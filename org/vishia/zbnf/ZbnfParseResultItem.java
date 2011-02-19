@@ -242,7 +242,7 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
   /** Gets the first child of a component.
    * Use it if it is known that at least one child should exist.
    * @return first child or null if it is not a component with children.
-   * @deprecated use instead {@link iteratorChildren()} or {@link getChildren()} from the current item.
+   * @deprecated use instead {@link listChildren()} from the current item.
    */
   ZbnfParseResultItem firstChild();
       

@@ -1,4 +1,4 @@
- /****************************************************************************/
+/****************************************************************************/
 /* Copyright/Copyleft:
  *
  * For this source the LGPL Lesser General Public License,
@@ -1178,7 +1178,7 @@ public class ZbnfSyntaxPrescript
   {
     {
       String sReport;
-      String sSyntax = getConstantSyntax();
+      //String sSyntax = getConstantSyntax();
       sReport = toString();
       report.reportln(Report.fineInfo, 0, "SyntaxPrescript:" + sIndent  + sReport);
       if(childSyntaxPrescripts != null)

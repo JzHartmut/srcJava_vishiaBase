@@ -20,7 +20,8 @@
  * @author www.vishia.de/Java
  * @version 2006-06-15  (year-month-day)
  * list of changes: 
- * 2006-05-00: www.vishia.de creation
+ * 2006-05-00: JcHartmut www.vishia.de creation
+ * 2008-04-02: JcHartmut some changes
  *
  ****************************************************************************/
 package org.vishia.util;

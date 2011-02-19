@@ -1,7 +1,37 @@
+/****************************************************************************
+ * Copyright/Copyleft: 
+ * 
+ * For this source the LGPL Lesser General Public License, 
+ * published by the Free Software Foundation is valid.
+ * It means:
+ * 1) You can use this source without any restriction for any desired purpose.
+ * 2) You can redistribute copies of this source to everybody.
+ * 3) Every user of this source, also the user of redistribute copies 
+ *    with or without payment, must accept this license for further using.
+ * 4) But the LPGL ist not appropriate for a whole software product,
+ *    if this source is only a part of them. It means, the user 
+ *    must publish this part of source,
+ *    but don't need to publish the whole source of the own product.
+ * 5) You can study and modify (improve) this source 
+ *    for own using or for redistribution, but you have to license the
+ *    modified sources likewise under this LGPL Lesser General Public License.
+ *    You mustn't delete this Copyright/Copyleft inscription in this source file.    
+ *
+ * @author www.vishia.de/Java
+ * @version 2006-06-15  (year-month-day)
+ * list of changes: 
+ * 2008-03-28 JcHartmut: The ParserStore is not cleared, only the reference is assigned new.
+ *                       So outside the ParserStore can be used from an older parsing.
+ * 2006-12-15 JcHartmut: regular expressions should be handled after white spaces trimming, error correction.
+ * 2006-06-00 JcHartmut: a lot of simple problems in developemnt.
+ * 2006-05-00 JcHartmut: creation
+ *
+ ****************************************************************************/
 package org.vishia.zbnf; 
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import org.vishia.util.SortedTreeNode;
 import org.vishia.util.StringPart;
@@ -414,16 +444,34 @@ class ZbnfParserStore
     }
 
 
-    public Iterator<ZbnfParseResultItem> getChildren()
+    public Iterator<ZbnfParseResultItem> iterChildren()
     { return iteratorChildren();
     }
 
 
-    public Iterator<ZbnfParseResultItem> getChildren(String key)
+    public Iterator<ZbnfParseResultItem> iterChildren(String key)
     { if(offsetAfterEnd == 1){ return null; }
       else
       { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
-        return treeNodeRepresentation.getChildren(key);
+        return treeNodeRepresentation.iterChildren(key);
+      }
+    }
+
+
+    public List<ZbnfParseResultItem> listChildren()
+    { if(offsetAfterEnd == 1){ return null; }
+      else
+      { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
+        return treeNodeRepresentation.listChildren();
+      }
+    }
+
+
+    public List<ZbnfParseResultItem> listChildren(String key)
+    { if(offsetAfterEnd == 1){ return null; }
+      else
+      { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
+        return treeNodeRepresentation.listChildren(key);
       }
     }
 

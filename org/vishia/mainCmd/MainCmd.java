@@ -17,10 +17,11 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author www.vishia.de/Java
+ * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2006-05-00: www.vishia.de creation
+ * 2006-05-00: JcHartmut www.vishia.de creation
+ * 2008-04-02: JcHartmut some changes
  *
  ****************************************************************************/
 
@@ -30,7 +31,7 @@ package org.vishia.mainCmd;
 import java.io.*;
 import java.util.*;  //List
 import java.text.*;  //ParseException
-
+import org.vishia.util.FileSystem;
 
 /**
 <h1>class MainCmd - Description</h1>
@@ -367,13 +368,26 @@ public abstract class MainCmd implements MainCmd_ifc
     //debug System.out.println("report level=" + main.nReportLevel + " file:" + sFileReport);
     /** open reportfile: */
     if(nReportLevel > 0)
-    { try{ main.fReport = new FileWrite(sFileReport, bAppendReport); }
+    { boolean bMkdir= false; 
+      try{ main.fReport = new FileWrite(sFileReport, bAppendReport); }
       catch(IOException exception)
-      { throw new ParseException("ERROR creating reportfile: " +sFileReport, 0);
+      { //it is possible that the path not exist.
+        bMkdir = true;
+      }
+      if(bMkdir)
+      { try
+        { FileSystem.mkDirPath(sFileReport); 
+          main.fReport = new FileWrite(sFileReport, bAppendReport);
+        }
+        catch(FileNotFoundException exc)
+        { writeError("ERROR creating reportfile-path: " +sFileReport);
+          throw new ParseException("ERROR creating reportfile-path: " +sFileReport, 0);
         /*if a requested reportfile is not createable, the programm can't be run. The normal problem reporting fails.
           That's why the program is aborted here.
         */
-      }
+        }
+      }  
+
     }
     if(!checkArguments())
     {
