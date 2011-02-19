@@ -307,9 +307,12 @@ public class ZbnfParser
       if(nReportLevel >= nLevelReportComponentParsing)  
       { String sReport = nReportLevel < nLevelReportComponentParsing ? ""
           : "parseComp " + input.getCurrentPosition()+ " " + input.getCurrent(40); // + sEmpty.substring(0, nRecursion); 
-        final String syntaxReport = "<" 
+        String syntaxReport = "<" 
         	+ (syntax.sDefinitionIdent.equals(syntax.sSemantic) ? "" : syntax.sDefinitionIdent + "?")
         	+ syntax.sSemantic + ">";
+        int zz = syntaxReport.length();
+        if(zz < 20){ syntaxReport += "                    ".substring(zz); }
+        else { syntaxReport = syntaxReport.substring(0,20); }
       	report.reportln(idReportComponentParsing, sReport
           + (bOk ? " ok    " : " error ") + nRecursion 
           + syntaxReport
@@ -739,7 +742,7 @@ public class ZbnfParser
               if(nType == ZbnfSyntaxPrescript.kTerminalSymbol){
             		sConstantText = syntaxItem.getConstantSyntax();
             		sReport = nReportLevel < nLevelReportBranchParsing ? ""
-              		: "parseSpac " + input.getCurrentPosition()+ " " + input.getCurrent(40); 
+              		: "parsSpace " + input.getCurrentPosition()+ " " + input.getCurrent(40); 
 	            } else {
 	            	sConstantText = null;
 	            }
@@ -878,11 +881,15 @@ public class ZbnfParser
               parserStoreInPrescript.setCurrentPosition(posParseResult);
             }
             if(nReportLevel >= nLevelReportBranchParsing)  ////  
-            { final String syntaxReport = syntaxItem.toString();
+            { String syntaxReport = syntaxItem.toString();
+              //set length to 20 chars
+            	int zz = syntaxReport.length();
+              if(zz < 20){ syntaxReport += "                    ".substring(zz); }
+              else { syntaxReport = syntaxReport.substring(0,20); }
             	  //+ " <?" 
               	//+ (sSemanticForStoring !=null ? sSemanticForStoring :"")  + "> "
             	  //+ (sConstantSyntax !=null ? sConstantSyntax  : "") + " ";	
-            	report.reportln(idReportComponentParsing, sReport
+            	report.reportln(idReportBranchParsing, sReport
                 + (bOk ? " ok    " : " error ") + nRecursion 
                 + syntaxReport
                 //+ " <?" + (sSemanticForStoring == null ? "" : sSemanticForStoring) + "> in "  
@@ -1482,21 +1489,29 @@ public class ZbnfParser
       }
   
   
-      private boolean parseNegativVariant(ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment) throws ParseException
+      private boolean parseNegativVariant(ZbnfSyntaxPrescript syntaxNegativ, boolean bSkipSpaceAndComment) throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseNegativVariante;   " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " [?" + sSemanticForError);
         
         //TODO: use a own buffer and trash it. //true/*use own buffer*/);
         //or be careful that the negativParser don't save any parse results.
-        SubParser negativParser = new SubParser(options, this, parentResultItem, nRecursion+1); 
+        SubParser negativParser = new SubParser(syntaxNegativ, this, parentResultItem, nRecursion+1); 
         int posParseResult = parserStoreInPrescript.getNextPosition();
         long posInput  = input.getCurrentPosition();
         bOk = negativParser.parseSub(input, "[?..]"/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
         /**always set the current position back to the originator at begin of this parse test. */
         input.setCurrentPosition(posInput);
         parserStoreInPrescript.setCurrentPosition(posParseResult);
-        
+        if(nReportLevel >= nLevelReportBranchParsing)  ////  
+        { final String syntaxReport = syntaxNegativ.toString();
+	        
+	        report.reportln(idReportBranchParsing, "parseNegV "
+	      		+ input.getCurrentPosition()+ " " + input.getCurrent(40)
+	          + (!bOk ? " ok    " : " error ") + nRecursion 
+	          + syntaxReport
+            + " in " + sReportParentComponents);
+        }  
         return !bOk;  //negation, it is not ok if the result matches.
       }
   

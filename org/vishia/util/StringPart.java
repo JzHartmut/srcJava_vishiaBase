@@ -2381,6 +2381,23 @@ that is a liststring and his part The associated String
   }
   
 
+  /**Closes the work. This routine should be called if the StringPart is never used, 
+   * but it may be kept because it is part of class data or part of a statement block which runs.
+   * The associated String is released. It can be recycled by garbage collector.
+   * If this method is overridden, it should used to close a associated file which is opened 
+   * for this String processing. The overridden method should call super->close() too.
+   */
+  public void close()
+  {
+  	content = null;
+  	sLastString = null;
+    startMin = startLast = start = startScan = 0;
+    endMax = end = endLast = 0;
+    nLineCt = 0;
+    bCurrentOk = bFound = false;
+
+  }
+  
   
 }
 

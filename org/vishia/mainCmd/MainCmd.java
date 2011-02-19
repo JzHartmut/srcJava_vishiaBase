@@ -38,7 +38,7 @@ import java.text.*;  //ParseException
 import org.vishia.util.FileSystem;
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
-import org.vishia.msgDispatch.LogMessage;;
+import org.vishia.msgDispatch.LogMessage;
 /**
 <h1>class MainCmd - Description</h1>
 <font color="0x008000">
