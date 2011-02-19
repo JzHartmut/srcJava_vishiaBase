@@ -93,7 +93,8 @@ import org.vishia.mainCmd.Report;
  *                                                              either syntax1 or syntax2 (or more choice possibilities</td></tr>
  * <tr><td><code>[</code><i>syntax1</i><code>|</code><i>syntax2</i><code>|]</code></td><td>It is a choiceable option, but also the empty choice is possible</td></tr>
  * <tr><td><code>[|</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>First it is tested the syntax behind the option, only if it is not matched, the options are tested.</td></tr>
- * <tr><td><code>[?</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Test wether it is <b>not</b> matched. This is usefull to abort repetitions.</td></tr>
+ * <tr><td><code>[></code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Ones of the alternatives should match, otherwise the parsing process fails.</td></tr>
+ * <tr><td><code>[?</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Test whether it is <b>not</b> matched. This is usefull to abort repetitions.</td></tr>
  * <tr><td><code>{</code><i>syntax</i><code>}</code></td><td>Repetition of the <i>syntax</i>, at least one time.</td></tr>
  * <tr><td><code>{</code><i>syntax1</i><code>|</code><i>syntax2</i><code>}</code></td><td>Alternatives in repetition.</td></tr>
  * <tr><td><code>{</code><i>syntax</i><code>?</code><i>syntaxBackward</i></code>}</code></td><td>A requested repeat syntax. It is a novum BNF-likely, but a require of praxis.
@@ -340,6 +341,8 @@ public class ZbnfSyntaxPrescript
    */
   static final int kNegativVariant = 8;
 
+  static final char kPositivVariant = '!';
+  
   static final int kRepetition = 9;
 
   static final int kRepetitionRepeat = 10;
@@ -763,7 +766,7 @@ public class ZbnfSyntaxPrescript
       stop();
   }
   
-  /**Only for debugging, possibility of breakpoint. */
+  /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
   void stop()
   {
     
@@ -1057,6 +1060,11 @@ public class ZbnfSyntaxPrescript
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
         optionItem.eType = kNegativVariant;
+      }
+      else if(spInput.startsWith(">"))
+      { spInput.seek(1);
+        optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
+        optionItem.eType = kPositivVariant;
       }
       else if(spInput.startsWith("|"))
       { spInput.seek(1);
@@ -1401,6 +1409,9 @@ public class ZbnfSyntaxPrescript
         } break;
         case kNegativVariant:
         { sReport = "[?...|...]";
+        } break;
+        case kPositivVariant:
+        { sReport = "[>...|...]";
         } break;
         case kAlternative:
         { sReport = "...|...";

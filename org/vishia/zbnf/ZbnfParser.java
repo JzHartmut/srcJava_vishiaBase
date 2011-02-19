@@ -142,7 +142,10 @@ public class ZbnfParser
        * but the references to the same input and parse result are assigend. 
        * By using the Parser for another parsing execution, a new input and parseResult is used.
        */
-    protected StringPart input;
+    protected final StringPart input;
+    
+    /**Position where the input String is located in the whole input. */
+    protected final int posInputbase;
   
     final PrescriptParser parentPrescriptParser;
 
@@ -172,8 +175,11 @@ public class ZbnfParser
     /**A string representing the parent components. */ 
     final String sReportParentComponents;
     
-    public PrescriptParser(PrescriptParser parent, String sSemantic/*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
+    private PrescriptParser(PrescriptParser parent, String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { parentPrescriptParser = parent;
+      
+      this.input = input;
+      this.posInputbase = posInputbase;
       //cc080318 this.parserStoreInPrescript = parseResult;
       /*cc080318 
       if(parseResultsFromOuterLevel != null) 
@@ -251,10 +257,11 @@ public class ZbnfParser
      *        in the parseResult buffer after insertion of parseResult.addAlternative() for this component.<br/>        
     
      * @return true if successfully, false on error.<br/>
+     * @throws ParseException 
      */
     public boolean parsePrescript1 //##a
-    ( StringPart input
-    , ZbnfSyntaxPrescript syntax
+    ( //StringPart input
+      ZbnfSyntaxPrescript syntax
     , String sSemanticForStoring
     , ZbnfParseResultItem parentResultItem
     , ZbnfParserStore parserStoreInPrescriptP
@@ -262,8 +269,8 @@ public class ZbnfParser
     , boolean bSkipSpaceAndComment
     , boolean addParseResultsFromOuterLevel
     , int nRecursion
-    )
-    { this.input = input;
+    ) throws ParseException
+    { //this.input = input;
       this.parserStoreInPrescript = parserStoreInPrescriptP;
       String sReport = nReportLevel < nLevelReportComponentParsing ? ""
           : "parse " + input.getCurrentPosition()+ " " + input.getCurrent(30); // + sEmpty.substring(0, nRecursion); 
@@ -452,6 +459,7 @@ public class ZbnfParser
        *        and should be skipped after test a terminate syntax if its failed.<br>
        * @param addParseResultsFromOuterLevel
        * @return true if successfully, false on error.<br/>
+       * @throws ParseException 
        */
       public boolean parseSub
       ( StringPart input
@@ -460,7 +468,7 @@ public class ZbnfParser
       , String sSemanticForStoring
       , boolean bSkipSpaceAndComment
       , boolean addParseResultsFromOuterLevel
-      )
+      ) throws ParseException
       { //cc080319 PrescriptParser.this.input = input;
         boolean bFound = false;
         sSemanticForError = sSemanticForErrorP;
@@ -679,8 +687,9 @@ public class ZbnfParser
        * @param syntaxItem
        * @param bSkipSpaceAndComment
        * @return
+       * @throws ParseException 
        */
-      private boolean parseItem(boolean bSkipSpaceAndComment) //, ParserStore parseResult, ParserStore addParseResult)
+      private boolean parseItem(boolean bSkipSpaceAndComment) throws ParseException //, ParserStore parseResult, ParserStore addParseResult)
       { boolean bOk;
         ZbnfSyntaxPrescript syntaxItem = listPrescripts.get(idxPrescript);
         String sConstantSyntax = syntaxItem.getConstantSyntax();
@@ -732,6 +741,9 @@ public class ZbnfParser
           case ZbnfSyntaxPrescript.kNegativVariant:
           { bOk = parseNegativVariant(syntaxItem, bSkipSpaceAndComment);
           } break;
+          case ZbnfSyntaxPrescript.kPositivVariant:
+          { bOk = parsePositiveVariant(syntaxItem, bSkipSpaceAndComment);
+          } break;
           case ZbnfSyntaxPrescript.kRepetition:
           { bOk = parseRepetition(syntaxItem, syntaxItem.getRepetitionBackwardPrescript(), bSkipSpaceAndComment, parserStoreInPrescript);
           } break;
@@ -753,6 +765,7 @@ public class ZbnfParser
           case ZbnfSyntaxPrescript.kSyntaxComponent:
           { bOk = parseComponent
                   ( input
+                  , posInputbase    
                   , sDefinitionIdent
                   , sSemanticForStoring
                   , bSkipSpaceAndComment
@@ -771,6 +784,7 @@ public class ZbnfParser
               parseWhiteSpaceAndComment(parserStoreInPrescript);
             }
             String sSrc = null;  //parsed string
+            int posSrc = -1;     //position of the string
             switch(nType)
             {
               case ZbnfSyntaxPrescript.kIdentifier:
@@ -832,6 +846,7 @@ public class ZbnfParser
               case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
               { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
                 sSrc = input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars);
+                posSrc = (int)input.getCurrentPosition();
                 bOk = input.found();
                 if(bOk)
                 { input.fromEnd();
@@ -866,8 +881,7 @@ public class ZbnfParser
             { //something parsed as string, may be also an empty string:
               if(syntaxItem.getSubSyntax()!= null)
               { //##i
-                StringPart partOfInput = new StringPart(sSrc);
-                bOk = parseComponent(partOfInput, syntaxItem.getSubSyntax(), null, false, false, false, false);
+                bOk = parseSubSyntax(sSrc, posSrc, syntaxItem.getSubSyntax());
               }
               else if( sSemanticForStoring != null)
               { parserStoreInPrescript.addString(sSrc, sSemanticForStoring, parentResultItem);
@@ -884,7 +898,18 @@ public class ZbnfParser
         return bOk;
       }
   
-      
+      /**Parses a parsed result String with a subSyntax.
+       * @param sSrc The string, it is the result especially from &lt;*EndChars?!syntax>
+       * @param posSrc Position of the source in the whole string
+       * @param subSyntax The sub syntax prescript identifier.
+       * @return successful or not
+       * @throws ParseException if the subsyntax should match and it isn*t so.
+       */
+      boolean parseSubSyntax(String sSrc, int posSrc, String subSyntax) 
+      throws ParseException
+      { StringPart partOfInput = new StringPart(sSrc);
+        return parseComponent(partOfInput, posSrc, subSyntax, null, false, false, false, false);
+      }
       
       /**
        * checks a terminal symbol.
@@ -975,7 +1000,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parsePositiveInteger(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult)
+      private boolean parsePositiveInteger(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parsePosNumber(" + nRecursion + ") <#?" + sSemanticForError + ">");
         if(input.scanPositivInteger().scanOk())
@@ -992,7 +1017,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parseHexNumber(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult)
+      private boolean parseHexNumber(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parseHex(" + nRecursion + ") <#x?" + sSemanticForError + ">");
         if(input.scanHex(maxNrofChars).scanOk())
@@ -1009,7 +1034,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parseInteger(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult)
+      private boolean parseInteger(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parseInt(" + nRecursion + ") <#-?" + sSemanticForError + ">");
         if(input.scanInteger().scanOk())
@@ -1045,7 +1070,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parseNoOrSomeCharsOutsideQuotion(String sSyntax, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult)
+      private boolean parseNoOrSomeCharsOutsideQuotion(String sSyntax, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*\"\"" + sSyntax + "?" + sSemanticForError + ">");
         int len = input.indexOfAnyCharOutsideQuotion(sSyntax, 0, maxNrofChars);
@@ -1076,8 +1101,9 @@ public class ZbnfParser
        * @param sSubSyntax not null, the name of the inner syntax prescript if there is one.
        * @param parseResult Buffer to store the result. It may be a special buffer or the main buffer.
        * @return
+       * @throws ParseException 
        */
-      private boolean parseStringUntilRightEndchar(String sConstantSyntax, boolean bInclusive, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult)
+      private boolean parseStringUntilRightEndchar(String sConstantSyntax, boolean bInclusive, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <stringtolastinclChar?" + sSemanticForError + ">");
         input.lentoAnyChar(sConstantSyntax, maxNrofChars, StringPart.seekBack);
@@ -1108,6 +1134,7 @@ public class ZbnfParser
        * @param syntaxItem The syntax item, contains info for substrings, see {@link ZbnfSyntaxPrescript#getListStrings()}.
        * @param parseResult Buffer to store the result. It may be a special buffer or the main buffer.
        * @return
+       * @throws ParseException 
        */
       private boolean parseStringUntilTerminateString
       ( String sConstantSyntax
@@ -1116,7 +1143,7 @@ public class ZbnfParser
       , String sSemanticForStoring
       , ZbnfSyntaxPrescript syntaxItem
       , ZbnfParserStore parseResult
-      )
+      ) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
         { int mode = bInclusive ? StringPart.seekEnd : StringPart.seekNormal;
@@ -1157,16 +1184,18 @@ public class ZbnfParser
        *        It is a result of pervious parsing with <code>&lt;...?-...&gt></code>, 
        *        stored now because the components prescript has the form <code>&lt;...?+...&gt></code>.
        * @return true if succesfull, false if the input not matches to the prescript. 
+       * @throws ParseException 
        */
       private boolean parseComponent
       ( StringPart sInputP
+      , int posInputbase
       , String sDefinitionIdent
       , String sSemanticForStoring
       , boolean bSkipSpaceAndComment
       , boolean bResultToAssignIntoNextComponent
       , boolean bTransferParseResultFromPrevious
       , boolean bAddParseResultFromPrevious
-      )
+      ) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + sDefinitionIdent + "?" + sSemanticForError + ">");
         if(sDefinitionIdent.equals("defineDefinition"))
@@ -1176,7 +1205,7 @@ public class ZbnfParser
         ZbnfSyntaxPrescript complexItem = searchSyntaxPrescript(sDefinitionIdent);
         if(complexItem != null)
         { /**Create the SubParser-instace: */
-          PrescriptParser componentsPrescriptParser;
+          final PrescriptParser componentsPrescriptParser;
           //SubParser itemParser;
           
           if(sDefinitionIdent.equals("attribute"))
@@ -1207,6 +1236,7 @@ public class ZbnfParser
             componentsPrescriptParser = new PrescriptParser
             ( PrescriptParser.this
             , sDefinitionIdent
+            , sInputP, posInputbase
             /*cc080318 , store1  */
             //cc080318, bTransferParseResultFromPrevious? parseResultsFromOuterToInnerLevels : null  //break the transport to components.
             );
@@ -1229,7 +1259,7 @@ public class ZbnfParser
                   );  //bAddParseResultFromPrevious ? parseResultToOtherComponent : null);
             */
             bOk = componentsPrescriptParser.parsePrescript1
-                  ( sInputP, complexItem, sSemanticForStoring, parentResultItem1, store1
+                  ( /*sInputP, */complexItem, sSemanticForStoring, parentResultItem1, store1
                   , bTransferParseResultFromPrevious? parseResultsFromOuterToInnerLevels : null
                   , bSkipSpaceAndComment
                   , bAddParseResultFromPrevious
@@ -1270,14 +1300,15 @@ public class ZbnfParser
       
       
       
-      private boolean addResultOrSubsyntax(String sSemanticForStoring, String subSyntax)
+      private boolean addResultOrSubsyntax(String sSemanticForStoring, String subSyntax) throws ParseException
       { //##ss
         boolean bOk;
         String sSrc = input.getCurrentPart();
+        int posSrc = (int)input.getCurrentPosition();
         if(subSyntax!= null)
         { //##i
           StringPart partOfInput = new StringPart(sSrc);
-          bOk = parseComponent(partOfInput, subSyntax, null, false, false, false, false);
+          bOk = parseComponent(partOfInput, posSrc, subSyntax, null, false, false, false, false);
         }
         else if( sSemanticForStoring != null)
         { parserStoreInPrescript.addString(sSrc, sSemanticForStoring, parentResultItem);
@@ -1295,8 +1326,9 @@ public class ZbnfParser
        * @param maxNrofChars
        * @param sSemantic
        * @return
+       * @throws ParseException 
        */
-      private boolean parseSimpleStringLiteral(String sQuotionMarks, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult)
+      private boolean parseSimpleStringLiteral(String sQuotionMarks, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <\"\"\"?" + sSemanticForError + ">");
         if(input.getCurrentChar() == sQuotionMarks.charAt(0))
@@ -1402,9 +1434,10 @@ public class ZbnfParser
        * 
        * @param options The current syntaxprescript item, a option item.
        * @return
+       * @throws ParseException 
        */
       //private boolean parseOptions(Iterator<ZbnfSyntaxPrescript> iterItems, ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment, ParserStore parseResult)
-      private boolean parseOptions(boolean bSkipSpaceAndComment)
+      private boolean parseOptions(boolean bSkipSpaceAndComment) throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse option:" + sSemanticForError);
@@ -1473,7 +1506,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parseNegativVariant(ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment)
+      private boolean parseNegativVariant(ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment) throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " [?" + sSemanticForError);
@@ -1490,7 +1523,23 @@ public class ZbnfParser
       }
   
   
-      private boolean parseRepetition(ZbnfSyntaxPrescript forwardSyntax, ZbnfSyntaxPrescript backwardSyntax, boolean bSkipSpaceAndComment, ZbnfParserStore parseResult)
+      private boolean parsePositiveVariant(ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment) 
+      throws ParseException
+      { boolean bOk = true;
+        //boolean bNotFound = true;
+        if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " [?" + sSemanticForError);
+        
+        //TODO: use a own buffer and trash it. //true/*use own buffer*/);
+        //or be careful that the negativParser don't save any parse results.
+        SubParser positiveParser = new SubParser(options, this, parentResultItem, nRecursion+1); 
+        bOk = positiveParser.parseSub(input, "[?..]"/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, false);
+        if(!bOk) 
+          throw new ParseException("positiveSyntax failes", 0);
+        return bOk;  //negation, it is not ok if the result matches.
+      }
+  
+  
+      private boolean parseRepetition(ZbnfSyntaxPrescript forwardSyntax, ZbnfSyntaxPrescript backwardSyntax, boolean bSkipSpaceAndComment, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk = true;
         boolean bShouldRepeat = true;
         boolean bRepeatContinue;
@@ -1597,8 +1646,9 @@ public class ZbnfParser
       { if(input.length() < input.lengthMaxPart())
         { report.reportln(Report.error," saveError: actual length of input is to less");
         }
-        if(posRightestError < input.getCurrentPosition())
-        { posRightestError = input.getCurrentPosition();
+        int posInput = (int)input.getCurrentPosition() + posInputbase;
+        if(posRightestError < posInput)
+        { posRightestError = posInput;
           sRightestError = input.getCurrentPart(80);
           if(input.length()< 80){sRightestError += "<<<<end of file"; }
           sExpectedSyntax = "";
@@ -1709,7 +1759,7 @@ public class ZbnfParser
   /**The main syntaxprescript setted from {@link setSyntax(StringPart)}. */
   private ZbnfSyntaxPrescript mainScript;
   
-  protected final PrescriptParser prescriptParserTopLevel;
+  protected PrescriptParser prescriptParserTopLevel;
 
   protected PrescriptParser.SubParser subParserTopLevel;
 
@@ -1828,7 +1878,7 @@ public class ZbnfParser
     //parserStore = new ParserStore();
     listSubPrescript = new TreeMap<String,ZbnfSyntaxPrescript>(); //ListPrescripts();
     //cc080318 create it at start of parse(): parserStore = new ZbnfParserStore();
-    prescriptParserTopLevel = new PrescriptParser(null, "topLevelSyntax"/*cc080318 , parserStore, null*/); 
+    //prescriptParserTopLevel = new PrescriptParser(null, "topLevelSyntax"/*cc080318 , parserStore, null*/); 
     this.maxParseResultEntriesOnError = maxParseResultEntriesOnError;
     listParseResultOnError = maxParseResultEntriesOnError >0 
                            ? new ArrayList<ZbnfParseResultItem>(maxParseResultEntriesOnError)
@@ -2039,7 +2089,7 @@ public class ZbnfParser
       { importScript(sFile, sDirParent);
       }
     }
-    subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
+    //subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
   }
 
 
@@ -2197,6 +2247,8 @@ public class ZbnfParser
   	sExpectedSyntax = null;
   	sRightestError = input.getCurrentPart(80); 
   	
+    prescriptParserTopLevel = new PrescriptParser(null, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
+    subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
     if(additionalInfo != null)
     { ZbnfParserStore addParseResult = new ZbnfParserStore();
       Iterator<String> iterAdditionalInfo = additionalInfo.iterator();
@@ -2213,9 +2265,15 @@ public class ZbnfParser
     boolean bOk = subParserTopLevel.parseSub(input, sSemantic, parserStore, ZbnfParserStore.kComponent, sSemantic, false, true);
     */
     String sSemantic = mainScript.getDefinitionIdent();
-  	boolean bOk = prescriptParserTopLevel.parsePrescript1
-                  (input, mainScript, sSemantic, null, parserStoreTopLevel, null, false, true, 0);
-    return bOk;
+  	try
+    { boolean bOk = prescriptParserTopLevel.parsePrescript1
+                  (mainScript, sSemantic, null, parserStoreTopLevel, null, false, true, 0);
+      return bOk;
+    }
+  	catch(ParseException exc)
+  	{
+  	  return false;
+  	}
   }
 
 
@@ -2452,6 +2510,7 @@ public class ZbnfParser
   }
 
 
+  /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
   private void stop()
   {
   }

@@ -363,6 +363,7 @@ class ZbnfParserStore
     }
 
 
+    /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
     private void stop()
     { 
     }
@@ -891,6 +892,7 @@ class ZbnfParserStore
   }
   
   
+  /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
   void stop()
   { //to test, set here a breadpoint.
   }

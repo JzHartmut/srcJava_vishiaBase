@@ -25,9 +25,10 @@
  *
  ****************************************************************************/
 package org.vishia.util;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Iterator;
-import org.vishia.mainCmd.Report;
+//import org.vishia.mainCmd.Report;
 import org.vishia.util.SpecialCharStrings;
 
 /** The StringPart class represents a flexible valid part of a character string which spread is changeable. 
@@ -111,6 +112,11 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   
   /**false if current scanning is not match*/
   protected boolean bCurrentOk = true;
+  
+  /**If true, than all idxLastScanned... are set to 0, 
+   * it is after {@link #scanOk()} or after {@link #scanStart}
+   */ 
+  protected boolean bStartScan = true;
 
   /** Borders of the last part before calling of scan__(), seek__(), lento__(). If there are different to the current part,
    * the call of restoreLastPart use this values. scanOk() sets the startLast-variable to the actual start or rewinds
@@ -125,13 +131,15 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   boolean bFound = true;
   
   /**Last scanned integer number*/
-  protected long nLastIntegerNumber = 0;
+  protected final long[] nLastIntegerNumber = new long[5];
+  
+  private int idxLastIntegerNumber = 0;
   
   /**Last scanned float number*/
   protected double nLastFloatNumber = 0.0;
   
   /** Last scanned string. */
-  //protected String sLastString;
+  protected String sLastString;
   
   /** Flag to force setting the start position after the seeking string. See description on seek(String, int).
   */
@@ -195,12 +203,12 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   public static final char cEndOfText = (char)(0x3);
 
   /** Interface to report something, only level Report.fineDebug is used.*/ 
-  protected final Report report;
+  //protected final Report report;
   
   /** Creates a new empty StringPart without an associated String. See method set() to assign a String.*/
   public StringPart()
   { this.content = null; startMin = start = startLast= 0; endLast = endMax = end = 0;
-    report = null;
+    //report = null;
   }
 
 
@@ -211,7 +219,7 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   */
   public StringPart(String content)
   { assign(content);
-    report = null;
+    //report = null;
   }
 
 
@@ -233,7 +241,7 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   */
   public StringPart(StringPart src)
   { assign(src);
-    report = null;
+    //report = null;
   }
 
 
@@ -563,7 +571,7 @@ abcd  this is a part uvwxyz The associated String
   */
   public StringPart lentoIdentifier()
   {
-    return lentoIdentifier((String) null, (String)null);
+    return lentoIdentifier(null, null);
   }
   
   /** Sets the endposition of the part of string to the end of the identifier which is beginning on start.
@@ -1628,8 +1636,7 @@ that is a liststring and his part The associated String
       { return start == end;
       }
       else
-      { String sCmp2 = sCmp.substring(0, pos_cEndOfText);
-        return content.substring(start, end).equals(sCmp);
+      { return content.substring(start, end).equals(sCmp);
       }
       
     }
@@ -1651,10 +1658,8 @@ that is a liststring and his part The associated String
       @return this
   */
   public StringPart scan(final String sTestP)
-  { if(bCurrentOk)
+  { if(scanEntry())
     { String sTest;
-      if(report != null){ reportScanPosition("StringScan.scan(" + sTestP +")"); }
-      seekNoWhitespaceOrComments();
       int len = sTestP.indexOf(cEndOfText);
       boolean bTestToEndOfText = (len >=0);
       if(bTestToEndOfText){ sTest = sTestP.substring(0, len); }
@@ -1668,18 +1673,15 @@ that is a liststring and his part The associated String
         )
       { start += len;
       }
-      else { bCurrentOk = false; if(report != null){ report.report(6,"ErrorScan scan(" + sTest + ")");} }     //error in current scanning
+      else 
+      { bCurrentOk = false; 
+        //if(report != null){ report.report(6,"ErrorScan scan(" + sTest + ")");}      //error in current scanning
+      }
     }
     return this;
   }
 
   
-  public void scanStart()
-  { bCurrentOk = true;
-    scanOk();  //turn all indicees to ok
-  }  
-  
-
   /** Test the result of scanning and set the scan Pos Ok, if current scanning was ok. If current scanning
       was not ok, this method set the current scanning pos back to the position of the last call of scanOk()
       or scanNext() or setCurrentOk().
@@ -1689,12 +1691,12 @@ that is a liststring and his part The associated String
   public boolean scanOk()
   { if(bCurrentOk) 
     { startScan = startLast = start;    //the scanOk-position is the start of maximal part.
+      bStartScan = true;   //set all idxLast... to 0
     }
     else           
     { start = startLast= startScan;   //return to the start
     }
-    //eScanPart = kWhitespace;
-    if(report != null){ report.report(6," scanOk:" + startMin + ".." + start + ":" + (bCurrentOk ? "ok" : "error")); }
+    //if(report != null){ report.report(6," scanOk:" + startMin + ".." + start + ":" + (bCurrentOk ? "ok" : "error")); }
     boolean bOk = bCurrentOk;
     bCurrentOk = true;        //prepare to next try scanning
     return(bOk);
@@ -1707,9 +1709,8 @@ that is a liststring and his part The associated String
   
   
   public StringPart scanQuotion(String sQuotionmarkStart, String sQuotionMarkEnd, String[] sResult, int maxToTest)
-  { if(bCurrentOk)
-    { seekNoWhitespaceOrComments();
-      scan(sQuotionmarkStart).lentoNonEscapedString(sQuotionMarkEnd, maxToTest);
+  { if(scanEntry())
+    { scan(sQuotionmarkStart).lentoNonEscapedString(sQuotionMarkEnd, maxToTest);
       if(bCurrentOk)
       { //TODO ...ToEndString, now use only 1 char in sQuotionMarkEnd
         if(sResult != null) sResult[0] = getCurrentPart();
@@ -1727,7 +1728,7 @@ that is a liststring and his part The associated String
       @param bHex true: scan hex Digits and realize base 16, otherwise realize base 10.
       @return long number represent the digits. Write the characters via Result.write_ScanStringResult().
   */
-  private StringPart scanDigits(boolean bHex, int maxNrofChars)
+  private long scanDigits(boolean bHex, int maxNrofChars)
   { if(bCurrentOk)
     { long nn = 0;
       boolean bCont = true;
@@ -1747,48 +1748,79 @@ that is a liststring and his part The associated String
       } while(bCont);
       if(pos > start)
       { start = pos;
-        nLastIntegerNumber = nn;
+        return nn;
+        //nLastIntegerNumber = nn;
       }
       else bCurrentOk = false;  //scanning failed.
     }
-    return this;
+    return -1; //on error
   }
 
 
-  public StringPart scanPositivInteger()  //::TODO:: scanLong(String sPicture)
+  public void scanStart()
+  { bCurrentOk = true;
+    scanOk();  //turn all indicees to ok
+  }
+
+
+
+  private boolean scanEntry()
   { if(bCurrentOk)
-    { 
-      skipWhitespaceAndComment();
-      scanDigits(false, Integer.MAX_VALUE);
+    { seekNoWhitespaceOrComments();
+      if(bStartScan)
+      { idxLastIntegerNumber = 0;
+        //idxLastFloatNumber = 0;
+        //idxLastString = 0;
+        bStartScan = false; 
+      }
+      if(start == end)
+      { bCurrentOk = false; //error, because nothing to scan.
+      }
+    }
+    return bCurrentOk;
+  }
+  
+  public StringPart scanPositivInteger() throws ParseException  //::TODO:: scanLong(String sPicture)
+  { if(scanEntry())
+    { long value = scanDigits(false, Integer.MAX_VALUE);
+      if(bCurrentOk && idxLastIntegerNumber < nLastIntegerNumber.length -1)
+      { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+      }
+      else throw new ParseException("to much scanned integers",0);
     } 
     return this;
   }
 
-  public StringPart scanInteger()  //::TODO:: scanLong(String sPicture)
-  { if(bCurrentOk)
+  public StringPart scanInteger() throws ParseException  //::TODO:: scanLong(String sPicture)
+  { if(scanEntry())
     { boolean bNegativValue = false;
-      skipWhitespaceAndComment();
       if( content.charAt(start) == '-')
       { bNegativValue = true;
         seek(1);
       }
-      scanDigits(false, Integer.MAX_VALUE);
+      long value = scanDigits(false, Integer.MAX_VALUE);
       if(bNegativValue)
-      { nLastIntegerNumber = - nLastIntegerNumber; 
+      { value = - value; 
+      }
+      if(bCurrentOk)
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -1)
+        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+        }
+        else throw new ParseException("to much scanned integers",0);
       }
     }  
     return this;
   }
 
   public StringPart scanFloatNumber()  //::TODO:: scanLong(String sPicture)
-  { if(bCurrentOk)
-    { long nInteger, nFractional, nExponent;
+  { if(scanEntry())
+    { long nInteger = 0, nFractional = 0;
+      int nDivisorFract = 1, nExponent;
       //int nDigitsFrac;
       char cc;
       boolean bNegativValue = false, bNegativExponent = false;
       boolean bFractionalFollowed = false;
       
-      skipWhitespaceAndComment();
       if( (cc = content.charAt(start)) == '-')
       { bNegativValue = true;
         seek(1);
@@ -1799,25 +1831,28 @@ that is a liststring and his part The associated String
         bFractionalFollowed = true;
       }
       else
-      { scanDigits(false, Integer.MAX_VALUE);
+      { nInteger = scanDigits(false, Integer.MAX_VALUE);
         if(bCurrentOk)
-        { nInteger = nLastIntegerNumber;
-          if(content.charAt(start) == '.')
+        { if(content.charAt(start) == '.')
           { bFractionalFollowed = true;
           }
         }
-        else nInteger = 0;
       }
       
       if(bCurrentOk && bFractionalFollowed)
-      { seek(1);
-        //int posFrac = start;
-        scanDigits(false, Integer.MAX_VALUE);
-        if(bCurrentOk)
-        { nFractional = nLastIntegerNumber;
-          //nDigitsFrac = start - posFrac;
+      { seek(1); //over .
+        while(getCurrentChar() == '0')
+        { seek(1); nDivisorFract *=10;
         }
-        else nFractional = 0;
+        //int posFrac = start;
+        nFractional = scanDigits(false, Integer.MAX_VALUE);
+        if(bCurrentOk)
+        { //nDigitsFrac = start - posFrac;
+        }
+        else if(nDivisorFract >=10)
+        { bCurrentOk = true; //it is okay, at ex."9.0" is found. There are no more digits after "0".
+          nFractional = 0;
+        }
       }   
       else {nFractional = 0; } //nDigitsFrac = 0;}
       
@@ -1831,11 +1866,10 @@ that is a liststring and his part The associated String
             cc = content.charAt(start);
           }
           if(cc >='0' && cc <= '9' )
-          { scanDigits(false, Integer.MAX_VALUE);
-            if(bCurrentOk)
-            { nExponent = nLastIntegerNumber;
+          { nExponent = (int)scanDigits(false, Integer.MAX_VALUE);
+            if(!bCurrentOk)
+            { nExponent = 0;
             }
-            else nExponent = 0;
           }
           else
           { // it isn't an exponent, but a String beginning with 'E' or 'e'.
@@ -1849,10 +1883,13 @@ that is a liststring and his part The associated String
       else{ nExponent = 0; }
       
       if(bCurrentOk)
-      { nLastFloatNumber = nInteger;
+      { nLastFloatNumber = (double)nInteger;
         if(nFractional > 0)
-        { double fFrac = nFractional;
-          while(fFrac >= 1.0) fFrac /= 10.0;
+        { double fFrac = (double)nFractional;
+          while(fFrac >= 1.0)  //the read number is pure integer, it is 0.1234
+          { fFrac /= 10.0; 
+          }
+          fFrac /= nDivisorFract;    //number of 0 after . until first digit.
           nLastFloatNumber += fFrac;
         }
         if(bNegativValue) { nLastFloatNumber = - nLastFloatNumber; }
@@ -1866,11 +1903,17 @@ that is a liststring and his part The associated String
   }
 
   
-  /**Scans a sequence of hex chars a hex number. No 0x or such should be present. See scanHexOrInt().*/
-  public StringPart scanHex(int maxNrofChars)  //::TODO:: scanLong(String sPicture)
-  { if(bCurrentOk)
-    { skipWhitespaceAndComment();
-      scanDigits(true, maxNrofChars);
+  /**Scans a sequence of hex chars a hex number. No 0x or such should be present. See scanHexOrInt().
+   * @throws ParseException */
+  public StringPart scanHex(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
+  { if(scanEntry())
+    { long value = scanDigits(true, maxNrofChars);
+      if(bCurrentOk)
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -1)
+        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+        }
+        else throw new ParseException("to much scanned integers",0);
+      }
     }
     return this;
   }
@@ -1880,33 +1923,64 @@ that is a liststring and his part The associated String
    * Octal numbers are not supported!  
    * @param maxNrofChars The maximal number of chars to scan, if <=0 than no limit.
    * @return
+   * @throws ParseException 
    */
-  public StringPart scanHexOrDecimal(int maxNrofChars)  //::TODO:: scanLong(String sPicture)
-  { if(bCurrentOk)
-    { skipWhitespaceAndComment();
+  public StringPart scanHexOrDecimal(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
+  { if(scanEntry())
+    { long value;
       if(content.substring(start, start + 2).equals("0x"))
-      { seek(2); scanDigits(true, maxNrofChars);
+      { seek(2); value = scanDigits(true, maxNrofChars);
       }
       else
-      { scanDigits(false, maxNrofChars);
+      { value = scanDigits(false, maxNrofChars);
+      }
+      if(bCurrentOk)
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -1)
+        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+        }
+        else throw new ParseException("to much scanned integers",0);
       }
     }
     return this;
   }
 
   
-  public long getLastScannedIntegerNumber()
-  { return nLastIntegerNumber;
+  public StringPart scanIdentifier()
+  { return scanIdentifier(null, null);
   }
+  
+  
+  public StringPart scanIdentifier(String additionalStartChars, String additionalChars)
+  { if(scanEntry())
+    { lentoIdentifier(additionalStartChars, additionalChars);
+      if(bFound)
+      { sLastString = getCurrentPart();
+        start = end;  //after identifier.
+      }
+      else
+      { bCurrentOk = false;
+      }
+      end = endLast;  //revert the change of length, otherwise end = end of identifier.
+    } 
+    return this;
+  }
+
+  public long getLastScannedIntegerNumber() throws ParseException
+  { if(idxLastIntegerNumber > 0)
+    { return nLastIntegerNumber[--idxLastIntegerNumber];
+    }
+    else throw new ParseException("no integer number scanned.", 0);
+  }
+  
   
   public double getLastScannedFloatNumber()
   { return nLastFloatNumber;
   }
   
   
-  //public String getLastScannedString()
-  //{ return sLastString;
-  //}
+  public String getLastScannedString()
+  { return sLastString;
+  }
   
   
   
@@ -2101,25 +2175,7 @@ that is a liststring and his part The associated String
     */      
   }
 
-  /*=================================================================================================================*/
-  /*=================================================================================================================*/
-  /*=================================================================================================================*/
-  /** Reports a message and show the positions.
-      @param sError Message should begin with "class.fn()"
-  */
-  protected void reportScanPosition(String sError)
-  { int posEnd = start +  20; if(posEnd > content.length()) posEnd = content.length();
-    String text = sError +" scanOk>>>";
-    if(start > startMin) text += content.substring(startMin, start);
-    text += "<<<scan>>>" + content.substring(start, posEnd) + "<<< ";
-    report.reportln(6, text);
-    /*
-    report.reportln(6, sError +" scanOk>>>"
-                     + (start > startMin ? content.substring(startMin, start) : "")
-                     + "<<<scan>>>" + content.substring(start, posEnd) + "<<< ");
-    */
-  }
-
+  
   
   
   /** Central mehtod to invoke excpetion, usefull to set a breakpoint in debug

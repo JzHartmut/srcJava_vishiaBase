@@ -711,8 +711,8 @@ public abstract class MainCmd implements MainCmd_ifc
   protected void writeErrorDirectly(String sInfo, Exception exception)
   {
     System.err.println("");
-    System.err.println( "EXCEPTION: " + sInfo + exception.getMessage());
-    exception.printStackTrace(System.err);
+    System.err.println( "EXCEPTION: " + sInfo); // + exception.getMessage());
+    exception.printStackTrace(System.err);  //the exception message will be printed here.
   }
 
   /*--------------------------------------------------------------------------------------------------------*/
