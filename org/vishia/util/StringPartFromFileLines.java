@@ -17,10 +17,12 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author www.vishia.de/Java
+ * @author Hartmut Schorrig www.vishia.org/Java
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2006-05-00: www.vishia.de creation
+ * 2009-05-31: Hartmut detecting and ignoring a BOM (byte order mark) as first char.
+ * 2009-04-09: Hartmut encoding detection korrig.
+ * 2006-05-00: Hartmut creation
  *
  ****************************************************************************/
 package org.vishia.util;
@@ -97,8 +99,13 @@ public class StringPartFromFileLines extends StringPart
       int posNewline = sFirstLine.indexOf('\n');
       if(posNewline < 0) posNewline = sFirstLine.length();
       StringPart spFirstLine = new StringPart(sFirstLine.substring(0, posNewline));
-      if(spFirstLine.seek("encoding=", StringPart.seekEnd).found())
+      spFirstLine.setIgnoreWhitespaces(true);
+      /**Check whether the encoding keyword is found: */
+      if(spFirstLine.seek(sEncodingDetect, StringPart.seekEnd).found()
+        && spFirstLine.scan("=").scanOk() 
+        )
       { String sCharset;
+        spFirstLine.seekNoWhitespace();
         if(spFirstLine.getCurrentChar() == '\"')
         { sCharset = spFirstLine.seek(1).lentoQuotionEnd('\"', 100).getCurrentPart();
           if(sCharset.length()>0) sCharset = sCharset.substring(0, sCharset.length()-1);
@@ -120,7 +127,13 @@ public class StringPartFromFileLines extends StringPart
     { readIn = new BufferedReader(new FileReader(fromFile));
     }
     readnextContentFromFile();
-    assign(buffer.toString());
+    if(buffer.charAt(0) == '\ufeff')
+    { /**ignore a BOM Byte Order Mark.*/
+      assign(buffer.substring(1));
+    }
+    else
+    { assign(buffer.substring(0));
+    }
   }
 
   

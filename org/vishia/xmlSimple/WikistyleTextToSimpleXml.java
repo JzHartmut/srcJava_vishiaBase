@@ -17,10 +17,12 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.    
  *
- * @author www.vishia.de/Java
- * @version 2006-06-15  (year-month-day)
- * list of changes: 
- * 2006-05-00 JcHartmut: creation
+ * @author Hartmut Schorrig, www.vishia.org
+ * @version 2009-07-02  (year-month-day)
+ * list of changes:
+ * 2009-07-02 Hartmut: new: A ~ is replaced by the value of attribute expandLabelOwn, if it is found.
+ *                     This feature is used in conclusion with XmiDocu.xslp to shorten the name of the own class. 
+ * 2006-05-00 Hartmut: creation
  *
  ****************************************************************************/
 package org.vishia.xmlSimple;
@@ -211,22 +213,28 @@ public class WikistyleTextToSimpleXml
   { this.report = report;
   }
   
-  /** Tests in the tree of xml elements all Elements wether they are appropriate &lt;p>-tags. 
-   * A appropriate &lt;p>-Tag is a tag which contains the attribute "expandWikistyle".
-   * <br>
-   * If such &lt;ü>-Tag is found, its textual content is read. Child Elements are ignored. It means, no
-   * xml-formatted &lt;b>- or adequate tags are considered. Its content is ignored. 
+  /** Tests all Elements of the XML tree whether their content should be expand.
+   * The children of the current level are tested with an iterator, for all child elements
+   * this routine is called recursively.
+   * If an element contains the attribute "expandWikistyle", it should be expand.
+   * The plain text of such an element is taken as input to expand. 
+   * Child Elements are ignored. It means, no xml-formatted &lt;b>- or adequate tags are considered. 
    * Only the the textual content directly held under this element is used.
-   * The &lt;p>-XmlNode will be removed, and the created new Elements are placed into this position instead,
-   * see Method {@link insertInIterator(String, ListIterator, List, String)}.  
+   * <br>
+   * If it is a &lt;p>-element, it will be removed, and the created new Elements are placed into this position instead,
+   * If it is another element, its content is removed and the content is replaced by the expanding result
+   * <br>
    * The new Elements are &lt;p>-Elements with XHTML-formatting inside, &lt;ul>-Elements and so on, 
    * see the general description of this class. All attributes of the original &lt;p>-XmlNode are copied 
    * to the created &lt;p-Elements inside.
-   * 
+   * <br>
+   * For preparation the expanding result see 
+   * {@link #insertAndConvertText(String, ListIterator, XmlNode, Map, String)}.  
    * @param xmlTree The tree to convert.
    * @throws XmlException 
    */
-  public void testXmlTreeAndConvert(XmlNode xmlTree) throws XmlException
+  public void testXmlTreeAndConvert(XmlNode xmlTree) 
+  throws XmlException
   {
     List<XmlNode> listParaElements = xmlTree.listChildren();
     if(listParaElements != null)
@@ -239,6 +247,7 @@ public class WikistyleTextToSimpleXml
         //if(xmlTest.getChildren().size()==0) //only if there are no xml formatting inside paragraph
         if(xmlTest.getName().equals("p") && (attrExpand = xmlTest.getAttribute("expandWikistyle"))!=null)
         { String sText = xmlTest.getText();
+          String sLabelOwn1 = xmlTest.getAttribute("expandLabelOwn");
           if(report!=null)
           { int sMax = sText.length(); if(sMax > 30){ sMax = 30;}
             report.reportln(Report.fineInfo, 0, "ConverterWikiStyle:" + sText.substring(0, sMax));
@@ -250,10 +259,11 @@ public class WikistyleTextToSimpleXml
           //remove the founded element:
           iterElements.remove(); 
           //add new elements instead using the sText, all elements inherit the attrrib:
-          insertInIterator(sText, iterElements, null, attrib, sClass);
+          insertAndConvertText(sText, iterElements, null, attrib, sClass, sLabelOwn1);
         }
         else if( (xmlTest.getAttribute("expandWikistyle"))!=null)
         { String sText = xmlTest.getText();
+          String sLabelOwn1 = xmlTest.getAttribute("expandLabelOwn");
           if(report!=null)
           { int sMax = sText.length(); if(sMax > 30){ sMax = 30;}
             report.reportln(Report.fineInfo, 0, "ConverterWikiStyle:" + sText.substring(0, sMax));
@@ -263,7 +273,7 @@ public class WikistyleTextToSimpleXml
           attrib = null; 
           xmlTest.removeChildren();
           String sClass = xmlTest.getAttribute("class");  //the style attribute
-          insertInIterator(sText, null, xmlTest, attrib, sClass);
+          insertAndConvertText(sText, null, xmlTest, attrib, sClass, sLabelOwn1);
                   
           
         }
@@ -274,6 +284,16 @@ public class WikistyleTextToSimpleXml
         idx +=1;
       }
     }     
+  }
+  
+  
+  
+  
+  
+  public void setWikistyleFormat(String sInput, XmlNode dstElement, Map attributes, String sClass) 
+  throws XmlException
+  {
+    insertAndConvertText(sInput, null, dstElement, attributes, sClass, null);
   }
   
   
@@ -315,17 +335,21 @@ public class WikistyleTextToSimpleXml
    * the new generated Elements. 
    * 
    * @param sInput A String may be containing wikipedia style elements.
-   * @param iter If not null, Iterator of Elements, getted via anyElement.getChildren().listIterator(). 
+   * @param iter If not null, it is an ListIterator of XML-children. 
    *        The resulting elements are added at the current position of the iterator.
-   * @param dstElement If not null, add new Elements as child into this given XmlNode.       
+   * @param dstElement If not null, add new Elements as children into this given XmlNode.       
    * @param attributes List of attributes, type org.jdom.Attribute. All attributes are setted to
    *        all created &lt;p>-Elements.
    * @param sClass Value of the class attribute from the original element.
+   * @param sLabelOwn transported in nested level, set from an Attribute expandLabelOwn.
+   *        It replaces a <code>~</code>-character in a label.
    * @throws XmlException 
    *        
    */
   @SuppressWarnings("unchecked")
-  public void insertInIterator(String sInput, ListIterator iter, XmlNode dstElement, Map attributes, String sClass) throws XmlException
+  private void insertAndConvertText(String sInput, ListIterator iter, XmlNode dstElement
+      , Map attributes, String sClass, String sLabelOwn
+      ) throws XmlException
   { 
   	iterBaseElement = iter; 
   	this.dstElement = dstElement;
@@ -402,10 +426,10 @@ public class WikistyleTextToSimpleXml
               sLine = nestingLevel(sLine, idxNesting+1, iter, dstElement, dstNamespace, sClass); //##1
               if(sLine.length()>0)
               { if(xmlChild.getName().equals("dt"))
-  	            { convertLine(sLine, xmlChild, dstNamespace);
+  	            { convertLine(sLine, xmlChild, dstNamespace, sLabelOwn);
   	            }
   	            else
-  	            { writeParagraphInElement(sLine, xmlChild, dstNamespace, attributes, sClassNesting == null ? null : sClassNesting + "_p");
+  	            { writeParagraphInElement(sLine, xmlChild, dstNamespace, attributes, sClassNesting == null ? null : sClassNesting, sLabelOwn); // + "_p");
   	            }
               }
             }break;
@@ -416,7 +440,7 @@ public class WikistyleTextToSimpleXml
             { //a new line not beginning with a special char, it is a paragraph at basic level. 
               xmlChild = initNesting();
               xmlPre = null;
-              writeParagraphInIter(sLine, iter, xmlChild, dstNamespace, attributes, sClass);
+              writeParagraphInIter(sLine, iter, xmlChild, dstNamespace, attributes, sClass, sLabelOwn);
             }          //special char at start of paragraphs line:
           }//switch
         }
@@ -437,7 +461,16 @@ public class WikistyleTextToSimpleXml
   
   
  
-  private void convertLine(String sInput, XmlNode xmlRet, String dstNamespace) throws XmlException
+  /**converts a line
+   * @param sInput
+   * @param xmlRet
+   * @param dstNamespace
+   * @param sLabelOwn transported in nested level, set from an Attribute expandLabelOwn.
+   *        It replaces a <code>~</code>-character in a label.
+   * @throws XmlException
+   * 
+   */
+  private void convertLine(String sInput, XmlNode xmlRet, String dstNamespace, String sLabelOwn) throws XmlException
 	{ //test the next appearances of some special chars:
 	  final int kNothing = 0, 
 	            kBold=1, 
@@ -445,6 +478,7 @@ public class WikistyleTextToSimpleXml
 	            kBoldItalic=3, 
 	            kHyperlink=4, 
 	            kHyperlinkAbsolute=5,
+	            kAnchor=6,
 	            kImage=8,
               kInset=9,
 	            kCode=10
@@ -516,6 +550,10 @@ public class WikistyleTextToSimpleXml
           { kind = kHyperlinkAbsolute; 
             startAfter = posCtrlChars + 3; 
           }
+          else if( sInput.substring(posCtrlChars).startsWith("[[&"))
+          { kind = kAnchor; 
+            startAfter = posCtrlChars + 3; 
+          }
           else
   		    { kind = kHyperlink; 
   		      startAfter = posCtrlChars + 2; 
@@ -539,7 +577,7 @@ public class WikistyleTextToSimpleXml
 		        if(endCtrledPart > startAfter)
 		        { XmlNode xmlBold = xmlRet.addNewNode("stroke", dstNamespace);
 		          XmlNode xmlNew = xmlBold.addNewNode("em", dstNamespace);
-		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
+		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace, sLabelOwn);  
 		        }
 		      } break;
 		      case kBold:
@@ -548,7 +586,7 @@ public class WikistyleTextToSimpleXml
 		        else { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;}
 		        if(endCtrledPart > startAfter)
 		        { XmlNode xmlNew = xmlRet.addNewNode("stroke", dstNamespace);
-		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
+		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace, sLabelOwn);  
 		        }
 		      } break;
 		      case kItalic:
@@ -558,7 +596,7 @@ public class WikistyleTextToSimpleXml
 		        if(endCtrledPart > startAfter)
 		        { XmlNode xmlNew = xmlRet.createNode("em", dstNamespace);
 		          xmlRet.addContent(xmlNew);
-		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
+		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace, sLabelOwn);  
 		        }
 		      } break;
 		      case kCode:
@@ -572,38 +610,73 @@ public class WikistyleTextToSimpleXml
 		        if(endCtrledPart > startAfter)
 		        { XmlNode xmlNew = xmlRet.createNode("code", dstNamespace);
 		          xmlRet.addContent(xmlNew);
-		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
+		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace, sLabelOwn);  
 		        }
 		      } break;
 		      case kHyperlink: case kHyperlinkAbsolute:
-		      { int startText, endCtrledPartHref;
-		        endCtrledPartHref = sInput.indexOf("|", startAfter); 
-		        endCtrledPart = sInput.indexOf("]]", startAfter); 
-		        if(endCtrledPart >= 0)
-		        { startNextPart = endCtrledPart +2; }
-		        else 
-		        { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;
-		        }
-		        if(endCtrledPartHref <0 || endCtrledPartHref > endCtrledPart)
-		        { startText = startAfter;
-		          endCtrledPartHref = endCtrledPart;
-		        }
-		        else
-		        { startText = endCtrledPartHref+1;
-		        }
-		        if(endCtrledPart > startAfter)
-		        { XmlNode xmlNew = xmlRet.createNode("a", dstNamespace);
-		          xmlRet.addContent(xmlNew);
-		          String sHref = sInput.substring(startAfter, endCtrledPartHref);
-		          if(kind == kHyperlinkAbsolute)
-		          { xmlNew.setAttribute("href", sHref);
-		          }
-		          else
-		          { xmlNew.setAttribute("href", "#" + sHref);
-		          }
-		          convertLine(sInput.substring(startText, endCtrledPart), xmlNew, dstNamespace);  
-		        }
-		      } break;
+          { int startText, endCtrledPartHref;
+            endCtrledPartHref = sInput.indexOf("|", startAfter); 
+            endCtrledPart = sInput.indexOf("]]", startAfter); 
+            if(endCtrledPart >= 0)
+            { startNextPart = endCtrledPart +2; }
+            else 
+            { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;
+            }
+            if(endCtrledPartHref <0 || endCtrledPartHref > endCtrledPart)
+            { startText = startAfter;
+              endCtrledPartHref = endCtrledPart;
+            }
+            else
+            { startText = endCtrledPartHref+1;
+            }
+            if(endCtrledPart > startAfter)
+            { XmlNode xmlNew = xmlRet.createNode("a", dstNamespace);
+              xmlRet.addContent(xmlNew);
+              String sHref = sInput.substring(startAfter, endCtrledPartHref);
+              int posSubst;
+              /**replaces a ~ with the attribute value of expandLabelOwn: */
+              if(sLabelOwn != null && (posSubst=sHref.indexOf('~')) >=0)
+              { sHref = sHref.substring(0, posSubst) + sLabelOwn + sHref.substring(posSubst+1);
+              }
+              if(kind == kHyperlinkAbsolute)
+              { xmlNew.setAttribute("href", sHref);
+              }
+              else
+              { xmlNew.setAttribute("href", "#" + sHref);
+              }
+              convertLine(sInput.substring(startText, endCtrledPart), xmlNew, dstNamespace, sLabelOwn);  
+            }
+          } break;
+          case kAnchor: 
+          { int startText, endCtrledPartHref;
+            endCtrledPartHref = sInput.indexOf("|", startAfter); 
+            endCtrledPart = sInput.indexOf("]]", startAfter); 
+            if(endCtrledPart >= 0)
+            { startNextPart = endCtrledPart +2; }
+            else 
+            { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;
+            }
+            if(endCtrledPartHref <0 || endCtrledPartHref > endCtrledPart)
+            { startText = startAfter;
+              endCtrledPartHref = endCtrledPart;
+            }
+            else
+            { startText = endCtrledPartHref+1;
+            }
+            if(endCtrledPart > startAfter)
+            { XmlNode xmlNew = xmlRet.createNode("span", dstNamespace);
+              xmlRet.addContent(xmlNew);
+              String sHref = sInput.substring(startAfter, endCtrledPartHref);
+              int posSubst;
+              /**replaces a ~ with the attribute value of expandLabelOwn: */
+              if(sLabelOwn != null && (posSubst=sHref.indexOf('~')) >=0)
+              { sHref = sHref.substring(0, posSubst) + sLabelOwn + sHref.substring(posSubst+1);
+              }
+              xmlNew.setAttribute("class", "anchor");
+              xmlNew.setAttribute("id", sHref);
+              convertLine(sInput.substring(startText, endCtrledPart), xmlNew, dstNamespace, sLabelOwn);  
+            }
+          } break;
           case kImage:
           { endCtrledPart = sInput.indexOf("]]", startAfter); 
             if(endCtrledPart >= 0)
@@ -829,7 +902,7 @@ public class WikistyleTextToSimpleXml
 	        //add it to the previous level, first to iterBaseElement.
 	        addToParentList(level-1, xmlContainer);
 	        if(sClass != null)
-	        { sClassNesting = sClass + "_" + sTagNesting;
+	        { sClassNesting = sClass; // + "_" + sTagNesting;
 	        	xmlContainer.setAttribute("class", sClassNesting);
 	        }
 	        xmlNesting[level] = xmlContainer;
@@ -844,7 +917,7 @@ public class WikistyleTextToSimpleXml
 		        xmlChild = xmlNesting[level] = dstElement.createNode(sTagListItem, dstNamespace);
 		        addToParentList(level-1, xmlNesting[level]);
 		        if(sClass != null)
-		        { sClassNesting = sClass + "_" + sTagListItem;
+		        { sClassNesting = sClass; // + "_" + sTagListItem;
 	        	  xmlChild.setAttribute("class", sClassNesting);
 		        }
 		        if(elementsWithAttrib != null)
@@ -977,7 +1050,9 @@ public class WikistyleTextToSimpleXml
   }
   
   
-  private void writeParagraphInIter(String sLine, ListIterator iterParent, XmlNode dstElement, String dstNamespace, Map attributes, String sClass) throws XmlException  
+  private void writeParagraphInIter(String sLine, ListIterator iterParent, XmlNode dstElement
+  , String dstNamespace, Map attributes, String sClass, String sLabelOwn
+  ) throws XmlException  
   { XmlNode xmlParagraph = dstElement.createNode("p", dstNamespace);
     if(iterParent != null){ iterParent.add(xmlParagraph);}
     if(dstElement != null){ dstElement.addContent(xmlParagraph); }
@@ -996,12 +1071,14 @@ public class WikistyleTextToSimpleXml
     if(sClass != null)
     { xmlParagraph.setAttribute("class", sClass);
     }
-    convertLine(sLine, xmlParagraph, dstNamespace);
+    convertLine(sLine, xmlParagraph, dstNamespace, sLabelOwn);
   }
   
   
   
-  private void writeParagraphInElement(String sLine, XmlNode xmlParent, String dstNamespace, Map attributes, String sClass) throws XmlException  
+  private void writeParagraphInElement(String sLine, XmlNode xmlParent, String dstNamespace
+  , Map attributes, String sClass, String sLabelOwn
+  ) throws XmlException  
   { XmlNode xmlParagraph = xmlParent.addNewNode("p", dstNamespace);
     if(attributes != null)
     { 
@@ -1018,7 +1095,7 @@ public class WikistyleTextToSimpleXml
     if(sClass != null)
     { xmlParagraph.setAttribute("class", sClass);
     }
-    convertLine(sLine, xmlParagraph, dstNamespace);
+    convertLine(sLine, xmlParagraph, dstNamespace, sLabelOwn);
   }
   
   /**Only for debug. */

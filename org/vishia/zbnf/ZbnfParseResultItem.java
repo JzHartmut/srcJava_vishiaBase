@@ -125,6 +125,13 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
   public String getParsedString();
 
   
+  /**Returns the String content of the given child or null, if no such child is found.
+   * @param child
+   */
+  public String getChildString(String child);
+  
+  
+  
   /** Returns the number of the alternative, -1 if there is not a alternative choice,
    * 0 if there is an empty option.
    * @return Number of alternative 1.. if a alternative is used actively.

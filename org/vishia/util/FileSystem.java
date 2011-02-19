@@ -20,8 +20,11 @@
  * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2007-10-15: JcHartmut www.vishia.de creation
- * 2008-04-02: JcHartmut some changes
+ * 2009-05-06 Hartmut: new: writeFile(content, file);
+ * 2009-05-06 Hartmut: bugfix: addFileToList(): A directory was also added like a file if wildcards are used. It is false, now filtered file.isFile().
+ * 2009-03-24 Hartmut: new: isAbsolutePathOrDrive()
+ * 2008-04-02 Hartmut: some changes
+ * 2007-10-15 Hartmut: www.vishia.org creation
  *
  ****************************************************************************/
 package org.vishia.util;
@@ -31,10 +34,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.FileFilter;
+import java.io.Writer;
 import java.util.List;
 
 /**This class supports some functions of file system access above the class java.io.File
@@ -49,12 +54,112 @@ public class FileSystem
     void add(File file);
   }
   
+  
+  /**This class supports the call of {@link #addFileToList(String, List)}. */
   private static class ListWrapper implements AddFileToList
   { private final List<File> files;
     public ListWrapper(List<File> files){ this.files = files; }
     public void add(File file){ files.add(file); }
   };
 
+  
+  /**This class holds a File with its Basepath. It is used inside 
+   * {@link #addFilesWithBasePath(String, List)}.
+   * The user should create a List<FileAndBasePath> and supply it to this method.
+   *
+   */
+  public static class FileAndBasePath
+  { final public File file;
+    final public String basePath;
+    final public String localPath;
+    FileAndBasePath(File file, String sBasePath, String localPath)
+    { this.file = file; 
+      this.basePath = sBasePath;
+      this.localPath = localPath;
+    }
+  }
+  
+  /**Temporary class used only inside {@link #addFilesWithBasePath}.
+   * An instance is created for all files of one call of {@link #addFileToList}
+   */
+  private static class FilesWithBasePath implements AddFileToList
+  {
+    /**injected composition of the String of base path. */
+    final String sPathBase;
+    /**Aggregation of the list, it is defined at user level. */
+    final List<FileAndBasePath> list;   
+    
+    final int posLocalPath;
+    
+    /**Construtor fills the static members. */
+    FilesWithBasePath(String sPathBase, int posLocalPath, List<FileAndBasePath> list)
+    { this.sPathBase = sPathBase; 
+      this.list = list;
+      this.posLocalPath = posLocalPath;
+    }
+    
+    /**Implements interface method. */
+    public void add(File file)
+    { final String localPath; 
+      String absPath = file.getAbsolutePath();
+      if(posLocalPath >0)
+      { localPath = absPath.substring(posLocalPath);
+      }
+      else
+      { localPath = absPath;
+      }
+      FileAndBasePath entry = new FileAndBasePath(file, sPathBase, localPath); //sPathBase ist from constructor
+      list.add(entry);
+    }
+    
+    
+  }
+  
+  /**Fills the list with found files to sPath.
+   * Example:
+   * <pre>
+   * addFilesWithBasePath("..\\example/dir:localdir/ ** /*.h", list);
+   * </pre>
+   * fills <code>../example/dir/</code> in all elements basePath of list,
+   * and fills all files with mask <code>*.h</code> from localdir and all sub folders,
+   * with the local name part starting with <code>localdir/...</code> 
+   * in all elements localPath.
+   * @param sPath may contain a <code>:</code>, this is instead <code>/</code> 
+   *        and separates the base path from a local path.
+   *        The sPath may contain backslashes for windows using, it will be converted to slash. 
+   * @param list The list to fill in files with the basepath. 
+   *        The basepath is <code>""</code> if no basepath is given in sPath.
+   * @return false if no file is found.
+   * @throws FileNotFoundException
+   */
+  public static boolean addFilesWithBasePath(String sPath, List<FileAndBasePath> list) 
+  throws FileNotFoundException
+  { final String sPathBase;
+    final File dir;
+    final int posLocalPath;
+    int posBase = sPath.indexOf(':');
+    if(posBase >=2)
+    { sPathBase = (sPath.substring(0, posBase) + "/").replace('\\', '/');
+      dir = new File(sPathBase);
+      String sBasepathAbsolute = dir.getAbsolutePath();
+      //The position after the separator after the absPath of base directory
+      // is the start of the local path.
+      posLocalPath = sBasepathAbsolute.length() +1;  
+      sPath = sPath.substring(posBase +1);
+    }
+    else 
+    { sPathBase = ""; 
+      posLocalPath = 0;
+      dir = null;
+    }
+    //The wrapper is created temporary to hold the informations about basepath
+    // to fill in the members of the list. 
+    // The wrapper instance isn't necessary outside of this static method. 
+    FilesWithBasePath wrapper = new FilesWithBasePath(sPathBase, posLocalPath, list);
+    return FileSystem.addFileToList(dir,sPath, wrapper);
+  }
+  
+  
   /**Reads the content of a whole file into a String.
    * This method supplies a null pointer if a exception has occurs internally,
    * it throws never an Exception itself.
@@ -78,7 +183,22 @@ public class FileSystem
   }
 
 
-
+  public static boolean writeFile(String content, String sFile)
+  { boolean bOk = true;
+    try{
+      FileWriter writer = new FileWriter(sFile, false);
+      if(true) //writer.open(sFile, false)>=0)
+      {
+        writer.write(content); 
+        writer.close();
+      } else {
+        bOk = false;
+      }
+    } catch (IOException e)
+    { bOk = false;
+    }
+    return bOk;
+  }
 
 
 
@@ -124,6 +244,32 @@ public class FileSystem
   }
 
 
+  
+  
+  
+  /**Returns true if the String which describes a file path is recognized as an absolute path.
+   * The conditions to recognize as absolute path are:
+   * <ul>
+   * <li>Start with slash or backslash
+   * <li>Contains a ':' as second char. In this case on windows it is a drive letter.
+   *   the path should used as absolute path mostly, because an access to another drive is done,
+   *   the current directory or another directory couldn't be applied.
+   * </ul>  
+   * @param filePath 
+   * @return
+   */
+  public static boolean isAbsolutePathOrDrive(String filePath)
+  { char cc;
+    return (filePath.length() >=2 && filePath.charAt(1)== ':') //a drive using is detect as absolute path.
+        || (filePath.length() >=1 
+           && ( (cc=filePath.charAt(0))== '/' || cc == '\\') //slash or backslash as first char
+           )
+           ;
+    
+  }
+  
+  
+  
 
   /**adds Files with the wildcard-path to a given list.
    *
@@ -217,7 +363,9 @@ public class FileSystem
         { FileFilter filter = new WildcardFilter(sPathBefore, sPathBehind);
           File[] files = fDir.listFiles(filter);
           for(File file: files)
-          { listFiles.add(file);
+          { if(file.isFile())
+            { listFiles.add(file);
+            }
           }
         }
         else

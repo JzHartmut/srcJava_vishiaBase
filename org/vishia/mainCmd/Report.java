@@ -27,6 +27,8 @@
 
 package org.vishia.mainCmd;
 
+import java.io.FileNotFoundException;
+
 
 /** <font color="0x00ffff">Dieses Interface dient zur Ausgabe von Reportmeldungen für kommandozeilenartige Abarbeitung.
     </font>
@@ -172,6 +174,8 @@ public interface Report
   public void writeError(String sError, Exception exception);
 
 
+  public void openReportfile(String sFileReport, boolean bAppendReport) 
+  throws FileNotFoundException;
 
 
   /** report inside a line*/

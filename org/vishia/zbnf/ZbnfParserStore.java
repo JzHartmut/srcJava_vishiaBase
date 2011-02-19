@@ -465,6 +465,16 @@ class ZbnfParserStore
       }  
     }
 
+    
+    public String getChildString(String key)
+    {
+      ZbnfParseResultItem child = getChild(key);
+      if(child != null) return child.getParsedString();
+      else return null;
+    }
+    
+    
+    
 
     public Iterator<ZbnfParseResultItem> iterChildren()
     { return iteratorChildren();
@@ -571,9 +581,7 @@ class ZbnfParserStore
    * @return The position of this entry, using for rewind(posititon);
    */
   private int add(String sSemantic, String sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
-  { //Note: the item should be member (respective outer class) of common ParserStore though it is created in context of this.
-    //item = (Parser.this).parserStore.new ParseResultItemImplement(sSemantic);
-    item = new ParseResultItemImplement(this, sSemantic, parent, "?");
+  { item = new ParseResultItemImplement(this, sSemantic, parent, "?");
     item.sInput = sInput;
     item.parsedString = sInput;
     item.kind = nAlternative;
@@ -589,10 +597,6 @@ class ZbnfParserStore
     { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
     return items.size() -1;  //position of the entry
-  }
-
-  int xxxaddOption(int numberOfOption, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
-  { return add(sSemantic, null, -numberOfOption, start, end, nLine, nColumn, parent);
   }
 
 
@@ -642,11 +646,6 @@ class ZbnfParserStore
   int addRepetitionRepeat(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
   { return add(sSemantic, null, -countRepetition, start, end, nLine, nColumn, parent);
   }
-
-
-  //int addSingleOption(int countRepetition, long start, long end, int nLine, int nColumn )
-  //{ return add(null, null, kSingleOption, start, end, nLine, nColumn);
-  //}
 
 
   int addConstantSyntax(String sInput, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
@@ -894,7 +893,7 @@ class ZbnfParserStore
   
   /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
   void stop()
-  { //to test, set here a breadpoint.
+  { //to test, set here a breakpoint.
   }
 }
 

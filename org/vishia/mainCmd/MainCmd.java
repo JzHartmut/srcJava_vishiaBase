@@ -20,8 +20,10 @@
  * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2006-05-00: JcHartmut www.vishia.de creation
+ * 2009-03-08: Hartmut new: openReportfile() as new protected method, used internally, but the report file is able to change.
+ * 2009-03-08: Hartmut new: executeCmdLine() is now deprecated, use new executeCmdLine(..., ProcessBuilder,..).  
  * 2008-04-02: JcHartmut some changes
+ * 2006-05-00: JcHartmut www.vishia.de creation
  *
  ****************************************************************************/
 
@@ -31,6 +33,7 @@ package org.vishia.mainCmd;
 import java.io.*;
 import java.util.*;  //List
 import java.text.*;  //ParseException
+
 import org.vishia.util.FileSystem;
 
 /**
@@ -128,11 +131,13 @@ public abstract class MainCmd implements MainCmd_ifc
 
   private String sFileReport = "report.txt";
 
-  /** All reports with a level less than or equal this level will be written on display.*/
+  /** All reports with a level less than or equal this level will be written on display.
+   *  Note: using {@link Report#writeInfo(String)} etc. writes to display also if this attribute is 0.
+   */
   private int nReportLevelDisplay = 0;   //default: don't write reports to display
 
-  /** writeError(), writeWarning(), writeInfo()  are also reported if the level is equal or less than 1,2,3*/
-  private int nLevelDisplayToReport = 0;
+  /** writeError(), writeWarning(), writeInfo()  are also reported if the level is equal or greater than 1,2,3*/
+  private int nLevelDisplayToReport = Report.info;
 
   /** List of strings contents help Info in form of lines. The list should be filled with method addHelpInfo(String);*/
   private List<String> listHelpInfo = new LinkedList<String>();
@@ -304,7 +309,7 @@ public abstract class MainCmd implements MainCmd_ifc
    * 
    * @throws ParseException
    */
-  public void parseArguments()
+  public final void parseArguments()
   throws ParseException
   {
     parseArguments(cmdLineArgs);
@@ -325,7 +330,7 @@ public abstract class MainCmd implements MainCmd_ifc
      At example a cmd line invoke like <code>>cmd -a arg1 @@file -x argx</code> results in the followed argument array:<br/>
      <code>-a arg1 arguments-from-file-lines -x argx</code>
   */
-  public void parseArguments(String [] args)
+  public final void parseArguments(String [] args)
   throws ParseException
   { cmdLineArgs = args;
     MainCmd main = this;
@@ -368,26 +373,14 @@ public abstract class MainCmd implements MainCmd_ifc
     //debug System.out.println("report level=" + main.nReportLevel + " file:" + sFileReport);
     /** open reportfile: */
     if(nReportLevel > 0)
-    { boolean bMkdir= false; 
-      try{ main.fReport = new FileWrite(sFileReport, bAppendReport); }
-      catch(IOException exception)
-      { //it is possible that the path not exist.
-        bMkdir = true;
+    { try{ openReportfile(sFileReport, bAppendReport); }
+      catch(FileNotFoundException exc)
+      { writeError("ERROR creating reportfile-path: " +sFileReport);
+        throw new ParseException("ERROR creating reportfile-path: " +sFileReport, 0);
+      /*if a requested reportfile is not createable, the programm can't be run. The normal problem reporting fails.
+        That's why the program is aborted here.
+      */
       }
-      if(bMkdir)
-      { try
-        { FileSystem.mkDirPath(sFileReport); 
-          main.fReport = new FileWrite(sFileReport, bAppendReport);
-        }
-        catch(FileNotFoundException exc)
-        { writeError("ERROR creating reportfile-path: " +sFileReport);
-          throw new ParseException("ERROR creating reportfile-path: " +sFileReport, 0);
-        /*if a requested reportfile is not createable, the programm can't be run. The normal problem reporting fails.
-          That's why the program is aborted here.
-        */
-        }
-      }  
-
     }
     if(!checkArguments())
     {
@@ -396,8 +389,34 @@ public abstract class MainCmd implements MainCmd_ifc
   }
 
 
+  
+  
+  public void openReportfile(String sFileReport, boolean bAppendReport) 
+  throws FileNotFoundException
+  { 
+    boolean bMkdir= false; 
+    this.sFileReport = sFileReport;
+    if(fReport != null)
+    { try{ fReport.close(); } catch(IOException exc){}
+    }
+    try{ this.fReport = new FileWrite(sFileReport, bAppendReport); }
+    catch(IOException exception)
+    { //it is possible that the path not exist.
+      bMkdir = true;
+    }
+    if(bMkdir)
+    { { FileSystem.mkDirPath(sFileReport); 
+        this.fReport = new FileWrite(sFileReport, bAppendReport);
+      }
+      
+    }  
+    
+  }
+  
+  
+  
   /** Checks the arguments after parsing from command line, test of consistence. This method must overwrite from
-   * the user, may be with a return true. The method is called at last inside parseArguments().
+   * the user, may be with a return true. The method is ocalled at last inside parseArguments().
    * If this method returns false, parseArguments throws an exception in the same manner if on argument errors.
    *
    * @return true if all is ok. If false,
@@ -504,6 +523,8 @@ public abstract class MainCmd implements MainCmd_ifc
   /*--------------------------------------------------------------------------------------------------------*/
 
   /** Execute a command invoke a cmdline call, implements MainCmd_Ifc.
+      @deprecated: since Java 1.5 a ProcessBuilder is available. 
+      The new form {@link #executeCmdLine(String, ProcessBuilder, int, StringBuffer, String)} use it.
   */
   public int executeCmdLine(String cmd, int nReportLevel, StringBuffer output, String input)
   {
@@ -520,6 +541,8 @@ public abstract class MainCmd implements MainCmd_ifc
       The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
       This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
       but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
+      @deprecated: since Java 1.5 a ProcessBuilder is available. 
+      The new form {@link #executeCmdLine(String[], ProcessBuilder, int, StringBuffer, String)} use it.
   */
   public int executeCmdLine(String[] cmd, int nReportLevel, StringBuffer output, String input)
   {
@@ -540,11 +563,75 @@ public abstract class MainCmd implements MainCmd_ifc
       InputStream processError  = process.getErrorStream();  //reads the error from exec.
 
       Runnable cmdOutput = new ShowCmdOutput(output, nReportLevel, new BufferedReader(new InputStreamReader(processOutput) ));
-      Thread threadOutput = new Thread(cmdOutput);
+      Thread threadOutput = new Thread(cmdOutput,"cmdline-out");
       threadOutput.start();  //the thread reads the processOutput and disposes it to the infoln
 
       Runnable cmdError = new ShowCmdOutput(null, nReportLevel < 0 ? -Report.error: Report.error, new BufferedReader(new InputStreamReader(processError) ));
-      Thread threadError = new Thread(cmdError);
+      Thread threadError = new Thread(cmdError,"cmdline-error");
+      threadError.start();   //the thread reads the processError and disposes it to the infoln
+      writeInfoln("process ...");
+      process.waitFor();
+      exitErrorLevel = process.exitValue();
+    }
+    catch(IOException exception)
+    { writeInfoln( "Problem \n" + exception);
+      throw new RuntimeException("IOException on commandline");
+    }
+    catch ( InterruptedException ie )
+    {
+      writeInfoln( ie.toString() );
+      throw new RuntimeException("cmdline interrupted");
+    }
+    return exitErrorLevel;
+  }
+
+  
+  
+  /** Execute a command invoke a cmdline call, implements MainCmd_Ifc.
+      The call must not be needed any input (:TODO:?).
+      The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
+      This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
+      but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
+  */
+  public int executeCmdLine
+  ( String cmd
+  , ProcessBuilder processBuilder
+  , int nReportLevel
+  , StringBuffer output, String input
+  )
+  {
+    String[] cmdArray = cmd.split(" ",0);
+    return executeCmdLine(cmdArray, processBuilder, nReportLevel, output, input);
+    
+  }
+  
+  
+  /** Execute a command invoke a cmdline call, implements MainCmd_Ifc.
+      The call must not be needed any input (:TODO:?).
+      The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
+      This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
+      but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
+  */
+  public int executeCmdLine
+  ( String[] cmd
+  , ProcessBuilder processBuilder
+  , int nReportLevel
+  , StringBuffer output, String input
+  )
+  { int exitErrorLevel;
+    try
+    {
+      processBuilder.command(cmd);
+      Process process = processBuilder.start();
+      InputStream processOutput = process.getInputStream();  //reads the output from exec.
+      InputStream processError  = process.getErrorStream();  //reads the error from exec.
+   
+      Runnable cmdOutput = new ShowCmdOutput(output, nReportLevel, new BufferedReader(new InputStreamReader(processOutput) ));
+      Thread threadOutput = new Thread(cmdOutput,"cmdline-out");
+      threadOutput.start();  //the thread reads the processOutput and disposes it to the infoln
+
+      Runnable cmdError = new ShowCmdOutput(null, nReportLevel, new BufferedReader(new InputStreamReader(processError) ));
+      Thread threadError = new Thread(cmdError,"cmdline-error");
       threadError.start();   //the thread reads the processError and disposes it to the infoln
       //boolean bCont = true;
       writeInfoln("process ...");
@@ -567,16 +654,20 @@ public abstract class MainCmd implements MainCmd_ifc
     }
     catch(IOException exception)
     { writeInfoln( "Problem \n" + exception);
-      throw new RuntimeException("IOException on commandline");
+      exitErrorLevel = 255;
+      //throw new RuntimeException("IOException on commandline");
     }
     catch ( InterruptedException ie )
     {
       writeInfoln( ie.toString() );
-      throw new RuntimeException("cmdline interrupted");
+      exitErrorLevel = 255;
+      //throw new RuntimeException("cmdline interrupted");
     }
     return exitErrorLevel;
   }
-
+  
+  
+  
 
 
   /*--------------------------------------------------------------------------------------------------------*/
@@ -685,7 +776,7 @@ public abstract class MainCmd implements MainCmd_ifc
     else if((kind & mError_writeInfoDirectly) != 0)
     {
       System.err.println("");
-      System.err.println( "WARNING: " + sInfo );
+      System.err.println( "ERROR: " + sInfo );
     }
     else
     { if( (kind & mNewln_writeInfoDirectly) != 0) System.out.println(""); //finishes the previous line

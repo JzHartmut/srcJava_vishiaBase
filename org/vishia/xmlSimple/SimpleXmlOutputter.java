@@ -17,17 +17,25 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author JcHartmut = hartmut.schorrig@vishia.de
+ * @author Hartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2008-01-15: JcHartmut www.vishia.de creation
- * 2008-04-02: JcHartmut some changes
+ * 2009-05-24: Hartmut The out arg for write is a OutputSteamWriter, not a basic Writer. 
+ *             Because: The charset of the writer is got and written in the head line.
+ *             The write routine should used to write a byte stream only.
+ * 2008-04-02: Hartmut some changes
+ * 2008-01-15: Hartmut www.vishia.de creation
+ * 
+ * known bugs and necessary features:
+ * 2008-05-24: Hartmut if US-ASCII-encoding is used, '?' is written on unknown chars yet.
  *
  ****************************************************************************/
 package org.vishia.xmlSimple;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -41,9 +49,17 @@ public class SimpleXmlOutputter
   String sIdent="\r\n                                                                                            ";
   
   
-  public void write(Writer out, XmlNode xmlNode) 
+  /**Writes the XML tree into a byte stream.
+   * @param out A Writer to convert in a Byte stream.
+   * @param xmlNode The top level node
+   * @throws IOException
+   */
+  public void write(OutputStreamWriter out, XmlNode xmlNode) 
   throws IOException
-  { out.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>" + newline);
+  { String sEncodingCanonicalName = out.getEncoding();
+    Charset charset = Charset.forName(sEncodingCanonicalName);
+    String sEncoding = charset.displayName();
+    out.write("<?xml version=\"1.0\" encoding=\"" + sEncoding + "\"?>" + newline);
     out.write("<!-- written with org.vishia.xmlSimple.SimpleXmlOutputter -->");
     writeNode(out, xmlNode, 0);
   }

@@ -27,13 +27,17 @@ package org.vishia.zbnf;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -41,6 +45,7 @@ import org.vishia.mainCmd.Report;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.XmlException;
+import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zbnf.ZbnfParser;
 
 
@@ -59,12 +64,15 @@ import org.vishia.zbnf.ZbnfParser;
 public class Zbnf2Xml
 {
 
-  /*---------------------------------------------------------------------------------------------*/
-  /*::TODO:: for every argument of command line at least one variable must be existed.
-    The variable is to set in testArgument.
-    It is possible that one variable can used in several command line arguments.
-  */
-
+  
+  public interface PrepareXmlNode
+  {
+    
+    void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException;
+  }
+  
+  
+  
   /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
   String sFileIn = null;
 
@@ -76,10 +84,15 @@ public class Zbnf2Xml
   /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
   String sFileOut = null;
   
+  /**Encoding given from cmdline argument -x, -y or -z
+   */
+  Charset encoding = Charset.defaultCharset();
+  
+  
   List<String> additionalSemantic;
 
   /** Type of the conversion, set in dependence of the -o or -x -option. */
-//  private XslConvertMode mode = new XslConvertMode();
+  //private XslConvertMode mode = new XslConvertMode();
   
   
   /** Help reference to name the report output.*/
@@ -156,12 +169,14 @@ public class Zbnf2Xml
       super.addStandardHelpInfo();
       super.addHelpInfo("-i:<INPUT>    inputfilepath, this file is parsing.");
       super.addHelpInfo("-s:<SYNTAX>   syntax prescript in SBNF format for parsing");
-      //super.addHelpInfo("-x:<OUTPUT>   output xml file written in UTF8-Format");
-      super.addHelpInfo("-y:<OUTPUT>   output xml file written in ISO8859-1-Format");
-      super.addHelpInfo("              (8 bit chars, windows compatible)");
-      //super.addHelpInfo("-z:<OUTPUT>   output xml file written in US-ASCII-Format");
+      super.addHelpInfo("-x:<OUTPUT>   output xml file written in UTF8-encoding");
+      super.addHelpInfo("-y:<OUTPUT>   output xml file written in the standard encoding of VM");
+      super.addHelpInfo("                or the given -charset:encoding");
+      super.addHelpInfo("-z:<OUTPUT>   output xml file written in US-ASCII-encoding");
+      super.addHelpInfo("-charset:<CHARSET> use this encoding.");
       super.addHelpInfo("-a:<NAME>     name of a additional XML infomation, typical @attribute");
       super.addHelpInfo("  =<VALUE>    value of the additional XML infomation, may be in \"\"");
+      
       //super.addHelpInfo("-w+          Write with indentification and beatification");
       //super.addHelpInfo("-w-          Write without indentification, long lines");
       //super.addHelpInfo("-w0          Write without indentification, long lines");
@@ -180,16 +195,18 @@ public class Zbnf2Xml
     public boolean testArgument(String argc, int nArg)
     { boolean bOk = true;  //set to false if the argc is not passed
   
-      if(argc.startsWith("-i:"))      sFileIn   = getArgument(3);
-      else if(argc.startsWith("-i")) sFileIn   = getArgument(2);
-      else if(argc.startsWith("-s:")) sFileSyntax  = getArgument(3);
-      else if(argc.startsWith("-s")) sFileSyntax  = getArgument(2);
-      else if(argc.startsWith("-x:")){ sFileOut = getArgument(3); }// mode.setXmlUTF8(); }
-      else if(argc.startsWith("-x")){ sFileOut = getArgument(2); }// mode.setXmlUTF8(); }
-      else if(argc.startsWith("-y:")){ sFileOut = getArgument(3); }//mode.setXmlIso8859(); }
-      else if(argc.startsWith("-y")){ sFileOut = getArgument(2); }//mode.setXmlIso8859(); }
-      else if(argc.startsWith("-z:")){ sFileOut = getArgument(3); }//mode.setXmlASCII(); }
-      else if(argc.startsWith("-z")){ sFileOut = getArgument(2); }//mode.setXmlASCII(); }
+      if(argc.startsWith("--_"))      { /*ignore it. */ }
+      else if(argc.startsWith("-i:")){ sFileIn   = getArgument(3); }
+      else if(argc.startsWith("-i")) { sFileIn   = getArgument(2); }
+      else if(argc.startsWith("-s:")){ sFileSyntax  = getArgument(3); }
+      else if(argc.startsWith("-s")) { sFileSyntax  = getArgument(2); }
+      else if(argc.startsWith("-x:")){ sFileOut = getArgument(3); encoding = Charset.forName("UTF-8"); }
+      else if(argc.startsWith("-x")) { sFileOut = getArgument(2); encoding = Charset.forName("UTF-8"); }
+      else if(argc.startsWith("-y:")){ sFileOut = getArgument(3); }
+      else if(argc.startsWith("-y")) { sFileOut = getArgument(2); }
+      else if(argc.startsWith("-z:")){ sFileOut = getArgument(3); encoding = Charset.forName("US-ASCII"); }
+      else if(argc.startsWith("-z")) { sFileOut = getArgument(2); encoding = Charset.forName("US-ASCII");  }
+      else if(argc.startsWith("-charset:")){ encoding = Charset.forName(getArgument(9));  }
       else if(argc.startsWith("-a:"))
       { //argument
         String sArg = getArgument(3);
@@ -319,7 +336,7 @@ public class Zbnf2Xml
       }
     }
     if(bOk)
-    {
+    { report.writeInfoln("parsing " + sFileIn);
       try{ bOk = parser.parse(spToParse, additionalSemantic); }
       catch(Exception exception)
       { report.writeError("any exception while parsing:" + exception.getMessage());
@@ -340,7 +357,20 @@ public class Zbnf2Xml
       //evaluateStore(parser.getFirstParseResult());
       ZbnfXmlOutput outputXml = new ZbnfXmlOutput();
       //outputXml.write(parser.getFirstParseResult(), sFileOut);
-      try{ outputXml.write(parser, sFileOut); }
+      report.writeInfo(" XML: ");
+      TreeMap<String, String> xmlnsList = parser.getXmlnsFromSyntaxPrescript();
+      if(encoding == null) 
+      { encoding = Charset.forName("UTF-8");
+      }
+      String sEncoding = encoding.displayName();
+      ZbnfParseResultItem zbnfTop = parser.getFirstParseResult();
+      try
+      { 
+        FileOutputStream fileOut = new FileOutputStream(sFileOut);
+        OutputStreamWriter out = new OutputStreamWriter(fileOut, encoding);
+        outputXml.write(zbnfTop, xmlnsList, out);
+        report.writeInfo(" done "); report.writeInfoln("");
+      }
       catch(FileNotFoundException exception)
       { report.writeError("file not writeable:" + sFileOut);
         bOk = false;

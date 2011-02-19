@@ -38,6 +38,11 @@ public class StringPartFromFile extends StringPart
   boolean bEof;
   Reader readIn;
 
+  /**Creates a StringPart from given file. 
+   * @param fromFile
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
   public StringPartFromFile(File fromFile)
   throws FileNotFoundException, IOException
   { super();

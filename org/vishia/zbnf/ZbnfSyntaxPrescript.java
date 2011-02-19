@@ -17,10 +17,16 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author www.vishia.de/Java
+ * @author Hartmut Schorrig www.vishia.org
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2006-05-00: www.vishia.de creation
+ * 2009-08-20: Hartmut bugfix: "toLastCharIncl:" were skipped over 1 char additionally. fixed.
+ * 2009-08-02: Hartmut new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
+ * 2009-03-16: Hartmut new: kFloatWithFactor: Schreibweise <#f*Factor?...> funktioniert jetzt.                                                   
+ *                     new: <toLastChar:chars?...> als alternative Schreibweise von <stringtolastExclChar oder <*<<, einfachere Beschreibung.    
+ *                     new: <toLastCharIncl:chars?...> als alternative Schreibweise von <stringtolastInclChar oder <+<<, einfachere Beschreibung.
+ *                     chg: <...?*... gibt es nicht mehr, nicht mehr zugelassen, war isToTransportOuterResults()                                 
+ * 2006-05-00: Hartmut creation
  *
  ****************************************************************************/
 package org.vishia.zbnf;
@@ -243,9 +249,6 @@ public class ZbnfSyntaxPrescript
   /** see quest method.*/
   protected boolean bAddOuterResults = false;
 
-  /** see quest method.*/
-  protected boolean bTransportOuterResults = false;
-
   /**Either List of all syntax items one after another of this node
    * or List of all apternatives if this is an alternativ syntax node.
    * It is an alternative syntax node if( (eType & (kAlternative | kAlternativOption...) !=0).
@@ -274,11 +277,11 @@ public class ZbnfSyntaxPrescript
    */
   protected String sConstantSyntax;
 
-  /** List of strings used by kStringUntilEndString*/
+  /** List of strings used by kStringUntilEndString or null if not used. */
   protected List<String> listStrings;
 
-  /** FloatToInt-Factor see attribute kFloatToInt */
-  double nFloatToInt = 0.0F;
+  /** Float-Factor see attribute kFloatToInt */
+  double nFloatFactor = 1.0;
 
   /** Ident number, auto generated, to store in the founded users syntax tree.*/
   protected int nodeIdent;
@@ -341,7 +344,15 @@ public class ZbnfSyntaxPrescript
    */
   static final int kNegativVariant = 8;
 
-  static final char kPositivVariant = '!';
+  /**Designation of a option written as <code>[>....]</code>
+   * If the syntax inside square brackets doesn't match, the whole parsing process is aborted.
+   */
+  static final char kUnconditionalVariant = '>';  //60 = 0x3c
+  
+  /**Designation of a option written as <code>[!....]</code>
+   * The syntax inside is expected, but not converted.
+   */
+  static final char kExpectedVariant = '!';  //33 = 0x21
   
   static final int kRepetition = 9;
 
@@ -361,7 +372,7 @@ public class ZbnfSyntaxPrescript
    * but it should be converted to an integer.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
    */
-  static final int kFloatToIntNumber     =15;
+  static final int kFloatWithFactor     =15;
 
   /** This enum marks, that the syntax of the token should be a positive number.
    * It is a string only with characters '0' to '9'.
@@ -464,7 +475,20 @@ public class ZbnfSyntaxPrescript
             { case 'X': eType = kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
               case 'x': eType = kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
               case '-': eType = kIntegerNumber; sDefinitionIdent = "i-IntegerNumber"; spInput.seek(1); break;
-              case 'f': eType = kFloatNumber;   sDefinitionIdent = "i-FloatNumber"; spInput.seek(1); break;
+              case 'f': 
+              { eType = kFloatNumber;   
+                sDefinitionIdent = "i-FloatNumber"; 
+                spInput.seek(1);
+                if(spInput.scanStart().scan("*").scanFloatNumber().scanOk())
+                { nFloatFactor = spInput.getLastScannedFloatNumber();
+                  eType = kFloatWithFactor;
+                  sDefinitionIdent = "i-FloatFactor(" + nFloatFactor + ")"; 
+                }
+                else
+                { eType = kFloatNumber;   
+                  sDefinitionIdent = "i-FloatNumber"; 
+                }  
+              } break;
               default:  eType = kPositivNumber; sDefinitionIdent = "i-PositivNumber"; break;
             }
           }
@@ -514,15 +538,10 @@ public class ZbnfSyntaxPrescript
               else bContinue = false;
             }
           }
+          
           else if(sTest.startsWith("*<<"))
           { eType = kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
-            spInput.seek(3); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
-          }
-          else if(sTest.startsWith("+<<"))
-          { eType = kStringUntilRightEndcharInclusive;
-            sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(3); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
           }
@@ -532,12 +551,34 @@ public class ZbnfSyntaxPrescript
             spInput.seek(20); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
           }
+          else if(sTest.startsWith("toLastChar:"))
+          { eType = kStringUntilRightEndchar;
+            sDefinitionIdent = "i-StringUntilRightEndChar";
+            spInput.seek(11); //read sConstantSyntax from "|"
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            //spInput.seek(1);  //skip over ), ?> will be accept later.
+          }
+          
+          else if(sTest.startsWith("+<<"))
+          { eType = kStringUntilRightEndcharInclusive;
+            sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
+            spInput.seek(3); //read sConstantSyntax from "|"
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+          }
           else if(sTest.startsWith("stringtolastinclChar"))
           { eType = kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(20); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
           }
+          else if(sTest.startsWith("toLastCharIncl:"))
+          { eType = kStringUntilRightEndcharInclusive;
+            sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
+            spInput.seek(15); //read sConstantSyntax from "|"
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            //spInput.seek(1);  //skip over ), ?> will be accept later.
+          }
+          
           else if(sTest.startsWith("*{"))
           { spInput.seek(2); //read sConstantSyntax from "|"
             sIndentChars = spInput.getCircumScriptionToAnyChar("}");
@@ -711,14 +752,16 @@ public class ZbnfSyntaxPrescript
       cc = spInput.seek(1).getCurrentChar();
     }
     else if(cc == '+')
-    { bAddOuterResults = bTransportOuterResults = true;
+    { bAddOuterResults = true;
+      //bTransportOuterResults = true;
       cc = spInput.seek(1).getCurrentChar();
     }
+    /*
     else if(cc == '*')
     { bTransportOuterResults = true;
       cc = spInput.seek(1).getCurrentChar();
     }
-
+    */
     if( cc  == '!')
     { //call of an inner parsing
       sSemantic = null;
@@ -894,13 +937,20 @@ public class ZbnfSyntaxPrescript
           childsAdd(new ZbnfSyntaxPrescript(this, kSkipSpaces));
         }
         String sSyntaxOnStartForErrorNothingFoundChild = spInput.getCurrent(20);
-        char cc = spInput.getCurrentChar();
-        if( charsEnd.indexOf(cc) >=0)
-        { spInput.seek(1);
-          cEnd = cc;
+        char cc;
+        if(spInput.length() >0)
+        { cc = spInput.getCurrentChar();
+          if( charsEnd.indexOf(cc) >=0)
+          { spInput.seek(1);
+            cEnd = cc;
+          }
+          else if(cc == StringPart.cEndOfText)
+          { cEnd = cc;
+          }
         }
-        else if(cc == StringPart.cEndOfText)
-        { cEnd = cc;
+        else
+        { cEnd = StringPart.cEndOfText;
+          cc = 0;
         }
         if(cEnd == 0)
         { sSyntaxOnStartForErrorNothingFound = null;
@@ -1064,7 +1114,12 @@ public class ZbnfSyntaxPrescript
       else if(spInput.startsWith(">"))
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kPositivVariant;
+        optionItem.eType = kUnconditionalVariant;
+      }
+      else if(spInput.startsWith("!"))
+      { spInput.seek(1);
+        optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
+        optionItem.eType = kExpectedVariant;
       }
       else if(spInput.startsWith("|"))
       { spInput.seek(1);
@@ -1279,6 +1334,12 @@ public class ZbnfSyntaxPrescript
   { return sIndentChars;
   }
 
+  /**Returns the factor to multiply for syntax <#f*factor?...> */
+  double getFloatFactor()
+  { return nFloatFactor;
+  }
+  
+  
   /**Returns true, if the result of the parsing with this Syntaxprescript
    * is to assigned into the next component of the outer prescript
    */
@@ -1293,13 +1354,6 @@ public class ZbnfSyntaxPrescript
   { return bAddOuterResults;
   }
 
-
-  /**Returns true, if outer result of parsing with the outer prescript
-   * are to assigned into this component.
-   */
-  boolean isToTransportOuterResults()
-  { return bTransportOuterResults;
-  }
 
 
   /**Returns true if the Syntax item contains some alternatives getted by getListPrescripts. 
@@ -1410,8 +1464,11 @@ public class ZbnfSyntaxPrescript
         case kNegativVariant:
         { sReport = "[?...|...]";
         } break;
-        case kPositivVariant:
+        case kUnconditionalVariant:
         { sReport = "[>...|...]";
+        } break;
+        case kExpectedVariant:
+        { sReport = "[!...|...]";
         } break;
         case kAlternative:
         { sReport = "...|...";
@@ -1437,6 +1494,7 @@ public class ZbnfSyntaxPrescript
         case kIntegerNumber : sReport = "<#-"; break;
         case kHexNumber :     sReport = "<#x"; break;
         case kFloatNumber :   sReport = "<#f"; break;
+        case kFloatWithFactor :   sReport = "<#f*" +nFloatFactor; break;
         case kSkipSpaces :    sReport = "\\n\\t"; break;
         default: sReport = "?-?-?";
       }

@@ -17,10 +17,11 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.    
  *
- * @author www.vishia.de/Java
- * @version 2006-06-15  (year-month-day)
+ * @author Hartmut Schorrig, Pinzberg, Germany www.vishia.org
+ * @version 2009-08-02  (year-month-day)
  * list of changes: 
- * 2006-05-00: www.vishia.de creation
+ * 2009-08-02: Hartmut change of visibility
+ * 2008-03-00: Hartmut creation
  *
  ****************************************************************************/
 package org.vishia.zbnf;
@@ -29,9 +30,12 @@ package org.vishia.zbnf;
 
 //import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.TreeMap;
 
@@ -59,33 +63,55 @@ import org.vishia.zbnf.ZbnfParser;
  * 
  *
  */
-class ZbnfXmlOutput
+public class ZbnfXmlOutput
 {
 
   //final Namespace xhtml = Namespace.getNamespace("http://www.w3.org/1999/xhtml");;
   
-  ZbnfParser parser;
+  //ZbnfParser parser;
   
-  TreeMap<String, String> xmlnsList;
+  private TreeMap<String, String> xmlnsList;
   
-  ZbnfXmlOutput()
+  public ZbnfXmlOutput()
   {
   }
   
-  //void write(ParseResultItem item, String sFileOut)
   /** writes the parsers store to an xml file
    * @throws XmlException 
    * 
    */
-  void write(ZbnfParser parser, String sFileOut) 
+  public void write(ZbnfParser parser, String sFileOut) 
   throws FileNotFoundException, XmlException
-  { this.parser = parser;
+  {
     xmlnsList = parser.getXmlnsFromSyntaxPrescript();
+    ZbnfParseResultItem zbnfTop = parser.getFirstParseResult();
+    Charset encoding = Charset.forName("UTF-8");
+    FileOutputStream fileOut = new FileOutputStream(sFileOut);
+    OutputStreamWriter out = new OutputStreamWriter(fileOut, encoding);
+    //Writer out = new FileWriter(sFileOut);
+    write(zbnfTop, xmlnsList, out);
+  }
+  
+  /**Writes the XML Tree.
+   * @param zbnfTop
+   * @param xmlnsList
+   * @param sFileOut
+   * @param encoding
+   * @throws FileNotFoundException
+   * @throws XmlException
+   */
+  public void write(ZbnfParseResultItem zbnfTop, TreeMap<String, String> xmlnsList, OutputStreamWriter out) 
+  throws FileNotFoundException, XmlException
+  { //this.parser = parser;
+    this.xmlnsList = xmlnsList;
+    String sTopLevelSemantic = zbnfTop.getSemantic();
     
-    ZbnfParseResultItem item = parser.getFirstParseResult();
-    XmlNode xmlTop = addToXmlNode(item, null);  //builds the whole XML tree recursively.
-    { TreeMap<String, String> xmlnsList = parser.getXmlnsFromSyntaxPrescript();
-      if(xmlnsList != null)
+    /**Converts the whole parser result. */
+    XmlNode xmlTop = newChild(sTopLevelSemantic);  //a new node.
+    processComponent(zbnfTop, xmlTop);
+
+    /**Adds the namespace declarations if exists: */
+    { if(xmlnsList != null)
       { Iterator<String> iter = xmlnsList.keySet().iterator();
         while(iter.hasNext())
         { String nsKey = iter.next();
@@ -100,7 +126,6 @@ class ZbnfXmlOutput
     toWikistyle.testXmlTreeAndConvert(xmlTop);
     try
     {
-      Writer out = new FileWriter(sFileOut);
       SimpleXmlOutputter outputter = new SimpleXmlOutputter();
       outputter.write(out, xmlTop);
       out.flush();
@@ -110,51 +135,8 @@ class ZbnfXmlOutput
       // TODO Auto-generated catch block
       e.printStackTrace();
     }    
-    //cc ConverterWikistyleTextToXml toWikistyle = new ConverterWikistyleTextToXml(); 
-    //cc toWikistyle.testXmlTreeAndConvert(xmlTop);
-    
-    /*cc
-    XmlExtensions.XmlMode mode = new XmlExtensions.XmlMode();
-    mode.setXmlIso8859();
-    if(true) //mode.isIndent())
-    { xmlTop = XmlExtensions.beautificationBewareTextContent(xmlTop);
-    }
-    try
-    { XmlExtensions.writeXmlFile(xmlTop, new File(sFileOut), mode);
-    }
-    catch (XmlException e)
-    {
-      // TODO Auto-generated catch block
-    }
-    */
   }
   
-  /*
-  private XmlNode writeXmlNode(ParseResultItem parent)
-  { 
-    if(parent == null)
-    { //The top xml element.
-      
-    }
-    String sSemantic = parent.getSemantic();
-    XmlNode xmlOut = new XmlNode(sSemantic);
-    //writeAttributes(xmlOut, parent);
-    ParseResultItem item = parent.nextSkipIntoComponent(parent);
-    while(item != null)
-    { if(item.isComponent())
-      { //recursively call:
-        xmlOut.addContent(writeXmlNode(item));
-      }
-      else
-      { if(!item.isOption() || item.getNrofAlternative() >0 )
-        { addToXmlNode(item, xmlOut);
-        }
-      }
-      item = item.next(parent);
-    }
-    return xmlOut;
-  }
-  */
   
   
   /**adds the content of the parse result item to the xml tree or creates the toplevel element.
@@ -170,72 +152,165 @@ class ZbnfXmlOutput
    * @throws XmlException 
    */
   @SuppressWarnings("deprecation")
-  private XmlNode addToXmlNode(ZbnfParseResultItem item, XmlNode xmlOut) 
+  private void addToXmlNode(ZbnfParseResultItem item, final XmlNode xmlOut) 
   throws XmlException
   { int posSeparator;
+    XmlNode xmlRet = null;
     String sSemantic = item.getSemantic();
     if(sSemantic.equals("elseConditionBlock"))
     	stop();
-    {
-      while( (posSeparator = sSemantic.indexOf('/')) > 0)
-      { String sName = sSemantic.substring(0, posSeparator);
-        sSemantic = sSemantic.substring(posSeparator+1);
+    if( (posSeparator = sSemantic.indexOf('/')) > 0)
+    { 
+      String sName = sSemantic.substring(0, posSeparator); //name of xmlNode to search/create
+      sSemantic = sSemantic.substring(posSeparator+1);     //the rest
 
-        XmlNode xmlChild = newChild(sName, null);
-        if(xmlOut == null)
-        { xmlOut = xmlChild; 
-        }
-        else
-        { xmlOut.addContent(xmlChild);
-          xmlOut = xmlChild;
-        } 
-      }
-
-      if(sSemantic.length() == 0)
-      { //the semantic had end with "/", the rest is empty, no text output inside the element.
-      }
-      else if(sSemantic.startsWith("@"))
-      { int posValue = sSemantic.indexOf('=');              //an attribute can defined in form @name=value
-        String sNameAttribute;
-        if(posValue >=0){ sNameAttribute = sSemantic.substring(1, posValue); }
-        else{ sNameAttribute = sSemantic.substring(1); }
-        if(sNameAttribute.length() >0)                      //the given =value is stored if neccessary.
-        { String sValue = posValue >=0 ? sSemantic.substring(posValue +1) : getValue(item, true);  
-          xmlOut.setAttribute(sNameAttribute, sValue);
+      /**Search all given XML-nodes and add the items content, if exists: */
+      Iterator<XmlNode> iter = xmlOut.iterChildren(sName);
+      if(iter != null)
+      { //maybe only one child.
+        while(iter.hasNext())
+        { XmlNode xmlAddTo = iter.next();
+          xmlRet = xmlAddTo;
+          addToXmlNodeFinal(sSemantic, item, xmlAddTo);
         }
       }
-      else if(sSemantic.equals("text()") || sSemantic.equals("."))
-      { xmlOut.addContent(getValue(item, true));
-      }
-      else
-      { XmlNode xmlChild = newChild(sSemantic, item);
+      /**create the XML-node because it isn't exists. */
+      if(xmlRet == null)
+      { XmlNode xmlChild = newChild(sName);
         if(xmlOut != null)
         { xmlOut.addContent(xmlChild);
-        } 
-        xmlOut = xmlChild; 
-      }  
+        }
+        xmlRet = xmlChild; 
+        addToXmlNodeFinal(sSemantic, item, xmlChild);
+      }
+    } 
+    else
+    { addToXmlNodeFinal(sSemantic, item, xmlOut);
       
-      if(item.isComponent())
-      { ZbnfParseResultItem childItem;
-        childItem = item.nextSkipIntoComponent(item);
-        while(childItem != null)
-        { //TODO what were this for a question?
-        	//if(!item.isOption() || item.getNrofAlternative() >0 )
-          { addToXmlNode(childItem, xmlOut);
+    }
+  }
+  
+
+
+
+  /**adds the content of the parse result item to the xml tree or creates the toplevel element.
+   * 
+   * @param item The current item. If it is a component, this routine will be called
+   *         recursively.
+   * @param xmlOut The parent element to be add the content. It may be null, than
+   *         the created element will be the toplevel element. In this case the semantic of item
+   *         should be contain only a simple identifier to create one element.
+   * @return the deepest created element. It is the toplevel element if param xmlOut
+   *         is null, and only one level of elements is created. Only in this constellation
+   *         the returned element is necessary and usefull.
+   * @throws XmlException 
+   */
+  @SuppressWarnings("deprecation")
+  private void addToXmlNodeFinal(final String sTagAttrName, ZbnfParseResultItem item, final XmlNode xmlOut) 
+  throws XmlException
+  { final XmlNode xmlNew;
+    boolean bZbnfComponent = item.isComponent();
+    { //Test only
+      if(sTagAttrName.equals("visibility"))
+        stop();
+    }
+    if(sTagAttrName.length() == 0)
+    { /**the semantic had end with "/", than a text output shouldn't be store.
+       * Either the XML-node, which is created before this method is called, 
+       * is the parent of the components content, or a node without content should be cretated.
+       */
+      xmlNew = xmlOut;
+    }
+    else if(sTagAttrName.startsWith("@"))
+    { /**Attribute should be set. */
+      int posValue = sTagAttrName.indexOf('=');              //an attribute can defined in form @name=value
+      String sNameAttribute;
+      if(posValue >=0){ sNameAttribute = sTagAttrName.substring(1, posValue); }
+      else{ sNameAttribute = sTagAttrName.substring(1); }
+      if(sNameAttribute.length() >0)                      //the given =value is stored if neccessary.
+      { String sValue = posValue >=0 ? sTagAttrName.substring(posValue +1) : getValue(item, true);  
+        xmlOut.setAttribute(sNameAttribute, sValue);
+      }
+      xmlNew = xmlOut;  //no new node, because attribute is added
+    }
+    else
+    { String sValue = null;
+      if(sTagAttrName.equals("text()") || sTagAttrName.equals("."))
+      { /**The last part of the semantic <code>tag/last()</code> is a routine ... TODO */
+        sValue = getValue(item, true);
+        if(sValue != null && sValue.length() >0)
+        { xmlOut.addContent(sValue);
+        }
+        xmlNew = xmlOut;  //no new node, because text is added
+      }
+      else
+      { /**The last part of the semantic <code>path/tag</code> or the whole semantic is an XML-indentifier.
+         * Create a child element with this tagname and add it to the output. 
+         * This child, xmlNew, is the parent of the content.*/
+        final String sTagName;
+        boolean bExpandWikistyle = sTagAttrName.endsWith("+");
+        boolean bSetParsedText = sTagAttrName.endsWith("&");
+        if(bExpandWikistyle || bSetParsedText)
+        { sTagName = sTagAttrName.substring(0, sTagAttrName.length()-1);
+        }
+        else
+        { sTagName = sTagAttrName;
+        }
+        xmlNew = newChild(sTagName);  //a new node.
+        xmlOut.addContent(xmlNew);          //add it to the given parent node.
+        //if(bExpandWikistyle){ xmlNew.setAttribute("expandWikistyle", "yes"); }
+        if(item != null && (!bZbnfComponent || bSetParsedText)) 
+        { sValue = getValue(item, true);
+          if(sValue != null && sValue.length() >0)
+          { 
+            if(bExpandWikistyle)
+            { convertWikiStyle.prepareXmlNode(xmlNew, sValue);
+            }
+            else 
+            { xmlNew.addContent(sValue);
+            }  
           }
-          childItem = childItem.next(item);
         }
       }
+    }  
+    
+    if(bZbnfComponent)
+    { processComponent(item, xmlNew);
     }
-    return xmlOut;
+    else
+    { /**Note: the content is added already above, if it is a component, its done also.*/
+    }
   }
 
   
   
   
+  /**Adds the content of the ZBNF-component item to the xmlParent.
+   * If the component hasn't own content, the parsed text is try to add.
+   * This situation is typical if <code>[<?choice> A| B | C]</code> is processed here.
+   * @param item The component
+   * @param xmlParent The XML-Node to which the components content should be added.
+   * @throws XmlException
+   */
+  private void processComponent( ZbnfParseResultItem item, final XmlNode xmlParent) 
+  throws XmlException
+  {
+    Iterator<ZbnfParseResultItem> iterZbnf = item.iteratorChildren();
+    if(iterZbnf != null && iterZbnf.hasNext())
+    { while(iterZbnf.hasNext())
+      { ZbnfParseResultItem childItem = iterZbnf.next();
+        addToXmlNode(childItem, xmlParent);
+      }
+    }
+    
+  }
   
   
-  XmlNode newChild(String sName, ZbnfParseResultItem item)
+  
+  
+  
+  
+  protected XmlNode newChild(String sName)
   { XmlNode xmlChild;
   
     int idxNs;
@@ -251,12 +326,7 @@ class ZbnfXmlOutput
       sNamespaceVal = null;
     }
     
-    boolean bExpandWikistyle = sName.endsWith("+");
-    boolean bSetParsedText = sName.endsWith("&");
-    if(bExpandWikistyle || bSetParsedText)
-    { sName = sName.substring(0, sName.length()-1);
-    }
-
+    
     if(sNamespaceKey != null)
     { xmlChild = new XmlNodeSimple(sName, sNamespaceKey, sNamespaceVal);
     }
@@ -264,67 +334,11 @@ class ZbnfXmlOutput
     { xmlChild = new XmlNodeSimple(sName);
     }
     
-    if(bExpandWikistyle){ xmlChild.setAttribute("expandWikistyle", "yes"); }
-    
-    if(item != null) 
-    { String sValue;
-      if(bSetParsedText)
-      { sValue = item.getParsedText();  //TODO: mostly no text is stored.
-      }
-      else
-      { sValue = getValue(item, bExpandWikistyle);
-      }
-      if(sValue != null && sValue.length() >0)
-      { xmlChild.addContent(sValue);
-      }
-    }
     return xmlChild;
   }  
   
   
   
-  
-  /*
-  void writeAttributes(XmlNode xmlOut, ParseResultItem item)
-  { boolean bWriteSrc = false;
-    if(item.isFloat())
-    { xmlOut.setAttribute("float", "" + item.getParsedFloat());
-      bWriteSrc = true;
-    }
-    else if(item.isInteger())
-    { xmlOut.setAttribute("int", "" + item.getParsedInteger());
-      bWriteSrc = true;
-    }
-    else if(item.isIdentifier())
-    { xmlOut.setAttribute("ident", "" + item.getParsedString());
-    }
-    else if(item.isString())
-    { xmlOut.setAttribute("string", "" + item.getParsedString());
-    }
-    
-    if(item.isRepeat()>0)
-    { xmlOut.setAttribute("repeat", "" + item.isRepeat());
-    }
-    
-    if(item.isRepetition()>0)
-    { xmlOut.setAttribute("repetition", "" + item.isRepetition());
-    }
-    
-    { String sParsedText = item.getParsedString();
-      if(sParsedText == null)
-      { sParsedText = item.getParsedText();
-      }
-      if(sParsedText != null)
-      { xmlOut.setAttribute("src", sParsedText);
-      }
-    }
-    { int alternative = item.getNrofAlternative();
-      if(alternative >=0) // && alternative !=1)
-      { xmlOut.setAttribute("alternative", "" + alternative);
-      }
-    }
-  }
-  */
   
   private String getValue(ZbnfParseResultItem item, boolean bGetParsedString)
   { if(item.isFloat())
@@ -361,5 +375,22 @@ class ZbnfXmlOutput
   {
     //only for debugging
   }
+  
+  
+  
+  private static class ConvertWikiStyle implements Zbnf2Xml.PrepareXmlNode
+  {
+    WikistyleTextToSimpleXml wikistyleText2SimpleXml = new WikistyleTextToSimpleXml();
+
+    public void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException
+    {
+      // TODO Auto-generated method stub
+      wikistyleText2SimpleXml.setWikistyleFormat(text, xmlDst, null, null);
+    }
+    
+  }
+  
+  ConvertWikiStyle convertWikiStyle = new ConvertWikiStyle(); 
+  
   
 }
