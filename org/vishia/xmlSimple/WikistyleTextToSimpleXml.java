@@ -234,6 +234,7 @@ public class WikistyleTextToSimpleXml
       int idx = 0;
       while(iterElements.hasNext())
       { XmlNode xmlTest = iterElements.next();
+        @SuppressWarnings("unused")
         String attrExpand;
         //if(xmlTest.getChildren().size()==0) //only if there are no xml formatting inside paragraph
         if(xmlTest.getName().equals("p") && (attrExpand = xmlTest.getAttribute("expandWikistyle"))!=null)
@@ -443,11 +444,11 @@ public class WikistyleTextToSimpleXml
 	            kItalic=2, 
 	            kBoldItalic=3, 
 	            kHyperlink=4, 
-	            kHyperlinkAbsolute=5, 
-	            kCode=6,
+	            kHyperlinkAbsolute=5,
+	            kImage=8,
+              kInset=9,
+	            kCode=10
 	            //kPreserve=7,
-              kImage=8,
-              kInset=9
 	            //kCitiation=8
 	            ;
 	
@@ -497,27 +498,29 @@ public class WikistyleTextToSimpleXml
 		      posCtrlChars = start + posCtrlChars1; 
 		      startAfter = posCtrlChars + 2; 
 		    }
-        if( (posCtrlChars1 = sInput.substring(start,posCtrlChars).indexOf("[[Inset:")) >=0)
-        { kind = kInset; 
-          posCtrlChars = start + posCtrlChars1; 
-          startAfter = posCtrlChars + 8; 
+        if( (posCtrlChars1 = sInput.substring(start,posCtrlChars).indexOf("[[")) >=0)
+        { posCtrlChars = start + posCtrlChars1; 
+          if( sInput.substring(posCtrlChars).startsWith("[[Inset:"))
+          { kind = kInset; 
+            startAfter = posCtrlChars + 8; 
+          }
+          else if( sInput.substring(posCtrlChars).startsWith("[[Image:"))
+          { kind = kImage; 
+            startAfter = posCtrlChars + 8; 
+          }
+          else if( sInput.substring(posCtrlChars).startsWith("[[http:"))
+          { kind = kHyperlinkAbsolute; 
+            startAfter = posCtrlChars + 2; 
+          }
+          else if( sInput.substring(posCtrlChars).startsWith("[[!"))
+          { kind = kHyperlinkAbsolute; 
+            startAfter = posCtrlChars + 3; 
+          }
+          else
+  		    { kind = kHyperlink; 
+  		      startAfter = posCtrlChars + 2; 
+  		    }
         }
-        if( (posCtrlChars1 = sInput.substring(start,posCtrlChars).indexOf("[[Image:")) >=0)
-        { kind = kImage; 
-          posCtrlChars = start + posCtrlChars1; 
-          startAfter = posCtrlChars + 8; 
-        }
-        if( (posCtrlChars1 = sInput.substring(start,posCtrlChars).indexOf("[[!")) >=0)
-        { kind = kHyperlinkAbsolute; 
-          posCtrlChars = start + posCtrlChars1; 
-          startAfter = posCtrlChars + 3; 
-        }
-		    if( (posCtrlChars1 = sInput.substring(start,posCtrlChars).indexOf("[[")) >=0)
-		    { kind = kHyperlink; 
-		      posCtrlChars = start + posCtrlChars1; 
-		      startAfter = posCtrlChars + 2; 
-		    }
-	      
 		    /**Copy the part before before the founded control chars: */
 		    if(posCtrlChars > start)
 		    { String sBefore = sInput.substring(start, posCtrlChars);
@@ -534,8 +537,8 @@ public class WikistyleTextToSimpleXml
 		        if(endCtrledPart >= 0){ startNextPart = endCtrledPart +5; }
 		        else { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;}
 		        if(endCtrledPart > startAfter)
-		        { XmlNode xmlBold = xmlRet.addNewNode("b", dstNamespace);
-		          XmlNode xmlNew = xmlBold.addNewNode("i", dstNamespace);
+		        { XmlNode xmlBold = xmlRet.addNewNode("stroke", dstNamespace);
+		          XmlNode xmlNew = xmlBold.addNewNode("em", dstNamespace);
 		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
 		        }
 		      } break;
@@ -544,7 +547,7 @@ public class WikistyleTextToSimpleXml
 		        if(endCtrledPart >= 0){ startNextPart = endCtrledPart +3; }
 		        else { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;}
 		        if(endCtrledPart > startAfter)
-		        { XmlNode xmlNew = xmlRet.addNewNode("b", dstNamespace);
+		        { XmlNode xmlNew = xmlRet.addNewNode("stroke", dstNamespace);
 		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
 		        }
 		      } break;
@@ -553,7 +556,7 @@ public class WikistyleTextToSimpleXml
 		        if(endCtrledPart >= 0){ startNextPart = endCtrledPart +2; }
 		        else { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;}
 		        if(endCtrledPart > startAfter)
-		        { XmlNode xmlNew = xmlRet.createNode("i", dstNamespace);
+		        { XmlNode xmlNew = xmlRet.createNode("em", dstNamespace);
 		          xmlRet.addContent(xmlNew);
 		          convertLine(sInput.substring(startAfter, endCtrledPart), xmlNew, dstNamespace);  
 		        }
@@ -627,6 +630,7 @@ public class WikistyleTextToSimpleXml
               }
               else if( (pos=sToken.indexOf("px"))>0)
               { int posX = sToken.indexOf('x');
+                @SuppressWarnings("unused")
                 int height=-1, width=-1;
                 if(posX >0 && posX < pos)
                 { //"80x100px"

@@ -563,7 +563,7 @@ abcd  this is a part uvwxyz The associated String
   */
   public StringPart lentoIdentifier()
   {
-    return lentoIdentifier(null, null);
+    return lentoIdentifier((String) null, (String)null);
   }
   
   /** Sets the endposition of the part of string to the end of the identifier which is beginning on start.
@@ -890,7 +890,8 @@ that is a liststring and his part The associated String
       @return this.       
     */  
   
-  public StringPart seekAnyString(List<String> strings, int[] nrofFoundString)
+  public StringPart seekAnyString(String[] strings, int[] nrofFoundString)
+  //public StringPart seekAnyString(List<String> strings, int[] nrofFoundString)
   { startLast = start;
     int pos;
     pos = indexOfAnyString(strings, 0, Integer.MAX_VALUE, nrofFoundString, null);
@@ -1068,7 +1069,8 @@ that is a liststring and his part The associated String
             but -1 if the end is reached.
   */
   public int indexOfAnyString
-  ( List<String> listStrings
+  ( String[] listStrings
+    //List<String> listStrings
   , final int fromWhere
   , final int maxToTest
   , int[] nrofFoundString
@@ -1077,16 +1079,20 @@ that is a liststring and his part The associated String
   { int pos = start + fromWhere;
     int max = (end - pos) < maxToTest ? end : pos + maxToTest;
     //int endLast = end;
-    StringBuffer sFirstCharBuffer = new StringBuffer(listStrings.size());
-    Iterator<String> iter = listStrings.iterator();
+    //StringBuffer sFirstCharBuffer = new StringBuffer(listStrings.size());
+    StringBuffer sFirstCharBuffer = new StringBuffer(listStrings.length);
+    //Iterator<String> iter = listStrings.iterator();
     boolean acceptToEndOfText = false;
-    while(iter.hasNext())
-    { String sString = (String)(iter.next());
-      if(sString.charAt(0) == cEndOfText)
-      { acceptToEndOfText = true;}
-      else 
-      { sFirstCharBuffer.append(sString.charAt(0)); }
-    }
+    //while(iter.hasNext())
+    { int ii = -1;
+      while(++ii < listStrings.length)
+      { //String sString = (String)(iter.next());
+        String sString = listStrings[ii];
+        if(sString.charAt(0) == cEndOfText)
+        { acceptToEndOfText = true;}
+        else 
+        { sFirstCharBuffer.append(sString.charAt(0)); }
+    } }
     String sFirstChars = sFirstCharBuffer.toString();
     boolean found = false;
     while(!found && pos < max)
@@ -1096,10 +1102,13 @@ that is a liststring and his part The associated String
       
       if(pos < max)
       { //a fist matching char is found! test wether or not the whole string is matched.
-        iter = listStrings.iterator();
+        //iter = listStrings.iterator();
         int nrofFoundString1 = 1;
-        while(!found && iter.hasNext())
-        { String sString = (String)(iter.next());
+        //while(!found && iter.hasNext())
+        int ii = -1;
+        while(!found && ++ii < listStrings.length)
+        { //String sString = (String)(iter.next());
+          String sString = listStrings[ii];
           int testLen = sString.length();
           if((max - pos) >= testLen 
             && substring(pos, pos + testLen).equals(sString)
@@ -1283,7 +1292,8 @@ that is a liststring and his part The associated String
    *        the actual length is set to 0.
    * @return This itself.
    */
-  public StringPart lentoAnyString(List<String> strings, int maxToTest)
+  public StringPart lentoAnyString(String[] strings, int maxToTest)
+  //public StringPart lentoAnyString(List<String> strings, int maxToTest)
   { return lentoAnyString(strings, maxToTest, seekNormal);
   }
 
@@ -1302,7 +1312,8 @@ that is a liststring and his part The associated String
    *        </ul>       
    * @return This itself.
    */
-  public StringPart lentoAnyString(List<String> strings, int maxToTest, int mode)
+  public StringPart lentoAnyString(String[] strings, int maxToTest, int mode)
+  //public StringPart lentoAnyString(List<String> strings, int maxToTest, int mode)
   { endLast = end;
     String[] foundString = new String[1];
     int pos = indexOfAnyString(strings, 0, maxToTest, null, foundString);
@@ -1354,9 +1365,10 @@ that is a liststring and his part The associated String
    *        the actual length is set to 0.
    * @return The converted from actpart string without indentation.
    */
-  public String lentoAnyStringWithIndent(List<String> strings, String sIndentChars, int maxToTest)
+  public String lentoAnyStringWithIndent(String[] strings, String sIndentChars, int maxToTest)
+  //public String lentoAnyStringWithIndent(List<String> strings, String sIndentChars, int maxToTest)
   { endLast = end;
-    String sRet = "";
+    String sRet; sRet = "";
     int indentColumn = getCurrentColumn();
     int startLine = start;
     boolean bAlsoWhiteSpaces = (sIndentChars.charAt(sIndentChars.length()-1) == ' ');
@@ -1604,31 +1616,58 @@ that is a liststring and his part The associated String
 
 
 
-  /** Compares the Part of string with the given string
+  /**compares the Part of string with the given string.
+   * new since 2008-09: if sCmp contains a cEndOfText char (coded with \e), the end of text is tested.
+   * @param sCmp The text to compare.
   */
   public boolean startsWith(String sCmp)
-  { return content.substring(start, end).startsWith(sCmp);
+  { int pos_cEndOfText = sCmp.indexOf(cEndOfText);
+    
+    if(pos_cEndOfText >=0)
+    { if(pos_cEndOfText ==0)
+      { return start == end;
+      }
+      else
+      { String sCmp2 = sCmp.substring(0, pos_cEndOfText);
+        return content.substring(start, end).equals(sCmp);
+      }
+      
+    }
+    else
+    { return content.substring(start, end).startsWith(sCmp);
+    }
   }
 
 
   /*=================================================================================================================*/
   /*=================================================================================================================*/
   /*=================================================================================================================*/
-  /** scan next content, test if it the requested String.
+  /** scan next content, test the requested String.
+   *  new since 2008-09: if sTest conains cEndOfText, test wether this is the end.
    *  Overreads automatically whitespaces and comments depends on the settings forced with
-   *  calling of forceSkippingOver___ .<br/>
+   *  calling of {@link #seekNoWhitespaceOrComments()} .<br/>
    *  See global description of scanning methods.
    *  @param sTest String to test
       @return this
   */
-  public StringPart scan(String sTest)
+  public StringPart scan(final String sTestP)
   { if(bCurrentOk)
-    { if(report != null){ reportScanPosition("StringScan.scan(" + sTest +")"); }
-      skipWhitespaceAndComment();
-      int len = sTest.length();
+    { String sTest;
+      if(report != null){ reportScanPosition("StringScan.scan(" + sTestP +")"); }
+      seekNoWhitespaceOrComments();
+      int len = sTestP.indexOf(cEndOfText);
+      boolean bTestToEndOfText = (len >=0);
+      if(bTestToEndOfText){ sTest = sTestP.substring(0, len); }
+      else { len = sTestP.length(); sTest = sTestP; }
+      //int len = sTest.length();
       if(  (start + len) <= endMax //content.length()
         && sTest.equals(content.substring(start, start+len))
-        ) start += len;
+        && (  !bTestToEndOfText 
+           || start + len == end
+           )
+        )
+      { start += len;
+      }
       else { bCurrentOk = false; if(report != null){ report.report(6,"ErrorScan scan(" + sTest + ")");} }     //error in current scanning
     }
     return this;
@@ -1655,7 +1694,7 @@ that is a liststring and his part The associated String
     { start = startLast= startScan;   //return to the start
     }
     //eScanPart = kWhitespace;
-    if(report != null){ report.report(6," scanOk:" + startMin + ".." + start + ":" + bCurrentOk); }
+    if(report != null){ report.report(6," scanOk:" + startMin + ".." + start + ":" + (bCurrentOk ? "ok" : "error")); }
     boolean bOk = bCurrentOk;
     bCurrentOk = true;        //prepare to next try scanning
     return(bOk);
@@ -1819,7 +1858,7 @@ that is a liststring and his part The associated String
         if(bNegativValue) { nLastFloatNumber = - nLastFloatNumber; }
         if(nExponent != 0)
         { if(bNegativExponent){ nExponent = -nExponent;}
-          nLastFloatNumber *= java.lang.Math.pow(10, -nExponent);
+          nLastFloatNumber *= Math.pow(10, -nExponent);
         }
       }
     }  
@@ -2051,9 +2090,15 @@ that is a liststring and his part The associated String
   */
   public String debugString()
   { int len = content.length();
+    String ret = content.substring(0, len > 20 ? 20 : len) + "<<<" + start + "," + end + ">>>";
+    if(start < len){ ret += content.substring(start, len > (start + 20) ? start+20: len); }
+    ret += "<<<";
+    return ret;
+    /*
     return( content.substring(0, len > 20 ? 20 : len) + "<<<" + start + "," + end + ">>>"
           + (start < len ? content.substring(start, len > (start + 20) ? start+20: len) : "")
           + "<<<" );
+    */      
   }
 
   /*=================================================================================================================*/
@@ -2064,9 +2109,15 @@ that is a liststring and his part The associated String
   */
   protected void reportScanPosition(String sError)
   { int posEnd = start +  20; if(posEnd > content.length()) posEnd = content.length();
+    String text = sError +" scanOk>>>";
+    if(start > startMin) text += content.substring(startMin, start);
+    text += "<<<scan>>>" + content.substring(start, posEnd) + "<<< ";
+    report.reportln(6, text);
+    /*
     report.reportln(6, sError +" scanOk>>>"
                      + (start > startMin ? content.substring(startMin, start) : "")
                      + "<<<scan>>>" + content.substring(start, posEnd) + "<<< ");
+    */
   }
 
   

@@ -125,7 +125,7 @@ public class ZbnfParser
 {
 
   /** Helpfull empty string to build some spaces in strings. */
-  static private final String sEmpty = "                                                                                                                     ";
+  static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
 
 
   
@@ -535,6 +535,16 @@ public class ZbnfParser
         int posParseResult = parserStoreInPrescript.getNextPosition();
         long posInput  = input.getCurrentPosition();
         //int nLineInput = input.getLineCt();
+        if(  bSkipSpaceAndComment 
+          && resultType == ZbnfParserStore.kOption
+          && sSemanticForStoring != null
+          )
+        { //only if a syntax [<?semantic>x|y|z] is given:
+          parseWhiteSpaceAndComment(parserStoreInPrescript);
+          //the input.getCurrentPosition() is the position after any whitespace or comment  
+        }
+        long posInputForStore  = input.getCurrentPosition();
+        
         
         int idxAlternative = 0;
         if(syntaxPrescript == null)
@@ -624,7 +634,7 @@ public class ZbnfParser
              * An option result item has no more essential informations. 
              * This information helps to evaluate such constructs as [<?semantic>green|red|yellow].
              */
-            String parsedInput = input.substring((int)posInput, (int)input.getCurrentPosition());
+            String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
             parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
             parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
           }
@@ -779,7 +789,9 @@ public class ZbnfParser
               { bOk = parseFloatNumber( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndchar:
-              { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
+              { if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
+                  stop();
+                if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
                 if(sConstantSyntax.length() >0)
                 { bOk = input.lentoAnyChar(sConstantSyntax, maxNrofChars).found();
                 }
@@ -812,14 +824,14 @@ public class ZbnfParser
               { bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndString: //kk
-              { bOk = parseStringUntilEndString(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndStringInclusive: //kk
-              { bOk = parseStringUntilEndString(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              { bOk = parseStringUntilTerminateString(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
               { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-                sSrc = input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings(), syntaxItem.getIndentChars() , maxNrofChars);
+                sSrc = input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars);
                 bOk = input.found();
                 if(bOk)
                 { input.fromEnd();
@@ -889,9 +901,10 @@ public class ZbnfParser
         //if(sConstantSyntax.equals(";") && input.getCurrentPosition()==28925)
           //stop();
         //if(input.scan(sConstantSyntax).scanOk())
-        if(input.startsWith(sConstantSyntax))
+        //if(input.startsWith(sConstantSyntax))
+        if(input.scan(sConstantSyntax).scanOk())
         { bOk = true;
-          input.seek(sConstantSyntax.length());
+          //input.seek(sConstantSyntax.length());
           if(bConstantSyntaxAsParseResult)
           { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, parentResultItem);
           }
@@ -1086,21 +1099,28 @@ public class ZbnfParser
       }
   
       
-      /**parses until one of some endchars from right.
+      /**parses until one of some one of the  end strings.
        * 
-       * @param sConstantSyntax contains the possible end chars
+       * @param sConstantSyntax now unused.
        * @param bInclusive If true, the end char is parsed inclusive, if false, than exclusive.
        * @param maxNrofChars possible given at left position <123....> or Integer.MAX_VALUE
        * @param sSemanticForStoring The semantic, null if no result should be stored.
-       * @param sSubSyntax not null, the name of the inner syntax prescript if there is one.
+       * @param syntaxItem The syntax item, contains info for substrings, see {@link ZbnfSyntaxPrescript#getListStrings()}.
        * @param parseResult Buffer to store the result. It may be a special buffer or the main buffer.
        * @return
-       */ //kk
-      private boolean parseStringUntilEndString(String sConstantSyntax, boolean bInclusive, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult)
+       */
+      private boolean parseStringUntilTerminateString
+      ( String sConstantSyntax
+      , boolean bInclusive
+      , int maxNrofChars
+      , String sSemanticForStoring
+      , ZbnfSyntaxPrescript syntaxItem
+      , ZbnfParserStore parseResult
+      )
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(20) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
         { int mode = bInclusive ? StringPart.seekEnd : StringPart.seekNormal;
-          input.setLengthMax().lentoAnyString(syntaxItem.getListStrings(), maxNrofChars, mode);
+          input.setLengthMax().lentoAnyString(syntaxItem.getListStrings().toArray(new String[1]), maxNrofChars, mode);
         }  
         bOk = input.found();
         if(bOk)

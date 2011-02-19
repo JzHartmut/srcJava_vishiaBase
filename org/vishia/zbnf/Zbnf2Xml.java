@@ -267,6 +267,7 @@ public class Zbnf2Xml
   { boolean bOk = true;
     ZbnfParser parser = null;
     { parser = new ZbnfParser(report);
+      parser.setReportIdents(Report.error, Report.info, Report.debug, Report.fineDebug);
       try
       { parser.setSkippingComment("/*", "*/", true);
         parser.setSyntax(new File(sFileSyntax));

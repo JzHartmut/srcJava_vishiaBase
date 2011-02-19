@@ -454,6 +454,10 @@ class ZbnfParserStore
 
     public ZbnfParseResultItem getChild(String key)
     { if(offsetAfterEnd == 1){ return null; }
+      else if(key == null || key.length()==0)
+      {
+        return store.items.get(idxOwn +1);
+      }
       else
       { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
         return treeNodeRepresentation.getChild(key);
@@ -494,10 +498,11 @@ class ZbnfParserStore
 
 
     public ZbnfParseResultItem firstChild()
-    { if(offsetAfterEnd > 1)
-      { return store.items.get(idxOwn +1);
-      }
-      else return null;
+    { return getChild(null);
+      //if(offsetAfterEnd > 1)
+      //{ return store.items.get(idxOwn +1);
+      //}
+      //else return null;
     }
 
 

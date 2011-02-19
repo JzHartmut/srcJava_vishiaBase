@@ -44,6 +44,16 @@ import java.util.List;
 public class FileSystem
 {
 
+  public interface AddFileToList
+  {
+    void add(File file);
+  }
+  
+  private static class ListWrapper implements AddFileToList
+  { private final List<File> files;
+    public ListWrapper(List<File> files){ this.files = files; }
+    public void add(File file){ files.add(file); }
+  };
 
   /**Reads the content of a whole file into a String.
    * This method supplies a null pointer if a exception has occurs internally,
@@ -128,7 +138,20 @@ public class FileSystem
     return addFileToList(null, sPath, listFiles);
   }
 
+  public static boolean addFileToList(String sPath, AddFileToList listFiles)
+  throws FileNotFoundException
+  { sPath = sPath.replace('\\', '/');
+    return addFileToList(null, sPath, listFiles);
+  }
+
   public static boolean addFileToList(File dir, String sPath, List<File> listFiles) throws FileNotFoundException
+  {
+    ListWrapper listWrapper = new ListWrapper(listFiles);
+    //NOTE: the listFiles is filled via the temporary ListWrapper.
+    return addFileToList(dir, sPath, listWrapper);
+  }
+  
+  public static boolean addFileToList(File dir, String sPath, AddFileToList listFiles) throws FileNotFoundException
   { boolean bFound = true;
     String sDir = dir != null ? dir.getAbsolutePath() + "/" : "";
     int posWildcard = sPath.indexOf('*');
@@ -207,7 +230,7 @@ public class FileSystem
 
 
 
-  private static void addDirRecursivelyToList(File dirParent, FileFilter dirMask, String sPath, List<File> listFiles) throws FileNotFoundException
+  private static void addDirRecursivelyToList(File dirParent, FileFilter dirMask, String sPath, AddFileToList listFiles) throws FileNotFoundException
   {
     addFileToList(dirParent, sPath, listFiles);  //the files inside
     File[] subDirs = dirParent.listFiles();  //TODO use dirmask to filter /name**name/ or

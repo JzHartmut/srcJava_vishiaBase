@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.util.SortedTree;
 
 /**This is a simple variant of processing XML.*/
 
@@ -143,7 +142,7 @@ public class XmlNodeSimple implements XmlNode
 
   
   public void removeChildren()
-  { for(XmlNode child: content)
+  { if(content != null) for(XmlNode child: content)
     { if(!child.isTextNode())
       { child.setParent(null);  //
       }
@@ -172,7 +171,7 @@ public class XmlNodeSimple implements XmlNode
     }
     else
     { String sText = "";
-      for(XmlNode child: content)
+      if(content != null) for(XmlNode child: content)
       { if(child.getNamespaceKey().equals("$"))
         { //a text content as child.
           sText += child.getName();

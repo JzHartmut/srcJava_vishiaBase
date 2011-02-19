@@ -36,21 +36,56 @@ import org.vishia.mainCmd.Report;
 @SuppressWarnings("unchecked")
 
 /**This class helps to convert a ZbnfParseResult into a tree of Java objects.
- * The user have to be provide a toplevel Object which contains 
- * <ul><li>java.util.List of objects for the child parse result levels,</li>
- * <li>java.lang.String for parsed string represented results,</li>
- * <li> int,float,double for parsed numbers.</li></ul>
+ * The user have to be provide a user Object which contains 
+ * <ul>
+ * <li><code>public static class Name{...}</code> as inner classes for each type of Syntax Component. 
+ *    The identifier should start with upper case, independent of the name of the syntax component.
+ * <li>public Fields or public set- or add-methods for every parse result.
+ * </ul>
+ * The inner classes should contain also public fields or public set- or add-methods for every parse result
+ * of the component. Using set- and add method is the better encapsulated mode. 
+ * Using public fields is more simple.
+ * <br><br> 
+ * The rules for this things are some different but with same principle likewise arguments 
+ * for call of java classes extends <code>org.apache.tools.ant.Task</code> called in ant 
+ * (http://ant.apache.org/manual/develop.html).
+ * There are much more simple:
  * <br>
- * In the current version the toplevel class has to contain inner classes for the child objects
- * and empty lists. All elements (fields) should be public. Please see the sample.
- * The name of the fields and sub-classes(current) should be the same as the semantic of the parse results,
- * but with the naming conventions of Java (first letter of classes in upper case, ..of fields in lower case.
- * <br>
- * In future releases there will be Object=add_Semantic() and set_Semantic(String) - Methods which should to be public.
- * The add methods should be called if components are in the parse result. The name of the methods after add_... or set_... 
- * should be following the semantic 
- * <br>
- * 
+ * <ul>
+ * <li>The semantic identifier is used as name for fields and methods, 
+ *     named <code>name</code> in the description below. For set- and get-methods
+ *     the name is used exactly like written in the ZBNF syntax script.
+ *     For searching field names the first character is converted to lower case.
+ * <li>The identifier of a sub syntax prescript is used as name for the class type for the inner class
+ *     and for the field type or argument type for set- and add- methods 
+ *     to store the instance of a component class Type in its parent.  
+ * <li>First a <code>set_name(Type)</code>- or <code>add_name(Type)</code>-method
+ *     is searched and invoked, if found. 
+ * <li>The type of the methods argument is predetermined by the type of the stored result.
+ *     For components, it is the component instance type. For elements, the type of elements 
+ *     determine the argument type:
+ * <li>If no method is found, a field <code>Type name</code> is searched. 
+ *     If it is found, the type is tested.
+ *     For parse result elements, the type of fields must be java.lang.String or int, float or double.
+ *     To store instances for parse result components, the type of the field have to be the same 
+ *     type like the components class. If a field isn't found, it is okay. If the type are false,
+ *     an IllegalArgumentException is thrown. This behavior is practicable, 
+ *     because mostly a false type is a writing error of the program.         
+ * <li>java.util.List<Type> name fields for the child parse result components,</li>
+ * <li>Xxx xxx fields for the child parse result components if only 1 child is able.
+ * <li>java.lang.String name-fields for parsed string represented results,</li>
+ * <li> int,float,double xxx fields for parsed numbers.</li>
+ * <li>An element <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
+ *     if the input column were the parsed text is found should be stored. 
+ *     This is important at example if line structures were parsed.
+ * </ul>
+ * <br><br>
+ * If a element is parsed only one time, a simple element to store the result is adequate. 
+ * If an element may be parsed some times, in a repetition, a list<Type> should be given. 
+ * Elsewhere a new parsed element overwrites the previous.
+ * Example:
+ * <pre>TODO
+ * </pre> 
  */
 
 public class ZbnfJavaOutput
@@ -63,15 +98,19 @@ public class ZbnfJavaOutput
   { this.report = report;
   }
 
+  
+  
   /** writes the parsers result into a tree of Java objects using the reflection method.
    * @param topLevelOutput The toplevel instance
    * @param resultItem The toplevel parse result
    * @param report
    * @throws IllegalAccessException if the field is found but it is not public.
    * @throws IllegalArgumentException 
+   * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */
   @SuppressWarnings("deprecation")
-  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report) throws IllegalArgumentException, IllegalAccessException
+  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report) 
+  throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { //instance of writer only for temporary help to organize, no data are stored here: 
     ZbnfJavaOutput instance = new ZbnfJavaOutput(report);  
     //the available classes of the top level output instance
@@ -99,23 +138,31 @@ public class ZbnfJavaOutput
    * 
    * @param parentOutputInstance The instance to add childs in some lists
    * @param resultItem
-   * @throws IllegalAccessException 
+   * @throws IllegalAccessException if the field is not public.
    * @throws IllegalArgumentException 
+   * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */  
   @SuppressWarnings("deprecation")
   private void writeChild( Object parentOutputInstance
             , ZbnfParseResultItem resultItem
             , int recursion
             //, ZbnfParseResultItem parentItem
-            ) throws IllegalArgumentException, IllegalAccessException
+            ) throws IllegalArgumentException, IllegalAccessException, InstantiationException
   {
     String semantic = resultItem.getSemantic();
-    if(semantic.equals("time"))
+    if(semantic.equals("ListHead"))
       stop();
     Object childOutputInstance = null;
     report.reportln(Report.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
+      
     if(resultItem.isComponent())
-    { //create a new instance with type of semantic
+    { 
+      /**Try to save the content also if it is an component. */
+      if(resultItem.isOption() && resultItem.getParsedString() != null)
+      { search_nWriteZbnfItem(parentOutputInstance, resultItem);
+      }
+      
+      //search a type instance with type of semantic
       char firstUpperChar = Character.toUpperCase(semantic.charAt(0)); 
       String nameOutputClass = firstUpperChar + semantic.substring(1);
       //if(Character.isLowerCase(semantic[0]))
@@ -131,97 +178,80 @@ public class ZbnfJavaOutput
       }
       if(outputClass != null)
       { report.report(Report.fineDebug, " found");
-        try{ childOutputInstance = outputClass.newInstance();}
-        catch(IllegalAccessException exception)
-        { report.report(Report.fineDebug, " IllegalAccessException");
-      	  childOutputInstance = null; 
-        }
-        catch(InstantiationException exception)
-        { report.report(Report.fineDebug, " InstanciationException");
-        	childOutputInstance = null; 
-        }
-        if(childOutputInstance != null)
-        { //write in parent:
-        	search_nWriteDstElement(parentOutputInstance, childOutputInstance, resultItem);
+        childOutputInstance = outputClass.newInstance();
+        //write in parent:
+        search_nWriteChildOrElement(parentOutputInstance, childOutputInstance, resultItem);
           
-        	try
-          { //if an field _inputColumn is found, write to it.
-        	  Field elementColumn = outputClass.getField("inputColumn_");
-            elementColumn.setInt(childOutputInstance, resultItem.getInputColumn());
-          }
-          catch(NoSuchFieldException exception){ /**do nothing if the field isn't found.*/ }
+      	try
+        { //if an field _inputColumn is found, write to it.
+      	  Field elementColumn = outputClass.getField("inputColumn_");
+          elementColumn.setInt(childOutputInstance, resultItem.getInputColumn());
+        }
+        catch(NoSuchFieldException exception){ /**do nothing if the field isn't found.*/ }
           
-        	// skip into the component resultItem:
-          ZbnfParseResultItem childItem = resultItem.nextSkipIntoComponent(resultItem);
-          while(childItem != null)
-          { 
-            writeChild(childOutputInstance, childItem, recursion +1);
-            childItem = childItem.next(resultItem);         
-          }
+      	// skip into the component resultItem:
+        ZbnfParseResultItem childItem = resultItem.nextSkipIntoComponent(resultItem);
+        while(childItem != null)
+        { 
+          writeChild(childOutputInstance, childItem, recursion +1);
+          childItem = childItem.next(resultItem);         
         }
       }
       else
-      { report.report(Report.fineDebug, ": ERROR class not found!");
+      { //a matching class to the component isn't found. 
+        //Try to write the textual content of the components zbnf item to a String field or method.
+        search_nWriteZbnfItem(parentOutputInstance, resultItem);
       }
     }
     else
     { //write the content of the resultItem into the outputInstance:
-      search_nWriteDstElement(parentOutputInstance, null, resultItem);
+      search_nWriteZbnfItem(parentOutputInstance, resultItem);
     }
   }
    
   
-  /** Searches if inside the outputInstance exists a field or method
-   * matching to the semantic of the resultItem, and writes the content in.
-   * If the resultItem is a component, the childOutputInstance is filled before.
-   * It contains the content of the component. The child output instance is added.
-   * Otherwise, the childOutputInstance is null, and the content of resultItem
-   * is written to the founded element in outputInstance.
+  private void search_nWriteZbnfItem(Object outputInstance, ZbnfParseResultItem resultItem) 
+  throws IllegalArgumentException, IllegalAccessException
+  { search_nWriteChildOrElement(outputInstance, null, resultItem);
+  }
+  
+  
+  
+  /**searches the field or method matching to the semantic of the resultItem in the outputInstance, 
+   * and writes the content either from given childOutputInstance or from the result-item in.
+   * @param outputInstance The instance to write into, it should contain a matching public field or method.
+   *        A field matches, if its name is equal the semantic, but with lower case at first char.
+   *        A method matches, if it is named setSEMANTIC, where SEMANTIC is the semantic of the zbnf item.
    * <br>
-   * @param outputInstance The Instance to write into, thows elements should be matched.
-   * <br>
-   * @param childOutputInstance If not null, it is be setted or added.
+   * @param childOutputInstance If not null, it is set or added to the outputInstance.
+   *        If it is null, the value in the result-item is set to the field or method of the output instance.
    * <br> 
-   * @param resultItem The semantic is determining for matching fields, 
-   *        the content is be used if childOutputInstance is null.
-   * @throws IllegalAccessException if the element is not writeable. 
+   * @param resultItem The semantic is determining the matching field or method. 
+   *        The content is used if childOutputInstance is null.
+   * @throws IllegalAccessException if the element is not writeable especially not public. 
    * @throws IllegalArgumentException 
    */
-  private void search_nWriteDstElement
+  private void search_nWriteChildOrElement
   ( Object outputInstance
   , Object childOutputInstance
   , ZbnfParseResultItem resultItem
   ) throws IllegalArgumentException, IllegalAccessException
   { //add the result to an element:
     String semantic = resultItem.getSemantic();
-    char firstLowerChar = Character.toLowerCase(semantic.charAt(0)); 
-    String nameOutputElement = firstLowerChar + semantic.substring(1);
+    if(semantic.equals("insert"))
+      stop();      //test special not component (scalar) field
+    char firstChar = semantic.charAt(0);
+    String semanticUpperCase = firstChar >='A' && firstChar <='Z' ? semantic : Character.toUpperCase(firstChar) + semantic.substring(1);
     Class dataClass = outputInstance.getClass();
     Class superClass = dataClass.getSuperclass();
     Object[] argMethod1 = new Object[1];
-    Class[] argTypes1 = new Class[1];
-    Class[] argTypes0 = new Class[0];
-    Field element;
-    try{ element = dataClass.getField(nameOutputElement);}
-    catch(NoSuchFieldException exception)
-    { try{ element = superClass.getField(nameOutputElement);}
-      catch(NoSuchFieldException exc2){ element = null; } 
-    }
-    if(element != null)
-    { //an element with the desired name is found, write the value to it:
-    	report.report(Report.fineDebug, nameOutputElement);
-  	  if(childOutputInstance != null)
-      { writeChildElement(element, outputInstance, childOutputInstance);
-      }
-      else
-      { writeInElement(element, outputInstance, resultItem);
-      }
-    }
-    else
-    { //not an element with the postulated name found,
-      //search an appropriate method:
-      Object[] argMethod = argMethod1;
-      Class[] argTypes = argTypes1;
+    Class[] argTypes1 = new Class[1];  //method with 1 arg
+    Class[] argTypes0 = new Class[0];  //void method
+    //search an appropriate method:
+    Object[] argMethod = argMethod1;
+    Class[] argTypes = argTypes1;
+    if(childOutputInstance == null)
+    { //writing of a simple element result
       if(resultItem.isInteger())
       { argMethod[0] = new Integer((int)resultItem.getParsedInteger());
         argTypes[0] = Integer.TYPE;
@@ -230,31 +260,67 @@ public class ZbnfJavaOutput
       { argMethod[0] = new Double((int)resultItem.getParsedFloat());
         argTypes[0] = Double.TYPE;
       }
-      else if(resultItem.isOption())
-      { argMethod[0] = new Integer((int)resultItem.getNrofAlternative());
-        argTypes[0] = Integer.TYPE;
+      else if(resultItem.isOption() && resultItem.getParsedString()!=null)
+      { //argMethod[0] = new Integer((int)resultItem.getNrofAlternative());
+        argMethod[0] = new String(resultItem.getParsedString());
+        argTypes[0] = String.class;
       }
       else
-      { //main.writeError("Not an integer or float element parsed: " + semantic);
-        argTypes = argTypes0;
+      { //no data in element, search of a argument-less set_- or add_-method: 
+        argTypes = argTypes0; 
         argMethod = null;
-        //argTypes[0] = null;
-      }
-      Method method;
-      try{ method = dataClass.getDeclaredMethod("set_" + nameOutputElement, argTypes);}
-      catch(NoSuchMethodException exception)
-      { try{ method = superClass.getDeclaredMethod("set_" + nameOutputElement, argTypes);}
-        catch(NoSuchMethodException exc2){ method = null; }
-      }
-      if(method != null)
-      {
-        
       }
     }
+    else
+    { //childOutputInstance given,
+      //than search of a set_ or add_-method for the type of the childOutputInstance.
+      argTypes[0] = childOutputInstance.getClass();
+      argMethod[0] = childOutputInstance;
+    }
+    Method method;
+    try{ method = dataClass.getDeclaredMethod("set_" + semantic, argTypes);}
+    catch(NoSuchMethodException exception){ method = null; }
+    if(method == null)
+    { try{ method = superClass.getDeclaredMethod("set_" + semantic, argTypes);}
+      catch(NoSuchMethodException exc2){ method = null; }
+    }
+    if(method == null)
+    { try{ method = dataClass.getDeclaredMethod("add" + semantic, argTypes);}
+      catch(NoSuchMethodException exc2){ method = null; }
+    }
+    if(method == null)
+    { try{ method = superClass.getDeclaredMethod("add" + semantic, argTypes);}
+      catch(NoSuchMethodException exc2){ method = null; }
+    }
+    if(method != null)
+    { //ivoke the method with the given matching args.
+      try{ method.invoke(outputInstance, argMethod); }
+      catch(InvocationTargetException exc){ throw new IllegalAccessException(exc.getMessage()); }
+    }
+    else
+    { Field element;
+      String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
+      try{ element = dataClass.getDeclaredField(semanticLowerCase);}
+      catch(NoSuchFieldException exception)
+      { try{ element = superClass.getField(semanticLowerCase);}
+        catch(NoSuchFieldException exc2){ element = null; } 
+      }
+      if(element != null)
+      { //an element with the desired name is found, write the value to it:
+        report.report(Report.fineDebug, semanticLowerCase);
+        if(childOutputInstance != null)
+        { writeChildElement(element, outputInstance, childOutputInstance);
+        }
+        else
+        { writeInElement(element, outputInstance, resultItem);
+        }
+      }
+    }  
+      
     //search an integer field with name_inputColumn, if found write the input column if the parse result.
     try
     { //if an field inputColumn_ is found, write to it.
-      Field elementColumn = dataClass.getField(nameOutputElement + "inputColumn_");
+      Field elementColumn = dataClass.getField("inputColumn_" + semantic);
       elementColumn.setInt(outputInstance, resultItem.getInputColumn());
     }
     catch(NoSuchFieldException exception)
@@ -262,9 +328,8 @@ public class ZbnfJavaOutput
       //not an element with the postulated name found,
       //search an appropriate method:
       argTypes1[0] = Integer.TYPE;
-      Method method;
       try
-      { method = dataClass.getDeclaredMethod("setinputColumn_" + nameOutputElement, argTypes1);
+      { method = dataClass.getDeclaredMethod("set_inputColumn_" + semantic, argTypes1);
         argMethod1[0] = new Integer(resultItem.getInputColumn());
         method.invoke(outputInstance, argMethod1);
       }
@@ -325,6 +390,9 @@ public class ZbnfJavaOutput
       list.add(value);
       
       if(debug) debugValue = value;
+    }
+    else
+    { throw new IllegalAccessException("Unexpected type of field: " + sType + " " + element.getName() + " in " + outputInstance.getClass().getName());
     }
     
     report.report(Report.fineDebug, " \""+ debugValue + "\" written in Element Type " + sType);

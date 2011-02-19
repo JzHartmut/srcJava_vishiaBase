@@ -45,6 +45,10 @@ public interface SortedTree<Type>
    *        with strings. The sKey can be representing more as a simple string as a attribute in children. 
    *        It may be comparable with the ability of XPATH in XML.
    *        But it will be a feature of Implementation and is not defined as a basic feature of this interface.
+   *        <br>
+   *        sKey==null or sKey="" should be accepted. Than the first child independed on its key is returned.
+   *        This is useable if only one child exists, but with unknown key.
+   *        
    * @return The first child with the given key or null if there is no such child.
    */
   Type getChild(String sKey);
