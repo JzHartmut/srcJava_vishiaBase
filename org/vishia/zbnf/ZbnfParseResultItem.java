@@ -125,13 +125,6 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
   public String getParsedString();
 
   
-  /**Returns the String content of the given child or null, if no such child is found.
-   * @param child
-   */
-  public String getChildString(String child);
-  
-  
-  
   /** Returns the number of the alternative, -1 if there is not a alternative choice,
    * 0 if there is an empty option.
    * @return Number of alternative 1.. if a alternative is used actively.
@@ -143,10 +136,6 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
    * @return A short description.
    */
   public String getDescription();
-  
-  
-  /**returns the column of the input line while parsing. */
-  public int getInputColumn();
   
   /** Tests if the actual item is a start item of a component. A component
    * is a complex part of the parsed input file, represent by the appropriated items
@@ -253,6 +242,7 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
   /** Gets the first child of a component.
    * Use it if it is known that at least one child should exist.
    * @return first child or null if it is not a component with children.
+   * @deprecated use instead {@link iteratorChildren()} or {@link getChildren()} from the current item.
    */
   ZbnfParseResultItem firstChild();
       

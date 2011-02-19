@@ -17,12 +17,10 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author Hartmut Schorrig www.vishia.org/Java
+ * @author www.vishia.de/Java
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2009-05-31: Hartmut detecting and ignoring a BOM (byte order mark) as first char.
- * 2009-04-09: Hartmut encoding detection korrig.
- * 2006-05-00: Hartmut creation
+ * 2006-05-00: www.vishia.de creation
  *
  ****************************************************************************/
 package org.vishia.util;
@@ -94,23 +92,13 @@ public class StringPartFromFileLines extends StringPart
     { //test the first line to detect a charset, maybe the charset exceptions.
       FileInputStream input = new FileInputStream(fromFile);
       byte[] inBuffer = new byte[256];
-      int nrofFirstChars = input.read(inBuffer);
-      input.close();
-      String sFirstLine = new String(inBuffer, 0, nrofFirstChars);
-      int posNewline = sFirstLine.indexOf('\n'); 
-      //@chg:JcHartmut-2010-0912: test 2 lines instead of the first only, because in a bash-shell script it can't be the first line!
-      if(posNewline >= 0 && posNewline < nrofFirstChars){    //= nrofFirstBytes, then an IndexOutOfBoundsException is thrown because
-      	posNewline = sFirstLine.indexOf('\n', posNewline +1); //from the second line. 
-      }
-      if(posNewline < 0) posNewline = nrofFirstChars;
+      input.read(inBuffer);
+      String sFirstLine = new String(inBuffer);
+      int posNewline = sFirstLine.indexOf('\n');
+      if(posNewline < 0) posNewline = sFirstLine.length();
       StringPart spFirstLine = new StringPart(sFirstLine.substring(0, posNewline));
-      spFirstLine.setIgnoreWhitespaces(true);
-      /**Check whether the encoding keyword is found: */
-      if(spFirstLine.seek(sEncodingDetect, StringPart.seekEnd).found()
-        && spFirstLine.scan("=").scanOk() 
-        )
+      if(spFirstLine.seek("encoding=", StringPart.seekEnd).found())
       { String sCharset;
-        spFirstLine.seekNoWhitespace();
         if(spFirstLine.getCurrentChar() == '\"')
         { sCharset = spFirstLine.seek(1).lentoQuotionEnd('\"', 100).getCurrentPart();
           if(sCharset.length()>0) sCharset = sCharset.substring(0, sCharset.length()-1);
@@ -132,13 +120,7 @@ public class StringPartFromFileLines extends StringPart
     { readIn = new BufferedReader(new FileReader(fromFile));
     }
     readnextContentFromFile();
-    if(buffer.length() >0 && buffer.charAt(0) == '\ufeff')
-    { /**ignore a BOM Byte Order Mark.*/
-      assign(buffer.substring(1));
-    }
-    else
-    { assign(buffer.substring(0));
-    }
+    assign(buffer.toString());
   }
 
   
@@ -177,11 +159,4 @@ public class StringPartFromFileLines extends StringPart
   }
 
 
-  public void close(){
-  	if(readIn != null){
-  		try{ readIn.close(); } catch(IOException exc){}
-  		//readIn = null;
-  	}
-  }
-  
 }

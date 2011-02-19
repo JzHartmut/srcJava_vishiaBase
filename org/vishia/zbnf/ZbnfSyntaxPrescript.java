@@ -1,4 +1,4 @@
-/****************************************************************************/
+ /****************************************************************************/
 /* Copyright/Copyleft:
  *
  * For this source the LGPL Lesser General Public License,
@@ -17,7 +17,10 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author Hartmut Schorrig www.vishia.org
+ * @author www.vishia.de/Java
+ * @version 2006-06-15  (year-month-day)
+ * list of changes:
+ * 2006-05-00: www.vishia.de creation
  *
  ****************************************************************************/
 package org.vishia.zbnf;
@@ -90,8 +93,7 @@ import org.vishia.mainCmd.Report;
  *                                                              either syntax1 or syntax2 (or more choice possibilities</td></tr>
  * <tr><td><code>[</code><i>syntax1</i><code>|</code><i>syntax2</i><code>|]</code></td><td>It is a choiceable option, but also the empty choice is possible</td></tr>
  * <tr><td><code>[|</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>First it is tested the syntax behind the option, only if it is not matched, the options are tested.</td></tr>
- * <tr><td><code>[></code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Ones of the alternatives should match, otherwise the parsing process fails.</td></tr>
- * <tr><td><code>[?</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Test whether it is <b>not</b> matched. This is usefull to abort repetitions.</td></tr>
+ * <tr><td><code>[?</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Test wether it is <b>not</b> matched. This is usefull to abort repetitions.</td></tr>
  * <tr><td><code>{</code><i>syntax</i><code>}</code></td><td>Repetition of the <i>syntax</i>, at least one time.</td></tr>
  * <tr><td><code>{</code><i>syntax1</i><code>|</code><i>syntax2</i><code>}</code></td><td>Alternatives in repetition.</td></tr>
  * <tr><td><code>{</code><i>syntax</i><code>?</code><i>syntaxBackward</i></code>}</code></td><td>A requested repeat syntax. It is a novum BNF-likely, but a require of praxis.
@@ -215,26 +217,7 @@ import org.vishia.mainCmd.Report;
  */
 public class ZbnfSyntaxPrescript
 {
-  /**Version-ident.
-	 * list of changes:
-	 * <ul>
-	 * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
-   * in the construct with inner syntax, in the form ,,<""?!innerSyntax?semantic>,,. 
-   * See the ZBNF-description. 
-   * In the past there should be a own pseudo syntax-component-definition to give a semantic 
-   * in form ,,<""?!pseudoComp>...   pseudoComp::=<innerSyntax?semantic>.,, Now it is more easy to apply.
-   * <li> 2009-08-20: Hartmut bugfix: "toLastCharIncl:" were skipped over 1 char additionally. fixed.
-	 * <li> 2009-08-02: Hartmut new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
-	 * <li> 2009-03-16: Hartmut new: kFloatWithFactor: noted as <#f*Factor?...> now works.                                                   
-	 * <li> 2009-03-16: Hartmut new: <toLastChar:chars?...> is an alternative notation of <stringtolastExclChar or <*<<, more simple to read.    
-	 * <li> 2009-03-16: Hartmut new: <toLastCharIncl:chars?...> is an alternative notation of <stringtolastInclChar oder <+<<, more simple to read.
-	 * <li> 2009-03-16: Hartmut chg: <...?*... is not supported anymore, it isn't admissible in syntax scripts up to now. 
-	 * <li>                     It was the functionality isToTransportOuterResults(). But this functionality is too complex, difficult to understand and able to handle.                                 
-	 * <li> 2006-05-00: Hartmut creation
-   * </ul>
-   */
-	public static final String sVersionStamp = "2011-01-18";
-	
+
   /** Kind of syntay type of the item */
   int eType;
 
@@ -258,6 +241,9 @@ public class ZbnfSyntaxPrescript
 
   /** see quest method.*/
   protected boolean bAddOuterResults = false;
+
+  /** see quest method.*/
+  protected boolean bTransportOuterResults = false;
 
   /**Either List of all syntax items one after another of this node
    * or List of all apternatives if this is an alternativ syntax node.
@@ -287,11 +273,11 @@ public class ZbnfSyntaxPrescript
    */
   protected String sConstantSyntax;
 
-  /** List of strings used by kStringUntilEndString or null if not used. */
+  /** List of strings used by kStringUntilEndString*/
   protected List<String> listStrings;
 
-  /** Float-Factor see attribute kFloatToInt */
-  double nFloatFactor = 1.0;
+  /** FloatToInt-Factor see attribute kFloatToInt */
+  double nFloatToInt = 0.0F;
 
   /** Ident number, auto generated, to store in the founded users syntax tree.*/
   protected int nodeIdent;
@@ -354,16 +340,6 @@ public class ZbnfSyntaxPrescript
    */
   static final int kNegativVariant = 8;
 
-  /**Designation of a option written as <code>[>....]</code>
-   * If the syntax inside square brackets doesn't match, the whole parsing process is aborted.
-   */
-  static final char kUnconditionalVariant = '>';  //60 = 0x3c
-  
-  /**Designation of a option written as <code>[!....]</code>
-   * The syntax inside is expected, but not converted.
-   */
-  static final char kExpectedVariant = '!';  //33 = 0x21
-  
   static final int kRepetition = 9;
 
   static final int kRepetitionRepeat = 10;
@@ -382,7 +358,7 @@ public class ZbnfSyntaxPrescript
    * but it should be converted to an integer.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
    */
-  static final int kFloatWithFactor     =15;
+  static final int kFloatToIntNumber     =15;
 
   /** This enum marks, that the syntax of the token should be a positive number.
    * It is a string only with characters '0' to '9'.
@@ -485,20 +461,7 @@ public class ZbnfSyntaxPrescript
             { case 'X': eType = kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
               case 'x': eType = kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
               case '-': eType = kIntegerNumber; sDefinitionIdent = "i-IntegerNumber"; spInput.seek(1); break;
-              case 'f': 
-              { eType = kFloatNumber;   
-                sDefinitionIdent = "i-FloatNumber"; 
-                spInput.seek(1);
-                if(spInput.scanStart().scan("*").scanFloatNumber().scanOk())
-                { nFloatFactor = spInput.getLastScannedFloatNumber();
-                  eType = kFloatWithFactor;
-                  sDefinitionIdent = "i-FloatFactor(" + nFloatFactor + ")"; 
-                }
-                else
-                { eType = kFloatNumber;   
-                  sDefinitionIdent = "i-FloatNumber"; 
-                }  
-              } break;
+              case 'f': eType = kFloatNumber;   sDefinitionIdent = "i-FloatNumber"; spInput.seek(1); break;
               default:  eType = kPositivNumber; sDefinitionIdent = "i-PositivNumber"; break;
             }
           }
@@ -548,10 +511,15 @@ public class ZbnfSyntaxPrescript
               else bContinue = false;
             }
           }
-          
           else if(sTest.startsWith("*<<"))
           { eType = kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
+            spInput.seek(3); //read sConstantSyntax from "|"
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+          }
+          else if(sTest.startsWith("+<<"))
+          { eType = kStringUntilRightEndcharInclusive;
+            sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(3); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
           }
@@ -561,34 +529,12 @@ public class ZbnfSyntaxPrescript
             spInput.seek(20); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
           }
-          else if(sTest.startsWith("toLastChar:"))
-          { eType = kStringUntilRightEndchar;
-            sDefinitionIdent = "i-StringUntilRightEndChar";
-            spInput.seek(11); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
-            //spInput.seek(1);  //skip over ), ?> will be accept later.
-          }
-          
-          else if(sTest.startsWith("+<<"))
-          { eType = kStringUntilRightEndcharInclusive;
-            sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
-            spInput.seek(3); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
-          }
           else if(sTest.startsWith("stringtolastinclChar"))
           { eType = kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(20); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
           }
-          else if(sTest.startsWith("toLastCharIncl:"))
-          { eType = kStringUntilRightEndcharInclusive;
-            sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
-            spInput.seek(15); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
-            //spInput.seek(1);  //skip over ), ?> will be accept later.
-          }
-          
           else if(sTest.startsWith("*{"))
           { spInput.seek(2); //read sConstantSyntax from "|"
             sIndentChars = spInput.getCircumScriptionToAnyChar("}");
@@ -755,7 +701,6 @@ public class ZbnfSyntaxPrescript
   void getSemantic(StringPart spInput)
   { //TRICKY: sSemantic blanketed the class variable, to test assignment from compiler in all branches.
     String sSemantic;
-    boolean bSemantic = true;
     char cc = spInput.getCurrentChar();
 
     if( cc == '-')
@@ -763,57 +708,62 @@ public class ZbnfSyntaxPrescript
       cc = spInput.seek(1).getCurrentChar();
     }
     else if(cc == '+')
-    { bAddOuterResults = true;
-      //bTransportOuterResults = true;
+    { bAddOuterResults = bTransportOuterResults = true;
       cc = spInput.seek(1).getCurrentChar();
     }
-    /*
     else if(cc == '*')
     { bTransportOuterResults = true;
       cc = spInput.seek(1).getCurrentChar();
     }
-    */
+
     if( cc  == '!')
     { //call of an inner parsing
+      sSemantic = null;
       spInput.seek(1).lentoIdentifier();
       if(spInput.length()>0)
       { sSubSyntax = spInput.getCurrentPart();
       }
       else ; //no sDefintionIdent and no Semantic
       spInput.fromEnd();
-      cc = spInput.getCurrentChar();
-      if(cc=='?'){ cc=spInput.seek(1).getCurrentChar();  //the first char of semantic
-      } else { bSemantic = false; }  //no second ?, cc should be '>'
     }
-    if(bSemantic){
-	    if( cc == '?')
-	    { spInput.seek(1);
-	      sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
-	    }
-	    else if(false && spInput.startsWith("text()"))
-	    { spInput.seek(6);
-	      sSemantic="text()";
-	    }
-	    else
-	    { //behind ? the semantic is defined. It may be a null-Semantic.
-	      spInput.lentoAnyChar(">");
-	      if(spInput.length()>0)
-	      { sSemantic = spInput.getCurrentPart();
-	      }
-	      else
-	      { sSemantic = null;  //<..?>: without semantic
-	      }
-	      spInput.fromEnd();
-	    }
-    } else {
-    	sSemantic = null;  //<...?!subSyntax>
+    /*
+    else if( cc == '@')
+    { spInput.seek(1);
+      spInput.lentoIdentifier();
+      if(spInput.length()>0)
+      { sSemantic = "@" + spInput.getCurrentPart();  //create an attribute in xml
+      }
+      else
+      { sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
+      }
+      spInput.fromEnd();
+    }
+    */
+    else if( cc == '?')
+    { spInput.seek(1);
+      sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
+    }
+    else if(false && spInput.startsWith("text()"))
+    { spInput.seek(6);
+      sSemantic="text()";
+    }
+    else
+    { //behind ? the semantic is defined. It may be a null-Semantic.
+      spInput.lentoAnyChar(">");
+      if(spInput.length()>0)
+      { sSemantic = spInput.getCurrentPart();
+      }
+      else
+      { sSemantic = null;  //<..?>: without semantic
+      }
+      spInput.fromEnd();
     }
     this.sSemantic = sSemantic;
     if(sSemantic != null && sSemantic.equals("return"))
       stop();
   }
   
-  /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
+  /**Only for debugging, possibility of breakpoint. */
   void stop()
   {
     
@@ -842,27 +792,18 @@ public class ZbnfSyntaxPrescript
     { spInput.setIgnoreWhitespaces(true);
       //spInput.setIgnoreComment("/*", "*/");
       spInput.setIgnoreEndlineComment("##");
-      spInput.seekNoWhitespaceOrComments();
-      if(spInput.getCurrentChar()=='?')
-      { //a semantic explanation
-        //skip until dot. It is uninteresting here.
-        spInput.getCircumScriptionToAnyCharOutsideQuotion(".");
-        spInput.seek(1);  //skip dot.
+      spInput.seekNoWhitespaceOrComments().lentoIdentifier();
+      if(spInput.length()>0)
+      { sDefinitionIdent = spInput.getCurrentPart();
+        sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
+        eType = kSyntaxDefinition;
+        spInput.fromEnd();
       }
-      else
-      { spInput.lentoIdentifier();
-        if(spInput.length()>0)
-        { sDefinitionIdent = spInput.getCurrentPart();
-          sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
-          eType = kSyntaxDefinition;
-          spInput.fromEnd();
-        }
-        else throwParseException(spInput, "identifier::=... for prescript expected");
-        if(!spInput.seekNoWhitespace().scan("::=").scanOk())
-        { throwParseException(spInput, "::= expected");
-        }
-        convertTheStringGivenSyntax(spInput, ".",true, spInput.getCurrent(20));
-      }  
+      else throwParseException(spInput, "identifier expected");
+      if(!spInput.seekNoWhitespace().scan("::=").scanOk())
+      { throwParseException(spInput, "::= expected");
+      }
+      convertTheStringGivenSyntax(spInput, ".",true, spInput.getCurrent(20));
     }
 
 
@@ -941,20 +882,13 @@ public class ZbnfSyntaxPrescript
           childsAdd(new ZbnfSyntaxPrescript(this, kSkipSpaces));
         }
         String sSyntaxOnStartForErrorNothingFoundChild = spInput.getCurrent(20);
-        char cc;
-        if(spInput.length() >0)
-        { cc = spInput.getCurrentChar();
-          if( charsEnd.indexOf(cc) >=0)
-          { spInput.seek(1);
-            cEnd = cc;
-          }
-          else if(cc == StringPart.cEndOfText)
-          { cEnd = cc;
-          }
+        char cc = spInput.getCurrentChar();
+        if( charsEnd.indexOf(cc) >=0)
+        { spInput.seek(1);
+          cEnd = cc;
         }
-        else
-        { cEnd = StringPart.cEndOfText;
-          cc = 0;
+        else if(cc == StringPart.cEndOfText)
+        { cEnd = cc;
         }
         if(cEnd == 0)
         { sSyntaxOnStartForErrorNothingFound = null;
@@ -1019,19 +953,7 @@ public class ZbnfSyntaxPrescript
             }break;
             default: //childsAdd(convertConstantSyntax(spInput));
             { //no special char found, it is a terminal syntax!
-              char cFirst = spInput.getCurrentChar();
-              String sTerminateChars;
-              if(cFirst == '\"') 
-              { sTerminateChars = spInput.getCircumScriptionToAnyCharOutsideQuotion("[|]{?}<>. \r\n\t\f");
-                int length = sTerminateChars.length();
-                if(length >=2 && sTerminateChars.charAt(length-1) == '\"')
-                { //The constant string is in "", it is valid without the "":
-                  sTerminateChars = sTerminateChars.substring(1, length-1);
-                }
-              }
-              else
-              { sTerminateChars = spInput.getCircumScriptionToAnyChar("[|]{?}<>. \r\n\t\f");
-              }
+              String sTerminateChars = spInput.getCircumScriptionToAnyChar("[|]{?}<>. \r\n\t\f");
               ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
               terminateSyntax.eType = kTerminalSymbol;
               terminateSyntax.sDefinitionIdent = "i-text";
@@ -1114,16 +1036,6 @@ public class ZbnfSyntaxPrescript
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
         optionItem.eType = kNegativVariant;
-      }
-      else if(spInput.startsWith(">"))
-      { spInput.seek(1);
-        optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kUnconditionalVariant;
-      }
-      else if(spInput.startsWith("!"))
-      { spInput.seek(1);
-        optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kExpectedVariant;
       }
       else if(spInput.startsWith("|"))
       { spInput.seek(1);
@@ -1266,9 +1178,9 @@ public class ZbnfSyntaxPrescript
   {
     {
       String sReport;
-      //String sSyntax = getConstantSyntax();
+      String sSyntax = getConstantSyntax();
       sReport = toString();
-      report.reportln(nLevel, 0, "SyntaxPrescript:" + sIndent  + sReport);
+      report.reportln(Report.fineInfo, 0, "SyntaxPrescript:" + sIndent  + sReport);
       if(childSyntaxPrescripts != null)
       { String sIndentNew = sIndent.substring(0, sIndent.length()-2)
                           + (bHasNext ? "| " : "  ");
@@ -1338,12 +1250,6 @@ public class ZbnfSyntaxPrescript
   { return sIndentChars;
   }
 
-  /**Returns the factor to multiply for syntax <#f*factor?...> */
-  double getFloatFactor()
-  { return nFloatFactor;
-  }
-  
-  
   /**Returns true, if the result of the parsing with this Syntaxprescript
    * is to assigned into the next component of the outer prescript
    */
@@ -1358,6 +1264,13 @@ public class ZbnfSyntaxPrescript
   { return bAddOuterResults;
   }
 
+
+  /**Returns true, if outer result of parsing with the outer prescript
+   * are to assigned into this component.
+   */
+  boolean isToTransportOuterResults()
+  { return bTransportOuterResults;
+  }
 
 
   /**Returns true if the Syntax item contains some alternatives getted by getListPrescripts. 
@@ -1468,12 +1381,6 @@ public class ZbnfSyntaxPrescript
         case kNegativVariant:
         { sReport = "[?...|...]";
         } break;
-        case kUnconditionalVariant:
-        { sReport = "[>...|...]";
-        } break;
-        case kExpectedVariant:
-        { sReport = "[!...|...]";
-        } break;
         case kAlternative:
         { sReport = "...|...";
         } break;
@@ -1494,15 +1401,11 @@ public class ZbnfSyntaxPrescript
         case kStringUntilRightEndchar:          sReport = "<stringtolastExclChar" + getConstantSyntax(); break;
         case kStringUntilRightEndcharInclusive: sReport = "<stringtolastinclChar" + getConstantSyntax(); break;
         case kQuotedString  : sReport = "<" + getConstantSyntax(); break;
-        case kStringUntilEndString: sReport = "<*" + sConstantSyntax; break;
-        case kStringUntilEndStringWithIndent: sReport = "<+++*" + sConstantSyntax; break;
         case kPositivNumber : sReport = "<#";  break;
         case kIntegerNumber : sReport = "<#-"; break;
         case kHexNumber :     sReport = "<#x"; break;
         case kFloatNumber :   sReport = "<#f"; break;
-        case kFloatWithFactor :   sReport = "<#f*" +nFloatFactor; break;
         case kSkipSpaces :    sReport = "\\n\\t"; break;
-        case 0 :    sReport = "?-0-?"; break;
         default: sReport = "?-?-?";
       }
       String sSemantic = getSemantic();
@@ -1528,7 +1431,7 @@ public class ZbnfSyntaxPrescript
   protected void throwParseException(StringPart spInput, String sMsg)
   throws ParseException
   { //reportContent(report, 0);
-    throw new ParseException(sMsg + ", found: " + spInput.getCurrent(60), spInput.getLineCt());
+    throw new ParseException(sMsg + ", found: " + spInput.getCurrent(12), spInput.getLineCt());
   }
 
 
