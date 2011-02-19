@@ -26,75 +26,118 @@
  ****************************************************************************/
 package org.vishia.xmlSimple;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.util.SortedTree;
 
-public class XmlNode
-{ String name;
-  String namespaceKey;
+/**This is a simple variant of processing XML.*/
 
-  TreeMap<String, String> attributes;
+/**Interface to Access to a XML node. It contains a tree of nodes or text content. 
+ * This class is a simple way using XML, some features will not supported yet:
+ * <ul><li>Namespaces on attributes.
+ * <li>Check of namespace correctness: The user works with the aliases (keys). They will be written in the node.
+ *     if the aliases are incorrect, the XML-tree is incorrect.
+ * </ul>    
+ */ 
+public interface XmlNode extends SortedTree<XmlNode>
+{ 
+  /**creates a XmlNode from the same implementation type as this, but without adding to the XML-tree.
+   * The node can be added later, using {@link #addContent(XmlNode)}, because it may be necessary to built
+   * a sub tree with the new node first, and than add, if there are multi threads.
+   * @param name
+   * @param namespaceKey The this-node should know the key, otherwise an XmlException is thrown.
+   * @return
+   */ 
+  public XmlNode createNode(String name, String namespaceKey) throws XmlException;
 
-  List<XmlContent> content;
+  /**Sets an attribute by name.
+   * 
+   * @param name
+   * @param value
+   */
+  public void setAttribute(String name, String value);
+  
+  /**Adds namespace declaration on the specified node. 
+   * 
+   * @param name namespace alias (key)
+   * @param value namespace uri.
+   */
+  public void addNamespaceDeclaration(String name, String value);
+  
+  /**Gets all namespace declaration at this node. */
+  public Map<String, String> getNamespaces();
 
-  TreeMap<String, String> namespaces;
+  /**Adds textual content. */
+  public XmlNode addContent(String text);
+  
+  /**adds a child node. 
+   * 
+   * @param node
+   * @return this itself to add something else.
+   * @throws XmlException
+   */
+  public XmlNode addContent(XmlNode node) throws XmlException;
+  
+  /**adds and returns a new child node.
+   * 
+   * @param name
+   * @param namespaceKey
+   * @return the new created node.
+   * @throws XmlException
+   */
+  public XmlNode addNewNode(String name, String namespaceKey) throws XmlException;
+  
+  /**removes all children, also textual content, but not attributes. */
+  public void removeChildren();  
+  
+  /**returns true if the node is a text, not a XML element. A textual content is also represent as node. 
+   * 
+   * @return
+   */ 
+  public boolean isTextNode();
+  
+  /**Returns the text of the node. 
+   * If it isn't a text node, the summary text of all child text-nodes is returned. 
+   */
+  public String getText();
+  
+  /**Returns the tagname of the node. If it is a text-node, the text is returned. 
+   */
+  public String getName();
+  
+  /**returns the alias or key of the namespace. */
+  public String getNamespaceKey();
+  
+  /**returns the requested attribute or null if it is not existing. */
+  public String getAttribute(String name);
 
+  /**returns all attributes. */
+  public Map<String, String> getAttributes();
+
+  /**removes the requested attribute. If the attribute is not existing, this method does nothing. */
+  public String removeAttribute(String name);
+
+  /**returns the first child with the given name.
+   * @param name If the child has a namespace, its key have to be given in form "key:name"
+   * @return the node or null.
+   * @see org.vishia.util.SortedTree#getChild(java.lang.String)
+   */
+  public XmlNode getChild(String name);
+
+  /**gets the parent of the node. */
+  public XmlNode getParent();
+
+  /**connects the node with the parent: Any node may be only used maximal one time in a xml tree.
+   * It the node should transfered in an other tree, it must be deleted from the current tree.
+   * @param parent if null than the node is detached.
+   */
+  public void setParent(XmlNode parent);
   
-  
-  XmlNode parent;
-  
-  public XmlNode(String name)
-  { this.name = name;
-  }
-  
-  public XmlNode(String name, String namespaceKey, String namespace)
-  { this.name = name;
-    this.namespaceKey = namespaceKey;
-  }
-  
-  public void setAttribute(String name, String value)
-  { if(attributes == null){ attributes = new TreeMap<String, String>(); }
-    attributes.put(name, value);
-  }
-  
-  public void addNamespaceDeclaration(String name, String value)
-  { if(namespaces == null){ namespaces = new TreeMap<String, String>(); }
-    namespaces.put(name, value);
-  }
-  
-  public void addContent(String text)
-  { if(content == null){ content = new LinkedList<XmlContent>(); }
-    content.add(new XmlContent(text));
-  }
-  
-  public void addContent(XmlNode node) 
-  throws XmlException
-  { if(content == null){ content = new LinkedList<XmlContent>(); }
-    if(node.parent != null)
-      throw new XmlException("node has always a parent");
-    node.parent = this;
-    content.add(new XmlContent(node));
-  }
   
 }
 
 
-/*
-class XmlAttribute
-{ String name;
-  String value;
-}
-*/
-
-
-class XmlContent
-{ String text;
-  XmlNode xmlNode;
-  
-  XmlContent(String text){ this.text = text; }
-
-  XmlContent(XmlNode xmlNode){ this.xmlNode = xmlNode; }
-
-}

@@ -1152,7 +1152,7 @@ that is a liststring and his part The associated String
       if(cc == '\"')
       { int endQuotion = indexEndOfQuotion('\"', pos - start, max - start);
         if(endQuotion < 0){ pos = max; }
-        else{ pos = endQuotion; }
+        else{ pos = endQuotion + start; }
       }
       else
       { if(sChars.indexOf(cc) >= 0){ bNotFound = false; }
@@ -1887,56 +1887,46 @@ that is a liststring and his part The associated String
    *  @param sCharsEnd Assembling of chars determine the end of the part.  
    * */
   public String getCircumScriptionToAnyChar(String sCharsEnd)
+  { return getCircumScriptionToAnyChar_p(sCharsEnd, false);
+  }
+  
+  
+  public String getCircumScriptionToAnyCharOutsideQuotion(String sCharsEnd)
+  { return getCircumScriptionToAnyChar_p(sCharsEnd, true);
+  }
+  
+  
+  private String getCircumScriptionToAnyChar_p(String sCharsEnd, boolean bOutsideQuotion)
   { String sResult;
     final char cEscape = '\\';
-    int posEnd    = (sCharsEnd == null) ? end : indexOfAnyChar(sCharsEnd);
-    if(posEnd < 0) posEnd = end;
-    int posEscape = indexOf(cEscape);
-    if(posEscape < 0 || posEnd < posEscape)
-    { sResult = lento(posEnd).getCurrentPart();
+    int posEnd    = (sCharsEnd == null) ? end 
+                  : bOutsideQuotion ? indexOfAnyCharOutsideQuotion(sCharsEnd, 0, end-start)
+                                    : indexOfAnyChar(sCharsEnd);
+    if(posEnd < 0) posEnd = end - start;
+    //int posEscape = indexOf(cEscape);
+    //search the first escape char inside the string.
+    int posEscape = content.substring(start, start + posEnd).indexOf(cEscape);  
+    if(posEscape < 0)
+    { //there is no escape char in the current part to sCharsEnd,
+      //no extra conversion is necessary.
+      sResult = lento(posEnd).getCurrentPart();
     }
     else
     { //escape character is found before end
-      do
-      { //search the end char after part of string without escape char
-        posEnd    = (sCharsEnd == null) ? end : indexOfAnyChar(sCharsEnd, posEscape +2, Integer.MAX_VALUE);
-        if(posEnd < 0) posEnd = end;
-        posEscape = indexOf(cEscape, posEscape +2);
-      }while((posEscape +1) == posEnd);
+      if(content.charAt(start + posEnd-1)== cEscape)
+      { //the escape char is the char immediately before the end char. 
+        //It means, the end char isn't such one and posEnd is faulty. 
+        //Search the really end char:
+        do
+        { //search the end char after part of string without escape char
+          posEnd    = (sCharsEnd == null) ? end : indexOfAnyChar(sCharsEnd, posEscape +2, Integer.MAX_VALUE);
+          if(posEnd < 0) posEnd = end;
+          posEscape = indexOf(cEscape, posEscape +2);
+        }while((posEscape +1) == posEnd);
+      }
       lento(posEnd);
       
-      if(true)
-      { sResult = SpecialCharStrings.resolveCircumScription(getCurrentPart());
-      }
-      else
-      { StringBuffer sbConstantSyntax = new StringBuffer(getCurrentPart());
-        int ii=0;
-        while(ii < sbConstantSyntax.length())
-        { if(sbConstantSyntax.charAt(ii) == cEscape)
-          { sbConstantSyntax.deleteCharAt(ii);
-            char cNext = sbConstantSyntax.charAt(ii);
-            int iChangedChar;
-            if( (iChangedChar = "nrtfb".indexOf(cNext)) >=0)
-            { sbConstantSyntax.setCharAt(ii, "\n\r\t\f\b".charAt(iChangedChar));
-            }
-            else if( cNext == 's')
-            { // \s means a space.
-              sbConstantSyntax.setCharAt(ii, ' ');
-            }
-            else if( cNext == 'a')
-            { // \a means end of file, coded inside with 4 = EOT (end of transmission).
-              sbConstantSyntax.setCharAt(ii, cStartOfText);
-            }
-            else if( cNext == 'e')
-            { // \e means end of file, coded inside with 4 = EOT (end of transmission).
-              sbConstantSyntax.setCharAt(ii, cEndOfText);
-            }
-            else; //the char after cEscape is valid!
-          }
-          ii +=1;
-        }
-        sResult = sbConstantSyntax.toString();
-      }  
+      sResult = SpecialCharStrings.resolveCircumScription(getCurrentPart());
     }
     fromEnd();
     return sResult;

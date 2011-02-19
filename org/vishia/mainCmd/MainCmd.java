@@ -813,6 +813,34 @@ public abstract class MainCmd implements MainCmd_ifc
   }
 
 
+  public void flushReport()
+  { if(fReport != null)
+    { try{ fReport.flush();}
+      catch(IOException exc)
+      { //do noting because the report is damaged at all.
+      }
+    }
+  }
+
+  
+  
+  
+  public void setReportLevelToIdent(int nLevel, int nLevelActive)
+  { throw new RuntimeException("report idents are not supported here.");
+    
+  }
+  
+  
+  public int getReportLevelFromIdent(int ident)
+  { if(ident >=Report.error && ident <=Report.fineDebug)
+    { return ident;
+    }
+    else throw new RuntimeException("report idents are not supported here.");
+  }
+
+  
+  
+  
   public String getReportFileName()
   { return sFileReport;
   }

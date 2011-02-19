@@ -46,7 +46,7 @@ public class XmlException extends Exception
 	 */
 	private static final long serialVersionUID = 1;
 
-	XmlException(String text)
+	public XmlException(String text)
   { super(text);
   }
 }

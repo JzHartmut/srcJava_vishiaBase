@@ -48,12 +48,21 @@ public class SimpleXmlOutputter
     writeNode(out, xmlNode, 0);
   }
   
-  protected void writeNode(Writer out, XmlNode xmlNode, int level) 
+  protected void writeNode(Writer out, XmlNode xmlNode, int nIndent) 
   throws IOException
-  { out.write(sIdent.substring(0, 2+level*2));
-    out.write(elementStart(xmlNode.name));
-    if(xmlNode.attributes != null)
-    { Iterator<Map.Entry<String, String>> iterAttrib = xmlNode.attributes.entrySet().iterator();
+  { if(nIndent >=0 && nIndent < sIdent.length()/2)
+    { out.write(sIdent.substring(0, 2+nIndent*2));
+    }
+    String sTagName;
+    if(xmlNode.getNamespaceKey() != null)
+    { sTagName = xmlNode.getNamespaceKey() + ":" + xmlNode.getName();
+    }
+    else
+    { sTagName = xmlNode.getName();
+    }
+    out.write(elementStart(sTagName));
+    if(xmlNode.getAttributes() != null)
+    { Iterator<Map.Entry<String, String>> iterAttrib = xmlNode.getAttributes().entrySet().iterator();
       while(iterAttrib.hasNext())
       { Map.Entry<String, String> entry = iterAttrib.next();
         String name = entry.getKey();
@@ -61,19 +70,30 @@ public class SimpleXmlOutputter
         out.write(attribute(name, value));
       }
     }  
-    if(xmlNode.content != null)
+    if(xmlNode.getNamespaces() != null)
+    { Iterator<Map.Entry<String, String>> iterNameSpaces = xmlNode.getNamespaces().entrySet().iterator();
+      while(iterNameSpaces.hasNext())
+      { Map.Entry<String, String> entry = iterNameSpaces.next();
+        String name = entry.getKey();
+        String value = entry.getValue();
+        out.write(attribute("xmlns:" + name, value));
+      }
+    }  
+    Iterator<XmlNode> iterContent = xmlNode.iterChildren();
+    if(iterContent != null) 
     { out.write(elementTagEnd());
-      Iterator<XmlContent> iterContent = xmlNode.content.iterator();
       while(iterContent.hasNext())
-      { XmlContent content = iterContent.next();
-        if(content.text != null)
-        { out.write(convert(content.text) );
+      { XmlNode content = iterContent.next();
+        if(content.isTextNode())
+        { out.write(convert(content.getText()) );
+          nIndent = -1;  //no indentation, write the rest and all subnodes in one line.
         }
-        if(content.xmlNode != null)
-        { writeNode(out, content.xmlNode, level+1);
+        else
+        { //if nIndent<0, write no indent in next node level.
+          writeNode(out, content, nIndent >=0 ? nIndent+1 : -1);
         }
       }
-      out.write(elementEnd(xmlNode.name));
+      out.write(elementEnd(sTagName));
     }  
     else
     { out.write(elementShortEnd());

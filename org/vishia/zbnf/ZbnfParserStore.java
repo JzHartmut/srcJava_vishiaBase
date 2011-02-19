@@ -160,14 +160,22 @@ class ZbnfParserStore
     /** The line and column nr for debugging*/
     int nLine, nColumn;
 
+    
+    /**The syntax identifications which has produced the stored result.
+     * With this information a re-using of result can be do if the same syntax is detect 
+     * in another path of the syntax graph, it spares calculation time. 
+     */
+    String syntaxIdent;
+    
     /**  */
     SortedTreeNode<ZbnfParseResultItem> treeNodeRepresentation = null;
     
     
-    ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent)
+    ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax)
     { this.store = store;
       this.sSemantic = sSemantic;
       this.parent = parent;
+      this.syntaxIdent = syntax;
     }
 
 
@@ -194,6 +202,10 @@ class ZbnfParserStore
     { return parsedString;
     }
 
+    public int getInputColumn()
+    { return nColumn;
+    }
+    
     public boolean isComponent()
     { return (offsetAfterEnd > 1) || kind == kComponent;
     }
@@ -288,6 +300,10 @@ class ZbnfParserStore
       { sRet += "{?" + isRepeat() + "}";
       }
 
+      sRet += " syntax=" + syntaxIdent;
+      
+      sRet += " input=" + start + ".." + end + "(" + nLine + ", " + nColumn + ")";
+      
       String sParsedText = getParsedText();
       if(sParsedText != null)
       { sRet += " read: \"" + sParsedText + "\"";
@@ -297,7 +313,7 @@ class ZbnfParserStore
 
     
     protected ParseResultItemImplement clone()
-    { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null);
+    { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null, null);
       item.kind = kind;
       item.nrofAlternative = nrofAlternative;
       item.parsedFloatNumber = parsedFloatNumber;
@@ -305,6 +321,7 @@ class ZbnfParserStore
       item.parsedString = parsedString;
       item.isAdded = false;
       item.offsetAfterEnd = offsetAfterEnd;
+      item.syntaxIdent = syntaxIdent;
       return item;
     }
     
@@ -550,7 +567,7 @@ class ZbnfParserStore
   private int add(String sSemantic, String sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
   { //Note: the item should be member (respective outer class) of common ParserStore though it is created in context of this.
     //item = (Parser.this).parserStore.new ParseResultItemImplement(sSemantic);
-    item = new ParseResultItemImplement(this, sSemantic, parent);
+    item = new ParseResultItemImplement(this, sSemantic, parent, "?");
     item.sInput = sInput;
     item.parsedString = sInput;
     item.kind = nAlternative;
@@ -573,8 +590,8 @@ class ZbnfParserStore
   }
 
 
-  int addAlternative(String sSemantic, int type, ZbnfParseResultItem parent)
-  { return add(sSemantic, null, type, 0,0,0,0, parent);
+  int addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
+  { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
   }
 
   /** Sets the number of the alternative into a existing item.
@@ -664,7 +681,7 @@ class ZbnfParserStore
   }
 
   void addIdentifier(String sSemantic, String sIdent, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement(this, sSemantic, parent);
+  { item = new ParseResultItemImplement(this, sSemantic, parent, "$");
     item.sInput = null;
     item.kind = kIdentifier;
     item.parsedString = sIdent;
@@ -679,7 +696,7 @@ class ZbnfParserStore
 
 
   void addIntegerNumber(String sSemantic, long number, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement( this, sSemantic, parent);
+  { item = new ParseResultItemImplement( this, sSemantic, parent, "#");
     item.sInput = null;
     item.kind = kIntegerNumber;
     item.parsedIntegerNumber = number;
@@ -694,7 +711,7 @@ class ZbnfParserStore
 
 
   void addFloatNumber(String sSemantic, double number, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement( this, sSemantic, parent);
+  { item = new ParseResultItemImplement( this, sSemantic, parent, "#f");
     item.sInput = null;
     item.kind = kFloatNumber;
     item.parsedFloatNumber = number;
@@ -802,8 +819,8 @@ class ZbnfParserStore
    * @param sSemantic The given semantic, may be null
    * @return the position of the item in array list.
    */
-  int addComponent(String sSemantic, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement(this, sSemantic, parent);
+  int xxxaddComponent(String sSemantic, ZbnfParseResultItem parent, String syntaxIdent)
+  { item = new ParseResultItemImplement(this, sSemantic, parent, syntaxIdent);
     item.kind = kComponent;
     item.idxOwn = items.size();
     if(item.idxOwn == 221)

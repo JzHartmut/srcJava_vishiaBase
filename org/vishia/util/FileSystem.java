@@ -134,7 +134,7 @@ public class FileSystem
     int posWildcard = sPath.indexOf('*');
     if(posWildcard < 0)
     {
-      File fFile = new File(sPath);
+      File fFile = new File(sDir + sPath);
       bFound = fFile.exists();
       if(bFound)
       { listFiles.add(fFile);
@@ -165,11 +165,11 @@ public class FileSystem
         String sPathDir; //, sDirMask;
         FileFilter dirMask = null;
         if(posLastSlash >=0)
-        { sPathDir = sPathBefore.substring(0, posLastSlash);
+        { sPathDir = sDir + sPathBefore.substring(0, posLastSlash);
           //sDirMask = sPathBefore.substring(posLastSlash+1);
         }
         else
-        { sPathDir = ".";
+        { sPathDir = sDir + ".";
           //sDirMask = sPathBefore;
         }
         dirBase = new File(sPathDir);

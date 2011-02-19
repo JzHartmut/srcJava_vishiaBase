@@ -75,7 +75,9 @@ public class SortedTreeNode<Type> implements SortedTree<Type>
     }
     childrenWithKey.add(newElement);
     //
-    //unsortedChildren.add(newElement);
+    if(unsortedChildren == null){
+      unsortedChildren = new LinkedList<Type>(); }
+    unsortedChildren.add(newElement);
   }
   
   /**implements the interface method from {@link org.vishia.util.SortedTree}.

@@ -792,18 +792,27 @@ public class ZbnfSyntaxPrescript
     { spInput.setIgnoreWhitespaces(true);
       //spInput.setIgnoreComment("/*", "*/");
       spInput.setIgnoreEndlineComment("##");
-      spInput.seekNoWhitespaceOrComments().lentoIdentifier();
-      if(spInput.length()>0)
-      { sDefinitionIdent = spInput.getCurrentPart();
-        sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
-        eType = kSyntaxDefinition;
-        spInput.fromEnd();
+      spInput.seekNoWhitespaceOrComments();
+      if(spInput.getCurrentChar()=='?')
+      { //a semantic explanation
+        //skip until dot. It is uninteresting here.
+        spInput.getCircumScriptionToAnyCharOutsideQuotion(".");
+        spInput.seek(1);  //skip dot.
       }
-      else throwParseException(spInput, "identifier expected");
-      if(!spInput.seekNoWhitespace().scan("::=").scanOk())
-      { throwParseException(spInput, "::= expected");
-      }
-      convertTheStringGivenSyntax(spInput, ".",true, spInput.getCurrent(20));
+      else
+      { spInput.lentoIdentifier();
+        if(spInput.length()>0)
+        { sDefinitionIdent = spInput.getCurrentPart();
+          sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
+          eType = kSyntaxDefinition;
+          spInput.fromEnd();
+        }
+        else throwParseException(spInput, "identifier::=... for prescript expected");
+        if(!spInput.seekNoWhitespace().scan("::=").scanOk())
+        { throwParseException(spInput, "::= expected");
+        }
+        convertTheStringGivenSyntax(spInput, ".",true, spInput.getCurrent(20));
+      }  
     }
 
 
@@ -953,7 +962,19 @@ public class ZbnfSyntaxPrescript
             }break;
             default: //childsAdd(convertConstantSyntax(spInput));
             { //no special char found, it is a terminal syntax!
-              String sTerminateChars = spInput.getCircumScriptionToAnyChar("[|]{?}<>. \r\n\t\f");
+              char cFirst = spInput.getCurrentChar();
+              String sTerminateChars;
+              if(cFirst == '\"') 
+              { sTerminateChars = spInput.getCircumScriptionToAnyCharOutsideQuotion("[|]{?}<>. \r\n\t\f");
+                int length = sTerminateChars.length();
+                if(length >=2 && sTerminateChars.charAt(length-1) == '\"')
+                { //The constant string is in "", it is valid without the "":
+                  sTerminateChars = sTerminateChars.substring(1, length-1);
+                }
+              }
+              else
+              { sTerminateChars = spInput.getCircumScriptionToAnyChar("[|]{?}<>. \r\n\t\f");
+              }
               ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
               terminateSyntax.eType = kTerminalSymbol;
               terminateSyntax.sDefinitionIdent = "i-text";
@@ -1431,7 +1452,7 @@ public class ZbnfSyntaxPrescript
   protected void throwParseException(StringPart spInput, String sMsg)
   throws ParseException
   { //reportContent(report, 0);
-    throw new ParseException(sMsg + ", found: " + spInput.getCurrent(12), spInput.getLineCt());
+    throw new ParseException(sMsg + ", found: " + spInput.getCurrent(60), spInput.getLineCt());
   }
 
 

@@ -36,9 +36,11 @@ import java.util.Iterator;
 import java.util.TreeMap;
 
 
+import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
+import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
 
@@ -94,6 +96,8 @@ class ZbnfXmlOutput
       }      
     }
     
+    WikistyleTextToSimpleXml toWikistyle = new WikistyleTextToSimpleXml(); 
+    toWikistyle.testXmlTreeAndConvert(xmlTop);
     try
     {
       Writer out = new FileWriter(sFileOut);
@@ -254,10 +258,10 @@ class ZbnfXmlOutput
     }
 
     if(sNamespaceKey != null)
-    { xmlChild = new XmlNode(sName, sNamespaceKey, sNamespaceVal);
+    { xmlChild = new XmlNodeSimple(sName, sNamespaceKey, sNamespaceVal);
     }
     else
-    { xmlChild = new XmlNode(sName);
+    { xmlChild = new XmlNodeSimple(sName);
     }
     
     if(bExpandWikistyle){ xmlChild.setAttribute("expandWikistyle", "yes"); }

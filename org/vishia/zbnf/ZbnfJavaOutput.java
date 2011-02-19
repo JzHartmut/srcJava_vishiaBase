@@ -67,9 +67,11 @@ public class ZbnfJavaOutput
    * @param topLevelOutput The toplevel instance
    * @param resultItem The toplevel parse result
    * @param report
+   * @throws IllegalAccessException if the field is found but it is not public.
+   * @throws IllegalArgumentException 
    */
   @SuppressWarnings("deprecation")
-  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report)
+  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report) throws IllegalArgumentException, IllegalAccessException
   { //instance of writer only for temporary help to organize, no data are stored here: 
     ZbnfJavaOutput instance = new ZbnfJavaOutput(report);  
     //the available classes of the top level output instance
@@ -97,15 +99,19 @@ public class ZbnfJavaOutput
    * 
    * @param parentOutputInstance The instance to add childs in some lists
    * @param resultItem
+   * @throws IllegalAccessException 
+   * @throws IllegalArgumentException 
    */  
   @SuppressWarnings("deprecation")
   private void writeChild( Object parentOutputInstance
             , ZbnfParseResultItem resultItem
             , int recursion
             //, ZbnfParseResultItem parentItem
-            )
+            ) throws IllegalArgumentException, IllegalAccessException
   {
     String semantic = resultItem.getSemantic();
+    if(semantic.equals("time"))
+      stop();
     Object childOutputInstance = null;
     report.reportln(Report.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
     if(resultItem.isComponent())
@@ -137,8 +143,15 @@ public class ZbnfJavaOutput
         if(childOutputInstance != null)
         { //write in parent:
         	search_nWriteDstElement(parentOutputInstance, childOutputInstance, resultItem);
-
-          // skip into the component resultItem:
+          
+        	try
+          { //if an field _inputColumn is found, write to it.
+        	  Field elementColumn = outputClass.getField("inputColumn_");
+            elementColumn.setInt(childOutputInstance, resultItem.getInputColumn());
+          }
+          catch(NoSuchFieldException exception){ /**do nothing if the field isn't found.*/ }
+          
+        	// skip into the component resultItem:
           ZbnfParseResultItem childItem = resultItem.nextSkipIntoComponent(resultItem);
           while(childItem != null)
           { 
@@ -171,12 +184,14 @@ public class ZbnfJavaOutput
    * <br> 
    * @param resultItem The semantic is determining for matching fields, 
    *        the content is be used if childOutputInstance is null.
+   * @throws IllegalAccessException if the element is not writeable. 
+   * @throws IllegalArgumentException 
    */
   private void search_nWriteDstElement
   ( Object outputInstance
   , Object childOutputInstance
   , ZbnfParseResultItem resultItem
-  )
+  ) throws IllegalArgumentException, IllegalAccessException
   { //add the result to an element:
     String semantic = resultItem.getSemantic();
     char firstLowerChar = Character.toLowerCase(semantic.charAt(0)); 
@@ -195,16 +210,11 @@ public class ZbnfJavaOutput
     if(element != null)
     { //an element with the desired name is found, write the value to it:
     	report.report(Report.fineDebug, nameOutputElement);
-  	  try
-      { if(childOutputInstance != null)
-        { writeChildElement(element, outputInstance, childOutputInstance);
-        }
-        else
-        { writeInElement(element, outputInstance, resultItem);
-        }
+  	  if(childOutputInstance != null)
+      { writeChildElement(element, outputInstance, childOutputInstance);
       }
-      catch(IllegalAccessException exc)
-      { report.report(Report.fineDebug, " IllegalAccessException");
+      else
+      { writeInElement(element, outputInstance, resultItem);
       }
     }
     else
@@ -240,7 +250,29 @@ public class ZbnfJavaOutput
       {
         
       }
-    }  
+    }
+    //search an integer field with name_inputColumn, if found write the input column if the parse result.
+    try
+    { //if an field inputColumn_ is found, write to it.
+      Field elementColumn = dataClass.getField(nameOutputElement + "inputColumn_");
+      elementColumn.setInt(outputInstance, resultItem.getInputColumn());
+    }
+    catch(NoSuchFieldException exception)
+    { /**do nothing if the field isn't found.*/ 
+      //not an element with the postulated name found,
+      //search an appropriate method:
+      argTypes1[0] = Integer.TYPE;
+      Method method;
+      try
+      { method = dataClass.getDeclaredMethod("setinputColumn_" + nameOutputElement, argTypes1);
+        argMethod1[0] = new Integer(resultItem.getInputColumn());
+        method.invoke(outputInstance, argMethod1);
+      }
+      catch(NoSuchMethodException exception1){ /**do nothing if the field isn't found.*/ }
+      catch(InvocationTargetException exc){ throw new IllegalAccessException(exc.getMessage()); }
+    }
+          
+              
   }
   
 
@@ -273,6 +305,10 @@ public class ZbnfJavaOutput
       element.setDouble(outputInstance, value);
       if(debug) debugValue = "" + value;
     }
+    else if(sType.equals("boolean"))
+    { element.setBoolean(outputInstance, true);
+      if(debug) debugValue = "true";
+    }
     else if(sType.equals("java.lang.String"))
     { String value = resultItem.getParsedString();
       if(value == null){ value = resultItem.getParsedText(); }
@@ -301,7 +337,7 @@ public class ZbnfJavaOutput
                              )
   throws IllegalAccessException
   { String sType = element.getType().getName();
-  
+    String sNameOutputClass = child.getClass().getName();
     if(sType.equals("java.util.List"))
     { java.util.List list = (java.util.List)element.get(outputInstance);
       if(list == null)
@@ -311,8 +347,17 @@ public class ZbnfJavaOutput
       list.add(child);
       report.report(Report.fineDebug, " child written, type List.");
     }
+    else if(sType.equals(sNameOutputClass))
+    { element.set(outputInstance, child);
+      
+    }
     else
     { report.report(Report.fineDebug, " child not written, unknown type "+ sType);
     }
+  }
+  
+  
+  void stop()
+  { //debug
   }
 }

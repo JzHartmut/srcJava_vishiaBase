@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -264,36 +266,39 @@ public class Zbnf2Xml
   public boolean execute()
   { boolean bOk = true;
     ZbnfParser parser = null;
-    { StringPart spSyntax = null;
+    { parser = new ZbnfParser(report);
       try
-      { spSyntax = new StringPartFromFileLines(new File(sFileSyntax), 20000, "encoding=", null);
+      { parser.setSkippingComment("/*", "*/", true);
+        parser.setSyntax(new File(sFileSyntax));
       }
-      catch(FileNotFoundException exception)
-      { report.writeError("file not found:" + sFileSyntax);
+      catch (ParseException exception)
+      { report.writeError("Parser Syntax reading error: " + exception.getMessage());
+        //writeError("Stack:" + e.getStackTrace());
+        exception.printStackTrace();
+        bOk = false;
+      } 
+      catch (IllegalCharsetNameException e)
+      {
+        report.writeError("The " + sFileSyntax + " contains an illegal charset-name");
+        bOk = false;
+      } 
+      catch (UnsupportedCharsetException e)
+      {
+        report.writeError("The charset in " + sFileSyntax + " is not supported");
+        bOk = false;
+      } 
+      catch (FileNotFoundException e)
+      {
+        report.writeError("file not found:" + sFileSyntax);
+        bOk = false;
+      } catch (IOException e)
+      {
+        report.writeError("file read error:" + sFileSyntax);
         bOk = false;
       }
-      catch(IOException exception)
-      { report.writeError("file read error:" + sFileSyntax);
-        bOk = false;
-      }
-      catch(Exception exception)
-      { report.writeError("any error, file:" + sFileSyntax);
-        bOk = false;
-      }
-      if(bOk)
-      { parser = new ZbnfParser(report);
-        try
-        { parser.setSkippingComment("/*", "*/", true);
-          parser.setSyntax(spSyntax);
-          parser.reportSyntax(report);
-        }
-        catch (ParseException exception)
-        { report.writeError("Parser Syntax reading error: " + exception.getMessage());
-          //writeError("Stack:" + e.getStackTrace());
-          exception.printStackTrace();
-          bOk = false;
-        }
-      }  
+    }
+    if(bOk)
+    { parser.reportSyntax(report);
     }
     StringPart spToParse = null;
     if(bOk)

@@ -205,6 +205,51 @@ public interface Report
    * */
   int getReportLevel();
 
+  
+  /**Writes the content in the physical medium.
+   * The implementation of flush is in the best way as possible. It depends on the possibilities
+   * of the output medium.
+   */
+  void flushReport();
+  
+  /**Sets a dedicated level number to the known output priorities.
+   * This method helps to define several levels to dispatch it.
+   * @param nLevel The number identifying a dedicated level. This number should be greater than
+   *        the known priority levels, it means >= 10 or >=1000. 
+   *        Use dedicated group of numbers for an application. 
+   * @param nLevelActive Ones of the known priotity levels {@link Report.error} to {@link Report.fineDebug}.
+   * <br>
+   * Example of using:
+   * <pre>
+   *   class MyModule
+   *   { /**Define module-specific numbers to identify a level. 
+   *      * The numbers should be define regarding a band of numbers in the application.
+   *      * /  
+   *     static final int myReportLevel1 = 3500, myReportLevel2=3501; 
+   *     
+   *     void init()
+   *     { setLevelActive(myReportLevel1, Report.info);  //This reports should be outputted always
+   *       setLevelActive(myReportLevel2, Report.debug); //This reports are debug infos.
+   *     }
+   *     
+   *     void processAnything()
+   *     { report.reportln( myReportLevel1, "InfoText"); //It depends on the report level settings 
+   *       report.reportln( myReportLevel2, "DebugText");//wether it is outputted or not. 
+   *     }  
+   * </pre>    
+   * 
+   */
+  void setReportLevelToIdent(int ident, int nLevelActive);
+  
+  
+  
+  
+  /**gets the associated report level to a report identifier.
+   * @param ident The identifier.
+   * @return the level.
+   */
+  int getReportLevelFromIdent(int ident);
+  
   /*----------------------------------------------------------------------------------------------------------*/
   /** set the exitErrorLevel of the maximum of given level of every call.
       @param level Errorlevel how defined in Report, 0 is the lowest level (successfull), >0 is worse.
