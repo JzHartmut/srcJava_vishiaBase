@@ -20,6 +20,7 @@
  * @author Hartmut Schorrig www.vishia.org
  * @version 2006-06-15  (year-month-day)
  * list of changes:
+ * 2009-12-30 Hartmut: corr: Output info: subParserTopLevel == null, no syntax is now removed.
  * 2009-08-02 Hartmut: new: parsing with subSyntax now also available in options writing [<?!subSyntax> ...]. 
  * 2009-08-02 Hartmut: new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
  * 2009-08-02 Hartmut: new: $Whitespaces= now accepted (it was declared in documentation but not implement). 
@@ -1228,7 +1229,10 @@ public class ZbnfParser
         else
         { bOk = false;
           report.reportln(Report.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
-          saveError("prescript: " + sDefinitionIdent + "not found. <?" + sSemanticForError + ">");
+          String sError = "prescript for : <" + sDefinitionIdent 
+          + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
+          + "> not found.";
+          saveError(sError);
         }
         return bOk;
       }
@@ -1687,8 +1691,8 @@ public class ZbnfParser
   protected int nLevelReportParsing, nLevelReportComponentParsing, nLevelReportInfo, nLevelReportError;
 
   /**The ident to report the progress of parsing. */
-  protected int idReportParsing = Report.debug;
-  protected int idReportComponentParsing = Report.fineInfo;
+  protected int idReportParsing = Report.fineDebug;
+  protected int idReportComponentParsing = Report.debug;
   protected int idReportInfo = Report.info;
   protected int idReportError = Report.error;
   

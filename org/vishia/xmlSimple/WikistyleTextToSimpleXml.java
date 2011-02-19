@@ -20,6 +20,7 @@
  * @author Hartmut Schorrig, www.vishia.org
  * @version 2009-07-02  (year-month-day)
  * list of changes:
+ * 2009-12-14 Hartmut: new: [[&name]] builds an anchor. 
  * 2009-07-02 Hartmut: new: A ~ is replaced by the value of attribute expandLabelOwn, if it is found.
  *                     This feature is used in conclusion with XmiDocu.xslp to shorten the name of the own class. 
  * 2006-05-00 Hartmut: creation
@@ -568,7 +569,7 @@ public class WikistyleTextToSimpleXml
 	    }	    
 	    /**Executes the concern of control chars: */
 	    { int endCtrledPart;
-	    	int startNextPart;  //::TRICKY:: The compiler tests wether a value is assigned in every case.
+	      int startNextPart;  //::TRICKY:: The compiler tests wether a value is assigned in every case.
 	      switch(kind)
 		    { case kBoldItalic:
 		      { endCtrledPart = sInput.indexOf("'''''", startAfter); 
@@ -723,22 +724,7 @@ public class WikistyleTextToSimpleXml
             }
           } break;
           case kInset:
-          { endCtrledPart = sInput.indexOf("]]", startAfter); 
-            if(endCtrledPart >= 0)
-            { startNextPart = endCtrledPart +2; }
-            else 
-            { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;
-            }
-            String sImage = sInput.substring(startAfter, endCtrledPart);
-            String[] sTokens = sImage.split("\\|");
-            XmlNode xmlInset = xmlRet.createNode("span", dstNamespace);
-            xmlRet.addContent(xmlInset);
-            xmlInset.setAttribute("class", "inset");
-            xmlInset.setAttribute("title", sTokens[0]);
-            if(sTokens.length > 1)
-            { //the last token is the title.
-              xmlInset.addContent(sTokens[sTokens.length-1]);
-            }
+          { startNextPart = setInset(sInput, startAfter, xmlRet, "span");
           } break;
           case kNothing:
 		      { //no control chars found, the text before is copied yet, its the end of line 
@@ -747,7 +733,7 @@ public class WikistyleTextToSimpleXml
 		      default:
 		      { throw new RuntimeException("unexpected case on switch");
 		      }
-		    }  
+		  }//switch  
 		    start = startNextPart;  //continous at this position.
 	    }
 	  }
@@ -833,13 +819,17 @@ public class WikistyleTextToSimpleXml
     char cNext = sLine.length()>=2 ? sLine.charAt(1) : ' ';
     int nrofPreChars = 1;
     { //new list item
-      String sTagNesting = null, sTagListItem = null;
+      String sTagNesting = null, sTagListItem = null; 
+      String sTagAttribSetting = null;  //TODO: use it.
       switch(cFirst)
       { case '*': sTagNesting = "ul"; sTagListItem = "li"; break;
         case '#': sTagNesting = "ol"; sTagListItem = "li"; break;
         case ';': sTagNesting = "dl"; sTagListItem = "dt"; break;
         case ':': sTagNesting = "dl"; sTagListItem = "dd"; break;
-        case '>': sTagNesting = "div"; sTagListItem = null; break;
+        case '>': 
+        { sTagNesting = null; sTagListItem = null;
+          nrofPreChars = checkInsertNesting_div(sLine, level, sClass);
+        } break;
         case '{': 
         { if(cNext=='|')
         	{ idxNesting = level;
@@ -894,20 +884,8 @@ public class WikistyleTextToSimpleXml
         default:  sTagListItem = "xdiv"; break;
       }  
       if(sTagNesting != null)
-      { boolean bNewListType = (xmlNesting[level] == null)  //no outer Tag, it is the first list item 
-		                         || !(xmlNesting[level].getName().equals(sTagNesting)); 
-      	if( bNewListType)  //another tag type
-	      { //the first element in this list, create the < ul>-XmlNode.
-	        XmlNode xmlContainer = dstElement.createNode(sTagNesting, dstNamespace); 
-	        //add it to the previous level, first to iterBaseElement.
-	        addToParentList(level-1, xmlContainer);
-	        if(sClass != null)
-	        { sClassNesting = sClass; // + "_" + sTagNesting;
-	        	xmlContainer.setAttribute("class", sClassNesting);
-	        }
-	        xmlNesting[level] = xmlContainer;
-	      }
-		    if( sTagListItem != null)
+      { boolean bNewListType = checkInsertNestingTag(sTagNesting, level, sClass);
+            if( sTagListItem != null)
 		    { level += 1; //need 2 level. 
 			    if( bNewListType     //first item of a list or such
 			    	|| (xmlNesting[level] == null)	
@@ -958,6 +936,69 @@ public class WikistyleTextToSimpleXml
   }  
 
   
+  
+  /**Checks whether the given tag is an new tag or it is the same like the last line.
+   * If it is a new tag a new nesting level is created.
+   * At example:
+   * <pre>
+   * *listitem
+   * *listitem
+   * </pre>
+   * Because the type of list is the same, no new list is inserted.
+   * @param sTagNesting The tag, if list, than the whole list, not the list item.
+   * @param level The new level of nesting.
+   * @param sClass
+   * @throws XmlException
+   */
+  boolean checkInsertNestingTag(String sTagNesting, int level, String sClass) 
+  throws XmlException
+  {
+    boolean bNewListType = (xmlNesting[level] == null)  //no outer Tag, it is the first list item 
+      || !(xmlNesting[level].getName().equals(sTagNesting)); 
+    if( bNewListType)  //another tag type
+    { //the first element in this list, create the < ul>-XmlNode.
+    XmlNode xmlContainer = dstElement.createNode(sTagNesting, dstNamespace); 
+    //add it to the previous level, first to iterBaseElement.
+    addToParentList(level-1, xmlContainer);
+    if(sClass != null)
+    { sClassNesting = sClass; // + "_" + sTagNesting;
+    xmlContainer.setAttribute("class", sClassNesting);
+    }
+    xmlNesting[level] = xmlContainer;
+    }
+    return bNewListType;
+  }
+  
+  
+  /**Processing a paragraph with beginning >
+   * @param sLine
+   * @param level
+   * @param sClass
+   * @return
+   * @throws XmlException 
+   */
+  int checkInsertNesting_div(String sLine, int level, String sClass) 
+  throws XmlException
+  {
+    checkInsertNestingTag("div", level, sClass);
+    XmlNode xmlDiv = xmlNesting[level];
+    int posContent = 1;
+    int lengthLine = sLine.length();
+    if(sLine.startsWith(">@")){
+      //sTagAttribSetting = readAttributeSetting(sLine, posContent);
+      //posContent += sTagAttribSetting.length();
+    }
+    if(lengthLine > posContent +2){
+      if(sLine.substring(posContent, lengthLine).startsWith("[[inset:")){
+        //The content of the devision is determined by another generated document part.
+        posContent = setInset(sLine, posContent+8, xmlDiv, "p");
+      }
+    }
+    return posContent;
+  }  
+  
+  
+  
   /**Gets the name of the element or "" to test wether it is*/
   private String getTagNesting(int idx)
   { String sTag;
@@ -998,6 +1039,62 @@ public class WikistyleTextToSimpleXml
     { //it should be exist a < li>, create it if text start with more as one **
       xmlNesting[level].addContent(toAdd);
     }
+  }
+  
+  
+  
+  int setInset(String sInput, int startAfter, XmlNode xmlRet, String sTag) 
+  throws XmlException
+  { int endCtrledPart, startNextPart;
+    endCtrledPart = sInput.indexOf("]]", startAfter); 
+    if(endCtrledPart >= 0)
+    { startNextPart = endCtrledPart +2; }
+    else 
+    { endCtrledPart = sInput.length(); startNextPart = endCtrledPart;
+    }
+    String sImage = sInput.substring(startAfter, endCtrledPart);
+    String[] sTokens = sImage.split("\\|");
+    XmlNode xmlInset = xmlRet.createNode(sTag, dstNamespace);
+    xmlRet.addContent(xmlInset);
+    xmlInset.setAttribute("class", "inset");
+    xmlInset.setAttribute("title", sTokens[0]);
+    if(sTokens.length > 1)
+    { //the last token is the title.
+      xmlInset.addContent(sTokens[sTokens.length-1]);
+    }
+    return startNextPart;
+  }
+  
+  
+  /** Reads an simple attribute setting.
+   * example: @dt.class="value" @class=value<br>
+   * @param sLine The line
+   * @param pos should be the position of the @.
+   * @return The attribute setting. It is postprocessed with 
+   *         White spaces are not admissible.
+   */
+  String readAttributeSetting(String sLine, int pos)
+  { return null;
+  }
+  
+  /**Gets the name of attribute from a setting returned by {@link #readAttributeSetting(String, int)}.
+   * example: @dt.class="value" @class=value<br>
+   * @param sLine The Setting
+   * @return The attribute name. It is the identifier after @
+   */
+  String getAttributeName(String sLine)
+  { return null;
+  }
+  
+  
+  /**Gets the value of attribute from a setting returned by {@link #readAttributeSetting(String, int)}.
+   * example: @dt.class="value" @class=value<br>
+   * @return The attribute value. It is the part of String after the = maybe in "".
+   *         If the value isn't set in "", the value is built from the identifier after =.
+   *         White spaces are not admissible.
+   */
+  String getAttributeValue(String sAttribSetting)
+  { return null;
   }
   
   /** Reads attributes for followed elements.

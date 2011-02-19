@@ -17,14 +17,18 @@
  *    modified sources likewise under this LGPL Lesser General Public License.
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
- * @author JcHartmut = hartmut.schorrig@vishia.de
- * @version 2006-06-15  (year-month-day)
+ * @author Hartmut Schorrig, Pinzberg, Germany: hartmut.schorrig@vishia.de
+ * @version ...
  * list of changes:
- * 2009-05-06 Hartmut: new: writeFile(content, file);
- * 2009-05-06 Hartmut: bugfix: addFileToList(): A directory was also added like a file if wildcards are used. It is false, now filtered file.isFile().
- * 2009-03-24 Hartmut: new: isAbsolutePathOrDrive()
- * 2008-04-02 Hartmut: some changes
- * 2007-10-15 Hartmut: www.vishia.org creation
+ * 2009-12-29 Hartmut bugfix: addFilesWithBasePath(...): If the sPath contains a ':' on second pos (Windows Drive), than the method hadn't accepted a ':' inside, fixed.
+ * 2009-12-29 Hartmut bugfix: mkDirPath(...): not it accepts '\' too (Windows)
+ * 2009-12-29 Hartmut corr: addFileToList(...): uses now currentDir, if param dir== null.
+ * 2009-12-29 Hartmut new: method relativatePath(String sInput, String sRefDir)
+ * 2009-05-06 Hartmut new: writeFile(content, file);
+ * 2009-05-06 Hartmut bugfix: addFileToList(): A directory was also added like a file if wildcards are used. It is false, now filtered file.isFile().
+ * 2009-03-24 Hartmut new: isAbsolutePathOrDrive()
+ * 2008-04-02 Hartmut corr: some changes
+ * 2007-10-15 Hartmut: creation
  *
  ****************************************************************************/
 package org.vishia.util;
@@ -132,12 +136,13 @@ public class FileSystem
    * @return false if no file is found.
    * @throws FileNotFoundException
    */
-  public static boolean addFilesWithBasePath(String sPath, List<FileAndBasePath> list) 
+  public static boolean addFilesWithBasePath(final String sPath, List<FileAndBasePath> list) 
   throws FileNotFoundException
   { final String sPathBase;
     final File dir;
     final int posLocalPath;
-    int posBase = sPath.indexOf(':');
+    int posBase = sPath.indexOf(':',2);
+    final String sPathLocal;
     if(posBase >=2)
     { sPathBase = (sPath.substring(0, posBase) + "/").replace('\\', '/');
       dir = new File(sPathBase);
@@ -145,10 +150,11 @@ public class FileSystem
       //The position after the separator after the absPath of base directory
       // is the start of the local path.
       posLocalPath = sBasepathAbsolute.length() +1;  
-      sPath = sPath.substring(posBase +1);
+      sPathLocal = sPath.substring(posBase +1).replace('\\', '/');
     }
     else 
     { sPathBase = ""; 
+      sPathLocal = sPath.replace('\\', '/');
       posLocalPath = 0;
       dir = null;
     }
@@ -156,7 +162,7 @@ public class FileSystem
     // to fill in the members of the list. 
     // The wrapper instance isn't necessary outside of this static method. 
     FilesWithBasePath wrapper = new FilesWithBasePath(sPathBase, posLocalPath, list);
-    return FileSystem.addFileToList(dir,sPath, wrapper);
+    return FileSystem.addFileToList(dir,sPathLocal, wrapper);
   }
   
   
@@ -231,6 +237,8 @@ public class FileSystem
   public static void mkDirPath(String sPath)
   throws FileNotFoundException
   { int pos2 = sPath.lastIndexOf('/');
+    int pos3 = sPath.lastIndexOf('\\');
+    if(pos3 > pos2){ pos2 = pos3; }
     if(pos2 >0)
     { String sPathDir = sPath.substring(0, pos2);
       File dir = new File(sPathDir);
@@ -244,7 +252,15 @@ public class FileSystem
   }
 
 
-  
+  public static File getDirectory(File file) throws FileNotFoundException
+  { File dir;
+    if(!file.exists()) throw new FileNotFoundException("not exists:" + file.getName());
+    if(!file.isAbsolute()){
+  		file = file.getAbsoluteFile();
+  	}
+  	dir = file.getParentFile();
+  	return dir;
+  }
   
   
   /**Returns true if the String which describes a file path is recognized as an absolute path.
@@ -324,7 +340,7 @@ public class FileSystem
     do{
       int posSep2 = sRefDir.indexOf('/', posSep +1);
       if(posSep2 >0){
-        bCont = sRefDir.substring(0, posSep2).equals(sInput.substring(0, posSep2));
+        bCont = sInput.length() >= posSep2 && sRefDir.substring(0, posSep2).equals(sInput.substring(0, posSep2));
       } else {
         bCont = false;
       }
@@ -487,7 +503,7 @@ public class FileSystem
   }
 
 
-
+  
 
 
 

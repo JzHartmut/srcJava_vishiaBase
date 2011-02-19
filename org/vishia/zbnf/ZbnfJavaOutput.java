@@ -1,4 +1,4 @@
-/****************************************************************************
+/* ***************************************************************************
  * Copyright/Copyleft:
  *
  * For this source the LGPL Lesser General Public License,
@@ -20,6 +20,7 @@
  * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
+ * 2010-01-24: Hartmut docu improved, Report-output before exception on error in called routine to visit the problem.
  * 2009-04-26: Hartmut corr: Now all float or int parse result can set a int, long, float double fields and set_method(value).
  * 2009-04-26: Hartmut corr: better Exception text if access a non public field as components output.
  * 2009-03-23: Hartmut chg: total new structuring. Functional change is: 
@@ -51,29 +52,66 @@ import org.vishia.util.StringPartFromFileLines;
 
 
 
-@SuppressWarnings("unchecked")
 
-/**This class helps to convert a ZbnfParseResult into a tree of Java objects.
- * The user have to be provide a user Object which contains 
- * public Fields or public new_-, set_- or add_-methods for any parse result.
- * <br>
- * For syntax components, either a field with the appropriate name (semantic identifier) 
- * or a pair of <code>type new_<i>semantic</i>()</code> 
- * and a appropriate <code>void set_<i>semantic</i>(type)</code> or <code>void add_<i>semantic</i>(type)</code>
- * should be exist. Either the <code>type new_<i>semantic</i>()</code>-method is invoked to get an instance,
- * than an associated <code>void add_<i>semantic</i>(type)</code> or <code>void set_<i>semantic</i>(type)</code>
- * should be exist and it is called after fill in the content of the component.
- * The return type of the <code>type new_<i>semantic</i>()</code>-method, or the field type of non-containers
+/**This class helps to convert a ZBNF-parse-result into a tree of Java objects.
+ * The user have to be provide a toplevel-instance with given access type which contains 
+ * public Fields or public new_-, set_- or add_-methods for any parse result. The fields or methods are find out
+ * using the reflection.
+ * <br><br>
+ * <b>Saving the content of simple result using fields</b>: Simple results are the basicly components of ZBNF
+ * such as &lt;#?any_number> or &lt;""?Astring>. Depending on the type of result a field with the appropriate name
+ * is searched in the users Object of the current level, and the result content is stored there. The field should be start
+ * with a lower-case letter, independent of the case of the first letter of the semantic identifier of the parse result. 
+ * The type of the field should be matched to the type of the parse result: <code>String</code> for String-results,
+ * and int, float, double for value results. The numeric type is flexible.
+ * <br><br>
+ * <b>Saving the content of result-components using fields</b>: Result-components are the complex results, which have a tree
+ * of results inside. The appropriate syntax-components are declared in ZBNF writing <code>component::=...</code>.
+ * If such results should be stored using fields, a field of type <code>List</code> should be exists with the semantic identifier
+ * of the parse result. Than a new element of the List type will be created, that object will be filled with the
+ * component's result and than add to the list.
+ * <br><br>
+ * <b>Saving the content of simple result using methods</b>: A method with name <code>set_Semantic(Type)</code> should be exist.
+ * The <code>Semantic</code> is the semantic identifier of the parse result. The <code>Type</code> of the argument should follow 
+ * the type of the parse result. Thereby an integer parse result can be associated to one of the scalar number types, 
+ * a float or double result can associated to both a float or double parameter type. Any other result should be have a String
+ * parameter. While accepting several parameter types, the architecture of the user methods can be adapted to the user's requirements.
+ * <br><br>
+ * <b>Saving the content of syntax components using methods</b>: 
+ * <br><br>
+ * If a <code>Type new_<i>semantic</i>()</code>-method will be found, it is invoked to get an instance 
+ * for the syntax-components's content. It is possible, that this instance isn't a new instance, but it is a static allocated instance
+ * which is reused temporary to hold the components data. Another way is to call a <code>new</code> operator to get a new instance.
+ * The return type of the <code>Type new_<i>semantic</i>()</code>-method, or the field type of non-containers
  * or the generic-type of <code>List</code> fields is used to search fields or methods for the component.
- * This types may be defined somewhere else in the Java-code, but it should be public.
- * <br>
- * For repetition in the ZBNF container objects should be used. 
- * The <code>void add_<i>semantic</i>(type)</code>-method should add to it, the container may be encapsulated than,
- * or a field should be from type <code>java.util.List</code>. Than an instance of the generic type will be added.
- * <br> 
- * The used elements should be public, because the access to it using reflection is done.
- * Using public fields is more simple, but using public methods is better to debug and encapsulate.
- * It is possible to use interfaces.
+ * The types may be defined somewhere else in the Java-package-tree, but the classes have to be be public.
+ * <br><br>
+ * Than the got instance is used to fill the content of the component like described above.
+ * <br><br>
+ * After them the appropriated method <code>void add_<i>semantic</i>(Type)</code> or <code>void set_<i>semantic</i>(Type)</code>
+ * is called to store the content. One of that methods have to be exist. Both method-variants, <code>add_</code> or <code>set_</code> 
+ * have the same meaning for processing the data,
+ * the name considers the meaning of the users action. <i>add</i> associates adding a content to a container, where <i>set</i>
+ * means a simple setting of data. The implementation of this method can be store the reference of the instance, or it can evaluate 
+ * the content with special tests, copy in a special way etc. It is user-free. 
+ * <br><br>
+ * <br><br>
+ * <b>Public fields or methods, interfaces</b>
+ * <br><br>
+ * All elements which should be used to store parse results have to be public, because the access to it using reflection is done.
+ * Using public fields is more simple, but using public methods is better to debug and encapsulate. The methods may be overridden
+ * or interface methods, the class-type which is returned by <code>new_Name(...)</code> may be a basic type or interface.
+ * The implementation method is called of course. This concept enables a break of dependency between the classes, which are known
+ * in context of storing a parse result and the really implementing classes. It is a application of the standard interface pattern.  
+ * <br><br> 
+ * <br><br> 
+ * <b>Encapsulation, Safety of data while using public access methods or public fields</b> 
+ * <br><br>
+ * The toplevel-instance is provided internally. If it isn't able to access in a public way, it and all its child data are safety,
+ * though the elements of the class are public. The access to the instance is protected. 
+ * <br><br> 
+ * <br><br> 
+ * <b>Comparison with Apache-ANT concept to store parameters for Tasks</b> 
  * <br><br> 
  * The rules for this things are some different but with same principle likewise arguments 
  * for call of java classes extends <code>org.apache.tools.ant.Task</code> called in ant 
@@ -99,23 +137,25 @@ import org.vishia.util.StringPartFromFileLines;
  * <li>Type fields for the child parse result components if only 1 child is able.
  * <li>java.lang.String name-fields for parsed string represented results,</li>
  * <li>long, int, float, double fields for parsed numbers.</li>
- * <li>An element <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
- *     if the input column were the parsed text is found should be stored. 
- *     This is important at example if line structures were parsed.
- * <li>If no appropriate method or field is found, either an IllegalArgumentException is thrown
- *     or the errors are collected and returned in a String. The first behavior is practicable, 
- *     because mostly a false content of destination classes is a writing error of the program.
- *     The variante to produce a collected error text is more for debugging.    
  * </ul>
+ * <br><br> 
+ * <br><br> 
+ * <b>Special functionality for storing the column-number of the input text</b> 
+ * <br><br> 
+ * An element <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
+ * if the input column were the parsed text is found should be stored. 
+ * This is important at example if line structures were parsed.
  * <br><br>
- * If a element is parsed only one time, a simple element to store the result is adequate. 
- * If an element may be parsed some times, in a repetition, a list<Type> should be given. 
- * Elsewhere a new parsed element overwrites the previous.
- * Example:
- * <pre>TODO
- * </pre> 
+ * <br><br>
+ * <b>Error detecting and handling</b>
+ * <br><br>
+ * If a appropriate method or field isn't found, either an IllegalArgumentException is thrown
+ * or the errors are collected and returned in a String. The first behavior is practicable, 
+ * because mostly a false content of destination classes may be writing error of the program.
+ * The variant to produce a collected error text is more usefull for debugging.    
+ * 
  */
-
+@SuppressWarnings("unchecked")
 public class ZbnfJavaOutput
 {
 	private final Report report;
@@ -134,15 +174,24 @@ public class ZbnfJavaOutput
    */
   private boolean bExceptionIfnotFound;
   
+  /**Buffer to note errors during working. 
+   * Its content will be returned as String-returnvalue of {@link #setContent(Class, Object, ZbnfParseResultItem)}.
+   */
   private  StringBuffer errors;
   
   private Class[] outputClasses; 
   
+  /**Empty constructor. 
+   * 
+   */
   public ZbnfJavaOutput()
   { report = null;
     init();
   }
   
+  /**Empty constructor. 
+   * @param report for logging the process of associated, only {@link org.vishia.mainCmd.Report#fineDebug} will be used.
+   */
   public ZbnfJavaOutput(Report report)
   { this.report = report;
     init();
@@ -155,8 +204,14 @@ public class ZbnfJavaOutput
   }
 
   
+  /**Sets the association mode: 
+   * @param value true, than fields aren't searched, only methods.
+   */
   public void setMethodsOnly(boolean value){ this.bOnlyMethods = value; }
   
+  /**Sets the association mode: 
+   * @param value true, than methods aren't searched, only fields. It may have some less calculation time.
+   */
   public void setFieldsOnly(boolean value){ this.bOnlyFields = value; }
   
   /**Sets the behavior if no appropriate method or field is found for a parser result.
@@ -206,7 +261,7 @@ public class ZbnfJavaOutput
   
   
   
-  /** writes the parsers result into a tree of Java objects using the reflection method.
+  /**Writes the parsers result into a tree of Java objects using the reflection method.
    * @param topLevelOutput The toplevel instance
    * @param resultItem The toplevel parse result
    * @param report
@@ -220,7 +275,7 @@ public class ZbnfJavaOutput
   }
   
   
-  /** writes the parsers result into a tree of Java objects using the reflection method.
+  /**Writes the parsers result into a tree of Java objects using the reflection method.
    * @param topLevelOutput The toplevel instance
    * @param resultItem The toplevel parse result
    * @param report
@@ -235,7 +290,7 @@ public class ZbnfJavaOutput
 
   
   
-  /** writes the parsers result into a tree of Java objects using the reflection method.
+  /**Writes the parsers result into a tree of Java objects using the reflection method.
    * @param topLevelOutput The toplevel instance
    * @param resultItem The toplevel parse result
    * @param report
@@ -459,7 +514,9 @@ public class ZbnfJavaOutput
       argMethod[0] = componentsDestination.instance;
       try{ method.invoke(parentInstance, argMethod); }
       catch(InvocationTargetException exc)
-      { throw new IllegalAccessException("the called method " +method.toGenericString() + " throws an Exception: " + exc.getTargetException() );
+      { String sMsg = "The called method " +method.toGenericString() + " throws an Exception: " + exc.getTargetException(); // + ", msg: " + exc.getTargetException().getMessage();
+        if(report!=null){ report.writeWarning(sMsg); }
+        throw new IllegalAccessException( sMsg );
       }
       catch(Exception exc)
       { throw new IllegalAccessException("can not access: " + parentClass.getCanonicalName()  + ".add_" + semantic + "(...) or .set..."); 
@@ -898,11 +955,12 @@ public class ZbnfJavaOutput
    * This is a simple common use-able routine to transfer textual content into content of a Java object.
    * <br>
    * NOTE:This routine is static because it is a recognition to functional programming. 
-   * No side effects are occur. This method sets nothing, it returns only anything.
+   * No side effects are occurring. This method sets nothing, except the content of result. it returns only anything.
+   * An instance of this class is created internally temporary.
    *
-   * @param result  An instance which should contain methods or fields appropriating to the semantic.
-   *                It will be filled by parsing results.
-   * @param fInput  The input file
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param fInput The input file to parse.
    * @param fSyntax The syntax file using ZBNF
    * @param report  Report for parsing process and errors
    * @param msgRange A start number of created messages in report.
@@ -919,13 +977,11 @@ public class ZbnfJavaOutput
    * <br>
    * The non static variant allows to set some options using class methods.
    * 
-   * @param result  An instance which should contain methods or fields appropriating to the semantic.
-   *                It will be filled by parsing results.
-   * @param fInput  The input file
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param fInput The input file to parse.
    * @param fSyntax The syntax file using ZBNF
-   * @param report  Report for parsing process and errors
-   * @param msgRange A start number of created messages in report.
-   * @return null if no error, else a short error text. The explicitely error text is written in report.
+   * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, File fSyntax) 
   { String sError = null;
@@ -958,13 +1014,11 @@ public class ZbnfJavaOutput
    * <br>
    * The non static variant allows to set some options using class methods.
    * 
-   * @param result  An instance which should contain methods or fields appropriating to the semantic.
-   *                It will be filled by parsing results.
-   * @param fInput  The input file
-   * @param fSyntax The syntax file using ZBNF
-   * @param report  Report for parsing process and errors
-   * @param msgRange A start number of created messages in report.
-   * @return null if no error, else a short error text. The explicitely error text is written in report.
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param fInput The input file to parse.
+   * @param spSyntax The syntax using ZBNF
+   * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPart spSyntax) 
   //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
@@ -999,8 +1053,9 @@ public class ZbnfJavaOutput
     { 
       boolean bOk = zbnfParser.parse(spInput);
       if(!bOk)
-      { report.writeError(zbnfParser.getSyntaxErrorReport());
-        sError = "ERROR syntax in input file. ";
+      { final String sParserError = zbnfParser.getSyntaxErrorReport();
+        report.writeError(sError);
+        sError = "ERROR syntax in input file: " + sParserError;
       }
       //The content of the setting file is stored inside the parser as 'parse result'.
       //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.
