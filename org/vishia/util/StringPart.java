@@ -130,13 +130,17 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   /** True if the last operation of lento__(), seek etc. has found anything. See {@link #found()}. */
   boolean bFound = true;
   
-  /**Last scanned integer number*/
+  /**Last scanned integer number.*/
   protected final long[] nLastIntegerNumber = new long[5];
   
-  private int idxLastIntegerNumber = 0;
+  /**current index of the last scanned integer number. -1=nothing scanned. 0..4=valid*/
+  private int idxLastIntegerNumber = -1;
   
   /**Last scanned float number*/
-  protected double nLastFloatNumber = 0.0;
+  protected final double[] nLastFloatNumber = new double[5];
+  
+  /**current index of the last scanned float number. -1=nothing scanned. 0..4=valid*/
+  private int idxLastFloatNumber = -1;
   
   /** Last scanned string. */
   protected String sLastString;
@@ -493,8 +497,8 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   throws IndexOutOfBoundsException
   { endLast = end;
     int endNew = start + len;
-    if(endNew < start) throwIndexOutOfBoundsException("lento(int) negative:" + (endNew - start));
-    if(endNew > endMax) throwIndexOutOfBoundsException("lento(int) after endMax:" + (endNew - endMax));
+    if(endNew < start) /**@java2c=StringBuilderInThreadCxt.*/ throwIndexOutOfBoundsException("lento(int) negative:" + (endNew - start));
+    if(endNew > endMax) /**@java2c=StringBuilderInThreadCxt.*/ throwIndexOutOfBoundsException("lento(int) after endMax:" + (endNew - endMax));
     end = endNew;
     return this;
   }
@@ -703,9 +707,11 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   { startLast = start;
     start += nr;
     if(start > end)
-      throwIndexOutOfBoundsException("seek=" + nr + " start=" + (start-nr) + " end=" + end);
+    	/**@java2c=StringBuilderInThreadCxt.*/ 
+    	throwIndexOutOfBoundsException("seek=" + nr + " start=" + (start-nr) + " end=" + end);
     else if(start < startMin) 
-      throwIndexOutOfBoundsException("seek=" + nr + " start=" + (start-nr) + " start-min=" + startMin);
+    	/**@java2c=StringBuilderInThreadCxt.*/
+    	throwIndexOutOfBoundsException("seek=" + nr + " start=" + (start-nr) + " start-min=" + startMin);
     bFound = true;
     return this;
   }
@@ -1096,7 +1102,6 @@ that is a liststring and his part The associated String
     @param maxToTest maximal numbers of chars to test. It may be Integer.MAX_VALUE. 
     @return position of first founded char inside the actual part, but not greater than maxToTest, if no chars is found unitl maxToTest,
             but -1 if the end is reached.
-   * @java2c=optimize-toString.
   */
   public int indexOfAnyString
   ( String[] listStrings
@@ -1116,6 +1121,7 @@ that is a liststring and his part The associated String
     //Iterator<String> iter = listStrings.iterator();
     boolean acceptToEndOfText = false;
     //while(iter.hasNext())
+    /**Compose a String with all first chars, to test whether a current char of src is equal. */
     { int ii = -1;
       while(++ii < listStrings.length)
       { //String sString = (String)(iter.next());
@@ -1125,20 +1131,20 @@ that is a liststring and his part The associated String
         else 
         { sFirstCharBuffer.append(sString.charAt(0)); }
     } }
+    /**@java2c=toStringNonPersist.*/
     String sFirstChars = sFirstCharBuffer.toString();
     boolean found = false;
     while(!found && pos < max)
     { 
-      //increment over not matching chars, test all first chars:
-      while(pos < max && sFirstChars.indexOf(content.charAt(pos)) < 0) pos +=1;
+    	int nrofFoundString1 = -1;
+      /**increment over not matching chars, test all first chars: */
+      while(pos < max && (nrofFoundString1 = sFirstChars.indexOf(content.charAt(pos))) < 0) pos +=1;
       
       if(pos < max)
-      { //a fist matching char is found! test wether or not the whole string is matched.
-        //iter = listStrings.iterator();
-        int nrofFoundString1 = 1;
-        //while(!found && iter.hasNext())
+      { /**a fist matching char is found! test wether or not the whole string is matched.
+         * Test all Strings, the first test is the test of start char. */
         int ii = -1;
-        while(!found && ++ii < listStrings.length)
+        while(!found && ++ii < listStrings.length)  //NOTE: don't use for(...) because found is a criterium of break.
         { //String sString = (String)(iter.next());
           String sString = listStrings[ii];
           int testLen = sString.length();
@@ -1150,10 +1156,10 @@ that is a liststring and his part The associated String
             { foundString[0] = sString;
             }
             if(nrofFoundString != null)
-            { nrofFoundString[0] = nrofFoundString1;
+            { nrofFoundString[0] = ii;
             }
           }
-          else { nrofFoundString1 +=1; }
+          //else { nrofFoundString1 +=1; }
         }
         if(!found){ pos +=1; }  //check from the next char because no string matches.
         
@@ -1351,6 +1357,7 @@ that is a liststring and his part The associated String
   public StringPart lentoAnyString(String[] strings, int maxToTest, int mode)
   //public StringPart lentoAnyString(List<String> strings, int maxToTest, int mode)
   { endLast = end;
+    /**@java2c=stackInstance. It is only used internally. */
     String[] foundString = new String[1];
     int pos = indexOfAnyString(strings, 0, maxToTest, null, foundString);
     if(pos < 0){ end = start; bFound = false; }
@@ -1399,12 +1406,14 @@ that is a liststring and his part The associated String
    *        also spaces after the indentation of the first line are skipped. 
    * @param maxToTest Maximum of chars to test. If the endchar isn't find inside this number of chars,
    *        the actual length is set to 0.
-   * @return The converted from actpart string without indentation.
+   * @param buffer The buffer where the found String is stored. The stored String has no indentations.       
+   * @since 2007, 2010-0508 changed param buffer, because better useable in C (java2c)
    */
-  public String lentoAnyStringWithIndent(String[] strings, String sIndentChars, int maxToTest)
+  public void lentoAnyStringWithIndent(String[] strings, String sIndentChars, int maxToTest, StringBuilder buffer)
   //public String lentoAnyStringWithIndent(List<String> strings, String sIndentChars, int maxToTest)
   { endLast = end;
-    String sRet; sRet = "";
+    //String sRet; sRet = "";
+    buffer.setLength(0);
     int indentColumn = getCurrentColumn();
     int startLine = start;
     boolean bAlsoWhiteSpaces = (sIndentChars.charAt(sIndentChars.length()-1) == ' ');
@@ -1424,7 +1433,7 @@ that is a liststring and his part The associated String
         }
         else { pos +=1; } // '\n' including
         //append the line to output string:
-        sRet += content.substring(startLine, pos);
+        buffer.append(content.substring(startLine, pos));
         if(!bFinish)
         { //skip over indent.
           startLine = pos;
@@ -1441,7 +1450,7 @@ that is a liststring and his part The associated String
         }
       }  
     } 
-    return sRet;
+    return ; //buffer.toString();
   }
 
 
@@ -1780,7 +1789,7 @@ that is a liststring and his part The associated String
 
   /** Scans if it is a integer number, contains exclusively of digits 0..9
       @param bHex true: scan hex Digits and realize base 16, otherwise realize base 10.
-      @return long number represent the digits. Write the characters via Result.write_ScanStringResult().
+      @return long number represent the digits.
   */
   private long scanDigits(boolean bHex, int maxNrofChars)
   { if(bCurrentOk)
@@ -1827,7 +1836,7 @@ that is a liststring and his part The associated String
   { if(bCurrentOk)
     { seekNoWhitespaceOrComments();
       if(bStartScan)
-      { idxLastIntegerNumber = 0;
+      { idxLastIntegerNumber = -1;
         //idxLastFloatNumber = 0;
         //idxLastString = 0;
         bStartScan = false; 
@@ -1839,18 +1848,22 @@ that is a liststring and his part The associated String
     return bCurrentOk;
   }
   
-  /**
+  /**Scanns a integer number as positiv value without sign. 
+   * All digit character '0' to '9' will be proceed. 
+   * The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * @throws ParseException if the buffer is not free to hold an integer number.
    * @java2c=return-this.
    * @return
-   * @throws ParseException only if the number of calling this routine one after another
-   * without call {@link #getLastScannedIntegerNumber()} is too much.
    */
   public StringPart scanPositivInteger() throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
     { long value = scanDigits(false, Integer.MAX_VALUE);
       if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length)
-        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
+        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
         }
         else throw new ParseException("to much scanned integers",0);
       }  
@@ -1858,10 +1871,14 @@ that is a liststring and his part The associated String
     return this;
   }
 
-  /**Scans an integer expression.
+  /**Scans an integer expression with possible sign char '-' at first.
+   * The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * @throws ParseException if the buffer is not free to hold an integer number.
    * @java2c=return-this.
    * @return this
-   * @throws ParseException
    */
   public StringPart scanInteger() throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
@@ -1875,8 +1892,8 @@ that is a liststring and his part The associated String
       { value = - value; 
       }
       if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -1)
-        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
+        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
         }
         else throw new ParseException("to much scanned integers",0);
       }
@@ -1884,11 +1901,15 @@ that is a liststring and his part The associated String
     return this;
   }
 
-  /**
+  /**Scans an float expression. The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
    * @java2c=return-this.
-   * @return
+   * @return this
+   * @throws ParseException if the buffer is not free to hold an integer number.
    */
-  public StringPart scanFloatNumber()  //::TODO:: scanLong(String sPicture)
+  public StringPart scanFloatNumber() throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
     { long nInteger = 0, nFractional = 0;
       int nDivisorFract = 1, nExponent;
@@ -1958,36 +1979,45 @@ that is a liststring and his part The associated String
       } 
       else{ nExponent = 0; }
       
-      if(bCurrentOk)
-      { nLastFloatNumber = (double)nInteger;
+      if(bCurrentOk){ 
+        double result = (double)nInteger;
         if(nFractional > 0)
         { double fFrac = (double)nFractional;
           while(fFrac >= 1.0)  //the read number is pure integer, it is 0.1234
           { fFrac /= 10.0; 
           }
           fFrac /= nDivisorFract;    //number of 0 after . until first digit.
-          nLastFloatNumber += fFrac;
+          result += fFrac;
         }
-        if(bNegativValue) { nLastFloatNumber = - nLastFloatNumber; }
+        if(bNegativValue) { result = - result; }
         if(nExponent != 0)
         { if(bNegativExponent){ nExponent = -nExponent;}
-          nLastFloatNumber *= Math.pow(10, -nExponent);
+          result *= Math.pow(10, nExponent);
         }
+      	if(idxLastFloatNumber < nLastFloatNumber.length -2){
+      		nLastFloatNumber[++idxLastFloatNumber] = result;
+	      } else throw new ParseException("to much scanned floats",0);
       }
     }  
     return this;
   }
 
   
-  /**Scans a sequence of hex chars a hex number. No 0x or such should be present. See scanHexOrInt().
+  /**Scans a sequence of hex chars a hex number. No '0x' or such should be present. 
+   * See scanHexOrInt().
+   * The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * @throws ParseException if the buffer is not free to hold an integer number.
    * @java2c=return-this.
-   * @throws ParseException */
+   */
   public StringPart scanHex(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
     { long value = scanDigits(true, maxNrofChars);
       if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -1)
-        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
+        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
         }
         else throw new ParseException("to much scanned integers",0);
       }
@@ -1998,10 +2028,14 @@ that is a liststring and his part The associated String
   /**Scans a integer number possible as hex, or decimal number.
    * If the number starts with 0x it is hexa. Otherwise it is a decimal number.
    * Octal numbers are not supported!  
+   * The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * @throws ParseException if the buffer is not free to hold an integer number.
    * @java2c=return-this.
    * @param maxNrofChars The maximal number of chars to scan, if <=0 than no limit.
-   * @return
-   * @throws ParseException 
+   * @return this to concatenate the call.
    */
   public StringPart scanHexOrDecimal(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
@@ -2013,8 +2047,8 @@ that is a liststring and his part The associated String
       { value = scanDigits(false, maxNrofChars);
       }
       if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -1)
-        { nLastIntegerNumber[idxLastIntegerNumber++] = value;
+      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
+        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
         }
         else throw new ParseException("to much scanned integers",0);
       }
@@ -2053,17 +2087,36 @@ that is a liststring and his part The associated String
     return this;
   }
 
+  
+  /**Returns the last scanned integer number. It is the result of the methods
+   * <ul><li>{@link #scanHex(int)}
+   * <li>{@link #scanHexOrDecimal(int)}
+   * <li>{@link #scanInteger()}
+   * </ul>
+   * @return The number in long format. A cast to int, short etc. may be necessary
+   *         depending on the expectable values.
+   * @throws ParseException if called though no scan routine was called. 
+   */
   public long getLastScannedIntegerNumber() throws ParseException
-  { if(idxLastIntegerNumber > 0)
-    { return nLastIntegerNumber[--idxLastIntegerNumber];
+  { if(idxLastIntegerNumber >= 0)
+    { return nLastIntegerNumber [idxLastIntegerNumber--];
     }
     else throw new ParseException("no integer number scanned.", 0);
   }
   
   
-  public double getLastScannedFloatNumber()
-  { return nLastFloatNumber;
+  /**Returns the last scanned float number.
+   * @return The number in double format. A cast to float may be necessary
+   *         depending on the expectable values and the storing format.
+   * @throws ParseException if called though no scan routine was called. 
+   */
+  public double getLastScannedFloatNumber() throws ParseException
+  { if(idxLastFloatNumber >= 0)
+    { return nLastFloatNumber[idxLastFloatNumber--];
+    }
+    else throw new ParseException("no integer number scanned.", 0);
   }
+  
   
   
   public String getLastScannedString()
@@ -2193,9 +2246,10 @@ that is a liststring and his part The associated String
   */
   public char getCurrentChar()
   { if(start < content.length()){ return content.charAt(start); }
-    else throw new IndexOutOfBoundsException("end of StringPart:" + start); // return cEndOfText;
+    else /**@java2c=StringBuilderInThreadCxt.*/ throw new IndexOutOfBoundsException("end of StringPart:" + start); // return cEndOfText;
   }
  
+  
   /** Gets the current position in line (column of the text).
    * It is the number of chars from the last '\n' or from beginning to the actual char.
    * @return Position of the actual char from start of line, leftest position is 0.
@@ -2259,15 +2313,15 @@ that is a liststring and his part The associated String
   */
   public String debugString()
   { int len = content.length();
+    /**@java2c=StringBuilderInThreadCxt,toStringNonPersist.*/ 
     String ret = content.substring(0, len > 20 ? 20 : len) + "<<<" + start + "," + end + ">>>";
-    if(start < len){ ret += content.substring(start, len > (start + 20) ? start+20: len); }
+    if(start < len){
+    	/**@java2c=toStringNonPersist.*/ 
+      ret += content.substring(start, len > (start + 20) ? start+20: len); 
+    }
+    /**@java2c=toStringNonPersist.*/ 
     ret += "<<<";
-    return ret;
-    /*
-    return( content.substring(0, len > 20 ? 20 : len) + "<<<" + start + "," + end + ">>>"
-          + (start < len ? content.substring(start, len > (start + 20) ? start+20: len) : "")
-          + "<<<" );
-    */      
+    return ret;  //java2c: buffer in threadContext
   }
 
   

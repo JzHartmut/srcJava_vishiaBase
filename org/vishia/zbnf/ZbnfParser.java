@@ -20,6 +20,7 @@
  * @author Hartmut Schorrig www.vishia.org
  * @version 2006-06-15  (year-month-day)
  * list of changes:
+ * 2010-05-04 Hartmut: corr: sEndlineCommentStringStart: The \n is not included, it will be skipped either as whitespace or it is necessary for the linemode.
  * 2009-12-30 Hartmut: corr: Output info: subParserTopLevel == null, no syntax is now removed.
  * 2009-08-02 Hartmut: new: parsing with subSyntax now also available in options writing [<?!subSyntax> ...]. 
  * 2009-08-02 Hartmut: new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
@@ -800,7 +801,9 @@ public class ZbnfParser
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
               { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-                sSrc = input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars);
+                StringBuilder buffer = new StringBuilder();
+                input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
+                sSrc = buffer.toString();
                 posSrc = (int)input.getCurrentPosition();
                 bOk = input.found();
                 if(bOk)
@@ -1016,7 +1019,8 @@ public class ZbnfParser
       }
   
   
-      private boolean parseFloatNumber(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult, ZbnfSyntaxPrescript syntaxItem)
+      private boolean parseFloatNumber(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore parseResult, ZbnfSyntaxPrescript syntaxItem) 
+      throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseFloat(" + nRecursion + ") <#f?" + sSemanticForError + ">");
         if(input.scanFloatNumber().scanOk())
@@ -1359,7 +1363,7 @@ public class ZbnfParser
             }
       
             if(!bFoundAnySpaceOrComment && sEndlineCommentStringStart != null && input.startsWith(sEndlineCommentStringStart))
-            { input.lento("\n", StringPart.seekEnd);
+            { input.lento("\n"); //, StringPart.seekEnd);  //the \n should not included, it will skip either as whitespace or it is necessary for the linemode.
               if(input.length()>0)
               { bFoundAnySpaceOrComment = true;
       
@@ -2397,10 +2401,12 @@ public class ZbnfParser
         + getInputPositionOnError()
         + "(0x" + Long.toString(getInputPositionOnError(),16) + ")"
         + " >>>>" + getFoundedInputOnError()
-        + "\nexpected: ----------------------------------------------" + getExpectedSyntaxOnError()
+        + "\nexpected: ----------------------------------------------" 
+        + getExpectedSyntaxOnError()
+        + "\nfounded before: ----------------------------------------------" 
         + ( sLastFoundedResultOnError == null 
-          ? "" 
-          : "\nfounded before: ----------------------------------------\n" + getLastFoundedResultOnError()
+          ? "-nothing-" 
+          : getLastFoundedResultOnError()
           )
         ;    
   }

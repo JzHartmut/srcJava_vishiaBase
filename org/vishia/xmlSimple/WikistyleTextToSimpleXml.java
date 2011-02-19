@@ -47,12 +47,7 @@ import org.vishia.mainCmd.Report;
  * <br>
  * Therewith, if an text field in pure ASCII is converted to XML inside some tools, 
  * it is able to write a formatted text in the wikipedia-style and get the XML-formatted text as result. 
- * <br>
- * Pay attention regarding JDOM: This software works prosperously only with a newer version of JDOM since Jan-2007.
- * With older versions (the actual version in 12/2006) use a corrected version of org/jdom/ContentList.java
- * inside the vishia-Download. This version is modified slightly, 
- * but important by using <code>anyElement.getChildren().listIterator().add(newContent);</code>.
- * <br>
+ * <br><br>
  * The followed rules are considered:<br>
  * <br><u>paragraph format rules:</u>
  * <table border="1" width="100%">
@@ -150,7 +145,7 @@ import org.vishia.mainCmd.Report;
  *<pre>
 {|!!column-title                 !!column-title2
 |-||cell 11                      ||cell 12
-/-||cell 21 may be have a longer text
+|-||cell 21 may be have a longer text
 ||thats why cell 22 is written in a new line, but cell 22 contains
  ** A list
  ** sendond item
@@ -161,7 +156,12 @@ its furthermore content of cell 22, a new paragraph.
 </pre>
 A '''simple table''' may be shown very simple, but a complex table is not readable simply,
 but itsn't worse as using the html tags &lt;table>&lt;tr> and so on.
- 
+ * @author Hartmut Schorrig
+ * @since 2006
+ * last changes:
+ * 2007: JDOM was used, but now this version uses the {@link org.vishia.xmlSimple.SimpleXmlOutputter}
+ * 2008..2010 some changes
+ * 2010-05-13 Tabs are recognize instead spaces too, but there are converted to 2 spaces. Method {@link #replaceTabs(String)}.
  */ 
 @SuppressWarnings("unchecked")
 public class WikistyleTextToSimpleXml
@@ -371,14 +371,16 @@ public class WikistyleTextToSimpleXml
     
     /** Searches in the given text paragraphs.*/
     while(start < (sInput.length()))
-    { String sLine;
+    { //String sLine;
       char cFirst = sInput.charAt(start);
-      if(cFirst == ' ' || cFirst == ',')
-      { end = sInput.indexOf("\n", start);
+      if(cFirst == ' ' || cFirst == '\t' || cFirst == ',')
+      { /**If the line starts with a space it is translated to a <pre>..</pre>*/
+      	end = sInput.indexOf("\n", start);
         if(end <0){ end = sInput.length(); }   //last line is empty
         //while(++start == ' ' && start < end);  //skip over spaces.
         if(start < end)
-        { sLine = sInput.substring(start, end);
+        { String sLineTest = sInput.substring(start, end);
+        	String sLine = replaceTabs(sLineTest);
           start = end+1;
           //pre Format
           xmlChild = initNesting(); 
@@ -401,12 +403,13 @@ public class WikistyleTextToSimpleXml
             //xmlPre.addContent("\n");
           }
           xmlPre.addContent(sLine.substring(1)+"\n");
-        }  
-      }
+        } //if(start < end), else it is an empty line.  
+      } //cFirst == ' ' || cFirst == ','
       else
-      { sLine = getLineSpecial(sInput); //reads more as one line or until special || and !!
-        if(sLine.length()>0)
-        { cFirst = sLine.charAt(0);
+      { String sLineTest = getLineSpecial(sInput); //reads more as one line or until special || and !!
+    		if(sLineTest.length()>0)
+        { String sLine = replaceTabs(sLineTest);
+    			cFirst = sLine.charAt(0);
           //char c2 = sLine.length()>=2 ? sLine.charAt(1) : ' ';
           //char c3 = sLine.length()>=3 ? sLine.charAt(2) : ' ';
           //switch(cFirst)
@@ -459,6 +462,31 @@ public class WikistyleTextToSimpleXml
 
   }
 
+  
+  
+  /**Replace tabs in the line with 2 spaces.
+   * @param src The line
+   * @return src, if it doesn't contain tabs, elsewhere new String with replaced tabs.
+   */
+  private final String replaceTabs(String src)
+  { int posStart = 0;
+  	int posTab = src.indexOf('\t');
+  	if(posTab >=0){
+  		final StringBuilder u = new StringBuilder(2 * src.length()); //if all chars are tabs, double size.
+  		//u.append(src);
+  		while(posTab >=0){
+  			u.append(src.substring(posStart, posTab))
+  			 .append("  ");  //replace with 2 spaces.
+  			posStart = posTab +1;
+  			posTab = src.indexOf('\t', posStart);
+  		}
+  		u.append(src.substring(posStart)); //rest of line.
+    	return u.toString();
+  	} else {
+  		/**The line doesn't contain any tab: */
+      return src;
+  	}
+  }
   
   
  
@@ -777,7 +805,7 @@ public class WikistyleTextToSimpleXml
       }
       continuationParagraphInNextline
        =  start < sInput.length()                  //there is a next line
-       && " ,>+*#;:@{!|\r\n".indexOf(sInput.charAt(start)) < 0  //it doesn't start with this chars.
+       && " \t,>+*#;:@{!|\r\n".indexOf(sInput.charAt(start)) < 0  //it doesn't start with this chars.
        ;  
     }  
     return sLine;  	
