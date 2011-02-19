@@ -20,6 +20,7 @@
  * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
+ * 2009-12-15: Hartmut chg: public of some variables for report because a using class has 2 instances, correct it later.
  * 2009-03-08: Hartmut new: openReportfile() as new protected method, used internally, but the report file is able to change.
  * 2009-03-08: Hartmut new: executeCmdLine() is now deprecated, use new executeCmdLine(..., ProcessBuilder,..).  
  * 2008-04-02: JcHartmut some changes
@@ -124,26 +125,26 @@ public abstract class MainCmd implements MainCmd_ifc
 {
   /** The report file. This attribute is set to null, if no report is desired by missing the argument -r REPORTFILE
   */
-  private FileWrite fReport;
+  public FileWrite fReport;
 
   /** All reports with a level less than or equal this level will be reported. Other report calls has non effect.*/
-  private int nReportLevel = Report.info;  //default: reports errors, warnings and info, but no debug
+  public int nReportLevel = Report.info;  //default: reports errors, warnings and info, but no debug
 
   private String sFileReport = "report.txt";
 
   /** All reports with a level less than or equal this level will be written on display.
    *  Note: using {@link Report#writeInfo(String)} etc. writes to display also if this attribute is 0.
    */
-  private int nReportLevelDisplay = 0;   //default: don't write reports to display
+  public int nReportLevelDisplay = 0;   //default: don't write reports to display
 
   /** writeError(), writeWarning(), writeInfo()  are also reported if the level is equal or greater than 1,2,3*/
-  private int nLevelDisplayToReport = Report.info;
+  public int nLevelDisplayToReport = Report.info;
 
   /** List of strings contents help Info in form of lines. The list should be filled with method addHelpInfo(String);*/
-  private List<String> listHelpInfo = new LinkedList<String>();
+  protected List<String> listHelpInfo = new LinkedList<String>();
 
   /** List of strings contents about Info in form of lines. The list should be filled with method addHelpInfo(String);*/
-  private List<String> listAboutInfo = new LinkedList<String>();
+  protected List<String> listAboutInfo = new LinkedList<String>();
 
   /** The maximum of the value given with setExitErrorLevel */
   private int nMaxErrorLevel = MainCmd_ifc.exitSuccessfull;

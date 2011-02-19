@@ -205,7 +205,7 @@ public class Zbnf2Xml
       else if(argc.startsWith("-y:")){ sFileOut = getArgument(3); }
       else if(argc.startsWith("-y")) { sFileOut = getArgument(2); }
       else if(argc.startsWith("-z:")){ sFileOut = getArgument(3); encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-z")) { sFileOut = getArgument(2); encoding = Charset.forName("US-ASCII");  }
+      else if(argc.startsWith("-z")) { sFileOut = getArgument(2); encoding = Charset.forName("US-ASCII"); }
       else if(argc.startsWith("-charset:")){ encoding = Charset.forName(getArgument(9));  }
       else if(argc.startsWith("-a:"))
       { //argument
@@ -316,7 +316,7 @@ public class Zbnf2Xml
       }
     }
     if(bOk)
-    { parser.reportSyntax(report);
+    { parser.reportSyntax(report, Report.fineInfo);
     }
     StringPart spToParse = null;
     if(bOk)

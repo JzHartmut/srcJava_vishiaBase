@@ -1264,7 +1264,7 @@ public class ZbnfSyntaxPrescript
       String sReport;
       //String sSyntax = getConstantSyntax();
       sReport = toString();
-      report.reportln(Report.fineInfo, 0, "SyntaxPrescript:" + sIndent  + sReport);
+      report.reportln(nLevel, 0, "SyntaxPrescript:" + sIndent  + sReport);
       if(childSyntaxPrescripts != null)
       { String sIndentNew = sIndent.substring(0, sIndent.length()-2)
                           + (bHasNext ? "| " : "  ");

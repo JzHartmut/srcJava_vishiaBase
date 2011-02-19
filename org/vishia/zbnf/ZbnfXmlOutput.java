@@ -95,8 +95,7 @@ public class ZbnfXmlOutput
   /**Writes the XML Tree.
    * @param zbnfTop
    * @param xmlnsList
-   * @param sFileOut
-   * @param encoding
+   * @param out
    * @throws FileNotFoundException
    * @throws XmlException
    */

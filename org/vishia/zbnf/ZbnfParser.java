@@ -2220,29 +2220,16 @@ public class ZbnfParser
 
 
   /** Reports the syntax.*/
-  public void reportSyntax(Report report)
+  public void reportSyntax(Report report, int reportLevel)
   {
-    if(subParserTopLevel == null)
-    {
-      report.reportln(Report.info, 0, "subParserTopLevel == null, no syntax");
-      
-    }
-    else
-    { assert(subParserTopLevel != null);
-      assert(subParserTopLevel.syntaxPrescript != null);
-      assert(report != null);
-      if(subParserTopLevel == null) throw new RuntimeException("??null subParserTopLevel");
-      if(subParserTopLevel.syntaxPrescript == null || report == null) throw new RuntimeException("??null");
-      stop();
-      subParserTopLevel.syntaxPrescript.reportContent(report, 0);
+      mainScript.reportContent(report, reportLevel);
       Iterator<String> iter = listSubPrescript.keySet().iterator();
       while(iter.hasNext())
       { String sName = (String)iter.next();
         ZbnfSyntaxPrescript subSyntax = (ZbnfSyntaxPrescript)listSubPrescript.get(sName);
-        report.reportln(Report.fineDebug, 0, "");
-        subSyntax.reportContent(report, 0);
+        report.reportln(reportLevel, 0, "");
+        subSyntax.reportContent(report, reportLevel);
       }
-    }  
   }
 
   

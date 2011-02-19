@@ -270,6 +270,103 @@ public class FileSystem
   
   
   
+  
+  /**Builds a relative path from a given directory, from an input path and the reference directory.
+   * The input path and the reference directory may be relative paths both, than both have to start 
+   * on the same point in the file tree. If there are absolute paths, it have to start with the same drive letter (Windows).
+   * <br><br>
+   * Examples:
+   * 
+   * <table>
+   * <tr><td>a/b/c/d  </td><td>a/b      </td><td>c/d</td><td>If the sRefDirectory is within sInput, sInput will be shortened:</td></tr>  
+   * <tr><td>a/b/c/d  </td><td>x/y      </td><td>../../a/b/c/d</td><td>If the sRefDirectory is parallel to sInput, ../ will be added and sRefDirectory will be added:</td></tr>  
+   * <tr><td>a/b/c/d  </td><td>a/x      </td><td>../b/c/d</td><td>If the sRefDirectory is within sInput but parallel, ../ will be added and the rest of sInput will be shortened:</td></tr>  
+   * @param sInput The given file path.
+   * @param sRefDir Reference from where the return value is built relative. 
+   *        A file-name of this reference file isn't relevant. 
+   *        If only the directory should be given, a '/' on end have to be present.
+   *        The reference directory may given with a relative path, 
+   *        than it should be start at the same directory as the relative given sInput.
+   * @return The file path relative to the sRefFile-directory.
+   */
+  public static String relativatePath(String sInput, String sRefDir)
+  { int posInput = 0;
+    if(sInput.startsWith("../../../examples_XML"))
+      FileSystem.stop();
+    /* old algorithm, the newer does the same and more.
+    int posHtmlRef =0;
+    while(posHtmlRef >=0 && sInput.substring(posInput, posInput+3).equals("../")){
+      //relative path to left
+      if(sRefFile.substring(posHtmlRef, posHtmlRef+3).equals("../")){
+         posHtmlRef +=3;  //both files are more left, delete 1 level of  ../
+         posInput +=3;
+      }
+      else {
+        int posSlash = sRefFile.indexOf('/', posHtmlRef);
+        if(posSlash >=0){
+          posHtmlRef =posSlash +1;  //after '/'
+          posInput -=3;  //go to left, because the output file is more right.
+        }
+        else {
+          posHtmlRef = -1; //to break.
+        }
+        while(posInput < 0){
+          posInput +=3;
+          sInput = "../" + sInput; //it may be errornuoes because the input is more left as a root.
+        }
+      }
+    }
+    */
+    final String sOutput1 = sInput.substring(posInput);
+    //check whether the both paths are equal, shorten the sInput at the equal part.
+    boolean bCont;
+    int posSep = -1;
+    do{
+      int posSep2 = sRefDir.indexOf('/', posSep +1);
+      if(posSep2 >0){
+        bCont = sRefDir.substring(0, posSep2).equals(sInput.substring(0, posSep2));
+      } else {
+        bCont = false;
+      }
+      if(bCont){
+        posSep = posSep2;
+      }
+    }while(bCont);
+    //detect a longer ref path:
+    String sBack = "";
+    int posSepRefNext = posSep+1; //follow after last equate '/'
+    int posSepRefNext2; 
+    int pathdepth = 0;
+    /**check path of reference dir, which is the source of the relative path.
+     * Correct the path with necessary "../" to go out a directory.
+     */ 
+    while( (posSepRefNext2 = sRefDir.indexOf('/', posSepRefNext) )>=0){ //another / found
+      if(posSepRefNext2 == posSepRefNext+2 && sRefDir.substring(posSepRefNext, posSepRefNext2).equals("..")){
+        int sBackLength = sBack.length();
+          if(sBackLength >=3){ sBack = sBack.substring(0, sBackLength-3);} //shorten "../"
+          else { pathdepth -=1; }
+      } else if( posSepRefNext2 == posSepRefNext) {
+          //do nothing, same depth, two "//" one after another
+      } else if( posSepRefNext2 == posSepRefNext+1 && sRefDir.substring(posSepRefNext, posSepRefNext2).equals(".")){
+          //do nothing, same depth  
+      } else
+      { //deeper level of source of link:
+        if(pathdepth <0){ 
+          pathdepth +=1;
+        } else {
+    	    sBack +="../";
+        }  
+      }
+      posSepRefNext = posSepRefNext2 + 1;
+    }
+    final String sOutput = sBack + sOutput1.substring(posSep+1); //posSep may be 0, than its the same.
+    return sOutput;
+  }
+  
+  
+  
+  
+  
 
   /**adds Files with the wildcard-path to a given list.
    *
@@ -356,7 +453,7 @@ public class FileSystem
           sPathBefore = sPathBefore.substring(posSepDir+1);  //may be ""
         }
         else
-        { sPathDir = sDir;
+        { sPathDir = sDir.length()==0 ? "." : sDir; //current Dir if no Dir is given.
         }
         File fDir = new File(sPathDir);
         if(fDir.exists())
@@ -422,7 +519,9 @@ public class FileSystem
 
 
 
-
+  private static void stop()
+  { //only for breakpoint
+  }
 
 
 

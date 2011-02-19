@@ -1008,7 +1008,7 @@ public class ZbnfJavaOutput
       zbnfParser.reportStore(report, Report.debug);
     }
     if(sError == null)
-    { 
+    { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 
       try{ setContent(resultType, result, zbnfParser.getFirstParseResult()); } 
       catch (IllegalAccessException exc)
       { sError = "ERROR access to elements. Hint: The elements should be public!: " + exc.getMessage();
