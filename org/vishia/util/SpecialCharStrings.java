@@ -46,7 +46,6 @@ public class SpecialCharStrings
   /** The char used to code end of text. */  
   public static final char cEndOfText = (char)(0x3);
 
-  
   /**Resolves the given String containing some switch chars in form of backslash 
    * to a string with the appropriate character codes.
    * In the result String all char-pairs beginning with backslash are replaced by

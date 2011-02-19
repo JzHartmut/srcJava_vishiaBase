@@ -30,7 +30,7 @@ public class VaArgBuffer
     va_list = new Va_list(this);
   }
   
-  private VaArgBuffer(Object[] src)
+  public VaArgBuffer(Object[] src)
   { args = src;
     length = src.length;
     va_list = new Va_list(this);

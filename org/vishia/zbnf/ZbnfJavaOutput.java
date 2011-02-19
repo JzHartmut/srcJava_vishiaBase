@@ -158,6 +158,27 @@ import org.vishia.util.StringPartFromFileLines;
 @SuppressWarnings("unchecked")
 public class ZbnfJavaOutput
 {
+	/**Version, able to read as hex yyyymmdd.
+	 * Changes:
+	 * <ul>
+	 * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
+	 * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
+	 * <li>2010-12-02 Hartmut new: Up to now this version variable, its description contains the version history.
+	 * </ul>
+	 * <ul>
+	 * <li>new: new functionality, downward compatibility.
+	 * <li>fnChg: Change of functionality, no changing of formal syntax, it may be influencing the functions of user,
+	 *            but mostly in a positive kind. 
+	 * <li>chg: Change of functionality, it should be checked syntactically, re-compilation necessary.
+	 * <li>adap: No changing of own functionality, but adapted to a used changed module.
+	 * <li>corr: correction of a bug, it should be a good thing.
+	 * <li>bug123: correction of a tracked bug.
+	 * <li>nice: Only a nice correction, without changing of functionality, without changing of syntax.
+	 * <li>descr: Change of description of elements.
+	 * </ul> 
+	 */
+	public final static int versionStamp = 0x20101203;
+	
 	private final Report report;
 	
   /**If it is set, only set_ or add_-methods and new_-methods are accepted,
@@ -253,7 +274,7 @@ public class ZbnfJavaOutput
     //loop of all first level elements, the output is written directly in topLevelOutput:
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
-      writeZbnfResult( topLevelClass, topLevelInstance, child, 1);
+      writeZbnfResult( new Component(null, topLevelClass, topLevelInstance), child, 1);
     }
   
     return errors == null ? null : errors.toString();
@@ -309,7 +330,7 @@ public class ZbnfJavaOutput
     //loop of all first level elements, the output is written directly in topLevelOutput:
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
-      instance.writeZbnfResult( topLevelOutput.getClass(), topLevelOutput, child, 1);
+      instance.writeZbnfResult( new Component(null, topLevelOutput.getClass(), topLevelOutput), child, 1);
     }
   }
 
@@ -333,7 +354,7 @@ public class ZbnfJavaOutput
     ZbnfParseResultItem childItem = resultItem.nextSkipIntoComponent(null /*no parent*/);
     //loop of all first level elements, the output is written directly in topLevelOutput:
     while(childItem != null)
-    { instance.writeZbnfResult( topLevelOutput.getClass(), topLevelOutput, childItem, 1);
+    { instance.writeZbnfResult( new Component(null, topLevelOutput.getClass(), topLevelOutput), childItem, 1);
       childItem = childItem.next(resultItem);
     }
   }
@@ -353,7 +374,7 @@ public class ZbnfJavaOutput
    * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */  
   private void writeZbnfResult
-  ( Class parentClass, Object parentOutputInstance
+  ( Component component
   , ZbnfParseResultItem resultItem
   , int recursion
   ) 
@@ -370,7 +391,7 @@ public class ZbnfJavaOutput
     { 
       /**Try to save the content also if it is an component. */
       if(resultItem.isOption() && resultItem.getParsedString() != null)
-      { searchDestinationAndWriteResult(semantic, parentClass, parentOutputInstance, resultItem);
+      { searchDestinationAndWriteResult(semantic, component, resultItem);
       }
       
       /**Search an instance (field or method result) which represents the semantic of the component. 
@@ -378,8 +399,7 @@ public class ZbnfJavaOutput
        */
       ChildInstanceAndClass componentsInstance = searchComponentsDestination
         ( semantic                //the semantic of the component.
-        , parentClass             //reference type of parentOutputInstance
-        , parentOutputInstance    //instance where the field or method for the component should be found.
+        , component    //instance where the field or method for the component should be found.
         );
       if(componentsInstance != null)
       { /**Such an instance is found, use it to fill.
@@ -387,16 +407,16 @@ public class ZbnfJavaOutput
          */
         /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
         int inputColumn = resultItem.getInputColumn();
-        trySetInputColumn("", componentsInstance.clazz, componentsInstance.instance, inputColumn);
+        trySetInputColumn("", new Component(component, componentsInstance.clazz, componentsInstance.instance), inputColumn);
         /** skip into the component resultItem: */
         Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
         while(iterChildren.hasNext())
         { ZbnfParseResultItem childItem = iterChildren.next();
-          writeZbnfResult(componentsInstance.clazz, componentsInstance.instance, childItem, recursion+1);
+          writeZbnfResult(new Component(component, componentsInstance.clazz, componentsInstance.instance), childItem, recursion+1);
         }
         if(componentsInstance.shouldAdd)
         {
-          searchAddMethodAndInvoke(semantic, parentClass, parentOutputInstance, componentsInstance);
+          searchAddMethodAndInvoke(semantic, component, componentsInstance);
         }
       }
       else
@@ -405,10 +425,30 @@ public class ZbnfJavaOutput
     }
     else
     { //write the content of the resultItem into the outputInstance:
-      searchDestinationAndWriteResult(semantic, parentClass, parentOutputInstance, resultItem);
+      searchDestinationAndWriteResult(semantic, component, resultItem);
     }
   }
    
+  
+  private static class Component
+  {
+  	final Object instance;
+  	
+  	final Class clazz;
+  	
+  	final Component parent;
+
+		public Component(Component parent, Class clazz, Object instance)
+		{
+			this.instance = instance;
+			this.clazz = clazz;
+			this.parent = parent;
+		}
+  	
+  	
+  }
+  
+  
   /**Instance to bundle a class to search methods or fields and the associated instance.
    * It is used especially for ZBNF-components.
    */
@@ -417,6 +457,7 @@ public class ZbnfJavaOutput
     /**Doc: see constructors args. */
     final Class clazz; final Object instance; final boolean shouldAdd; 
     
+    //final Object parentInstance;
     /**
      * @param instance  The instance where the data should store in.
      * @param clazz     The type of the reference to the instance, not the type of the instance.
@@ -426,8 +467,10 @@ public class ZbnfJavaOutput
      *                  of its parent, because it is got with a new_Semantic()-Method.
      *                  false than the instance is referenced from the parent already.
      */
-    ChildInstanceAndClass(Object instance, Class clazz, boolean shouldAdd)
-    { this.instance = instance; this.clazz = clazz; this.shouldAdd = shouldAdd; 
+    ChildInstanceAndClass(Object instance, Class clazz
+    	, boolean shouldAdd)
+    { this.instance = instance; this.clazz = clazz; 
+      this.shouldAdd = shouldAdd; 
     }
   }
   
@@ -469,15 +512,15 @@ public class ZbnfJavaOutput
   
   
   
-  ChildInstanceAndClass searchCreateMethod(Class parentClass, Object parentInstance, String semantic) 
+  ChildInstanceAndClass searchCreateMethod(Component component, String semantic) 
   throws IllegalArgumentException, IllegalAccessException
   {
-    Method method = searchMethod(parentClass, "new_" + semantic, new Class[1][0]);
+    Method method = searchMethod(component.clazz, "new_" + semantic, new Class[1][0]);
     if(method != null)
     { final Class childClass = method.getReturnType();
       final Object childOutputInstance;
       Object[] noParam = null; //without param.
-      try{ childOutputInstance = method.invoke(parentInstance, noParam); }
+      try{ childOutputInstance = method.invoke(component.instance, noParam); }
       catch(Exception exc)
       { throw new IllegalAccessException("cannot access: " + method.toString()); 
       }
@@ -501,30 +544,35 @@ public class ZbnfJavaOutput
    * @throws IllegalAccessException If the <code>add_<i>semantic</i>(Object)</code>-Method isn't public.
    */
   private void searchAddMethodAndInvoke
-  (String semantic, Class parentClass, Object parentInstance, ChildInstanceAndClass componentsDestination) 
+  (String semantic, Component component, ChildInstanceAndClass componentsDestination) 
   throws IllegalArgumentException, IllegalAccessException
   { Class[][] argtypes = new Class[1][1];
     argtypes[0][0] = componentsDestination.clazz;
-    Method method = searchMethod(parentClass, "set_" + semantic, argtypes);
+    Method method = searchMethod(component.clazz, "set_" + semantic, argtypes);
     if(method == null)
-    { method = searchMethod(parentClass, "add_" + semantic, argtypes);
+    { method = searchMethod(component.clazz, "add_" + semantic, argtypes);
     }
     if(method != null)
     { Object[] argMethod = new Object[1];
       argMethod[0] = componentsDestination.instance;
-      try{ method.invoke(parentInstance, argMethod); }
+      try{ method.invoke(component.instance, argMethod); }
       catch(InvocationTargetException exc)
       { String sMsg = "The called method " +method.toGenericString() + " throws an Exception: " + exc.getTargetException(); // + ", msg: " + exc.getTargetException().getMessage();
         if(report!=null){ report.writeWarning(sMsg); }
         throw new IllegalAccessException( sMsg );
       }
       catch(Exception exc)
-      { throw new IllegalAccessException("can not access: " + parentClass.getCanonicalName()  + ".add_" + semantic + "(...) or .set..."); 
+      { throw new IllegalAccessException("can not access: " + component.clazz.getCanonicalName()  + ".add_" + semantic + "(...) or .set..."); 
       }
     }
     else
-    { String problem = "method set_- or add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found in " + parentClass.getCanonicalName();
-      if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
+    { String problem = "method set_- or add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found";
+	    Component parentComponent = component;
+	    while(parentComponent !=null){
+	    	problem += " in " + parentComponent.clazz.getCanonicalName();
+	    	parentComponent = parentComponent.parent;
+	    }
+	    if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
       else noteError(problem);
     }
   }
@@ -561,28 +609,29 @@ public class ZbnfJavaOutput
    * @throws IllegalAccessException If a problem with the field or method exists, especially the field or method should be public!
    * @throws InstantiationException If a problem calling the new_-method exists. 
    */
-  private ChildInstanceAndClass searchComponentsDestination(String semantic, Class parentType, Object parentObj) 
+  private ChildInstanceAndClass searchComponentsDestination(String semantic
+  	, Component component) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { /**The returned instance if resultItem is null, and the field is searched. */
     ChildInstanceAndClass child = null;
     int posSeparator = semantic.indexOf('/');
     if(posSeparator >0)
     { String sematicFirst = semantic.substring(0, posSeparator);
-      child = searchComponentsDestination(sematicFirst, parentType, parentObj);
+      child = searchComponentsDestination(sematicFirst, component);
       String semanticRest = semantic.substring(posSeparator+1);
       //Class outputClassRest = outputInstanceRest.getClass();
-      return searchComponentsDestination(semanticRest, child.clazz, child.instance);
+      return searchComponentsDestination(semanticRest, new Component(component, child.clazz, child.instance));
     }
     else
     {
-      child = searchCreateMethod(parentType, parentObj, semantic);
+      child = searchCreateMethod(component, semantic);
       if(child == null)
       { //if(!bOnlyMethods)
-        { Class superClass = parentType.getSuperclass();
+        { Class superClass = component.clazz.getSuperclass();
           char firstChar = semantic.charAt(0);
           String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
           Field element = null;
-          try{ element = parentType.getDeclaredField(semanticLowerCase);}
+          try{ element = component.clazz.getDeclaredField(semanticLowerCase);}
           catch(NoSuchFieldException exception)
           { try{ element = superClass.getField(semanticLowerCase);}
             catch(NoSuchFieldException exc2){ element = null; } 
@@ -590,11 +639,16 @@ public class ZbnfJavaOutput
           if(element != null)
           { //an element with the desired name is found, write the value to it:
             report.report(Report.fineDebug, semanticLowerCase);
-            child = getComponentsOutputField(element, parentObj);
+            child = getComponentsOutputField(element, component.instance);
           }
           else
-          { String problem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase + " in class" + parentType.getCanonicalName();
-            if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
+          { String problem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase; 
+          	Component parentComponent = component;
+	          while(parentComponent !=null){
+	          	problem += " in " + parentComponent.clazz.getCanonicalName();
+	          	parentComponent = parentComponent.parent;
+	          }
+	          if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
             else noteError(problem);
           }
         }
@@ -690,8 +744,7 @@ public class ZbnfJavaOutput
    */
   private ChildInstanceAndClass searchDestinationAndWriteResult
   ( final String semanticRaw
-  , final Class destinationClass
-  , final Object destinationInstance
+  , final Component destComponent
   , final ZbnfParseResultItem resultItem
   ) throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { 
@@ -704,17 +757,17 @@ public class ZbnfJavaOutput
     int posSeparator = semantic.lastIndexOf('/');
     if(posSeparator >0)
     { String sematicFirst = semantic.substring(0, posSeparator);
-      child = searchComponentsDestination(sematicFirst, destinationClass, destinationInstance);
+      child = searchComponentsDestination(sematicFirst, destComponent);
       String semanticRest = semantic.substring(posSeparator+1);
       //NOTE: recursively call is necessary only because the destinationClass etc. are final.
-      return searchDestinationAndWriteResult(semanticRest, child.clazz, child.instance, resultItem);
+      return searchDestinationAndWriteResult(semanticRest, new Component(destComponent, child.clazz, child.instance), resultItem);
     }
     else
     {
       Class[][] argTypesVariants;
       if(resultItem == null)
       { //search a new_-Method
-        child = searchComponentsDestination(semantic, destinationClass, destinationInstance);
+        child = searchComponentsDestination(semantic, destComponent);
       }
       else 
       { //writing of a simple element result
@@ -744,10 +797,10 @@ public class ZbnfJavaOutput
           argTypesVariants = new Class[1][0];
         }
         Method method;
-        final String sMethodToFind = destinationClass.getCanonicalName()+ ".set_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
-        method = searchMethod(destinationClass, "set_" + semantic, argTypesVariants);      
+        final String sMethodToFind = destComponent.clazz.getCanonicalName()+ ".set_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
+        method = searchMethod(destComponent.clazz, "set_" + semantic, argTypesVariants);      
         if(method == null)
-        { method = searchMethod(destinationClass, "add_" + semantic, argTypesVariants);      
+        { method = searchMethod(destComponent.clazz, "add_" + semantic, argTypesVariants);      
         }
         if(method != null)
         { //invoke the method with the given matching args.
@@ -779,7 +832,7 @@ public class ZbnfJavaOutput
           { argMethod = null;  //parameterless
             
           }
-          try{ method.invoke(destinationInstance, argMethod); }
+          try{ method.invoke(destComponent.instance, argMethod); }
           catch(InvocationTargetException exc)
           { throw new IllegalAccessException("cannot access: " + sMethodToFind + " / " + exc.getMessage()); 
           }
@@ -792,9 +845,9 @@ public class ZbnfJavaOutput
           { char firstChar = semantic.charAt(0);
             String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
             Field element = null;
-            Class searchClass = destinationClass;
+            Class searchClass = destComponent.clazz;
             do
-            { try{ element = destinationClass.getDeclaredField(semanticLowerCase);}
+            { try{ element = destComponent.clazz.getDeclaredField(semanticLowerCase);}
               catch(NoSuchFieldException exception)
               { element = null; 
               }
@@ -805,10 +858,16 @@ public class ZbnfJavaOutput
             if(element != null)
             { //an element with the desired name is found, write the value to it:
               report.report(Report.fineDebug, semanticLowerCase);
-              writeInField(element, destinationInstance, resultItem);
+              writeInField(element, destComponent.instance, resultItem);
             }
             else
-            { String problem = "cannot found method " + sMethodToFind + " or field " + semanticLowerCase + " in class" + destinationClass.getCanonicalName();
+            { String problem = "cannot found method " + sMethodToFind + " or field " + semanticLowerCase 
+            	+ " in class" + destComponent.clazz.getCanonicalName();
+              Component parentComponent = destComponent;
+              while(parentComponent !=null){
+              	problem += " in " + parentComponent.clazz.getCanonicalName();
+              	parentComponent = parentComponent.parent;
+              }
               if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
               else noteError(problem);
             }
@@ -819,7 +878,7 @@ public class ZbnfJavaOutput
         }  
       }    
       //search an integer field with name_inputColumn, if found write the input column if the parse result.
-      trySetInputColumn(semantic, destinationClass, destinationInstance, resultItem.getInputColumn());
+      trySetInputColumn(semantic, destComponent, resultItem.getInputColumn());
       return child; //outputInstanceNew;      
     }              
   }
@@ -888,7 +947,10 @@ public class ZbnfJavaOutput
         if(debug) debugValue = value;
       }
       else
-      { throw new IllegalAccessException("Unexpected type of field: " + sType + " " + element.getName() + " in " + outputInstance.getClass().getName());
+      { throw new IllegalArgumentException("Unexpected type of field: " + sType + " " + element.getName() 
+      	+ " in " + outputInstance.getClass().getName()
+      	+ " Hint: An access to a public element can only be done for types int, long, float, double, boolean, String and List<String>."
+      	);
       }
     }
     catch(IllegalAccessException exc)
@@ -912,13 +974,13 @@ public class ZbnfJavaOutput
    *               that no valid column is given to set.
    * @throws IllegalAccessException If any problem with the set-method exists.
    */
-  private void trySetInputColumn(String semantic, Class destinationClass, Object destinationInstance, int column) 
+  private void trySetInputColumn(String semantic, Component destComponent, int column) 
   throws IllegalAccessException
   { if(column >=0)
     { try
       { //if an field inputColumn_ is found, write to it.
-        Field elementColumn = destinationClass.getField("inputColumn_" + semantic);
-        elementColumn.setInt(destinationInstance, column);
+        Field elementColumn = destComponent.clazz.getField("inputColumn_" + semantic);
+        elementColumn.setInt(destComponent.instance, column);
       }
       catch(NoSuchFieldException exception)
       { /**do nothing if the field isn't found.*/ 
@@ -928,10 +990,10 @@ public class ZbnfJavaOutput
         Class[] argTypes1 = new Class[1]; 
         argTypes1[0] = Integer.TYPE;
         try
-        { method = destinationClass.getDeclaredMethod("set_inputColumn_" + semantic, argTypes1);
+        { method = destComponent.clazz.getDeclaredMethod("set_inputColumn_" + semantic, argTypes1);
           Object[] argMethod1 = new Object[1];
           argMethod1[0] = new Integer(column);
-          method.invoke(destinationInstance, argMethod1);
+          method.invoke(destComponent.instance, argMethod1);
         }
         catch(NoSuchMethodException exception1){ /**do nothing if the field isn't found.*/ }
         catch(InvocationTargetException exc)
@@ -1006,7 +1068,24 @@ public class ZbnfJavaOutput
     }
     return sError;
   }
+
   
+  
+  /**Parses the given file with given syntax and fills the parsed result into the result object.
+   * This is a simple common use-able routine to transfer textual content into content of a Java object.
+   * <br>
+   * The non static variant allows to set some options using class methods.
+   * 
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param fInput The input file to parse.
+   * @param sSyntax The syntax using ZBNF
+   * @return null if no error, else a short error text. The explicitly error text is written in report.
+   */
+  public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, String sSyntax) 
+  { StringPart spSyntax = new StringPart(sSyntax);
+  	return parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
+  }
   
   
   /**Parses the given file with given syntax and fills the parsed result into the result object.
@@ -1024,7 +1103,7 @@ public class ZbnfJavaOutput
   //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
   { String sError = null;
     //configure the parser:
-    StringPart spInput = null;
+    StringPartFromFileLines spInput = null;
     ZbnfParser zbnfParser = null;
     if(sError == null)
     { zbnfParser = new ZbnfParser(report);
@@ -1052,10 +1131,11 @@ public class ZbnfJavaOutput
     if(sError == null)
     { 
       boolean bOk = zbnfParser.parse(spInput);
+      spInput.close();
       if(!bOk)
       { final String sParserError = zbnfParser.getSyntaxErrorReport();
-        report.writeError(sError);
-        sError = "ERROR syntax in input file: " + sParserError;
+        sError = "ERROR syntax in input file: " + fInput.getAbsolutePath() + "\n" + sParserError;
+        //report.writeError(sError);
       }
       //The content of the setting file is stored inside the parser as 'parse result'.
       //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.

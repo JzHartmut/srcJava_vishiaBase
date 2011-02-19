@@ -36,23 +36,25 @@ import java.util.*;  //List
 import java.text.*;  //ParseException
 
 import org.vishia.util.FileSystem;
-
+import org.vishia.bridgeC.OS_TimeStamp;
+import org.vishia.bridgeC.Va_list;
+import org.vishia.msgDispatch.LogMessage;;
 /**
 <h1>class MainCmd - Description</h1>
 <font color="0x008000">
-    Diese abstrakte Klasse dient als Basisklasse für alle cmdline-Applikationen. Diese Klasse enthält folgende Leistungseigenschaften:
+    Diese abstrakte Klasse dient als Basisklasse fï¿½r alle cmdline-Applikationen. Diese Klasse enthï¿½lt folgende Leistungseigenschaften:
     <ul><li>Erfassen der Kommandozeilenargumente: Als Erweiterung ist geplant ::TODO:: bei Angabe @filepath werden
             die Argumente aus einem File gelesen, und zwar pro Zeile ein Argument auch mit Leerzeichen. Der Anwender
-            braucht dies selbst nicht zu berücksichtigen, siehe parseArguments() und getArgument()</li>
+            braucht dies selbst nicht zu berï¿½cksichtigen, siehe parseArguments() und getArgument()</li>
         <li>Relalisieren aller System-Ausgaben auf das CmdLine-Fenster oder anders geeignet:
             Der User ruft die entsprechenden Methoden writeHelpInfo(), writeInfo() usw. auf und nicht direkt
-            System.out.println... Damit ist es in dieser Klasse möglich, die Ausgabe geeignet umzuleiten, beispielsweise
-            für Windows-Applikationen.
-        <li>Bereitstellen einer Schnittstelle für Report in eine Datei, es wird das Interface Report implementiert.</li>
+            System.out.println... Damit ist es in dieser Klasse mï¿½glich, die Ausgabe geeignet umzuleiten, beispielsweise
+            fï¿½r Windows-Applikationen.
+        <li>Bereitstellen einer Schnittstelle fï¿½r Report in eine Datei, es wird das Interface Report implementiert.</li>
         <li>Erfassen des Maximum des ExitErrorLevel, siehe setExitErrorLevel().</li>
-        <li>Bereitstellen einer Methode, um auf einfache Weise andere Kommandozeilen auszuführen, siehe executeCmdLine()</li>
-        <li>Bereitstellen eines Systems für die Applikation (abstrakte Methoden), wie Informationen nach außen gegeben werden
-            sollen. Diese Methoden werden unter anderem in der MainCmdWin benutzt und sollen zu einer Einheitlichkeit führen.
+        <li>Bereitstellen einer Methode, um auf einfache Weise andere Kommandozeilen auszufï¿½hren, siehe executeCmdLine()</li>
+        <li>Bereitstellen eines Systems fï¿½r die Applikation (abstrakte Methoden), wie Informationen nach auï¿½en gegeben werden
+            sollen. Diese Methoden werden unter anderem in der MainCmdWin benutzt und sollen zu einer Einheitlichkeit fï¿½hren.
             Siehe writeHelpInfo(), writeAboutInfo().
     </ul>
     </font>
@@ -240,22 +242,24 @@ public abstract class MainCmd implements MainCmd_ifc
   /** Adds the help info for standard arguments. The text is the followed:<pre>
     addHelpInfo("--about show the help infos");
     addHelpInfo("--help  show the help infos");
-    addHelpInfo("--report:FILE  write the report (log) into the given file, create or clear the file.");
-    addHelpInfo("--report+:FILE add to the end of given file or create the report file.");
-    addHelpInfo("--rlevel:R     set the level of report, R is number from 1 to 6.");
-    addHelpInfo("--rlevel:DR    also write reports upto level D on display, sample: ..-rlevel:24");
-    addHelpInfo("--rlevel:WDR   write output also in report, W is nr from 1 to 3 (error, warning, info");
+    addHelpInfo("--report=FILE  write the report (log) into the given file, create or clear the file.");
+    addHelpInfo("--report+=FILE add to the end of given file or create the report file.");
+    addHelpInfo("--rlevel=R     set the level of report, R is number from 1 to 6.");
+    addHelpInfo("--rlevel=DR    also write reports upto level D on display, sample: ..-rlevel:24");
+    addHelpInfo("--rlevel=WDR   write output also in report, W is nr from 1 to 3 (error, warning, info");
     </pre>
   */
   protected void addStandardHelpInfo()
   {
     addHelpInfo("--about show the help infos");
     addHelpInfo("--help  show the help infos");
-    addHelpInfo("--report:FILE  write the report (log) into the given file, create or clear the file.");
-    addHelpInfo("--report+:FILE add to the end of given file or create the report file.");
-    addHelpInfo("--rlevel:R     set the level of report, R is number from 1 to 6.");
-    addHelpInfo("--rlevel:DR    also write reports upto level D on display, sample: ..-rlevel:24");
-    addHelpInfo("--rlevel:WDR   write output also in report, W is nr from 1 to 3 (error, warning, info");
+    addHelpInfo("---arg ignore this argument");
+    addHelpInfo("--@file use file for further arguments, one argument per line.");
+    addHelpInfo("--report=FILE  write the report (log) into the given file, create or clear the file.");
+    addHelpInfo("--report+=FILE add to the end of given file or create the report file.");
+    addHelpInfo("--rlevel=R     set the level of report, R is number from 1 to 6.");
+    addHelpInfo("--rlevel=DR    also write reports upto level D on display, sample: ..-rlevel:24");
+    addHelpInfo("--rlevel=WDR   write output also in report, W is nr from 1 to 3 (error, warning, info");
   }
 
 
@@ -348,20 +352,51 @@ public abstract class MainCmd implements MainCmd_ifc
     boolean bAppendReport = false;
     { iArgs = 0;
       while(iArgs < cmdLineArgs.length)
-      { if     (cmdLineArgs[iArgs].startsWith("--rlevel:"))
+      { if(cmdLineArgs[iArgs].startsWith("--@")){
+      	  String sArgFile = getArgument(3);
+      	  File fileArg = new File(sArgFile);
+      	  List<String> listArgs = new LinkedList<String>();
+      	  try{
+      	  	int lenFile = (int)fileArg.length();
+      	  	BufferedReader inp = new BufferedReader(new FileReader(fileArg));
+      	    while(inp.ready()){
+      	  	  String sParam = inp.readLine().trim();	
+      	    	if(sParam.length()>0 && sParam.charAt(0) != '#'){
+      	  	    listArgs.add(sParam);
+      	  	  }  
+            }
+      	    //add existing cmdLineArgs and the new args:
+      	    String[] argsNew = new String[cmdLineArgs.length -1 + listArgs.size()];
+      	    System.arraycopy(cmdLineArgs, 0, argsNew, 0, iArgs);
+      	    int iArgNew = iArgs-1;
+      	    for(String arg: listArgs){
+      	    	argsNew[++iArgNew] = arg;
+      	    }
+      	    System.arraycopy(cmdLineArgs, iArgs+1, argsNew, iArgNew+1, cmdLineArgs.length - iArgs-1);
+      	    //now all args from file and the existing cmdLineArgs are stored in argsNew, use it instead:
+      	    cmdLineArgs = argsNew;
+      	    iArgs -=1;  //the --@ is removed and replaced with the first argument from file!
+      	  } 
+      	  catch(FileNotFoundException exc){ throw new ParseException("argfile not found: " + fileArg.getAbsolutePath(),0); }
+      	  catch(IOException exc){ throw new ParseException("argfile read error: " + fileArg.getAbsolutePath(),0); }
+      	  
+        }
+        else if (cmdLineArgs[iArgs].startsWith("--rlevel"))
         { int level;
           try{ level = Integer.parseInt(getArgument(9)); } //;cmdLineArgs[iArgs].substring(7,8)); }
           catch(Exception e)
-          { throw new ParseException("ERROR on argument --rlevel:" + cmdLineArgs[iArgs], iArgs);
+          { throw new ParseException("ERROR on argument --rlevel=" + cmdLineArgs[iArgs], iArgs);
           }
           main.nReportLevel          = level % 10;
           main.nReportLevelDisplay   = (level / 10) % 10;  //0: no report on display.
           main.nLevelDisplayToReport = (level / 100) % 10;  //0: no display to report.
         }
-        else if(cmdLineArgs[iArgs].startsWith("--report+:")) { sFileReport = getArgument(10); bAppendReport = true; }
+        else if(cmdLineArgs[iArgs].startsWith("--report+=")) { sFileReport = getArgument(10); bAppendReport = true; }
         else if(cmdLineArgs[iArgs].startsWith("--report:")) { sFileReport = getArgument(9); }
+        else if(cmdLineArgs[iArgs].startsWith("--report=")) { sFileReport = getArgument(9); }
         else if(cmdLineArgs[iArgs].startsWith("--about")) { writeAboutInfo(); }
         else if(cmdLineArgs[iArgs].startsWith("--help")) { writeHelpInfo(); }
+        else if(cmdLineArgs[iArgs].startsWith("---")) { /*ignore it*/ }
         else
         { if(!main.testArgument(cmdLineArgs[iArgs], iArgs))
           { main.writeError("failed argument:" + cmdLineArgs[iArgs]);
@@ -588,87 +623,188 @@ public abstract class MainCmd implements MainCmd_ifc
 
   
   
-  /** Execute a command invoke a cmdline call, implements MainCmd_Ifc.
-      The call must not be needed any input (:TODO:?).
-      The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
-      This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
-      but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
-  */
-  public int executeCmdLine
-  ( String cmd
-  , ProcessBuilder processBuilder
-  , int nReportLevel
-  , StringBuffer output, String input
-  )
-  {
-    String[] cmdArray = cmd.split(" ",0);
-    return executeCmdLine(cmdArray, processBuilder, nReportLevel, output, input);
-    
-  }
-  
-  
-  /** Execute a command invoke a cmdline call, implements MainCmd_Ifc.
-      The call must not be needed any input (:TODO:?).
-      The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
-      This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
-      but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
-  */
-  public int executeCmdLine
-  ( String[] cmd
-  , ProcessBuilder processBuilder
-  , int nReportLevel
-  , StringBuffer output, String input
-  )
-  { int exitErrorLevel;
-    try
-    {
-      processBuilder.command(cmd);
-      Process process = processBuilder.start();
-      InputStream processOutput = process.getInputStream();  //reads the output from exec.
-      InputStream processError  = process.getErrorStream();  //reads the error from exec.
-   
-      Runnable cmdOutput = new ShowCmdOutput(output, nReportLevel, new BufferedReader(new InputStreamReader(processOutput) ));
-      Thread threadOutput = new Thread(cmdOutput,"cmdline-out");
-      threadOutput.start();  //the thread reads the processOutput and disposes it to the infoln
+	/**Execute a command invoke a cmdline call, implements MainCmd_Ifc.
+	  The call must not be needed any input (:TODO:?).
+	  The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
+	  This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
+	  but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
+	 * @deprecated
+	*/
+	public int executeCmdLine
+	( String cmd
+	, ProcessBuilder processBuilder
+	, int nReportLevel
+	, StringBuffer output, String input
+	)
+	{
+		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+		return executeCmdLine(cmdArray, processBuilder, nReportLevel, output, input);
+	
+	}
 
-      Runnable cmdError = new ShowCmdOutput(null, nReportLevel, new BufferedReader(new InputStreamReader(processError) ));
-      Thread threadError = new Thread(cmdError,"cmdline-error");
-      threadError.start();   //the thread reads the processError and disposes it to the infoln
-      //boolean bCont = true;
-      writeInfoln("process ...");
-      //String sOut = null;
-      //String sError = null;
-      //int nTime = 0;
-      //while(bCont)
-      { //if(++nTime > 100000){ writeInfo("."); nTime = 0; }
-        //if(in.ready())
-        //{ writeInfoln(in   .readLine()); }
-        //if(error.ready()) { writeInfoln(error.readLine()); }
-        //if(sOut == null || sError == null)
-        { //writeInfoln("******* finish **********");
-          //bCont = false;
-        }
-      }
+	
+	/**
+	 * @param cmd
+	 * @param processBuilder
+	 * @param nReportLevel
+	 * @param output
+	 * @param input
+	 * @return
+	 * @deprecated
+	 */
+	public int executeCmdLine
+	( String[] cmd
+	, ProcessBuilder processBuilder
+	, int nReportLevel
+	, StringBuffer output, String input
+	){
+		return executeCmdLine(processBuilder, cmd, input, nReportLevel, output, output);
+	}
+	
+	
+	
+	/**Executes a command line call maybe as pipe, waiting for finishing..
+	 * The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
+	 * @param processBuilder The ProcessBuilder. There may be assigned environment variables and a current directory.
+	 * @param cmd The cmd and arguments. If it is null, the command assigened to the processBuilder is used.
+	 * @param input Any pipe-input. It may be null.
+	 * @param nReportLevel The report level which is used for output. 
+	 *        If it is 0, then the output isn't written TODO
+	 * @param output The output pipe.
+	 * @param error The error pipe. If it is null, then errors are written in the output pipe.
+	 * @return
+	 */
+	@Override public int executeCmdLine
+	( ProcessBuilder processBuilder
+  , String cmd
+  , String input
+	, int nReportLevel
+	, StringBuffer output
+	, StringBuffer error
+	){
+		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+		return executeCmdLine(processBuilder, cmdArray, input, nReportLevel, output, error);
 
-      process.waitFor();
-      exitErrorLevel = process.exitValue();
-    }
-    catch(IOException exception)
-    { writeInfoln( "Problem \n" + exception);
-      exitErrorLevel = 255;
-      //throw new RuntimeException("IOException on commandline");
-    }
-    catch ( InterruptedException ie )
-    {
-      writeInfoln( ie.toString() );
-      exitErrorLevel = 255;
-      //throw new RuntimeException("cmdline interrupted");
-    }
-    return exitErrorLevel;
-  }
-  
-  
-  
+	}
+
+	
+	/**Executes a command line call maybe as pipe, waiting for finishing..
+	 * The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
+	 * @param processBuilder The ProcessBuilder. There may be assigned environment variables and a current directory.
+	 * @param cmd The cmd and arguments. If it is null, the command assigend to the processBuilder is used.
+	 * @param input Any pipe-input. It may be null.
+	 * @param nReportLevel The report level which is used for output. 
+	 *        If it is 0, then the output isn't written TODO
+	 * @param output The output pipe.
+	 * @param error The error pipe. If it is null, then errors are written in the output pipe.
+	 * @return
+	 */
+	@Override public int executeCmdLine
+	( ProcessBuilder processBuilder
+  , String[] cmd
+  , String input
+	, int nReportLevel
+	, StringBuffer output
+	, StringBuffer error
+	)
+	{ int exitErrorLevel;
+	try
+	{
+	  processBuilder.command(cmd);
+	  Process process = processBuilder.start();
+	  InputStream processOutput = process.getInputStream();  //reads the output from exec.
+	  InputStream processError  = process.getErrorStream();  //reads the error from exec.
+	
+	  Runnable cmdOutput = new ShowCmdOutput(output, nReportLevel, new BufferedReader(new InputStreamReader(processOutput) ));
+	  Thread threadOutput = new Thread(cmdOutput,"cmdline-out");
+	  threadOutput.start();  //the thread reads the processOutput and disposes it to the infoln
+	
+	  Runnable cmdError = new ShowCmdOutput(null, nReportLevel, new BufferedReader(new InputStreamReader(processError) ));
+	  Thread threadError = new Thread(cmdError,"cmdline-error");
+	  threadError.start();   //the thread reads the processError and disposes it to the infoln
+	  //boolean bCont = true;
+	  writeInfoln("process ...");
+	  //String sOut = null;
+	  //String sError = null;
+	  //int nTime = 0;
+	  //while(bCont)
+	  { //if(++nTime > 100000){ writeInfo("."); nTime = 0; }
+	    //if(in.ready())
+	    //{ writeInfoln(in   .readLine()); }
+	    //if(error.ready()) { writeInfoln(error.readLine()); }
+	    //if(sOut == null || sError == null)
+	    { //writeInfoln("******* finish **********");
+	      //bCont = false;
+	    }
+	  }
+	
+	  process.waitFor();
+	  exitErrorLevel = process.exitValue();
+	}
+	catch(IOException exception)
+	{ writeInfoln( "Problem \n" + exception);
+	  exitErrorLevel = 255;
+	  //throw new RuntimeException("IOException on commandline");
+	}
+	catch ( InterruptedException ie )
+	{
+	  writeInfoln( ie.toString() );
+	  exitErrorLevel = 255;
+	  //throw new RuntimeException("cmdline interrupted");
+	}
+	return exitErrorLevel;
+	}
+	
+
+
+	/**Starts a command invocation for a independent window.
+	 * This command does not have any input or output. The command will be started,
+	 * the finishing isn't await. This command line invocation is proper for commands,
+	 * which create a new window in the operation system. The new window has its own live cycle then,
+	 * independent of the invocation.
+	 * @param cmd The command. Some arguments are possible, they should be separated by space.
+	 * @param processBuilder The processBuilder.
+	 * @return
+	 */
+	@Override public int startCmdLine(ProcessBuilder processBuilder, String cmd)
+	{
+		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+		return startCmdLine(processBuilder, cmdArray);
+	
+	}
+	
+	
+	/**Starts a command invocation for a independent window.
+	 * This command does not have any input or output. The command will be started,
+	 * the finishing isn't await. This command line invocation is proper for commands,
+	 * which create a new window in the operation system. The new window has its own live cycle then,
+	 * independent of the invocation.
+	 * @param cmd The command and some arguments.
+	 * @param processBuilder The processBuilder.
+	 * @return 0 on success, 255 if any start error.
+	 */
+	@Override public int startCmdLine(ProcessBuilder processBuilder, String[] cmd)
+	{ int exitErrorLevel = 0;
+		try
+		{
+		  processBuilder.command(cmd);
+		  Process process = processBuilder.start();
+		
+		}
+		catch(IOException exception)
+		{ writeError("", exception);
+		  exitErrorLevel = 255;
+		  //throw new RuntimeException("IOException on commandline");
+		}
+		return exitErrorLevel;
+	}
+	
+
+	@Override public int switchToWindowOrStartCmdline(ProcessBuilder processBuilder, String sCmd, String sWindowTitle)
+	{
+    throw new IllegalArgumentException("only available in graphical-systems.");
+	}
+
 
 
   /*--------------------------------------------------------------------------------------------------------*/
@@ -938,6 +1074,107 @@ public abstract class MainCmd implements MainCmd_ifc
   }
   
   
+  class LogMessageImplConsole implements LogMessage
+  {
+    final private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd HH:mm:ss.SSS: ");
+
+		@Override
+		public void close() {}
+	
+		@Override
+		public void flush() {}
+	
+		@Override
+		public boolean isOnline() { return true; }
+
+		@Override
+		public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime,
+				String text, Va_list args) {
+			String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args.get());
+	    reportln(Report.info, line);
+			return false;
+		}
+
+		@Override
+		public boolean sendMsg(int identNumber, String text, Object... args) {
+			return sendMsgTime(identNumber, OS_TimeStamp.os_getDateTime(), text, args);
+		}
+
+		@Override
+		public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime,
+				String text, Object... args) {
+			if(args.length == 0){
+				//no arguments, no formatting!
+			  if(fReport != null)
+		    { String line = dateFormat.format(creationTime) + "; " + identNumber + "; ";
+		      fReport.writeln("");
+		      fReport.write(line);
+		      fReport.write(text);  //may be more as one line.
+		    }
+			} else {
+				String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args);
+				final int reportLevel = identNumber == 0 ? Report.info :
+					identNumber <= Report.fineDebug ? identNumber : Report.info;
+				reportln(reportLevel, line);
+		  }
+			return false;
+		}
+  	
+  }
+  
+  class LogMessageImplFile implements LogMessage
+  {
+    final private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd HH:mm:ss.SSS: ");
+
+		@Override
+		public void close() {}
+	
+		@Override
+		public void flush() {}
+	
+		@Override
+		public boolean isOnline() { return true; }
+
+		@Override
+		public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime,
+				String text, Va_list args) {
+			String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args.get());
+	    reportln(Report.info, line);
+			return false;
+		}
+
+		@Override
+		public boolean sendMsg(int identNumber, String text, Object... args) {
+			return sendMsgTime(identNumber, OS_TimeStamp.os_getDateTime(), text, args);
+		}
+
+		@Override
+		public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime,
+				String text, Object... args) {
+		  if(fReport != null)
+	    { String line = "*" + identNumber + "; " + dateFormat.format(creationTime) + "; ";
+	      fReport.writeln("");
+	      fReport.write(line);
+	      if(args.length == 0){
+					//no arguments, no formatting!
+				  line = text;  //may be more as one line, can contain %-character.
+	      } else {
+				  line = String.format(text,args);
+	      }
+				fReport.write(line);  //may be more as one line.
+	    }
+			return false;
+		}
+  	
+  }
+  
+  LogMessageImplConsole logMessageConsole = new LogMessageImplConsole();
+  
+  LogMessageImplFile logMessageFile = new LogMessageImplFile();
+  
+  @Override public LogMessage getLogMessageOutputConsole(){ return logMessageConsole; }
+  
+  @Override public LogMessage getLogMessageOutputFile(){ return logMessageFile; }
   
 }
 

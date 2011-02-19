@@ -173,6 +173,13 @@ class ZbnfParserStore
     
     ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax)
     { this.store = store;
+      int posValue = sSemantic.indexOf('='); 
+      if(posValue>0){
+      	String value = sSemantic.substring(posValue+1);
+      	sSemantic = sSemantic.substring(0, posValue);
+      	this.parsedString = value;
+      	this.kind = kString;
+      }
       this.sSemantic = sSemantic;
       this.parent = parent;
       this.syntaxIdent = syntax;
@@ -453,6 +460,11 @@ class ZbnfParserStore
     }
     
 
+    /**Gets the named child or null.
+     * @param key Name or path. The key can address more as one key in tree-depth,
+     *            separated with slash. '/' This feature is since 2010-06-02
+     * implements {@link org.vishia.util.SortedTree#getChild(java.lang.String)}
+     */
     public ZbnfParseResultItem getChild(String key)
     { if(offsetAfterEnd == 1){ return null; }
       else if(key == null || key.length()==0)
@@ -461,7 +473,14 @@ class ZbnfParserStore
       }
       else
       { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
-        return treeNodeRepresentation.getChild(key);
+      	int posSep = key.indexOf('/');
+      	final String key2 = posSep >=0 ? key.substring(0, posSep) : key; 
+      	ZbnfParseResultItem zbnfChild = treeNodeRepresentation.getChild(key2);
+        if(zbnfChild !=null && posSep >=0){
+        	final String key3 = key.substring(posSep+1);
+        	zbnfChild = zbnfChild.getChild(key3);
+        }
+        return zbnfChild;
       }  
     }
 
@@ -583,8 +602,12 @@ class ZbnfParserStore
   private int add(String sSemantic, String sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
   { item = new ParseResultItemImplement(this, sSemantic, parent, "?");
     item.sInput = sInput;
-    item.parsedString = sInput;
-    item.kind = nAlternative;
+    if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
+      item.parsedString = sInput;
+    }
+    if(item.kind ==0){  //it is not 0 if it was set in constructor, especially on sSemantic = "name=value".
+    	item.kind = nAlternative;
+    }
     item.start = start;
     item.end = end;
     item.nLine = nLine;

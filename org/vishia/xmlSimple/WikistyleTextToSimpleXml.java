@@ -347,7 +347,6 @@ public class WikistyleTextToSimpleXml
    * @throws XmlException 
    *        
    */
-  @SuppressWarnings("unchecked")
   private void insertAndConvertText(String sInput, ListIterator iter, XmlNode dstElement
       , Map attributes, String sClass, String sLabelOwn
       ) throws XmlException

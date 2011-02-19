@@ -94,10 +94,15 @@ public class StringPartFromFileLines extends StringPart
     { //test the first line to detect a charset, maybe the charset exceptions.
       FileInputStream input = new FileInputStream(fromFile);
       byte[] inBuffer = new byte[256];
-      input.read(inBuffer);
-      String sFirstLine = new String(inBuffer);
-      int posNewline = sFirstLine.indexOf('\n');
-      if(posNewline < 0) posNewline = sFirstLine.length();
+      int nrofFirstChars = input.read(inBuffer);
+      input.close();
+      String sFirstLine = new String(inBuffer, 0, nrofFirstChars);
+      int posNewline = sFirstLine.indexOf('\n'); 
+      //@chg:JcHartmut-2010-0912: test 2 lines instead of the first only, because in a bash-shell script it can't be the first line!
+      if(posNewline >= 0 && posNewline < nrofFirstChars){    //= nrofFirstBytes, then an IndexOutOfBoundsException is thrown because
+      	posNewline = sFirstLine.indexOf('\n', posNewline +1); //from the second line. 
+      }
+      if(posNewline < 0) posNewline = nrofFirstChars;
       StringPart spFirstLine = new StringPart(sFirstLine.substring(0, posNewline));
       spFirstLine.setIgnoreWhitespaces(true);
       /**Check whether the encoding keyword is found: */
@@ -127,7 +132,7 @@ public class StringPartFromFileLines extends StringPart
     { readIn = new BufferedReader(new FileReader(fromFile));
     }
     readnextContentFromFile();
-    if(buffer.charAt(0) == '\ufeff')
+    if(buffer.length() >0 && buffer.charAt(0) == '\ufeff')
     { /**ignore a BOM Byte Order Mark.*/
       assign(buffer.substring(1));
     }
@@ -172,4 +177,11 @@ public class StringPartFromFileLines extends StringPart
   }
 
 
+  public void close(){
+  	if(readIn != null){
+  		try{ readIn.close(); } catch(IOException exc){}
+  		//readIn = null;
+  	}
+  }
+  
 }

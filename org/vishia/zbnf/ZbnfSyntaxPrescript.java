@@ -18,15 +18,6 @@
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.
  *
  * @author Hartmut Schorrig www.vishia.org
- * @version 2006-06-15  (year-month-day)
- * list of changes:
- * 2009-08-20: Hartmut bugfix: "toLastCharIncl:" were skipped over 1 char additionally. fixed.
- * 2009-08-02: Hartmut new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
- * 2009-03-16: Hartmut new: kFloatWithFactor: Schreibweise <#f*Factor?...> funktioniert jetzt.                                                   
- *                     new: <toLastChar:chars?...> als alternative Schreibweise von <stringtolastExclChar oder <*<<, einfachere Beschreibung.    
- *                     new: <toLastCharIncl:chars?...> als alternative Schreibweise von <stringtolastInclChar oder <+<<, einfachere Beschreibung.
- *                     chg: <...?*... gibt es nicht mehr, nicht mehr zugelassen, war isToTransportOuterResults()                                 
- * 2006-05-00: Hartmut creation
  *
  ****************************************************************************/
 package org.vishia.zbnf;
@@ -224,7 +215,26 @@ import org.vishia.mainCmd.Report;
  */
 public class ZbnfSyntaxPrescript
 {
-
+  /**Version-ident.
+	 * list of changes:
+	 * <ul>
+	 * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
+   * in the construct with inner syntax, in the form ,,<""?!innerSyntax?semantic>,,. 
+   * See the ZBNF-description. 
+   * In the past there should be a own pseudo syntax-component-definition to give a semantic 
+   * in form ,,<""?!pseudoComp>...   pseudoComp::=<innerSyntax?semantic>.,, Now it is more easy to apply.
+   * <li> 2009-08-20: Hartmut bugfix: "toLastCharIncl:" were skipped over 1 char additionally. fixed.
+	 * <li> 2009-08-02: Hartmut new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
+	 * <li> 2009-03-16: Hartmut new: kFloatWithFactor: noted as <#f*Factor?...> now works.                                                   
+	 * <li> 2009-03-16: Hartmut new: <toLastChar:chars?...> is an alternative notation of <stringtolastExclChar or <*<<, more simple to read.    
+	 * <li> 2009-03-16: Hartmut new: <toLastCharIncl:chars?...> is an alternative notation of <stringtolastInclChar oder <+<<, more simple to read.
+	 * <li> 2009-03-16: Hartmut chg: <...?*... is not supported anymore, it isn't admissible in syntax scripts up to now. 
+	 * <li>                     It was the functionality isToTransportOuterResults(). But this functionality is too complex, difficult to understand and able to handle.                                 
+	 * <li> 2006-05-00: Hartmut creation
+   * </ul>
+   */
+	public static final String sVersionStamp = "2011-01-18";
+	
   /** Kind of syntay type of the item */
   int eType;
 
@@ -745,6 +755,7 @@ public class ZbnfSyntaxPrescript
   void getSemantic(StringPart spInput)
   { //TRICKY: sSemantic blanketed the class variable, to test assignment from compiler in all branches.
     String sSemantic;
+    boolean bSemantic = true;
     char cc = spInput.getCurrentChar();
 
     if( cc == '-')
@@ -764,45 +775,38 @@ public class ZbnfSyntaxPrescript
     */
     if( cc  == '!')
     { //call of an inner parsing
-      sSemantic = null;
       spInput.seek(1).lentoIdentifier();
       if(spInput.length()>0)
       { sSubSyntax = spInput.getCurrentPart();
       }
       else ; //no sDefintionIdent and no Semantic
       spInput.fromEnd();
+      cc = spInput.getCurrentChar();
+      if(cc=='?'){ cc=spInput.seek(1).getCurrentChar();  //the first char of semantic
+      } else { bSemantic = false; }  //no second ?, cc should be '>'
     }
-    /*
-    else if( cc == '@')
-    { spInput.seek(1);
-      spInput.lentoIdentifier();
-      if(spInput.length()>0)
-      { sSemantic = "@" + spInput.getCurrentPart();  //create an attribute in xml
-      }
-      else
-      { sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
-      }
-      spInput.fromEnd();
-    }
-    */
-    else if( cc == '?')
-    { spInput.seek(1);
-      sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
-    }
-    else if(false && spInput.startsWith("text()"))
-    { spInput.seek(6);
-      sSemantic="text()";
-    }
-    else
-    { //behind ? the semantic is defined. It may be a null-Semantic.
-      spInput.lentoAnyChar(">");
-      if(spInput.length()>0)
-      { sSemantic = spInput.getCurrentPart();
-      }
-      else
-      { sSemantic = null;  //<..?>: without semantic
-      }
-      spInput.fromEnd();
+    if(bSemantic){
+	    if( cc == '?')
+	    { spInput.seek(1);
+	      sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
+	    }
+	    else if(false && spInput.startsWith("text()"))
+	    { spInput.seek(6);
+	      sSemantic="text()";
+	    }
+	    else
+	    { //behind ? the semantic is defined. It may be a null-Semantic.
+	      spInput.lentoAnyChar(">");
+	      if(spInput.length()>0)
+	      { sSemantic = spInput.getCurrentPart();
+	      }
+	      else
+	      { sSemantic = null;  //<..?>: without semantic
+	      }
+	      spInput.fromEnd();
+	    }
+    } else {
+    	sSemantic = null;  //<...?!subSyntax>
     }
     this.sSemantic = sSemantic;
     if(sSemantic != null && sSemantic.equals("return"))
@@ -1490,12 +1494,15 @@ public class ZbnfSyntaxPrescript
         case kStringUntilRightEndchar:          sReport = "<stringtolastExclChar" + getConstantSyntax(); break;
         case kStringUntilRightEndcharInclusive: sReport = "<stringtolastinclChar" + getConstantSyntax(); break;
         case kQuotedString  : sReport = "<" + getConstantSyntax(); break;
+        case kStringUntilEndString: sReport = "<*" + sConstantSyntax; break;
+        case kStringUntilEndStringWithIndent: sReport = "<+++*" + sConstantSyntax; break;
         case kPositivNumber : sReport = "<#";  break;
         case kIntegerNumber : sReport = "<#-"; break;
         case kHexNumber :     sReport = "<#x"; break;
         case kFloatNumber :   sReport = "<#f"; break;
         case kFloatWithFactor :   sReport = "<#f*" +nFloatFactor; break;
         case kSkipSpaces :    sReport = "\\n\\t"; break;
+        case 0 :    sReport = "?-0-?"; break;
         default: sReport = "?-?-?";
       }
       String sSemantic = getSemantic();

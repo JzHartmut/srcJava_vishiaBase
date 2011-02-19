@@ -50,6 +50,12 @@ public class OS_TimeStamp
   }
   
   
+  public OS_TimeStamp set(OS_TimeStamp src)
+  {
+  	time_sec = src.time_sec;
+  	time_nsec = src.time_nsec;
+  	return this;
+  }
   
   public static boolean os_delayThread(int millisec)
   { boolean breaked = false;

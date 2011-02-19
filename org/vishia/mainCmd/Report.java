@@ -29,8 +29,15 @@ package org.vishia.mainCmd;
 
 import java.io.FileNotFoundException;
 
+import org.vishia.msgDispatch.LogMessage;
 
-/** <font color="0x00ffff">Dieses Interface dient zur Ausgabe von Reportmeldungen für kommandozeilenartige Abarbeitung.
+
+/**This interface is the access to output Log- or report messages while running an application
+ * to check its work.
+ * In opposite to the {@link org.vishia.msgDispatch.LogMessage}, 
+ * the report-interface doesn't use ident-numbers...
+ * 
+ *  <font color="0x00ffff">Dieses Interface dient zur Ausgabe von Reportmeldungen for kommandozeilenartige Abarbeitung.
     </font>
     This interface is usefull for reporting something (logfiles). It should be used in every algorithm routine
     to support debugging without using an extra debugger. It may help to encircle problems. 
@@ -246,7 +253,15 @@ public interface Report
   void setReportLevelToIdent(int ident, int nLevelActive);
   
   
+  /**Gets a LogMessage output.
+   * @return never null. 
+   */
+  LogMessage getLogMessageOutputConsole();
   
+  /**Gets a LogMessage output.
+   * @return never null. 
+   */
+  LogMessage getLogMessageOutputFile();
   
   /**gets the associated report level to a report identifier.
    * @param ident The identifier.

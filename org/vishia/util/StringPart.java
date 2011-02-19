@@ -910,18 +910,17 @@ that is a liststring and his part The associated String
 
   
   /** Searchs the given String inside the valid part, posits the start of the part to the begin of the searched string.
-      The end of the part is not affected.<br>
-      If the string is not found, the start is posit to the actual end. The length()-method supplies 0.
+   *  The end of the part is not affected.<br>
+   *  If the string is not found, the start is posit to the actual end. The length()-method supplies 0.
       Methods such fromEnd() are not interacted from the result of the searching.
       The rule is: seek()-methods only shifts the start position.<br>
       see {@link seek(String sSeek, int mode)}
-   *  @java2c=return-this.
-      @param strings List of String contains the strings to search.
-      @param nrofFoundedString [0] will be set with the index of the founded String in List, or to -1;
-             may be null, if the result is not interested. 
-      @return this.       
-    */  
-  
+   * @java2c=return-this.
+     @param strings List of String contains the strings to search.
+   * @param nrofFoundString If given, [0] is set with the number of the found String in listStrings, 
+   *                        count from 0. This array reference may be null, then unused.
+   * @return this.       
+   */  
   public StringPart seekAnyString(String[] strings, int[] nrofFoundString)
   //public StringPart seekAnyString(List<String> strings, int[] nrofFoundString)
   { startLast = start;
@@ -1096,16 +1095,18 @@ that is a liststring and his part The associated String
   
   
   /**Returns the position of one of the chars in sChars within the part, started inside the part with fromIndex,
-     returns -1 if the char is not found in the part started from 'fromIndex'.
-    @param sChars contents some chars to find.
-    @param fromIndex start of search within the part.
-    @param maxToTest maximal numbers of chars to test. It may be Integer.MAX_VALUE. 
-    @return position of first founded char inside the actual part, but not greater than maxToTest, if no chars is found unitl maxToTest,
-            but -1 if the end is reached.
-  */
+   *  returns -1 if the char is not found in the part started from 'fromIndex'.
+   * @param listStrings contains some Strings to find.
+   * @param fromWhere start of search within the part.
+   * @param maxToTest maximal numbers of chars to test. It may be Integer.MAX_VALUE. 
+   * @param nrofFoundString If given, [0] is set with the number of the found String in listStrings, 
+   *                        count from 0. This array reference may be null, then unused.
+   * @param foundString If given, [0] is set with the found String. This array reference may be null.
+   * @return position of first founded char inside the actual part, but not greater than maxToTest, 
+   *                 if no chars is found until maxToTest, but -1 if the end is reached.
+   */
   public int indexOfAnyString
   ( String[] listStrings
-    //List<String> listStrings
   , final int fromWhere
   , final int maxToTest
   , int[] nrofFoundString
@@ -1115,8 +1116,8 @@ that is a liststring and his part The associated String
     int max = (end - pos) < maxToTest ? end : pos + maxToTest;
     //int endLast = end;
     //StringBuffer sFirstCharBuffer = new StringBuffer(listStrings.size());
-    /** @java2c=stackInstance.*/
     assert(listStrings.length < 100);  //static size is need
+    /** @java2c=stackInstance.*/
     StringBuffer sFirstCharBuffer = new StringBuffer(100);
     //Iterator<String> iter = listStrings.iterator();
     boolean acceptToEndOfText = false;
@@ -1171,7 +1172,15 @@ that is a liststring and his part The associated String
       )
     { nChars = pos - start;
     }
-    else { nChars = -1; }
+    else { 
+    	nChars = -1; 
+      if(foundString != null)
+      { foundString[0] = null;
+      }
+      if(nrofFoundString != null)
+      { nrofFoundString[0] = -1;
+      }
+    }
     return nChars;
   }
 
@@ -2337,7 +2346,41 @@ that is a liststring and his part The associated String
   { throw new IndexOutOfBoundsException(sMsg);
   }
   
+  /**Replaces up to 20 placeholder with a given content.
+   * The method creates a StringBuilder with buffer and a StringPart locally. 
+   * @param src The source String, it may be a line.
+   * @param placeholder An array of strings, any string of them may be found in the src. 
+   * @param value An array of strings appropriate to the placeholder. Any found placeholder 
+   *        will be substitute with that string. 
+   * @param dst A given StringBuilder-instance. If null, then a StringBuilder will be created here
+   * @return The changed string contained in dst or a created StringBuilder.
+   */
+  public static String replace(String src, String[] placeholder, String[] value, StringBuilder dst)
+  { int len = src.length();
+    int ixPos = 0;
+    int nrofToken = placeholder.length;
+    if(nrofToken != value.length) throw new IllegalArgumentException("token and value should have same size, lesser 20"); 
+    if(dst == null){ dst = new StringBuilder(len + 100); }//calculate about 53 chars for identifier
+    StringPart spPattern = new StringPart(src);
+    int posPatternStart = 0;
+    int posPattern;
+    do
+    { int[] type = new int[1];
+      posPattern = spPattern.indexOfAnyString(placeholder, posPatternStart, spPattern.length(), type, null);
+      if(posPattern >=0){
+      	dst.append(src.substring(posPatternStart, posPattern));
+        int ixValue = type[0];
+        dst.append(value[ixValue]);
+        posPatternStart = posPattern + placeholder[ixValue].length();
+      } else { //last pattern constant part:
+      	dst.append(src.substring(posPatternStart));
+        posPatternStart = -1;  //mark end
+      }
+    }while(posPatternStart >=0);
+    return dst.toString();
+  }
   
+
   
 }
 

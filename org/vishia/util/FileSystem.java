@@ -37,10 +37,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.FileFilter;
 import java.io.Writer;
@@ -221,6 +223,7 @@ public class FileSystem
     { InputStream reader = new FileInputStream(file);
       content = new byte[sizeFile];   //reserve memory only if open not fails.
       reader.read(content);
+      reader.close();
     }
     catch(Exception exc)
     { content = null;   //on any exception, return null. Mostly file not found.
@@ -229,9 +232,109 @@ public class FileSystem
   }
 
 
+  /**Reads the content of a whole file into a byte array.
+   * @param file The file should be exist, but don't need to exist.
+   * @return nrofBytes read , see java.io.InputStream.read(byte[])
+   */
+  public static int readBinFile(File file, byte[] buffer)
+  { int nrofBytes;
+    try
+    { InputStream reader = new FileInputStream(file);
+      nrofBytes = reader.read(buffer);
+      reader.close();
+    }
+    catch(Exception exc)
+    { 
+    	nrofBytes = 0;
+    }
+    return nrofBytes;
+  }
+
+
+  /**Writes the content of a whole file from a byte array.
+   * @param file The file should be exist, but don't need to exist.
+   * @return nrofBytes written , see java.io.OutputStream.write(byte[])
+   */
+  public static int writeBinFile(File file, byte[] buffer)
+  { int nrofBytes;
+    try
+    { OutputStream writer = new FileOutputStream(file);
+      writer.write(buffer);
+      writer.close();
+      nrofBytes = buffer.length;
+    }
+    catch(Exception exc)
+    { 
+    	nrofBytes = 0;
+    }
+    return nrofBytes;
+  }
+
+  
+  /**Copy a file. The time-stamp and read-only-properties will be kept for dst. 
+   * @param src A src file. 
+   * @param dst The dst directory should be exist. Use {@link #mkDirPath(String)} with this dst to create it.
+   * @return Number of bytes copied. -1 if src file not found. 0 if the src file is empty.
+   * @throws IOException Any error. but not src file not found.
+   */
+  public static int copyFile(File src, File dst) 
+  throws IOException
+  { 
+  	int nrofBytes = 0;
+  	byte[] buffer = new byte[16384];
+  	if(dst.exists()){
+  		if(!dst.canWrite()){
+  			dst.setWritable(true);
+  		}
+  		dst.delete();
+  	}
+  	InputStream inp;
+  	try{ inp = new FileInputStream(src);
+  	}catch(FileNotFoundException exc){
+  		nrofBytes = -1;
+  		inp = null;
+  	}
+  	if(inp != null){
+	  	OutputStream out = new FileOutputStream(dst);
+	  	int nrofBytesBlock;
+	  	do{
+	  	  nrofBytesBlock = inp.read(buffer);
+	  	  if(nrofBytesBlock >0){
+	  	  	nrofBytes += nrofBytesBlock;
+	  	  	out.write(buffer, 0, nrofBytesBlock);
+	  	  }
+	  	}while(nrofBytesBlock >0);
+	  	inp.close();
+	  	out.close();
+	    long timeSrc = src.lastModified();
+	    dst.setLastModified(timeSrc);
+	    if(!src.canWrite()){
+	    	dst.setWritable(false);
+	    }
+  	}
+	  return nrofBytes;
+  }
+  
+  /**checks if a path exists or execute mkdir for all not existing directory levels.
+  *  If the file should be a directory but it doesn't exists, the parent directory is created.
+  *  That is because it is not able to detect whether a non-existing directory path is a directory.
+  * @param file Either any file or any directory with given path. 
+  * @throws IOException If the path is not makeable.
+  */
+  public static void mkDirPath(File file)
+  throws FileNotFoundException
+  {
+  	if(file.exists()) return;
+  	String sName = file.getAbsolutePath();
+  	if(file.isDirectory()){ assert(false); sName = sName + "/"; }
+  	mkDirPath(sName);
+  }
+  
+
   /**checks if a path exists or execute mkdir for all not existing directory levels.
    *
-   * @param sPath The path. A file name on end will ignored. The last directory is written bevor last / .
+   * @param sPath The path. A file name on end will ignored. 
+   *        The used path to a directory is all before the last / or backslash.
    * @throws IOException If the path is not makeable.
    */
   public static void mkDirPath(String sPath)
@@ -339,7 +442,7 @@ public class FileSystem
     int posSep = -1;
     do{
       int posSep2 = sRefDir.indexOf('/', posSep +1);
-      if(posSep2 >0){
+      if(posSep2 >=0){  //if path starts with '/', continue. It checks from the last '/' +1 or from 0.
         bCont = sInput.length() >= posSep2 && sRefDir.substring(0, posSep2).equals(sInput.substring(0, posSep2));
       } else {
         bCont = false;
@@ -403,6 +506,14 @@ public class FileSystem
     return addFileToList(null, sPath, listFiles);
   }
 
+  /**Add files. It calls {@link #addFileToList(File, String, AddFileToList)}
+   * with the wrapped listFiles.
+   * @param dir may be null, a directory as base for sPath.
+   * @param sPath path may contain wildcard for path and file.
+   * @param listFiles Container to get the files.
+   * @return true if at least on file is found.
+   * @throws FileNotFoundException
+   */
   public static boolean addFileToList(File dir, String sPath, List<File> listFiles) throws FileNotFoundException
   {
     ListWrapper listWrapper = new ListWrapper(listFiles);
@@ -410,13 +521,22 @@ public class FileSystem
     return addFileToList(dir, sPath, listWrapper);
   }
   
+  /**Add files
+   * @param dir may be null, a directory as base for sPath.
+   * @param sPath path may contain wildcard for path and file.
+   * @param listFiles Container to get the files.
+   * @return true if at least on file is found.
+   * @throws FileNotFoundException
+   */
   public static boolean addFileToList(File dir, String sPath, AddFileToList listFiles) throws FileNotFoundException
   { boolean bFound = true;
-    String sDir = dir != null ? dir.getAbsolutePath() + "/" : "";
+    final String sDir, sDirSlash;
+    if(dir != null){ sDir = dir.getAbsolutePath(); sDirSlash = sDir + "/"; }
+    else { sDir = ""; sDirSlash = ""; }
     int posWildcard = sPath.indexOf('*');
     if(posWildcard < 0)
     {
-      File fFile = new File(sDir + sPath);
+      File fFile = new File(sDirSlash + sPath);
       bFound = fFile.exists();
       if(bFound)
       { listFiles.add(fFile);
@@ -447,11 +567,11 @@ public class FileSystem
         String sPathDir; //, sDirMask;
         FileFilter dirMask = null;
         if(posLastSlash >=0)
-        { sPathDir = sDir + sPathBefore.substring(0, posLastSlash);
+        { sPathDir = sDirSlash + sPathBefore.substring(0, posLastSlash);
           //sDirMask = sPathBefore.substring(posLastSlash+1);
         }
         else
-        { sPathDir = sDir + ".";
+        { sPathDir = sDir;
           //sDirMask = sPathBefore;
         }
         dirBase = new File(sPathDir);
@@ -465,7 +585,7 @@ public class FileSystem
         String sPathDir;
         if(posSepDir >= 0)
         {
-          sPathDir = sDir + sPathBefore.substring(0, posSepDir);
+          sPathDir = sDirSlash + sPathBefore.substring(0, posSepDir);
           sPathBefore = sPathBefore.substring(posSepDir+1);  //may be ""
         }
         else

@@ -54,17 +54,24 @@ import org.vishia.bridgeC.Va_list;
  * In a realtime system, compiled with C-Language, the struct Date may have a microsecond resolution
  * and another base year, but it should be absolute. 
  *    
- * @author JcHartmut
+ * @author Hartmut Schorrig
  *
  */
-public abstract class LogMessage
+public interface LogMessage
 {
   /**Sends a message. The timestamp of the message is build with the system time. 
    * All other parameter are identically see {@link #sendMsg(int, OS_TimeStamp, String, Object...)}.
+   * @param identNumber of the message. If it is negative, it is the same message as positive number,
+   *                    but with information 'going state', where the positive number is 'coming state'.
+   * @param text The text representation of the message, format string, see java.lang.String.format(..).
+   *             @pjava2c=zeroTermString.
+   * @param args 0, 1 or more arguments of any type. 
+   *             The interpretation of the arguments is controlled by param text.
+   * @return TODO
    */  
-  public final boolean sendMsg(int identNumber, String text, Object... args)
-  { return sendMsgVaList(identNumber, OS_TimeStamp.os_getDateTime(), text, VaArgBuffer.represent(args).get_va_list());
-  }
+  public boolean sendMsg(int identNumber, String text, Object... args);
+  //{ return sendMsgVaList(identNumber, OS_TimeStamp.os_getDateTime(), text, VaArgBuffer.represent(args).get_va_list());
+  //}
 
   /**Sends a message.
    * 
@@ -72,12 +79,14 @@ public abstract class LogMessage
    *                    but with information 'going state', where the positive number is 'coming state'.
    * @param creationTime absolute time stamp. @Java2C=perValue.
    * @param text The text representation of the message, format string, see java.lang.String.format(..).
+   *             @pjava2c=zeroTermString.
    * @param args 0, 1 or more arguments of any type. 
    *             The interpretation of the arguments is controlled by param text.
+   * @return TODO
    */
-  public final boolean sendMsg(int identNumber, OS_TimeStamp creationTime, String text, Object... args)
-  { return sendMsgVaList(identNumber, creationTime, text, VaArgBuffer.represent(args).get_va_list());
-  }
+  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args);
+  //{ return sendMsgVaList(identNumber, creationTime, text, VaArgBuffer.represent(args).get_va_list());
+  //}
   
 
   
@@ -116,7 +125,7 @@ public abstract class LogMessage
    * @param src 
    * @return the src.
    */
-  public static LogMessage convertFromMsgDispatcher(LogMessage src){ return src; }
+  //public final static LogMessage convertFromMsgDispatcher(LogMessage src){ return src; }
   
   /**A call of this method closes the devices, which processed the message. It is abstract. 
    * It depends from the kind of device, what <code>close</code> mean. 
@@ -135,5 +144,14 @@ public abstract class LogMessage
   
   /**Checks whether the message output is available. */
   public abstract boolean isOnline();
+  
+  /**It should be implemented especially for a File-Output to flush or close
+   * the file in a raster of some seconds. 
+   * This routine should be called only in the same thread like the queued output,
+   * It is called inside the {@link MsgDispatcher.DispatcherThread#run()}.
+   * 
+   */
+  //public abstract void tickAndFlushOrClose();
+  
   
 }

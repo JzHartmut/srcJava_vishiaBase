@@ -150,7 +150,6 @@ public class ZbnfXmlOutput
    *         the returned element is necessary and usefull.
    * @throws XmlException 
    */
-  @SuppressWarnings("deprecation")
   private void addToXmlNode(ZbnfParseResultItem item, final XmlNode xmlOut) 
   throws XmlException
   { int posSeparator;
@@ -204,7 +203,6 @@ public class ZbnfXmlOutput
    *         the returned element is necessary and usefull.
    * @throws XmlException 
    */
-  @SuppressWarnings("deprecation")
   private void addToXmlNodeFinal(final String sTagAttrName, ZbnfParseResultItem item, final XmlNode xmlOut) 
   throws XmlException
   { final XmlNode xmlNew;
