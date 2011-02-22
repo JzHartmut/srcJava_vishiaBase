@@ -1,2 +1,2 @@
-bzr_call.bat .bzr_Zbnf.java explorer
+bzr_call.bat V:\Bzr\srcJava_Zbnf\.bzr explorer
  
