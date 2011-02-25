@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import org.vishia.mainCmd.Report;
 import org.vishia.zmake.ZmakeGenScript.Zbnf_genContent;
 
+/**This class generates the output make file. */
 public class ZmakeGenerator
 {
 
