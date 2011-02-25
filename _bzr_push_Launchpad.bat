@@ -1,6 +1,6 @@
-call bzr_call.bat V:\Bzr\srcJava_Zbnf 
+call bzr_call.bat V:\Bzr\srcJava_Zbnf exit
 ::NOTE: putty/pageant.exe runs. 
-D:\Progs\putty\PAGEANT.EXE V:\vishia\buero\keys\privateSSHkeyFromPuttyGen.bin
+echo NOTE: SSH-key should be started
 pause
 call bzr launchpad-login hartmut-schorrig
 pause

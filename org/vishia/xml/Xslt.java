@@ -167,7 +167,7 @@ public class Xslt
   /**Instance to process input files. This instance holds informations about input files with several reading conditions 
    * and contains a xml parser call.
    */ 
-  protected XmlMReaderJdomSaxon xmlMReader;
+  protected XmlMReader xmlMReader;
 
   /*---------------------------------------------------------------------------------------------*/
   /** main started from java.
@@ -193,7 +193,7 @@ public class Xslt
     boolean bOk = true;
     try{ 
     	@SuppressWarnings("unchecked")
-    	Class<XmlMReaderJdomSaxon> classXmlReader = (Class<XmlMReaderJdomSaxon>)Class.forName("org.vishia.xml.XmlMReaderJdomSaxon");
+    	Class<XmlMReader> classXmlReader = (Class<XmlMReader>)Class.forName("org.vishia.xml.XmlMReaderJdomSaxon");
       main.xmlMReader = classXmlReader.newInstance();
     } catch(Exception exc){
     	main.console.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
@@ -277,8 +277,8 @@ public class Xslt
       int posArg = (arg.length()>=2 && arg.charAt(2)==':') ? 3 : 2; //with or without :
     
       if(     arg.startsWith("-i")) { xmlMReader.addInputFile(getArgument(posArg)); }
-      else if(arg.startsWith("-j")) { xmlMReader.addInputFile(getArgument(posArg),XmlMReaderJdomSaxon.mReplaceWhiteSpaceWith1Space); }
-      else if(arg.startsWith("-k")) { xmlMReader.addInputFile(getArgument(posArg),XmlMReaderJdomSaxon.mExpandWikiFormat); }
+      else if(arg.startsWith("-j")) { xmlMReader.addInputFile(getArgument(posArg),XmlMReader.mReplaceWhiteSpaceWith1Space); }
+      else if(arg.startsWith("-k")) { xmlMReader.addInputFile(getArgument(posArg),XmlMReader.mExpandWikiFormat); }
       else if(arg.startsWith("-t")) { sFileXslt = getArgument(posArg); }
       else if(arg.startsWith("-p")) { sFileXslp = getArgument(posArg); }
       else if(arg.startsWith("-y")) { sFileOut =  getArgument(posArg); }
