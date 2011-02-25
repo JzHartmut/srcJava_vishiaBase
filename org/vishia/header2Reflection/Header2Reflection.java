@@ -394,7 +394,7 @@ public class Header2Reflection
           fileAllC.write("\n#define private public    //  to enable the access to all elements.");
           fileAllC.write("\n#include <Jc/ReflectionJc.h>");
           fileAllC.write("\n#include <stddef.h>");
-          fileAllC.write("\n#include \"" +sFileAllH+ "\"");
+          //fileAllC.write("\n#include \"" +sFileAllH+ "\"");
           
           //fileAllC.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
           //fileAllC.write("\n * It is " + dataFormat.format(dateNow) + "*/");
@@ -959,7 +959,7 @@ public class Header2Reflection
       console.writeInfo(sClassName + "...");
 
       if(fileAllH != null)
-      { fileAllH.write("\nextern const ClassJc reflection_" + sReflectionClassName + ";");
+      { fileAllH.write("\nextern_C const ClassJc reflection_" + sReflectionClassName + ";");
         fileAllH.write("\n#define REFLECTION_" + sReflectionClassName + " &reflection_" + sReflectionClassName);
       }
       List<ZbnfParseResultItem> visibilityBlocks = classItem.listChildren("classVisibilityBlock");
@@ -1050,9 +1050,9 @@ public class Header2Reflection
         }
       }
       */
+      fileC.append("\n\nextern_C const ClassJc reflection_" + sReflectionClassName + ";  //the just defined reflection_");
       if(nrofAttributes >0)
       { fileC.append(sbForward); sbForward.setLength(0);
-        //fileC.append("\nextern const ClassJc reflection_" + sReflectionClassName + ";\n");
         fileC.append("\nconst struct Reflection_Fields_" + sReflectionClassName + "_t");
         fileC.append("\n{ ObjectArrayJc head;");
         fileC.append("\n  FieldJc data[" + nrofAttributes + "];");
@@ -1718,7 +1718,7 @@ public class Header2Reflection
             }
           }  
           if(useReflection)
-          { sbForward.append("\nextern const ClassJc reflection_" + sType + ";");
+          { sbForward.append("\nextern_C const ClassJc reflection_" + sType + ";");
           }
         }  
       }
