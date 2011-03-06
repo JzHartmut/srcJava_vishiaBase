@@ -36,7 +36,7 @@ public class ZmakeGenerator
 	 */
 	Map<String, List<CharSequence>> addToListTexts = new TreeMap<String, List<CharSequence>>();
 
-
+  Map<String, String> scriptVariables = new TreeMap<String, String>();
 	
 	/**This List will be filled with all generated targets in its order in the users generation file,
 	 * to determine the 'depends' in the main target.
@@ -53,15 +53,34 @@ public class ZmakeGenerator
 
 
 	
+	/**Generates the output file which is invoked for make.
+	 * @throws IOException
+	 */
 	void gen_ZmakeOutput() throws IOException
 	{
+		//complete script-level-variables:
+		StringBuilder uBuffer = new StringBuilder();
+		Gen_Content genVariable = new Gen_Content(null);
+		
+		for(Zbnf_genContent scriptVariableScript: mainGenScript.zbnfZmakeGenCtrl.listScriptVariables){
+			uBuffer.setLength(0);
+			genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript, null, null, null);
+			scriptVariables.put(scriptVariableScript.name, uBuffer.toString());
+		}
+		//the variable (?=currDir?) may exist. Get it:
+		sCurrDir = scriptVariables.get("currDir");
+		if(sCurrDir == null){
+			sCurrDir = "";
+		}
+		
+		//Generate the (?:file?)-part.
 		Gen_Content genFile = new Gen_Content(null);
 		if(mainGenScript.zbnf_genFile == null){
 			final String sHint = "You must have a part in the ZmakeGen-script for the whole file output\n"
 				+ "Syntax: (?:file?) ...some outputs...(?/file?)\n";
 			throw new IllegalArgumentException(sHint);	
 		}
-		StringBuilder uBuffer = new StringBuilder();
+		uBuffer.setLength(0);
 		genFile.gen_Content(uBuffer, outAnt, null, mainGenScript.zbnf_genFile, null, null);
 		outAnt.append(uBuffer);
 		outAnt.close();
@@ -332,7 +351,7 @@ public class ZmakeGenerator
 	/**Gets parts from a file
 	 * <ul>
 	 * <li>absFile: The absolute file path: If a source path is given, it is used instead a base  path.
-	 *   If a relative path is given, the ${curDir} TODO the relativeBase is added before the relative path.
+	 *   If a relative path is given, the {@link #sCurrDir}-content is added before the relative path.
 	 * <li>localFile: The local file path with all parts. It is supplied as relative path.
 	 *   It is used normally in composition with another maybe absolute directory path.   
 	 * </li>
@@ -350,21 +369,13 @@ public class ZmakeGenerator
 			if(generalPath !=null){
 				if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
 				if(!generalPath.absPath){ 
-					if(sCurrDir ==null){
-						Zbnf_genContent contentCurrDirVariable = mainGenScript.getScriptVariable("currDir");
-						StringBuilder u = new StringBuilder();
-						Gen_Content genContent = new Gen_Content(null);
-						try { genContent.gen_Content(u, null, null, contentCurrDirVariable, null, null); } 
-						catch (IOException exc) {throw new RuntimeException(exc); }
-						sCurrDir = u.toString();
-					}
-				  uRet.append(sCurrDir); 
+					uRet.append(sCurrDir); 
 				}
 				if(generalPath.pathbase !=null){ uRet.append(generalPath.pathbase).append('/'); }
 				uRet.append(generalPath.path);  //ends with /
 			} else {
 				if(file.drive !=null){ uRet.append(file.drive); }
-				if(!file.absPath){ uRet.append("${curDir}/"); }
+				if(!file.absPath){ uRet.append(sCurrDir); }
 				if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
 			}
 			uRet.append(file.path);
@@ -377,7 +388,7 @@ public class ZmakeGenerator
 		else if(part.equals("absDir")){
 			StringBuilder uRet = new StringBuilder();
 			if(file.drive !=null){ uRet.append(file.drive); }
-			if(!file.absPath){ uRet.append("${curDir}/"); }
+			if(!file.absPath){ uRet.append(sCurrDir); }
 			if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
 			uRet.append(file.path);
 			return uRet;
@@ -408,6 +419,8 @@ public class ZmakeGenerator
 		  		uText.append(text1);
 		  	}
 		  	text = uText;
+		  } else {
+		  	text = scriptVariables.get(name);
 		  }
 		}
 		if(text == null)
@@ -434,7 +447,7 @@ public class ZmakeGenerator
 			if(srcpath != null){ srcPathFile = srcpath;
 			} else if(variable.fileset.srcpath != null){ 
 				                   srcPathFile = variable.fileset.srcpath.pathbase; 
-			} else {             srcPathFile = "${curDir}";
+			} else {             srcPathFile = "sCurrDir";
 			}
 			for(ZmakeUserScript.UserFilepath file: variable.fileset.filesOfFileset){
 				String sFilePath = srcPathFile + file.path + file.file + file.ext;

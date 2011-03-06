@@ -26,8 +26,8 @@ public class ZmakeGenScript
 
 	private final Report console;
 
-	/**Mirror of the content of the ant-genctrl-configuration file. Filled from ZBNF-ParseResult*/
-	private Zbnf_ZmakeGenCtrl zbnfZmakeGenCtrl = new Zbnf_ZmakeGenCtrl();
+	/**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
+	Zbnf_ZmakeGenCtrl zbnfZmakeGenCtrl = new Zbnf_ZmakeGenCtrl();
   
 	Map<String, Zbnf_genContent> zmakeTargets = new TreeMap<String, Zbnf_genContent>();
 	
@@ -72,7 +72,7 @@ public class ZmakeGenScript
 	 */
 	Zbnf_genContent searchZmakeTaget(String name){ return zmakeTargets.get(name); }
 	
-	public Zbnf_genContent getScriptVariable(String sName)
+	public Zbnf_genContent xxxgetScriptVariable(String sName)
 	{
 		Zbnf_genContent content = zbnfZmakeGenCtrl.indexScriptVariables.get(sName);
 		return content;
