@@ -20,38 +20,46 @@ import org.vishia.zbnf.ZbnfXmlOutput;
 
 public class Zmake
 {
+
+	/**
+	 * 2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
+	 * 
+	 */
+	public final static int version = 0x20110307;
+	
+	
 	private static class CallingArgs
 	{
 	
-  private String input = null;
-  
-  /**String path to the XML_TOOLBASE Directory. */
-  private String zbnfjax_PATH;
-  
-  /**String path to the current dir from calling. */
-  private String curDir = null;  //default: actual dir
-  
-  /**String path fromcurDir to a tmp dir. */
-  private String tmp = "../tmp";  
-  
-  
-  /**Path of ZBNF script to generate the ant.xml*/
-  private String sZbnf4ant = "xsl/ZmakeStd.zbnf";
-  
-  /**Path of ZBNF script to read the genctrl4ant*/
-  private String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
-  
-  /**Path of ZBNF script to generate the ant.xml*/
-  private String sGenCtrl4ant = "xsl/ZmakeStd2Ant.genctrl";
-  
-  /**Path of XSL script to generate the ant.xml*/
-  //private String sXslt4ant = "xsl/ZmakeStd.xslp";
-  
-  /**Path of the input.xml*/
-  private String sInputXml = null;
-  
-  /**Path of the ant.xml*/
-  private String sAntXml = null;
+	  private String input = null;
+	  
+	  /**String path to the XML_TOOLBASE Directory. */
+	  private String zbnfjax_PATH;
+	  
+	  /**String path to the current dir from calling. */
+	  private String curDir = null;  //default: actual dir
+	  
+	  /**String path fromcurDir to a tmp dir. */
+	  private String tmp = "../tmp";  
+	  
+	  
+	  /**Path of ZBNF script to generate the ant.xml*/
+	  private String sZbnf4ant = "xsl/ZmakeStd.zbnf";
+	  
+	  /**Path of ZBNF script to read the genctrl4ant*/
+	  private String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
+	  
+	  /**Path of ZBNF script to generate the ant.xml*/
+	  private String sGenCtrl4ant = "xsl/ZmakeStd2Ant.genctrl";
+	  
+	  /**Path of XSL script to generate the ant.xml*/
+	  //private String sXslt4ant = "xsl/ZmakeStd.xslp";
+	  
+	  /**Path of the input.xml*/
+	  private String sInputXml = null;
+	  
+	  /**Path of the ant.xml*/
+	  private String sOutput = null;
 	};
 
 	
@@ -82,8 +90,8 @@ public class Zmake
      -ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.       
      -tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".    
      -tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml   
-     -tmpantxml:WPATH   ant.xml-file to generate, default=ant_INPUTFILE.xml                        
-     -zbnf4ant:TPATH    zbnf-file to parse the input                                           
+     -o=PATH            output-file for generate the target                        
+     -zbnf=TPATH        zbnf-file to parse the input                                           
      -genCtrl:TPATH    xslt-file to generate the ant.xml                                      
      </pre>
    *
@@ -155,8 +163,8 @@ public class Zmake
       super.addHelpInfo("-ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.");
       super.addHelpInfo("-tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".");
       super.addHelpInfo("-tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml");
-      super.addHelpInfo("-tmpantxml:WPATH   ant.xml-file to generate, default=ant_INPUTFILE.xml");
-      super.addHelpInfo("-zbnf4ant:TPATH    zbnf-file to parse the input");
+      super.addHelpInfo("-o=PATH            output-file to generate");
+      super.addHelpInfo("-zbnf=TPATH        zbnf-file to parse the input");
       super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the ant.xml");
       super.addStandardHelpInfo();
       
@@ -180,6 +188,7 @@ public class Zmake
   
       if(nArg==0 && !arg.startsWith("-"))      { callingArgs.input = getArgument(0); }
       else if(arg.startsWith("-i:"))           { callingArgs.input = getArgument(3); }
+      else if(arg.startsWith("-i="))           { callingArgs.input = getArgument(3); }
       else if(arg.startsWith("-i"))            { callingArgs.input = getArgument(2); }
       else if(arg.startsWith("-curdir:"))      { callingArgs.curDir = getArgument(8) + "/"; }
       else if(arg.startsWith("-curdir="))      { callingArgs.curDir = getArgument(8) + "/"; }
@@ -189,10 +198,8 @@ public class Zmake
       else if(arg.startsWith("-tmp:"))         { callingArgs.tmp = getArgument(5); }
       else if(arg.startsWith("-tmp="))         { callingArgs.tmp = getArgument(5); } //older version, compatibility
       else if(arg.startsWith("-tmpinputxml:")) { callingArgs.sInputXml = getArgument(13); }
-      else if(arg.startsWith("-tmpantxml:"))   { callingArgs.sAntXml = getArgument(11); }
-      else if(arg.startsWith("-antxml="))      { callingArgs.sAntXml = getArgument(8); }  //older version, compatibility
-      else if(arg.startsWith("-zbnf4ant:"))    { callingArgs.sZbnf4ant = getArgument(10); }
-      else if(arg.startsWith("-zbnf4ant="))    { callingArgs.sZbnf4ant = getArgument(10); }  //older version, compatibility
+      else if(arg.startsWith("-o="))           { callingArgs.sOutput = getArgument(3); }
+      else if(arg.startsWith("-zbnf="))        { callingArgs.sZbnf4ant = getArgument(6); }  //older version, compatibility
       else if(arg.startsWith("-genCtrl="))     { callingArgs.sGenCtrl4ant = getArgument(9); }
       //else if(arg.startsWith("-xslt4ant="))    { sXslt4ant = getArgument(10); }  //older version, compatibility
       else bOk=false;
@@ -300,10 +307,9 @@ public class Zmake
     fileZbnfXml.setWritable(true); 
     fileZbnfXml.delete();
 
-    if(args.sAntXml == null){ args.sAntXml = "ant_" + inputFile + inputExt + ".xml"; }
-    File fileAnt = new File(tmpAbs + "/" + args.sAntXml);
-    fileAnt.setWritable(true); 
-    fileAnt.delete();
+    File fileOut = new File(args.sOutput);
+    fileOut.setWritable(true); 
+    fileOut.delete();
     
     File fileZbnf4GenCtrl = new File(args.zbnfjax_PATH + args.sZbnfGenCtrl);
     if(!fileZbnf4GenCtrl.exists()) throw new IllegalArgumentException("cannot find -zbnf4GenCtrl=" + fileZbnf4GenCtrl.getAbsolutePath());
@@ -345,8 +351,8 @@ public class Zmake
     ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     //evaluate
-    console.writeInfoln("* generate script \"" + fileAnt.getAbsolutePath() + "\"\n");
-    ZmakeGenerator mng = new ZmakeGenerator(fileAnt, zmakeInput, antGenCtrl, console);
+    console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
+    ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, antGenCtrl, console);
     mng.gen_ZmakeOutput();
     console.writeInfoln("* done");
     

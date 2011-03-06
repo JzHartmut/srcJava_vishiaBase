@@ -74,7 +74,7 @@ public class ZmakeGenScript
 	
 	public Zbnf_genContent getScriptVariable(String sName)
 	{
-		Zbnf_genContent content = zbnfZmakeGenCtrl.scriptVariables.get(sName);
+		Zbnf_genContent content = zbnfZmakeGenCtrl.indexScriptVariables.get(sName);
 		return content;
 	}
 	
@@ -227,7 +227,13 @@ genContent::=  ##<$NoWhiteSpaces>
 	public final class Zbnf_ZmakeGenCtrl
 	{
 
-		Map<String,Zbnf_genContent> scriptVariables = new TreeMap<String,Zbnf_genContent>();
+		Map<String,Zbnf_genContent> indexScriptVariables = new TreeMap<String,Zbnf_genContent>();
+
+		/**List of the script variables in order of creation in the zmakeCtrl-file.
+		 * The script variables can contain inputs of other variables which are defined before.
+		 * Therefore the order is important.
+		 */
+		List<Zbnf_genContent> listScriptVariables = new LinkedList<Zbnf_genContent>();
 
 		
 		public Zbnf_genContent new_ZmakeTarget(){ return new Zbnf_genContent(false); }
@@ -241,7 +247,10 @@ genContent::=  ##<$NoWhiteSpaces>
 		
 		public Zbnf_genContent new_setVariable(){ return new Zbnf_genContent(false); }
 
-		public void add_setVariable(Zbnf_genContent val){ scriptVariables.put(val.name, val); } 
+		public void add_setVariable(Zbnf_genContent val)
+		{ indexScriptVariables.put(val.name, val); 
+		  listScriptVariables.add(val);
+		} 
 		
 
 	}
