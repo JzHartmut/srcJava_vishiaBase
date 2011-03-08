@@ -36,7 +36,7 @@ public class ZmakeGenerator
 	 */
 	Map<String, List<CharSequence>> addToListTexts = new TreeMap<String, List<CharSequence>>();
 
-
+  Map<String, String> scriptVariables = new TreeMap<String, String>();
 	
 	/**This List will be filled with all generated targets in its order in the users generation file,
 	 * to determine the 'depends' in the main target.
@@ -53,30 +53,61 @@ public class ZmakeGenerator
 
 
 	
+	/**Generates the output file which is invoked for make.
+	 * @throws IOException
+	 */
 	void gen_ZmakeOutput() throws IOException
 	{
+		//complete script-level-variables:
 		StringBuilder uBuffer = new StringBuilder();
-		for(ZmakeUserScript.UserTarget inpTarget: userScript.targets){
-			//Note: target in Zmake maybe more as one target in ANT. It depends from the kind of target.
-			ZmakeGenScript.Zbnf_genContent antZmakeTarget = mainGenScript.searchZmakeTaget(inpTarget.translator);
-			if(antZmakeTarget == null){
-				console.writeError("Zmake - unknown target; " + inpTarget.translator);
-			} else {
-				Gen_Content genZmakeTarget = new Gen_Content(null);
-				genZmakeTarget.gen_Content(uBuffer, inpTarget, antZmakeTarget, null, null);
-			}
-			
+		Gen_Content genVariable = new Gen_Content(null);
+		
+		for(Zbnf_genContent scriptVariableScript: mainGenScript.zbnfZmakeGenCtrl.listScriptVariables){
+			uBuffer.setLength(0);
+			genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript, null, null, null);
+			scriptVariables.put(scriptVariableScript.name, uBuffer.toString());
 		}
+		//the variable (?=currDir?) may exist. Get it:
+		sCurrDir = scriptVariables.get("currDir");
+		if(sCurrDir == null){
+			sCurrDir = "";
+		}
+		
+		//Generate the (?:file?)-part.
 		Gen_Content genFile = new Gen_Content(null);
 		if(mainGenScript.zbnf_genFile == null){
 			final String sHint = "You must have a part in the ZmakeGen-script for the whole file output\n"
 				+ "Syntax: (?:file?) ...some outputs...(?/file?)\n";
 			throw new IllegalArgumentException(sHint);	
 		}
-		genFile.gen_Content(uBuffer, null, mainGenScript.zbnf_genFile, null, null);
+		uBuffer.setLength(0);
+		genFile.gen_Content(uBuffer, outAnt, null, mainGenScript.zbnf_genFile, null, null);
 		outAnt.append(uBuffer);
 		outAnt.close();
 	}
+	
+	
+	
+	
+	void genUserTargets(Writer out) throws IOException
+	{
+		StringBuilder uBuffer = new StringBuilder();
+		for(ZmakeUserScript.UserTarget inpTarget: userScript.targets){
+			uBuffer.setLength(0);
+			//Note: target in Zmake maybe more as one target in ANT. It depends from the kind of target.
+			ZmakeGenScript.Zbnf_genContent antZmakeTarget = mainGenScript.searchZmakeTaget(inpTarget.translator);
+			if(antZmakeTarget == null){
+				console.writeError("Zmake - unknown target; " + inpTarget.translator);
+			} else {
+				Gen_Content genZmakeTarget = new Gen_Content(null);
+				genZmakeTarget.gen_Content(uBuffer, out, inpTarget, antZmakeTarget, null, null);
+			}
+			out.append(uBuffer);
+		}
+		
+	}
+	
+	
 	
 	
 	
@@ -102,7 +133,17 @@ public class ZmakeGenerator
 		}
 
 
+		/**Generates the content controlled with the zmakeCtrl-script into the buffer.
+		 * @param uBuffer
+		 * @param userTarget
+		 * @param container
+		 * @param input
+		 * @param srcPathP
+		 * @return
+		 * @throws IOException
+		 */
 		boolean gen_Content(StringBuilder uBuffer
+			, Writer out
 			,	ZmakeUserScript.UserTarget userTarget
 			, ZmakeGenScript.Zbnf_genContent container
 			, ZmakeUserScript.UserFilepath input
@@ -114,7 +155,7 @@ public class ZmakeGenerator
 				for(ZmakeUserScript.UserInput inputIntern : userTarget.inputs){
 					if(inputIntern.inputFile !=null){
 						Gen_Content contentData = new Gen_Content(this);	
-						contentData.gen_ContentWithScript(uBuffer, userTarget, container, inputIntern.inputFile
+						contentData.gen_ContentWithScript(uBuffer, out, userTarget, container, inputIntern.inputFile
 							, userTarget.srcpath, null);
 					} else {
 						//it is a input-set
@@ -124,7 +165,7 @@ public class ZmakeGenerator
 				}
 			} else {
 				Gen_Content contentData = new Gen_Content(this);	
-				contentData.gen_ContentWithScript(uBuffer, userTarget, container, input, srcPathP, null);
+				contentData.gen_ContentWithScript(uBuffer, out, userTarget, container, input, srcPathP, null);
 			}
 			return bOk;
 		}
@@ -155,14 +196,25 @@ public class ZmakeGenerator
       	: inputsetVariable.fileset.srcpath;
 			for(ZmakeUserScript.UserFilepath file: inputsetVariable.fileset.filesOfFileset){
       	Gen_Content contentData = new Gen_Content(this);	
-				contentData.gen_ContentWithScript(uBuffer, userTarget, genScript, file, srcPath, null);
+				contentData.gen_ContentWithScript(uBuffer, null, userTarget, genScript, file, srcPath, null);
 			}
 			
 		}
 
 
+		/**Generates
+		 * @param uBuffer      If out isn't given, the whole output is expected in the buffer. Used for internal values (variableValue)
+		 * @param out          If given, then it writes to the file.
+		 * @param userTarget   The users target. It may be the (?:file?)
+		 * @param contentScript The zmakeCtrl-script-part
+		 * @param input        The input of the users target.
+		 * @param srcPath      A given srcPath of users target
+		 * @param listElement  
+		 * @throws IOException
+		 */
 		private void gen_ContentWithScript(
 			StringBuilder uBuffer
+		, Writer out	
 		,	ZmakeUserScript.UserTarget userTarget
 		, ZmakeGenScript.Zbnf_genContent contentScript
 		, ZmakeUserScript.UserFilepath input
@@ -177,7 +229,7 @@ public class ZmakeGenerator
 			for(Zbnf_genContent variableScript: contentScript.localVariables){
 				StringBuilder uBufferVariable = new StringBuilder();
 				Gen_Content genVariable = new Gen_Content(this);
-				genVariable.gen_Content(uBufferVariable, userTarget, variableScript, input, srcPath);
+				genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, input, srcPath);
 				localVariables.put(variableScript.name, uBufferVariable);
 			}
 		
@@ -185,7 +237,7 @@ public class ZmakeGenerator
 			for(Zbnf_genContent listContainer: contentScript.addToList){
 				StringBuilder uBufferLocal = new StringBuilder();
 				Gen_Content contentData = new Gen_Content(this);	
-			  contentData.gen_Content(uBufferLocal,userTarget, listContainer, input, srcPath); 
+			  contentData.gen_Content(uBufferLocal, out, userTarget, listContainer, input, srcPath); 
 			  //save it
 			  List<CharSequence> list = addToListTexts.get(listContainer.name);
 				if(list == null){
@@ -211,12 +263,19 @@ public class ZmakeGenerator
 			  	uBuffer.append(listElement); 
 				} break;
 			  case 'v': { 
-			  	CharSequence text = getTextofVariable(userTarget, contentElement.text, this);
-			  	uBuffer.append(text); 
+			  	if(contentElement.text.equals("target")){
+			  		//generates all targets, only advisable in the (?:file?)
+			  		out.append(uBuffer);   //flush content before.
+			  		uBuffer.setLength(0);  //fill new
+			  		genUserTargets(out);
+			  	} else {
+			  	 	CharSequence text = getTextofVariable(userTarget, contentElement.text, this);
+				  	uBuffer.append(text); 
+				 }
 			  } break;
 			  case 'I': {  //generation (?:forInput?) <genContent?forInputContent> (\?/forInput\?) 
 			  	Gen_Content contentData = new Gen_Content(this);	
-				  contentData.gen_Content(uBuffer,userTarget, contentElement.subContent, input, srcPath); 
+				  contentData.gen_Content(uBuffer, out, userTarget, contentElement.subContent, input, srcPath); 
 			  } break;
 			  case 'L': { //generation (\?:forList : <$?@name>\?) <genContent?> (\?/forList\?)
 			  	String sListName = contentElement.subContent.name;
@@ -225,7 +284,7 @@ public class ZmakeGenerator
 			  		uBuffer.append("ERROR: list \"" + sListName + "\" not found :ERROR");
 			  	} else {
 			  		for(CharSequence listText: list){
-			  			gen_ContentWithScript(uBuffer, userTarget, contentElement.subContent, input, null, listText);
+			  			gen_ContentWithScript(uBuffer, out, userTarget, contentElement.subContent, input, null, listText);
 			  		}
 			  	}
 			  } break;
@@ -233,6 +292,10 @@ public class ZmakeGenerator
 			  	uBuffer.append("ERROR: unknown type '" + contentElement.whatisit + "' :ERROR");
 			  }//switch
 			  
+			}
+			if(out !=null){
+				out.append(uBuffer);
+				uBuffer.setLength(0);
 			}
 		}
 		
@@ -288,7 +351,7 @@ public class ZmakeGenerator
 	/**Gets parts from a file
 	 * <ul>
 	 * <li>absFile: The absolute file path: If a source path is given, it is used instead a base  path.
-	 *   If a relative path is given, the ${curDir} TODO the relativeBase is added before the relative path.
+	 *   If a relative path is given, the {@link #sCurrDir}-content is added before the relative path.
 	 * <li>localFile: The local file path with all parts. It is supplied as relative path.
 	 *   It is used normally in composition with another maybe absolute directory path.   
 	 * </li>
@@ -306,21 +369,13 @@ public class ZmakeGenerator
 			if(generalPath !=null){
 				if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
 				if(!generalPath.absPath){ 
-					if(sCurrDir ==null){
-						Zbnf_genContent contentCurrDirVariable = mainGenScript.getScriptVariable("currDir");
-						StringBuilder u = new StringBuilder();
-						Gen_Content genContent = new Gen_Content(null);
-						try { genContent.gen_Content(u, null, contentCurrDirVariable, null, null); } 
-						catch (IOException exc) {throw new RuntimeException(exc); }
-						sCurrDir = u.toString();
-					}
-				  uRet.append(sCurrDir); 
+					uRet.append(sCurrDir); 
 				}
 				if(generalPath.pathbase !=null){ uRet.append(generalPath.pathbase).append('/'); }
 				uRet.append(generalPath.path);  //ends with /
 			} else {
 				if(file.drive !=null){ uRet.append(file.drive); }
-				if(!file.absPath){ uRet.append("${curDir}/"); }
+				if(!file.absPath){ uRet.append(sCurrDir); }
 				if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
 			}
 			uRet.append(file.path);
@@ -333,7 +388,7 @@ public class ZmakeGenerator
 		else if(part.equals("absDir")){
 			StringBuilder uRet = new StringBuilder();
 			if(file.drive !=null){ uRet.append(file.drive); }
-			if(!file.absPath){ uRet.append("${curDir}/"); }
+			if(!file.absPath){ uRet.append(sCurrDir); }
 			if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
 			uRet.append(file.path);
 			return uRet;
@@ -346,7 +401,13 @@ public class ZmakeGenerator
 	}
 	
 	
-  
+  /**Get the content of a named variable.
+   * 
+   * @param userTarget The users data. Not used here.
+   * @param name Name of the variable
+   * @param contentData The local context where variable may be defined.
+   * @return
+   */
 	private CharSequence getTextofVariable(ZmakeUserScript.UserTarget userTarget, String name, Gen_Content contentData)
 	{ 
 		CharSequence text = contentData.localVariables.get(name);
@@ -358,6 +419,8 @@ public class ZmakeGenerator
 		  		uText.append(text1);
 		  	}
 		  	text = uText;
+		  } else {
+		  	text = scriptVariables.get(name);
 		  }
 		}
 		if(text == null)
@@ -384,7 +447,7 @@ public class ZmakeGenerator
 			if(srcpath != null){ srcPathFile = srcpath;
 			} else if(variable.fileset.srcpath != null){ 
 				                   srcPathFile = variable.fileset.srcpath.pathbase; 
-			} else {             srcPathFile = "${curDir}";
+			} else {             srcPathFile = "sCurrDir";
 			}
 			for(ZmakeUserScript.UserFilepath file: variable.fileset.filesOfFileset){
 				String sFilePath = srcPathFile + file.path + file.file + file.ext;
