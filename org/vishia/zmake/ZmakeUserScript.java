@@ -118,7 +118,7 @@ fileset::=
 	 * variable::=<$?@name> = [ fileset ( <fileset> ) | <string> | { <execCmd> } ].
 	 *
 	 */
-	public static class UserVariable
+	public static class ScriptVariable
 	{ public String name;
 	  public UserFileset fileset;
 	  public UserString string;
@@ -238,14 +238,14 @@ input::=
 	 */
 	public static class UserScript
 	{
-		Map<String, UserVariable> allVariables = new TreeMap<String, UserVariable>();
+		Map<String, ScriptVariable> allVariables = new TreeMap<String, ScriptVariable>();
 		
 		List<UserTarget> targets = new LinkedList<UserTarget>();
 		
 		/**From ZBNF: < variable> */
-		public UserVariable new_variable(){ return new UserVariable(); }
+		public ScriptVariable new_variable(){ return new ScriptVariable(); }
 		
-		public void add_variable(UserVariable  value){ allVariables.put(value.name, value); }
+		public void add_variable(ScriptVariable  value){ allVariables.put(value.name, value); }
 		
 		public UserTarget new_target(){ return new UserTarget(); }
 		

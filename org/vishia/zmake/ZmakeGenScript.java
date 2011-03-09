@@ -89,8 +89,9 @@ public class ZmakeGenScript
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>i</td><td>content of the output, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
-     * <tr><td>e</td><td>given content of a list element. {@link #text} and {@link #subContent} == null.</td></tr>
+     * <tr><td>e</td><td>given content of a list or for-element. List: {@link #text}==null, Always: {@link #subContent} == null.</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
+     * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
      * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,
      *                   whereby subContent.{@link Zbnf_genContent#name} is the name of the list. </td></tr>
      * </table> 
@@ -100,6 +101,10 @@ public class ZmakeGenScript
     /**Constant text or name of elements or build-script-name. */
     final public String text;
 		
+    public String name;
+    
+    public String elementPart;
+    
     /**If need, a sub-content, maybe null. */
 		Zbnf_genContent subContent;
 		
@@ -108,6 +113,7 @@ public class ZmakeGenScript
 			this.text = text;
 		}
 		
+		
 		@Override public String toString()
 		{
 			switch(whatisit){
@@ -115,8 +121,9 @@ public class ZmakeGenScript
 			case 'v': return "(?" + text + "?)";
 			case 'o': return "(?outp." + text + "?)";
 			case 'i': return "(?inp." + text + "?)";
-			case 'e': return "(?*?)";
+			case 'e': return "(?*" + text + "?)";
 			case 'I': return "(?forInput?)...(/?)";
+			case 'V': return "(?for:" + text + "?)";
 			case 'L': return "(?forList " + text + "?)";
 			default: return "(??" + text + "?)";
 			}
@@ -171,6 +178,11 @@ genContent::=  ##<$NoWhiteSpaces>
 		
 		public void set_variableValue(String text){ content.add(new Zbnf_ScriptElement('v', text)); }
 		
+		/**Set from ZBNF:  (\?*<$?forElement>\?) */
+		public Zbnf_ScriptElement new_forElement(){ return new Zbnf_ScriptElement('e', null); }
+		
+		public void add_forElement(Zbnf_ScriptElement val){ content.add(val); }
+		
 		/**Set from ZBNF:  (\?*\?)<?listElement> */
 		public void set_listElement(){ content.add(new Zbnf_ScriptElement('e', null)); }
 		
@@ -187,6 +199,17 @@ genContent::=  ##<$NoWhiteSpaces>
 		}
 		
 		public void add_forInputContent(Zbnf_genContent val){}
+
+		
+		public Zbnf_genContent new_forVariable()
+		{ Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+		  Zbnf_ScriptElement contentElement = new Zbnf_ScriptElement('V', null);
+		  contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
+		  content.add(contentElement);
+		  return subGenContent;
+		}
+		
+		public void add_forVariable(Zbnf_genContent val){} //empty, it is added in new_forList()
 
 		
 		public Zbnf_genContent new_forList()

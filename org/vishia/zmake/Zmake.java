@@ -231,12 +231,17 @@ public class Zmake
     protected boolean checkArguments()
     { boolean bOk = true;
   
-      if(callingArgs.input == null)              
-      { bOk = false; 
-        writeError("ERROR argument -i is obligat."); 
-      }
-
-      if(!bOk) setExitErrorLevel(exitWithArgumentError);
+	    if(callingArgs.input == null)              
+	    { bOk = false; 
+	      writeError("ERROR argument -i=INP is obligate."); 
+	    }
+	
+	    if(callingArgs.sOutput == null)              
+	    { bOk = false; 
+	      writeError("ERROR argument -o=OUT is obligate."); 
+	    }
+	
+	    if(!bOk) setExitErrorLevel(exitWithArgumentError);
     
       return bOk;
     
