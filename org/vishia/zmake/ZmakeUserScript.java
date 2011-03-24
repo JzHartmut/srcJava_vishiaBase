@@ -96,8 +96,10 @@ fileset::=
 	
 	private final static class UserStringContent
 	{
-		private char type;
+		private final char type;
+		private String text;
 		private UserStringContent(char type){ this.type = type; }
+		private UserStringContent(char type, String text){ this.type = type; this.text = text; }
 	}
 	
 	
@@ -109,9 +111,28 @@ fileset::=
 	{
 		private List<UserStringContent> content = new LinkedList<UserStringContent>();
 		
+		/**Set From ZBNF: */
 		public UserStringContent new_literal(){ return new UserStringContent('\"'); }
 		
+		/**Set From ZBNF: */
 		public void add_literal(UserStringContent val){ content.add(val); }
+		
+		public void set_literal(String val){ 
+			UserStringContent el = new UserStringContent('\"', val);
+			content.add(el);
+		}
+		
+		public CharSequence getText()
+		{
+			StringBuilder u = new StringBuilder();
+			for(UserStringContent el: content){
+				switch(el.type){
+				case '"': u.append(el.text);
+				}
+			}
+			return u;
+		}
+
 	}
 	
 	/**A < variable> in the ZmakeStd.zbnf is

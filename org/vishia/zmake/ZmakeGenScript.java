@@ -48,11 +48,18 @@ public class ZmakeGenScript
 
 		ZbnfParser parserGenCtrl = new ZbnfParser(console);
     parserGenCtrl.setSyntax(fileZbnf4GenCtrl);
+    if(console.getReportLevel() >= Report.fineInfo){
+      console.reportln(Report.fineInfo, "== Syntax GenCtrl ==");
+    	parserGenCtrl.reportSyntax(console, Report.fineInfo);
+    }
     console.writeInfo(" ... ");
     bOk = parserGenCtrl.parse(new StringPartFromFileLines(fileGenCtrl));
     if(!bOk){
     	String sError = parserGenCtrl.getSyntaxErrorReport();
     	throw new ParseException(sError,0);
+    }
+    if(console.getReportLevel() >= Report.fineInfo){
+    	parserGenCtrl.reportStore(console, Report.fineInfo, "Zmake-GenScript");
     }
     console.writeInfo(", ok set output ... ");
     //ZbnfParseResultItem parseResultGenCtrl = parserGenCtrl.getFirstParseResult();
@@ -178,13 +185,20 @@ genContent::=  ##<$NoWhiteSpaces>
 		
 		public void set_variableValue(String text){ content.add(new Zbnf_ScriptElement('v', text)); }
 		
-		/**Set from ZBNF:  (\?*<$?forElement>\?) */
-		public Zbnf_ScriptElement new_forElement(){ return new Zbnf_ScriptElement('e', null); }
+		/**Set from ZBNF:  (\?*<$?valueElement>\?) */
+		public Zbnf_ScriptElement new_valueElement(){ return new Zbnf_ScriptElement('e', null); }
 		
-		public void add_forElement(Zbnf_ScriptElement val){ content.add(val); }
+		/**Set from ZBNF:  (\?*<$?forElement>\?) */
+		public void add_valueElement(Zbnf_ScriptElement val){ content.add(val); }
 		
 		/**Set from ZBNF:  (\?*\?)<?listElement> */
 		public void set_listElement(){ content.add(new Zbnf_ScriptElement('e', null)); }
+		
+		/**Set from ZBNF:  (\?*<$?forElement>\?) */
+		public void set_fnEmpty(String val){ content.add(new Zbnf_ScriptElement('f', val)); }
+		
+		/**Set from ZBNF:  (\?*<$?forElement>\?) */
+		public void add_fnEmpty(Zbnf_ScriptElement val){ content.add(val); }
 		
 		public Zbnf_genContent new_setVariable(){ return new Zbnf_genContent(false); }
 

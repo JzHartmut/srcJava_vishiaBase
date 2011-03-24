@@ -9,6 +9,7 @@ import java.util.Properties;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
+import org.vishia.mainCmd.Report;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
@@ -344,6 +345,9 @@ public class Zmake
     	throw new ParseException(sError,0);
     }
     spInput.close();
+    if(console.getReportLevel() >= Report.fineInfo){
+    	parser.reportStore(console, Report.fineInfo, "User-ZmakeScript");
+    }
     console.writeInfo(" ok, set result ... ");
     ZbnfParseResultItem parseResult = parser.getFirstParseResult();
     //write XML output only to check:
