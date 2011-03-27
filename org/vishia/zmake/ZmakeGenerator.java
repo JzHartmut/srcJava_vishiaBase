@@ -260,7 +260,21 @@ public class ZmakeGenerator
 			//Generate direct requested output. It is especially on inner content-scripts.
 			for(ZmakeGenScript.Zbnf_ScriptElement contentElement: contentScript.content){
 			  switch(contentElement.whatisit){
-			  case 't': uBuffer.append(contentElement.text); break;
+			  case 't': { 
+			  	int posLine = 0;
+			  	int posEnd;
+			  	do{
+			  		posEnd = contentElement.text.indexOf('\n', posLine);
+			      if(posEnd >= 0){ 
+			      	uBuffer.append(contentElement.text.substring(posLine, posEnd));		
+				  		uBuffer.append("\r\n");
+				  	  posLine = posEnd +1;  //after \n 
+					  } else {
+			  			uBuffer.append(contentElement.text.substring(posLine));		
+					  }
+			      
+			    } while(posEnd >=0);  //output all lines.
+			  } break;
 			  case 'i': {
 			  	ZmakeUserScript.UserFilepath input = forElements.get("input");  //all for elements, use the input
 			  	CharSequence text = getPartsFromFilepath(input, srcPath, contentElement.text);

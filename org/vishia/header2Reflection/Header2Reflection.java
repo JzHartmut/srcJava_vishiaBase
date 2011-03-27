@@ -315,6 +315,14 @@ public class Header2Reflection
     return bOk;
   }
 
+  
+  
+  
+  
+  /**Adds a path/file or path/mask to the {@link #listFileIn}.  
+   * @param sMask
+   * @return
+   */
   boolean addInputFilemask(String sMask)
   { boolean bOk = true;
     int posSep = sMask.indexOf(':');
@@ -376,81 +384,103 @@ public class Header2Reflection
     //if(readReflectionTypes())
     { if(init()) //here all action are done, testversion.
       {
-        dateNow = new Date();
-        secondsAfter1970Now = (int)(dateNow.getTime()/1000);
-        if(sFileAllC != null)
-        { File fileAllCFile = new File(sFileAllC);
-          //sOutDirAbs = fileAllCFile.getParentFile().getCanonicalPath().replace('\\','/');  //directory of output file
-          sOutDirAbs = fileAllCFile.getCanonicalPath().replace('\\','/');  //directory of output file
-          fileAllC = new BufferedWriter(new FileWriter(fileAllCFile));
-          int posDot = sFileAllC.lastIndexOf('.');
-          int posPath = sFileAllC.lastIndexOf('/');
-          String sPathFileAllH = sFileAllC.substring(0, posDot) + ".h";
-          String sFileAllH = sFileAllC.substring(posPath+1, posDot) + ".h";
-          String sFileName = sFileAllC.substring(posPath+1, posDot);
-          fileAllH = new BufferedWriter(new FileWriter(new File(sPathFileAllH)));
-          fileAllC.write("\n/*This file is generated from Header2Reflection. */");
-          fileAllC.write("\n#define protected public  //only active inside this compilation unit");
-          fileAllC.write("\n#define private public    //  to enable the access to all elements.");
-          fileAllC.write("\n#include <Jc/ReflectionJc.h>");
-          fileAllC.write("\n#include <stddef.h>");
-          //fileAllC.write("\n#include \"" +sFileAllH+ "\"");
-          
-          //fileAllC.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
-          //fileAllC.write("\n * It is " + dataFormat.format(dateNow) + "*/");
-          //fileAllC.write("\nconst int reflectionGenerationTime = " + secondsAfter1970Now + ";\n");
-          
-          fileAllH.write("\n#ifndef __" + sFileName + "_h__\n");
-          fileAllH.write("\n#define __" + sFileName + "_h__\n");
-          fileAllH.write("\n#include \"Jc/ReflectionJc.h\"");
-        }
-        if(sFileOffset != null)
-        { File filesFileOffset = new File(sFileOffset);
-          //String sFileOffsetName = filesFileOffset.getName();
-          sOffsetDirAbs = filesFileOffset.getCanonicalPath().replace('\\','/');  //directory of output file
-          fileOffs = new BufferedWriter(new FileWriter(filesFileOffset));
-          fileOffs.write("\n/*This file is generated from Header2Reflection. */");
-          fileOffs.write("\n#include <os_types_def.h>");
-          fileOffs.write("\n#include <stddef.h>");
-          fileOffs.write("\n#define protected public  //only active inside this compilation unit");
-          fileOffs.write("\n#define private public    //  to enable the access to all elements.\n\n");
-          fileOffs.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
-          fileOffs.write("\n * It is " + dataFormat.format(dateNow) + "*/");
-          fileOffs.write("\nconst int reflectionOffsGenerationTime = " + secondsAfter1970Now + ";\n");
-          
-          bufferOffsArray = new StringBuilder();
-        }
-        if(sFileBin != null)
-        { 
-          binOutPrep = new BinOutPrep(sFileBin, fileBinBigEndian, fileBinHex, secondsAfter1970Now);
-        }
-        for(FileIn fileIn: listFileIn)
-        { for(File file: fileIn.listFileIn)
-          { String fileName = file.getCanonicalPath().replace('\\','/');
-            fileName = fileName.substring(fileIn.posPath+1);  //regards a ':' in the input mask.
-            translate(file, fileName);
+        boolean dontGenerate = false;
+    		long timestampLast = 0;
+        for(FileIn fileIn: listFileIn){
+          for(File file: fileIn.listFileIn){
+        	  if(!file.exists()){ console.reportln(Report.error, "File not found: " + file.getAbsolutePath()); 
+        	  } else {
+              long timestamp = file.lastModified();
+              if(timestamp > timestampLast){
+              	timestampLast = timestamp;
+              }
+        	  }
+        } }
+        secondsAfter1970Now = (int)(timestampLast / 1000);
+        //dateNow = new Date();
+        //secondsAfter1970Now = (int)(dateNow.getTime()/1000);
+        File fileAllCFile = null;
+        if(sFileAllC !=null){
+        	fileAllCFile = new File(sFileAllC);
+          if(fileAllCFile.exists() && fileAllCFile.lastModified() > timestampLast){
+          	dontGenerate = true;  //not necessary
           }
         }
-        if(fileAllC != null)
-        { fileAllC.close();
-          fileAllH.write("\n#endif // ___h__\n");
-          fileAllH.close();
-        }
-        if(fileOffs != null)
-        { 
-          fileOffs.append("\n\n/**Array of all offsets: ------------------------------------------------------------------------*/");
-          fileOffs.append("\nint32* reflectionOffsetArrays[] = \n{ null");
-          fileOffs.append(bufferOffsArray);
-          fileOffs.append("\n};\n");
-          
-          fileOffs.close();
-        }
-        if(binOutPrep != null)
-        { binOutPrep.postProcessBinOut();
-          binOutPrep.close();
-        }
-        console.writeInfoln("...finished.");
-
+        if(!dontGenerate){
+          if(fileAllCFile != null)
+	        { //sOutDirAbs = fileAllCFile.getParentFile().getCanonicalPath().replace('\\','/');  //directory of output file
+	          sOutDirAbs = fileAllCFile.getCanonicalPath().replace('\\','/');  //directory of output file
+	          fileAllC = new BufferedWriter(new FileWriter(fileAllCFile));
+	          int posDot = sFileAllC.lastIndexOf('.');
+	          int posPath = sFileAllC.lastIndexOf('/');
+	          String sPathFileAllH = sFileAllC.substring(0, posDot) + ".h";
+	          String sFileAllH = sFileAllC.substring(posPath+1, posDot) + ".h";
+	          String sFileName = sFileAllC.substring(posPath+1, posDot);
+	          fileAllH = new BufferedWriter(new FileWriter(new File(sPathFileAllH)));
+	          fileAllC.write("\n/*This file is generated from Header2Reflection. */");
+	          fileAllC.write("\n#define protected public  //only active inside this compilation unit");
+	          fileAllC.write("\n#define private public    //  to enable the access to all elements.");
+	          fileAllC.write("\n#include <Jc/ReflectionJc.h>");
+	          fileAllC.write("\n#include <stddef.h>");
+	          //fileAllC.write("\n#include \"" +sFileAllH+ "\"");
+	          
+	          //fileAllC.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
+	          //fileAllC.write("\n * It is " + dataFormat.format(dateNow) + "*/");
+	          //fileAllC.write("\nconst int reflectionGenerationTime = " + secondsAfter1970Now + ";\n");
+	          
+	          fileAllH.write("\n#ifndef __" + sFileName + "_h__\n");
+	          fileAllH.write("\n#define __" + sFileName + "_h__\n");
+	          fileAllH.write("\n#include \"Jc/ReflectionJc.h\"");
+	        }
+	        if(sFileOffset != null)
+	        { File filesFileOffset = new File(sFileOffset);
+	          //String sFileOffsetName = filesFileOffset.getName();
+	          sOffsetDirAbs = filesFileOffset.getCanonicalPath().replace('\\','/');  //directory of output file
+	          fileOffs = new BufferedWriter(new FileWriter(filesFileOffset));
+	          fileOffs.write("\n/*This file is generated from Header2Reflection. */");
+	          fileOffs.write("\n#include <os_types_def.h>");
+	          fileOffs.write("\n#include <stddef.h>");
+	          fileOffs.write("\n#define protected public  //only active inside this compilation unit");
+	          fileOffs.write("\n#define private public    //  to enable the access to all elements.\n\n");
+	          fileOffs.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
+	          fileOffs.write("\n * It is " + dataFormat.format(dateNow) + "*/");
+	          fileOffs.write("\nconst int reflectionOffsGenerationTime = " + secondsAfter1970Now + ";\n");
+	          
+	          bufferOffsArray = new StringBuilder();
+	        }
+	        if(sFileBin != null)
+	        { 
+	          binOutPrep = new BinOutPrep(sFileBin, fileBinBigEndian, fileBinHex, secondsAfter1970Now);
+	        }
+	        for(FileIn fileIn: listFileIn)
+	        { for(File file: fileIn.listFileIn)
+	          { String fileName = file.getCanonicalPath().replace('\\','/');
+	            fileName = fileName.substring(fileIn.posPath+1);  //regards a ':' in the input mask.
+	            translate(file, fileName);
+	          }
+	        }
+	        if(fileAllC != null)
+	        { fileAllC.close();
+	          fileAllH.write("\n#endif // ___h__\n");
+	          fileAllH.close();
+	        }
+	        if(fileOffs != null)
+	        { 
+	          fileOffs.append("\n\n/**Array of all offsets: ------------------------------------------------------------------------*/");
+	          fileOffs.append("\nint32* reflectionOffsetArrays[] = \n{ null");
+	          fileOffs.append(bufferOffsArray);
+	          fileOffs.append("\n};\n");
+	          
+	          fileOffs.close();
+	        }
+	        if(binOutPrep != null)
+	        { binOutPrep.postProcessBinOut();
+	          binOutPrep.close();
+	        }
+	        console.writeInfoln("...finished.");
+	      } else {
+	        console.writeInfoln("...no newer files, nothing to do.");
+		    }
       }
       //if(sFileReflectionTypesOut!= null)  writeReflectionTypes();
     }
