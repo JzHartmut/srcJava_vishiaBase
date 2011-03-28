@@ -397,7 +397,7 @@ public class Header2Reflection
         	  }
         } }
         secondsAfter1970Now = (int)(timestampLast / 1000);
-        //dateNow = new Date();
+        dateNow = new Date(timestampLast);
         //secondsAfter1970Now = (int)(dateNow.getTime()/1000);
         File fileAllCFile = null;
         if(sFileAllC !=null){
