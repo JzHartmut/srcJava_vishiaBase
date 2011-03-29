@@ -169,20 +169,22 @@ public class Header2Reflection
 
   
   
-  private final static String sSyntaxReflectionTypes
-    = "$setLinemode. ReflectionTypes::={ \\n"     //simple empty line possible, may contain comments. 
+  final static String sSyntaxReflectionTypes
+    = "$setLinemode. \n"
+    + "ReflectionTypes::=\n"
+    + "{ \\n\n"     //simple empty line possible, may contain comments. 
     + "| \\<leaderTextOffs  [ = <textFile?leaderTextOffs>  \\> | \\> \\n<lines?leaderTextOffs>]\n"
     + "| \\<trailerTextOffs [ = <textFile?trailerTextOffs> \\> | \\> \\n<lines?trailerTextOffs>]\n"
     + "| \\<leaderTextC     [ = <textFile?leaderTextC>     \\> | \\> \\n<lines?leaderTextC>]\n"
     + "| \\<trailerTextC    [ = <textFile?trailerTextC>    \\> | \\> \\n<lines?trailerTextC>]\n"
     + "| \\<leaderTextH     [ = <textFile?leaderTextH>     \\> | \\> \\n<lines?leaderTextH>]\n"
     + "| \\<trailerTextH    [ = <textFile?trailerTextH>    \\> | \\> \\n<lines?trailerTextH>]\n"
-    + "|exprOffsField = <\"\"?exprOffsField> \\n\n" 
-    + "|exprOffsBase = <\"\"?exprOffsBase> \\n\n" 
-    + "|exprOffsObj = <\"\"?exprOffsObj> \\n\n" 
-    + "|exprOffsObjJcpp = <\"\"?exprOffsObjJcpp> \\n\n" 
-    + "|exprOffsCppObj = <\"\"?exprOffsCppObj> \\n\n"
-    + "|exprSizeType = <\"\"?exprSizeType> \\n\n"
+    + "| exprOffsField = <\"\"?exprOffsField> \\n\n" 
+    + "| exprOffsBase = <\"\"?exprOffsBase> \\n\n" 
+    + "| exprOffsObj = <\"\"?exprOffsObj> \\n\n" 
+    + "| exprOffsObjJcpp = <\"\"?exprOffsObjJcpp> \\n\n" 
+    + "| exprOffsCppObj = <\"\"?exprOffsCppObj> \\n\n"
+    + "| exprSizeType = <\"\"?exprSizeType> \\n\n"
     + "| <blockedFile> \\n \n" 
     + "|<?c_only> c_only \\n\n" 
     + "| <reflectionType> \\n \n" 

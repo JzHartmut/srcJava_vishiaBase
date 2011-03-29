@@ -99,6 +99,9 @@ public class CmdHeader2Reflection extends MainCmd
     super.addHelpInfo("-obin[b|l]hex:HEXFILE The BINFILE will written in Intel-hex-Format.");
     super.addHelpInfo("-c_only Don't reagard C++-classes, don't generate C++-code especially static_cast<...> .");
     super.addHelpInfo("-b:Types.cfg Config-file for special handled types.");
+    super.addHelpInfo("Syntax of the config-file: ------------------------------------------------------------");
+    super.addHelpInfo(Header2Reflection.sSyntaxReflectionTypes);
+    super.addHelpInfo("---------------------------------------------------------------------------------------");
   }
 
 
