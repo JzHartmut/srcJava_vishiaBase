@@ -96,7 +96,7 @@ public class Header2Reflection
   private String sFileReflectionTypesOut;
 
   /**File-path of the file with the infos for blocked types and files. */
-  private String sFileReflectionBlockedTypes;
+  private File fileReflectionBlockedTypes;
 
   /**True if a new file for types should be created, false if append. */
   private boolean bNewFileReflectionTypesOut = false;
@@ -160,6 +160,10 @@ public class Header2Reflection
    */
   private String sExprSizeType = "sizeof(%%%)";
   
+  private String sLinefeed = "\n";
+  
+  /**Text for leader and trailer in the offset- and C-Files. It will be filled depending on cfg-file. */
+  StringBuilder leaderTextC, trailerTextC, leaderTextH, trailerTextH, leaderTextOffs, trailerTextOffs;
   
   private final static String scalarTypes = "0-void:1-bool:1-boolean:4-float:4-float32:8-double:1-char:4-int:2-short:1-byte:4-int32:4-uint32:2-int16:2-uint16:1-int8:2-uint8:";
 
@@ -167,21 +171,30 @@ public class Header2Reflection
   
   private final static String sSyntaxReflectionTypes
     = "$setLinemode. ReflectionTypes::={ \\n"     //simple empty line possible, may contain comments. 
-    + "|exprOffsField = <\"\"?exprOffsField> \\n" 
-    + "|exprOffsBase = <\"\"?exprOffsBase> \\n" 
-    + "|exprOffsObj = <\"\"?exprOffsObj> \\n" 
-    + "|exprOffsObjJcpp = <\"\"?exprOffsObjJcpp> \\n" 
-    + "|exprOffsCppObj = <\"\"?exprOffsCppObj> \\n"
-    + "|exprSizeType = <\"\"?exprSizeType> \\n"
-    + "| <blockedFile> \\n " 
-    + "|<?c_only> c_only \\n" 
-    + "| <reflectionType> \\n " 
-    + "| \\n" 
-    + "} \\e."
+    + "| \\<leaderTextOffs  [ = <textFile?leaderTextOffs>  \\> | \\> \\n<lines?leaderTextOffs>]\n"
+    + "| \\<trailerTextOffs [ = <textFile?trailerTextOffs> \\> | \\> \\n<lines?trailerTextOffs>]\n"
+    + "| \\<leaderTextC     [ = <textFile?leaderTextC>     \\> | \\> \\n<lines?leaderTextC>]\n"
+    + "| \\<trailerTextC    [ = <textFile?trailerTextC>    \\> | \\> \\n<lines?trailerTextC>]\n"
+    + "| \\<leaderTextH     [ = <textFile?leaderTextH>     \\> | \\> \\n<lines?leaderTextH>]\n"
+    + "| \\<trailerTextH    [ = <textFile?trailerTextH>    \\> | \\> \\n<lines?trailerTextH>]\n"
+    + "|exprOffsField = <\"\"?exprOffsField> \\n\n" 
+    + "|exprOffsBase = <\"\"?exprOffsBase> \\n\n" 
+    + "|exprOffsObj = <\"\"?exprOffsObj> \\n\n" 
+    + "|exprOffsObjJcpp = <\"\"?exprOffsObjJcpp> \\n\n" 
+    + "|exprOffsCppObj = <\"\"?exprOffsCppObj> \\n\n"
+    + "|exprSizeType = <\"\"?exprSizeType> \\n\n"
+    + "| <blockedFile> \\n \n" 
+    + "|<?c_only> c_only \\n\n" 
+    + "| <reflectionType> \\n \n" 
+    + "| \\n\n" 
+    + "} \\e.\n"
     + "blockedFile::= % <* ,\\r\\n?path>.\n"
-    + "reflectionType::= [<?sign>#|-] <* ,\\r\\n?type> " 
-    + "| [<?sign>=|@] <* =?type> = [ <$?deftype>| 0x<#x?defvalue>| <#?defvalue>] " 
-    + "| [<?sign>!|!] <* =?type> = [ <$?deftype>]."  //definition of baseclass
+    + "reflectionType::= [<?sign>#|-] <* ,\\r\\n?type> \n" 
+    + "| [<?sign>=|@] <* =?type> = [ <$?deftype>| 0x<#x?defvalue>| <#?defvalue>] \n" 
+    + "| [<?sign>!|!] <* =?type> = [ <$?deftype>].\n"  //definition of baseclass
+    + "lines::={[? \\<END\\>]<*\\n?line>\\n} \\<END\\> \\n.\n"
+    + "textFile::= <\"\"?fileName>.\n"
+    
     ;
 //    + "reflectionType::= <!.?sign> <* ,\\r\\n?path> [, {<?type> <!.?sign> <$?name> ? , } ].";
 
@@ -267,7 +280,7 @@ public class Header2Reflection
   }
 
   void setReflectionBlockedTypes(String sFile)
-  { this.sFileReflectionBlockedTypes = sFile;
+  { this.fileReflectionBlockedTypes = new File(sFile);
   }
 
   boolean setOutC(String sFile)
@@ -417,6 +430,9 @@ public class Header2Reflection
 	          String sFileAllH = sFileAllC.substring(posPath+1, posDot) + ".h";
 	          String sFileName = sFileAllC.substring(posPath+1, posDot);
 	          fileAllH = new BufferedWriter(new FileWriter(new File(sPathFileAllH)));
+	          if(leaderTextC !=null){
+	          	fileAllC.append(leaderTextC);
+	          }
 	          fileAllC.write("\n/*This file is generated from Header2Reflection. */");
 	          fileAllC.write("\n#define protected public  //only active inside this compilation unit");
 	          fileAllC.write("\n#define private public    //  to enable the access to all elements.");
@@ -430,14 +446,21 @@ public class Header2Reflection
 	          
 	          fileAllH.write("\n#ifndef __" + sFileName + "_h__\n");
 	          fileAllH.write("\n#define __" + sFileName + "_h__\n");
-	          fileAllH.write("\n#include \"Jc/ReflectionJc.h\"");
+	          if(leaderTextH !=null){
+	          	fileAllH.append(leaderTextH);
+	          }
+            fileAllH.write("\n#include \"Jc/ReflectionJc.h\"");
 	        }
 	        if(sFileOffset != null)
 	        { File filesFileOffset = new File(sFileOffset);
 	          //String sFileOffsetName = filesFileOffset.getName();
 	          sOffsetDirAbs = filesFileOffset.getCanonicalPath().replace('\\','/');  //directory of output file
 	          fileOffs = new BufferedWriter(new FileWriter(filesFileOffset));
-	          fileOffs.write("\n/*This file is generated from Header2Reflection. */");
+	          if(leaderTextOffs !=null){
+	          	fileOffs.append(leaderTextOffs);
+	          }
+	          //Note: append and write are the same, but append can be used with CharSequence.
+	          fileOffs.append("\n/*This file is generated from Header2Reflection. */");
 	          fileOffs.write("\n#include <os_types_def.h>");
 	          fileOffs.write("\n#include <stddef.h>");
 	          fileOffs.write("\n#define protected public  //only active inside this compilation unit");
@@ -459,9 +482,15 @@ public class Header2Reflection
 	            translate(file, fileName);
 	          }
 	        }
-	        if(fileAllC != null)
-	        { fileAllC.close();
-	          fileAllH.write("\n#endif // ___h__\n");
+	        if(fileAllC != null){
+	          if(trailerTextC !=null){
+	          	fileAllC.append(trailerTextC);
+	          }
+          	fileAllC.close();
+          	if(trailerTextH !=null){
+	          	fileAllH.append(trailerTextH);
+	          }
+          	fileAllH.write("\n#endif // ___h__\n");
 	          fileAllH.close();
 	        }
 	        if(fileOffs != null)
@@ -470,7 +499,9 @@ public class Header2Reflection
 	          fileOffs.append("\nint32* reflectionOffsetArrays[] = \n{ null");
 	          fileOffs.append(bufferOffsArray);
 	          fileOffs.append("\n};\n");
-	          
+	          if(trailerTextOffs !=null){
+	          	fileOffs.append(trailerTextOffs);
+	          }
 	          fileOffs.close();
 	        }
 	        if(binOutPrep != null)
@@ -507,10 +538,10 @@ public class Header2Reflection
   boolean readBlockedFilesAndTypes()
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { ZbnfParser parser = new ZbnfParser(console, 10);
-    console.writeInfoln("read ctrl-file: " + sFileReflectionBlockedTypes);
+    console.writeInfoln("read ctrl-file: " + fileReflectionBlockedTypes.getAbsolutePath());
     parser.setSyntax(sSyntaxReflectionTypes);
     StringPart spInput = null;
-    spInput = new StringPartFromFileLines(new File(sFileReflectionBlockedTypes),-1, null, null);
+    spInput = new StringPartFromFileLines(fileReflectionBlockedTypes,-1, null, null);
     boolean bOk = parser.parse(spInput);
     if(!bOk)
     { console.writeError(parser.getSyntaxErrorReport());
@@ -556,7 +587,21 @@ public class Header2Reflection
           identifierRelacements.put(sType, identReplacement);
         } else if(semantic.equals("blockedFile")){
           stop();
-        } else throw new RuntimeException("syntax definition false.");
+        } else if(semantic.equals("leaderTextC")){
+          leaderTextC = getLeaderTrailerText(item, leaderTextC);
+        } else if(semantic.equals("trailerTextC")){
+          trailerTextC = getLeaderTrailerText(item, trailerTextC);
+        } else if(semantic.equals("leaderTextH")){
+          leaderTextH = getLeaderTrailerText(item, leaderTextH);
+        } else if(semantic.equals("trailerTextH")){
+          trailerTextH = getLeaderTrailerText(item, trailerTextH);
+        } else if(semantic.equals("leaderTextOffs")){
+          leaderTextOffs = getLeaderTrailerText(item, leaderTextOffs);
+        } else if(semantic.equals("trailerTextOffs")){
+          trailerTextOffs = getLeaderTrailerText(item, trailerTextOffs);
+        } else {
+        	throw new RuntimeException("unknown syntax definition: " + semantic);
+        }
       }
     }
     return bOk;
@@ -564,7 +609,34 @@ public class Header2Reflection
 
 
 
+  StringBuilder getLeaderTrailerText(ZbnfParseResultItem zbnfResult, StringBuilder lines){
+  	//StringBuilder lines = new StringBuilder(500);
+  	if(lines == null){ lines = new StringBuilder(500); }
+  	List<ZbnfParseResultItem> listLine = zbnfResult.listChildren("line");
+  	if(listLine !=null){
+	  	for(ZbnfParseResultItem zbnfChild: listLine){
+	  		lines.append(zbnfChild.getParsedString()).append(sLinefeed);
+	  	}
+  	}
+  	String sFile = zbnfResult.getChildString("fileName");
+  	if(sFile !=null){
+	  	String sFileName = fileReflectionBlockedTypes.getParent() + "/" + sFile;
+	  	File file = new File(sFileName);
+	  	if(!file.exists()){ 
+	  		lines.append("/*ERROR Header2Reflection - file not found: ")
+	  		     .append(sFileName).append("*/").append(sLinefeed);
+	  	} else {
+	  		String sContent = FileSystem.readFile(file);
+	  		lines.append(sContent);
+	  	}
+  	}
+  	return lines;
+  }
+  
+  
 
+  
+  
 
   /**Reads all types from the file given with -r: argument in cmdline or setted with setReflectionTypes(filepath);
    *
