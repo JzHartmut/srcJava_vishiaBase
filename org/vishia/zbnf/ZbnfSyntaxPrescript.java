@@ -1450,71 +1450,79 @@ public class ZbnfSyntaxPrescript
 
   /**Shows the content in a readable format for debugging. */
   public String toString()
-  { String sReport = "Syntax:" + getDefinitionIdent();
+  { StringBuilder u = new StringBuilder(50);
+  	{ String sWhat; // = "Syntax:" + getDefinitionIdent();
       switch(eType)
       { case kSyntaxDefinition:
-        { sReport += "::=";
+        { sWhat = "Syntax:" + getDefinitionIdent() + "::=";
         } break;
-        case kTerminalSymbol: sReport = ":" + sConstantSyntax; break;
+        case kTerminalSymbol: sWhat = ":" + sConstantSyntax; break;
         case kSimpleOption:
-        { sReport = "[...]";
+        { sWhat = "[...]";
         } break;
         case kAlternativeOption:
-        { sReport = "[...|...|]";
+        { sWhat = "[...|...|]";
         } break;
         case kAlternativeOptionCheckEmptyFirst:
-        { sReport = "[|...|...]";
+        { sWhat = "[|...|...]";
         } break;
         case kNegativVariant:
-        { sReport = "[?...|...]";
+        { sWhat = "[?...|...]";
         } break;
         case kUnconditionalVariant:
-        { sReport = "[>...|...]";
+        { sWhat = "[>...|...]";
         } break;
         case kExpectedVariant:
-        { sReport = "[!...|...]";
+        { sWhat = "[!...|...]";
         } break;
         case kAlternative:
-        { sReport = "...|...";
+        { sWhat = "...|...";
         } break;
         case kRepetition:
-        { sReport = "{...}";
+        { sWhat = "{...}";
         } break;
         case kOnlySemantic:
-        { sReport = "<";
+        { sWhat = "<";
         } break;
         case kSyntaxComponent:
-        { sReport = "<" + getDefinitionIdent();
+        { sWhat = "<" + getDefinitionIdent();
         } break;
-        case kIdentifier  :                     sReport="<$" + getConstantSyntax(); break;
-        case kRegularExpression :               sReport="<!" + getConstantSyntax();  break;
-        case kStringUntilEndchar:               sReport="<*" + getConstantSyntax();  break;
-        case kStringUntilEndcharOutsideQuotion: sReport = "<*\"\"" + getConstantSyntax(); break;
-        case kStringUntilEndStringInclusive:    sReport = "<*|" + getConstantSyntax(); break;
-        case kStringUntilRightEndchar:          sReport = "<stringtolastExclChar" + getConstantSyntax(); break;
-        case kStringUntilRightEndcharInclusive: sReport = "<stringtolastinclChar" + getConstantSyntax(); break;
-        case kQuotedString  : sReport = "<" + getConstantSyntax(); break;
-        case kStringUntilEndString: sReport = "<*" + sConstantSyntax; break;
-        case kStringUntilEndStringWithIndent: sReport = "<+++*" + sConstantSyntax; break;
-        case kPositivNumber : sReport = "<#";  break;
-        case kIntegerNumber : sReport = "<#-"; break;
-        case kHexNumber :     sReport = "<#x"; break;
-        case kFloatNumber :   sReport = "<#f"; break;
-        case kFloatWithFactor :   sReport = "<#f*" +nFloatFactor; break;
-        case kSkipSpaces :    sReport = "\\n\\t"; break;
-        case 0 :    sReport = "?-0-?"; break;
-        default: sReport = "?-?-?";
+        case kIdentifier  :                     sWhat="<$" + getConstantSyntax(); break;
+        case kRegularExpression :               sWhat="<!" + getConstantSyntax();  break;
+        case kStringUntilEndchar:               sWhat="<*" + getConstantSyntax();  break;
+        case kStringUntilEndcharOutsideQuotion: sWhat = "<*\"\"" + getConstantSyntax(); break;
+        case kStringUntilEndStringInclusive:    sWhat = "<*|" + getConstantSyntax(); break;
+        case kStringUntilRightEndchar:          sWhat = "<stringtolastExclChar" + getConstantSyntax(); break;
+        case kStringUntilRightEndcharInclusive: sWhat = "<stringtolastinclChar" + getConstantSyntax(); break;
+        case kQuotedString  : sWhat = "<" + getConstantSyntax(); break;
+        case kStringUntilEndString: sWhat = "<*" + sConstantSyntax; break;
+        case kStringUntilEndStringWithIndent: sWhat = "<+++*" + sConstantSyntax; break;
+        case kPositivNumber : sWhat = "<#";  break;
+        case kIntegerNumber : sWhat = "<#-"; break;
+        case kHexNumber :     sWhat = "<#x"; break;
+        case kFloatNumber :   sWhat = "<#f"; break;
+        case kFloatWithFactor :   sWhat = "<#f*" +nFloatFactor; break;
+        case kSkipSpaces :    sWhat = "\\n\\t"; break;
+        case 0 :    sWhat = "?-0-?"; break;
+        default: sWhat = "?-?-?";
       }
-      String sSemantic = getSemantic();
-      if(sSemantic != null)
-      { if(sReport.charAt(0) != '<'){ sReport += "<"; }
-        sReport += "?" + sSemantic + ">";
-      }
-      else
-      { if(sReport.charAt(0) == '<'){ sReport += ">"; }
-      }
-      
-    return sReport;
+      u.append(sWhat);
+  	}
+    String sSemantic = getSemantic();
+    if(sSemantic != null)
+    { if(u.charAt(0) != '<'){ u.append("<"); }
+      u.append("?").append(sSemantic).append(">");
+    }
+    else
+    { if(u.charAt(0) == '<'){ u.append( ">"); }
+    }
+  	for(int i=0; i <u.length(); ++i){  //change \r etc in constant text to readable output
+  		char cc = u.charAt(i);
+  		if(cc == '\n'){ u.replace(i, i+1, "\\n");}
+  		if(cc == '\r'){ u.replace(i, i+1, "\\r");}
+  	}
+
+    return u.toString();
   }
 
 

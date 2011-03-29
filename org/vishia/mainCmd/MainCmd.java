@@ -958,10 +958,12 @@ public abstract class MainCmd implements MainCmd_ifc
   { if( (nLevel & mReportLevel) <= nReportLevel && fReport != null)
     { int posStart = 0;
       int posEol;
+      /*
       while( posStart < ss.length() && (posEol = ss.indexOf('\n', posStart)) >=0)
       { fReport.write(ss.substring(posStart, posEol) + "|");
         posStart = posEol + 1;
       }
+      */
       if(posStart < ss.length()){ fReport.write(ss.substring(posStart)); }
     }
     if( (nLevel & mReportLevel) <= nReportLevelDisplay && (nLevel & mNeverOutputToDisplay) == 0)

@@ -305,24 +305,10 @@ public class ZbnfParser
         }
       }
       if(nReportLevel >= nLevelReportComponentParsing)  
-      { String sReport = nReportLevel < nLevelReportComponentParsing ? ""
-          : "parseComp " + input.getCurrentPosition()+ " " + input.getCurrent(40); // + sEmpty.substring(0, nRecursion); 
-        String syntaxReport = "<" 
-        	+ (syntax.sDefinitionIdent.equals(syntax.sSemantic) ? "" : syntax.sDefinitionIdent + "?")
-        	+ syntax.sSemantic + ">";
-        int zz = syntaxReport.length();
-        if(zz < 20){ syntaxReport += "                    ".substring(zz); }
-        else { syntaxReport = syntaxReport.substring(0,20); }
-      	report.reportln(idReportComponentParsing, sReport
-          + (bOk ? " ok    " : " error ") + nRecursion 
-          + syntaxReport
-          //+ " <?" + (sSemanticForStoring == null ? "" : sSemanticForStoring) + "> in "  
-          + " in " + sReportParentComponents);
+      { reportParsing("parseComp ", idReportComponentParsing, syntax, nRecursion, bOk);
       }
       return bOk;
     }
-
-
 
 
 
@@ -742,7 +728,7 @@ public class ZbnfParser
               if(nType == ZbnfSyntaxPrescript.kTerminalSymbol){
             		sConstantText = syntaxItem.getConstantSyntax();
             		sReport = nReportLevel < nLevelReportBranchParsing ? ""
-              		: "parsSpace " + input.getCurrentPosition()+ " " + input.getCurrent(40); 
+              		: "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
 	            } else {
 	            	sConstantText = null;
 	            }
@@ -754,7 +740,7 @@ public class ZbnfParser
             }
             if(!bTerminalFoundInComment){
             	sReport = nReportLevel < nLevelReportBranchParsing ? ""
-            		: "parseItem " + input.getCurrentPosition()+ " " + input.getCurrent(40); // + sEmpty.substring(0, nRecursion); 
+            		: "parseItem " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
 
             	String sSrc = null;  //parsed string
             	int posSrc = -1;     //position of the string
@@ -881,19 +867,7 @@ public class ZbnfParser
               parserStoreInPrescript.setCurrentPosition(posParseResult);
             }
             if(nReportLevel >= nLevelReportBranchParsing)  ////  
-            { String syntaxReport = syntaxItem.toString();
-              //set length to 20 chars
-            	int zz = syntaxReport.length();
-              if(zz < 20){ syntaxReport += "                    ".substring(zz); }
-              else { syntaxReport = syntaxReport.substring(0,20); }
-            	  //+ " <?" 
-              	//+ (sSemanticForStoring !=null ? sSemanticForStoring :"")  + "> "
-            	  //+ (sConstantSyntax !=null ? sConstantSyntax  : "") + " ";	
-            	report.reportln(idReportBranchParsing, sReport
-                + (bOk ? " ok    " : " error ") + nRecursion 
-                + syntaxReport
-                //+ " <?" + (sSemanticForStoring == null ? "" : sSemanticForStoring) + "> in "  
-                + " in " + sReportParentComponents);
+            { reportParsing(sReport, idReportBranchParsing, syntaxItem, nRecursion, bOk);
             }
           }//default
         }//switch
@@ -1504,13 +1478,7 @@ public class ZbnfParser
         input.setCurrentPosition(posInput);
         parserStoreInPrescript.setCurrentPosition(posParseResult);
         if(nReportLevel >= nLevelReportBranchParsing)  ////  
-        { final String syntaxReport = syntaxNegativ.toString();
-	        
-	        report.reportln(idReportBranchParsing, "parseNegV "
-	      		+ input.getCurrentPosition()+ " " + input.getCurrent(40)
-	          + (!bOk ? " ok    " : " error ") + nRecursion 
-	          + syntaxReport
-            + " in " + sReportParentComponents);
+        { reportParsing("parseNegV ", idReportBranchParsing, syntaxNegativ, nRecursion, bOk);
         }  
         return !bOk;  //negation, it is not ok if the result matches.
       }
@@ -1726,6 +1694,22 @@ public class ZbnfParser
   
     }
   
+  	private void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, int nRecursion, boolean bOk){
+    	String sReport = sWhat + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
+      StringBuilder syntaxReport = new StringBuilder(syntax.toString());  /*new StringBuilder("<" 
+      	+ (syntax.sDefinitionIdent.equals(syntax.sSemantic) ? "" : syntax.sDefinitionIdent + "?")
+      	+ syntax.sSemantic + ">"); */
+      int zz = syntaxReport.length();
+      if(zz < 20){ syntaxReport.append("                    ".substring(zz)); }
+      else { syntaxReport.setLength(20); }
+    	report.reportln(nReport, sReport
+        + (bOk ? " ok    " : " error ") + nRecursion 
+        + syntaxReport
+        //+ " <?" + (sSemanticForStoring == null ? "" : sSemanticForStoring) + "> in "  
+        + " in " + sReportParentComponents);
+    }
+
+
   
   }//class PrescriptParser
 
@@ -2421,7 +2405,7 @@ public class ZbnfParser
    * @return The part of input on error position.
    */
   public String getFoundedInputOnError()
-  { return sRightestError;
+  { return sRightestError.replace('\n', '|').replace('\r', ' ');
   }
 
   
@@ -2453,18 +2437,20 @@ public class ZbnfParser
    */
   public String getSyntaxErrorReport()
   { String sLastFoundedResultOnError = getLastFoundedResultOnError();
-    return "Parse ERROR at input:" 
-        + getInputPositionOnError()
-        + "(0x" + Long.toString(getInputPositionOnError(),16) + ")"
-        + " >>>>" + getFoundedInputOnError()
-        + "\nexpected: ----------------------------------------------" 
-        + getExpectedSyntaxOnError()
-        + "\nfounded before: ----------------------------------------------" 
-        + ( sLastFoundedResultOnError == null 
+    StringBuilder u = new StringBuilder(1000);
+    
+    u.append("Parse ERROR at input:"); 
+    u.append(getInputPositionOnError());
+    u.append("(0x" + Long.toString(getInputPositionOnError(),16) + ")");
+    u.append(" >>>>" + getFoundedInputOnError());
+    u.append("\nexpected: ----------------------------------------------"); 
+    u.append(getExpectedSyntaxOnError());
+    u.append("\nfounded before: ----------------------------------------------"); 
+    u.append(( sLastFoundedResultOnError == null 
           ? "-nothing-" 
           : getLastFoundedResultOnError()
-          )
-        ;    
+          ));
+    return u.toString();
   }
   
   
@@ -2513,4 +2499,19 @@ public class ZbnfParser
   {
   }
 
+
+
+  CharSequence inputCurrent(StringPart input)
+  {
+  	StringBuilder u = new StringBuilder(input.getCurrent(40));
+  	char c;
+  	for(int i=0; i<u.length(); ++i){
+  		c=u.charAt(i);
+  		if(c=='\n'){ u.replace(i, i+1, "|");}
+  		if(c=='\r'){ u.replace(i, i+1, "-");}
+  	}
+  	return u;
+  }
+  
+  
 }
