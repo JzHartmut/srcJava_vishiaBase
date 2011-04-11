@@ -387,6 +387,19 @@ public class FileSystem
     
   }
   
+
+  
+  
+  /**Gets the canonical path of a file without exception. See java.io.File.getCanonicalPath().
+   * @param file The given file
+   * @return null if the canonical path isn't available, for example if the path to the file doesn't exists.
+   */
+  public static String getCanonicalPath(File file)
+  { String sPath;
+  	try{ sPath = file.getCanonicalPath(); }
+  	catch(IOException exc){ sPath = null; }  //the file doesn't exists.
+  	return sPath;
+  }
   
   
   
