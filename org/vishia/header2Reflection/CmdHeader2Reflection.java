@@ -38,6 +38,18 @@ import org.vishia.mainCmd.Report;
 public class CmdHeader2Reflection extends MainCmd
 {
   
+	
+	
+	/**Revision number
+	 * <ul>
+	 * <li>2011-04-11: Dependency to the control file: regard it in maker. To header and footer too!
+	 * 
+	 * </ul>
+	 */
+	static public final int revisionInfo = 20110411;
+	
+	
+	
   /**Aggregation to the Console implementation class.*/
   Report console;
 

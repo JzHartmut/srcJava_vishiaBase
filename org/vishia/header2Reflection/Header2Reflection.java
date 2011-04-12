@@ -1264,8 +1264,12 @@ public class Header2Reflection
   	{
     
 	  	String semantic = zbnfElement.getSemantic();
-	    if(semantic.equals("attribute") || semantic.equals("implicitStructAttribute")){
-	    	if(convertAttribute(bFirst, sSeparator, sCppClassName, sReflectionClassName, sNameVariant
+	  	if(semantic.equals("implicitStructAttribute")){
+	  		String sName = zbnfElement.getChildString("@name");
+	  		convertElementsInClass(zbnfElement, sName);
+	  	}
+	  	else if(semantic.equals("attribute")){
+	  	    	if(convertAttribute(bFirst, sSeparator, sCppClassName, sReflectionClassName, sNameVariant
 	    		, zbnfElement, sbCfile, sbForward, cppClass))
 	      { nrofAttributes +=1;
 	        sSeparator = "\n  , ";  //next entries.
@@ -1328,19 +1332,11 @@ public class Header2Reflection
 	      ConverterClass converterClass = new ConverterClass(innerTypesP);
 	      converterClass.convertClass(sTypeName, sParentCppClassName, sParentReflectionClassName, innerClassItem, sFilePath, cppClass);//, typesInFile);
 	    }
-	    /*
-	    List<ZbnfParseResultItem> unionVariants = zbnfParent.listChildren("variante");
-	    //
-	    if(unionVariants!=null)
-	    for(ZbnfParseResultItem innerItem : unionVariants)
-	    { //innerTypes.put(null, sParentReflectionClassName);
-	    	ZbnfParseResultItem zbnfVariantContent = innerItem.firstChild();
-	      String sTypeName = zbnfVariantContent.getChildString("@name");
-	      
-	      ConverterClass converterClass = new ConverterClass(innerTypesP);
-	      converterClass.convertClass(sTypeName, sParentCppClassName, sParentReflectionClassName, zbnfVariantContent, sFilePath, cppClass);//, typesInFile);
-	    }
-	    */
+
+	    /**2011-04-12: don't convert implicitStructAttribute as extra type. It isn't able in C to do so.
+	     * If a implicitStruct is used, the type should remain anonymous. 
+	     * The attributes of the implicit struct are generated in form NAME_INNER already, see convertAttribute.
+	     *  
 	    List<ZbnfParseResultItem> zbnfImplicitStruct = zbnfParent.listChildren("implicitStructAttribute");
       //
 	    if(zbnfImplicitStruct!=null)
@@ -1361,6 +1357,7 @@ public class Header2Reflection
           converterClass.convertClass(sTypeName, sParentCppClassName, sParentReflectionClassName, zbnfImplicitStructItem, sFilePath, cppClass);//, typesInFile);
         }
       }
+      */
     }
 
 
@@ -1534,7 +1531,7 @@ public class Header2Reflection
 	      if(sTypeInContainer!= null){
 	        sType = sTypeInContainer;  //it is more significant, the sType may be the type of container of Type.
 	      }
-	      if(sAttributeName !=null && sAttributeName.equals("C_CB_ON"))
+	      if(sAttributeName !=null && sAttributeName.equals("TEST"))
 	        stop();
 	      
 	      /**Shorten the name of the attribute, because the max. number of chars is limited. */
