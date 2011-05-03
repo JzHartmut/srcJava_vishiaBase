@@ -175,7 +175,7 @@ public abstract class MainCmd implements MainCmd_ifc
     final BufferedReader reader;
 
     /** Captures the output if not null, see constructor*/
-    final StringBuffer sOutput;
+    final Appendable uOutput;
 
     /**control of the output medium. See constructor, value nCtrl*/
     final int nCtrl;
@@ -196,8 +196,8 @@ public abstract class MainCmd implements MainCmd_ifc
                      -1..-3 (negative) using -Report.error to -Report.info  writes via writeInfo
         @param in The input stream to read.
     */
-    ShowCmdOutput(StringBuffer output, int nCtrl, BufferedReader in)
-    { this.sOutput = output;
+    ShowCmdOutput(Appendable output, int nCtrl, BufferedReader in)
+    { this.uOutput = output;
       this.nCtrl   = nCtrl;
       this.reader  = in;
     }
@@ -208,7 +208,7 @@ public abstract class MainCmd implements MainCmd_ifc
     { String sOut;
       try
       { while( (sOut = reader.readLine()) != null)
-        { if(sOutput!=null) sOutput.append(sOut + "\n");
+        { if(uOutput!=null) uOutput.append(sOut + "\n");
 
           if     (nCtrl == -Report.error)  writeError(sOut);
           else if(nCtrl == -Report.warning)writeWarning(sOut);
@@ -560,9 +560,9 @@ public abstract class MainCmd implements MainCmd_ifc
 
   /** Execute a command invoke a cmdline call, implements MainCmd_Ifc.
       @deprecated: since Java 1.5 a ProcessBuilder is available. 
-      The new form {@link #executeCmdLine(String, ProcessBuilder, int, StringBuffer, String)} use it.
+      The new form {@link #executeCmdLine(String, ProcessBuilder, int, Appendable, String)} use it.
   */
-  public int executeCmdLine(String cmd, int nReportLevel, StringBuffer output, String input)
+  public int executeCmdLine(String cmd, int nReportLevel, Appendable output, String input)
   {
     String[] cmdArray = cmd.split(" ",0);
     return executeCmdLine(cmdArray, nReportLevel, output, input);
@@ -578,12 +578,12 @@ public abstract class MainCmd implements MainCmd_ifc
       This class use the method writeInfoln() from here. The writeInfoln-Method writes to console for MainCmd,
       but it may be overloaded, to example for MainCmdWin it may be writed to a box in the GUI.
       @deprecated: since Java 1.5 a ProcessBuilder is available. 
-      The new form {@link #executeCmdLine(String[], ProcessBuilder, int, StringBuffer, String)} use it.
+      The new form {@link #executeCmdLine(String[], ProcessBuilder, int, Appendable, String)} use it.
   */
-  public int executeCmdLine(String[] cmd, int nReportLevel, StringBuffer output, String input)
+  public int executeCmdLine(String[] cmd, int nReportLevel, Appendable output, String input)
   {
     int exitErrorLevel; // = 0;  //default unused, only because throw
-    { StringBuffer sOut = new StringBuffer();
+    { StringBuilder sOut = new StringBuilder();
       int iCmd = 0;
       while(iCmd < cmd.length)
       { sOut.append(cmd[iCmd]); iCmd +=1;
@@ -634,7 +634,7 @@ public abstract class MainCmd implements MainCmd_ifc
 	( String cmd
 	, ProcessBuilder processBuilder
 	, int nReportLevel
-	, StringBuffer output, String input
+	, Appendable output, String input
 	)
 	{
 		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
@@ -656,7 +656,7 @@ public abstract class MainCmd implements MainCmd_ifc
 	( String[] cmd
 	, ProcessBuilder processBuilder
 	, int nReportLevel
-	, StringBuffer output, String input
+	, Appendable output, String input
 	){
 		return executeCmdLine(processBuilder, cmd, input, nReportLevel, output, output);
 	}
@@ -676,18 +676,18 @@ public abstract class MainCmd implements MainCmd_ifc
 	 */
 	@Override public int executeCmdLine
 	( ProcessBuilder processBuilder
-  , String cmd
-  , String input
-	, int nReportLevel
-	, StringBuffer output
-	, StringBuffer error
+	    , String cmd
+	    , String input
+	    , int nReportLevel
+	    , Appendable output
+	    , Appendable error
 	){
-		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
-		return executeCmdLine(processBuilder, cmdArray, input, nReportLevel, output, error);
+	  String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+	  return executeCmdLine(processBuilder, cmdArray, input, nReportLevel, output, error);
 
 	}
 
-	
+
 	/**Executes a command line call maybe as pipe, waiting for finishing..
 	 * The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
 	 * @param processBuilder The ProcessBuilder. There may be assigned environment variables and a current directory.
@@ -701,11 +701,11 @@ public abstract class MainCmd implements MainCmd_ifc
 	 */
 	@Override public int executeCmdLine
 	( ProcessBuilder processBuilder
-  , String[] cmd
-  , String input
-	, int nReportLevel
-	, StringBuffer output
-	, StringBuffer error
+	    , String[] cmd
+	    , String input
+	    , int nReportLevel
+	    , Appendable output
+	    , Appendable error
 	)
 	{ int exitErrorLevel;
 	try
@@ -714,11 +714,11 @@ public abstract class MainCmd implements MainCmd_ifc
 	  Process process = processBuilder.start();
 	  InputStream processOutput = process.getInputStream();  //reads the output from exec.
 	  InputStream processError  = process.getErrorStream();  //reads the error from exec.
-	
+
 	  Runnable cmdOutput = new ShowCmdOutput(output, nReportLevel, new BufferedReader(new InputStreamReader(processOutput) ));
 	  Thread threadOutput = new Thread(cmdOutput,"cmdline-out");
 	  threadOutput.start();  //the thread reads the processOutput and disposes it to the infoln
-	
+
 	  Runnable cmdError = new ShowCmdOutput(null, nReportLevel, new BufferedReader(new InputStreamReader(processError) ));
 	  Thread threadError = new Thread(cmdError,"cmdline-error");
 	  threadError.start();   //the thread reads the processError and disposes it to the infoln
@@ -737,14 +737,14 @@ public abstract class MainCmd implements MainCmd_ifc
 	      //bCont = false;
 	    }
 	  }
-	
+
 	  process.waitFor();
 	  exitErrorLevel = process.exitValue();
 	}
 	catch(IOException exception)
 	{ writeInfoln( "Problem \n" + exception);
-	  exitErrorLevel = 255;
-	  //throw new RuntimeException("IOException on commandline");
+   	  exitErrorLevel = 255;
+	//throw new RuntimeException("IOException on commandline");
 	}
 	catch ( InterruptedException ie )
 	{

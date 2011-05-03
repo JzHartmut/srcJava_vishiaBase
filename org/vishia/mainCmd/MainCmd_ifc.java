@@ -74,15 +74,15 @@ public interface MainCmd_ifc extends Report
       @param input     If not null, this input is send to the cmdline process. If null, no input is send.
       @return exitErrorLevel from the command line process.
   */
-  public int executeCmdLine(String[] cmd, int nReportLevel, StringBuffer output, String input);
+  public int executeCmdLine(String[] cmd, int nReportLevel, Appendable output, String input);
 
   /** Execute a command, invoke a cmdline call.
       The call must not be needed any input. The output is written with a separate thread either to writeInfoln()
       or to report.
       @param cmdLine String represents the command with all arguments. The arguments must be separated by exactly one space.
-      The rest of paramter and return see <a href="#executeCmdLine(java.lang.String[], int, java.lang.StringBuffer, java.lang.String)">executeCmdLine(String[], ...)</a>.
+      The rest of paramter and return see <a href="#executeCmdLine(java.lang.String[], int, java.lang.Appendable, java.lang.String)">executeCmdLine(String[], ...)</a>.
   */
-  public int executeCmdLine(String cmdLine, int nReportLevel, StringBuffer output, String input);
+  public int executeCmdLine(String cmdLine, int nReportLevel, Appendable output, String input);
   
   
   
@@ -102,8 +102,8 @@ public interface MainCmd_ifc extends Report
   , String cmd
   , String input
 	, int nReportLevel
-	, StringBuffer output
-	, StringBuffer error
+	, Appendable output
+	, Appendable error
 	);
 	
 	/**Executes a command line call maybe as pipe, waiting for finishing..
@@ -119,11 +119,11 @@ public interface MainCmd_ifc extends Report
 	 */
 	public int executeCmdLine
 	( ProcessBuilder processBuilder
-  , String[] cmd
-  , String input
-	, int nReportLevel
-	, StringBuffer output
-	, StringBuffer error
+	    , String[] cmd
+	    , String input
+	    , int nReportLevel
+	    , Appendable output
+	    , Appendable error
 	);
   
   
