@@ -209,6 +209,24 @@ public class FileSystem
   }
 
 
+  public static boolean writeFile(String content, File file)
+  { boolean bOk = true;
+    try{
+      FileWriter writer = new FileWriter(file, false);
+      if(true) //writer.open(sFile, false)>=0)
+      {
+        writer.write(content); 
+        writer.close();
+      } else {
+        bOk = false;
+      }
+    } catch (IOException e)
+    { bOk = false;
+    }
+    return bOk;
+  }
+
+
 
   /**Reads the content of a whole file into a byte array.
    * This method supplies a null pointer if a exception has occurs internally,
