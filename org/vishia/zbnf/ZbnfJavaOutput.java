@@ -623,8 +623,7 @@ public class ZbnfJavaOutput
       return searchComponentsDestination(semanticRest, new Component(component, child.clazz, child.instance));
     }
     else
-    {
-      child = searchCreateMethod(component, semantic);
+    { child = searchCreateMethod(component, semantic);
       if(child == null)
       { //if(!bOnlyMethods)
         { Class superClass = component.clazz.getSuperclass();
@@ -846,8 +845,10 @@ public class ZbnfJavaOutput
             String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
             Field element = null;
             Class searchClass = destComponent.clazz;
+            if(semanticLowerCase.equals("name"))
+              stop();
             do
-            { try{ element = destComponent.clazz.getDeclaredField(semanticLowerCase);}
+            { try{ element = searchClass.getDeclaredField(semanticLowerCase);}
               catch(NoSuchFieldException exception)
               { element = null; 
               }
