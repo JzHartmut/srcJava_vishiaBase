@@ -570,7 +570,13 @@ public abstract class ByteDataAccess
 
 
   /**adds an child Element after the current child or as first child after head.
-   * With the aid of the child Element the data can be read or write structured. 
+   * With the aid of the child Element the data can be read or write structured.
+   * <br><br>
+   * The child instance will be initialized newly. Any old usage of the child instance will be unnoted.
+   * The child is only a helper to manage indices in the parent, to get data and to manage is own indices
+   * while further children were added to itself.
+   * <br><br>
+   * 
    *<br>
    * Some children can be added after a parent like following sample:
    * <pre>
@@ -1813,6 +1819,11 @@ public abstract class ByteDataAccess
   }
 
 
+  public final boolean assertNotExpandable()
+  {
+    assert(idxCurrentChild >0 && idxEnd > 0 && !bExpand);
+    return true;
+  }
 
   public final ByteDataAccess getCurrentChild() 
   {
