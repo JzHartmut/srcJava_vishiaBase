@@ -48,12 +48,22 @@ import java.io.FileFilter;
 import java.io.Writer;
 import java.util.List;
 
+import org.vishia.gral.GuiPanelMngWorkingIfc;
+
 /**This class supports some functions of file system access above the class java.io.File
  * and independent of other commonly or special solutions, only based on Java standard.
  * Some methods helps a simple using of functionality for standard cases.
  */
 public class FileSystem
 {
+
+  /**Version, able to read as hex yyyymmdd.
+   * Changes:
+   * <ul>2011-06-22 {@link #getCanonicalPath(File)} returns slash in windows too.
+   * <li>2007 Hartmut: created
+   * </ul>
+   */
+  public final static int version = 0x20110617;
 
   public interface AddFileToList
   {
@@ -408,13 +418,20 @@ public class FileSystem
 
   
   
-  /**Gets the canonical path of a file without exception. See java.io.File.getCanonicalPath().
+  /**Gets the canonical path of a file without exception and with unique slashes. 
+   * See java.io.File.getCanonicalPath().
+   * The separator between directory names is the slash / in windows too!
+   * It helps to work with unique designation of paths. 
+   * The original java.io.File.getCanonicalPath() produces a backslash in windows systems. 
    * @param file The given file
    * @return null if the canonical path isn't available, for example if the path to the file doesn't exists.
    */
   public static String getCanonicalPath(File file)
   { String sPath;
-  	try{ sPath = file.getCanonicalPath(); }
+  	try{ 
+  	  sPath = file.getCanonicalPath();
+  	  sPath = sPath.replace('\\', '/');
+  	}
   	catch(IOException exc){ sPath = null; }  //the file doesn't exists.
   	return sPath;
   }
