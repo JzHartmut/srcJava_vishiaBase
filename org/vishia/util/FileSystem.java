@@ -45,10 +45,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.FileFilter;
-import java.io.Writer;
 import java.util.List;
-
-import org.vishia.gral.GuiPanelMngWorkingIfc;
 
 /**This class supports some functions of file system access above the class java.io.File
  * and independent of other commonly or special solutions, only based on Java standard.
