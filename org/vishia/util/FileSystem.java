@@ -56,7 +56,11 @@ public class FileSystem
 
   /**Version, able to read as hex yyyymmdd.
    * Changes:
-   * <ul>2011-06-22 {@link #getCanonicalPath(File)} returns slash in windows too.
+   * <ul>
+   * <li>2011-07-10 Hartmut new: {@link #absolutePath(String, File)}. The requirement was: 
+   *   Usage of "~/path" to select in the users home in linux.
+   * <li>2011-06-22 {@link #getCanonicalPath(File)} returns slash in windows too.
+   * <li>2011-07-10 Hartmut
    * <li>2007 Hartmut: created
    * </ul>
    */
@@ -528,7 +532,44 @@ public class FileSystem
   }
   
   
-  
+  /**Converts to the absolut path if a relativ path or HOME path is given.
+   * The filePath may start with
+   * <ul><li>"./" - then the currDir is replaced.
+   * <li>"~/" - then the home dir is replaced. The home dir is the string 
+   *     containing in the HOME environment variable. This style of notification is usual in Linux/Unix
+   * <li>"../../" - then the parent of currDir is replaced.
+   * </ul>    
+   * @param sFileNameP filename. It may contain "\\". "\\" are converted to "/" firstly. 
+   * @param currDir The current dir or null. If null then the current dir is gotten calling new File(".");
+   * @return The path as absolute path. It is not tested whether it is a valid path.
+   */
+  public static String absolutePath(String sFileNameP, File currDir)
+  { String sFileName = sFileNameP.replace('\\', '/');
+    final String sAbs;
+    if(sFileName.startsWith("~")){ //The home directory
+      String sHome = System.getenv("HOME");
+      sAbs = sHome + sFileName.substring(1);
+    } else if(sFileName.startsWith("./")){
+      if(currDir == null){
+        currDir = new File(".");   //maybe environment PWD etc. but that is always valid 
+      }
+      sAbs = currDir + sFileName.substring(1); 
+    }
+    else if(sFileName.startsWith("../")){
+      if(currDir == null){
+        currDir = new File(".");   //maybe environment PWD etc. but that is always valid 
+      }
+      File base = currDir;
+      while(sFileName.startsWith("../")){
+        base = currDir.getParentFile();
+        sFileName = sFileName.substring(3);
+      }
+      sAbs = base + "/" + sFileName; 
+    } else {
+      sAbs = sFileName;
+    }
+    return sAbs;
+  }
   
   
 
