@@ -36,6 +36,7 @@ import java.util.*;  //List
 import java.text.*;  //ParseException
 
 import org.vishia.util.FileSystem;
+import org.vishia.util.StringPart;
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
 import org.vishia.msgDispatch.LogMessage;
@@ -111,12 +112,6 @@ import org.vishia.msgDispatch.LogMessage;
 <hr/>
 <pre>
 date       who        what
-2007-03-07 JcHartmut  Method getReportFileName
-2007-03-07 JcHartmut  callWithoutArgument do not exit but throws an exception likewise by an error of arguments.
-2006-04-02 JcHartmut  writeInfo__ new methods write__Directly, solution of concurrency to write to report.
-2006-01-17 JcHartmut  testArgument() may thrown an ParseException.
-2006-01-21 JcHartmut  bugfix callWithoutArguments() should be protected, not package private.
-2004-06-00 JcHartmut  initial revision
 
 *
 </pre>
@@ -125,6 +120,26 @@ date       who        what
 
 public abstract class MainCmd implements MainCmd_ifc
 {
+
+  /**Version, able to read as hex yyyymmdd.
+   * Changes:
+   * <ul>
+   * <li>2011-07-10 The method {@link #executeCmdLine(ProcessBuilder, String, String, int, Appendable, Appendable)}
+   *   has produced a problem because 2 spaces are given in the args instead of one. There was an empty argument therefore,
+   *   which has had a negative effect to a called command (it was "bzr add", an empty argument forces addition of all files
+   *   though the next arguments had contain some named files). The problem is solved with using a more complex algorithm
+   *   to split arguments as a simple String.split(" "). See {@link #splitArgs(String)}.  
+   * <li>2007..2011 JcHartmut Some changes
+   * <li>2007-03-07 JcHartmut  Method getReportFileName
+   * <li>2007-03-07 JcHartmut  callWithoutArgument do not exit but throws an exception likewise by an error of arguments.
+   * <li>2006-04-02 JcHartmut  writeInfo__ new methods write__Directly, solution of concurrency to write to report.
+   * <li>2006-01-17 JcHartmut  testArgument() may thrown an ParseException.
+   * <li>2006-01-21 JcHartmut  bugfix callWithoutArguments() should be protected, not package private.
+   * <li>2004-06-00 JcHartmut  initial revision
+   * </ul>
+   */
+  public static int version = 0x20110710;
+  
   /** The report file. This attribute is set to null, if no report is desired by missing the argument -r REPORTFILE
   */
   public FileWrite fReport;
@@ -564,7 +579,7 @@ public abstract class MainCmd implements MainCmd_ifc
   */
   public int executeCmdLine(String cmd, int nReportLevel, Appendable output, String input)
   {
-    String[] cmdArray = cmd.split(" ",0);
+    String[] cmdArray = splitArgs(cmd);
     return executeCmdLine(cmdArray, nReportLevel, output, input);
   }
 
@@ -637,7 +652,7 @@ public abstract class MainCmd implements MainCmd_ifc
 	, Appendable output, String input
 	)
 	{
-		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+		String[] cmdArray = splitArgs(cmd);  //split arguments in the array form
 		return executeCmdLine(cmdArray, processBuilder, nReportLevel, output, input);
 	
 	}
@@ -667,6 +682,8 @@ public abstract class MainCmd implements MainCmd_ifc
 	 * The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
 	 * @param processBuilder The ProcessBuilder. There may be assigned environment variables and a current directory.
 	 * @param cmd The cmd and arguments. If it is null, the command assigened to the processBuilder is used.
+	 *   The command can contain arguments separated with spaces (usual for command lines) or white spaces.
+	 *   The method {@link #splitArgs(String)} is used.
 	 * @param input Any pipe-input. It may be null.
 	 * @param nReportLevel The report level which is used for output. 
 	 *        If it is 0, then the output isn't written TODO
@@ -682,12 +699,64 @@ public abstract class MainCmd implements MainCmd_ifc
 	    , Appendable output
 	    , Appendable error
 	){
-	  String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+	  String[] cmdArray = splitArgs(cmd);  //split arguments in the array form
+	  
 	  return executeCmdLine(processBuilder, cmdArray, input, nReportLevel, output, error);
 
 	}
 
 
+	
+	/**Splits command line arguments.
+	 * The arguments can be separated with one or more as one spaces (typical for command lines)
+	 * or with white spaces. If commands are quoted with "" it are taken as one unit.
+	 * The line can be a text with more as one line, for example one line per argument.
+	 * If a "##" is contained, the text until the end of line is ignored.
+	 * @param line The line or more as one line with arguments
+	 * @return All arguments written in one String per element.
+	 */
+	public static String[] splitArgs(String line)
+	{
+	  StringPart spLine = new StringPart(line);
+	  spLine.setIgnoreWhitespaces(true);
+	  spLine.setIgnoreEndlineComment("##");
+	  int ixArg = -1;
+	  int[] posArgs = new int[1000];  //only local, enought size
+	  int posArg = 0;
+	  while(spLine.length() >0){
+      spLine.seekNoWhitespaceOrComments();
+      posArg = (int)spLine.getCurrentPosition();
+      int length;
+      if(spLine.length() >0 && spLine.getCurrentChar()=='\"'){
+        posArgs[++ixArg] = posArg+1;
+        spLine.lentoQuotionEnd('\"', Integer.MAX_VALUE);
+        length = spLine.length();
+        if(length <=2){ //especially 0 if no end quotion found
+          spLine.setLengthMax();
+          length = spLine.length() - 1;  //without leading "
+        } else {
+          length -= 2;  
+        }
+      } else { //non quoted:
+        posArgs[++ixArg] = posArg;
+        spLine.lentoAnyChar(" \t\n\r");
+        spLine.len0end();
+        length = spLine.length();
+      }
+      posArgs[++ixArg] = posArg + length;
+      spLine.fromEnd();
+    }
+    String[] ret = new String[(ixArg+1)/2];
+    ixArg = -1;
+    for(int ixRet = 0; ixRet < ret.length; ++ixRet){
+      ret[ixRet] = line.substring(posArgs[++ixArg], posArgs[++ixArg]);
+    }
+    return ret;
+	}
+	
+	
+	
+	
 	/**Executes a command line call maybe as pipe, waiting for finishing..
 	 * The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
 	 * @param processBuilder The ProcessBuilder. There may be assigned environment variables and a current directory.
@@ -768,7 +837,7 @@ public abstract class MainCmd implements MainCmd_ifc
 	 */
 	@Override public int startCmdLine(ProcessBuilder processBuilder, String cmd)
 	{
-		String[] cmdArray = cmd.split(" ",0);  //split arguments in the array form
+		String[] cmdArray = splitArgs(cmd);  //split arguments in the array form
 		return startCmdLine(processBuilder, cmdArray);
 	
 	}
@@ -1012,12 +1081,13 @@ public abstract class MainCmd implements MainCmd_ifc
    * @param bWrittenOnDisplay true, than the writing to display is always done.
    */
   private void report(String sInfo, Exception exception, boolean bWrittenOnDisplay)
-  { if(fReport == null && !bWrittenOnDisplay)
-    { writeErrorDirectly(sInfo, exception);
-      //exception.printStackTrace(System.out);
-    }
-    else
-    { fReport.writeln("\nEXCEPTION: " + sInfo + "  " + exception.getMessage());
+  { if(fReport == null){
+      if( !bWrittenOnDisplay){
+        writeErrorDirectly(sInfo, exception);
+        //exception.printStackTrace(System.out);
+      }
+    } else { 
+      fReport.writeln("\nEXCEPTION: " + sInfo + "  " + exception.getMessage());
       exception.printStackTrace(new PrintStream(fReport, true));
       if(Report.error <= nReportLevelDisplay && !bWrittenOnDisplay)
       { //writes also an error as info on display.
