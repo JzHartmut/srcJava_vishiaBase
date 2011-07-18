@@ -60,14 +60,6 @@ import org.vishia.util.SpecialCharStrings;
 
 /*
 <pre>
-date       who        what
-2009-03-16 Hartmut new: scanStart() returns this, not void. Useable in concatenation.
-2007-05-08 JcHartmut  change: seekAnyChar(String,int[]) renamed to {@link seekAnyString(String,int[])} because it was an erroneous identifier. 
-2007-05-08 JcHartmut  new: {@link lastIndexOfAnyChar(String,int,int)}
-                      new: {@link lentoAnyChar(String, int, int)}
-                      rem: it should programmed consequently for all indexOf and lento methods.
-2007-04-00 JcHartmut  some changes, not noted.
-2005-06-00 JcHartmut  initial revision
 
 *
 </pre>
@@ -77,6 +69,24 @@ date       who        what
 
 public class StringPart
 {
+
+  /**Version of this class.
+   * <br>
+   * commit history:
+   * <ul>
+   * <li>1011-07-18 Hartmut bugfix: some checks of length in {@link #scanFloatNumber()}. If the String contains only the number digits,
+   *                an IndexOutOfBounds-exception was thrown because the end of the String was reached. 
+   * <li>2009-03-16 Hartmut new: scanStart() returns this, not void. Useable in concatenation.
+   * <li>2007-05-08 JcHartmut  change: seekAnyChar(String,int[]) renamed to {@link seekAnyString(String,int[])} because it was an erroneous identifier. 
+   * <li>2007-05-08 JcHartmut  new: {@link lastIndexOfAnyChar(String,int,int)}
+   * <li>2007-05-08 JcHartmut  new: {@link lentoAnyChar(String, int, int)}
+   *                           it should programmed consequently for all indexOf and lento methods.
+   * <li>2007-04-00 JcHartmut  some changes, not noted.
+   * <li>2005-06-00 JcHartmut  initial revision The idea of such functionality was created in th 1990th in C++ language.
+   * </ul>
+   */
+  public static final int version = 0x20110718; 
+  
   /** The actual start position of the valid part.*/
   protected int start;
   /** The actual exclusive end position of the valid part.*/
@@ -259,6 +269,7 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   { this.content = content;
     startMin = startLast = start = 0;
     endMax = end = endLast = content.length();
+    bStartScan = bCurrentOk = true;
     return this;
   }
 
@@ -1939,7 +1950,7 @@ that is a liststring and his part The associated String
       else
       { nInteger = scanDigits(false, Integer.MAX_VALUE);
         if(bCurrentOk)
-        { if(content.charAt(start) == '.')
+        { if(start < endMax && content.charAt(start) == '.')
           { bFractionalFollowed = true;
           }
         }
@@ -1947,7 +1958,7 @@ that is a liststring and his part The associated String
       
       if(bCurrentOk && bFractionalFollowed)
       { seek(1); //over .
-        while(getCurrentChar() == '0')
+        while(start < endMax && getCurrentChar() == '0')
         { seek(1); nDivisorFract *=10;
         }
         //int posFrac = start;
@@ -1964,7 +1975,7 @@ that is a liststring and his part The associated String
       
       if(bCurrentOk)
       { int nPosExponent = start;
-        if( (cc = content.charAt(start)) == 'e' || cc == 'E')
+        if( nPosExponent < endMax && (cc = content.charAt(start)) == 'e' || cc == 'E')
         { seek(1);
           if( (cc = content.charAt(start)) == '-')
           { bNegativExponent = true;
