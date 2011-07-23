@@ -32,5 +32,5 @@ export SRCPATH_JAVAC=".."
 
 ## Call java-compilation and jar within zbnfjax with given input environment:
 #zbnfjax javacjar
-javacjar.sh
+./javacjar.sh
 
