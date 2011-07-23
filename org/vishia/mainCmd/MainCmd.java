@@ -124,7 +124,7 @@ public abstract class MainCmd implements MainCmd_ifc
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
-   * <li>2011-07-10 The method {@link #executeCmdLine(ProcessBuilder, String, String, int, Appendable, Appendable)}
+   * <li>2011-07-10 JcHartmut bugfix: The method {@link #executeCmdLine(ProcessBuilder, String, String, int, Appendable, Appendable)}
    *   has produced a problem because 2 spaces are given in the args instead of one. There was an empty argument therefore,
    *   which has had a negative effect to a called command (it was "bzr add", an empty argument forces addition of all files
    *   though the next arguments had contain some named files). The problem is solved with using a more complex algorithm

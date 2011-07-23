@@ -520,8 +520,9 @@ public class ZmakeGenerator
 		}
 		else if(part.equals("localPathName")){ return file.path + file.file; }
 		else if(part.equals("localFile")){ return file.path + file.file + file.ext; }
-		else if(part.equals("localPath")){ return file.path; }
-		else if(part.equals("name")){ return file.file; }
+		else if(part.equals("localDir")){ return file.path; }
+		else if(part.equals("localPath")){ return file.path; }  //deprecated
+  else if(part.equals("name")){ return file.file; }
 		else if(part.equals("nameExt")){ return file.file + file.ext; }
 		else if(part.equals("ext")){ return file.ext; }
 		else return("...ERROR Zmake: fault-pathRequest(" + part + ")...");
