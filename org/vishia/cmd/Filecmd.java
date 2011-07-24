@@ -2,7 +2,9 @@ package org.vishia.cmd;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,7 +33,12 @@ public class Filecmd
    */
   static public class Cargs
   {
-    public String sCmd;
+    public String sLine;
+    
+    public boolean bExecute;
+    
+    /**This file is written as output, one line for each file. */
+    public String sFileOut;
     
     public String sFileMask;
     
@@ -73,6 +80,9 @@ public class Filecmd
   ProcessBuilder processBuilder;
   
   
+  Writer out;
+  
+  
   void execute()
   {
     boolean ok = true;
@@ -81,11 +91,18 @@ public class Filecmd
       mainCmd.writeError("Filecmd- file not found in path; " + cargs.sFileMask);
       ok = false;
     }
-    if(ok){
-      for(File file: files){
-        if(cargs.sCmd !=null){ executeCmd(file); }
+    if(ok && cargs.sFileOut !=null){
+      try{ out = new FileWriter(cargs.sFileOut); }
+      catch(IOException exc){ mainCmd.writeError("Filecmd- can't open outfile; " + cargs.sFileOut, exc); 
+        ok = false; 
       }
     }
+    if(ok){
+      for(File file: files){
+        if(cargs.sLine !=null){ executeCmd(file); }
+      }
+    }
+    if(out !=null){ try{ out.close(); } catch(IOException exc){} }
   }
   
   
@@ -93,7 +110,7 @@ public class Filecmd
   void prepareListCmdReplace()
   {
     listCmdReplace = new LinkedList<CmdReplace>();
-    StringBuilder sCmd2 = new StringBuilder(cargs.sCmd);
+    StringBuilder sCmd2 = new StringBuilder(cargs.sLine);
     int posSep;
     while( (posSep = sCmd2.indexOf("<:"))>=0){
       String s3 = sCmd2.substring(posSep);
@@ -124,9 +141,6 @@ public class Filecmd
   {
     if(listCmdReplace ==null){ 
       prepareListCmdReplace(); 
-    }
-    if(processBuilder == null){
-      processBuilder = new ProcessBuilder();
     }
     StringBuilder sCmd2 = new StringBuilder(sCmd);
     
@@ -159,9 +173,24 @@ public class Filecmd
         sCmd2.insert(repl.pos, sDirAbs);
       }
     }
-    StringBuilder output = new StringBuilder();
-    StringBuilder error = new StringBuilder();
-    mainCmd.executeCmdLine(processBuilder, sCmd2.toString(), null,0, output, error);
+    if(cargs.bExecute){
+      if(processBuilder == null){
+        processBuilder = new ProcessBuilder();
+      }
+      StringBuilder output = new StringBuilder();
+      StringBuilder error = new StringBuilder();
+      mainCmd.executeCmdLine(processBuilder, sCmd2.toString(), null,0, output, error);
+      if(out == null){
+        try{ 
+          out.append(output).append("\n"); 
+          out.append(error).append("\n"); 
+        }
+        catch(IOException exc){ mainCmd.writeError("write error", exc); }
+      }
+    } else if(out !=null){
+      try{ out.append(sCmd2).append("\n"); }
+      catch(IOException exc){ mainCmd.writeError("write error", exc); }
+    }
   }
   
   
@@ -209,10 +238,13 @@ public class Filecmd
 
     @Override protected boolean testArgument(String argc, int nArg) throws ParseException
     { boolean ok = true;
-      if(argc.startsWith("cmd=")){ cargs.sCmd = argc.substring(4); }
-      else if(argc.startsWith("files=")){ cargs.sFileMask = argc.substring(6); }
-      else if(argc.startsWith("execjava=")){ cargs.sExecCmdClass = argc.substring(9); }
-      else if(argc.startsWith("outjava=")){ cargs.sExecFilterOutputClass = argc.substring(8); }
+      if(argc.startsWith("cmd:")){ cargs.sLine = argc.substring(4); cargs.bExecute = true; }
+      else if(argc.startsWith("line:")){ cargs.sLine = argc.substring(5); }
+      else if(argc.startsWith("out:")){ cargs.sFileOut = argc.substring(4); }
+      else if(argc.startsWith("files:")){ cargs.sFileMask = argc.substring(6); }
+      else if(argc.startsWith("execjava:")){ cargs.sExecCmdClass = argc.substring(9); }
+      else if(argc.startsWith("outjava:")){ cargs.sExecFilterOutputClass = argc.substring(8); }
+      else { ok = false; }
       return ok;
     }
     
