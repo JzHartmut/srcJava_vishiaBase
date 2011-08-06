@@ -158,10 +158,10 @@ public abstract class MainCmd implements MainCmd_ifc
   public int nLevelDisplayToReport = Report.info;
 
   /** List of strings contents help Info in form of lines. The list should be filled with method addHelpInfo(String);*/
-  protected List<String> listHelpInfo = new LinkedList<String>();
+  public List<String> listHelpInfo = new LinkedList<String>();
 
   /** List of strings contents about Info in form of lines. The list should be filled with method addHelpInfo(String);*/
-  protected List<String> listAboutInfo = new LinkedList<String>();
+  public List<String> listAboutInfo = new LinkedList<String>();
 
   /** The maximum of the value given with setExitErrorLevel */
   private int nMaxErrorLevel = MainCmd_ifc.exitSuccessfull;
@@ -946,14 +946,14 @@ public abstract class MainCmd implements MainCmd_ifc
 
   /** Some bits to mark the kind of output*/
   protected static final short kInfo_writeInfoDirectly     = (short)0x1;
-  protected static final short kInfoln_writeInfoDirectly   = (short)0x3;
+  public static final short kInfoln_writeInfoDirectly   = (short)0x3;
   protected static final short kWarning_writeInfoDirectly  = (short)0x6;
   protected static final short kError_writeInfoDirectly    = (short)0xa;
 
   /** If this bit is setted in param kind of writeDirectly
    * a newline should be inserted at begin of output
    */
-  protected static final short mNewln_writeInfoDirectly   = (short)0x2;
+  public static final short mNewln_writeInfoDirectly   = (short)0x2;
 
   /** If this bit is setted in param kind of writeDirectly
    * a warning is to be outputted
@@ -972,7 +972,7 @@ public abstract class MainCmd implements MainCmd_ifc
      @param sInfo The String to write
      @param kind Ones of the kWriteOut__
    */
-  protected void writeDirectly(String sInfo, short kind)  //##a
+  public void writeDirectly(String sInfo, short kind)  //##a
   {
     if((kind & mWarning_writeInfoDirectly) != 0)
     {
@@ -1005,7 +1005,7 @@ public abstract class MainCmd implements MainCmd_ifc
       @param sInfo Text to write in the new line after "EXCEPTION: ".
       @param exception Its getMessage will be written.
   */
-  protected void writeErrorDirectly(String sInfo, Exception exception)
+  public void writeErrorDirectly(String sInfo, Exception exception)
   {
     System.err.println("");
     System.err.println( "EXCEPTION: " + sInfo); // + exception.getMessage());

@@ -180,6 +180,9 @@ public interface Report
   */
   public void writeError(String sError, Exception exception);
 
+  
+  void writeStackTrace(Exception exc);
+  
 
   public void openReportfile(String sFileReport, boolean bAppendReport) 
   throws FileNotFoundException;

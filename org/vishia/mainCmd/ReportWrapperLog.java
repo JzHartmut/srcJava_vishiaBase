@@ -140,4 +140,11 @@ public class ReportWrapperLog implements Report
     // TODO Auto-generated method stub
     
   }
+
+  @Override
+  public void writeStackTrace(Exception exc)
+  {
+    // TODO Auto-generated method stub
+    
+  }
 }
