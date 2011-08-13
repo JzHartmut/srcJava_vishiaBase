@@ -11,12 +11,25 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.Report;
+import org.vishia.util.FileSystem;
 import org.vishia.zmake.ZmakeGenScript.Zbnf_genContent;
 import org.vishia.zmake.ZmakeUserScript.UserFilepath;
 
 /**This class generates the output make file. */
 public class ZmakeGenerator
 {
+
+  /**Changes
+   * <ul>
+   * <li>2011-08-13: Gen_Content#genContentForInputset(...) now regards < ?expandFiles>.
+   *   If this tag is found in a < :forInput>...< .forInput> content generation prescript,
+   *   then wildcards in the file name are expanded to the execution of the content prescript
+   *   for all files which are found matching to the wildcard filename. The {@link FileSystem#addFilesWithBasePath(String, List)}
+   *   is used to evaluate the files. The user scripts can be more shorten now if all files in a directory
+   *   should be taken.
+   * </ul>
+   */
+  public final static int version = 0x20110813;
 
 	final Writer outAnt;
 	
@@ -205,8 +218,40 @@ public class ZmakeGenerator
       	Gen_Content contentData = new Gen_Content(this);	
       	Map<String,ZmakeUserScript.UserFilepath> forElementsNested = new TreeMap<String,ZmakeUserScript.UserFilepath>();
 				//if(forElements !=null){ forElementsNested.putAll(forElements); }
-				forElementsNested.put("input", file);
-				contentData.gen_ContentWithScript(uBuffer, null, userTarget, genScript, forElementsNested, srcPath, null);
+				if(file.someFiles && genScript.expandFiles){ //input contains wildcards, it should be expanded:
+				  List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
+				  final String basePath = getPartsFromFilepath(file, null, "absBasePath").toString();
+				  final String filePath = getPartsFromFilepath(file, null, "file").toString();
+          final String sPathSearch = basePath + ":" + filePath;
+				  FileSystem.addFilesWithBasePath(sPathSearch, listFiles);
+          for(FileSystem.FileAndBasePath file1: listFiles){
+            ZmakeUserScript.UserFilepath file2 = new ZmakeUserScript.UserFilepath();
+            if(file1.basePath !=null ){
+              int posEnd = file1.basePath.length() -1;  //last char is path separator, file2.pathbase without separator!
+              if(file.absPath){
+                file2.pathbase = file1.basePath.substring(0, posEnd);
+              } else {
+                //The file1.basePath contains the currDir, remove it.
+                file2.pathbase = file1.basePath.substring(sCurrDir.length(), posEnd);
+              }
+            }
+            int posName = file1.localPath.lastIndexOf('/') +1;  //if not found, set to 0
+            int posExt = file1.localPath.lastIndexOf('.');
+            final String sPath = file1.localPath.substring(0, posName);  //"" if only name
+            final String sName;
+            final String sExt;
+            if(posExt < 0){ sExt = ""; sName = file1.localPath.substring(posName); }
+            else { sExt = file1.localPath.substring(posExt); sName = file1.localPath.substring(posName, posExt); }
+            file2.path = sPath;
+            file2.file = sName;
+            file2.ext = sExt;
+            forElementsNested.put("input", file2);  //named input
+            contentData.gen_ContentWithScript(uBuffer, null, userTarget, genScript, forElementsNested, srcPath, null);
+          }
+				} else {
+      	  forElementsNested.put("input", file);
+          contentData.gen_ContentWithScript(uBuffer, null, userTarget, genScript, forElementsNested, srcPath, null);
+				}
 			}
 			
 		}
@@ -476,11 +521,11 @@ public class ZmakeGenerator
 			StringBuilder uRet = new StringBuilder();
 			if(generalPath !=null){
 				if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
-				if(generalPath.pathbase !=null){ uRet.append(generalPath.pathbase).append('/'); }
+				if(generalPath.pathbase !=null && file.pathbase.length() >0){ uRet.append(generalPath.pathbase).append('/'); }
 				uRet.append(generalPath.path);  //ends with /
 			} else {
 				if(file.drive !=null){ uRet.append(file.drive); }
-				if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
+				if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
 			}
 			uRet.append(file.path);
 			uRet.append(file.file);
@@ -496,12 +541,12 @@ public class ZmakeGenerator
 				if(!generalPath.absPath){ 
 					uRet.append(sCurrDir); 
 				}
-				if(generalPath.pathbase !=null){ uRet.append(generalPath.pathbase).append('/'); }
+				if(generalPath.pathbase !=null && file.pathbase.length() >0){ uRet.append(generalPath.pathbase).append('/'); }
 				uRet.append(generalPath.path);  //ends with /
 			} else {
 				if(file.drive !=null){ uRet.append(file.drive); }
 				if(!file.absPath){ uRet.append(sCurrDir); }
-				if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
+				if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
 			}
 			uRet.append(file.path);
 			uRet.append(file.file);
@@ -514,7 +559,7 @@ public class ZmakeGenerator
 			StringBuilder uRet = new StringBuilder();
 			if(file.drive !=null){ uRet.append(file.drive); }
 			if(!file.absPath){ uRet.append(sCurrDir); }
-			if(file.pathbase !=null){ uRet.append(file.pathbase).append('/'); }
+			if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
 			uRet.append(file.path);
 			return uRet;
 		}
@@ -522,9 +567,22 @@ public class ZmakeGenerator
 		else if(part.equals("localFile")){ return file.path + file.file + file.ext; }
 		else if(part.equals("localDir")){ return file.path; }
 		else if(part.equals("localPath")){ return file.path; }  //deprecated
-  else if(part.equals("name")){ return file.file; }
+    else if(part.equals("name")){ return file.file; }
 		else if(part.equals("nameExt")){ return file.file + file.ext; }
-		else if(part.equals("ext")){ return file.ext; }
+    else if(part.equals("ext")){ return file.ext; }
+    else if(part.equals("basePath")){
+      StringBuilder uRet = new StringBuilder();
+      if(file.drive !=null){ uRet.append(file.drive).append(':'); }
+      if(file.pathbase !=null){ uRet.append(file.pathbase); }
+      return uRet;
+    }
+    else if(part.equals("absBasePath")){ 
+      StringBuilder uRet = new StringBuilder();
+      if(file.drive !=null){ uRet.append(file.drive); }
+      if(!file.absPath){ uRet.append(sCurrDir); }
+      if(file.pathbase !=null){ uRet.append(file.pathbase); }
+      return uRet;
+    }
 		else return("...ERROR Zmake: fault-pathRequest(" + part + ")...");
 	}
 	

@@ -22,11 +22,13 @@ import org.vishia.zbnf.ZbnfXmlOutput;
 public class Zmake
 {
 
-	/**
-	 * 2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
-	 * 
+	/**Changes
+	 * <ul>
+	 * <li>2011-08-13: {@link ZmakeGenerator} regards < ?expandFiles>, see there.
+	 * <li>2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
+	 * </ul>
 	 */
-	public final static int version = 0x20110307;
+	public final static int version = 0x20110813;
 	
 	
 	private static class CallingArgs

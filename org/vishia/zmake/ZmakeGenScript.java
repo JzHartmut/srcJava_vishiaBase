@@ -166,6 +166,9 @@ genContent::=  ##<$NoWhiteSpaces>
 		final boolean isContentForInput;
 		
 		public String name;
+		
+		/**Set from ZBNF: */
+    public boolean expandFiles;
 
 		List<Zbnf_ScriptElement> content = new LinkedList<Zbnf_ScriptElement>();
 		

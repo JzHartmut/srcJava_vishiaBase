@@ -40,8 +40,13 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
 		
 		/**Localpath after ':' or the whole path. */
 		public String path = "";
+		
+		/**From Zbnf: The filename without extension. */
 		public String file = "";
-		public String ext = "";
+		
+		
+		/**From Zbnf: The extension inclusive the leading dot. */
+    public String ext = "";
 		
 		boolean allTree, someFiles, wildcardExt;
 		public void set_someFiles(){ someFiles = true; }
