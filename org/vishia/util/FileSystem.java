@@ -57,9 +57,19 @@ public class FileSystem
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
+   * <li>2011-08-13 Hartmut chg: {@link #addFilesWithBasePath(String, List)} now stores the localPath 
+   *     with '/' instead backslash on windows too. Strategy: Use slash generally in Java-applications.
+   *     Only a java.lang.File instance can contain backslash, because it is gotten from basic file routines
+   *     such as File.listFiles() called in addFileToList(..). TODO use File.list() instead File.listFiles()
+   *     and build the File-instance after replace('/', '\\'). The advantage of only have slash: The user
+   *     should not be search to both backslash and slash while evaluating a file path. 
+   *     In Java a path with slash works proper any time. 
+   *     Only if a line for execution of the windows operation systems command shell is generated,
+   *     all slash have to be converted to backslash lastly. See change 2011-06-22 of this file:
+   *     {@link #getCanonicalPath(File)} returns slash in operation system MS-Windows too.   
    * <li>2011-07-10 Hartmut new: {@link #absolutePath(String, File)}. The requirement was: 
    *   Usage of "~/path" to select in the users home in linux.
-   * <li>2011-06-22 {@link #getCanonicalPath(File)} returns slash in windows too.
+   * <li>2011-06-22 {@link #getCanonicalPath(File)} returns slash in operation system MS-Windows too.
    * <li>2011-07-10 Hartmut
    * <li>2007 Hartmut: created
    * </ul>
@@ -120,10 +130,10 @@ public class FileSystem
     { final String localPath; 
       String absPath = file.getAbsolutePath();
       if(posLocalPath >0)
-      { localPath = absPath.substring(posLocalPath);
+      { localPath = absPath.substring(posLocalPath).replace('\\', '/');
       }
       else
-      { localPath = absPath;
+      { localPath = absPath.replace('\\', '/');
       }
       FileAndBasePath entry = new FileAndBasePath(file, sPathBase, localPath); //sPathBase ist from constructor
       list.add(entry);
