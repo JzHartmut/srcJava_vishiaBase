@@ -93,7 +93,8 @@ public interface MainCmd_ifc extends Report
 	 * @param input Any pipe-input. It may be null.
 	 * @param nReportLevel The report level which is used for output. 
 	 *        If it is 0, then the output isn't written TODO
-	 * @param output The output pipe.
+	 * @param output The output pipe. If it is null, the the outputs were not be captured while the process is running.
+	 *        The output of the process can be read after finishing this routine calling processBuilder.getOutputStream()
 	 * @param error The error pipe. If it is null, then errors are written in the output pipe.
 	 * @return
 	 */

@@ -101,7 +101,8 @@ public class Filecmd
   
   void executeCmd(File file)
   { cmd.cmd = cargs.sLine;
-    String sCmd2 = cmd.prepareCmd(file);
+    File1Arg arg = new File1Arg(file);
+    String sCmd2 = cmd.prepareCmd(arg);
     if(cargs.bExecute){
       if(processBuilder == null){
         processBuilder = new ProcessBuilder();
@@ -179,6 +180,16 @@ public class Filecmd
     
   }
   
+  private static class File1Arg implements CmdGetFileArgs_ifc
+  { final File file;
+    public File1Arg(File file){ this.file = file; }
+    @Override public File getFile1() { return file; }
+    @Override public File getFile2() { return file; }
+    @Override public File getFile3() { return file; }
+    @Override public File getFileSelect() { return file; }
+    @Override public void  prepareFileSelection(){}
+    
+  };
   
   
   public static void main(String[] args)
