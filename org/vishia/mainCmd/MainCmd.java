@@ -39,6 +39,7 @@ import org.vishia.util.FileSystem;
 import org.vishia.util.StringPart;
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
+import org.vishia.cmd.CmdExecuter;
 import org.vishia.msgDispatch.LogMessage;
 /**
 <h1>class MainCmd - Description</h1>
@@ -579,7 +580,7 @@ public abstract class MainCmd implements MainCmd_ifc
   */
   public int executeCmdLine(String cmd, int nReportLevel, Appendable output, String input)
   {
-    String[] cmdArray = splitArgs(cmd);
+    String[] cmdArray = CmdExecuter.splitArgs(cmd);
     return executeCmdLine(cmdArray, nReportLevel, output, input);
   }
 
@@ -652,7 +653,7 @@ public abstract class MainCmd implements MainCmd_ifc
 	, Appendable output, String input
 	)
 	{
-		String[] cmdArray = splitArgs(cmd);  //split arguments in the array form
+		String[] cmdArray = CmdExecuter.splitArgs(cmd);  //split arguments in the array form
 		return executeCmdLine(cmdArray, processBuilder, nReportLevel, output, input);
 	
 	}
@@ -699,63 +700,13 @@ public abstract class MainCmd implements MainCmd_ifc
 	    , Appendable output
 	    , Appendable error
 	){
-	  String[] cmdArray = splitArgs(cmd);  //split arguments in the array form
+	  String[] cmdArray = CmdExecuter.splitArgs(cmd);  //split arguments in the array form
 	  
 	  return executeCmdLine(processBuilder, cmdArray, input, nReportLevel, output, error);
 
 	}
 
 
-	
-	/**Splits command line arguments.
-	 * The arguments can be separated with one or more as one spaces (typical for command lines)
-	 * or with white spaces. If commands are quoted with "" it are taken as one unit.
-	 * The line can be a text with more as one line, for example one line per argument.
-	 * If a "##" is contained, the text until the end of line is ignored.
-	 * @param line The line or more as one line with arguments
-	 * @return All arguments written in one String per element.
-	 */
-	public static String[] splitArgs(String line)
-	{
-	  StringPart spLine = new StringPart(line);
-	  spLine.setIgnoreWhitespaces(true);
-	  spLine.setIgnoreEndlineComment("##");
-	  int ixArg = -1;
-	  int[] posArgs = new int[1000];  //only local, enought size
-	  int posArg = 0;
-	  while(spLine.length() >0){
-      spLine.seekNoWhitespaceOrComments();
-      posArg = (int)spLine.getCurrentPosition();
-      int length;
-      if(spLine.length() >0 && spLine.getCurrentChar()=='\"'){
-        posArgs[++ixArg] = posArg+1;
-        spLine.lentoQuotionEnd('\"', Integer.MAX_VALUE);
-        length = spLine.length();
-        if(length <=2){ //especially 0 if no end quotion found
-          spLine.setLengthMax();
-          length = spLine.length() - 1;  //without leading "
-        } else {
-          length -= 2;  
-        }
-      } else { //non quoted:
-        posArgs[++ixArg] = posArg;
-        spLine.lentoAnyChar(" \t\n\r");
-        spLine.len0end();
-        length = spLine.length();
-      }
-      posArgs[++ixArg] = posArg + length;
-      spLine.fromEnd();
-    }
-    String[] ret = new String[(ixArg+1)/2];
-    ixArg = -1;
-    for(int ixRet = 0; ixRet < ret.length; ++ixRet){
-      ret[ixRet] = line.substring(posArgs[++ixArg], posArgs[++ixArg]);
-    }
-    return ret;
-	}
-	
-	
-	
 	
 	/**Executes a command line call maybe as pipe, waiting for finishing..
 	 * The output is written with a separate thread, using the internal (private) class ShowCmdOutput.
@@ -837,7 +788,7 @@ public abstract class MainCmd implements MainCmd_ifc
 	 */
 	@Override public int startCmdLine(ProcessBuilder processBuilder, String cmd)
 	{
-		String[] cmdArray = splitArgs(cmd);  //split arguments in the array form
+		String[] cmdArray = CmdExecuter.splitArgs(cmd);  //split arguments in the array form
 		return startCmdLine(processBuilder, cmdArray);
 	
 	}
