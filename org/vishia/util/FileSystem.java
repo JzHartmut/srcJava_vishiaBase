@@ -45,6 +45,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.FileFilter;
+import java.util.LinkedList;
 import java.util.List;
 
 /**This class supports some functions of file system access above the class java.io.File
@@ -747,6 +748,25 @@ public class FileSystem
   }
 
 
+  /**This is equal the usual grep, but with given files.
+   * @param files
+   * @param what
+   * @return
+   */
+  public static String[] searchInFiles(File[] files, String what)
+  {
+    List<String> listResult = new LinkedList<String>();
+    for(File file: files){
+      try{
+        BufferedReader r1 = new BufferedReader(new FileReader(file));
+        String sLine;
+        while( (sLine = r1.readLine()) !=null){
+        }
+      }catch(IOException exc){ listResult.add("File error; " + file.getAbsolutePath()); }
+    }
+    String[] ret = new String[1];
+    return ret;
+  }
 
 
 

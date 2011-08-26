@@ -1,7 +1,11 @@
 package org.vishia.util;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Reader;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,12 +36,13 @@ public class FileCompare
   
   long minDiffTimestamp = 2000; 
   
+  final String[] sIgnores;
   
   
-  
-  public FileCompare(int mode, long minDiffTimestamp)
+  public FileCompare(int mode, String[] ignores, long minDiffTimestamp)
   {
     this.mode = mode;
+    this.sIgnores = ignores;
     this.minDiffTimestamp = minDiffTimestamp;
   }
 
@@ -57,6 +62,8 @@ public class FileCompare
     public final List<Result> subFiles;
     public boolean alone;
     public boolean equal;
+    public boolean lenEqual;
+    public boolean readProblems;
     
     public boolean equalDaylightSaved;
     public boolean contentEqual;
@@ -91,16 +98,35 @@ public class FileCompare
   {
     File[] files1 = dir1.listFiles();
     File[] files2 = dir2.listFiles();
-    //fill all files sorted by name in the idx:
+    //fill all files sorted by name in the index, to get it by name:
     Map<String, File> idxFiles1 = new TreeMap<String, File>();
     Map<String, File> idxFiles2 = new TreeMap<String, File>();
     for(File file: files1){ 
-      String name = file.isDirectory() ? ":" + file.getName() : file.getName();
-      idxFiles1.put(name, file); 
+      String name = file.getName();
+      int ixIgnore = -1;
+      //don't fill in ignored files.
+      while(++ixIgnore < sIgnores.length ){
+        if(name.equals(sIgnores[ixIgnore])){ 
+          ixIgnore = Integer.MAX_VALUE -1;  //its a break;
+        }
+      }
+      if(ixIgnore == sIgnores.length){ //all ignores checked  
+        String name4cmp = file.isDirectory() ? ":" + name : name;
+        idxFiles1.put(name4cmp, file);
+      }
     }
     for(File file: files2){ 
-      String name = file.isDirectory() ? ":" + file.getName() : file.getName();
-      idxFiles2.put(name, file); 
+      String name = file.getName();
+      int ixIgnore = -1;
+      while(++ixIgnore < sIgnores.length ){
+        if(name.equals(sIgnores[ixIgnore])){ 
+          ixIgnore = Integer.MAX_VALUE -1;  //its a break;
+        }
+      }
+      if(ixIgnore == sIgnores.length){ //all ignores checked  
+        String name4cmp = file.isDirectory() ? ":" + name : name;
+        idxFiles2.put(name4cmp, file);
+      }
     }
     //
     //iterate over files
@@ -166,32 +192,67 @@ public class FileCompare
   
   
   /**Compare two files.
-   * @param file1
-   * @param file2
+   * @param file
    */
   void compareFile(Result file)
   {
-    if(mode == onlyTimestamp){
-      long date1 = file.file1.lastModified();
-      long date2 = file.file2.lastModified();
-      if(Math.abs(date1 - date2) < minDiffTimestamp){
-        file.equal = true;
-      } else if( Math.abs(date1 - date2 + 3600000) < minDiffTimestamp
-              || Math.abs(date1 - date2 - 3600000) < minDiffTimestamp){ 
-        file.equalDaylightSaved = true;
-      }  
+    long date1 = file.file1.lastModified();
+    long date2 = file.file2.lastModified();
+    if(Math.abs(date1 - date2) < minDiffTimestamp && mode == onlyTimestamp){
+      file.equal = true;
+    } else if( ( Math.abs(date1 - date2 + 3600000) < minDiffTimestamp
+              || Math.abs(date1 - date2 - 3600000) < minDiffTimestamp
+               ) && mode == onlyTimestamp){ 
+      file.equalDaylightSaved = true;
+    } else {
+      long len1 = file.file1.length();
+      long len2 = file.file1.length();
+      if(len1 == len2){
+        file.lenEqual = true;
+      }
+      //Files are different in timestamp or timestamp is insufficient for comparison:
+      file.contentEqual = compareFileContent(file);
     }
   }
-  
+  /**Compare two files.
+   * @param file
+   */
+  boolean compareFileContent(Result result)
+  {
+    boolean bEqu = true;
+    try {
+      BufferedReader r1 = new BufferedReader(new FileReader(result.file1));
+      BufferedReader r2 = new BufferedReader(new FileReader(result.file1));
+      String s1, s2;
+      while( bEqu && (s1 = r1.readLine()) !=null){
+        s2 = r2.readLine();
+        if(s2 ==null || !s1.equals(s2)){
+          //check trimmed etc.
+          bEqu = false;
+        }
+      }
+    } catch( IOException exc){
+      result.readProblems = true; bEqu = false;
+    }
+    return bEqu;
+  }  
   
   
   void reportResult(PrintStream out, List<Result> list)
   {
     boolean bWriteDir = false;
     for(Result entry: list){
-      if(entry.contentEqual){
+      if(entry.equal){
+        out.append("    ====     ; ").append(entry.name).append("\n");
         
-      } else if(entry.alone && entry.file1 !=null){
+      } else if(entry.contentEqual){
+        out.append("     ==      ; ").append(entry.name).append("\n");
+        
+      } else if(entry.lenEqual){
+        out.append("    =?=      ; ").append(entry.name).append("\n");
+           
+      }
+        else if(entry.alone && entry.file1 !=null){
         out.append("left         ; ").append(entry.name).append("\n");
       } else if(entry.alone && entry.file2 !=null){
         out.append("       right ; ").append(entry.name).append("\n");
@@ -222,7 +283,8 @@ public class FileCompare
     List<FileCompare.Result> list = new LinkedList<FileCompare.Result>();
     File dir1 = new File(args[0]);
     File dir2 = new File(args[1]);
-    FileCompare main = new FileCompare(FileCompare.onlyTimestamp, 2000);
+    String[] ignores = new String[]{".bzr"};
+    FileCompare main = new FileCompare(FileCompare.onlyTimestamp, ignores, 2000);
     main.compare(list, dir1, dir2, null);
     main.reportResult(System.out, list);
   }
