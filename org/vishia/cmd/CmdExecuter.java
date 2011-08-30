@@ -45,6 +45,8 @@ public class CmdExecuter
    *        Any argument have to be given with one element of this String array.
    * @param input The input stream of the command. TODO not used yet.
    * @param output Will be filled with the output of the command.
+   *        If output ==null then no output is expected and the end of command execution is not await.
+   *        But in this case error should not be ==null because errors of command invocation are written there.
    * @param error Will be filled with the error output of the command. 
    *        Maybe null, then the error output will be written to output 
    */
@@ -59,19 +61,20 @@ public class CmdExecuter
     try
     {
       Process process = processBuilder.start();
-      process.waitFor();
-      BufferedReader out1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
-      BufferedReader err1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
-      String sLine;
-      while( (sLine= out1.readLine()) !=null){
-        output.append(sLine).append('\n');
+      if(output !=null){
+        process.waitFor();
+        BufferedReader out1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        BufferedReader err1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String sLine;
+        while( (sLine= out1.readLine()) !=null){
+          output.append(sLine).append('\n');
+        }
+        while( (sLine= err1.readLine()) !=null){
+          error.append(sLine).append('\n');
+        }
       }
-      while( (sLine= err1.readLine()) !=null){
-        error.append(sLine).append('\n');
-      }
-      
     } catch(Exception exception)
-    { try{ output.append( "Problem: ").append(exception.getMessage());}
+    { try{ error.append( "Problem: ").append(exception.getMessage());}
       catch(IOException exc){ throw new RuntimeException(exc); }
     }
   }

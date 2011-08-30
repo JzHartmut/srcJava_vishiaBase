@@ -55,6 +55,8 @@ public class PrepareCmd
       if(chars >0){
         listCmdReplace.add(0,cmdReplace); 
         sCmd2.replace(posSep, posSep + chars + 3, "");
+      } else {
+        throw new IllegalArgumentException("Illegal placeholder: " + sCmd2.substring(posSep));
       }
     }
     sCmdTemplate = sCmd2.toString();
