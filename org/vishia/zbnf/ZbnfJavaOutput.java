@@ -161,7 +161,8 @@ public class ZbnfJavaOutput
 	/**Version, able to read as hex yyyymmdd.
 	 * Changes:
 	 * <ul>
-	 * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
+   * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(Component, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
+   * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
 	 * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
 	 * <li>2010-12-02 Hartmut new: Up to now this version variable, its description contains the version history.
 	 * </ul>
@@ -383,49 +384,51 @@ public class ZbnfJavaOutput
     final String semantic1 = resultItem.getSemantic();
     /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
     final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
-    if(semantic.equals("timestep"))
-      stop();
-    report.reportln(Report.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
-      
-    if(resultItem.isComponent())
-    { 
-      /**Try to save the content also if it is an component. */
-      if(resultItem.isOption() && resultItem.getParsedString() != null)
-      { searchDestinationAndWriteResult(semantic, component, resultItem);
-      }
-      
-      /**Search an instance (field or method result) which represents the semantic of the component. 
-       * That instance will be used to fill the parse result of the component.
-       */
-      ChildInstanceAndClass componentsInstance = searchComponentsDestination
-        ( semantic                //the semantic of the component.
-        , component    //instance where the field or method for the component should be found.
-        );
-      if(componentsInstance != null)
-      { /**Such an instance is found, use it to fill.
-         * That instance may also be an new element of a container
+    if(semantic.length() >0){ ///
+      if(semantic.equals("timestep"))
+        stop();
+      report.reportln(Report.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
+        
+      if(resultItem.isComponent())
+      { 
+        /**Try to save the content also if it is an component. */
+        if(resultItem.isOption() && resultItem.getParsedString() != null)
+        { searchDestinationAndWriteResult(semantic, component, resultItem);
+        }
+        
+        /**Search an instance (field or method result) which represents the semantic of the component. 
+         * That instance will be used to fill the parse result of the component.
          */
-        /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
-        int inputColumn = resultItem.getInputColumn();
-        trySetInputColumn("", new Component(component, componentsInstance.clazz, componentsInstance.instance), inputColumn);
-        /** skip into the component resultItem: */
-        Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
-        while(iterChildren.hasNext())
-        { ZbnfParseResultItem childItem = iterChildren.next();
-          writeZbnfResult(new Component(component, componentsInstance.clazz, componentsInstance.instance), childItem, recursion+1);
+        ChildInstanceAndClass componentsInstance = searchComponentsDestination
+          ( semantic                //the semantic of the component.
+          , component    //instance where the field or method for the component should be found.
+          );
+        if(componentsInstance != null)
+        { /**Such an instance is found, use it to fill.
+           * That instance may also be an new element of a container
+           */
+          /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
+          int inputColumn = resultItem.getInputColumn();
+          trySetInputColumn("", new Component(component, componentsInstance.clazz, componentsInstance.instance), inputColumn);
+          /** skip into the component resultItem: */
+          Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
+          while(iterChildren.hasNext())
+          { ZbnfParseResultItem childItem = iterChildren.next();
+            writeZbnfResult(new Component(component, componentsInstance.clazz, componentsInstance.instance), childItem, recursion+1);
+          }
+          if(componentsInstance.shouldAdd)
+          {
+            searchAddMethodAndInvoke(semantic, component, componentsInstance);
+          }
         }
-        if(componentsInstance.shouldAdd)
-        {
-          searchAddMethodAndInvoke(semantic, component, componentsInstance);
-        }
+        else
+        { 
+        }  
       }
       else
-      { 
-      }  
-    }
-    else
-    { //write the content of the resultItem into the outputInstance:
-      searchDestinationAndWriteResult(semantic, component, resultItem);
+      { //write the content of the resultItem into the outputInstance:
+        searchDestinationAndWriteResult(semantic, component, resultItem);
+      }
     }
   }
    
