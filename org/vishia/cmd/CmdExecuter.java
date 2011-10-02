@@ -1,19 +1,63 @@
 package org.vishia.cmd;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.util.StringPart;
 
 public class CmdExecuter
 {
+  /**Version and History:
+   * <ul>
+   * <li>2011-10-02 chg some experiences: It needs parallel threads to capture the output. Extra threads
+   *   for out and err, because a read() waits in the out-Buffer and blocks while an error-info is present etc.
+   *   The outputs should presented while the process runs, not only if it is finished. It is because
+   *   the user should be informed why a process blocks or waits for something etc. This fact is implemented already
+   *   in {@link org.vishia.mainCmd.MainCmd#executeCmdLine(String[], ProcessBuilder, int, Appendable, String)}.
+   * <li>TODO handling input pipe.
+   * <li>TODO non waiting process.  
+   * <li>older: TODO
+   * </ul>
+   */
+  public static final int version = 0x20111002;
+
+  
   private final ProcessBuilder processBuilder;
 
+  private Process process;
+  
+  /**True for ever so long the application should run. */
+  boolean bRunAppl;
+  
+  /**True if a process is started, false if it is finished. */
+  boolean bRunExec;
+  
+  boolean bFinishedExec;
+
+  BufferedReader out1;
+  BufferedReader err1;
+  BufferedWriter processIn;
+
+  Appendable userOutput;
+  Appendable userError;
+
+  Thread threadExecOut;
+  Thread threadExecIn;
+  Thread threadExecError;
+  
   public CmdExecuter()
   { this.processBuilder = new ProcessBuilder("");
+    threadExecOut = new Thread(inOutThread, "execOut");
+    threadExecError = new Thread(outErrorThread, "execError");
+    threadExecIn = new Thread(inputThread, "execIn");
+    threadExecOut.start();
+    threadExecError.start();
+    //threadExecIn.start();
   }
   
   public void setCurrentDir(File dir)
@@ -58,20 +102,17 @@ public class CmdExecuter
   {
     processBuilder.command(cmdArgs);
     if(error == null){ error = output; }
+    userError = error;
+    userOutput = output;
     try
     {
-      Process process = processBuilder.start();
+      process = processBuilder.start();
       if(output !=null){
+        bRunExec = true;
+        out1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        err1 = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        //processIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
         process.waitFor();
-        BufferedReader out1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        BufferedReader err1 = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String sLine;
-        while( (sLine= out1.readLine()) !=null){
-          output.append(sLine).append('\n');
-        }
-        while( (sLine= err1.readLine()) !=null){
-          error.append(sLine).append('\n');
-        }
       }
     } catch(Exception exception)
     { try{ error.append( "Problem: ").append(exception.getMessage());}
@@ -134,6 +175,95 @@ public class CmdExecuter
   }
   
   
+  void stop(){};
+  
+  
+  Runnable inOutThread = new Runnable()
+  { @Override public void run()
+    { bRunAppl = true;
+      while(bRunAppl){
+        if(bRunExec){
+          String sLine;
+          boolean bFinished = true;
+          try{
+            if( (sLine= out1.readLine()) !=null){
+              userOutput.append(sLine).append('\n');
+              bFinished = false;
+            }
+          } catch(IOException exc){
+            
+          }
+          if(bFinished){
+            bRunExec = false;
+          }
+          try { Thread.sleep(50); } catch (InterruptedException exc) { }
+          
+        } else {
+          try { Thread.sleep(100); } catch (InterruptedException exc) { }
+        }
+        
+      }
+    }
+  };
+  
+  
+
+  Runnable outErrorThread = new Runnable()
+  { @Override public void run()
+    { bRunAppl = true;
+      while(bRunAppl){
+        if(bRunExec){
+          String sLine;
+          boolean bFinished = true;
+          try{
+            if( (sLine= err1.readLine()) !=null){
+              userError.append(sLine).append('\n');
+              bFinished = false;
+            }
+          } catch(IOException exc){
+            
+          }
+          if(bFinished){
+            bRunExec = false;
+          }
+          try { Thread.sleep(50); } catch (InterruptedException exc) { }
+          
+        } else {
+          try { Thread.sleep(100); } catch (InterruptedException exc) { }
+        }
+        
+      }
+    }
+  };
+  
+  
+
+  Runnable inputThread = new Runnable()
+  { @Override public void run()
+    { bRunAppl = true;
+      while(bRunAppl){
+        if(bRunExec){
+          String sLine;
+          boolean bFinished = true;
+          try{
+            if( (processIn.append("")) !=null){
+              bFinished = false;
+            }
+          } catch(IOException exc){
+            stop();
+          }
+          if(bFinished){
+            bRunExec = false;
+          }
+          try { Thread.sleep(50); } catch (InterruptedException exc) { }
+          process.destroy();
+        } else {
+          try { Thread.sleep(100); } catch (InterruptedException exc) { }
+        }
+        
+      }
+    }
+  };
   
   
 

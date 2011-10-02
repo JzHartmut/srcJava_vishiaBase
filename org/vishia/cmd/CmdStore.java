@@ -51,7 +51,7 @@ public class CmdStore
   /**Contains all commands read from the configuration file in the read order. */
   private final Map<String, CmdBlock> idxCmd = new TreeMap<String, CmdBlock>();
 
-  private String syntaxCmd = "Cmds::={ <cmd> }\\e. "
+  private String XXXsyntaxCmd = "Cmds::={ <cmd> }\\e. "
     + "cmd::= <* :?name> : { <*\\n?cmd> \\n } ."; 
 
   

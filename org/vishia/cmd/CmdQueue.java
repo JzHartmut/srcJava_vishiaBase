@@ -17,10 +17,12 @@ public class CmdQueue
   {
     final CmdStore.CmdBlock cmdBlock;
     final File[] files;
+    File currentDir;
     
-    public PendingCmd(CmdStore.CmdBlock cmdBlock, File[] files)
+    public PendingCmd(CmdStore.CmdBlock cmdBlock, File[] files, File currentDir)
     { this.cmdBlock = cmdBlock;
       this.files = files;
+      this.currentDir = currentDir;
     }
 
     @Override public void  prepareFileSelection()
@@ -62,9 +64,9 @@ public class CmdQueue
    * @param files Some files
    * @return Number of members in queue pending for execution.
    */
-  public int addCmd(CmdBlock cmdBlock, File[] files)
+  public int addCmd(CmdBlock cmdBlock, File[] files, File currentDir)
   {
-    pendingCmds.add(new PendingCmd(cmdBlock, files));  //to execute.
+    pendingCmds.add(new PendingCmd(cmdBlock, files, currentDir));  //to execute.
     return pendingCmds.size();
   }
 
@@ -90,6 +92,9 @@ public class CmdQueue
     PendingCmd cmd1;
     while( (cmd1 = pendingCmds.poll())!=null){
       try{
+        if(cmd1.currentDir !=null){
+          executer.setCurrentDir(cmd1.currentDir);
+        }
         for(PrepareCmd cmd: cmd1.cmdBlock.listCmd){
           String sCmd = cmd.prepareCmd(cmd1);
           if(sCmd.startsWith("@")){
@@ -97,9 +102,12 @@ public class CmdQueue
           } else {
             //a operation system command:
             //executer.execWait(sCmd, null, this.cmdOutput, cmdError);
-            executer.execWait(sCmd, null, null, cmdError);
-            System.out.append(cmdOutput);
-            System.out.append(cmdError);
+            executer.execWait(sCmd, null, System.out, System.err);
+            //executer.execWait(sCmd, null, cmdOutput, cmdError);
+            //System.out.append(cmdOutput);
+            //System.out.append(cmdError);
+            cmdOutput.setLength(0);
+            cmdError.setLength(0);
           }
         }
         System.out.println(cmd1.cmdBlock.name);

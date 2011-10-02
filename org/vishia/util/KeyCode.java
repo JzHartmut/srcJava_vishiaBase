@@ -22,6 +22,15 @@ package org.vishia.util;
 public class KeyCode
 {
  
+  
+  /**The version
+   * <ul>
+   * <li>2011-09-30 improved
+   * </ul>
+   */
+  public static final int version = 0x20110930;
+  
+
   public static final int alt =           0x00a00000;
   
   public static final int ctrl =          0x0c000000;
@@ -35,6 +44,12 @@ public class KeyCode
   public static final int shiftCtrl =     0x5c000000;
   
   public static final int shiftCtrlAlt =  0x5ca00000;
+  
+  public final static int mSpecialKeys = 0x000f0000;
+  
+  public final static int mAddKeys = 0xfff00000;
+  
+  public final static int cursor = 0x000c0000;
   
   public static final int F =             0x000f0000;
   
@@ -68,16 +83,20 @@ public class KeyCode
   
   public static final int up =    0x000a0000 + 'u';
   
-  public static final int down =  0x000a0000 + 'd';
+  public static final int dn =  0x000a0000 + 'd';
   
   public static final int pgup =  0x000b0000 + 'u';
   
-  public static final int pgdown =0x000b0000 + 'd';
+  public static final int pgdn =0x000b0000 + 'd';
   
   public static final int home =  0x000b0000 + 'h';
   
   public static final int end =   0x000b0000 + 'e';
   
+  public final static int ins =   0x000c0014;
+  public final static int del =   0x000c0014;
+  public final static int enter = 0x000c0014;
+  public final static int back =  0x000c0014;
   
   
   public final int code;
