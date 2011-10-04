@@ -32,7 +32,7 @@ public class CmdExecuter
   private Process process;
   
   /**True for ever so long the application should run. */
-  boolean bRunAppl;
+  boolean bRunThreads;
   
   /**True if a process is started, false if it is finished. */
   boolean bRunExec;
@@ -55,6 +55,7 @@ public class CmdExecuter
     threadExecOut = new Thread(inOutThread, "execOut");
     threadExecError = new Thread(outErrorThread, "execError");
     threadExecIn = new Thread(inputThread, "execIn");
+    bRunThreads = true;
     threadExecOut.start();
     threadExecError.start();
     //threadExecIn.start();
@@ -180,8 +181,7 @@ public class CmdExecuter
   
   Runnable inOutThread = new Runnable()
   { @Override public void run()
-    { bRunAppl = true;
-      while(bRunAppl){
+    { while(bRunThreads){
         if(bRunExec){
           String sLine;
           boolean bFinished = true;
@@ -210,8 +210,7 @@ public class CmdExecuter
 
   Runnable outErrorThread = new Runnable()
   { @Override public void run()
-    { bRunAppl = true;
-      while(bRunAppl){
+    { while(bRunThreads){
         if(bRunExec){
           String sLine;
           boolean bFinished = true;
@@ -240,8 +239,7 @@ public class CmdExecuter
 
   Runnable inputThread = new Runnable()
   { @Override public void run()
-    { bRunAppl = true;
-      while(bRunAppl){
+    { while(bRunThreads){
         if(bRunExec){
           String sLine;
           boolean bFinished = true;
@@ -265,6 +263,18 @@ public class CmdExecuter
     }
   };
   
+  @Override public void finalize()
+  {
+    bRunThreads = false;
+  }
+  
+  
+  public final static void main(String[] args)
+  {
+    CmdExecuter main = new CmdExecuter();
+    main.execWait("cmd /C", null, null, null);
+    main.finalize();
+  }
   
 
 }
