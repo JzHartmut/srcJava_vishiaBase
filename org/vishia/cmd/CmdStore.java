@@ -92,7 +92,7 @@ public class CmdStore
           } else  if(sLine.startsWith(" ")){  //a command line
             PrepareCmd cmd = actBlock.new_cmd();
             cmd.cmd = sLine.trim();
-            cmd.prepareListCmdReplace();
+            //cmd.prepareListCmdReplace();
             actBlock.add_cmd(cmd);
           }      
         }

@@ -50,7 +50,7 @@ public class PrepareCmd
       else if(s3.startsWith("<*localFile>")){ cmdReplace.what = 'l'; chars = 9; }
       else if(s3.startsWith("<*absFile>"))  { cmdReplace.what = 'a'; chars = 8; }
       else if(s3.startsWith("<*localDir>")) { cmdReplace.what = 'L'; chars = 8; }
-      else if(s3.startsWith("<*absDir>"))   { cmdReplace.what = 'A'; chars = 7; }
+      else if(s3.startsWith("<*absDir>"))   { cmdReplace.what = 'A'; chars = 6; }
       else { cmdReplace = null; }         
       if(chars >0){
         listCmdReplace.add(0,cmdReplace); 
@@ -96,7 +96,7 @@ public class PrepareCmd
         case 'L': sCmd2.insert(repl.pos, posName ==0 ? "." : sPathCmd.substring(0, posName-1)); break;  //dir
         case 'A': 
           String sDirAbs = null;
-          try{ String sDir = file.getParentFile().getCanonicalPath();
+          try{ sDirAbs = file.getParentFile().getCanonicalPath();
           } catch(IOException exc){ sDirAbs = "?notFound?"; }
           sCmd2.insert(repl.pos, sDirAbs);
         }
