@@ -85,13 +85,13 @@ public class CmdExecuter
    * @param error Will be filled with the error output of the command. 
    *        Maybe null, then the error output will be written to output 
    */
-  public void execWait(String cmdLine
+  public int execWait(String cmdLine
   , String input
   , Appendable output
   , Appendable error
   )
   { String[] cmdArgs = splitArgs(cmdLine);
-    execWait(cmdArgs, input, output, error);
+    return execWait(cmdArgs, input, output, error);
   }
   
   
@@ -106,12 +106,12 @@ public class CmdExecuter
    * @param error Will be filled with the error output of the command. 
    *        Maybe null, then the error output will be written to output 
    */
-  public void execWait(String[] cmdArgs
+  public int execWait(String[] cmdArgs
   , String input
   , Appendable output
   , Appendable error
   )
-  {
+  { int exitCode;
     processBuilder.command(cmdArgs);
     if(error == null){ error = output; }
     //userError = error;
@@ -132,17 +132,19 @@ public class CmdExecuter
         outThread.out = output;
         synchronized(outThread){ outThread.notify(); }  //wake up to work!
         //processIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
-        process.waitFor();  //wait for finishing the process
+        exitCode = process.waitFor();  //wait for finishing the process
         synchronized(outThread){
           if(outThread.processOut !=null){ //will be set to null on end of file detection.
-            process.wait();   //wait for finishing getting output. It will be notified if end of file is detected
+            outThread.wait();   //wait for finishing getting output. It will be notified if end of file is detected
           }
         }
         synchronized(errThread){
           if(errThread.processOut !=null){ //may be null if err isn't used, will be set to null on end of file detection
-            process.wait();   //wait for finishing getting error output. It will be notified if end of file is detected 
+            errThread.wait();   //wait for finishing getting error output. It will be notified if end of file is detected 
           }
         }
+      } else {
+        exitCode = 0; //don't wait
       }
       process = null;  //no more used
     } catch(Exception exception)
@@ -152,7 +154,9 @@ public class CmdExecuter
       } else {
         throw new RuntimeException(exception);
       }
+      exitCode = -1; //Exception
     }
+    return exitCode;
   }
   
   
@@ -235,7 +239,7 @@ public class CmdExecuter
               //It means, the process is terminated now.
               processOut = null;  //Set to null because it will not be used up to now. Garbage.
               if(process !=null){
-                synchronized(process){ process.notify(); }  //notify it!  
+                synchronized(this){ notify(); }  //notify it!  
               }
             }
           } catch(IOException exc){

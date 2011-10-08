@@ -7,12 +7,21 @@ import org.vishia.cmd.CmdStore.CmdBlock;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
 
-/**This class stores some prepared commands for execution. 
- * @author hartmut
+/**This class stores some prepared commands for execution and executes it one after another.
+ * The commands can contain placeholder for files.
+ * @author hartmut Schorrig
  *
  */
 public class CmdQueue
 {
+  
+  /**Version and history
+   * <ul>2011-10-09 Hartmut new 
+   * <li>2011-07-00 created
+   * </ul>
+   */
+  public static final int version = 0x20111009;
+  
   private static class PendingCmd implements CmdGetFileArgs_ifc
   {
     final CmdStore.CmdBlock cmdBlock;
@@ -49,14 +58,39 @@ public class CmdQueue
   
   //private final ProcessBuilder processBuilder = new ProcessBuilder();
   
-  private final StringBuilder cmdOutput = new StringBuilder(4000);
+  private Appendable cmdOutput = System.out;
   
-  private final StringBuilder cmdError = new StringBuilder(1000);
+  private Appendable cmdError = System.err;
   
   public CmdQueue(MainCmd_ifc mainCmd)
   {
     this.mainCmd = mainCmd;
   }
+  
+
+  /**Sets the output and error stream destination
+   * @param userOut Destination for output of all executed commands. 
+   *   If null then any cmd invocation is done without awaiting the end of execution.
+   *   The output and error output isn't used then.
+   * @param userErr may be null, then the error is redirected to output
+   */
+  public void setOutput(Appendable userOut, Appendable userErr)
+  {
+    cmdOutput = userOut;
+    cmdError = userErr;
+  }
+  
+  public void setWorkingDir(File file)
+  { final File dir;
+    if(!file.isDirectory()){
+      dir = file.getParentFile();
+    } else {
+      dir = file;
+    }
+    //processBuilder.directory(dir);
+  }
+  
+
   
   /**Adds a command to execute later. The execution may be done in another thread.
    * The adding is thread-safe and a cheap operation. It uses a ConcurrentListQueue. 
@@ -70,18 +104,6 @@ public class CmdQueue
     return pendingCmds.size();
   }
 
-  public void setWorkingDir(File file)
-  { final File dir;
-    if(!file.isDirectory()){
-      dir = file.getParentFile();
-    } else {
-      dir = file;
-    }
-    //processBuilder.directory(dir);
-  }
-  
-
-  
   /**Execute the pending commands.
    * This method should be called in a specified user thread.
    * 
@@ -101,13 +123,9 @@ public class CmdQueue
             
           } else {
             //a operation system command:
-            //executer.execWait(sCmd, null, this.cmdOutput, cmdError);
-            executer.execWait(sCmd, null, System.out, System.err);
-            //executer.execWait(sCmd, null, cmdOutput, cmdError);
-            //System.out.append(cmdOutput);
-            //System.out.append(cmdError);
-            cmdOutput.setLength(0);
-            cmdError.setLength(0);
+            int exitCode = executer.execWait(sCmd, null, cmdOutput, cmdError);
+            if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull"); }
+            else {cmdOutput.append("JavaCmd: cmd execution errorlevel = " + exitCode); }
           }
         }
         System.out.println(cmd1.cmdBlock.name);

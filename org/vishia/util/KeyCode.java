@@ -77,26 +77,27 @@ public class KeyCode
   
   public static final int F12 = 0x000f0043;
   
-  public static final int left =  0x000a0000 + 'l';
+  public static final int left =  0x000a0000 + 'l';  //'a' means arrow, not c for cursor, c is ctrl
   
   public static final int right = 0x000a0000 + 'r';
   
   public static final int up =    0x000a0000 + 'u';
   
-  public static final int dn =  0x000a0000 + 'd';
+  public static final int dn =    0x000a0000 + 'd';
   
-  public static final int pgup =  0x000b0000 + 'u';
+  public static final int pgup =  0x000a0000 + 'U';
   
-  public static final int pgdn =0x000b0000 + 'd';
+  public static final int pgdn =  0x000a0000 + 'D';
   
-  public static final int home =  0x000b0000 + 'h';
+  public static final int home =  0x000a0000 + 'h';
   
-  public static final int end =   0x000b0000 + 'e';
+  public static final int end =   0x000a0000 + 'e';
   
-  public final static int ins =   0x000c0014;
-  public final static int del =   0x000c0014;
-  public final static int enter = 0x000c0014;
-  public final static int back =  0x000c0014;
+  public final static int ins =   0x000e0000 + 'i';
+  public final static int del =   0x000e0000 + 'd';
+  public final static int enter = 0x000e0000 + '\r';
+  public final static int back =  0x000e0000 + '\b';
+  public final static int esc =   0x000e0000 + 0x1b;
   
   
   public final int code;
