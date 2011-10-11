@@ -74,6 +74,7 @@ public class StringPart
    * <br>
    * commit history:
    * <ul>
+   * <li>2011-10-10 Hartmut new: {@link #scanFloatNumber(boolean)}. It should be possible to scan a float with clearing the buffer. Using in ZbnfParser.
    * <li>1011-07-18 Hartmut bugfix: some checks of length in {@link #scanFloatNumber()}. If the String contains only the number digits,
    *                an IndexOutOfBounds-exception was thrown because the end of the String was reached. 
    * <li>2009-03-16 Hartmut new: scanStart() returns this, not void. Useable in concatenation.
@@ -1921,13 +1922,34 @@ that is a liststring and his part The associated String
     return this;
   }
 
-  /**Scans an float expression. The result as long value is stored internally
-   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+  
+  /**Scans a float number. The result is stored internally
+   * and have to be got calling {@link #getLastScannedFloatNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown.
+   * @param cleanBuffer true then clean the float number buffer because the values are not used. 
+   * @java2c=return-this.
+   * @return this
+   * @throws ParseException if the buffer is not free to hold the float number.
+   */
+  public StringPart scanFloatNumber(boolean cleanBuffer)  throws ParseException
+  {
+    if(cleanBuffer){
+      idxLastFloatNumber = -1; 
+    }
+    scanFloatNumber();
+    return this;
+  }
+  
+  
+  
+  /**Scans a float number. The result is stored internally
+   * and have to be got calling {@link #getLastScannedFloatNumber()}.
    * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
    * an exception is thrown. 
    * @java2c=return-this.
    * @return this
-   * @throws ParseException if the buffer is not free to hold an integer number.
+   * @throws ParseException if the buffer is not free to hold the float number.
    */
   public StringPart scanFloatNumber() throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
@@ -2134,7 +2156,7 @@ that is a liststring and his part The associated String
   { if(idxLastFloatNumber >= 0)
     { return nLastFloatNumber[idxLastFloatNumber--];
     }
-    else throw new ParseException("no integer number scanned.", 0);
+    else throw new ParseException("no float number scanned.", 0);
   }
   
   

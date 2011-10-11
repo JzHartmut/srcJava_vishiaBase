@@ -6,36 +6,86 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-/**This class holds a command line which is prepared with place holder
+/**This class prepares a command and holds it maybe with place holder for files.
+ * A command may be written in form for example ">cmd <*file1> -option <*dirAbs>".
+ * The optional first char determines how the command should be executed.
+ * The preparation finds out the textual given placeholder and stores it in an internal format.
+ * The method {@link #PrepareCmd()} returns the command with given actual parameter
+ * in the form, which is able to execute with java.lang.Process
+ * <br><br>
+ * <b>First char of command</b>:
+ * <ul>
+ * <li> '>' invocation of command with output and error output
+ * <li> '&' invocation of command without in/out pipe, typical start another process without feedback.
+ * <li> '§' call of a java class. Class path after §.
+ * </ul> 
+ * <b>Placeholder</b>
+ * <ul>
+ * <li> <*file>: The file how it is given in arguments, maybe a relative path.
+ * <li> <*dir>: The dir how it is given in arguments, maybe a relative path.
+ * <li> <*name>: The name of the file, without path, without extension. It is the string after the last '/' and before the last '.'
+ * <li> <*nameExt>: The name of the file without path, but with extension. It is the string after the last '/'
+ * <li> <*ext>: The extension. It is the string after the last '.'
+ * <li> <*localFile>: The local path of the file. A local path is supported by some calling conventions. It makes it possible
+ *   to use a path, but starting from any given directory.       
+ * <li> <*absFile>: The absolute canonical path of the file. 
+ * <li> <*localDir>: The local path of the directory where the file is placed.
+ * <li> <*absDir>: The absolute canonical path of the directory where the file is placed.
+ * </ul>
+ * 
  * @author Hartmut Schorrig
  *
  */
-public class PrepareCmd
+public final class PrepareCmd
 {
+  
+  
+  /**Version and history:
+   * <ul>
+   * <li>2011-10-08 Hartmut new Detection of >&§ to select kind of command, {@link #getJavaClass()} prepared (not ready)
+   * </ul>
+   */
+  public static int version = 0x20111011;
+  
+  /**Element in the {@link #listCmdReplace}. */
   private static class CmdReplace{ int pos; char what;} 
   
+  /**List of positions where somewhat is to be preplaced. */
   private List<CmdReplace> listCmdReplace;
   
   /**Command string without placeholder. The positions of the placeholder
-   * are contained in {@link #listCmdReplace}.
-   * 
-   */
+   * are contained in {@link #listCmdReplace}. */
   private String sCmdTemplate;
   
-  
-  /**The command how it is given with place holder. Maybe from ZBNF2Java-parsing.
-   * 
+  /**Kind of the command, the first char:
    */
-  public String cmd;
+  private char cKindOfCmd;
+  
+  /**The command how it is given with place holder. Maybe from ZBNF2Java-parsing. 
+   * This value is used only as parameter in {@link #prepareListCmdReplace()}. It isn't use after them.
+   */
+  private String cmd;
   
   
   /**Name of the command which it is showing to select. */
-  public String name;
+  private String name;
   
+  /**Prepares the string given {@link #cmd} with placeholder in the internal form.
+   * This method can be invoked on creation of this class or if  a new cmd is assigned.
+   * 
+   */
   public void prepareListCmdReplace()
   {
     listCmdReplace = new LinkedList<CmdReplace>();
-    StringBuilder sCmd2 = new StringBuilder(cmd);
+    char cCmd = cmd.charAt(0);
+    final StringBuilder sCmd2;
+    if(">&§".indexOf(cCmd)>=0){
+      cKindOfCmd = cCmd;
+      sCmd2 = new StringBuilder(cmd.substring(1));
+    } else {
+      cKindOfCmd = '>';
+      sCmd2 = new StringBuilder(cmd);
+    }
     int posSep;
     while( (posSep = sCmd2.indexOf("<*"))>=0){
       String s3 = sCmd2.substring(posSep);
@@ -63,6 +113,30 @@ public class PrepareCmd
     
   }
   
+  
+  /**Sets the command and prepares it.
+   * This method may be invoked using {@link org.vishia.zbnf.ZbnfJavaOutput} with the ZBNF parser.
+   * @param cmd The command with placeholder.
+   */
+  public void set_cmd(String cmd)
+  { this.cmd = cmd; 
+    prepareListCmdReplace();
+  }
+  
+  /**Sets the name of the command. Note that the name isn't necessary internal. It is only given
+   * to present commands with a short name in a list.
+   * This method may be invoked using {@link org.vishia.zbnf.ZbnfJavaOutput} with the ZBNF parser.
+   * @param name The string given name.
+   */
+  public void set_name(String name)
+  { this.name = name; 
+  }
+  
+  
+  /**Prepares a command for execution.
+   * @param args Interface to get the input files for the command.
+   * @return The command how it is executable as parameter for java.lang.Process or any other command invocation.
+   */
   public String prepareCmd(CmdGetFileArgs_ifc args)
   {
     if(listCmdReplace ==null){ 
@@ -105,4 +179,22 @@ public class PrepareCmd
     return sCmd2.toString();
   }
 
+  
+  /**If the command is a Java class call, returns the Java class from class loader. Elsewhere returns null.
+   * @return
+   */
+  public Class getJavaClass()
+  { return null;  //TODO
+  }
+  
+  
+  /**Returns true if the stdin, stdout and stderr should be used and the end of execution is awaiting.
+   * @return
+   */
+  public boolean usePipes(){
+    return cKindOfCmd == '>';
+  }
+  
+  
+  
 }

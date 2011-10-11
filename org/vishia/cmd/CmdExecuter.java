@@ -11,11 +11,18 @@ import java.io.Reader;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.util.StringPart;
 
+/**This class organizes the execution of commands with thread-parallel getting of the process outputs.
+ * @author Hartmut Schorrig
+ *
+ */
 public class CmdExecuter
 {
   /**Version and History:
    * <ul>
-   * <li>2011-10-08 chg the {@link #execWait(String[], String, Appendable, Appendable)} waits until 
+   * <li>2011-10-09 Hartmut chg: rename 'execWait' to {@link #execute(String, String, Appendable, Appendable)}
+   *   because it has the capability of no-wait too.
+   * <li>2011-10-09 Hartmut new: {@link #abortCmd()}. experience: On windows the output getting thread may block.   
+   * <li>2011-10-08 chg the {@link #execute(String[], String, Appendable, Appendable)} waits until 
    *   all outputs are gotten in the {@link #outThread} and errThread. Extra class {@link OutThread}
    *   for both errThread and outThread.
    * <li>2011-10-02 chg some experiences: It needs parallel threads to capture the output. Extra threads
@@ -61,6 +68,15 @@ public class CmdExecuter
   final Thread threadExecIn;
   final Thread threadExecError;
   
+  /**Constructs the class and starts the threads to getting output and error stream
+   * and putting the input stream to a process. This three threads runs anytime unless the class
+   * is garbaged or {@link #finalize()} is called manually.
+   * <br><br>
+   * Note: Starting of threads only if a command is executed results in a longer waiting time
+   * for fast simple commands. The input and output putting/getting threads wait in a while-loop
+   * until a command is executed. 
+   * 
+   */
   public CmdExecuter()
   { this.processBuilder = new ProcessBuilder("");
     threadExecOut = new Thread(outThread, "execOut");
@@ -72,6 +88,9 @@ public class CmdExecuter
     //threadExecIn.start();
   }
   
+  /**Sets the current directory for the next execution.
+   * @param dir any directory in the users file system.
+   */
   public void setCurrentDir(File dir)
   {
     processBuilder.directory(dir);
@@ -85,13 +104,13 @@ public class CmdExecuter
    * @param error Will be filled with the error output of the command. 
    *        Maybe null, then the error output will be written to output 
    */
-  public int execWait(String cmdLine
+  public int execute(String cmdLine
   , String input
   , Appendable output
   , Appendable error
   )
   { String[] cmdArgs = splitArgs(cmdLine);
-    return execWait(cmdArgs, input, output, error);
+    return execute(cmdArgs, input, output, error);
   }
   
   
@@ -106,7 +125,7 @@ public class CmdExecuter
    * @param error Will be filled with the error output of the command. 
    *        Maybe null, then the error output will be written to output 
    */
-  public int execWait(String[] cmdArgs
+  public int execute(String[] cmdArgs
   , String input
   , Appendable output
   , Appendable error
@@ -146,7 +165,9 @@ public class CmdExecuter
       } else {
         exitCode = 0; //don't wait
       }
-      process = null;  //no more used
+      synchronized(this){
+        process = null;  //no more used
+      }
     } catch(Exception exception)
     { if(error !=null){
         try{ error.append( "Problem: ").append(exception.getMessage());}
@@ -162,7 +183,34 @@ public class CmdExecuter
   
   
   
-  
+  /**Aborts the running cmd. 
+   * @return true if any cmd is aborted.
+   */
+   public boolean abortCmd()
+  { boolean destroyed = false;
+    synchronized(this){
+      if(process !=null){
+        process.destroy();
+        destroyed = true;
+      }
+    }
+    //TODO doesn't work:
+    /*
+    if(outThread.processOut !=null){
+      try{ outThread.processOut.close(); }
+      catch(IOException exc){
+        stop();
+      }
+    }
+    if(errThread.processOut !=null){
+      try{ errThread.processOut.close(); }
+      catch(IOException exc){
+        stop();
+      }
+    }
+    */
+    return destroyed;
+  }
   
   
   
@@ -293,16 +341,22 @@ public class CmdExecuter
     }
   }
   
+  /**Stops the threads to get output.
+   * @see java.lang.Object#finalize()
+   */
   @Override public void finalize()
   {
     bRunThreads = false;
   }
   
   
+  /**A test main programm only for class test espesically in debug mode.
+   * @param args not used.
+   */
   public final static void main(String[] args)
   {
     CmdExecuter main = new CmdExecuter();
-    main.execWait("cmd /C", null, null, null);
+    main.execute("cmd /C", null, null, null);
     main.finalize();
   }
   

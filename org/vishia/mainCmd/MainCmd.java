@@ -125,6 +125,8 @@ public abstract class MainCmd implements MainCmd_ifc
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
+   * <li>2011-10-11 Hartmut new {@link #setOutputChannels(Appendable, Appendable)}. All outputs are redirect-able now.
+   *   Used for output in a graphical text box.
    * <li>2011-07-10 JcHartmut bugfix: The method {@link #executeCmdLine(ProcessBuilder, String, String, int, Appendable, Appendable)}
    *   has produced a problem because 2 spaces are given in the args instead of one. There was an empty argument therefore,
    *   which has had a negative effect to a called command (it was "bzr add", an empty argument forces addition of all files
@@ -177,6 +179,9 @@ public abstract class MainCmd implements MainCmd_ifc
   /** access to some spaces via Report.spaces.substring(0,n)*/
   private static final String report_spaces = "                                                                                ";
 
+  /**Channels for output and error output of the main program. */
+  Appendable out,err;
+  
 
   /*===========================================================================================================*/
   /** Class to write any readed stream to the output, running in a separate thread.
@@ -245,13 +250,15 @@ public abstract class MainCmd implements MainCmd_ifc
    * set in the derivated class.
   */
   protected MainCmd()
-  { 
+  { out = System.out;
+    err = System.err;
   }
 
   /** Constructor of the main class.
   */
   protected MainCmd(String[] args)
-  { this.cmdLineArgs = args;
+  { this();
+    this.cmdLineArgs = args;
   }
 
 
@@ -556,6 +563,21 @@ public abstract class MainCmd implements MainCmd_ifc
   }
 
 
+  
+  /**Sets destinations for output and error output.
+   * Per default java.lang.System.out and System.err is used. 
+   * This method allows to redirect output and error. 
+   * @param outP  Destination for output. If null, current output isn't change.
+   * @param errP Destination for error output. If null, current output isn't change.
+   */
+  @Override public void setOutputChannels(Appendable outP, Appendable errP)
+  {
+    if(outP !=null) { out = outP; }
+    if(errP !=null) { err = errP; }
+  }
+  
+  
+  
 
   /*--------------------------------------------------------------------------------------------------------*/
   /**Exits the cmdline application with the maximum of setted exit error level.
@@ -925,25 +947,29 @@ public abstract class MainCmd implements MainCmd_ifc
    */
   public void writeDirectly(String sInfo, short kind)  //##a
   {
-    if((kind & mWarning_writeInfoDirectly) != 0)
-    {
-      System.err.println("");
-      System.err.println( "WARNING: " + sInfo );
-    }
-    else if((kind & mError_writeInfoDirectly) != 0)
-    {
-      System.err.println("");
-      System.err.println( "ERROR: " + sInfo );
-    }
-    else
-    { if( (kind & mNewln_writeInfoDirectly) != 0) System.out.println(""); //finishes the previous line
-      int posStart = 0;
-      int posEol;
-      while( posStart < sInfo.length() && (posEol = sInfo.indexOf('\n', posStart)) >=0)
-      { System.out.print(sInfo.substring(posStart, posEol) + "|");
-        posStart = posEol + 1;
+    try{
+      if((kind & mWarning_writeInfoDirectly) != 0)
+      {
+        err.append("\n");
+        err.append( "WARNING: ").append(sInfo ).append("\n");
       }
-      if(posStart < sInfo.length()) System.out.print(sInfo.substring(posStart));
+      else if((kind & mError_writeInfoDirectly) != 0)
+      {
+        err.append("\n");
+        err.append( "ERROR: " ).append(sInfo).append("\n");
+      }
+      else
+      { if( (kind & mNewln_writeInfoDirectly) != 0) out.append("\n"); //finishes the previous line
+        int posStart = 0;
+        int posEol;
+        while( posStart < sInfo.length() && (posEol = sInfo.indexOf('\n', posStart)) >=0)
+        { out.append(sInfo.substring(posStart, posEol)).append("|");
+          posStart = posEol + 1;
+        }
+        if(posStart < sInfo.length()) out.append(sInfo.substring(posStart));
+      }
+    } catch(Exception exc){
+      System.err.println("Exception while output in MainCmd.writeDirectly(" + sInfo + ")");
     }
   }
 
@@ -1126,7 +1152,7 @@ public abstract class MainCmd implements MainCmd_ifc
 		@Override
 		public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime,
 				String text, Object... args) {
-			if(args.length == 0){
+			if(false && args.length == 0){
 				//no arguments, no formatting!
 			  if(fReport != null)
 		    { String line = dateFormat.format(creationTime) + "; " + identNumber + "; ";
@@ -1135,7 +1161,12 @@ public abstract class MainCmd implements MainCmd_ifc
 		      fReport.write(text);  //may be more as one line.
 		    }
 			} else {
-				String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args);
+				final String line;
+				if(args.length == 0){
+				  line = dateFormat.format(creationTime) + "; " + identNumber + "; " + text;
+				} else {
+				  line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args);
+				}
 				final int reportLevel = identNumber == 0 ? Report.info :
 					identNumber <= Report.fineDebug ? identNumber : Report.info;
 				reportln(reportLevel, line);

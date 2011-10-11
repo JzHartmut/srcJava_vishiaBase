@@ -56,6 +56,8 @@ public class CmdQueue
   private final MainCmd_ifc mainCmd;
 
   
+  private boolean busy;
+  
   //private final ProcessBuilder processBuilder = new ProcessBuilder();
   
   private Appendable cmdOutput = System.out;
@@ -113,27 +115,46 @@ public class CmdQueue
     CmdStore.CmdBlock block;
     PendingCmd cmd1;
     while( (cmd1 = pendingCmds.poll())!=null){
+      busy = true;
       try{
         if(cmd1.currentDir !=null){
           executer.setCurrentDir(cmd1.currentDir);
         }
-        for(PrepareCmd cmd: cmd1.cmdBlock.listCmd){
-          String sCmd = cmd.prepareCmd(cmd1);
-          if(sCmd.startsWith("@")){
+        for(PrepareCmd cmd: cmd1.cmdBlock.getCmds()){
+          Class<?> javaClass = cmd.getJavaClass();
+          if(javaClass !=null){
             
           } else {
             //a operation system command:
-            int exitCode = executer.execWait(sCmd, null, cmdOutput, cmdError);
-            if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull"); }
-            else {cmdOutput.append("JavaCmd: cmd execution errorlevel = " + exitCode); }
+            String sCmd = cmd.prepareCmd(cmd1);
+            if(cmd.usePipes()){
+              int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError);
+              if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull\n"); }
+              else {cmdOutput.append("JavaCmd: cmd execution errorlevel = " + exitCode + "\n"); }
+            } else {
+              executer.execute(sCmd, null, null, null);
+              cmdOutput.append("JavaCmd; started; " + sCmd + "\n");
+            }
           }
         }
         System.out.println(cmd1.cmdBlock.name);
       } catch(Exception exc){ System.out.println("Exception " + exc.getMessage()); }
     }
+    busy = false;
   }
 
 
+  /**Aborts a running cmd. If the cmd queue contains any further cmd, it is started yet.
+   * If 
+   * @return true if any cmd is aborted.
+   */
+  public boolean abortCmd()
+  {
+    return executer.abortCmd();
+  }
+  
+  
+  public boolean isBusy(){ return busy; }
   
 
 }

@@ -120,6 +120,8 @@ public class ZbnfParser
 	/**Version-ident.
 	 * list of changes:
 	 * <ul>
+	 * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
+	 * 
 	 * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
 	 *     (set with Report.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
 	 *     in respect to the syntax prescript is able to view. It is if some uncertainty about the correctness of the given syntax is in question. 
@@ -531,7 +533,9 @@ public class ZbnfParser
             { 
               if(testSkipSpaceAndComment()){ bSkipSpaceAndComment = true; }
               if(idxPrescript < listPrescripts.size())  //consider spaces on end of prescript.
-              { 
+              { if(input.getCurrentPosition()==705)
+                  stop();
+              
                 bOk = parseItem(bSkipSpaceAndComment); //, thisParseResult, addParseResult);  //##s
                 bSkipSpaceAndComment = false; 
               }  
@@ -661,7 +665,7 @@ public class ZbnfParser
         int nType = syntaxItem.getType();
         
         { /*Only for debugging:*/
-          if(input.getCurrentPosition()==20352)
+          if(input.getCurrentPosition()==704)
             stop();
           
           //if(input.startsWith("\n\r\n/** Konstantedefinitionen"))
@@ -746,7 +750,7 @@ public class ZbnfParser
             	int posSrc = -1;     //position of the string
             	switch(nType)
             	{
-            	case ZbnfSyntaxPrescript.kTerminalSymbol: ////
+            	case ZbnfSyntaxPrescript.kTerminalSymbol: 
               { bOk = parseTerminalSymbol(syntaxItem, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kIdentifier:
@@ -1038,7 +1042,7 @@ public class ZbnfParser
       throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseFloat;             " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseFloat(" + nRecursion + ") <#f?" + sSemanticForError + ">");
-        if(input.scanFloatNumber().scanOk())
+        if(input.scanFloatNumber(true).scanOk())
         {
           bOk = true;
           if(sSemanticForStoring != null)

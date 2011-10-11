@@ -32,7 +32,7 @@ public class CmdStore
     public String name;
     
     /**Some commands of this block. */
-    public final List<PrepareCmd> listCmd = new LinkedList<PrepareCmd>();
+    public final List<PrepareCmd> listBlockCmds = new LinkedList<PrepareCmd>();
 
     /**Possible call from {@link org.vishia.zbnf.ZbnfJavaOutput}. Creates an instance of one command */
     public PrepareCmd new_cmd(){ return new PrepareCmd(); }
@@ -40,13 +40,16 @@ public class CmdStore
     /**Possible call from {@link org.vishia.zbnf.ZbnfJavaOutput}. Adds the instance of command */
     public void add_cmd(PrepareCmd cmd)
     { cmd.prepareListCmdReplace();
-      listCmd.add(cmd); 
+      listBlockCmds.add(cmd); 
     }
+    
+    /**Returns all commands which are contained in this CmdBlock. */
+    public final List<PrepareCmd> getCmds(){ return listBlockCmds; }
     
   }
   
   /**Contains all commands read from the configuration file in the read order. */
-  public final List<CmdBlock> listCmd = new LinkedList<CmdBlock>();
+  private final List<CmdBlock> listCmds = new LinkedList<CmdBlock>();
 
   /**Contains all commands read from the configuration file in the read order. */
   private final Map<String, CmdBlock> idxCmd = new TreeMap<String, CmdBlock>();
@@ -65,7 +68,7 @@ public class CmdStore
   public CmdBlock new_CmdBlock(){ return new CmdBlock(); }
   
   /**Possible call from {@link org.vishia.zbnf.ZbnfJavaOutput}. Adds the instance of command block. */
-  public void add_CmdBlock(CmdBlock value){ listCmd.add(value); idxCmd.put(value.name, value); }
+  public void add_CmdBlock(CmdBlock value){ listCmds.add(value); idxCmd.put(value.name, value); }
   
   
   public String readCmdCfg(File cfgFile)
@@ -76,7 +79,7 @@ public class CmdStore
     } catch(FileNotFoundException exc){ sError = "CommandSelector - cfg file not found; " + cfgFile; }
     if(reader !=null){
       CmdBlock actBlock = null;
-      listCmd.clear();
+      listCmds.clear();
       String sLine;
       int posSep;
       try{ 
@@ -91,7 +94,7 @@ public class CmdStore
               
           } else  if(sLine.startsWith(" ")){  //a command line
             PrepareCmd cmd = actBlock.new_cmd();
-            cmd.cmd = sLine.trim();
+            cmd.set_cmd(sLine.trim());
             //cmd.prepareListCmdReplace();
             actBlock.add_cmd(cmd);
           }      
@@ -111,6 +114,9 @@ public class CmdStore
    */
   public CmdBlock getCmd(String name){ return idxCmd.get(name); }
   
-  
+  /**Gets a contained commands for example to present in a selection list.
+   * @return The list.
+   */
+  public final List<CmdBlock> getListCmds(){ return listCmds; }
   
 }

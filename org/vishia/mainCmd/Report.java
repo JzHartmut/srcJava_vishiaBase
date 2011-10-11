@@ -43,17 +43,24 @@ import org.vishia.msgDispatch.LogMessage;
     to support debugging without using an extra debugger. It may help to encircle problems. 
 <hr/>
 <pre>
-date       who       change
-2007-12-29 HartmutS  some methods from mainCmd_ifc are displaced here. 
-                     Thus the Report interface is revalued to write some informations also to the display
-                     with the capability to control the report levels for that in the implementation.
-2006-01-07 HartmutS  initial revision
 *
 </pre>
 <hr/>
 */
 public interface Report
 {
+  /**Version and history:
+   * <ul>
+   * <li>2011-10-11 Hartmut new {@link #setOutputChannels(Appendable, Appendable)}. All outputs are redirect-able now.
+   *   Used for output in a graphical text box.
+   * <li>2007-12-29 Hartmut  some methods from mainCmd_ifc are displaced here. 
+   *                 Thus the Report interface is revalued to write some informations also to the display
+   *                 with the capability to control the report levels for that in the implementation.
+   * <li>2006-01-07 Hartmut  initial revision
+   * </ul>  
+   */
+  static final int version = 0x20111011;
+  
   /** exit value to indicate a unconditional abort of a process.*/
   static final int exitUserAbort          = 6;
   /** exit value to indicate a parameter error, that is a programmers error mostly.*/
@@ -283,6 +290,13 @@ public interface Report
   public int getExitErrorLevel();
   
 
+  /**Sets destinations for output and error output.
+   * This method may allow to redirect output and error. 
+   * @param outP  Destination for output. If null, current output isn't change.
+   * @param errP Destination for error output. If null, current output isn't change.
+   */
+  void setOutputChannels(Appendable outP, Appendable errP);
+  
 }
 
 

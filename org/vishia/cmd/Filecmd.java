@@ -100,7 +100,7 @@ public class Filecmd
   
   
   void executeCmd(File file)
-  { cmd.cmd = cargs.sLine;
+  { cmd.set_cmd(cargs.sLine);
     File1Arg arg = new File1Arg(file);
     String sCmd2 = cmd.prepareCmd(arg);
     if(cargs.bExecute){

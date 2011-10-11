@@ -147,4 +147,10 @@ public class ReportWrapperLog implements Report
     // TODO Auto-generated method stub
     
   }
+  
+  
+  @Override public void setOutputChannels(Appendable outP, Appendable errP)
+  {
+  }
+
 }
