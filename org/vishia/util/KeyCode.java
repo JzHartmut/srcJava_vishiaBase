@@ -4,17 +4,25 @@ package org.vishia.util;
  * in a well readable form. It contains a string representation for debug-view 
  * and a unique integer representation for fast switch-case-processing.
  * The key code consist of 2 blocks, which are able to read in hexa view:
- * <ul><li>The lower 16 bit are the character code of the key, whereby typically only 8 bit are used
- *   if the key is presented by a ASCII-code.
- * <li>The middle bits 19..16 respectively the middle hex digit is set to a b f whereby
- *   <ul><li>a is one of the arrow keys, see {@link #left} etc.
- *   <li>b is one of page up, page down, home and end.
- *   <li>f is one of the function keys.
- *   </ul>  
+ * <ul><li>The lower 16 bit usual are the character code of the key, whereby typically only 8 bit are used
+ *   if the key is presented by a ASCII-code. It may be the number of a special key too.
+ *   The key code pressed on keyboard depends on the language-specific keyboard layout.     
+ * <li>The middle bits 19..16 respectively the middle hex digit is set to a b e f, see {@link #mSpecialKeys}.
  * <li>The higher 12 bit, 3 hex digits are set with hexa-readable digits 5, c, a and f whereby 5 means 'S' for shift.
  *   See the codings {@link #alt}, {@link #ctrl}, {@link #shift} and {@link #F},
  * </ul>
- * The key code pressed on keyboard depends on the language-specific keyboard layout.     
+ * <br><br>
+ * <b>Mouse button<b><br>
+ * The mouse buttons are coded here too. Concept:
+ * <ul>
+ * <li>The left, right and middle button is designated as 'first', 'second' because a mouse may be set to left hand mode.
+ *   Then the left button is the 'second'. The middle button may be supported or not. Depending on driver, hardware
+ *   it is designated as third button.
+ * <li>The code contains the hex digit 'b' in bits 19..16 and a character 'D', 'U', 'C' for 'up', 'down' and 'doubleClick' 
+ *   of the first button (right hand mouse: the left button). Furthermore 'd', 'u' and 'c' for the other button
+ *   and '3' and '4' for the third button up and down.
+ * <li>A pressed alt, control and/or shift key is presented in the bits 31..20 
+ * </ul>     
  * 
  * @author Hartmut Schorrig
  *
@@ -45,6 +53,18 @@ public class KeyCode
   
   public static final int shiftCtrlAlt =  0x5ca00000;
   
+  /**Bits to designate special keys.
+   * <ul>
+   * <li>a: arrow
+   * <li>b: mouse button
+   * <li>d: -
+   * <li>e: enter, esc etc.
+   * <li>f: function key
+   * <li>Use letter, not digits to recognize it well.
+   * <li>Don't use a, e, 5 to distinguish with the alt, control, shift
+   * 
+   * </ul>
+   */
   public final static int mSpecialKeys = 0x000f0000;
   
   public final static int mAddKeys = 0xfff00000;
@@ -99,6 +119,16 @@ public class KeyCode
   public final static int back =  0x000e0000 + '\b';
   public final static int esc =   0x000e0000 + 0x1b;
   
+  public final static int mouse1Down =   0x000b0000 + 'D';  
+  public final static int mouse1Up =     0x000b0000 + 'U';  
+  public final static int mouse1Double = 0x000b0000 + 'C';  
+  
+  public final static int mouse2Down =   0x000b0000 + 'd'; 
+  public final static int mouse2Up =     0x000b0000 + 'u'; 
+  public final static int mouse2Double = 0x000b0000 + 'c'; 
+  
+  public final static int mouse3Down =   0x000b0000 + '3'; 
+  public final static int mouse3Up =     0x000b0000 + '4'; 
   
   public final int code;
   
