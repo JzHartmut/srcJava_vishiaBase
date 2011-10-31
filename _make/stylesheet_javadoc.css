@@ -1,0 +1,38 @@
+/* Javadoc style sheet */
+
+/* Define colors, fonts and other style attributes here to override the defaults */
+
+/* Page background color */
+body { background-color: #FFFFFF }
+
+/* Headings */
+h1 { font-size: 145% }
+
+/* Table colors */
+.TableHeadingColor     { background: #CCFFCC } /* Dark green */
+.TableSubHeadingColor  { background: #EEFFCC } /* Light green */
+.TableRowColor         { background: #FFFFFF } /* White */
+
+/* Font used in left-hand frame lists */
+.FrameTitleFont   { font-size: 100%; font-family: Helvetica, Arial, sans-serif }
+.FrameHeadingFont { font-size:  90%; font-family: Helvetica, Arial, sans-serif }
+.FrameItemFont    { font-size:  90%; font-family: Helvetica, Arial, sans-serif }
+
+/* Navigation bar fonts and colors */
+.NavBarCell1    { background-color:#EEEEFF;} /* Light mauve */
+.NavBarCell1Rev { background-color:#00008B;} /* Dark Blue */
+.NavBarFont1    { font-family: Arial, Helvetica, sans-serif; color:#000000;}
+.NavBarFont1Rev { font-family: Arial, Helvetica, sans-serif; color:#FFFFFF;}
+
+.NavBarCell2    { font-family: Arial, Helvetica, sans-serif; background-color:#FFFFFF;}
+.NavBarCell3    { font-family: Arial, Helvetica, sans-serif; background-color:#FFFFFF;}
+
+*{font-family:Arial,sans-serif; font-style:normal; margin-top:3pt; margin-bottom:6pt}
+p{font-family:Arial,sans-serif; font-style:normal; margin-top:3pt; margin-bottom:6pt}
+dd{font-family:Arial,sans-serif; font-style:normal; margin-top:3pt; margin-bottom:6pt}
+code{font-family:monospace ; background-color:#f0f0f0;}
+pre{font-family:monospace ; background-color:#f0f0f0;}
+pre.CCode{font-family:monospace ; background-color:#c0e0ff;}
+pre.Java{font-family:monospace ; background-color:#c0ffc0;}
+table{width:100%;border:2px; border-collapse:collapse; background-color:#ffffd0;border-style:solid}
+td{border: 2px solid; background-color:#ffffff}

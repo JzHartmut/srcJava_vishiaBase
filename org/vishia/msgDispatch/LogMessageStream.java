@@ -3,6 +3,7 @@ package org.vishia.msgDispatch;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -13,7 +14,7 @@ public class LogMessageStream implements LogMessage
 {
 	final FileDescriptor fd;
 	
-	final FileOutputStream out;
+	final OutputStream out;
 	
 	/**Newline-String, for windows, TODO. depends from OS. */
 	byte[] sNewLine = { '\r', '\n'};
@@ -30,6 +31,12 @@ public class LogMessageStream implements LogMessage
   {
     this.fd = fd; 
     out = new FileOutputStream(fd);
+  }
+  
+  public LogMessageStream(OutputStream out)
+  {
+    this.out = out; 
+    this.fd = null;
   }
   
   /**Sends a message. See interface.  
