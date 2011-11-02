@@ -56,8 +56,8 @@ public class KeyCode
   /**Bits to designate special keys.
    * <ul>
    * <li>a: arrow
-   * <li>b: mouse button
-   * <li>d: -
+   * <li>b: mouse button, menu
+   * <li>d: drag and drop
    * <li>e: enter, esc etc.
    * <li>f: function key
    * <li>Use letter, not digits to recognize it well.
@@ -129,6 +129,16 @@ public class KeyCode
   
   public final static int mouse3Down =   0x000b0000 + '3'; 
   public final static int mouse3Up =     0x000b0000 + '4'; 
+  
+  public final static int menuEntered =  0x000b0000 + 'M'; 
+  
+  public final static int dropFiles =    0x000d0000 + 'F'; 
+  public final static int dropText =     0x000d0000 + 'T'; 
+  
+  public final static int dragFiles =    0x000d0000 + 'f'; 
+  public final static int dragText =     0x000d0000 + 't'; 
+  
+  
   
   public final int code;
   
