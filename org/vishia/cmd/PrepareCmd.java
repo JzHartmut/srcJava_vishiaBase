@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.util.FileSystem;
+
 
 /**This class prepares a command and holds it maybe with place holder for files.
  * A command may be written in form for example ">cmd <*file1> -option <*dirAbs>".
@@ -17,7 +19,7 @@ import java.util.List;
  * <ul>
  * <li> '>' invocation of command with output and error output
  * <li> '&' invocation of command without in/out pipe, typical start another process without feedback.
- * <li> '§' call of a java class. Class path after §.
+ * <li> 'ï¿½' call of a java class. Class path after ï¿½.
  * </ul> 
  * <b>Placeholder</b>
  * <ul>
@@ -42,13 +44,138 @@ public final class PrepareCmd
   
   /**Version and history:
    * <ul>
-   * <li>2011-10-08 Hartmut new Detection of >&§ to select kind of command, {@link #getJavaClass()} prepared (not ready)
+   * <li>2011-10-08 Hartmut new Detection of >&ï¿½ to select kind of command, {@link #getJavaClass()} prepared (not ready)
    * </ul>
    */
   public static int version = 0x20111011;
   
   /**Element in the {@link #listCmdReplace}. */
-  private static class CmdReplace{ int pos; char what;} 
+  private static class CmdReplace{ int pos; int what;} 
+  
+  
+  /**Helper class to get parts from the file path.
+   * The file is accessed from {@link CmdGetFileArgs_ifc} only one time after clean().
+   * The getting of file parts is optimized, for example only one time getCanonicalPath().
+   */
+  private static class FileParts
+  { /**what part from args, 1..3 or 0 for fileSelect. */
+    final int what;
+    /**Reference set on clean. */
+    private CmdGetFileArgs_ifc args;
+    /**Get from args if firstly used. */
+    File file;
+    
+    String sPathFile;
+    String sPathLocal;
+    String sPathCanonical;
+    int posFile;
+    int posFileInLocalPath;
+    String sName;
+    int posExt;
+    
+    FileParts(int what){ this.what = what; }
+    
+    /**called on new prepareCmd invocation: */
+    void clean(CmdGetFileArgs_ifc args){ 
+      this.args = args;
+      file = null;
+      sPathCanonical = sPathLocal = sPathFile = sName = null; posFileInLocalPath = posFile = posExt = -2; 
+    }
+    
+    void getFile(){
+      switch(what){
+      case 0: file = args.getFileSelect(); break;
+      case 1: file = args.getFile1(); break;
+      case 2: file = args.getFile2(); break;
+      case 3: file = args.getFile3(); break;
+      }
+    }
+    
+    
+    /**Returns the directory like it is given by the File constructor.
+     * It may be a local file starting from current directory.
+     */
+    String getGivenFile(){
+      if(file ==null){ getFile(); }
+      if(sPathFile ==null){ sPathFile = file.getPath(); }
+      return sPathFile;  
+    }
+    
+    
+    
+    String getNameExt(){
+      if(file == null){ getFile(); }
+      if(sName ==null){ sName = file.getName(); }
+      return sName;
+    }
+
+    String getNameOnly(){
+      if(file ==null){ getFile(); }
+      if(sName ==null){ sName = file.getName(); }
+      if(posExt ==-2){ posExt = sName.lastIndexOf('.'); }
+      return posExt < 0 ? sName : sName.substring(0,posExt);
+    }
+
+    String getExt(){
+      if(file ==null){ getFile(); }
+      if(sName ==null){ sName = file.getName(); }
+      if(posExt ==-2){ posExt = sName.lastIndexOf('.'); }
+      return posExt < 0 ? "" : sName.substring(posExt+1); //Note if '.' not found, posExt==-1, returns 
+    }
+    
+    String getLocalFile(){
+      if(file ==null){ getFile(); }
+      if(sPathLocal ==null){ sPathLocal = file.getPath(); }
+      return sPathLocal;  
+    }
+    
+    String getLocalDir(){
+      if(file ==null){ getFile(); }
+      if(sPathLocal ==null){ sPathLocal = file.getPath(); }
+      if(posFileInLocalPath ==-2){ posFileInLocalPath = sPathLocal.lastIndexOf('/'); }
+      return posFileInLocalPath == -1 ? "." : sPathLocal.substring(0, posFileInLocalPath);  
+    }
+    
+    /**Returns the directory like it is given by the File constructor.
+     * It may be a local file starting from current directory.
+     */
+    String getGivenDir(){
+      if(file ==null){ getFile(); }
+      if(sPathFile ==null){ sPathFile = file.getPath(); }
+      if(posFileInLocalPath ==-2){ posFileInLocalPath = sPathFile.lastIndexOf('/'); }
+      return posFileInLocalPath == -1 ? "." : sPathFile.substring(0, posFileInLocalPath);  
+    }
+    
+    
+    
+    String getCanonicalFile(){
+      if(file ==null){ getFile(); }
+      if(sPathCanonical ==null){ sPathCanonical = FileSystem.getCanonicalPath(file); }
+      return sPathCanonical;
+    }
+
+    String getCanonicalDir(){
+      if(file ==null){ getFile(); }
+      if(sPathCanonical ==null){ sPathCanonical = FileSystem.getCanonicalPath(file); }
+      if(posFile == -2){ posFile = sPathCanonical.lastIndexOf('/'); }
+      return sPathCanonical.substring(0, posFile);
+    }
+  }
+  
+  /**Instance combines 4 instances to get parts from given files. */
+  private static class File3Parts{
+    final FileParts file = new FileParts(0);
+    final FileParts file1 = new FileParts(1);
+    final FileParts file2 = new FileParts(2);
+    final FileParts file3 = new FileParts(3);
+    /**called on new prepareCmd invocation: */
+    void clean(CmdGetFileArgs_ifc args){ 
+      file.clean(args); file1.clean(args); file2.clean(args); file3.clean(args);
+    }
+  }
+  
+  private final File3Parts part = new File3Parts();
+  
   
   /**List of positions where somewhat is to be preplaced. */
   private List<CmdReplace> listCmdReplace;
@@ -79,7 +206,7 @@ public final class PrepareCmd
     listCmdReplace = new LinkedList<CmdReplace>();
     char cCmd = cmd.charAt(0);
     final StringBuilder sCmd2;
-    if(">&§".indexOf(cCmd)>=0){
+    if(">&$".indexOf(cCmd)>=0){
       cKindOfCmd = cCmd;
       sCmd2 = new StringBuilder(cmd.substring(1));
     } else {
@@ -91,22 +218,39 @@ public final class PrepareCmd
       String s3 = sCmd2.substring(posSep);
       CmdReplace cmdReplace = new CmdReplace(); 
       cmdReplace.pos = posSep;
-      int chars = 0;
-      if(     s3.startsWith("<*file>"))     { cmdReplace.what = 'f'; chars = 4; }
-      else if(s3.startsWith("<*dir>"))      { cmdReplace.what = 'F'; chars = 3; }
-      else if(s3.startsWith("<*name>"))     { cmdReplace.what = 'm'; chars = 4; }
-      else if(s3.startsWith("<*nameExt>"))  { cmdReplace.what = 'n'; chars = 7; }
-      else if(s3.startsWith("<*ext>"))      { cmdReplace.what = 'e'; chars = 3; }
-      else if(s3.startsWith("<*localFile>")){ cmdReplace.what = 'l'; chars = 9; }
-      else if(s3.startsWith("<*absFile>"))  { cmdReplace.what = 'a'; chars = 8; }
-      else if(s3.startsWith("<*localDir>")) { cmdReplace.what = 'L'; chars = 8; }
-      else if(s3.startsWith("<*absDir>"))   { cmdReplace.what = 'A'; chars = 6; }
-      else { cmdReplace = null; }         
+      int chars;
+      if(     s3.startsWith("<*file"))     { cmdReplace.what = 'f'; chars = 6; }
+      else if(s3.startsWith("<*dir"))      { cmdReplace.what = 'd'; chars = 5; }
+      else if(s3.startsWith("<*nameExt"))  { cmdReplace.what = 'n'; chars = 9; }
+      else if(s3.startsWith("<*name"))     { cmdReplace.what = 'm'; chars = 6; }
+      else if(s3.startsWith("<*ext"))      { cmdReplace.what = 'e'; chars = 5; }
+      else if(s3.startsWith("<*localFile")){ cmdReplace.what = 'l'; chars = 11; }
+      else if(s3.startsWith("<*absFile"))  { cmdReplace.what = 'a'; chars = 9; }
+      else if(s3.startsWith("<*localDir")) { cmdReplace.what = 'c'; chars = 10; }
+      else if(s3.startsWith("<*absDir"))   { cmdReplace.what = 'b'; chars = 8; }
+      else if(s3.startsWith("<*wfile"))     { cmdReplace.what = 'F'; chars = 7; }
+      else if(s3.startsWith("<*wdir"))      { cmdReplace.what = 'D'; chars = 6; }
+      else if(s3.startsWith("<*wlocalFile")){ cmdReplace.what = 'L'; chars = 12; }
+      else if(s3.startsWith("<*wabsFile"))  { cmdReplace.what = 'A'; chars = 10; }
+      else if(s3.startsWith("<*wlocalDir")) { cmdReplace.what = 'C'; chars = 11; }
+      else if(s3.startsWith("<*wabsDir"))   { cmdReplace.what = 'B'; chars = 9; }
+      else { chars = 0; }         
       if(chars >0){
-        listCmdReplace.add(0,cmdReplace); 
-        sCmd2.replace(posSep, posSep + chars + 3, "");
+        char nrFile = s3.charAt(chars);
+        switch(nrFile){
+        case '1': cmdReplace.what |= 0x10000; chars +=1; break;
+        case '2': cmdReplace.what |= 0x20000; chars +=1; break;
+        case '3': cmdReplace.what |= 0x30000; chars +=1; break;
+        case '>': break;
+        default: chars = 0;  break;
+        }
+        if(chars >0 && s3.length() >chars && s3.charAt(chars) == '>'){
+          listCmdReplace.add(0,cmdReplace); 
+          sCmd2.replace(posSep, posSep + chars + 1, "");
+        }
       } else {
-        throw new IllegalArgumentException("Illegal placeholder: " + sCmd2.substring(posSep));
+        posSep +=2; //skip over <*
+        //throw new IllegalArgumentException("Illegal placeholder: " + s3.substring(0, 12));
       }
     }
     sCmdTemplate = sCmd2.toString();
@@ -134,7 +278,10 @@ public final class PrepareCmd
   
   
   /**Prepares a command for execution.
-   * @param args Interface to get the input files for the command.
+   * @param args Interface to get the input files for the command. Getting the file is optimized. 
+   *   {@link CmdGetFileArgs_ifc#getFile1()} etc. is only called one time in this method.
+   *   It means the getting process can be complex in the implementor of {@link CmdGetFileArgs_ifc}.
+   *   Getting of file parts is optimized, for example only one time getCanonicalPath().
    * @return The command how it is executable as parameter for java.lang.Process or any other command invocation.
    */
   public String prepareCmd(CmdGetFileArgs_ifc args)
@@ -143,7 +290,9 @@ public final class PrepareCmd
       prepareListCmdReplace(); 
     }
     StringBuilder sCmd2 = new StringBuilder(sCmdTemplate);
+    //maybe the files should be selected.
     args.prepareFileSelection();
+    part.clean(args);
     File file = args.getFileSelect();
     if(file !=null){
       String sPath = file.getPath().replace('\\', '/');
@@ -159,21 +308,26 @@ public final class PrepareCmd
       if(posExt < 0){ posExt = posNameEnd = sPath.length();}
       //replace placeholder:
       for(CmdReplace repl: listCmdReplace){
-        switch(repl.what){
-        case 'f': sCmd2.insert(repl.pos, sPathCmd); break;
-        case 'm': sCmd2.insert(repl.pos, sPathCmd.substring(posName, posNameEnd)); break;
-        case 'n': sCmd2.insert(repl.pos, sPathCmd.substring(posName)); break;
-        case 'e': sCmd2.insert(repl.pos, sPathCmd.substring(posExt)); break;
-        case 'l': sCmd2.insert(repl.pos, sPathCmd); break;
-        case 'a': sCmd2.insert(repl.pos, sPathAbs); break;
-        case 'F': sCmd2.insert(repl.pos, posName ==0 ? "." : sPathCmd.substring(0, posName-1)); break;  //dir
-        case 'L': sCmd2.insert(repl.pos, posName ==0 ? "." : sPathCmd.substring(0, posName-1)); break;  //dir
-        case 'A': 
-          String sDirAbs = null;
-          try{ sDirAbs = file.getParentFile().getCanonicalPath();
-          } catch(IOException exc){ sDirAbs = "?notFound?"; }
-          sCmd2.insert(repl.pos, sDirAbs);
-        }
+        final FileParts parts;
+        switch(repl.what & 0x000f0000){
+        case 0x00000000: parts = part.file; break;
+        case 0x00010000: parts = part.file1; break;
+        case 0x00020000: parts = part.file2; break;
+        case 0x00030000: parts = part.file3; break;
+        default: throw new IllegalArgumentException("faulty part designation:" + Integer.toHexString(repl.what));
+        }//switch parts
+        //get the requestet representation of file:   
+        switch(repl.what & 0xffff){
+        case 'f': sCmd2.insert(repl.pos, parts.getGivenFile()); break;
+        case 'd': sCmd2.insert(repl.pos, parts.getGivenDir()); break;  //dir
+        case 'm': sCmd2.insert(repl.pos, parts.getNameOnly()); break;
+        case 'n': sCmd2.insert(repl.pos, parts.getNameExt()); break;
+        case 'e': sCmd2.insert(repl.pos, parts.getNameExt()); break;
+        case 'l': sCmd2.insert(repl.pos, parts.getLocalFile()); break;
+        case 'a': sCmd2.insert(repl.pos, parts.getCanonicalFile()); break;
+        case 'c': sCmd2.insert(repl.pos, parts.getLocalDir()); break;  //dir
+        case 'b': sCmd2.insert(repl.pos, parts.getCanonicalDir()); break; 
+        } //switch
       }
     }
     return sCmd2.toString();
