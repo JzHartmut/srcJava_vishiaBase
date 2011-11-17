@@ -19,6 +19,7 @@ public class CmdExecuter
 {
   /**Version and History:
    * <ul>
+   * <li>2011-11-17 Hartmut new {@link #close()} to stop threads.
    * <li>2011-10-09 Hartmut chg: rename 'execWait' to {@link #execute(String, String, Appendable, Appendable)}
    *   because it has the capability of no-wait too.
    * <li>2011-10-09 Hartmut new: {@link #abortCmd()}. experience: On windows the output getting thread may block.   
@@ -274,9 +275,11 @@ public class CmdExecuter
     /**Output to write.*/
     Appendable out;
     
+    char state = '.';
     
     @Override public void run()
-    { while(bRunThreads){
+    { state = 'r';
+      while(bRunThreads){
         if(processOut !=null && out !=null){  //ask only if processOutput is Set.
           String sLine;
           try{
@@ -299,6 +302,7 @@ public class CmdExecuter
         }
         
       }
+      state = 'x';
     }
   }
   
@@ -340,6 +344,24 @@ public class CmdExecuter
       }
     }
   }
+  
+  
+  /**Closes the functionality, finished the threads.
+   * 
+   */
+  public void close()
+  {
+    bRunThreads = false;
+    while(  outThread !=null && outThread.state == 'r'
+         || errThread !=null && errThread.state == 'r'
+         //|| inThread !=null && inThread == 'r'
+         ){
+      synchronized(this){
+        try{ wait(100); } catch(InterruptedException exc){}
+      }
+    }
+  }
+  
   
   /**Stops the threads to get output.
    * @see java.lang.Object#finalize()

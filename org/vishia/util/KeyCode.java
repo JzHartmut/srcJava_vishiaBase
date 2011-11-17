@@ -33,6 +33,7 @@ public class KeyCode
   
   /**The version
    * <ul>
+   * <li>2011-11-18 new {@link #mouse1UpMoved}
    * <li>2011-09-30 improved
    * </ul>
    */
@@ -121,10 +122,16 @@ public class KeyCode
   
   public final static int mouse1Down =   0x000b0000 + 'D';  
   public final static int mouse1Up =     0x000b0000 + 'U';  
+  
+  /**The mouse button is released, but at another position where pressed. */
+  public final static int mouse1UpMoved = 0x000b0000 + 'M';  
+  /**Doubleclick on mouse button. */
   public final static int mouse1Double = 0x000b0000 + 'C';  
   
   public final static int mouse2Down =   0x000b0000 + 'd'; 
   public final static int mouse2Up =     0x000b0000 + 'u'; 
+  /**The mouse button is released, but at another position where pressed. */
+  public final static int mouse2UpMoved = 0x000b0000 + 'm';  
   public final static int mouse2Double = 0x000b0000 + 'c'; 
   
   public final static int mouse3Down =   0x000b0000 + '3'; 

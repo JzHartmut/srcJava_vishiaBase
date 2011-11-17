@@ -59,7 +59,7 @@ import java.text.ParseException;
  *                     {@link SampleCmdLine.CmdLine} and the {@link SampleCmdLine.Args} but not the main class itself,
  *                     because the Main-class of the application may got some other aggregates, 
  *                     which may created first and outside (dependency injection, inside using final).
- *                     It is also possible to create more as one classes in {@link SampleCmdLine#main}, 
+ *                     It is also possible to create more as one classes in {@link SampleCmdLine#reflexAccessSfc}, 
  *                     especially {@link SampleCmdLine} may only be an empty wrapper 
  *                     for organization of main, Args and MainCmd, without deeper dependencies to the core application.                                             
  */

@@ -17,6 +17,7 @@ public class CmdQueue
   
   /**Version and history
    * <ul>2011-10-09 Hartmut new 
+   * <li>2011-11-17 Hartmut new {@link #close()} to stop threads.
    * <li>2011-07-00 created
    * </ul>
    */
@@ -156,5 +157,9 @@ public class CmdQueue
   
   public boolean isBusy(){ return busy; }
   
+  
+  public void close(){
+    executer.close();
+  }
 
 }
