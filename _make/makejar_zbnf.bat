@@ -23,6 +23,13 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zbnf/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zmake/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/util/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/msgDispatch/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/cmd/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/bridgeC/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/reflection_Jc/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/mainCmd/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/xml/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/xmlSimple/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/header2Reflection/CmdHeader2Reflection.java
 
 

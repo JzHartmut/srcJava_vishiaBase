@@ -1,8 +1,7 @@
 package org.vishia.util;
 
-/**This class helps to present key codes in combination with shift, alt, control and the function keys
- * in a well readable form. It contains a string representation for debug-view 
- * and a unique integer representation for fast switch-case-processing.
+/**This class helps to present key codes and other events in combination with shift, alt, control 
+ * in a maybe readable form. It defines unique integer representations for all keys and events.
  * The key code consist of 2 blocks, which are able to read in hexa view:
  * <ul><li>The lower 16 bit usual are the character code of the key, whereby typically only 8 bit are used
  *   if the key is presented by a ASCII-code. It may be the number of a special key too.
@@ -23,6 +22,9 @@ package org.vishia.util;
  *   and '3' and '4' for the third button up and down.
  * <li>A pressed alt, control and/or shift key is presented in the bits 31..20 
  * </ul>     
+ * <br><br>
+ * <b>Selection events<b><br>
+ * The class defines constants which are used to determine which cause calls a user method.
  * 
  * @author Hartmut Schorrig
  *
@@ -137,8 +139,17 @@ public class KeyCode
   public final static int mouse3Down =   0x000b0000 + '3'; 
   public final static int mouse3Up =     0x000b0000 + '4'; 
   
+  /**Determines that a menu item is entered. */
   public final static int menuEntered =  0x000b0000 + 'M'; 
+
+  /**Determines that a line of a table is selected. */
+  public final static int tableLineSelect =  0x000b0000 + 'L'; 
   
+  /**Determines that a field has got a focus. */
+  public final static int fieldFocus =  0x000b0000 + 'F'; 
+  
+  
+  //----- drag and drop ---------------------------------------------------------------
   public final static int dropFiles =    0x000d0000 + 'F'; 
   public final static int dropText =     0x000d0000 + 'T'; 
   

@@ -1,5 +1,6 @@
 package org.vishia.cmd;
 
+import java.io.Closeable;
 import java.io.File;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -12,7 +13,7 @@ import org.vishia.mainCmd.Report;
  * @author hartmut Schorrig
  *
  */
-public class CmdQueue
+public class CmdQueue implements Closeable
 {
   
   /**Version and history
@@ -129,6 +130,7 @@ public class CmdQueue
             //a operation system command:
             String sCmd = cmd.prepareCmd(cmd1);
             if(cmd.usePipes()){
+              mainCmd.writeInfoln("executes " + sCmd);
               int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError);
               if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull\n"); }
               else {cmdOutput.append("JavaCmd: cmd execution errorlevel = " + exitCode + "\n"); }
@@ -158,7 +160,7 @@ public class CmdQueue
   public boolean isBusy(){ return busy; }
   
   
-  public void close(){
+  @Override public void close(){
     executer.close();
   }
 

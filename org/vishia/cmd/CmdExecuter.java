@@ -2,6 +2,7 @@ package org.vishia.cmd;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +16,7 @@ import org.vishia.util.StringPart;
  * @author Hartmut Schorrig
  *
  */
-public class CmdExecuter
+public class CmdExecuter implements Closeable
 {
   /**Version and History:
    * <ul>
@@ -349,7 +350,7 @@ public class CmdExecuter
   /**Closes the functionality, finished the threads.
    * 
    */
-  public void close()
+  @Override public void close()
   {
     bRunThreads = false;
     while(  outThread !=null && outThread.state == 'r'
