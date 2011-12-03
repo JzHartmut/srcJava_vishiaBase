@@ -2,6 +2,7 @@ package org.vishia.cmd;
 
 import java.io.Closeable;
 import java.io.File;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.cmd.CmdStore.CmdBlock;
@@ -17,7 +18,10 @@ public class CmdQueue implements Closeable
 {
   
   /**Version and history
-   * <ul>2011-10-09 Hartmut new 
+   * <ul>
+   * <li>2011-12-03 Hartmut chg: The {@link #pendingCmds}-queue contains {@link PendingCmd} instead
+   *   {@link CmdStore.CmdBlock} now. It is one level near on the really execution. A queued
+   *   command may not stored in a CmdBlock. 
    * <li>2011-11-17 Hartmut new {@link #close()} to stop threads.
    * <li>2011-07-00 created
    * </ul>
@@ -26,12 +30,22 @@ public class CmdQueue implements Closeable
   
   private static class PendingCmd implements CmdGetFileArgs_ifc
   {
-    final CmdStore.CmdBlock cmdBlock;
+    //final CmdStore.CmdBlock cmdBlock;
+    //public final List<PrepareCmd> listCmds;
+    public final PrepareCmd cmd;
     final File[] files;
     File currentDir;
     
-    public PendingCmd(CmdStore.CmdBlock cmdBlock, File[] files, File currentDir)
-    { this.cmdBlock = cmdBlock;
+    /**Constructs a cmd which is added to a queue to execute in another thread.
+     * @param cmd The prepared cmd
+     * @param files Some files which may be used by the command.
+     *   Note that a reference to another {@link CmdGetFileArgs_ifc} can't be used
+     *   if that selection is valid only on calling time. Therefore the yet selected files
+     *   should be referenced.CmdGetFileArgs_ifc
+     * @param currentDir
+     */
+    public PendingCmd(PrepareCmd cmd, File[] files, File currentDir)
+    { this.cmd = cmd;
       this.files = files;
       this.currentDir = currentDir;
     }
@@ -104,17 +118,30 @@ public class CmdQueue implements Closeable
    */
   public int addCmd(CmdBlock cmdBlock, File[] files, File currentDir)
   {
-    pendingCmds.add(new PendingCmd(cmdBlock, files, currentDir));  //to execute.
+    for(PrepareCmd cmd: cmdBlock.getCmds()){
+      pendingCmds.add(new PendingCmd(cmd, files, currentDir));  //to execute.
+    }
     return pendingCmds.size();
   }
 
+  
+  public int addCmd(String sCmd, File[] files, File currentDir)
+  {
+    PrepareCmd cmd = new PrepareCmd();
+    cmd.set_cmd(sCmd);
+    pendingCmds.add(new PendingCmd(cmd, files, currentDir));  //to execute.
+    return pendingCmds.size();
+    
+  }
+  
+  
+  
   /**Execute the pending commands.
    * This method should be called in a specified user thread.
    * 
    */
   public final void execCmds()
   {
-    CmdStore.CmdBlock block;
     PendingCmd cmd1;
     while( (cmd1 = pendingCmds.poll())!=null){
       busy = true;
@@ -122,14 +149,14 @@ public class CmdQueue implements Closeable
         if(cmd1.currentDir !=null){
           executer.setCurrentDir(cmd1.currentDir);
         }
-        for(PrepareCmd cmd: cmd1.cmdBlock.getCmds()){
-          Class<?> javaClass = cmd.getJavaClass();
+        //for(PrepareCmd cmd: cmd1.listCmds){
+          Class<?> javaClass = cmd1.cmd.getJavaClass();
           if(javaClass !=null){
             
           } else {
             //a operation system command:
-            String sCmd = cmd.prepareCmd(cmd1);
-            if(cmd.usePipes()){
+            String[] sCmd = cmd1.cmd.prepareCmd(cmd1);
+            if(cmd1.cmd.usePipes()){
               mainCmd.writeInfoln("executes " + sCmd);
               int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError);
               if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull\n"); }
@@ -139,8 +166,8 @@ public class CmdQueue implements Closeable
               cmdOutput.append("JavaCmd; started; " + sCmd + "\n");
             }
           }
-        }
-        System.out.println(cmd1.cmdBlock.name);
+        //}
+        //System.out.println(cmd1.cmdBlock.name);
       } catch(Exception exc){ System.out.println("Exception " + exc.getMessage()); }
     }
     busy = false;

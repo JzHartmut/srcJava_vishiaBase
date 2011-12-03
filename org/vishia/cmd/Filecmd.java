@@ -102,7 +102,7 @@ public class Filecmd
   void executeCmd(File file)
   { cmd.set_cmd(cargs.sLine);
     File1Arg arg = new File1Arg(file);
-    String sCmd2 = cmd.prepareCmd(arg);
+    String[] sCmd2 = cmd.prepareCmd(arg);
     if(cargs.bExecute){
       if(processBuilder == null){
         processBuilder = new ProcessBuilder();
@@ -118,7 +118,7 @@ public class Filecmd
         catch(IOException exc){ mainCmd.writeError("write error", exc); }
       }
     } else if(out !=null){
-      try{ out.append(sCmd2).append("\n"); }
+      try{ out.append(sCmd2[0]).append("\n"); }
       catch(IOException exc){ mainCmd.writeError("write error", exc); }
     }
   }

@@ -115,11 +115,13 @@ public class KeyCode
   public static final int home =  0x000a0000 + 'h';
   
   public static final int end =   0x000a0000 + 'e';
+
+  public final static int back =  0x000e0000 + '\b';
+
+  public final static int enter = 0x000e0000 + '\r';
   
   public final static int ins =   0x000e0000 + 'i';
   public final static int del =   0x000e0000 + 'd';
-  public final static int enter = 0x000e0000 + '\r';
-  public final static int back =  0x000e0000 + '\b';
   public final static int esc =   0x000e0000 + 0x1b;
   
   public final static int mouse1Down =   0x000b0000 + 'D';  
@@ -214,5 +216,22 @@ public class KeyCode
       ret |= src.charAt(len-1);  //The last char is the key.
     }
     return ret;
+  }
+  
+  
+  public static boolean isWritingKey(int key){
+    if((key & (mAddKeys | mSpecialKeys))==0) return true; 
+    if(key == del) return true;
+    return false;
+  }
+
+  
+  public static boolean isWritingOrTextNavigationKey(int key){
+    if((key & (mAddKeys | mSpecialKeys))==0) return true; 
+    if((key & mSpecialKeys)==0x000a0000) return true;
+    if(key == back) return true;
+    if(key == enter) return true;
+    if(key == del) return true;
+    return false;
   }
 }

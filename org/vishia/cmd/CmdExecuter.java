@@ -218,7 +218,7 @@ public class CmdExecuter implements Closeable
   
   /**Splits command line arguments.
    * The arguments can be separated with one or more as one spaces (typical for command lines)
-   * or with white spaces. If commands are quoted with "" it are taken as one unit.
+   * or with white spaces. If arguments are quoted with "" it are taken as one argument.
    * The line can be a text with more as one line, for example one line per argument.
    * If a "##" is contained, the text until the end of line is ignored.
    * @param line The line or more as one line with arguments

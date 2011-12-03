@@ -26,7 +26,7 @@ public class CmdStore
 
   /**Description of one command.
    */
-  public class CmdBlock
+  public static class CmdBlock
   {
     /**The identification for user in the selection list. */
     public String name;
