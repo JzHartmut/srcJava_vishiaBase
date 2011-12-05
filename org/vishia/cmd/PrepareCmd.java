@@ -15,12 +15,8 @@ import org.vishia.util.FileSystem;
  * The method {@link #PrepareCmd()} returns the command with given actual parameter
  * in the form, which is able to execute with java.lang.Process
  * <br><br>
- * <b>First char of command</b>:
- * <ul>
- * <li> '>' invocation of command with output and error output
- * <li> '&' invocation of command without in/out pipe, typical start another process without feedback.
- * <li> '�' call of a java class. Class path after �.
- * </ul> 
+ * <b>First char of command maybe the kind of execution.</b> See { @link #PrepareCmd(char)}
+ * <br><br>
  * <b>Placeholder</b>
  * <ul>
  * <li> <*file>: The file how it is given in arguments, maybe a relative path.
@@ -188,9 +184,11 @@ public final class PrepareCmd
    * instead the {@link #listPlaceholderForCmdArgsTemplate} contains the kind of placeholder. */
   private String[] cmdArgsTemplate;
   
-  /**Kind of the command, the first char:
-   */
-  private char cKindOfCmd;
+  /**Kind of the execution as default value given on ctor */
+  private final char cKindOfExecutionDefault;
+  
+  /**Kind of the execution of the prepared command */
+  private char cKindOfExecutionPrepared;
   
   /**The command how it is given with place holder. Maybe from ZBNF2Java-parsing. 
    * This value is used only as parameter in {@link #prepareListCmdReplace()}. It isn't use after them.
@@ -200,6 +198,27 @@ public final class PrepareCmd
   
   /**Name of the command which it is showing to select. */
   private String name;
+  
+  
+  
+  /**Creates an instance of a Preparer for a command.
+   * The argument determines the kind of execution. It is the default if the given command doesn't contain
+   * a first char which determines the kind of execution.
+   * <ul>
+   * <li> '>' or '%': invocation of command with output and error output
+   * <li> '&' invocation of command without in/out pipe, typical start another process without feedback.
+   * <li> '$' opens a shell for invocation of command.
+   * <li> '*' call of a java class. Class path after '*'.
+   * </ul> 
+   * @param cKindOfExecution One of 0 or '%', '>', '&', '$' or '*'
+   */
+  PrepareCmd(char cKindOfExecution){
+    this.cKindOfExecutionDefault = cKindOfExecution;
+  }
+  
+  PrepareCmd(){
+    this.cKindOfExecutionDefault = '>';  //use pipes
+  }
   
   /**Prepares the string given {@link #cmd} with placeholder in the internal form.
    * This method can be invoked on creation of this class or if  a new cmd is assigned.
@@ -213,11 +232,11 @@ public final class PrepareCmd
       listPlaceholderForCmdArgsTemplate = new LinkedList<CmdReplace>();
       char cCmd = cmd.charAt(0);
       final StringBuilder sCmd2;
-      if(">&$".indexOf(cCmd)>=0){
-        cKindOfCmd = cCmd;
+      if("%>&$".indexOf(cCmd)>=0){
+        cKindOfExecutionPrepared = cCmd;
         sCmd2 = new StringBuilder(cmd.substring(1));
       } else {
-        cKindOfCmd = '>';
+        cKindOfExecutionPrepared = cKindOfExecutionDefault; 
         sCmd2 = new StringBuilder(cmd);
       }
       int posSep;
@@ -356,9 +375,10 @@ public final class PrepareCmd
    * @return
    */
   public boolean usePipes(){
-    return cKindOfCmd == '>';
+    return cKindOfExecutionPrepared == '>';
   }
   
+  public char getKindOfExecution(){ return cKindOfExecutionPrepared; }
   
   
 }

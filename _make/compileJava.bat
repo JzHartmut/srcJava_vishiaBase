@@ -1,4 +1,5 @@
 REM Call java-compilation and jar with given input environment. This following commands are the same for all java-compilations.
+REM remove the temporary dir for javac class files.
 echo on
 if exist %TMP_JAVAC% rmdir /S /Q %TMP_JAVAC%
 mkdir %TMP_JAVAC%
@@ -10,6 +11,9 @@ echo copiling successfull, generate jar:
 
 set ENTRYDIR=%CD%
 cd %TMP_JAVAC%\bin
+REM remove the file also it is readonly.
+attrib -r %ENTRYDIR%/%OUTPUTFILE_JAVAC%
+if exist %ENTRYDIR%/%OUTPUTFILE_JAVAC% del %ENTRYDIR%/%OUTPUTFILE_JAVAC%
 echo jar -c
 %JAVA_HOME%\bin\jar.exe -cvfm %ENTRYDIR%/%OUTPUTFILE_JAVAC% %ENTRYDIR%/%MANIFEST_JAVAC% *  >>../error.txt
 if errorlevel 1 goto :error

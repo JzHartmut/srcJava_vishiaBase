@@ -125,9 +125,16 @@ public class CmdQueue implements Closeable
   }
 
   
-  public int addCmd(String sCmd, File[] files, File currentDir)
+  /**Adds a command to the queue which should be executed in another thread.
+   * @param sCmd The command maybe with <*file> etc. like described in {@link PrepareCmd}
+   * @param files null or some files for execution
+   * @param currentDir directory of execution
+   * @param kindOfExecution See {@link PrepareCmd#PrepareCmd(char)}
+   * @return
+   */
+  public int addCmd(String sCmd, File[] files, File currentDir, char kindOfExecution)
   {
-    PrepareCmd cmd = new PrepareCmd();
+    PrepareCmd cmd = new PrepareCmd(kindOfExecution);
     cmd.set_cmd(sCmd);
     pendingCmds.add(new PendingCmd(cmd, files, currentDir));  //to execute.
     return pendingCmds.size();
@@ -156,14 +163,17 @@ public class CmdQueue implements Closeable
           } else {
             //a operation system command:
             String[] sCmd = cmd1.cmd.prepareCmd(cmd1);
-            if(cmd1.cmd.usePipes()){
+            char kindOfExecution = cmd1.cmd.getKindOfExecution();
+            if(">%".indexOf(kindOfExecution) >=0){
               mainCmd.writeInfoln("executes " + sCmd);
-              int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError);
+              int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError, false);
               if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull\n"); }
               else {cmdOutput.append("JavaCmd: cmd execution errorlevel = " + exitCode + "\n"); }
+            } else if(kindOfExecution == '&'){
+              executer.execute(sCmd, null, null, null, false);
+              //cmdOutput.append("JavaCmd; started; " + sCmd + "\n");
             } else {
-              executer.execute(sCmd, null, null, null);
-              cmdOutput.append("JavaCmd; started; " + sCmd + "\n");
+              mainCmd.writeInfoln("CmdQueue - unexpected kind of execution; " + kindOfExecution);
             }
           }
         //}

@@ -70,6 +70,8 @@ public class CmdExecuter implements Closeable
   final Thread threadExecIn;
   final Thread threadExecError;
   
+  String[] sConsoleInvocation;
+  
   /**Constructs the class and starts the threads to getting output and error stream
    * and putting the input stream to a process. This three threads runs anytime unless the class
    * is garbaged or {@link #finalize()} is called manually.
@@ -98,6 +100,12 @@ public class CmdExecuter implements Closeable
     processBuilder.directory(dir);
   }
   
+  
+  public void setConsoleInvocation(String cmd){
+    sConsoleInvocation = splitArgs(cmd);
+  }
+  
+  
   /**Executes a command with arguments and waits for its finishing.
    * @param cmdLine The command and its arguments in one line. 
    *        To separate the command and its argument the method {@link #splitArgs(String)} is used.
@@ -112,7 +120,26 @@ public class CmdExecuter implements Closeable
   , Appendable error
   )
   { String[] cmdArgs = splitArgs(cmdLine);
-    return execute(cmdArgs, input, output, error);
+    return execute(cmdArgs, input, output, error, false);
+  }
+  
+  
+  /**Executes a command with arguments and waits for its finishing.
+   * @param cmdLine The command and its arguments in one line. 
+   *        To separate the command and its argument the method {@link #splitArgs(String)} is used.
+   * @param input The input stream of the command. TODO not used yet.
+   * @param output Will be filled with the output of the command.
+   * @param error Will be filled with the error output of the command. 
+   *        Maybe null, then the error output will be written to output 
+   */
+  public int execute(String cmdLine
+  , String input
+  , Appendable output
+  , Appendable error
+  , boolean useShell
+  )
+  { String[] cmdArgs = splitArgs(cmdLine);
+    return execute(cmdArgs, input, output, error, useShell);
   }
   
   
@@ -131,6 +158,7 @@ public class CmdExecuter implements Closeable
   , String input
   , Appendable output
   , Appendable error
+  , boolean useShell
   )
   { int exitCode;
     processBuilder.command(cmdArgs);
