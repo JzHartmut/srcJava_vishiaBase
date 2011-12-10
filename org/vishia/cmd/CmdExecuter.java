@@ -223,6 +223,8 @@ public class CmdExecuter implements Closeable
         process.destroy();
         destroyed = true;
       }
+      outThread.out = null;  //to abort
+      errThread.out = null;
     }
     //TODO doesn't work:
     /*
@@ -309,27 +311,37 @@ public class CmdExecuter implements Closeable
     @Override public void run()
     { state = 'r';
       while(bRunThreads){
-        if(processOut !=null && out !=null){  //ask only if processOutput is Set.
-          String sLine;
-          try{
-            if( (sLine= processOut.readLine()) !=null){
-              out.append(sLine).append('\n');
-            } else {
-              //Because processOut returns null, it is "end of file" for the output stream of the started process.
-              //It means, the process is terminated now.
-              processOut = null;  //Set to null because it will not be used up to now. Garbage.
-              if(process !=null){
-                synchronized(this){ notify(); }  //notify it!  
+        try{
+          if(processOut !=null && out !=null){  //ask only if processOutput is Set.
+            String sLine;
+            if(out != null && processOut.ready()){
+              if( (sLine= processOut.readLine()) !=null){
+                out.append(sLine).append('\n');
+              } else {
+                //Because processOut returns null, it is "end of file" for the output stream of the started process.
+                //It means, the process is terminated now.
+                processOut = null;  //Set to null because it will not be used up to now. Garbage.
               }
+            } else {
+              Thread.sleep(100);
             }
-          } catch(IOException exc){
             
+          } else {
+            //no process is active, wait
+            try { synchronized(this){ wait(1000); } } catch (InterruptedException exc) { }
           }
-        } else {
-          //no process is active, wait
-          try { synchronized(this){ wait(1000); } } catch (InterruptedException exc) { }
+          if(out == null && processOut !=null){  //aborted
+            //if(process !=null){
+              synchronized(this){ 
+                processOut.close();
+                processOut = null;
+                notify();
+              }  //notify it!  
+            //}
+          }
+        } catch(Exception exc){
+          
         }
-        
       }
       state = 'x';
     }

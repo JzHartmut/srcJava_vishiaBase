@@ -227,16 +227,16 @@ public final class PrepareCmd
   public void prepareListCmdReplace()
   { int ixCmd = -1; //preincrement
     cmdArgsTemplate = new String[cmdSrc.length];
+    cKindOfExecutionPrepared = cKindOfExecutionDefault; 
     for(String cmd: cmdSrc){
       ixCmd +=1;
       listPlaceholderForCmdArgsTemplate = new LinkedList<CmdReplace>();
       char cCmd = cmd.charAt(0);
       final StringBuilder sCmd2;
-      if("%>&$".indexOf(cCmd)>=0){
+      if(ixCmd == 0 && "%>&$".indexOf(cCmd)>=0){
         cKindOfExecutionPrepared = cCmd;
         sCmd2 = new StringBuilder(cmd.substring(1));
       } else {
-        cKindOfExecutionPrepared = cKindOfExecutionDefault; 
         sCmd2 = new StringBuilder(cmd);
       }
       int posSep;
