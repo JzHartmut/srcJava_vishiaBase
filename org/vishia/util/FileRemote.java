@@ -26,7 +26,7 @@ public class FileRemote extends File
 
   /**Version and history.
    * <ul>
-   * <li>2011-12-10 Hartmut creation: It is needed for {@link org.vishia.commander.JavaCmd}, this tool
+   * <li>2011-12-10 Hartmut creation: It is needed for {@link org.vishia.commander.Fcmd}, this tool
    *   should work with remote files with any protocol for example FTP. But firstly it is implemented and tested
    *   only for local files. The concept is: 
    *   <ul>
@@ -90,11 +90,11 @@ public class FileRemote extends File
   
   
   
-  ReadableByteChannel openRead(long passPhrase){
+  public ReadableByteChannel openRead(long passPhrase){
     return device.openRead(this, passPhrase);
   }
   
-  WritableByteChannel openWrite(long passPhrase){
+  public WritableByteChannel openWrite(long passPhrase){
     return device.openWrite(this, passPhrase);
   }
   

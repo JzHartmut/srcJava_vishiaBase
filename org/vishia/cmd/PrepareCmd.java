@@ -45,6 +45,33 @@ public final class PrepareCmd
    */
   public static int version = 0x20111011;
   
+  
+  /**Kind of command execution: A system shell should be opened and let open after execution. 
+   * The user can view the output after execution and invoke commands after execution of the started command. */
+  public final static char executeInShellOpened = '>';
+  
+  /**Kind of command execution: A system shell should be opened while execution and close after them. 
+   * The user can view the output while execution. After execution neither the return value (errorlevel)
+   * nor console outputs are visible. This kind of operation can use if any pause commands are part of the
+   * command script, or the command window should inform only, or the execution paused on errors only. */
+  public final static char executeInShellClose = '$';
+  
+  /**Kind of command execution: A new system process is started. 
+   * This kind of execution is proper to start any process, which has its own window. */
+  public final static char executeStartProcess = '&';
+  
+  /**Kind of command execution: The execution is done using local pipes.
+   * This kind of execution starts a new process for execution outside the Java VM sphere 
+   * but it redirects the pipes (input, output, errorOutput) to the local pipes. So the pipes can be used
+   * from the caller level. The process has no window on the users display if it is a command line process.  */
+  public final static char executeLocalPipes = '%';
+  
+  /**Kind of command execution: A java class's main method is invoked.  */
+  public final static char executeJavaMain = '*';
+  
+  /**Kind of command execution: A java class's main method is invoked.  */
+  public final static char executeQuest = '?';
+  
   /**Element in the {@link #listPlaceholderForCmdArgsTemplate}. 
    * arg - index of argument, pos-position in sArg[arg], 
    * what 0x0f0000 nr of file */
@@ -203,12 +230,14 @@ public final class PrepareCmd
   
   /**Creates an instance of a Preparer for a command.
    * The argument determines the kind of execution. It is the default if the given command doesn't contain
-   * a first char which determines the kind of execution.
+   * a first char which determines the kind of execution. See one of
+   * {@link #executeInShellClose}, {@link #executeInShellClose}, {@link #executeLocalPipes} and {@link #executeStartProcess}.
    * <ul>
-   * <li> '>' or '%': invocation of command with output and error output
+   * <li> '%': invocation of command with output and error output
    * <li> '&' invocation of command without in/out pipe, typical start another process without feedback.
    * <li> '$' opens a shell for invocation of command.
-   * <li> '*' call of a java class. Class path after '*'.
+   * <li> '>' opens a shell for invocation of command.
+   * <li> 'm' call of a java class. Class path after '*'.
    * </ul> 
    * @param cKindOfExecution One of 0 or '%', '>', '&', '$' or '*'
    */
@@ -217,7 +246,7 @@ public final class PrepareCmd
   }
   
   PrepareCmd(){
-    this.cKindOfExecutionDefault = '>';  //use pipes
+    this.cKindOfExecutionDefault = executeLocalPipes;  //use pipes
   }
   
   /**Prepares the string given {@link #cmd} with placeholder in the internal form.
@@ -233,7 +262,7 @@ public final class PrepareCmd
       listPlaceholderForCmdArgsTemplate = new LinkedList<CmdReplace>();
       char cCmd = cmd.charAt(0);
       final StringBuilder sCmd2;
-      if(ixCmd == 0 && "%>&$".indexOf(cCmd)>=0){
+      if(ixCmd == 0 && "%>&$*?".indexOf(cCmd)>=0){
         cKindOfExecutionPrepared = cCmd;
         sCmd2 = new StringBuilder(cmd.substring(1));
       } else {
@@ -375,7 +404,7 @@ public final class PrepareCmd
    * @return
    */
   public boolean usePipes(){
-    return cKindOfExecutionPrepared == '>';
+    return cKindOfExecutionPrepared == executeLocalPipes;
   }
   
   public char getKindOfExecution(){ return cKindOfExecutionPrepared; }
