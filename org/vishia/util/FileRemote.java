@@ -60,6 +60,12 @@ public class FileRemote extends File
   }
 
   
+  public FileRemote(String path, String name)
+  {
+    this(FileRemoteAccessorLocalFile.getInstance(), path, name, 0, 0, false);
+  }
+
+  
   
   
   /**Constructs the instance. This invocation does not force any access to the file system.
@@ -74,13 +80,24 @@ public class FileRemote extends File
    *   if the timestamp is requested by {@link #lastModified()}.
    * @param isWriteable Status of writeable
    */
-  public FileRemote(FileRemoteAccessor device, String sPathP, String sName, long length, long date, boolean isWriteable){
-    super(sPathP + sName);  //it is correct if it is a local file. 
+  public FileRemote(final FileRemoteAccessor device, final String sPathP, final String sName, final long length, final long date, final boolean isWriteable){
+    super(sPathP + (sName ==null ? "" : sName));  //it is correct if it is a local file. 
     String sPath = sPathP.replace('\\', '/');
-    assert(sPath.endsWith("/"));
     this.device = device;
-    path = sPath;
-    this.name = sName;
+    if(sName == null){
+      int posSep = sPath.lastIndexOf('/');
+      if(posSep >=0){
+        this.path = sPath.substring(0, posSep+1);
+        this.name = sPath.substring(posSep+1);
+      } else {
+        this.path = "";
+        this.name = sPath;
+      }
+    } else {
+      assert(sPath.endsWith("/"));
+      this.path = sPath;
+      this.name = sName;
+    }
     this.isWriteable = isWriteable;
     this.length = length;
     this.date = date;
@@ -119,6 +136,16 @@ public class FileRemote extends File
   
   @Override public String getParent(){ return path; }
   
+  public void delete(Event backEvent){
+    if(device.isLocalFileSystem()){
+      boolean bOk = super.delete();
+      backEvent.iData = bOk? 0 : -1;
+      backEvent.dst.processEvent(backEvent);
+    } else {
+      //TODO
+    }
+    
+  }
   
   
 }
