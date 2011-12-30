@@ -257,9 +257,9 @@ public final class PrepareCmd
   { int ixCmd = -1; //preincrement
     cmdArgsTemplate = new String[cmdSrc.length];
     cKindOfExecutionPrepared = cKindOfExecutionDefault; 
+    listPlaceholderForCmdArgsTemplate = new LinkedList<CmdReplace>();
     for(String cmd: cmdSrc){
       ixCmd +=1;
-      listPlaceholderForCmdArgsTemplate = new LinkedList<CmdReplace>();
       char cCmd = cmd.charAt(0);
       final StringBuilder sCmd2;
       if(ixCmd == 0 && "%>&$*?".indexOf(cCmd)>=0){
@@ -268,8 +268,8 @@ public final class PrepareCmd
       } else {
         sCmd2 = new StringBuilder(cmd);
       }
-      int posSep;
-      while( (posSep = sCmd2.indexOf("<*"))>=0){
+      int posSep = 0;
+      while( (posSep = sCmd2.indexOf("<*", posSep))>=0){
         String s3 = sCmd2.substring(posSep);
         CmdReplace cmdReplace = new CmdReplace(); 
         cmdReplace.pos = posSep;
@@ -301,7 +301,7 @@ public final class PrepareCmd
           default: chars = 0;  break;
           }
           if(chars >0 && s3.length() >chars && s3.charAt(chars) == '>'){
-            listPlaceholderForCmdArgsTemplate.add(0,cmdReplace); 
+            listPlaceholderForCmdArgsTemplate.add(cmdReplace); 
             sCmd2.replace(posSep, posSep + chars + 1, "");
           }
         } else {
@@ -350,11 +350,11 @@ public final class PrepareCmd
     }
     //maybe the files should be selected.
     args.prepareFileSelection();
-    part.clean(args);
+    part.clean(args);   //clean parts from file (maybe used in the past). args will be referenced only yet
     //replace placeholder:
-    for(CmdReplace repl: listPlaceholderForCmdArgsTemplate){
+    for(CmdReplace repl: listPlaceholderForCmdArgsTemplate){  //NOTE: repl.arg in order
+      //Copy arguments without any placeholder
       while(ixArg < repl.arg){
-        //lines without any placeholder
         cmdArgs[ixArg] = cmdArgsTemplate[ixArg];
         ixArg +=1;
       }

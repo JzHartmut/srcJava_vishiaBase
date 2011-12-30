@@ -20,6 +20,9 @@ public class CmdExecuter implements Closeable
 {
   /**Version and History:
    * <ul>
+   * <li>2011-12-31 Hartmut bugfix: The OutThread doesn't realize that the process was finished,
+   *   because BufferedReader.ready() returns false and the buffer was not checked. So 'end of file'
+   *   was not detected. Therefore {@link OutThread#bProcessIsRunning} set to false to abort waiting.
    * <li>2011-11-17 Hartmut new {@link #close()} to stop threads.
    * <li>2011-10-09 Hartmut chg: rename 'execWait' to {@link #execute(String, String, Appendable, Appendable)}
    *   because it has the capability of no-wait too.
@@ -170,6 +173,7 @@ public class CmdExecuter implements Closeable
       process = processBuilder.start();
       if(error !=null){
         //bRunExec = true;
+        errThread.bProcessIsRunning = true;
         errThread.processOut = new BufferedReader(new InputStreamReader(process.getErrorStream()));
         errThread.out = error;
         synchronized(errThread){ errThread.notify(); }  //wake up to work!
@@ -177,18 +181,24 @@ public class CmdExecuter implements Closeable
       }
       if(output !=null){
         //bRunExec = true;
+        outThread.bProcessIsRunning = true;
         outThread.processOut = new BufferedReader(new InputStreamReader(process.getInputStream()));
         outThread.out = output;
         synchronized(outThread){ outThread.notify(); }  //wake up to work!
         //processIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
         exitCode = process.waitFor();  //wait for finishing the process
+        //If the outThread or errThread will be attempt to wait, it realizes that the process has been finished. 
+        outThread.bProcessIsRunning =false;
+        errThread.bProcessIsRunning =false;
+        //It is possible that the last output isn't gotten because the outThread or errThread
+        //is not run in the last time. Run it till it has recognized the end of process itself.
         synchronized(outThread){
-          if(outThread.processOut !=null){ //will be set to null on end of file detection.
+          if(outThread.processOut !=null){ //will be set to null on 'end of file' detection.
             outThread.wait();   //wait for finishing getting output. It will be notified if end of file is detected
           }
         }
         synchronized(errThread){
-          if(errThread.processOut !=null){ //may be null if err isn't used, will be set to null on end of file detection
+          if(errThread.processOut !=null){ //may be null if err isn't used, will be set to null on 'end of file' detection
             errThread.wait();   //wait for finishing getting error output. It will be notified if end of file is detected 
           }
         }
@@ -308,6 +318,9 @@ public class CmdExecuter implements Closeable
     
     char state = '.';
     
+    /**Set to true before a process is started, set to false if the process has finished. */
+    boolean bProcessIsRunning;
+    
     @Override public void run()
     { state = 'r';
       while(bRunThreads){
@@ -323,14 +336,20 @@ public class CmdExecuter implements Closeable
                 processOut = null;  //Set to null because it will not be used up to now. Garbage.
               }
             } else {
-              Thread.sleep(100);
+              //yet no output available. The process may be run still, but doesn't produce output.
+              //The process may be finished.
+              if(!bProcessIsRunning){
+                out = null;  
+              } else {
+                Thread.sleep(100);
+              }
             }
             
           } else {
             //no process is active, wait
             try { synchronized(this){ wait(1000); } } catch (InterruptedException exc) { }
           }
-          if(out == null && processOut !=null){  //aborted
+          if(out == null && processOut !=null){  //aborted or process is finished.
             //if(process !=null){
               synchronized(this){ 
                 processOut.close();

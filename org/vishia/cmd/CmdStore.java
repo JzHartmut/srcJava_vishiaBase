@@ -24,12 +24,27 @@ import org.vishia.mainCmd.Report;
 public class CmdStore
 {
 
+  /**Version and history
+   * <ul>
+   * <li>2011-12-31 Hartmut chg {@link CmdBlock#title} is new, the syntax of configfile is changed.
+   *   This class is used to capture all executables for a specified extension for The.file.Commander 
+   * </ul>
+   */
+  int version = 0x20111231;
+  
   /**Description of one command.
    */
   public static class CmdBlock
   {
     /**The identification for user in the selection list. */
     public String name;
+  
+    /**The title of the cmd, for selection. It is the part after ':' in the title line:
+     * <pre>
+     * ==name: title==
+     * </pre>
+     * */
+    public String title;
     
     /**Some commands of this block. */
     public final List<PrepareCmd> listBlockCmds = new LinkedList<PrepareCmd>();
@@ -81,15 +96,21 @@ public class CmdStore
       CmdBlock actBlock = null;
       listCmds.clear();
       String sLine;
-      int posSep;
       try{ 
         while( (sLine = reader.readLine()) !=null){
           if( sLine.startsWith("==")){
-            posSep = sLine.indexOf("==", 2);  
+            final int posColon = sLine.indexOf(':');
+            final int posEnd = sLine.indexOf("==", 2);  
             //a new command block
-            if(actBlock !=null){ add_CmdBlock(actBlock); } 
+            if(actBlock !=null){ add_CmdBlock(actBlock); }  //the last one. 
             actBlock = new_CmdBlock();
-            actBlock.name = sLine.substring(2, posSep);
+            if(posColon >=0 && posColon < posEnd){
+              actBlock.name = sLine.substring(2, posColon).trim();
+              actBlock.title = sLine.substring(posColon+1, posEnd).trim();
+            } else {
+              actBlock.name = sLine.substring(2, posEnd).trim();
+              actBlock.title = "";
+            }
           } else if(sLine.startsWith("@")){
               
           } else  if(sLine.startsWith(" ")){  //a command line
