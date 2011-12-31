@@ -26,6 +26,9 @@ public class FileRemote extends File
 
   /**Version and history.
    * <ul>
+   * <li>2012-01-01 Hartmut new: {@link #oFile}. In the future the superclass File should be used only as interface.
+   *   TODO: For any file access the oFile-instance should be used by {@link #device}.
+   * <li>2012-01-01 Hartmut new: {@link #copyTo(FileRemote, Event)}
    * <li>2011-12-10 Hartmut creation: It is needed for {@link org.vishia.commander.Fcmd}, this tool
    *   should work with remote files with any protocol for example FTP. But firstly it is implemented and tested
    *   only for local files. The concept is: 
@@ -53,16 +56,25 @@ public class FileRemote extends File
   protected long length;
   protected boolean isWriteable;
   
+  /**This is the internal file object. It is handled by the device only. */
+  Object oFile;
+  
   
   public FileRemote(String pathname)
   {
-    this(FileRemoteAccessorLocalFile.getInstance(), pathname, null, 0, 0, false);
+    this(FileRemoteAccessorLocalFile.getInstance(), pathname, null, -1, 0, false);
   }
 
   
   public FileRemote(String path, String name)
   {
-    this(FileRemoteAccessorLocalFile.getInstance(), path, name, 0, 0, false);
+    this(FileRemoteAccessorLocalFile.getInstance(), path, name, -1, 0, false);
+  }
+
+  
+  public FileRemote(FileRemote dir, String name)
+  {
+    this(FileRemoteAccessorLocalFile.getInstance(), dir.getAbsolutePath(), name, -1, 0, false);
   }
 
   
@@ -81,11 +93,12 @@ public class FileRemote extends File
    * @param isWriteable Status of writeable
    */
   public FileRemote(final FileRemoteAccessor device, final String sPathP, final String sName, final long length, final long date, final boolean isWriteable){
-    super(sPathP + (sName ==null ? "" : sName));  //it is correct if it is a local file. 
+    super(sPathP + (sName ==null ? "" : ("/" + sName)));  //it is correct if it is a local file. 
     String sPath = sPathP.replace('\\', '/');
     this.device = device;
     if(sName == null){
-      int posSep = sPath.lastIndexOf('/');
+      int lenPath = sPath.length();
+      int posSep = sPath.lastIndexOf('/', lenPath-2);
       if(posSep >=0){
         this.path = sPath.substring(0, posSep+1);
         this.name = sPath.substring(posSep+1);
@@ -94,10 +107,12 @@ public class FileRemote extends File
         this.name = sPath;
       }
     } else {
+      if(!sPath.endsWith("/")){ sPath += "/";}
       assert(sPath.endsWith("/"));
       this.path = sPath;
       this.name = sName;
     }
+    oFile = device.createFileObject(this);
     this.isWriteable = isWriteable;
     this.length = length;
     this.date = date;
@@ -105,6 +120,14 @@ public class FileRemote extends File
   }
   
   
+  
+  /**Check whether two files are at the same device. It means it can be copied, compared etc. remotely. 
+   * @param other The other file to check
+   * @return true if they are at the same device. The same device is given if the comparison
+   *   of the {@link FileRemoteAccessor} instances of both files using {@link #device}.equals(other.device) 
+   *   returns true.
+   */
+  public boolean sameDevice(FileRemote other){ return device.equals(other.device); }
   
   
   public ReadableByteChannel openRead(long passPhrase){
@@ -136,6 +159,17 @@ public class FileRemote extends File
   
   @Override public String getParent(){ return path; }
   
+  /**Gets the path of the file. For this class the path should be esteemed as canonical,
+   * but that should be considered on constructor. 
+   */
+  @Override public String getPath(){ return path + name; }
+  
+  /**Deletes a file maybe in a remote device. This is a send-only routine without feedback,
+   * because the calling thread should not be waiting for success.
+   * The success is notified with invocation of the 
+   * {@link Event#dst}.{@link EventConsumer#processEvent(Event)} method. 
+   * @param backEvent The event for success.
+   */
   public void delete(Event backEvent){
     if(device.isLocalFileSystem()){
       boolean bOk = super.delete();
@@ -144,8 +178,36 @@ public class FileRemote extends File
     } else {
       //TODO
     }
-    
   }
+  
+  
+  
+  
+  /**Copies a file maybe in a remote device to another file in the same device. 
+   * This is a send-only routine without feedback, because the calling thread should not be waiting 
+   * for success. The success is notified with invocation of the 
+   * {@link Event#dst}.{@link EventConsumer#processEvent(Event)} method. 
+   * 
+   * @param dst This file will be created or filled newly. If it is existing but read only,
+   *   nothing is copied and an error message is fed back.
+   * @param backEvent The event for success.
+   */
+  public void copyTo(FileRemote dst, Event backEvent){
+    if(device.isLocalFileSystem() && dst.device.isLocalFileSystem()){
+      FileRemoteAccessor.Commission com = new FileRemoteAccessor.Commission();
+      com.callBack = backEvent;
+      com.cmd = FileRemoteAccessor.Commission.kCopy;
+      com.src = this;
+      com.dst = dst;
+      device.addCommission(com);
+    } else {
+      //TODO
+    }
+  }
+  
+  
+  
+  
   
   
 }

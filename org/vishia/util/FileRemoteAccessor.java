@@ -13,11 +13,17 @@ public interface FileRemoteAccessor
 {
   /**Version and history.
    * <ul>
+   * <li>2012-01-01 Hartmut new {@link #createFileObject(FileRemote)}
+   * <li>2011-12-31 Hartmut new {@link Commission} and {@link #addCommission(Commission)}. It is used
+   *   to add commissions to the implementation class to do in another thread/via communication.
    * <li>2011-12-10 Hartmut creation: Firstly only the {@link FileRemoteAccessorLocalFile} is written.
    *   
    * </ul>
    */
   public static final int version = 0x20111210;
+  
+  public final static int kOperation = 0xd00000, kFinishOk = 0xf10000, kFinishNok = 0xf10001, kFinishError = 0xf1e3303;
+
   
   public boolean getFileProperties(FileRemote file);
 
@@ -25,8 +31,31 @@ public interface FileRemoteAccessor
   
   WritableByteChannel openWrite(FileRemote file, long passPhase);
   
+  void addCommission(Commission com);
+  
   boolean isLocalFileSystem();
 
+  
+  /**The file object is a java.io.File for the local file system. If it is a remote file system,
+   * the file object may be a instance for communication with the remote file system.
+   * @param file The description of the file.
+   * @return Any object.
+   */
+  Object createFileObject(FileRemote file);
+  
+  public class Commission
+  {
+    public final static int kCopy = 0xc0b7, kDel = 0xde1ede;
+    
+    
+    
+    int cmd;
+    
+    FileRemote src, dst;
+    
+    Event callBack;
+    
+  }
   
   
 }
