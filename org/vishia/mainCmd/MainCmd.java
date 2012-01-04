@@ -1229,6 +1229,19 @@ public abstract class MainCmd implements MainCmd_ifc
   @Override public LogMessage getLogMessageOutputConsole(){ return logMessageConsole; }
   
   @Override public LogMessage getLogMessageOutputFile(){ return logMessageFile; }
+
+  
+  
+  
+  /**Its a helper to set a breakpoint for assert
+   * @param condition
+   */
+  public static void assertion(boolean condition){
+    if(!condition){
+      throw new RuntimeException ("assertion");
+    }
+  }
+
   
 }
 

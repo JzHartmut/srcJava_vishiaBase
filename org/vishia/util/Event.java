@@ -1,34 +1,44 @@
 package org.vishia.util;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**Base class for all events in a event driven software or for communications.
  * Events may contain data. Special data are contained in derived classes of this. The type of the event
- * can be checked using event instanceof DerivedEvent. The id may be only a hint.
+ * can be checked using <code>event instanceof DerivedEvent</code>. The id may be only a hint.
  * <br><br>
- * <b>What is a event driven software<b>?<br>
+ * <b>What is a event driven software</b>?<br>
  * There are 4 types of organization of the cooperation in a multi thread system or in a distributed system:
  * <ol>
- * <li>request, wait and notify: The action which should be done by another thread or in another remote device
+ * <li><b>request, wait and notify</b>: The action which should be done by another thread or in another remote device
  *   is requested. Then the requesting thread waits for the execution (for response, for answer, for notify). 
  *   
- * <li>request and poll: The action which should be done by another thread or in another remote device
- *   is requested. Then the requesting thread does any other action, it can't be used the result from the request yet.
+ * <li><b>request and poll</b>: The action is requested. Then the requesting thread does any other action, 
+ *   it can't be used the result from the request yet.
  *   But the thread polls cyclically (may be for some milliseconds or longer) the result of the requested order.
- * <li>callback: The action which should be done by another thread or in another remote device
- *   is requested. With the request a callback reference is taken. If the request is executed (received response etc),
+ * <li><b>callback</b>: The action which should be done by another thread or in another remote device
+ *   is requested. With the request a callback reference is given. If the request is executed (received response etc),
  *   the other thread calls the callback method. In the callback method the results of the request can be processed.
- * <li>event driven: The action which should be done by another thread or in another remote device
- *   is requested. The request may be forced by a event, by a direct invocation of a communication call
- *   or by filling any queue with the request. The requested thread does nothing with any response in the immediate
- *   programming environment. It requests only. But the response or execution program may send an event 
- *   to the requesting thread or more exactly, to the requesting module. The thread is stored in a queue firstly.
- *   The queue will be checked by the 'event execution thread', it may be that thread which forces the request.
- *   Because the event is received, any actions may be done to process the response or result.
+ * <li><b>event driven</b>: The action is requested usual by sending an event to the executer instance. 
+ *   The requested thread does nothing with any response in the immediate programming environment. 
+ *   It requests only. But the executer instance may send an event back if it has finished the execution
+ *   or if any other messages should be given.<br>
+ *   Events are stored stored in a queue firstly. The queue will be checked by the 'event execution thread'.
+ *   It is possible to have only one event execution thread in the system. In this case the execution will be done
+ *   in the same thread, but to any later time (if the event is gotten from the queue).<br>
+ *   There may be some more event execution threads, for example a thread which organizes communication.
+ *   The execution of any request and the execution of the response is binded to the thread, 
+ *   which polls the receivers event queue.<br>
+ *   It is possible too to request any action non-event-driven, maybe by sending a request via Ethernet communication
+ *   or adequate. But the response may be event-driven. The receiver thread of the communication
+ *   puts the event in the queue. The execution of the response is done in the event-queue-thread.
+ *   This is a proper mechanism to decouple activity. If the receiver thread would execute anything
+ *   in another module, this execution may be hanging or may cause any exceptions which disturbs 
+ *   the receiving thread so the whole receiving functionality may hang.  
  * </ol>
  * This 4 types may be present in a users program. The following remarks should be recognized:
  * <ol>
- * <li>request wait and notify: This is the simplest and basic methodology for inter-thread-cooperation,
+ * <li><b>request wait and notify</b>: This is the simplest and basic methodology for inter-thread-cooperation,
  *    supported by the basic operations Object.wait() and Object.notify() as basic feature provided in Java.
  *    <br>
  *    The waiting thread can't execute any other things while waiting. A timeout of waiting may be good 
@@ -45,35 +55,117 @@ import java.util.concurrent.atomic.AtomicLong;
  *    The thread waits for events in the queue. If any other thread put an event in the queue, it notifies
  *    the waiting thread. That event execution thread has only one mission: providing the events to its destinations.
  *    If there are no events, it should wait and sleep.
- * <li>request and poll: This methodology may be used in cyclic execution systems for example for
+ * <li><b>request and poll</b>: This methodology may be used in cyclic execution systems for example for
  *   analog-like controlling of signals. The cyclic execution tests results from communication or inter-thread-communication
  *   in any cycle of execution. 
- * <li>callback: This is a simple methodology to prevent waiting. But the callback method is executed 
+ * <li><b>callback</b>: This is a simple methodology to prevent waiting. But the callback method is executed 
  *   in the other thread, which is responsible to the execution of the request or which is the receiving thread
  *   of any communication with a remote device. Maybe some thread mutex mechanism should be necessary.
- * <li>event driven: This methodology needs a system support in user space: The event execution thread. 
+ * <li><b>event driven</b>: This methodology needs a system support in user space: The event execution thread. 
  *   That thread polls the event queue. It waits if the queue is empty. If an event is gotten, it is
  *   distributed to its destination. The destination is any instance of any class which offers a the 
  *   event processing method. 
  *   <br>
  *   The event driven methodology can be esteemed as the best for complex systems.     
  * </ol>  
+ * <br><br>
+ * <b>Usage of this Event class</b>:<br>
+ * This class supplies a common use-able base for event driven programming. It hasn't any dependencies 
+ * to other classes of this package or component except {@link EventConsumer} and {@link EventThread}. 
+ * (It may be good if this class is a member of the java/lang package).
+ * The event mechanisms are well known and used in some Java applications for example in graphic (AWT, SWT)
+ * or in special frameworks. That event classes are similar, but they are embedded in their environment.
+ * If they are used, unnecessary dependency are caused. <br>
+ * This class supports event driven programming in the language C too. It is designed to use in simple C applications
+ * which where translated with the vishia Java2C translator. Thats why the usage of inheritance 
+ * for any kind of events isn't the first choice. This Event class contains enough data for simple and usual
+ * usages.
+ * <br><br>
+ * <b>Usage for callback</b>:<br>
+ * A request should be called with an reference to an instance to this Event class as parameter. 
+ * This Event class contains the reference to the callback instance {@link #dst}. 
+ * The callback instance implements the {@link EventConsumer}-interface. In this manner the request receiver
+ * can invoke a callback using {@link #dst}.{@link EventConsumer#processEvent(Event)}. Note that this callback
+ * is executed in the request receiver's thread.
+ * <br><pre>
+ *   Thread                     class             another Thread             
+ *  Requester               Request preparer     Request executer                      
+ *      |                          |                    |                       
+ *      |->request(data, Event)--->|-->any queue------->|                                              
+ *      |                          | (Event stored)     |                      
+ *      |                          |                    |
+ *      |                                        {executes request}
+ *      |                                               |
+ *      |                                       {fills Event with data}
+ *      |<-------------Event.dst.processEvent(ev)-------|
+ *      |                  it is a callback             |
+ * </pre>
  * <br>
- * <b>remote software, communication</b>:<br>
+ * <br>
+ * <b>Usage for event driven mechanism</b>:<br>
+ * The difference between callback and event driven is marginal but substantial. Instead invocation of
+ * a callback in the other thread, the event is put in a queue. The event execution thread polls the event
+ * and invokes the callback method to the destination class to consume the event. The difference is only:
+ * The event is stored in a queue, the callback is invoked by another thread. But this difference is
+ * substantial.
+ * <br><pre>
+ *   Thread    Thread           class             another Thread             
+ *  Requester EventThread   Request preparer     Request executer                      
+ *      |         |                |                    |                       
+ *      |->request(data, Event)--->|-->any queue------->|                                              
+ *      |         |                | (Event stored)     |                      
+ *      |         |                |                    |
+ *      |         |                              {executes request}
+ *      |         |                                     |
+ *      |         |                             {fills Event with data}
+ *      |         |<---Event.dst.processEvent(ev)-------|
+ *      |         |        it is a callback             |
+ *      |         |                                     |
+ *      |         |---------------------+               |
+ *      |<---Event.dst.processEvent(ev)-+      
+ *      |     it is a callback              
+ *      |         |                                     |
+ *      |         |                                     |
+ * </pre>
+ * <br><br>
+ * <b>Request and response in an event driven system</b>
+ * In a common event driven system their isn't a thinking of 'request' and 'response'. Any event inducing
+ * is independent of any other event. But usual mechanism uses 'request' and the associated 'response'.
+ * For that methodology it is possible to give the event instance as parameter of the request already.
+ * The event parameter contains the {@link #dst} for the response. This may be a instance in knowledge
+ * of the requesting instance (maybe an inner class for implementation of {@link EventConsumer})
+ * or the requesting instance itself. So the requested instance should not be known the requester permanently,
+ * but only for the pending request.
+ * <br><br>
+ * <b>Remote device, communication</b>:<br>
  * If any action should be executed in any other device which is connected via any communication maybe
- * via ethernet, or serial or any other special, the request for the execution should be sent. 
+ * via Ethernet, or serial or any other special, the request for the execution has to be sent. This request
+ * can contain this Event class as parameter for the response. <br>  
  * The execution occurs independently in the other device then. The communication may be work with
  * request and response. If the action is received and accepted, a response will be sent back which may
- * contain a answer.
+ * contain any answer data. The response of the device is received by the receiver thread of the communication.
  * <br>
- * The thread which is requesting the action for the remote device may not wait for the response only
- * but may do other things also. It is a adequate theme like presented above.
- * The response will be received from a special receiver thread of the communication usually. 
- * That receiver thread can execute either a callback associated to the request or it can be generate
- * an event causing by the received information. <br>
- * If request and response are assigned together the request can contain an unique order number
- * which is used for the response. In this kind the order of a request can be stored and used if the
- * response is received for callback or to generate the correct event.
+ * The communication should store and manage a association between request to the other device and response
+ * from the device. The association may be realized using a sequence, order or commission number. If the
+ * associated response is received, the Event of the request is found out using the commission or sequence
+ * number. Then the communication-receive-thread can use the Event instance to invoke the callback
+ * or put the event in the queue of dst.
+ * <br><pre>
+ *   Thread                     class                Thread             
+ *  Requester               Communication-tx     Communication-rx       Remote device
+ *      |                          |                    |                     |
+ *      |->request(data, Event)--->|---->telg: request to device(data)------->|(receives commission nr)
+ *      |                          | (Event stored)     |                     |
+ *      |                          |                    |               {executes request}
+ *      |                                               |                     |
+ *      |                                               |<--telg: response----|(uses same commission nr)
+ *      |                                    {searches Event                  |
+ *      |                                    {fills Event with data}          |
+ *      |<--------------------response(Event)-----------|                     |
+ *      |callback or Event queue                        |                     |
+ *      |                                               |                     |
+ *      |                                               |                     |
+ * </pre>
  * <br><br>
  * Where is this Event class able to use:
  * <ul>
@@ -87,27 +179,35 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Event
 {
   /**The src instance for the event. This reference should not be used for processing, it is only
-   * a hint while debugging.
-   */
+   * a hint while debugging. */
   protected Object src;
   
+  /**The queue for events of the {@link EventThread} if this event should be used
+   * in a really event driven system (without directly callback). 
+   * If it is null, the dst.{@link EventConsumer#processEvent(Event)} should be called immediately. */
+  protected EventThread dstThread;
+  
   /**The destination instance for the Event. If the event is stored in a common queue, 
-   * the dst is invoked while polling the queue. */
+   * the dst is invoked while polling the queue. Elsewhere the dst is the callback instance. */
   protected EventConsumer dst;
-  
-  /**The order number for the request, which may be answered by this event. */
-  public long order;
-  
-  /**Timestamp of the requested order. */
-  public AtomicLong dateOrder = new AtomicLong();
   
   /**Any number to identify. It is dst-specific. */
   public int id;
   
-  /**Any value of this event. Mostly it is a return value. */
-  public int iData;
+  /**The commission number for the request, which may be answered by this event. */
+  public long commisionId;
   
-  /**Any value refererence. */ 
+  /**Timestamp of the request. It is atomic because the timestamp may be an identification
+   * that the event instance is in use (for new-obviating usage like C-programming). */
+  public AtomicLong dateCreation = new AtomicLong();
+  
+  /**Any value of this event. Mostly it is a return value. */
+  public int data1, data2;
+  
+  /**Any value of this event. */
+  public long data3, data4, data5, data6;
+  
+  /**Any value reference. */ 
   public Object oData;
   
   public Event(Object src, EventConsumer dst){
@@ -123,8 +223,8 @@ public class Event
    * @return true if the event instance is able to use.
    */
   public boolean use(long order, int id, Object src){ 
-    if(dateOrder.compareAndSet(0, System.currentTimeMillis())){
-      this.order = order;
+    if(dateCreation.compareAndSet(0, System.currentTimeMillis())){
+      this.commisionId = order;
       this.id = id;
       this.src = src;
       return true;
@@ -133,11 +233,36 @@ public class Event
   }
   
   
+  /**Releases the event instance. It is the opposite to the {@link #consumed()} method.
+   * The {@link #dateCreation} is set to 0 especially to designate the free-state of the Event instance.
+   * All other data are reseted, so no unused references are hold.  
+   */
   public void consumed(){
     this.id = 0;
     this.src = null;
-    this.order = 0;
-    dateOrder.set(0);
+    this.dst = null;
+    this.dstThread = null;
+    this.commisionId = 0;
+    data1 = data2 = 0;
+    data3 = data4 = data5 = data6 = 0;
+    oData = null;
+    dateCreation.set(0);
   }
+
+  
+  
+  /**Sends this event to the destination instance.
+   * Either the element {@link #dstQueue} is not null, then the event is put in the queue
+   * and the event thread is notified.
+   * Or the dstQueue is null, then a callback is invoked using {@link #dst}.{@link EventConsumer#processEvent(Event this)}
+   */
+  public void sendtoDst(){
+    if(dstThread !=null){
+      dstThread.storeEvent(this);
+    } else {
+      dst.processEvent(this);
+    }
+  }
+  
   
 }

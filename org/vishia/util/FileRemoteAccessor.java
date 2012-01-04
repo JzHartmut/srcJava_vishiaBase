@@ -22,7 +22,8 @@ public interface FileRemoteAccessor
    */
   public static final int version = 0x20111210;
   
-  public final static int kOperation = 0xd00000, kFinishOk = 0xf10000, kFinishNok = 0xf10001, kFinishError = 0xf1e3303;
+  public final static int kOperation = 0xd00000, kFinishOk = 0xf10000, kFinishNok = 0xf10001
+  , kFinishError = 0xf1e3303, kNrofFilesAndBytes = 0xd00001;
 
   
   public boolean getFileProperties(FileRemote file);
@@ -45,7 +46,7 @@ public interface FileRemoteAccessor
   
   public class Commission
   {
-    public final static int kCopy = 0xc0b7, kDel = 0xde1ede;
+    public final static int kCheckFile = 0xcecf1e, kCheck = 0xcec, kCopy = 0xc0b7, kDel = 0xde1ede;
     
     
     

@@ -4,6 +4,8 @@ import java.io.File;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import org.vishia.mainCmd.MainCmd;
+
 /**This class describes a File, which may be localized at any maybe remote device or which may be a normal local file. 
  * A remote file should be accessed by FileRemoteChannel implementations. It may be any information
  * at an embedded hardware, not only in a standard network.
@@ -108,10 +110,11 @@ public class FileRemote extends File
       }
     } else {
       if(!sPath.endsWith("/")){ sPath += "/";}
-      assert(sPath.endsWith("/"));
       this.path = sPath;
       this.name = sName;
     }
+    MainCmd.assertion(this.path.endsWith("/"));
+    MainCmd.assertion(!this.path.endsWith("//"));
     oFile = device.createFileObject(this);
     this.isWriteable = isWriteable;
     this.length = length;
@@ -173,7 +176,7 @@ public class FileRemote extends File
   public void delete(Event backEvent){
     if(device.isLocalFileSystem()){
       boolean bOk = super.delete();
-      backEvent.iData = bOk? 0 : -1;
+      backEvent.data1 = bOk? 0 : -1;
       backEvent.dst.processEvent(backEvent);
     } else {
       //TODO
@@ -181,6 +184,29 @@ public class FileRemote extends File
   }
   
   
+  
+  
+  /**Checks a file maybe in a remote device maybe a directory. 
+   * This is a send-only routine without feedback, because the calling thread should not be waiting 
+   * for success. The success is notified with invocation of the 
+   * {@link Event#dst}.{@link EventConsumer#processEvent(Event)} method. 
+   * 
+   * @param dst This file will be created or filled newly. If it is existing but read only,
+   *   nothing is copied and an error message is fed back.
+   * @param backEvent The event for success.
+   */
+  public void check(Event backEvent){
+    if(device.isLocalFileSystem()){
+      FileRemoteAccessor.Commission com = new FileRemoteAccessor.Commission();
+      com.callBack = backEvent;
+      com.cmd = FileRemoteAccessor.Commission.kCheckFile;
+      com.src = this;
+      com.dst = null;
+      device.addCommission(com);
+    } else {
+      //TODO
+    }
+  }
   
   
   /**Copies a file maybe in a remote device to another file in the same device. 
