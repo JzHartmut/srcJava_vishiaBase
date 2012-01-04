@@ -113,7 +113,7 @@ public class FileRemote extends File
       this.path = sPath;
       this.name = sName;
     }
-    MainCmd.assertion(this.path.endsWith("/"));
+    MainCmd.assertion(this.path.length() == 0 || this.path.endsWith("/"));
     MainCmd.assertion(!this.path.endsWith("//"));
     oFile = device.createFileObject(this);
     this.isWriteable = isWriteable;
@@ -175,14 +175,18 @@ public class FileRemote extends File
    */
   public void delete(Event backEvent){
     if(device.isLocalFileSystem()){
-      boolean bOk = super.delete();
+      boolean bOk;
+      if(super.isDirectory()){
+        bOk = FileSystem.rmdir(this);
+      } else {
+        bOk = super.delete();
+      }
       backEvent.data1 = bOk? 0 : -1;
       backEvent.dst.processEvent(backEvent);
     } else {
       //TODO
     }
   }
-  
   
   
   

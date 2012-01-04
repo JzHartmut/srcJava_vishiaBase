@@ -58,6 +58,7 @@ public class FileSystem
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
+   * <li>2012-01-05 Hartmut new: {@link #rmdir(File)}
    * <li>2011-08-13 Hartmut chg: {@link #addFilesWithBasePath(String, List)} now stores the localPath 
    *     with '/' instead backslash on windows too. Strategy: Use slash generally in Java-applications.
    *     Only a java.lang.File instance can contain backslash, because it is gotten from basic file routines
@@ -394,6 +395,28 @@ public class FileSystem
     }
   }
 
+  
+  
+  /**Removes all files inside the directory and all sub directories with its files.
+   * The remove the dir itself.
+   * @param dir A directory
+   * @return true if all files are deleted. If false then the deletion process was aborted.
+   */
+  public static boolean rmdir(File dir){
+    boolean bOk = true;
+    assert(dir.isDirectory());
+    File[] files = dir.listFiles();
+    for(File file: files){
+      if(file.isDirectory()){
+        bOk = bOk && rmdir(file);
+      } else {
+        bOk = bOk && file.delete();
+      }
+    }
+    bOk = bOk & dir.delete();
+    return bOk;
+  }
+  
 
   public static File getDirectory(File file) throws FileNotFoundException
   { File dir;

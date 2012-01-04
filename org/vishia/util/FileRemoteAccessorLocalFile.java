@@ -38,14 +38,6 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   private final ConcurrentLinkedQueue<Commission> commissions = new ConcurrentLinkedQueue<Commission>();
   
   
-  /**List of files to handle between {@link #checkCopy(org.vishia.util.FileRemoteAccessor.Commission)}
-   * and {@link #execCopy(org.vishia.util.FileRemoteAccessor.Commission)}. */
-  private final List<File> listFiles = new LinkedList<File>();
-  
-  private File currentFile;
-
-  long zBytes, zFiles;
-  
   
   /**The thread to run all commissions. */
   private Runnable runCommissions = new Runnable(){
@@ -55,9 +47,12 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   };
   
   
-  Thread thread = new Thread(runCommissions, "vishia.FileLocal");
+  private Thread thread = new Thread(runCommissions, "vishia.FileLocal");
   
   { thread.start(); }
+  
+  private Copy copy = new Copy();
+  
   
   public static FileRemoteAccessor getInstance(){
     return instance;
@@ -136,8 +131,8 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   void execCommission(Commission commission){
     switch(commission.cmd){
-    case Commission.kCheckFile: checkCopy(commission); break;
-    case Commission.kCopy: execCopy(commission); break;
+    case Commission.kCheckFile: copy.checkCopy(commission); break;
+    case Commission.kCopy: copy.execCopy(commission); break;
     case Commission.kDel:  execDel(commission); break;
     
     }
@@ -145,93 +140,148 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   
   
-  void checkCopy(Commission co){
-    this.currentFile= co.src;
-    listFiles.clear();
-    if(currentFile.isDirectory()){ 
-      zBytes = 0;
-      zFiles = 0;
-      checkDir(currentFile, 1);
-    } else {
-      listFiles.add(currentFile);
-      zBytes = co.src.length();
-      zFiles = 1;
+  private class Copy
+  {
+  
+    long timestart;
+    
+    long zFilesCheck, zFilesCopy;
+    
+    long zBytesCheck, zBytesCopy;
+    
+    
+    /**List of files to handle between {@link #checkCopy(org.vishia.util.FileRemoteAccessor.Commission)}
+     * and {@link #execCopy(org.vishia.util.FileRemoteAccessor.Commission)}. */
+    private final List<File> listFiles = new LinkedList<File>();
+    
+    private File currentFile;
+
+    
+
+    
+    
+    void checkCopy(Commission co){
+      this.currentFile= co.src;
+      listFiles.clear();
+      if(currentFile.isDirectory()){ 
+        zBytesCheck = 0;
+        zFilesCheck = 0;
+        checkDir(currentFile, 1);
+      } else {
+        listFiles.add(currentFile);
+        zBytesCheck = co.src.length();
+        zFilesCheck = 1;
+      }
+      co.callBack.data3 = zBytesCheck;  //number between 0...1000
+      co.callBack.data4 = zFilesCheck;  //number between 0...1000
+      co.callBack.id = FileRemoteAccessor.kNrofFilesAndBytes;
+      co.callBack.sendtoDst();
     }
-    co.callBack.data3 = zBytes;  //number between 0...1000
-    co.callBack.data4 = zFiles;  //number between 0...1000
-    co.callBack.id = FileRemoteAccessor.kNrofFilesAndBytes;
-    co.callBack.dst.processEvent(co.callBack);
-  }
-  
-  
-  
-  void checkDir(File dir, int recursion){
-    //try{
-      File[] files = dir.listFiles();
-      for(File file: files){
-        if(file.isDirectory()){
-          if(recursion < 100){ //prevent loop with itself
-            checkDir(file, recursion+1);  //recursively
+    
+    
+    
+    void checkDir(File dir, int recursion){
+      //try{
+        File[] files = dir.listFiles();
+        for(File file: files){
+          if(file.isDirectory()){
+            if(recursion < 100){ //prevent loop with itself
+              checkDir(file, recursion+1);  //recursively
+            }
+          } else {
+            listFiles.add(file);
+            zFilesCheck +=1;
+            zBytesCheck += file.length();
           }
+        }
+      //}catch(IOException exc){
+        
+      //}
+    }
+    
+    
+    private void execCopy(Commission co){
+      timestart = System.currentTimeMillis();
+      zFilesCopy = 0;
+      zBytesCopy = 0;
+      if(co.src.isDirectory()){
+        copy.execCopyDir(co, co.src, co.dst);
+      } else {
+        copy.execCopyFile(co, co.src, co.dst);
+      }
+      co.callBack.id = FileRemoteAccessor.kFinishOk; //zBytesCopyFile == zBytesMax ? FileRemoteAccessor.kFinishOk : FileRemoteAccessor.kFinishNok;
+      co.callBack.sendtoDst();
+    }
+
+    
+    private void execCopyDir(Commission co, File src, File dst){
+      assert(src.isDirectory());
+      dst.mkdirs();
+      File[] filesSrc = src.listFiles();
+      for(File fileSrc: filesSrc){
+        if(fileSrc.isDirectory()){
+          File dirDst = new File(dst, fileSrc.getName());
+          execCopyDir(co, fileSrc, dirDst);
         } else {
-          listFiles.add(file);
-          zFiles +=1;
-          zBytes += file.length();
+          File fileDst = new File(dst, fileSrc.getName());
+          execCopyFile(co, fileSrc, fileDst);
         }
       }
-    //}catch(IOException exc){
-      
-    //}
-  }
-  
-  
-  
-  void execCopy(Commission co){
-    FileInputStream in = null;
-    FileOutputStream out = null;
-    final long zBytesMax = co.src.length();
-    long zBytesCum = 0;
-    try{
-      long timestart = System.currentTimeMillis();
-      in = new FileInputStream(co.src);
-      out = new FileOutputStream(co.dst);
-      byte[] buffer = new byte[0x4000];  //16 kByte buffer
-      boolean bContCopy;
-      do {
-        int zBytes = in.read(buffer);
-        if(zBytes > 0){
-          bContCopy = true;
-          zBytesCum += zBytes;
-          out.write(buffer, 0, zBytes);
-          long time = System.currentTimeMillis();
-          //
-          //feedback of progression after about 0.3 second. 
-          if(time > timestart + 300){
-            co.callBack.data1 = (int)((float)zBytesCum / zBytesMax * 1000);  //number between 0...1000
-            co.callBack.id = FileRemoteAccessor.kOperation;
-            co.callBack.dst.processEvent(co.callBack);
-            timestart = time;
-          }
-        } else if(zBytes == -1){
-          bContCopy = false;
-          out.close();
-          co.callBack.id = zBytesCum == zBytesMax ? FileRemoteAccessor.kFinishOk : FileRemoteAccessor.kFinishNok;
-          co.callBack.dst.processEvent(co.callBack);
-        } else {
-          //0 bytes ?
-          bContCopy = true;
-        }
-      }while(bContCopy);
-    } catch(IOException exc){
-      co.callBack.data1 = (int)((float)zBytesCum / zBytesMax * 1000);  //number between 0...1000
-      co.callBack.id = FileRemoteAccessor.kFinishError;
-      co.callBack.dst.processEvent(co.callBack);
     }
-    try{
-      if(in !=null) { in.close(); }
-      if(out !=null) { out.close(); }
-    }catch(IOException exc){}
-  }
+    
+    
+    private void execCopyFile(Commission co, File src, File dst){
+      FileInputStream in = null;
+      FileOutputStream out = null;
+      final long zBytesMax = src.length();
+      long zBytesCopyFile = 0;
+      try{
+        in = new FileInputStream(src);
+        out = new FileOutputStream(dst);
+        byte[] buffer = new byte[0x4000];  //16 kByte buffer
+        boolean bContCopy;
+        do {
+          int zBytes = in.read(buffer);
+          if(zBytes > 0){
+            bContCopy = true;
+            zBytesCopyFile += zBytes;
+            zBytesCopy += zBytes;
+            out.write(buffer, 0, zBytes);
+            long time = System.currentTimeMillis();
+            //
+            //feedback of progression after about 0.3 second. 
+            if(time > timestart + 300){
+              co.callBack.data1 = (int)((float)zBytesCopyFile / zBytesMax * 1000);  //number between 0...1000
+              co.callBack.data2 = (int)((float)zBytesCopy / zBytesCheck * 1000);  //number between 0...1000
+              co.callBack.data3 = zFilesCheck - zFilesCopy;
+              co.callBack.id = FileRemoteAccessor.kOperation;
+              co.callBack.sendtoDst();
+              timestart = time;
+            }
+          } else if(zBytes == -1){
+            bContCopy = false;
+            out.close();
+          } else {
+            //0 bytes ?
+            bContCopy = true;
+          }
+        }while(bContCopy);
+      } catch(IOException exc){
+        co.callBack.data1 = (int)((float)zBytesCopyFile / zBytesMax * 1000);  //number between 0...1000
+        co.callBack.data2 = (int)((float)zBytesCopy / zBytesCheck * 1000);  //number between 0...1000
+        co.callBack.data3 = zFilesCheck - zFilesCopy;
+        co.callBack.id = FileRemoteAccessor.kFinishError;
+        co.callBack.sendtoDst();
+      }
+      try{
+        if(in !=null) { in.close(); }
+        if(out !=null) { out.close(); }
+      }catch(IOException exc){}
+      zFilesCopy +=1;
+    }
+  }  
+  
+  
   
   
   void execDel(Commission commission){
