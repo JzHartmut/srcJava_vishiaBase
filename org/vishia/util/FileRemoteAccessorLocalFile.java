@@ -18,8 +18,9 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   /**Version and history.
    * <ul>
+   * <li>2012-01-06 Hartmut new: {@link #setFileProperties(FileRemote)} etc.
+   * <li>2012-01-04 Hartmut new: copy file trees started from a given directory
    * <li>2011-12-31 Hartmut new {@link #execCopy(org.vishia.util.FileRemoteAccessor.Commission)}. 
-   *   TODO: copy file trees started from a given directory
    * <li>2011-12-31 Hartmut new {@link #runCommissions} as extra thread.  
    * <li>2011-12-10 Hartmut creation: See {@link FileRemoteAccessor}.
    * </ul>
@@ -53,21 +54,66 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   private Copy copy = new Copy();
   
+  private FileRemote workingDir;
   
   public static FileRemoteAccessor getInstance(){
     return instance;
   }
   
   
+  /*
   @Override public Object createFileObject(FileRemote file)
   { Object oFile = new File(file.path, file.name);
     return oFile;
   }
+  */
   
   
-  
-  @Override public boolean getFileProperties(FileRemote file)
-  { return false; //file.super.lastModified();
+  @Override public boolean setFileProperties(FileRemote fileRemote)
+  { String path = fileRemote.getPath();
+    File fileLocal = new File(path);
+    setFileProperties(fileRemote, fileLocal);
+    return true;
+  }
+
+  private void setFileProperties(FileRemote fileRemote, File fileLocal){
+    String path = fileRemote.getPath();
+    String canonicalPath = FileSystem.getCanonicalPath(fileLocal);
+    long date = fileLocal.lastModified();
+    long length = fileLocal.length();
+    int flags = FileRemote.mExist | FileRemote.mTested;
+    if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
+    if(fileLocal.isHidden()){ flags |= FileRemote.mHidden; }
+    if(fileLocal.canWrite()){ flags |= FileRemote.mCanWrite; }
+    if(fileLocal.canRead()){ flags |= FileRemote.mCanRead; }
+    if(fileLocal.canExecute()){ flags |= FileRemote.mExecute; }
+    if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
+    if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
+    fileRemote._setProperties(length, date, flags, fileLocal);
+    if(fileLocal.isAbsolute()){
+      if(path.indexOf("./")>=0){
+        StringBuilder uPath = new StringBuilder(path);
+        int pos;
+        while( ( pos=uPath.indexOf("/../") ) >=0){
+          int pos1 = uPath.lastIndexOf("/", pos-1);
+          uPath.delete(pos1, pos+4);
+        }
+        while( ( pos=uPath.indexOf("/./") ) >=0){
+          uPath.delete(pos, pos+3);
+        }
+        path = uPath.toString();
+      }
+      if(!canonicalPath.startsWith(path)){
+        fileRemote.setSymbolicLinkedPath(canonicalPath);
+      } else {
+        fileRemote.setCanonicalAbsPath(canonicalPath);
+      }
+    } else { //relative path
+      if(workingDir == null){
+        workingDir = new FileRemote(FileSystem.getCanonicalPath(new File(".")));  //NOTE: should be absolute
+      }
+      fileRemote.setReferenceFile(workingDir);  
+    }
   }
 
   
@@ -90,6 +136,29 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
     }
   }
 
+  
+  @Override public FileRemote[] listFiles(FileRemote parent){
+    File dir = (File)parent.oFile;
+    File[] files = dir.listFiles();
+    FileRemote[] retFiles = new FileRemote[files.length];
+    int iFile = -1;
+    for(File fileLocal: files){
+      retFiles[++iFile] = newFile(fileLocal);
+    }
+    return retFiles;
+  }
+
+  
+  public FileRemote newFile(File fileLocal){
+    String name = fileLocal.getName();
+    String sDir = fileLocal.getParent().replace('\\', '/');
+    FileRemote fileRemote = new FileRemote(this, sDir, name, 0, 0, 0, null);
+    setFileProperties(fileRemote, fileLocal);  
+    return fileRemote;
+  }
+  
+  
+  
   
   @Override public boolean isLocalFileSystem()
   {  return true;

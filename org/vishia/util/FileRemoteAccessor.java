@@ -13,7 +13,7 @@ public interface FileRemoteAccessor
 {
   /**Version and history.
    * <ul>
-   * <li>2012-01-01 Hartmut new {@link #createFileObject(FileRemote)}
+   * <li>2012-01-06 Hartmut new {@link #setFileProperties(FileRemote)}. 
    * <li>2011-12-31 Hartmut new {@link Commission} and {@link #addCommission(Commission)}. It is used
    *   to add commissions to the implementation class to do in another thread/via communication.
    * <li>2011-12-10 Hartmut creation: Firstly only the {@link FileRemoteAccessorLocalFile} is written.
@@ -26,11 +26,14 @@ public interface FileRemoteAccessor
   , kFinishError = 0xf1e3303, kNrofFilesAndBytes = 0xd00001;
 
   
-  public boolean getFileProperties(FileRemote file);
+  public boolean setFileProperties(FileRemote file);
 
   ReadableByteChannel openRead(FileRemote file, long passPhase);
   
   WritableByteChannel openWrite(FileRemote file, long passPhase);
+ 
+  FileRemote[] listFiles(FileRemote parent);
+  
   
   void addCommission(Commission com);
   
@@ -42,7 +45,7 @@ public interface FileRemoteAccessor
    * @param file The description of the file.
    * @return Any object.
    */
-  Object createFileObject(FileRemote file);
+  //Object createFileObject(FileRemote file);
   
   public class Commission
   {
