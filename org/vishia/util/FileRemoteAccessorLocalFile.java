@@ -138,12 +138,17 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
 
   
   @Override public FileRemote[] listFiles(FileRemote parent){
+    FileRemote[] retFiles = null;
     File dir = (File)parent.oFile;
-    File[] files = dir.listFiles();
-    FileRemote[] retFiles = new FileRemote[files.length];
-    int iFile = -1;
-    for(File fileLocal: files){
-      retFiles[++iFile] = newFile(fileLocal);
+    if(dir.exists()){
+      File[] files = dir.listFiles();
+      if(files !=null){
+        retFiles = new FileRemote[files.length];
+        int iFile = -1;
+        for(File fileLocal: files){
+          retFiles[++iFile] = newFile(fileLocal);
+        }
+      }
     }
     return retFiles;
   }
