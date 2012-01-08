@@ -351,6 +351,12 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
         if(in !=null) { in.close(); }
         if(out !=null) { out.close(); }
       }catch(IOException exc){}
+      try {
+        long date = src.lastModified();
+        dst.setLastModified(date);
+      } catch(Exception exc){
+        System.err.println("can't modified date: " + dst.getAbsolutePath());
+      }
       zFilesCopy +=1;
     }
   }  

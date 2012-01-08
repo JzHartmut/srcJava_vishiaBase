@@ -1234,7 +1234,8 @@ that is a liststring and his part The associated String
   
   
 
-  /** Searches the end of a quotion string.
+  /**Searches the end of a quoted string. In Generally, a backslash skips over the next char
+   * and does not test it as end of the quotion.  
    * @param fromWhere Offset after start to start search. 
    *                  It may be 0 if the quotion starts at start, it is the position of the left
    *                  quotion mark.
@@ -1504,7 +1505,8 @@ that is a liststring and his part The associated String
 
 
   /** Sets the length of the current part to the end of the quotion. It is not tested here,
-   * whether or not the actual part starts with a left quotion mark.  
+   * whether or not the actual part starts with a left quotion mark.
+   * In Generally, a backslash skips over the next char and does not test it as end of the quotion.  
    * @java2c=return-this.
    * @param sEndQuotion The char determine the end of quotion, it may be at example " or ' or >.
    * @param maxToTest Maximum of chars to test. If the endchar isn't find inside this number of chars,

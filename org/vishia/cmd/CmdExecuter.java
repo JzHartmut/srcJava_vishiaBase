@@ -284,7 +284,7 @@ public class CmdExecuter implements Closeable
           spLine.setLengthMax();
           length = spLine.length() - 1;  //without leading "
         } else {
-          length -= 2;  
+          length -= 1;  //without leading ", the trailing " is not   
         }
       } else { //non quoted:
         posArgs[++ixArg] = posArg;
