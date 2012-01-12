@@ -28,6 +28,10 @@ public class FileRemote extends File
 
   /**Version and history.
    * <ul>
+   * <li>2012-01-14 Hartmut chg: The toplevel directory contains only one slash in the {@link #sDir}
+   *   and an empty name in {@link #name}. 
+   * <li>2012-01-14 Hartmut new: {@link #getParentFile()} now implemented here.  
+   * <li>2012-01-14 Hartmut new: {@link #fromFile(File)} to convert from a normal File instance.
    * <li>2012-01-06 Hartmut new: Some functionality for {@link #_setProperties(long, long, int, Object)}
    *   and symbolic linked paths.
    * <li>2012-01-01 Hartmut new: {@link #oFile}. In the future the superclass File should be used only as interface.
@@ -63,12 +67,15 @@ public class FileRemote extends File
   /**Alternative for referencing of the reference file. */
   protected FileRemote[] referenceFileRef;
   
-  /**The directory path of the file. If the path is absolute, it doesn't contain any "/./" 
-   * or "/../"-parts. It is an canonical absolute path. 
-   * The directory path may be relative. A relative path may be empty "" too. 
-   * An absolute path can contain a start string for a remote device designation. */
+  /**The directory path of the file. It ends with '/' always.
+   * If the path is absolute, it doesn't contain any "/./" 
+   * or "/../"-parts. Then it is an canonical absolute path.
+   * An absolute path can contain a start string for a remote device designation.
+   * <br> 
+   * The directory path may be relative too. A relative path may be empty "". */
   protected final String sDir;
-  /**The name with extension of the file. */
+  
+  /**The name with extension of the file. It is empty if this is the root directory. */
   protected final String name;
   
   /**The unique path to the file or directory entry. If the file is symbolic linked (on UNIX systems),
@@ -159,21 +166,24 @@ public class FileRemote extends File
     super(sDirP + (sName ==null ? "" : ("/" + sName)));  //it is correct if it is a local file. 
     String sPath = sDirP.replace('\\', '/');
     this.device = device;
+    String name1;
     if(sName == null){
       int lenPath = sPath.length();
       int posSep = sPath.lastIndexOf('/', lenPath-2);
       if(posSep >=0){
         this.sDir = sPath.substring(0, posSep+1);
-        this.name = sPath.substring(posSep+1);
+        name1 = sPath.substring(posSep+1);
       } else {
-        this.sDir = "";
-        this.name = sPath;
+        this.sDir = "/";
+        name1 = sPath;
       }
     } else {
       if(!sPath.endsWith("/")){ sPath += "/";}
       this.sDir = sPath;
-      this.name = sName;
+      name1 = sName;
     }
+    if(name1.endsWith("/")){ this.name = name1.substring(0, name1.length()-1); }
+    else { this.name = name1; }
     MainCmd.assertion(this.sDir.length() == 0 || this.sDir.endsWith("/"));
     MainCmd.assertion(!this.sDir.endsWith("//"));
     if(length == -1){
@@ -187,6 +197,19 @@ public class FileRemote extends File
     }
   }
   
+  
+  
+  /**Returns a FileRemote instance from a standard java.io.File instance.
+   * If src is instanceof FileRemote already, it returns src.
+   * Elsewhere it builds a new instance of FileRemote which inherits from File,
+   * it is a new instance of File too.
+   * @param src Any File or FileRemote instance.
+   * @return src if it is instanceof FileRemote or a new Instance.
+   */
+  public static FileRemote fromFile(File src){
+    if(src instanceof FileRemote){ return (FileRemote)src; }
+    else return new FileRemote(src.getAbsolutePath());
+  }
   
   
   /**Sets the properties to this.
@@ -321,7 +344,13 @@ public class FileRemote extends File
   
   @Override public String getName(){ return name; }
   
-  @Override public String getParent(){ return sDir; }
+  @Override public String getParent(){ 
+    int zDir = sDir.length();
+    int posSlash = sDir.indexOf('/');  //the first slash
+    //if only one slash is present, return it. Elsewhere don't return the terminating slash.
+    String sParent = zDir > posSlash+1 ? sDir.substring(0, zDir-1): sDir;
+    return sParent; 
+  }
   
   /**Gets the path of the file. For this class the path should be esteemed as canonical,
    * but that should be considered on constructor. 
@@ -329,6 +358,23 @@ public class FileRemote extends File
   @Override public String getPath(){ return sDir + name; }
   
   @Override public String getCanonicalPath(){ return canonicalPath; }
+  
+  
+  /**Gets the parent directory.
+   * It creates a new instance of FileRemote with the path infos from {@link #sDir}.
+   * 
+   * @return null if this is the toplevel directory.
+   */
+  @Override public FileRemote getParentFile(){
+    final FileRemote parent;
+    if(sDir.indexOf('/') < sDir.length()-1 || name.length() > 0){
+      parent = new FileRemote(sDir);
+    } else {
+      parent = null;
+    }
+    return parent;
+  }
+  
   
   @Override public boolean isDirectory(){ return (flags & mDirectory) !=0; }
   
