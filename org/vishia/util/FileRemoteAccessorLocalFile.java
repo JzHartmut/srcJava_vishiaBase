@@ -1,5 +1,6 @@
 package org.vishia.util;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -18,6 +19,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   /**Version and history.
    * <ul>
+   * <li>2012-01-09 Hartmut new: {@link #close()} terminates the thread.
    * <li>2012-01-06 Hartmut new: {@link #setFileProperties(FileRemote)} etc.
    * <li>2012-01-04 Hartmut new: copy file trees started from a given directory
    * <li>2011-12-31 Hartmut new {@link #execCopy(org.vishia.util.FileRemoteAccessor.Commission)}. 
@@ -27,7 +29,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
    */
   public static final int version = 0x20111210;
 
-  private static FileRemoteAccessor instance = new FileRemoteAccessorLocalFile();
+  private static FileRemoteAccessor instance;
   
   /**State of execution commissions.
    * '?': not started. 'w': waiting for commission, 'b': busy, 'x': should finish, 'z': finished
@@ -56,7 +58,14 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   private FileRemote workingDir;
   
+  /**Returns the singleton instance of this class.
+   * Note: The instance will be created and the thread will be started if this routine was called firstly.
+   * @return The singleton instance.
+   */
   public static FileRemoteAccessor getInstance(){
+    if(instance == null){
+      instance = new FileRemoteAccessorLocalFile();
+    }
     return instance;
   }
   
@@ -185,17 +194,25 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   void runCommissions(){
     commissionState = 'r';
-    while(commissionState != 'x'){
+    while(commissionState != 'x'){ //exit?
       Commission commission;
       if( (commission = commissions.poll()) !=null){
-        commissionState = 'b';
-        execCommission(commission);    
+        synchronized(this){
+          if(commissionState != 'x'){
+            commissionState = 'b'; //busy
+          }
+        }
+        if(commissionState == 'b'){
+          execCommission(commission);
+        }
       } else {
         synchronized(this){
-          if(commissionState != 'c'){
+          if(commissionState != 'x'){  //exit?
             commissionState = 'w';
             try{ wait(1000); } catch(InterruptedException exc){}
-            commissionState = 'r';
+            if(commissionState == 'w'){ //can be changed while waiting
+              commissionState = 'r';
+            }
           }
         }
       }
@@ -366,6 +383,15 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   void execDel(Commission commission){
     
+  }
+
+
+  @Override public void close() throws IOException
+  {
+    synchronized(this){
+      if(commissionState == 'w'){ notify(); }
+      commissionState = 'x';
+    }
   }
   
   

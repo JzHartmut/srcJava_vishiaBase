@@ -1,5 +1,6 @@
 package org.vishia.util;
 
+import java.io.Closeable;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -9,10 +10,12 @@ import java.nio.channels.WritableByteChannel;
  * @author Hartmut Schorrig
  *
  */
-public interface FileRemoteAccessor
+public interface FileRemoteAccessor extends Closeable
 {
   /**Version and history.
    * <ul>
+   * <li>2012-01-09 Hartmut new: This class extends from Closeable, because an implementation 
+   *  may have an running thread which is need to close. A device should be closeable any time.
    * <li>2012-01-06 Hartmut new {@link #setFileProperties(FileRemote)}. 
    * <li>2011-12-31 Hartmut new {@link Commission} and {@link #addCommission(Commission)}. It is used
    *   to add commissions to the implementation class to do in another thread/via communication.
