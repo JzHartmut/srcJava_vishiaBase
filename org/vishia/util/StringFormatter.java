@@ -261,6 +261,7 @@ public class StringFormatter
    */
   public StringFormatter addStringLine(byte[] data, int idx, int nrofBytes, String charsetName)
   { //to convert bytes with a given charset, but show bytes < 0x20 with '.', copy it in a independend buffer:
+    if(nrofBytes > data.length){ nrofBytes = data.length; }
     byte[] data1 = new byte[nrofBytes];
     System.arraycopy(data, idx, data1, 0, nrofBytes);
     for(int ii = 0; ii < nrofBytes; ii++)
@@ -363,7 +364,7 @@ public class StringFormatter
     int incrIdx;
     if((mode & mBytesInWordBigEndian) != 0){ incrIdx = 1; }
     else { incrIdx = -1; idx += nrofBytesInWord -1;}
-    while(--nrofBytesInWord >= 0)
+    while(--nrofBytesInWord >= 0 && idx < data.length)
     { byte value = data[idx];
       idx += incrIdx;  //TRICKY may be 1 or -1 dependend on BigEndian
       for(int i=0; i<2; i++)

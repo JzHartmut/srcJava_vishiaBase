@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.Reader;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -94,8 +93,9 @@ public class FileCompare
    * @param dir2 The second directory
    * @param sExclude Exclude filter for files (TODO)
    */
-  void compare(List<Result> list, File dir1, File dir2, String[] sExclude)
+  public void compare(List<Result> list, File dir1, File dir2, String[] sExclude)
   {
+    int zIgnores = sIgnores !=null ? sIgnores.length : 0;
     File[] files1 = dir1.listFiles();
     File[] files2 = dir2.listFiles();
     //fill all files sorted by name in the index, to get it by name:
@@ -105,12 +105,12 @@ public class FileCompare
       String name = file.getName();
       int ixIgnore = -1;
       //don't fill in ignored files.
-      while(++ixIgnore < sIgnores.length ){
+      while(++ixIgnore < zIgnores ){
         if(name.equals(sIgnores[ixIgnore])){ 
           ixIgnore = Integer.MAX_VALUE -1;  //its a break;
         }
       }
-      if(ixIgnore == sIgnores.length){ //all ignores checked  
+      if(ixIgnore == zIgnores){ //all ignores checked  
         String name4cmp = file.isDirectory() ? ":" + name : name;
         idxFiles1.put(name4cmp, file);
       }
@@ -118,12 +118,12 @@ public class FileCompare
     for(File file: files2){ 
       String name = file.getName();
       int ixIgnore = -1;
-      while(++ixIgnore < sIgnores.length ){
+      while(++ixIgnore < zIgnores ){
         if(name.equals(sIgnores[ixIgnore])){ 
           ixIgnore = Integer.MAX_VALUE -1;  //its a break;
         }
       }
-      if(ixIgnore == sIgnores.length){ //all ignores checked  
+      if(ixIgnore == zIgnores){ //all ignores checked  
         String name4cmp = file.isDirectory() ? ":" + name : name;
         idxFiles2.put(name4cmp, file);
       }
