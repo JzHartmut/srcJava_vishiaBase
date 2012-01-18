@@ -166,11 +166,12 @@ public class CmdQueue implements Closeable
           char kindOfExecution = cmd1.cmd.getKindOfExecution();
           if(">%".indexOf(kindOfExecution) >=0){
             if(outStatus !=null){ outStatus.append(">" + sCmd[0]); }
-            mainCmd.writeInfoln("executes " + sCmd);
+            mainCmd.writeInfoln("executes " + sCmd[0]);
             int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError, false);
             if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull\n"); }
             else {cmdOutput.append("JavaCmd: cmd execution errorlevel = " + exitCode + "\n"); }
           } else if(kindOfExecution == '&'){
+            mainCmd.writeInfoln("executes " + sCmd[0]);
             if(outStatus !=null){ outStatus.append("&" + sCmd[0]); }
             executer.execute(sCmd, null, null, null, false);
             //cmdOutput.append("JavaCmd; started; " + sCmd + "\n");

@@ -77,6 +77,10 @@ public class FileCompare
       } else {
         subFiles = null;
       }
+      //default values will be changed during comparison.
+      alone = false; readProblems = false;
+      equal = true; lenEqual = true; equalDaylightSaved = true; contentEqual = true;
+      contentEqualWithoutEndline = true;
     }
   
     @Override public String toString(){ return name; }
@@ -93,11 +97,12 @@ public class FileCompare
    * @param dir2 The second directory
    * @param sExclude Exclude filter for files (TODO)
    */
-  public void compare(List<Result> list, File dir1, File dir2, String[] sExclude)
+  public void compare(Result result, String[] sExclude, int recursion)
   {
+    if(recursion > 100) throw new IllegalArgumentException("deepness");
     int zIgnores = sIgnores !=null ? sIgnores.length : 0;
-    File[] files1 = dir1.listFiles();
-    File[] files2 = dir2.listFiles();
+    File[] files1 = result.file1.listFiles();
+    File[] files2 = result.file2.listFiles();
     //fill all files sorted by name in the index, to get it by name:
     Map<String, File> idxFiles1 = new TreeMap<String, File>();
     Map<String, File> idxFiles2 = new TreeMap<String, File>();
@@ -132,60 +137,69 @@ public class FileCompare
     //iterate over files
     Set<Map.Entry<String, File>> setFiles1 = idxFiles1.entrySet();
     Set<Map.Entry<String, File>> setFiles2 = idxFiles2.entrySet();
+    Iterator<Map.Entry<String, File>> iter1 = setFiles1.iterator();
+    Map.Entry<String, File> entry1 = null;
     Iterator<Map.Entry<String, File>> iter2 = setFiles2.iterator();
     Map.Entry<String, File> entry2 = null;
-    String name1;
+    String name1 = null;
     String name2 = null;
-    File file1, file2 = null;
-    for(Map.Entry<String, File> entry1: setFiles1){
+    File file1 = null, file2 = null;
+    boolean bCont = true;
+    //for(Map.Entry<String, File> entry1: setFiles1){
+    do {
+      if(entry1 == null) {  //get next entry  
+        entry1 = iter1.hasNext() ? iter1.next() : null;
+        if(entry1 !=null)
+        { name1 = entry1.getKey();
+          file1 = entry1.getValue();
+        } else{ 
+          name1 = null; file1 = null; 
+        }
+      }
       if(entry2 == null) {  //get next entry  
         entry2 = iter2.hasNext() ? iter2.next() : null;
         if(entry2 !=null)
         { name2 = entry2.getKey();
           file2 = entry2.getValue();
+        } else{ 
+          name2 = null; file2 = null; 
         }
       }
-      name1 = entry1.getKey();
-      file1 = entry1.getValue();
-      if(entry2 != null && name1.equals(name2)){
+      if(entry1 != null && entry2 != null && name1.equals(name2)){
         final Result resEntry;
         resEntry = new Result(file1, file2);
         if(name1.startsWith(":")){
             //a directory
-          compare(resEntry.subFiles, file1, file2, sExclude);
+          compare(resEntry, sExclude, recursion +1);
         } else {
           //the same file names, compare it:
           compareFile(resEntry);
         }
-        list.add(resEntry);
-        entry2 = null;    //use next
+        result.subFiles.add(resEntry);
+        if(!resEntry.contentEqual){ result.contentEqual = false; } 
+        if(!resEntry.contentEqualWithoutEndline){ result.contentEqualWithoutEndline = false; } 
+        if(!resEntry.equal){ result.equal = false; } 
+        if(!resEntry.equalDaylightSaved){ result.equalDaylightSaved = false; } 
+        if(resEntry.readProblems){ result.readProblems = true; } 
+        entry1 = entry2 = null;    //use next
       } else if( entry2 != null && name1.compareTo(name2) >0){
-        //file2 has no presentation at left
+        //file2 has no presentation at left because name2 is less than name1
         Result resEntry = new Result(null, file2);
         resEntry.alone = true;
-        list.add(resEntry);
+        result.equal = false;
+        result.subFiles.add(resEntry);
         entry2 = null;  //use next
-      } else {
-        //file1 has no presentation at right
+      } else if( entry1 != null){
+        //file1 has no presentation at right because the name
         Result resEntry = new Result(file1, null);
         resEntry.alone = true;
-        list.add(resEntry);
+        result.equal = false;
+        result.subFiles.add(resEntry);
+        entry1 = null;
+      } else {
+        bCont = false;
       }
-    }
-    do{
-      if(entry2 == null) {  //get next entry  
-        entry2 = iter2.hasNext() ? iter2.next() : null;
-      }
-      if(entry2 !=null){
-        name2 = entry2.getKey();
-        file2 = entry2.getValue();
-        //file2 has no presentation at left
-        Result resEntry = new Result(null, file2);
-        resEntry.alone = true;
-        list.add(resEntry);
-        entry2 = null;  //use next
-      }
-    } while(iter2.hasNext());
+    } while(bCont);
   }
   
   
@@ -198,20 +212,25 @@ public class FileCompare
   {
     long date1 = file.file1.lastModified();
     long date2 = file.file2.lastModified();
-    if(Math.abs(date1 - date2) < minDiffTimestamp && mode == onlyTimestamp){
-      file.equal = true;
+    long len1 = file.file1.length();
+    long len2 = file.file1.length();
+    if(Math.abs(date1 - date2) > minDiffTimestamp && mode == onlyTimestamp){
+      file.equal = file.equalDaylightSaved = file.contentEqual = file.contentEqualWithoutEndline = false;
+      file.lenEqual = len1 == len2;
     } else if( ( Math.abs(date1 - date2 + 3600000) < minDiffTimestamp
               || Math.abs(date1 - date2 - 3600000) < minDiffTimestamp
                ) && mode == onlyTimestamp){ 
-      file.equalDaylightSaved = true;
+      file.equalDaylightSaved = file.contentEqual = file.contentEqualWithoutEndline = false;
     } else {
-      long len1 = file.file1.length();
-      long len2 = file.file1.length();
-      if(len1 == len2){
-        file.lenEqual = true;
+      //timestamp is not tested.
+      if(len1 != len2){
+        //different length
+        file.equal = file.contentEqual = file.contentEqualWithoutEndline = file.lenEqual = false;
       }
       //Files are different in timestamp or timestamp is insufficient for comparison:
-      file.contentEqual = compareFileContent(file);
+      if(file.file1.getName().equals("MainCmd.java"))
+        file.alone = false;
+      file.equal = compareFileContent(file);
     }
   }
   /**Compare two files.
@@ -222,7 +241,7 @@ public class FileCompare
     boolean bEqu = true;
     try {
       BufferedReader r1 = new BufferedReader(new FileReader(result.file1));
-      BufferedReader r2 = new BufferedReader(new FileReader(result.file1));
+      BufferedReader r2 = new BufferedReader(new FileReader(result.file2));
       String s1, s2;
       while( bEqu && (s1 = r1.readLine()) !=null){
         s2 = r2.readLine();
@@ -234,6 +253,7 @@ public class FileCompare
     } catch( IOException exc){
       result.readProblems = true; bEqu = false;
     }
+    result.equal = bEqu;
     return bEqu;
   }  
   
@@ -280,13 +300,13 @@ public class FileCompare
   
   public static void main(String[] args)
   {
-    List<FileCompare.Result> list = new LinkedList<FileCompare.Result>();
     File dir1 = new File(args[0]);
     File dir2 = new File(args[1]);
     String[] ignores = new String[]{".bzr"};
     FileCompare main = new FileCompare(FileCompare.onlyTimestamp, ignores, 2000);
-    main.compare(list, dir1, dir2, null);
-    main.reportResult(System.out, list);
+    Result result = new Result(dir1, dir2);
+    main.compare(result, null, 0);
+    main.reportResult(System.out, result.subFiles);
   }
   
 }

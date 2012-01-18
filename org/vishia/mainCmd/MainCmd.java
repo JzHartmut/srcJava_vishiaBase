@@ -1236,7 +1236,7 @@ public abstract class MainCmd implements MainCmd_ifc
   /**Its a helper to set a breakpoint for assert
    * @param condition
    */
-  public static void assertion(boolean condition){
+  public static void XXXassertion(boolean condition){
     if(!condition){
       throw new RuntimeException ("assertion");
     }

@@ -184,8 +184,8 @@ public class FileRemote extends File
     }
     if(name1.endsWith("/")){ this.name = name1.substring(0, name1.length()-1); }
     else { this.name = name1; }
-    MainCmd.assertion(this.sDir.length() == 0 || this.sDir.endsWith("/"));
-    MainCmd.assertion(!this.sDir.endsWith("//"));
+    Assert.check(this.sDir.length() == 0 || this.sDir.endsWith("/"));
+    Assert.check(!this.sDir.endsWith("//"));
     if(length == -1){
       device.setFileProperties(this); 
     } else {
