@@ -222,11 +222,12 @@ public class Event
    *  
    * @return true if the event instance is able to use.
    */
-  public boolean use(long order, int id, Object src){ 
+  public boolean use(long order, int id, Object src, EventConsumer dst){ 
     if(dateCreation.compareAndSet(0, System.currentTimeMillis())){
       this.commisionId = order;
       this.id = id;
       this.src = src;
+      this.dst = dst;
       return true;
     }
     else return false;

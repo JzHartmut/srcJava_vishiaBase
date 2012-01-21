@@ -70,7 +70,7 @@ public class Header2Reflection
   /**Aggregation to the Console implementation class.*/
   Report console;
 
-  private class FileIn
+  private static class FileIn
   {
     /**Input files. */
     final List<File> listFileIn = new LinkedList<File>();
