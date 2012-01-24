@@ -178,6 +178,17 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class Event
 {
+  
+  /**Version and history
+   * <ul>
+   * <li>2012-01-22 Hartmut chg: {@link #use(long, int, Object, EventConsumer)} needs the dst as parameter.
+   * <li>2012-01-05 Hartmut improved: {@link #dstThread}, {@link #commisionId} instead order, more {@link #data2} 
+   * <li>2011-12-27 Hartmut created, concept of event queue, callback need for remote copy and delete of files
+   *   (in another thread too). A adequate universal class in java.lang etc wasn't found.
+   * </ul>
+   */
+  public static final int version = 0x20120122;
+  
   /**The src instance for the event. This reference should not be used for processing, it is only
    * a hint while debugging. */
   protected Object src;
