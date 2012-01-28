@@ -151,8 +151,10 @@ public class CmdQueue implements Closeable
   public final void execCmds(Appendable outStatus, Appendable outErrors)
   {
     PendingCmd cmd1;
+    boolean someExecute = false;
     while( (cmd1 = pendingCmds.poll())!=null){
       busy = true;
+      someExecute = true;
       try{
         if(cmd1.currentDir !=null){
           executer.setCurrentDir(cmd1.currentDir);
@@ -166,6 +168,14 @@ public class CmdQueue implements Closeable
           char kindOfExecution = cmd1.cmd.getKindOfExecution();
           if(">%".indexOf(kindOfExecution) >=0){
             if(outStatus !=null){ outStatus.append(">" + sCmd[0]); }
+            if(cmdOutput !=null){
+              if(cmd1.currentDir !=null){ cmdOutput.append(cmd1.currentDir.getCanonicalPath()).append(">"); }
+              else { cmdOutput.append("??>");}
+              for(String s:sCmd){
+                if(s !=null){ cmdOutput.append(s).append(" "); }
+              }
+              cmdOutput.append("\n");
+            }
             mainCmd.writeInfoln("executes " + sCmd[0]);
             int exitCode = executer.execute(sCmd, null, cmdOutput, cmdError, false);
             if(exitCode == 0){ cmdOutput.append("JavaCmd: cmd execution successfull\n"); }
@@ -182,8 +192,10 @@ public class CmdQueue implements Closeable
       } catch(Exception exc){ System.out.println("Exception " + exc.getMessage()); }
     }
     busy = false;
-    if(outStatus !=null){ try{ outStatus.append('\0');} catch(IOException exc){} }
-    
+    if(someExecute && outStatus !=null){
+      //clean status line after execution.
+      try{ outStatus.append('\0');} catch(IOException exc){}
+    }
   }
 
 

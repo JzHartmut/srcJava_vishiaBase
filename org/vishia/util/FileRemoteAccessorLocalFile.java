@@ -1,6 +1,5 @@
 package org.vishia.util;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -45,7 +44,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   /**The thread to run all commissions. */
   private Runnable runCommissions = new Runnable(){
     @Override public void run(){
-      runCommissions();  
+      runCommissions();
     }
   };
   
@@ -100,19 +99,8 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
     if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
     fileRemote._setProperties(length, date, flags, fileLocal);
     if(fileLocal.isAbsolute()){
-      if(path.indexOf("./")>=0){
-        StringBuilder uPath = new StringBuilder(path);
-        int pos;
-        while( ( pos=uPath.indexOf("/../") ) >=0){
-          int pos1 = uPath.lastIndexOf("/", pos-1);
-          uPath.delete(pos1, pos+4);
-        }
-        while( ( pos=uPath.indexOf("/./") ) >=0){
-          uPath.delete(pos, pos+3);
-        }
-        path = uPath.toString();
-      }
-      if(!canonicalPath.startsWith(path)){
+      String pathCleaned = FileSystem.cleanAbsolutePath(path);
+      if(!canonicalPath.startsWith(pathCleaned)){
         fileRemote.setSymbolicLinkedPath(canonicalPath);
       } else {
         fileRemote.setCanonicalAbsPath(canonicalPath);
@@ -194,27 +182,33 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   void runCommissions(){
     commissionState = 'r';
+  
     while(commissionState != 'x'){ //exit?
-      Commission commission;
-      if( (commission = commissions.poll()) !=null){
-        synchronized(this){
-          if(commissionState != 'x'){
-            commissionState = 'b'; //busy
+      try{ //never let the thread crash
+        Commission commission;
+        if( (commission = commissions.poll()) !=null){
+          synchronized(this){
+            if(commissionState != 'x'){
+              commissionState = 'b'; //busy
+            }
           }
-        }
-        if(commissionState == 'b'){
-          execCommission(commission);
-        }
-      } else {
-        synchronized(this){
-          if(commissionState != 'x'){  //exit?
-            commissionState = 'w';
-            try{ wait(1000); } catch(InterruptedException exc){}
-            if(commissionState == 'w'){ //can be changed while waiting
-              commissionState = 'r';
+          if(commissionState == 'b'){
+            execCommission(commission);
+          }
+        } else {
+          synchronized(this){
+            if(commissionState != 'x'){  //exit?
+              commissionState = 'w';
+              try{ wait(1000); } catch(InterruptedException exc){}
+              if(commissionState == 'w'){ //can be changed while waiting
+                commissionState = 'r';
+              }
             }
           }
         }
+      } catch(Exception exc){
+        System.err.println("Unexpected exception " + exc.getLocalizedMessage());
+        exc.printStackTrace(System.err);
       }
     }
   }

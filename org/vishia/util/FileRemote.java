@@ -4,7 +4,6 @@ import java.io.File;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.vishia.mainCmd.MainCmd;
 
 /**This class describes a File, which may be localized at any maybe remote device or which may be a normal local file. 
  * A remote file should be accessed by FileRemoteChannel implementations. It may be any information

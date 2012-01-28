@@ -48,8 +48,8 @@ import java.io.FileFilter;
 import java.util.LinkedList;
 import java.util.List;
 
-/**This class supports some functions of file system access above the class java.io.File
- * and independent of other commonly or special solutions, only based on Java standard.
+/**This class supports some functions of file system access as enhancement of the class java.io.File
+ * independently of other classes of vishia packages, only based on Java standard.
  * Some methods helps a simple using of functionality for standard cases.
  */
 public class FileSystem
@@ -58,6 +58,7 @@ public class FileSystem
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
+   * <li>2012-01-26 Hartmut new: {@link #isSymbolicLink(File)} and {@link #cleanAbsolutePath(String)}.
    * <li>2012-01-05 Hartmut new: {@link #rmdir(File)}
    * <li>2011-08-13 Hartmut chg: {@link #addFilesWithBasePath(String, List)} now stores the localPath 
    *     with '/' instead backslash on windows too. Strategy: Use slash generally in Java-applications.
@@ -192,7 +193,7 @@ public class FileSystem
   
   
   /**Reads the content of a whole file into a String.
-   * This method supplies a null pointer if a exception has occurs internally,
+   * This method returns a null pointer if an exception has occurs internally,
    * it throws never an Exception itself.
    * @param file The file should be exist, but don't need to exist.
    * @return null means, there is nothing to read. Otherwise the string contains the content of the file.
@@ -214,17 +215,18 @@ public class FileSystem
   }
 
 
+  /**Writes the given String as content to a file without exception throwing.
+   * This method doesn't throws an exception but returns true of false. It may more simple in application.
+   * @param content any textual information
+   * @param sFile The path of the file.
+   * @return true if done, false if there was any exception internally.
+   */
   public static boolean writeFile(String content, String sFile)
   { boolean bOk = true;
     try{
       FileWriter writer = new FileWriter(sFile, false);
-      if(true) //writer.open(sFile, false)>=0)
-      {
-        writer.write(content); 
-        writer.close();
-      } else {
-        bOk = false;
-      }
+      writer.write(content); 
+      writer.close();
     } catch (IOException e)
     { bOk = false;
     }
@@ -232,17 +234,18 @@ public class FileSystem
   }
 
 
+  /**Writes the given String as content to a file without exception throwing.
+   * This method doesn't throws an exception but returns true of false. It may more simple in application.
+   * @param content any textual information
+   * @param sFile The file.
+   * @return true if done, false if there was any exception internally.
+   */
   public static boolean writeFile(String content, File file)
   { boolean bOk = true;
     try{
       FileWriter writer = new FileWriter(file, false);
-      if(true) //writer.open(sFile, false)>=0)
-      {
-        writer.write(content); 
-        writer.close();
-      } else {
-        bOk = false;
-      }
+      writer.write(content); 
+      writer.close();
     } catch (IOException e)
     { bOk = false;
     }
@@ -566,7 +569,7 @@ public class FileSystem
   }
   
   
-  /**Converts to the absolut path if a relativ path or HOME path is given.
+  /**Converts to the absolute path if a relative path or HOME path is given.
    * The filePath may start with
    * <ul><li>"./" - then the currDir is replaced.
    * <li>"~/" - then the home dir is replaced. The home dir is the string 
@@ -575,7 +578,8 @@ public class FileSystem
    * </ul>    
    * @param sFileNameP filename. It may contain "\\". "\\" are converted to "/" firstly. 
    * @param currDir The current dir or null. If null then the current dir is gotten calling new File(".");
-   * @return The path as absolute path. It is not tested whether it is a valid path.
+   * @return The path as absolute path. It is not tested whether it is a valid path. 
+   *   The path contains / instead \ on windows.
    */
   public static String absolutePath(String sFileNameP, File currDir)
   { String sFileName = sFileNameP.replace('\\', '/');
@@ -602,8 +606,61 @@ public class FileSystem
     } else {
       sAbs = sFileName;
     }
-    return sAbs;
+    return cleanAbsolutePath(sAbs);
   }
+  
+  
+  
+  /**Cleans any /../ and /./ from a path. It makes it canonical.
+   * The difference between this canonical approach and java.io.File.getCanonicalpath() is:
+   * The canonical path of a file in a Unix-like filesystem presents the really location of a file
+   * dissolving symbolic links. 
+   * @param inp Any path.
+   * @return The originally inp if inp doesn't contain /./ or /../, elsewhere a new String
+   */
+  public static String cleanAbsolutePath(String inp){
+    if(inp.indexOf("./")>=0){
+      StringBuilder uPath = new StringBuilder(inp);
+      int pos;
+      while( ( pos=uPath.indexOf("/../") ) >=0){
+        int pos1 = uPath.lastIndexOf("/", pos-1);
+        uPath.delete(pos1, pos+4);
+      }
+      while( ( pos=uPath.indexOf("/./") ) >=0){
+        uPath.delete(pos, pos+3);
+      }
+      return uPath.toString();
+    } else {
+      return inp;
+    }
+  }
+  
+  
+  
+  
+  /**Returns true if the file is symbolic linked. This works on Unix-like file systems.
+   * For windows it returns true if the cleaned absolute path is identical with the result of
+   * file.getCanonicalPath() whereby the comparison is done ignoring the lower/upper case of letters and with
+   * unique slashes instead backslash. It means that this test returns true always, so that
+   * this method returns false in all situations on windows.
+   * <br>
+   * Implementation: The cleaned absolute path is compared with the canonical path. The absolute path is cleared
+   * from unnecessary ./ parts, see {@link absolutePath(String, File)}. and {@link #cleanAbsolutePath(String)}.
+   * @param file The file to test.
+   * @return
+   */
+  public static boolean isSymbolicLink(File file){
+    String sAbsPath = absolutePath(file.getAbsolutePath(), null);  //converts \ to /, removes unnecessary ./
+    String sCanonPath = getCanonicalPath(file);
+    if(sAbsPath.equals(sCanonPath)) return false;
+    else if(File.pathSeparatorChar == '\\'){
+        //on windows ignore cases
+        sAbsPath = sAbsPath.toLowerCase();
+        sCanonPath = sCanonPath.toLowerCase(); 
+        return !sAbsPath.equals(sCanonPath);
+    } else return true;  //its a symbolic link. 
+  }
+  
   
   
 
@@ -771,7 +828,7 @@ public class FileSystem
   }
 
 
-  /**This is equal the usual grep, but with given files.
+  /**This is equal the usual grep, but with given files. TODO this method is not ready yet.
    * @param files
    * @param what
    * @return
@@ -784,6 +841,9 @@ public class FileSystem
         BufferedReader r1 = new BufferedReader(new FileReader(file));
         String sLine;
         while( (sLine = r1.readLine()) !=null){
+          if(sLine.contains(what)){
+            //TODO fill an ArrayList, with the line number and file path. 
+          }
         }
       }catch(IOException exc){ listResult.add("File error; " + file.getAbsolutePath()); }
     }

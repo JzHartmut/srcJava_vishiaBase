@@ -61,6 +61,8 @@ public class FileCompare
     public final List<Result> subFiles;
     public boolean alone;
     public boolean equal;
+    /**For directories: There are some files missing in this dir or deeper dirs. */
+    public boolean missingFiles;
     public boolean lenEqual;
     public boolean readProblems;
     
@@ -80,6 +82,7 @@ public class FileCompare
       //default values will be changed during comparison.
       alone = false; readProblems = false;
       equal = true; lenEqual = true; equalDaylightSaved = true; contentEqual = true;
+      missingFiles = false;
       contentEqualWithoutEndline = true;
     }
   
@@ -91,6 +94,7 @@ public class FileCompare
   
   /**Compares two directory trees. This method will be called recursively for all sub directories
    * which are found on both sides.
+   * Symbolic linked directories (Linux) will be excluded from comparison.
    * @param list1 List for result for dir1
    * @param list2 list for result for dir2
    * @param dir1 A directory
@@ -106,35 +110,43 @@ public class FileCompare
     //fill all files sorted by name in the index, to get it by name:
     Map<String, File> idxFiles1 = new TreeMap<String, File>();
     Map<String, File> idxFiles2 = new TreeMap<String, File>();
+    //
+    //sort all files per name, exclude some, 
     for(File file: files1){ 
       String name = file.getName();
-      int ixIgnore = -1;
-      //don't fill in ignored files.
-      while(++ixIgnore < zIgnores ){
-        if(name.equals(sIgnores[ixIgnore])){ 
-          ixIgnore = Integer.MAX_VALUE -1;  //its a break;
+      boolean isSymbolicLink = FileSystem.isSymbolicLink(file);
+      if(!isSymbolicLink){
+        int ixIgnore = -1;
+        //don't fill in ignored files.
+        while(++ixIgnore < zIgnores ){
+          if(name.equals(sIgnores[ixIgnore])){ 
+            ixIgnore = Integer.MAX_VALUE -1;  //its a break;
+          }
         }
-      }
-      if(ixIgnore == zIgnores){ //all ignores checked  
-        String name4cmp = file.isDirectory() ? ":" + name : name;
-        idxFiles1.put(name4cmp, file);
+        if(ixIgnore == zIgnores){ //all ignores checked and nothing found  
+          String name4cmp = file.isDirectory() ? ":" + name : name;
+          idxFiles1.put(name4cmp, file);
+        }
       }
     }
     for(File file: files2){ 
-      String name = file.getName();
-      int ixIgnore = -1;
-      while(++ixIgnore < zIgnores ){
-        if(name.equals(sIgnores[ixIgnore])){ 
-          ixIgnore = Integer.MAX_VALUE -1;  //its a break;
+      boolean isSymbolicLink = FileSystem.isSymbolicLink(file);
+      if(!isSymbolicLink){
+        String name = file.getName();
+        int ixIgnore = -1;
+        while(++ixIgnore < zIgnores ){
+          if(name.equals(sIgnores[ixIgnore])){ 
+            ixIgnore = Integer.MAX_VALUE -1;  //its a break;
+          }
         }
-      }
-      if(ixIgnore == zIgnores){ //all ignores checked  
-        String name4cmp = file.isDirectory() ? ":" + name : name;
-        idxFiles2.put(name4cmp, file);
+        if(ixIgnore == zIgnores){ //all ignores checked  
+          String name4cmp = file.isDirectory() ? ":" + name : name;
+          idxFiles2.put(name4cmp, file);
+        }
       }
     }
     //
-    //iterate over files
+    //iterate over sorted files
     Set<Map.Entry<String, File>> setFiles1 = idxFiles1.entrySet();
     Set<Map.Entry<String, File>> setFiles2 = idxFiles2.entrySet();
     Iterator<Map.Entry<String, File>> iter1 = setFiles1.iterator();
@@ -179,21 +191,22 @@ public class FileCompare
         if(!resEntry.contentEqual){ result.contentEqual = false; } 
         if(!resEntry.contentEqualWithoutEndline){ result.contentEqualWithoutEndline = false; } 
         if(!resEntry.equal){ result.equal = false; } 
+        if(resEntry.missingFiles || resEntry.alone){ result.missingFiles = true; } 
         if(!resEntry.equalDaylightSaved){ result.equalDaylightSaved = false; } 
         if(resEntry.readProblems){ result.readProblems = true; } 
         entry1 = entry2 = null;    //use next
-      } else if( entry2 != null && name1.compareTo(name2) >0){
+      } else if( entry2 != null && (entry1 == null || name1.compareTo(name2) >0)){
         //file2 has no presentation at left because name2 is less than name1
         Result resEntry = new Result(null, file2);
         resEntry.alone = true;
-        result.equal = false;
+        //result.equal = false;
         result.subFiles.add(resEntry);
         entry2 = null;  //use next
       } else if( entry1 != null){
         //file1 has no presentation at right because the name
         Result resEntry = new Result(file1, null);
         resEntry.alone = true;
-        result.equal = false;
+        //result.equal = false;
         result.subFiles.add(resEntry);
         entry1 = null;
       } else {

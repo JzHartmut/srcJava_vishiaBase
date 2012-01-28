@@ -138,7 +138,7 @@ public final class PrepareCmd
       if(file ==null){ getFile(); }
       if(sName ==null){ sName = file.getName(); }
       if(posExt ==-2){ posExt = sName.lastIndexOf('.'); }
-      return posExt < 0 ? sName : sName.substring(0,posExt);
+      return posExt < 1 ? sName : sName.substring(0,posExt);  //Note . on first position is not a start of extension.
     }
 
     String getExt(){

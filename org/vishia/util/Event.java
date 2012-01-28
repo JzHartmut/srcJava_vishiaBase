@@ -190,7 +190,8 @@ public class Event
   public static final int version = 0x20120122;
   
   /**The src instance for the event. This reference should not be used for processing, it is only
-   * a hint while debugging. */
+   * a hint while debugging. The creator of the event knows the type of the src and can use it 
+   * for any message especially if any negative callback is gotten. */
   protected Object src;
   
   /**The queue for events of the {@link EventThread} if this event should be used
@@ -276,5 +277,13 @@ public class Event
     }
   }
   
+  
+  /**Returns the stored src argument of construction.
+   * This argument should not be used in functionality. It should only be used
+   * for logs, error report or debugging. Especially the creator of the event knows the type
+   * of src and can re-cast to it.
+   * @return
+   */
+  public Object getSrc(){ return src; }
   
 }

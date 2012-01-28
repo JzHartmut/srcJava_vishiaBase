@@ -144,11 +144,16 @@ public class KeyCode
   /**Determines that a menu item is entered. */
   public final static int menuEntered =  0x000b0000 + 'M'; 
 
+  /**Determines that a menu item is entered. */
+  public final static int Entered =  0x000b0000 + 'M'; 
+
   /**Determines that a line of a table is selected. */
   public final static int tableLineSelect =  0x000b0000 + 'L'; 
   
   /**Determines that a field has got a focus. */
-  public final static int fieldFocus =  0x000b0000 + 'F'; 
+  public final static int focusGained =  0x000b0000 + 'F'; 
+  
+  public final static int focusLost =  0x000b0000 + 'f'; 
   
   
   //----- drag and drop ---------------------------------------------------------------
