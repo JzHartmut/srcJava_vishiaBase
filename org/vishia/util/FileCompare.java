@@ -112,7 +112,7 @@ public class FileCompare
     Map<String, File> idxFiles2 = new TreeMap<String, File>();
     //
     //sort all files per name, exclude some, 
-    for(File file: files1){ 
+    if(files1 !=null) for(File file: files1){ 
       String name = file.getName();
       boolean isSymbolicLink = FileSystem.isSymbolicLink(file);
       if(!isSymbolicLink){
@@ -129,7 +129,7 @@ public class FileCompare
         }
       }
     }
-    for(File file: files2){ 
+    if(files2 !=null) for(File file: files2){ 
       boolean isSymbolicLink = FileSystem.isSymbolicLink(file);
       if(!isSymbolicLink){
         String name = file.getName();

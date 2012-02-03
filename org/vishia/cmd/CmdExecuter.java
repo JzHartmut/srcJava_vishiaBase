@@ -20,6 +20,9 @@ public class CmdExecuter implements Closeable
 {
   /**Version and History:
    * <ul>
+   * <li>2012-02-02 Hartmut bug: There was a situation were in {@link OutThread#run()} readline() hangs,
+   *   though the {@link #process} was destroyed. It isn't solved yet. Test whether it may be better
+   *   to read the InputStread direct without wrapping with an BufferedReader. 
    * <li>2011-12-31 Hartmut bugfix: The OutThread doesn't realize that the process was finished,
    *   because BufferedReader.ready() returns false and the buffer was not checked. So 'end of file'
    *   was not detected. Therefore {@link OutThread#bProcessIsRunning} set to false to abort waiting.
@@ -232,6 +235,15 @@ public class CmdExecuter implements Closeable
       if(process !=null){
         process.destroy();
         destroyed = true;
+      }
+      try{ 
+        //problem, if it is in readline(), then deadlock! because readkube and close() are synchronized.
+        //how to abort the readline???
+        //if(outThread.processOut !=null) { outThread.processOut.close(); } 
+        //if(errThread.processOut !=null) { errThread.processOut.close(); } 
+      } catch(Exception exc){ 
+        System.err.println("error close");
+        exc.printStackTrace();
       }
       outThread.out = null;  //to abort
       errThread.out = null;

@@ -27,6 +27,10 @@ public class FileRemote extends File
 
   /**Version and history.
    * <ul>
+   * <li>2012-02-02 Hartmut chg: Now the {@link #sFile} (renamed from name) is empty if this describes
+   *   an directory and it is known that it is an directory. The ctor is adapted therefore.
+   *   {@link #getParent()} is changed. Some assertions are set.
+   * <li>2012-02-02 Hartmut chg: Handling of relative paths: It is detected in ctor. TODO relative paths are not tested well. 
    * <li>2012-01-14 Hartmut chg: The toplevel directory contains only one slash in the {@link #sDir}
    *   and an empty name in {@link #name}. 
    * <li>2012-01-14 Hartmut new: {@link #getParentFile()} now implemented here.  
@@ -74,13 +78,14 @@ public class FileRemote extends File
    * The directory path may be relative too. A relative path may be empty "". */
   protected final String sDir;
   
-  /**The name with extension of the file. It is empty if this is the root directory. */
-  protected final String name;
+  /**The name with extension of the file. It is empty if this describes a directory. 
+   * */
+  protected final String sFile;
   
   /**The unique path to the file or directory entry. If the file is symbolic linked (on UNIX systems),
    * this field contains the non-linked direct path. But the {@link #sDir} contains the linked path. 
    */
-  protected String canonicalPath;
+  protected String sCanonicalPath;
   
   /**Timestamp of the file. */
   protected long date;
@@ -153,7 +158,10 @@ public class FileRemote extends File
    * @param sDirP The path to the directory.
    *   The standard path separator is the slash "/". 
    *   A backslash will be converted to slash internally, it isn't distinct from the slash.
-   * @param sName Name of the file. If null then the name is gotten from the last part of path.
+   *   If this parameter ends with an slash or backslash and the name is null or empty, this is designated 
+   *   as an directory descriptor. {@link #mDirectory} will be set in {@link #flags}.
+   * @param sName Name of the file. If null then the name is gotten from the last part of path
+   *   after the last slash or backslash.
    * @param length The length of the file. ==-1 then all other parameter are gotten from the file
    * @param date Timestamp of the file. 
    * @param flags Properties of the file.
@@ -165,34 +173,44 @@ public class FileRemote extends File
     super(sDirP + (sName ==null ? "" : ("/" + sName)));  //it is correct if it is a local file. 
     String sPath = sDirP.replace('\\', '/');
     this.device = device;
+    this.flags = flags;
     String name1;
     if(sName == null){
       int lenPath = sPath.length();
-      int posSep = sPath.lastIndexOf('/', lenPath-2);
+      int posSep = sPath.lastIndexOf('/'); //, lenPath-2);
       if(posSep >=0){
         this.sDir = sPath.substring(0, posSep+1);
-        name1 = sPath.substring(posSep+1);
-      } else {
-        this.sDir = "/";
+        if(posSep == sPath.length()-1){
+          name1 = "";  //it is a directory.
+          this.flags |= mDirectory;
+        } else {
+          name1 = sPath.substring(posSep+1);
+        }
+      } else { //no / found, it is only a name:
+        this.flags |= mRelativePath;
+        this.sDir = "";
         name1 = sPath;
       }
-    } else {
+    } else { //name is given:
       if(!sPath.endsWith("/")){ sPath += "/";}
       this.sDir = sPath;
       name1 = sName;
     }
-    if(name1.endsWith("/")){ this.name = name1.substring(0, name1.length()-1); }
-    else { this.name = name1; }
+    //if(name1.endsWith("/")){ this.name = name1.substring(0, name1.length()-1); }
+    //else { this.name = name1; }
+    this.sFile = name1;
+    Assert.check(this.sFile !=null);
+    Assert.check(this.sDir !=null);
+    Assert.check(!name1.contains("/"));
     Assert.check(this.sDir.length() == 0 || this.sDir.endsWith("/"));
     Assert.check(!this.sDir.endsWith("//"));
     if(length == -1){
-      device.setFileProperties(this); 
+      device.setFileProperties(this);   ////
     } else {
     //oFile = oFileP !=null ? oFileP : device.createFileObject(this);
-      this.flags = flags;
       this.length = length;
       this.date = date;
-      this.canonicalPath = this.sDir + this.name;  //maybe overwrite from setSymbolicLinkedPath
+      this.sCanonicalPath = this.sDir + this.sFile;  //maybe overwrite from setSymbolicLinkedPath
     }
   }
   
@@ -279,7 +297,7 @@ public class FileRemote extends File
    */
   public void setSymbolicLinkedPath(String pathP){
     flags |= mSymLinkedPath;
-    canonicalPath = pathP;
+    this.sCanonicalPath = pathP;
   }
   
   
@@ -295,7 +313,7 @@ public class FileRemote extends File
   public void setCanonicalAbsPath(String pathP){
     flags |= mAbsPath;
     flags &= ~mSymLinkedPath;
-    canonicalPath = pathP;
+    this.sCanonicalPath = pathP;
   }
   
   
@@ -341,22 +359,40 @@ public class FileRemote extends File
     return date; 
   }
   
-  @Override public String getName(){ return name; }
+  @Override public String getName(){ return sFile; }
   
   @Override public String getParent(){ 
+    String sParent;
     int zDir = sDir.length();
-    int posSlash = sDir.indexOf('/');  //the first slash
+    Assert.check(sDir.charAt(zDir-1) == '/'); //Should end with slash
+    if(sFile == null || sFile.length() == 0){
+      //it is a directory, get its parent path
+      if(zDir > 1){
+        int pDir = sDir.lastIndexOf('/', zDir-2);
+        if(pDir >0){
+          sParent = sDir.substring(0, pDir+1);  //with ending slash
+        } else {
+          sParent = null;  //sDir is forex "D:/", or "/" it hasn't a parent.
+        }
+      } else {
+        sParent = null;    //sDir has only one char, it may be a "/", it hasn't a parent.
+      }
+    } else { //a sFile is given, the sDir is the parent.
+      sParent = sDir;
+    }
+    return sParent;
+    //int posSlash = sDir.indexOf('/');  //the first slash
     //if only one slash is present, return it. Elsewhere don't return the terminating slash.
-    String sParent = zDir > posSlash+1 ? sDir.substring(0, zDir-1): sDir;
-    return sParent; 
+    //String sParent = zDir > posSlash+1 ? sDir.substring(0, zDir-1): sDir;
+    //return sParent; 
   }
   
   /**Gets the path of the file. For this class the path should be esteemed as canonical,
-   * but that should be considered on constructor. 
+   * it is considered on constructor. 
    */
-  @Override public String getPath(){ return sDir + name; }
+  @Override public String getPath(){ return sDir + sFile; }
   
-  @Override public String getCanonicalPath(){ return canonicalPath; }
+  @Override public String getCanonicalPath(){ return sCanonicalPath; }
   
   
   /**Gets the parent directory.
@@ -366,8 +402,12 @@ public class FileRemote extends File
    */
   @Override public FileRemote getParentFile(){
     final FileRemote parent;
-    if(sDir.indexOf('/') < sDir.length()-1 || name.length() > 0){
-      parent = new FileRemote(sDir);
+    String sParent = getParent();
+    if(sParent !=null){
+      parent = new FileRemote(sParent);
+    
+    //if(sDir.indexOf('/') < sDir.length()-1 || name.length() > 0){
+    //  parent = new FileRemote(sDir);
     } else {
       parent = null;
     }

@@ -18,6 +18,8 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
   /**Version and history.
    * <ul>
+   * <li>2012-02-02 Hartmut chg: {@link #setFileProperties(FileRemote, File)}: There was an faulty recursive loop,
+   *   more checks. 
    * <li>2012-01-09 Hartmut new: {@link #close()} terminates the thread.
    * <li>2012-01-06 Hartmut new: {@link #setFileProperties(FileRemote)} etc.
    * <li>2012-01-04 Hartmut new: copy file trees started from a given directory
@@ -77,6 +79,11 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   */
   
   
+  /**Sets the file properties from the local file.
+   * checks whether the file exists and set the {@link FileRemote#mTested} flag any time.
+   * If the file exists, the properties of the file were set, elsewhere they were set to 0.
+   * @see {@link org.vishia.util.FileRemoteAccessor#setFileProperties(org.vishia.util.FileRemote)}
+   */
   @Override public boolean setFileProperties(FileRemote fileRemote)
   { String path = fileRemote.getPath();
     File fileLocal = new File(path);
@@ -84,32 +91,42 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
     return true;
   }
 
+  /**Sets the file properties from the local file.
+   * Called from {@link #setFileProperties(FileRemote)}, description see there.
+   * @param fileRemote
+   * @param fileLocal
+   */
   private void setFileProperties(FileRemote fileRemote, File fileLocal){
     String path = fileRemote.getPath();
-    String canonicalPath = FileSystem.getCanonicalPath(fileLocal);
-    long date = fileLocal.lastModified();
-    long length = fileLocal.length();
-    int flags = FileRemote.mExist | FileRemote.mTested;
-    if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
-    if(fileLocal.isHidden()){ flags |= FileRemote.mHidden; }
-    if(fileLocal.canWrite()){ flags |= FileRemote.mCanWrite; }
-    if(fileLocal.canRead()){ flags |= FileRemote.mCanRead; }
-    if(fileLocal.canExecute()){ flags |= FileRemote.mExecute; }
-    if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
-    if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
-    fileRemote._setProperties(length, date, flags, fileLocal);
-    if(fileLocal.isAbsolute()){
-      String pathCleaned = FileSystem.cleanAbsolutePath(path);
-      if(!canonicalPath.startsWith(pathCleaned)){
-        fileRemote.setSymbolicLinkedPath(canonicalPath);
-      } else {
-        fileRemote.setCanonicalAbsPath(canonicalPath);
+    if(fileLocal.exists()){
+      String canonicalPath = FileSystem.getCanonicalPath(fileLocal);
+      long date = fileLocal.lastModified();
+      long length = fileLocal.length();
+      int flags = FileRemote.mExist | FileRemote.mTested;
+      if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
+      if(fileLocal.isHidden()){ flags |= FileRemote.mHidden; }
+      if(fileLocal.canWrite()){ flags |= FileRemote.mCanWrite; }
+      if(fileLocal.canRead()){ flags |= FileRemote.mCanRead; }
+      if(fileLocal.canExecute()){ flags |= FileRemote.mExecute; }
+      if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
+      if(fileLocal.isDirectory()){ flags |= FileRemote.mDirectory; }
+      fileRemote._setProperties(length, date, flags, fileLocal);
+      if(fileLocal.isAbsolute()){
+        String pathCleaned = FileSystem.cleanAbsolutePath(path);
+        if(!canonicalPath.startsWith(pathCleaned)){
+          fileRemote.setSymbolicLinkedPath(canonicalPath);
+        } else {
+          fileRemote.setCanonicalAbsPath(canonicalPath);
+        }
+      } else { //relative path
+        if(workingDir == null){
+          workingDir = new FileRemote(FileSystem.getCanonicalPath(new File(".")));  //NOTE: should be absolute
+        }
+        fileRemote.setReferenceFile(workingDir);  
       }
-    } else { //relative path
-      if(workingDir == null){
-        workingDir = new FileRemote(FileSystem.getCanonicalPath(new File(".")));  //NOTE: should be absolute
-      }
-      fileRemote.setReferenceFile(workingDir);  
+    } else { //fileLocal not exists:
+      //designate it as tested, mExists isn't set.
+      fileRemote._setProperties(0, 0, FileRemote.mTested, fileLocal);
     }
   }
 
