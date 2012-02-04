@@ -83,7 +83,7 @@ public class StringFormatter
   
   private static final String spaces = "                                                          ";
   
-  protected final StringBuffer buffer;
+  protected final StringBuilder buffer;
 
   /**The position of actual writing.
    * 
@@ -97,7 +97,7 @@ public class StringFormatter
   private char cDecimalSeparator = '.';
   
   public StringFormatter()
-  { buffer = new StringBuffer();
+  { buffer = new StringBuilder();
   }
 
 
@@ -106,7 +106,7 @@ public class StringFormatter
    * @param length lenngth of the internal StringBuffer.
    */
   public StringFormatter(int length)
-  { buffer = new StringBuffer(length);
+  { buffer = new StringBuilder(length);
   }
 
 
@@ -115,7 +115,7 @@ public class StringFormatter
    * @param str initial value.
    */
   public StringFormatter(String str)
-  { buffer = new StringBuffer(str);
+  { buffer = new StringBuilder(str);
   }
 
 
@@ -124,7 +124,7 @@ public class StringFormatter
    * and can also be written directly.
    * @param buffer The buffer.
    */
-  public StringFormatter(StringBuffer buffer)
+  public StringFormatter(StringBuilder buffer)
   { this.buffer = buffer;
   }
 
