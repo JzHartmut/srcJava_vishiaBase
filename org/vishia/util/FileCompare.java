@@ -201,6 +201,7 @@ public class FileCompare
         resEntry.alone = true;
         //result.equal = false;
         result.subFiles.add(resEntry);
+        result.missingFiles = true;
         entry2 = null;  //use next
       } else if( entry1 != null){
         //file1 has no presentation at right because the name
@@ -208,6 +209,7 @@ public class FileCompare
         resEntry.alone = true;
         //result.equal = false;
         result.subFiles.add(resEntry);
+        result.missingFiles = true;
         entry1 = null;
       } else {
         bCont = false;

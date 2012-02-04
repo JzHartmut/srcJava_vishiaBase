@@ -20,7 +20,7 @@ public class CmdExecuter implements Closeable
 {
   /**Version and History:
    * <ul>
-   * <li>2012-02-02 Hartmut bug: There was a situation were in {@link OutThread#run()} readline() hangs,
+   * <li>2012-02-02 Hartmut bug: Calling {@link #abortCmd()}: There was a situation were in {@link OutThread#run()} readline() hangs,
    *   though the {@link #process} was destroyed. It isn't solved yet. Test whether it may be better
    *   to read the InputStread direct without wrapping with an BufferedReader. 
    * <li>2011-12-31 Hartmut bugfix: The OutThread doesn't realize that the process was finished,
