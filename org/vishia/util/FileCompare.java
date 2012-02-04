@@ -22,7 +22,14 @@ import java.util.TreeMap;
 public class FileCompare
 {
   
-  
+  /**Version and history
+   * <ul>
+   * <li>2012-02-04 Hartmut new: {@link Result#parent}, {@link Result#setToEqual()}
+   *   used if after comparison the files are copied (The.file.Commander)
+   * </ul>
+   * 
+   */
+  public final static int version = 0x20120204;
   
   final static int onlyTimestamp = 1;
   final static int content = 2;
@@ -59,6 +66,7 @@ public class FileCompare
     public final String name;
     
     public final List<Result> subFiles;
+    public final Result parent;
     public boolean alone;
     public boolean equal;
     /**For directories: There are some files missing in this dir or deeper dirs. */
@@ -70,8 +78,9 @@ public class FileCompare
     public boolean contentEqual;
     public boolean contentEqualWithoutEndline;
     
-    public Result(File file1, File file2 )
-    { this.file1 = file1;
+    public Result(Result parent, File file1, File file2 )
+    { this.parent = parent;
+      this.file1 = file1;
       this.file2 = file2;
       this.name = file1 !=null ? file1.getName(): file2.getName();
       if(file1 !=null && file2 !=null && file1.isDirectory()){
@@ -86,6 +95,45 @@ public class FileCompare
       contentEqualWithoutEndline = true;
     }
   
+    /**Sets the comparison information to 'equal at all'. This routine can be called
+     * if a file is copied after comparison and therefore equal. */
+    public void setToEqual(){
+      alone = false;
+      missingFiles = false;
+      readProblems = false;
+      lenEqual = true;
+      contentEqual = true;
+      contentEqualWithoutEndline = true;
+      equal = true;
+      if(parent !=null){
+        adjustParent(parent, 0);
+      }
+    }
+    
+    
+    void adjustParent(Result parent1, int recursion){
+      if(recursion >100) throw new IllegalArgumentException("recursion problem");
+      parent1.contentEqual = true;
+      parent1.contentEqualWithoutEndline = true;
+      parent1.equal = true;
+      parent1.missingFiles = false;
+      parent1.equalDaylightSaved = true;
+      parent1.readProblems = false;
+      //check whether all files have some problems:
+      for(Result resEntry: parent1.subFiles){
+        if(!resEntry.contentEqual){ parent1.contentEqual = false; } 
+        if(!resEntry.contentEqualWithoutEndline){ parent1.contentEqualWithoutEndline = false; } 
+        if(!resEntry.equal){ parent1.equal = false; } 
+        if(resEntry.missingFiles || resEntry.alone){ parent1.missingFiles = true; } 
+        if(!resEntry.equalDaylightSaved){ parent1.equalDaylightSaved = false; } 
+        if(resEntry.readProblems){ parent1.readProblems = true; } 
+      }
+      if(parent1.parent != null){
+        adjustParent(parent1.parent, recursion +1);
+      }
+    }
+    
+    
     @Override public String toString(){ return name; }
     
   }
@@ -179,7 +227,7 @@ public class FileCompare
       }
       if(entry1 != null && entry2 != null && name1.equals(name2)){
         final Result resEntry;
-        resEntry = new Result(file1, file2);
+        resEntry = new Result(result, file1, file2);
         if(name1.startsWith(":")){
             //a directory
           compare(resEntry, sExclude, recursion +1);
@@ -197,19 +245,17 @@ public class FileCompare
         entry1 = entry2 = null;    //use next
       } else if( entry2 != null && (entry1 == null || name1.compareTo(name2) >0)){
         //file2 has no presentation at left because name2 is less than name1
-        Result resEntry = new Result(null, file2);
+        Result resEntry = new Result(result, null, file2);
         resEntry.alone = true;
         //result.equal = false;
         result.subFiles.add(resEntry);
-        result.missingFiles = true;
         entry2 = null;  //use next
       } else if( entry1 != null){
         //file1 has no presentation at right because the name
-        Result resEntry = new Result(file1, null);
+        Result resEntry = new Result(result, file1, null);
         resEntry.alone = true;
         //result.equal = false;
         result.subFiles.add(resEntry);
-        result.missingFiles = true;
         entry1 = null;
       } else {
         bCont = false;
@@ -319,7 +365,7 @@ public class FileCompare
     File dir2 = new File(args[1]);
     String[] ignores = new String[]{".bzr"};
     FileCompare main = new FileCompare(FileCompare.onlyTimestamp, ignores, 2000);
-    Result result = new Result(dir1, dir2);
+    Result result = new Result(null, dir1, dir2);
     main.compare(result, null, 0);
     main.reportResult(System.out, result.subFiles);
   }
