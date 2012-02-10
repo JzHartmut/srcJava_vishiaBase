@@ -251,6 +251,12 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
     
     long zBytesCheck, zBytesCopy;
     
+    /**Buffer for copy. It is allocated static. 
+     * Only used in this thread {@link FileRemoteAccessorLocalFile#runCommissions}. 
+     * The size of 1 MByte may be enough for fast copy. 16 kByte is too less. It should be approximately
+     * at least the size of 1 record of the file system. */
+    byte[] buffer = new byte[0x100000];  //1 MByte 16 kByte buffer
+    
     
     /**List of files to handle between {@link #checkCopy(org.vishia.util.FileRemoteAccessor.Commission)}
      * and {@link #execCopy(org.vishia.util.FileRemoteAccessor.Commission)}. */
@@ -340,7 +346,6 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
       try{
         in = new FileInputStream(src);
         out = new FileOutputStream(dst);
-        byte[] buffer = new byte[0x4000];  //16 kByte buffer
         boolean bContCopy;
         do {
           int zBytes = in.read(buffer);
@@ -369,6 +374,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
           }
         }while(bContCopy);
       } catch(IOException exc){
+        System.err.println("Copy exc "+ exc.getMessage());
         co.callBack.data1 = (int)((float)zBytesCopyFile / zBytesMax * 1000);  //number between 0...1000
         co.callBack.data2 = (int)((float)zBytesCopy / zBytesCheck * 1000);  //number between 0...1000
         co.callBack.data3 = zFilesCheck - zFilesCopy;
