@@ -203,7 +203,7 @@ public class FileRemote extends File
     Assert.check(this.sDir !=null);
     Assert.check(!name1.contains("/"));
     Assert.check(this.sDir.length() == 0 || this.sDir.endsWith("/"));
-    Assert.check(!this.sDir.endsWith("//"));
+    //TODO Assert.check(!this.sDir.endsWith("//"));
     if(length == -1){
       device.setFileProperties(this);   ////
     } else {
@@ -361,16 +361,26 @@ public class FileRemote extends File
   
   @Override public String getName(){ return sFile; }
   
+  /**Returns the parent path, it is the directory path. 
+   * It is define by:
+   * @see java.io.File#getParent()
+   * @return path without ending slash.
+   */
   @Override public String getParent(){ 
     String sParent;
     int zDir = sDir.length();
+    int pDir;
     Assert.check(sDir.charAt(zDir-1) == '/'); //Should end with slash
     if(sFile == null || sFile.length() == 0){
       //it is a directory, get its parent path
       if(zDir > 1){
-        int pDir = sDir.lastIndexOf('/', zDir-2);
+        pDir = sDir.lastIndexOf('/', zDir-2);
+        if(pDir == 0 || (pDir == 2 && sDir.charAt(1) == ':')){
+          //the root. 
+          pDir +=1; //return inclusive the /
+        }
         if(pDir >0){
-          sParent = sDir.substring(0, pDir+1);  //with ending slash
+          sParent = sDir.substring(0, pDir);  //without ending slash
         } else {
           sParent = null;  //sDir is forex "D:/", or "/" it hasn't a parent.
         }
@@ -378,7 +388,13 @@ public class FileRemote extends File
         sParent = null;    //sDir has only one char, it may be a "/", it hasn't a parent.
       }
     } else { //a sFile is given, the sDir is the parent.
-      sParent = sDir;
+      if(zDir == 1 || (zDir == 3 && sDir.charAt(1) == ':')){
+        //the root. 
+        pDir = zDir; //return inclusive the /
+      } else {
+        pDir = zDir -1;
+      }
+      sParent = sDir.substring(0, pDir);
     }
     return sParent;
     //int posSlash = sDir.indexOf('/');  //the first slash
@@ -389,8 +405,23 @@ public class FileRemote extends File
   
   /**Gets the path of the file. For this class the path should be esteemed as canonical,
    * it is considered on constructor. 
+   * The difference between this routine and {@link #getCanonicalPath()} is:
+   * The canonical path under Unix-Systems (linux) is the linked path. 
+   * The return path of this routine is the path without dissolving symbolic links.
+   * @return path never ending with "/", but canonical, slash as separator. 
    */
-  @Override public String getPath(){ return sDir + sFile; }
+  @Override public String getPath(){ 
+    if(sFile !=null && sFile.length() > 0) return sDir + sFile;
+    else {
+      int zDir = sDir.length();
+      Assert.check(sDir.charAt(zDir-1) == '/');
+      if(zDir == 1 || zDir == 3 && sDir.charAt(1) == ':'){
+        return sDir;  //with ending slash because it is root.
+      } else {
+        return sDir.substring(0, zDir-1);  //without /
+      }
+    }
+  }
   
   @Override public String getCanonicalPath(){ return sCanonicalPath; }
   
