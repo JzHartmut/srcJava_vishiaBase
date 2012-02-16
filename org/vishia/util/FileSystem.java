@@ -833,20 +833,31 @@ public class FileSystem
    * @param what
    * @return
    */
-  public static String[] searchInFiles(File[] files, String what)
+  public static String[] searchInFiles(List<File> files, String what, Appendable searchOutput)
   {
     List<String> listResult = new LinkedList<String>();
     for(File file: files){
       try{
         BufferedReader r1 = new BufferedReader(new FileReader(file));
         String sLine;
+        boolean fileOut = false;
         while( (sLine = r1.readLine()) !=null){
           if(sLine.contains(what)){
+            if(!fileOut){
+              searchOutput.append("<file=").append(file.getPath()).append(">").append("\n");
+              fileOut = true;  
+            }
+            searchOutput.append("  ").append(sLine).append("\n");
             //TODO fill an ArrayList, with the line number and file path. 
           }
         }
-      }catch(IOException exc){ listResult.add("File error; " + file.getAbsolutePath()); }
+      }catch(IOException exc){ 
+        try{ searchOutput.append("<file=").append(file.getPath()).append("> - read error.\n");
+        } catch(IOException exc2){}
+        //listResult.add("File error; " + file.getAbsolutePath()); 
+      }
     }
+    try{ searchOutput.append("<done: search in files>\n");} catch(IOException exc){}
     String[] ret = new String[1];
     return ret;
   }
