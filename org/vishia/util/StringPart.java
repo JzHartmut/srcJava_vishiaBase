@@ -74,6 +74,7 @@ public class StringPart
    * <br>
    * commit history:
    * <ul>
+   * <li>2012-02-19 Hartmut new: {@link #assignReplaceEnv(StringBuilder)}
    * <li>2011-10-10 Hartmut new: {@link #scanFloatNumber(boolean)}. It should be possible to scan a float with clearing the buffer. Using in ZbnfParser.
    * <li>1011-07-18 Hartmut bugfix: some checks of length in {@link #scanFloatNumber()}. If the String contains only the number digits,
    *                an IndexOutOfBounds-exception was thrown because the end of the String was reached. 
@@ -262,18 +263,67 @@ abcdefghijklmnopqrstuvwxyz  The associated String
 
 
   /** Sets the content to the given string, forgets the old content. Initialy the whole string is valid.
-      @java2c=return-this.
-      @param content The content.
-      @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-  */
-  public StringPart assign(String content)
-  { this.content = content;
-    startMin = startLast = start = 0;
-    endMax = end = endLast = content.length();
-    bStartScan = bCurrentOk = true;
-    return this;
-  }
+  @java2c=return-this.
+  @param content The content.
+  @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+*/
+public StringPart assign(String content)
+{ this.content = content;
+startMin = startLast = start = 0;
+endMax = end = endLast = content.length();
+bStartScan = bCurrentOk = true;
+return this;
+}
 
+
+
+
+
+
+/**Sets the content to the given string, forgets the old content. 
+ * All Place-holder for System environment variable are replaced firstly.
+ * A place holder for a environment variable is written like "$(name)" or "$name" like in a unix shell.
+ * The replacement is done in the content. 
+ * Initially the whole string is valid.
+ * TODO designate input as persistent.
+@java2c=return-this.
+@param input The content initially maybe with place holders for environment variable, they will be replaced.
+  For java2c-usage the content should not be changed after them, because the String is referred there
+  originally.
+@return <code>this</code> refers the content.
+*/
+public StringPart assignReplaceEnv(StringBuilder input)
+{ int pos1 = 0;
+  int zInput = input.length();
+  while( (pos1 = input.indexOf("$", pos1))>=0){
+    int posident, posidentend, pos9;
+    if(input.charAt(pos1+1)=='('){
+      posident = pos1 + 2;
+      posidentend = input.indexOf(")", posident);
+      pos9 = posidentend +1;  //after )
+      
+    } else {
+      posident = pos1 +1 ;
+      posidentend = pos9 = StringFunctions.posAfterIdentifier(input, posident, zInput);
+    }
+    String sEnv = System.getenv(input.substring(posident, posidentend));
+    if(sEnv == null){ sEnv = ""; }
+    input.replace(pos1, pos9, sEnv);
+    zInput = input.length();
+  }
+  this.content = content.toString();
+  startMin = startLast = start = 0;
+  endMax = end = endLast = content.length();
+  bStartScan = bCurrentOk = true;
+  return this;
+}
+
+
+
+
+
+
+  
 
   /** Sets the StringPart with the same String object as the given StringPart, forgets the old content.
       The borders of the new StringPart (the maximal part)
@@ -612,7 +662,9 @@ abcd  this is a part uvwxyz The associated String
     end = start;
     if(end >= endMax){ bFound = false; }
     else
-    { char cc = content.charAt(end);
+      
+    { //TODO use StringFunctions.lenIdentifier
+      char cc = content.charAt(end);
       if(   cc == '_' 
         || (cc >= 'A' && cc <='Z') 
         || (cc >= 'a' && cc <='z') 
@@ -633,8 +685,7 @@ abcd  this is a part uvwxyz The associated String
     return this;
   }
 
-
-
+  
 
   /*=================================================================================================================*/
   /*=================================================================================================================*/
