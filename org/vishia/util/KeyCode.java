@@ -128,15 +128,20 @@ public class KeyCode
   public final static int mouse1Up =     0x000b0000 + 'U';  
   
   /**The mouse button is released, but at another position where pressed. */
-  public final static int mouse1UpMoved = 0x000b0000 + 'M';  
+  public final static int mouse1UpMoved = 0x000b0000 + 'R';  
   /**Doubleclick on mouse button. */
   public final static int mouse1Double = 0x000b0000 + 'C';  
   
   public final static int mouse2Down =   0x000b0000 + 'd'; 
   public final static int mouse2Up =     0x000b0000 + 'u'; 
   /**The mouse button is released, but at another position where pressed. */
-  public final static int mouse2UpMoved = 0x000b0000 + 'm';  
+  public final static int mouse2UpMoved = 0x000b0000 + 'r';  
   public final static int mouse2Double = 0x000b0000 + 'c'; 
+  
+  /**Both mouse buttons left and right are pressed down.*/
+  public final static int mouseBothDown = 0x000b0000 + 'b'; 
+  
+  
   
   public final static int mouse3Down =   0x000b0000 + '3'; 
   public final static int mouse3Up =     0x000b0000 + '4'; 

@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.StringPart;
 
 
 /**This class stores some prepared commands. The input of the store is a file, 
@@ -26,6 +27,8 @@ public class CmdStore
 
   /**Version and history
    * <ul>
+   * <li>2012-02-19 Hartmut chg: {@link #readCmdCfg(File)} accepts $ENV, commentlines with // and #
+   *   and start of command not with spaces on line start.
    * <li>2011-12-31 Hartmut chg {@link CmdBlock#title} is new, the syntax of configfile is changed.
    *   This class is used to capture all executables for a specified extension for The.file.Commander 
    * </ul>
@@ -96,9 +99,21 @@ public class CmdStore
       CmdBlock actBlock = null;
       listCmds.clear();
       String sLine;
+      StringPart spLine = new StringPart();
+      StringBuilder uLine = new StringBuilder(1000);
       try{ 
         while( (sLine = reader.readLine()) !=null){
-          if( sLine.startsWith("==")){
+          if(sLine.contains("$")){
+            uLine.append(sLine.trim());
+            spLine.assignReplaceEnv(uLine);
+            sLine = uLine.toString();
+          } else {
+            sLine = sLine.trim();
+            spLine.assign(sLine);
+          }
+          if(sLine.length() ==0){
+            
+          } else if( sLine.startsWith("==")){
             final int posColon = sLine.indexOf(':');
             final int posEnd = sLine.indexOf("==", 2);  
             //a new command block
@@ -112,8 +127,10 @@ public class CmdStore
               actBlock.title = "";
             }
           } else if(sLine.startsWith("@")){
-              
-          } else  if(sLine.startsWith(" ")){  //a command line
+          } else if(sLine.startsWith("//")){
+          } else if(sLine.startsWith("#")){
+                  
+          } else { // if(sLine.startsWith(" ")){  //a command line
             PrepareCmd cmd = actBlock.new_cmd();
             cmd.set_cmd(sLine.trim());
             //cmd.prepareListCmdReplace();
