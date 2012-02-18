@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -235,6 +236,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
     switch(commission.cmd){
     case Commission.kCheckFile: copy.checkCopy(commission); break;
     case Commission.kCopy: copy.execCopy(commission); break;
+    case Commission.kMove: copy.execMove(commission); break;
     case Commission.kDel:  execDel(commission); break;
     
     }
@@ -247,7 +249,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
   
     long timestart;
     
-    long zFilesCheck, zFilesCopy;
+    int zFilesCheck, zFilesCopy;
     
     long zBytesCheck, zBytesCopy;
     
@@ -280,8 +282,8 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
         zBytesCheck = co.src.length();
         zFilesCheck = 1;
       }
-      co.callBack.data3 = zBytesCheck;  //number between 0...1000
-      co.callBack.data4 = zFilesCheck;  //number between 0...1000
+      co.callBack.nrofBytesAll = (int)zBytesCheck;  //number between 0...1000
+      co.callBack.nrofFiles = zFilesCheck;  //number between 0...1000
       co.callBack.id = FileRemoteAccessor.kNrofFilesAndBytes;
       co.callBack.sendtoDst();
     }
@@ -306,7 +308,21 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
         
       //}
     }
+
     
+    
+    private void execMove(Commission co){
+      timestart = System.currentTimeMillis();
+      if(co.src.renameTo(co.dst)){
+        co.callBack.id = FileRemoteAccessor.kFinishOk; 
+      } else {
+        co.callBack.id = FileRemoteAccessor.kFinishNok; 
+      }
+      co.callBack.sendtoDst();
+    }
+
+    
+
     
     private void execCopy(Commission co){
       timestart = System.currentTimeMillis();
@@ -360,7 +376,15 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
             if(time > timestart + 300){
               co.callBack.data1 = (int)((float)zBytesCopyFile / zBytesMax * 1000);  //number between 0...1000
               co.callBack.data2 = (int)((float)zBytesCopy / zBytesCheck * 1000);  //number between 0...1000
-              co.callBack.data3 = zFilesCheck - zFilesCopy;
+              co.callBack.nrofFiles = zFilesCheck - zFilesCopy;
+              co.callBack.nrofBytesInFile = (int)zBytesCopy;
+              String name = src.getName();
+              int zName = name.length();
+              if(zName > co.callBack.fileName.length){ 
+                zName = co.callBack.fileName.length;    //shorten the name, it is only an info 
+              }
+              System.arraycopy(name.toCharArray(), 0, co.callBack.fileName, 0, zName);
+              Arrays.fill(co.callBack.fileName, zName, co.callBack.fileName.length, '\0');
               co.callBack.id = FileRemoteAccessor.kOperation;
               co.callBack.sendtoDst();
               timestart = time;
@@ -377,7 +401,7 @@ public class FileRemoteAccessorLocalFile implements FileRemoteAccessor
         System.err.println("Copy exc "+ exc.getMessage());
         co.callBack.data1 = (int)((float)zBytesCopyFile / zBytesMax * 1000);  //number between 0...1000
         co.callBack.data2 = (int)((float)zBytesCopy / zBytesCheck * 1000);  //number between 0...1000
-        co.callBack.data3 = zFilesCheck - zFilesCopy;
+        co.callBack.nrofFiles = zFilesCheck - zFilesCopy;
         co.callBack.id = FileRemoteAccessor.kFinishError;
         co.callBack.sendtoDst();
       }

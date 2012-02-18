@@ -217,7 +217,7 @@ public class Event
   public int data1, data2;
   
   /**Any value of this event. */
-  public long data3, data4, data5, data6;
+  //public long data3, data4, data5, data6;
   
   /**Any value reference. */ 
   public Object oData;
@@ -257,7 +257,6 @@ public class Event
     this.dstThread = null;
     this.commisionId = 0;
     data1 = data2 = 0;
-    data3 = data4 = data5 = data6 = 0;
     oData = null;
     dateCreation.set(0);
   }

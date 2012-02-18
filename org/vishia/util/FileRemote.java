@@ -490,7 +490,7 @@ public class FileRemote extends File
    *   nothing is copied and an error message is fed back.
    * @param backEvent The event for success.
    */
-  public void check(Event backEvent){
+  public void check(FileRemote.Callback backEvent){
     if(device.isLocalFileSystem()){
       FileRemoteAccessor.Commission com = new FileRemoteAccessor.Commission();
       com.callBack = backEvent;
@@ -513,7 +513,7 @@ public class FileRemote extends File
    *   nothing is copied and an error message is fed back.
    * @param backEvent The event for success.
    */
-  public void copyTo(FileRemote dst, Event backEvent){
+  public void copyTo(FileRemote dst, FileRemote.Callback backEvent){
     if(device.isLocalFileSystem() && dst.device.isLocalFileSystem()){
       FileRemoteAccessor.Commission com = new FileRemoteAccessor.Commission();
       com.callBack = backEvent;
@@ -528,7 +528,46 @@ public class FileRemote extends File
   
   
   
+  /**Copies a file maybe in a remote device to another file in the same device. 
+   * This is a send-only routine without feedback, because the calling thread should not be waiting 
+   * for success. The success is notified with invocation of the 
+   * {@link Event#dst}.{@link EventConsumer#processEvent(Event)} method. 
+   * 
+   * @param dst This file will be created or filled newly. If it is existing but read only,
+   *   nothing is copied and an error message is fed back.
+   * @param backEvent The event for success.
+   */
+  public void moveTo(FileRemote dst, FileRemote.Callback backEvent){
+    if(device.isLocalFileSystem() && dst.device.isLocalFileSystem()){
+      FileRemoteAccessor.Commission com = new FileRemoteAccessor.Commission();
+      com.callBack = backEvent;
+      com.cmd = FileRemoteAccessor.Commission.kMove;
+      com.src = this;
+      com.dst = dst;
+      device.addCommission(com);
+    } else {
+      //TODO
+    }
+  }
   
+  
+  
+  public static class Callback extends Event{
+
+    public char[] fileName = new char[100];
+    
+    public int nrofBytesInFile;
+    
+    public int nrofBytesAll;
+    
+    public int nrofFiles;
+    
+    public Callback(Object src, EventConsumer dst){ super(src, dst); }
+    
+  }
+  
+  
+
   
   
 }

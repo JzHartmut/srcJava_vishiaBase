@@ -50,9 +50,12 @@ public interface FileRemoteAccessor extends Closeable
    */
   //Object createFileObject(FileRemote file);
   
+  
+  
   public class Commission
   {
-    public final static int kCheckFile = 0xcecf1e, kCheck = 0xcec, kCopy = 0xc0b7, kDel = 0xde1ede;
+    public final static int kCheckFile = 0xcecf1e, kCheck = 0xcec, kCopy = 0xc0b7, kDel = 0xde1ede
+    , kMove = 0x307e;
     
     
     
@@ -60,9 +63,11 @@ public interface FileRemoteAccessor extends Closeable
     
     FileRemote src, dst;
     
-    Event callBack;
+    FileRemote.Callback callBack;
     
   }
+  
+  
   
   
 }
