@@ -9,7 +9,8 @@ if test "$JAVA_JDK" = "";  then export JAVA_JDK="/usr/share/JDK"; fi
 export TMP_JAVAC="../../../tmp_javac"
 
 ## Output jar-file with path and filename relative from current dir:
-export OUTPUTFILE_JAVAC="../../zbnfjax/zbnf.jar"
+export OUTPUTFILE_JAVAC="../../exe/zbnf.jar"
+export OUTPUTDIR_JAVAC="../../exe/zbnf.jar"
 
 ## Manifest-file for jar building relativ path from current dir:
 export MANIFEST_JAVAC="zbnf.manifest"
@@ -18,9 +19,6 @@ export MANIFEST_JAVAC="zbnf.manifest"
 INPUT_JAVAC=""
 INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/zbnf/*.java"
 INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/zmake/*.java"
-INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/cmd/*.java"
-INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/util/*.java"
-INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/msgDispatch/*.java"
 INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/header2Reflection/CmdHeader2Reflection.java"
 export INPUT_JAVAC
 

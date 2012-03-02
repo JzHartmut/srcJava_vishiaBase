@@ -1,26 +1,43 @@
 #!/bin/bash
-##Task: Compilation javac and call jar inside the zbnfJax shell
+##Task: Compilation javac and call jar
+
+if test -z "$INPUT_JAVAC"; then
+  echo == javacjar.sh ==
+  echo script to organize javac compilation and build the jar.
+  echo The environment variables should be export as Input for this script:
+  echo ---------------------------------------------------------------------------------------------
+  echo JAVA_JDK: Directory where bin/javac is found. This java version will taken for compilation
+  echo   if not set, the it will be initalized with "/usr/share/JDK"
+  echo TMP_JAVAC: Directory for all class files and logs: The directory will be cleaned and created
+  echo INPUT_JAVAC: All primary input java files to compile separated with space
+  echo CLASSPATH_JAVAC: PATH where compiled classes are found, relativ from current dir or absolute
+  echo SRCPATH_JAVAC: PATH where sources are found, relativ from current dir or absolute
+  echo OUTDIR_JAVAC: Path where the generated jar file will be stored. It may be a relative path.
+  echo   It will be created if not found.
+  echo JAR_JAVAC: file.jar
+  echo MANIFEST_JAVAC: Path/file.manifest relative from currect dir for manifest file
+
+  exit 1
+fi
 
 ##--------------------------------------------------------------------------------------------
 ## Environment variables set from zbnfjax:
-## JAVA_JDK: Directory where bin/javac is found. This java version will taken for compilation
 
-##---------------------------------------------------------------------------------------------
-## Environment variables should be set as Input before calling zbnfjax or this script:
-## TMP_JAVAC: Directory for all class files and logs: The directory will be cleaned and created
-## INPUT_JAVAC: All primary input java files to compile separated with space
-## CLASSPATH_JAVAC: PATH where compiled classes are found, relativ from current dir or absolute
-## SRCPATH_JAVAC: PATH where sources are found, relativ from current dir or absolute
-## OUTPUTFILE_JAVAC: Path/file.jar relative from current diretory for the jar-file
-## MANIFEST_JAVAC: Path/file.manifest relative from currect dir for manifest file
+## The java-copiler may be located at a user-specified position.
+## Set the environment variable JAVA_HOME, where bin/javac will be found.
+if test "$JAVA_JDK" = "";  then export JAVA_JDK="/usr/share/JDK"; fi
+#set PATH="$JAVA_JDK_HOME\bin:$PATH"
+
+
+if test ! $OUTDIR_JAVAC; then mkdir $OUTDIR_JAVAC; fi
 
 ## Delete and create the tmp_javac new. It should be empty because all content will be stored in the jar-file.
 if test -d $TMP_JAVAC; then rm -r $TMP_JAVAC; fi
 mkdir -p $TMP_JAVAC/bin
 
 ## Delete the result jar-file
-rm -f $OUTPUTFILE_JAVAC
-rm -f $OUTPUTFILE_JAVAC.ERROR.txt
+rm -f $OUTDIR_JAVAC/$JAR_JAVAC
+rm -f $OUTDIR_JAVAC/$JAR_JAVAC.compile.log
 
 echo === javac -sourcepath $SRCPATH_JAVAC -classpath $CLASSPATH_JAVAC $INPUT_JAVAC
 
@@ -36,19 +53,20 @@ fi
 ## Store the actual directory to submit restoring on end
 ENTRYDIR=$PWD
 cd $TMP_JAVAC/bin
-echo === SUCCESS compiling, generate jar: $ENTRYDIR/$OUTPUTFILE_JAVAC
+echo === SUCCESS compiling, generate jar: $ENTRYDIR/$OUTPUTDIR_JAVAC/$JAR_JAVAC
 
-$JAVA_JDK/bin/jar -cvfm $ENTRYDIR/$OUTPUTFILE_JAVAC $ENTRYDIR/$MANIFEST_JAVAC *  1>../jar_ok.txt 2>../jar_error.txt
+$JAVA_JDK/bin/jar -cvfm $ENTRYDIR/$OUTPUTDIR_JAVAC/$JAR_JAVAC $ENTRYDIR/$MANIFEST_JAVAC *  1>../jar_ok.txt 2>../jar_error.txt
+
+cat ../jar_ok.txt ../jar_error.txt >$ENTRYDIR/$OUTPUTDIR_JAVAC/$JAR_JAVAC.compile.log
 
 if test $? -ge 1; then
   echo === ERROR jar
   cat ../jar_ok.txt ../jar_error.txt
-  cat ../jar_ok.txt ../jar_error.txt >$ENTRYDIR/$OUTPUTFILE_JAVAC.ERROR.txt
   cd $ENTRYDIR
   exit 1
 fi
 
 ## Restore current dir: $ENTRYDIR
 cd $ENTRYDIR
-echo === SUCCESS making $OUTPUTFILE_JAVAC.
+echo === SUCCESS making $JAR_JAVAC in $OUTDIR_JAVAC.
 
