@@ -21,6 +21,9 @@ public class ZmakeGenerator
 
   /**Changes
    * <ul>
+   * <li>2012-05-25 Hartmut bugfix: {@link #getPartsFromFilepath(UserFilepath, UserFilepath, String)}: 
+   *   'localFile': It returns now path/*.ext or path/*.* if the input is parsed 
+   *   with 'someFiles' or 'wildCardExt'. It is important if '<:expandFiles>' is requested in the genScript.zmake.
    * <li>2011-08-13: Gen_Content#genContentForInputset(...) now regards < ?expandFiles>.
    *   If this tag is found in a < :forInput>...< .forInput> content generation prescript,
    *   then wildcards in the file name are expanded to the execution of the content prescript
@@ -221,7 +224,8 @@ public class ZmakeGenerator
 				if(file.someFiles && genScript.expandFiles){ //input contains wildcards, it should be expanded:
 				  List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
 				  final String basePath = getPartsFromFilepath(file, null, "absBasePath").toString();
-				  final String filePath = getPartsFromFilepath(file, null, "file").toString();
+				  final String filePath1 = getPartsFromFilepath(file, null, "file").toString();
+				  final String filePath = getPartsFromFilepath(file, null, "localFile").toString();
           final String sPathSearch = basePath + ":" + filePath;
 				  FileSystem.addFilesWithBasePath(sPathSearch, listFiles);
           for(FileSystem.FileAndBasePath file1: listFiles){
@@ -517,7 +521,10 @@ public class ZmakeGenerator
 	 */
 	public CharSequence getPartsFromFilepath(ZmakeUserScript.UserFilepath file
 		, ZmakeUserScript.UserFilepath generalPath, String part)
-	{ if(part.equals("file")){ 
+	{ if(file.path.contains("inspectorAccessor"))
+	    stop();
+	
+	  if(part.equals("file")){ 
 			StringBuilder uRet = new StringBuilder();
 			if(generalPath !=null){
 				if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
@@ -564,7 +571,15 @@ public class ZmakeGenerator
 			return uRet;
 		}
 		else if(part.equals("localPathName")){ return file.path + file.file; }
-		else if(part.equals("localFile")){ return file.path + file.file + file.ext; }
+		else if(part.equals("localFile")){ 
+		  StringBuilder uRet = new StringBuilder();
+      uRet.append(file.path);
+      uRet.append(file.file);
+      if(file.someFiles){ uRet.append('*'); }
+      if(file.wildcardExt){ uRet.append(".*"); }
+      uRet.append(file.ext);
+      return uRet;
+		}
 		else if(part.equals("localDir")){ return file.path; }
 		else if(part.equals("localPath")){ return file.path; }  //deprecated
     else if(part.equals("name")){ return file.file; }

@@ -39,7 +39,7 @@ public class ZmakeGenScript
 	}
 
 	
-	boolean parseAntGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
+	boolean parseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
 	throws FileNotFoundException, IOException
 	  , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
 	{ boolean bOk;

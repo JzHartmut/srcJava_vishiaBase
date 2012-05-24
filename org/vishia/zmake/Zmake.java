@@ -243,7 +243,7 @@ public class Zmake
                 false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
                 the application should be aborted.
     */
-    protected boolean testArgument(String arg, int nArg)
+    @Override protected boolean testArgument(String arg, int nArg)
     { boolean bOk = true;  //set to false if the argc is not passed
   
       if(nArg==0 && !arg.startsWith("-"))      { callingArgs.input = getArgument(0); }
@@ -392,7 +392,7 @@ public class Zmake
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
     //Build the data for ANT-generation control:
-    antGenCtrl.parseAntGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
+    antGenCtrl.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.curDir + args.input + "\" with \"" 
     	+ args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
