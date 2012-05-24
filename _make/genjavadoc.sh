@@ -1,12 +1,4 @@
 
-##--------------------------------------------------------------------------------------------
-## Environment variables set from zbnfjax:
-## JAVA_JDK: Directory where bin/javac is found. This java version will taken for compilation
-## The java-copiler may be located at a user-specified position.
-## Set the environment variable JAVA_HOME, where bin/javac will be found.
-if test "$JAVA_JDK" = "";  then export JAVA_JDK="/usr/share/JDK"; fi
-
-
 export DST="../../docuSrcJava_Zbnf"
 export DST_priv="../../docuSrcJava_Zbnf_priv"
 

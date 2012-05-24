@@ -19,6 +19,55 @@ import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
 import org.vishia.zbnf.ZbnfXmlOutput;
 
+
+
+/**The Zmake translator translates between a Zmake user script and the ready-to-run make-script. 
+ * The zmake user script describes what's how to make in a more simple syntax than most of the other known 
+ * make scripts. The outputted make-script may be an ANT.xml-make file, an old-style make file, 
+ * a simple batch or script file or any other control file for a make process. 
+ * The translator is able for universal usage, it  controls which text is produced for the output.
+ * <pre>
+  Zmake
+  user    =====Z===translator=====> make script
+  script       ^        ^           ready to run
+               |        |
+               |        |  (user level)
+          - - -|- - - - |- - - - - - -
+               |        |  (admin level)
+          zmake.zbnf    |
+                        |
+   ZmakeGenctrl.zbnf--->Z
+                        |
+               translation script
+
+ * </pre>
+ * The Zmake translator works in two stages. Adequate, two scripts control the working of the translator:
+ * <ul>
+ * <li> Parsing the Zmake user script: A Zmake.zbnf syntax script describes the syntax of the zmake user script 
+ *   and controls the ZBNF-parser.
+ * <li> Generate the output script: The translation script controls it. The translation script is parsed too 
+ * before it is used. The [[zbnfjax/xsl/ZmakeGenctrl.zbnf]] contains the syntax for it.
+ * </ul>
+ * The three scripts below are designated as ',,admin level,,' in the figure above. 
+ * Where the end user writes its Zmake script and starts the make process for its sources, a person 
+ * which administrates the make-tools edits and determines the ''translation script''. 
+ * The ''translation script'' can contain some more options for the compiler or other translator tools, 
+ * which are usage specific, but without influence possibility of the end-user. 
+ * For example some standard include paths or compiling options may be determined from the administrator only. 
+ * The translation script may be usage-unspecific also, whereby all options are supplied in the user script.
+ * <br><br>
+ * The [[zbnfjax:xsl/ZmakeStd.zbnf]] script determines the syntax and semantic of the user script. 
+ * The given script containing in ,,zbnfjax/zmake/zmake.zbnf,, contains enough possibilities to formulate 
+ * the users requests. It is adjusted with the Java-algorithm of the translator. 
+ * But some enhancements are possible without changing the translator-program.
+ * <br><br>
+ * The [[zbnfjax:xsl/ZmakeGenctrl.zbnf]] controls the syntax of the translation script. 
+ * It is adjusted with the internals of the translator. Only for special cases an adaption may be sensitive.
+ * The translator itself, a Java-program, is not specialized to any input or output form.
+ *
+ * @author Hartmut Schorrig
+ *
+ */
 public class Zmake
 {
 
@@ -26,6 +75,8 @@ public class Zmake
 	 * <ul>
 	 * <li>2011-08-13: {@link ZmakeGenerator} regards < ?expandFiles>, see there.
 	 * <li>2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
+	 * <li>2011-02-01: Hartmut creation. Before that, the {@link org.vishia.zbnf.Zmake} exists (in the zbnf-package)
+	 *   which produces only ANT files. This solution bases on them, but it is more universal.
 	 * </ul>
 	 */
 	public final static int version = 0x20110813;
@@ -34,35 +85,37 @@ public class Zmake
 	private static class CallingArgs
 	{
 	
-	  private String input = null;
+	  String input = null;
 	  
 	  /**String path to the XML_TOOLBASE Directory. */
-	  private String zbnfjax_PATH;
+	  String zbnfjax_PATH;
 	  
 	  /**String path to the current dir from calling. */
-	  private String curDir = null;  //default: actual dir
+	  String curDir = null;  //default: actual dir
 	  
 	  /**String path fromcurDir to a tmp dir. */
-	  private String tmp = "../tmp";  
+	  String tmp = "../tmp";  
 	  
 	  
-	  /**Path of ZBNF script to generate the ant.xml*/
-	  private String sZbnf4ant = "xsl/ZmakeStd.zbnf";
+	  /**Path of ZBNF script for the input zmake script file*/
+	  String sZbnfInput = "xsl/ZmakeStd.zbnf";
 	  
-	  /**Path of ZBNF script to read the genctrl4ant*/
-	  private String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
+	  /**Path of ZBNF script to read the sGenCtrl*/
+	  String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
 	  
-	  /**Path of ZBNF script to generate the ant.xml*/
-	  private String sGenCtrl4ant = "xsl/ZmakeStd2Ant.genctrl";
+	  /**Path of script to control the generation of the output file. */
+	  String sGenCtrl = "xsl/ZmakeStd2Ant.genctrl";
 	  
 	  /**Path of XSL script to generate the ant.xml*/
-	  //private String sXslt4ant = "xsl/ZmakeStd.xslp";
+	  //String sXslt4ant = "xsl/ZmakeStd.xslp";
 	  
 	  /**Path of the input.xml*/
-	  private String sInputXml = null;
+	  String sInputXml = null;
 	  
 	  /**Path of the ant.xml*/
-	  private String sOutput = null;
+	  String sOutput = null;
+	  
+	  CallingArgs(){}
 	};
 
 	
@@ -78,24 +131,25 @@ public class Zmake
 	final CallingArgs args;
   
   /*---------------------------------------------------------------------------------------------*/
-  /**Invocation from command line. Up to now the ant file will produced, but ant will not started here. 
+  /**Invocation from command line. 
    * <br>code in constructor to generate help info:<pre>
-     Zmake organizer                                               
-     made by JcHartmut, 2007-07-06 - 2007-10-18                    
-     invoke>%JAX_EXE% org.vishia.zbnfXml.Zmake [INPUT] [{OPTIONS}]
-     * pathes to files or dirs are absolute or relativ from cmd line invocation.               
-     * TPATH means a path started from given -ZBNFJAX_HOME:PATH or ZBNFJAX_HOME in environment.
-     * WPATH means a path started from given -tmp directory (WorkPATH).
-     * INPUTFILE is the only filename without path and without extension dissolved from INPUT                        
+     Zmake generator                                               
+     invoke>java -cp zbnf.jar org.vishia.zmake.Zmake [INPUT] [{OPTIONS}]
+     + pathes to files or dirs are absolute or relativ from cmd line invocation.               
+     + TPATH means a path started from given -ZBNFJAX_HOME:PATH or ZBNFJAX_HOME in environment.
+       But if the path starts with . it is from current dir, 
+     + WPATH means a path started from given -tmp directory (WorkPATH).
+     + INPUTFILE is the only filename without path and without extension dissolved from INPUT                        
      INPUT              The first argument without - is the input file with path and extension.
      -i:INPUT           path to the input file alternatively to INPUT.                         
      -curdir:PATH       sets the current dir alternatively to command line invocation path.     
-     -ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.       
+     -ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is gotten from environment.       
      -tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".    
      -tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml   
      -o=PATH            output-file for generate the target                        
      -zbnf=TPATH        zbnf-file to parse the input                                           
-     -genCtrl:TPATH    xslt-file to generate the ant.xml                                      
+     -genCtrl=TPATH     Zmake-genScript-file to generate the output file
+     One can use either '=' or ':' as separator between option key and value.                                      
      </pre>
    *
    */
@@ -148,27 +202,30 @@ public class Zmake
     /** Constructor of the CmdLine class.
         The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
     */
-    private CmdLine(String[] args, CallingArgs callingArgs)
+    CmdLine(String[] args, CallingArgs callingArgs)
     { super(args);
       this.callingArgs = callingArgs;
       //:TODO: user, add your help info!
       //super.addHelpInfo(getAboutInfo());
-      super.addAboutInfo("Zmake organizer");
-      super.addAboutInfo("made by JcHartmut, 2007-07-06 - 2007-10-18");
-      super.addHelpInfo("invoke>%JAX_EXE% org.vishia.zbnfXml.Zmake [INPUT] [{OPTIONS}]");
+      super.addAboutInfo("Zmake generator");
+      super.addAboutInfo("made by JcHartmut, 2007-07-06 - 2012-05-24");
+      super.addHelpInfo("invoke>java -cp zbnf.jar org.vishia.zmake.Zmake [INPUT] [{OPTIONS}]");
       super.addHelpInfo("* pathes to files or dirs are absolute or relativ from cmd line invocation.");
       super.addHelpInfo("* TPATH means a path started from given -ZBNFJAX_HOME:PATH or ZBNFJAX_HOME in environment.");
+      super.addHelpInfo("  But if the path starts with . it is from current dir. ");
       super.addHelpInfo("* WPATH means a path started from given -tmp directory (WorkPATH).");
       super.addHelpInfo("* INPUTFILE is the only filename without path and without extension dissolved from INPUT");
       super.addHelpInfo("INPUT              The first argument without - is the input file with path and extension.");
       super.addHelpInfo("-i:INPUT           path to the input file alternatively to INPUT.");
+      super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the output file");
+      super.addHelpInfo("-o=PATH            output-file to generate");
       super.addHelpInfo("-curdir:PATH       sets the current dir alternatively to command line invocation path.");
       super.addHelpInfo("-ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.");
       super.addHelpInfo("-tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".");
       super.addHelpInfo("-tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml");
-      super.addHelpInfo("-o=PATH            output-file to generate");
-      super.addHelpInfo("-zbnf=TPATH        zbnf-file to parse the input");
-      super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the ant.xml");
+      super.addHelpInfo("-zbnf=TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf");
+      super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is zmake/ZmakeGenctrl.zbnf");
+      super.addHelpInfo("One can use either '=' or ':' as separator between option key and value.");
       super.addStandardHelpInfo();
       
     }
@@ -202,8 +259,13 @@ public class Zmake
       else if(arg.startsWith("-tmp="))         { callingArgs.tmp = getArgument(5); } //older version, compatibility
       else if(arg.startsWith("-tmpinputxml:")) { callingArgs.sInputXml = getArgument(13); }
       else if(arg.startsWith("-o="))           { callingArgs.sOutput = getArgument(3); }
-      else if(arg.startsWith("-zbnf="))        { callingArgs.sZbnf4ant = getArgument(6); }  //older version, compatibility
-      else if(arg.startsWith("-genCtrl="))     { callingArgs.sGenCtrl4ant = getArgument(9); }
+      else if(arg.startsWith("-o:"))           { callingArgs.sOutput = getArgument(3); }
+      else if(arg.startsWith("-zbnf="))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
+      else if(arg.startsWith("-zbnf:"))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
+      else if(arg.startsWith("-zGen="))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
+      else if(arg.startsWith("-zGen:"))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
+      else if(arg.startsWith("-genCtrl="))     { callingArgs.sGenCtrl = getArgument(9); }
+      else if(arg.startsWith("-genCtrl:"))     { callingArgs.sGenCtrl = getArgument(9); }
       //else if(arg.startsWith("-xslt4ant="))    { sXslt4ant = getArgument(10); }  //older version, compatibility
       else bOk=false;
   
@@ -308,12 +370,14 @@ public class Zmake
     File tmpDir = new File(tmpAbs);
     if(!tmpDir.exists()) { tmpDir.mkdir(); }
     
+    /*
     if(args.sInputXml == null)
     { args.sInputXml = inputFile + inputExt + ".xml"; 
     }
     File fileZbnfXml = new File(tmpAbs + "/" + args.sInputXml);
     fileZbnfXml.setWritable(true); 
     fileZbnfXml.delete();
+    */
 
     File fileOut = new File(args.sOutput);
     fileOut.setWritable(true); 
@@ -322,8 +386,8 @@ public class Zmake
     File fileZbnf4GenCtrl = new File(args.zbnfjax_PATH + args.sZbnfGenCtrl);
     if(!fileZbnf4GenCtrl.exists()) throw new IllegalArgumentException("cannot find -zbnf4GenCtrl=" + fileZbnf4GenCtrl.getAbsolutePath());
     
-    final String sFileGenCtrl = args.sGenCtrl4ant.startsWith(".") ? args.sGenCtrl4ant
-    	                        : (args.zbnfjax_PATH + args.sGenCtrl4ant);
+    final String sFileGenCtrl = args.sGenCtrl.startsWith(".") ? args.sGenCtrl
+    	                        : (args.zbnfjax_PATH + args.sGenCtrl);
     File fileGenCtrl = new File(sFileGenCtrl);
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
@@ -331,10 +395,10 @@ public class Zmake
     antGenCtrl.parseAntGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.curDir + args.input + "\" with \"" 
-    	+ args.zbnfjax_PATH + args.sZbnf4ant + "\" to \""  + fileZbnfXml.getAbsolutePath() + "\"");
+    	+ args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
     //call the parser from input, it produces a temporary xml file.
     String sInputAbs = args.curDir + args.input;
-    String sZbnf = args.zbnfjax_PATH + args.sZbnf4ant;
+    String sZbnf = args.zbnfjax_PATH + args.sZbnfInput;
     
     String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
     StringPart spInput = new StringPartFromFileLines(new File(sInputAbs));
