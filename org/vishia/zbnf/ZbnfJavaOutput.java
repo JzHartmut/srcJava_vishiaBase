@@ -205,11 +205,12 @@ public class ZbnfJavaOutput
   
   /**Empty constructor. 
    * 
-   */
+  
   public ZbnfJavaOutput()
   { report = null;
     init();
   }
+   */
   
   /**Empty constructor. 
    * @param report for logging the process of associated, only {@link org.vishia.mainCmd.Report#fineDebug} will be used.
