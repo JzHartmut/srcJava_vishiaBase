@@ -161,6 +161,7 @@ public class ZbnfJavaOutput
 	/**Version, able to read as hex yyyymmdd.
 	 * Changes:
 	 * <ul>
+	 * <li>2012-10-07 Hartmut chg: error text output, able to use for {@link org.vishia.msgDispatch.MsgDispatchSystemOutErr}
    * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(Component, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
    * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
 	 * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
@@ -1056,14 +1057,14 @@ public class ZbnfJavaOutput
     StringPart spSyntax = null;
     try{ spSyntax = new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null); }
     catch(FileNotFoundException exc)
-    { sError = "Syntax file not found: " + fSyntax.getAbsolutePath();
+    { sError = "ZbnfJavaOutput - Syntax file not found; " + fSyntax.getAbsolutePath();
     }
     catch(IOException exc)
-    { sError = "Syntax file read problems: " + fSyntax.getAbsolutePath() + " msg = " + exc.getMessage();
+    { sError = "ZbnfJavaOutput - Syntax file read problems; " + fSyntax.getAbsolutePath() + " msg = " + exc.getMessage();
     }
     catch(IllegalArgumentException exc)
     { //it is IllegalCharsetNameException, UnsupportedCharsetException
-      sError = "Syntax file charset problems: " + fSyntax.getAbsolutePath() + " msg = " + exc.getMessage();
+      sError = "ZbnfJavaOutput - Syntax file charset problems; " + fSyntax.getAbsolutePath() + " msg = " + exc.getMessage();
     }
     if(sError == null)
     { sError = parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
@@ -1114,7 +1115,7 @@ public class ZbnfJavaOutput
     { zbnfParser = new ZbnfParser(report);
       try{ zbnfParser.setSyntax(spSyntax); }
       catch(ParseException exc)
-      { sError = "ERROR in syntax prescript: " + exc.getMessage();
+      { sError = "ZbnfJavaOutput - ERROR in syntax prescript; " + exc.getMessage();
       }
     }  
     if(sError == null)
@@ -1123,14 +1124,14 @@ public class ZbnfJavaOutput
       int lenFileInput = (int)fInput.length();
       try{ spInput = new StringPartFromFileLines(fInput, lenFileInput, null, null); }
       catch(FileNotFoundException exc)
-      { sError = "Input file not found: " + fInput.getAbsolutePath();
+      { sError = "ZbnfJavaOutput - Input file not found, " + fInput.getAbsolutePath();
       }
       catch(IOException exc)
-      { sError = "Input file read problems: " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
+      { sError = "ZbnfJavaOutput - Input file read problems; " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
       }
       catch(IllegalArgumentException exc)
       { //it is IllegalCharsetNameException, UnsupportedCharsetException
-        sError = "Input file charset problems: " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
+        sError = "ZbnfJavaOutput - Input file charset problems; " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
       }
     }
     if(sError == null)
@@ -1139,7 +1140,7 @@ public class ZbnfJavaOutput
       spInput.close();
       if(!bOk)
       { final String sParserError = zbnfParser.getSyntaxErrorReport();
-        sError = "ERROR syntax in input file: " + fInput.getAbsolutePath() + "\n" + sParserError;
+        sError = "ZbnfJavaOutput - ERROR syntax in input file; " + fInput.getAbsolutePath() + "\n" + sParserError;
         //report.writeError(sError);
       }
       //The content of the setting file is stored inside the parser as 'parse result'.
@@ -1151,13 +1152,13 @@ public class ZbnfJavaOutput
     { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 
       try{ setContent(resultType, result, zbnfParser.getFirstParseResult()); } 
       catch (IllegalAccessException exc)
-      { sError = "ERROR access to elements. Hint: The elements should be public!: " + exc.getMessage();
+      { sError = "ZbnfJavaOutput - ERROR access to elements;. Hint: The elements should be public!: " + exc.getMessage();
       } 
       catch (IllegalArgumentException exc)
-      { sError = "ERROR access to elements, IllegalArgumentException: " + exc.getMessage();
+      { sError = "ZbnfJavaOutput - ERROR access to elements, IllegalArgumentException;: " + exc.getMessage();
       } 
       catch (InstantiationException exc)
-      { sError = "ERROR access to elements, InstantiationException: " + exc.getMessage();
+      { sError = "ZbnfJavaOutput - ERROR access to elements, InstantiationException; Hint: Any sub-classes for parse results should be static; " + exc.getMessage();
       } 
       
     }  
