@@ -26,27 +26,27 @@ import org.vishia.zbnf.ZbnfXmlOutput;
 public class ZmakeAntGenCtrl
 {
 
-	private final Report console;
-	
-	/**Mirror of the content of the ant-genctrl-configuration file. Filled from ZBNF-ParseResult*/
-	private final ZmakeGenCtrl zmakeGenCtrl = new ZmakeGenCtrl();
+  private final Report console;
   
-	
-	public ZmakeAntGenCtrl(Report console)
-	{ this.console = console;
-	}
+  /**Mirror of the content of the ant-genctrl-configuration file. Filled from ZBNF-ParseResult*/
+  private final ZmakeGenCtrl zmakeGenCtrl = new ZmakeGenCtrl();
+  
+  
+  public ZmakeAntGenCtrl(Report console)
+  { this.console = console;
+  }
 
-	
-	boolean parseAntGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
-	throws FileNotFoundException, IOException
-	  , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
-	{ boolean bOk;
-		ZbnfParser parserGenCtrl = new ZbnfParser(console);
+  
+  boolean parseAntGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
+  throws FileNotFoundException, IOException
+    , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
+  { boolean bOk;
+    ZbnfParser parserGenCtrl = new ZbnfParser(console);
     parserGenCtrl.setSyntax(fileZbnf4GenCtrl);
     bOk = parserGenCtrl.parse(new StringPartFromFileLines(fileGenCtrl));
     if(!bOk){
-    	String sError = parserGenCtrl.getSyntaxErrorReport();
-    	throw new ParseException(sError,0);
+      String sError = parserGenCtrl.getSyntaxErrorReport();
+      throw new ParseException(sError,0);
     }
     //ZbnfParseResultItem parseResultGenCtrl = parserGenCtrl.getFirstParseResult();
     ZbnfXmlOutput xmlOutputGenCtrl = new ZbnfXmlOutput();
@@ -56,39 +56,39 @@ public class ZmakeAntGenCtrl
     parserGenCtrl2Java.setContent(zmakeGenCtrl.getClass(), zmakeGenCtrl, parserGenCtrl.getFirstParseResult());
     
     return bOk;
-	}
-	
-	
-	/**Searches the Zmake-target by name (binary search. TreeMap.get(name).
-	 * @param name The name of given < ?translator> in the end-users script.
-	 * @return null if the Zmake-target is not found.
-	 */
-	ZmakeTarget searchZmakeTaget(String name){ return zmakeGenCtrl.zmakeTargets.get(name); }
-	
-	
-	
-	/**Class for ZBNF parse result Element of String 
-	 */
-	public final static class ZmakeStringElement
-	{
-		final boolean isVariable;
-		public String text;
-		public ZmakeStringElement(boolean isVariable){ this.isVariable = isVariable; }
-		public ZmakeStringElement(String text, boolean isVariable){ this.text = text; this.isVariable = isVariable; }
-		@Override public String toString(){ return (isVariable?"$$(":"") + text + (isVariable?")":""); } 
-	}
-	
-	
-	
-	/**Class for ZBNF parse result 
-	 * <pre>
+  }
+  
+  
+  /**Searches the Zmake-target by name (binary search. TreeMap.get(name).
+   * @param name The name of given < ?translator> in the end-users script.
+   * @return null if the Zmake-target is not found.
+   */
+  ZmakeTarget searchZmakeTaget(String name){ return zmakeGenCtrl.zmakeTargets.get(name); }
+  
+  
+  
+  /**Class for ZBNF parse result Element of String 
+   */
+  public final static class ZmakeStringElement
+  {
+    final boolean isVariable;
+    public String text;
+    public ZmakeStringElement(boolean isVariable){ this.isVariable = isVariable; }
+    public ZmakeStringElement(String text, boolean isVariable){ this.text = text; this.isVariable = isVariable; }
+    @Override public String toString(){ return (isVariable?"$$(":"") + text + (isVariable?")":""); } 
+  }
+  
+  
+  
+  /**Class for ZBNF parse result 
+   * <pre>
 string::=
 { $$(<*)?variable>)   ##a part from any variable, forex from the input files, may be some files or fileset
 | \e                  ##end of text
 | <*|$$|\e?text>      ##constant parts of text.
 } \e.
-	 * </pre>
-	 */
+   * </pre>
+   */
   public static class ZmakeString
   {
     List<ZmakeStringElement> elements = new LinkedList<ZmakeStringElement>();

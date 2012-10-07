@@ -8,10 +8,10 @@ import java.util.TreeMap;
 
 public class ZmakeUserScript
 {
-	
-	
-	/**ZBNF-result for
-	 * <pre>
+  
+  
+  /**ZBNF-result for
+   * <pre>
 prepFilePath::=<$NoWhiteSpaces><! *?>
 [<!.?@drive>:]               ## only 1 char with followed : is drive
 [ [/|\\]<?@absPath>]         ## starting with / is absolute path
@@ -27,45 +27,45 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
 [\.*<?@wildcardExt>]         ## .* is wildcard-extension
 [ <* \e?@ext> ]              ## the rest is the extension
 .
-	 * </pre>
-	 */
-	public static class UserFilepath
-	{
-		public String drive;
-		/**From Zbnf: [ [/|\\]<?@absPath>]. Set if the path starts with '/' or '\' maybe after drive letter. */
-		public boolean absPath;
-		
-		/**Path-part before a ':'. */
-		public String pathbase;
-		
-		/**Localpath after ':' or the whole path. */
-		public String path = "";
-		
-		/**From Zbnf: The filename without extension. */
-		public String file = "";
-		
-		
-		/**From Zbnf: The extension inclusive the leading dot. */
+   * </pre>
+   */
+  public static class UserFilepath
+  {
+    public String drive;
+    /**From Zbnf: [ [/|\\]<?@absPath>]. Set if the path starts with '/' or '\' maybe after drive letter. */
+    public boolean absPath;
+    
+    /**Path-part before a ':'. */
+    public String pathbase;
+    
+    /**Localpath after ':' or the whole path. */
+    public String path = "";
+    
+    /**From Zbnf: The filename without extension. */
+    public String file = "";
+    
+    
+    /**From Zbnf: The extension inclusive the leading dot. */
     public String ext = "";
-		
-		boolean allTree, someFiles, wildcardExt;
-		public void set_someFiles(){ someFiles = true; }
-		public void set_wildcardExt(){ wildcardExt = true; }
-		public void set_allTree(){ allTree = true; }
-		
-		String getPath(){ return file; }
-		
-		@Override
+    
+    boolean allTree, someFiles, wildcardExt;
+    public void set_someFiles(){ someFiles = true; }
+    public void set_wildcardExt(){ wildcardExt = true; }
+    public void set_allTree(){ allTree = true; }
+    
+    String getPath(){ return file; }
+    
+    @Override
     public String toString()
-		{ return path + file + ext;
-		}
-	}
-	
-	
-	
-	
-	/**A < fileset> in the ZmakeStd.zbnf:
-	 * <pre>
+    { return path + file + ext;
+    }
+  }
+  
+  
+  
+  
+  /**A < fileset> in the ZmakeStd.zbnf:
+   * <pre>
 fileset::= 
 { srcpath = <""?!prepSrcpath>
 | srcext = <""?srcext>
@@ -73,8 +73,8 @@ fileset::=
 ? , | + 
 }.
 
-	 * </pre>
-	 * @author Hartmut
+   * </pre>
+   * @author Hartmut
    *
    */
   public static class UserFileset
