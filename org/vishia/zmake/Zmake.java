@@ -84,43 +84,43 @@ public class Zmake
 	
 	private static class CallingArgs
 	{
-	
-	  String input = null;
-	  
-	  /**String path to the XML_TOOLBASE Directory. */
-	  String zbnfjax_PATH;
-	  
-	  /**String path to the current dir from calling. */
-	  String curDir = null;  //default: actual dir
-	  
-	  /**String path fromcurDir to a tmp dir. */
-	  String tmp = "../tmp";  
-	  
-	  
-	  /**Path of ZBNF script for the input zmake script file*/
-	  String sZbnfInput = "xsl/ZmakeStd.zbnf";
-	  
-	  /**Path of ZBNF script to read the sGenCtrl*/
-	  String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
-	  
-	  /**Path of script to control the generation of the output file. */
-	  String sGenCtrl = "xsl/ZmakeStd2Ant.genctrl";
-	  
-	  /**Path of XSL script to generate the ant.xml*/
-	  //String sXslt4ant = "xsl/ZmakeStd.xslp";
-	  
-	  /**Path of the input.xml*/
-	  String sInputXml = null;
-	  
-	  /**Path of the ant.xml*/
-	  String sOutput = null;
-	  
-	  CallingArgs(){}
-	};
+  
+    String input = null;
+    
+    /**String path to the XML_TOOLBASE Directory. */
+    String zbnfjax_PATH;
+    
+    /**String path to the current dir from calling. */
+    String curDir = null;  //default: actual dir
+    
+    /**String path fromcurDir to a tmp dir. */
+    String tmp = "../tmp";  
+    
+    
+    /**Path of ZBNF script for the input zmake script file*/
+    String sZbnfInput = "xsl/ZmakeStd.zbnf";
+    
+    /**Path of ZBNF script to read the sGenCtrl*/
+    String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
+    
+    /**Path of script to control the generation of the output file. */
+    String sGenCtrl = "xsl/ZmakeStd2Ant.genctrl";
+    
+    /**Path of XSL script to generate the ant.xml*/
+    //String sXslt4ant = "xsl/ZmakeStd.xslp";
+    
+    /**Path of the input.xml*/
+    String sInputXml = null;
+    
+    /**Path of the ant.xml*/
+    String sOutput = null;
+    
+    CallingArgs(){}
+  };
 
-	
+  
   /** Aggregation to the Console implementation class.*/
-  private MainCmd_ifc console;
+  private final MainCmd_ifc console;
 
   private final ZmakeGenScript antGenCtrl;
   
@@ -128,7 +128,7 @@ public class Zmake
   private String tmpAbs;  
   
 
-	final CallingArgs args;
+  final CallingArgs args;
   
   /*---------------------------------------------------------------------------------------------*/
   /**Invocation from command line. 
@@ -155,8 +155,8 @@ public class Zmake
    */
   public static void main(String [] args)
   { //creates the args-class before creating the main class and fills it:
-  	Zmake.CallingArgs cmdArgs = new Zmake.CallingArgs();
-  	CmdLine mainCmdLine = new CmdLine(args, cmdArgs); //the instance to parse arguments and others.
+    Zmake.CallingArgs cmdArgs = new Zmake.CallingArgs();
+    CmdLine mainCmdLine = new CmdLine(args, cmdArgs); //the instance to parse arguments and others.
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
     catch(Exception exception)
@@ -196,8 +196,8 @@ public class Zmake
   
   private static class CmdLine extends MainCmd
   {
-  	private final CallingArgs callingArgs;
-  	
+    private final CallingArgs callingArgs;
+    
     /*---------------------------------------------------------------------------------------------*/
     /** Constructor of the CmdLine class.
         The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
@@ -278,6 +278,7 @@ public class Zmake
      * @throws ParseException 
      *
      */
+    @Override
     protected void callWithoutArguments() throws ParseException
     { //:TODO: overwrite with empty method - if the calling without arguments
       //having equal rights than the calling with arguments - no special action.
@@ -293,20 +294,21 @@ public class Zmake
        :TODO: the user only should determine the specific checks, this is a sample.
        @return true if successfull, false if failed.
     */
+    @Override
     protected boolean checkArguments()
     { boolean bOk = true;
   
-	    if(callingArgs.input == null)              
-	    { bOk = false; 
-	      writeError("ERROR argument -i=INP is obligate."); 
-	    }
-	
-	    if(callingArgs.sOutput == null)              
-	    { bOk = false; 
-	      writeError("ERROR argument -o=OUT is obligate."); 
-	    }
-	
-	    if(!bOk) setExitErrorLevel(exitWithArgumentError);
+      if(callingArgs.input == null)              
+      { bOk = false; 
+        writeError("ERROR argument -i=INP is obligate."); 
+      }
+  
+      if(callingArgs.sOutput == null)              
+      { bOk = false; 
+        writeError("ERROR argument -o=OUT is obligate."); 
+      }
+  
+      if(!bOk) setExitErrorLevel(exitWithArgumentError);
     
       return bOk;
     
@@ -345,7 +347,7 @@ public class Zmake
       
       if(args.curDir == null) 
       { args.curDir = args.input.substring(0, pos1 +1);  //"" if no path before filename is given.
-      	args.input = inputFile + inputExt;
+        args.input = inputFile + inputExt;
       } 
       else
       { //input is the full named file, but it is used relative to current dir.
@@ -361,7 +363,7 @@ public class Zmake
     { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
     }
     if(args.zbnfjax_PATH.startsWith("\"") && args.zbnfjax_PATH.length()>=2){ 
-    	args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
+      args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
     }
     args.zbnfjax_PATH += "/";
     
@@ -387,7 +389,7 @@ public class Zmake
     if(!fileZbnf4GenCtrl.exists()) throw new IllegalArgumentException("cannot find -zbnf4GenCtrl=" + fileZbnf4GenCtrl.getAbsolutePath());
     
     final String sFileGenCtrl = args.sGenCtrl.startsWith(".") ? args.sGenCtrl
-    	                        : (args.zbnfjax_PATH + args.sGenCtrl);
+                              : (args.zbnfjax_PATH + args.sGenCtrl);
     File fileGenCtrl = new File(sFileGenCtrl);
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
@@ -395,7 +397,7 @@ public class Zmake
     antGenCtrl.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.curDir + args.input + "\" with \"" 
-    	+ args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
+      + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
     //call the parser from input, it produces a temporary xml file.
     String sInputAbs = args.curDir + args.input;
     String sZbnf = args.zbnfjax_PATH + args.sZbnfInput;
@@ -407,19 +409,19 @@ public class Zmake
     console.writeInfo(" ... ");
     bOk = parser.parse(spInput);
     if(!bOk){
-    	sError = parser.getSyntaxErrorReport();
-    	throw new ParseException(sError,0);
+      sError = parser.getSyntaxErrorReport();
+      throw new ParseException(sError,0);
     }
     spInput.close();
     if(console.getReportLevel() >= Report.fineInfo){
-    	parser.reportStore(console, Report.fineInfo, "User-ZmakeScript");
+      parser.reportStore(console, Report.fineInfo, "User-ZmakeScript");
     }
     console.writeInfo(" ok, set result ... ");
     ZbnfParseResultItem parseResult = parser.getFirstParseResult();
     //write XML output only to check:
     if(sInputAbs_xml !=null){
-	    ZbnfXmlOutput xmlOutput = new ZbnfXmlOutput();
-	    xmlOutput.write(parser, sInputAbs_xml);
+      ZbnfXmlOutput xmlOutput = new ZbnfXmlOutput();
+      xmlOutput.write(parser, sInputAbs_xml);
     }
     //write into Java classes:
     ZmakeUserScript.UserScript zmakeInput = new ZmakeUserScript.UserScript();

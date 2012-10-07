@@ -29,7 +29,7 @@ public class ZmakeAntGenCtrl
 	private final Report console;
 	
 	/**Mirror of the content of the ant-genctrl-configuration file. Filled from ZBNF-ParseResult*/
-	private ZmakeGenCtrl zmakeGenCtrl = new ZmakeGenCtrl();
+	private final ZmakeGenCtrl zmakeGenCtrl = new ZmakeGenCtrl();
   
 	
 	public ZmakeAntGenCtrl(Report console)
@@ -91,26 +91,26 @@ string::=
 	 */
   public static class ZmakeString
   {
-  	List<ZmakeStringElement> elements = new LinkedList<ZmakeStringElement>();
+    List<ZmakeStringElement> elements = new LinkedList<ZmakeStringElement>();
  
-  	public ZmakeStringElement new_text(){ return new ZmakeStringElement(false); }
-  	
-  	public ZmakeStringElement new_variable(){ return new ZmakeStringElement(true); }
-  	
-  	public void add_text(ZmakeStringElement val){ elements.add(val); }
+    public ZmakeStringElement new_text(){ return new ZmakeStringElement(false); }
+    
+    public ZmakeStringElement new_variable(){ return new ZmakeStringElement(true); }
+    
+    public void add_text(ZmakeStringElement val){ elements.add(val); }
 
-  	public void add_variable(ZmakeStringElement val){ elements.add(val); }
+    public void add_variable(ZmakeStringElement val){ elements.add(val); }
 
-  	public void set_text(String val){ elements.add(new ZmakeStringElement(val, false)); }
+    public void set_text(String val){ elements.add(new ZmakeStringElement(val, false)); }
 
-  	public void set_variable(String val){ elements.add(new ZmakeStringElement(val, true)); }
+    public void set_variable(String val){ elements.add(new ZmakeStringElement(val, true)); }
 
  }
-	
-	
+  
+  
   public static final class ZmakeArgString extends ZmakeString
   {
-  	/**mode: i=forInput .=else */
+    /**mode: i=forInput .=else */
     char mode;
     
     ZmakeArgString(char mode){ this.mode = mode; }
@@ -119,184 +119,184 @@ string::=
 
   
   /**Class for ZBNF parse result 
-	 * <pre>
+   * <pre>
 exec ::=
 { dir = [<?dir> <*\s\n;?!string> | <""?!string>];
 | executable = [<?exectuable> <*\s\n;?!string>];
 | failonerror=[<?failonerror> true|false] ;
 | args \{ { [<?arg> <""?!string>|!] | forinput ( [<?argForinput> <""?!string>|!] )} \}
 }.
-	 * </pre>
-	 */
+   * </pre>
+   */
   public final static class AntExec
   {
-  	ZmakeString dir;
-  	
-  	public String executable;
-  	
-  	public String failonerror;
-  	
-  	public ZmakeString new_dir(){ return dir = new ZmakeString(); }
-  	
-  	public void set_dir(String val){}
-  	
-  	public void set_dir(ZmakeString val){}
-  	
-  	List<ZmakeArgString> args = new LinkedList<ZmakeArgString>();
+    ZmakeString dir;
+    
+    public String executable;
+    
+    public String failonerror;
+    
+    public ZmakeString new_dir(){ return dir = new ZmakeString(); }
+    
+    public void set_dir(String val){}
+    
+    public void set_dir(ZmakeString val){}
+    
+    List<ZmakeArgString> args = new LinkedList<ZmakeArgString>();
  
-  	public ZmakeArgString new_arg(){ return new ZmakeArgString('.'); }
-  	
-  	public ZmakeArgString new_argForinput(){ return new ZmakeArgString('i'); }
-  	
-   	public void add_arg(ZmakeArgString val){ args.add(val); }
+    public ZmakeArgString new_arg(){ return new ZmakeArgString('.'); }
+    
+    public ZmakeArgString new_argForinput(){ return new ZmakeArgString('i'); }
+    
+     public void add_arg(ZmakeArgString val){ args.add(val); }
 
-   	public void add_arg(String val){ } //args.add(new ZmakeArgString(val, 'i')); }
+     public void add_arg(String val){ } //args.add(new ZmakeArgString(val, 'i')); }
 
-  	public void add_argForinput(ZmakeArgString val){ args.add(val); }
+    public void add_argForinput(ZmakeArgString val){ args.add(val); }
   }
-	
-	
+  
+  
   
   final static class AntAction
   { final AntExec exec;
   
     final String nameRoutine;
-  	
+    
     AntAction(String nameAction){
-    	this.nameRoutine = nameAction;
-    	if(nameAction.equals("exec")){
-    		exec = new AntExec();
-    	} else {
-    		exec = null;
-    	}
-    		
+      this.nameRoutine = nameAction;
+      if(nameAction.equals("exec")){
+        exec = new AntExec();
+      } else {
+        exec = null;
+      }
+        
     }
   }
   
   
   
   /**Class for ZBNF parse result 
-	 * <pre>
+   * <pre>
 depends::=
 [ forinput ( [<?forinputFile> <*\s\n,;?!string> | <""?!string>] )
 | [<?file> <*\s\n,;\?!string> | <""?!string>]                             ##string contains build prescript for file name
 ].
-	 * </pre>
-	 */
+   * </pre>
+   */
   public final static class ZmakeDepends
   {
-  	public ZmakeArgString string;
-  	//public ZmakeString forinputFile;
-  	
-  	public ZmakeString new_file(){ return string = new ZmakeArgString('.'); }
-   	//public void set_file(String val){  }
-   	public void set_file(ZmakeString val){  }
+    public ZmakeArgString string;
+    //public ZmakeString forinputFile;
     
-   	public ZmakeString new_forinputFile(){ return string = new ZmakeArgString('i'); }
-   	public void set_forinputFile(ZmakeString val){}
-  	
+    public ZmakeString new_file(){ return string = new ZmakeArgString('.'); }
+     //public void set_file(String val){  }
+     public void set_file(ZmakeString val){  }
+    
+     public ZmakeString new_forinputFile(){ return string = new ZmakeArgString('i'); }
+     public void set_forinputFile(ZmakeString val){}
+    
   }
-	
-	
   
   
   
   
-	
-	/**Class for ZBNF parse result 
-	 * <pre>
+  
+  
+  
+  /**Class for ZBNF parse result 
+   * <pre>
 AntTarget::= genAntTarget \{
 { name = [<?name> <* ;?!string>|xxx] ;
 | depends =   { <depends> ? , }  ;       ##more as one {depends,...} or only one depends
 | exec \{ <exec> \}                                    ##exec written in { } to build a block
 } \}.
-	 * </pre>
-	 */
-	public final static class AntTarget
-	{
-		ZmakeString nameTarget;
-		
-		final boolean forInput;
-		
-		List<ZmakeDepends> depends = new LinkedList<ZmakeDepends>();
-		
-		List<AntAction> actions = new LinkedList<AntAction>();
-		
-		AntTarget(boolean forInput){ this.forInput = forInput; }
+   * </pre>
+   */
+  public final static class AntTarget
+  {
+    ZmakeString nameTarget;
+    
+    final boolean forInput;
+    
+    List<ZmakeDepends> depends = new LinkedList<ZmakeDepends>();
+    
+    List<AntAction> actions = new LinkedList<AntAction>();
+    
+    AntTarget(boolean forInput){ this.forInput = forInput; }
 
-		public ZmakeString new_name(){ return nameTarget = new ZmakeString(); }
-		
-		public void set_name(ZmakeString val){}
-		
-		public String get_name(ZmakeUserScript.UserTarget inpTarget)
-		{
-			return "";
-		}
-		
-		public void set_name(String val){}
-		
-		public ZmakeDepends new_depends(){ return new ZmakeDepends(); }
-		
-		public void add_depends(ZmakeDepends val){ depends.add(val); }
-		
-		public AntExec new_exec(){ 
-			AntAction action = new AntAction("exec"); actions.add(action); 
-			return action.exec; 
-		}
-		
-		public void add_exec(AntExec val){ }
-		
-		
-	}
-	
-	/**Class for ZBNF parse result 
-	 * <pre>
+    public ZmakeString new_name(){ return nameTarget = new ZmakeString(); }
+    
+    public void set_name(ZmakeString val){}
+    
+    public String get_name(ZmakeUserScript.UserTarget inpTarget)
+    {
+      return "";
+    }
+    
+    public void set_name(String val){}
+    
+    public ZmakeDepends new_depends(){ return new ZmakeDepends(); }
+    
+    public void add_depends(ZmakeDepends val){ depends.add(val); }
+    
+    public AntExec new_exec(){ 
+      AntAction action = new AntAction("exec"); actions.add(action); 
+      return action.exec; 
+    }
+    
+    public void add_exec(AntExec val){ }
+    
+    
+  }
+  
+  /**Class for ZBNF parse result 
+   * <pre>
 ZmakeTarget::= target ( <$?@name> ) \{
 { AntTargetForinput < AntTarget?forinputAntTarget>
 | AntTarget < AntTarget>
 } \}.                                    ##one Zmake-target can generate more as one ANT-target.
-	 * </pre>
-	 */
-	public final static class ZmakeTarget
-	{
-		private boolean bhasForInputTargets = false;
-		
-		public String name;
-		List<AntTarget> antTargets = new LinkedList<AntTarget>();
-		
-		/**From ZBNF: < AntTarget> */ 
-		public AntTarget new_AntTarget(){ return new AntTarget(false); }
-		
-		/**From ZBNF: < AntTarget?forinputAntTarget> */ 
-		public AntTarget new_forinputAntTarget(){ bhasForInputTargets = true; return new AntTarget(true); } //true signed forinput
-		
-		/**From ZBNF: < AntTarget> */ 
-		public void add_AntTarget(AntTarget val){ antTargets.add(val); } 
-		
-		/**From ZBNF: < AntTarget?forinputAntTarget> */ 
-		public void add_forinputAntTarget(AntTarget val){ antTargets.add(val); }
-		
-		/**Query whether any forInput-ANT-Target is contained, then a superior target is necessary
-		 * because more as one ANT-Targets are created from this.
-		 * @return
-		 */
-		public boolean hasForInputAntTargets(){ return bhasForInputTargets; }
-	}
-	
-	/**Main class for ZBNF parse result 
-	 * <pre>
-	 * ZmakeGenctrl::= { <target> } \e.
-	 * </pre>
-	 */
-	public final static class ZmakeGenCtrl
-	{
+   * </pre>
+   */
+  public final static class ZmakeTarget
+  {
+    private boolean bhasForInputTargets = false;
+    
+    public String name;
+    List<AntTarget> antTargets = new LinkedList<AntTarget>();
+    
+    /**From ZBNF: < AntTarget> */ 
+    public AntTarget new_AntTarget(){ return new AntTarget(false); }
+    
+    /**From ZBNF: < AntTarget?forinputAntTarget> */ 
+    public AntTarget new_forinputAntTarget(){ bhasForInputTargets = true; return new AntTarget(true); } //true signed forinput
+    
+    /**From ZBNF: < AntTarget> */ 
+    public void add_AntTarget(AntTarget val){ antTargets.add(val); } 
+    
+    /**From ZBNF: < AntTarget?forinputAntTarget> */ 
+    public void add_forinputAntTarget(AntTarget val){ antTargets.add(val); }
+    
+    /**Query whether any forInput-ANT-Target is contained, then a superior target is necessary
+     * because more as one ANT-Targets are created from this.
+     * @return
+     */
+    public boolean hasForInputAntTargets(){ return bhasForInputTargets; }
+  }
+  
+  /**Main class for ZBNF parse result 
+   * <pre>
+   * ZmakeGenctrl::= { <target> } \e.
+   * </pre>
+   */
+  public final static class ZmakeGenCtrl
+  {
 
-		private Map<String, ZmakeTarget> zmakeTargets = new TreeMap<String, ZmakeTarget>();
-		
-		public ZmakeTarget new_ZmakeTarget(){ return new ZmakeTarget(); }
-		
-		public void add_ZmakeTarget(ZmakeTarget val){ zmakeTargets.put(val.name, val); }
-		
-	}
-	
+    private final Map<String, ZmakeTarget> zmakeTargets = new TreeMap<String, ZmakeTarget>();
+    
+    public ZmakeTarget new_ZmakeTarget(){ return new ZmakeTarget(); }
+    
+    public void add_ZmakeTarget(ZmakeTarget val){ zmakeTargets.put(val.name, val); }
+    
+  }
+  
 }

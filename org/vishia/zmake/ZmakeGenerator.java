@@ -470,120 +470,120 @@ public class ZmakeGenerator
 		*/
   }
 	
-	
-	/**Builds a String with given parts from a given ZmakeString-format and user data.
-	 * @param string The ZmakeString-format in the script to build the ANT-XML-file.
-	 * @param userTarget The users Zmake-Target-data-
-	 * @param input null or information about input-file if target per input.
-	 * @return String
-	 */
-	private String buildString(ZmakeAntGenCtrl.ZmakeString string, ZmakeUserScript.UserTarget userTarget
-		, ZmakeUserScript.UserFilepath input)
-	{
-		StringBuilder uBuffer = new StringBuilder(64);
-		for(ZmakeAntGenCtrl.ZmakeStringElement element: string.elements){
-			if(element.isVariable){
-				if(element.text.startsWith("input.")){
-					CharSequence part = getPartsFromFilepath(input, null, element.text.substring(6));
-					uBuffer.append(part);
-				} else if(element.text.startsWith("output.")){
-					CharSequence part = getPartsFromFilepath(userTarget.output, null, element.text.substring(7));
-					uBuffer.append(part);
-				} else {
-					ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(element.text);
-					if(variable.string !=null){
-			      stop();
-					}
-				}
-			} else {
-				uBuffer.append(element.text);
-			}
-		}
-		return uBuffer.toString();
-	}
-	
-	
-	/**Gets parts from a file
-	 * <ul>
-	 * <li>file: The local file path with all parts. It is supplied as relative path.
-	 *   It is used normally in composition with another maybe absolute directory path.
-	 * <li>absFile: The absolute file path: If a source path is given, it is used instead a base  path.
-	 *   If a relative path is given, the {@link #sCurrDir}-content is added before the relative path.
-	 * <li>localFile: The local file path with all parts. It is supplied as relative path.
-	 *   It is used normally in composition with another maybe absolute directory path.   
-	 * <li>localPath: The local path only without the file. It is supplied as relative path.
-	 *   It is used normally in composition with another maybe absolute directory path.   
-	 * </li>
-	 * @param file
-	 * @param generalPath
-	 * @param part
-	 * @return
-	 */
-	public CharSequence getPartsFromFilepath(ZmakeUserScript.UserFilepath file
-		, ZmakeUserScript.UserFilepath generalPath, String part)
-	{ if(file.path.contains("inspectorAccessor"))
-	    stop();
-	
-	  if(part.equals("file")){ 
-			StringBuilder uRet = new StringBuilder();
-			if(generalPath !=null){
-				if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
-				if(generalPath.pathbase !=null && file.pathbase.length() >0){ uRet.append(generalPath.pathbase).append('/'); }
-				uRet.append(generalPath.path);  //ends with /
-			} else {
-				if(file.drive !=null){ uRet.append(file.drive); }
-				if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
-			}
-			uRet.append(file.path);
-			uRet.append(file.file);
-			if(file.someFiles){ uRet.append('*'); }
-			if(file.wildcardExt){ uRet.append(".*"); }
-			uRet.append(file.ext);
-			return uRet;
-		}
-		else if(part.equals("absFile")){
-			StringBuilder uRet = new StringBuilder();
-			if(generalPath !=null){
-				if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
-				if(!generalPath.absPath){ 
-					uRet.append(sCurrDir); 
-				}
-				if(generalPath.pathbase !=null && file.pathbase.length() >0){ uRet.append(generalPath.pathbase).append('/'); }
-				uRet.append(generalPath.path);  //ends with /
-			} else {
-				if(file.drive !=null){ uRet.append(file.drive); }
-				if(!file.absPath){ uRet.append(sCurrDir); }
-				if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
-			}
-			uRet.append(file.path);
-			uRet.append(file.file);
-			if(file.someFiles){ uRet.append('*'); }
-			if(file.wildcardExt){ uRet.append(".*"); }
-			uRet.append(file.ext);
-			return uRet;
-		}
-		else if(part.equals("absDir")){
-			StringBuilder uRet = new StringBuilder();
-			if(file.drive !=null){ uRet.append(file.drive); }
-			if(!file.absPath){ uRet.append(sCurrDir); }
-			if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
-			uRet.append(file.path);
-			return uRet;
-		}
-		else if(part.equals("localPathName")){ return file.path + file.file; }
-		else if(part.equals("localFile")){ 
-		  StringBuilder uRet = new StringBuilder();
+  
+  /**Builds a String with given parts from a given ZmakeString-format and user data.
+   * @param string The ZmakeString-format in the script to build the ANT-XML-file.
+   * @param userTarget The users Zmake-Target-data-
+   * @param input null or information about input-file if target per input.
+   * @return String
+   */
+  private String buildString(ZmakeAntGenCtrl.ZmakeString string, ZmakeUserScript.UserTarget userTarget
+    , ZmakeUserScript.UserFilepath input)
+  {
+    StringBuilder uBuffer = new StringBuilder(64);
+    for(ZmakeAntGenCtrl.ZmakeStringElement element: string.elements){
+      if(element.isVariable){
+        if(element.text.startsWith("input.")){
+          CharSequence part = getPartsFromFilepath(input, null, element.text.substring(6));
+          uBuffer.append(part);
+        } else if(element.text.startsWith("output.")){
+          CharSequence part = getPartsFromFilepath(userTarget.output, null, element.text.substring(7));
+          uBuffer.append(part);
+        } else {
+          ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(element.text);
+          if(variable.string !=null){
+            stop();
+          }
+        }
+      } else {
+        uBuffer.append(element.text);
+      }
+    }
+    return uBuffer.toString();
+  }
+  
+  
+  /**Gets parts from a file
+   * <ul>
+   * <li>file: The local file path with all parts. It is supplied as relative path.
+   *   It is used normally in composition with another maybe absolute directory path.
+   * <li>absFile: The absolute file path: If a source path is given, it is used instead a base  path.
+   *   If a relative path is given, the {@link #sCurrDir}-content is added before the relative path.
+   * <li>localFile: The local file path with all parts. It is supplied as relative path.
+   *   It is used normally in composition with another maybe absolute directory path.   
+   * <li>localPath: The local path only without the file. It is supplied as relative path.
+   *   It is used normally in composition with another maybe absolute directory path.   
+   * </li>
+   * @param file
+   * @param generalPath
+   * @param part
+   * @return
+   */
+  public CharSequence getPartsFromFilepath(ZmakeUserScript.UserFilepath file
+    , ZmakeUserScript.UserFilepath generalPath, String part)
+  { if(file.path.contains("inspectorAccessor"))
+      stop();
+  
+    if(part.equals("file")){ 
+      StringBuilder uRet = new StringBuilder();
+      if(generalPath !=null){
+        if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
+        if(generalPath.pathbase !=null && file.pathbase.length() >0){ uRet.append(generalPath.pathbase).append('/'); }
+        uRet.append(generalPath.path);  //ends with /
+      } else {
+        if(file.drive !=null){ uRet.append(file.drive); }
+        if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
+      }
       uRet.append(file.path);
       uRet.append(file.file);
       if(file.someFiles){ uRet.append('*'); }
       if(file.wildcardExt){ uRet.append(".*"); }
       uRet.append(file.ext);
       return uRet;
-		}
-		else if(part.equals("localDir")){ return file.path; }
-		else if(part.equals("localPath")){ return file.path; }  //deprecated
+    }
+    else if(part.equals("absFile")){
+      StringBuilder uRet = new StringBuilder();
+      if(generalPath !=null){
+        if(generalPath.drive !=null){ uRet.append(generalPath.drive); }
+        if(!generalPath.absPath){ 
+          uRet.append(sCurrDir); 
+        }
+        if(generalPath.pathbase !=null && file.pathbase.length() >0){ uRet.append(generalPath.pathbase).append('/'); }
+        uRet.append(generalPath.path);  //ends with /
+      } else {
+        if(file.drive !=null){ uRet.append(file.drive); }
+        if(!file.absPath){ uRet.append(sCurrDir); }
+        if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
+      }
+      uRet.append(file.path);
+      uRet.append(file.file);
+      if(file.someFiles){ uRet.append('*'); }
+      if(file.wildcardExt){ uRet.append(".*"); }
+      uRet.append(file.ext);
+      return uRet;
+    }
+    else if(part.equals("absDir")){
+      StringBuilder uRet = new StringBuilder();
+      if(file.drive !=null){ uRet.append(file.drive); }
+      if(!file.absPath){ uRet.append(sCurrDir); }
+      if(file.pathbase !=null && file.pathbase.length() >0){ uRet.append(file.pathbase).append('/'); }
+      uRet.append(file.path);
+      return uRet;
+    }
+    else if(part.equals("localPathName")){ return file.path + file.file; }
+    else if(part.equals("localFile")){ 
+      StringBuilder uRet = new StringBuilder();
+      uRet.append(file.path);
+      uRet.append(file.file);
+      if(file.someFiles){ uRet.append('*'); }
+      if(file.wildcardExt){ uRet.append(".*"); }
+      uRet.append(file.ext);
+      return uRet;
+    }
+    else if(part.equals("localDir")){ return file.path; }
+    else if(part.equals("localPath")){ return file.path; }  //deprecated
     else if(part.equals("name")){ return file.file; }
-		else if(part.equals("nameExt")){ return file.file + file.ext; }
+    else if(part.equals("nameExt")){ return file.file + file.ext; }
     else if(part.equals("ext")){ return file.ext; }
     else if(part.equals("basePath")){
       StringBuilder uRet = new StringBuilder();
@@ -598,10 +598,10 @@ public class ZmakeGenerator
       if(file.pathbase !=null){ uRet.append(file.pathbase); }
       return uRet;
     }
-		else return("...ERROR Zmake: fault-pathRequest(" + part + ")...");
-	}
-	
-	
+    else return("...ERROR Zmake: fault-pathRequest(" + part + ")...");
+  }
+  
+  
   /**Get the content of a named variable.
    * 
    * @param userTarget The users data. Not used here.
@@ -609,100 +609,101 @@ public class ZmakeGenerator
    * @param contentData The local context where variable may be defined.
    * @return
    */
-	private CharSequence getTextofVariable(ZmakeUserScript.UserTarget userTarget, String name, Gen_Content contentData)
-	{ 
-		if(name.equals("compileOptions"))
-			stop();
-		CharSequence text = contentData.localVariables.get(name);
-		if(text == null){ 
-		  List<CharSequence> list = addToListTexts.get(name);
-		  if(list !=null){
-		  	StringBuilder uText = new StringBuilder();
-		  	for(CharSequence text1: list){
-		  		uText.append(text1);
-		  	}
-		  	text = uText;
-		  } else {
-		  	text = scriptVariables.get(name);  //variables defined in the gen-script (not user script)
-		  }
-		}
+  private CharSequence getTextofVariable(ZmakeUserScript.UserTarget userTarget, String name, Gen_Content contentData)
+  { 
+    if(name.equals("compileOptions"))
+      stop();
+    CharSequence text = contentData.localVariables.get(name);
+    if(text == null){ 
+      List<CharSequence> list = addToListTexts.get(name);
+      if(list !=null){
+        StringBuilder uText = new StringBuilder();
+        for(CharSequence text1: list){
+          uText.append(text1);
+        }
+        text = uText;
+      } else {
+        text = scriptVariables.get(name);  //variables defined in the gen-script (not user script)
+      }
+    }
     if(text == null 
-    	&& userTarget !=null     //prevent recursively call from getTextOfParam(...) 
-    	&& userTarget.params !=null
-    	){
-    	ZmakeUserScript.UserParam param = userTarget.params.get(name);
-    	if(param !=null){
-    		text = getTextOfParam(param, contentData);
-    	}
+      && userTarget !=null     //prevent recursively call from getTextOfParam(...) 
+      && userTarget.params !=null
+      ){
+      ZmakeUserScript.UserParam param = userTarget.params.get(name);
+      if(param !=null){
+        text = getTextOfParam(param, contentData);
+      }
     }
     if(text == null){
-    	ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(name);
-    	if(variable !=null){
-	    	if(variable.string !=null){
-	    		text = variable.string.getText();
-	    	}
-    	}
+      ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(name);
+      if(variable !=null){
+        if(variable.string !=null){
+          text = variable.string.getText();
+        }
+      }
     }
-		if(text == null)
-			text="...ERROR: unknown:" + name + "...";
-			stop();
-			//throw new IllegalArgumentException("unknown variable: " + name); 
-		return text;
-	}
-	
-	
-	
-	
-	
-	
-	private CharSequence getTextOfParam(ZmakeUserScript.UserParam param, Gen_Content contentData)
-	{
-		if(param.value !=null){
-			return param.value;
-		} else {
-			String nameVariable = param.variable;
-			//Note: prevent recursion: userTarget = null. Don't get content of a variable in usertarget, especially another param.
-			return getTextofVariable(null, nameVariable, contentData);
-		}
-	}
+    if(text == null)
+      text="...ERROR: unknown:" + name + "...";
+      stop();
+      //throw new IllegalArgumentException("unknown variable: " + name); 
+    return text;
+  }
   
-	
-	
-	
-	
-	private boolean addFileset(String name, String srcpath, List<String> container)
-	{ boolean bOk = true;
-		//search the fileset:
-		ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(name);
-		if(variable.fileset == null){
-			console.writeError("fileset not found; " + name);
-			bOk = false;
-		} else {
-			final String srcPathFile;
-			if(srcpath != null){ srcPathFile = srcpath;
-			} else if(variable.fileset.srcpath != null){ 
-				                   srcPathFile = variable.fileset.srcpath.pathbase; 
-			} else {             srcPathFile = "sCurrDir";
-			}
-			for(ZmakeUserScript.UserFilepath file: variable.fileset.filesOfFileset){
-				String sFilePath = srcPathFile + file.path + file.file + file.ext;
-				container.add(sFilePath);
-			}
-			//container
-		}
-		return bOk;
-	}
-	
-	/**Small class instance to build a next number. 
-	 * Note: It is anonymous to encapsulate the current number value. 
-	 * The only one access method is Object.toString(). It returns a countered number.
-	 */
-	private Object nextNr = new Object(){
-		int nr = 0;
-		public String toString(){
-			return "" + ++nr;
-		}
-	};
-	
-	void stop(){}
+  
+  
+  
+  
+  
+  private CharSequence getTextOfParam(ZmakeUserScript.UserParam param, Gen_Content contentData)
+  {
+    if(param.value !=null){
+      return param.value;
+    } else {
+      String nameVariable = param.variable;
+      //Note: prevent recursion: userTarget = null. Don't get content of a variable in usertarget, especially another param.
+      return getTextofVariable(null, nameVariable, contentData);
+    }
+  }
+  
+  
+  
+  
+  
+  private boolean addFileset(String name, String srcpath, List<String> container)
+  { boolean bOk = true;
+    //search the fileset:
+    ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(name);
+    if(variable.fileset == null){
+      console.writeError("fileset not found; " + name);
+      bOk = false;
+    } else {
+      final String srcPathFile;
+      if(srcpath != null){ srcPathFile = srcpath;
+      } else if(variable.fileset.srcpath != null){ 
+                           srcPathFile = variable.fileset.srcpath.pathbase; 
+      } else {             srcPathFile = "sCurrDir";
+      }
+      for(ZmakeUserScript.UserFilepath file: variable.fileset.filesOfFileset){
+        String sFilePath = srcPathFile + file.path + file.file + file.ext;
+        container.add(sFilePath);
+      }
+      //container
+    }
+    return bOk;
+  }
+  
+  /**Small class instance to build a next number. 
+   * Note: It is anonymous to encapsulate the current number value. 
+   * The only one access method is Object.toString(). It returns a countered number.
+   */
+  private final Object nextNr = new Object(){
+    int nr = 0;
+    @Override
+    public String toString(){
+      return "" + ++nr;
+    }
+  };
+  
+  void stop(){}
 }
