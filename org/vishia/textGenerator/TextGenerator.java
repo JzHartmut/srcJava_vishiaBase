@@ -171,7 +171,8 @@ public class TextGenerator {
           pos = posEnd+1;
           //replace a placeholder
         } else if(posControl >=0){
-          sLine = processControl(pos, sLine, reader);
+          out.append(sLine.substring(pos, posControl));
+          sLine = processControl(posControl, sLine, reader);
           pos = 0;
         } else {
           out.append(sLine.substring(pos));  //till end.
@@ -239,19 +240,18 @@ public class TextGenerator {
     do{
       int posNestedBlock = sLine.indexOf("<:for", posSearchNested);
       int posEndBlock = sLine.indexOf("<.for>", posStart);
-      int posDeleteEnd;
-      if(posNestedBlock > 0 && (posEndBlock < 0 || posNestedBlock < posEndBlock)){
+      if(posNestedBlock >= 0 && (posEndBlock < 0 || posNestedBlock < posEndBlock)){
         zNestedForEach +=1;
       }
       if(posEndBlock >=0){ // && (posNestedBlock < 0 || posNestedBlock > posEndBlock)){
         //end found.
-        forEachAct.lines.append(sLine.substring(posStart, posEndBlock));
         if(zNestedForEach>0){
           zNestedForEach -=1;
-          posStart = posEndBlock;
+          forEachAct.lines.append(sLine.substring(posStart, posEndBlock+6));
+          posStart = posEndBlock+6;
         } else {
-          posDeleteEnd = posEndBlock + 6;
-          sLineAfterForeach = sLine.substring(posDeleteEnd);
+          forEachAct.lines.append(sLine.substring(posStart, posEndBlock));
+          sLineAfterForeach = sLine.substring(posEndBlock + 6);
         }
       } else {
         //transfer rest of first line or whole line:

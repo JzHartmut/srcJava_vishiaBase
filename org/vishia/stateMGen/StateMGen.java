@@ -12,6 +12,7 @@ import java.util.List;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
+import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenerator;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
@@ -35,13 +36,22 @@ public class StateMGen {
     /**Cmdline-argument, set on -i: option. Inputfile to to something. */
     String sFileIn = null;
   
-    /**Cmdline-argument, set on -y: option. Outputfile to output something. */
-    String sFileOut = null;
-
     /**Cmdline-argument, set on -s: option. Zbnf-file to output something. */
     String sFileZbnf = null;
+
+    String sFileData = null;
     
-    String sFileScript = null;
+    static class Out{
+      
+      /**Cmdline-argument, set on -y: option. Outputfile to output something. */
+      String sFileOut = null;
+  
+      String sFileScript = null;
+    }
+    
+    List<Out> listOut = new LinkedList<Out>();
+    
+    Out lastOut;
   }
 
 
@@ -133,9 +143,18 @@ public class StateMGen {
     { boolean bOk = true;  //set to false if the argc is not passed
   
       if(arg.startsWith("-i:"))      cmdlineArgs.sFileIn   = getArgument(3);
-      else if(arg.startsWith("-y:")) cmdlineArgs.sFileOut  = getArgument(3);
-      else if(arg.startsWith("-c:")) cmdlineArgs.sFileScript  = getArgument(3);
       else if(arg.startsWith("-s:")) cmdlineArgs.sFileZbnf  = getArgument(3);
+      else if(arg.startsWith("-d:")) cmdlineArgs.sFileData  = getArgument(3);
+      else if(arg.startsWith("-y:")) {
+        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Args.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
+        cmdlineArgs.lastOut.sFileOut  = getArgument(3);
+        if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
+      }
+      else if(arg.startsWith("-c:")) {
+        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Args.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
+        cmdlineArgs.lastOut.sFileScript  = getArgument(3);
+        if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
+      }
       else bOk=false;
   
       return bOk;
@@ -185,6 +204,9 @@ public class StateMGen {
   {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
+    
+    /**From ZBNF: <$?@enclState>. */
+    public String enclState;
     
     /**From ZBNF: <""?description>. */
     public String description;
@@ -249,6 +271,9 @@ public class StateMGen {
   {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
+    
+    /**From ZBNF: <$?@enclState>. */
+    public String enclState;
     
     /**From ZBNF: <""?description>. */
     public String description;
@@ -356,14 +381,22 @@ public class StateMGen {
     ZbnfResultData zbnfResultData = parseAndStoreInput(args);
     if(zbnfResultData != null){
       
+      if(args.sFileData !=null){
+        FileWriter outData = new FileWriter(args.sFileData);
+        OutputDataTree outputterData = new OutputDataTree();
+        outputterData.output(0, zbnfResultData, outData, false);
+        outData.close();
+      }
       TextGenerator generator = new TextGenerator();
-      File fOut = new File(args.sFileOut);
-      File fileScript = new File(args.sFileScript);
-      String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
-      if(sError !=null){
-        console.writeError(sError);
-      } else {
-        console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
+      for(Args.Out out: args.listOut){
+        File fOut = new File(out.sFileOut);
+        File fileScript = new File(out.sFileScript);
+        String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
+        if(sError !=null){
+          console.writeError(sError);
+        } else {
+          console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
+        }
       }
     } else {
       console.writeInfoln("ERROR");
