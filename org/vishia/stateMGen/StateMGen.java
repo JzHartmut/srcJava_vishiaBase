@@ -2,6 +2,7 @@ package org.vishia.stateMGen;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -14,7 +15,10 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenerator;
+import org.vishia.util.Assert;
 import org.vishia.zbnf.ZbnfJavaOutput;
+import org.vishia.zmake.ZmakeGenScript;
+import org.vishia.zmake.ZmakeGenerator;
 
 
 public class StateMGen {
@@ -387,11 +391,10 @@ public class StateMGen {
         outputterData.output(0, zbnfResultData, outData, false);
         outData.close();
       }
-      TextGenerator generator = new TextGenerator();
       for(Args.Out out: args.listOut){
         File fOut = new File(out.sFileOut);
         File fileScript = new File(out.sFileScript);
-        String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
+        String sError = generateZmake(zbnfResultData, fileScript, fOut);
         if(sError !=null){
           console.writeError(sError);
         } else {
@@ -403,6 +406,47 @@ public class StateMGen {
       
     }
   }
+  
+  
+  
+  String generateText(ZbnfResultData zbnfResultData, File fileScript, File fOut){
+    TextGenerator generator = new TextGenerator();
+    String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
+    return sError;
+  }
+  
+  
+  
+  String generateZmake(ZbnfResultData zbnfResultData, File fileScript, File fOut){
+    ZmakeGenScript genScript = new ZmakeGenScript(console);
+    File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
+    Writer out = null;
+    String sError = null;
+    try{ 
+      genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
+      out = new FileWriter(fOut);
+    
+    } catch(ParseException exc){
+      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
+      
+    } catch(FileNotFoundException exc){
+      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
+    } catch(Exception exc){
+      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
+    }
+    try{
+      TextGenerator generator = new TextGenerator();
+      sError = generator.genContent(genScript, zbnfResultData, out);
+      out.close();
+    } catch(IOException exc){
+      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
+    }
+    //String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
+    return sError;
+  }
+  
+  
+  
   
   
   

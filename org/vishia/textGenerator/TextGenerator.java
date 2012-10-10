@@ -17,6 +17,7 @@ import java.util.Stack;
 import java.util.TreeMap;
 
 import org.vishia.util.Assert;
+import org.vishia.zmake.ZmakeGenScript;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script.
  * The script is a simple text file which contains placeholder for data and some control statements
@@ -46,6 +47,44 @@ import org.vishia.util.Assert;
  *
  */
 public class TextGenerator {
+  
+  
+  /**Version and history
+   * <ul>
+   * <li>2012-10-10 Usage of {@link ZmakeGenScript}.
+   * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
+   *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
+   *   was need.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  @SuppressWarnings("hiding")
+  static final public int version = 0x20111203;
+
   
   private class ForEach{
     StringBuilder lines = new StringBuilder(5000);
@@ -336,4 +375,171 @@ public class TextGenerator {
   }
   
   
+  
+  /**Read content from data.
+   * @param sPath
+   * @return
+   * @throws IllegalArgumentException
+   */
+  private Object getContent(List<String> path, Map<String, Object> localVariables)
+  throws IllegalArgumentException
+  {
+    Class<?> clazz1;
+    Object data1 = data;
+    Iterator<String> iter = path.iterator();
+    String sElement = iter.next();
+    //ForEach forVariable = idxForeaches.get(sElement);
+    data1 = localVariables.get(sElement);
+    if(data1 !=null){
+      sElement = iter.hasNext() ? iter.next() : null;
+    } else {
+      data1 = this.data;
+    }
+    while(sElement !=null && data1 !=null){
+      try{ 
+        clazz1 = data1.getClass();
+        Field element = clazz1.getDeclaredField(sElement);
+        try{ data1 = element.get(data1);
+        
+        } catch(IllegalAccessException exc){ 
+          if(bWriteErrorInOutput){
+            return "<? path access: " + path.toString() + "?>";
+          } else {
+            throw new IllegalArgumentException("IllegalAccessException, hint: should be public;" + sElement); 
+          }
+        }
+        sElement = iter.hasNext() ? iter.next() : null;
+      } catch(NoSuchFieldException exc){
+        //TODO method
+        if(bWriteErrorInOutput){
+          return "<? path fault: " + path.toString() + "?>";
+        } else {
+          throw new IllegalArgumentException("NoSuchFieldException;" + sElement); 
+        }
+      }
+    }
+    return data1;
+  }
+  
+  
+  
+  public String genContent(ZmakeGenScript genScript, Object userData, Writer out) throws IOException{
+    this.out = out;
+    this.data = userData;
+    this.bWriteErrorInOutput = true;
+    ZmakeGenScript.Zbnf_genContent contentScript = genScript.getFileScript();
+    Gen_Content genFile = new Gen_Content(null);
+    String sError = genFile.genContent(contentScript, userData);
+    return sError;
+  }
+    
+  
+  
+  final class Gen_Content
+  {
+    final Gen_Content parent;
+    
+    Map<String, Object> localVariables = new TreeMap<String, Object>();
+    
+    
+    
+    
+    public Gen_Content(Gen_Content parent)
+    { this.parent = parent;
+      if(parent !=null){
+        this.localVariables.putAll(parent.localVariables);
+      }
+    }
+
+
+  
+    public String genContent(ZmakeGenScript.Zbnf_genContent contentScript, Object userTarget) 
+    throws IOException{
+      Appendable uBuffer = out;
+      //Fill all local variable, which are defined in this script.
+      //store its values in the local Gen_Content-instance.
+      for(ZmakeGenScript.Zbnf_genContent variableScript: contentScript.getLocalVariables()){
+        StringBuilder uBufferVariable = new StringBuilder();
+        Gen_Content genVariable = new Gen_Content(this);
+        //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
+        localVariables.put(variableScript.name, uBufferVariable);
+      }
+    
+    
+      //Generate direct requested output. It is especially on inner content-scripts.
+      for(ZmakeGenScript.Zbnf_ScriptElement contentElement: contentScript.content){
+        switch(contentElement.whatisit){
+        case 't': { 
+          int posLine = 0;
+          int posEnd;
+          do{
+            posEnd = contentElement.text.indexOf('\n', posLine);
+            if(posEnd >= 0){ 
+              uBuffer.append(contentElement.text.substring(posLine, posEnd));   
+              uBuffer.append("\r\n");
+              posLine = posEnd +1;  //after \n 
+            } else {
+              uBuffer.append(contentElement.text.substring(posLine));   
+            }
+            
+          } while(posEnd >=0);  //output all lines.
+        } break;
+        case 'f': {
+          if(contentElement.text.equals("nextNr")){
+            String val = "" + nextNr.toString();
+            uBuffer.append(nextNr.toString());
+          }
+       } break;
+        case 'v': {
+          //TODO: delete it later
+          if(contentElement.text.equals("target")){
+            //generates all targets, only advisable in the (?:file?)
+            //genUserTargets(out);
+          } else {
+            replacePlaceholder(contentElement.text);
+         }
+        } break;
+        case 'C': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
+          ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
+          Object container = getContent(subContent.datapath, localVariables);
+          if(container !=null && container instanceof Iterable<?>){
+            Iterator<?> iter = ((Iterable<?>)container).iterator();
+            while(iter.hasNext()){
+              Object foreachData = iter.next();
+              if(foreachData !=null){
+                Gen_Content genFor = new Gen_Content(this);
+                genFor.localVariables.put(subContent.name, foreachData);
+                genFor.genContent(subContent, userTarget);
+              }
+            }
+          } else {
+            if(bWriteErrorInOutput){
+              return "<? for container path fault: " + container + "?>";
+            } else {
+              throw new IllegalArgumentException("container path;"); 
+            }
+          }
+        } break;
+        default: 
+          uBuffer.append("ERROR: unknown type '" + contentElement.whatisit + "' :ERROR");
+        }//switch
+        
+      }
+      return null;
+    }
+  }    
+  /**Small class instance to build a next number. 
+   * Note: It is anonymous to encapsulate the current number value. 
+   * The only one access method is Object.toString(). It returns a countered number.
+   */
+  private final Object nextNr = new Object(){
+    int nr = 0;
+    @Override
+    public String toString(){
+      return "" + ++nr;
+    }
+  };
+  
+  void stop(){}
+
 }

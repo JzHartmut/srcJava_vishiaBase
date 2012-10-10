@@ -23,6 +23,40 @@ import org.vishia.zbnf.ZbnfXmlOutput;
  */
 public class ZmakeGenScript
 {
+  /**Version and history
+   * <ul>
+   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.textGenerator.TextGenerator} now too.
+   * <li>2011-03-00 created.
+   *   It is the concept of specialized {@link GralWidget}.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  @SuppressWarnings("hiding")
+  static final public int version = 20111010;
 
   private final Report console;
 
@@ -39,7 +73,7 @@ public class ZmakeGenScript
   }
 
   
-  boolean parseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
+  public boolean parseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
   throws FileNotFoundException, IOException
     , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
   { boolean bOk;
@@ -79,6 +113,10 @@ public class ZmakeGenScript
    */
   Zbnf_genContent searchZmakeTaget(String name){ return zmakeTargets.get(name); }
   
+  
+  public final Zbnf_genContent getFileScript(){ return zbnf_genFile; }
+  
+  
   public Zbnf_genContent xxxgetScriptVariable(String sName)
   {
     Zbnf_genContent content = zbnfZmakeGenCtrl.indexScriptVariables.get(sName);
@@ -103,7 +141,7 @@ public class ZmakeGenScript
      *                   whereby subContent.{@link Zbnf_genContent#name} is the name of the list. </td></tr>
      * </table> 
      */
-    final char whatisit;    
+    final public char whatisit;    
     
     /**Constant text or name of elements or build-script-name. */
     final public String text;
@@ -120,6 +158,7 @@ public class ZmakeGenScript
       this.text = text;
     }
     
+    public Zbnf_genContent getSubContent(){ return subContent; }
     
     @Override public String toString()
     {
@@ -132,6 +171,7 @@ public class ZmakeGenScript
       case 'I': return "(?forInput?)...(/?)";
       case 'V': return "(?for:" + text + "?)";
       case 'L': return "(?forList " + text + "?)";
+      case 'C': return "<:for:Container " + text + "?)";
       default: return "(??" + text + "?)";
       }
     }
@@ -170,16 +210,21 @@ genContent::=  ##<$NoWhiteSpaces>
     /**Set from ZBNF: */
     public boolean expandFiles;
 
-    List<Zbnf_ScriptElement> content = new LinkedList<Zbnf_ScriptElement>();
+    public final List<Zbnf_ScriptElement> content = new LinkedList<Zbnf_ScriptElement>();
     
     List<Zbnf_genContent> localVariables = new LinkedList<Zbnf_genContent>();
     
-    List<Zbnf_genContent> addToList = new LinkedList<Zbnf_genContent>();
+    public final List<Zbnf_genContent> addToList = new LinkedList<Zbnf_genContent>();
+    
+    public List<String> datapath = new LinkedList<String>();
     
     public Zbnf_genContent(boolean isContentForInput)
     {this.isContentForInput = isContentForInput;
     }
         
+    
+    public List<Zbnf_genContent> getLocalVariables(){ return localVariables; }
+    
     public void set_text(String text){ content.add(new Zbnf_ScriptElement('t', text)); }
     
     public void set_outputValue(String text){ content.add(new Zbnf_ScriptElement('o', text)); }
@@ -218,6 +263,17 @@ genContent::=  ##<$NoWhiteSpaces>
     public void add_forInputContent(Zbnf_genContent val){}
 
     
+    public Zbnf_genContent new_forContainer()
+    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+      Zbnf_ScriptElement contentElement = new Zbnf_ScriptElement('C', null);
+      contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
+      content.add(contentElement);
+      return subGenContent;
+    }
+    
+    public void add_forContainer(Zbnf_genContent val){}
+
+    
     public Zbnf_genContent new_forVariable()
     { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
       Zbnf_ScriptElement contentElement = new Zbnf_ScriptElement('V', null);
@@ -248,6 +304,13 @@ genContent::=  ##<$NoWhiteSpaces>
    
     public void add_addToList(Zbnf_genContent val)
     {
+    }
+
+    
+    
+    public void add_datapath(String val)
+    {
+      datapath.add(val);
     }
 
     
