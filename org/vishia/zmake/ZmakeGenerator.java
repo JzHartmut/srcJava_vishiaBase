@@ -21,6 +21,8 @@ public class ZmakeGenerator
 
   /**Changes
    * <ul>
+   * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: valueElement::={ <$?path>? \.}. 
+   *   instead valueElement::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
    * <li>2012-05-25 Hartmut bugfix: {@link #getPartsFromFilepath(UserFilepath, UserFilepath, String)}: 
    *   'localFile': It returns now path/*.ext or path/*.* if the input is parsed 
    *   with 'someFiles' or 'wildCardExt'. It is important if '<:expandFiles>' is requested in the genScript.zmake.
@@ -340,13 +342,15 @@ public class ZmakeGenerator
 			  		out.append(uBuffer);   //flush content before.
 			  		uBuffer.setLength(0);  //fill new
 			  		genUserTargets(out);
-			    } else if(contentElement.name !=null) {
+			    } else if(contentElement.path !=null) {
 			  		ZmakeUserScript.UserFilepath file;
-			  		if(forElements !=null && (file = forElements.get(contentElement.name)) !=null){
-			  		  text = getPartsFromFilepath(file, null, contentElement.elementPart);
+			  		String eName = contentElement.path.get(0);
+			  		String elementPart = contentElement.path.size() >=2 ? contentElement.path.get(0) : null;
+			  		if(forElements !=null && (file = forElements.get(eName)) !=null){
+			  		  text = getPartsFromFilepath(file, null, elementPart);
 				  		uBuffer.append(text);
 			  		} else {
-				  	 	text = getTextofVariable(userTarget, contentElement.name, this);
+			  		  text = getTextofVariable(userTarget, eName, this);
 					  	uBuffer.append(text); 
 			  		}
 		  		} else if(contentElement.text !=null){

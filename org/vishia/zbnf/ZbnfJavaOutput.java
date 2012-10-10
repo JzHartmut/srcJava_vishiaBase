@@ -161,6 +161,7 @@ public class ZbnfJavaOutput
 	/**Version, able to read as hex yyyymmdd.
 	 * Changes:
 	 * <ul>
+	 * <li>2012-10-07 Hartmut bugfix on writing in a public List<String> getParsedString() should be used too.
 	 * <li>2012-10-07 Hartmut chg: error text output, able to use for {@link org.vishia.msgDispatch.MsgDispatchSystemOutErr}
    * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(Component, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
    * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
@@ -634,6 +635,8 @@ public class ZbnfJavaOutput
         { Class superClass = component.clazz.getSuperclass();
           char firstChar = semantic.charAt(0);
           String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
+          if(semanticLowerCase.equals("path"))
+            stop();
           Field element = null;
           try{ element = component.clazz.getDeclaredField(semanticLowerCase);}
           catch(NoSuchFieldException exception)
@@ -942,7 +945,8 @@ public class ZbnfJavaOutput
         if(debug) debugValue = value;
       }
       else if(sType.equals("java.util.List"))
-      { String value = resultItem.getParsedText();
+      { String value = resultItem.getParsedString();
+        if(value == null){ value = resultItem.getParsedText(); }
         List list = (java.util.List)element.get(outputInstance);
         if(list == null)
         { list = new java.util.LinkedList<List>();

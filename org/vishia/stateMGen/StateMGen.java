@@ -1,13 +1,11 @@
 package org.vishia.stateMGen;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,7 +16,6 @@ import org.vishia.textGenerator.TextGenerator;
 import org.vishia.util.Assert;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zmake.ZmakeGenScript;
-import org.vishia.zmake.ZmakeGenerator;
 
 
 public class StateMGen {

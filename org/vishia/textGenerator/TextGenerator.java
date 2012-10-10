@@ -83,7 +83,7 @@ public class TextGenerator {
    * 
    */
   @SuppressWarnings("hiding")
-  static final public int version = 0x20111203;
+  static final public int version = 20121010;
 
   
   private class ForEach{
@@ -312,18 +312,7 @@ public class TextGenerator {
     String sPath = sPlaceholder.substring(2);
     try{ 
       Object content = getContent(sPath);
-      String sContent;
-      if(content == null){
-       sContent = "";
-      }
-      else if(content instanceof String){ 
-        sContent = (String) content; 
-      } else if(content instanceof Integer){ 
-        int value = ((Integer)content).intValue();
-        sContent = "" + value;
-      } else {
-        sContent = content.toString();
-      }
+      String sContent = getStringFromObject(content);
       out.append(sContent);
     } catch(IllegalArgumentException exc){
       if(bWriteErrorInOutput){
@@ -332,6 +321,24 @@ public class TextGenerator {
         sError = "TextGenerator - data path error;" + sPath;
       }
     }
+  }
+
+  
+  
+  String getStringFromObject(Object content){
+    String sContent;
+    if(content == null){
+    sContent = "";
+    }
+    else if(content instanceof String){ 
+      sContent = (String) content; 
+    } else if(content instanceof Integer){ 
+      int value = ((Integer)content).intValue();
+      sContent = "" + value;
+    } else {
+      sContent = content.toString();
+    }
+    return sContent;
   }
   
   
@@ -498,6 +505,20 @@ public class TextGenerator {
           } else {
             replacePlaceholder(contentElement.text);
          }
+        } break;
+        case 'e': {
+          final CharSequence text;
+          if(contentElement.text !=null && contentElement.text.equals("target")){
+            //generates all targets, only advisable in the (?:file?)
+            //genUserTargets(out);
+          } else if(contentElement.path !=null){
+            Object oContent = getContent(contentElement.path, localVariables);
+            text = getStringFromObject(oContent);
+            //text = getTextofVariable(userTarget, contentElement.text, this);
+            uBuffer.append(text); 
+          } else {
+            //uBuffer.append(listElement);
+          }
         } break;
         case 'C': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
           ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();

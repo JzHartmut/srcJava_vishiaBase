@@ -25,6 +25,8 @@ public class ZmakeGenScript
 {
   /**Version and history
    * <ul>
+   * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: valueElement::={ <$?path>? \.}. 
+   *   instead valueElement::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
    * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.textGenerator.TextGenerator} now too.
    * <li>2011-03-00 created.
    *   It is the concept of specialized {@link GralWidget}.
@@ -146,9 +148,11 @@ public class ZmakeGenScript
     /**Constant text or name of elements or build-script-name. */
     final public String text;
     
-    public String name;
+    //public String name;
     
-    public String elementPart;
+    public List<String> path;
+    
+    //public String elementPart;
     
     /**If need, a sub-content, maybe null. */
     Zbnf_genContent subContent;
