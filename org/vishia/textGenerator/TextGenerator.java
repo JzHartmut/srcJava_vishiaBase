@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.Writer;
 import java.lang.reflect.Field;
+import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.TreeMap;
 
+import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.zmake.ZmakeGenScript;
 
@@ -51,6 +53,7 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2012-10-19 Hartmut chg: <:if...> works.
    * <li>2012-10-10 Usage of {@link ZmakeGenScript}.
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
@@ -86,45 +89,6 @@ public class TextGenerator {
   static final public int version = 20121010;
 
   
-  private class ForEach{
-    StringBuilder lines = new StringBuilder(5000);
-    final String sPathIterator;
-    
-    /**The container for this foreach. */
-    Object container;
-    
-    /**The iterator in the container. */
-    Iterator<?> iter;
-    
-    /**actual element in container while generating foreach. */
-    Object data;
-    
-    ForEach(String sPathIterator, String sPath) throws IOException{
-      this.sPathIterator = sPathIterator;
-      try{
-        container = getContent(sPath);
-        if(container == null){
-          
-        }
-        else if(container !=null && container instanceof Iterable<?>){
-          iter = ((Iterable<?>)container).iterator();
-        } else {
-          if(bWriteErrorInOutput){
-            out.append("<?error for-container, not a container; path=" + sPath + ">");
-          } else {
-            sError = "TextGenerator - for-containernot a container; path=" + sPath;
-          }
-        }
-      } catch(IllegalArgumentException exc){
-        if(bWriteErrorInOutput){
-          out.append("<?error for-container, path=" + sPath + ">");
-        } else {
-          sError = "TextGenerator - for-container not found; path=" + sPath;
-        }
-      }
-    }
-    @Override public String toString(){ return sPathIterator; }
-  }
   
   
   BufferedReader readerScript;
@@ -141,188 +105,55 @@ public class TextGenerator {
   
   private boolean bWriteErrorInOutput;
   
-  ForEach forEachAct;
-  
-  final Stack<ForEach> forEaches = new Stack<ForEach>();
+  final Report console;
   
   
-  final Map<String,ForEach> idxForeaches = new TreeMap<String, ForEach>() ;
+  public TextGenerator(Report console){
+    this.console = console;
+  }
   
   
-  public String generate(Object data, File fileScript, File fileOut, boolean bWriteErrorInOutput){
-    this.data = data;
-    this.bWriteErrorInOutput = bWriteErrorInOutput;
-    try{
-      readerScript = new BufferedReader(new FileReader(fileScript));
-    } catch(FileNotFoundException exc){
-      sError = "TextGenerator - script file not found;" + fileScript.getAbsolutePath();
-      return sError;
-    }
-    try{
-      out = new FileWriter(fileOut);
-    } catch(IOException exc){
-      sError = "TextGenerator - output file not able to open;" + fileOut.getAbsolutePath();
-      return sError;
-    }
-    try{
-      generateLines(readerScript);
-    } catch(Exception exc){
-      sError = Assert.exceptionInfo(exc.getMessage(), exc, 1, 4).toString();
-    }
+  
+  public String generate(Object userData, File fileScript, File fOut, Appendable testOut){
+    ZmakeGenScript genScript = new ZmakeGenScript(console);
+    File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
+    Writer out = null;
+    String sError = null;
     try{ 
-      out.close();
-      readerScript.close();
-    } catch(IOException exc){ 
-      sError = "TextGenerator - close file error;" + exc.getMessage();
+      genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
+      if(testOut !=null){
+        OutputDataTree outputterData = new OutputDataTree();
+        outputterData.output(0, genScript, testOut, false);
+      }
+      out = new FileWriter(fOut);
+    
+    } catch(ParseException exc){
+      System.err.println(Assert.exceptionInfo("\n", exc, 0, 4));
+      
+    } catch(FileNotFoundException exc){
+      System.err.println(Assert.exceptionInfo("\n", exc, 0, 4));
+    } catch(Exception exc){
+      System.err.println(Assert.exceptionInfo("\n", exc, 0, 4));
     }
+    if(out !=null){
+      try{
+        sError = genContent(genScript, userData, out);
+        out.close();
+      } catch(IOException exc){
+        System.err.println(Assert.exceptionInfo("", exc, 0, 4));
+      }
+    }
+    //String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
     return sError;
   }
   
   
   
-  void generateLines(BufferedReader reader){
-    String sLine;
-    try{
-      while((sLine = reader.readLine())!=null && sError == null){
-        generateLine(reader, sLine);
-      }
-    }catch(IOException exc){
-      sError = "TextGenerator - any file error;" + exc.getMessage();
-    }
-  }
-  
-  
-  
-  
-  public void generateLine(BufferedReader reader, final String sLineInp){
-    int pos = 0;
-    String sLine = sLineInp;
-    int posPlaceholder;
-    int posControl;
-    try{
-      do{
-        posPlaceholder = sLine.indexOf("<*", pos);
-        posControl = sLine.indexOf("<:", pos);
-        if(posPlaceholder >=0 && (posControl < 0 || posPlaceholder < posControl)){
-          out.append(sLine.substring(pos, posPlaceholder));
-          int posEnd = sLine.indexOf(">", pos);
-          replacePlaceholder(sLine.substring(posPlaceholder, posEnd));
-          pos = posEnd+1;
-          //replace a placeholder
-        } else if(posControl >=0){
-          out.append(sLine.substring(pos, posControl));
-          sLine = processControl(posControl, sLine, reader);
-          pos = 0;
-        } else {
-          out.append(sLine.substring(pos));  //till end.
-        }
-      } while(posPlaceholder >=0 || posControl >=0);
-      out.append("\n");
-    } catch(IOException exc){
-      sError = "TextGenerator - write error output file;" + exc.getMessage();
-    }
-  }
-  
-  
-  
-  public String processControl(int pos, String sLine, BufferedReader reader) throws IOException
-  { String sLineAfterCtrl = "";
-    int posEnd = sLine.indexOf(">", pos);
-    String sCtrl = sLine.substring(pos, posEnd+1);
-    if(sCtrl.startsWith("<:for:")){
-      sLineAfterCtrl = processForeach(sLine, pos, sCtrl, reader);
-    } else {
-      sError = "TextGenerator - unknown control;" + sCtrl;
-    }
-    return sLineAfterCtrl;
-  }
   
 
-  public String processForeach(String sLine, int pos, String sCtrl, BufferedReader reader) throws IOException
-  {
-    int posSep = sCtrl.indexOf(":", 6);  //after <:for:
-    int posEnd = sCtrl.length()-1;
-    String sPath = sCtrl.substring(posSep+1, posEnd);
-    String sIterVariable = sCtrl.substring(6, posSep);
-    ///
-    if(forEachAct !=null){ 
-      forEaches.push(forEachAct);
-    }
-    forEachAct = new ForEach(sIterVariable, sPath);
-    idxForeaches.put(sIterVariable, forEachAct);
-    //search the end in this line or following lines
-    
-    String sLineAfterCtrl = prepareForeach(sLine, pos, pos + posEnd+1, reader);
-    if(forEachAct.iter !=null){
-      while(forEachAct.iter.hasNext()){
-        BufferedReader readerForeachLines = new BufferedReader(new StringReader(forEachAct.lines.toString()));
-        forEachAct.data = forEachAct.iter.next();
-        generateLines(readerForeachLines);
-      }
-    }
-    idxForeaches.remove(forEachAct.sPathIterator);
-    if(forEaches.size()>0){
-      forEachAct = forEaches.pop();
-    } else {
-      forEachAct = null;
-    }
-    return sLineAfterCtrl;
-  }
   
   
   
-  String prepareForeach(String sLine, final int posForeachStart, final int posFirstStart, final BufferedReader reader) throws IOException
-  { String sLineAfterForeach = null;
-    int posStart = posFirstStart;
-    int posSearchNested = posFirstStart;
-    int zNestedForEach = 0;
-    do{
-      int posNestedBlock = sLine.indexOf("<:for", posSearchNested);
-      int posEndBlock = sLine.indexOf("<.for>", posStart);
-      if(posNestedBlock >= 0 && (posEndBlock < 0 || posNestedBlock < posEndBlock)){
-        zNestedForEach +=1;
-      }
-      if(posEndBlock >=0){ // && (posNestedBlock < 0 || posNestedBlock > posEndBlock)){
-        //end found.
-        if(zNestedForEach>0){
-          zNestedForEach -=1;
-          forEachAct.lines.append(sLine.substring(posStart, posEndBlock+6));
-          posStart = posEndBlock+6;
-        } else {
-          forEachAct.lines.append(sLine.substring(posStart, posEndBlock));
-          sLineAfterForeach = sLine.substring(posEndBlock + 6);
-        }
-      } else {
-        //transfer rest of first line or whole line:
-        forEachAct.lines.append(sLine.substring(posStart)).append("\n");
-        if((sLine = reader.readLine())==null){
-          sLineAfterForeach = "";
-        } else { 
-          posStart = 0;
-        }
-      }
-      posSearchNested = 0;
-    } while(sLineAfterForeach == null);
-    return sLineAfterForeach;
-  }
-  
-  
-  
-  public void replacePlaceholder(String sPlaceholder) throws IOException{
-    String sPath = sPlaceholder.substring(2);
-    try{ 
-      Object content = getContent(sPath);
-      String sContent = getStringFromObject(content);
-      out.append(sContent);
-    } catch(IllegalArgumentException exc){
-      if(bWriteErrorInOutput){
-        out.append("<?error path=" + sPath + ">");
-      } else {
-        sError = "TextGenerator - data path error;" + sPath;
-      }
-    }
-  }
-
   
   
   String getStringFromObject(Object content){
@@ -341,45 +172,6 @@ public class TextGenerator {
     return sContent;
   }
   
-  
-  /**Read content from data.
-   * @param sPath
-   * @return
-   * @throws IllegalArgumentException
-   */
-  private Object getContent(String sPath)
-  throws IllegalArgumentException
-  {
-    String[] paths = sPath.split("\\.");
-    Class<?> clazz1;
-    Object data1 = data;
-    ForEach forVariable = idxForeaches.get(paths[0]);
-    int ixPath;
-    if(forVariable !=null){
-      data1 = forVariable.data;
-      ixPath = 1;
-    } else {
-      data1 = this.data;
-      ixPath = 0;
-    }
-    while(ixPath < paths.length && data1 !=null){
-      String sElement = paths[ixPath++];
-      try{ 
-        clazz1 = data1.getClass();
-        Field element = clazz1.getDeclaredField(sElement);
-        try{ data1 = element.get(data1);
-        
-        } catch(IllegalAccessException exc){ 
-          throw new IllegalArgumentException("IllegalAccessException, hint: should be public;" + sElement); 
-        }
-      
-      } catch(NoSuchFieldException exc){
-        //TODO method
-        throw new IllegalArgumentException(sElement);
-      }
-    }
-    return data1;
-  }
   
   
   
@@ -406,6 +198,7 @@ public class TextGenerator {
       try{ 
         clazz1 = data1.getClass();
         Field element = clazz1.getDeclaredField(sElement);
+        element.setAccessible(true);
         try{ data1 = element.get(data1);
         
         } catch(IllegalAccessException exc){ 
@@ -434,9 +227,9 @@ public class TextGenerator {
     this.out = out;
     this.data = userData;
     this.bWriteErrorInOutput = true;
-    ZmakeGenScript.Zbnf_genContent contentScript = genScript.getFileScript();
+    ZmakeGenScript.ScriptElement contentScript = genScript.getFileScript();
     Gen_Content genFile = new Gen_Content(null);
-    String sError = genFile.genContent(contentScript, userData);
+    String sError = genFile.genContent(contentScript.subContent, userData);
     return sError;
   }
     
@@ -469,12 +262,12 @@ public class TextGenerator {
         StringBuilder uBufferVariable = new StringBuilder();
         Gen_Content genVariable = new Gen_Content(this);
         //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-        localVariables.put(variableScript.name, uBufferVariable);
+        localVariables.put(variableScript.cmpnName, uBufferVariable);
       }
     
     
       //Generate direct requested output. It is especially on inner content-scripts.
-      for(ZmakeGenScript.Zbnf_ScriptElement contentElement: contentScript.content){
+      for(ZmakeGenScript.ScriptElement contentElement: contentScript.content){
         switch(contentElement.whatisit){
         case 't': { 
           int posLine = 0;
@@ -503,7 +296,7 @@ public class TextGenerator {
             //generates all targets, only advisable in the (?:file?)
             //genUserTargets(out);
           } else {
-            replacePlaceholder(contentElement.text);
+            //XXXreplacePlaceholder(contentElement.text);
          }
         } break;
         case 'e': {
@@ -522,14 +315,16 @@ public class TextGenerator {
         } break;
         case 'C': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
           ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
-          Object container = getContent(subContent.datapath, localVariables);
+          if(contentElement.name.equals("sub"))
+            stop();
+          Object container = getContent(contentElement.path, localVariables);
           if(container !=null && container instanceof Iterable<?>){
             Iterator<?> iter = ((Iterable<?>)container).iterator();
             while(iter.hasNext()){
               Object foreachData = iter.next();
               if(foreachData !=null){
                 Gen_Content genFor = new Gen_Content(this);
-                genFor.localVariables.put(subContent.name, foreachData);
+                genFor.localVariables.put(contentElement.name, foreachData);
                 genFor.genContent(subContent, userTarget);
               }
             }
@@ -541,13 +336,49 @@ public class TextGenerator {
             }
           }
         } break;
+        case 'F': { 
+          generateIfStatement(contentElement, userTarget);
+        } break;
         default: 
-          uBuffer.append("ERROR: unknown type '" + contentElement.whatisit + "' :ERROR");
+          uBuffer.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
         }//switch
         
       }
       return null;
     }
+    
+    /**it contains maybe more as one if block and else. */
+    void generateIfStatement(ZmakeGenScript.ScriptElement ifStatement, Object userData) throws IOException{
+      Iterator<ZmakeGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
+      boolean found = false;  //if block found
+      while(iter.hasNext() && !found ){
+        ZmakeGenScript.ScriptElement contentElement = iter.next();
+        switch(contentElement.whatisit){
+          case 'G': { //if-block
+            
+            found = generateIfBlock(contentElement, userData);
+          } break;
+          case 'E': { //elsef
+            if(!found){
+              genContent(contentElement.subContent, userData);
+            }
+          } break;
+          default:{
+            out.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
+          }
+        }//switch
+      }//for
+    }
+    
+    boolean generateIfBlock(ZmakeGenScript.ScriptElement ifBlock, Object userData) throws IOException{
+      Object check = getContent(ifBlock.path, localVariables);
+      boolean bCondition = check !=null;
+      if(bCondition){
+        genContent(ifBlock.subContent, userData);
+      }
+      return bCondition;
+    }
+    
   }    
   /**Small class instance to build a next number. 
    * Note: It is anonymous to encapsulate the current number value. 

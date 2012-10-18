@@ -84,7 +84,7 @@ public class ZmakeGenerator
 		for(Zbnf_genContent scriptVariableScript: mainGenScript.zbnfZmakeGenCtrl.listScriptVariables){
 			uBuffer.setLength(0);
 			genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript, null, null, null);
-			scriptVariables.put(scriptVariableScript.name, uBuffer.toString());
+			scriptVariables.put(scriptVariableScript.cmpnName, uBuffer.toString());
 		}
 		//the variable (?=currDir?) may exist. Get it:
 		sCurrDir = scriptVariables.get("currDir");
@@ -100,7 +100,7 @@ public class ZmakeGenerator
 			throw new IllegalArgumentException(sHint);	
 		}
 		uBuffer.setLength(0);
-		genFile.gen_Content(uBuffer, outAnt, null, mainGenScript.zbnf_genFile, null, null);
+		genFile.gen_Content(uBuffer, outAnt, null, mainGenScript.zbnf_genFile.subContent, null, null);
 		outAnt.append(uBuffer);
 		outAnt.close();
 	}
@@ -291,7 +291,7 @@ public class ZmakeGenerator
 				StringBuilder uBufferVariable = new StringBuilder();
 				Gen_Content genVariable = new Gen_Content(this);
 				genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-				localVariables.put(variableScript.name, uBufferVariable);
+				localVariables.put(variableScript.cmpnName, uBufferVariable);
 			}
 		
 			//Generate the result for all output lists to fill and complete it.
@@ -300,16 +300,16 @@ public class ZmakeGenerator
 				Gen_Content contentData = new Gen_Content(this);	
 			  contentData.gen_Content(uBufferLocal, out, userTarget, listContainer, forElements, srcPath); 
 			  //save it
-			  List<CharSequence> list = addToListTexts.get(listContainer.name);
+			  List<CharSequence> list = addToListTexts.get(listContainer.cmpnName);
 				if(list == null){
 					list = new LinkedList<CharSequence>();
-					addToListTexts.put(listContainer.name, list);
+					addToListTexts.put(listContainer.cmpnName, list);
 				}
 				list.add(uBufferLocal);
 			}
 		
 			//Generate direct requested output. It is especially on inner content-scripts.
-			for(ZmakeGenScript.Zbnf_ScriptElement contentElement: contentScript.content){
+			for(ZmakeGenScript.ScriptElement contentElement: contentScript.content){
 			  switch(contentElement.whatisit){
 			  case 't': { 
 			  	int posLine = 0;
@@ -384,7 +384,7 @@ public class ZmakeGenerator
 				  contentData.gen_Content(uBuffer, out, userTarget, contentElement.subContent, forElements, srcPath); 
 			  } break;
 			  case 'L': { //generation (\?:forList : <$?@name>\?) <genContent?> (\?/forList\?)
-			  	String sListName = contentElement.subContent.name;
+			  	String sListName = contentElement.name;
 			  	List<CharSequence>  list = addToListTexts.get(sListName);
 			  	if(list == null) {
 			  		uBuffer.append("ERROR: list \"" + sListName + "\" not found :ERROR");
@@ -395,7 +395,7 @@ public class ZmakeGenerator
 			  	}
 			  } break;
 			  case 'V': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
-			  	String sVariable = contentElement.subContent.name;
+			  	String sVariable = contentElement.name;
 			  	if(sVariable.equals("input")){ //generation (?:forInput?) <genContent?forInputContent> (\?/forInput\?) 
 			  		Gen_Content contentData = new Gen_Content(this);	
 					  contentData.gen_Content(uBuffer, out, userTarget, contentElement.subContent, forElements, srcPath); 

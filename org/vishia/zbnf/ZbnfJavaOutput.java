@@ -388,7 +388,7 @@ public class ZbnfJavaOutput
     /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
     final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
     if(semantic.length() >0){ ///
-      if(semantic.equals("timestep"))
+      if(semantic.equals("operator"))
         stop();
       report.reportln(Report.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
         
@@ -572,14 +572,8 @@ public class ZbnfJavaOutput
       }
     }
     else
-    { String problem = "method set_- or add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found";
-	    Component parentComponent = component;
-	    while(parentComponent !=null){
-	    	problem += " in " + parentComponent.clazz.getCanonicalName();
-	    	parentComponent = parentComponent.parent;
-	    }
-	    if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
-      else noteError(problem);
+    { String sProblem = "method set_- or add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found";
+	    problem(component, sProblem);
     }
   }
   
@@ -635,7 +629,7 @@ public class ZbnfJavaOutput
         { Class superClass = component.clazz.getSuperclass();
           char firstChar = semantic.charAt(0);
           String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
-          if(semanticLowerCase.equals("path"))
+          if(semanticLowerCase.equals("operator"))
             stop();
           Field element = null;
           try{ element = component.clazz.getDeclaredField(semanticLowerCase);}
@@ -649,14 +643,8 @@ public class ZbnfJavaOutput
             child = getComponentsOutputField(element, component.instance);
           }
           else
-          { String problem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase; 
-          	Component parentComponent = component;
-	          while(parentComponent !=null){
-	          	problem += " in " + parentComponent.clazz.getCanonicalName();
-	          	parentComponent = parentComponent.parent;
-	          }
-	          if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
-            else noteError(problem);
+          { String sProblem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase; 
+            problem(component, sProblem);
           }
         }
         //else
@@ -759,7 +747,7 @@ public class ZbnfJavaOutput
     ChildInstanceAndClass child = null;
           
     final String semantic = semanticRaw.startsWith("@") ? semanticRaw.substring(1) : semanticRaw;
-    if(semantic.equals("controlFile"))
+    if(semantic.equals("operator"))
       stop();      //test special not component (scalar) field
     int posSeparator = semantic.lastIndexOf('/');
     if(posSeparator >0)
@@ -853,7 +841,7 @@ public class ZbnfJavaOutput
             String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
             Field element = null;
             Class searchClass = destComponent.clazz;
-            if(semanticLowerCase.equals("name"))
+            if(semanticLowerCase.equals("operator"))
               stop();
             do
             { try{ element = searchClass.getDeclaredField(semanticLowerCase);}
@@ -870,15 +858,8 @@ public class ZbnfJavaOutput
               writeInField(element, destComponent.instance, resultItem);
             }
             else
-            { String problem = "cannot found method " + sMethodToFind + " or field " + semanticLowerCase 
-            	+ " in class" + destComponent.clazz.getCanonicalName();
-              Component parentComponent = destComponent;
-              while(parentComponent !=null){
-              	problem += " in " + parentComponent.clazz.getCanonicalName();
-              	parentComponent = parentComponent.parent;
-              }
-              if(bExceptionIfnotFound) throw new IllegalArgumentException(problem);
-              else noteError(problem);
+            { String sProblem = "cannot found method " + sMethodToFind + " or field " + semanticLowerCase; 
+              problem(destComponent, sProblem);
             }
           }
           //else
@@ -1012,6 +993,22 @@ public class ZbnfJavaOutput
       }
     }  
   }
+  
+  
+  private void problem(Component destComponent, String sProblem){
+    StringBuilder u = new StringBuilder(sProblem);
+    u.append("\n");
+    Component parentComponent = destComponent;
+    while(parentComponent !=null){
+      u.append(" in class ").append(parentComponent.clazz.getCanonicalName())
+      .append(" = " + parentComponent.instance.toString()).append("\n");
+      parentComponent = parentComponent.parent;
+    }
+    if(bExceptionIfnotFound) throw new IllegalArgumentException(u.toString());
+    else noteError(u);
+
+  }
+  
   
   
   /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
@@ -1174,12 +1171,12 @@ public class ZbnfJavaOutput
   /**Adds an error. This method is called if {@link #bExceptionIfnotFound} = false.
    * @param problem The text.
    */
-  private void noteError(String problem)
+  private void noteError(CharSequence problem)
   {
     if(errors == null)
     { errors = new StringBuffer();
     }
-    errors.append(problem).append('\n');
+    errors.append('\n').append(problem).append('\n');
   }
 
 

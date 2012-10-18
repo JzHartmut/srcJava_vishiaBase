@@ -42,6 +42,8 @@ public class StateMGen {
 
     String sFileData = null;
     
+    String sScriptCheck = null;
+    
     static class Out{
       
       /**Cmdline-argument, set on -y: option. Outputfile to output something. */
@@ -146,6 +148,7 @@ public class StateMGen {
       if(arg.startsWith("-i:"))      cmdlineArgs.sFileIn   = getArgument(3);
       else if(arg.startsWith("-s:")) cmdlineArgs.sFileZbnf  = getArgument(3);
       else if(arg.startsWith("-d:")) cmdlineArgs.sFileData  = getArgument(3);
+      else if(arg.startsWith("-scriptcheck:")) cmdlineArgs.sScriptCheck  = getArgument(13);
       else if(arg.startsWith("-y:")) {
         if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Args.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
         cmdlineArgs.lastOut.sFileOut  = getArgument(3);
@@ -309,7 +312,11 @@ public class StateMGen {
   public static class SubCondition{
     public String cond;
     
-    public DstState dstState; 
+    public String description;
+    
+    public List<DstState> dstState; 
+    
+    public String code;
    
     public SubCondition(){}
   }
@@ -327,6 +334,8 @@ public class StateMGen {
     
     public String event;
     
+    public String code;
+    
     private final List<SubCondition> subCondition = new LinkedList<SubCondition>();
 
     public SubCondition new_subCondition(){ return new SubCondition(); }
@@ -334,7 +343,7 @@ public class StateMGen {
     public void add_subCondition(SubCondition value){ subCondition.add(value); }
     
     
-    public DstState dstState; 
+    public List<DstState> dstState; 
   }
   
   
@@ -379,25 +388,39 @@ public class StateMGen {
   
   void execute(Args args) throws IOException
   {
-    ZbnfResultData zbnfResultData = parseAndStoreInput(args);
-    if(zbnfResultData != null){
+    ZbnfResultData stateData = parseAndStoreInput(args);
+    if(stateData != null){
       
       if(args.sFileData !=null){
         FileWriter outData = new FileWriter(args.sFileData);
         OutputDataTree outputterData = new OutputDataTree();
-        outputterData.output(0, zbnfResultData, outData, false);
+        outputterData.output(0, stateData, outData, false);
         outData.close();
+      }
+      FileWriter outData;
+      if(args.sScriptCheck !=null){
+        outData = new FileWriter(args.sScriptCheck);
+      } else {
+        outData = null;
       }
       for(Args.Out out: args.listOut){
         File fOut = new File(out.sFileOut);
         File fileScript = new File(out.sFileScript);
-        String sError = generateZmake(zbnfResultData, fileScript, fOut);
+        TextGenerator generator = new TextGenerator(console);
+        if(outData !=null) {
+          outData.append("===================").append(out.sFileScript);
+        }
+        String sError = generator.generate(stateData, fileScript, fOut, outData);
         if(sError !=null){
           console.writeError(sError);
         } else {
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
         }
       }
+      if(outData !=null) {
+        outData.close();
+      }
+
     } else {
       console.writeInfoln("ERROR");
       
@@ -405,42 +428,6 @@ public class StateMGen {
   }
   
   
-  
-  String generateText(ZbnfResultData zbnfResultData, File fileScript, File fOut){
-    TextGenerator generator = new TextGenerator();
-    String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
-    return sError;
-  }
-  
-  
-  
-  String generateZmake(ZbnfResultData zbnfResultData, File fileScript, File fOut){
-    ZmakeGenScript genScript = new ZmakeGenScript(console);
-    File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
-    Writer out = null;
-    String sError = null;
-    try{ 
-      genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
-      out = new FileWriter(fOut);
-    
-    } catch(ParseException exc){
-      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
-      
-    } catch(FileNotFoundException exc){
-      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
-    } catch(Exception exc){
-      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
-    }
-    try{
-      TextGenerator generator = new TextGenerator();
-      sError = generator.genContent(genScript, zbnfResultData, out);
-      out.close();
-    } catch(IOException exc){
-      System.err.println(Assert.exceptionInfo("", exc, 0, 4));
-    }
-    //String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
-    return sError;
-  }
   
   
   
