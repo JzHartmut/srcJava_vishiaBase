@@ -195,6 +195,8 @@ public class TextGenerator {
       data1 = this.data;
     }
     while(sElement !=null && data1 !=null){
+      if(sElement.equals("dstState"))
+        stop();
       try{ 
         clazz1 = data1.getClass();
         Field element = clazz1.getDeclaredField(sElement);
@@ -272,6 +274,8 @@ public class TextGenerator {
         case 't': { 
           int posLine = 0;
           int posEnd;
+          if(contentElement.text.startsWith("'''trans ==> dst"))
+            stop();
           do{
             posEnd = contentElement.text.indexOf('\n', posLine);
             if(posEnd >= 0){ 
@@ -315,7 +319,7 @@ public class TextGenerator {
         } break;
         case 'C': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
           ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
-          if(contentElement.name.equals("sub"))
+          if(contentElement.name.equals("dstState"))
             stop();
           Object container = getContent(contentElement.path, localVariables);
           if(container !=null && container instanceof Iterable<?>){
@@ -330,7 +334,7 @@ public class TextGenerator {
             }
           } else {
             if(bWriteErrorInOutput){
-              return "<? for container path fault: " + container + "?>";
+              out.append("<? for container path fault: ").append(contentElement.path.toString()).append("?>");
             } else {
               throw new IllegalArgumentException("container path;"); 
             }

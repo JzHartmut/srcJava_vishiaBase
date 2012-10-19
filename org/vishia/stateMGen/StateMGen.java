@@ -6,8 +6,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -271,7 +275,7 @@ public class StateMGen {
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
    */
-  public static class StateDetails
+  public static class State
   {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
@@ -279,6 +283,8 @@ public class StateMGen {
     /**From ZBNF: <$?@enclState>. */
     public String enclState;
     
+    private Map<String, State> subStates;
+
     /**From ZBNF: <""?description>. */
     public String description;
     
@@ -288,6 +294,7 @@ public class StateMGen {
     
     public List<Trans> trans;
     
+    @Override public String toString(){ return stateName; }
   }
   
   
@@ -309,17 +316,6 @@ public class StateMGen {
     public String code;
   }
   
-  public static class SubCondition{
-    public String cond;
-    
-    public String description;
-    
-    public List<DstState> dstState; 
-    
-    public String code;
-   
-    public SubCondition(){}
-  }
   
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
@@ -336,27 +332,55 @@ public class StateMGen {
     
     public String code;
     
-    private final List<SubCondition> subCondition = new LinkedList<SubCondition>();
+    private final List<Trans> subCondition = new LinkedList<Trans>();
 
-    public SubCondition new_subCondition(){ return new SubCondition(); }
     
-    public void add_subCondition(SubCondition value){ subCondition.add(value); }
+    private final List<State> exitStates = new LinkedList<State>();
     
+    private DstState dstStateTree; 
+
+    public List<String> dstState;
     
-    public List<DstState> dstState; 
+    public Trans new_subCondition(){ return new Trans(); }
+    
+    public void add_subCondition(Trans value){ subCondition.add(value); }
+    
+    /**From Zbnf parser: <dstState> dstState::=<$?name>. */
+    public void add_dstState(String val){ 
+      if(dstState == null){
+        dstState = new LinkedList<String>();
+      }
+      dstState.add(val);
+      //return dstState; 
+    }
+
+    //public void add_dstState(DstState val){} 
+    
   }
   
   
   
   
   
-  /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
+  /**This class gets and stores the results from a parsed ZBNF-component <code>dstState</code>.
+   * After {@link StateMGen#prepareStateTrans(State, ZbnfResultData)} it holds the information
+   * about entry in state while processing a transition.
    * 
    */
   public static class DstState
   {
+    /**From Zbnf parser: dstState::=<$?name>. */
     public String name;
-    public DstState dstState;
+    
+    /**The state from which this entry starts. */
+    State srcState;
+    
+    State entryState;
+    
+    private List<DstState> entrySubStates;
+    
+    @Override public String toString(){ return name; }
+    
   }
   
   public static class ZbnfResultData
@@ -364,16 +388,20 @@ public class StateMGen {
 
     public StateStructure stateStructure;
 
-    public final List<StateDetails> stateDetails = new LinkedList<StateDetails>();
+    final List<State> state = new LinkedList<State>();
     
+    private final Map<String, State> idxStates = new TreeMap<String, State>();
     
-    public StateDetails new_stateDetails()
-    { return new StateDetails();
+    private final Map<String, State> topStates = new TreeMap<String, State>();
+    
+    public State new_state()
+    { return new State();
     }
     
-    public void add_stateDetails(StateDetails value)
+    public void add_state(State value)
     { 
-      stateDetails.add(value);
+      state.add(value);
+      idxStates.put(value.stateName, value);
     }
     
   }
@@ -390,7 +418,7 @@ public class StateMGen {
   {
     ZbnfResultData stateData = parseAndStoreInput(args);
     if(stateData != null){
-      
+      prepareStateData(stateData);
       if(args.sFileData !=null){
         FileWriter outData = new FileWriter(args.sFileData);
         OutputDataTree outputterData = new OutputDataTree();
@@ -428,11 +456,146 @@ public class StateMGen {
   }
   
   
+  void prepareStateData(ZbnfResultData stateData){
+    for(State state: stateData.state){
+      prepareStateStructure(state, stateData);
+    }
+    for(State state: stateData.state){
+      if(state.trans !=null){
+        for(Trans trans: state.trans){
+          prepareStateTrans(trans, state, stateData);
+        }
+      }
+    }
+  }
   
   
+  void prepareStateStructure(State state, ZbnfResultData stateData){
+    //stateStructure
+    if(state.enclState !=null){
+      //search top state, enter it.
+      List<State> enclStates = new LinkedList<State>();
+      State state1 = state;
+      enclStates.add(state);
+      while(state1.enclState !=null){
+        String state1Name = state1.enclState;
+        state1 = stateData.idxStates.get(state1Name);
+        assert(state1 !=null);
+        enclStates.add(state1);
+      }
+      int states = enclStates.size();
+      State enclState1 = enclStates.get(states-1);
+      if(stateData.topStates.get(enclState1.stateName) == null){
+        stateData.topStates.put(enclState1.stateName, enclState1);
+      }
+      ListIterator<State> iter = enclStates.listIterator(states-1);
+      while(iter.hasPrevious()){
+        State subState1 = iter.previous();
+        if(enclState1.subStates ==null){
+          enclState1.subStates = new TreeMap<String, State>(); 
+        }
+        if(enclState1.subStates.get(subState1.stateName) == null){
+          enclState1.subStates.put(subState1.stateName, subState1);
+        }
+      }
+      
+    }
+  }
+
   
-  
-  
+  void prepareStateTrans(Trans trans, State state, ZbnfResultData stateData){
+    if(trans.dstState == null && trans.subCondition !=null){
+      for(Trans subCond: trans.subCondition){
+        prepareStateTrans(subCond, state, stateData);
+      }
+    } else if(trans.dstState != null){
+      
+      int nrofDstStates = trans.dstState.size();
+      @SuppressWarnings("unchecked")
+      List<State>[] listDst1 = new LinkedList[nrofDstStates];
+      State[] entryStates = new State[nrofDstStates];
+      int ix = 0;
+      for(ix = 0; ix < listDst1.length; ++ix) {
+        listDst1[ix] = new LinkedList<State>();
+      }
+      State exitState = state;
+      boolean found = false;
+      while(!found){
+        trans.exitStates.add(exitState);
+        if(exitState.enclState != null){
+          State exitState2 = stateData.idxStates.get(exitState.enclState);
+          if(exitState2 == null){
+            System.out.println("\nSemantic error: parent state \"" + exitState.enclState + "\" in state \"" + state.stateName + "\"not found. ");
+            return;
+          }
+          exitState = exitState2;
+        } else {
+          exitState = null;  //it is the top state.
+        }
+        found = true;  //set to false if any not found.
+        ix = 0;
+        for(String dstStateName: trans.dstState){
+          listDst1[ix].clear();
+          entryStates[ix] = stateData.idxStates.get(dstStateName);
+          if(entryStates[ix] == null){
+            System.out.println("\nSemantic error: destination state \"" + dstStateName + "\" from state \"" + state.stateName + "\" not found. ");
+            return;
+          }
+          do { 
+            //check entryStates down to either the exitState or down to to top state.
+            //If the exit state is equal any entry enclosing state or both are null (top state), then it is the common state.
+            listDst1[ix].add(0, entryStates[ix]);
+            if(entryStates[ix].enclState != null){
+              State entryState = stateData.idxStates.get(entryStates[ix].enclState);
+              if(entryState == null){
+                System.out.println("\nSemantic error: parent state \"" + entryStates[ix].enclState + "\" in state \"" + state.stateName + "\"not found. ");
+                return;
+              }
+              entryStates[ix] = entryState;
+            } else {
+              entryStates[ix] = null;  //it is the top state.
+            }
+          }while(entryStates[ix] != null && exitState != entryStates[ix]);
+          //the loop is finished if the exitstate and the enclosing entryState are equal or the enclosing entrystate reaches the topstate.
+          if(exitState != entryStates[ix]){  //check whether both are equal or both are the top state, it is null.
+            //not equal, the exitstate is not a common state of this dst state, it means it is not the common state of all.
+            found = false;
+          }
+          ix +=1;
+        }
+        //the common enclosing state is found.
+        //dst.entrySubStates.clear();
+        DstState dstStateTreeNode = new DstState();
+        trans.dstStateTree = dstStateTreeNode;
+        
+        for(List<State> listEntries: listDst1){
+          //dstStateTreeNode = dst;
+          for(State entryState: listEntries){
+            if(dstStateTreeNode.entrySubStates == null){
+              dstStateTreeNode.entrySubStates = new LinkedList<DstState>();
+            }
+            boolean foundEntry = false;
+            for(DstState entry: dstStateTreeNode.entrySubStates){
+              if(entry.entryState == entryState){
+                foundEntry = true;
+                dstStateTreeNode = entry;
+              }
+            }
+            if(!foundEntry){
+              DstState entryDst = new DstState();
+              entryDst.entryState = entryState;
+              entryDst.name = entryState.stateName;
+              dstStateTreeNode.entrySubStates.add(entryDst);
+              dstStateTreeNode = entryDst;
+            }
+          }
+        }
+        
+      }
+    } else {
+      System.err.println("unexpected");
+    }
+  }
   
   
   /**This method reads the input VHDL-script, parses it with ZBNF, 

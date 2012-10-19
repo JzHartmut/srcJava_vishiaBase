@@ -21,7 +21,7 @@ public class OutputDataTree {
   public void output(int recurs, Object data, Appendable out, boolean bXML) throws IOException {
     int hash = data.hashCode();
     if(processedAlready.get(hash) !=null){ //prevent circular associations
-      out.append(" circular -->").append("@"+hash);
+      out.append(" = ").append(data.toString()).append(" (circular=").append("@"+hash).append(")");
       
     } else 
     { processedAlready.put(hash, data);
