@@ -120,6 +120,7 @@ public class ZbnfParser
 	/**Version-ident.
 	 * list of changes:
 	 * <ul>
+   * <li>2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
 	 * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
 	 * 
 	 * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
@@ -808,10 +809,13 @@ public class ZbnfParser
             	{ bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
             	} break;
             	case ZbnfSyntaxPrescript.kStringUntilEndString: //kk
-            	{ bOk = parseStringUntilTerminateString(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilEndStringInclusive: //kk
-            	{ bOk = parseStringUntilTerminateString(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+            	case ZbnfSyntaxPrescript.kStringUntilEndStringTrim: //kk
+              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilEndStringInclusive: //kk
+            	{ bOk = parseStringUntilTerminateString(sConstantSyntax, true, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
             	} break;
             	case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
             	{ if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
@@ -1135,6 +1139,7 @@ public class ZbnfParser
       private boolean parseStringUntilTerminateString
       ( String sConstantSyntax
       , boolean bInclusive
+      , boolean bTrim
       , int maxNrofChars
       , String sSemanticForStoring
       , ZbnfSyntaxPrescript syntaxItem
@@ -1151,6 +1156,9 @@ public class ZbnfParser
           { input.lento(input.length()+1);  //inclusive termintated char.
           } 
           String sResult = input.getCurrentPart();
+          if(bTrim){ 
+            sResult = sResult.trim();
+          }
           long posResult = input.getCurrentPosition();
           bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
           if(bOk){ input.fromEnd(); }
@@ -1159,7 +1167,7 @@ public class ZbnfParser
         { input.setLengthMax();  //not found: length() was setted to 0
           String sTerminateStrings = "";
           Iterator<String> iter = syntaxItem.getListStrings().iterator();
-          while(iter.hasNext()){ sTerminateStrings += "|" + (String)(iter.next());}
+          while(iter.hasNext()){ sTerminateStrings += "|" + (iter.next());}
           saveError("ones of terminate strings:"+ sTerminateStrings + " not found" + " <?" + sSemanticForError + ">");
         }
         return bOk;
@@ -2262,7 +2270,7 @@ public class ZbnfParser
 
   private ZbnfSyntaxPrescript searchSyntaxPrescript(String sSyntax)
   { ZbnfSyntaxPrescript foundItem;
-    foundItem = (ZbnfSyntaxPrescript)listSubPrescript.get(sSyntax);
+    foundItem = listSubPrescript.get(sSyntax);
     return foundItem;
   }
 
@@ -2274,8 +2282,8 @@ public class ZbnfParser
       mainScript.reportContent(report, reportLevel);
       Iterator<String> iter = listSubPrescript.keySet().iterator();
       while(iter.hasNext())
-      { String sName = (String)iter.next();
-        ZbnfSyntaxPrescript subSyntax = (ZbnfSyntaxPrescript)listSubPrescript.get(sName);
+      { String sName = iter.next();
+        ZbnfSyntaxPrescript subSyntax = listSubPrescript.get(sName);
         report.reportln(reportLevel, 0, "");
         subSyntax.reportContent(report, reportLevel);
       }

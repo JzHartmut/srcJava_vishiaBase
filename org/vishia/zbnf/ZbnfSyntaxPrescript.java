@@ -133,6 +133,9 @@ import org.vishia.mainCmd.Report;
  * <tr><td><code>*|</code><i>endstring</i><code>|</code><i>endstring</i></td><td>between | to ? there are some strings as end strings.
  *                                       All chars are matching until one of the endstring.
  *                                       </td></tr>
+ * <tr><td><code>* |</code><i>endstring</i><code>|</code><i>endstring</i></td><td>between | to ? there are some strings as end strings.
+ *                                       All chars are matching until one of the endstring. The parse result is trimmed without leading and trailing white spaces.
+ *                                       </td></tr>
  * <tr><td><code>*""</code><i>endchars</i></td><td>Any chars exclusively <i>endchars</i>, but if any of the <i>endchars</i> is inside
  *                                       a quution, it is claimed as a valid char, not an endchar.</td></tr>
  * <tr><td><code>*{</code><i>indent</i><code>}|</code><i>endstring</i></td><td>It is a special construct to parse text with indentation.
@@ -218,6 +221,7 @@ public class ZbnfSyntaxPrescript
   /**Version-ident.
 	 * list of changes:
 	 * <ul>
+	 * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
 	 * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
    * in the construct with inner syntax, in the form ,,<""?!innerSyntax?semantic>,,. 
    * See the ZBNF-description. 
@@ -405,18 +409,19 @@ public class ZbnfSyntaxPrescript
    * The method getSyntaxFromComplexItem(Object) supplies a list of extra characters
    * there should be also accepted as identifier characters;
    */
-  static final int kIdentifier    = 20;
+  static final int kIdentifier    = 20;  //0x14
 
   /**Some constants used in switch-case to mark the search type.
    */
   static final int kStringUntilEndString   = 0x15
                  , kStringUntilEndchar     = 0x16
-                 , kStringUntilEndcharOutsideQuotion  = 23
-                 , kStringUntilEndcharWithIndent     = 24
-                 , kStringUntilEndStringWithIndent = 25
-                 , kQuotedString = 26
+                 , kStringUntilEndcharOutsideQuotion  = 0x17
+                 , kStringUntilEndcharWithIndent     = 0x18
+                 , kStringUntilEndStringWithIndent = 0x19
+                 , kQuotedString = 0x1a
                  , kStringUntilRightEndchar     = 0x1b
-                 , kRegularExpression = 28
+                 , kRegularExpression = 0x1c
+                 , kStringUntilEndStringTrim= 0x25
                  , kStringUntilEndStringInclusive   = 0x35
                  , kStringUntilEndcharInclusive     = 0x36
                  , kStringUntilRightEndcharInclusive     =0x3b 
@@ -522,6 +527,21 @@ public class ZbnfSyntaxPrescript
           { eType = kStringUntilEndString;
             sDefinitionIdent = "i-StringUntilEndString";
             spInput.seek(2); //read sConstantSyntax from "|"
+            listStrings = new LinkedList<String>();
+            boolean bContinue = true;
+            while(bContinue)
+            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>");
+              listStrings.add(sConstantSyntax);
+              if(spInput.getCurrentChar() == '|')
+              { spInput.seek(1);
+              }
+              else bContinue = false;
+            }
+          }
+          else if(sTest.startsWith("* |"))
+          { eType = kStringUntilEndStringTrim;
+            sDefinitionIdent = "i-StringUntilEndStringTrim";
+            spInput.seek(3); //read sConstantSyntax from "|"
             listStrings = new LinkedList<String>();
             boolean bContinue = true;
             while(bContinue)
@@ -1449,6 +1469,7 @@ public class ZbnfSyntaxPrescript
 
 
   /**Shows the content in a readable format for debugging. */
+  @Override
   public String toString()
   { StringBuilder u = new StringBuilder(50);
   	{ String sWhat; // = "Syntax:" + getDefinitionIdent();
