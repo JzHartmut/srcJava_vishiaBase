@@ -73,6 +73,10 @@ public class ZmakeGenScript
   
   Map<String, Zbnf_genContent> zmakeTargets = new TreeMap<String, Zbnf_genContent>();
   
+  private final Map<String, ScriptElement> subtexts = new TreeMap<String, ScriptElement>();
+  
+  
+  
   ScriptElement zbnf_genFile;
   
 
@@ -125,11 +129,20 @@ public class ZmakeGenScript
   public final ScriptElement getFileScript(){ return zbnf_genFile; }
   
   
+  public ScriptElement getSubtextScript(String name){ return subtexts.get(name); }
+  
   public Zbnf_genContent xxxgetScriptVariable(String sName)
   {
     Zbnf_genContent content = zbnfZmakeGenCtrl.indexScriptVariables.get(sName);
     return content;
   }
+  
+  
+  public static final class DataPath{
+    public String name;
+    public List<String> path;
+  }
+  
   
   
   /**An element of the generate script, maybe a simple text, an condition etc.
@@ -145,9 +158,10 @@ public class ZmakeGenScript
      * <tr><td>v</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
-     * <tr><td>i</td><td>content of the output, {@link #text} describes the build-prescript, 
+     * <tr><td>o</td><td>content of the output, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>e</td><td>given content of a list or for-element. List: {@link #text}==null, Always: {@link #subContent} == null.</td></tr>
+     * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
      * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
      * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,
@@ -157,8 +171,9 @@ public class ZmakeGenScript
      * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,
      * <tr><td>G</td><td><:elsif:condition:path> {@link #subContent} contains build.script for any list element,
      * 
-     * <tr><td>T</td><td>a target,
-     * <tr><td>Y</td><td>a file,
+     * <tr><td>Z</td><td>a target,
+     * <tr><td>Y</td><td>the file
+     * <tr><td>X</td><td>a subtext
      * </table> 
      */
     final public char whatisit;    
@@ -174,6 +189,8 @@ public class ZmakeGenScript
     
     public List<String> path;
     
+    private List<DataPath> refenceData;
+    
     //public String elementPart;
     
     /**If need, a sub-content, maybe null. TODO should be final*/
@@ -182,14 +199,31 @@ public class ZmakeGenScript
     public ScriptElement(char whatisit, String text)
     { this.whatisit = whatisit;
       this.text = text;
-      if("FT".indexOf(whatisit)>=0){
+      if("NXYZ".indexOf(whatisit)>=0){
         subContent = new Zbnf_genContent(false);
       }
     }
     
+    
+    public List<DataPath> getReferenceDataSettings(){ return refenceData; }
+    
     public Zbnf_genContent getSubContent(){ return subContent; }
     
     public void set_text(String text){ subContent.content.add(new ScriptElement('t', text)); }
+    
+    
+    
+    
+    
+    /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
+    public DataPath new_referencedData(){ return new DataPath(); }
+    
+    /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
+    public void add_referencedData(DataPath val){ 
+      if(refenceData == null){ refenceData = new LinkedList<DataPath>(); }
+      refenceData.add(val); }
+    
+    
     
     /**Set from ZBNF:  (\?*<$?valueElement>\?) */
     public ScriptElement new_valueElement(){ return new ScriptElement('e', null); }
@@ -229,6 +263,32 @@ public class ZmakeGenScript
     
     public void add_ifBlock(ScriptElement val){}
 
+    public ScriptElement new_hasNext()
+    { ScriptElement contentElement = new ScriptElement('N', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_hasNext(ScriptElement val){}
+
+    public ScriptElement new_elseBlock()
+    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+      ScriptElement contentElement = new ScriptElement('E', null);
+      contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_elseBlock(ScriptElement val){}
+
+    public ScriptElement new_callSubtext()
+    { ScriptElement contentElement = new ScriptElement('s', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_callSubtext(ScriptElement val){}
+
     
     @Override public String toString()
     {
@@ -237,16 +297,19 @@ public class ZmakeGenScript
       case 'v': return "(?" + text + "?)";
       case 'o': return "(?outp." + text + "?)";
       case 'i': return "(?inp." + text + "?)";
-      case 'e': return "(?*" + text + "?)";
+      case 'e': return "<*" + path + ">";
+      case 's': return "<*subtext:" + name + ">";
       case 'I': return "(?forInput?)...(/?)";
       case 'V': return "(?for:" + text + "?)";
       case 'L': return "(?forList " + text + "?)";
       case 'C': return "<:for:Container " + text + "?)";
       case 'F': return "<:if:Container " + text + "?)";
-      case 'G': return "<:if-condition " + text + "?)";
+      case 'G': return "<:elsif-condition " + text + "?)";
+      case 'N': return "<:hasNext> content <.hasNext>";
       case 'E': return "<:else>";
-      case 'Z': return "<:target>";
+      case 'Z': return "<:target:" + name + ">";
       case 'Y': return "<:file>";
+      case 'X': return "<:subtext:" + name + ">";
       default: return "(??" + text + "?)";
       }
     }
@@ -287,7 +350,11 @@ genContent::=  ##<$NoWhiteSpaces>
     
     public final List<ScriptElement> content = new LinkedList<ScriptElement>();
     
-    List<Zbnf_genContent> localVariables = new LinkedList<Zbnf_genContent>();
+    /**Scripts for some local variable. This scripts where executed with current data on start of processing this genContent.
+     * The generator stores the results in a Map<String, String> localVariable. 
+     * 
+     */
+    List<Zbnf_genContent> localVariableScripts = new LinkedList<Zbnf_genContent>();
     
     public final List<Zbnf_genContent> addToList = new LinkedList<Zbnf_genContent>();
     
@@ -298,7 +365,7 @@ genContent::=  ##<$NoWhiteSpaces>
     }
         
     
-    public List<Zbnf_genContent> getLocalVariables(){ return localVariables; }
+    public List<Zbnf_genContent> getLocalVariables(){ return localVariableScripts; }
     
     public void set_outputValue(String text){ content.add(new ScriptElement('o', text)); }
     
@@ -317,7 +384,7 @@ genContent::=  ##<$NoWhiteSpaces>
     
     public Zbnf_genContent new_setVariable(){ return new Zbnf_genContent(false); }
 
-    public void add_setVariable(Zbnf_genContent val){ localVariables.add(val); } 
+    public void add_setVariable(Zbnf_genContent val){ localVariableScripts.add(val); } 
     
     public Zbnf_genContent new_forInputContent()
     { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
@@ -400,7 +467,11 @@ genContent::=  ##<$NoWhiteSpaces>
     public void add_ZmakeTarget(Zbnf_genContent val){ zmakeTargets.put(val.cmpnName, val); }
     
     
-    public ScriptElement new_genFile(){ return zbnf_genFile = new ScriptElement('F', null); }
+    public ScriptElement new_subtext(){ return new ScriptElement('X', null); }
+    
+    public void add_subtext(ScriptElement val){ subtexts.put(val.name, val); }
+    
+    public ScriptElement new_genFile(){ return zbnf_genFile = new ScriptElement('Y', null); }
     
     public void add_genFile(ScriptElement val){  }
     

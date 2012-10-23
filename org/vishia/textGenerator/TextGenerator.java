@@ -14,11 +14,14 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
+import org.vishia.util.DataAccess;
 import org.vishia.zmake.ZmakeGenScript;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script.
@@ -112,10 +115,10 @@ public class TextGenerator {
     this.console = console;
   }
   
-  
+  ZmakeGenScript genScript;
   
   public String generate(Object userData, File fileScript, File fOut, Appendable testOut){
-    ZmakeGenScript genScript = new ZmakeGenScript(console);
+    genScript = new ZmakeGenScript(console);
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     Writer out = null;
     String sError = null;
@@ -156,71 +159,10 @@ public class TextGenerator {
   
   
   
-  String getStringFromObject(Object content){
-    String sContent;
-    if(content == null){
-    sContent = "";
-    }
-    else if(content instanceof String){ 
-      sContent = (String) content; 
-    } else if(content instanceof Integer){ 
-      int value = ((Integer)content).intValue();
-      sContent = "" + value;
-    } else {
-      sContent = content.toString();
-    }
-    return sContent;
-  }
   
-  
-  
-  
-  /**Read content from data.
-   * @param sPath
-   * @return
-   * @throws IllegalArgumentException
-   */
   private Object getContent(List<String> path, Map<String, Object> localVariables)
   throws IllegalArgumentException
-  {
-    Class<?> clazz1;
-    Object data1 = data;
-    Iterator<String> iter = path.iterator();
-    String sElement = iter.next();
-    //ForEach forVariable = idxForeaches.get(sElement);
-    data1 = localVariables.get(sElement);
-    if(data1 !=null){
-      sElement = iter.hasNext() ? iter.next() : null;
-    } else {
-      data1 = this.data;
-    }
-    while(sElement !=null && data1 !=null){
-      if(sElement.equals("dstState"))
-        stop();
-      try{ 
-        clazz1 = data1.getClass();
-        Field element = clazz1.getDeclaredField(sElement);
-        element.setAccessible(true);
-        try{ data1 = element.get(data1);
-        
-        } catch(IllegalAccessException exc){ 
-          if(bWriteErrorInOutput){
-            return "<? path access: " + path.toString() + "?>";
-          } else {
-            throw new IllegalArgumentException("IllegalAccessException, hint: should be public;" + sElement); 
-          }
-        }
-        sElement = iter.hasNext() ? iter.next() : null;
-      } catch(NoSuchFieldException exc){
-        //TODO method
-        if(bWriteErrorInOutput){
-          return "<? path fault: " + path.toString() + "?>";
-        } else {
-          throw new IllegalArgumentException("NoSuchFieldException;" + sElement); 
-        }
-      }
-    }
-    return data1;
+  { return DataAccess.getData(path,data, localVariables, bWriteErrorInOutput, true);
   }
   
   
@@ -231,16 +173,28 @@ public class TextGenerator {
     this.bWriteErrorInOutput = true;
     ZmakeGenScript.ScriptElement contentScript = genScript.getFileScript();
     Gen_Content genFile = new Gen_Content(null);
-    String sError = genFile.genContent(contentScript.subContent, userData);
+    String sError = genFile.genContent(contentScript.subContent, false);
     return sError;
   }
     
+  
+  void writeError(String sError) throws IOException{
+    if(bWriteErrorInOutput){
+      out.append(sError);
+    } else {
+      throw new IllegalArgumentException(sError); 
+    }
+    
+
+  }
+  
   
   
   final class Gen_Content
   {
     final Gen_Content parent;
     
+    /**Generated content of local variables or reference to any data for this content and all sub contents. */
     Map<String, Object> localVariables = new TreeMap<String, Object>();
     
     
@@ -255,7 +209,13 @@ public class TextGenerator {
 
 
   
-    public String genContent(ZmakeGenScript.Zbnf_genContent contentScript, Object userTarget) 
+    /**
+     * @param contentScript
+     * @param bContainerHasNext Especially for <:for:element:container>SCRIPT<.for> to implement <:hasNext>
+     * @return
+     * @throws IOException
+     */
+    public String genContent(ZmakeGenScript.Zbnf_genContent contentScript, boolean bContainerHasNext) 
     throws IOException{
       Appendable uBuffer = out;
       //Fill all local variable, which are defined in this script.
@@ -310,38 +270,55 @@ public class TextGenerator {
             //genUserTargets(out);
           } else if(contentElement.path !=null){
             Object oContent = getContent(contentElement.path, localVariables);
-            text = getStringFromObject(oContent);
+            text = DataAccess.getStringFromObject(oContent);
             //text = getTextofVariable(userTarget, contentElement.text, this);
             uBuffer.append(text); 
           } else {
             //uBuffer.append(listElement);
           }
         } break;
+        case 's': {
+          genSubtext(contentElement);
+        } break;
         case 'C': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
           ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
           if(contentElement.name.equals("dstState"))
             stop();
           Object container = getContent(contentElement.path, localVariables);
-          if(container !=null && container instanceof Iterable<?>){
+          if(container instanceof String && ((String)container).startsWith("<?")){
+            writeError((String)container);
+          }
+          else if(container !=null && container instanceof Iterable<?>){
             Iterator<?> iter = ((Iterable<?>)container).iterator();
             while(iter.hasNext()){
               Object foreachData = iter.next();
               if(foreachData !=null){
                 Gen_Content genFor = new Gen_Content(this);
                 genFor.localVariables.put(contentElement.name, foreachData);
-                genFor.genContent(subContent, userTarget);
+                genFor.genContent(subContent, iter.hasNext());
               }
             }
-          } else {
-            if(bWriteErrorInOutput){
-              out.append("<? for container path fault: ").append(contentElement.path.toString()).append("?>");
-            } else {
-              throw new IllegalArgumentException("container path;"); 
+          }
+          else if(container !=null && container instanceof Map<?,?>){
+            Map<?,?> map = (Map<?,?>)container;
+            Set<?> entries = map.entrySet();
+            Iterator<?> iter = entries.iterator();
+            while(iter.hasNext()){
+              Map.Entry<?, ?> foreachDataEntry = (Map.Entry<?, ?>)iter.next();
+              Object foreachData = foreachDataEntry.getValue();
+              if(foreachData !=null){
+                Gen_Content genFor = new Gen_Content(this);
+                genFor.localVariables.put(contentElement.name, foreachData);
+                genFor.genContent(subContent, iter.hasNext());
+              }
             }
           }
         } break;
         case 'F': { 
-          generateIfStatement(contentElement, userTarget);
+          generateIfStatement(contentElement, data);
+        } break;
+        case 'N': {
+          generateIfContainerHasNext(contentElement, bContainerHasNext);
         } break;
         default: 
           uBuffer.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
@@ -350,6 +327,16 @@ public class TextGenerator {
       }
       return null;
     }
+    
+    
+    
+    void generateIfContainerHasNext(ZmakeGenScript.ScriptElement hasNextScript, boolean bContainerHasNext) throws IOException{
+      if(bContainerHasNext){
+        (new Gen_Content(this)).genContent(hasNextScript.getSubContent(), false);
+      }
+    }
+    
+    
     
     /**it contains maybe more as one if block and else. */
     void generateIfStatement(ZmakeGenScript.ScriptElement ifStatement, Object userData) throws IOException{
@@ -360,11 +347,11 @@ public class TextGenerator {
         switch(contentElement.whatisit){
           case 'G': { //if-block
             
-            found = generateIfBlock(contentElement, userData);
+            found = generateIfBlock(contentElement, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
-              genContent(contentElement.subContent, userData);
+              genContent(contentElement.subContent, false);
             }
           } break;
           default:{
@@ -374,14 +361,44 @@ public class TextGenerator {
       }//for
     }
     
-    boolean generateIfBlock(ZmakeGenScript.ScriptElement ifBlock, Object userData) throws IOException{
+    boolean generateIfBlock(ZmakeGenScript.ScriptElement ifBlock, boolean bIfHasNext) throws IOException{
       Object check = getContent(ifBlock.path, localVariables);
-      boolean bCondition = check !=null;
+      boolean bCondition;
+      if(ifBlock.operator !=null){
+        String value = check == null ? "null" : check.toString();
+        if(ifBlock.operator.equals("!=")){
+          bCondition = check == null || !value.trim().equals(ifBlock.value); 
+        } else if(ifBlock.operator.equals("==")){
+          bCondition = check != null && value.trim().equals(ifBlock.value); 
+        } else {
+          writeError(" faulty operator " + ifBlock.operator);
+          bCondition = false;
+        }
+      } else {
+        bCondition= check !=null;
+      }
       if(bCondition){
-        genContent(ifBlock.subContent, userData);
+        genContent(ifBlock.subContent, bIfHasNext);
       }
       return bCondition;
     }
+    
+    
+    void genSubtext(ZmakeGenScript.ScriptElement contentElement) throws IOException{
+      ZmakeGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
+      if(subtextScript == null){
+        writeError("<? *subtext:" + contentElement.name + "> not found.");
+      }
+      Gen_Content subtextGenerator = new Gen_Content(this);
+      for( ZmakeGenScript.DataPath referenceSetting: contentElement.getReferenceDataSettings()){
+        Object ref = DataAccess.getData(referenceSetting.path, data, this.localVariables, true, true);
+        if(ref !=null){
+          subtextGenerator.localVariables.put(referenceSetting.name, ref);
+        }
+      }
+      subtextGenerator.genContent(subtextScript.subContent, false);
+    }
+    
     
   }    
   /**Small class instance to build a next number. 

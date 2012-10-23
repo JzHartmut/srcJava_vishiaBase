@@ -283,10 +283,19 @@ public class StateMGen {
     /**From ZBNF: <$?@enclState>. */
     public String enclState;
     
+    /**From ZBNF: <$?@enclState>. */
+    public String parallelState;
+    
     private Map<String, State> subStates;
 
-    /**From ZBNF: <""?description>. */
+    /**From ZBNF: \? <*|\?\.?description>. */
     public String description;
+    
+    /**From ZBNF: + <*|\?\.?additionaldescription>. */
+    public String additionaldescription;
+    
+    /**From ZBNF: ! <*|\?\.?description>. */
+    public String tododescription;
     
     public Entry entry;
     
@@ -303,7 +312,15 @@ public class StateMGen {
    */
   public static class Entry
   {
+    /**From ZBNF: \? <*|\?\.?description>. */
     public String description;
+    
+    /**From ZBNF: + <*|\?\.?additionaldescription>. */
+    public String additionaldescription;
+    
+    /**From ZBNF: ! <*|\?\.?description>. */
+    public String tododescription;
+    
     public String code;
   }
   
@@ -312,7 +329,15 @@ public class StateMGen {
    */
   public static class Exit
   {
+    /**From ZBNF: \? <*|\?\.?description>. */
     public String description;
+    
+    /**From ZBNF: + <*|\?\.?additionaldescription>. */
+    public String additionaldescription;
+    
+    /**From ZBNF: ! <*|\?\.?description>. */
+    public String tododescription;
+    
     public String code;
   }
   
@@ -322,7 +347,14 @@ public class StateMGen {
    */
   public static class Trans
   {
+    /**From ZBNF: \? <*|\?\.?description>. */
     public String description;
+    
+    /**From ZBNF: + <*|\?\.?additionaldescription>. */
+    public String additionaldescription;
+    
+    /**From ZBNF: ! <*|\?\.?description>. */
+    public String tododescription;
     
     public String cond;
     
@@ -383,16 +415,24 @@ public class StateMGen {
     
   }
   
+  
+  public static class NameValue{ 
+    public String name;
+    public String value;
+  }
+  
   public static class ZbnfResultData
   {
 
     public StateStructure stateStructure;
 
-    final List<State> state = new LinkedList<State>();
-    
     private final Map<String, State> idxStates = new TreeMap<String, State>();
     
     private final Map<String, State> topStates = new TreeMap<String, State>();
+    
+    final List<State> state = new LinkedList<State>();
+    
+    final Map<String, String> variables =new TreeMap<String, String>();
     
     public State new_state()
     { return new State();
@@ -403,6 +443,10 @@ public class StateMGen {
       state.add(value);
       idxStates.put(value.stateName, value);
     }
+    
+    public NameValue new_variable(){ return new NameValue(); }
+    
+    public void add_variable(NameValue inp){ variables.put(inp.name, inp.value); }
     
   }
   
@@ -565,10 +609,10 @@ public class StateMGen {
         }
         //the common enclosing state is found.
         //dst.entrySubStates.clear();
-        DstState dstStateTreeNode = new DstState();
-        trans.dstStateTree = dstStateTreeNode;
+        trans.dstStateTree = new DstState();
         
         for(List<State> listEntries: listDst1){
+          DstState dstStateTreeNode = trans.dstStateTree;
           //dstStateTreeNode = dst;
           for(State entryState: listEntries){
             if(dstStateTreeNode.entrySubStates == null){

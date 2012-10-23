@@ -45,6 +45,7 @@ import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.vishia.mainCmd.Report;
 import org.vishia.util.StringPart;
@@ -715,7 +716,7 @@ public class ZbnfJavaOutput
 
   
   
-  /**searches the method or field matching to the semantic of the non-ZBNF-component-resultItem 
+  /**searches the method or field matching to the semantic of the leaf resultItem (not a ZBNF-component) 
    * and write the given content of resultItem into it, 
    * 
    * @param semanticRaw The semantic from ZBNF parse result item. 
@@ -766,106 +767,110 @@ public class ZbnfJavaOutput
       }
       else 
       { //writing of a simple element result
-        if(resultItem.isInteger() || resultItem.isFloat())
-        { argTypesVariants = new Class[4][1];
-          argTypesVariants[0][0] = Integer.TYPE;
-          argTypesVariants[1][0] = Long.TYPE;
-          argTypesVariants[2][0] = Float.TYPE;
-          argTypesVariants[3][0] = Double.TYPE;
-        }
-        else if(resultItem.isFloat())
-        { argTypesVariants = new Class[2][1];
-          argTypesVariants[0][0] = Float.TYPE;
-          argTypesVariants[1][0] = Double.TYPE;
-        }
-        else if(  resultItem.isString()
-               || resultItem.isIdentifier()
-               || resultItem.isTerminalSymbol()
-               || resultItem.isOption() && resultItem.getParsedString()!=null
-               )
-        { //argMethod[0] = new Integer((int)resultItem.getNrofAlternative());
-          argTypesVariants = new Class[1][1];
-          argTypesVariants[0][0] = String.class; 
-        }
-        else
-        { //no data in element, search of a argument-less set_- or add_-method: 
-          argTypesVariants = new Class[1][0];
-        }
-        Method method;
-        final String sMethodToFind = destComponent.clazz.getCanonicalName()+ ".set_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
-        method = searchMethod(destComponent.clazz, "set_" + semantic, argTypesVariants);      
-        if(method == null)
-        { method = searchMethod(destComponent.clazz, "add_" + semantic, argTypesVariants);      
-        }
-        if(method != null)
-        { //invoke the method with the given matching args.
-          Class[] parameterTypes = method.getParameterTypes();
-          Object[] argMethod;
-          if(parameterTypes.length >= 1)
-          { argMethod = new Object[1];
-            Class type1 = parameterTypes[0];
-            boolean isFloat = resultItem.isFloat();
-            double floatVal = isFloat ? resultItem.getParsedFloat() : resultItem.getParsedInteger();
-            long intVal = isFloat ? (long)resultItem.getParsedFloat() : resultItem.getParsedInteger();
-            
-            String type =type1.getName();
-            if     (type.equals("long"))   { argMethod[0] = new Long(isFloat ? (int)floatVal : intVal); }
-            else if(type.equals("int"))    { argMethod[0] = new Integer((int)(isFloat ? floatVal : intVal)); }
-            else if(type.equals("double")) { argMethod[0] = new Double(isFloat ? floatVal : intVal); }
-            else if(type.equals("float"))  { argMethod[0] = new Float((float)(isFloat ? floatVal : intVal)); }
-            else if(type1 == String.class) 
-            { argMethod[0] = new String(resultItem.getParsedString());
-              if(argMethod[0] == null)
-              { argMethod[0] = new String(resultItem.getParsedText());
-              }
-            }
-            else
-            { throw new IllegalAccessException("unexpected argument type: " + sMethodToFind + " / " + type1.getName()); 
-            }
+        if(destComponent.instance instanceof Map){
+          child = writeInMap(semantic, destComponent, resultItem);
+        } else {
+          if(resultItem.isInteger() || resultItem.isFloat())
+          { argTypesVariants = new Class[4][1];
+            argTypesVariants[0][0] = Integer.TYPE;
+            argTypesVariants[1][0] = Long.TYPE;
+            argTypesVariants[2][0] = Float.TYPE;
+            argTypesVariants[3][0] = Double.TYPE;
+          }
+          else if(resultItem.isFloat())
+          { argTypesVariants = new Class[2][1];
+            argTypesVariants[0][0] = Float.TYPE;
+            argTypesVariants[1][0] = Double.TYPE;
+          }
+          else if(  resultItem.isString()
+                 || resultItem.isIdentifier()
+                 || resultItem.isTerminalSymbol()
+                 || resultItem.isOption() && resultItem.getParsedString()!=null
+                 )
+          { //argMethod[0] = new Integer((int)resultItem.getNrofAlternative());
+            argTypesVariants = new Class[1][1];
+            argTypesVariants[0][0] = String.class; 
           }
           else
-          { argMethod = null;  //parameterless
-            
+          { //no data in element, search of a argument-less set_- or add_-method: 
+            argTypesVariants = new Class[1][0];
           }
-          try{ method.invoke(destComponent.instance, argMethod); }
-          catch(InvocationTargetException exc)
-          { throw new IllegalAccessException("cannot access: " + sMethodToFind + " / " + exc.getMessage()); 
+          Method method;
+          final String sMethodToFind = destComponent.clazz.getCanonicalName()+ ".set_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
+          method = searchMethod(destComponent.clazz, "set_" + semantic, argTypesVariants);      
+          if(method == null)
+          { method = searchMethod(destComponent.clazz, "add_" + semantic, argTypesVariants);      
           }
-          catch(Exception exc)
-          { throw new IllegalAccessException("error calling: " + sMethodToFind + " / " + exc.getMessage()); 
-          }
-        }
-        else 
-        { //if(!bOnlyMethods)
-          { char firstChar = semantic.charAt(0);
-            String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
-            Field element = null;
-            Class searchClass = destComponent.clazz;
-            if(semanticLowerCase.equals("operator"))
-              stop();
-            do
-            { try{ element = searchClass.getDeclaredField(semanticLowerCase);}
-              catch(NoSuchFieldException exception)
-              { element = null; 
+          if(method != null)
+          { //invoke the method with the given matching args.
+            Class[] parameterTypes = method.getParameterTypes();
+            Object[] argMethod;
+            if(parameterTypes.length >= 1)
+            { argMethod = new Object[1];
+              Class type1 = parameterTypes[0];
+              boolean isFloat = resultItem.isFloat();
+              double floatVal = isFloat ? resultItem.getParsedFloat() : resultItem.getParsedInteger();
+              long intVal = isFloat ? (long)resultItem.getParsedFloat() : resultItem.getParsedInteger();
+              
+              String type =type1.getName();
+              if     (type.equals("long"))   { argMethod[0] = new Long(isFloat ? (int)floatVal : intVal); }
+              else if(type.equals("int"))    { argMethod[0] = new Integer((int)(isFloat ? floatVal : intVal)); }
+              else if(type.equals("double")) { argMethod[0] = new Double(isFloat ? floatVal : intVal); }
+              else if(type.equals("float"))  { argMethod[0] = new Float((float)(isFloat ? floatVal : intVal)); }
+              else if(type1 == String.class) 
+              { argMethod[0] = new String(resultItem.getParsedString());
+                if(argMethod[0] == null)
+                { argMethod[0] = new String(resultItem.getParsedText());
+                }
               }
-            } while(  element == null    //search in all super classes.
-                   && (searchClass = searchClass.getSuperclass()) != null
-                   && searchClass != Object.class
-                   );  
-            if(element != null)
-            { //an element with the desired name is found, write the value to it:
-              report.report(Report.fineDebug, semanticLowerCase);
-              writeInField(element, destComponent.instance, resultItem);
+              else
+              { throw new IllegalAccessException("unexpected argument type: " + sMethodToFind + " / " + type1.getName()); 
+              }
             }
             else
-            { String sProblem = "cannot found method " + sMethodToFind + " or field " + semanticLowerCase; 
-              problem(destComponent, sProblem);
+            { argMethod = null;  //parameterless
+              
+            }
+            try{ method.invoke(destComponent.instance, argMethod); }
+            catch(InvocationTargetException exc)
+            { throw new IllegalAccessException("cannot access: " + sMethodToFind + " / " + exc.getMessage()); 
+            }
+            catch(Exception exc)
+            { throw new IllegalAccessException("error calling: " + sMethodToFind + " / " + exc.getMessage()); 
             }
           }
-          //else
-          { //if(bStrict) throw new IllegalArgumentException("cannot found: " + sMethodToFind);
+          else 
+          { //if(!bOnlyMethods)
+            { char firstChar = semantic.charAt(0);
+              String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
+              Field element = null;
+              Class searchClass = destComponent.clazz;
+              if(semanticLowerCase.equals("operator"))
+                stop();
+              do
+              { try{ element = searchClass.getDeclaredField(semanticLowerCase);}
+                catch(NoSuchFieldException exception)
+                { element = null; 
+                }
+              } while(  element == null    //search in all super classes.
+                     && (searchClass = searchClass.getSuperclass()) != null
+                     && searchClass != Object.class
+                     );  
+              if(element != null)
+              { //an element with the desired name is found, write the value to it:
+                report.report(Report.fineDebug, semanticLowerCase);
+                writeInField(element, destComponent.instance, resultItem);
+              }
+              else
+              { String sProblem = "cannot found method " + sMethodToFind + " or field " + semanticLowerCase; 
+                problem(destComponent, sProblem);
+              }
+            }
+            //else
+            { //if(bStrict) throw new IllegalArgumentException("cannot found: " + sMethodToFind);
+            }
           }
-        }  
+        }
       }    
       //search an integer field with name_inputColumn, if found write the input column if the parse result.
       trySetInputColumn(semantic, destComponent, resultItem.getInputColumn());
@@ -955,6 +960,7 @@ public class ZbnfJavaOutput
   
   
   
+  
   /**Tries if an field <code>inputColumn_<i>semantic</i></code> or a method
    * <code>set_inputColumn_<i>semantic</i></code> exists and set resp. calls it.
    * If such a field or method isn't found, nothing is done. It is oksy.
@@ -1007,6 +1013,18 @@ public class ZbnfJavaOutput
     if(bExceptionIfnotFound) throw new IllegalArgumentException(u.toString());
     else noteError(u);
 
+  }
+  
+  
+  
+  ChildInstanceAndClass writeInMap(final String semantic
+      , final Component destComponent
+      , final ZbnfParseResultItem resultItem
+  ){
+    Map<String, String> dest = (Map)destComponent.instance;
+    String sParseResult = resultItem.getParsedText();
+    dest.put(semantic, sParseResult);
+    return null;
   }
   
   

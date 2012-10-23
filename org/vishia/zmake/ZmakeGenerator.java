@@ -141,6 +141,7 @@ public class ZmakeGenerator
 	{
 		final Gen_Content parent;
 		
+		/**Generated content of local variables for this content and all sub contents. */
 		Map<String, CharSequence> localVariables = new TreeMap<String, CharSequence>();
 		
 		
@@ -287,7 +288,7 @@ public class ZmakeGenerator
 		
 		  //Fill all local variable, which are defined in this script.
 			//store its values in the local Gen_Content-instance.
-			for(Zbnf_genContent variableScript: contentScript.localVariables){
+			for(Zbnf_genContent variableScript: contentScript.localVariableScripts){
 				StringBuilder uBufferVariable = new StringBuilder();
 				Gen_Content genVariable = new Gen_Content(this);
 				genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
