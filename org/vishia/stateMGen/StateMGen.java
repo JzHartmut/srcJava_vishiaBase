@@ -272,7 +272,23 @@ public class StateMGen {
     
   }
   
-  /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
+  
+  
+  /**This class gets and stores the results from a parsed ZBNF-component <code>State</code>.
+   * 
+   */
+  public static class ConstDef
+  {  public String description;
+  
+     public List<String> ident;
+     
+     public String code;
+  }
+  
+  
+  
+  
+  /**This class gets and stores the results from a parsed ZBNF-component <code>State</code>.
    * 
    */
   public static class State
@@ -288,14 +304,21 @@ public class StateMGen {
     
     private Map<String, State> subStates;
 
+    private Map<String, State> parallelStates;
+
     /**From ZBNF: \? <*|\?\.?description>. */
     public String description;
+    
+    /**From ZBNF: \? <*|\?\.?shortdescription>. */
+    public String shortdescription;
     
     /**From ZBNF: + <*|\?\.?additionaldescription>. */
     public String additionaldescription;
     
     /**From ZBNF: ! <*|\?\.?description>. */
     public String tododescription;
+    
+    public ConstDef constDef;
     
     public Entry entry;
     
@@ -442,6 +465,13 @@ public class StateMGen {
     { 
       state.add(value);
       idxStates.put(value.stateName, value);
+      if(value.parallelState !=null){
+        if(idxStates.get(value.parallelState) ==null){
+          State parallel = new State();
+          parallel.stateName = value.parallelState;
+          idxStates.put(value.parallelState, parallel);
+        }
+      }
     }
     
     public NameValue new_variable(){ return new NameValue(); }
@@ -514,9 +544,12 @@ public class StateMGen {
   }
   
   
-  void prepareStateStructure(State state, ZbnfResultData stateData){
+  void XXXprepareStateStructure(State stateP, ZbnfResultData stateData){
     //stateStructure
+    State state = stateP;
     if(state.enclState !=null){
+      if(state.stateName.equals("Set_UfastIctrl"))
+        stop();
       //search top state, enter it.
       List<State> enclStates = new LinkedList<State>();
       State state1 = state;
@@ -528,7 +561,7 @@ public class StateMGen {
         enclStates.add(state1);
       }
       int states = enclStates.size();
-      State enclState1 = enclStates.get(states-1);
+      State enclState1 = enclStates.get(states-1);  //The last in the list is the top state
       if(stateData.topStates.get(enclState1.stateName) == null){
         stateData.topStates.put(enclState1.stateName, enclState1);
       }
@@ -541,9 +574,56 @@ public class StateMGen {
         if(enclState1.subStates.get(subState1.stateName) == null){
           enclState1.subStates.put(subState1.stateName, subState1);
         }
+        enclState1 = subState1;
       }
       
     }
+  }
+
+  
+  void prepareStateStructure(State stateP, ZbnfResultData stateData){
+    //stateStructure
+    State state = stateP;
+      if(state.stateName.equals("Set_UfastIctrl"))
+        stop();
+      while(state.enclState !=null){
+        String enclStateName = state.enclState;
+        State enclState = stateData.idxStates.get(enclStateName);
+        assert(enclState !=null);
+        if(state.parallelState !=null){
+          String parallelStateName = state.parallelState;
+          State parallelState = stateData.idxStates.get(parallelStateName);
+          assert(parallelState !=null);
+          if(enclState.parallelStates ==null){
+            enclState.parallelStates = new TreeMap<String, State>(); 
+          }
+          if(enclState.parallelStates.get(parallelState.stateName) == null){
+            enclState.parallelStates.put(parallelState.stateName, parallelState);
+          }
+          if(parallelState.subStates ==null){
+            parallelState.subStates = new TreeMap<String, State>(); 
+          }
+          if(parallelState.subStates.get(state.stateName) == null){
+            parallelState.subStates.put(state.stateName, state);
+          }
+          
+        } else {
+          if(enclState.subStates ==null){
+            enclState.subStates = new TreeMap<String, State>(); 
+          }
+          if(enclState.subStates.get(state.stateName) == null){
+            enclState.subStates.put(state.stateName, state);
+          }
+        }
+        state = enclState;
+      }
+      if(state.enclState == null){
+        if(stateData.topStates.get(state.stateName) == null){
+          stateData.topStates.put(state.stateName, state);
+        }
+          
+      }
+      
   }
 
   
@@ -667,5 +747,6 @@ public class StateMGen {
   
   
 
+  void stop(){}
 
 }
