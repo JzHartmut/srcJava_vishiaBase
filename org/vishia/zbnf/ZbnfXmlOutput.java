@@ -325,10 +325,10 @@ public class ZbnfXmlOutput
     
     
     if(sNamespaceKey != null)
-    { xmlChild = new XmlNodeSimple(sName, sNamespaceKey, sNamespaceVal);
+    { xmlChild = new XmlNodeSimple<ZbnfParseResultItem>(sName, sNamespaceKey, sNamespaceVal);
     }
     else
-    { xmlChild = new XmlNodeSimple(sName);
+    { xmlChild = new XmlNodeSimple<ZbnfParseResultItem>(sName);
     }
     
     return xmlChild;

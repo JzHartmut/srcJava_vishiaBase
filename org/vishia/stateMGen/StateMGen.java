@@ -18,7 +18,9 @@ import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenerator;
 import org.vishia.util.Assert;
+import org.vishia.zbnf.Zbnf2Text;
 import org.vishia.zbnf.ZbnfJavaOutput;
+import org.vishia.zbnf.Zbnf2Text.Out;
 import org.vishia.zmake.ZmakeGenScript;
 
 
@@ -36,7 +38,7 @@ public class StateMGen {
    * The user of arguments should know (reference) only this instance, not all other things arround MainCmd,
    * it it access to arguments. 
    */
-  static class Args
+  static class Args extends Zbnf2Text.Args
   {
     /**Cmdline-argument, set on -i: option. Inputfile to to something. */
     String sFileIn = null;
@@ -48,17 +50,6 @@ public class StateMGen {
     
     String sScriptCheck = null;
     
-    static class Out{
-      
-      /**Cmdline-argument, set on -y: option. Outputfile to output something. */
-      String sFileOut = null;
-  
-      String sFileScript = null;
-    }
-    
-    List<Out> listOut = new LinkedList<Out>();
-    
-    Out lastOut;
   }
 
 
@@ -154,16 +145,25 @@ public class StateMGen {
       else if(arg.startsWith("-d:")) cmdlineArgs.sFileData  = getArgument(3);
       else if(arg.startsWith("-scriptcheck:")) cmdlineArgs.sScriptCheck  = getArgument(13);
       else if(arg.startsWith("-y:")) {
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Args.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
+        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Zbnf2Text.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
         cmdlineArgs.lastOut.sFileOut  = getArgument(3);
         if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
       }
       else if(arg.startsWith("-c:")) {
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Args.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
+        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Zbnf2Text.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
         cmdlineArgs.lastOut.sFileScript  = getArgument(3);
         if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
       }
-      else bOk=false;
+      else if(arg.startsWith("-t:")) {
+        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
+        cmdlineArgs.lastOut.sFileOut  = getArgument(3);
+        if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
+      }
+      else if(arg.startsWith("-c:")) {
+        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
+        cmdlineArgs.lastOut.sFileScript  = getArgument(3);
+        if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
+      }
   
       return bOk;
     }
@@ -505,14 +505,14 @@ public class StateMGen {
       } else {
         outData = null;
       }
-      for(Args.Out out: args.listOut){
+      for(Zbnf2Text.Out out: args.listOut){
         File fOut = new File(out.sFileOut);
         File fileScript = new File(out.sFileScript);
         TextGenerator generator = new TextGenerator(console);
         if(outData !=null) {
           outData.append("===================").append(out.sFileScript);
         }
-        String sError = generator.generate(stateData, fileScript, fOut, outData);
+        String sError = generator.generate(stateData, fileScript, fOut, true, outData);
         if(sError !=null){
           console.writeError(sError);
         } else {

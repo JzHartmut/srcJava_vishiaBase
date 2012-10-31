@@ -3,29 +3,27 @@ package org.vishia.textGenerator;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.StringReader;
 import java.io.Writer;
-import java.lang.reflect.Field;
 import java.text.ParseException;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 import java.util.TreeMap;
-import java.util.Map.Entry;
 
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 import org.vishia.zmake.ZmakeGenScript;
 
-/**This class helps to generate texts from any Java-stored data controlled with a script.
- * The script is a simple text file which contains placeholder for data and some control statements
+/**This class helps to generate texts from any Java-stored data controlled with a script. 
+ * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
+ * You should not use the instance concurrently in more as one thread. But you can use this instance
+ * for one after another call of {@link #generate(Object, File, File, boolean, Appendable)}.
+ * <br><br>
+ * The script is a simple text file which contains place holder for data and some control statements
  * for repeatedly generated data from any container.
  * <br><br>
  * The placeholder and control tags have the following form:
@@ -108,17 +106,30 @@ public class TextGenerator {
   
   private boolean bWriteErrorInOutput;
   
+  private boolean accessPrivate;
+  
   final Report console;
+  
+  ZmakeGenScript genScript;
   
   
   public TextGenerator(Report console){
     this.console = console;
   }
   
-  ZmakeGenScript genScript;
-  
-  public String generate(Object userData, File fileScript, File fOut, Appendable testOut){
+  /**
+   * @param userData
+   * @param fileScript
+   * @param fOut
+   * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
+   *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
+   *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
+   * @param testOut
+   * @return
+   */
+  public String generate(Object userData, File fileScript, File fOut, boolean accessPrivate, Appendable testOut){
     genScript = new ZmakeGenScript(console);
+    this.accessPrivate = accessPrivate;
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     Writer out = null;
     String sError = null;
@@ -162,7 +173,7 @@ public class TextGenerator {
   
   private Object getContent(List<String> path, Map<String, Object> localVariables)
   throws IllegalArgumentException
-  { return DataAccess.getData(path,data, localVariables, bWriteErrorInOutput, true);
+  { return DataAccess.getData(path,data, localVariables, bWriteErrorInOutput, accessPrivate);
   }
   
   

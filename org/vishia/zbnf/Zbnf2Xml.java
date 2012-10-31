@@ -18,9 +18,6 @@
  *    You mustn't delete this Copyright/Copyleft inscription in this source file.    
  *
  * @author www.vishia.de/Java
- * @version 2006-06-15  (year-month-day)
- * list of changes: 
- * 2006-05-00: www.vishia.de creation
  *
  ****************************************************************************/
 package org.vishia.zbnf;
@@ -44,6 +41,7 @@ import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.util.TreeNodeUniqueKey;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zbnf.ZbnfParser;
@@ -64,6 +62,39 @@ import org.vishia.zbnf.ZbnfParser;
 public class Zbnf2Xml
 {
 
+  /**Version, history and license.
+   * <ul>
+   * <li>2012-11-01 Hartmut Some changes in structure of args, non-function-relevant.
+   *   It is to provide common structures with {@link Zbnf2Text}.
+   * <li>2006-05-00 Hartmut creation: 
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final int version = 20121101;
+
   
   public interface PrepareXmlNode
   {
@@ -71,40 +102,42 @@ public class Zbnf2Xml
     void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException;
   }
   
+  static class Args{
+    
+    /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
+    String sFileIn = null;
+  
+    /**Cmdline-argument, set on -y option. Inputfile to to something. :TODO: its a example.*/
+    String sFileSyntax = null;
   
   
-  /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
-  String sFileIn = null;
-
-  /**Cmdline-argument, set on -y option. Inputfile to to something. :TODO: its a example.*/
-  String sFileSyntax = null;
-
-
-
-  /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
-  String sFileOut = null;
   
-  /**Encoding given from cmdline argument -x, -y or -z
-   */
-  Charset encoding = Charset.defaultCharset();
+    /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
+    String sFileOut = null;
+    
+    /**Encoding given from cmdline argument -x, -y or -z
+     */
+    Charset encoding = Charset.defaultCharset();
+    
+    
+    List<String> additionalSemantic;
   
-  
-  List<String> additionalSemantic;
-
-  /** Type of the conversion, set in dependence of the -o or -x -option. */
-  //private XslConvertMode mode = new XslConvertMode();
-  
+    /** Type of the conversion, set in dependence of the -o or -x -option. */
+    //private XslConvertMode mode = new XslConvertMode();
+  }  
   
   /** Help reference to name the report output.*/
   Report report;
 
+  final Args arg;
   
 
   /*---------------------------------------------------------------------------------------------*/
   /** main started from java*/
-  public static void main(String [] args)
-  { Zbnf2Xml main = new Zbnf2Xml();     //the main instance
-    CmdLine mainCmdLine = main.new CmdLine(args); //the instance to parse arguments and others.
+  public static void main(String [] sArgs)
+  { Args args = new Args();
+    CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
+    Zbnf2Xml main = new Zbnf2Xml(args);     //the main instance
     main.report = mainCmdLine;  //it may be also another instance based on MainCmd_ifc
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
@@ -137,32 +170,36 @@ public class Zbnf2Xml
   /** Constructor of the main class.
       The command line arguments are parsed here. After them the execute class is created as composition of Zbnf2Xml.
   */
-  public Zbnf2Xml()
-  { 
+  public Zbnf2Xml(Args args)
+  { this.arg = args;
   }
 
 
   public Zbnf2Xml(String input, String syntax, String output, Report report)
   {
-    this.sFileIn = input;
-    this.sFileOut = output;
-    this.sFileSyntax = syntax;
+    arg = new Args();
+    
+    this.arg.sFileIn = input;
+    this.arg.sFileOut = output;
+    this.arg.sFileSyntax = syntax;
     this.report = report;
   }
 
   /**The inner class CmdLine helps to evaluate the command line arguments
    * and show help messages on command line.
    */
-  class CmdLine extends MainCmd
+  static class CmdLine extends MainCmd
   { 
   
+    final Args args;
+    
     /*---------------------------------------------------------------------------------------------*/
     /** Constructor of the main class.
         The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
     */
-    private CmdLine(String[] args)
-    { super(args);
-      report = this;
+    protected CmdLine(Args args, String[] sArgs)
+    { super(sArgs);
+      this.args = args;
       super.addAboutInfo("Conversion text to XML via ZBNF");
       super.addAboutInfo("made by HSchorrig, 2006-03-20..2008-02-29");
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> -y:<OUTPUT> [{-a:<NAME>=<VALUE>}]");  //[-w[+|-|0]]
@@ -196,17 +233,17 @@ public class Zbnf2Xml
     { boolean bOk = true;  //set to false if the argc is not passed
   
       if(argc.startsWith("--_"))      { /*ignore it. */ }
-      else if(argc.startsWith("-i:")){ sFileIn   = getArgument(3); }
-      else if(argc.startsWith("-i")) { sFileIn   = getArgument(2); }
-      else if(argc.startsWith("-s:")){ sFileSyntax  = getArgument(3); }
-      else if(argc.startsWith("-s")) { sFileSyntax  = getArgument(2); }
-      else if(argc.startsWith("-x:")){ sFileOut = getArgument(3); encoding = Charset.forName("UTF-8"); }
-      else if(argc.startsWith("-x")) { sFileOut = getArgument(2); encoding = Charset.forName("UTF-8"); }
-      else if(argc.startsWith("-y:")){ sFileOut = getArgument(3); }
-      else if(argc.startsWith("-y")) { sFileOut = getArgument(2); }
-      else if(argc.startsWith("-z:")){ sFileOut = getArgument(3); encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-z")) { sFileOut = getArgument(2); encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-charset:")){ encoding = Charset.forName(getArgument(9));  }
+      else if(argc.startsWith("-i:")){ args.sFileIn   = getArgument(3); }
+      else if(argc.startsWith("-i")) { args.sFileIn   = getArgument(2); }
+      else if(argc.startsWith("-s:")){ args.sFileSyntax  = getArgument(3); }
+      else if(argc.startsWith("-s")) { args.sFileSyntax  = getArgument(2); }
+      else if(argc.startsWith("-x:")){ args.sFileOut = getArgument(3); args.encoding = Charset.forName("UTF-8"); }
+      else if(argc.startsWith("-x")) { args.sFileOut = getArgument(2); args.encoding = Charset.forName("UTF-8"); }
+      else if(argc.startsWith("-y:")){ args.sFileOut = getArgument(3); }
+      else if(argc.startsWith("-y")) { args.sFileOut = getArgument(2); }
+      else if(argc.startsWith("-z:")){ args.sFileOut = getArgument(3); args.encoding = Charset.forName("US-ASCII"); }
+      else if(argc.startsWith("-z")) { args.sFileOut = getArgument(2); args.encoding = Charset.forName("US-ASCII"); }
+      else if(argc.startsWith("-charset:")){ args.encoding = Charset.forName(getArgument(9));  }
       else if(argc.startsWith("-a:"))
       { //argument
         String sArg = getArgument(3);
@@ -225,11 +262,11 @@ public class Zbnf2Xml
         { addSemantic = sArg;
           addContent = "";
         }
-        if(additionalSemantic == null)
-        { additionalSemantic = new LinkedList<String>();
+        if(args.additionalSemantic == null)
+        { args.additionalSemantic = new LinkedList<String>();
         }
-        additionalSemantic.add(addSemantic);
-        additionalSemantic.add(addContent);
+        args.additionalSemantic.add(addSemantic);
+        args.additionalSemantic.add(addContent);
       }
   /*
       else if(argc.equals("-w+"))   { mode.setIndent("  "); }
@@ -262,14 +299,14 @@ public class Zbnf2Xml
     protected boolean checkArguments()
     { boolean bOk = true;
   
-      if(sFileIn == null)            { bOk = false; writeError("ERROR argument -iInputfile is obligat."); }
-      else if(sFileIn.length()==0)   { bOk = false; writeError("ERROR argument -iInputfile without content.");}
+      if(args.sFileIn == null)            { bOk = false; writeError("ERROR argument -iInputfile is obligat."); }
+      else if(args.sFileIn.length()==0)   { bOk = false; writeError("ERROR argument -iInputfile without content.");}
   
-      if(sFileSyntax == null)            { bOk = false; writeError("ERROR argument -sSyntaxfile is obligat."); }
-      else if(sFileSyntax.length()==0)   { bOk = false; writeError("ERROR argument -sSyntaxfile without content.");}
+      if(args.sFileSyntax == null)            { bOk = false; writeError("ERROR argument -sSyntaxfile is obligat."); }
+      else if(args.sFileSyntax.length()==0)   { bOk = false; writeError("ERROR argument -sSyntaxfile without content.");}
   
-      if(sFileOut == null)           { bOk = false; writeError("argument -y -x or -z: no outputfile is given");}
-      else if(sFileOut.length()==0)  { bOk = false; writeError("argument -y -x or -z without content"); }
+      if(args.sFileOut == null)           { bOk = false; writeError("argument -y -x or -z: no outputfile is given");}
+      else if(args.sFileOut.length()==0)  { bOk = false; writeError("argument -y -x or -z without content"); }
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
   
       return bOk;
@@ -287,7 +324,7 @@ public class Zbnf2Xml
       parser.setReportIdents(Report.error, Report.info, Report.debug, Report.fineDebug);
       try
       { parser.setSkippingComment("/*", "*/", true);
-        parser.setSyntax(new File(sFileSyntax));
+        parser.setSyntax(new File(arg.sFileSyntax));
       }
       catch (ParseException exception)
       { report.writeError("Parser Syntax reading error: " + exception.getMessage());
@@ -297,21 +334,21 @@ public class Zbnf2Xml
       } 
       catch (IllegalCharsetNameException e)
       {
-        report.writeError("The " + sFileSyntax + " contains an illegal charset-name");
+        report.writeError("The " + arg.sFileSyntax + " contains an illegal charset-name");
         bOk = false;
       } 
       catch (UnsupportedCharsetException e)
       {
-        report.writeError("The charset in " + sFileSyntax + " is not supported");
+        report.writeError("The charset in " + arg.sFileSyntax + " is not supported");
         bOk = false;
       } 
       catch (FileNotFoundException e)
       {
-        report.writeError("file not found:" + sFileSyntax);
+        report.writeError("file not found:" + arg.sFileSyntax);
         bOk = false;
       } catch (IOException e)
       {
-        report.writeError("file read error:" + sFileSyntax);
+        report.writeError("file read error:" + arg.sFileSyntax);
         bOk = false;
       }
     }
@@ -324,20 +361,20 @@ public class Zbnf2Xml
       String sInputEncodingKeyword = parser.getInputEncodingKeyword();
       try
       { //spToParse = new StringPartFromFileLines(new File(sFileIn));
-        spToParse = new StringPartFromFileLines(new File(sFileIn), -1, sInputEncodingKeyword, inputEncoding);
+        spToParse = new StringPartFromFileLines(new File(arg.sFileIn), -1, sInputEncodingKeyword, inputEncoding);
       }
       catch(FileNotFoundException exception)
-      { report.writeError("file not found:" + sFileIn);
+      { report.writeError("file not found:" + arg.sFileIn);
         bOk = false;
       }
       catch(IOException exception)
-      { report.writeError("file read error:" + sFileIn);
+      { report.writeError("file read error:" + arg.sFileIn);
         bOk = false;
       }
     }
     if(bOk)
-    { report.writeInfoln("parsing " + sFileIn);
-      try{ bOk = parser.parse(spToParse, additionalSemantic); }
+    { report.writeInfoln("parsing " + arg.sFileIn);
+      try{ bOk = parser.parse(spToParse, arg.additionalSemantic); }
       catch(Exception exception)
       { report.writeError("any exception while parsing:" + exception.getMessage());
         
@@ -359,20 +396,20 @@ public class Zbnf2Xml
       //outputXml.write(parser.getFirstParseResult(), sFileOut);
       report.writeInfo(" XML: ");
       TreeMap<String, String> xmlnsList = parser.getXmlnsFromSyntaxPrescript();
-      if(encoding == null) 
-      { encoding = Charset.forName("UTF-8");
+      if(arg.encoding == null) 
+      { arg.encoding = Charset.forName("UTF-8");
       }
-      String sEncoding = encoding.displayName();
+      String sEncoding = arg.encoding.displayName();
       ZbnfParseResultItem zbnfTop = parser.getFirstParseResult();
       try
       { 
-        FileOutputStream fileOut = new FileOutputStream(sFileOut);
-        OutputStreamWriter out = new OutputStreamWriter(fileOut, encoding);
+        FileOutputStream fileOut = new FileOutputStream(arg.sFileOut);
+        OutputStreamWriter out = new OutputStreamWriter(fileOut, arg.encoding);
         outputXml.write(zbnfTop, xmlnsList, out);
         report.writeInfo(" done "); report.writeInfoln("");
       }
       catch(FileNotFoundException exception)
-      { report.writeError("file not writeable:" + sFileOut);
+      { report.writeError("file not writeable:" + arg.sFileOut);
         bOk = false;
       } catch (XmlException e)
       {

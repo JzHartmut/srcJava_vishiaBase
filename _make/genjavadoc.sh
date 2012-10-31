@@ -3,7 +3,7 @@ export DST="../../docuSrcJava_Zbnf"
 export DST_priv="../../docuSrcJava_Zbnf_priv"
 
 
-export SRC="-subpackages org.vishia.zbnf:org.vishia.zmake:org.vishia.ant:org.vishia.header2Reflection"
+export SRC="-subpackages org.vishia.zbnf:org.vishia.textGenerator:org.vishia.zmake:org.vishia.ant:org.vishia.header2Reflection"
 export SRC="$SRC  ../org/vishia/byteData/*.java"
 
 

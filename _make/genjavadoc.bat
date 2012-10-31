@@ -4,6 +4,7 @@ set DST_priv=..\..\docuSrcJava_Zbnf_priv
 
 echo set SRC
 set SRC=-subpackages org.vishia.zbnf
+set SRC=%SRC% -subpackages org.vishia.textGenerator
 set SRC=%SRC% -subpackages org.vishia.zmake
 set SRC=%SRC% -subpackages org.vishia.ant
 set SRC=%SRC% -subpackages org.vishia.header2Reflection 
