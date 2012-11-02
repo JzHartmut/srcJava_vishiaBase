@@ -127,9 +127,11 @@ public class Zbnf2Xml
   }  
   
   /** Help reference to name the report output.*/
-  Report report;
+  final Report report;
 
   final Args arg;
+  
+  ZbnfParser parser = null;
   
 
   /*---------------------------------------------------------------------------------------------*/
@@ -137,8 +139,7 @@ public class Zbnf2Xml
   public static void main(String [] sArgs)
   { Args args = new Args();
     CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
-    Zbnf2Xml main = new Zbnf2Xml(args);     //the main instance
-    main.report = mainCmdLine;  //it may be also another instance based on MainCmd_ifc
+    Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
     catch(Exception exception)
@@ -170,8 +171,9 @@ public class Zbnf2Xml
   /** Constructor of the main class.
       The command line arguments are parsed here. After them the execute class is created as composition of Zbnf2Xml.
   */
-  public Zbnf2Xml(Args args)
+  public Zbnf2Xml(Args args, Report report)
   { this.arg = args;
+    this.report = report;
   }
 
 
@@ -319,7 +321,6 @@ public class Zbnf2Xml
 
   public boolean execute()
   { boolean bOk = true;
-    ZbnfParser parser = null;
     { parser = new ZbnfParser(report);
       parser.setReportIdents(Report.error, Report.info, Report.debug, Report.fineDebug);
       try

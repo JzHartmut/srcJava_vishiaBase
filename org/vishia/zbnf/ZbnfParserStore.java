@@ -35,6 +35,11 @@ import java.util.List;
 
 import org.vishia.util.SortedTreeNode;
 import org.vishia.util.StringPart;
+import org.vishia.util.TreeNodeBase;
+import org.vishia.util.TreeNodeUniqueKey;
+import org.vishia.xmlSimple.XmlException;
+import org.vishia.xmlSimple.XmlNode;
+import org.vishia.xmlSimple.XmlNodeSimple;
 
 
 /** This class stores an syntax tested item.
@@ -60,6 +65,47 @@ import org.vishia.util.StringPart;
  * */
 class ZbnfParserStore
 {
+  /**Version, history and license.
+   * <ul>
+   * <li>2012-11-02 JcHartmut: The ParseResultItem has gotten an element {@link ParseResultItemImplement#treeNodeXml}.
+   *   It refers to an tree-like result store, whereby the {@link XmlNodeSimple} is used as node.
+   *   Therewith the conversion to XML is obviously. As well too, the access to treed data able to use for direct
+   *   text conversion using {@link org.vishia.textGenerator.TextGenerator}.
+   *   A new method {@link #buildTreeNodeRepresentationXml(XmlNodeSimple, ParseResultItemImplement, boolean)} is offered to use.    
+   * <li>2008-03-28 JcHartmut: The ParserStore is not cleared, only the reference is assigned new.
+   *   So outside the ParserStore can be used from an older parsing.
+   * <li>2006-12-15 JcHartmut: regular expressions should be handled after white spaces trimming, error correction.
+   * <li>2006-06-00 JcHartmut: fixed a lot of simple problems in development.
+   * <li>2006-05-00 JcHartmut: creation
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de, www.vishia.org
+   * 
+   */
+  public static final int version = 20121102;
+
+  
   /** Constant to detect the entry describes a terminate symbol. -32767*/
   final static int kTerminalSymbol = -0x7fff;
 
@@ -169,6 +215,9 @@ class ZbnfParserStore
     
     /**  */
     SortedTreeNode<ZbnfParseResultItem> treeNodeRepresentation = null;
+    
+    
+    XmlNodeSimple<ZbnfParseResultItem> treeNodeXml = null;
     
     
     ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax)
@@ -765,7 +814,7 @@ class ZbnfParserStore
    * @param addStore
    * @return position of the added content. 
    */
-  int add(ZbnfParserStore addStore, ZbnfParseResultItem parent)
+  int xxxadd(ZbnfParserStore addStore, ZbnfParseResultItem parent)
   { int idx = items.size(); //actual position
     if(addStore.items.size() >0)
     { Iterator<ParseResultItemImplement> iter = addStore.items.iterator();
@@ -905,6 +954,82 @@ class ZbnfParserStore
   public Iterator<ParseResultItemImplement> getIterator()
   { return items.iterator();
   }
+
+  
+  /**Builds an XML tree node representation for the current element and its children.
+   * @param bRecursive true then for all children of children.
+   */
+  static XmlNodeSimple<ZbnfParseResultItem>  buildTreeNodeRepresentationXml(XmlNodeSimple<ZbnfParseResultItem> xmlParent
+      , ParseResultItemImplement cmpnResult, boolean bRecursive) 
+  {
+    XmlNodeSimple<ZbnfParseResultItem> xmlNode = createXmlNode(xmlParent, cmpnResult);
+    xmlNode.data = cmpnResult;
+    cmpnResult.treeNodeXml = xmlNode;
+    Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
+    while(iter.hasNext()) { 
+      ZbnfParseResultItem item =iter.next(); 
+      ParseResultItemImplement childResult = (ParseResultItemImplement)item;
+      XmlNodeSimple<ZbnfParseResultItem> xmlChild;
+      if(childResult.treeNodeXml !=null){
+        //it has a child gotten already, it should not added 
+        xmlChild = childResult.treeNodeXml;
+      } else {
+        if(bRecursive){
+          buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
+          xmlChild = childResult.treeNodeXml;
+        } else {
+          xmlChild = createXmlNode(xmlParent, childResult);
+          xmlChild.data = item;
+        }
+      }
+    }
+    return xmlNode;
+  }
+  
+
+  static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
+  ( XmlNodeSimple<ZbnfParseResultItem> xmlParent
+  , ParseResultItemImplement parseResult
+  ){
+    XmlNodeSimple<ZbnfParseResultItem> xmlNode = xmlParent;
+    String semantic = parseResult.getSemantic();
+    int sep;
+    do{
+      sep = semantic.indexOf('/');
+      if(sep >=0){
+        String sLeftSemantic = semantic.substring(0, sep);
+        XmlNodeSimple<ZbnfParseResultItem> xmlMeta = (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
+        if(xmlMeta ==null){
+          xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sLeftSemantic);
+          if(xmlParent !=null){
+            try { 
+              xmlParent.addContent(xmlNode);
+            } catch (XmlException e) {
+              throw new IllegalArgumentException(e);
+            }
+          }
+        } else {
+          xmlNode = xmlMeta;
+        }
+        semantic = semantic.substring(sep +1);
+      } else {
+        if(semantic.startsWith("@")){
+          xmlNode.setAttribute(semantic.substring(1), parseResult.getParsedText());
+        } else {
+          xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic);
+          if(xmlParent !=null){
+            try { 
+              xmlParent.addContent(xmlNode);
+            } catch (XmlException e) {
+              throw new IllegalArgumentException(e);
+            }
+          }
+        }
+      }
+    } while(sep >=0 && semantic.length() >0);
+    return xmlNode;
+  }
+  
 
   
   public String toString()

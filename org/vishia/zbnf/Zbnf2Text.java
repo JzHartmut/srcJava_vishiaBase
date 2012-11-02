@@ -10,6 +10,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.textGenerator.TextGenerator;
 import org.vishia.util.TreeNodeUniqueKey;
+import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.Zbnf2Xml.CmdLine;
 
 public class Zbnf2Text extends Zbnf2Xml
@@ -19,8 +20,8 @@ public class Zbnf2Text extends Zbnf2Xml
   final MainCmd_ifc console;
 
 
-  final TreeNodeUniqueKey<ZbnfParseResultItem> data = 
-    new TreeNodeUniqueKey<ZbnfParseResultItem>("root", null);
+  //final TreeNodeUniqueKey<ZbnfParseResultItem> data = 
+    //new TreeNodeUniqueKey<ZbnfParseResultItem>("root", null);
   
   
   
@@ -41,7 +42,7 @@ public class Zbnf2Text extends Zbnf2Xml
     { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
           to hold the contact to the command line execution.
       */
-      try{ main.execute(); }
+      try{ main.execute(arg); }
       catch(Exception exception)
       { //catch the last level of error. No error is reported direct on command line!
         main.report.report("Uncatched Exception on main level:", exception);
@@ -54,7 +55,7 @@ public class Zbnf2Text extends Zbnf2Xml
 
   
   Zbnf2Text(Args args, MainCmd_ifc mainCmdLine){
-    super(args);
+    super(args, mainCmdLine);
     this.console = mainCmdLine;  //it may be also another instance based on MainCmd_ifc
     
   }
@@ -66,7 +67,7 @@ public class Zbnf2Text extends Zbnf2Xml
   { boolean bOk = true;
     bOk = super.execute();
     
-    
+    XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
     
     
     if(bOk){
@@ -83,7 +84,7 @@ public class Zbnf2Text extends Zbnf2Xml
         if(outData !=null) {
           outData.append("===================").append(out.sFileScript);
         }
-        String sError = generator.generate(data, fileScript, fOut, true, outData);
+        String sError = generator.generate(resultTree, fileScript, fOut, true, outData);
         if(sError !=null){
           console.writeError(sError);
         } else {

@@ -43,6 +43,8 @@ import java.util.regex.Pattern;
 //import org.vishia.util.SortedTreeNode;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.xmlSimple.XmlNodeSimple;
+import org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement;
 
 //import vishia.mainCmd.Report;
 import org.vishia.mainCmd.Report;
@@ -119,8 +121,11 @@ public class ZbnfParser
 	
 	/**Version-ident.
 	 * list of changes:
-	 * <ul>
-   * <li>2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
+	 * <ul>2012-11-02 Hartmut new local class {@link ParseResultlet}, the {@link PrescriptParser} contains a reference to it.
+	 *   The resultlet is the first action to save gotten parse results though the result is not convenient in the current context.
+	 *   This result may be re-used later in another context (not programmed yet, only prepared).
+	 *   In that context any component's result is converted to an XML tree presentation. This may be the new strategy for parse result storing.
+   * <li>2012-10-23 Hartmut Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
 	 * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
 	 * 
 	 * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
@@ -157,11 +162,11 @@ public class ZbnfParser
   
   
   /** Class to organize parsing of a component with a own prescript.
-   *  It is a outer class from the working class SubParser.  
+   *  It is the outer class of the working class {@link ZbnfParser.PrescriptParser.SubParser}.  
    */
   private class PrescriptParser
   {
-    
+    final ParseResultlet resultlet;
      /**
        * The actual input stream. 
        * By calling parse recursively, a new SubParser instance is created, 
@@ -202,8 +207,13 @@ public class ZbnfParser
     /**A string representing the parent components. */ 
     final String sReportParentComponents;
     
-    private PrescriptParser(PrescriptParser parent, String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
-    { parentPrescriptParser = parent;
+    private PrescriptParser(PrescriptParser parent
+        , ZbnfSyntaxPrescript syntax
+        , String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
+    { 
+      resultlet = new ParseResultlet(syntax);
+      
+      parentPrescriptParser = parent;
       
       this.input = input;
       this.posInputbase = posInputbase;
@@ -275,8 +285,7 @@ public class ZbnfParser
      */
     public boolean parsePrescript1 //##a
     ( //StringPart input
-      ZbnfSyntaxPrescript syntax
-    , String sSemanticForStoring
+      String sSemanticForStoring
     , ZbnfParseResultItem parentResultItem
     , ZbnfParserStore parserStoreInPrescriptP  //either main store, or a temporary if <..?->
     , ZbnfParserStore parseResultsFromOtherComponents          //null in main, or if <..?+..>
@@ -285,13 +294,14 @@ public class ZbnfParser
     ) throws ParseException
     { //this.input = input;
       this.parserStoreInPrescript = parserStoreInPrescriptP;
-      int idxRewind = -1; 
+      int ixStoreStart = parserStoreInPrescript.items.size();
+      int idxRewind = -1; //unused yet.
       if(false && parseResultsFromOtherComponents != null)
       { idxRewind = parserStoreInPrescript.getNextPosition(); 
         parserStoreInPrescript.insert(parseResultsFromOtherComponents, idxRewind, null);
       }
        
-      SubParser subParser = new SubParser(syntax, null, parentResultItem, nRecursion); //bOwnParserStore);
+      SubParser subParser = new SubParser(resultlet.syntaxPrescript, null, parentResultItem, nRecursion); //bOwnParserStore);
       boolean bOk = subParser.parseSub
             ( input
             , "::=" //sSemanticForError
@@ -308,7 +318,12 @@ public class ZbnfParser
         }
       }
       if(nReportLevel >= nLevelReportComponentParsing)  
-      { reportParsing("parseComp ", idReportComponentParsing, syntax, nRecursion, bOk);
+      { reportParsing("parseComp ", idReportComponentParsing, resultlet.syntaxPrescript, nRecursion, bOk);
+      }
+      if(bOk){
+        ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
+        //Build a part of the XML tree from the start parse result without parent.
+        resultlet.xmlResult = ZbnfParserStore.buildTreeNodeRepresentationXml(null, parseResultStart, true);
       }
       return bOk;
     }
@@ -326,6 +341,11 @@ public class ZbnfParser
        * The parser instance is useable for more as one parsing execution with the same syntax prescript.
        * */
       final ZbnfSyntaxPrescript syntaxPrescript;
+
+      /** The Prescript of the syntax.
+       * The parser instance is useable for more as one parsing execution with the same syntax prescript.
+       * */
+      //final ZbnfSyntaxPrescript syntaxPrescript;
   
       /** The index of the current treated item.*/
       private int idxPrescript;
@@ -1233,12 +1253,13 @@ public class ZbnfParser
             }
             componentsPrescriptParser = new PrescriptParser
             ( PrescriptParser.this
+            , complexItem 
             , sDefinitionIdent
             , sInputP, posInputbase
             );
             
             bOk = componentsPrescriptParser.parsePrescript1
-                  ( /*sInputP, */complexItem, sSemanticForStoring, parentResultItem1, store1
+                  ( sSemanticForStoring, parentResultItem1, store1
                   , bAddParseResultFromPrevious ? parseResultToOtherComponent : null
                   , bSkipSpaceAndComment
                   , nRecursion +2
@@ -1767,7 +1788,7 @@ public class ZbnfParser
   
   protected PrescriptParser prescriptParserTopLevel;
 
-  protected PrescriptParser.SubParser subParserTopLevel;
+  //protected PrescriptParser.SubParser subParserTopLevel;
 
   /** The string and position found on the rightest position of an parse fault.
    * It is necessarry to report a parsing error.
@@ -2234,8 +2255,8 @@ public class ZbnfParser
   	sExpectedSyntax = null;
   	sRightestError = input.getCurrentPart(80); 
   	
-    prescriptParserTopLevel = new PrescriptParser(null, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
-    subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
+    prescriptParserTopLevel = new PrescriptParser(null, mainScript, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
+    //subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
     final ZbnfParserStore addParseResult;
     if(additionalInfo != null)
     { addParseResult = new ZbnfParserStore();
@@ -2256,7 +2277,7 @@ public class ZbnfParser
     String sSemantic = mainScript.getDefinitionIdent();
   	try
     { boolean bOk = prescriptParserTopLevel.parsePrescript1
-                  (mainScript, sSemantic, null, parserStoreTopLevel, addParseResult, false, 0);
+                  (sSemantic, null, parserStoreTopLevel, addParseResult, false, 0);
       return bOk;
     }
   	catch(ParseException exc)
@@ -2484,6 +2505,19 @@ public class ZbnfParser
     else return null;
   }
 
+  
+  
+  public XmlNodeSimple<ZbnfParseResultItem> getResultTree(){
+    if(parserStoreTopLevel.items.size()>0)
+    { //parseResult.idxParserStore = 0;
+      ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
+      //ZbnfParserStore.buildTreeNodeRepresentationXml(null, firstItem, true);
+      return firstItem.treeNodeXml;
+    }
+    else return null;
+  }
+  
+  
 
   /** Returns a TreeMap of all xmlns keys and strings.
    * This is the result of detecting $xmlns:ns="string". -expressions in the syntax prescript.
@@ -2524,6 +2558,32 @@ public class ZbnfParser
   	}
   	return u;
   }
+  
+  
+  /**Element of a Parse result for a part of the syntax.
+   * It is possible to reuse an instance of a ParseResultlet though the result was 
+   * dedicated as false before in a given content. 
+   * If another bough in the syntax tree uses the same
+   * sub syntax with the same syntax prescript on the same position in text,
+   * it is parsed successfully already.
+   */
+  static class ParseResultlet
+  {
+    /** The Prescript of the syntax.
+     * The parser instance is useable for more as one parsing execution with the same syntax prescript.
+     * */
+    final ZbnfSyntaxPrescript syntaxPrescript;
+
+    /**The start and the end position (character in parsed Character input) */
+    int startPosText, endPosText;
+    
+    XmlNodeSimple<ZbnfParseResultItem> xmlResult;
+    
+    ParseResultlet(ZbnfSyntaxPrescript syntaxPrescript){
+      this.syntaxPrescript = syntaxPrescript;
+    }
+  }
+  
   
   
 }
