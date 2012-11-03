@@ -6,12 +6,9 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.textGenerator.TextGenerator;
-import org.vishia.util.TreeNodeUniqueKey;
 import org.vishia.xmlSimple.XmlNodeSimple;
-import org.vishia.zbnf.Zbnf2Xml.CmdLine;
 
 public class Zbnf2Text extends Zbnf2Xml
 {
@@ -29,7 +26,7 @@ public class Zbnf2Text extends Zbnf2Xml
   /** main started from java*/
   public static void main(String [] sArgs)
   { Args arg = new Args();
-    CmdLine mainCmdLine = new CmdLineText(arg, sArgs); //the instance to parse arguments and others.
+    CmdLineText mainCmdLine = new CmdLineText(arg, sArgs); //the instance to parse arguments and others.
     Zbnf2Text main = new Zbnf2Text(arg, mainCmdLine);     //the main instance
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
@@ -135,12 +132,12 @@ public class Zbnf2Text extends Zbnf2Xml
   static class CmdLineText extends Zbnf2Xml.CmdLine
   {
 
-    Args cmdlineArgs;  
+    //Args cmdlineArgs;  
     
     
     protected CmdLineText(Args arg, String[] args) {
       super(arg, args);
-      cmdlineArgs = new Args();
+      //cmdlineArgs = new Args();
       super.addHelpInfo("-c:<OUTCTRL> name of a file to control the output");
       super.addHelpInfo("-t:<TEXTOUT> name of the output file to generate");
       super.addHelpInfo("-c:<TEXTOUT> -t:<TEXTOUT> more as one output file with this pair of arguments");
@@ -159,11 +156,13 @@ public class Zbnf2Text extends Zbnf2Xml
     public boolean testArgsZbnf2Text(String argc, int nArg){
       boolean bOk = true;
       if(argc.startsWith("-t:")) {
+        Args cmdlineArgs = (Args)super.args;
         if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
         cmdlineArgs.lastOut.sFileOut  = getArgument(3);
         if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
       }
       else if(argc.startsWith("-c:")) {
+        Args cmdlineArgs = (Args)super.args;
         if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
         cmdlineArgs.lastOut.sFileScript  = getArgument(3);
         if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 

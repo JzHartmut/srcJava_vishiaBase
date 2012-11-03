@@ -507,6 +507,13 @@ class ZbnfParserStore
         treeNodeRepresentation.add(item.getSemantic(), item);
       }
     }
+
+    
+    @Override public ZbnfParseResultItem getParent(){
+      return null;
+    }
+
+    
     
 
     /**Gets the named child or null.
@@ -963,25 +970,31 @@ class ZbnfParserStore
       , ParseResultItemImplement cmpnResult, boolean bRecursive) 
   {
     XmlNodeSimple<ZbnfParseResultItem> xmlNode = createXmlNode(xmlParent, cmpnResult);
-    xmlNode.data = cmpnResult;
     cmpnResult.treeNodeXml = xmlNode;
-    Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
-    while(iter.hasNext()) { 
-      ZbnfParseResultItem item =iter.next(); 
-      ParseResultItemImplement childResult = (ParseResultItemImplement)item;
-      XmlNodeSimple<ZbnfParseResultItem> xmlChild;
-      if(childResult.treeNodeXml !=null){
-        //it has a child gotten already, it should not added 
-        xmlChild = childResult.treeNodeXml;
-      } else {
-        if(bRecursive){
-          buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
+    if(cmpnResult.isComponent()){
+      Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
+      while(iter.hasNext()) { 
+        ZbnfParseResultItem item =iter.next(); 
+        ParseResultItemImplement childResult = (ParseResultItemImplement)item;
+        XmlNodeSimple<ZbnfParseResultItem> xmlChild;
+        if(childResult.treeNodeXml !=null){
+          //it has a child gotten already, it should not added 
           xmlChild = childResult.treeNodeXml;
+          if(xmlNode !=null){
+            try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
+          }
         } else {
-          xmlChild = createXmlNode(xmlParent, childResult);
-          xmlChild.data = item;
+          if(bRecursive){
+            buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
+            xmlChild = childResult.treeNodeXml;
+          } else {
+            createXmlNode(xmlParent, childResult);
+          }
         }
       }
+    } else {
+      String sText = cmpnResult.getParsedText();
+      xmlNode.addContent(sText);
     }
     return xmlNode;
   }
@@ -1016,7 +1029,7 @@ class ZbnfParserStore
         if(semantic.startsWith("@")){
           xmlNode.setAttribute(semantic.substring(1), parseResult.getParsedText());
         } else {
-          xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic);
+          xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic, parseResult);
           if(xmlParent !=null){
             try { 
               xmlParent.addContent(xmlNode);

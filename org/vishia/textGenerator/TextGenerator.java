@@ -54,6 +54,7 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2012-11-04 Hartmut chg: adaption to DataAccess respectively distinguish between getting a container or an simple element.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
    * <li>2012-10-10 Usage of {@link ZmakeGenScript}.
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
@@ -171,9 +172,9 @@ public class TextGenerator {
   
   
   
-  private Object getContent(List<String> path, Map<String, Object> localVariables)
+  private Object getContent(List<String> path, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
-  { return DataAccess.getData(path,data, localVariables, bWriteErrorInOutput, accessPrivate);
+  { return DataAccess.getData(path,data, localVariables, bWriteErrorInOutput, accessPrivate, bContainer);
   }
   
   
@@ -280,7 +281,7 @@ public class TextGenerator {
             //generates all targets, only advisable in the (?:file?)
             //genUserTargets(out);
           } else if(contentElement.path !=null){
-            Object oContent = getContent(contentElement.path, localVariables);
+            Object oContent = getContent(contentElement.path, localVariables, false);
             text = DataAccess.getStringFromObject(oContent);
             //text = getTextofVariable(userTarget, contentElement.text, this);
             uBuffer.append(text); 
@@ -295,7 +296,7 @@ public class TextGenerator {
           ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
           if(contentElement.name.equals("dstState"))
             stop();
-          Object container = getContent(contentElement.path, localVariables);
+          Object container = getContent(contentElement.path, localVariables, true);
           if(container instanceof String && ((String)container).startsWith("<?")){
             writeError((String)container);
           }
@@ -373,7 +374,7 @@ public class TextGenerator {
     }
     
     boolean generateIfBlock(ZmakeGenScript.ScriptElement ifBlock, boolean bIfHasNext) throws IOException{
-      Object check = getContent(ifBlock.path, localVariables);
+      Object check = getContent(ifBlock.path, localVariables, false);
       boolean bCondition;
       if(ifBlock.operator !=null){
         String value = check == null ? "null" : check.toString();
@@ -402,7 +403,7 @@ public class TextGenerator {
       }
       Gen_Content subtextGenerator = new Gen_Content(this);
       for( ZmakeGenScript.DataPath referenceSetting: contentElement.getReferenceDataSettings()){
-        Object ref = DataAccess.getData(referenceSetting.path, data, this.localVariables, true, true);
+        Object ref = DataAccess.getData(referenceSetting.path, data, this.localVariables, true, true, false);
         if(ref !=null){
           subtextGenerator.localVariables.put(referenceSetting.name, ref);
         }

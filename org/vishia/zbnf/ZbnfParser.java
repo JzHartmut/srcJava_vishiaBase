@@ -321,9 +321,13 @@ public class ZbnfParser
       { reportParsing("parseComp ", idReportComponentParsing, resultlet.syntaxPrescript, nRecursion, bOk);
       }
       if(bOk){
-        ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
-        //Build a part of the XML tree from the start parse result without parent.
-        resultlet.xmlResult = ZbnfParserStore.buildTreeNodeRepresentationXml(null, parseResultStart, true);
+        if(ixStoreStart >= parserStoreInPrescript.items.size())
+          stop();
+        else{
+          ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
+          //Build a part of the XML tree from the start parse result without parent.
+          resultlet.xmlResult = ZbnfParserStore.buildTreeNodeRepresentationXml(null, parseResultStart, true);
+        }
       }
       return bOk;
     }
