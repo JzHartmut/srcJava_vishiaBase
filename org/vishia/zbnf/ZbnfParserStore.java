@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.vishia.util.Assert;
 import org.vishia.util.SortedTreeNode;
 import org.vishia.util.StringPart;
 import org.vishia.util.TreeNodeBase;
@@ -67,6 +68,7 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2012-11-02 JaHartmut new {@link ParseResultItemImplement#getText()} to get a textual projection of the content. used for XML presentation.
    * <li>2012-11-02 JcHartmut: The ParseResultItem has gotten an element {@link ParseResultItemImplement#treeNodeXml}.
    *   It refers to an tree-like result store, whereby the {@link XmlNodeSimple} is used as node.
    *   Therewith the conversion to XML is obviously. As well too, the access to treed data able to use for direct
@@ -367,6 +369,27 @@ class ZbnfParserStore
       return sRet;
     }
 
+    
+    
+    /**Returns a text information proper to use for XML if it is a leaf node.
+     * Returns null if it is a component.
+     */
+    String getText(){
+      String ret = null;
+      if(isComponent()){ ret = null; }
+      else{
+        switch(kind){
+          case kTerminalSymbol: ret = parsedString; break;
+          case kIntegerNumber: ret = Long.toString(parsedIntegerNumber); break;
+          case kFloatNumber: ret = Double.toString(parsedFloatNumber); break;
+          case kIdentifier: ret = parsedString; break;
+          case kString: ret = parsedString; break;
+          default: ret = "??unknown kind of node.?"; break;
+        }
+      }
+      return ret;
+    }
+    
     
     protected ParseResultItemImplement clone()
     { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null, null);
@@ -993,8 +1016,12 @@ class ZbnfParserStore
         }
       }
     } else {
-      String sText = cmpnResult.getParsedText();
-      xmlNode.addContent(sText);
+      String sText = cmpnResult.getText();
+      if(sText !=null){
+        xmlNode.addContent(sText);
+      } else {
+        Assert.check(false);
+      }
     }
     return xmlNode;
   }
