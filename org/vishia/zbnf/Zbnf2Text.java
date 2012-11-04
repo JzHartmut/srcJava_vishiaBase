@@ -1,13 +1,16 @@
 package org.vishia.zbnf;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.textGenerator.TextGenerator;
+import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlNodeSimple;
 
 public class Zbnf2Text extends Zbnf2Xml
@@ -66,6 +69,12 @@ public class Zbnf2Text extends Zbnf2Xml
     
     XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
     
+    if(args.sFileOut !=null){
+      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sFileOut + "2.xml")); 
+      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
+      xmlOut.write(wrXml, resultTree);
+      wrXml.close();
+    }
     
     if(bOk){
       FileWriter outData;

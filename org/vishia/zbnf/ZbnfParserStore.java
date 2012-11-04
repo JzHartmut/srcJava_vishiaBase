@@ -1015,14 +1015,7 @@ class ZbnfParserStore
           }
         }
       }
-    } else {
-      String sText = cmpnResult.getText();
-      if(sText !=null){
-        xmlNode.addContent(sText);
-      } else {
-        Assert.check(false);
-      }
-    }
+    } 
     return xmlNode;
   }
   
@@ -1054,9 +1047,18 @@ class ZbnfParserStore
         semantic = semantic.substring(sep +1);
       } else {
         if(semantic.startsWith("@")){
-          xmlNode.setAttribute(semantic.substring(1), parseResult.getParsedText());
+          xmlNode.setAttribute(semantic.substring(1), parseResult.getText());
         } else {
           xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic, parseResult);
+          if(!parseResult.isComponent()){
+            //add the textual parse result to a leaf node.
+            String sText = parseResult.getText();
+            if(sText !=null){
+              xmlNode.addContent(sText);
+            } else {
+              Assert.check(false);
+            }
+          }
           if(xmlParent !=null){
             try { 
               xmlParent.addContent(xmlNode);
