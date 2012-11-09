@@ -391,6 +391,7 @@ class ZbnfParserStore
     }
     
     
+    @Override
     protected ParseResultItemImplement clone()
     { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null, null);
       item.kind = kind;
@@ -404,6 +405,7 @@ class ZbnfParserStore
       return item;
     }
     
+    @Override
     public String toString()
     { return getDescription();
     }
@@ -432,7 +434,7 @@ class ZbnfParserStore
 
       if( idxNew < idxEnd)
       { if(idxNew < store.items.size())
-          return (ZbnfParseResultItem) store.items.get(idxNew);
+          return store.items.get(idxNew);
         else
         { stop();
           return null;
@@ -618,7 +620,7 @@ class ZbnfParserStore
     public ZbnfParseResultItem next()
     { int idxNew = idxOwn + offsetAfterEnd;
       if(idxNew < store.items.size())
-      { return (ZbnfParseResultItem) store.items.get(idxNew);
+      { return store.items.get(idxNew);
       }
       else
       { stop();
@@ -659,7 +661,7 @@ class ZbnfParserStore
   {
     if(items.size()>0)
     { //parseResult.idxParserStore = 0;
-      return (ZbnfParseResultItem)items.get(0);
+      return items.get(0);
     }
     else return null;
   }
@@ -718,7 +720,7 @@ class ZbnfParserStore
    */
   void setAlternativeAndOffsetToEnd(int idxStore, int alternative)
   {
-    ParseResultItemImplement item = (ParseResultItemImplement)items.get(idxStore);
+    ParseResultItemImplement item = items.get(idxStore);
     item.nrofAlternative = alternative;
     item.offsetAfterEnd = items.size() - idxStore;
   }
@@ -729,13 +731,13 @@ class ZbnfParserStore
    */
   void setParsedText(int idxStore, String sInput)
   {
-    ParseResultItemImplement item = (ParseResultItemImplement)items.get(idxStore);
+    ParseResultItemImplement item = items.get(idxStore);
     item.sInput = sInput;
   }
   
   void setParsedString(int idxStore, String ss)
   {
-    ParseResultItemImplement item = (ParseResultItemImplement)items.get(idxStore);
+    ParseResultItemImplement item = items.get(idxStore);
     item.parsedString = ss;
   }
   
@@ -849,7 +851,7 @@ class ZbnfParserStore
     if(addStore.items.size() >0)
     { Iterator<ParseResultItemImplement> iter = addStore.items.iterator();
       while(iter.hasNext())
-      { ParseResultItemImplement item = (ParseResultItemImplement)(iter.next());
+      { ParseResultItemImplement item = (iter.next());
         if(item.isAdded)
         { //the item is used onetime, therefore clone it.
           item = item.clone();
@@ -883,7 +885,7 @@ class ZbnfParserStore
     if(addStore.items.size() >0)
     { Iterator<ParseResultItemImplement> iter = addStore.items.iterator();
       while(iter.hasNext())
-      { ParseResultItemImplement item = (ParseResultItemImplement)(iter.next());
+      { ParseResultItemImplement item = (iter.next());
         if(item.isAdded)
         { //the item is used already, therefore clone it.
           item = item.clone();
@@ -944,7 +946,7 @@ class ZbnfParserStore
    * @param idxFromwhere
    */
   void xxx_setOffsetToEnd(int idxFromwhere)
-  { ParseResultItemImplement fromWhere = (ParseResultItemImplement) items.get(idxFromwhere);
+  { ParseResultItemImplement fromWhere = items.get(idxFromwhere);
     fromWhere.offsetAfterEnd = items.size() - idxFromwhere;
   }
 
@@ -969,7 +971,7 @@ class ZbnfParserStore
          * if there are added to the main store, but they must stay there for further using.
          * 
         */
-        ((ParseResultItemImplement)(items.get(ii))).isAdded = false;
+        ((items.get(ii))).isAdded = false;
         items.remove(ii);
         ii-=1;
       }
@@ -992,30 +994,36 @@ class ZbnfParserStore
   static XmlNodeSimple<ZbnfParseResultItem>  buildTreeNodeRepresentationXml(XmlNodeSimple<ZbnfParseResultItem> xmlParent
       , ParseResultItemImplement cmpnResult, boolean bRecursive) 
   {
-    XmlNodeSimple<ZbnfParseResultItem> xmlNode = createXmlNode(xmlParent, cmpnResult);
-    cmpnResult.treeNodeXml = xmlNode;
-    if(cmpnResult.isComponent()){
-      Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
-      while(iter.hasNext()) { 
-        ZbnfParseResultItem item =iter.next(); 
-        ParseResultItemImplement childResult = (ParseResultItemImplement)item;
-        XmlNodeSimple<ZbnfParseResultItem> xmlChild;
-        if(childResult.treeNodeXml !=null){
-          //it has a child gotten already, it should not added 
-          xmlChild = childResult.treeNodeXml;
-          if(xmlNode !=null){
-            try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
-          }
-        } else {
-          if(bRecursive){
-            buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
+    XmlNodeSimple<ZbnfParseResultItem> xmlNode = cmpnResult.treeNodeXml;
+    if(xmlNode ==null){
+      xmlNode = createXmlNode(xmlParent, cmpnResult);
+      cmpnResult.treeNodeXml = xmlNode;
+      if(cmpnResult.isComponent()){
+        Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
+        while(iter.hasNext()) { 
+          ZbnfParseResultItem item =iter.next(); 
+          ParseResultItemImplement childResult = (ParseResultItemImplement)item;
+          XmlNodeSimple<ZbnfParseResultItem> xmlChild;
+          if(childResult.treeNodeXml !=null){
+            //it has a child gotten already, it should not added 
             xmlChild = childResult.treeNodeXml;
+            if(xmlNode !=null){
+              if(xmlChild.getParent() !=null){
+                Assert.check(true);
+              }
+              try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
+            }
           } else {
-            createXmlNode(xmlParent, childResult);
+            if(bRecursive){
+              buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
+              xmlChild = childResult.treeNodeXml;
+            } else {
+              createXmlNode(xmlParent, childResult);
+            }
           }
         }
       }
-    } 
+    }
     return xmlNode;
   }
   
@@ -1074,6 +1082,7 @@ class ZbnfParserStore
   
 
   
+  @Override
   public String toString()
   { String ret = "size=" + items.size();
     if(item!=null) ret+=" lastItem=" + item.sSemantic;

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.XmlException;
@@ -66,7 +67,7 @@ public class ZmakeGenScript
   @SuppressWarnings("hiding")
   static final public int version = 20111010;
 
-  private final Report console;
+  private final MainCmdLogging_ifc console;
 
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
   Zbnf_ZmakeGenCtrl zbnfZmakeGenCtrl = new Zbnf_ZmakeGenCtrl();
@@ -80,7 +81,7 @@ public class ZmakeGenScript
   ScriptElement zbnf_genFile;
   
 
-  public ZmakeGenScript(Report console)
+  public ZmakeGenScript(MainCmdLogging_ifc console)
   { this.console = console;
   }
 
@@ -92,11 +93,11 @@ public class ZmakeGenScript
     console.writeInfoln("* Zmake: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
     + "\" with \"" + fileGenCtrl.getAbsolutePath() + "\"");
 
-    ZbnfParser parserGenCtrl = new ZbnfParser(console);
+    ZbnfParser parserGenCtrl = new ZbnfParser((Report)console);
     parserGenCtrl.setSyntax(fileZbnf4GenCtrl);
-    if(console.getReportLevel() >= Report.fineInfo){
-      console.reportln(Report.fineInfo, "== Syntax GenCtrl ==");
-      parserGenCtrl.reportSyntax(console, Report.fineInfo);
+    if(console.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
+      console.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
+      parserGenCtrl.reportSyntax((Report)console, MainCmdLogging_ifc.fineInfo);
     }
     console.writeInfo(" ... ");
     bOk = parserGenCtrl.parse(new StringPartFromFileLines(fileGenCtrl));
@@ -104,15 +105,15 @@ public class ZmakeGenScript
       String sError = parserGenCtrl.getSyntaxErrorReport();
       throw new ParseException(sError,0);
     }
-    if(console.getReportLevel() >= Report.fineInfo){
-      parserGenCtrl.reportStore(console, Report.fineInfo, "Zmake-GenScript");
+    if(console.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
+      parserGenCtrl.reportStore((Report)console, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
     }
     console.writeInfo(", ok set output ... ");
     //ZbnfParseResultItem parseResultGenCtrl = parserGenCtrl.getFirstParseResult();
     ZbnfXmlOutput xmlOutputGenCtrl = new ZbnfXmlOutput();
     xmlOutputGenCtrl.write(parserGenCtrl, fileGenCtrl.getAbsoluteFile()+".xml");  //only for test
     //write into Java classes:
-    ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(console);
+    ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput((Report)console);
     parserGenCtrl2Java.setContent(zbnfZmakeGenCtrl.getClass(), zbnfZmakeGenCtrl, parserGenCtrl.getFirstParseResult());
     console.writeInfo(" ok");
     return bOk;

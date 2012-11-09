@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
@@ -109,13 +110,13 @@ public class TextGenerator {
   
   private boolean accessPrivate;
   
-  final Report console;
+  final MainCmdLogging_ifc log;
   
   ZmakeGenScript genScript;
   
   
-  public TextGenerator(Report console){
-    this.console = console;
+  public TextGenerator(MainCmdLogging_ifc log){
+    this.log = log;
   }
   
   /**
@@ -129,7 +130,7 @@ public class TextGenerator {
    * @return
    */
   public String generate(Object userData, File fileScript, File fOut, boolean accessPrivate, Appendable testOut){
-    genScript = new ZmakeGenScript(console);
+    genScript = new ZmakeGenScript(log);
     this.accessPrivate = accessPrivate;
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     Writer out = null;

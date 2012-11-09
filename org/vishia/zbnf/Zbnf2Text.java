@@ -36,6 +36,7 @@ public class Zbnf2Text extends Zbnf2Xml
     catch(Exception exception)
     { main.report.report("Argument error:", exception);
       main.report.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
+      mainCmdLine.writeHelpInfo();
       bOk = false;
     }
     if(bOk)
@@ -153,6 +154,7 @@ public class Zbnf2Text extends Zbnf2Xml
     } 
     
     
+    @Override
     public boolean testArgument(String argc, int nArg)
     { boolean bOk = super.testArgument(argc, nArg);  //set to false if the argc is not passed
       if(!bOk){ 
