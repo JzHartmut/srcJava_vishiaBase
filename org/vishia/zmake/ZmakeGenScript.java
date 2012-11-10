@@ -291,6 +291,17 @@ public class ZmakeGenScript
     public void add_callSubtext(ScriptElement val){}
 
     
+    /**Set from ZBNF:  (\?*<$?forElement>\?) */
+    public void set_fnEmpty(String val){ 
+      ScriptElement contentElement = new ScriptElement('f', val);
+      subContent.content.add(contentElement);
+    }
+    
+    /**Set from ZBNF:  (\?*<$?forElement>\?) */
+    public void axxxdd_fnEmpty(ScriptElement val){  }
+    
+
+    
     @Override public String toString()
     {
       switch(whatisit){
@@ -376,12 +387,6 @@ genContent::=  ##<$NoWhiteSpaces>
     
     /**Set from ZBNF:  (\?*\?)<?listElement> */
     public void set_listElement(){ content.add(new ScriptElement('e', null)); }
-    
-    /**Set from ZBNF:  (\?*<$?forElement>\?) */
-    public void set_fnEmpty(String val){ content.add(new ScriptElement('f', val)); }
-    
-    /**Set from ZBNF:  (\?*<$?forElement>\?) */
-    public void add_fnEmpty(ScriptElement val){ content.add(val); }
     
     public Zbnf_genContent new_setVariable(){ return new Zbnf_genContent(false); }
 

@@ -505,14 +505,16 @@ public class StateMGen {
       } else {
         outData = null;
       }
-      for(Zbnf2Text.Out out: args.listOut){
-        File fOut = new File(out.sFileOut);
-        File fileScript = new File(out.sFileScript);
+      for(Zbnf2Text.Out outArgs: args.listOut){
+        File fOut = new File(outArgs.sFileOut);
+        File fileScript = new File(outArgs.sFileScript);
         TextGenerator generator = new TextGenerator(console);
         if(outData !=null) {
-          outData.append("===================").append(out.sFileScript);
+          outData.append("===================").append(outArgs.sFileScript);
         }
-        String sError = generator.generate(stateData, fileScript, fOut, true, outData);
+        Writer out = new FileWriter(fOut);
+        String sError = generator.generate(stateData, fileScript, out, true, outData);
+        out.close();
         if(sError !=null){
           console.writeError(sError);
         } else {

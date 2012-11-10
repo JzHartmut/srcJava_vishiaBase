@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -84,14 +85,16 @@ public class Zbnf2Text extends Zbnf2Xml
       } else {
         outData = null;
       }
-      for(Zbnf2Text.Out out: args.listOut){
-        File fOut = new File(out.sFileOut);
-        File fileScript = new File(out.sFileScript);
+      for(Zbnf2Text.Out outArgs: args.listOut){
+        File fOut = new File(outArgs.sFileOut);
+        File fileScript = new File(outArgs.sFileScript);
         TextGenerator generator = new TextGenerator(console);
         if(outData !=null) {
-          outData.append("===================").append(out.sFileScript);
+          outData.append("===================").append(outArgs.sFileScript);
         }
-        String sError = generator.generate(resultTree, fileScript, fOut, true, outData);
+        Writer out = new FileWriter(fOut);
+        String sError = generator.generate(resultTree, fileScript, out, true, outData);
+        out.close();
         if(sError !=null){
           console.writeError(sError);
         } else {

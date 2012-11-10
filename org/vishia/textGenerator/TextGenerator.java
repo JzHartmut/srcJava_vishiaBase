@@ -96,7 +96,7 @@ public class TextGenerator {
   
   BufferedReader readerScript;
   
-  Writer out;
+  Appendable out;
 
   //StringBuilder uLine = new StringBuilder(5000);
 
@@ -129,11 +129,12 @@ public class TextGenerator {
    * @param testOut
    * @return
    */
-  public String generate(Object userData, File fileScript, File fOut, boolean accessPrivate, Appendable testOut){
+  public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
     genScript = new ZmakeGenScript(log);
     this.accessPrivate = accessPrivate;
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
-    Writer out = null;
+    //Writer out = null;
+    this.out = out;
     String sError = null;
     try{ 
       genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
@@ -141,7 +142,7 @@ public class TextGenerator {
         OutputDataTree outputterData = new OutputDataTree();
         outputterData.output(0, genScript, testOut, false);
       }
-      out = new FileWriter(fOut);
+      //out = new FileWriter(fOut);
     
     } catch(ParseException exc){
       System.err.println(Assert.exceptionInfo("\n", exc, 0, 4));
@@ -154,7 +155,7 @@ public class TextGenerator {
     if(out !=null){
       try{
         sError = genContent(genScript, userData, out);
-        out.close();
+        //out.close();
       } catch(IOException exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));
       }
@@ -180,7 +181,7 @@ public class TextGenerator {
   
   
   
-  public String genContent(ZmakeGenScript genScript, Object userData, Writer out) throws IOException{
+  private String genContent(ZmakeGenScript genScript, Object userData, Appendable out) throws IOException{
     this.out = out;
     this.data = userData;
     this.bWriteErrorInOutput = true;
@@ -263,7 +264,7 @@ public class TextGenerator {
         } break;
         case 'f': {
           if(contentElement.text.equals("nextNr")){
-            String val = "" + nextNr.toString();
+            //String val = "" + nextNr.toString();
             uBuffer.append(nextNr.toString());
           }
        } break;
