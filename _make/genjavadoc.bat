@@ -1,6 +1,7 @@
 
-set DST=..\..\docuSrcJava_Zbnf
-set DST_priv=..\..\docuSrcJava_Zbnf_priv
+set DSTDIR=..\..\
+set DST=docuSrcJava_Zbnf
+set DST_priv=docuSrcJava_Zbnf_priv
 
 echo set SRC
 set SRC=-subpackages org.vishia.zbnf

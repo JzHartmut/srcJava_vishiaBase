@@ -294,9 +294,9 @@ public class TextGenerator {
         case 's': {
           genSubtext(contentElement);
         } break;
-        case 'C': { //generation (?:for:<$?@name>?) <genContent?> (?/for?)
+        case 'C': { //generation <:for:name:path> <genContent> <.for>
           ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
-          if(contentElement.name.equals("dstState"))
+          if(contentElement.name.equals("state1"))
             stop();
           Object container = getContent(contentElement.path, localVariables, true);
           if(container instanceof String && ((String)container).startsWith("<?")){
