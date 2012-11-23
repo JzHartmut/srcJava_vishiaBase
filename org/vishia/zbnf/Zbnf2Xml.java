@@ -39,6 +39,7 @@ import java.util.TreeMap;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.textGenerator.Zbnf2Text;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.TreeNodeUniqueKey;
@@ -102,7 +103,7 @@ public class Zbnf2Xml
     void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException;
   }
   
-  static class Args{
+  protected static class Args{
     
     /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
     String sFileIn = null;
@@ -113,7 +114,7 @@ public class Zbnf2Xml
   
   
     /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
-    String sFileOut = null;
+    public String sFileOut = null;
     
     /**Encoding given from cmdline argument -x, -y or -z
      */
@@ -127,11 +128,11 @@ public class Zbnf2Xml
   }  
   
   /** Help reference to name the report output.*/
-  final Report report;
+  protected final Report report;
 
   final Args arg;
   
-  ZbnfParser parser = null;
+  protected ZbnfParser parser = null;
   
 
   /*---------------------------------------------------------------------------------------------*/
@@ -190,10 +191,10 @@ public class Zbnf2Xml
   /**The inner class CmdLine helps to evaluate the command line arguments
    * and show help messages on command line.
    */
-  static class CmdLine extends MainCmd
+  protected static class CmdLine extends MainCmd
   { 
   
-    final Args args;
+    public final Args args;
     
     /*---------------------------------------------------------------------------------------------*/
     /** Constructor of the main class.
@@ -231,6 +232,7 @@ public class Zbnf2Xml
                 false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
                 the application should be aborted.
     */
+    @Override
     public boolean testArgument(String argc, int nArg)
     { boolean bOk = true;  //set to false if the argc is not passed
   
@@ -285,6 +287,7 @@ public class Zbnf2Xml
      * is meaningfull.
      *
      */
+    @Override
     protected void callWithoutArguments()
     { //overwrite with empty method - if the calling without arguments
       //having equal rights than the calling with arguments - no special action.
@@ -298,6 +301,7 @@ public class Zbnf2Xml
        If there is an inconsistents, a message should be written. It may be also a warning.
        @return true if successfull, false if failed.
     */
+    @Override
     protected boolean checkArguments()
     { boolean bOk = true;
   

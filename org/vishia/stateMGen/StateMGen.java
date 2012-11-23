@@ -17,11 +17,11 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenerator;
+import org.vishia.textGenerator.Zbnf2Text;
+import org.vishia.textGenerator.Zbnf2Text.Out;
 import org.vishia.util.Assert;
-import org.vishia.zbnf.Zbnf2Text;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zbnf.Zbnf2Text.Out;
-import org.vishia.zmake.ZmakeGenScript;
+import org.vishia.zmake.ZmakeGenScriptOld;
 
 
 public class StateMGen {

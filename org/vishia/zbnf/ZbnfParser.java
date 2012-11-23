@@ -2511,6 +2511,10 @@ public class ZbnfParser
 
   
   
+  /**Returns the XML-like result tree.
+   * Note that the {@link XmlNodeSimple} can be written as XML textfile or converted to a Java-XML-format (TODO)
+   * using {@link @org.vishia.xmlSimple.SimpleXmlOutputter}
+   * */
   public XmlNodeSimple<ZbnfParseResultItem> getResultTree(){
     if(parserStoreTopLevel.items.size()>0)
     { //parseResult.idxParserStore = 0;

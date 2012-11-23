@@ -1,4 +1,4 @@
-package org.vishia.zbnf;
+package org.vishia.textGenerator;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -10,9 +10,10 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.textGenerator.TextGenerator;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlNodeSimple;
+import org.vishia.zbnf.Zbnf2Xml;
+import org.vishia.zbnf.ZbnfParseResultItem;
 
 public class Zbnf2Text extends Zbnf2Xml
 {

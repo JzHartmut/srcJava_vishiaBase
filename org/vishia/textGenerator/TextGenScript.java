@@ -1,4 +1,4 @@
-package org.vishia.zmake;
+package org.vishia.textGenerator;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -17,14 +17,13 @@ import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
 import org.vishia.zbnf.ZbnfXmlOutput;
 
-/**This class contains control data and sub-routines to generate the output-file for all Zmake-targets.
+/**This class contains control data and sub-routines to generate output texts from internal data.
  * 
  * @author Hartmut Schorrig
  *
  */
-public class ZmakeGenScript
-{
-  /**Version and history
+public class TextGenScript {
+  /**Version, history and license.
    * <ul>
    * <li>2012-10-19 Hartmut chg: <:if...> works.
    * <li>2012-10-19 Hartmut chg: Renaming: {@link ScriptElement} instead Zbnf_ScriptElement (shorter). The Scriptelement
@@ -40,15 +39,14 @@ public class ZmakeGenScript
    * </ul>
    * 
    * <b>Copyright/Copyleft</b>:
-   * For this source the LGPL Lesser General Public License,
-   * published by the Free Software Foundation is valid.
+   * For this source the LGPL Lesser General Public License, published by the Free Software Foundation is valid.
    * It means:
    * <ol>
    * <li> You can use this source without any restriction for any desired purpose.
    * <li> You can redistribute copies of this source to everybody.
    * <li> Every user of this source, also the user of redistribute copies
    *    with or without payment, must accept this license for further using.
-   * <li> But the LPGL ist not appropriate for a whole software product,
+   * <li> But the LPGL is not appropriate for a whole software product,
    *    if this source is only a part of them. It means, the user
    *    must publish this part of source,
    *    but don't need to publish the whole source of the own product.
@@ -65,23 +63,31 @@ public class ZmakeGenScript
    * 
    */
   @SuppressWarnings("hiding")
-  static final public int version = 20111010;
+  static final public int version = 20121130;
 
   private final MainCmdLogging_ifc console;
 
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
   Zbnf_ZmakeGenCtrl zbnfZmakeGenCtrl = new Zbnf_ZmakeGenCtrl();
   
-  Map<String, Zbnf_genContent> zmakeTargets = new TreeMap<String, Zbnf_genContent>();
+  private final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
   
   private final Map<String, ScriptElement> subtexts = new TreeMap<String, ScriptElement>();
   
   
   
-  ScriptElement zbnf_genFile;
+  private final Map<String,ScriptElement> indexScriptVariables = new TreeMap<String,ScriptElement>();
+
+  /**List of the script variables in order of creation in the zmakeCtrl-file.
+   * The script variables can contain inputs of other variables which are defined before.
+   * Therefore the order is important.
+   */
+  private final List<ScriptElement> listScriptVariables = new LinkedList<ScriptElement>();
+
+  private ScriptElement zbnf_genFile;
   
 
-  public ZmakeGenScript(MainCmdLogging_ifc console)
+  public TextGenScript(MainCmdLogging_ifc console)
   { this.console = console;
   }
 
@@ -124,7 +130,10 @@ public class ZmakeGenScript
    * @param name The name of given < ?translator> in the end-users script.
    * @return null if the Zmake-target is not found.
    */
-  Zbnf_genContent searchZmakeTaget(String name){ return zmakeTargets.get(name); }
+  public final Zbnf_genContent searchZmakeTaget(String name){ 
+    ScriptElement target = zmakeTargets.get(name);
+    return target == null ? null : target.subContent;
+  }
   
   
   public final ScriptElement getFileScript(){ return zbnf_genFile; }
@@ -132,12 +141,13 @@ public class ZmakeGenScript
   
   public ScriptElement getSubtextScript(String name){ return subtexts.get(name); }
   
-  public Zbnf_genContent xxxgetScriptVariable(String sName)
+  public ScriptElement xxxgetScriptVariable(String sName)
   {
-    Zbnf_genContent content = zbnfZmakeGenCtrl.indexScriptVariables.get(sName);
+    ScriptElement content = indexScriptVariables.get(sName);
     return content;
   }
   
+  public List<ScriptElement> getListScriptVariables(){ return listScriptVariables; }
   
   public static final class DataPath{
     public String name;
@@ -148,7 +158,16 @@ public class ZmakeGenScript
   
   /**An element of the generate script, maybe a simple text, an condition etc.
    * It may have a sub content with a list of sub scrip elements if need, see aggregation {@link #subContent}. 
+   * <br>
+   * UML-Notation see {@link org.vishia.util.Docu_UML_simpleNotation}:
+   * <pre>
+   *   ScriptElement             GenContent          ScriptElement
+   *        |                         |              !The Sub content
+   *        |-----subContent--------->|                  |
+   *        |                         |                  |
+   *                                  |----content-----*>|
    * 
+   * </pre> 
    *
    */
   public final class ScriptElement
@@ -157,6 +176,7 @@ public class ZmakeGenScript
      * <table><tr><th>c</th><th>what is it</th></tr>
      * <tr><td>t</td><td>simple constant text</td></tr>
      * <tr><td>v</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>l</td><td>add to list</td></tr>
      * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>o</td><td>content of the output, {@link #text} describes the build-prescript, 
@@ -200,8 +220,11 @@ public class ZmakeGenScript
     public ScriptElement(char whatisit, String text)
     { this.whatisit = whatisit;
       this.text = text;
-      if("NXYZ".indexOf(whatisit)>=0){
+      if("NXYZvl".indexOf(whatisit)>=0){
         subContent = new Zbnf_genContent(false);
+      }
+      else if("IVL".indexOf(whatisit)>=0){
+        subContent = new Zbnf_genContent(true);
       }
     }
     
@@ -213,6 +236,10 @@ public class ZmakeGenScript
     public void set_text(String text){ subContent.content.add(new ScriptElement('t', text)); }
     
     
+    
+    public ScriptElement new_setVariable(){ return new ScriptElement('v', null); }
+
+    public void add_setVariable(ScriptElement val){ subContent.localVariableScripts.add(val); } 
     
     
     
@@ -297,6 +324,53 @@ public class ZmakeGenScript
       subContent.content.add(contentElement);
     }
     
+    public void set_outputValue(String text){ subContent.content.add(new ScriptElement('o', text)); }
+    
+    public void set_inputValue(String text){ subContent.content.add(new ScriptElement('i', text)); }
+    
+    public void set_variableValue(String text){ subContent.content.add(new ScriptElement('v', text)); }
+    
+    /**Set from ZBNF:  (\?*\?)<?listElement> */
+    public void set_listElement(){ subContent.content.add(new ScriptElement('e', null)); }
+    
+    public ScriptElement new_forInputContent()
+    { ScriptElement contentElement = new ScriptElement('I', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_forInputContent(ScriptElement val){}
+
+    
+    public ScriptElement new_forVariable()
+    { ScriptElement contentElement = new ScriptElement('V', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_forVariable(ScriptElement val){} //empty, it is added in new_forList()
+
+    
+    public ScriptElement new_forList()
+    { ScriptElement contentElement = new ScriptElement('L', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_forList(ScriptElement val){} //empty, it is added in new_forList()
+
+    
+    public ScriptElement new_addToList()
+    { ScriptElement subGenContent = new ScriptElement('l', null);
+      subContent.addToList.add(subGenContent.subContent);
+      return subGenContent;
+    }
+   
+    public void add_addToList(ScriptElement val)
+    {
+    }
+
+    
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void axxxdd_fnEmpty(ScriptElement val){  }
     
@@ -330,30 +404,13 @@ public class ZmakeGenScript
   }
 
   
-  /**Class for ZBNF parse result 
-   * <pre>
-genContent::=  ##<$NoWhiteSpaces>
-{ [?(\?/\?)]
-[ (\?= <variableAssignment?setVariable> (\?/=\?)
-| (\?:forInput\?) <genContent?forInputContent> (\?/forInput\?)
-| (\?:forList : <forList> (\?/forList\?)
-| (\?+ <variableAssignment?addToList> (\?/+\?)
-| (\?input\.<$?inputValue>\?)    
-| (\?output\.<$?outputValue>\?)
-| (\?*\?)<?listElement>
-| (\?<$?variableValue>\?)
-| (\?:\?)<genContentNoWhitespace?>(\?/\?)
-| (\?:text\?)<*|(\??text>(\?/text\?)  ##text in (?:text?).....(?/text?) with all whitespaces 
-| <*|(\??text>                        ##text after whitespace but inclusive trailing whitespaces
-]
-}.
-   * </pre>
-   * It is the content of a target in a generating script.
+  /**Organization class for a list of script elements inside another Scriptelement.
+   *
    */
   public final class Zbnf_genContent
   {
     /**True if < genContent> is called for any input, (?:forInput?) */
-    final boolean isContentForInput;
+    public final boolean isContentForInput;
     
     /**Set from ZBNF: */
     public boolean expandFiles;
@@ -366,7 +423,7 @@ genContent::=  ##<$NoWhiteSpaces>
      * The generator stores the results in a Map<String, String> localVariable. 
      * 
      */
-    List<Zbnf_genContent> localVariableScripts = new LinkedList<Zbnf_genContent>();
+    private final List<ScriptElement> localVariableScripts = new LinkedList<ScriptElement>();
     
     public final List<Zbnf_genContent> addToList = new LinkedList<Zbnf_genContent>();
     
@@ -377,65 +434,12 @@ genContent::=  ##<$NoWhiteSpaces>
     }
         
     
-    public List<Zbnf_genContent> getLocalVariables(){ return localVariableScripts; }
+    public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
     
-    public void set_outputValue(String text){ content.add(new ScriptElement('o', text)); }
     
-    public void set_inputValue(String text){ content.add(new ScriptElement('i', text)); }
-    
-    public void set_variableValue(String text){ content.add(new ScriptElement('v', text)); }
-    
-    /**Set from ZBNF:  (\?*\?)<?listElement> */
-    public void set_listElement(){ content.add(new ScriptElement('e', null)); }
-    
-    public Zbnf_genContent new_setVariable(){ return new Zbnf_genContent(false); }
-
-    public void add_setVariable(Zbnf_genContent val){ localVariableScripts.add(val); } 
-    
-    public Zbnf_genContent new_forInputContent()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
-      ScriptElement contentElement = new ScriptElement('I', null);
-      contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
-      content.add(contentElement);
-      return subGenContent;
+    public void set_name(String name){
+      cmpnName = name;
     }
-    
-    public void add_forInputContent(Zbnf_genContent val){}
-
-    
-    public Zbnf_genContent new_forVariable()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
-      ScriptElement contentElement = new ScriptElement('V', null);
-      contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
-      content.add(contentElement);
-      return subGenContent;
-    }
-    
-    public void add_forVariable(Zbnf_genContent val){} //empty, it is added in new_forList()
-
-    
-    public Zbnf_genContent new_forList()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
-      ScriptElement contentElement = new ScriptElement('L', null);
-      contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
-      content.add(contentElement);
-      return subGenContent;
-    }
-    
-    public void add_forList(Zbnf_genContent val){} //empty, it is added in new_forList()
-
-    
-    public Zbnf_genContent new_addToList()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(false);
-      addToList.add(subGenContent);
-      return subGenContent;
-    }
-   
-    public void add_addToList(Zbnf_genContent val)
-    {
-    }
-
-    
     
     public void XXXadd_datapath(String val)
     {
@@ -459,18 +463,10 @@ genContent::=  ##<$NoWhiteSpaces>
   public final class Zbnf_ZmakeGenCtrl
   {
 
-    Map<String,Zbnf_genContent> indexScriptVariables = new TreeMap<String,Zbnf_genContent>();
-
-    /**List of the script variables in order of creation in the zmakeCtrl-file.
-     * The script variables can contain inputs of other variables which are defined before.
-     * Therefore the order is important.
-     */
-    List<Zbnf_genContent> listScriptVariables = new LinkedList<Zbnf_genContent>();
-
     
-    public Zbnf_genContent new_ZmakeTarget(){ return new Zbnf_genContent(false); }
+    public ScriptElement new_ZmakeTarget(){ return new ScriptElement('Z', null); }
     
-    public void add_ZmakeTarget(Zbnf_genContent val){ zmakeTargets.put(val.cmpnName, val); }
+    public void add_ZmakeTarget(ScriptElement val){ zmakeTargets.put(val.name, val); }
     
     
     public ScriptElement new_subtext(){ return new ScriptElement('X', null); }
@@ -481,15 +477,16 @@ genContent::=  ##<$NoWhiteSpaces>
     
     public void add_genFile(ScriptElement val){  }
     
-    public Zbnf_genContent new_setVariable(){ return new Zbnf_genContent(false); }
+    public ScriptElement new_setVariable(){ return new ScriptElement('v', null); }
 
-    public void add_setVariable(Zbnf_genContent val)
-    { indexScriptVariables.put(val.cmpnName, val); 
+    public void add_setVariable(ScriptElement val)
+    { indexScriptVariables.put(val.name, val); 
       listScriptVariables.add(val);
     } 
     
 
   }
   
+
 
 }

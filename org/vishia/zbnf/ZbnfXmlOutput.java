@@ -60,9 +60,11 @@ import org.vishia.zbnf.ZbnfParser;
  * <li><code>name%</code>: Writes also the parsed syntax as content, if no other content is stored. 
  *      Especially for options with no deeper semantic statements like <code>[<?option> a|b|c]</code></li>
  * </ul>  
- * 
+ * @deprecated since 2012-11 because the {@link org.vishia.zbnf.ZbnfParser#getResultTree()}.
+ *  Example see {@link org.vishia.zbnf.Zbnf2Xml}
  *
  */
+@Deprecated
 public class ZbnfXmlOutput
 {
 
@@ -90,6 +92,9 @@ public class ZbnfXmlOutput
     OutputStreamWriter out = new OutputStreamWriter(fileOut, encoding);
     //Writer out = new FileWriter(sFileOut);
     write(zbnfTop, xmlnsList, out);
+    try{ out.close();
+    
+    } catch(IOException exc){ System.err.println("ZbnfXmlOutput - unexpected IOException;" + exc. getMessage()); }
   }
   
   /**Writes the XML Tree.
@@ -315,7 +320,7 @@ public class ZbnfXmlOutput
     String sNamespaceVal;
     if( (idxNs = sName.indexOf(':')) >0)
     { sNamespaceKey = sName.substring(0, idxNs);
-      sNamespaceVal = (String)xmlnsList.get(sNamespaceKey);
+      sNamespaceVal = xmlnsList.get(sNamespaceKey);
       sName = sName.substring(idxNs+1);
     }
     else

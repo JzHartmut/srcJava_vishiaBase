@@ -11,8 +11,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.Report;
+import org.vishia.textGenerator.TextGenScript;
 import org.vishia.util.FileSystem;
-import org.vishia.zmake.ZmakeGenScript.Zbnf_genContent;
 import org.vishia.zmake.ZmakeUserScript.UserFilepath;
 
 /**This class generates the output make file. */
@@ -42,7 +42,7 @@ public class ZmakeGenerator
 	
 	final private ZmakeUserScript.UserScript userScript;
 	
-	final private ZmakeGenScript mainGenScript;
+	final private TextGenScript mainGenScript;
 	
 	/**used for{@link #getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}.
 	 * It is filled from the content of the script variable "currDir".
@@ -62,7 +62,7 @@ public class ZmakeGenerator
 	 */
 	//final private List<String> indexAllAntTargets = new LinkedList<String>();
 	
-	public ZmakeGenerator(File fileAnt, ZmakeUserScript.UserScript userScript, ZmakeGenScript antGenCtrl, Report console) throws IOException
+	public ZmakeGenerator(File fileAnt, ZmakeUserScript.UserScript userScript, TextGenScript antGenCtrl, Report console) throws IOException
 	{
 	  this.outAnt = new FileWriter(fileAnt);
 		this.console = console;
@@ -81,10 +81,10 @@ public class ZmakeGenerator
 		StringBuilder uBuffer = new StringBuilder();
 		Gen_Content genVariable = new Gen_Content(null);
 		
-		for(Zbnf_genContent scriptVariableScript: mainGenScript.zbnfZmakeGenCtrl.listScriptVariables){
+		for(TextGenScript.ScriptElement scriptVariableScript: mainGenScript.getListScriptVariables()){
 			uBuffer.setLength(0);
-			genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript, null, null, null);
-			scriptVariables.put(scriptVariableScript.cmpnName, uBuffer.toString());
+			genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript.subContent, null, null, null);
+			scriptVariables.put(scriptVariableScript.name, uBuffer.toString());
 		}
 		//the variable (?=currDir?) may exist. Get it:
 		sCurrDir = scriptVariables.get("currDir");
@@ -94,13 +94,14 @@ public class ZmakeGenerator
 		
 		//Generate the (?:file?)-part.
 		Gen_Content genFile = new Gen_Content(null);
-		if(mainGenScript.zbnf_genFile == null){
+		TextGenScript.ScriptElement fileScript = mainGenScript.getFileScript();
+		if(fileScript == null){
 			final String sHint = "You must have a part in the ZmakeGen-script for the whole file output\n"
 				+ "Syntax: (?:file?) ...some outputs...(?/file?)\n";
 			throw new IllegalArgumentException(sHint);	
 		}
 		uBuffer.setLength(0);
-		genFile.gen_Content(uBuffer, outAnt, null, mainGenScript.zbnf_genFile.subContent, null, null);
+		genFile.gen_Content(uBuffer, outAnt, null, fileScript.subContent, null, null);
 		outAnt.append(uBuffer);
 		outAnt.close();
 	}
@@ -288,15 +289,15 @@ public class ZmakeGenerator
 		
 		  //Fill all local variable, which are defined in this script.
 			//store its values in the local Gen_Content-instance.
-			for(Zbnf_genContent variableScript: contentScript.localVariableScripts){
+			for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
 				StringBuilder uBufferVariable = new StringBuilder();
 				Gen_Content genVariable = new Gen_Content(this);
-				genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-				localVariables.put(variableScript.cmpnName, uBufferVariable);
+				genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript.subContent, forElements, srcPath);
+				localVariables.put(variableScript.name, uBufferVariable);
 			}
 		
 			//Generate the result for all output lists to fill and complete it.
-			for(Zbnf_genContent listContainer: contentScript.addToList){
+			for(TextGenScript.Zbnf_genContent listContainer: contentScript.addToList){
 				StringBuilder uBufferLocal = new StringBuilder();
 				Gen_Content contentData = new Gen_Content(this);	
 			  contentData.gen_Content(uBufferLocal, out, userTarget, listContainer, forElements, srcPath); 

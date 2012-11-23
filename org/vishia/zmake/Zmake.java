@@ -2,7 +2,9 @@ package org.vishia.zmake;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.Properties;
 
@@ -10,10 +12,13 @@ import java.util.Properties;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.textGenerator.TextGenScript;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
+import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
+import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
@@ -56,7 +61,7 @@ import org.vishia.zbnf.ZbnfXmlOutput;
  * For example some standard include paths or compiling options may be determined from the administrator only. 
  * The translation script may be usage-unspecific also, whereby all options are supplied in the user script.
  * <br><br>
- * The [[zbnfjax:xsl/ZmakeStd.zbnf]] script determines the syntax and semantic of the user script. 
+ * The [[zbnfjax:zmake/ZmakeStd.zbnf]] script determines the syntax and semantic of the user script. 
  * The given script containing in ,,zbnfjax/zmake/zmake.zbnf,, contains enough possibilities to formulate 
  * the users requests. It is adjusted with the Java-algorithm of the translator. 
  * But some enhancements are possible without changing the translator-program.
@@ -98,10 +103,10 @@ public class Zmake
     
     
     /**Path of ZBNF script for the input zmake script file*/
-    String sZbnfInput = "xsl/ZmakeStd.zbnf";
+    String sZbnfInput = "zmake/ZmakeStd.zbnf";
     
     /**Path of ZBNF script to read the sGenCtrl*/
-    String sZbnfGenCtrl = "xsl/ZmakeGenctrl.zbnf";
+    String sZbnfGenCtrl = "zmake/ZmakeGenctrl.zbnf";
     
     /**Path of script to control the generation of the output file. */
     String sGenCtrl = "xsl/ZmakeStd2Ant.genctrl";
@@ -122,7 +127,10 @@ public class Zmake
   /** Aggregation to the Console implementation class.*/
   private final MainCmd_ifc console;
 
-  private final ZmakeGenScript antGenCtrl;
+  /**
+   * 
+   */
+  private final TextGenScript genScript;
   
   /**String path for the absolute tmp dir. */
   private String tmpAbs;  
@@ -190,7 +198,7 @@ public class Zmake
   public Zmake(CallingArgs args, MainCmd_ifc console)
   { this.args = args;
     this.console = console;
-    antGenCtrl = new ZmakeGenScript(console);
+    genScript = new TextGenScript(console);
   }
   
   
@@ -394,7 +402,7 @@ public class Zmake
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
     //Build the data for ANT-generation control:
-    antGenCtrl.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
+    genScript.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.curDir + args.input + "\" with \"" 
       + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
@@ -419,9 +427,15 @@ public class Zmake
     console.writeInfo(" ok, set result ... ");
     ZbnfParseResultItem parseResult = parser.getFirstParseResult();
     //write XML output only to check:
+    XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
     if(sInputAbs_xml !=null){
+      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(sInputAbs_xml)); 
+      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
+      xmlOut.write(wrXml, xmlTop);
+      wrXml.close();
+      
       ZbnfXmlOutput xmlOutput = new ZbnfXmlOutput();
-      xmlOutput.write(parser, sInputAbs_xml);
+      xmlOutput.write(parser, sInputAbs_xml + "2.xml");
     }
     //write into Java classes:
     ZmakeUserScript.UserScript zmakeInput = new ZmakeUserScript.UserScript();
@@ -429,7 +443,7 @@ public class Zmake
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
-    ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, antGenCtrl, console);
+    ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, genScript, console);
     mng.gen_ZmakeOutput();
     console.writeInfoln("* done");
     

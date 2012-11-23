@@ -1054,7 +1054,10 @@ class ZbnfParserStore
         }
         semantic = semantic.substring(sep +1);
       } else {
-        if(semantic.startsWith("@")){
+        if((xmlNode !=null || xmlParent !=null) && semantic.startsWith("@")){
+          if(xmlNode == null){
+            xmlNode = xmlParent;
+          }
           xmlNode.setAttribute(semantic.substring(1), parseResult.getText());
         } else {
           xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic, parseResult);

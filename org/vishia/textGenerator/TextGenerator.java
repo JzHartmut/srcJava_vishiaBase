@@ -17,7 +17,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
-import org.vishia.zmake.ZmakeGenScript;
+import org.vishia.zmake.ZmakeGenScriptOld;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -57,7 +57,7 @@ public class TextGenerator {
    * <ul>
    * <li>2012-11-04 Hartmut chg: adaption to DataAccess respectively distinguish between getting a container or an simple element.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
-   * <li>2012-10-10 Usage of {@link ZmakeGenScript}.
+   * <li>2012-10-10 Usage of {@link TextGenScript}.
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
    *   was need.
@@ -112,7 +112,7 @@ public class TextGenerator {
   
   final MainCmdLogging_ifc log;
   
-  ZmakeGenScript genScript;
+  TextGenScript genScript;
   
   
   public TextGenerator(MainCmdLogging_ifc log){
@@ -130,7 +130,7 @@ public class TextGenerator {
    * @return
    */
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
-    genScript = new ZmakeGenScript(log);
+    genScript = new TextGenScript(log);
     this.accessPrivate = accessPrivate;
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     //Writer out = null;
@@ -181,11 +181,11 @@ public class TextGenerator {
   
   
   
-  private String genContent(ZmakeGenScript genScript, Object userData, Appendable out) throws IOException{
+  private String genContent(TextGenScript genScript, Object userData, Appendable out) throws IOException{
     this.out = out;
     this.data = userData;
     this.bWriteErrorInOutput = true;
-    ZmakeGenScript.ScriptElement contentScript = genScript.getFileScript();
+    TextGenScript.ScriptElement contentScript = genScript.getFileScript();
     Gen_Content genFile = new Gen_Content(null);
     String sError = genFile.genContent(contentScript.subContent, false);
     return sError;
@@ -229,21 +229,21 @@ public class TextGenerator {
      * @return
      * @throws IOException
      */
-    public String genContent(ZmakeGenScript.Zbnf_genContent contentScript, boolean bContainerHasNext) 
+    public String genContent(TextGenScript.Zbnf_genContent contentScript, boolean bContainerHasNext) 
     throws IOException{
       Appendable uBuffer = out;
       //Fill all local variable, which are defined in this script.
       //store its values in the local Gen_Content-instance.
-      for(ZmakeGenScript.Zbnf_genContent variableScript: contentScript.getLocalVariables()){
+      for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
         StringBuilder uBufferVariable = new StringBuilder();
         Gen_Content genVariable = new Gen_Content(this);
         //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-        localVariables.put(variableScript.cmpnName, uBufferVariable);
+        localVariables.put(variableScript.name, uBufferVariable);
       }
     
     
       //Generate direct requested output. It is especially on inner content-scripts.
-      for(ZmakeGenScript.ScriptElement contentElement: contentScript.content){
+      for(TextGenScript.ScriptElement contentElement: contentScript.content){
         switch(contentElement.whatisit){
         case 't': { 
           int posLine = 0;
@@ -295,7 +295,7 @@ public class TextGenerator {
           genSubtext(contentElement);
         } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
-          ZmakeGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
+          TextGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
           if(contentElement.name.equals("state1"))
             stop();
           Object container = getContent(contentElement.path, localVariables, true);
@@ -344,7 +344,7 @@ public class TextGenerator {
     
     
     
-    void generateIfContainerHasNext(ZmakeGenScript.ScriptElement hasNextScript, boolean bContainerHasNext) throws IOException{
+    void generateIfContainerHasNext(TextGenScript.ScriptElement hasNextScript, boolean bContainerHasNext) throws IOException{
       if(bContainerHasNext){
         (new Gen_Content(this)).genContent(hasNextScript.getSubContent(), false);
       }
@@ -353,11 +353,11 @@ public class TextGenerator {
     
     
     /**it contains maybe more as one if block and else. */
-    void generateIfStatement(ZmakeGenScript.ScriptElement ifStatement, Object userData) throws IOException{
-      Iterator<ZmakeGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
+    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Object userData) throws IOException{
+      Iterator<TextGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
-        ZmakeGenScript.ScriptElement contentElement = iter.next();
+        TextGenScript.ScriptElement contentElement = iter.next();
         switch(contentElement.whatisit){
           case 'G': { //if-block
             
@@ -375,7 +375,7 @@ public class TextGenerator {
       }//for
     }
     
-    boolean generateIfBlock(ZmakeGenScript.ScriptElement ifBlock, boolean bIfHasNext) throws IOException{
+    boolean generateIfBlock(TextGenScript.ScriptElement ifBlock, boolean bIfHasNext) throws IOException{
       Object check = getContent(ifBlock.path, localVariables, false);
       boolean bCondition;
       if(ifBlock.operator !=null){
@@ -398,13 +398,13 @@ public class TextGenerator {
     }
     
     
-    void genSubtext(ZmakeGenScript.ScriptElement contentElement) throws IOException{
-      ZmakeGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
+    void genSubtext(TextGenScript.ScriptElement contentElement) throws IOException{
+      TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
       if(subtextScript == null){
         writeError("<? *subtext:" + contentElement.name + "> not found.");
       }
       Gen_Content subtextGenerator = new Gen_Content(this);
-      for( ZmakeGenScript.DataPath referenceSetting: contentElement.getReferenceDataSettings()){
+      for( TextGenScript.DataPath referenceSetting: contentElement.getReferenceDataSettings()){
         Object ref = DataAccess.getData(referenceSetting.path, data, this.localVariables, true, true, false);
         if(ref !=null){
           subtextGenerator.localVariables.put(referenceSetting.name, ref);
