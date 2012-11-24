@@ -43,9 +43,9 @@ public class OutputDataTree {
           if(sName.equals("whatisit")){
             stop();
           }
-          out.append(sName).append(" = ");
           Class<?> type = field.getType();
           if(type.isPrimitive()){
+            out.append(sName).append(" = ");
             try{
               String name = type.getName();
               if(name.equals("int")){
@@ -69,6 +69,7 @@ public class OutputDataTree {
               out.append(" ?access ").append(exc.getMessage());
             }
           } else {
+            out.append(sName).append("(").append("@" + data.hashCode()).append(") = ");  ///
             try{ Object dataField = field.get(data);
               outData(recurs, field.getName(), dataField, out, bXML);
             } catch(Exception exc){

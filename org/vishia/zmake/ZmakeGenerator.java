@@ -115,7 +115,7 @@ public class ZmakeGenerator
 		for(ZmakeUserScript.UserTarget inpTarget: userScript.targets){
 			uBuffer.setLength(0);
 			//Note: target in Zmake maybe more as one target in ANT. It depends from the kind of target.
-			ZmakeGenScript.Zbnf_genContent antZmakeTarget = mainGenScript.searchZmakeTaget(inpTarget.translator);
+			TextGenScript.Zbnf_genContent antZmakeTarget = mainGenScript.searchZmakeTaget(inpTarget.translator);
 			if(antZmakeTarget == null){
 				console.writeError("Zmake - unknown target; " + inpTarget.translator);
 			} else {
@@ -169,7 +169,7 @@ public class ZmakeGenerator
 		boolean gen_Content(StringBuilder uBuffer
 			, Writer out
 			,	ZmakeUserScript.UserTarget userTarget
-			, ZmakeGenScript.Zbnf_genContent container
+			, TextGenScript.Zbnf_genContent container
 			, Map<String,ZmakeUserScript.UserFilepath> threadVariable
 			, ZmakeUserScript.UserFilepath srcPathP
 			) 
@@ -213,7 +213,7 @@ public class ZmakeGenerator
 		 */
 		private void genContentForInputset(StringBuilder uBuffer
 			,	ZmakeUserScript.UserTarget userTarget
-			, ZmakeGenScript.Zbnf_genContent genScript
+			, TextGenScript.Zbnf_genContent genScript
 			, ZmakeUserScript.UserInput inputIntern
 			) throws IOException
 		{
@@ -279,7 +279,7 @@ public class ZmakeGenerator
 			StringBuilder uBuffer
 		, Writer out	
 		,	ZmakeUserScript.UserTarget userTarget
-		, ZmakeGenScript.Zbnf_genContent contentScript
+		, TextGenScript.Zbnf_genContent contentScript
 		, Map<String,ZmakeUserScript.UserFilepath> forElements
 		, ZmakeUserScript.UserFilepath srcPath
 		, CharSequence listElement
@@ -311,7 +311,7 @@ public class ZmakeGenerator
 			}
 		
 			//Generate direct requested output. It is especially on inner content-scripts.
-			for(ZmakeGenScript.ScriptElement contentElement: contentScript.content){
+			for(TextGenScript.ScriptElement contentElement: contentScript.content){
 			  switch(contentElement.whatisit){
 			  case 't': { 
 			  	int posLine = 0;

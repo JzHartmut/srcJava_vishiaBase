@@ -1054,12 +1054,14 @@ class ZbnfParserStore
         }
         semantic = semantic.substring(sep +1);
       } else {
+        
         if((xmlNode !=null || xmlParent !=null) && semantic.startsWith("@")){
           if(xmlNode == null){
             xmlNode = xmlParent;
           }
           xmlNode.setAttribute(semantic.substring(1), parseResult.getText());
         } else {
+          //creates an attribute node which is added as attribute later.
           xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic, parseResult);
           if(!parseResult.isComponent()){
             //add the textual parse result to a leaf node.

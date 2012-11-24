@@ -3,8 +3,10 @@ package org.vishia.zmake;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.text.ParseException;
 import java.util.Properties;
 
@@ -12,7 +14,9 @@ import java.util.Properties;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenScript;
+import org.vishia.textGenerator.TextGenerator;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
@@ -426,25 +430,39 @@ public class Zmake
     }
     console.writeInfo(" ok, set result ... ");
     ZbnfParseResultItem parseResult = parser.getFirstParseResult();
-    //write XML output only to check:
+    //
     XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
-    if(sInputAbs_xml !=null){
+    if(args.sInputXml !=null){
+      //write XML output only to check the input script.
       OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(sInputAbs_xml)); 
       SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
       xmlOut.write(wrXml, xmlTop);
       wrXml.close();
       
-      ZbnfXmlOutput xmlOutput = new ZbnfXmlOutput();
-      xmlOutput.write(parser, sInputAbs_xml + "2.xml");
+      //ZbnfXmlOutput xmlOutput = new ZbnfXmlOutput();
+      //xmlOutput.write(parser, sInputAbs_xml + "2.xml");
     }
     //write into Java classes:
     ZmakeUserScript.UserScript zmakeInput = new ZmakeUserScript.UserScript();
     ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
+    
+    if(args.sInputXml !=null){
+      FileWriter outData = new FileWriter(sInputAbs_xml + ".javadat");
+      OutputDataTree outputterData = new OutputDataTree();
+      outputterData.output(0, zmakeInput, outData, false);
+      outData.close();
+    }
+
+    
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
-    ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, genScript, console);
-    mng.gen_ZmakeOutput();
+    TextGenerator gen = new TextGenerator(console);
+    Writer out = new FileWriter(fileOut);
+    gen.generate(zmakeInput, fileGenCtrl, out, true, null);
+    out.close();
+    //ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, genScript, console);
+    //mng.gen_ZmakeOutput();
     console.writeInfoln("* done");
     
         
