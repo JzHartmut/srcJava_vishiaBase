@@ -25,6 +25,7 @@ public class OutputDataTree {
       
     } else 
     { processedAlready.put(hash, data);
+      out.append(" (").append("@" + data.hashCode()).append(") = ");  ///
       if(recurs > 100){
         recurs +=1;
       }
@@ -44,8 +45,8 @@ public class OutputDataTree {
             stop();
           }
           Class<?> type = field.getType();
+          out.append(sName).append(" = ");
           if(type.isPrimitive()){
-            out.append(sName).append(" = ");
             try{
               String name = type.getName();
               if(name.equals("int")){
@@ -69,7 +70,6 @@ public class OutputDataTree {
               out.append(" ?access ").append(exc.getMessage());
             }
           } else {
-            out.append(sName).append("(").append("@" + data.hashCode()).append(") = ");  ///
             try{ Object dataField = field.get(data);
               outData(recurs, field.getName(), dataField, out, bXML);
             } catch(Exception exc){

@@ -172,12 +172,24 @@ public class TextGenerator {
   
   
   
+
   
-  
-  private Object getContent(List<String> path, Map<String, Object> localVariables, boolean bContainer)
+  private Object getContent(List<DataAccess.DatapathElement> dataRef, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
-  { return DataAccess.getData(path,data, localVariables, bWriteErrorInOutput, accessPrivate, bContainer);
+  { Object dataRet;
+      try{
+        dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
+      } catch(NoSuchFieldException exc){
+        dataRet = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
+        if(!bWriteErrorInOutput){
+          throw new IllegalArgumentException(dataRet.toString());
+        }
+      }
+      return dataRet;
   }
+  
+
+  
   
   
   
@@ -282,8 +294,8 @@ public class TextGenerator {
           if(contentElement.text !=null && contentElement.text.equals("target")){
             //generates all targets, only advisable in the (?:file?)
             //genUserTargets(out);
-          } else if(contentElement.path !=null){
-            Object oContent = getContent(contentElement.path, localVariables, false);
+          } else if(contentElement.datapath !=null){
+            Object oContent = getContent(contentElement.datapath, localVariables, false);
             text = DataAccess.getStringFromObject(oContent);
             //text = getTextofVariable(userTarget, contentElement.text, this);
             uBuffer.append(text); 
@@ -291,6 +303,14 @@ public class TextGenerator {
             //uBuffer.append(listElement);
           }
         } break;
+        /*
+        case 'g': {
+          final CharSequence text;
+          Object oContent = getContent(contentElement, localVariables, false);
+          text = DataAccess.getStringFromObject(oContent);
+          uBuffer.append(text); 
+        } break;
+        */
         case 's': {
           genSubtext(contentElement);
         } break;
@@ -298,7 +318,7 @@ public class TextGenerator {
           TextGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
           if(contentElement.name.equals("state1"))
             stop();
-          Object container = getContent(contentElement.path, localVariables, true);
+          Object container = getContent(contentElement.datapath, localVariables, true);
           if(container instanceof String && ((String)container).startsWith("<?")){
             writeError((String)container);
           }
@@ -376,7 +396,7 @@ public class TextGenerator {
     }
     
     boolean generateIfBlock(TextGenScript.ScriptElement ifBlock, boolean bIfHasNext) throws IOException{
-      Object check = getContent(ifBlock.path, localVariables, false);
+      Object check = getContent(ifBlock.datapath, localVariables, false);
       boolean bCondition;
       if(ifBlock.operator !=null){
         String value = check == null ? "null" : check.toString();
@@ -404,10 +424,14 @@ public class TextGenerator {
         writeError("<? *subtext:" + contentElement.name + "> not found.");
       }
       Gen_Content subtextGenerator = new Gen_Content(this);
-      for( TextGenScript.DataPath referenceSetting: contentElement.getReferenceDataSettings()){
-        Object ref = DataAccess.getData(referenceSetting.path, data, this.localVariables, true, true, false);
-        if(ref !=null){
-          subtextGenerator.localVariables.put(referenceSetting.name, ref);
+      List<TextGenScript.Arguments> referenceSettings = contentElement.getReferenceDataSettings();
+      if(referenceSettings !=null){
+        for( TextGenScript.Arguments referenceSetting: referenceSettings){
+          Object ref;
+            ref = getContent(referenceSetting.datapath, localVariables, false);
+          if(ref !=null){
+            subtextGenerator.localVariables.put(referenceSetting.name, ref);
+          }
         }
       }
       subtextGenerator.genContent(subtextScript.subContent, false);

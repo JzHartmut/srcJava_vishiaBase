@@ -11,6 +11,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.DataAccess;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.zbnf.ZbnfJavaOutput;
@@ -149,9 +150,23 @@ public class TextGenScript {
   
   public List<ScriptElement> getListScriptVariables(){ return listScriptVariables; }
   
-  public static final class DataPath{
+  
+  
+  public static final class Arguments{
     public String name;
-    public List<String> path;
+    //public List<String> path;
+    List<DataAccess.DatapathElement> datapath;
+    
+    public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
+    
+    public void add_datapathElement(DataAccess.DatapathElement val){ 
+      if(datapath == null){
+        datapath = new LinkedList<DataAccess.DatapathElement>();
+      }
+      datapath.add(val); 
+    }
+    
+
   }
   
   
@@ -181,7 +196,8 @@ public class TextGenScript {
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>o</td><td>content of the output, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
-     * <tr><td>e</td><td>given content of a list or for-element. List: {@link #text}==null, Always: {@link #subContent} == null.</td></tr>
+     * <tr><td>e</td><td>content of a data path.</td></tr>
+     * <tr><td>XXXg</td><td>content of a data path starting with an internal variable (reference) or value of the variable.</td></tr>
      * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
      * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
@@ -208,9 +224,20 @@ public class TextGenScript {
     
     public String value;
     
-    public List<String> path;
+    //public List<String> path;
     
-    private List<DataPath> refenceData;
+    List<DataAccess.DatapathElement> datapath;
+    
+    public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
+    
+    public void add_datapathElement(DataAccess.DatapathElement val){ 
+      if(datapath == null){
+        datapath = new LinkedList<DataAccess.DatapathElement>();
+      }
+      datapath.add(val); 
+    }
+    
+    private List<Arguments> refenceData;
     
     //public String elementPart;
     
@@ -229,7 +256,7 @@ public class TextGenScript {
     }
     
     
-    public List<DataPath> getReferenceDataSettings(){ return refenceData; }
+    public List<Arguments> getReferenceDataSettings(){ return refenceData; }
     
     public Zbnf_genContent getSubContent(){ return subContent; }
     
@@ -237,6 +264,8 @@ public class TextGenScript {
     
     
     
+    /**Defines a variable with initial value. <= <variableAssign?setVariable> \<\.=\>
+     */
     public ScriptElement new_setVariable(){ return new ScriptElement('v', null); }
 
     public void add_setVariable(ScriptElement val){ subContent.localVariableScripts.add(val); } 
@@ -244,11 +273,11 @@ public class TextGenScript {
     
     
     /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
-    public DataPath new_referencedData(){ return new DataPath(); }
+    public Arguments new_referencedData(){ return new Arguments(); }
     
     /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
-    public void add_referencedData(DataPath val){ 
-      if(refenceData == null){ refenceData = new LinkedList<DataPath>(); }
+    public void add_referencedData(Arguments val){ 
+      if(refenceData == null){ refenceData = new LinkedList<Arguments>(); }
       refenceData.add(val); }
     
     
@@ -258,6 +287,12 @@ public class TextGenScript {
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void add_valueElement(ScriptElement val){ subContent.content.add(val); }
+    
+    /**Set from ZBNF:  (\?*<$?valueElement>\?) */
+    //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
+    
+    /**Set from ZBNF:  (\?*<$?forElement>\?) */
+    //public void add_valueVariable(ScriptElement val){ subContent.content.add(val); }
     
     public ScriptElement new_forContainer()
     { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
@@ -328,10 +363,10 @@ public class TextGenScript {
     
     public void set_inputValue(String text){ subContent.content.add(new ScriptElement('i', text)); }
     
-    public void set_variableValue(String text){ subContent.content.add(new ScriptElement('v', text)); }
+    //public void set_variableValue(String text){ subContent.content.add(new ScriptElement('v', text)); }
     
     /**Set from ZBNF:  (\?*\?)<?listElement> */
-    public void set_listElement(){ subContent.content.add(new ScriptElement('e', null)); }
+    //public void set_listElement(){ subContent.content.add(new ScriptElement('e', null)); }
     
     public ScriptElement new_forInputContent()
     { ScriptElement contentElement = new ScriptElement('I', null);
@@ -383,7 +418,8 @@ public class TextGenScript {
       case 'v': return "(?" + text + "?)";
       case 'o': return "(?outp." + text + "?)";
       case 'i': return "(?inp." + text + "?)";
-      case 'e': return "<*" + path + ">";
+      case 'e': return "<*" + datapath + ">";
+      //case 'g': return "<$" + path + ">";
       case 's': return "<*subtext:" + name + ">";
       case 'I': return "(?forInput?)...(/?)";
       case 'V': return "(?for:" + text + "?)";

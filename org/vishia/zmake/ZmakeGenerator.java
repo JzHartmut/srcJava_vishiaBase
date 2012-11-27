@@ -344,7 +344,8 @@ public class ZmakeGenerator
 			  		out.append(uBuffer);   //flush content before.
 			  		uBuffer.setLength(0);  //fill new
 			  		genUserTargets(out);
-			    } else if(contentElement.path !=null) {
+			  		/*
+			    } else if(contentElement.datap !=null) {
 			  		ZmakeUserScript.UserFilepath file;
 			  		String eName = contentElement.path.get(0);
 			  		String elementPart = contentElement.path.size() >=2 ? contentElement.path.get(0) : null;
@@ -354,7 +355,7 @@ public class ZmakeGenerator
 			  		} else {
 			  		  text = getTextofVariable(userTarget, eName, this);
 					  	uBuffer.append(text); 
-			  		}
+			  		}*/
 		  		} else if(contentElement.text !=null){
 			  	 	text = getTextofVariable(userTarget, contentElement.text, this);
 				  	uBuffer.append(text); 
