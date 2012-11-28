@@ -55,6 +55,7 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-11-04 Hartmut chg: adaption to DataAccess respectively distinguish between getting a container or an simple element.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
    * <li>2012-10-10 Usage of {@link TextGenScript}.

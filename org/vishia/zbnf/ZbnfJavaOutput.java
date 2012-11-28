@@ -704,7 +704,11 @@ public class ZbnfJavaOutput
     }  
     else
     { if(childInstance == null)
-      { childInstance = childClass.newInstance();
+      { try{ childInstance = childClass.newInstance();
+      
+        } catch(Exception exc){
+          throw new InstantiationException(exc.getMessage());
+        }
         element.set(outputInstance, childInstance);
       }
       child = new ChildInstanceAndClass(childInstance, childClass, false);

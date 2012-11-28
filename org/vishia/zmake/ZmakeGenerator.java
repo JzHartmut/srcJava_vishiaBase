@@ -233,7 +233,7 @@ public class ZmakeGenerator
           final String sPathSearch = basePath + ":" + filePath;
 				  FileSystem.addFilesWithBasePath(sPathSearch, listFiles);
           for(FileSystem.FileAndBasePath file1: listFiles){
-            ZmakeUserScript.UserFilepath file2 = new ZmakeUserScript.UserFilepath();
+            ZmakeUserScript.UserFilepath file2 = new ZmakeUserScript.UserFilepath(null);
             if(file1.basePath !=null ){
               int posEnd = file1.basePath.length() -1;  //last char is path separator, file2.pathbase without separator!
               if(file.absPath){

@@ -26,6 +26,8 @@ import org.vishia.zbnf.ZbnfXmlOutput;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2012-11-24 Hartmut chg: @{@link ScriptElement#datapath} with {@link DataAccess.DatapathElement} 
+   * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
    * <li>2012-10-19 Hartmut chg: Renaming: {@link ScriptElement} instead Zbnf_ScriptElement (shorter). The Scriptelement
    *   is the component for the genContent-Elements now instead Zbnf_genContent. This class contains attributes of the
