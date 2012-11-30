@@ -95,9 +95,9 @@ public class TextGenerator {
   
   
   
-  BufferedReader readerScript;
+  //BufferedReader readerScript;
   
-  Appendable out;
+  //Appendable out;
 
   //StringBuilder uLine = new StringBuilder(5000);
 
@@ -120,22 +120,24 @@ public class TextGenerator {
     this.log = log;
   }
   
-  /**
-   * @param userData
-   * @param fileScript
-   * @param fOut
+  
+  
+  /**Generates a text described with a file given script from any data. This is the main routine of this class.
+   * @param userData The data pool where all data are stored
+   * @param fileScript The script to generate the text context
+   * @param out output for the text
    * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
    *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
    *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
-   * @param testOut
-   * @return
+   * @param testOut if not null then outputs a data tree of the generate script.
+   * @return null if no error or an error string.
    */
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
     genScript = new TextGenScript(log);
     this.accessPrivate = accessPrivate;
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     //Writer out = null;
-    this.out = out;
+    //this.out = out;
     String sError = null;
     try{ 
       genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
@@ -178,15 +180,17 @@ public class TextGenerator {
   private Object getContent(List<DataAccess.DatapathElement> dataRef, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
   { Object dataRet;
-      try{
-        dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
-      } catch(NoSuchFieldException exc){
-        dataRet = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
-        if(!bWriteErrorInOutput){
-          throw new IllegalArgumentException(dataRet.toString());
-        }
+    if(dataRef.size() >=1 && dataRef.get(0).ident.equals("$objDirW"))
+      Assert.stop();
+    try{
+      dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
+    } catch(NoSuchFieldException exc){
+      dataRet = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
+      if(!bWriteErrorInOutput){
+        throw new IllegalArgumentException(dataRet.toString());
       }
-      return dataRet;
+    }
+    return dataRet;
   }
   
 
@@ -195,17 +199,40 @@ public class TextGenerator {
   
   
   private String genContent(TextGenScript genScript, Object userData, Appendable out) throws IOException{
-    this.out = out;
+    //this.out = out;
     this.data = userData;
     this.bWriteErrorInOutput = true;
-    TextGenScript.ScriptElement contentScript = genScript.getFileScript();
+
     Gen_Content genFile = new Gen_Content(null);
-    String sError = genFile.genContent(contentScript.subContent, false);
+    
+    
+    for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
+      StringBuilder uVariable = new StringBuilder();
+      Gen_Content genVariable = new Gen_Content(null);
+      genVariable.genContent(scriptVariableScript.getSubContent(), uVariable, false);
+      //genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript.subContent, null, null, null);
+      genFile.localVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
+    }
+    
+    /*
+    //the variable (?=currDir?) may exist. Get it:
+    sCurrDir = scriptVariables.get("currDir");
+    if(sCurrDir == null){
+      sCurrDir = "";
+    }
+    */
+
+    
+    
+    
+    
+    TextGenScript.ScriptElement contentScript = genScript.getFileScript();
+    String sError = genFile.genContent(contentScript.subContent, out, false);
     return sError;
   }
     
   
-  void writeError(String sError) throws IOException{
+  void writeError(String sError, Appendable out) throws IOException{
     if(bWriteErrorInOutput){
       out.append(sError);
     } else {
@@ -242,7 +269,7 @@ public class TextGenerator {
      * @return
      * @throws IOException
      */
-    public String genContent(TextGenScript.Zbnf_genContent contentScript, boolean bContainerHasNext) 
+    public String genContent(TextGenScript.Zbnf_genContent contentScript, Appendable out, boolean bContainerHasNext) 
     throws IOException{
       Appendable uBuffer = out;
       //Fill all local variable, which are defined in this script.
@@ -250,6 +277,8 @@ public class TextGenerator {
       for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
         StringBuilder uBufferVariable = new StringBuilder();
         Gen_Content genVariable = new Gen_Content(this);
+        TextGenScript.Zbnf_genContent content = variableScript.getSubContent();
+        genVariable.genContent(content, out, false);
         //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
         localVariables.put(variableScript.name, uBufferVariable);
       }
@@ -313,7 +342,7 @@ public class TextGenerator {
         } break;
         */
         case 's': {
-          genSubtext(contentElement);
+          genSubtext(contentElement, out);
         } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
           TextGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
@@ -321,7 +350,7 @@ public class TextGenerator {
             stop();
           Object container = getContent(contentElement.datapath, localVariables, true);
           if(container instanceof String && ((String)container).startsWith("<?")){
-            writeError((String)container);
+            writeError((String)container, out);
           }
           else if(container !=null && container instanceof Iterable<?>){
             Iterator<?> iter = ((Iterable<?>)container).iterator();
@@ -330,7 +359,7 @@ public class TextGenerator {
               if(foreachData !=null){
                 Gen_Content genFor = new Gen_Content(this);
                 genFor.localVariables.put(contentElement.name, foreachData);
-                genFor.genContent(subContent, iter.hasNext());
+                genFor.genContent(subContent, out, iter.hasNext());
               }
             }
           }
@@ -344,16 +373,16 @@ public class TextGenerator {
               if(foreachData !=null){
                 Gen_Content genFor = new Gen_Content(this);
                 genFor.localVariables.put(contentElement.name, foreachData);
-                genFor.genContent(subContent, iter.hasNext());
+                genFor.genContent(subContent, out, iter.hasNext());
               }
             }
           }
         } break;
         case 'F': { 
-          generateIfStatement(contentElement, data);
+          generateIfStatement(contentElement, data, out);
         } break;
         case 'N': {
-          generateIfContainerHasNext(contentElement, bContainerHasNext);
+          generateIfContainerHasNext(contentElement, out, bContainerHasNext);
         } break;
         default: 
           uBuffer.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
@@ -365,16 +394,16 @@ public class TextGenerator {
     
     
     
-    void generateIfContainerHasNext(TextGenScript.ScriptElement hasNextScript, boolean bContainerHasNext) throws IOException{
+    void generateIfContainerHasNext(TextGenScript.ScriptElement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
       if(bContainerHasNext){
-        (new Gen_Content(this)).genContent(hasNextScript.getSubContent(), false);
+        (new Gen_Content(this)).genContent(hasNextScript.getSubContent(), out, false);
       }
     }
     
     
     
     /**it contains maybe more as one if block and else. */
-    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Object userData) throws IOException{
+    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Object userData, Appendable out) throws IOException{
       Iterator<TextGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
@@ -382,11 +411,11 @@ public class TextGenerator {
         switch(contentElement.whatisit){
           case 'G': { //if-block
             
-            found = generateIfBlock(contentElement, iter.hasNext());
+            found = generateIfBlock(contentElement, out, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
-              genContent(contentElement.subContent, false);
+              genContent(contentElement.subContent, out, false);
             }
           } break;
           default:{
@@ -396,7 +425,7 @@ public class TextGenerator {
       }//for
     }
     
-    boolean generateIfBlock(TextGenScript.ScriptElement ifBlock, boolean bIfHasNext) throws IOException{
+    boolean generateIfBlock(TextGenScript.ScriptElement ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
       Object check = getContent(ifBlock.datapath, localVariables, false);
       boolean bCondition;
       if(ifBlock.operator !=null){
@@ -406,23 +435,23 @@ public class TextGenerator {
         } else if(ifBlock.operator.equals("==")){
           bCondition = check != null && value.trim().equals(ifBlock.value); 
         } else {
-          writeError(" faulty operator " + ifBlock.operator);
+          writeError(" faulty operator " + ifBlock.operator, out);
           bCondition = false;
         }
       } else {
         bCondition= check !=null;
       }
       if(bCondition){
-        genContent(ifBlock.subContent, bIfHasNext);
+        genContent(ifBlock.subContent, out, bIfHasNext);
       }
       return bCondition;
     }
     
     
-    void genSubtext(TextGenScript.ScriptElement contentElement) throws IOException{
+    void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
       TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
       if(subtextScript == null){
-        writeError("<? *subtext:" + contentElement.name + "> not found.");
+        writeError("<? *subtext:" + contentElement.name + "> not found.", out);
       }
       Gen_Content subtextGenerator = new Gen_Content(this);
       List<TextGenScript.Arguments> referenceSettings = contentElement.getReferenceDataSettings();
@@ -435,7 +464,7 @@ public class TextGenerator {
           }
         }
       }
-      subtextGenerator.genContent(subtextScript.subContent, false);
+      subtextGenerator.genContent(subtextScript.subContent, out, false);
     }
     
     

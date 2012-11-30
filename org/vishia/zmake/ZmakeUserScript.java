@@ -64,31 +64,66 @@ public class ZmakeUserScript
   
   
   /**This class describes one file entry in a zmake script. The file entry can contain wild cards.
-   * It may be a absolute or a relative path. It can have a base path.
+   * It may be a absolute or a relative path. It can have a base path and a local path part.
    * <ul>
    * <li>
-   * If you write
-   * <pre>
-   *   anyPath/path:localPath/path/file.ext
-   * </pre>
-   *   it describes a path which part from <code>localPath</code> can be used extra.
-   * <li>If this file entry is member of a file set, the file set can have a general path.
-   *   The without <code>:</code> in path this entry describes the local path if a drive letter is not given.  
-   * <li>If this entry contains a drive letter or starts with slash, it is a absolute path.
-   *   Elsewhere it is relative. The general path in the file set can be absolute then.
-   *   If the general path in the file set is absolute, this file entry should not contain a drive letter.  
+   * <li><b>localpath</b>:
+   *   If you write <code>anyPath/path:localPath/path/file.ext</code> then it describes a path which part 
+   *    from <code>localPath</code> can be used as path to the file in some scripts. 
+   *    <ul>
+   *    <li>For example in C-compilation object-files can be stored in sub directories of the objects destination directory 
+   *      which follows this local path designation.
+   *    <li>Another example: copying some files from one directory location to another in designated sub directories.
+   *    <ul> 
+   * <li><b>General path</b>: If this file entry is member of a file set, the file set can have a general path.
+   *   It is given by the {@link UserFileset#srcpath}. A given general path is used for all methods. 
+   *   Only this entry describes an absolute path the general path is not used. 
+   * <li><b>Drive letter or select path<b>: On windows systems a drive letter can be used in form <code>A:</code>.
+   *   The path should not be absolute. For example <code>"X:mypath\file.ext"</code> describes a file starting from the 
+   *   current directory of the <code>X</code> drive. Any drive has its own current directory. A user can use this capability
+   *   of windows to set different current directories in special maybe substitute drives.
+   * <li><b>Drive letter as select path<b>:  
+   *   It may be possible (future extension) to use this capability independent of windows in this class. 
+   *   For that the {@link #parent} can have some paths associated to drive letters with local meaning,
+   *   If the path starts with a drive letter, the associated path is searched in the parents drive list. 
+   * <li><b>Absolute path</b>: If this entry starts with slash or backslash, maybe after a drive designation for windows systems,
+   *   it is an absolute path. Elsewhere the parent's general path can be absolute. If an absolute path is requested
+   *   calling {@link #absFile()} or adequate and the path is not given as absolute path, then the current directory is used
+   *   as prefix for the path. The current directory is a property of the {@link UserScript#sCurrDir}. The current directory
+   *   of the operation system is not used for that. 
+   * <li><b>opeation systems current directory<b>: In opposite if you generate a relative path and the executing system
+   *   expects a normal path then it may use the operation system's current directory. But that behaviour is outside of this tool.
+   * <li><b>Slash or backslash</b>: The user script can contain slash characters for path directory separation also for windows systems.
+   *   It is recommended to use slash. The script which should be generate may expect back slashes on windows systems.
+   *   Therefore all methods which returns a path are provided in 2 forms: With "W" on end of there name it is the windows version
+   *   which converts given slash characters in backslash in its return value. So the generated script will contain backslash characters.
+   *   Note that some tools in windows accept a separation with slash too. Especial in C-sources an <code>#include <path/file.h></code>
+   *   should be written with slash or URLs (hyperlinks) should be written with slash in any case.    
+   * <li><b>Return value of methods</b>: All methods which assembles parts of the path returns a {@link java.lang.CharSequence}.
+   *   The instance type of the CharSequence is either {@link java.lang.String} or {@link java.lang.StringBuilder}.
+   *   It is not recommended that a user casts the instance type to StringBuilder, then changes it, stores references and
+   *   expects that is unchanged. Usual either references to {@link java.lang.CharSequence} or {@link java.lang.String} are expected
+   *   as argument type for further processing. If a String is need, one can invoke returnValue.toString(); 
+   *   <br><br>
+   *   The usage of a {@link java.lang.CharSequence} saves memory space in opposite to concatenate Strings and then return
+   *   a new String. In user algorithms it may be recommended to use  {@link java.lang.CharSequence} argument types 
+   *   instead {@link java.lang.String} if the reference is not stored permanently but processed immediately.
+   *   <br><br> 
+   *   If a reference is stored for a longer time in multithreading or in complex algorithms, a {@link java.lang.String}
+   *   preserves that the content of the referenced String is unchanged in any case. A {@link java.lang.CharSequence} does not
+   *   assert that it is unchanged in any case. Therefore in that case the usage of {@link java.lang.String} is recommended.
    * </ul>  
    * <br>
-   * ZBNF-result for
+   * ZBNF-syntax parsing an Zmake input script for this class:
    * <pre>
 prepFilePath::=<$NoWhiteSpaces><! *?>
 [<!.?@drive>:]               ## only 1 char with followed : is drive
 [ [/|\\]<?@absPath>]         ## starting with / is absolute path
-[<*:?@pathbase>[?:=]:]       ## all until : is pathbase
+[<*:?@pathbase>[?:=]:]       ## all until : is pathbase But ":=" is not expected after that.
 [ <*|**?@path>               ## all until ** is path
 | <toLastCharIncl:/\\?@path> ## or all until last \\ or / is path
 |]                           ## or no path is given.
-[ **<?@allTree>[/\\] ]       ## ** is found, than files in subtree
+[ **<?@allTree>[/\\] ]       ## ** / is found, than files in subtree
 [ <**?@file>                 ## all until * is the file (begin)
   *<?@someFiles>             ## * detect: set someFiles
 | <toLastChar:.?@file>       ## or all until dot is the file
@@ -122,6 +157,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     boolean allTree, someFiles, wildcardExt;
     
+    private static UserFilepath emptyParent = new UserFilepath(null);
+    
     UserFilepath(UserFileset parent){
       this.parent = parent;
     }
@@ -137,9 +174,10 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      */
     public String localPathName(){ return path + file; }
     
+    
+    
     /**Method can be called in the generation script: <*path.localFile()>. 
-     * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
-     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+     * @return the local path to this file.
      */
     public CharSequence localFile(){ 
       StringBuilder uRet = new StringBuilder();
@@ -152,10 +190,15 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     }
     
     
-    /**Method can be called in the generation script: <*path.localPathName()>. 
+    /**Method can be called in the generation script: <*path.localDir()>. 
      * @return the local path part with file without extension.
      */
     public String localDir(){ return path; }
+    
+    /**Method can be called in the generation script: <*path.localDir()>. 
+     * @return the local path part with file without extension.
+     */
+    public String localDirW(){ return path.replace('/', '\\'); }
     
     /**Method can be called in the generation script: <*path.localPathName()>. 
      * @return the local path part with file without extension.
@@ -171,23 +214,50 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     /**Method can be called in the generation script: <*path.localPathName()>. 
      * @return the local path part with file without extension.
      */
-    public String nameExt(){ return file + ext; }
+    public CharSequence nameExt(){ StringBuilder uRet = new StringBuilder(); return uRet.append(file).append(ext); }
     
     /**Method can be called in the generation script: <*path.localPathName()>. 
      * @return the local path part with file without extension.
      */
     public String ext(){ return ext; }
     
-    /**Method can be called in the generation script: <*path.file()>. 
-     * @return the whole path inclusive a given general path in a {@link UserFileSet}.
-     *   Either as absolute or as relative path.
+    
+    /**Method can be called in the generation script: <*basePath()>. 
+     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
+     *   till a ':' in the input path or an empty string.
+     *   Either as absolute or as relative path how it is given.
      */
     public CharSequence basePath(){ 
-      StringBuilder uRet = new StringBuilder();
-      if(this.drive !=null){ uRet.append(this.drive).append(':'); }
-      if(this.pathbase !=null){ uRet.append(this.pathbase); }
-      return uRet;
+      UserFilepath generalPath = parent !=null && parent.srcpath !=null ? parent.srcpath : emptyParent;
+      if(pathbase !=null || (generalPath.pathbase !=null)){
+        StringBuilder uRet = new StringBuilder();
+        if(this.drive !=null){ uRet.append(this.drive).append(':'); }
+        else if(generalPath.drive !=null){
+          uRet.append(parent.srcpath.drive).append(':'); 
+        }
+        if(absPath){ uRet.append('/'); }
+        else if(generalPath.absPath){ uRet.append('/'); }
+        //
+        if(this.pathbase !=null){
+          //append a general path completely firstly.
+          if(generalPath.pathbase !=null){ uRet.append(this.pathbase).append('/'); }
+          int pos = uRet.length();
+          uRet.append(generalPath.path).append(generalPath.file).append(generalPath.ext);
+          if(uRet.length() > pos){ uRet.append('/');  } //after path.file.ext
+        }
+        else if(generalPath.pathbase !=null){
+          //only pathbase of the generalPath because a local pathBase is not given.
+          uRet.append(parent.srcpath.pathbase); 
+        }
+        return uRet;
+      } else {
+        return "";
+      }
     }
+    
+    
+    
+    public CharSequence basePathW(){ return toWindows(basePath()); }
     
     
     /**Method can be called in the generation script: <*path.file()>. 
@@ -265,6 +335,21 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       if(this.pathbase !=null && this.pathbase.length() >0){ uRet.append(this.pathbase).append('/'); }
       uRet.append(this.path);
       return uRet;
+    }
+    
+    
+    private CharSequence toWindows(CharSequence inp)
+    {
+      if(inp instanceof StringBuilder){
+        StringBuilder uRet = (StringBuilder)inp;
+        for(int ii=0; ii<inp.length(); ++ii){
+          if(uRet.charAt(ii)=='/'){ uRet.setCharAt(ii, '\\'); }
+        }
+        return uRet;
+      }
+      else { //it is String!
+        return ((String)inp).replace('/', '\\');
+      }
     }
     
     
@@ -517,6 +602,8 @@ input::=
    */
   public static class UserScript
   {
+    int nextNr = 0;
+    
     /**The current directory for access to all files which are necessary as absolute file.
      * 
      */
@@ -534,6 +621,11 @@ input::=
     public UserTarget new_target(){ return new UserTarget(this); }
     
     public void add_target(UserTarget value){ targets.add(value); }
+    
+    public String nextNr(){
+      nextNr +=1;
+      return Integer.toString(nextNr);
+    }
     
   }
 
