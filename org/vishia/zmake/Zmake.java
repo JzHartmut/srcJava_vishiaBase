@@ -1,7 +1,6 @@
 package org.vishia.zmake;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.text.ParseException;
 import java.util.Map;
-import java.util.Properties;
 
 
 import org.vishia.mainCmd.MainCmd;
@@ -18,7 +16,6 @@ import org.vishia.mainCmd.Report;
 import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenScript;
 import org.vishia.textGenerator.TextGenerator;
-import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
@@ -29,7 +26,6 @@ import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
-import org.vishia.zbnf.ZbnfXmlOutput;
 
 
 

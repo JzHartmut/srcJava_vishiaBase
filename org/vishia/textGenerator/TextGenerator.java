@@ -1,11 +1,8 @@
 package org.vishia.textGenerator;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.text.ParseException;
 import java.util.Iterator;
 import java.util.List;
@@ -14,7 +11,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 
@@ -310,7 +306,7 @@ public class TextGenerator {
      * @return
      * @throws IOException if out throws it.
      */
-    public String genContent(TextGenScript.Zbnf_genContent contentScript, Appendable out, boolean bContainerHasNext) 
+    public String genContent(TextGenScript.GenContent contentScript, Appendable out, boolean bContainerHasNext) 
     throws IOException
     {
       Appendable uBuffer = out;
@@ -319,7 +315,7 @@ public class TextGenerator {
       for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
         StringBuilder uBufferVariable = new StringBuilder();
         Gen_Content genVariable = new Gen_Content(this);
-        TextGenScript.Zbnf_genContent content = variableScript.getSubContent();
+        TextGenScript.GenContent content = variableScript.getSubContent();
         genVariable.genContent(content, uBufferVariable, false);
         //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
         localVariables.put(variableScript.name, uBufferVariable);
@@ -387,7 +383,7 @@ public class TextGenerator {
           genSubtext(contentElement, out);
         } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
-          TextGenScript.Zbnf_genContent subContent = contentElement.getSubContent();
+          TextGenScript.GenContent subContent = contentElement.getSubContent();
           if(contentElement.name.equals("state1"))
             stop();
           Object container = getContent(contentElement.datapath, localVariables, true);

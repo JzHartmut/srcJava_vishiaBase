@@ -16,7 +16,6 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
-import org.vishia.zbnf.ZbnfXmlOutput;
 
 /**This class contains control data and sub-routines to generate output texts from internal data.
  * 
@@ -65,13 +64,13 @@ public class TextGenScript {
    * 
    * 
    */
-  @SuppressWarnings("hiding")
+  //@SuppressWarnings("hiding")
   static final public int version = 20121130;
 
   private final MainCmdLogging_ifc console;
 
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
-  Zbnf_ZmakeGenCtrl zbnfZmakeGenCtrl = new Zbnf_ZmakeGenCtrl();
+  MainGenCtrl zbnfZmakeGenCtrl = new MainGenCtrl();
   
   private final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
   
@@ -118,9 +117,6 @@ public class TextGenScript {
       parserGenCtrl.reportStore((Report)console, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
     }
     console.writeInfo(", ok set output ... ");
-    //ZbnfParseResultItem parseResultGenCtrl = parserGenCtrl.getFirstParseResult();
-    ZbnfXmlOutput xmlOutputGenCtrl = new ZbnfXmlOutput();
-    xmlOutputGenCtrl.write(parserGenCtrl, fileGenCtrl.getAbsoluteFile()+".xml");  //only for test
     //write into Java classes:
     ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput((Report)console);
     parserGenCtrl2Java.setContent(zbnfZmakeGenCtrl.getClass(), zbnfZmakeGenCtrl, parserGenCtrl.getFirstParseResult());
@@ -133,7 +129,7 @@ public class TextGenScript {
    * @param name The name of given < ?translator> in the end-users script.
    * @return null if the Zmake-target is not found.
    */
-  public final Zbnf_genContent searchZmakeTaget(String name){ 
+  public final GenContent searchZmakeTaget(String name){ 
     ScriptElement target = zmakeTargets.get(name);
     return target == null ? null : target.subContent;
   }
@@ -211,7 +207,7 @@ public class TextGenScript {
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
      * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
      * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,
-     *                   whereby subContent.{@link Zbnf_genContent#name} is the name of the list. </td></tr>
+     *                   whereby subContent.{@link GenContent#name} is the name of the list. </td></tr>
      * <tr><td>C</td><td><:for:path> {@link #subContent} contains build.script for any list element,
      * <tr><td>E</td><td><:else> {@link #subContent} contains build.script for any list element,
      * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,
@@ -247,16 +243,16 @@ public class TextGenScript {
     //public String elementPart;
     
     /**If need, a sub-content, maybe null. TODO should be final*/
-    public Zbnf_genContent subContent;
+    public GenContent subContent;
     
     public ScriptElement(char whatisit, String text)
     { this.whatisit = whatisit;
       this.text = text;
       if("NXYZvl".indexOf(whatisit)>=0){
-        subContent = new Zbnf_genContent(false);
+        subContent = new GenContent(false);
       }
       else if("IVL".indexOf(whatisit)>=0){
-        subContent = new Zbnf_genContent(true);
+        subContent = new GenContent(true);
       }
     }
     
@@ -272,7 +268,7 @@ public class TextGenScript {
     
     public List<Arguments> getReferenceDataSettings(){ return refenceData; }
     
-    public Zbnf_genContent getSubContent(){ return subContent; }
+    public GenContent getSubContent(){ return subContent; }
     
     public void set_text(String text){ subContent.content.add(new ScriptElement('t', text)); }
     
@@ -309,7 +305,7 @@ public class TextGenScript {
     //public void add_valueVariable(ScriptElement val){ subContent.content.add(val); }
     
     public ScriptElement new_forContainer()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+    { GenContent subGenContent = new GenContent(true);
       ScriptElement contentElement = new ScriptElement('C', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
@@ -320,7 +316,7 @@ public class TextGenScript {
 
     
     public ScriptElement new_ifContainer()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+    { GenContent subGenContent = new GenContent(true);
       ScriptElement contentElement = new ScriptElement('F', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
@@ -331,7 +327,7 @@ public class TextGenScript {
 
     
     public ScriptElement new_ifBlock()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+    { GenContent subGenContent = new GenContent(true);
       ScriptElement contentElement = new ScriptElement('G', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
@@ -349,7 +345,7 @@ public class TextGenScript {
     public void add_hasNext(ScriptElement val){}
 
     public ScriptElement new_elseBlock()
-    { Zbnf_genContent subGenContent = new Zbnf_genContent(true);
+    { GenContent subGenContent = new GenContent(true);
       ScriptElement contentElement = new ScriptElement('E', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
@@ -457,7 +453,7 @@ public class TextGenScript {
   /**Organization class for a list of script elements inside another Scriptelement.
    *
    */
-  public final class Zbnf_genContent
+  public final class GenContent
   {
     /**True if < genContent> is called for any input, (?:forInput?) */
     public final boolean isContentForInput;
@@ -475,11 +471,11 @@ public class TextGenScript {
      */
     private final List<ScriptElement> localVariableScripts = new LinkedList<ScriptElement>();
     
-    public final List<Zbnf_genContent> addToList = new LinkedList<Zbnf_genContent>();
+    public final List<GenContent> addToList = new LinkedList<GenContent>();
     
     //public List<String> datapath = new LinkedList<String>();
     
-    public Zbnf_genContent(boolean isContentForInput)
+    public GenContent(boolean isContentForInput)
     {this.isContentForInput = isContentForInput;
     }
         
@@ -510,7 +506,7 @@ public class TextGenScript {
    * ZmakeGenctrl::= { <target> } \e.
    * </pre>
    */
-  public final class Zbnf_ZmakeGenCtrl
+  public final class MainGenCtrl
   {
 
     
