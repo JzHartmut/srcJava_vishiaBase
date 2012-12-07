@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.text.ParseException;
+import java.util.Map;
 import java.util.Properties;
 
 
@@ -17,6 +18,8 @@ import org.vishia.mainCmd.Report;
 import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenScript;
 import org.vishia.textGenerator.TextGenerator;
+import org.vishia.util.Assert;
+import org.vishia.util.DataAccess;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
@@ -447,6 +450,7 @@ public class Zmake
     ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     
+        
     if(args.sInputXml !=null){
       FileWriter outData = new FileWriter(sInputAbs_xml + ".javadat");
       OutputDataTree outputterData = new OutputDataTree();
@@ -459,7 +463,28 @@ public class Zmake
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     TextGenerator gen = new TextGenerator(console);
     Writer out = new FileWriter(fileOut);
-    gen.generate(zmakeInput, fileGenCtrl, out, true, null);
+    TextGenScript genScript = gen.parseGenScript(fileGenCtrl, null);
+    Map<String, Object> scriptVariables;
+    try{ 
+      scriptVariables = gen.genScriptVariables();
+    } catch(IOException exc){
+      System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
+      scriptVariables = null;
+    }
+    
+    //The gen script may contain a currDir variable. Set the current directory of Zmake therewith.
+    //the variable <=currDir><.=> may exist. Get it:
+    Object oCurrDir = scriptVariables.get("currDir");
+    if(oCurrDir != null){
+      //Set the current dir in the user script. It is needed there for file path building.
+      zmakeInput.setCurrentDir(null, DataAccess.getStringFromObject(oCurrDir));
+    }
+    
+    try{ 
+      sError = gen.genContent(genScript, zmakeInput, true, out);
+    } catch(IOException exc){
+      System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
+    }
     out.close();
     //ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, genScript, console);
     //mng.gen_ZmakeOutput();

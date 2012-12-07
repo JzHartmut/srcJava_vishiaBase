@@ -212,7 +212,7 @@ public class ZbnfParser
         , String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { 
       resultlet = new ParseResultlet(syntax);
-      
+      //System.out.println("ZbnfParser - PrescriptPaser; " + input.debugString() + syntax.sSemantic);
       parentPrescriptParser = parent;
       
       this.input = input;

@@ -55,6 +55,10 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
+   *   {@link #genContent(TextGenScript, Object, boolean, Appendable)} able to call extra especially for Zmake, currDir.
+   *   It is possible to define any script variables in the generating script and use it then to control getting data 
+   *   from the input data.
    * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-11-04 Hartmut chg: adaption to DataAccess respectively distinguish between getting a container or an simple element.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
@@ -113,8 +117,13 @@ public class TextGenerator {
   
   final MainCmdLogging_ifc log;
   
+  /**The java prepared generation script. */
   TextGenScript genScript;
   
+  /**Instance for the main script part. */
+  Gen_Content genFile = new Gen_Content(null);
+
+  private boolean bScriptVariableGenerated;
   
   public TextGenerator(MainCmdLogging_ifc log){
     this.log = log;
@@ -133,12 +142,31 @@ public class TextGenerator {
    * @return null if no error or an error string.
    */
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
-    genScript = new TextGenScript(log);
-    this.accessPrivate = accessPrivate;
-    File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
-    //Writer out = null;
-    //this.out = out;
     String sError = null;
+    genScript = parseGenScript(fileScript, testOut);
+    if(out !=null){
+      try{
+        sError = genContent(genScript, userData, accessPrivate, out);
+        //out.close();
+      } catch(IOException exc){
+        System.err.println(Assert.exceptionInfo("", exc, 0, 4));
+      }
+    }
+    //String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
+    return sError;
+  }
+  
+  
+  
+  /**Parses and returns a Java-prepared generation script form a file.
+   * @param fileScript The file which contains the script.
+   * @param testOut If not null, the content of the generation script will be reported there.
+   * @return The generation script ready to use for {@link #genContent(TextGenScript, Object, boolean, Appendable)}.
+   */
+  public TextGenScript parseGenScript(File fileScript, Appendable testOut)
+  {
+    genScript = new TextGenScript(log);
+    File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     try{ 
       genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
       if(testOut !=null){
@@ -155,22 +183,64 @@ public class TextGenerator {
     } catch(Exception exc){
       System.err.println(Assert.exceptionInfo("\n", exc, 0, 4));
     }
-    if(out !=null){
-      try{
-        sError = genContent(genScript, userData, out);
-        //out.close();
-      } catch(IOException exc){
-        System.err.println(Assert.exceptionInfo("", exc, 0, 4));
-      }
-    }
-    //String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
-    return sError;
+    return genScript;
   }
   
   
+
   
+  
+  public Map<String, Object> genScriptVariables() throws IOException
+  {
+    for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
+      StringBuilder uVariable = new StringBuilder();
+      Gen_Content genVariable = new Gen_Content(null);
+      genVariable.genContent(scriptVariableScript.getSubContent(), uVariable, false);
+      genFile.localVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
+    }
+    bScriptVariableGenerated = true;
+    return genFile.localVariables;
+  }
   
 
+  
+  
+  
+  /**Generates an output with the given script.
+   * @param genScript Generation script in java-prepared form. Parse it with {@link #parseGenScript(File, Appendable)}.
+   * @param userData The data which are used in the script
+   * @param out Any output
+   * @return If null, it is okay. Elsewhere a readable error message.
+   * @throws IOException only if out.append throws it.
+   */
+  public String genContent(TextGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
+  throws IOException
+  {
+    this.accessPrivate = accessPrivate;this.data = userData;
+    this.bWriteErrorInOutput = true;
+
+    if(!bScriptVariableGenerated){
+      genScriptVariables();
+    }
+    
+    /*
+    //the variable (?=currDir?) may exist. Get it:
+    sCurrDir = scriptVariables.get("currDir");
+    if(sCurrDir == null){
+      sCurrDir = "";
+    }
+    */
+
+    
+    
+    
+    
+    TextGenScript.ScriptElement contentScript = genScript.getFileScript();
+    String sError = genFile.genContent(contentScript.subContent, out, false);
+    return sError;
+  }
+
+  
   
   
   
@@ -195,42 +265,6 @@ public class TextGenerator {
   
 
   
-  
-  
-  
-  private String genContent(TextGenScript genScript, Object userData, Appendable out) throws IOException{
-    //this.out = out;
-    this.data = userData;
-    this.bWriteErrorInOutput = true;
-
-    Gen_Content genFile = new Gen_Content(null);
-    
-    
-    for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
-      StringBuilder uVariable = new StringBuilder();
-      Gen_Content genVariable = new Gen_Content(null);
-      genVariable.genContent(scriptVariableScript.getSubContent(), uVariable, false);
-      //genVariable.gen_ContentWithScript(uBuffer, null, null, scriptVariableScript.subContent, null, null, null);
-      genFile.localVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
-    }
-    
-    /*
-    //the variable (?=currDir?) may exist. Get it:
-    sCurrDir = scriptVariables.get("currDir");
-    if(sCurrDir == null){
-      sCurrDir = "";
-    }
-    */
-
-    
-    
-    
-    
-    TextGenScript.ScriptElement contentScript = genScript.getFileScript();
-    String sError = genFile.genContent(contentScript.subContent, out, false);
-    return sError;
-  }
-    
   
   void writeError(String sError, Appendable out) throws IOException{
     if(bWriteErrorInOutput){
@@ -267,10 +301,11 @@ public class TextGenerator {
      * @param contentScript
      * @param bContainerHasNext Especially for <:for:element:container>SCRIPT<.for> to implement <:hasNext>
      * @return
-     * @throws IOException
+     * @throws IOException if out throws it.
      */
     public String genContent(TextGenScript.Zbnf_genContent contentScript, Appendable out, boolean bContainerHasNext) 
-    throws IOException{
+    throws IOException
+    {
       Appendable uBuffer = out;
       //Fill all local variable, which are defined in this script.
       //store its values in the local Gen_Content-instance.
@@ -278,7 +313,7 @@ public class TextGenerator {
         StringBuilder uBufferVariable = new StringBuilder();
         Gen_Content genVariable = new Gen_Content(this);
         TextGenScript.Zbnf_genContent content = variableScript.getSubContent();
-        genVariable.genContent(content, out, false);
+        genVariable.genContent(content, uBufferVariable, false);
         //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
         localVariables.put(variableScript.name, uBufferVariable);
       }

@@ -217,7 +217,7 @@ public class ZmakeGenerator
 			, ZmakeUserScript.UserInput inputIntern
 			) throws IOException
 		{
-			ZmakeUserScript.ScriptVariable inputsetVariable = userScript.allVariables.get(inputIntern.inputSet.name);
+			ZmakeUserScript.ScriptVariable inputsetVariable = userScript.var.get(inputIntern.inputSet.name);
       final ZmakeUserScript.UserFilepath srcPath =
       	userTarget.srcpath !=null ? userTarget.srcpath
       	: inputsetVariable.fileset.srcpath;
@@ -418,14 +418,14 @@ public class ZmakeGenerator
 				  			sRefName = null;
 				  		} else {
 				        assert(param.variable !=null);
-				        scriptVariable = userScript.allVariables.get(param.variable);
+				        scriptVariable = userScript.var.get(param.variable);
 				        sRefName = param.name;
 				        if(scriptVariable == null){
 				        	throw new IllegalArgumentException("TODO not a scriptvariable: " + param.variable);
 				        }
 				  		}
 				  	} else {
-				  		scriptVariable = userScript.allVariables.get(sVariable);
+				  		scriptVariable = userScript.var.get(sVariable);
 				  		sRefName = sVariable;
 				  	}
 		        if(scriptVariable !=null){
@@ -497,7 +497,7 @@ public class ZmakeGenerator
           CharSequence part = getPartsFromFilepath(userTarget.output, null, element.text.substring(7));
           uBuffer.append(part);
         } else {
-          ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(element.text);
+          ZmakeUserScript.ScriptVariable variable = userScript.var.get(element.text);
           if(variable.string !=null){
             stop();
           }
@@ -643,7 +643,7 @@ public class ZmakeGenerator
       }
     }
     if(text == null){
-      ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(name);
+      ZmakeUserScript.ScriptVariable variable = userScript.var.get(name);
       if(variable !=null){
         if(variable.string !=null){
           text = variable.string.getText();
@@ -680,7 +680,7 @@ public class ZmakeGenerator
   private boolean addFileset(String name, String srcpath, List<String> container)
   { boolean bOk = true;
     //search the fileset:
-    ZmakeUserScript.ScriptVariable variable = userScript.allVariables.get(name);
+    ZmakeUserScript.ScriptVariable variable = userScript.var.get(name);
     if(variable.fileset == null){
       console.writeError("fileset not found; " + name);
       bOk = false;

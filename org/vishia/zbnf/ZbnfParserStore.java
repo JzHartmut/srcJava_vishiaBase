@@ -994,6 +994,7 @@ class ZbnfParserStore
   static XmlNodeSimple<ZbnfParseResultItem>  buildTreeNodeRepresentationXml(XmlNodeSimple<ZbnfParseResultItem> xmlParent
       , ParseResultItemImplement cmpnResult, boolean bRecursive) 
   {
+    long time = System.nanoTime();
     XmlNodeSimple<ZbnfParseResultItem> xmlNode = cmpnResult.treeNodeXml;
     if(xmlNode ==null){
       xmlNode = createXmlNode(xmlParent, cmpnResult);
@@ -1024,6 +1025,8 @@ class ZbnfParserStore
         }
       }
     }
+    time = System.nanoTime() - time;
+    //System.out.println("buildTreeNodeRepresentationXml; " + time + "; " + cmpnResult.sSemantic);
     return xmlNode;
   }
   

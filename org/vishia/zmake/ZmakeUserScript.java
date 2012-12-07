@@ -11,13 +11,14 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
-   * <li>2012-11-29 Hartmut new: The {@link UserFilePath} contains now all access routines to parts of the file path
+   * <li>2012-12-08 Hartmut chg: improve access rotoutines.
+   * <li>2012-11-29 Hartmut new: The {@link UserFilePath} now contains all access routines to parts of the file path
    *   which were contained in the ZmakeGenerator class before. This allows to use this with the common concept
    *   of a text generator using {@link org.vishia.textGenerator.TextGenerator}. That Textgenerator does not know such
    *   file parts and this {@link UserFilepath} class because it is more universal. Access is possible 
    *   with that access methods {@link UserFilepath#localPath()} etc. To implement that a {@link UserFilepath}
-   *   should know its set where it is contained in, that is {@link UserFilepath#parent}. 
-   *   And the {@link UserFileset#script} knows the Zmake generation script. In this kind it is possible to use the
+   *   knows its file-set where it is contained in, that is {@link UserFilepath#parent}. 
+   *   The {@link UserFileset#script} knows the Zmake generation script. In this kind it is possible to use the
    *   common data of a file set and the absolute path.
    * <li>2011-08-14 Hartmut chg: ZmakeGenerator.Gen_Content#genContentForInputset(...) now regards < ?expandFiles>:
    *   If this tag is found in a < :forInput>...< .forInput> content generation prescript, 
@@ -172,15 +173,27 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     /**Method can be called in the generation script: <*path.localPathName()>. 
      * @return the local path part with file without extension.
      */
-    public String localPathName(){ return path + file; }
+    public CharSequence localPathName(){ 
+      StringBuilder uRet = new StringBuilder(path);
+      uRet.append(file);
+      return uRet; 
+    }
     
-    
+    public CharSequence localPathNameW(){ return toWindows(localPathName()); }
+
     
     /**Method can be called in the generation script: <*path.localFile()>. 
      * @return the local path to this file.
      */
     public CharSequence localFile(){ 
       StringBuilder uRet = new StringBuilder();
+      return addLocalFile(uRet);
+    }
+
+    public CharSequence localFileW(){ return toWindows(localFile()); }
+
+    
+    private CharSequence addLocalFile(StringBuilder uRet){ 
       uRet.append(this.path);
       uRet.append(this.file);
       if(this.someFiles){ uRet.append('*'); }
@@ -260,40 +273,53 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence basePathW(){ return toWindows(basePath()); }
     
     
-    /**Method can be called in the generation script: <*path.file()>. 
+    /**Method can be called in the generation script: <*absBasePath()>. 
      * @return the whole path inclusive a given general path in a {@link UserFileSet}.
      *   Either as absolute or as relative path.
      */
     public CharSequence absBasePath(){ 
-      StringBuilder uRet = new StringBuilder();
-      if(this.drive !=null){ uRet.append(this.drive); }
-      if(!this.absPath){ uRet.append(parent.script.sCurrDir); }
-      if(this.pathbase !=null){ uRet.append(this.pathbase); }
-      return uRet;
+      CharSequence basePath = basePath();
+      if(this.absPath){ return basePath; }
+      else if(basePath instanceof StringBuilder){
+        //not an absolute path, complete it with the global given base path:
+        StringBuilder uRet = (StringBuilder)basePath;
+        String sCurrDir = parent.script.sCurrDir;
+        if(uRet.charAt(1) == ':'){
+          //a drive is present
+          if(sCurrDir.length()>=2 && sCurrDir.charAt(1)==':' && uRet.charAt(0) == sCurrDir.charAt(0)){
+            //Same drive letter how sCurrDir: replace the absolute path.
+            uRet.replace(0, 2, sCurrDir);
+          }
+          else {
+            //a drive is present, it is another drive else in sCurrDir But the path is not absolute:
+            //TODO nothing yet, 
+          }
+        }
+        else {
+          uRet.insert(0, parent.script.sCurrDir);
+        }
+        return uRet;
+      }
+      else {
+        //this has no basepath, then return the current dir.
+        return parent.script.sCurrDir;
+      }
     }
     
+    
+    public CharSequence absBasePathW(){ return toWindows(absBasePath()); }
     
     /**Method can be called in the generation script: <*path.file()>. 
      * @return the whole path inclusive a given general path in a {@link UserFileSet}.
      *   Either as absolute or as relative path.
      */
     public CharSequence file(){ 
-      StringBuilder uRet = new StringBuilder();
-      if(parent.srcpath !=null){
-        if(parent.srcpath.drive !=null){ uRet.append(parent.srcpath.drive); }
-        if(parent.srcpath.pathbase !=null && this.pathbase.length() >0){ uRet.append(parent.srcpath.pathbase).append('/'); }
-        uRet.append(parent.srcpath.path);  //ends with /
-      } else {
-        if(this.drive !=null){ uRet.append(this.drive); }
-        if(this.pathbase !=null && this.pathbase.length() >0){ uRet.append(this.pathbase).append('/'); }
-      }
-      uRet.append(this.path);
-      uRet.append(this.file);
-      if(this.someFiles){ uRet.append('*'); }
-      if(this.wildcardExt){ uRet.append(".*"); }
-      uRet.append(this.ext);
-      return uRet;
+      CharSequence basePath = basePath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      return addLocalFile(uRet);
     }
+    
+    public CharSequence fileW(){ return toWindows(file()); }
     
     
     
@@ -302,26 +328,32 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
      */
     public CharSequence absFile(){ 
-      StringBuilder uRet = new StringBuilder();
-      if(parent.srcpath !=null){
-        if(parent.srcpath.drive !=null){ uRet.append(parent.srcpath.drive); }
-        if(!parent.srcpath.absPath){ 
-          uRet.append(parent.script.sCurrDir); 
-        }
-        if(parent.srcpath.pathbase !=null && this.pathbase.length() >0){ uRet.append(parent.srcpath.pathbase).append('/'); }
-        uRet.append(parent.srcpath.path);  //ends with /
-      } else {
-        if(this.drive !=null){ uRet.append(this.drive); }
-        if(!this.absPath){ uRet.append(parent.script.sCurrDir); }
-        if(this.pathbase !=null && this.pathbase.length() >0){ uRet.append(this.pathbase).append('/'); }
+      CharSequence basePath = absBasePath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      if(uRet.length() > 1 && uRet.charAt(uRet.length()-1) != '/'){
+        uRet.append('/');
       }
-      uRet.append(this.path);
-      uRet.append(this.file);
-      if(this.someFiles){ uRet.append('*'); }
-      if(this.wildcardExt){ uRet.append(".*"); }
-      uRet.append(this.ext);
+      return addLocalFile(uRet);
+    }
+    
+    public CharSequence absFileW(){ return toWindows(absFile()); }
+    
+    
+    /**Method can be called in the generation script: <*path.absDir()>. 
+     * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
+     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+     */
+    public CharSequence dir(){ 
+      CharSequence basePath = basePath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      if(uRet.length() > 1 && uRet.charAt(uRet.length()-1) != '/'){
+        uRet.append('/');
+      }
+      uRet.append(path);
       return uRet;
     }
+    
+    public CharSequence dirW(){ return toWindows(dir()); }
     
     
     /**Method can be called in the generation script: <*path.absDir()>. 
@@ -329,13 +361,16 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
      */
     public CharSequence absDir(){ 
-      StringBuilder uRet = new StringBuilder();
-      if(this.drive !=null){ uRet.append(this.drive); }
-      if(!this.absPath){ uRet.append(parent.script.sCurrDir); }
-      if(this.pathbase !=null && this.pathbase.length() >0){ uRet.append(this.pathbase).append('/'); }
-      uRet.append(this.path);
+      CharSequence basePath = absBasePath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      if(uRet.length() > 1 && uRet.charAt(uRet.length()-1) != '/'){
+        uRet.append('/');
+      }
+      uRet.append(path);
       return uRet;
     }
+    
+    public CharSequence absDirW(){ return toWindows(absDir()); }
     
     
     private CharSequence toWindows(CharSequence inp)
@@ -472,6 +507,17 @@ fileset::=
     public void add_fileset(UserFileset val){ }
     public UserString new_string(){ return string = new UserString(); }
     public void set_string(UserString val){} //left empty, is set already.
+    
+    /**For textscript: <*var.name.files()>
+     * @return The List of files. 
+     */
+    public List<UserFilepath> files(){ return (fileset !=null) ? fileset.filesOfFileset : null; }
+    
+    /**For textscript: <*var.name.text()>
+     * @return The text of the script variable. 
+     */
+    public CharSequence text(){ return string !=null ? string.getText() : ""; }
+    
   }
   
   public static class UserParam
@@ -605,26 +651,50 @@ input::=
     int nextNr = 0;
     
     /**The current directory for access to all files which are necessary as absolute file.
-     * 
+     * It should be end with slash!
      */
     String sCurrDir = "";
     
-    Map<String, ScriptVariable> allVariables = new TreeMap<String, ScriptVariable>();
+    Map<String, String> currDir = new TreeMap<String, String>();
+    
+    Map<String, ScriptVariable> var = new TreeMap<String, ScriptVariable>();
     
     List<UserTarget> targets = new LinkedList<UserTarget>();
     
     /**From ZBNF: < variable> */
     public ScriptVariable new_variable(){ return new ScriptVariable(this); }
     
-    public void add_variable(ScriptVariable  value){ allVariables.put(value.name, value); }
+    public void add_variable(ScriptVariable  value){ var.put(value.name, value); }
     
     public UserTarget new_target(){ return new UserTarget(this); }
     
     public void add_target(UserTarget value){ targets.add(value); }
     
+    /**This method can be called from a user script.
+     * @return an incremented number started from 1.
+     */
     public String nextNr(){
       nextNr +=1;
       return Integer.toString(nextNr);
+    }
+    
+    
+    /**This method should be called after parsing the input script maybe from information from the script
+     * maybe inside a text generating script.
+     * @param sDrive If null or "" then sets the main current directory for paths without local drive.
+     *   Elsewhere it should be a drive designation.
+     * @param sDir The directory path.
+     */
+    public void setCurrentDir(String sDrive, String sDir){
+      sDir = sDir.replace('\\', '/');  //use slash internally.
+      if(!sDir.endsWith("/")){
+        sDir += "/";
+      }
+      if(sDrive == null || sDrive.length() == 0){
+        sCurrDir = sDir;
+      } else {
+        currDir.put(sDrive, sDir);
+      }
     }
     
   }
