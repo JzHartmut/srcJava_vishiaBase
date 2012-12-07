@@ -21,7 +21,6 @@ import org.vishia.textGenerator.Zbnf2Text;
 import org.vishia.textGenerator.Zbnf2Text.Out;
 import org.vishia.util.Assert;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zmake.ZmakeGenScriptOld;
 
 
 public class StateMGen {

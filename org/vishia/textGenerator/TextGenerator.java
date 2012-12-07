@@ -17,7 +17,6 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
-import org.vishia.zmake.ZmakeGenScriptOld;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -55,6 +54,8 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
+   *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
    *   {@link #genContent(TextGenScript, Object, boolean, Appendable)} able to call extra especially for Zmake, currDir.
    *   It is possible to define any script variables in the generating script and use it then to control getting data 
@@ -266,13 +267,19 @@ public class TextGenerator {
 
   
   
-  void writeError(String sError, Appendable out) throws IOException{
+  /**
+   * @param sError
+   * @param out
+   * @return false to assign to an ok variable.
+   * @throws IOException
+   */
+  boolean writeError(String sError, Appendable out) throws IOException{
     if(bWriteErrorInOutput){
       out.append(sError);
     } else {
       throw new IllegalArgumentException(sError); 
     }
-    
+    return false;
 
   }
   
@@ -484,22 +491,65 @@ public class TextGenerator {
     
     
     void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
+      boolean ok = true;
+      if(contentElement.name == null){
+        Object oName = getContent(contentElement.datapath, localVariables, false);
+        contentElement.name = DataAccess.getStringFromObject(oName);
+      }
       TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
       if(subtextScript == null){
-        writeError("<? *subtext:" + contentElement.name + "> not found.", out);
-      }
-      Gen_Content subtextGenerator = new Gen_Content(this);
-      List<TextGenScript.Arguments> referenceSettings = contentElement.getReferenceDataSettings();
-      if(referenceSettings !=null){
-        for( TextGenScript.Arguments referenceSetting: referenceSettings){
-          Object ref;
-            ref = getContent(referenceSetting.datapath, localVariables, false);
-          if(ref !=null){
-            subtextGenerator.localVariables.put(referenceSetting.name, ref);
+        ok = writeError("<? *subtext:" + contentElement.name + "> not found.", out);
+      } else {
+        Gen_Content subtextGenerator = new Gen_Content(this);
+        if(subtextScript.refenceData !=null){
+          TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
+          for(TextGenScript.Arguments formalArg: subtextScript.refenceData) {
+            check.put(formalArg.name, new CheckArgument(formalArg));
           }
+          List<TextGenScript.Arguments> referenceSettings = contentElement.getReferenceDataSettings();
+          if(referenceSettings !=null){
+            for( TextGenScript.Arguments referenceSetting: referenceSettings){
+              Object ref;
+              ref = getContent(referenceSetting.datapath, localVariables, false);
+              if(ref !=null){
+                CheckArgument checkArg = check.get(referenceSetting.name);
+                if(checkArg == null){
+                  ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + "> faulty argument. ", out);
+                } else {
+                  checkArg.used = true;
+                  subtextGenerator.localVariables.put(referenceSetting.name, ref);
+                }
+              } else {
+                ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " = ??> not found. ", out);
+              }
+            }
+            //check whether all formal arguments are given with actual args or get its default values.
+            //if not all variables are correct, write error.
+            for(Map.Entry<String, CheckArgument> checkArg : check.entrySet()){
+              CheckArgument arg = checkArg.getValue();
+              if(!arg.used){
+                if(arg.formalArg.text !=null){
+                  subtextGenerator.localVariables.put(arg.formalArg.name, arg.formalArg.text);
+                } else if(arg.formalArg.datapath !=null){
+                  Object ref = getContent(arg.formalArg.datapath, localVariables, false);
+                  if(ref !=null){
+                    subtextGenerator.localVariables.put(arg.formalArg.name, ref);
+                  } else {
+                    ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> not found. ", out);
+                  }
+                } else {
+                  ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> missing on call. ", out);
+                }
+              }
+            }
+          }
+        } else if(contentElement.getReferenceDataSettings() !=null){
+          ok = writeError("<? *subtext;" + contentElement.name + "> called with arguments, it has not one. ", out);
+        }
+        if(ok){
+          subtextGenerator.genContent(subtextScript.subContent, out, false);
         }
       }
-      subtextGenerator.genContent(subtextScript.subContent, out, false);
     }
     
     
@@ -515,6 +565,21 @@ public class TextGenerator {
       return "" + ++nr;
     }
   };
+  
+  
+  /**Class only to check argument lists and use default values for arguments. */
+  private class CheckArgument
+  {
+    /**Reference to the formal argument. */
+    final TextGenScript.Arguments formalArg;
+    
+    /**Set to true if this argument is used. */
+    boolean used;
+    
+    CheckArgument(TextGenScript.Arguments formalArg){ this.formalArg = formalArg; }
+  }
+  
+  
   
   void stop(){}
 

@@ -155,8 +155,15 @@ public class TextGenScript {
   
   
   public static final class Arguments{
+    
+    /**Name of the argument. It is the key to assign calling argument values. */
     public String name;
-    //public List<String> path;
+    
+    /**From Zbnf <""?text>, constant text, null if not used. */
+    public String text; 
+    
+    
+    
     List<DataAccess.DatapathElement> datapath;
     
     public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
@@ -212,7 +219,7 @@ public class TextGenScript {
      * 
      * <tr><td>Z</td><td>a target,
      * <tr><td>Y</td><td>the file
-     * <tr><td>X</td><td>a subtext
+     * <tr><td>X</td><td>a subtext definition
      * </table> 
      */
     final public char whatisit;    
@@ -228,18 +235,14 @@ public class TextGenScript {
     
     //public List<String> path;
     
+    /**The description of the path to any data if the script-element refers data. It is null if the script element
+     * does not refer data. See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
+     */
     List<DataAccess.DatapathElement> datapath;
     
-    public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
-    
-    public void add_datapathElement(DataAccess.DatapathElement val){ 
-      if(datapath == null){
-        datapath = new LinkedList<DataAccess.DatapathElement>();
-      }
-      datapath.add(val); 
-    }
-    
-    private List<Arguments> refenceData;
+    /**Arguments either actual or formal if this is a subtext call or subtext definition. 
+     * Maybe null if the subtext has not argument. It is null if it is not a subtext call or definition. */
+    List<Arguments> refenceData;
     
     //public String elementPart;
     
@@ -257,6 +260,15 @@ public class TextGenScript {
       }
     }
     
+    
+    public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
+    
+    public void add_datapathElement(DataAccess.DatapathElement val){ 
+      if(datapath == null){
+        datapath = new LinkedList<DataAccess.DatapathElement>();
+      }
+      datapath.add(val); 
+    }
     
     public List<Arguments> getReferenceDataSettings(){ return refenceData; }
     
