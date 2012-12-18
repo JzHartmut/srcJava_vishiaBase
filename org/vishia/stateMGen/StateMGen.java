@@ -295,14 +295,21 @@ public class StateMGen {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
     
-    /**From ZBNF: <$?@enclState>. */
+    /**From ZBNF: <$?@enclState>. It is the name of the state where this state is member of. */
     public String enclState;
     
-    /**From ZBNF: <$?@enclState>. */
+    /**From ZBNF: <$?@enclState>.<$?@parallelState>. It is the name of the state where this state is member of
+     * in a parallel machine of the enclosing state. */
     public String parallelState;
     
+    /**Name of the state which is the container of the parallel state machine. Only set on enclosing state
+     * of a parallel state machine. */
+    String parallelParent;
+    
+    /**All states which are direct sub-states in this state. null if the state has not sub-states. */
     private Map<String, State> subStates;
 
+    /**All states which are parallel states in this states. null if the state has not parallel sub-states. */
     private Map<String, State> parallelStates;
 
     /**From ZBNF: \? <*|\?\.?description>. */
@@ -462,15 +469,18 @@ public class StateMGen {
     
     public void add_state(State value)
     { 
-      state.add(value);
       idxStates.put(value.stateName, value);
       if(value.parallelState !=null){
         if(idxStates.get(value.parallelState) ==null){
           State parallel = new State();
           parallel.stateName = value.parallelState;
+          parallel.parallelParent = value.enclState;
+          parallel.shortdescription = "Parallel state machine inside " + value.enclState;
           idxStates.put(value.parallelState, parallel);
+          state.add(parallel);  //add first the parallel self created state.
         }
       }
+      state.add(value);
     }
     
     public NameValue new_variable(){ return new NameValue(); }

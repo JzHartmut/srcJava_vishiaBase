@@ -494,7 +494,7 @@ public class TextGenerator {
       }
       TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
       if(subtextScript == null){
-        ok = writeError("<? *subtext:" + contentElement.name + "> not found.", out);
+        ok = writeError("<? *subtext:" + contentElement.name + " not found.?>", out);
       } else {
         Gen_Content subtextGenerator = new Gen_Content(this);
         if(subtextScript.refenceData !=null){
@@ -510,13 +510,13 @@ public class TextGenerator {
               if(ref !=null){
                 CheckArgument checkArg = check.get(referenceSetting.name);
                 if(checkArg == null){
-                  ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + "> faulty argument. ", out);
+                  ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " faulty argument.?> ", out);
                 } else {
                   checkArg.used = true;
                   subtextGenerator.localVariables.put(referenceSetting.name, ref);
                 }
               } else {
-                ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " = ??> not found. ", out);
+                ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " = ? not found. ?>", out);
               }
             }
             //check whether all formal arguments are given with actual args or get its default values.
@@ -531,16 +531,16 @@ public class TextGenerator {
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.name, ref);
                   } else {
-                    ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> not found. ", out);
+                    ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> not found. ?>", out);
                   }
                 } else {
-                  ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> missing on call. ", out);
+                  ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> missing on call. ?>", out);
                 }
               }
             }
           }
         } else if(contentElement.getReferenceDataSettings() !=null){
-          ok = writeError("<? *subtext;" + contentElement.name + "> called with arguments, it has not one. ", out);
+          ok = writeError("<? *subtext;" + contentElement.name + " called with arguments, it has not one. ?>", out);
         }
         if(ok){
           subtextGenerator.genContent(subtextScript.subContent, out, false);
