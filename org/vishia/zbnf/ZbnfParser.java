@@ -118,42 +118,42 @@ import org.vishia.mainCmd.Report;
  */
 public class ZbnfParser
 {
-	
-	/**Version-ident.
-	 * list of changes:
-	 * <ul>2012-11-02 Hartmut new local class {@link ParseResultlet}, the {@link PrescriptParser} contains a reference to it.
-	 *   The resultlet is the first action to save gotten parse results though the result is not convenient in the current context.
-	 *   This result may be re-used later in another context (not programmed yet, only prepared).
-	 *   In that context any component's result is converted to an XML tree presentation. This may be the new strategy for parse result storing.
+  
+  /**Version-ident.
+   * list of changes:
+   * <ul>2012-11-02 Hartmut new local class {@link ParseResultlet}, the {@link PrescriptParser} contains a reference to it.
+   *   The resultlet is the first action to save gotten parse results though the result is not convenient in the current context.
+   *   This result may be re-used later in another context (not programmed yet, only prepared).
+   *   In that context any component's result is converted to an XML tree presentation. This may be the new strategy for parse result storing.
    * <li>2012-10-23 Hartmut Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
-	 * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
-	 * 
-	 * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
-	 *     (set with Report.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
-	 *     in respect to the syntax prescript is able to view. It is if some uncertainty about the correctness of the given syntax is in question. 
-	 * <li>2011-01-09 Creation of this variable to show the changes in the javadoc.    
-	 * <li>2010-05-04 Hartmut: corr: sEndlineCommentStringStart: The \n is not included, it will be skipped either as whitespace or it is necessary for the linemode.
-	 * <li>2009-12-30 Hartmut: corr: Output info: subParserTopLevel == null, no syntax is now removed.
-	 * <li>2009-08-02 Hartmut: new: parsing with subSyntax now also available in options writing [<?!subSyntax> ...]. 
-	 * <li>2009-08-02 Hartmut: new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
-	 * <li>2009-08-02 Hartmut: new: $Whitespaces= now accepted (it was declared in documentation but not implement). 
-	 * <li>2009-05-31 Hartmut: corr: some changes of report and error output: In both cases the syntax path is written from inner to root,
-	 *                           separated with a +. 
-	 *                           In reportlevel 5 (nLevelReportComponentParsing) also the success of parsing terminal symbols are reported,
-	 *                           in the same line after 'ok/error Component'. The reporting of parsing process should be improved furthermore.
-	 * <li>2009-01-16 Hartmut: new: ZbnfSyntaxPrescript.kFloatWithFactor: Writing <#f*Factor?...> is working now..
-	 *                     corr: Some non-active code parts deleted.
-	 *                     corr: Processing of parse(... additionalInfo) corrected. It was the only one position, where setparseResultsFromOuterLevels() was used. But more simple is: 
-	 *                     chg: pass of  ParseResult to components is simplified, in the kind like programmed in 2007. The pass of parse-Results through some components in deeper levels ins't able now, 
-	 *                          but that feature causes falsity by using.
-	 * <li>2008-03-28 JcHartmut: The ParserStore is not cleared, only the reference is assigned new.
-	 *                       So outside the ParserStore can be used from an older parsing.
-	 * <li>2006-12-15 JcHartmut: regular expressions should be handled after white spaces trimming, error correction.
-	 * <li>2006-06-00 JcHartmut: a lot of simple problems in developemnt.
-	 * <li>2006-05-00 JcHartmut: creation
-	 * </ul>
-	 */
-	static final String sVersionStamp = "2011-01-14";
+   * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
+   * 
+   * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
+   *     (set with Report.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
+   *     in respect to the syntax prescript is able to view. It is if some uncertainty about the correctness of the given syntax is in question. 
+   * <li>2011-01-09 Creation of this variable to show the changes in the javadoc.    
+   * <li>2010-05-04 Hartmut: corr: sEndlineCommentStringStart: The \n is not included, it will be skipped either as whitespace or it is necessary for the linemode.
+   * <li>2009-12-30 Hartmut: corr: Output info: subParserTopLevel == null, no syntax is now removed.
+   * <li>2009-08-02 Hartmut: new: parsing with subSyntax now also available in options writing [<?!subSyntax> ...]. 
+   * <li>2009-08-02 Hartmut: new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
+   * <li>2009-08-02 Hartmut: new: $Whitespaces= now accepted (it was declared in documentation but not implement). 
+   * <li>2009-05-31 Hartmut: corr: some changes of report and error output: In both cases the syntax path is written from inner to root,
+   *                           separated with a +. 
+   *                           In reportlevel 5 (nLevelReportComponentParsing) also the success of parsing terminal symbols are reported,
+   *                           in the same line after 'ok/error Component'. The reporting of parsing process should be improved furthermore.
+   * <li>2009-01-16 Hartmut: new: ZbnfSyntaxPrescript.kFloatWithFactor: Writing <#f*Factor?...> is working now..
+   *                     corr: Some non-active code parts deleted.
+   *                     corr: Processing of parse(... additionalInfo) corrected. It was the only one position, where setparseResultsFromOuterLevels() was used. But more simple is: 
+   *                     chg: pass of  ParseResult to components is simplified, in the kind like programmed in 2007. The pass of parse-Results through some components in deeper levels ins't able now, 
+   *                          but that feature causes falsity by using.
+   * <li>2008-03-28 JcHartmut: The ParserStore is not cleared, only the reference is assigned new.
+   *                       So outside the ParserStore can be used from an older parsing.
+   * <li>2006-12-15 JcHartmut: regular expressions should be handled after white spaces trimming, error correction.
+   * <li>2006-06-00 JcHartmut: a lot of simple problems in developemnt.
+   * <li>2006-05-00 JcHartmut: creation
+   * </ul>
+   */
+  static final String sVersionStamp = "2011-01-14";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -755,131 +755,131 @@ public class ZbnfParser
             if(bSkipSpaceAndComment)
             { final String sConstantText;
               if(nType == ZbnfSyntaxPrescript.kTerminalSymbol){
-            		sConstantText = syntaxItem.getConstantSyntax();
-            		sReport = nReportLevel < nLevelReportBranchParsing ? ""
-              		: "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
-	            } else {
-	            	sConstantText = null;
-	            }
-            	bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol
-            		(sConstantText, parserStoreInPrescript);
+                sConstantText = syntaxItem.getConstantSyntax();
+                sReport = nReportLevel < nLevelReportBranchParsing ? ""
+                  : "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
+              } else {
+                sConstantText = null;
+              }
+              bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol
+                (sConstantText, parserStoreInPrescript);
               //parseWhiteSpaceAndComment(parserStoreInPrescript);
             } else { 
-            	bOk = bTerminalFoundInComment = false; 
+              bOk = bTerminalFoundInComment = false; 
             }
             if(!bTerminalFoundInComment){
-            	sReport = nReportLevel < nLevelReportBranchParsing ? ""
-            		: "parseItem " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
+              sReport = nReportLevel < nLevelReportBranchParsing ? ""
+                : "parseItem " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
 
-            	String sSrc = null;  //parsed string
-            	int posSrc = -1;     //position of the string
-            	switch(nType)
-            	{
-            	case ZbnfSyntaxPrescript.kTerminalSymbol: 
+              String sSrc = null;  //parsed string
+              int posSrc = -1;     //position of the string
+              switch(nType)
+              {
+              case ZbnfSyntaxPrescript.kTerminalSymbol: 
               { bOk = parseTerminalSymbol(syntaxItem, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kIdentifier:
-            	{ bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kPositivNumber:
-            	{ bOk = parsePositiveInteger( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kHexNumber:
-            	{ bOk = parseHexNumber( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kIntegerNumber:
-            	{ bOk = parseInteger( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kFloatNumber:
-            	case ZbnfSyntaxPrescript.kFloatWithFactor:
-            	{ bOk = parseFloatNumber( sSemanticForStoring, maxNrofChars, parserStoreInPrescript, syntaxItem);
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilEndchar:
-            	{ if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
-            		stop();
-	            	if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem StrTilEndchar;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-	            	if(sConstantSyntax.length() >0)
-	            	{ bOk = input.lentoAnyChar(sConstantSyntax, maxNrofChars).found();
-	            	}
-	            	else
-	            	{ int maxLen = input.length();
-	            	if(maxNrofChars < maxLen)
-	            	{ input.lento(maxNrofChars);  //NOTE: if maxNrofChars > length(), an exception will be thrown in StringPart.
-	            	}
-	            	bOk = true;  //whole length
-	            	}
-	            	if(bOk)
-	            	{ String sResult = input.getCurrentPart();
-		            	long posResult = input.getCurrentPosition();
-		
-		            	bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
-		            	/* NOTE: is it necessary to store the line numbers etc?
-		                  if(input.length()>0 && sSemanticForStoring != null)
-		                  { parseResult.addString(input, sSemanticForStoring);
-		                  }
-		            	 */
-		            	input.fromEnd();
-	            	}
-	            	else
-	            	{ input.setLengthMax();
-	            		saveError("ones of terminate chars \"" + sConstantSyntax + "\" not found <?" + sSemanticForError + ">");
-	            	}
+              { bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kPositivNumber:
+              { bOk = parsePositiveInteger( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kHexNumber:
+              { bOk = parseHexNumber( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kIntegerNumber:
+              { bOk = parseInteger( sSemanticForStoring, maxNrofChars, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kFloatNumber:
+              case ZbnfSyntaxPrescript.kFloatWithFactor:
+              { bOk = parseFloatNumber( sSemanticForStoring, maxNrofChars, parserStoreInPrescript, syntaxItem);
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilEndchar:
+              { if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
+                stop();
+                if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem StrTilEndchar;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
+                if(sConstantSyntax.length() >0)
+                { bOk = input.lentoAnyChar(sConstantSyntax, maxNrofChars).found();
+                }
+                else
+                { int maxLen = input.length();
+                if(maxNrofChars < maxLen)
+                { input.lento(maxNrofChars);  //NOTE: if maxNrofChars > length(), an exception will be thrown in StringPart.
+                }
+                bOk = true;  //whole length
+                }
+                if(bOk)
+                { String sResult = input.getCurrentPart();
+                  long posResult = input.getCurrentPosition();
+    
+                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+                  /* NOTE: is it necessary to store the line numbers etc?
+                      if(input.length()>0 && sSemanticForStoring != null)
+                      { parseResult.addString(input, sSemanticForStoring);
+                      }
+                   */
+                  input.fromEnd();
+                }
+                else
+                { input.setLengthMax();
+                  saveError("ones of terminate chars \"" + sConstantSyntax + "\" not found <?" + sSemanticForError + ">");
+                }
 
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilRightEndchar:
-            	{ bOk = parseStringUntilRightEndchar(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilRightEndcharInclusive:
-            	{ bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilEndString: //kk
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilRightEndchar:
+              { bOk = parseStringUntilRightEndchar(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilRightEndcharInclusive:
+              { bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilEndString: //kk
               { bOk = parseStringUntilTerminateString(sConstantSyntax, false, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
               } break;
-            	case ZbnfSyntaxPrescript.kStringUntilEndStringTrim: //kk
+              case ZbnfSyntaxPrescript.kStringUntilEndStringTrim: //kk
               { bOk = parseStringUntilTerminateString(sConstantSyntax, false, true, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndStringInclusive: //kk
-            	{ bOk = parseStringUntilTerminateString(sConstantSyntax, true, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
-            	{ if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-	            	StringBuilder buffer = new StringBuilder();
-	            	input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
-	            	sSrc = buffer.toString();
-	            	posSrc = (int)input.getCurrentPosition();
-	            	bOk = input.found();
-	            	if(bOk)
-	            	{ input.fromEnd();
-	
-	            	if(sSrc.startsWith("Sets the reflection class."))
-	            		stop();
-	
-	            	}
-	            	else
-	            	{ input.setLengthMax();  //not found: length() was setted to 0
-	            	saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
-	            	}
-            	} break;
-            	case ZbnfSyntaxPrescript.kStringUntilEndcharOutsideQuotion:
-            	{ bOk = parseNoOrSomeCharsOutsideQuotion(sConstantSyntax, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kQuotedString:
-            	{ bOk = parseSimpleStringLiteral(sConstantSyntax, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
-            	} break;
-            	case ZbnfSyntaxPrescript.kRegularExpression:
-            	{ 
-            		bOk = parseRegularExpression(syntaxItem, sSemanticForStoring, bSkipSpaceAndComment, parserStoreInPrescript);
-            	} break;
-            	default:
-            	{
-            		if(nReportLevel >= nLevelReportParsing) {
-            			report.reportln(idReportParsing, "parseItem-default;      " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
-            		}
-            		//parseResult.addSemantic(sSyntax);
-            		bOk = false;
-            	}
-            	}//switch
-            	if(sSrc != null)  //##ss
+              { bOk = parseStringUntilTerminateString(sConstantSyntax, true, false, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
+              { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
+                StringBuilder buffer = new StringBuilder();
+                input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
+                sSrc = buffer.toString();
+                posSrc = (int)input.getCurrentPosition();
+                bOk = input.found();
+                if(bOk)
+                { input.fromEnd();
+  
+                if(sSrc.startsWith("Sets the reflection class."))
+                  stop();
+  
+                }
+                else
+                { input.setLengthMax();  //not found: length() was setted to 0
+                saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
+                }
+              } break;
+              case ZbnfSyntaxPrescript.kStringUntilEndcharOutsideQuotion:
+              { bOk = parseNoOrSomeCharsOutsideQuotion(sConstantSyntax, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kQuotedString:
+              { bOk = parseSimpleStringLiteral(sConstantSyntax, maxNrofChars, sSemanticForStoring, syntaxItem, parserStoreInPrescript);
+              } break;
+              case ZbnfSyntaxPrescript.kRegularExpression:
+              { 
+                bOk = parseRegularExpression(syntaxItem, sSemanticForStoring, bSkipSpaceAndComment, parserStoreInPrescript);
+              } break;
+              default:
+              {
+                if(nReportLevel >= nLevelReportParsing) {
+                  report.reportln(idReportParsing, "parseItem-default;      " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
+                }
+                //parseResult.addSemantic(sSyntax);
+                bOk = false;
+              }
+              }//switch
+              if(sSrc != null)  //##ss
               { //something parsed as string, may be also an empty string:
                 if(syntaxItem.getSubSyntax()!= null)
                 { //##i
@@ -1307,8 +1307,8 @@ public class ZbnfParser
         if(subSyntax!= null)
         { //##i
           if(sSemanticForStoring !=null)
-          	stop();
-        	StringPart partOfInput = new StringPart(sResult);
+            stop();
+          StringPart partOfInput = new StringPart(sResult);
           bOk = parseComponent(partOfInput, (int)posSrc, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
@@ -1731,15 +1731,15 @@ public class ZbnfParser
   
     }
   
-  	private void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, int nRecursion, boolean bOk){
-    	String sReport = sWhat + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
+    private void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, int nRecursion, boolean bOk){
+      String sReport = sWhat + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
       StringBuilder syntaxReport = new StringBuilder(syntax.toString());  /*new StringBuilder("<" 
-      	+ (syntax.sDefinitionIdent.equals(syntax.sSemantic) ? "" : syntax.sDefinitionIdent + "?")
-      	+ syntax.sSemantic + ">"); */
+        + (syntax.sDefinitionIdent.equals(syntax.sSemantic) ? "" : syntax.sDefinitionIdent + "?")
+        + syntax.sSemantic + ">"); */
       int zz = syntaxReport.length();
       if(zz < 20){ syntaxReport.append("                    ".substring(zz)); }
       else { syntaxReport.setLength(20); }
-    	report.reportln(nReport, sReport
+      report.reportln(nReport, sReport
         + (bOk ? " ok    " : " error ") + nRecursion 
         + syntaxReport
         //+ " <?" + (sSemanticForStoring == null ? "" : sSemanticForStoring) + "> in "  
@@ -1969,7 +1969,16 @@ public class ZbnfParser
   
 
   
-  private void setSyntax(StringPart syntax, String sDirParent)
+  /**Sets the syntax
+   * @param syntax The syntax, may be read from any file or from a String, use new StringPart(...)
+   * @param sDirImport If the syntax contains a $import statement, use this directory as current dir to search the file.
+   * @throws ParseException
+   * @throws IllegalCharsetNameException
+   * @throws UnsupportedCharsetException
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  public void setSyntax(StringPart syntax, String sDirImport)
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { List<String> listImports = null;
     boolean bSetMainscript = false;
@@ -2084,7 +2093,7 @@ public class ZbnfParser
         if(  syntax.seekNoWhitespace().scanQuotion("\"", "\"", result).scan(".").scanOk())
         { if(listImports == null){ listImports = new LinkedList<String>(); }
           //listImports.add(result[0]);
-          importScript(result[0], sDirParent);
+          importScript(result[0], sDirImport);
         }
         else throw new ParseException("$import \"importfile\".",0);
       } 
@@ -2106,7 +2115,7 @@ public class ZbnfParser
     if(listImports != null)
     { //this text contains imports, it should be files with absolute or relativ path.
       for(String sFile: listImports)
-      { importScript(sFile, sDirParent);
+      { importScript(sFile, sDirImport);
       }
     }
   }
@@ -2254,11 +2263,11 @@ public class ZbnfParser
     nReportLevel = report.getReportLevel(); //the current reportlevel from the users conditions.
     
     //the old parserStore may be referenced from the evaluation, use anyway a new one!
-  	parserStoreTopLevel = new ZbnfParserStore(); 
+    parserStoreTopLevel = new ZbnfParserStore(); 
     posRightestError = 0;
-  	sExpectedSyntax = null;
-  	sRightestError = input.getCurrentPart(80); 
-  	
+    sExpectedSyntax = null;
+    sRightestError = input.getCurrentPart(80); 
+    
     prescriptParserTopLevel = new PrescriptParser(null, mainScript, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
     //subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
     final ZbnfParserStore addParseResult;
@@ -2279,15 +2288,15 @@ public class ZbnfParser
     { addParseResult = null; 
     }
     String sSemantic = mainScript.getDefinitionIdent();
-  	try
+    try
     { boolean bOk = prescriptParserTopLevel.parsePrescript1
                   (sSemantic, null, parserStoreTopLevel, addParseResult, false, 0);
       return bOk;
     }
-  	catch(ParseException exc)
-  	{
-  	  return false;
-  	}
+    catch(ParseException exc)
+    {
+      return false;
+    }
   }
 
 
@@ -2557,14 +2566,14 @@ public class ZbnfParser
 
   CharSequence inputCurrent(StringPart input)
   {
-  	StringBuilder u = new StringBuilder(input.getCurrent(40));
-  	char c;
-  	for(int i=0; i<u.length(); ++i){
-  		c=u.charAt(i);
-  		if(c=='\n'){ u.replace(i, i+1, "|");}
-  		if(c=='\r'){ u.replace(i, i+1, "-");}
-  	}
-  	return u;
+    StringBuilder u = new StringBuilder(input.getCurrent(40));
+    char c;
+    for(int i=0; i<u.length(); ++i){
+      c=u.charAt(i);
+      if(c=='\n'){ u.replace(i, i+1, "|");}
+      if(c=='\r'){ u.replace(i, i+1, "-");}
+    }
+    return u;
   }
   
   

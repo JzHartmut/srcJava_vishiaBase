@@ -12,6 +12,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
+import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
@@ -215,6 +216,7 @@ public class TextGenerator {
   {
     this.accessPrivate = accessPrivate;this.data = userData;
     this.bWriteErrorInOutput = true;
+    this.genScript = genScript;
 
     if(!bScriptVariableGenerated){
       genScriptVariables();
@@ -247,7 +249,7 @@ public class TextGenerator {
   private Object getContent(List<DataAccess.DatapathElement> dataRef, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
   { Object dataRet;
-    if(dataRef.size() >=1 && dataRef.get(0).ident.equals("$objDirW"))
+    if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$objDirW"))
       Assert.stop();
     try{
       dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
@@ -449,7 +451,7 @@ public class TextGenerator {
         switch(contentElement.whatisit){
           case 'G': { //if-block
             
-            found = generateIfBlock(contentElement, out, iter.hasNext());
+            found = generateIfBlock((TextGenScript.IfCondition)contentElement, out, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
@@ -463,20 +465,34 @@ public class TextGenerator {
       }//for
     }
     
-    boolean generateIfBlock(TextGenScript.ScriptElement ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
+    
+    
+    boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
       Object check = getContent(ifBlock.datapath, localVariables, false);
       boolean bCondition;
-      if(ifBlock.operator !=null){
-        String value = check == null ? "null" : check.toString();
-        if(ifBlock.operator.equals("!=")){
-          bCondition = check == null || !value.trim().equals(ifBlock.value); 
-        } else if(ifBlock.operator.equals("==")){
-          bCondition = check != null && value.trim().equals(ifBlock.value); 
-        } else {
-          writeError(" faulty operator " + ifBlock.operator, out);
-          bCondition = false;
-        }
+      if(ifBlock.expr == null && ifBlock.condition !=null){
+          
+        ifBlock.expr = new CalculatorExpr();
+        ifBlock.expr.addExprToStack(0, "!");
+        ifBlock.expr.addExprToStack(1, ifBlock.condition.name);
+      }
+      if(ifBlock.expr != null){
+        Object cmp = getContent(ifBlock.condition.datapath, localVariables, false);
+        CalculatorExpr.Value result = ifBlock.expr.calc(check, cmp);
+        bCondition = result.booleanValue();
       } else {
+        /*
+        if(ifBlock.operator !=null){
+          String value = check == null ? "null" : check.toString();
+          if(ifBlock.operator.equals("!=")){
+            bCondition = check == null || !value.trim().equals(ifBlock.value); 
+          } else if(ifBlock.operator.equals("==")){
+            bCondition = check != null && value.trim().equals(ifBlock.value); 
+          } else {
+            writeError(" faulty operator " + ifBlock.operator, out);
+            bCondition = false;
+          }
+          */
         bCondition= check !=null;
       }
       if(bCondition){
@@ -484,6 +500,14 @@ public class TextGenerator {
       }
       return bCondition;
     }
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{

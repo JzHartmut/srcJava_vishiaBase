@@ -39,8 +39,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.*;
-import java.nio.charset.IllegalCharsetNameException;
-import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -159,32 +157,32 @@ import org.vishia.util.StringPartFromFileLines;
 @SuppressWarnings("unchecked")
 public class ZbnfJavaOutput
 {
-	/**Version, able to read as hex yyyymmdd.
-	 * Changes:
-	 * <ul>
-	 * <li>2012-10-07 Hartmut bugfix on writing in a public List<String> getParsedString() should be used too.
-	 * <li>2012-10-07 Hartmut chg: error text output, able to use for {@link org.vishia.msgDispatch.MsgDispatchSystemOutErr}
+  /**Version, able to read as hex yyyymmdd.
+   * Changes:
+   * <ul>
+   * <li>2012-10-07 Hartmut bugfix on writing in a public List<String> getParsedString() should be used too.
+   * <li>2012-10-07 Hartmut chg: error text output, able to use for {@link org.vishia.msgDispatch.MsgDispatchSystemOutErr}
    * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(Component, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
    * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
-	 * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
-	 * <li>2010-12-02 Hartmut new: Up to now this version variable, its description contains the version history.
-	 * </ul>
-	 * <ul>
-	 * <li>new: new functionality, downward compatibility.
-	 * <li>fnChg: Change of functionality, no changing of formal syntax, it may be influencing the functions of user,
-	 *            but mostly in a positive kind. 
-	 * <li>chg: Change of functionality, it should be checked syntactically, re-compilation necessary.
-	 * <li>adap: No changing of own functionality, but adapted to a used changed module.
-	 * <li>corr: correction of a bug, it should be a good thing.
-	 * <li>bug123: correction of a tracked bug.
-	 * <li>nice: Only a nice correction, without changing of functionality, without changing of syntax.
-	 * <li>descr: Change of description of elements.
-	 * </ul> 
-	 */
-	public final static int versionStamp = 0x20101203;
-	
-	private final Report report;
-	
+   * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
+   * <li>2010-12-02 Hartmut new: Up to now this version variable, its description contains the version history.
+   * </ul>
+   * <ul>
+   * <li>new: new functionality, downward compatibility.
+   * <li>fnChg: Change of functionality, no changing of formal syntax, it may be influencing the functions of user,
+   *            but mostly in a positive kind. 
+   * <li>chg: Change of functionality, it should be checked syntactically, re-compilation necessary.
+   * <li>adap: No changing of own functionality, but adapted to a used changed module.
+   * <li>corr: correction of a bug, it should be a good thing.
+   * <li>bug123: correction of a tracked bug.
+   * <li>nice: Only a nice correction, without changing of functionality, without changing of syntax.
+   * <li>descr: Change of description of elements.
+   * </ul> 
+   */
+  public final static int versionStamp = 0x20101203;
+  
+  private final Report report;
+  
   /**If it is set, only set_ or add_-methods and new_-methods are accepted,
    * no fields and no inner classes as container.
    */
@@ -439,20 +437,20 @@ public class ZbnfJavaOutput
   
   private static class Component
   {
-  	final Object instance;
-  	
-  	final Class clazz;
-  	
-  	final Component parent;
+    final Object instance;
+    
+    final Class clazz;
+    
+    final Component parent;
 
-		public Component(Component parent, Class clazz, Object instance)
-		{
-			this.instance = instance;
-			this.clazz = clazz;
-			this.parent = parent;
-		}
-  	
-  	
+    public Component(Component parent, Class clazz, Object instance)
+    {
+      this.instance = instance;
+      this.clazz = clazz;
+      this.parent = parent;
+    }
+    
+    
   }
   
   
@@ -475,7 +473,7 @@ public class ZbnfJavaOutput
      *                  false than the instance is referenced from the parent already.
      */
     ChildInstanceAndClass(Object instance, Class clazz
-    	, boolean shouldAdd)
+      , boolean shouldAdd)
     { this.instance = instance; this.clazz = clazz; 
       this.shouldAdd = shouldAdd; 
     }
@@ -574,7 +572,7 @@ public class ZbnfJavaOutput
     }
     else
     { String sProblem = "method set_- or add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found";
-	    problem(component, sProblem);
+      problem(component, sProblem);
     }
   }
   
@@ -611,7 +609,7 @@ public class ZbnfJavaOutput
    * @throws InstantiationException If a problem calling the new_-method exists. 
    */
   private ChildInstanceAndClass searchComponentsDestination(String semantic
-  	, Component component) 
+    , Component component) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { /**The returned instance if resultItem is null, and the field is searched. */
     ChildInstanceAndClass child = null;
@@ -948,9 +946,9 @@ public class ZbnfJavaOutput
       }
       else
       { throw new IllegalArgumentException("Unexpected type of field: " + sType + " " + element.getName() 
-      	+ " in " + outputInstance.getClass().getName()
-      	+ " Hint: An access to a public element can only be done for types int, long, float, double, boolean, String and List<String>."
-      	);
+        + " in " + outputInstance.getClass().getName()
+        + " Hint: An access to a public element can only be done for types int, long, float, double, boolean, String and List<String>."
+        );
       }
     }
     catch(IllegalAccessException exc)
@@ -1113,7 +1111,7 @@ public class ZbnfJavaOutput
    */
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, String sSyntax) 
   { StringPart spSyntax = new StringPart(sSyntax);
-  	return parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
+    return parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
   }
   
   

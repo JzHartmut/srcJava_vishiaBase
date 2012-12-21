@@ -11,7 +11,9 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
+import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.zbnf.ZbnfJavaOutput;
@@ -25,6 +27,8 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #setGenCtrl(StringPart)} etc.
+   * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
    * <li>2012-11-24 Hartmut chg: @{@link ScriptElement#datapath} with {@link DataAccess.DatapathElement} 
    * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
@@ -70,7 +74,7 @@ public class TextGenScript {
   private final MainCmdLogging_ifc console;
 
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
-  MainGenCtrl zbnfZmakeGenCtrl = new MainGenCtrl();
+  MainGenCtrl zbnfZmakeGenCtrl;
   
   private final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
   
@@ -88,6 +92,94 @@ public class TextGenScript {
 
   private ScriptElement zbnf_genFile;
   
+  public static String syntax =
+    "$comment=(?...?).\n"
+    + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
+    + "\n"
+    + "ZmakeGenctrl::= \n"
+    + "{ <ZmakeTarget> \n"
+    + "| <subtext> \n"
+    + "| <genFile> \n"
+    + "| \\<= <variableAssign?setVariable> \\<\\.=\\>\n"
+    + "} \\e.\n"
+    + "\n"
+    + "##A Zmake-Script contains of targets, which are to do.\n"
+    + "##The genControl Script determines the textual representation of some targets with the several use-able names.\n"
+    + "##All named targets in the control script can be used as Zmake-target-name (translator name) in the users Zmake script.\n"
+    + "##This file describes how a genControl script should be build.\n"
+    + "\n"
+    + "\n"
+    + "ZmakeTarget::= \\<:target = <$?@name> \\> \n"
+    +   "<genContent?>\n"
+    + "\\<\\.target\\>.\n"
+    + "\n"
+    + "\n"
+    + "subtext::= \\<:subtext : <$?name> [ : { <referencedData> ? , }] \\><genContent?> \\<\\.subtext\\>.\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "##A genControl script should have a part <:file>....<.file> which describes how the whole file should build.\n"
+    + "\n"
+    + "genFile::= \\<:file\\>\n"
+    +   "<genContent?>\n"
+    + "\\<\\.file\\>.\n"
+    +   "\n"
+    + "  \n"
+    + "\n"
+    + "\n"
+    + "##The textual content of any target, file, variable etc.\n"
+    + "\n"
+    + "genContent::=\n"
+    + "{ \\<= <variableAssign?setVariable> \\<\\.=\\>                       ##Possibility to have local variables. It is constant text.\n"
+    + "| \\<= <referencedData>                                           ##A reference to user data\n"
+    + "| \\<:for:<forContainer>\n"
+    + "| \\<:if: <if>\n"
+    + "| \\<:hasNext\\> <genContent?hasNext> \\<\\.hasNext\\>\n"
+    + "| \\<+<variableAssignment?addToList>\\<\\.+\\>\n"
+    + "| \\<*subtext : <callSubtext>\n"
+    + "| \\<*<valueElement>\\>\n"
+    + "| \\<:\\><genContentNoWhitespace?>\\<\\.\\>\n"
+    + "| <*|\\<:|\\<*|\\<\\.?text>                        ##text after whitespace but inclusive trailing whitespaces till next control <: <* <.\n"
+    + "}.\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "callSubtext::=[<\"\"?name>|<datapath>] [ : { <referencedData> ? , }] \\>.\n"
+    + "\n"
+    + "\n"
+    + "valueElement::=<\"\"?text>|<datapath>.\n"
+    + "\n"
+    + "datapath::=<?>{ <datapathElement> ? \\.}.  ##path elements can start with $ or @ and can contain -\n"
+    + "\n"
+    + "datapathElement::=[ <#?intValue> |<?ident>[$|@|][<$-?>]] [( [{ <#?intArg> | <#f?floatArg> | <\"\"?textArg> | <*,)?textArg> ? ,}<?fn>])].\n"
+    + "\n"
+    + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
+    + "{ [?\\<\\.\\>]              ##abort on <.> \n"
+    + "[ \\<*<valueElement>\\>\n"
+    + "| <*|\\<:|\\<*|\\<\\.?text>           ##text inclusive leading and trailing whitespaces\n"
+    + "]\n"
+    + "}.\n"
+    + "\n"
+    + "\n"
+    + "variableAssign::= <$?@name> \\> <genContent?> .\n"
+    + "\n"
+    + "referencedData::= <$?name>[ = [ <\"\"?text> | <datapath>]].\n"
+    + "\n"
+    + "forContainer::= <$?@name> : <datapath> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
+    + "\n"
+    + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <genContent?elseBlock> ] \\<\\.if\\>.\n"
+    + "ifBlock::= <condition> \\> <genContent?>.\n"
+    + "\n"
+    + "condition::=<?><datapath> [<cmpOperation>].\n"
+    + "\n"
+    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <datapath>\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n";
+ 
+  
 
   public TextGenScript(MainCmdLogging_ifc console)
   { this.console = console;
@@ -97,18 +189,56 @@ public class TextGenScript {
   public boolean parseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
   throws FileNotFoundException, IOException
     , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
-  { boolean bOk;
-    console.writeInfoln("* Zmake: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
+  { console.writeInfoln("* Zmake: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
     + "\" with \"" + fileGenCtrl.getAbsolutePath() + "\"");
 
+    int lengthBufferSyntax = (int)fileZbnf4GenCtrl.length();
+    StringPart spSyntax = new StringPartFromFileLines(fileZbnf4GenCtrl, lengthBufferSyntax, "encoding", null);
+
+    int lengthBufferGenctrl = (int)fileGenCtrl.length();
+    StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
+
+    
+    return parseGenCtrl(spSyntax, spGenCtrl);
+    
+  }
+  
+
+  public boolean setGenCtrl(File fileGenCtrl) 
+  throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
+  {
+    int lengthBufferGenctrl = (int)fileGenCtrl.length();
+    StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
+    return parseGenCtrl(new StringPart(syntax), new StringPart(spGenCtrl));
+  }
+  
+  
+  public boolean setGenCtrl(String spGenCtrl) 
+  throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
+  {
+    return parseGenCtrl(new StringPart(syntax), new StringPart(spGenCtrl));
+  }
+  
+  
+  public boolean setGenCtrl(StringPart spGenCtrl) 
+  throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
+  {
+    return parseGenCtrl(new StringPart(syntax), spGenCtrl);
+  }
+  
+  
+  
+  public boolean parseGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl) 
+  throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
+  { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser((Report)console);
-    parserGenCtrl.setSyntax(fileZbnf4GenCtrl);
+    parserGenCtrl.setSyntax(sZbnf4GenCtrl);
     if(console.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
       console.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
       parserGenCtrl.reportSyntax((Report)console, MainCmdLogging_ifc.fineInfo);
     }
     console.writeInfo(" ... ");
-    bOk = parserGenCtrl.parse(new StringPartFromFileLines(fileGenCtrl));
+    bOk = parserGenCtrl.parse(spGenCtrl);
     if(!bOk){
       String sError = parserGenCtrl.getSyntaxErrorReport();
       throw new ParseException(sError,0);
@@ -118,6 +248,7 @@ public class TextGenScript {
     }
     console.writeInfo(", ok set output ... ");
     //write into Java classes:
+    zbnfZmakeGenCtrl = new MainGenCtrl();
     ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput((Report)console);
     parserGenCtrl2Java.setContent(zbnfZmakeGenCtrl.getClass(), zbnfZmakeGenCtrl, parserGenCtrl.getFirstParseResult());
     console.writeInfo(" ok");
@@ -190,7 +321,7 @@ public class TextGenScript {
    * </pre> 
    *
    */
-  public final class ScriptElement
+  public class ScriptElement
   {
     /**Designation what presents the element:
      * <table><tr><th>c</th><th>what is it</th></tr>
@@ -212,6 +343,7 @@ public class TextGenScript {
      * <tr><td>E</td><td><:else> {@link #subContent} contains build.script for any list element,
      * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,
      * <tr><td>G</td><td><:elsif:condition:path> {@link #subContent} contains build.script for any list element,
+     * <tr><td>?</td><td><:if:...?gt> compare-operation in if
      * 
      * <tr><td>Z</td><td>a target,
      * <tr><td>Y</td><td>the file
@@ -225,7 +357,7 @@ public class TextGenScript {
     
     public String name;
     
-    public String operator;
+    //public String operator;
     
     public String value;
     
@@ -315,7 +447,7 @@ public class TextGenScript {
     public void add_forContainer(ScriptElement val){}
 
     
-    public ScriptElement new_ifContainer()
+    public ScriptElement new_if()
     { GenContent subGenContent = new GenContent(true);
       ScriptElement contentElement = new ScriptElement('F', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
@@ -323,18 +455,18 @@ public class TextGenScript {
       return contentElement;
     }
     
-    public void add_ifContainer(ScriptElement val){}
+    public void add_if(ScriptElement val){}
 
     
-    public ScriptElement new_ifBlock()
+    public IfCondition new_ifBlock()
     { GenContent subGenContent = new GenContent(true);
-      ScriptElement contentElement = new ScriptElement('G', null);
+      IfCondition contentElement = new IfCondition('G');
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_ifBlock(ScriptElement val){}
+    public void add_ifBlock(IfCondition val){}
 
     public ScriptElement new_hasNext()
     { ScriptElement contentElement = new ScriptElement('N', null);
@@ -354,6 +486,8 @@ public class TextGenScript {
     
     public void add_elseBlock(ScriptElement val){}
 
+    
+    
     public ScriptElement new_callSubtext()
     { ScriptElement contentElement = new ScriptElement('s', null);
       subContent.content.add(contentElement);
@@ -450,6 +584,32 @@ public class TextGenScript {
   }
 
   
+  
+  public class IfCondition extends ScriptElement
+  {
+    
+    ScriptElement condition;
+    
+    CalculatorExpr expr;
+    
+    IfCondition(char whatis){
+      super(whatis, null);
+    }
+    
+    public ScriptElement new_cmpOperation()
+    { condition = new ScriptElement('?', null);
+      return condition;
+    }
+    
+    public void add_cmpOperation(ScriptElement val){}
+
+
+    
+
+  }
+  
+  
+  
   /**Organization class for a list of script elements inside another Scriptelement.
    *
    */
@@ -475,6 +635,10 @@ public class TextGenScript {
     
     //public List<String> datapath = new LinkedList<String>();
     
+    public GenContent()
+    {this.isContentForInput = false;
+    }
+        
     public GenContent(boolean isContentForInput)
     {this.isContentForInput = isContentForInput;
     }
