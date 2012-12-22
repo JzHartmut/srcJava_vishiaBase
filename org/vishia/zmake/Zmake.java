@@ -473,7 +473,7 @@ public class Zmake
     Object oCurrDir = scriptVariables.get("currDir");
     if(oCurrDir != null){
       //Set the current dir in the user script. It is needed there for file path building.
-      zmakeInput.setCurrentDir(null, DataAccess.getStringFromObject(oCurrDir));
+      zmakeInput.setCurrentDir(null, DataAccess.getStringFromObject(oCurrDir, null));
     }
     
     try{ 

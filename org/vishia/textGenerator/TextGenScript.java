@@ -27,6 +27,9 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2012-12-23 Hartmut chg: A {@link ScriptElement} and a {@link Argument} have the same usage aspects for arguments
+   *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link Argument#text} if a data path is given, use for formatting a numerical value.   
    * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #setGenCtrl(StringPart)} etc.
    * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
    * <li>2012-11-24 Hartmut chg: @{@link ScriptElement#datapath} with {@link DataAccess.DatapathElement} 
@@ -147,11 +150,11 @@ public class TextGenScript {
     + "callSubtext::=[<\"\"?name>|<datapath>] [ : { <referencedData> ? , }] \\>.\n"
     + "\n"
     + "\n"
-    + "valueElement::=<\"\"?text>|<datapath>.\n"
+    + "valueElement::=<\"\"?text>|<datapath> [ : <\"\"?formatText>].\n"
     + "\n"
     + "datapath::=<?>{ <datapathElement> ? \\.}.  ##path elements can start with $ or @ and can contain -\n"
     + "\n"
-    + "datapathElement::=[ <#?intValue> |<?ident>[$|@|][<$-?>]] [( [{ <#?intArg> | <#f?floatArg> | <\"\"?textArg> | <*,)?textArg> ? ,}<?fn>])].\n"
+    + "datapathElement::=[ <#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> |<?ident>[$|@|][<$-?>]] [( [{ <#?intArg> | <#f?floatArg> | <\"\"?textArg> | <*,)?textArg> ? ,}<?fn>])].\n"
     + "\n"
     + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
     + "{ [?\\<\\.\\>]              ##abort on <.> \n"
@@ -277,11 +280,13 @@ public class TextGenScript {
     return content;
   }
   
+  
+  
   public List<ScriptElement> getListScriptVariables(){ return listScriptVariables; }
-  
-  
-  
-  public static final class Arguments{
+
+
+
+  public static class Argument{
     
     /**Name of the argument. It is the key to assign calling argument values. */
     public String name;
@@ -291,6 +296,9 @@ public class TextGenScript {
     
     
     
+    /**The description of the path to any data if the script-element refers data. It is null if the script element
+     * does not refer data. See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
+     */
     List<DataAccess.DatapathElement> datapath;
     
     public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
@@ -321,7 +329,7 @@ public class TextGenScript {
    * </pre> 
    *
    */
-  public class ScriptElement
+  public class ScriptElement extends Argument
   {
     /**Designation what presents the element:
      * <table><tr><th>c</th><th>what is it</th></tr>
@@ -332,7 +340,7 @@ public class TextGenScript {
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>o</td><td>content of the output, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
-     * <tr><td>e</td><td>content of a data path.</td></tr>
+     * <tr><td>e</td><td>A value, maybe content of a data path or a constant value.</td></tr>
      * <tr><td>XXXg</td><td>content of a data path starting with an internal variable (reference) or value of the variable.</td></tr>
      * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
@@ -352,25 +360,14 @@ public class TextGenScript {
      */
     final public char whatisit;    
     
-    /**Constant text or name of elements or build-script-name. */
-    public final String text;
-    
-    public String name;
-    
-    //public String operator;
-    
     public String value;
     
     //public List<String> path;
     
-    /**The description of the path to any data if the script-element refers data. It is null if the script element
-     * does not refer data. See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
-     */
-    List<DataAccess.DatapathElement> datapath;
     
-    /**Arguments either actual or formal if this is a subtext call or subtext definition. 
+    /**Argument either actual or formal if this is a subtext call or subtext definition. 
      * Maybe null if the subtext has not argument. It is null if it is not a subtext call or definition. */
-    List<Arguments> refenceData;
+    List<Argument> refenceData;
     
     //public String elementPart;
     
@@ -389,22 +386,15 @@ public class TextGenScript {
     }
     
     
-    public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
     
-    public void add_datapathElement(DataAccess.DatapathElement val){ 
-      if(datapath == null){
-        datapath = new LinkedList<DataAccess.DatapathElement>();
-      }
-      datapath.add(val); 
-    }
-    
-    public List<Arguments> getReferenceDataSettings(){ return refenceData; }
+    public List<Argument> getReferenceDataSettings(){ return refenceData; }
     
     public GenContent getSubContent(){ return subContent; }
     
     public void set_text(String text){ subContent.content.add(new ScriptElement('t', text)); }
     
     
+    public void set_formatText(String text){ this.text = text; }///
     
     /**Defines a variable with initial value. <= <variableAssign?setVariable> \<\.=\>
      */
@@ -415,11 +405,11 @@ public class TextGenScript {
     
     
     /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
-    public Arguments new_referencedData(){ return new Arguments(); }
+    public Argument new_referencedData(){ return new Argument(); }
     
     /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
-    public void add_referencedData(Arguments val){ 
-      if(refenceData == null){ refenceData = new LinkedList<Arguments>(); }
+    public void add_referencedData(Argument val){ 
+      if(refenceData == null){ refenceData = new LinkedList<Argument>(); }
       refenceData.add(val); }
     
     

@@ -51,6 +51,10 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.textGenerator.TextGenScript.Argument, Map, boolean)} now uses
+   *   an {@link TextGenScript.Argument} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
+   *   without extra dataPath, only with a ScriptElement.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link TextGenScript.Argument#text} if a data path is given, use for formatting a numerical value.
    * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
    *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
@@ -246,9 +250,10 @@ public class TextGenerator {
   
 
   
-  private Object getContent(List<DataAccess.DatapathElement> dataRef, Map<String, Object> localVariables, boolean bContainer)
+  private Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
-  { Object dataRet;
+  { List<DataAccess.DatapathElement> dataRef = arg.datapath;
+    Object dataRet;
     if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$objDirW"))
       Assert.stop();
     try{
@@ -359,14 +364,14 @@ public class TextGenerator {
             //XXXreplacePlaceholder(contentElement.text);
          }
         } break;
-        case 'e': {
+        case 'e': {  //value or datapath
           final CharSequence text;
           if(contentElement.text !=null && contentElement.text.equals("target")){
             //generates all targets, only advisable in the (?:file?)
             //genUserTargets(out);
           } else if(contentElement.datapath !=null){
-            Object oContent = getContent(contentElement.datapath, localVariables, false);
-            text = DataAccess.getStringFromObject(oContent);
+            Object oContent = getContent(contentElement, localVariables, false);
+            text = DataAccess.getStringFromObject(oContent, contentElement.text);
             //text = getTextofVariable(userTarget, contentElement.text, this);
             uBuffer.append(text); 
           } else {
@@ -388,7 +393,7 @@ public class TextGenerator {
           TextGenScript.GenContent subContent = contentElement.getSubContent();
           if(contentElement.name.equals("state1"))
             stop();
-          Object container = getContent(contentElement.datapath, localVariables, true);
+          Object container = getContent(contentElement, localVariables, true);
           if(container instanceof String && ((String)container).startsWith("<?")){
             writeError((String)container, out);
           }
@@ -468,7 +473,7 @@ public class TextGenerator {
     
     
     boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
-      Object check = getContent(ifBlock.datapath, localVariables, false);
+      Object check = getContent(ifBlock, localVariables, false);
       boolean bCondition;
       if(ifBlock.expr == null && ifBlock.condition !=null){
           
@@ -477,7 +482,7 @@ public class TextGenerator {
         ifBlock.expr.addExprToStack(1, ifBlock.condition.name);
       }
       if(ifBlock.expr != null){
-        Object cmp = getContent(ifBlock.condition.datapath, localVariables, false);
+        Object cmp = getContent(ifBlock.condition, localVariables, false);
         CalculatorExpr.Value result = ifBlock.expr.calc(check, cmp);
         bCondition = result.booleanValue();
       } else {
@@ -513,8 +518,8 @@ public class TextGenerator {
     void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
       boolean ok = true;
       if(contentElement.name == null){
-        Object oName = getContent(contentElement.datapath, localVariables, false);
-        contentElement.name = DataAccess.getStringFromObject(oName);
+        Object oName = getContent(contentElement, localVariables, false);
+        contentElement.name = DataAccess.getStringFromObject(oName, null);
       }
       TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
       if(subtextScript == null){
@@ -522,15 +527,17 @@ public class TextGenerator {
       } else {
         Gen_Content subtextGenerator = new Gen_Content(this);
         if(subtextScript.refenceData !=null){
+          //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
-          for(TextGenScript.Arguments formalArg: subtextScript.refenceData) {
+          for(TextGenScript.Argument formalArg: subtextScript.refenceData) {
             check.put(formalArg.name, new CheckArgument(formalArg));
           }
-          List<TextGenScript.Arguments> referenceSettings = contentElement.getReferenceDataSettings();
+          //process all actual arguments:
+          List<TextGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
           if(referenceSettings !=null){
-            for( TextGenScript.Arguments referenceSetting: referenceSettings){
+            for( TextGenScript.Argument referenceSetting: referenceSettings){
               Object ref;
-              ref = getContent(referenceSetting.datapath, localVariables, false);
+              ref = getContent(referenceSetting, localVariables, false);
               if(ref !=null){
                 CheckArgument checkArg = check.get(referenceSetting.name);
                 if(checkArg == null){
@@ -551,7 +558,7 @@ public class TextGenerator {
                 if(arg.formalArg.text !=null){
                   subtextGenerator.localVariables.put(arg.formalArg.name, arg.formalArg.text);
                 } else if(arg.formalArg.datapath !=null){
-                  Object ref = getContent(arg.formalArg.datapath, localVariables, false);
+                  Object ref = getContent(arg.formalArg, localVariables, false);
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.name, ref);
                   } else {
@@ -591,12 +598,12 @@ public class TextGenerator {
   private class CheckArgument
   {
     /**Reference to the formal argument. */
-    final TextGenScript.Arguments formalArg;
+    final TextGenScript.Argument formalArg;
     
     /**Set to true if this argument is used. */
     boolean used;
     
-    CheckArgument(TextGenScript.Arguments formalArg){ this.formalArg = formalArg; }
+    CheckArgument(TextGenScript.Argument formalArg){ this.formalArg = formalArg; }
   }
   
   
