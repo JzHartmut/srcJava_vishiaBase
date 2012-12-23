@@ -14,6 +14,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
+import org.vishia.xmlSimple.XmlException;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -145,8 +146,13 @@ public class TextGenerator {
    */
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
     String sError = null;
-    genScript = parseGenScript(fileScript, testOut);
-    if(out !=null){
+    TextGenScript genScript = new TextGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
+    try { genScript.setGenCtrl(fileScript);
+    } catch (Exception exc) {
+      sError = exc.getMessage();
+    }
+    //genScript = parseGenScript(fileScript, testOut);
+    if(sError == null && out !=null){
       try{
         sError = genContent(genScript, userData, accessPrivate, out);
         //out.close();
@@ -165,12 +171,12 @@ public class TextGenerator {
    * @param testOut If not null, the content of the generation script will be reported there.
    * @return The generation script ready to use for {@link #genContent(TextGenScript, Object, boolean, Appendable)}.
    */
-  public TextGenScript parseGenScript(File fileScript, Appendable testOut)
+  public TextGenScript XXXparseGenScript(File fileScript, Appendable testOut)
   {
     genScript = new TextGenScript(log);
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     try{ 
-      genScript.parseGenCtrl(fileZbnf4GenCtrl, fileScript);
+      genScript.XXXparseGenCtrl(fileZbnf4GenCtrl, fileScript);
       if(testOut !=null){
         OutputDataTree outputterData = new OutputDataTree();
         outputterData.output(0, genScript, testOut, false);
@@ -192,8 +198,25 @@ public class TextGenerator {
 
   
   
-  public Map<String, Object> genScriptVariables() throws IOException
+  /**Generates script-global variables.
+   * 
+   * @param genScript It should be the same how used on {@link #genContent(TextGenScript, Object, boolean, Appendable)}
+   *   but it may be another one for special cases.
+   * @param userData Used userdata for content of scriptvariables. It should be the same how used on 
+   *   {@link #genContent(TextGenScript, Object, boolean, Appendable)} but it may be another one for special cases.
+   * @param accessPrivate true than access to private data of userData
+   * @return The built script variables. It is the @{@link Gen_Content#localVariables} of {@link #genFile}.
+   *   One can evaluate some script variables before running {@link #genContent(TextGenScript, Object, boolean, Appendable)}.
+   *   Especially it is used for {@link org.vishia.zmake.Zmake to set the currDir.} 
+   * @throws IOException
+   */
+  public Map<String, Object> genScriptVariables(TextGenScript genScript, Object userData, boolean accessPrivate) 
+  throws IOException
   {
+    this.genScript = genScript;
+    this.data = userData;
+    this.accessPrivate = accessPrivate;
+    
     for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
       Gen_Content genVariable = new Gen_Content(null);
@@ -223,7 +246,7 @@ public class TextGenerator {
     this.genScript = genScript;
 
     if(!bScriptVariableGenerated){
-      genScriptVariables();
+      genScriptVariables(genScript, userData, accessPrivate);
     }
     
     /*
@@ -254,15 +277,19 @@ public class TextGenerator {
   throws IllegalArgumentException
   { List<DataAccess.DatapathElement> dataRef = arg.datapath;
     Object dataRet;
-    if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$objDirW"))
-      Assert.stop();
-    try{
-      dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
-    } catch(NoSuchFieldException exc){
-      dataRet = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
-      if(!bWriteErrorInOutput){
-        throw new IllegalArgumentException(dataRet.toString());
+    if(arg.datapath !=null){
+      if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$objDirW"))
+        Assert.stop();
+      try{
+        dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
+      } catch(NoSuchFieldException exc){
+        dataRet = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
+        if(!bWriteErrorInOutput){
+          throw new IllegalArgumentException(dataRet.toString());
+        }
       }
+    } else {
+      dataRet = arg.constValue;
     }
     return dataRet;
   }
@@ -526,10 +553,10 @@ public class TextGenerator {
         ok = writeError("<? *subtext:" + contentElement.name + " not found.?>", out);
       } else {
         Gen_Content subtextGenerator = new Gen_Content(this);
-        if(subtextScript.refenceData !=null){
+        if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
-          for(TextGenScript.Argument formalArg: subtextScript.refenceData) {
+          for(TextGenScript.Argument formalArg: subtextScript.arguments) {
             check.put(formalArg.name, new CheckArgument(formalArg));
           }
           //process all actual arguments:

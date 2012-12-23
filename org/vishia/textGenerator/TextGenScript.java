@@ -27,6 +27,11 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2012-12-24 Hartmut chg: Now the 'ReferencedData' are 'namedArgument' and it uses 'valueElement' inside. 
+   *   The 'valueElement' is represented by a new {@link ScriptElement}('e',...) which can have {@link Argument#constValue} 
+   *   instead a {@link Argument#datapath}. 
+   * <li>2012-12-24 Hartmut chg: {@link ZbnfDataPathElement} is a derived class of {@link DataAccess.DatapathElement}
+   *   which contains destinations for argument parsing of a called Java-subroutine in a dataPath.  
    * <li>2012-12-23 Hartmut chg: A {@link ScriptElement} and a {@link Argument} have the same usage aspects for arguments
    *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
    * <li>2012-12-23 Hartmut new: formatText in the {@link Argument#text} if a data path is given, use for formatting a numerical value.   
@@ -117,7 +122,7 @@ public class TextGenScript {
     + "\\<\\.target\\>.\n"
     + "\n"
     + "\n"
-    + "subtext::= \\<:subtext : <$?name> [ : { <referencedData> ? , }] \\><genContent?> \\<\\.subtext\\>.\n"
+    + "subtext::= \\<:subtext : <$?name> [ : { <namedArgument?formalArgument> ? , }] \\><genContent?> \\<\\.subtext\\>.\n"
     + "\n"
     + "\n"
     + "\n"
@@ -134,7 +139,7 @@ public class TextGenScript {
     + "\n"
     + "genContent::=\n"
     + "{ \\<= <variableAssign?setVariable> \\<\\.=\\>                       ##Possibility to have local variables. It is constant text.\n"
-    + "| \\<= <referencedData>                                           ##A reference to user data\n"
+    //+ "| \\<= <namedArgument>                                           ##A reference to user data\n"
     + "| \\<:for:<forContainer>\n"
     + "| \\<:if: <if>\n"
     + "| \\<:hasNext\\> <genContent?hasNext> \\<\\.hasNext\\>\n"
@@ -147,14 +152,14 @@ public class TextGenScript {
     + "\n"
     + "\n"
     + "\n"
-    + "callSubtext::=[<\"\"?name>|<datapath>] [ : { <referencedData> ? , }] \\>.\n"
+    + "callSubtext::=[<\"\"?name>|<datapath>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
     + "\n"
-    + "valueElement::=<\"\"?text>|<datapath> [ : <\"\"?formatText>].\n"
+    + "valueElement::= <#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> |<datapath> [ : <\"\"?formatText>].\n"
     + "\n"
     + "datapath::=<?>{ <datapathElement> ? \\.}.  ##path elements can start with $ or @ and can contain -\n"
     + "\n"
-    + "datapathElement::=[ <#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> |<?ident>[$|@|][<$-?>]] [( [{ <#?intArg> | <#f?floatArg> | <\"\"?textArg> | <*,)?textArg> ? ,}<?fn>])].\n"
+    + "datapathElement::=[<?ident>[$|@|][<$-?>]] [( [{ <valueElement?actualArgument> ? ,}<?fn>])].\n"  ///
     + "\n"
     + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
     + "{ [?\\<\\.\\>]              ##abort on <.> \n"
@@ -166,16 +171,16 @@ public class TextGenScript {
     + "\n"
     + "variableAssign::= <$?@name> \\> <genContent?> .\n"
     + "\n"
-    + "referencedData::= <$?name>[ = [ <\"\"?text> | <datapath>]].\n"
+    + "namedArgument::= <$?name>[ = <valueElement?>].\n"
     + "\n"
     + "forContainer::= <$?@name> : <datapath> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
     + "\n"
     + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <genContent?elseBlock> ] \\<\\.if\\>.\n"
     + "ifBlock::= <condition> \\> <genContent?>.\n"
     + "\n"
-    + "condition::=<?><datapath> [<cmpOperation>].\n"
+    + "condition::=<?><valueElement?> [<cmpOperation>].\n"  //NOTE: condition and valueElement is stored in the ifBlock.
     + "\n"
-    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <datapath>\n"
+    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <valueElement?>\n"
     + "\n"
     + "\n"
     + "\n"
@@ -189,7 +194,7 @@ public class TextGenScript {
   }
 
   
-  public boolean parseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
+  public boolean XXXparseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
   throws FileNotFoundException, IOException
     , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
   { console.writeInfoln("* Zmake: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
@@ -294,21 +299,34 @@ public class TextGenScript {
     /**From Zbnf <""?text>, constant text, null if not used. */
     public String text; 
     
-    
-    
+    /**Maybe a constant value, also a String. */
+    public Object constValue;
+
     /**The description of the path to any data if the script-element refers data. It is null if the script element
      * does not refer data. See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
      */
     List<DataAccess.DatapathElement> datapath;
     
-    public DataAccess.DatapathElement new_datapathElement(){ return new DataAccess.DatapathElement(); }
+    public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(); }
     
-    public void add_datapathElement(DataAccess.DatapathElement val){ 
+    public void add_datapathElement(ZbnfDataPathElement val){ 
       if(datapath == null){
         datapath = new LinkedList<DataAccess.DatapathElement>();
       }
       datapath.add(val); 
     }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_intValue(long val){ constValue = new Long(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_floatValue(double val){ constValue = new Double(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_textValue(String val){ constValue = val; }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_charValue(String val){ constValue = new Character(val.charAt(0)); }
     
 
   }
@@ -329,7 +347,7 @@ public class TextGenScript {
    * </pre> 
    *
    */
-  public class ScriptElement extends Argument
+  public static class ScriptElement extends Argument
   {
     /**Designation what presents the element:
      * <table><tr><th>c</th><th>what is it</th></tr>
@@ -360,14 +378,14 @@ public class TextGenScript {
      */
     final public char whatisit;    
     
-    public String value;
+    //public String value;
     
     //public List<String> path;
     
     
-    /**Argument either actual or formal if this is a subtext call or subtext definition. 
+    /**Argument list either actual or formal if this is a subtext call or subtext definition. 
      * Maybe null if the subtext has not argument. It is null if it is not a subtext call or definition. */
-    List<Argument> refenceData;
+    List<Argument> arguments;
     
     //public String elementPart;
     
@@ -387,7 +405,7 @@ public class TextGenScript {
     
     
     
-    public List<Argument> getReferenceDataSettings(){ return refenceData; }
+    public List<Argument> getReferenceDataSettings(){ return arguments; }
     
     public GenContent getSubContent(){ return subContent; }
     
@@ -404,13 +422,22 @@ public class TextGenScript {
     
     
     
-    /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
-    public Argument new_referencedData(){ return new Argument(); }
+    /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
+    public Argument new_formalArgument(){ return new Argument(); }
     
-    /**Set from ZBNF:  \<*subtext:name: { <referencedData> ?,} \> */
-    public void add_referencedData(Argument val){ 
-      if(refenceData == null){ refenceData = new LinkedList<Argument>(); }
-      refenceData.add(val); }
+    /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
+    public void add_formalArgument(Argument val){ 
+      if(arguments == null){ arguments = new LinkedList<Argument>(); }
+      arguments.add(val); }
+    
+    
+    /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
+    public Argument new_actualArgument(){ return new Argument(); }
+    
+    /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
+    public void add_actualArgument(Argument val){ 
+      if(arguments == null){ arguments = new LinkedList<Argument>(); }
+      arguments.add(val); }
     
     
     
@@ -575,7 +602,24 @@ public class TextGenScript {
 
   
   
-  public class IfCondition extends ScriptElement
+  public static class ZbnfDataPathElement extends DataAccess.DatapathElement
+  {
+    List<ScriptElement> actualArguments;
+    
+    public ScriptElement new_actualArgument(){
+      ScriptElement actualArgument = new ScriptElement('e', null);
+      if(actualArguments == null){ actualArguments = new LinkedList<ScriptElement>(); }
+      return actualArgument;
+    }
+
+    
+    public void add_actualArgument(ScriptElement val){ } //always added.
+
+  }
+  
+  
+  
+  public static class IfCondition extends ScriptElement
   {
     
     ScriptElement condition;
@@ -603,7 +647,7 @@ public class TextGenScript {
   /**Organization class for a list of script elements inside another Scriptelement.
    *
    */
-  public final class GenContent
+  public final static class GenContent
   {
     /**True if < genContent> is called for any input, (?:forInput?) */
     public final boolean isContentForInput;

@@ -273,8 +273,8 @@ public class Zmake
       else if(arg.startsWith("-o:"))           { callingArgs.sOutput = getArgument(3); }
       else if(arg.startsWith("-zbnf="))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
       else if(arg.startsWith("-zbnf:"))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
-      else if(arg.startsWith("-zGen="))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
-      else if(arg.startsWith("-zGen:"))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
+      //else if(arg.startsWith("-zGen="))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
+      //else if(arg.startsWith("-zGen:"))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
       else if(arg.startsWith("-genCtrl="))     { callingArgs.sGenCtrl = getArgument(9); }
       else if(arg.startsWith("-genCtrl:"))     { callingArgs.sGenCtrl = getArgument(9); }
       //else if(arg.startsWith("-xslt4ant="))    { sXslt4ant = getArgument(10); }  //older version, compatibility
@@ -396,8 +396,8 @@ public class Zmake
     fileOut.setWritable(true); 
     fileOut.delete();
     
-    File fileZbnf4GenCtrl = new File(args.zbnfjax_PATH + args.sZbnfGenCtrl);
-    if(!fileZbnf4GenCtrl.exists()) throw new IllegalArgumentException("cannot find -zbnf4GenCtrl=" + fileZbnf4GenCtrl.getAbsolutePath());
+    //File fileZbnf4GenCtrl = new File(args.zbnfjax_PATH + args.sZbnfGenCtrl);
+    //if(!fileZbnf4GenCtrl.exists()) throw new IllegalArgumentException("cannot find -zbnf4GenCtrl=" + fileZbnf4GenCtrl.getAbsolutePath());
     
     final String sFileGenCtrl = args.sGenCtrl.startsWith(".") ? args.sGenCtrl
                               : (args.zbnfjax_PATH + args.sGenCtrl);
@@ -405,7 +405,8 @@ public class Zmake
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
     //Build the data for ANT-generation control:
-    genScript.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
+    //genScript.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
+    genScript.setGenCtrl(fileGenCtrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.curDir + args.input + "\" with \"" 
       + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
@@ -459,10 +460,11 @@ public class Zmake
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     TextGenerator gen = new TextGenerator(console);
     Writer out = new FileWriter(fileOut);
-    TextGenScript genScript = gen.parseGenScript(fileGenCtrl, null);
+    TextGenScript genScript = new TextGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
+    genScript.setGenCtrl(fileGenCtrl);
     Map<String, Object> scriptVariables;
     try{ 
-      scriptVariables = gen.genScriptVariables();
+      scriptVariables = gen.genScriptVariables(genScript, zmakeInput, true);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
       scriptVariables = null;
