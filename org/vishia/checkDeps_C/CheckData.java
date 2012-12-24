@@ -87,29 +87,13 @@ public class CheckData
   final Map<String, InfoFileDependencies> indexSrcFilesAbs = new TreeMap<String, InfoFileDependencies>();
 
   /**Writer for all dependencies, use it if not null. */
-  Writer writerDepAll;
+  //Writer writerDepAll;
   
-  /**The dirSrcMirror refers to the build root directory. It is null, if the calling argument -srcBuild= isn't given.
-   * All input paths are located inside this directory tree. 
-   * For the src directories given with -src= calling argument, a local path part can be given.
-   * The argument is written in form PATH:PATHLOCAL. The PATHLOCAL is used inside that attribute.
-   * Additional the local path of the files are regarded. 
-   */
-  final File dirSrcMirrorRoot;
-
-  final File dirDepsRoot;
-  
-  /**The dirObj refers to the object root directory.
-   */
-  final File dirObjRoot;
-
-  public CheckData(File dirSrcMirror, File dirObjRoot, File dirDepRoot, Writer writerDepAll)
+  public CheckData() //, File dirDepRoot) //, Writer writerDepAll)
   {
     super();
-    this.dirSrcMirrorRoot = dirSrcMirror;
-    this.dirObjRoot = dirObjRoot;
-    this.writerDepAll = writerDepAll;
-    this.dirDepsRoot = dirDepRoot;
+    //this.writerDepAll = writerDepAll;
+    //this.dirDepsRoot = dirDepRoot;
   }
   
 

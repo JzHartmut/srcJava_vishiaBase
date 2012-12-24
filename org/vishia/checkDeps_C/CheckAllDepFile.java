@@ -5,7 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 public class CheckAllDepFile
 {
@@ -45,9 +45,9 @@ public class CheckAllDepFile
   public static final int version = 20121225;
 
   
-  final CheckDependencyFile checkerOld;
+  final CfgData cfgData;
   
-  final Report console;
+  final MainCmdLogging_ifc console;
   
   final CheckData checkData;
   
@@ -55,9 +55,9 @@ public class CheckAllDepFile
   private final static int maxTimeAbbreviation = 2500;
 
   
-  CheckAllDepFile(CheckDependencyFile checkerOld, Report console, CheckData checkData)
+  CheckAllDepFile(CfgData cfgData, MainCmdLogging_ifc console, CheckData checkData)
   {
-    this.checkerOld = checkerOld;
+    this.cfgData = cfgData;
     this.console = console;
     this.checkData = checkData;
   }
@@ -124,7 +124,7 @@ public class CheckAllDepFile
         ){
         //the source is not change in comparison to the last build (.dep-file).
         //store the info with all its unchangend primary dependencies:
-        String sLocalPath = checkerOld.cfgData.checkIsInSourcePool(sAbsPathFileSource);
+        String sLocalPath = cfgData.checkIsInSourcePool(sAbsPathFileSource);
         boolean isSourceFile = sLocalPath !=null; 
         String sFilePath = isSourceFile ? sLocalPath : sAbsPathFileSource;
         infoRead = new InfoFileDependencies(sFilePath, fileSource, fileMirror, isSourceFile, console);

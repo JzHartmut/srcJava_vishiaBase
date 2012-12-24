@@ -6,7 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.FileSystem;
 
 
@@ -99,7 +99,7 @@ class ObjectFileDeps
   }
   
   
-  boolean notifyNewer(InfoFileDependencies infoFile, Report console){
+  boolean notifyNewer(InfoFileDependencies infoFile, MainCmdLogging_ifc console){
     boolean bDelete = false;
     boolean bNewer;
     if(infoFile.isNewlyOrIncludedNewly()){
@@ -133,7 +133,7 @@ class ObjectFileDeps
   }
   
   
-  public void createObjDir(Report console)
+  public void createObjDir(MainCmdLogging_ifc console)
   {
     try{ FileSystem.mkDirPath(fileObj); }
     catch(IOException exc){

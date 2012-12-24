@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.FileSystem;
 
 
@@ -92,6 +93,8 @@ public class CheckDependencyFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2012-12-25 Hartmut chg: Now This class is able to use independently from {@link CheckDeps}. It should be used
+   *   to check file by file. 
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
    * <li>2011-05-00 Hartmut created: It was necessary for C-compilation to check real dependencies in a fast way.
@@ -124,24 +127,106 @@ public class CheckDependencyFile
    */
   public static final int version = 20121225;
 
-  
+  /**Contains all dependencies, read from file and processed. */
   final CheckData checkData;
+  
+  /**Junction between the dependency data in {@link #checkData} and the dependency input and output textual file. */
+  final CheckAllDepFile readerInputDepFile;
 
+  /**Some paths etc. */
   final CfgData cfgData;
 
-  final Report console;
+  final MainCmdLogging_ifc console;
+  
+  /**The dirSrcMirror refers to the build root directory. It is null, if the calling argument -srcBuild= isn't given.
+   * All input paths are located inside this directory tree. 
+   * For the src directories given with -src= calling argument, a local path part can be given.
+   * The argument is written in form PATH:PATHLOCAL. The PATHLOCAL is used inside that attribute.
+   * Additional the local path of the files are regarded. 
+   */
+  File dirSrcMirrorRoot;
+
+  //final File dirDepsRoot;
+  
+  /**The dirObj refers to the object root directory.
+   */
+  File dirObjRoot;
+
+
+  
   
   /**Constructor. The instance can be used for all files, which are located in the same source pool
    * and in the same object pool.
    * @param dirSrcMirrorRoot If null, then the comparison of content isn't done. 
    * @param dirObjRoot Base directory, where the objects and dependency files are located.
    */
-  CheckDependencyFile(final CfgData cfgData, final CheckData checkData, final Report console)
+  public CheckDependencyFile(MainCmdLogging_ifc log)
   {
-    this.cfgData = cfgData;
+    CheckData checkData = new CheckData();
+    this.cfgData = new CfgData();
     this.checkData = checkData;
-    this.console = console;
+    this.readerInputDepFile = new CheckAllDepFile(cfgData, log, checkData);
+    this.console = log;
   }
+  
+  
+  
+  public String setDirSrcMirror(String sDirSrcMirror){
+    String sError = null;
+    try{ 
+      dirSrcMirrorRoot = FileSystem.mkDirPath(sDirSrcMirror + "/");   //assert that the directory exists. A build file can written into.
+    }
+    catch(IOException exc){ sError = "CheckDeps - Problem with source mirror path; " + exc.getMessage(); }
+    return sError;
+  }
+  
+  
+  
+  public String setDirObj(String sDirObj){
+    String sError = null;
+    try{ 
+      dirObjRoot = FileSystem.mkDirPath(sDirObj + "/");   //assert that the directory exists. A build file can written into.
+    }
+    catch(IOException exc){ sError = "CheckDeps - Problem with obj path; " + exc.getMessage(); }
+    return sError;
+  }
+  
+  
+  
+  /**This routine must be called after construction to supply the configuration data.
+   * It is not a part of constructor because it may be evaluated separately.
+   * Any error in config file provides a string return.  
+   * @param sFileCfgData The file
+   * @return null if no error. An error message. If not null, this class is not able to use.
+   */
+  public String readCfgData(String sFileCfgData)
+  {
+    ParserConfigFile parserCfg = new ParserConfigFile(cfgData, console);
+    String sError = parserCfg.parseConfigFile(sFileCfgData);
+    
+    return sError;
+  }
+  
+  
+  
+  /**This routine can be called after construction to supply the configuration data.
+   * It is not a part of constructor because it may be evaluated separately.
+   * Any error in config file provides a string return.  
+   * <br><br>
+   * If this routine is not called, there are not known dependencies. So any file is checked completely.
+   * 
+   * @param sFileDepenencies The last created dependency file.
+   * @return null if no error. An error message. If not null, this class is not able to use.
+   */
+  public String readDependencyInput(String sFileDepenencies){
+    readerInputDepFile.readDepFile(sFileDepenencies);
+
+    return null;
+  }
+  
+  
+  
+  
   
   
   
@@ -158,8 +243,8 @@ public class CheckDependencyFile
    */
   File getFileSrcMirror(String sLocalPath){
     final File fileSrcMirror;
-    if(checkData.dirSrcMirrorRoot !=null && sLocalPath !=null){
-      fileSrcMirror = new File(this.checkData.dirSrcMirrorRoot, sLocalPath);
+    if(dirSrcMirrorRoot !=null && sLocalPath !=null){
+      fileSrcMirror = new File(this.dirSrcMirrorRoot, sLocalPath);
       try{ FileSystem.mkDirPath(fileSrcMirror); }
       catch(IOException exc){ throw new RuntimeException(exc); }
     } else {
@@ -169,21 +254,37 @@ public class CheckDependencyFile
   }
 
 
-  File xxx_getFileDependencies(String sLocalPath){
-    final File fileDep;
-    if(checkData.dirDepsRoot !=null && sLocalPath !=null){
-      //String sFileName = fileSrc.getName();
-      //int posExt = sFileName.lastIndexOf('.');
-      String sFileDeps = sLocalPath + ".dep";
-      fileDep = new File(this.checkData.dirDepsRoot, sFileDeps);
-      try{ FileSystem.mkDirPath(fileDep); }
-      catch(IOException exc){ throw new RuntimeException(exc); }
-    } else {
-      fileDep = null;
-    }
-    return fileDep;  //may be null
-  }
 
+  
+  /**Check of one source file for newly against the associated result file of translation (object-file for C-compilation). 
+   * @param fileSrc
+   * @param sLocalPathName
+   * @param sObjExt
+   * @param recursiveCt
+   * @return
+   */
+  InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt, int recursiveCt) 
+  {
+    final ObjectFileDeps objDeps;
+    
+    int posExt = sLocalPathName.lastIndexOf('.');
+    String sExt = sLocalPathName.substring(posExt+1);
+    //
+    if(sExt.startsWith("c") || sExt.startsWith("C") || sExt.equals("s") || sExt.equals("S")){
+      objDeps = new ObjectFileDeps(dirObjRoot, sLocalPathName, sObjExt); 
+      objDeps.createObjDir(console);
+    } else {
+      objDeps = null;
+    }
+    InfoFileDependencies infoFile = processSrcfile(fileSrc, objDeps, recursiveCt);
+    if(objDeps.isObjDeleted()){ 
+      checkData.nrofDelObj +=1; 
+    }
+    if(objDeps.isObjRecompile()){ 
+      checkData.nrofRecompilings +=1; 
+    }
+    return infoFile;
+  }
 
 
   
@@ -195,7 +296,7 @@ public class CheckDependencyFile
    * @return Instance for this file, where dependency information are stored for further occurrence
    *         of the same file. Then the file is processed already.
    */
-  InfoFileDependencies processSrcfile(File fileSrc , ObjectFileDeps objDeps, int recursiveCt) 
+  InfoFileDependencies processSrcfile(File fileSrc, final ObjectFileDeps objDeps, int recursiveCt) 
   {
     String sFileSrcGenAbs = FileSystem.getCanonicalPath(fileSrc);
     String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
@@ -220,14 +321,13 @@ public class CheckDependencyFile
           , null, objDeps, recursiveCt+1);
         String sNewly = infoFile.isNewlyItself() ? "newly; " : 
                         infoFile.isNewlyOrIncludedNewly() ? " include newly; " : "not changed; ";
-        console.reportln(Report.fineInfo, "CheckDeps - source file checked; " + sNewly + sFileSrcGenAbs + "");
+        console.reportln(MainCmdLogging_ifc.fineInfo, "CheckDeps - source file checked; " + sNewly + sFileSrcGenAbs + "");
         
       } 
       checkData.indexAllInclFilesAbsPath.put(infoFile.sAbsolutePath, infoFile);
     }
     return infoFile;
   }
-
   
   
   InfoFileDependencies checkDependenciesInputDepFile(String sPathSrcCanonical, ObjectFileDeps objDeps, int nRecursion)
@@ -326,7 +426,7 @@ public class CheckDependencyFile
       codeLineMirror = new NextCodeLine(fileSrcMirror);
       nEqual = 2;  //presume lines are equal
     }
-    console.reportln(Report.debug, "checkFile; " + sFileSrgGenAbs);
+    console.reportln(MainCmdLogging_ifc.debug, "checkFile; " + sFileSrgGenAbs);
     if(sFileSrgGenAbs.contains("ObjectJc.h"))
       stop();
     
@@ -365,7 +465,7 @@ public class CheckDependencyFile
         if(nEqual > 0){ //if not equal, let it not equal!
           if(sLineMirror != null && !sLineMirror.equals(sLineSrc)){
             nEqual = 0;
-            console.reportln(Report.debug, "CheckFile - changed line; " + sLineSrc);
+            console.reportln(MainCmdLogging_ifc.debug, "CheckFile - changed line; " + sLineSrc);
           }
         }
         if(nEqual ==0)
@@ -387,7 +487,7 @@ public class CheckDependencyFile
     }
     else if(nEqual == 0){
       //not equal, copy the file
-      console.reportln(Report.info, "CheckDeps - changed file; " + sFileSrcGenName + ";   PATH: "+ sFileSrgGenAbs);
+      console.reportln(MainCmdLogging_ifc.info, "CheckDeps - changed file; " + sFileSrcGenName + ";   PATH: "+ sFileSrgGenAbs);
       
       copyToMirror(fileSrcGen, fileSrcMirror, "; !!checkFile(): ");
       infoDepsOfFile.notifyNewly(objDeps);
@@ -406,8 +506,8 @@ public class CheckDependencyFile
     if(timestampSrcNewest < timestampSrc){
       timestampSrcNewest = timestampSrc;   //the copied file determines the newest timestamp.
     }
-    if(console.getReportLevel() >= Report.debug){
-      console.reportln(Report.debug, "checkFile finished; " + sFileSrgGenAbs);
+    if(console.getReportLevel() >= MainCmdLogging_ifc.debug){
+      console.reportln(MainCmdLogging_ifc.debug, "checkFile finished; " + sFileSrgGenAbs);
       reportIncludesOfFile(infoDepsOfFile, 1, new TreeMap<String, InfoFileDependencies>());
     }
     /*
@@ -498,7 +598,7 @@ public class CheckDependencyFile
       inclFileInfo = null;
     } else {
       String sFileIncl = sLine.substring(from+1, to);
-      console.reportln(Report.debug, "processIncludeLine - included File; " + sFileIncl);
+      console.reportln(MainCmdLogging_ifc.debug, "processIncludeLine - included File; " + sFileIncl);
       if(sLine.contains("ccs_1p_BB_limit_signal_processing_public"))
         stop();
       
@@ -531,22 +631,24 @@ public class CheckDependencyFile
         //If the file isn't found relative, the include path is used.
         //The include path is related to the original source files, because the mirror files doesn't may existing.
         File fileIncl = searchInclFileInIncludePath(sFileIncl, sDirCurrentFile, includeFromCurrent, typeInclude);
-        final String sInclFileAbs;
-        if(fileIncl == null){
-          //file not found. The compiler doesn't it found too, if the include paths are correct.
-          //Only write a warning. Don't handle the file. Process the others.
-          console.writeInfoln("searchInclude - file not found: " + sFileIncl + "|||File: " + sSrcPath);
-          //no: throw new IllegalArgumentException("searchInclude - file not found: " + sFileIncl);
-        } else {
-          //The file is found. Save it in the index of processed files. Fill content then.
-          sInclFileAbs = FileSystem.getCanonicalPath(fileIncl);
-          //The fileInfo may be found with its absolute path. It is if different #include <path/name.h>-notations are used.
-          inclFileInfo = checkData.indexAllInclFilesAbsPath.get(sInclFileAbs);
-          if(inclFileInfo == null){ //not found yet
-            //
-            //This file is included, is contained in the source-pool or not, and it s not checked yet.
-            //Check it, build the InfoFileDependencies, maybe recursively call of that routine.
-            inclFileInfo = processSrcfile(fileIncl, objDeps, recursion);
+        if(typeInclude[0] != 'y'){  //do not process system include files.
+          final String sInclFileAbs;
+          if(fileIncl == null){
+            //file not found. The compiler doesn't it found too, if the include paths are correct.
+            //Only write a warning. Don't handle the file. Process the others.
+            console.writeInfoln("searchInclude - file not found: " + sFileIncl + "|||File: " + sSrcPath);
+            //no: throw new IllegalArgumentException("searchInclude - file not found: " + sFileIncl);
+          } else {
+            //The file is found. Save it in the index of processed files. Fill content then.
+            sInclFileAbs = FileSystem.getCanonicalPath(fileIncl);
+            //The fileInfo may be found with its absolute path. It is if different #include <path/name.h>-notations are used.
+            inclFileInfo = checkData.indexAllInclFilesAbsPath.get(sInclFileAbs);
+            if(inclFileInfo == null){ //not found yet
+              //
+              //This file is included, is contained in the source-pool or not, and it s not checked yet.
+              //Check it, build the InfoFileDependencies, maybe recursively call of that routine.
+              inclFileInfo = processSrcfile(fileIncl, objDeps, recursion);
+            }
           }
         }
         //store the include-file-string to prevent newer search with the same include path.
@@ -648,26 +750,26 @@ public class CheckDependencyFile
           if(!fileBack.canWrite()){ 
             bOk = fileBack.setWritable(true);
             if(!bOk){ 
-              console.reportln(Report.info, sTest + "CheckDeps - ERROR set writeable " + fileBack.getAbsoluteFile());
+              console.reportln(MainCmdLogging_ifc.info, sTest + "CheckDeps - ERROR set writeable " + fileBack.getAbsoluteFile());
             }
           }
           bOk = fileBack.delete();
           if(!bOk){ 
-            console.reportln(Report.info, sTest + "CheckDeps - ERROR delete " + fileBack.getAbsoluteFile());
+            console.reportln(MainCmdLogging_ifc.info, sTest + "CheckDeps - ERROR delete " + fileBack.getAbsoluteFile());
           }
         }
         bOk = fileSrcMirror.renameTo(fileBack);  //rename may doesn't work!  
-        if(bOk) { console.reportln(Report.fineInfo, "checkDeps - rename to; " + fileBack.getAbsoluteFile() + sTest); }
+        if(bOk) { console.reportln(MainCmdLogging_ifc.fineInfo, "checkDeps - rename to; " + fileBack.getAbsoluteFile() + sTest); }
         else { 
-          console.reportln(Report.debug, sTest + "CheckDeps - ERROR rename to " + fileBack.getAbsoluteFile());
+          console.reportln(MainCmdLogging_ifc.debug, sTest + "CheckDeps - ERROR rename to " + fileBack.getAbsoluteFile());
           //because renaming isn't possible, try copy and delete.
           try{
             bOk = fileSrcMirror.delete();
-            if(!bOk){ console.reportln(Report.fineInfo, "CheckDeps - delete fails; " + fileBack.getAbsoluteFile() + sTest); }
+            if(!bOk){ console.reportln(MainCmdLogging_ifc.fineInfo, "CheckDeps - delete fails; " + fileBack.getAbsoluteFile() + sTest); }
             FileSystem.mkDirPath(fileBack);
             FileSystem.copyFile(fileSrcMirror, fileBack);
             bOk = fileSrcMirror.delete();
-            if(!bOk){ console.reportln(Report.fineInfo, "CheckDeps - delete fails; " + fileBack.getAbsoluteFile() + sTest); }
+            if(!bOk){ console.reportln(MainCmdLogging_ifc.fineInfo, "CheckDeps - delete fails; " + fileBack.getAbsoluteFile() + sTest); }
           } catch(IOException exc){
             console.writeError(sTest + "CheckDeps - problem copy to lastpath; file=" 
               + fileBack.getAbsolutePath() + "; srcFile=" + fileSrcMirror.getAbsolutePath());
@@ -692,26 +794,26 @@ public class CheckDependencyFile
   
   
   
-  void reportIncludesOfFile(InfoFileDependencies infoFile, int recursionCt, Map<String, InfoFileDependencies> indexReported)
+  void reportIncludesOfFile(InfoFileDependencies infoFile, int recursionCt, Map<String, InfoFileDependencies> indexMainCmdLogging_ifced)
   {
     for(Map.Entry<String, InfoFileDependencies> entry: infoFile.includedPrimaryFiles.entrySet()){
       InfoFileDependencies info = entry.getValue();
       if(info !=null){
-        console.reportln(Report.debug, "  checkFile includes; " + recursionCt + "; "+ info.sFilePathIncludeline);
+        console.reportln(MainCmdLogging_ifc.debug, "  checkFile includes; " + recursionCt + "; "+ info.sFilePathIncludeline);
         if(info.fileSrc !=null){  //maybe includepath not found.
           String sFileAbsPath = info.fileSrc.getAbsolutePath(); 
-          if(indexReported.get(sFileAbsPath) == null){
-            indexReported.put(sFileAbsPath, info);
+          if(indexMainCmdLogging_ifced.get(sFileAbsPath) == null){
+            indexMainCmdLogging_ifced.put(sFileAbsPath, info);
             if( info.includedPrimaryFiles.size() >0 && recursionCt < 99){
-              reportIncludesOfFile(info, recursionCt +1, indexReported);
+              reportIncludesOfFile(info, recursionCt +1, indexMainCmdLogging_ifced);
             }
           } else {
             stop();
-            //console.reportln(Report.info, "  recursion included:" + sFileAbsPath);  
+            //console.reportln(MainCmdLogging_ifc.info, "  recursion included:" + sFileAbsPath);  
           }
         }
       } else {
-        console.reportln(Report.debug, "  checkFile includes; " + recursionCt + "; Systemfile; "+ entry.getKey());
+        console.reportln(MainCmdLogging_ifc.debug, "  checkFile includes; " + recursionCt + "; Systemfile; "+ entry.getKey());
       }
     }
   }
@@ -721,46 +823,6 @@ public class CheckDependencyFile
   
   
   
-  
-  void XXXwriteAllDependencies(InfoFileDependencies infoFile, String sSrcFileAbs, int recursionCt, Map<String, InfoFileDependencies> indexProcessed)
-  { try{
-      if(sSrcFileAbs !=null){
-        if(sSrcFileAbs.contains("ObjectJc.h"))
-          stop();
-        checkData.writerDepAll.append(sSrcFileAbs).append("\n");
-      }
-      for(Map.Entry<String, InfoFileDependencies> entry: infoFile.includedPrimaryFiles.entrySet()){
-        InfoFileDependencies info = entry.getValue();
-        if(info !=null){
-          if(info.fileSrc !=null){
-            String sFileAbsPath = info.fileSrc.getAbsolutePath(); 
-            checkData.writerDepAll.append("  ").append(Integer.toString(recursionCt)).append(": ").append(sFileAbsPath).append("\n");
-            if(indexProcessed.get(sFileAbsPath) == null){
-              indexProcessed.put(sFileAbsPath, info);
-            
-              if( info.includedPrimaryFiles.size() >0 && recursionCt < 99){
-                XXXwriteAllDependencies(info, null, recursionCt +1, indexProcessed);
-              }
-            } else {
-              checkData.writerDepAll.append("  ... it is included above already\n");
-              //writerDepAll.flush();
-              //stop();
-            }
-          } else {
-            checkData.writerDepAll.append("  ").append(Integer.toString(recursionCt)).append(":  (file not found) ").append(info.sFilePathIncludeline).append("\n");
-          }
-          
-        } else {
-          checkData.writerDepAll.append("  ").append(Integer.toString(recursionCt)).append(": Systemfile: ").append(entry.getKey()).append("\n");
-        }
-      }
-    } catch(IOException exc){
-      console.writeError("writeDependenciesOfFile - IOException");
-    }
-  }
-  
-  
-
   
   
   void deleteResultFile(String localName){

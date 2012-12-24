@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.FileSystem;
 
 
@@ -66,7 +66,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
    */
   public static String spaces = "                                                                                                ";
   
-  final Report console;
+  final MainCmdLogging_ifc console;
   
   /**File path like written in Include line between "path" or < path>. */
   final String sFilePathIncludeline;
@@ -126,7 +126,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
 
   
   public InfoFileDependencies(String sFilePathIncludeline, File fileSrc, File fileMirror
-    , boolean isSrc, Report console) 
+    , boolean isSrc, MainCmdLogging_ifc console) 
   {
     this.console = console;
     this.sFilePathIncludeline = sFilePathIncludeline;
@@ -138,7 +138,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
     this.timestampNewestDependingFiles_ = this.dateFileSrc;
   }
 
-  public InfoFileDependencies(String sFileAbs, Report console) 
+  public InfoFileDependencies(String sFileAbs, MainCmdLogging_ifc console) 
   { this.console = console;
     this.sFilePathIncludeline = sFileAbs;
     this.fileSrc = null;
@@ -292,8 +292,8 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
    * @param fileDep The file will be created. The directory of file will be created if not exists.
    * TODO use for new alldep-file
    */
-  public void xxx_writeDependenciesOfFile(File fileDep, Report console){
-    console.reportln(Report.debug, "write file.dep; " + fileDep.getAbsolutePath());
+  public void xxx_writeDependenciesOfFile(File fileDep, MainCmdLogging_ifc console){
+    console.reportln(MainCmdLogging_ifc.debug, "write file.dep; " + fileDep.getAbsolutePath());
     Map<String, String> indexWrittenDeps = new TreeMap<String, String>();
     try{
       FileSystem.mkDirPath(fileDep);
@@ -319,7 +319,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
    */
   public void writeDependendingFiles(Appendable writer
       , Map<String, String> indexWrittenDeps
-      , Report console
+      , MainCmdLogging_ifc console
       , int nRecursion
       ) throws IOException
   {
@@ -330,7 +330,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
       final String sDateName = getDataNameLine();
       String sRecursion = Integer.toString(nRecursion);
       writer.append(sRecursion).append("; ").append(spaces.substring(0, 2* nRecursion)).append(sDateName).append("\n");
-      console.reportln(Report.debug, "  depending; " + sDateName);
+      console.reportln(MainCmdLogging_ifc.debug, "  depending; " + sDateName);
       if(includedPrimaryFiles !=null) for(Map.Entry<String, InfoFileDependencies> entry: includedPrimaryFiles.entrySet()) { //index.entrySet()){
         InfoFileDependencies infoFileIncl = entry.getValue();
         //

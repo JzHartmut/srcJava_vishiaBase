@@ -2,9 +2,7 @@ package org.vishia.checkDeps_C;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -66,7 +64,7 @@ public class CheckDeps
     public String sPathSrcMirrorRoot;
 
     /**Path where all .dep-files are read and written. Command line argument -deps= */
-    public String sPathDepsRoot;
+    //public String sPathDepsRoot;
     
     public String sPathObj;
     
@@ -106,7 +104,7 @@ public class CheckDeps
       if(argc.startsWith("-src="))          { args.pathsSrcGen.add(getArgument(5)); }
       else if(argc.startsWith("-srcBuild="))     { args.sPathSrcMirrorRoot  = getArgument(10); }
       else if(argc.startsWith("-srcMirrorRoot=")){ args.sPathSrcMirrorRoot  = getArgument(15); }
-      else if(argc.startsWith("-deps="))         { args.sPathDepsRoot  = getArgument(6); }
+      //else if(argc.startsWith("-deps="))         { args.sPathDepsRoot  = getArgument(6); }
       else if(argc.startsWith("-obj=")){ 
         String sArg = getArgument(5);
         int posAsterisk = sArg.indexOf("*");
@@ -150,61 +148,19 @@ public class CheckDeps
   /**Aggregation to any console or log output. */
   private final Report console;
 
-  CheckDependencyFile checkerDependencyFile;
-  
-  CheckAllDepFile readerInputDepFile;
+  final CheckDependencyFile checkerDependencyFile;
   
   /**Constructor of this class. */
-  public CheckDeps(Report console, Args args, CfgData cfgData) {
-    super();
+  public CheckDeps(Report console, Args args) //, CfgData cfgData) {
+  { super();
     this.console = console;
     this.args = args;
-    this.cfgData = cfgData;
     //
-    //create directory-File-instance for the srcBuid if the argument -srcBuild= is given.
-    final File dirSrcMirror;
-    if(args.sPathSrcMirrorRoot !=null){
-      String sDirSrcBuild = args.sPathSrcMirrorRoot;
-      dirSrcMirror = new File(sDirSrcBuild);
-      try{ FileSystem.mkDirPath(sDirSrcBuild + "/"); }  //assert that the directory exists. A build file can written into.
-      catch(IOException exc){ throw new IllegalArgumentException("CheckDeps - Problem with path; " + sDirSrcBuild); }
-    } else {
-      dirSrcMirror = null;  //not given.
-    }
-    final File dirDepsRoot;
-    if(args.sPathDepsRoot !=null){
-      String sDir = args.sPathDepsRoot;
-      dirDepsRoot = new File(sDir);
-      try{ FileSystem.mkDirPath(sDir + "/"); }  //assert that the directory exists. A build file can written into.
-      catch(IOException exc){ throw new IllegalArgumentException("CheckDeps - Problem with path; " + sDir); }
-    } else {
-      dirDepsRoot = null;  //not given.
-    }
     //
-    //create directory-File-instance for the main directories: obj
-    final String sDirObj = args.sPathObj;
-    File dirObj = new File(sDirObj);
-    try{ FileSystem.mkDirPath(sDirObj + "/");
-    } catch(IOException exc){
-      throw new IllegalArgumentException("CheckDeps_C - argument error; directory for objects not found and not able to create: " + dirObj.getAbsolutePath());
-    }
-    if(!dirObj.isDirectory()) throw new IllegalArgumentException("CheckDeps_C - directory for build-sources have to be a directory: " + args.sPathSrcMirrorRoot); 
-    //
-    //open file for depAll:
-    Writer writerDepAll = null;
-    if(args.sFileDep !=null){
-      File fileDep = new File(args.sFileDep + ".old");
-      try{
-        FileSystem.mkDirPath(fileDep);
-        writerDepAll = new FileWriter(fileDep);
-      } catch(IOException exc){
-        throw new IllegalArgumentException("CheckDeps_C - argument error; cannot create -depAll=" + args.sFileDep);
-      }
-    }
-    this.checkData = new CheckData(dirSrcMirror, dirObj, dirDepsRoot, writerDepAll);
     //checker for all files:
-    checkerDependencyFile = new CheckDependencyFile(cfgData, checkData, console);
-    this.readerInputDepFile = new CheckAllDepFile(checkerDependencyFile, console, checkData);
+    checkerDependencyFile = new CheckDependencyFile(console);
+    this.checkData = checkerDependencyFile.checkData;
+    this.cfgData = checkerDependencyFile.cfgData;
   }
   
 
@@ -222,17 +178,18 @@ public class CheckDeps
       cmdline.writeError("cmd line arguments: ", exc);
     }
     
+    /*
     ParserConfigFile parserCfg = new ParserConfigFile(cmdline);
     CfgData cfgData = null;
     try{ cfgData = parserCfg.parseConfigFile(args.sFileCfg); }
     catch(IOException exc){cmdline.writeError("Configfile error; ", exc);
     }
-    
-    if(cfgData !=null){
-      CheckDeps main = new CheckDeps(cmdline, args, cfgData);
+    */
+    //if(cfgData !=null){
+      CheckDeps main = new CheckDeps(cmdline, args); //, cfgData);
       try{ main.execute(); } 
       catch(Exception exc){ cmdline.writeError("Any execution error; ", exc); }
-    }
+    //}
   }
   
   /**Main execution routine of this class. It processes all given source files 
@@ -243,14 +200,25 @@ public class CheckDeps
    */
   private void execute()
   {
-    File dirSrcMirror = new File(args.sPathSrcMirrorRoot);
-    if(!dirSrcMirror.exists()) throw new IllegalArgumentException("CheckDeps_C - directory for build-sources not found: " + dirSrcMirror.getAbsolutePath());
-    if(!dirSrcMirror.isDirectory()) throw new IllegalArgumentException("CheckDeps_C - directory for build-sources have to be a directory: " + dirSrcMirror.getAbsolutePath()); 
     
-    if(args.sFileDep !=null){
-       readerInputDepFile.readDepFile(args.sFileDep);
+    String sError = null;
+    if(args.sPathSrcMirrorRoot !=null){
+      //create directory-File-instance for the srcBuid if the argument -srcBuild= is given.
+      sError = checkerDependencyFile.setDirSrcMirror(args.sPathSrcMirrorRoot);
+      if(sError !=null) throw new IllegalArgumentException(sError);
     }
-    //List<InputSrc> listSrcDirs = new LinkedList<InputSrc>();
+    //create directory-File-instance for the main directories: obj
+    if(args.sPathObj !=null){
+      //create directory-File-instance for the srcBuid if the argument -srcBuild= is given.
+      sError = checkerDependencyFile.setDirSrcMirror(args.sPathObj);
+      if(sError !=null) throw new IllegalArgumentException(sError);
+    }
+
+    sError = checkerDependencyFile.readCfgData(args.sFileCfg);
+    if(sError !=null) throw new IllegalArgumentException(sError);
+    
+    sError = checkerDependencyFile.readDependencyInput(args.sFileDep);
+    if(sError !=null) throw new IllegalArgumentException(sError);
     
     for(String sPathSrc : args.pathsSrcGen){
       InputSrc srcInfo = new InputSrc(sPathSrc);
@@ -333,10 +301,9 @@ public class CheckDeps
       if(sFileSrcAbs.contains("ObjectJc.h"))
         stop();
       InfoFileDependencies infoDepsPrimary;
-      final ObjectFileDeps objDeps;
       if( (infoDepsPrimary = checkData.indexSrcFilesAbs.get(sFileSrcAbs))!=null){
         console.report(Report.debug, " : is processed already.");
-        objDeps = null;
+        //objDeps = null;
       } else {
         //build the local pathName inside the build- and object-directory.
         //It is the given local name from -src=SRCPATH + the local path inside the SRCPATH
@@ -344,25 +311,10 @@ public class CheckDeps
         if(sLocalPathName == null){
           console.reportln(Report.error, "CheckDeps - error check source file - sLocalPathName not found in config; " + sFileSrcAbs);
         } else {
-          int posExt = sLocalPathName.lastIndexOf('.');
-          String sExt = sLocalPathName.substring(posExt+1);
-          //
-          if(sExt.startsWith("c") || sExt.startsWith("C") || sExt.equals("s") || sExt.equals("S")){
-            objDeps = new ObjectFileDeps(checkData.dirObjRoot, sLocalPathName, args.sObjExt); 
-            objDeps.createObjDir(console);
-          } else {
-            objDeps = null;
-          }
           //
           //process the source file:
           //
-          infoDepsPrimary = checkerDependencyFile.processSrcfile(fileSrc, objDeps, 0);
-          if(objDeps.isObjDeleted()){ 
-            checkData.nrofDelObj +=1; 
-          }
-          if(objDeps.isObjRecompile()){ 
-            checkData.nrofRecompilings +=1; 
-          }
+          infoDepsPrimary = checkerDependencyFile.processSrcfile(fileSrc, sLocalPathName, args.sObjExt, 0);
         }
       }
     }//for all source files

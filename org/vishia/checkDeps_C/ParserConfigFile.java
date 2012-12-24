@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 /**This class is create temporary to parse the config file.
  * The results are written to a created instance of {@link CfgData}. Only this is used then.
@@ -54,16 +54,17 @@ public class ParserConfigFile
   
 
   /**Aggregation to any console or log output. */
-  private final Report console;
+  private final MainCmdLogging_ifc console;
   
   /**Index of some variables with name=value. It are defined in the config file.  */
   private final Map<String, String> indexEnvirVariables = new TreeMap<String, String>();
 
-  private final CfgData data = new CfgData(); 
+  private final CfgData data; 
 
   
-  public ParserConfigFile(Report console)
+  public ParserConfigFile(CfgData cfgData, MainCmdLogging_ifc console)
   { this.console = console;
+    this.data = cfgData;
   }
 
 
@@ -76,34 +77,40 @@ public class ParserConfigFile
    * @param sFileCfg
    * @throws IOException
    */
-  public CfgData parseConfigFile(String sFileCfg) throws IOException {
-    File fileCfg = new File(sFileCfg);
-    BufferedReader reader = new BufferedReader(new FileReader(fileCfg));
-    String sLine;
-    while( (sLine = reader.readLine())!=null){
-      int posComment = sLine.indexOf('#');
-      if(posComment >=0){ sLine = sLine.substring(0, posComment); }
-      sLine = sLine.trim();
-      if(sLine.startsWith("-s=")){ //an include path
-        parseCfgIncludeLine(sLine, 's');
-      } else if(sLine.startsWith("-i=")){ //an include path
-        parseCfgIncludeLine(sLine, 'i');
-      } else if(sLine.startsWith("-j=")){ //an include path
-        parseCfgIncludeLine(sLine, 'j');
-      } else if(sLine.startsWith("-g=")){ //an include path
-        parseCfgIncludeLine(sLine, 'g');
-      } else if(sLine.startsWith("-y=")){ //an include path
-        parseCfgIncludeLine(sLine, 'y');
-      } else {
-        if(sLine.length()>1){
-          switch(sLine.charAt(0)){
-          case '$': parseCfgEnvironmentVariable(sLine); break;
-          default: throw new IllegalArgumentException("config file - error in line: " + sLine);
+  public String parseConfigFile(String sFileCfg){
+    try{
+      File fileCfg = new File(sFileCfg);
+      BufferedReader reader = new BufferedReader(new FileReader(fileCfg));
+      String sLine;
+      while( (sLine = reader.readLine())!=null){
+        int posComment = sLine.indexOf('#');
+        if(posComment >=0){ sLine = sLine.substring(0, posComment); }
+        sLine = sLine.trim();
+        if(sLine.startsWith("-s=")){ //an include path
+          parseCfgIncludeLine(sLine, 's');
+        } else if(sLine.startsWith("-i=")){ //an include path
+          parseCfgIncludeLine(sLine, 'i');
+        } else if(sLine.startsWith("-j=")){ //an include path
+          parseCfgIncludeLine(sLine, 'j');
+        } else if(sLine.startsWith("-g=")){ //an include path
+          parseCfgIncludeLine(sLine, 'g');
+        } else if(sLine.startsWith("-y=")){ //an include path
+          parseCfgIncludeLine(sLine, 'y');
+        } else {
+          if(sLine.length()>1){
+            switch(sLine.charAt(0)){
+            case '$': parseCfgEnvironmentVariable(sLine); break;
+            default: throw new IllegalArgumentException("config file - error in line; " + sLine);
+            }
           }
         }
       }
+    }catch(IllegalArgumentException exc){
+      return "CheckDeps -" + exc.getMessage();
+    }catch(IOException exc){
+      return "CheckDeps - config file read error;" + exc.getMessage();
     }
-    return data;
+    return null;
   }
   
   
@@ -133,13 +140,13 @@ public class ParserConfigFile
     while( (posVariable = uInclPath.indexOf("$"))>=0){
       int posEnd = uInclPath.indexOf(")", posVariable+2);
       if(uInclPath.charAt(posVariable+1) != '(' || posEnd <0)
-        throw new IllegalArgumentException("Error in cfg-file: Write $(name). Line:" + sLine);
+        throw new IllegalArgumentException("Error in cfg-file: Write $(name). Line;" + sLine);
       String sName = uInclPath.substring(posVariable +2, posEnd);
       String sValue = indexEnvirVariables.get(sName);
       if(sValue == null) {
         sValue = System.getenv(sName);  //read from environment variable
       }
-      if(sValue == null) throw new IllegalArgumentException("config file - env-variable not found: " + sName);
+      if(sValue == null) throw new IllegalArgumentException("config file - env-variable not found; " + sName);
       uInclPath.replace(posVariable, posEnd+1, sValue);
     }
     String sInclPathLocalSep = uInclPath.toString();
@@ -150,9 +157,9 @@ public class ParserConfigFile
     String sInclPath = uInclPath.toString();
     File dirIncludePath = new File(sInclPath);
     if(!dirIncludePath.exists()) {
-      console.writeWarning("config file - include path not found: " + sInclPath);
+      console.writeWarning("config file - include path not found; " + sInclPath);
     } else if(!dirIncludePath.isDirectory()) {
-      console.writeWarning("config file - include path is not a directory: " + sInclPath);
+      console.writeWarning("config file - include path is not a directory; " + sInclPath);
     } else {
       switch(cWhat){
         case 's': case 'i':{
