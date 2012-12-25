@@ -38,18 +38,18 @@ import org.vishia.mainCmd.Report;
 public class CmdHeader2Reflection extends MainCmd
 {
   
-	
-	
-	/**Revision number
-	 * <ul>
-	 * <li>2011-04-11: Dependency to the control file: regard it in maker. To header and footer too!
-	 * 
-	 * </ul>
-	 */
-	static public final int revisionInfo = 20110411;
-	
-	
-	
+  
+  
+  /**Revision number
+   * <ul>
+   * <li>2011-04-11: Dependency to the control file: regard it in maker. To header and footer too!
+   * 
+   * </ul>
+   */
+  static public final int revisionInfo = 20110411;
+  
+  
+  
   /**Aggregation to the Console implementation class.*/
   Report console;
 
@@ -141,6 +141,7 @@ public class CmdHeader2Reflection extends MainCmd
               the application should be aborted.
    * @throws FileNotFoundException 
   */
+  @Override
   protected boolean testArgument(String arg, int nArg)
   { boolean bOk = true;  //set to false if the argc is not passed
 
@@ -169,6 +170,7 @@ public class CmdHeader2Reflection extends MainCmd
    * @throws ParseException 
    *
    */
+  @Override
   protected void callWithoutArguments() throws ParseException
   { //:TODO: overwrite with empty method - if the calling without arguments
     //having equal rights than the calling with arguments - no special action.
@@ -184,6 +186,7 @@ public class CmdHeader2Reflection extends MainCmd
      :TODO: the user only should determine the specific checks, this is a sample.
      @return true if successful, false if failed.
   */
+  @Override
   protected boolean checkArguments()
   { return true;
   

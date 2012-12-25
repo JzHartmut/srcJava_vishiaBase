@@ -35,25 +35,25 @@ import org.vishia.util.StdHexFormatWriter;
   
   /**Binary data for fileBin. If setOutBin is called, this array is present, else it is null. 
    * The head data contains all relocatable addresses. */
-  private byte[] binOutData, binOutHeadData, binOutClassArrayData;
+  private final byte[] binOutData, binOutHeadData, binOutClassArrayData;
   
   /**Access to binary data for fileBin. If setOutBin is called, this array is present, else it is null. 
    * This Data contains fields and classes. */
-  private RawDataAccess binOutClass;
+  private final RawDataAccess binOutClass;
   
   /**Access to binary head data for fileBin. If setOutBin is called, this array is present, else it is null. 
    * This data contains all relocatable addresses in binOut.*/
-  private ExtReflection_Insp_h.ExtReflection_Insp binOutHead;
+  private final ExtReflection_Insp_h.ExtReflection_Insp binOutHead;
   
   /**Access to binary class Array data for fileBin. If setOutBin is called, this array is present, else it is null. 
    * This data contains all references to the classes as relative pointers (offset). */
-  private ObjectArray_Jc binOutClassArray;
+  private final ObjectArray_Jc binOutClassArray;
   
-  private Class_Jc binClass;
+  private final Class_Jc binClass;
   
-  private ObjectArray_Jc binFieldArray;
+  private final ObjectArray_Jc binFieldArray;
   
-  private Field_Jc binField;
+  private final Field_Jc binField;
   
   int ixField;
   
@@ -87,9 +87,9 @@ import org.vishia.util.StdHexFormatWriter;
   }
   
   
-  private Map<String, TypeBinPosition> posClassesInBuffer = new TreeMap<String, TypeBinPosition>();
+  private final Map<String, TypeBinPosition> posClassesInBuffer = new TreeMap<String, TypeBinPosition>();
   
-  private List<TypeNeedInBinOut> typeBinNeed = new LinkedList<TypeNeedInBinOut>();
+  private final List<TypeNeedInBinOut> typeBinNeed = new LinkedList<TypeNeedInBinOut>();
   
   
   
@@ -100,7 +100,7 @@ import org.vishia.util.StdHexFormatWriter;
   {
     File fileBinFile = new File(sFileBin);
     if(hexOutput){
-    	fileBin = new StdHexFormatWriter(new File(sFileBin));
+      fileBin = new StdHexFormatWriter(new File(sFileBin));
     } else {
       fileBin = new FileOutputStream(fileBinFile);
     }
@@ -167,7 +167,7 @@ import org.vishia.util.StdHexFormatWriter;
     binField.set_position(0x8000 + ixField); //ccc-1);
     binField.set_offsetToObjectifcBase(0);
     if(nrofArrayElements >0)
-    	stop();
+      stop();
     if(typeAddress == -1){
       //The type address is not known yet, replace later:
       int posTypeInField = binField.getPositionInBuffer_type();

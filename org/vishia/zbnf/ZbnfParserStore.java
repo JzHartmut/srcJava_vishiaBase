@@ -226,10 +226,10 @@ class ZbnfParserStore
     { this.store = store;
       int posValue = sSemantic.indexOf('='); 
       if(posValue>0){
-      	String value = sSemantic.substring(posValue+1);
-      	sSemantic = sSemantic.substring(0, posValue);
-      	this.parsedString = value;
-      	this.kind = kString;
+        String value = sSemantic.substring(posValue+1);
+        sSemantic = sSemantic.substring(0, posValue);
+        this.parsedString = value;
+        this.kind = kString;
       }
       this.sSemantic = sSemantic;
       this.parent = parent;
@@ -554,12 +554,12 @@ class ZbnfParserStore
       }
       else
       { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
-      	int posSep = key.indexOf('/');
-      	final String key2 = posSep >=0 ? key.substring(0, posSep) : key; 
-      	ZbnfParseResultItem zbnfChild = treeNodeRepresentation.getChild(key2);
+        int posSep = key.indexOf('/');
+        final String key2 = posSep >=0 ? key.substring(0, posSep) : key; 
+        ZbnfParseResultItem zbnfChild = treeNodeRepresentation.getChild(key2);
         if(zbnfChild !=null && posSep >=0){
-        	final String key3 = key.substring(posSep+1);
-        	zbnfChild = zbnfChild.getChild(key3);
+          final String key3 = key.substring(posSep+1);
+          zbnfChild = zbnfChild.getChild(key3);
         }
         return zbnfChild;
       }  
@@ -687,7 +687,7 @@ class ZbnfParserStore
       item.parsedString = sInput;
     }
     if(item.kind ==0){  //it is not 0 if it was set in constructor, especially on sSemantic = "name=value".
-    	item.kind = nAlternative;
+      item.kind = nAlternative;
     }
     item.start = start;
     item.end = end;

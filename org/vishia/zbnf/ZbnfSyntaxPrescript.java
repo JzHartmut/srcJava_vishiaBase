@@ -219,26 +219,26 @@ import org.vishia.mainCmd.Report;
 public class ZbnfSyntaxPrescript
 {
   /**Version-ident.
-	 * list of changes:
-	 * <ul>
-	 * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
-	 * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
+   * list of changes:
+   * <ul>
+   * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
+   * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
    * in the construct with inner syntax, in the form ,,<""?!innerSyntax?semantic>,,. 
    * See the ZBNF-description. 
    * In the past there should be a own pseudo syntax-component-definition to give a semantic 
    * in form ,,<""?!pseudoComp>...   pseudoComp::=<innerSyntax?semantic>.,, Now it is more easy to apply.
    * <li> 2009-08-20: Hartmut bugfix: "toLastCharIncl:" were skipped over 1 char additionally. fixed.
-	 * <li> 2009-08-02: Hartmut new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
-	 * <li> 2009-03-16: Hartmut new: kFloatWithFactor: noted as <#f*Factor?...> now works.                                                   
-	 * <li> 2009-03-16: Hartmut new: <toLastChar:chars?...> is an alternative notation of <stringtolastExclChar or <*<<, more simple to read.    
-	 * <li> 2009-03-16: Hartmut new: <toLastCharIncl:chars?...> is an alternative notation of <stringtolastInclChar oder <+<<, more simple to read.
-	 * <li> 2009-03-16: Hartmut chg: <...?*... is not supported anymore, it isn't admissible in syntax scripts up to now. 
-	 * <li>                     It was the functionality isToTransportOuterResults(). But this functionality is too complex, difficult to understand and able to handle.                                 
-	 * <li> 2006-05-00: Hartmut creation
+   * <li> 2009-08-02: Hartmut new: parseExpectedVariant writing [!...] now available. It tests but doesn't processed the content.
+   * <li> 2009-03-16: Hartmut new: kFloatWithFactor: noted as <#f*Factor?...> now works.                                                   
+   * <li> 2009-03-16: Hartmut new: <toLastChar:chars?...> is an alternative notation of <stringtolastExclChar or <*<<, more simple to read.    
+   * <li> 2009-03-16: Hartmut new: <toLastCharIncl:chars?...> is an alternative notation of <stringtolastInclChar oder <+<<, more simple to read.
+   * <li> 2009-03-16: Hartmut chg: <...?*... is not supported anymore, it isn't admissible in syntax scripts up to now. 
+   * <li>                     It was the functionality isToTransportOuterResults(). But this functionality is too complex, difficult to understand and able to handle.                                 
+   * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-	public static final String sVersionStamp = "2011-01-18";
-	
+  public static final String sVersionStamp = "2011-01-18";
+  
   /** Kind of syntay type of the item */
   int eType;
 
@@ -806,27 +806,27 @@ public class ZbnfSyntaxPrescript
       } else { bSemantic = false; }  //no second ?, cc should be '>'
     }
     if(bSemantic){
-	    if( cc == '?')
-	    { spInput.seek(1);
-	      sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
-	    }
-	    else if(false && spInput.startsWith("text()"))
-	    { spInput.seek(6);
-	      sSemantic="text()";
-	    }
-	    else
-	    { //behind ? the semantic is defined. It may be a null-Semantic.
-	      spInput.lentoAnyChar(">");
-	      if(spInput.length()>0)
-	      { sSemantic = spInput.getCurrentPart();
-	      }
-	      else
-	      { sSemantic = null;  //<..?>: without semantic
-	      }
-	      spInput.fromEnd();
-	    }
+      if( cc == '?')
+      { spInput.seek(1);
+        sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
+      }
+      else if(false && spInput.startsWith("text()"))
+      { spInput.seek(6);
+        sSemantic="text()";
+      }
+      else
+      { //behind ? the semantic is defined. It may be a null-Semantic.
+        spInput.lentoAnyChar(">");
+        if(spInput.length()>0)
+        { sSemantic = spInput.getCurrentPart();
+        }
+        else
+        { sSemantic = null;  //<..?>: without semantic
+        }
+        spInput.fromEnd();
+      }
     } else {
-    	sSemantic = null;  //<...?!subSyntax>
+      sSemantic = null;  //<...?!subSyntax>
     }
     this.sSemantic = sSemantic;
     if(sSemantic != null && sSemantic.equals("return"))
@@ -910,7 +910,7 @@ public class ZbnfSyntaxPrescript
         else
         { //spInput.lentoIdentifier("@", ".");
           getSemantic(spInput);
-        	/*
+          /*
           spInput.lentoAnyChar(">");
           if(spInput.length()>0)
           { sSemantic = spInput.getCurrentPart();
@@ -1472,7 +1472,7 @@ public class ZbnfSyntaxPrescript
   @Override
   public String toString()
   { StringBuilder u = new StringBuilder(50);
-  	{ String sWhat; // = "Syntax:" + getDefinitionIdent();
+    { String sWhat; // = "Syntax:" + getDefinitionIdent();
       switch(eType)
       { case kSyntaxDefinition:
         { sWhat = "Syntax:" + getDefinitionIdent() + "::=";
@@ -1528,7 +1528,7 @@ public class ZbnfSyntaxPrescript
         default: sWhat = "?-?-?";
       }
       u.append(sWhat);
-  	}
+    }
     String sSemantic = getSemantic();
     if(sSemantic != null)
     { if(u.charAt(0) != '<'){ u.append("<"); }
@@ -1537,11 +1537,11 @@ public class ZbnfSyntaxPrescript
     else
     { if(u.charAt(0) == '<'){ u.append( ">"); }
     }
-  	for(int i=0; i <u.length(); ++i){  //change \r etc in constant text to readable output
-  		char cc = u.charAt(i);
-  		if(cc == '\n'){ u.replace(i, i+1, "\\n");}
-  		if(cc == '\r'){ u.replace(i, i+1, "\\r");}
-  	}
+    for(int i=0; i <u.length(); ++i){  //change \r etc in constant text to readable output
+      char cc = u.charAt(i);
+      if(cc == '\n'){ u.replace(i, i+1, "\\n");}
+      if(cc == '\r'){ u.replace(i, i+1, "\\r");}
+    }
 
     return u.toString();
   }

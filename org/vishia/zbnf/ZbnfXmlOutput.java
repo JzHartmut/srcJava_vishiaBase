@@ -161,7 +161,7 @@ public class ZbnfXmlOutput
     XmlNode xmlRet = null;
     String sSemantic = item.getSemantic();
     if(sSemantic.equals("elseConditionBlock"))
-    	stop();
+      stop();
     if( (posSeparator = sSemantic.indexOf('/')) > 0)
     { 
       String sName = sSemantic.substring(0, posSeparator); //name of xmlNode to search/create

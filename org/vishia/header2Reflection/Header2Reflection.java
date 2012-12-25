@@ -126,9 +126,9 @@ public class Header2Reflection
   /*Absolute path to the sOutOffsetDir. */
   private String sOffsetDirAbs;
 
-  private String[] sExprTokens = new String[] {"@@@", "$$$"};
+  private final String[] sExprTokens = new String[] {"@@@", "$$$"};
   
-  private String[] sPlaceholderType  = new String[]{"%%%"};
+  private final String[] sPlaceholderType  = new String[]{"%%%"};
   
   /**The pattern for the expression for field offset, which is generated to calculate the offset value in the C-code.
    * The expression can be provided by the config-file.
@@ -160,7 +160,7 @@ public class Header2Reflection
    */
   private String sExprSizeType = "sizeof(%%%)";
   
-  private String sLinefeed = "\n";
+  private final String sLinefeed = "\n";
   
   /**Text for leader and trailer in the offset- and C-Files. It will be filled depending on cfg-file. */
   StringBuilder leaderTextC, trailerTextC, leaderTextH, trailerTextH, leaderTextOffs, trailerTextOffs;
@@ -216,11 +216,11 @@ public class Header2Reflection
   /**
    * 
    */
-  private TreeMap<String, TypeEntry> identifierRelacements = new TreeMap<String, TypeEntry>();
+  private final TreeMap<String, TypeEntry> identifierRelacements = new TreeMap<String, TypeEntry>();
 
-  private TreeMap<String, TypeEntry> types = new TreeMap<String, TypeEntry>();
+  private final TreeMap<String, TypeEntry> types = new TreeMap<String, TypeEntry>();
 
-  private TreeMap<String, List<TypeEntry>> typesByFilename = new TreeMap<String, List<TypeEntry>>();
+  private final TreeMap<String, List<TypeEntry>> typesByFilename = new TreeMap<String, List<TypeEntry>>();
 
 
   /**created header and c file. */
@@ -244,7 +244,7 @@ public class Header2Reflection
   
   private int secondsAfter1970Now;
   
-  private SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+  private final SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
   
   BinOutPrep binOutPrep;
   
@@ -400,120 +400,120 @@ public class Header2Reflection
     { if(init()) //here all action are done, testversion.
       {
         boolean dontGenerate = false;
-    		long timestampLast = 0;
+        long timestampLast = 0;
         for(FileIn fileIn: listFileIn){
           for(File file: fileIn.listFileIn){
-        	  if(!file.exists()){ console.reportln(Report.error, "File not found: " + file.getAbsolutePath()); 
-        	  } else {
+            if(!file.exists()){ console.reportln(Report.error, "File not found: " + file.getAbsolutePath()); 
+            } else {
               long timestamp = file.lastModified();
               if(timestamp > timestampLast){
-              	timestampLast = timestamp;
+                timestampLast = timestamp;
               }
-        	  }
+            }
         } }
         secondsAfter1970Now = (int)(timestampLast / 1000);
         dateNow = new Date(timestampLast);
         //secondsAfter1970Now = (int)(dateNow.getTime()/1000);
         File fileAllCFile = null;
         if(sFileAllC !=null){
-        	fileAllCFile = new File(sFileAllC);
+          fileAllCFile = new File(sFileAllC);
           if(fileAllCFile.exists() && fileAllCFile.lastModified() > timestampLast){
-          	dontGenerate = true;  //not necessary
+            dontGenerate = true;  //not necessary
           }
         }
         if(!dontGenerate){
           if(fileAllCFile != null)
-	        { //sOutDirAbs = fileAllCFile.getParentFile().getCanonicalPath().replace('\\','/');  //directory of output file
-	          sOutDirAbs = fileAllCFile.getCanonicalPath().replace('\\','/');  //directory of output file
-	          fileAllC = new BufferedWriter(new FileWriter(fileAllCFile));
-	          int posDot = sFileAllC.lastIndexOf('.');
-	          int posPath = sFileAllC.lastIndexOf('/');
-	          String sPathFileAllH = sFileAllC.substring(0, posDot) + ".h";
-	          String sFileAllH = sFileAllC.substring(posPath+1, posDot) + ".h";
-	          String sFileName = sFileAllC.substring(posPath+1, posDot);
-	          fileAllH = new BufferedWriter(new FileWriter(new File(sPathFileAllH)));
-	          if(leaderTextC !=null){
-	          	fileAllC.append(leaderTextC);
-	          }
-	          fileAllC.write("\n/*This file is generated from Header2Reflection. */");
-	          fileAllC.write("\n#define protected public  //only active inside this compilation unit");
-	          fileAllC.write("\n#define private public    //  to enable the access to all elements.");
-	          fileAllC.write("\n#include <Jc/ReflectionJc.h>");
-	          fileAllC.write("\n#include <stddef.h>");
-	          //fileAllC.write("\n#include \"" +sFileAllH+ "\"");
-	          
-	          //fileAllC.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
-	          //fileAllC.write("\n * It is " + dataFormat.format(dateNow) + "*/");
-	          //fileAllC.write("\nconst int reflectionGenerationTime = " + secondsAfter1970Now + ";\n");
-	          
-	          fileAllH.write("\n#ifndef __" + sFileName + "_h__\n");
-	          fileAllH.write("\n#define __" + sFileName + "_h__\n");
-	          if(leaderTextH !=null){
-	          	fileAllH.append(leaderTextH);
-	          }
+          { //sOutDirAbs = fileAllCFile.getParentFile().getCanonicalPath().replace('\\','/');  //directory of output file
+            sOutDirAbs = fileAllCFile.getCanonicalPath().replace('\\','/');  //directory of output file
+            fileAllC = new BufferedWriter(new FileWriter(fileAllCFile));
+            int posDot = sFileAllC.lastIndexOf('.');
+            int posPath = sFileAllC.lastIndexOf('/');
+            String sPathFileAllH = sFileAllC.substring(0, posDot) + ".h";
+            String sFileAllH = sFileAllC.substring(posPath+1, posDot) + ".h";
+            String sFileName = sFileAllC.substring(posPath+1, posDot);
+            fileAllH = new BufferedWriter(new FileWriter(new File(sPathFileAllH)));
+            if(leaderTextC !=null){
+              fileAllC.append(leaderTextC);
+            }
+            fileAllC.write("\n/*This file is generated from Header2Reflection. */");
+            fileAllC.write("\n#define protected public  //only active inside this compilation unit");
+            fileAllC.write("\n#define private public    //  to enable the access to all elements.");
+            fileAllC.write("\n#include <Jc/ReflectionJc.h>");
+            fileAllC.write("\n#include <stddef.h>");
+            //fileAllC.write("\n#include \"" +sFileAllH+ "\"");
+            
+            //fileAllC.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
+            //fileAllC.write("\n * It is " + dataFormat.format(dateNow) + "*/");
+            //fileAllC.write("\nconst int reflectionGenerationTime = " + secondsAfter1970Now + ";\n");
+            
+            fileAllH.write("\n#ifndef __" + sFileName + "_h__\n");
+            fileAllH.write("\n#define __" + sFileName + "_h__\n");
+            if(leaderTextH !=null){
+              fileAllH.append(leaderTextH);
+            }
             fileAllH.write("\n#include \"Jc/ReflectionJc.h\"");
-	        }
-	        if(sFileOffset != null)
-	        { File filesFileOffset = new File(sFileOffset);
-	          //String sFileOffsetName = filesFileOffset.getName();
-	          sOffsetDirAbs = filesFileOffset.getCanonicalPath().replace('\\','/');  //directory of output file
-	          fileOffs = new BufferedWriter(new FileWriter(filesFileOffset));
-	          if(leaderTextOffs !=null){
-	          	fileOffs.append(leaderTextOffs);
-	          }
-	          //Note: append and write are the same, but append can be used with CharSequence.
-	          fileOffs.append("\n/*This file is generated from Header2Reflection. */");
-	          fileOffs.write("\n#include <os_types_def.h>");
-	          fileOffs.write("\n#include <stddef.h>");
-	          fileOffs.write("\n#define protected public  //only active inside this compilation unit");
-	          fileOffs.write("\n#define private public    //  to enable the access to all elements.\n\n");
-	          fileOffs.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
-	          fileOffs.write("\n * It is " + dataFormat.format(dateNow) + "*/");
-	          fileOffs.write("\nconst int reflectionOffsGenerationTime = " + secondsAfter1970Now + ";\n");
-	          
-	          bufferOffsArray = new StringBuilder();
-	        }
-	        if(sFileBin != null)
-	        { 
-	          binOutPrep = new BinOutPrep(sFileBin, fileBinBigEndian, fileBinHex, secondsAfter1970Now);
-	        }
-	        for(FileIn fileIn: listFileIn)
-	        { for(File file: fileIn.listFileIn)
-	          { String fileName = file.getCanonicalPath().replace('\\','/');
-	            fileName = fileName.substring(fileIn.posPath+1);  //regards a ':' in the input mask.
-	            translate(file, fileName);
-	          }
-	        }
-	        if(fileAllC != null){
-	          if(trailerTextC !=null){
-	          	fileAllC.append(trailerTextC);
-	          }
-          	fileAllC.close();
-          	if(trailerTextH !=null){
-	          	fileAllH.append(trailerTextH);
-	          }
-          	fileAllH.write("\n#endif // ___h__\n");
-	          fileAllH.close();
-	        }
-	        if(fileOffs != null)
-	        { 
-	          fileOffs.append("\n\n/**Array of all offsets: ------------------------------------------------------------------------*/");
-	          fileOffs.append("\nint32* reflectionOffsetArrays[] = \n{ null");
-	          fileOffs.append(bufferOffsArray);
-	          fileOffs.append("\n};\n");
-	          if(trailerTextOffs !=null){
-	          	fileOffs.append(trailerTextOffs);
-	          }
-	          fileOffs.close();
-	        }
-	        if(binOutPrep != null)
-	        { binOutPrep.postProcessBinOut();
-	          binOutPrep.close();
-	        }
-	        console.writeInfoln("...finished.");
-	      } else {
-	        console.writeInfoln("...no newer files, nothing to do.");
-		    }
+          }
+          if(sFileOffset != null)
+          { File filesFileOffset = new File(sFileOffset);
+            //String sFileOffsetName = filesFileOffset.getName();
+            sOffsetDirAbs = filesFileOffset.getCanonicalPath().replace('\\','/');  //directory of output file
+            fileOffs = new BufferedWriter(new FileWriter(filesFileOffset));
+            if(leaderTextOffs !=null){
+              fileOffs.append(leaderTextOffs);
+            }
+            //Note: append and write are the same, but append can be used with CharSequence.
+            fileOffs.append("\n/*This file is generated from Header2Reflection. */");
+            fileOffs.write("\n#include <os_types_def.h>");
+            fileOffs.write("\n#include <stddef.h>");
+            fileOffs.write("\n#define protected public  //only active inside this compilation unit");
+            fileOffs.write("\n#define private public    //  to enable the access to all elements.\n\n");
+            fileOffs.write("\n/**The seconds after 1970 where the this file and the apprpriated reflection in binfile where created.");
+            fileOffs.write("\n * It is " + dataFormat.format(dateNow) + "*/");
+            fileOffs.write("\nconst int reflectionOffsGenerationTime = " + secondsAfter1970Now + ";\n");
+            
+            bufferOffsArray = new StringBuilder();
+          }
+          if(sFileBin != null)
+          { 
+            binOutPrep = new BinOutPrep(sFileBin, fileBinBigEndian, fileBinHex, secondsAfter1970Now);
+          }
+          for(FileIn fileIn: listFileIn)
+          { for(File file: fileIn.listFileIn)
+            { String fileName = file.getCanonicalPath().replace('\\','/');
+              fileName = fileName.substring(fileIn.posPath+1);  //regards a ':' in the input mask.
+              translate(file, fileName);
+            }
+          }
+          if(fileAllC != null){
+            if(trailerTextC !=null){
+              fileAllC.append(trailerTextC);
+            }
+            fileAllC.close();
+            if(trailerTextH !=null){
+              fileAllH.append(trailerTextH);
+            }
+            fileAllH.write("\n#endif // ___h__\n");
+            fileAllH.close();
+          }
+          if(fileOffs != null)
+          { 
+            fileOffs.append("\n\n/**Array of all offsets: ------------------------------------------------------------------------*/");
+            fileOffs.append("\nint32* reflectionOffsetArrays[] = \n{ null");
+            fileOffs.append(bufferOffsArray);
+            fileOffs.append("\n};\n");
+            if(trailerTextOffs !=null){
+              fileOffs.append(trailerTextOffs);
+            }
+            fileOffs.close();
+          }
+          if(binOutPrep != null)
+          { binOutPrep.postProcessBinOut();
+            binOutPrep.close();
+          }
+          console.writeInfoln("...finished.");
+        } else {
+          console.writeInfoln("...no newer files, nothing to do.");
+        }
       }
       //if(sFileReflectionTypesOut!= null)  writeReflectionTypes();
     }
@@ -558,17 +558,17 @@ public class Header2Reflection
         if(semantic.equals("c_only")){
           c_only = true;  
         } else if(semantic.equals("exprOffsField")) {
-        	sExprOffsField = item.getParsedString();
+          sExprOffsField = item.getParsedString();
         } else if(semantic.equals("exprOffsBase")) {
-        	sExprOffsBase = item.getParsedString();
+          sExprOffsBase = item.getParsedString();
         } else if(semantic.equals("exprOffsObj")) {
-        	sExprOffsObj = item.getParsedString();
+          sExprOffsObj = item.getParsedString();
         } else if(semantic.equals("exprOffsObjJcpp")) {
-        	sExprOffsObjJcpp = item.getParsedString();
+          sExprOffsObjJcpp = item.getParsedString();
         } else if(semantic.equals("exprOffsCppObj")) {
-        	sExprOffsCppObj = item.getParsedString();
+          sExprOffsCppObj = item.getParsedString();
         } else if(semantic.equals("exprSizeType")) {
-        	sExprSizeType = item.getParsedString();
+          sExprSizeType = item.getParsedString();
         } else if(semantic.equals("reflectionType")) {
           char cSign = item.getChild("sign").getParsedText().charAt(0);
           String sType = item.getChild("type").getParsedString();
@@ -602,7 +602,7 @@ public class Header2Reflection
         } else if(semantic.equals("trailerTextOffs")){
           trailerTextOffs = getLeaderTrailerText(item, trailerTextOffs);
         } else {
-        	throw new RuntimeException("unknown syntax definition: " + semantic);
+          throw new RuntimeException("unknown syntax definition: " + semantic);
         }
       }
     }
@@ -612,27 +612,27 @@ public class Header2Reflection
 
 
   StringBuilder getLeaderTrailerText(ZbnfParseResultItem zbnfResult, StringBuilder lines){
-  	//StringBuilder lines = new StringBuilder(500);
-  	if(lines == null){ lines = new StringBuilder(500); }
-  	List<ZbnfParseResultItem> listLine = zbnfResult.listChildren("line");
-  	if(listLine !=null){
-	  	for(ZbnfParseResultItem zbnfChild: listLine){
-	  		lines.append(zbnfChild.getParsedString()).append(sLinefeed);
-	  	}
-  	}
-  	String sFile = zbnfResult.getChildString("fileName");
-  	if(sFile !=null){
-	  	String sFileName = fileReflectionBlockedTypes.getParent() + "/" + sFile;
-	  	File file = new File(sFileName);
-	  	if(!file.exists()){ 
-	  		lines.append("/*ERROR Header2Reflection - file not found: ")
-	  		     .append(sFileName).append("*/").append(sLinefeed);
-	  	} else {
-	  		String sContent = FileSystem.readFile(file);
-	  		lines.append(sContent);
-	  	}
-  	}
-  	return lines;
+    //StringBuilder lines = new StringBuilder(500);
+    if(lines == null){ lines = new StringBuilder(500); }
+    List<ZbnfParseResultItem> listLine = zbnfResult.listChildren("line");
+    if(listLine !=null){
+      for(ZbnfParseResultItem zbnfChild: listLine){
+        lines.append(zbnfChild.getParsedString()).append(sLinefeed);
+      }
+    }
+    String sFile = zbnfResult.getChildString("fileName");
+    if(sFile !=null){
+      String sFileName = fileReflectionBlockedTypes.getParent() + "/" + sFile;
+      File file = new File(sFileName);
+      if(!file.exists()){ 
+        lines.append("/*ERROR Header2Reflection - file not found: ")
+             .append(sFileName).append("*/").append(sLinefeed);
+      } else {
+        String sContent = FileSystem.readFile(file);
+        lines.append(sContent);
+      }
+    }
+    return lines;
   }
   
   
@@ -925,8 +925,8 @@ public class Header2Reflection
         ZbnfParseResultItem itemName = resultItem.getChild("@name");
         if(itemName != null)
         { if(sSemantic.equals("unionDefinition"))
-        	  stop();
-        	String sClassName = itemName.getParsedString();
+            stop();
+          String sClassName = itemName.getParsedString();
           if(sClassName.equals("ListItr_LinkedListJcpp"))
             stop();
           if(sClassName.equals("ObjectJcpp"))
@@ -963,9 +963,9 @@ public class Header2Reflection
   class ConverterClass
   {
     
-  	boolean cppClass;
-  	
-  	/**Inheritance situation. */
+    boolean cppClass;
+    
+    /**Inheritance situation. */
     boolean bObjectJcpp = false ;
     
     /**Inheritance situation. */
@@ -1036,7 +1036,7 @@ public class Header2Reflection
     throws IOException
     { //String sClassName = classItem.getChild("@name").getParsedString();
       this.cppClass = cppClass;
-    	sReflectionClassName = sParentReflectionClassName != null ? sParentReflectionClassName + "_" + sClassName : sClassName;
+      sReflectionClassName = sParentReflectionClassName != null ? sParentReflectionClassName + "_" + sClassName : sClassName;
       sCppClassName = sParentCppClassName != null ? sParentCppClassName + "::" + sClassName : sClassName;
 
       //if(sClassName.startsWith("EntryValue"))
@@ -1240,56 +1240,56 @@ public class Header2Reflection
 
     
     /**Convert all element in a class or struct or inner part (visibility-block).
-  	 */
-  	private void convertElementsInClass(ZbnfParseResultItem classItem, String sVariantName) 
+     */
+    private void convertElementsInClass(ZbnfParseResultItem classItem, String sVariantName) 
     throws IOException
     {
       List<ZbnfParseResultItem> elements = classItem.listChildren();
       for(ZbnfParseResultItem zbnfElement : elements){
-      	convertElement(zbnfElement, sVariantName);
+        convertElement(zbnfElement, sVariantName);
       }
     }  
 
 
     
-  	/**Convert 1 element in a class or struct or inner part (visibility-block).
-  	 * @param zbnfElement The element from which the reflection should generated.
-  	 * @param sNameStruct null or a name of the superior structure, 
-  	 *        which is used in form sNameStruct.nameElement to build the offset.
-  	 * @throws IOException
-  	 * @throws AccessException
-  	 */
-  	private void convertElement(ZbnfParseResultItem zbnfElement, String sNameVariant) 
-  	throws IOException
-  	{
+    /**Convert 1 element in a class or struct or inner part (visibility-block).
+     * @param zbnfElement The element from which the reflection should generated.
+     * @param sNameStruct null or a name of the superior structure, 
+     *        which is used in form sNameStruct.nameElement to build the offset.
+     * @throws IOException
+     * @throws AccessException
+     */
+    private void convertElement(ZbnfParseResultItem zbnfElement, String sNameVariant) 
+    throws IOException
+    {
     
-	  	String semantic = zbnfElement.getSemantic();
-	  	if(semantic.equals("implicitStructAttribute")){
-	  		String sName = zbnfElement.getChildString("@name");
-	  		convertElementsInClass(zbnfElement, sName);
-	  	}
-	  	else if(semantic.equals("attribute")){
-	  	    	if(convertAttribute(bFirst, sSeparator, sCppClassName, sReflectionClassName, sNameVariant
-	    		, zbnfElement, sbCfile, sbForward, cppClass))
-	      { nrofAttributes +=1;
-	        sSeparator = "\n  , ";  //next entries.
-	        bFirst = false;
-	      }
-	    }
-	    else if(semantic.equals("classVisibilityBlock")){
-	    	convertElementsInClass(zbnfElement, null);  //elements of the classVisibilityBlock
-	    }
-	    else if(semantic.equals("variante")){  //variant of a union
-	    	lastOffsetBeforeBitfield = null;     //A bitfield starts from offset 0 now, because it is a union.
-	    	ZbnfParseResultItem variantContent = zbnfElement.firstChild();
-	    	convertElement(variantContent, null);  //The structure inside a union
-	    }
-	    else if(semantic.equals("structDefinition") ) {//an inner, embedded struct
-	    	  //NOTE: commonly it is necessary to regard the name of the structure. But for bitfields it isn't necessary.
-	    	String sVariantName = zbnfElement.getChildString("@name"); //The name of the struct inside union
-	    	convertElementsInClass(zbnfElement, sVariantName);  //elements of the classVisibilityBlock
-	    }
-  	}
+      String semantic = zbnfElement.getSemantic();
+      if(semantic.equals("implicitStructAttribute")){
+        String sName = zbnfElement.getChildString("@name");
+        convertElementsInClass(zbnfElement, sName);
+      }
+      else if(semantic.equals("attribute")){
+            if(convertAttribute(bFirst, sSeparator, sCppClassName, sReflectionClassName, sNameVariant
+          , zbnfElement, sbCfile, sbForward, cppClass))
+        { nrofAttributes +=1;
+          sSeparator = "\n  , ";  //next entries.
+          bFirst = false;
+        }
+      }
+      else if(semantic.equals("classVisibilityBlock")){
+        convertElementsInClass(zbnfElement, null);  //elements of the classVisibilityBlock
+      }
+      else if(semantic.equals("variante")){  //variant of a union
+        lastOffsetBeforeBitfield = null;     //A bitfield starts from offset 0 now, because it is a union.
+        ZbnfParseResultItem variantContent = zbnfElement.firstChild();
+        convertElement(variantContent, null);  //The structure inside a union
+      }
+      else if(semantic.equals("structDefinition") ) {//an inner, embedded struct
+          //NOTE: commonly it is necessary to regard the name of the structure. But for bitfields it isn't necessary.
+        String sVariantName = zbnfElement.getChildString("@name"); //The name of the struct inside union
+        convertElementsInClass(zbnfElement, sVariantName);  //elements of the classVisibilityBlock
+      }
+    }
     
     
     
@@ -1325,30 +1325,30 @@ public class Header2Reflection
     )
     throws IOException
     { List<ZbnfParseResultItem> innerClasses = zbnfParent.listChildren("classDef");
-	    if(innerClasses!=null)
-	    for(ZbnfParseResultItem innerClassItem : innerClasses)
-	    { String sTypeName = innerClassItem.getChild("@name").getParsedString();
-	      innerTypes.put(sTypeName, sParentReflectionClassName);
-	      ConverterClass converterClass = new ConverterClass(innerTypesP);
-	      converterClass.convertClass(sTypeName, sParentCppClassName, sParentReflectionClassName, innerClassItem, sFilePath, cppClass);//, typesInFile);
-	    }
+      if(innerClasses!=null)
+      for(ZbnfParseResultItem innerClassItem : innerClasses)
+      { String sTypeName = innerClassItem.getChild("@name").getParsedString();
+        innerTypes.put(sTypeName, sParentReflectionClassName);
+        ConverterClass converterClass = new ConverterClass(innerTypesP);
+        converterClass.convertClass(sTypeName, sParentCppClassName, sParentReflectionClassName, innerClassItem, sFilePath, cppClass);//, typesInFile);
+      }
 
-	    /**2011-04-12: don't convert implicitStructAttribute as extra type. It isn't able in C to do so.
-	     * If a implicitStruct is used, the type should remain anonymous. 
-	     * The attributes of the implicit struct are generated in form NAME_INNER already, see convertAttribute.
-	     *  
-	    List<ZbnfParseResultItem> zbnfImplicitStruct = zbnfParent.listChildren("implicitStructAttribute");
+      /**2011-04-12: don't convert implicitStructAttribute as extra type. It isn't able in C to do so.
+       * If a implicitStruct is used, the type should remain anonymous. 
+       * The attributes of the implicit struct are generated in form NAME_INNER already, see convertAttribute.
+       *  
+      List<ZbnfParseResultItem> zbnfImplicitStruct = zbnfParent.listChildren("implicitStructAttribute");
       //
-	    if(zbnfImplicitStruct!=null)
+      if(zbnfImplicitStruct!=null)
       for(ZbnfParseResultItem zbnfImplicitStructItem : zbnfImplicitStruct)
       { String sTagName = zbnfImplicitStructItem.getChildString("@tagname");  //@tagname");
-      	String sName = zbnfImplicitStructItem.getChildString("@name");  //@tagname");
-      	String sTypeName = sTagName != null ? sTagName : sName;
+        String sName = zbnfImplicitStructItem.getChildString("@name");  //@tagname");
+        String sTypeName = sTagName != null ? sTagName : sName;
         //an unnamed embedded struct won't be recognized as an extra struct. 
-      	//Because, it is not able to address in the enclosing struct.
-      	//It is especially the situation in unions.
-      	//for example: union{ int first; struct{ int a; int b;};}
-      	if(sName != null){  //only named inner structures are extra types.
+        //Because, it is not able to address in the enclosing struct.
+        //It is especially the situation in unions.
+        //for example: union{ int first; struct{ int a; int b;};}
+        if(sName != null){  //only named inner structures are extra types.
           if(!sParentCppClassName.startsWith("struct "))
           { sParentCppClassName = "struct " + sParentCppClassName;
           }
@@ -1377,354 +1377,354 @@ public class Header2Reflection
      * @throws ByteDataAccess.AccessException 
      */
     private boolean convertAttribute(boolean bFirst, String sSeparator, String sCppClassName
-    	, String sReflectionClassName
-    	, String sNameVariant
-    	, ZbnfParseResultItem attributeItem
-    	, StringBuffer sbCfile, StringBuffer sbForward, boolean cppClass) 
+      , String sReflectionClassName
+      , String sNameVariant
+      , ZbnfParseResultItem attributeItem
+      , StringBuffer sbCfile, StringBuffer sbForward, boolean cppClass) 
     throws IOException
     { final String sAttributeName1 = attributeItem.getChildString("@name");
-    	if(false && sAttributeName1 == null){
-    		return false;  //no name given, it may be a unnamed bitfield especially.
-    	} else {
-	    	final String sAttributeName = sAttributeName1 == null ? null :  //sAttributeName == null controls flow 
-	    		sNameVariant == null ? sAttributeName1 :
-	    		sNameVariant + "-" + sAttributeName1;
-	
-	      if(sAttributeName !=null && sAttributeName.equals("var1"))
-	      	stop();
-	    
-	      if(bFirst && binOutPrep != null){
-	        /**Create the head of the fields*/
-	        binOutPrep.addFieldHead();
-	      }
-	      
-	      boolean bContainerObjectArray = false;
-	      boolean bReferenceInContainer = false;
-	      String sTypeInContainer = null;
-	      String sContainerType = null;
-	      int arrayLengthPerAnnotation = 0;
-	      ZbnfParseResultItem zbnfDescription = attributeItem.getChild("description");
-	      if(zbnfDescription != null){
-	      	sTypeInContainer = zbnfDescription.getChildString("containerElementType");
-	      	if(sTypeInContainer !=null){
-	      	  sContainerType = zbnfDescription.getChildString("containerType");
-	      	  bReferenceInContainer = zbnfDescription.getChild("referencedContainerElement") !=null;
-	      	}
-	      	/*
-	      	ZbnfParseResultItem zbnfContainer = zbnfDescription.getChild("containerType");
-	        if(zbnfContainer != null){
-	          String sContainer = zbnfContainer.getParsedString();
-	          if(sContainer.startsWith("ObjectArrayJc")){ bContainerObjectArray = true; }
-	          else { console.writeWarning("unknown @container=" + sContainer); }
-	          int posBracket = sContainer.indexOf('[');
-	          int posBracketEnd = sContainer.indexOf(']');
-	          int posStar = sContainer.indexOf('*');
-	          if(posBracket > 0 && posBracketEnd >0 && posStar == posBracketEnd-1){
-	            sTypeInContainer = sContainer.substring(posBracket+1, posStar);
-	            bReferenceInContainer = true;
-	          } else if(posBracket > 0 && posBracketEnd >0 && posBracket < posBracketEnd){
-	            sTypeInContainer = sContainer.substring(posBracket+1, posBracketEnd);
-	          } else {
-	            console.writeWarning("failed @container="  + sContainer);  
-	          }
-	          if(posBracket >0){
-	            sContainerType = sContainer.substring(0, posBracket);
-	          }  
-	          
-	        }
-	        */
-	        List<ZbnfParseResultItem> listZbnfRefl = zbnfDescription.listChildren("refl");  //Hartmut-2010-11-15
-	        if(listZbnfRefl !=null){
-	        	for(ZbnfParseResultItem zbnfRefl: listZbnfRefl ){
-	        		String sRefl = zbnfRefl.getParsedString();
-	        		if(sRefl.startsWith("arrayLength")){  ////
-	        			int posEq = sRefl.indexOf('=');
-	        			if(posEq <0 || sRefl.length() < posEq+1) throw new IllegalArgumentException(" Annotation refl: arrayLength = value: \"= value\" is missed. ");
-	        			String sArrayLength = sRefl.substring(posEq+1).trim();
-	        			TypeEntry replacement = identifierRelacements.get(sArrayLength);
-	        			if(replacement !=null && replacement.sType == null){ //value is given then
-	        				arrayLengthPerAnnotation = replacement.value;
-	        			} else {
-		        			try{ arrayLengthPerAnnotation = Integer.parseInt(sArrayLength); }
-		        			catch(NumberFormatException exc){ 
-		        				arrayLengthPerAnnotation = 1;
-			        			throw new IllegalArgumentException(
-		        					" Annotation refl: arrayLength = " + sArrayLength 
-		        					+ ": This value isn't a number and it isn't found in the replacements. "
-		        					+ "\nHint: You can add a replacement writing a line \"@ident = [0x]value\" in the config-file.");
-		        			}
-	        			}
-	        		}
-	        	}
-	        	
-	        }
-	      }
-	        
-	      
-	      ZbnfParseResultItem typeItem = attributeItem.getChild("type");
-	      String sType;
-	      int nReference;   //0: no reference, 1, 2 number of *
-	      if(typeItem == null)
-	      { if(attributeItem.getChild("@implicitStruct")!=null)
-	        { /*an implicit struct like "... struct Tag_t{ type element,...} name; " has a tag-name perhaps, but not always,
-	            therefore the name of the attribute is used as type-name.
-	            The same rule is taken by detect types from inner implicit struct
-	          */
-	          ZbnfParseResultItem zbnfTagName = attributeItem.getChild("@tagname");
-	          if(zbnfTagName != null)
-	          { sType = zbnfTagName.getParsedString();
-	          }
-	          else
-	          { sType = sAttributeName;  //may be null, then ignore.
-	          }
-	          //sType = sReflectionClassName + "_" + sAttributeName;
-	          nReference = 0;  //a implicit struct can not be used outside, because it is unknown.
-	          //struct{ type element} *name; is syntactical correct in C, but it is not useable. Do not consider here.
-	        }
-	        else
-	        { stop();  //TODO
-	          return false;
-	        }
-	      }
-	      else
-	      { ZbnfParseResultItem itemTypeName = typeItem.getChild("@name");
-	        if(itemTypeName == null)
-	        { stop();
-	          return false;
-	        }
-	        sType = itemTypeName.getParsedString();
-	        if(typeItem.getChild("@pointer") != null
-	          || typeItem.getChild("@constPointer") != null
-	          || typeItem.getChild("@volatilePointer") != null
-	          || typeItem.getChild("@cppRef") != null
-	          ){
-	        	nReference = 1;
-	        } else if(
-	             typeItem.getChild("@volatilePointer2") != null
-	          || typeItem.getChild("@pointerRef") != null
-	          || typeItem.getChild("@pointer2") != null
-	          ){
-	        	nReference = 2;
-	        } else {
-	        	nReference = 0;
-	        }
-	        boolean bForwardStruct = typeItem.getChild("@forward") != null;
-	        if(sType.equals("ObjectJc") && bFirst)
-	        { /**A attribute with type ObjectJc is the first one, the class/struct is based on ObjectJc. */
-	          bStructHasFirstObjectJc = true;
-	        }
-	        if(sType.equals("char"))
-	          stop();
-	        
-	        //translate the type, possible on forward declaration struct TypeXX* or for define-replacement
-	        TypeEntry typeEntry = identifierRelacements.get(sType);
-	        if(typeEntry != null) //found
-	        { if(typeEntry.sign == (bForwardStruct ? '@' : '='))  //it is a translation
-	          { sType = typeEntry.sPath;
-	          }
-	        }
-	        else if(bForwardStruct && sType.endsWith("_t"))
-	        { //struct Type_t may be mostly of type Type
-	          sType = sType.substring(0,sType.length()-2);
-	        }
-	      }
-	      if(sTypeInContainer!= null){
-	        sType = sTypeInContainer;  //it is more significant, the sType may be the type of container of Type.
-	      }
-	      if(sAttributeName !=null && sAttributeName.equals("TEST"))
-	        stop();
-	      
-	      /**Shorten the name of the attribute, because the max. number of chars is limited. */
-		    final String sAttributeNameShow;
-	      if(sAttributeName == null){
-	      	sAttributeNameShow = null;
-	      } else {
-		      final int zAttributeName = sAttributeName.length();
-		      if(zAttributeName <= Field_Jc.kLengthName-1){ sAttributeNameShow = sAttributeName; }
-		      else { 
-		        int restLength = Field_Jc.kLengthName - 13 -2;
-		        sAttributeNameShow = sAttributeName.substring(0, 13) + "_" + sAttributeName.substring(zAttributeName -restLength, zAttributeName); 
-		      }
-		      /**Write struct content of FieldJc in C-file.*/
-		      sbCfile.append(sSeparator +"{ \"" + sAttributeNameShow + "\"");
-	      }
-	      
-	      ZbnfParseResultItem zbnfBitfield = attributeItem.getChild("bitField");
-	      int bitfieldNrofBits = (zbnfBitfield != null) ? (int)zbnfBitfield.getParsedInteger(): -1;  
-	        
-	      FieldTypeInfos fieldTypeInfos = new FieldTypeInfos(); //usage of class instance is possible to optimize.
-	      setFieldTypeInfos(sType, sbForward, fieldTypeInfos, bitfieldNrofBits);
-	      
-	      int nrofArrayElementsOrBitfield = 0;
-	      ZbnfParseResultItem zbnfArraysize = attributeItem.getChild("arraysize");
-	      
-	      if(sAttributeName != null){  //generate only if a name is given.
-	      	int mModifier = 0;  //value for modifier in the binary reflection file.
-	        
-	      	if(bitfieldNrofBits >=0){
-	        	assert(zbnfArraysize == null);  //bitfield-arrays are not supported
-	        	nrofArrayElementsOrBitfield = (bitfieldNrofBits <<12) + (bitfieldByte <<3) + bitfieldPos;
-	          sbCfile.append(  "\n    , 0x" + Integer.toHexString(nrofArrayElementsOrBitfield));
-	          sbCfile.append(" //bitfield nrofBits=" + bitfieldNrofBits );
-	          sbCfile.append(", bitPos=").append(bitfieldByte).append(".").append(bitfieldPos);
-	        } else if(zbnfArraysize != null)
-	        { Iterator<ZbnfParseResultItem> iterZbnf = zbnfArraysize.iteratorChildren();
-	          while(iterZbnf.hasNext())
-	          { ZbnfParseResultItem zbnfArraysizeChild = iterZbnf.next();
-	            if( zbnfArraysizeChild.getSemantic().equals("@value"))
-	            { nrofArrayElementsOrBitfield = (int)zbnfArraysizeChild.getParsedInteger(); 
-	            }
-	            else if( zbnfArraysizeChild.getSemantic().equals("@symbolValue"))
-	            { String name = zbnfArraysizeChild.getParsedString();
-	              TypeEntry entry = identifierRelacements.get(name);
-	              if(entry != null && entry.value >0)
-	              { nrofArrayElementsOrBitfield = entry.value ;
-	              }
-	              else 
-	              { nrofArrayElementsOrBitfield = 0; 
-	                console.writeWarning("symbolic arraysize: " + name + " - no value.");
-	              }
-	            }
-	            else if( zbnfArraysizeChild.getSemantic().equals("binaryOperator"))
-	            { console.writeWarning("not supported yet: binary operator in arraysize ");
-	            }
-	          } 
-	          /*
-	            ZbnfParseResultItem zbnfValue;
-	            if( (zbnfValue  = zbnfArraysize.getChild("@value")) != null)
-	            { nrofArrayElements = (int)zbnfValue.getParsedInteger(); }
-	            else if( (zbnfValue  = zbnfArraysize.getChild("@symbolValue")) != null)
-	            { String name = zbnfValue.getParsedString();
-	              TypeEntry entry = blockedFilesAndTypes.get(name);
-	              if(entry != null && entry.value >0)
-	                   { nrofArrayElements = entry.value ;}
-	              else 
-	              { nrofArrayElements = 0; 
-	                console.writeWarning("symbolic arraysize: " + name + " - no value.");
-	              }
-	            }
-	            else
-	            { //it is possible to have a "@symbolValue", ignore it yet.
-	              nrofArrayElements = 0;
-	            }
-	          */
-	          sbCfile.append(  "\n    , " + nrofArrayElementsOrBitfield).append("   //nrofArrayElements");
-	          
-	        } else if(arrayLengthPerAnnotation >0){
-	        	nrofArrayElementsOrBitfield = arrayLengthPerAnnotation;
-	          sbCfile.append(  "\n    , " + nrofArrayElementsOrBitfield).append("   //nrofArrayElements per Annotation");
-	        } else { 
-	        	nrofArrayElementsOrBitfield = 0;
-	          sbCfile.append(  "\n    , 0   //no Array, no Bitfield");
-	        }
-	        
-	        /**Write Type of field: */
-	        if(bitfieldNrofBits >=0){
-	        	sbCfile.append("\n    , REFLECTION_BITFIELD");
-	          sbCfile.append("\n    , kBitfield_Modifier_reflectJc");
-	          mModifier |= Class_Jc.kBitfield_Modifier;
-	        }
-	        
-	        else if(fieldTypeInfos.bytesScalarType >=0)
-	        { sbCfile.append("\n    , REFLECTION_" + sType);
-	          sbCfile.append("\n    , ("+ fieldTypeInfos.bytesScalarType+"<<kBitPrimitiv_Modifier_reflectJc)");
-	          mModifier = fieldTypeInfos.bytesScalarType << Class_Jc.kBitPrimitiv_Modifier;
-	        }
-	        else
-	        {
-	          if(fieldTypeInfos.useReflection)
-	          { sbCfile.append("\n    , &reflection_" + sType);
-	          }
-	          else
-	          { sbCfile.append("\n    , REFLECTION_void");
-	          }
-	          sbCfile.append("\n    , 0");  //bitModifiers
-	        }
-	        
-	        if(sContainerType != null){
-	          if(sContainerType.equals("ObjectArrayJc")){
-	            sbCfile.append("| kObjectArrayJc_Modifier_reflectJc");
-	            mModifier |= Class_Jc.kObjectArrayJc_Modifier;
-	          }
-	          if(nReference >0){
-	            sbCfile.append("| kReferencedContainer_Modifier_reflectJc");
-	            mModifier |= Class_Jc.kReferencedContainer_Modifier;
-	          } else {
-	            sbCfile.append("| kEmbeddedContainer_Modifier_reflectJc");
-	            mModifier |= Class_Jc.kEmbeddedContainer_Modifier;
-	          }
-	          nReference = bReferenceInContainer ? 1 : 0;
-	        } else if (arrayLengthPerAnnotation >0 && nReference >0){
-	          //if the definition follows the pattern Type* array with annotation @refl:arrayLength=99,
-	        	//it is a referenced static array of this type. 
-	        	sbCfile.append("| kReferencedContainer_Modifier_reflectJc");
-	          mModifier |= Class_Jc.kReferencedContainer_Modifier;
-	          nReference -=1;  //typical 0
-	        }
-	        if(nReference >0){ 
-	          sbCfile.append("| mReference_Modifier_reflectJc"); 
-	          mModifier|= Class_Jc.mReference_Modifier;
-	        }
-	        if(zbnfArraysize != null && nrofArrayElementsOrBitfield >1)
-	        {
-	          sbCfile.append(" |kStaticArray_Modifier_reflectJc|kEmbeddedContainer_Modifier_reflectJc");
-	          mModifier|= Class_Jc.kStaticArray_Modifier|Class_Jc.kEmbeddedContainer_Modifier;
-	        }
-	        if(arrayLengthPerAnnotation >0){
-	          sbCfile.append(" |kStaticArray_Modifier_reflectJc");
-	          mModifier|= Class_Jc.kStaticArray_Modifier;
-	        }
-	        sbCfile.append(" //bitModifiers");
-	
-	        final String sOffset;
-	        if(bitfieldNrofBits <0){
-	          sOffset = buildOffset(sCppClassName, sAttributeName, cppClass);
-	          bitfieldPos = 0;  //a new bitfield will be start with byte0.bit0
-	          bitfieldByte = 0;
-	          lastOffsetBeforeBitfield = sOffset;
-	          lastType = sType;
-	          
-	        } else {
-	        	
-	        	if(lastOffsetBeforeBitfield == null){
-	        		//the first field is a bitfield.
-	        		sOffset = "0";   //Position is 0.
-	        	} else {
-	        		//TODO
-	        		sOffset = lastOffsetBeforeBitfield + " + sizeof(" + lastType + ")";
-	        	}
-	        }
-	        
-	        
-	        if(fileOffs != null){
-	        	String sTypeForSize = nReference>0 ? sType + "*" : sType;
-	        	String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
-	          fileOffs.write("\n    , (" + sSize + "<<16) | (" + sOffset + ")");                //Offsetfile: it is a int32
-	          sbCfile.append(  "\n    , -1   //offset in extra file");
-	          
-	        } else {
-	          sbCfile.append(  "\n    , " + "(int16)" + sOffset);  //Reflection-file: cast to (int16)
-	        }
-	        
-	        sbCfile.append(  "\n    , 0  //offsetToObjectifcBase");
-	        sbCfile.append(  "\n    , &reflection_" + sReflectionClassName);
-	        sbCfile.append(  "\n    }");
-	
-	        if(binOutPrep != null && sAttributeName != null){  //generate only if a name is given.
-	          binOutPrep.addField(sAttributeNameShow, fieldTypeInfos.typeIdent, sType, mModifier, nrofArrayElementsOrBitfield);
-	        }
-	        
-	      } //if(sAttributeName != null)
-	      if(bitfieldNrofBits >=0){
-		        
-		      bitfieldPos += bitfieldNrofBits;
-		    	if(bitfieldPos > 8){
-		    		bitfieldPos -= 8;
-		    		bitfieldByte += 1;
-		    	}
-	      }
-	      return sAttributeName != null;
-    	}
+      if(false && sAttributeName1 == null){
+        return false;  //no name given, it may be a unnamed bitfield especially.
+      } else {
+        final String sAttributeName = sAttributeName1 == null ? null :  //sAttributeName == null controls flow 
+          sNameVariant == null ? sAttributeName1 :
+          sNameVariant + "-" + sAttributeName1;
+  
+        if(sAttributeName !=null && sAttributeName.equals("var1"))
+          stop();
+      
+        if(bFirst && binOutPrep != null){
+          /**Create the head of the fields*/
+          binOutPrep.addFieldHead();
+        }
+        
+        boolean bContainerObjectArray = false;
+        boolean bReferenceInContainer = false;
+        String sTypeInContainer = null;
+        String sContainerType = null;
+        int arrayLengthPerAnnotation = 0;
+        ZbnfParseResultItem zbnfDescription = attributeItem.getChild("description");
+        if(zbnfDescription != null){
+          sTypeInContainer = zbnfDescription.getChildString("containerElementType");
+          if(sTypeInContainer !=null){
+            sContainerType = zbnfDescription.getChildString("containerType");
+            bReferenceInContainer = zbnfDescription.getChild("referencedContainerElement") !=null;
+          }
+          /*
+          ZbnfParseResultItem zbnfContainer = zbnfDescription.getChild("containerType");
+          if(zbnfContainer != null){
+            String sContainer = zbnfContainer.getParsedString();
+            if(sContainer.startsWith("ObjectArrayJc")){ bContainerObjectArray = true; }
+            else { console.writeWarning("unknown @container=" + sContainer); }
+            int posBracket = sContainer.indexOf('[');
+            int posBracketEnd = sContainer.indexOf(']');
+            int posStar = sContainer.indexOf('*');
+            if(posBracket > 0 && posBracketEnd >0 && posStar == posBracketEnd-1){
+              sTypeInContainer = sContainer.substring(posBracket+1, posStar);
+              bReferenceInContainer = true;
+            } else if(posBracket > 0 && posBracketEnd >0 && posBracket < posBracketEnd){
+              sTypeInContainer = sContainer.substring(posBracket+1, posBracketEnd);
+            } else {
+              console.writeWarning("failed @container="  + sContainer);  
+            }
+            if(posBracket >0){
+              sContainerType = sContainer.substring(0, posBracket);
+            }  
+            
+          }
+          */
+          List<ZbnfParseResultItem> listZbnfRefl = zbnfDescription.listChildren("refl");  //Hartmut-2010-11-15
+          if(listZbnfRefl !=null){
+            for(ZbnfParseResultItem zbnfRefl: listZbnfRefl ){
+              String sRefl = zbnfRefl.getParsedString();
+              if(sRefl.startsWith("arrayLength")){  ////
+                int posEq = sRefl.indexOf('=');
+                if(posEq <0 || sRefl.length() < posEq+1) throw new IllegalArgumentException(" Annotation refl: arrayLength = value: \"= value\" is missed. ");
+                String sArrayLength = sRefl.substring(posEq+1).trim();
+                TypeEntry replacement = identifierRelacements.get(sArrayLength);
+                if(replacement !=null && replacement.sType == null){ //value is given then
+                  arrayLengthPerAnnotation = replacement.value;
+                } else {
+                  try{ arrayLengthPerAnnotation = Integer.parseInt(sArrayLength); }
+                  catch(NumberFormatException exc){ 
+                    arrayLengthPerAnnotation = 1;
+                    throw new IllegalArgumentException(
+                      " Annotation refl: arrayLength = " + sArrayLength 
+                      + ": This value isn't a number and it isn't found in the replacements. "
+                      + "\nHint: You can add a replacement writing a line \"@ident = [0x]value\" in the config-file.");
+                  }
+                }
+              }
+            }
+            
+          }
+        }
+          
+        
+        ZbnfParseResultItem typeItem = attributeItem.getChild("type");
+        String sType;
+        int nReference;   //0: no reference, 1, 2 number of *
+        if(typeItem == null)
+        { if(attributeItem.getChild("@implicitStruct")!=null)
+          { /*an implicit struct like "... struct Tag_t{ type element,...} name; " has a tag-name perhaps, but not always,
+              therefore the name of the attribute is used as type-name.
+              The same rule is taken by detect types from inner implicit struct
+            */
+            ZbnfParseResultItem zbnfTagName = attributeItem.getChild("@tagname");
+            if(zbnfTagName != null)
+            { sType = zbnfTagName.getParsedString();
+            }
+            else
+            { sType = sAttributeName;  //may be null, then ignore.
+            }
+            //sType = sReflectionClassName + "_" + sAttributeName;
+            nReference = 0;  //a implicit struct can not be used outside, because it is unknown.
+            //struct{ type element} *name; is syntactical correct in C, but it is not useable. Do not consider here.
+          }
+          else
+          { stop();  //TODO
+            return false;
+          }
+        }
+        else
+        { ZbnfParseResultItem itemTypeName = typeItem.getChild("@name");
+          if(itemTypeName == null)
+          { stop();
+            return false;
+          }
+          sType = itemTypeName.getParsedString();
+          if(typeItem.getChild("@pointer") != null
+            || typeItem.getChild("@constPointer") != null
+            || typeItem.getChild("@volatilePointer") != null
+            || typeItem.getChild("@cppRef") != null
+            ){
+            nReference = 1;
+          } else if(
+               typeItem.getChild("@volatilePointer2") != null
+            || typeItem.getChild("@pointerRef") != null
+            || typeItem.getChild("@pointer2") != null
+            ){
+            nReference = 2;
+          } else {
+            nReference = 0;
+          }
+          boolean bForwardStruct = typeItem.getChild("@forward") != null;
+          if(sType.equals("ObjectJc") && bFirst)
+          { /**A attribute with type ObjectJc is the first one, the class/struct is based on ObjectJc. */
+            bStructHasFirstObjectJc = true;
+          }
+          if(sType.equals("char"))
+            stop();
+          
+          //translate the type, possible on forward declaration struct TypeXX* or for define-replacement
+          TypeEntry typeEntry = identifierRelacements.get(sType);
+          if(typeEntry != null) //found
+          { if(typeEntry.sign == (bForwardStruct ? '@' : '='))  //it is a translation
+            { sType = typeEntry.sPath;
+            }
+          }
+          else if(bForwardStruct && sType.endsWith("_t"))
+          { //struct Type_t may be mostly of type Type
+            sType = sType.substring(0,sType.length()-2);
+          }
+        }
+        if(sTypeInContainer!= null){
+          sType = sTypeInContainer;  //it is more significant, the sType may be the type of container of Type.
+        }
+        if(sAttributeName !=null && sAttributeName.equals("TEST"))
+          stop();
+        
+        /**Shorten the name of the attribute, because the max. number of chars is limited. */
+        final String sAttributeNameShow;
+        if(sAttributeName == null){
+          sAttributeNameShow = null;
+        } else {
+          final int zAttributeName = sAttributeName.length();
+          if(zAttributeName <= Field_Jc.kLengthName-1){ sAttributeNameShow = sAttributeName; }
+          else { 
+            int restLength = Field_Jc.kLengthName - 13 -2;
+            sAttributeNameShow = sAttributeName.substring(0, 13) + "_" + sAttributeName.substring(zAttributeName -restLength, zAttributeName); 
+          }
+          /**Write struct content of FieldJc in C-file.*/
+          sbCfile.append(sSeparator +"{ \"" + sAttributeNameShow + "\"");
+        }
+        
+        ZbnfParseResultItem zbnfBitfield = attributeItem.getChild("bitField");
+        int bitfieldNrofBits = (zbnfBitfield != null) ? (int)zbnfBitfield.getParsedInteger(): -1;  
+          
+        FieldTypeInfos fieldTypeInfos = new FieldTypeInfos(); //usage of class instance is possible to optimize.
+        setFieldTypeInfos(sType, sbForward, fieldTypeInfos, bitfieldNrofBits);
+        
+        int nrofArrayElementsOrBitfield = 0;
+        ZbnfParseResultItem zbnfArraysize = attributeItem.getChild("arraysize");
+        
+        if(sAttributeName != null){  //generate only if a name is given.
+          int mModifier = 0;  //value for modifier in the binary reflection file.
+          
+          if(bitfieldNrofBits >=0){
+            assert(zbnfArraysize == null);  //bitfield-arrays are not supported
+            nrofArrayElementsOrBitfield = (bitfieldNrofBits <<12) + (bitfieldByte <<3) + bitfieldPos;
+            sbCfile.append(  "\n    , 0x" + Integer.toHexString(nrofArrayElementsOrBitfield));
+            sbCfile.append(" //bitfield nrofBits=" + bitfieldNrofBits );
+            sbCfile.append(", bitPos=").append(bitfieldByte).append(".").append(bitfieldPos);
+          } else if(zbnfArraysize != null)
+          { Iterator<ZbnfParseResultItem> iterZbnf = zbnfArraysize.iteratorChildren();
+            while(iterZbnf.hasNext())
+            { ZbnfParseResultItem zbnfArraysizeChild = iterZbnf.next();
+              if( zbnfArraysizeChild.getSemantic().equals("@value"))
+              { nrofArrayElementsOrBitfield = (int)zbnfArraysizeChild.getParsedInteger(); 
+              }
+              else if( zbnfArraysizeChild.getSemantic().equals("@symbolValue"))
+              { String name = zbnfArraysizeChild.getParsedString();
+                TypeEntry entry = identifierRelacements.get(name);
+                if(entry != null && entry.value >0)
+                { nrofArrayElementsOrBitfield = entry.value ;
+                }
+                else 
+                { nrofArrayElementsOrBitfield = 0; 
+                  console.writeWarning("symbolic arraysize: " + name + " - no value.");
+                }
+              }
+              else if( zbnfArraysizeChild.getSemantic().equals("binaryOperator"))
+              { console.writeWarning("not supported yet: binary operator in arraysize ");
+              }
+            } 
+            /*
+              ZbnfParseResultItem zbnfValue;
+              if( (zbnfValue  = zbnfArraysize.getChild("@value")) != null)
+              { nrofArrayElements = (int)zbnfValue.getParsedInteger(); }
+              else if( (zbnfValue  = zbnfArraysize.getChild("@symbolValue")) != null)
+              { String name = zbnfValue.getParsedString();
+                TypeEntry entry = blockedFilesAndTypes.get(name);
+                if(entry != null && entry.value >0)
+                     { nrofArrayElements = entry.value ;}
+                else 
+                { nrofArrayElements = 0; 
+                  console.writeWarning("symbolic arraysize: " + name + " - no value.");
+                }
+              }
+              else
+              { //it is possible to have a "@symbolValue", ignore it yet.
+                nrofArrayElements = 0;
+              }
+            */
+            sbCfile.append(  "\n    , " + nrofArrayElementsOrBitfield).append("   //nrofArrayElements");
+            
+          } else if(arrayLengthPerAnnotation >0){
+            nrofArrayElementsOrBitfield = arrayLengthPerAnnotation;
+            sbCfile.append(  "\n    , " + nrofArrayElementsOrBitfield).append("   //nrofArrayElements per Annotation");
+          } else { 
+            nrofArrayElementsOrBitfield = 0;
+            sbCfile.append(  "\n    , 0   //no Array, no Bitfield");
+          }
+          
+          /**Write Type of field: */
+          if(bitfieldNrofBits >=0){
+            sbCfile.append("\n    , REFLECTION_BITFIELD");
+            sbCfile.append("\n    , kBitfield_Modifier_reflectJc");
+            mModifier |= Class_Jc.kBitfield_Modifier;
+          }
+          
+          else if(fieldTypeInfos.bytesScalarType >=0)
+          { sbCfile.append("\n    , REFLECTION_" + sType);
+            sbCfile.append("\n    , ("+ fieldTypeInfos.bytesScalarType+"<<kBitPrimitiv_Modifier_reflectJc)");
+            mModifier = fieldTypeInfos.bytesScalarType << Class_Jc.kBitPrimitiv_Modifier;
+          }
+          else
+          {
+            if(fieldTypeInfos.useReflection)
+            { sbCfile.append("\n    , &reflection_" + sType);
+            }
+            else
+            { sbCfile.append("\n    , REFLECTION_void");
+            }
+            sbCfile.append("\n    , 0");  //bitModifiers
+          }
+          
+          if(sContainerType != null){
+            if(sContainerType.equals("ObjectArrayJc")){
+              sbCfile.append("| kObjectArrayJc_Modifier_reflectJc");
+              mModifier |= Class_Jc.kObjectArrayJc_Modifier;
+            }
+            if(nReference >0){
+              sbCfile.append("| kReferencedContainer_Modifier_reflectJc");
+              mModifier |= Class_Jc.kReferencedContainer_Modifier;
+            } else {
+              sbCfile.append("| kEmbeddedContainer_Modifier_reflectJc");
+              mModifier |= Class_Jc.kEmbeddedContainer_Modifier;
+            }
+            nReference = bReferenceInContainer ? 1 : 0;
+          } else if (arrayLengthPerAnnotation >0 && nReference >0){
+            //if the definition follows the pattern Type* array with annotation @refl:arrayLength=99,
+            //it is a referenced static array of this type. 
+            sbCfile.append("| kReferencedContainer_Modifier_reflectJc");
+            mModifier |= Class_Jc.kReferencedContainer_Modifier;
+            nReference -=1;  //typical 0
+          }
+          if(nReference >0){ 
+            sbCfile.append("| mReference_Modifier_reflectJc"); 
+            mModifier|= Class_Jc.mReference_Modifier;
+          }
+          if(zbnfArraysize != null && nrofArrayElementsOrBitfield >1)
+          {
+            sbCfile.append(" |kStaticArray_Modifier_reflectJc|kEmbeddedContainer_Modifier_reflectJc");
+            mModifier|= Class_Jc.kStaticArray_Modifier|Class_Jc.kEmbeddedContainer_Modifier;
+          }
+          if(arrayLengthPerAnnotation >0){
+            sbCfile.append(" |kStaticArray_Modifier_reflectJc");
+            mModifier|= Class_Jc.kStaticArray_Modifier;
+          }
+          sbCfile.append(" //bitModifiers");
+  
+          final String sOffset;
+          if(bitfieldNrofBits <0){
+            sOffset = buildOffset(sCppClassName, sAttributeName, cppClass);
+            bitfieldPos = 0;  //a new bitfield will be start with byte0.bit0
+            bitfieldByte = 0;
+            lastOffsetBeforeBitfield = sOffset;
+            lastType = sType;
+            
+          } else {
+            
+            if(lastOffsetBeforeBitfield == null){
+              //the first field is a bitfield.
+              sOffset = "0";   //Position is 0.
+            } else {
+              //TODO
+              sOffset = lastOffsetBeforeBitfield + " + sizeof(" + lastType + ")";
+            }
+          }
+          
+          
+          if(fileOffs != null){
+            String sTypeForSize = nReference>0 ? sType + "*" : sType;
+            String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
+            fileOffs.write("\n    , (" + sSize + "<<16) | (" + sOffset + ")");                //Offsetfile: it is a int32
+            sbCfile.append(  "\n    , -1   //offset in extra file");
+            
+          } else {
+            sbCfile.append(  "\n    , " + "(int16)" + sOffset);  //Reflection-file: cast to (int16)
+          }
+          
+          sbCfile.append(  "\n    , 0  //offsetToObjectifcBase");
+          sbCfile.append(  "\n    , &reflection_" + sReflectionClassName);
+          sbCfile.append(  "\n    }");
+  
+          if(binOutPrep != null && sAttributeName != null){  //generate only if a name is given.
+            binOutPrep.addField(sAttributeNameShow, fieldTypeInfos.typeIdent, sType, mModifier, nrofArrayElementsOrBitfield);
+          }
+          
+        } //if(sAttributeName != null)
+        if(bitfieldNrofBits >=0){
+            
+          bitfieldPos += bitfieldNrofBits;
+          if(bitfieldPos > 8){
+            bitfieldPos -= 8;
+            bitfieldByte += 1;
+          }
+        }
+        return sAttributeName != null;
+      }
       
     }
     
@@ -1732,7 +1732,7 @@ public class Header2Reflection
     
     String buildOffset(String sCppClassName, String sAttributeNameP, boolean cppClass)
     {
-    	String sAttributeName = sAttributeNameP.replace('-', '.');
+      String sAttributeName = sAttributeNameP.replace('-', '.');
       String[] sReplacement = new String[]{ sCppClassName, sAttributeName };  //order of sExprTokens
       
       //String sOffset = "((int32)(&((" + sCppClassName + "*)(0x1000))->" + sAttributeName + ") ";
@@ -1745,15 +1745,15 @@ public class Header2Reflection
       else if(bClassBasedOnObjectJc)
       { if(c_only || !cppClass){
           //sOffset += "- (int32)&((" + sCppClassName + "*)0x1000)->base.object)";
-        	sOffset += "-" + StringPart.replace(sExprOffsObj, sExprTokens, sReplacement, null);
+          sOffset += "-" + StringPart.replace(sExprOffsObj, sExprTokens, sReplacement, null);
         } else {
           //sOffset += "- (int32)(static_cast<ObjectJc*>((" + sCppClassName+ "*)0x1000)))";
-        	sOffset += "-" + StringPart.replace(sExprOffsCppObj, sExprTokens, sReplacement, null);
+          sOffset += "-" + StringPart.replace(sExprOffsCppObj, sExprTokens, sReplacement, null);
         }
       }
       else
       { //sOffset += "- (int32)(" + sCppClassName+ "*)0x1000)";
-      	sOffset += "-" + StringPart.replace(sExprOffsBase, sExprTokens, sReplacement, null);
+        sOffset += "-" + StringPart.replace(sExprOffsBase, sExprTokens, sReplacement, null);
       }
       return sOffset;
     }
@@ -1780,12 +1780,12 @@ public class Header2Reflection
       Field_Jc.TypeSizeIdent scalarSizeIdent = Field_Jc.getTypeSizeIdent(sType);
 
       if(bitfieldNrofBits >0){
-      	bytesScalarType = 7;   //designation of bitfield.
+        bytesScalarType = 7;   //designation of bitfield.
         typeAddress = Field_Jc.REFLECTION_bitfield;
         useReflection = true;
       }
       else if(scalarSizeIdent != null) {
-      	bytesScalarType = scalarSizeIdent.size;
+        bytesScalarType = scalarSizeIdent.size;
         typeAddress = scalarSizeIdent.ident;
         useReflection = true;
       }
@@ -1848,8 +1848,8 @@ public class Header2Reflection
     
     @Override public String toString()
     {
-    	String sRet = "" + bitfieldPos + innerTypes; 
-    	return sRet;
+      String sRet = "" + bitfieldPos + innerTypes; 
+      return sRet;
     }
   }
 

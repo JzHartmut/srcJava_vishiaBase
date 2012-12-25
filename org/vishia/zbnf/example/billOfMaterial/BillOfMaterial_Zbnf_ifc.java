@@ -12,10 +12,10 @@ public interface BillOfMaterial_Zbnf_ifc
   
   /**Interface to store a position in the list. ZBNF-syntax-component <code>position::=...</code>.  It is returned from {@link BillOfMaterial_Zbnf_ifc.ZbnfStore_BillOfMaterial.new_position()}
    * and used from ...set_position(). 
-   */	
+   */  
   public interface ZbnfStore_position
   {
-	/**invoked on ZBNF-result <#?amount>. */  
+  /**invoked on ZBNF-result <#?amount>. */  
     void set_amount(int value);
     
     /**invoked on ZBNF-result <#?code>. */  
@@ -31,24 +31,24 @@ public interface BillOfMaterial_Zbnf_ifc
   
   /**Interface to store a position in the list. ZBNF-syntax-component <code>order::=...</code>.  It is returned from {@link BillOfMaterial_Zbnf_ifc.ZbnfStore_BillOfMaterial.new_order()}
    * and used from ...set_order(). 
-   */	
+   */  
   public interface ZbnfStore_order
   {
-	/**invoked on ZBNF-result <#?order/@part1>. */  
-	void set_part1(int value);
+  /**invoked on ZBNF-result <#?order/@part1>. */  
+  void set_part1(int value);
     
-	/**invoked on ZBNF-result <#?order/@part2>. */  
-	void set_part2(int value);
+  /**invoked on ZBNF-result <#?order/@part2>. */  
+  void set_part2(int value);
     
-	/**invoked on ZBNF-result <#?order/@part3>. */  
-	void set_part3(int value);
+  /**invoked on ZBNF-result <#?order/@part3>. */  
+  void set_part3(int value);
   }
   
   
   
   /**Interface to store a date in the list. ZBNF-syntax-component <code>date::=...</code>.  It is returned from {@link BillOfMaterial_Zbnf_ifc.ZbnfStore_BillOfMaterial.new_date()}
    * and used from ...set_date(). 
-   */	
+   */  
   public interface ZbnfStore_date
   {
     /**invoked on ZBNF-result <#?order/@part2>. */  
@@ -60,7 +60,7 @@ public interface BillOfMaterial_Zbnf_ifc
   
   /**Interface to store the whole result of parsing. The given instance on call of org.vishia.zbnf.ZbnfJavaOutput.setContent(type, instance ...) have to implement this interface.
    * It is assigned to the main syntax component <code>BillOfMaterial::=...</code> 
-   */	
+   */  
   public interface ZbnfStore_BillOfMaterial
   {
     
