@@ -160,6 +160,8 @@ public class ZbnfJavaOutput
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
+   * <li>2012-12-26 Hartmut new: {@link #writeInField(Field, Object, ZbnfParseResultItem)} supports a char field too,
+   *   it gets the first char of a parsed string or the numeric value converted in a char (ASCII, UTF-16).
    * <li>2012-10-07 Hartmut bugfix on writing in a public List<String> getParsedString() should be used too.
    * <li>2012-10-07 Hartmut chg: error text output, able to use for {@link org.vishia.msgDispatch.MsgDispatchSystemOutErr}
    * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(Component, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
@@ -930,6 +932,18 @@ public class ZbnfJavaOutput
       { String value = resultItem.getParsedString();
         if(value == null){ value = resultItem.getParsedText(); }
         element.set(outputInstance, value);
+        if(debug) debugValue = value;
+      }
+      else if(sType.equals("char"))
+      { String value = resultItem.getParsedString();
+        if(value == null){ value = resultItem.getParsedText(); }
+        char cc;
+        if(value !=null && value.length() >=1){
+          cc = value.charAt(0);
+        } else {
+          cc = (char)resultItem.getParsedInteger();
+        }
+        element.setChar(outputInstance, cc);
         if(debug) debugValue = value;
       }
       else if(sType.equals("java.util.List"))

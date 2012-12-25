@@ -94,7 +94,7 @@ public class CheckDependencyFile
   /**Version, history and license.
    * <ul>
    * <li>2012-12-25 Hartmut chg: Now This class is able to use independently from {@link CheckDeps}. It should be used
-   *   to check file by file. 
+   *   to check file by file. All other classes are adapted. 
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
    * <li>2011-05-00 Hartmut created: It was necessary for C-compilation to check real dependencies in a fast way.

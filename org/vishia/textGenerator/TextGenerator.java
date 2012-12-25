@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.textGenerator.TextGenScript.ZbnfDataPathElement;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
@@ -113,6 +114,9 @@ public class TextGenerator {
   Object data;
   
   String sError = null;
+  
+  /**Variable for any exception while accessing any java ressources. It is the $error variable of the script. */
+  String accessError = null;
   
   private boolean bWriteErrorInOutput;
   
@@ -217,6 +221,8 @@ public class TextGenerator {
     this.data = userData;
     this.accessPrivate = accessPrivate;
     
+    genFile.localVariables.put("error", accessError);
+    genFile.localVariables.put("mainCmdLogging", log);
     for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
       Gen_Content genVariable = new Gen_Content(null);
@@ -280,6 +286,16 @@ public class TextGenerator {
     if(arg.datapath !=null){
       if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$objDirW"))
         Assert.stop();
+      //calculate all actual arguments:
+      for(DataAccess.DatapathElement dataElement : arg.datapath){
+        ZbnfDataPathElement zd;
+        if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualArguments !=null){
+          for(TextGenScript.Argument zarg: zd.actualArguments){
+            Object oValue = getContent(zarg, localVariables, false);
+            zd.addActualArgument(oValue);
+          }
+        }
+      }
       try{
         dataRet = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
       } catch(NoSuchFieldException exc){
@@ -347,12 +363,18 @@ public class TextGenerator {
       //Fill all local variable, which are defined in this script.
       //store its values in the local Gen_Content-instance.
       for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
-        StringBuilder uBufferVariable = new StringBuilder();
-        Gen_Content genVariable = new Gen_Content(this);
-        TextGenScript.GenContent content = variableScript.getSubContent();
-        genVariable.genContent(content, uBufferVariable, false);
-        //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-        localVariables.put(variableScript.name, uBufferVariable);
+        if(variableScript.whatisit == 'J'){
+          Object value = getContent(variableScript, localVariables, true);
+          localVariables.put(variableScript.name, value);
+        } else { //a text variable
+          assert(variableScript.whatisit == 'v');
+          StringBuilder uBufferVariable = new StringBuilder();
+          Gen_Content genVariable = new Gen_Content(this);
+          TextGenScript.GenContent content = variableScript.getSubContent();
+          genVariable.genContent(content, uBufferVariable, false);
+          //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
+          localVariables.put(variableScript.name, uBufferVariable);
+        }
       }
     
     
@@ -415,6 +437,12 @@ public class TextGenerator {
         */
         case 's': {
           genSubtext(contentElement, out);
+        } break;
+        case 'J': {
+          newJavaClass(contentElement, out);
+        } break;
+        case 'j': {
+          staticJavaMethod(contentElement, out);
         } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
           TextGenScript.GenContent subContent = contentElement.getSubContent();
@@ -604,6 +632,24 @@ public class TextGenerator {
           subtextGenerator.genContent(subtextScript.subContent, out, false);
         }
       }
+    }
+    
+
+    
+    
+    void newJavaClass(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
+      Assert.stop();
+      try{
+        Object obj = DataAccess.create(contentElement.text, log);
+        localVariables.put(contentElement.name, obj);
+      } catch(Exception exc){
+        String sError = "class not found; " + contentElement.text;
+      }
+    }
+    
+    
+    void staticJavaMethod(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
+      Assert.stop();
     }
     
     
