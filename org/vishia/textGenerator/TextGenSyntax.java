@@ -119,7 +119,7 @@ public final class TextGenSyntax {
     + "\n"
     + "namedArgument::= <$?name>[ = <dataAccess?>].\n"
     + "\n"
-    + "forContainer::= <$?@name> : <datapath> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
+    + "forContainer::= [$]<$?@name> : <datapath> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
     + "\n"
     + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <genContent?elseBlock> ] \\<\\.if\\>.\n"
     + "ifBlock::= <condition> \\> <genContent?>.\n"

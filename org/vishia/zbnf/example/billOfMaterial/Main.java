@@ -78,21 +78,19 @@ public class Main
     final Args cmdlineArgs;
     
     /*---------------------------------------------------------------------------------------------*/
-    /** Constructor of the main class.
-        The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
+    /**Constructor of the main class.
+     * The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
     */
     private CmdLine(String[] argsInput, Args cmdlineArgs)
     { super(argsInput);
       this.cmdlineArgs = cmdlineArgs;
-      //:TODO: user, add your help info!
-      //super.addHelpInfo(getAboutInfo());
-      super.addAboutInfo("Sample cmdLine");
+      super.addAboutInfo("Sample Bill of material");
       super.addAboutInfo("made by JcHartmut, 2006-01-06");
-      super.addHelpInfo("Sample of a java programm.");
-      super.addHelpInfo("param: -i:INPUT -o:OUTPUT");
+      super.addHelpInfo(">invoke -i:INPUT");
+      super.addHelpInfo("Note: the current directory have to be contain the file billOfMaterial.zbnf");
       super.addStandardHelpInfo();
       super.addHelpInfo("-i:INPUT    inputfilepath, this file is testing.");
-      super.addHelpInfo("-o:OUTPUT   outputfilepath, this file is written.");
+      //super.addHelpInfo("-o:OUTPUT   outputfilepath, this file is written.");
   
     }
   
@@ -113,6 +111,7 @@ public class Main
                 false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
                 the application should be aborted.
     */
+    @Override
     protected boolean testArgument(String arg, int nArg)
     { boolean bOk = true;  //set to false if the argc is not passed
   
@@ -128,6 +127,7 @@ public class Main
      * @throws ParseException 
      *
      */
+    @Override
     protected void callWithoutArguments() throws ParseException
     { //:TODO: overwrite with empty method - if the calling without arguments
       //having equal rights than the calling with arguments - no special action.
@@ -143,6 +143,7 @@ public class Main
        :TODO: the user only should determine the specific checks, this is a sample.
        @return true if successfull, false if failed.
     */
+    @Override
     protected boolean checkArguments()
     { boolean bOk = true;
   

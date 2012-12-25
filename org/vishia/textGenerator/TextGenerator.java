@@ -223,6 +223,8 @@ public class TextGenerator {
     
     genFile.localVariables.put("error", accessError);
     genFile.localVariables.put("mainCmdLogging", log);
+    genFile.localVariables.put("nextNr", nextNr);
+    
     for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
       Gen_Content genVariable = new Gen_Content(null);
@@ -279,7 +281,7 @@ public class TextGenerator {
   
 
   
-  private Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
+  Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
   { List<DataAccess.DatapathElement> dataRef = arg.datapath;
     Object dataRet;
@@ -398,12 +400,6 @@ public class TextGenerator {
             
           } while(posEnd >=0);  //output all lines.
         } break;
-        case 'f': {
-          if(contentElement.text.equals("nextNr")){
-            //String val = "" + nextNr.toString();
-            uBuffer.append(nextNr.toString());
-          }
-       } break;
         case 'v': {
           //TODO: delete it later
           if(contentElement.text.equals("target")){
@@ -438,45 +434,8 @@ public class TextGenerator {
         case 's': {
           genSubtext(contentElement, out);
         } break;
-        case 'J': {
-          newJavaClass(contentElement, out);
-        } break;
-        case 'j': {
-          staticJavaMethod(contentElement, out);
-        } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
-          TextGenScript.GenContent subContent = contentElement.getSubContent();
-          if(contentElement.name.equals("state1"))
-            stop();
-          Object container = getContent(contentElement, localVariables, true);
-          if(container instanceof String && ((String)container).startsWith("<?")){
-            writeError((String)container, out);
-          }
-          else if(container !=null && container instanceof Iterable<?>){
-            Iterator<?> iter = ((Iterable<?>)container).iterator();
-            while(iter.hasNext()){
-              Object foreachData = iter.next();
-              if(foreachData !=null){
-                Gen_Content genFor = new Gen_Content(this);
-                genFor.localVariables.put(contentElement.name, foreachData);
-                genFor.genContent(subContent, out, iter.hasNext());
-              }
-            }
-          }
-          else if(container !=null && container instanceof Map<?,?>){
-            Map<?,?> map = (Map<?,?>)container;
-            Set<?> entries = map.entrySet();
-            Iterator<?> iter = entries.iterator();
-            while(iter.hasNext()){
-              Map.Entry<?, ?> foreachDataEntry = (Map.Entry<?, ?>)iter.next();
-              Object foreachData = foreachDataEntry.getValue();
-              if(foreachData !=null){
-                Gen_Content genFor = new Gen_Content(this);
-                genFor.localVariables.put(contentElement.name, foreachData);
-                genFor.genContent(subContent, out, iter.hasNext());
-              }
-            }
-          }
+          generateForContainer(contentElement, out);
         } break;
         case 'F': { 
           generateIfStatement(contentElement, data, out);
@@ -490,6 +449,44 @@ public class TextGenerator {
         
       }
       return null;
+    }
+    
+    
+    
+    void generateForContainer(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException
+    {
+      TextGenScript.GenContent subContent = contentElement.getSubContent();
+      if(contentElement.name.equals("state1"))
+        stop();
+      Object container = getContent(contentElement, localVariables, true);
+      if(container instanceof String && ((String)container).startsWith("<?")){
+        writeError((String)container, out);
+      }
+      else if(container !=null && container instanceof Iterable<?>){
+        Iterator<?> iter = ((Iterable<?>)container).iterator();
+        while(iter.hasNext()){
+          Object foreachData = iter.next();
+          if(foreachData !=null){
+            Gen_Content genFor = new Gen_Content(this);
+            genFor.localVariables.put(contentElement.name, foreachData);
+            genFor.genContent(subContent, out, iter.hasNext());
+          }
+        }
+      }
+      else if(container !=null && container instanceof Map<?,?>){
+        Map<?,?> map = (Map<?,?>)container;
+        Set<?> entries = map.entrySet();
+        Iterator<?> iter = entries.iterator();
+        while(iter.hasNext()){
+          Map.Entry<?, ?> foreachDataEntry = (Map.Entry<?, ?>)iter.next();
+          Object foreachData = foreachDataEntry.getValue();
+          if(foreachData !=null){
+            Gen_Content genFor = new Gen_Content(this);
+            genFor.localVariables.put(contentElement.name, foreachData);
+            genFor.genContent(subContent, out, iter.hasNext());
+          }
+        }
+      }
     }
     
     
@@ -636,21 +633,6 @@ public class TextGenerator {
     
 
     
-    
-    void newJavaClass(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
-      Assert.stop();
-      try{
-        Object obj = DataAccess.create(contentElement.text, log);
-        localVariables.put(contentElement.name, obj);
-      } catch(Exception exc){
-        String sError = "class not found; " + contentElement.text;
-      }
-    }
-    
-    
-    void staticJavaMethod(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
-      Assert.stop();
-    }
     
     
   }    
