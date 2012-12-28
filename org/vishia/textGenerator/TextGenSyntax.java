@@ -104,7 +104,7 @@ public final class TextGenSyntax {
     + "\n"
     + "datapath::=<?>{ <datapathElement> ? \\.}.  ##path elements can start with $ or @ and can contain -\n"
     + "\n"
-    + "datapathElement::=[<?ident>[$|@|][<$-?>]] [( [{ <dataAccess?actualArgument> ? ,}<?whatisit=r>])].\n"  
+    + "datapathElement::=[<?ident>[$|@|]<$-?>|XXX] [( [{ <dataAccess?actualArgument> ? ,}])<?whatisit=r>].\n"  
     + "\n"
     + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
     + "{ [?\\<\\.\\>]              ##abort on <.> \n"

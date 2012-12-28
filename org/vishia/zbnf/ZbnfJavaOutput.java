@@ -447,6 +447,7 @@ public class ZbnfJavaOutput
 
     public Component(Component parent, Class clazz, Object instance)
     {
+      assert(instance !=null);
       this.instance = instance;
       this.clazz = clazz;
       this.parent = parent;

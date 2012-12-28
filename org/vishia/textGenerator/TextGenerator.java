@@ -527,30 +527,35 @@ public class TextGenerator {
     boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
       Object check = getContent(ifBlock, localVariables, false);
       boolean bCondition;
-      if(ifBlock.expr == null && ifBlock.condition !=null){
-          
-        ifBlock.expr = new CalculatorExpr();
-        ifBlock.expr.addExprToStack(0, "!");
-        ifBlock.expr.addExprToStack(1, ifBlock.condition.name);
+      if(ifBlock.condition !=null && ifBlock.condition.constValue !=null && ifBlock.condition.constValue.equals("else")){
+        bCondition = true;  //if the else block is found, all others have returned false.
       }
-      if(ifBlock.expr != null){
-        Object cmp = getContent(ifBlock.condition, localVariables, false);
-        CalculatorExpr.Value result = ifBlock.expr.calc(check, cmp);
-        bCondition = result.booleanValue();
-      } else {
-        /*
-        if(ifBlock.operator !=null){
-          String value = check == null ? "null" : check.toString();
-          if(ifBlock.operator.equals("!=")){
-            bCondition = check == null || !value.trim().equals(ifBlock.value); 
-          } else if(ifBlock.operator.equals("==")){
-            bCondition = check != null && value.trim().equals(ifBlock.value); 
-          } else {
-            writeError(" faulty operator " + ifBlock.operator, out);
-            bCondition = false;
-          }
-          */
-        bCondition= check !=null;
+      else {
+        if(ifBlock.expr == null && ifBlock.condition !=null){
+            
+          ifBlock.expr = new CalculatorExpr();
+          ifBlock.expr.addExprToStack(0, "!");
+          ifBlock.expr.addExprToStack(1, ifBlock.condition.name);
+        }
+        if(ifBlock.expr != null){
+          Object cmp = getContent(ifBlock.condition, localVariables, false);
+          CalculatorExpr.Value result = ifBlock.expr.calc(check, cmp);
+          bCondition = result.booleanValue();
+        } else {
+          /*
+          if(ifBlock.operator !=null){
+            String value = check == null ? "null" : check.toString();
+            if(ifBlock.operator.equals("!=")){
+              bCondition = check == null || !value.trim().equals(ifBlock.value); 
+            } else if(ifBlock.operator.equals("==")){
+              bCondition = check != null && value.trim().equals(ifBlock.value); 
+            } else {
+              writeError(" faulty operator " + ifBlock.operator, out);
+              bCondition = false;
+            }
+            */
+          bCondition= check !=null;
+        }
       }
       if(bCondition){
         genContent(ifBlock.subContent, out, bIfHasNext);
@@ -570,10 +575,11 @@ public class TextGenerator {
     void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
       boolean ok = true;
       if(contentElement.name == null){
+        //subtext name gotten from any data location, variable name
         Object oName = getContent(contentElement, localVariables, false);
         contentElement.name = DataAccess.getStringFromObject(oName, null);
       }
-      TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);
+      TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);  //the subtext script to call
       if(subtextScript == null){
         ok = writeError("<? *subtext:" + contentElement.name + " not found.?>", out);
       } else {
@@ -587,15 +593,15 @@ public class TextGenerator {
           //process all actual arguments:
           List<TextGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
           if(referenceSettings !=null){
-            for( TextGenScript.Argument referenceSetting: referenceSettings){
+            for( TextGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
               Object ref;
-              ref = getContent(referenceSetting, localVariables, false);
+              ref = getContent(referenceSetting, localVariables, false);       //actual value
               if(ref !=null){
-                CheckArgument checkArg = check.get(referenceSetting.name);
+                CheckArgument checkArg = check.get(referenceSetting.name);      //is it a requested argument (per name)?
                 if(checkArg == null){
                   ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " faulty argument.?> ", out);
                 } else {
-                  checkArg.used = true;
+                  checkArg.used = true;    //requested and resolved.
                   subtextGenerator.localVariables.put(referenceSetting.name, ref);
                 }
               } else {

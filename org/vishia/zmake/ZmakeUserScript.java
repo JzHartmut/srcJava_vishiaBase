@@ -1,16 +1,24 @@
 package org.vishia.zmake;
 
+import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.vishia.util.Assert;
+import org.vishia.util.FileSystem;
 
 
 public class ZmakeUserScript
 {
   
   /**Version, history and license.
-   * <ul>
+   * <ul>2012-12-29 Hartmut chg: A {@link UserFilepath} is independent from a target and describes a non-completely relative path usually.
+   *   The path is completed, usual as absolute path, if the {@link UserFileSet} is used in a target. The {@link UserInput} of a target
+   *   determines the location of the file set by its {@link UserInput#srcpath}. The {@link UserFilepath} of all inputs are cloned
+   *   and completed with that srcpath for usage. The {@link UserTarget#allInputFiles()} or {@link UserTarget#allInputFilesExpanded()}
+   *   builds that list. Usage of that files provide the correct source path for the files of a target's input.
    * <li>2012-12-08 Hartmut chg: improve access rotoutines.
    * <li>2012-11-29 Hartmut new: The {@link UserFilePath} now contains all access routines to parts of the file path
    *   which were contained in the ZmakeGenerator class before. This allows to use this with the common concept
@@ -139,6 +147,9 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     /**Aggregation to a given srcpath in the {@link UserFileset} which is valid for all this files. */
     private final UserFileset parent;
     
+    /**From ZBNF: $<$?scriptVariable>. If given, then the {@link #basePath()} starts with it. It is an absolute path then. */
+    public String scriptVariable;
+    
     public String drive;
     /**From Zbnf: [ [/|\\]<?@absPath>]. Set if the path starts with '/' or '\' maybe after drive letter. */
     public boolean absPath;
@@ -194,6 +205,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
 
     
     private CharSequence addLocalFile(StringBuilder uRet){ 
+      int pos;
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
       uRet.append(this.path);
       uRet.append(this.file);
       if(this.someFiles){ uRet.append('*'); }
@@ -240,7 +253,17 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      *   till a ':' in the input path or an empty string.
      *   Either as absolute or as relative path how it is given.
      */
-    public CharSequence basePath(){ 
+    public CharSequence basePath(){ return basePath(null); }
+     
+    
+    /**Method can be called in the generation script: <*basePath(<*abspath>)>. 
+     * @param abspath a String given path which is written before the given base path if the path is not absolute in this.
+     *   If null, it is ignored. If this path is absolute, the result is a absolute path of course.
+     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
+     *   till a ':' in the input path or an empty string.
+     *   Either as absolute or as relative path how it is given.
+     */
+    public CharSequence basePath(String abspath){ 
       UserFilepath generalPath = parent !=null && parent.srcpath !=null ? parent.srcpath : emptyParent;
       if(pathbase !=null || (generalPath.pathbase !=null)){
         StringBuilder uRet = new StringBuilder();
@@ -250,21 +273,25 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
         }
         if(absPath){ uRet.append('/'); }
         else if(generalPath.absPath){ uRet.append('/'); }
-        //
-        if(this.pathbase !=null){
-          //append a general path completely firstly.
-          if(generalPath.pathbase !=null){ uRet.append(this.pathbase).append('/'); }
-          int pos = uRet.length();
-          uRet.append(generalPath.path).append(generalPath.file).append(generalPath.ext);
-          if(uRet.length() > pos){ uRet.append('/');  } //after path.file.ext
+        else if(abspath !=null){
+          uRet.append(abspath);
         }
-        else if(generalPath.pathbase !=null){
-          //only pathbase of the generalPath because a local pathBase is not given.
-          uRet.append(parent.srcpath.pathbase); 
+        int pos;
+        //
+        //append a general path completely firstly.
+        if(generalPath.pathbase !=null){
+          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+          uRet.append(generalPath.pathbase).append('/'); 
+        }
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(generalPath.path).append(generalPath.file).append(generalPath.ext);
+        if(this.pathbase !=null){
+          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+          uRet.append(this.pathbase);
         }
         return uRet;
       } else {
-        return "";
+        return abspath !=null ? abspath : "";
       }
     }
     
@@ -284,7 +311,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
         //not an absolute path, complete it with the global given base path:
         StringBuilder uRet = (StringBuilder)basePath;
         String sCurrDir = parent.script.sCurrDir;
-        if(uRet.charAt(1) == ':'){
+        if(uRet.length() >=2 && uRet.charAt(1) == ':'){
           //a drive is present
           if(sCurrDir.length()>=2 && sCurrDir.charAt(1)==':' && uRet.charAt(0) == sCurrDir.charAt(0)){
             //Same drive letter how sCurrDir: replace the absolute path.
@@ -330,9 +357,6 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence absFile(){ 
       CharSequence basePath = absBasePath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      if(uRet.length() > 1 && uRet.charAt(uRet.length()-1) != '/'){
-        uRet.append('/');
-      }
       return addLocalFile(uRet);
     }
     
@@ -346,9 +370,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence dir(){ 
       CharSequence basePath = basePath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      if(uRet.length() > 1 && uRet.charAt(uRet.length()-1) != '/'){
-        uRet.append('/');
-      }
+      int pos;
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
       uRet.append(path);
       return uRet;
     }
@@ -363,9 +386,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence absDir(){ 
       CharSequence basePath = absBasePath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      if(uRet.length() > 1 && uRet.charAt(uRet.length()-1) != '/'){
-        uRet.append('/');
-      }
+      int pos;
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
       uRet.append(path);
       return uRet;
     }
@@ -387,18 +409,66 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       }
     }
     
+    /**Fills this.{@link #filesOfFilesetExpanded} with all files, which are selected by the filepathWildcards and the absPath.
+     * The filepathWildcards does not need to contain in this UserFileset, it may be contained in another one too.
+     * Especially the {@link UserTarget} in form of this base class can be filled.
+     * @param filepathWildcards
+     * @param absPath
+     */
+    static void expandFiles(List<UserFilepath> listToadd, UserFilepath filepathWildcards, String absPath){
+      List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
+      final CharSequence basePath = filepathWildcards.basePath(absPath); //getPartsFromFilepath(file, null, "absBasePath").toString();
+      final CharSequence localfilePath = filepathWildcards.localFile(); //getPartsFromFilepath(file, null, "file").toString();
+      final String sPathSearch = basePath + ":" + localfilePath;
+      try{ FileSystem.addFilesWithBasePath(sPathSearch, listFiles);
+      } catch(FileNotFoundException exc){
+        //let it empty.
+      }
+      for(FileSystem.FileAndBasePath file1: listFiles){
+        ZmakeUserScript.UserFilepath filepath2 = new ZmakeUserScript.UserFilepath(null);
+        /*
+        if(file1.basePath !=null ){
+          int posEnd = file1.basePath.length() -1;  //last char is path separator, file2.pathbase without separator!
+          if(filepathWildcards.absPath){
+            file2.pathbase = file1.basePath.substring(0, posEnd);
+          } else {
+            //The file1.basePath contains the currDir, remove it.
+            if(lengthPathCurrdir < posEnd){
+              file2.pathbase = file1.basePath.substring(lengthPathCurrdir, posEnd);
+            } else {file2.pathbase = "..";}
+          }
+        }
+        */
+        filepath2.pathbase = basePath.toString();  //it is the same. Maybe null
+        int posName = file1.localPath.lastIndexOf('/') +1;  //if not found, set to 0
+        int posExt = file1.localPath.lastIndexOf('.');
+        final String sPath = file1.localPath.substring(0, posName);  //"" if only name
+        final String sName;
+        final String sExt;
+        if(posExt < 0){ sExt = ""; sName = file1.localPath.substring(posName); }
+        else { sExt = file1.localPath.substring(posExt); sName = file1.localPath.substring(posName, posExt); }
+        filepath2.path = sPath;
+        filepath2.file = sName;
+        filepath2.ext = sExt;
+        listToadd.add(filepath2);
+      }
+
+    }
     
+
     
     @Override
     public String toString()
-    { return path + file + ext;
+    { return file().toString();
     }
   }
   
   
   
   
-  /**A < fileset> in the ZmakeStd.zbnf:
+  /**A < fileset> in the ZmakeStd.zbnf. It is assigned to a script variable if it was created by parsing the user script.
+   * If the fileset is used in a target, it is associated to the target to get the absolute paths of the files
+   * temporary while processing that target. See 
    * <pre>
 fileset::= 
 { srcpath = <""?!prepSrcpath>
@@ -416,10 +486,24 @@ fileset::=
     
     final UserScript script;
     
-    /**From ZBNF: */
+    /**From ZBNF srcpath = <""?!prepSrcpath>. It is a part of the base path anyway. It may be absolute, but usually relative. 
+     * If null then unused. */
     UserFilepath srcpath;
+    
+    /**From ZBNF srcext = <""?srcext>. If null then unused. */
     public String srcext;
+    
+    
+    /**The target which handles with this file set yet. The target can contain an additional part of the base path. */
+    //private UserTarget target;
+    //private UserInput targetinput;
+    
+    /**All entries of the file set how it is given in the users script. */
     List<UserFilepath> filesOfFileset = new LinkedList<UserFilepath>();
+    
+    /**All files without wildcards build from all found files of the {@link #filesOfFileset}
+     * but only build if requested. */
+    List<UserFilepath> filesOfFilesetExpanded;
     
     UserFileset(UserScript script){
       this.script = script;
@@ -431,13 +515,30 @@ fileset::=
     }
     
     
-    public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(this); }
-    public void set_srcpath(UserFilepath val){  }
+    //void setTargetInputParam(UserInput input){ this.targetinput = input; }
+    void setTargetInputParam(){  }
+    
+    
+    /**From Zbnf: srcpath = <""?!prepSrcpath>.
+     * It sets the base path for all files of this fileset. This basepath is usually relative.
+     * @return ZBNF component.
+     */
+    public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(null); }  //NOTE: it has not a parent. this is not its parent!
+    public void set_srcpath(UserFilepath val){  }  //it is set already.
     
     /**From ZBNF: < file>. */
     public UserFilepath new_file(){ return new UserFilepath(this); }
+    
     /**From ZBNF: < file>. */
-    public void add_file(UserFilepath val){ filesOfFileset.add(val); }
+    public void add_file(UserFilepath val){ 
+      if(val.pathbase !=null || val.path.length() >0 || val.file.length() >0 || val.someFiles || val.drive !=null){
+        //only if any field is set. not on empty val
+        filesOfFileset.add(val); 
+      }
+    }
+    
+    
+
     
     @Override
     public String toString(){ 
@@ -488,6 +589,8 @@ fileset::=
       return u;
     }
 
+    @Override public String toString(){ return getText().toString(); }
+    
   }
   
   /**A < variable> in the ZmakeStd.zbnf is
@@ -513,6 +616,32 @@ fileset::=
      */
     public List<UserFilepath> files(){ return (fileset !=null) ? fileset.filesOfFileset : null; }
     
+    
+    /**For textscript: <*var.name.filesExpanded()>
+     * @return The List of files. 
+     */
+    public List<UserFilepath> filesExpanded(String absPath){
+      if(fileset == null){ return null; }
+      else {
+        List<UserFilepath> listToadd = new LinkedList<UserFilepath>();
+        if(fileset.filesOfFilesetExpanded ==null){
+          int lengthPathCurrdir = fileset.script.sCurrDir.length();
+          for(ZmakeUserScript.UserFilepath filepathWildcards: fileset.filesOfFileset){
+            
+            UserFilepath.expandFiles(listToadd, filepathWildcards, absPath);
+          }
+          
+        }
+        return listToadd;
+      }
+    }
+    
+    
+    @Override public String toString(){
+      return name + ":" + (string !=null ? string : fileset);
+    }
+    
+    
     /**For textscript: <*var.name.text()>
      * @return The text of the script variable. 
      */
@@ -526,29 +655,63 @@ fileset::=
     public String variable;
   }
   
-  public static class UserInputSet
-  { final UserScript script;
+  /**One of possible more inputs for a target.
+   */
+  public static class XXXUserInputSet
+  { /**The main script. */
+    final UserScript script;
+    /**The target where this input set is used. */
+    final UserTarget parentTarget;
   
     public String name;
     UserFilepath srcpath;
-    UserInputSet(UserScript script){
-      this.script = script;
+    XXXUserInputSet(UserTarget parentTarget){
+      this.parentTarget = parentTarget;
+      this.script = parentTarget.script;
     }
     public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(null); }
     public void set_srcpath(UserFilepath val){  }
+    
+    @Override public String toString(){ return "$"+name + ":" + srcpath; }
   }
   
   
   /**Describes 1 input item for a target, maybe a file, maybe a inputset. */
-  static class UserInput
-  { final UserInputSet inputSet;
-    final UserFilepath inputFile;
-    UserInput(UserInputSet inputSet){ this.inputSet = inputSet; this.inputFile = null; }
-    UserInput(UserFilepath inputFile){ this.inputSet = null; this.inputFile = inputFile; }
+  public static class UserInput
+  { //final UserInputSet inputSet;
+    //final String inputSet;
+    /**The main script. */
+    final UserScript script;
+    /**The target where this input set is used. */
+    final UserTarget parentTarget;
+  
+    public String scriptVariable;
+    
+    UserFilepath srcpath;
+    UserFilepath inputFile;
+    
+    
+    
+    UserInput(UserTarget parentTarget){
+      this.parentTarget = parentTarget;
+      this.script = parentTarget.script;
+    }
+    
+    public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(null);}
+    public void add_srcpath(UserFilepath val){}
+    
+    
+    //UserInput(String inputSet){ this.inputSet = inputSet; this.inputFile = null; }
+    //UserInput(UserInputSet inputSet){ this.inputSet = inputSet; this.inputFile = null; }
+    //UserInput(UserFilepath inputFile){ this.inputSet = null; this.inputFile = inputFile; }
+    
+    @Override public String toString(){ return inputFile !=null ? inputFile.toString() : scriptVariable; }
+    
   }
   
   
-  /**
+  /**A target processes files, especially input files or input and output files described with the same fileSet.
+   * A target is a UserFileSet which combines all files of the input from all input file sets or separate files.
    * <pre>
    * target::=  [:<$?@target>:] 
       [ <specials?do>  ##action without dst file. 
@@ -579,44 +742,48 @@ input::=
    * @author Hartmut
    *
    */
-  public final static class UserTarget extends UserFileset
+  public final static class UserTarget //extends UserFileset
   {
+    final UserScript script;
+    
+    /**From ZBNF srcpath = <""?!prepSrcpath>. It is a part of the base path anyway. It may be absolute, but usually relative. 
+     * If null then unused. */
+    //UserFilepath srcpath;
+    
     UserFilepath output;
     
     public String name;
     
     public String translator;
     
-    //UserFilepath srcpath;
-    
-    //public String srcext;
-    
-    UserTarget(UserScript script){
-      super(script);
-    }
-    
-    @Override
-    public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(this); }
-    
-    @Override
-    public void set_srcpath(UserFilepath value){  }
-    
-    public UserFilepath new_output(){ return output = new UserFilepath(this); }
-    
-    public void set_output(UserFilepath value){  }
-    
     List<UserInput> inputs = new LinkedList<UserInput>();
     
     Map<String,UserParam> params;
     
-    /**From ZBNF < inputSet>*/
+    UserTarget(UserScript script){
+      this.script = script;
+      //super(script);
+    }
+    
+    //@Override
+    //public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(this); }
+    
+    //@Override
+    //public void set_srcpath(UserFilepath value){  }
+    
+    public UserFilepath new_output(){ return output = new UserFilepath(null); } //this); }
+    
+    public void set_output(UserFilepath value){  }
+    
+    /**From ZBNF < inputSet>*
     public UserInputSet new_inputSet()
-    { UserInput userInput = new UserInput(new UserInputSet(script));
+    { UserInput userInput = new UserInput(new UserInputSet(this));
       inputs.add(userInput);
       return userInput.inputSet; 
     }
     
     public void add_inputSet(UserInputSet value){  }
+    */
     
     
     /**From ZBNF < param>. */
@@ -629,14 +796,68 @@ input::=
     }
     
     /**From ZBNF < ?!prepInputfile> < ?input>*/
-    public UserFilepath new_input()
-    { UserInput userInput = new UserInput(new UserFilepath(this));
+    public UserInput new_input()
+    { UserInput userInput = new UserInput(this);
       inputs.add(userInput);
-      return userInput.inputFile; 
+      return userInput; 
     }
 
-    public void add_input(UserFilepath val){}
+    public void add_input(UserInput val){}
 
+    
+    /**FromZbnf: <$?inputSet>
+     * An inputSet is a simple string which is the name of a script variable which should refer to a file {@link UserFileset}.
+     * @param val
+     */
+    public void XXXset_inputSet(String val){
+      //inputs.add(new UserInput(val));
+    }
+    
+    public List<UserFilepath> allInputFiles(){
+      return prepareInput(false);
+    }
+    
+    public List<UserFilepath> allInputFilesExpanded(){
+      return prepareInput(true);
+    }
+    
+    
+    private List<UserFilepath> prepareInput(boolean expandFiles) {
+      List<UserFilepath> files = new LinkedList<UserFilepath>();
+      for(UserInput targetInputParam: inputs){
+        UserFilepath srcpath = targetInputParam.srcpath;
+        CharSequence sSrcPath = srcpath.file();
+        String abspath = script.sCurrDir + sSrcPath;
+        if(targetInputParam.inputFile !=null){
+          if(expandFiles){
+            UserFilepath.expandFiles(files, targetInputParam.inputFile, abspath);
+          } else {
+            //clone filepath! add srcpath
+            files.add(targetInputParam.inputFile);
+          }
+        } else { 
+          assert(targetInputParam.scriptVariable !=null);
+          //search the input Set in the script variables:
+          ScriptVariable variable = script.var.get(targetInputParam.scriptVariable);
+          if(variable == null || variable.fileset == null){
+            Assert.stop();
+          } else {
+            variable.fileset.setTargetInputParam(); //targetInputParam);  //with it the abspath is determined.
+            for(UserFilepath filepath: variable.fileset.filesOfFileset){
+              if(expandFiles){
+                UserFilepath.expandFiles(files, filepath, abspath);
+              } else {
+                //clone filepath! add srcpath
+                files.add(filepath);
+              }
+            }
+          }
+        }
+      }
+      return files;
+    }
+    
+    
   
   }
   

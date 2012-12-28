@@ -295,7 +295,7 @@ public class TextGenScript {
     
     public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
 
-
+    @Override public String toString(){ return name; }
 
   }
   

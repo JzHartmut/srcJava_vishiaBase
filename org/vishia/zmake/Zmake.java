@@ -17,6 +17,7 @@ import org.vishia.textGenerator.OutputDataTree;
 import org.vishia.textGenerator.TextGenScript;
 import org.vishia.textGenerator.TextGenerator;
 import org.vishia.util.DataAccess;
+import org.vishia.util.FileSystem;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
@@ -462,6 +463,7 @@ public class Zmake
     Writer out = new FileWriter(fileOut);
     TextGenScript genScript = new TextGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
     genScript.setGenCtrl(fileGenCtrl);
+    
     Map<String, Object> scriptVariables;
     try{ 
       scriptVariables = gen.genScriptVariables(genScript, zmakeInput, true);
@@ -469,14 +471,7 @@ public class Zmake
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
       scriptVariables = null;
     }
-    
-    //The gen script may contain a currDir variable. Set the current directory of Zmake therewith.
-    //the variable <=currDir><.=> may exist. Get it:
-    Object oCurrDir = scriptVariables.get("currDir");
-    if(oCurrDir != null){
-      //Set the current dir in the user script. It is needed there for file path building.
-      zmakeInput.setCurrentDir(null, DataAccess.getStringFromObject(oCurrDir, null));
-    }
+    setScriptVariablesCurrDir(zmakeInput, scriptVariables);
     
     try{ 
       sError = gen.genContent(genScript, zmakeInput, true, out);
@@ -492,6 +487,21 @@ public class Zmake
     return sError;
   }
   
-  
+  void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, Object> scriptVariables){
+    //The gen script may contain a currDir variable. Set the current directory of Zmake therewith.
+    //the variable <=currDir><.=> may exist. Get it:
+    Object oCurrDir = scriptVariables.get("currDir");
+    if(oCurrDir != null){
+      //Set the current dir in the user script. It is needed there for file path building.
+      String sCurrDir = DataAccess.getStringFromObject(oCurrDir, null);
+      File currDir = new File(sCurrDir);
+      if(!currDir.exists()){
+        
+      } else {
+        sCurrDir = FileSystem.getCanonicalPath(currDir);
+      }
+      zmakeInput.setCurrentDir(null, sCurrDir);
+    }
+  }
 
 }
