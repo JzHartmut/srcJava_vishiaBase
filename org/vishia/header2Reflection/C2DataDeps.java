@@ -140,13 +140,14 @@ public class C2DataDeps  extends MainCmd {
               the application should be aborted.
    * @throws FileNotFoundException 
   */
+  @Override
   protected boolean testArgument(String arg, int nArg)
   { boolean bOk = true;  //set to false if the argc is not passed
 
     if(arg.startsWith("-i:"))     {
       String sFile = getArgument(3);
       try{
-        if(!FileSystem.addFilesWithBasePath(sFile, listFileIn)){
+        if(!FileSystem.addFilesWithBasePath(null, sFile, listFileIn)){
           writeError("file not found: " + sFile);
           bOk = false;
         }
@@ -168,6 +169,7 @@ public class C2DataDeps  extends MainCmd {
    * @throws ParseException 
    *
    */
+  @Override
   protected void callWithoutArguments() throws ParseException
   { //:TODO: overwrite with empty method - if the calling without arguments
     //having equal rights than the calling with arguments - no special action.
@@ -183,6 +185,7 @@ public class C2DataDeps  extends MainCmd {
      :TODO: the user only should determine the specific checks, this is a sample.
      @return true if successful, false if failed.
   */
+  @Override
   protected boolean checkArguments()
   { return true;
   

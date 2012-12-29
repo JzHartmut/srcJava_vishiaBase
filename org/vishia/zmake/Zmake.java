@@ -1,6 +1,7 @@
 package org.vishia.zmake;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -100,9 +101,9 @@ public class Zmake
     String zbnfjax_PATH;
     
     /**String path to the current dir from calling. */
-    String curDir = null;  //default: actual dir
+    File currdir = null;  //default: actual dir
     
-    /**String path fromcurDir to a tmp dir. */
+    /**String path from currdir to a tmp dir. */
     String tmp = "../tmp";  
     
     
@@ -137,10 +138,13 @@ public class Zmake
   private final TextGenScript genScript;
   
   /**String path for the absolute tmp dir. */
-  private String tmpAbs;  
+  //private String tmpAbs;  
   
 
   final CallingArgs args;
+  
+  
+  File fileInput;
   
   /*---------------------------------------------------------------------------------------------*/
   /**Invocation from command line. 
@@ -154,7 +158,7 @@ public class Zmake
      + INPUTFILE is the only filename without path and without extension dissolved from INPUT                        
      INPUT              The first argument without - is the input file with path and extension.
      -i:INPUT           path to the input file alternatively to INPUT.                         
-     -curdir:PATH       sets the current dir alternatively to command line invocation path.     
+     -currdir:PATH       sets the current dir alternatively to command line invocation path.     
      -ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is gotten from environment.       
      -tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".    
      -tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml   
@@ -231,7 +235,7 @@ public class Zmake
       super.addHelpInfo("-i:INPUT           path to the input file alternatively to INPUT.");
       super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the output file");
       super.addHelpInfo("-o=PATH            output-file to generate");
-      super.addHelpInfo("-curdir:PATH       sets the current dir alternatively to command line invocation path.");
+      super.addHelpInfo("-currdir:PATH       sets the current dir alternatively to command line invocation path.");
       super.addHelpInfo("-ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.");
       super.addHelpInfo("-tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".");
       super.addHelpInfo("-tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml");
@@ -262,8 +266,12 @@ public class Zmake
       else if(arg.startsWith("-i:"))           { callingArgs.input = getArgument(3); }
       else if(arg.startsWith("-i="))           { callingArgs.input = getArgument(3); }
       else if(arg.startsWith("-i"))            { callingArgs.input = getArgument(2); }
-      else if(arg.startsWith("-curdir:"))      { callingArgs.curDir = getArgument(8) + "/"; }
-      else if(arg.startsWith("-curdir="))      { callingArgs.curDir = getArgument(8) + "/"; }
+      else if(arg.startsWith("-currdir:")      
+            || arg.startsWith("-currdir="))    {
+        String sCurrdir = getArgument(9); 
+        callingArgs.currdir = new File(sCurrdir);
+        if(!callingArgs.currdir.exists()) throw new IllegalArgumentException("Zmake - failed argument -currdir:, not existing; " + sCurrdir);
+      }
       else if(arg.startsWith("-ZBNFJAX_HOME:")){ callingArgs.zbnfjax_PATH = getArgument(14); }
       else if(arg.startsWith("-XML_TOOLBASE:")){ callingArgs.zbnfjax_PATH = getArgument(14); }  //older version, compatibility
       else if(arg.startsWith("-XML_TOOLBASE=")){ callingArgs.zbnfjax_PATH = getArgument(14); }  //older version, compatibility
@@ -312,12 +320,12 @@ public class Zmake
   
       if(callingArgs.input == null)              
       { bOk = false; 
-        writeError("ERROR argument -i=INP is obligate."); 
+        writeError("ERROR argument -i:INP is obligate."); 
       }
   
       if(callingArgs.sOutput == null)              
       { bOk = false; 
-        writeError("ERROR argument -o=OUT is obligate."); 
+        writeError("ERROR argument -o:OUT is obligate."); 
       }
   
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
@@ -357,17 +365,9 @@ public class Zmake
       inputFile = args.input.substring(pos1 + 1, pos9); //, pos9);
       inputExt =  args.input.substring(pos9);
       
-      if(args.curDir == null) 
-      { args.curDir = args.input.substring(0, pos1 +1);  //"" if no path before filename is given.
-        args.input = inputFile + inputExt;
-      } 
-      else
-      { //input is the full named file, but it is used relative to current dir.
-        //curDir is given from command line.
-      }
     }
     
-    tmpAbs = args.curDir +args.tmp;
+    //tmpAbs = args.currdir +args.tmp;
     
     if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
     if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
@@ -381,8 +381,8 @@ public class Zmake
     
     console.writeInfoln("* Zmake: " + args.input);
     
-    File tmpDir = new File(tmpAbs);
-    if(!tmpDir.exists()) { tmpDir.mkdir(); }
+    //File tmpDir = new File(tmpAbs);
+    //if(!tmpDir.exists()) { tmpDir.mkdir(); }
     
     /*
     if(args.sInputXml == null)
@@ -405,18 +405,16 @@ public class Zmake
     File fileGenCtrl = new File(sFileGenCtrl);
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
-    //Build the data for ANT-generation control:
-    //genScript.parseGenCtrl(fileZbnf4GenCtrl, fileGenCtrl);
     genScript.setGenCtrl(fileGenCtrl);
     
-    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.curDir + args.input + "\" with \"" 
+    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.currdir + args.input + "\" with \"" 
       + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
     //call the parser from input, it produces a temporary xml file.
-    String sInputAbs = args.curDir + args.input;
     String sZbnf = args.zbnfjax_PATH + args.sZbnfInput;
     
-    String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
-    StringPart spInput = new StringPartFromFileLines(new File(sInputAbs));
+    //String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
+    fileInput = new File(args.currdir, args.input);
+    StringPart spInput = new StringPartFromFileLines(fileInput);
     ZbnfParser parser = new ZbnfParser(console);
     parser.setSyntax(new File(sZbnf));
     console.writeInfo(" ... ");
@@ -432,35 +430,29 @@ public class Zmake
     console.writeInfo(" ok, set result ... ");
     ZbnfParseResultItem parseResult = parser.getFirstParseResult();
     //
-    XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
-    if(args.sInputXml !=null){
-      //write XML output only to check the input script.
-      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(sInputAbs_xml)); 
-      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
-      xmlOut.write(wrXml, xmlTop);
-      wrXml.close();
-      
-      //ZbnfXmlOutput xmlOutput = new ZbnfXmlOutput();
-      //xmlOutput.write(parser, sInputAbs_xml + "2.xml");
-    }
-    //write into Java classes:
+    //write ZmakeUserScript into Java classes:
     ZmakeUserScript.UserScript zmakeInput = new ZmakeUserScript.UserScript();
     ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     
-        
     if(args.sInputXml !=null){
-      FileWriter outData = new FileWriter(sInputAbs_xml + ".javadat");
+      //write ZmakeUserScript into XML output only to check the input script.
+      XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
+      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sInputXml)); 
+      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
+      xmlOut.write(wrXml, xmlTop);
+      wrXml.close();
+      FileWriter outData = new FileWriter(args.sInputXml + ".javadat");
       OutputDataTree outputterData = new OutputDataTree();
       outputterData.output(0, zmakeInput, outData, false);
       outData.close();
+      
     }
-
+        
     
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     TextGenerator gen = new TextGenerator(console);
-    Writer out = new FileWriter(fileOut);
     TextGenScript genScript = new TextGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
     genScript.setGenCtrl(fileGenCtrl);
     
@@ -473,6 +465,7 @@ public class Zmake
     }
     setScriptVariablesCurrDir(zmakeInput, scriptVariables);
     
+    Writer out = new FileWriter(fileOut);
     try{ 
       sError = gen.genContent(genScript, zmakeInput, true, out);
     } catch(IOException exc){
@@ -486,21 +479,30 @@ public class Zmake
         
     return sError;
   }
+
   
-  void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, Object> scriptVariables){
-    //The gen script may contain a currDir variable. Set the current directory of Zmake therewith.
-    //the variable <=currDir><.=> may exist. Get it:
-    Object oCurrDir = scriptVariables.get("currDir");
-    if(oCurrDir != null){
-      //Set the current dir in the user script. It is needed there for file path building.
-      String sCurrDir = DataAccess.getStringFromObject(oCurrDir, null);
-      File currDir = new File(sCurrDir);
-      if(!currDir.exists()){
-        
+  
+  void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, Object> scriptVariables) 
+  throws FileNotFoundException{
+    File currdir = args.currdir;
+    String sCurrdir;
+    if(args.currdir == null){
+      File dirInput = FileSystem.getDirectory(fileInput);
+      //The gen script may contain a currdir variable. Set the current directory of Zmake therewith.
+      //the variable <=currdir><.=> may exist. Get it:
+      Object oCurrDir = scriptVariables.get("currdir");
+      if(oCurrDir != null){
+        //Set the current dir in the user script. It is needed there for file path building.
+        sCurrdir = DataAccess.getStringFromObject(oCurrDir, null);
+        currdir = new File(dirInput, sCurrdir);
       } else {
-        sCurrDir = FileSystem.getCanonicalPath(currDir);
+        currdir = dirInput;
       }
-      zmakeInput.setCurrentDir(null, sCurrDir);
+    }
+    if(!currdir.exists()){
+      throw new FileNotFoundException("Zmake - currdir does not exist; " + currdir.getAbsolutePath());
+    } else {
+      zmakeInput.setCurrentDir(currdir);
     }
   }
 

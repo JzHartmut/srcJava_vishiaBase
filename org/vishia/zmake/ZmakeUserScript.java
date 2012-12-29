@@ -1,5 +1,6 @@
 package org.vishia.zmake;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,8 +16,8 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>2012-12-29 Hartmut chg: A {@link UserFilepath} is independent from a target and describes a non-completely relative path usually.
-   *   The path is completed, usual as absolute path, if the {@link UserFileSet} is used in a target. The {@link UserInput} of a target
-   *   determines the location of the file set by its {@link UserInput#srcpath}. The {@link UserFilepath} of all inputs are cloned
+   *   The path is completed, usual as absolute path, if the {@link UserFileSet} is used in a target. The {@link TagetInput} of a target
+   *   determines the location of the file set by its {@link TagetInput#srcpathInput}. The {@link UserFilepath} of all inputs are cloned
    *   and completed with that srcpath for usage. The {@link UserTarget#allInputFiles()} or {@link UserTarget#allInputFilesExpanded()}
    *   builds that list. Usage of that files provide the correct source path for the files of a target's input.
    * <li>2012-12-08 Hartmut chg: improve access rotoutines.
@@ -415,12 +416,12 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * @param filepathWildcards
      * @param absPath
      */
-    static void expandFiles(List<UserFilepath> listToadd, UserFilepath filepathWildcards, String absPath){
+    static void expandFiles(List<UserFilepath> listToadd, UserFilepath filepathWildcards, CharSequence srcpath, File currdir){
       List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
-      final CharSequence basePath = filepathWildcards.basePath(absPath); //getPartsFromFilepath(file, null, "absBasePath").toString();
+      final CharSequence basePath = srcpath.toString() + "/" + filepathWildcards.basePath(); //getPartsFromFilepath(file, null, "absBasePath").toString();
       final CharSequence localfilePath = filepathWildcards.localFile(); //getPartsFromFilepath(file, null, "file").toString();
       final String sPathSearch = basePath + ":" + localfilePath;
-      try{ FileSystem.addFilesWithBasePath(sPathSearch, listFiles);
+      try{ FileSystem.addFilesWithBasePath(currdir, sPathSearch, listFiles);
       } catch(FileNotFoundException exc){
         //let it empty.
       }
@@ -628,7 +629,7 @@ fileset::=
           int lengthPathCurrdir = fileset.script.sCurrDir.length();
           for(ZmakeUserScript.UserFilepath filepathWildcards: fileset.filesOfFileset){
             
-            UserFilepath.expandFiles(listToadd, filepathWildcards, absPath);
+            UserFilepath.expandFiles(listToadd, filepathWildcards, absPath, script.currDir);
           }
           
         }
@@ -677,35 +678,42 @@ fileset::=
   
   
   /**Describes 1 input item for a target, maybe a file, maybe a inputset. */
-  public static class UserInput
+  public static class TagetInput
   { //final UserInputSet inputSet;
     //final String inputSet;
     /**The main script. */
-    final UserScript script;
+    //final UserScript script;
     /**The target where this input set is used. */
     final UserTarget parentTarget;
   
-    public String scriptVariable;
+    /**Name of the variable which refers a {@link UserFileset} which's files are used as input. */
+    public String filesetVariable;
     
-    UserFilepath srcpath;
+    public String srcpathEnvVariable;
+    
+    public String srcpathVariable;
+    
+    public String srcpath;
+    
+    //UserFilepath srcpathInput;
     UserFilepath inputFile;
     
     
     
-    UserInput(UserTarget parentTarget){
+    TagetInput(UserTarget parentTarget){
       this.parentTarget = parentTarget;
-      this.script = parentTarget.script;
+      //this.script = parentTarget.script;
     }
     
-    public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(null);}
-    public void add_srcpath(UserFilepath val){}
+    //public UserFilepath new_srcpath(){ return srcpathInput = new UserFilepath(null);}
+    //public void add_srcpath(UserFilepath val){}
     
     
     //UserInput(String inputSet){ this.inputSet = inputSet; this.inputFile = null; }
     //UserInput(UserInputSet inputSet){ this.inputSet = inputSet; this.inputFile = null; }
     //UserInput(UserFilepath inputFile){ this.inputSet = null; this.inputFile = inputFile; }
     
-    @Override public String toString(){ return inputFile !=null ? inputFile.toString() : scriptVariable; }
+    @Override public String toString(){ return inputFile !=null ? inputFile.toString() : filesetVariable; }
     
   }
   
@@ -756,7 +764,7 @@ input::=
     
     public String translator;
     
-    List<UserInput> inputs = new LinkedList<UserInput>();
+    List<TagetInput> inputs = new LinkedList<TagetInput>();
     
     Map<String,UserParam> params;
     
@@ -796,13 +804,13 @@ input::=
     }
     
     /**From ZBNF < ?!prepInputfile> < ?input>*/
-    public UserInput new_input()
-    { UserInput userInput = new UserInput(this);
+    public TagetInput new_input()
+    { TagetInput userInput = new TagetInput(this);
       inputs.add(userInput);
       return userInput; 
     }
 
-    public void add_input(UserInput val){}
+    public void add_input(TagetInput val){}
 
     
     /**FromZbnf: <$?inputSet>
@@ -824,28 +832,53 @@ input::=
     
     private List<UserFilepath> prepareInput(boolean expandFiles) {
       List<UserFilepath> files = new LinkedList<UserFilepath>();
-      for(UserInput targetInputParam: inputs){
-        UserFilepath srcpath = targetInputParam.srcpath;
-        CharSequence sSrcPath = srcpath.file();
-        String abspath = script.sCurrDir + sSrcPath;
+      for(TagetInput targetInputParam: inputs){
+        CharSequence srcpath = null;
+        if(targetInputParam.srcpathEnvVariable !=null){
+          srcpath = System.getenv(targetInputParam.srcpathEnvVariable);
+          if(srcpath == null){
+            if(script.bWriteErrorInOutputScript){
+              srcpath = "<??missing environment variable: " + targetInputParam.srcpathEnvVariable + "??>";
+            } else throw new IllegalArgumentException("Zmake - environment variable not found; " + targetInputParam.srcpathEnvVariable);
+          }
+        }
+        else if(targetInputParam.srcpathVariable !=null){
+          ScriptVariable var = script.var.get(targetInputParam.srcpathVariable);
+          if(var == null){
+            if(script.bWriteErrorInOutputScript){
+              srcpath = "<??missing script variable: " + targetInputParam.srcpathVariable + "??>";
+            } else throw new IllegalArgumentException("Zmake - script variable not found; " + targetInputParam.srcpathEnvVariable);
+          } else {
+            srcpath = var.text();
+          }
+        }
+        if(targetInputParam.srcpath !=null){
+          if(srcpath == null){ srcpath = targetInputParam.srcpath; }
+          else {
+            StringBuilder uSrcpath = (srcpath instanceof StringBuilder) ? (StringBuilder) srcpath : new StringBuilder(srcpath);
+            uSrcpath.append(targetInputParam.srcpath);
+            srcpath = uSrcpath;
+          }
+        }
+        if(srcpath == null){ srcpath = ""; }
         if(targetInputParam.inputFile !=null){
           if(expandFiles){
-            UserFilepath.expandFiles(files, targetInputParam.inputFile, abspath);
+            UserFilepath.expandFiles(files, targetInputParam.inputFile, srcpath, script.currDir);
           } else {
             //clone filepath! add srcpath
             files.add(targetInputParam.inputFile);
           }
         } else { 
-          assert(targetInputParam.scriptVariable !=null);
+          assert(targetInputParam.filesetVariable !=null);
           //search the input Set in the script variables:
-          ScriptVariable variable = script.var.get(targetInputParam.scriptVariable);
+          ScriptVariable variable = script.var.get(targetInputParam.filesetVariable);
           if(variable == null || variable.fileset == null){
             Assert.stop();
           } else {
             variable.fileset.setTargetInputParam(); //targetInputParam);  //with it the abspath is determined.
             for(UserFilepath filepath: variable.fileset.filesOfFileset){
               if(expandFiles){
-                UserFilepath.expandFiles(files, filepath, abspath);
+                UserFilepath.expandFiles(files, filepath, srcpath, script.currDir);
               } else {
                 //clone filepath! add srcpath
                 files.add(filepath);
@@ -876,7 +909,11 @@ input::=
      */
     String sCurrDir = "";
     
-    Map<String, String> currDir = new TreeMap<String, String>();
+    File currDir;
+    
+    boolean bWriteErrorInOutputScript = true;
+    
+    //Map<String, String> currDir = new TreeMap<String, String>();
     
     Map<String, ScriptVariable> var = new TreeMap<String, ScriptVariable>();
     
@@ -906,7 +943,10 @@ input::=
      *   Elsewhere it should be a drive designation.
      * @param sDir The directory path.
      */
-    public void setCurrentDir(String sDrive, String sDir){
+    public void setCurrentDir(File dir){
+      sCurrDir = FileSystem.getCanonicalPath(dir);
+      currDir = dir;
+      /*
       sDir = sDir.replace('\\', '/');  //use slash internally.
       if(!sDir.endsWith("/")){
         sDir += "/";
@@ -916,6 +956,7 @@ input::=
       } else {
         currDir.put(sDrive, sDir);
       }
+      */
     }
     
   }

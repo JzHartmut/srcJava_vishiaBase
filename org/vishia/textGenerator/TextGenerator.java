@@ -118,7 +118,7 @@ public class TextGenerator {
   /**Variable for any exception while accessing any java ressources. It is the $error variable of the script. */
   String accessError = null;
   
-  private boolean bWriteErrorInOutput;
+  public final boolean bWriteErrorInOutput;
   
   private boolean accessPrivate;
   
@@ -134,6 +134,7 @@ public class TextGenerator {
   
   public TextGenerator(MainCmdLogging_ifc log){
     this.log = log;
+    bWriteErrorInOutput = true;
   }
   
   
@@ -250,7 +251,6 @@ public class TextGenerator {
   throws IOException
   {
     this.accessPrivate = accessPrivate;this.data = userData;
-    this.bWriteErrorInOutput = true;
     this.genScript = genScript;
 
     if(!bScriptVariableGenerated){
