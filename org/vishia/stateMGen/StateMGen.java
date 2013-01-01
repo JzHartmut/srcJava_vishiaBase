@@ -1,12 +1,10 @@
 package org.vishia.stateMGen;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -15,11 +13,10 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.textGenerator.OutputDataTree;
-import org.vishia.textGenerator.TextGenerator;
-import org.vishia.textGenerator.Zbnf2Text;
-import org.vishia.textGenerator.Zbnf2Text.Out;
-import org.vishia.util.Assert;
+import org.vishia.zTextGen.OutputDataTree;
+import org.vishia.zTextGen.TextGenerator;
+import org.vishia.zTextGen.Zbnf2Text;
+import org.vishia.zTextGen.Zbnf2Text.Out;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 

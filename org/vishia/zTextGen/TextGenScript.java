@@ -1,4 +1,4 @@
-package org.vishia.textGenerator;
+package org.vishia.zTextGen;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,6 +27,9 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-02 Hartmut chg: localVariableScripts removed. The variables in each script part are processed
+   *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
+   *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    * <li>2012-12-24 Hartmut chg: Now the 'ReferencedData' are 'namedArgument' and it uses 'dataAccess' inside. 
    *   The 'dataAccess' is represented by a new {@link ScriptElement}('e',...) which can have {@link Argument#constValue} 
    *   instead a {@link Argument#datapath}. 
@@ -47,7 +50,7 @@ public class TextGenScript {
    *   {@link ScriptElement#whatisit}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
    * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: datapath::={ <$?path>? \.}. 
    *   instead dataAccess::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
-   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.textGenerator.TextGenerator} now too.
+   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.zTextGen.TextGenerator} now too.
    * <li>2011-03-00 created.
    *   It is the concept of specialized {@link GralWidget}.
    * </ul>
@@ -390,14 +393,14 @@ public class TextGenScript {
      */
     public ScriptElement new_textVariable(){ return new ScriptElement('v', null); }
 
-    public void add_textVariable(ScriptElement val){ subContent.localVariableScripts.add(val); } 
+    public void add_textVariable(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
     
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
     public ScriptElement new_objVariable(){ return new ScriptElement('J', null); } ///
 
-    public void add_objVariable(ScriptElement val){ subContent.localVariableScripts.add(val); } 
+    public void add_objVariable(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
     
     
     
@@ -628,7 +631,7 @@ public class TextGenScript {
      * The generator stores the results in a Map<String, String> localVariable. 
      * 
      */
-    private final List<ScriptElement> localVariableScripts = new LinkedList<ScriptElement>();
+    //private final List<ScriptElement> localVariableScripts = new LinkedList<ScriptElement>();
     
     public final List<GenContent> addToList = new LinkedList<GenContent>();
     
@@ -643,7 +646,7 @@ public class TextGenScript {
     }
         
     
-    public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
+    //public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
     
     
     public void set_name(String name){

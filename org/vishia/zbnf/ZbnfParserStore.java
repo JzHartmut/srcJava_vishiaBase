@@ -72,7 +72,7 @@ class ZbnfParserStore
    * <li>2012-11-02 JcHartmut: The ParseResultItem has gotten an element {@link ParseResultItemImplement#treeNodeXml}.
    *   It refers to an tree-like result store, whereby the {@link XmlNodeSimple} is used as node.
    *   Therewith the conversion to XML is obviously. As well too, the access to treed data able to use for direct
-   *   text conversion using {@link org.vishia.textGenerator.TextGenerator}.
+   *   text conversion using {@link org.vishia.zTextGen.TextGenerator}.
    *   A new method {@link #buildTreeNodeRepresentationXml(XmlNodeSimple, ParseResultItemImplement, boolean)} is offered to use.    
    * <li>2008-03-28 JcHartmut: The ParserStore is not cleared, only the reference is assigned new.
    *   So outside the ParserStore can be used from an older parsing.

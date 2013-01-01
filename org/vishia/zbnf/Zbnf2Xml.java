@@ -39,12 +39,12 @@ import java.util.TreeMap;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
-import org.vishia.textGenerator.Zbnf2Text;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.TreeNodeUniqueKey;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
+import org.vishia.zTextGen.Zbnf2Text;
 import org.vishia.zbnf.ZbnfParser;
 
 

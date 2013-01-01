@@ -1,4 +1,4 @@
-package org.vishia.textGenerator;
+package org.vishia.zTextGen;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,11 +11,11 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.textGenerator.TextGenScript.ZbnfDataPathElement;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.xmlSimple.XmlException;
+import org.vishia.zTextGen.TextGenScript.ZbnfDataPathElement;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -53,7 +53,12 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
-   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.textGenerator.TextGenScript.Argument, Map, boolean)} now uses
+   * <li>2013-01-02 Hartmut chg: The variables in each script part are processed
+   *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
+   *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
+   *   But a script-global variable referred with {@link #listScriptVariables} is defined only one time on start of text generation
+   *   with the routine {@link TextGenerator#genScriptVariables(TextGenScript, Object, boolean)}.  
+   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zTextGen.TextGenScript.Argument, Map, boolean)} now uses
    *   an {@link TextGenScript.Argument} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
    *   without extra dataPath, only with a ScriptElement.
    * <li>2012-12-23 Hartmut new: formatText in the {@link TextGenScript.Argument#text} if a data path is given, use for formatting a numerical value.
@@ -289,9 +294,11 @@ public class TextGenerator {
       if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$objDirW"))
         Assert.stop();
       //calculate all actual arguments:
-      for(DataAccess.DatapathElement dataElement : arg.datapath){
+      for(DataAccess.DatapathElement dataElement : arg.datapath){  //loop over all elements of the path with or without arguments.
         ZbnfDataPathElement zd;
         if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualArguments !=null){
+          //it is a element with arguments, usual a method call. 
+          zd.removeAllActualArguments();
           for(TextGenScript.Argument zarg: zd.actualArguments){
             Object oValue = getContent(zarg, localVariables, false);
             zd.addActualArgument(oValue);
@@ -364,9 +371,12 @@ public class TextGenerator {
       Appendable uBuffer = out;
       //Fill all local variable, which are defined in this script.
       //store its values in the local Gen_Content-instance.
+      /*
       for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
+        if(variableScript.name.equals("objdir"))
+          Assert.stop();
         if(variableScript.whatisit == 'J'){
-          Object value = getContent(variableScript, localVariables, true);
+          Object value = getContent(variableScript, localVariables, false);  //not a container
           localVariables.put(variableScript.name, value);
         } else { //a text variable
           assert(variableScript.whatisit == 'v');
@@ -378,7 +388,7 @@ public class TextGenerator {
           localVariables.put(variableScript.name, uBufferVariable);
         }
       }
-    
+      */
     
       //Generate direct requested output. It is especially on inner content-scripts.
       for(TextGenScript.ScriptElement contentElement: contentScript.content){
@@ -401,13 +411,18 @@ public class TextGenerator {
           } while(posEnd >=0);  //output all lines.
         } break;
         case 'v': {
-          //TODO: delete it later
-          if(contentElement.text.equals("target")){
-            //generates all targets, only advisable in the (?:file?)
-            //genUserTargets(out);
-          } else {
-            //XXXreplacePlaceholder(contentElement.text);
-         }
+          StringBuilder uBufferVariable = new StringBuilder();
+          Gen_Content genVariable = new Gen_Content(this);
+          TextGenScript.GenContent content = contentElement.getSubContent();
+          genVariable.genContent(content, uBufferVariable, false);
+          //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
+          localVariables.put(contentElement.name, uBufferVariable);
+        } break;
+        case 'J': {
+          if(contentElement.name.equals("checkDeps"))
+            stop();
+          Object value = getContent(contentElement, localVariables, false);  //not a container
+          localVariables.put(contentElement.name, value);
         } break;
         case 'e': {  //value or datapath
           final CharSequence text;
@@ -455,7 +470,7 @@ public class TextGenerator {
     
     void generateForContainer(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException
     {
-      TextGenScript.GenContent subContent = contentElement.getSubContent();
+      TextGenScript.GenContent subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
         stop();
       Object container = getContent(contentElement, localVariables, true);
@@ -574,14 +589,17 @@ public class TextGenerator {
     
     void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
       boolean ok = true;
+      final String nameSubtext;
       if(contentElement.name == null){
         //subtext name gotten from any data location, variable name
         Object oName = getContent(contentElement, localVariables, false);
-        contentElement.name = DataAccess.getStringFromObject(oName, null);
+        nameSubtext = DataAccess.getStringFromObject(oName, null);
+      } else {
+        nameSubtext = contentElement.name;
       }
-      TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(contentElement.name);  //the subtext script to call
+      TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
-        ok = writeError("<? *subtext:" + contentElement.name + " not found.?>", out);
+        ok = writeError("<? *subtext:" + nameSubtext + " not found.?>", out);
       } else {
         Gen_Content subtextGenerator = new Gen_Content(this);
         if(subtextScript.arguments !=null){
@@ -599,13 +617,13 @@ public class TextGenerator {
               if(ref !=null){
                 CheckArgument checkArg = check.get(referenceSetting.name);      //is it a requested argument (per name)?
                 if(checkArg == null){
-                  ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " faulty argument.?> ", out);
+                  ok = writeError("<? *subtext;" + nameSubtext + ": " + referenceSetting.name + " faulty argument.?> ", out);
                 } else {
                   checkArg.used = true;    //requested and resolved.
                   subtextGenerator.localVariables.put(referenceSetting.name, ref);
                 }
               } else {
-                ok = writeError("<? *subtext;" + contentElement.name + ": " + referenceSetting.name + " = ? not found. ?>", out);
+                ok = writeError("<? *subtext;" + nameSubtext + ": " + referenceSetting.name + " = ? not found. ?>", out);
               }
             }
             //check whether all formal arguments are given with actual args or get its default values.
@@ -620,16 +638,16 @@ public class TextGenerator {
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.name, ref);
                   } else {
-                    ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> not found. ?>", out);
+                    ok = writeError("<? *subtext;" + nameSubtext + ": " + arg.formalArg.name + " = ??> not found. ?>", out);
                   }
                 } else {
-                  ok = writeError("<? *subtext;" + contentElement.name + ": " + arg.formalArg.name + " = ??> missing on call. ?>", out);
+                  ok = writeError("<? *subtext;" + nameSubtext + ": " + arg.formalArg.name + " = ??> missing on call. ?>", out);
                 }
               }
             }
           }
         } else if(contentElement.getReferenceDataSettings() !=null){
-          ok = writeError("<? *subtext;" + contentElement.name + " called with arguments, it has not one. ?>", out);
+          ok = writeError("<? *subtext;" + nameSubtext + " called with arguments, it has not one. ?>", out);
         }
         if(ok){
           subtextGenerator.genContent(subtextScript.subContent, out, false);

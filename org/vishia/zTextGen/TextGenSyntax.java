@@ -1,4 +1,4 @@
-package org.vishia.textGenerator;
+package org.vishia.zTextGen;
 
 public final class TextGenSyntax {
 

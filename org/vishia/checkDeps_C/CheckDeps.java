@@ -314,7 +314,7 @@ public class CheckDeps
           //
           //process the source file:
           //
-          infoDepsPrimary = checkerDependencyFile.processSrcfile(fileSrc, sLocalPathName, args.sObjExt, 0);
+          infoDepsPrimary = checkerDependencyFile.processSrcfile(fileSrc, sLocalPathName, args.sObjExt);
         }
       }
     }//for all source files

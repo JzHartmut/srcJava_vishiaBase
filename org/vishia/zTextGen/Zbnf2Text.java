@@ -1,4 +1,4 @@
-package org.vishia.textGenerator;
+package org.vishia.zTextGen;
 
 import java.io.File;
 import java.io.FileOutputStream;

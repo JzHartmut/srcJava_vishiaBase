@@ -21,8 +21,13 @@ export MANIFEST_JAVAC="zbnf.manifest"
 ## Input for javac, only choice of primary sources, relativ path from current (make)-directory:
 INPUT_JAVAC=""
 INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/zbnf/*.java"
+INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/checkDeps_C/*.java"
+INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/stateMGen/*.java"
+INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/zTextGen/*.java"
 INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/zmake/*.java"
+INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/byteData/*.java"
 INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/header2Reflection/CmdHeader2Reflection.java"
+INPUT_JAVAC="$INPUT_JAVAC ../org/vishia/sclConversions/*.java"
 export INPUT_JAVAC
 
 ## Sets the CLASSPATH variable for compilation (used jar-libraries). do not leaf empty also it aren't needed:

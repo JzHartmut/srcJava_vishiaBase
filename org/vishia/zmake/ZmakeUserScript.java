@@ -15,15 +15,18 @@ public class ZmakeUserScript
 {
   
   /**Version, history and license.
-   * <ul>2012-12-29 Hartmut chg: A {@link UserFilepath} is independent from a target and describes a non-completely relative path usually.
-   *   The path is completed, usual as absolute path, if the {@link UserFileSet} is used in a target. The {@link TagetInput} of a target
-   *   determines the location of the file set by its {@link TagetInput#srcpathInput}. The {@link UserFilepath} of all inputs are cloned
+   * <ul>
+   * <li>2013-01-02 Hartmut chg: The {@link TargetParam} is established now, it can contain some {@link TargetParam#referVariables}
+   *   in that kind a parameter can describe more as one fileset for other files then the input file set. Changed syntax see Component zbnfjax.
+   * <li>2012-12-29 Hartmut chg: A {@link UserFilepath} is independent from a target and describes a non-completely relative path usually.
+   *   The path is completed, usual as absolute path, if the {@link UserFileSet} is used in a target. The {@link TargetInput} of a target
+   *   determines the location of the file set by its {@link TargetInput#srcpathInput}. The {@link UserFilepath} of all inputs are cloned
    *   and completed with that srcpath for usage. The {@link UserTarget#allInputFiles()} or {@link UserTarget#allInputFilesExpanded()}
    *   builds that list. Usage of that files provide the correct source path for the files of a target's input.
    * <li>2012-12-08 Hartmut chg: improve access rotoutines.
    * <li>2012-11-29 Hartmut new: The {@link UserFilePath} now contains all access routines to parts of the file path
    *   which were contained in the ZmakeGenerator class before. This allows to use this with the common concept
-   *   of a text generator using {@link org.vishia.textGenerator.TextGenerator}. That Textgenerator does not know such
+   *   of a text generator using {@link org.vishia.zTextGen.TextGenerator}. That Textgenerator does not know such
    *   file parts and this {@link UserFilepath} class because it is more universal. Access is possible 
    *   with that access methods {@link UserFilepath#localPath()} etc. To implement that a {@link UserFilepath}
    *   knows its file-set where it is contained in, that is {@link UserFilepath#parent}. 
@@ -214,6 +217,11 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public void set_wildcardExt(){ wildcardExt = true; }
     public void set_allTree(){ allTree = true; }
     
+    public void set_ext(String val){
+      if(val.charAt(0) == '.' || file.length() >0){ ext = val; }
+      else { file = val; }  //file is empty and ext does not start with dot. It is a filename without extension.
+    }
+    
     String getPath(){ return file; }
     
     /**Method can be called in the generation script: <*path.localPathName()>. 
@@ -292,13 +300,13 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      
     
     /**Method can be called in the generation script: <*basePath(<*abspath>)>. 
-     * @param abspath a String given path which is written before the given base path if the path is not absolute in this.
+     * @param accesspath a String given path which is written before the given base path if the path is not absolute in this.
      *   If null, it is ignored. If this path is absolute, the result is a absolute path of course.
      * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
      *   till a ':' in the input path or an empty string.
      *   Either as absolute or as relative path how it is given.
      */
-    public CharSequence basePath(String abspath){ 
+    public CharSequence basePath(String accesspath){ 
       UserFilepath generalPath = parent !=null && parent.srcpath !=null ? parent.srcpath : emptyParent;
       if(pathbase !=null || (generalPath.pathbase !=null)){
         StringBuilder uRet = new StringBuilder();
@@ -308,8 +316,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
         }
         if(absPath){ uRet.append('/'); }
         else if(generalPath.absPath){ uRet.append('/'); }
-        else if(abspath !=null){
-          uRet.append(abspath);
+        else if(accesspath !=null){
+          uRet.append(accesspath);
         }
         int pos;
         //
@@ -325,8 +333,24 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
           uRet.append(this.pathbase);
         }
         return uRet;
+      } else if(drive !=null){
+        StringBuilder uRet = new StringBuilder();
+        uRet.append(drive).append(":");
+        if(absPath){ uRet.append('/'); }
+        else if(accesspath !=null){
+          uRet.append(accesspath);
+        }
+        return uRet;
+      } else if(generalPath.drive !=null){
+        StringBuilder uRet = new StringBuilder();
+        uRet.append(generalPath.drive).append(":");
+        if(generalPath.absPath){ uRet.append('/'); }
+        else if(accesspath !=null){
+          uRet.append(accesspath);
+        }
+        return uRet;
       } else {
-        return abspath !=null ? abspath : "";
+        return accesspath !=null ? accesspath : "";
       }
     }
     
@@ -371,8 +395,25 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     public CharSequence absBasePathW(){ return toWindows(absBasePath()); }
     
-    /**Method can be called in the generation script: <*path.file()>. 
-     * @return the whole path inclusive a given general path in a {@link UserFileSet}.
+    /**Method can be called in the generation script: <*data.pathName()>. 
+     * @return the whole path with file name but without extension inclusive a given general path in a {@link UserFileSet}.
+     *   Either as absolute or as relative path.
+     */
+    public CharSequence pathName(){ 
+      CharSequence basePath = basePath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      int pos;
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+      uRet.append(this.path);
+      uRet.append(this.file);
+      return uRet;
+    }
+    
+    public CharSequence pathNameW(){ return toWindows(pathName()); }
+    
+
+    /**Method can be called in the generation script: <*data.file()>. 
+     * @return the whole path with file name and extension inclusive a given general path in a {@link UserFileSet}.
      *   Either as absolute or as relative path.
      */
     public CharSequence file(){ 
@@ -430,7 +471,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence absDirW(){ return toWindows(absDir()); }
     
     
-    private CharSequence toWindows(CharSequence inp)
+    private static CharSequence toWindows(CharSequence inp)
     {
       if(inp instanceof StringBuilder){
         StringBuilder uRet = (StringBuilder)inp;
@@ -538,7 +579,7 @@ fileset::=
     
     /**All files without wildcards build from all found files of the {@link #filesOfFileset}
      * but only build if requested. */
-    List<UserFilepath> filesOfFilesetExpanded;
+    //List<UserFilepath> filesOfFilesetExpanded;
     
     UserFileset(UserScript script){
       this.script = script;
@@ -549,9 +590,6 @@ fileset::=
       this.script = null;
     }
     
-    
-    //void setTargetInputParam(UserInput input){ this.targetinput = input; }
-    void setTargetInputParam(){  }
     
     
     /**From Zbnf: srcpath = <""?!prepSrcpath>.
@@ -573,8 +611,30 @@ fileset::=
     }
     
     
+    void listFilesExpanded(List<UserFilepath> files, CharSequence accesspath) {  ////
+      boolean expandFiles = true;
+      for(UserFilepath filepath: filesOfFileset){
+        if(expandFiles && filepath.someFiles || filepath.wildcardExt || filepath.allTree){
+          filepath.expandFiles(files, accesspath, script.currDir);
+        } else {
+          //clone filepath! add srcpath
+          UserFilepath targetsrc = new UserFilepath(script, filepath, accesspath);
+          files.add(targetsrc);
+        }
+      }
+    }
 
+    public List<UserFilepath> listFilesExpanded(CharSequence accesspath) { 
+      List<UserFilepath> files = new LinkedList<UserFilepath>();
+      listFilesExpanded(files, accesspath);
+      return files;
+    }
     
+    
+    public List<UserFilepath> listFilesExpanded() { return listFilesExpanded(null); }
+
+      
+      
     @Override
     public String toString(){ 
       StringBuilder u = new StringBuilder();
@@ -613,7 +673,11 @@ fileset::=
       content.add(el);
     }
     
-    public CharSequence getText()
+    
+    public CharSequence getText(){ return text(); }
+
+    
+    public CharSequence text()
     {
       StringBuilder u = new StringBuilder();
       for(UserStringContent el: content){
@@ -622,6 +686,15 @@ fileset::=
         }
       }
       return u;
+    }
+
+    public void addtext(StringBuilder u)
+    {
+      for(UserStringContent el: content){
+        switch(el.type){
+        case '"': u.append(el.text);
+        }
+      }
     }
 
     @Override public String toString(){ return getText().toString(); }
@@ -652,26 +725,6 @@ fileset::=
     public List<UserFilepath> files(){ return (fileset !=null) ? fileset.filesOfFileset : null; }
     
     
-    /**For textscript: <*var.name.filesExpanded()>
-     * @return The List of files. 
-     */
-    public List<UserFilepath> filesExpanded(String absPath){
-      if(fileset == null){ return null; }
-      else {
-        List<UserFilepath> listToadd = new LinkedList<UserFilepath>();
-        if(fileset.filesOfFilesetExpanded ==null){
-          int lengthPathCurrdir = fileset.script.sCurrDir.length();
-          for(ZmakeUserScript.UserFilepath filepathWildcards: fileset.filesOfFileset){
-            
-            filepathWildcards.expandFiles(listToadd, absPath, script.currDir);
-          }
-          
-        }
-        return listToadd;
-      }
-    }
-    
-    
     @Override public String toString(){
       return name + ":" + (string !=null ? string : fileset);
     }
@@ -684,15 +737,107 @@ fileset::=
     
   }
   
-  public static class XXXUserParam
-  { public String name;
+  public static class TargetParamZbnf
+  { 
+    /**The target where this input set is used. */
+    final UserTarget parentTarget;
+
+    /**From ZBNF: [<$?name> =] of a parameter or null  */
+    public String name;
+    /**From ZBNF: [<$?name> = [ <""?value>]] of a parameter or null  */
     public String value;
-    public String variable;
+    
+    //public String referVariable;
+    
+    List<TargetInput> referVariables; 
+    
+    TargetParamZbnf(UserTarget parentTarget){ this.parentTarget = parentTarget; }
+    
+    public TargetInput new_inputarg(){ return new TargetInput(parentTarget); }
+
+    public void add_inputarg(TargetInput val){ 
+      if(referVariables == null){
+        referVariables = new LinkedList<TargetInput>();
+      }
+      referVariables.add(val);
+    }
   }
   
   
+  public static class TargetParam
+  { 
+    /**The target where this input set is used. */
+    final UserTarget parentTarget;
+
+    /**From ZBNF: [<$?name> =] of a parameter or null  */
+    final String name;
+    /**From ZBNF: [<$?name> = [ <""?value>]] of a parameter or null  */
+    final String value;
+    
+    //final String referVariable;
+    
+    final List<TargetInput> referVariables; 
+    
+    TargetParam(TargetParamZbnf src){ 
+      this.parentTarget = src.parentTarget;
+      this.name = src.name;
+      this.value = src.value;
+      //this.referVariable = null;
+      this.referVariables = src.referVariables;
+    }
+    
+    
+    /**Returns the text which is referred with this parameter. 
+     * <ul>
+     * <li>If the parameter is given with a constant stringLiteral, it is returned without any effort. 
+     * <li>If the parameter refers a string script variable, its content is evaluated and returned.
+     * <li>If the parameter referes a concatenation of script variables, it is returned.
+     * </ul>
+     * <br><br> 
+     * If the scriptVariable or any of them in a concatenation was not found, either a IllegalArgumentException is thrown
+     * or a "<??errorText??> will be produced.
+     * @return Any case a string if no exception.
+     */
+    public CharSequence text(){
+      if(value !=null) return value;
+      else {
+        StringBuilder u = new StringBuilder();
+        for(TargetInput element: referVariables){
+          if(element.inputFile !=null){
+            u.append(element.inputFile.file());
+          } else { 
+            assert(element.referVariable !=null);
+            //search the input Set in the script variables:
+            ScriptVariable variable = parentTarget.script.var.get(element.referVariable);
+            if(variable == null){
+              int pos = u.length();
+              u.append("<??error ZmakeScriptvariable not found: ").append(element.referVariable).append(" ??>");
+              parentTarget.script.abortOnError(u,pos);
+            } else if(variable.string !=null){
+              variable.string.addtext(u);
+            } else {
+              int pos = u.length();
+              u.append("<??error ZmakeScriptvariable as string expected: ").append(element.referVariable).append(" ??>");
+              parentTarget.script.abortOnError(u,pos);
+            } 
+          }
+        }
+        return u;
+      }
+    }
+
+    
+    public CharSequence textW(){ return UserFilepath.toWindows(text()); }
+  
+  
+  }
+  
+
+  
+
+  
   /**Describes 1 input item for a target, maybe a file, maybe a inputset. */
-  public static class TagetInput //extends UserFileset
+  public static class TargetInput //extends UserFileset
   { //final UserInputSet inputSet;
     //final String inputSet;
     /**The main script. */
@@ -701,10 +846,10 @@ fileset::=
     final UserTarget parentTarget;
   
     /**From ZBNF: [<$?name> =] of a parameter or null  */
-    public String name;
+    //public String paramname;
     
     /**From ZBNF: [<$?name> = [ <""?value>]] of a parameter or null  */
-    public String value;
+    //public String paramvalue;
     
     /**Name of the variable which refers a {@link UserFileset} which's files are used as input. */
     public String referVariable;
@@ -720,7 +865,7 @@ fileset::=
     
     
     
-    TagetInput(UserTarget parentTarget){
+    TargetInput(UserTarget parentTarget){
       //super(parentTarget.script);
       this.parentTarget = parentTarget;
       //this.script = parentTarget.script;
@@ -798,9 +943,9 @@ input::=
     
     public String translator;
     
-    List<TagetInput> inputs = new LinkedList<TagetInput>();
+    List<TargetInput> inputs = new LinkedList<TargetInput>();
     
-    Map<String,TagetInput> params;
+    Map<String,TargetParam> params;
     
     UserTarget(UserScript script){
       this.script = script;
@@ -829,31 +974,30 @@ input::=
     
     
     /**From ZBNF < param>. */
-    //public UserParam new_param(){ return new UserParam();}
+    public TargetParamZbnf new_param(){ return new TargetParamZbnf(this);}
     
-    /**From ZBNF < param>. * /
-    public void add_param(UserParam val){ 
-      if(params ==null){ params = new TreeMap<String,UserParam>(); }
-      params.put(val.name, val); 
+    /**From ZBNF < param>. */
+    public void add_param(TargetParamZbnf val){ 
+      if(params ==null){ params = new TreeMap<String,TargetParam>(); }
+      params.put(val.name, new TargetParam(val)); 
     }
-    */
     /**From ZBNF < ?!prepInputfile> < ?input>*/
-    public TagetInput new_input()
-    { TagetInput userInput = new TagetInput(this);
+    public TargetInput new_input()
+    { TargetInput userInput = new TargetInput(this);
       inputs.add(userInput);
       return userInput; 
     }
 
-    public void add_input(TagetInput val){}
+    public void add_input(TargetInput val){}
 
     
-    public TagetInput new_inputarg()
-    { TagetInput userInput = new TagetInput(this);
+    public TargetInput new_inputarg()
+    { TargetInput userInput = new TargetInput(this);
       inputs.add(userInput);
       return userInput; 
     }
 
-    public void add_inputarg(TagetInput val){}
+    public void add_inputarg(TargetInput val){}
 
     
     /**FromZbnf: <$?inputSet>
@@ -865,7 +1009,7 @@ input::=
     }
     
     public List<UserFilepath> allInputFiles(){
-      return prepareInput(false, null);
+      return prepareInput(false);
     }
     
     /**Prepares the input of the target.
@@ -874,7 +1018,7 @@ input::=
      * @return
      */
     public List<UserFilepath> allInputFilesExpanded(){
-      return prepareInput(true, null);
+      return prepareInput(true);
     }
     
     
@@ -882,12 +1026,12 @@ input::=
      * @param expandFiles
      * @return
      */
-    private List<UserFilepath> prepareInput(boolean expandFiles, String name) {
+    private List<UserFilepath> prepareInput(boolean expandFiles) {
       List<UserFilepath> files = new LinkedList<UserFilepath>();
       //UserFileset inputfileset = null; 
-      for(TagetInput targetInputParam: inputs){
+      for(TargetInput targetInputParam: inputs){
         //UserFileset targetparaminputfileset; 
-        if(name == null && targetInputParam.name == null || name.equals(targetInputParam.name)){ //input or matching parameter?
+        { //if(name == null && targetInputParam.name == null || name !=null && name.equals(targetInputParam.name)){ //input or matching parameter?
           CharSequence srcpath = null;
           if(targetInputParam.srcpathEnvVariable !=null){
             srcpath = System.getenv(targetInputParam.srcpathEnvVariable);
@@ -932,19 +1076,13 @@ input::=
             //search the input Set in the script variables:
             ScriptVariable variable = script.var.get(targetInputParam.referVariable);
             if(variable == null || variable.fileset == null){
-              Assert.stop();
-            } else {
-              variable.fileset.setTargetInputParam(); //targetInputParam);  //with it the abspath is determined.
-              for(UserFilepath filepath: variable.fileset.filesOfFileset){
-                if(expandFiles){
-                  filepath.expandFiles(files, srcpath, script.currDir);
-                } else {
-                  //clone filepath! add srcpath
-                  UserFilepath targetsrc = new UserFilepath(script, filepath, srcpath);
-                  
-                  files.add(targetsrc);
-                }
+              if(script.bWriteErrorInOutputScript){
+                UserFilepath errorhint = new UserFilepath(script);
+                errorhint.file = "<?error not found; " + targetInputParam.referVariable + ">";
+                files.add(errorhint);
               }
+            } else {
+              variable.fileset.listFilesExpanded(files, srcpath);
             }
           }
         }
@@ -952,7 +1090,9 @@ input::=
       return files;
     }
     
-    
+    @Override public String toString(){
+      return name + ":=" + translator;
+    }
   
   }
   
@@ -1019,6 +1159,18 @@ input::=
         currDir.put(sDrive, sDir);
       }
       */
+    }
+    
+    
+    /**This routine does nothing,if {@link #bWriteErrorInOutputScript} is set.
+     * elsewhere it throws an {@link IllegalArgumentException}
+     * @param msg The msg
+     * @param fromPos substring from this position.
+     */
+    void abortOnError(CharSequence msg, int fromPos){
+      if(bWriteErrorInOutputScript){
+        throw new IllegalArgumentException(msg.subSequence(fromPos, msg.length()).toString());
+      }
     }
     
   }

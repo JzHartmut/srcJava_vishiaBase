@@ -263,7 +263,7 @@ public class CheckDependencyFile
    * @param recursiveCt
    * @return
    */
-  InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt, int recursiveCt) 
+  public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt) 
   {
     final ObjectFileDeps objDeps;
     
@@ -276,7 +276,7 @@ public class CheckDependencyFile
     } else {
       objDeps = null;
     }
-    InfoFileDependencies infoFile = processSrcfile(fileSrc, objDeps, recursiveCt);
+    InfoFileDependencies infoFile = processSrcfile(fileSrc, objDeps, 0);
     if(objDeps.isObjDeleted()){ 
       checkData.nrofDelObj +=1; 
     }
