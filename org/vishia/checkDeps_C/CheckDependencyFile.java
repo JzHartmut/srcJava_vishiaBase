@@ -218,7 +218,7 @@ public class CheckDependencyFile
    * @param sFileDepenencies The last created dependency file.
    * @return null if no error. An error message. If not null, this class is not able to use.
    */
-  public String readDependencyInput(String sFileDepenencies){
+  public String readDependencies(String sFileDepenencies){
     readerInputDepFile.readDepFile(sFileDepenencies);
 
     return null;
@@ -826,6 +826,22 @@ public class CheckDependencyFile
   
   
   void deleteResultFile(String localName){
+    
+  }
+  
+  
+  
+  /**Writes the dependencies which are checked after creation of this class in the given file.
+   * @param sFileDeps The file to write into.
+   * @return
+   */
+  public String writeDependencies(String sFileDeps){
+    InfoFileDependencies.writeAllBackDeps(sFileDeps, checkData.indexAllInclFilesAbsPath);
+    return "";
+  }
+  
+  
+  public void close(){
     
   }
   

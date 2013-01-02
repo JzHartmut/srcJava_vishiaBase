@@ -24,6 +24,7 @@ import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zTextGen.OutputDataTree;
 import org.vishia.zTextGen.TextGenScript;
+import org.vishia.zTextGen.TextGenSyntax;
 import org.vishia.zTextGen.TextGenerator;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
@@ -116,6 +117,9 @@ public class Zmake
     /**Path of script to control the generation of the output file. */
     String sGenCtrl = "xsl/ZmakeStd2Ant.genctrl";
     
+    /**Output file for help with syntax information. */
+    String sHelpOut;
+    
     /**Path of XSL script to generate the ant.xml*/
     //String sXslt4ant = "xsl/ZmakeStd.xslp";
     
@@ -185,7 +189,22 @@ public class Zmake
           to hold the contact to the command line execution.
       */
       String sExecuteError = null;
-      try{ sExecuteError = main.execute(); }
+      try{ 
+        if(cmdArgs.sHelpOut !=null){
+          FileWriter helpOut = new FileWriter(new File(cmdArgs.sHelpOut));
+          for(String sLine: mainCmdLine.listHelpInfo){
+            helpOut.append(sLine).append("\n");
+          }
+          helpOut.append("\n\n\n");
+          helpOut.append("==Syntax of the ZmakeGenCtrlScript================================================================================\n");
+          helpOut.append(TextGenSyntax.syntax);
+          helpOut.append("==================================================================================================================\n");
+          helpOut.close();
+        }
+        if(cmdArgs.input != null){
+          sExecuteError = main.execute();
+        }
+      }
       catch(Exception exception)
       { //catch the last level of error. No error is reported direct on command line!
         main.console.report("Uncatched Exception on main level:", exception);
@@ -226,11 +245,10 @@ public class Zmake
       super.addAboutInfo("Zmake generator");
       super.addAboutInfo("made by JcHartmut, 2007-07-06 - 2012-05-24");
       super.addHelpInfo("invoke>java -cp zbnf.jar org.vishia.zmake.Zmake [INPUT] [{OPTIONS}]");
-      super.addHelpInfo("* pathes to files or dirs are absolute or relativ from cmd line invocation.");
+      super.addHelpInfo("* PATH to files or dirs are absolute or relativ from cmd line invocation.");
       super.addHelpInfo("* TPATH means a path started from given -ZBNFJAX_HOME:PATH or ZBNFJAX_HOME in environment.");
       super.addHelpInfo("  But if the path starts with . it is from current dir. ");
       super.addHelpInfo("* WPATH means a path started from given -tmp directory (WorkPATH).");
-      super.addHelpInfo("* INPUTFILE is the only filename without path and without extension dissolved from INPUT");
       super.addHelpInfo("INPUT              The first argument without - is the input file with path and extension.");
       super.addHelpInfo("-i:INPUT           path to the input file alternatively to INPUT.");
       super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the output file");
@@ -239,8 +257,9 @@ public class Zmake
       super.addHelpInfo("-ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.");
       super.addHelpInfo("-tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".");
       super.addHelpInfo("-tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml");
-      super.addHelpInfo("-zbnf=TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf");
-      super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is zmake/ZmakeGenctrl.zbnf");
+      super.addHelpInfo("-zbnf:TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf");
+      //super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is the internal syntax");
+      super.addHelpInfo("-syntax:PATH       Write an information file which contains the help and the syntax.");
       super.addHelpInfo("One can use either '=' or ':' as separator between option key and value.");
       super.addStandardHelpInfo();
       
@@ -286,6 +305,8 @@ public class Zmake
       //else if(arg.startsWith("-zGen:"))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
       else if(arg.startsWith("-genCtrl="))     { callingArgs.sGenCtrl = getArgument(9); }
       else if(arg.startsWith("-genCtrl:"))     { callingArgs.sGenCtrl = getArgument(9); }
+      else if(arg.startsWith("-syntax:"))      { callingArgs.sHelpOut = getArgument(8); }
+      else if(arg.startsWith("-syntax="))      { callingArgs.sHelpOut = getArgument(8); }
       //else if(arg.startsWith("-xslt4ant="))    { sXslt4ant = getArgument(10); }  //older version, compatibility
       else bOk=false;
   
@@ -318,16 +339,17 @@ public class Zmake
     protected boolean checkArguments()
     { boolean bOk = true;
   
-      if(callingArgs.input == null)              
-      { bOk = false; 
-        writeError("ERROR argument -i:INP is obligate."); 
+      if(callingArgs.sHelpOut ==null){
+        if(callingArgs.input == null)              
+        { bOk = false; 
+          writeError("ERROR argument -i:INP is obligate."); 
+        }
+    
+        if(callingArgs.sOutput == null)              
+        { bOk = false; 
+          writeError("ERROR argument -o:OUT is obligate."); 
+        }
       }
-  
-      if(callingArgs.sOutput == null)              
-      { bOk = false; 
-        writeError("ERROR argument -o:OUT is obligate."); 
-      }
-  
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
     
       return bOk;
@@ -348,12 +370,13 @@ public class Zmake
   String execute() throws ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException
   { boolean bOk = true;
     String sError = null;
+    
     //the followed line maybe unnecessary because the java cmd line interpretation always cuts the quotion  marks,
     //Such quotion marks appeares if a double click from commandline is happened. 
     if(args.input.startsWith("\"") && args.input.length()>=2){ args.input = args.input.substring(1, args.input.length()-1); }
 
     /*Separate input path file ext.*/
-    String inputFile, inputExt;
+    //String inputFile, inputExt;
     { int pos1 = args.input.lastIndexOf(('/'));
       int pos2 = args.input.lastIndexOf(('\\'));
       int pos3 = args.input.lastIndexOf((':'));
@@ -362,8 +385,8 @@ public class Zmake
       if(pos1 < 0){ pos1 = -1; }
       int pos9 = args.input.lastIndexOf('.');
       if(pos9 < pos1) { pos9 = args.input.length(); }
-      inputFile = args.input.substring(pos1 + 1, pos9); //, pos9);
-      inputExt =  args.input.substring(pos9);
+      //inputFile = args.input.substring(pos1 + 1, pos9); //, pos9);
+      //inputExt =  args.input.substring(pos9);
       
     }
     

@@ -217,7 +217,7 @@ public class CheckDeps
     sError = checkerDependencyFile.readCfgData(args.sFileCfg);
     if(sError !=null) throw new IllegalArgumentException(sError);
     
-    sError = checkerDependencyFile.readDependencyInput(args.sFileDep);
+    sError = checkerDependencyFile.readDependencies(args.sFileDep);
     if(sError !=null) throw new IllegalArgumentException(sError);
     
     for(String sPathSrc : args.pathsSrcGen){
