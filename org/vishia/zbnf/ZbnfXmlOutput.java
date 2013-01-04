@@ -60,7 +60,8 @@ import org.vishia.zbnf.ZbnfParser;
  * <li><code>name%</code>: Writes also the parsed syntax as content, if no other content is stored. 
  *      Especially for options with no deeper semantic statements like <code>[<?option> a|b|c]</code></li>
  * </ul>  
- * @deprecated since 2012-11 because the {@link org.vishia.zbnf.ZbnfParser#getResultTree()}.
+ * @deprecated since 2012-11 because the {@link org.vishia.zbnf.ZbnfParser#getResultTree()} provides an XML tree already.
+ *   The {@link org.vishia.xmlSimple.SimpleXmlOutputter} can be used instead.
  *  Example see {@link org.vishia.zbnf.Zbnf2Xml}
  *
  */

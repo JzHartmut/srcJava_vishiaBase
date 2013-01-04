@@ -383,8 +383,9 @@ class ZbnfParserStore
           case kIntegerNumber: ret = Long.toString(parsedIntegerNumber); break;
           case kFloatNumber: ret = Double.toString(parsedFloatNumber); break;
           case kIdentifier: ret = parsedString; break;
+          case kOption: ret = parsedString!=null ? parsedString : ""; break;
           case kString: ret = parsedString; break;
-          default: ret = "??unknown kind of node.?"; break;
+          default: ret = "??unknown kind of node = " + Integer.toHexString(kind) + "=" + Integer.toHexString(-kind) + ".?"; break;
         }
       }
       return ret;

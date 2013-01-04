@@ -106,8 +106,10 @@ class ObjectFileDeps
       bNewer = true;
     } else if(!infoFile.isSrcFile() && infoFile.timestampNewestDependingFiles_ > timestampObj){
       bNewer = true;
+      assert(false);
     } else {
       bNewer = false;
+      assert(false);
     }
     if(bNewer){
       if(infoFile.timestampNewestDependingFiles_ > timestampSrcNewest){

@@ -930,9 +930,9 @@ variablenBlock::=
         sclOut = new FileWriter(args.sFileScl);
         try{
           if(args.sFileSclCtrl !=null){
-            genScript.setGenCtrl(new File(args.sFileSclCtrl));
+            genScript.translateAndSetGenCtrl(new File(args.sFileSclCtrl));
           } else {
-            genScript.setGenCtrl(sGenCtrlSclOamAssigment);
+            genScript.translateAndSetGenCtrl(sGenCtrlSclOamAssigment);
           }
         } catch(Exception exc){ throw new RuntimeException(exc); }
         textGen.genContent(genScript, SCLstruct2Lists.this, true, sclOut);
@@ -952,7 +952,7 @@ variablenBlock::=
       if(args.sFileOamVariables != null){
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript.setGenCtrl(new File(args.sFileOamVariablesCtrl));
+          genScript.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl));
         } catch(Exception exc){ throw new RuntimeException(exc); }
         textGen.genContent(genScript, SCLstruct2Lists.this, true, sclOut);
         /*

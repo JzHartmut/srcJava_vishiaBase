@@ -123,8 +123,9 @@ public class Zmake
     /**Path of XSL script to generate the ant.xml*/
     //String sXslt4ant = "xsl/ZmakeStd.xslp";
     
-    /**Path of the input.xml*/
-    String sInputXml = null;
+    /**Path without extension of a file which outputs the text generation scripts parse result and the Zmake input parse result. 
+     * */
+    String sCheckXmlOutput = null;
     
     /**Path of the ant.xml*/
     String sOutput = null;
@@ -296,7 +297,7 @@ public class Zmake
       else if(arg.startsWith("-XML_TOOLBASE=")){ callingArgs.zbnfjax_PATH = getArgument(14); }  //older version, compatibility
       else if(arg.startsWith("-tmp:"))         { callingArgs.tmp = getArgument(5); }
       else if(arg.startsWith("-tmp="))         { callingArgs.tmp = getArgument(5); } //older version, compatibility
-      else if(arg.startsWith("-tmpinputxml:")) { callingArgs.sInputXml = getArgument(13); }
+      else if(arg.startsWith("-checkxml:"))    { callingArgs.sCheckXmlOutput = getArgument(10); }
       else if(arg.startsWith("-o="))           { callingArgs.sOutput = getArgument(3); }
       else if(arg.startsWith("-o:"))           { callingArgs.sOutput = getArgument(3); }
       else if(arg.startsWith("-zbnf="))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
@@ -428,7 +429,9 @@ public class Zmake
     File fileGenCtrl = new File(sFileGenCtrl);
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
-    genScript.setGenCtrl(fileGenCtrl);
+    
+    File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
+    genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.currdir + args.input + "\" with \"" 
       + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
@@ -458,14 +461,14 @@ public class Zmake
     ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     
-    if(args.sInputXml !=null){
+    if(args.sCheckXmlOutput !=null){
       //write ZmakeUserScript into XML output only to check the input script.
       XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
-      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sInputXml)); 
+      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sCheckXmlOutput + "_zmake.xml")); 
       SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
       xmlOut.write(wrXml, xmlTop);
       wrXml.close();
-      FileWriter outData = new FileWriter(args.sInputXml + ".javadat");
+      FileWriter outData = new FileWriter(args.sCheckXmlOutput + "_zmake.javadat");
       OutputDataTree outputterData = new OutputDataTree();
       outputterData.output(0, zmakeInput, outData, false);
       outData.close();
@@ -477,7 +480,7 @@ public class Zmake
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     TextGenerator gen = new TextGenerator(console);
     TextGenScript genScript = new TextGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
-    genScript.setGenCtrl(fileGenCtrl);
+    genScript.translateAndSetGenCtrl(fileGenCtrl);
     
     Map<String, Object> scriptVariables;
     try{ 

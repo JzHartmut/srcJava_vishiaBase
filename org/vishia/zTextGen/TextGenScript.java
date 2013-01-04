@@ -2,8 +2,12 @@ package org.vishia.zTextGen;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +19,10 @@ import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.util.UnexpectedException;
+import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
+import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
 
@@ -31,14 +38,14 @@ public class TextGenScript {
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    * <li>2012-12-24 Hartmut chg: Now the 'ReferencedData' are 'namedArgument' and it uses 'dataAccess' inside. 
-   *   The 'dataAccess' is represented by a new {@link ScriptElement}('e',...) which can have {@link Argument#constValue} 
-   *   instead a {@link Argument#datapath}. 
+   *   The 'dataAccess' is represented by a new {@link ScriptElement}('e',...) which can have {@link SumExpression#constValue} 
+   *   instead a {@link SumExpression#datapath}. 
    * <li>2012-12-24 Hartmut chg: {@link ZbnfDataPathElement} is a derived class of {@link DataAccess.DatapathElement}
    *   which contains destinations for argument parsing of a called Java-subroutine in a dataPath.  
    * <li>2012-12-23 Hartmut chg: A {@link ScriptElement} and a {@link Argument} have the same usage aspects for arguments
    *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link Argument#text} if a data path is given, use for formatting a numerical value.   
-   * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #setGenCtrl(StringPart)} etc.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link SumExpression#text} if a data path is given, use for formatting a numerical value.   
+   * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #translateAndSetGenCtrl(StringPart)} etc.
    * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
    * <li>2012-11-24 Hartmut chg: @{@link ScriptElement#datapath} with {@link DataAccess.DatapathElement} 
    * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
@@ -85,7 +92,7 @@ public class TextGenScript {
   private final MainCmdLogging_ifc console;
 
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
-  MainGenCtrl zbnfZmakeGenCtrl;
+  MainGenCtrl zTextGenCtrl;
   
   private final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
   
@@ -108,7 +115,7 @@ public class TextGenScript {
   }
 
   
-  public boolean XXXparseGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl) 
+  public boolean translateAndSetGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IOException
     , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
   { console.writeInfoln("* Zmake: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
@@ -121,37 +128,64 @@ public class TextGenScript {
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
     
-    return parseGenCtrl(spSyntax, spGenCtrl);
+    return translateAndSetGenCtrl(spSyntax, spGenCtrl, checkXmlOut);
     
   }
   
 
-  public boolean setGenCtrl(File fileGenCtrl) 
+  public boolean translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
-    return parseGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl));
+    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut);
   }
   
   
-  public boolean setGenCtrl(String spGenCtrl) 
+  public boolean translateAndSetGenCtrl(File fileGenCtrl) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
-    return parseGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl));
+    int lengthBufferGenctrl = (int)fileGenCtrl.length();
+    StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
+    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), null);
   }
   
   
-  public boolean setGenCtrl(StringPart spGenCtrl) 
+  public boolean translateAndSetGenCtrl(String spGenCtrl) 
+  throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
+  {
+    try{ return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), null);
+    } catch(IOException exc){ throw new UnexpectedException(exc); }
+  }
+  
+  
+  public boolean translateAndSetGenCtrl(StringPart spGenCtrl) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
-    return parseGenCtrl(new StringPart(TextGenSyntax.syntax), spGenCtrl);
+    try { return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), spGenCtrl, null);
+    }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
   
   
-  public boolean parseGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl) 
-  throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
+  /**Translate the generation control file - core routine.
+   * It sets the {@link #zTextGenCtrl} aggregation. This routine must be called before  the script can be used.
+   * There are some routines without the parameter sZbnf4GenCtrl, which uses the internal syntax. Use those if possible:
+   * {@link #translateAndSetGenCtrl(File)}, {@link #translateAndSetGenCtrl(String)}
+   * 
+   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link TextGenSyntax#syntax}.
+   * @param spGenCtrl The input file with the genCtrl statements.
+   * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
+   * @return
+   * @throws ParseException
+   * @throws IllegalArgumentException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws IOException only if xcheckXmlOutput fails
+   * @throws FileNotFoundException only if xcheckXmlOutput file not found or not writeable
+   */
+  public boolean translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput) 
+  throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser((Report)console);
     parserGenCtrl.setSyntax(sZbnf4GenCtrl);
@@ -165,15 +199,20 @@ public class TextGenScript {
       String sError = parserGenCtrl.getSyntaxErrorReport();
       throw new ParseException(sError,0);
     }
-    if(console.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
-      parserGenCtrl.reportStore((Report)console, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
+    if(checkXmlOutput !=null){
+      XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
+      SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
+      OutputStreamWriter xmlWriter = new OutputStreamWriter(new FileOutputStream(checkXmlOutput));
+      xmlOutputter.write(xmlWriter, xmlParseResult);
+      xmlWriter.close();
     }
-    console.writeInfo(", ok set output ... ");
+    //if(console.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
+    //  parserGenCtrl.reportStore((Report)console, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
+    //}
     //write into Java classes:
-    zbnfZmakeGenCtrl = new MainGenCtrl();
+    zTextGenCtrl = new MainGenCtrl();
     ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput((Report)console);
-    parserGenCtrl2Java.setContent(zbnfZmakeGenCtrl.getClass(), zbnfZmakeGenCtrl, parserGenCtrl.getFirstParseResult());
-    console.writeInfo(" ok");
+    parserGenCtrl2Java.setContent(zTextGenCtrl.getClass(), zTextGenCtrl, parserGenCtrl.getFirstParseResult());
     return bOk;
   }
   
@@ -207,10 +246,14 @@ public class TextGenScript {
 
   public static class ZbnfDataPathElement extends DataAccess.DatapathElement
   {
-    List<ScriptElement> actualArguments;
+    //List<ZbnfDataPathElement> actualArguments;
     
-    public ScriptElement new_actualArgument(){
-      ScriptElement actualArgument = new ScriptElement('e', null);
+    List<SumExpression> actualValue;
+    
+    public SumExpression new_argument(){
+      SumExpression actualArgument = new SumExpression();
+      //ScriptElement actualArgument = new ScriptElement('e', null);
+      //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
       return actualArgument;
     }
 
@@ -221,9 +264,9 @@ public class TextGenScript {
      * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
      * @param val The Scriptelement which describes how to get the value.
      */
-    public void add_actualArgument(ScriptElement val){ 
-      if(actualArguments == null){ actualArguments = new LinkedList<ScriptElement>(); }
-      actualArguments.add(val);
+    public void add_argument(SumExpression val){ 
+      if(actualValue == null){ actualValue = new LinkedList<SumExpression>(); }
+      actualValue.add(val);
     } 
     
     public void set_javapath(String text){ this.ident = text; }
@@ -233,17 +276,39 @@ public class TextGenScript {
   }
   
   
+
+  /**
+  *
+  */
+  public static class SumExpression{
   
-  public static class Argument{
+    List<SumValue> values = new ArrayList<SumValue>();
+  
+  
+    public SumValue new_sumValue(){ return new SumValue(); }
+    
+    public void add_sumValue(SumValue val){ values.add(val); }
+  
+  }
+  
+  
+  
+  
+  /**
+   *
+   */
+  public static class SumValue{
     
     /**Name of the argument. It is the key to assign calling argument values. */
-    public String name;
+    //public String name;
     
     /**From Zbnf <""?text>, constant text, null if not used. */
     public String text; 
     
     /**Maybe a constant value, also a String. */
     public Object constValue;
+    
+    char operator;
 
     /**The description of the path to any data if the script-element refers data. It is null if the script element
      * does not refer data. If it is filled, the instances are of type {@link ZbnfDataPathElement}.
@@ -262,7 +327,7 @@ public class TextGenScript {
     }
     
     
-    
+    public void set_operator(String val){ operator = val.charAt(0); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
     public void set_intValue(long val){ constValue = new Long(val); }
@@ -298,8 +363,24 @@ public class TextGenScript {
     
     public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
 
-    @Override public String toString(){ return name; }
+    @Override public String toString(){ return "sumExpression"; }
 
+  }
+  
+  
+  
+  public static class Argument{
+    
+    /**Name of the argument. It is the key to assign calling argument values. */
+    public String name;
+    
+    SumExpression sumExpression;
+  
+    public SumExpression new_sumExpression(){ return new SumExpression(); }
+    
+    public void add_sumExpression(SumExpression val){ sumExpression = val; }
+    
+    
   }
   
   
@@ -351,6 +432,9 @@ public class TextGenScript {
      */
     final public char whatisit;    
     
+    /**From Zbnf <""?text>, constant text, null if not used. */
+    public String text; 
+
     //public String value;
     
     //public List<String> path;
@@ -561,10 +645,10 @@ public class TextGenScript {
     {
       switch(whatisit){
       case 't': return text;
-      case 'v': return "(?" + text + "?)";
+      case 'v': return "<=" + name + ">";
       case 'o': return "(?outp." + text + "?)";
       case 'i': return "(?inp." + text + "?)";
-      case 'e': return "<*" + datapath + ">";
+      case 'e': return "<*" +   ">";  //sumExpressions.get(0).datapath
       //case 'g': return "<$" + path + ">";
       case 's': return "<*subtext:" + name + ">";
       case 'I': return "(?forInput?)...(/?)";
@@ -578,7 +662,8 @@ public class TextGenScript {
       case 'Z': return "<:target:" + name + ">";
       case 'Y': return "<:file>";
       case 'X': return "<:subtext:" + name + ">";
-      default: return "(??" + text + "?)";
+      case 'J': return "<=" + name + ":objVariable>";
+      default: return "(??" + whatisit + " " + text + "?)";
       }
     }
     
@@ -592,6 +677,8 @@ public class TextGenScript {
     
     ScriptElement condition;
     
+    boolean bElse;
+    
     CalculatorExpr expr;
     
     IfCondition(char whatis){
@@ -603,7 +690,14 @@ public class TextGenScript {
       return condition;
     }
     
-    public void add_cmpOperation(ScriptElement val){}
+    public void add_cmpOperation(ScriptElement val){
+      String text;
+      if(val.sumExpression !=null && val.sumExpression.values !=null && val.sumExpression.values.size()==1
+        && (text = val.sumExpression.values.get(0).text) !=null && text.equals("else") ){
+        bElse = true;
+      }
+        
+    }
 
 
     
