@@ -31,7 +31,7 @@ import org.vishia.util.FileSystem;
  *          Therefore it is regarded in the translation process. If all source files are produced newly in that way, 
  *          this method is ineffective.
  *          <li>If a older file should be taken with other content, it is not recognized as changed (as newly for translation).
- *       <ul>
+ *       </ul>
  *     </ul>      
  * <li>Comparison with stored last file: This may be seems as a expensive method. 
  *     It allows to compare whether only productive code is changed, in opposite to comments, 

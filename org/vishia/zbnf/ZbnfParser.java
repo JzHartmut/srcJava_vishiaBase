@@ -41,6 +41,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 //import org.vishia.util.SortedTreeNode;
+import org.vishia.util.Assert;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.XmlNodeSimple;
@@ -121,7 +122,11 @@ public class ZbnfParser
   
   /**Version-ident.
    * list of changes:
-   * <ul>2012-11-02 Hartmut new local class {@link ParseResultlet}, the {@link PrescriptParser} contains a reference to it.
+   * <ul>
+   * <li>2013-01-04 Hartmut new {@link #alreadyParsedCmpn}. It may be speed up the parsing process but only if the same component
+   *   is requested  at the same position inside another component. It is not used yet. 
+   *   Todo: position of text for <syntax?!subsyntax) starts with position 0, it is faulty for that.
+   * <li>2012-11-02 Hartmut new local class {@link ParseResultlet}, the {@link PrescriptParser} contains a reference to it.
    *   The resultlet is the first action to save gotten parse results though the result is not convenient in the current context.
    *   This result may be re-used later in another context (not programmed yet, only prepared).
    *   In that context any component's result is converted to an XML tree presentation. This may be the new strategy for parse result storing.
@@ -164,7 +169,7 @@ public class ZbnfParser
   /** Class to organize parsing of a component with a own prescript.
    *  It is the outer class of the working class {@link ZbnfParser.PrescriptParser.SubParser}.  
    */
-  private class PrescriptParser
+  class PrescriptParser
   {
     final ParseResultlet resultlet;
      /**
@@ -211,7 +216,7 @@ public class ZbnfParser
         , ZbnfSyntaxPrescript syntax
         , String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { 
-      resultlet = new ParseResultlet(syntax);
+      resultlet = new ParseResultlet(syntax, input.getCurrentPosition());
       //System.out.println("ZbnfParser - PrescriptPaser; " + input.debugString() + syntax.sSemantic);
       parentPrescriptParser = parent;
       
@@ -226,10 +231,10 @@ public class ZbnfParser
     
     
     
-    /**Parses a syntax-prescript assigned with this class. This routine should be called 
+    /**Parses the syntax-prescript assigned with this class. This routine should be called 
      * only one time with a new instance of SubParser. But some instances of SubParser may be created in nested levels.
      *   
-     * The input is used from the outer class Parser, aggregation 'input'.
+     * The input is given in the constructor, calld from the outer class {@link ZbnfParser}.
      * It is running in a while()-loop. The loop breaks at end of syntax-prescript or
      * if no path in syntax prescript matches to the input. Inside the method 
      * {@link ZbnfParser.PrescriptParser.SubParser#parseComponent(StringPart, int, String, String, boolean, boolean, boolean)}
@@ -322,11 +327,14 @@ public class ZbnfParser
       }
       if(bOk){
         if(ixStoreStart >= parserStoreInPrescript.items.size())
-          stop();
+          assert(false);
         else{
           ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
           //Build a part of the XML tree from the start parse result without parent.
           resultlet.xmlResult = ZbnfParserStore.buildTreeNodeRepresentationXml(null, parseResultStart, true);
+          resultlet.endPosText = input.getCurrentPosition();
+          String key = String.format("%9d", resultlet.startPosText) + resultlet.syntaxPrescript.sDefinitionIdent;
+          alreadyParsedCmpn.put(key, resultlet);
         }
       }
       return bOk;
@@ -1228,6 +1236,12 @@ public class ZbnfParser
       , boolean bAddParseResultFromPrevious
       ) throws ParseException
       { boolean bOk;
+        String sKeySearchAlreadyParsed = String.format("%9d", input.getCurrentPosition()) + sDefinitionIdent;
+        ParseResultlet resultlet = alreadyParsedCmpn.get(sKeySearchAlreadyParsed);
+        if(resultlet !=null){
+          Assert.stop();
+        }
+          
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + sDefinitionIdent + "?" + sSemanticForError + ">");
         if(sDefinitionIdent.equals("type"))
         { stop();
@@ -1874,6 +1888,13 @@ public class ZbnfParser
   private ZbnfParserStore parserStoreTopLevel; //parseResult;
 
   
+  /**Already parsed components with the same input text which should be requested in another context. 
+   * The usage of the already detected parse result speeds up the parsing process. 
+   * The syntax may be designed with such reused parts especially. 
+   * The key contains the component syntax name and the position in the input.
+   * */
+  final TreeMap<String, ParseResultlet> alreadyParsedCmpn = new TreeMap<String, ParseResultlet>();
+  
   /**Creates a empty parser instance. 
    * @param report A report output
    * */
@@ -2266,6 +2287,7 @@ public class ZbnfParser
     parserStoreTopLevel = new ZbnfParserStore(); 
     posRightestError = 0;
     sExpectedSyntax = null;
+    alreadyParsedCmpn.clear();
     sRightestError = input.getCurrentPart(80); 
     
     prescriptParserTopLevel = new PrescriptParser(null, mainScript, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
@@ -2592,15 +2614,19 @@ public class ZbnfParser
     final ZbnfSyntaxPrescript syntaxPrescript;
 
     /**The start and the end position (character in parsed Character input) */
-    int startPosText, endPosText;
+    final long startPosText;
+    long endPosText;
     
     XmlNodeSimple<ZbnfParseResultItem> xmlResult;
     
-    ParseResultlet(ZbnfSyntaxPrescript syntaxPrescript){
+    ParseResultlet(ZbnfSyntaxPrescript syntaxPrescript, long startPosText){
       this.syntaxPrescript = syntaxPrescript;
+      this.startPosText = startPosText;
     }
+
+    
+    @Override public final String toString(){ return syntaxPrescript.sDefinitionIdent; }
   }
-  
   
   
 }

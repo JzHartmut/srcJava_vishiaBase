@@ -301,7 +301,7 @@ public class ZbnfSyntaxPrescript
   protected int nodeIdent;
 
 
-  /** Identification of the definition of the syntax.
+  /**Identificator of the sub-syntax. It is the part before ::=
    * <ul>
    * <li>If this is a top-level syntax item,
    * it is the identification disposed at <code><i>sDefinitionIdent</i>:==...</code>.</li>

@@ -117,10 +117,13 @@ public class CheckDeps
         }
       }
       else if(argc.startsWith("-cfg=")) args.sFileCfg  = getArgument(5);
+      else if(argc.startsWith("-cfg:")) args.sFileCfg  = getArgument(5);
       else if(argc.startsWith("-depAll=")) args.sFileDep  = getArgument(8);
+      else if(argc.startsWith("-depAll:")) args.sFileDep  = getArgument(8);
       else if(argc.startsWith("cmpAndCpy")) args.cmpAndCpy = true;
       else if(argc.startsWith("evalDeps")) args.evalDeps = true;
       else if(argc.startsWith("-lastPath=")) args.sPathLast = getArgument(10);
+      else if(argc.startsWith("-lastPath:")) args.sPathLast = getArgument(10);
       else if(argc.startsWith("-testDummyObj")) args.testDummyObj = true;
       else bOk=false;
       return bOk;

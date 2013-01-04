@@ -988,33 +988,38 @@ class ZbnfParserStore
   }
 
   
-  /**Builds an XML tree node representation for the current element and its children.
+  /**Builds an XML tree node representation for the current element and its children of a parser result item.
+   * @param xmlParent null if a  {@link ZbnfParser.ParseResultlet#xmlResult} is built 
+   *   in {@link ZbnfParser.PrescriptParser#parsePrescript1(String, ZbnfParseResultItem, ZbnfParserStore, ZbnfParserStore, boolean, int)}.
+   *   in this case the node has not a parent. The parent if this method is called recursively internally.
+   * @param cmpnResult The Zbnf result component in the Zbnf Arraylist presentation.
    * @param bRecursive true then for all children of children.
+   * @return
    */
   static XmlNodeSimple<ZbnfParseResultItem>  buildTreeNodeRepresentationXml(XmlNodeSimple<ZbnfParseResultItem> xmlParent
       , ParseResultItemImplement cmpnResult, boolean bRecursive) 
   {
-    long time = System.nanoTime();
+    //long time = System.nanoTime();
     XmlNodeSimple<ZbnfParseResultItem> xmlNode = cmpnResult.treeNodeXml;
     if(xmlNode ==null){
-      xmlNode = createXmlNode(xmlParent, cmpnResult);
-      cmpnResult.treeNodeXml = xmlNode;
+      cmpnResult.treeNodeXml = xmlNode = createXmlNode(xmlParent, cmpnResult);
       if(cmpnResult.isComponent()){
         Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
         while(iter.hasNext()) { 
           ZbnfParseResultItem item =iter.next(); 
           ParseResultItemImplement childResult = (ParseResultItemImplement)item;
-          XmlNodeSimple<ZbnfParseResultItem> xmlChild;
-          if(childResult.treeNodeXml !=null){
-            //it has a child gotten already, it should not added 
-            xmlChild = childResult.treeNodeXml;
-            if(xmlNode !=null){
+          XmlNodeSimple<ZbnfParseResultItem> xmlChild = childResult.treeNodeXml;
+          if( xmlChild !=null){
+            //The child component has a treeNodeRepresentation already.
+            //It is because it is a component, any component has gotten its treeNodeRepresentation already.
+            assert(xmlNode !=null);
             if(xmlChild.getParent() !=null){
-                Assert.check(true);
+              Assert.check(false);
             }
             try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
-            }
           } else {
+            assert(!childResult.isComponent());
+            //No component. Build a leaf and add it.
             if(bRecursive){
               buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
               xmlChild = childResult.treeNodeXml;
@@ -1025,7 +1030,7 @@ class ZbnfParserStore
         }
       }
     }
-    time = System.nanoTime() - time;
+    //time = System.nanoTime() - time;
     //System.out.println("buildTreeNodeRepresentationXml; " + time + "; " + cmpnResult.sSemantic);
     return xmlNode;
   }
@@ -1070,7 +1075,7 @@ class ZbnfParserStore
             //add the textual parse result to a leaf node.
             String sText = parseResult.getText();
             if(sText !=null){
-              xmlNode.addContent(sText);
+              xmlNode.addContent(sText); 
             } else {
               Assert.check(false);
             }
