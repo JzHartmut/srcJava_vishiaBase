@@ -1009,10 +1009,10 @@ class ZbnfParserStore
             //it has a child gotten already, it should not added 
             xmlChild = childResult.treeNodeXml;
             if(xmlNode !=null){
-              if(xmlChild.getParent() !=null){
+            if(xmlChild.getParent() !=null){
                 Assert.check(true);
-              }
-              try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
+            }
+            try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
             }
           } else {
             if(bRecursive){
@@ -1042,7 +1042,7 @@ class ZbnfParserStore
       sep = semantic.indexOf('/');
       if(sep >=0){
         String sLeftSemantic = semantic.substring(0, sep);
-        XmlNodeSimple<ZbnfParseResultItem> xmlMeta = (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
+        XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
         if(xmlMeta ==null){
           xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sLeftSemantic);
           if(xmlParent !=null){
