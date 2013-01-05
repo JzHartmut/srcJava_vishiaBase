@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -93,6 +94,10 @@ public class CheckDependencyFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-06 Hartmut chg: Now supports more as one obj file. This is necessary if one make process compiles several versions.
+   *   The routine {@link #setDirObj(String)} is changed in parameter form.
+   * <li>2013-01-06 Hartmut chg order of search in {@link #searchInclFileInIncludePath(String, List)}, not at last 'y'.
+   *   Elsewhere not founded includefiles are not reported.
    * <li>2012-12-25 Hartmut chg: Now This class is able to use independently from {@link CheckDeps}. It should be used
    *   to check file by file. All other classes are adapted. 
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
@@ -150,8 +155,10 @@ public class CheckDependencyFile
   
   /**The dirObj refers to the object root directory.
    */
-  File dirObjRoot;
+  File XXXdirObjRoot;
 
+  
+  List<String> dirObjRoots = new LinkedList<String>();
 
   
   
@@ -182,12 +189,23 @@ public class CheckDependencyFile
   
   
   
-  public String setDirObj(String sDirObj){
+  /**Set one object directory
+   * @param sDirObjExt Should have the form "path/*.objExt"
+   * @return
+   */
+  public String setDirObj(String sDirObjExt){
     String sError = null;
-    try{ 
-      dirObjRoot = FileSystem.mkDirPath(sDirObj + "/");   //assert that the directory exists. A build file can written into.
+    if(sDirObjExt.indexOf("/*.")<0){
+      sError = "CheckDeps - Format of obj path, should be \"path/*.objext\"; " + sDirObjExt;
     }
-    catch(IOException exc){ sError = "CheckDeps - Problem with obj path; " + exc.getMessage(); }
+    else {
+      try{ 
+        //dirObjRoot = 
+        FileSystem.mkDirPath(sDirObjExt);   //assert that the directory exists. A build file can written into.
+        dirObjRoots.add(sDirObjExt);
+      }
+      catch(IOException exc){ sError = "CheckDeps - Problem with obj path; " + exc.getMessage(); }
+    }
     return sError;
   }
   
@@ -271,7 +289,7 @@ public class CheckDependencyFile
     String sExt = sLocalPathName.substring(posExt+1);
     //
     if(sExt.startsWith("c") || sExt.startsWith("C") || sExt.equals("s") || sExt.equals("S")){
-      objDeps = new ObjectFileDeps(dirObjRoot, sLocalPathName, sObjExt); 
+      objDeps = new ObjectFileDeps(dirObjRoots, sLocalPathName); 
       objDeps.createObjDir(console);
     } else {
       objDeps = null;
@@ -700,17 +718,17 @@ public class CheckDependencyFile
       }
     }
     if(fileIncl == null){
-      typeInclude[0] = 'i';
-      fileIncl = searchInclFileInIncludePath(sPathInIncludeLine, cfgData.listInclPaths);
-    }   
+      typeInclude[0] = 'y';
+      fileIncl = searchInclFileInIncludePath(sPathInIncludeLine, cfgData.listSystemInclPaths);
+    }
     if(fileIncl == null){
       typeInclude[0] = 'g';
       fileIncl = searchInclFileInIncludePath(sPathInIncludeLine, cfgData.listGenSrcInclPaths);
     }   
     if(fileIncl == null){
-      typeInclude[0] = 'y';
-      fileIncl = searchInclFileInIncludePath(sPathInIncludeLine, cfgData.listSystemInclPaths);
-    }
+      typeInclude[0] = 'i';
+      fileIncl = searchInclFileInIncludePath(sPathInIncludeLine, cfgData.listInclPaths);
+    }   
     return fileIncl;
   }
   
