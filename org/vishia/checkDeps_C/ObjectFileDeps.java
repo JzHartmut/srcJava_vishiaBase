@@ -27,6 +27,7 @@ class ObjectFileDeps
 {
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-06 Hartmut chg: Now supports more as one obj file. This is necessary if one make process compiles several versions.
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
    * <li>2011-05-00 Hartmut created: It was necessary for C-compilation to check real dependencies in a fast way.
@@ -61,8 +62,10 @@ class ObjectFileDeps
 
   
   /**The object file. */
-  private final File fileObj;
-  private final long timestampObj;
+  //private final File fileObj;
+  //private final long timestampObj;
+  
+  private final List<File> fileObjs = new LinkedList<File>();
   
   private long timestampSrcNewest;
   
@@ -80,8 +83,8 @@ class ObjectFileDeps
   private final List<InfoFileDependencies> newerFiles = new LinkedList<InfoFileDependencies>();
   
   private ObjectFileDeps(File fileObj){
-    this.fileObj = fileObj;
-    timestampObj = fileObj == null ? Long.MAX_VALUE: fileObj.lastModified();
+    //this.fileObj = fileObj;
+    //timestampObj = fileObj == null ? Long.MAX_VALUE: fileObj.lastModified();
     //this.fileDeps = null;
   }
   
@@ -89,8 +92,20 @@ class ObjectFileDeps
   ObjectFileDeps(File dirObjRoot, String sLocalPath, String sExtObj){
     int posExt = sLocalPath.lastIndexOf('.');
     File fileObj = new File(dirObjRoot, sLocalPath.substring(0, posExt) + sExtObj);
-    this.fileObj = fileObj;
-    timestampObj = fileObj == null ? Long.MAX_VALUE: fileObj.lastModified();
+    //this.fileObj = fileObj;
+    //timestampObj = fileObj == null ? Long.MAX_VALUE: fileObj.lastModified();
+  }
+  
+  
+  ObjectFileDeps(List<String> dirObjRoots, String sLocalPath){
+    int posExt = sLocalPath.lastIndexOf('.');
+    for(String sDirObjRoot: dirObjRoots){
+      StringBuilder uDirObj = new StringBuilder(sDirObjRoot);
+      int posName = uDirObj.indexOf("*");
+      uDirObj.replace(posName, posName+1, sLocalPath.substring(0, posExt));
+      File fileObj = new File(uDirObj.toString());
+      fileObjs.add(fileObj);
+    }
   }
   
   
@@ -104,12 +119,14 @@ class ObjectFileDeps
     boolean bNewer;
     if(infoFile.isNewlyOrIncludedNewly()){
       bNewer = true;
-    } else if(!infoFile.isSrcFile() && infoFile.timestampNewestDependingFiles_ > timestampObj){
-      bNewer = true;
-      assert(false);
     } else {
       bNewer = false;
-      assert(false);
+      for(File fileObj: fileObjs){
+        if(fileObj.exists() && fileObj.lastModified() < infoFile.timestampNewestDependingFiles_){
+          bNewer = true;
+        }
+      }
+      //assert(false);
     }
     if(bNewer){
       if(infoFile.timestampNewestDependingFiles_ > timestampSrcNewest){
@@ -117,18 +134,20 @@ class ObjectFileDeps
       }
       newerFiles.add(infoFile);
       //try to delete the obj now, not at least (better for debugging).
-      if(fileObj.exists()){
-        if(fileObj.delete()){
-          objIsDeleted = 'd';
-          console.writeInfoln("CheckDeps - obj-deleted;" + fileObj.getPath());
-          bDelete = true;
-        } else {
-          console.writeError("Problem deleting object: " + fileObj.getAbsolutePath());
+      for(File fileObj: fileObjs){
+        if(fileObj.exists()){
+          if(fileObj.delete()){
+            objIsDeleted = 'd';
+            console.writeInfoln("CheckDeps - obj-deleted;" + fileObj.getPath());
+            bDelete = true;
+          } else {
+            console.writeError("Problem deleting object: " + fileObj.getAbsolutePath());
+          }
+        } else if(objIsDeleted == '.'){
+          objIsDeleted = 'n';
+          console.writeInfoln("CheckDeps - obj-recompile;" + fileObj.getPath());
+          bDelete = true;        //for test without compiled obj. All obj which will be deleted if exists are countered.
         }
-      } else if(objIsDeleted == '.'){
-        objIsDeleted = 'n';
-        console.writeInfoln("CheckDeps - obj-recompile;" + fileObj.getPath());
-        bDelete = true;        //for test without compiled obj. All obj which will be deleted if exists are countered.
       }
     }
     return bDelete;
@@ -137,9 +156,11 @@ class ObjectFileDeps
   
   public void createObjDir(MainCmdLogging_ifc console)
   {
-    try{ FileSystem.mkDirPath(fileObj); }
-    catch(IOException exc){
-      console.writeError("Problem creating directory for: " + fileObj.getAbsolutePath());
+    for(File fileObj: fileObjs){
+      try{ FileSystem.mkDirPath(fileObj); }
+      catch(IOException exc){
+        console.writeError("Problem creating directory for: " + fileObj.getAbsolutePath());
+      }
     }
   }
   

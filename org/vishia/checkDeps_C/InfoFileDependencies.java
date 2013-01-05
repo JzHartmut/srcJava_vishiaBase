@@ -15,11 +15,13 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
+import org.vishia.util.UnexpectedException;
 
 
-/**Information about any file, source or header, with its dependencies
- * to included files.
+/**Information about one file, source or header, with its dependencies and its influences.
+ * 
  */
 public class InfoFileDependencies implements AddDependency_InfoFileDependencies
 {
@@ -354,8 +356,8 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
    * 
    */
   static void writeAllBackDeps(String sDepFileName, Map<String,InfoFileDependencies> indexAllDeps)
-  { try{
-      Writer writer = null;
+  { Writer writer = null;
+    try{
       if(sDepFileName !=null){
         File fileDep = new File(sDepFileName);
         try{
@@ -382,10 +384,13 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
       //
       for(Map.Entry<String,InfoFileDependencies> infoEntry: indexAllDeps.entrySet()){
         //for all parents of this:
+        String key = infoEntry.getKey();
+        if(key.contains("ccs_param_values.h"))
+          Assert.stop();
         InfoFileDependencies info = infoEntry.getValue();
         writer.append("\n");
         //writer.append("\nFile: " + info.sAbsolutePath + ": " );
-        writer.append("\nFile: " + info.getDataNameLine());
+        writer.append("\nFile: ").append(info.getDataNameLine()).append(";");
         writer.append("\n  .includes: ");
         for(Map.Entry<String,InfoFileDependencies> includedEntry: info.includedPrimaryFiles.entrySet()){
           InfoFileDependencies including = includedEntry.getValue();
@@ -414,6 +419,9 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
       writer.append("\n");
     }catch(IOException exc) {
       throw new RuntimeException(exc);
+    }
+    if(writer !=null){
+      try{ writer.close();} catch(IOException exc){ throw new UnexpectedException(exc); }
     }
   }
 

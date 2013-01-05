@@ -101,7 +101,7 @@ public final class TextGenSyntax {
     + "sumExpression::={ <dataAccess?sumValue> ? [! + | -] }.\n"
     + "\n"
     + "dataAccess::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
-    + "              | $new <newJavaClass> | $!<staticJavaMethod> |<datapath>].\n"
+    + "              | $new\\  <newJavaClass> | $!<staticJavaMethod> |<datapath>].\n"
     + "\n"
     + "newJavaClass::= <$\\.?javapath> [ ({ <sumExpression?argument> ? , } )].\n" ///
     + "staticJavaMethod::= <$\\.?javapath> ( [ { <sumExpression?argument> ? , } ] ).\n"

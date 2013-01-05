@@ -4,6 +4,8 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.util.Assert;
+
 
 /**Contains the data read from the config file. */
 public class CfgData
@@ -73,6 +75,8 @@ public class CfgData
    */
   String checkIsInSourcePool(String sAbsolutePath)
   {
+    if(sAbsolutePath.contains("ccs_param_values.h"))
+      Assert.stop();
     for(InputSrc inputSrc: listSourcePaths){
       if(sAbsolutePath.startsWith(inputSrc.sCanonicalPathSrc)){ 
         String sLocalPath = sAbsolutePath.substring(inputSrc.sCanonicalPathSrc.length());
