@@ -1020,7 +1020,7 @@ class ZbnfParserStore
             }
             try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
           } else {
-            assert(!childResult.isComponent());
+            //assert(!childResult.isComponent());
             //No component. Build a leaf and add it.
             if(bRecursive){
               buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
@@ -1079,7 +1079,8 @@ class ZbnfParserStore
             if(sText !=null){
               xmlNode.addContent(sText); 
             } else {
-              Assert.check(false);
+              //it is possible to have a node without text!
+              //Assert.check(false);
             }
           }
           if(xmlParent !=null){
