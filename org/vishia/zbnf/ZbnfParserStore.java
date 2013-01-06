@@ -385,6 +385,7 @@ class ZbnfParserStore
           case kIdentifier: ret = parsedString; break;
           case kOption: ret = parsedString!=null ? parsedString : ""; break;
           case kString: ret = parsedString; break;
+          case kOnlySemantic: ret = null; break;
           default: ret = "??unknown kind of node = " + Integer.toHexString(kind) + "=" + Integer.toHexString(-kind) + ".?"; break;
         }
       }
