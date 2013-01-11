@@ -14,7 +14,6 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
-import org.vishia.xmlSimple.XmlException;
 import org.vishia.zTextGen.TextGenScript.ZbnfDataPathElement;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
@@ -53,6 +52,7 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2013-01-12 Hartmut chg: improvements while documentation. Some syntax details. Especially handling of visibility of variables.
    * <li>2013-01-02 Hartmut chg: The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
@@ -105,17 +105,6 @@ public class TextGenerator {
   @SuppressWarnings("hiding")
   static final public int version = 20121010;
 
-  
-  
-  
-  //BufferedReader readerScript;
-  
-  //Appendable out;
-
-  //StringBuilder uLine = new StringBuilder(5000);
-
-  //String sLine;
-  
   Object data;
   
   String sError = null;
@@ -133,8 +122,11 @@ public class TextGenerator {
   TextGenScript genScript;
   
   /**Instance for the main script part. */
-  Gen_Content genFile = new Gen_Content(null);
+  //Gen_Content genFile;
 
+  /**Generated content of local variables or reference to any data for this content and all sub contents. */
+  final Map<String, Object> scriptVariables = new TreeMap<String, Object>();
+  
   private boolean bScriptVariableGenerated;
   
   public TextGenerator(MainCmdLogging_ifc log){
@@ -215,7 +207,7 @@ public class TextGenerator {
    * @param userData Used userdata for content of scriptvariables. It should be the same how used on 
    *   {@link #genContent(TextGenScript, Object, boolean, Appendable)} but it may be another one for special cases.
    * @param accessPrivate true than access to private data of userData
-   * @return The built script variables. It is the @{@link Gen_Content#localVariables} of {@link #genFile}.
+   * @return The built script variables. 
    *   One can evaluate some script variables before running {@link #genContent(TextGenScript, Object, boolean, Appendable)}.
    *   Especially it is used for {@link org.vishia.zmake.Zmake to set the currDir.} 
    * @throws IOException
@@ -227,18 +219,19 @@ public class TextGenerator {
     this.data = userData;
     this.accessPrivate = accessPrivate;
     
-    genFile.localVariables.put("error", accessError);
-    genFile.localVariables.put("mainCmdLogging", log);
-    genFile.localVariables.put("nextNr", nextNr);
-    
+    scriptVariables.put("error", accessError);
+    scriptVariables.put("mainCmdLogging", log);
+    scriptVariables.put("nextNr", nextNr);
+    scriptVariables.put("nrElementInContainer", null);
+
     for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
-      Gen_Content genVariable = new Gen_Content(null);
-      genVariable.genContent(scriptVariableScript.getSubContent(), uVariable, false);
-      genFile.localVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
+      Gen_Content genVariable = new Gen_Content(scriptVariables, uVariable); //NOTE: use recent scriptVariables.
+      genVariable.genContent(scriptVariableScript.getSubContent(), false);
+      scriptVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
     }
     bScriptVariableGenerated = true;
-    return genFile.localVariables;
+    return scriptVariables;
   }
   
 
@@ -261,21 +254,9 @@ public class TextGenerator {
     if(!bScriptVariableGenerated){
       genScriptVariables(genScript, userData, accessPrivate);
     }
-    
-    /*
-    //the variable (?=currDir?) may exist. Get it:
-    sCurrDir = scriptVariables.get("currDir");
-    if(sCurrDir == null){
-      sCurrDir = "";
-    }
-    */
-
-    
-    
-    
-    
     TextGenScript.ScriptElement contentScript = genScript.getFileScript();
-    String sError = genFile.genContent(contentScript.subContent, out, false);
+    Gen_Content genFile = new Gen_Content(scriptVariables, out);
+    String sError = genFile.genContent(contentScript.subContent, false);
     return sError;
   }
 
@@ -376,20 +357,29 @@ public class TextGenerator {
   
   
   
+  /**Wrapper to generate a script in a specified output with specified localVariables.
+   * A new Wrapper is created on <:file>, <:subtext> or on abbreviated output, especially to generate into variables.
+   * @author Hartmut
+   *
+   */
   final class Gen_Content
   {
-    final Gen_Content parent;
+    //final Gen_Content parent;
     
     /**Generated content of local variables or reference to any data for this content and all sub contents. */
-    Map<String, Object> localVariables = new TreeMap<String, Object>();
+    final Map<String, Object> localVariables;
+    
+    final Appendable out;
     
     
-    
-    
-    public Gen_Content(Gen_Content parent)
-    { this.parent = parent;
-      if(parent !=null){
-        this.localVariables.putAll(parent.localVariables);
+    public Gen_Content(Map<String, Object> parentVariables, Appendable out)
+    { //this.parent = parent;
+      this.out = out;
+      if(parentVariables == null){
+        localVariables = new TreeMap<String, Object>();
+        localVariables.putAll(scriptVariables);
+      } else {
+        this.localVariables = parentVariables;  //use the same if it is not a subText, only a 
       }
     }
 
@@ -401,30 +391,10 @@ public class TextGenerator {
      * @return
      * @throws IOException if out throws it.
      */
-    public String genContent(TextGenScript.GenContent contentScript, Appendable out, boolean bContainerHasNext) 
+    public String genContent(TextGenScript.GenContent contentScript, boolean bContainerHasNext) 
     throws IOException
     {
       Appendable uBuffer = out;
-      //Fill all local variable, which are defined in this script.
-      //store its values in the local Gen_Content-instance.
-      /*
-      for(TextGenScript.ScriptElement variableScript: contentScript.getLocalVariables()){
-        if(variableScript.name.equals("objdir"))
-          Assert.stop();
-        if(variableScript.whatisit == 'J'){
-          Object value = getContent(variableScript, localVariables, false);  //not a container
-          localVariables.put(variableScript.name, value);
-        } else { //a text variable
-          assert(variableScript.whatisit == 'v');
-          StringBuilder uBufferVariable = new StringBuilder();
-          Gen_Content genVariable = new Gen_Content(this);
-          TextGenScript.GenContent content = variableScript.getSubContent();
-          genVariable.genContent(content, uBufferVariable, false);
-          //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-          localVariables.put(variableScript.name, uBufferVariable);
-        }
-      }
-      */
     
       //Generate direct requested output. It is especially on inner content-scripts.
       for(TextGenScript.ScriptElement contentElement: contentScript.content){
@@ -446,11 +416,11 @@ public class TextGenerator {
             
           } while(posEnd >=0);  //output all lines.
         } break;
-        case 'v': {
+        case 'v': { //create a new local variable.
           StringBuilder uBufferVariable = new StringBuilder();
-          Gen_Content genVariable = new Gen_Content(this);
+          Gen_Content genVariable = new Gen_Content(localVariables, uBufferVariable);
           TextGenScript.GenContent content = contentElement.getSubContent();
-          genVariable.genContent(content, uBufferVariable, false);
+          genVariable.genContent(content, false);
           //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
           localVariables.put(contentElement.name, uBufferVariable);
         } break;
@@ -483,16 +453,16 @@ public class TextGenerator {
         } break;
         */
         case 's': {
-          genSubtext(contentElement, out);
+          genSubtext(contentElement);
         } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
-          generateForContainer(contentElement, out);
+          generateForContainer(contentElement);
         } break;
         case 'F': { 
-          generateIfStatement(contentElement, data, out);
+          generateIfStatement(contentElement);
         } break;
         case 'N': {
-          generateIfContainerHasNext(contentElement, out, bContainerHasNext);
+          generateIfContainerHasNext(contentElement, bContainerHasNext);
         } break;
         default: 
           uBuffer.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
@@ -504,7 +474,7 @@ public class TextGenerator {
     
     
     
-    void generateForContainer(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException
+    void generateForContainer(TextGenScript.ScriptElement contentElement) throws IOException
     {
       TextGenScript.GenContent subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
@@ -518,9 +488,11 @@ public class TextGenerator {
         while(iter.hasNext()){
           Object foreachData = iter.next();
           if(foreachData !=null){
-            Gen_Content genFor = new Gen_Content(this);
-            genFor.localVariables.put(contentElement.name, foreachData);
-            genFor.genContent(subContent, out, iter.hasNext());
+            //Gen_Content genFor = new Gen_Content(this, false);
+            //genFor.
+            localVariables.put(contentElement.name, foreachData);
+            //genFor.
+            genContent(subContent, iter.hasNext());
           }
         }
       }
@@ -532,9 +504,11 @@ public class TextGenerator {
           Map.Entry<?, ?> foreachDataEntry = (Map.Entry<?, ?>)iter.next();
           Object foreachData = foreachDataEntry.getValue();
           if(foreachData !=null){
-            Gen_Content genFor = new Gen_Content(this);
-            genFor.localVariables.put(contentElement.name, foreachData);
-            genFor.genContent(subContent, out, iter.hasNext());
+            //Gen_Content genFor = new Gen_Content(this, false);
+            //genFor.
+            localVariables.put(contentElement.name, foreachData);
+            //genFor.
+            genContent(subContent, iter.hasNext());
           }
         }
       }
@@ -542,16 +516,17 @@ public class TextGenerator {
     
     
     
-    void generateIfContainerHasNext(TextGenScript.ScriptElement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
+    void generateIfContainerHasNext(TextGenScript.ScriptElement hasNextScript, boolean bContainerHasNext) throws IOException{
       if(bContainerHasNext){
-        (new Gen_Content(this)).genContent(hasNextScript.getSubContent(), out, false);
+        //(new Gen_Content(this, false)).
+        genContent(hasNextScript.getSubContent(), false);
       }
     }
     
     
     
     /**it contains maybe more as one if block and else. */
-    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Object userData, Appendable out) throws IOException{
+    void generateIfStatement(TextGenScript.ScriptElement ifStatement) throws IOException{
       Iterator<TextGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
@@ -559,11 +534,11 @@ public class TextGenerator {
         switch(contentElement.whatisit){
           case 'G': { //if-block
             
-            found = generateIfBlock((TextGenScript.IfCondition)contentElement, out, iter.hasNext());
+            found = generateIfBlock((TextGenScript.IfCondition)contentElement, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
-              genContent(contentElement.subContent, out, false);
+              genContent(contentElement.subContent, false);
             }
           } break;
           default:{
@@ -575,7 +550,7 @@ public class TextGenerator {
     
     
     
-    boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
+    boolean generateIfBlock(TextGenScript.IfCondition ifBlock, boolean bIfHasNext) throws IOException{
       Object check = getContent(ifBlock, localVariables, false);
       boolean bCondition;
       if(ifBlock.condition !=null && ifBlock.bElse){ //condition.sumExpression.constValue !=null && ifBlock.condition.sumExpression.constValue.equals("else")){
@@ -609,7 +584,7 @@ public class TextGenerator {
         }
       }
       if(bCondition){
-        genContent(ifBlock.subContent, out, bIfHasNext);
+        genContent(ifBlock.subContent, bIfHasNext);
       }
       return bCondition;
     }
@@ -623,7 +598,7 @@ public class TextGenerator {
     
     
     
-    void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
+    void genSubtext(TextGenScript.ScriptElement contentElement) throws IOException{
       boolean ok = true;
       final String nameSubtext;
       if(contentElement.name == null){
@@ -637,7 +612,7 @@ public class TextGenerator {
       if(subtextScript == null){
         ok = writeError("<? *subtext:" + nameSubtext + " not found.?>", out);
       } else {
-        Gen_Content subtextGenerator = new Gen_Content(this);
+        Gen_Content subtextGenerator = new Gen_Content(null, out);
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
@@ -695,7 +670,7 @@ public class TextGenerator {
           ok = writeError("<? *subtext;" + nameSubtext + " called with arguments, it has not one. ?>", out);
         }
         if(ok){
-          subtextGenerator.genContent(subtextScript.subContent, out, false);
+          subtextGenerator.genContent(subtextScript.subContent, false);
         }
       }
     }

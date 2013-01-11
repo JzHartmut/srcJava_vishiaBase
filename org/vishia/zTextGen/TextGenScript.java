@@ -327,6 +327,28 @@ public class TextGenScript {
     }
     
     
+    public void set_envVariable(String ident){
+      if(datapath == null){
+        datapath = new LinkedList<DataAccess.DatapathElement>();
+      }
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+      element.whatisit = 'e';
+      element.ident = ident;
+      datapath.add(element); 
+    }
+    
+
+    public void set_startVariable(String ident){
+      if(datapath == null){
+        datapath = new LinkedList<DataAccess.DatapathElement>();
+      }
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+      element.whatisit = 'v';
+      element.ident = ident;
+      datapath.add(element); 
+    }
+    
+    
     public void set_operator(String val){ operator = val.charAt(0); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
@@ -507,13 +529,13 @@ public class TextGenScript {
     
     
     
-    /**Set from ZBNF:  (\?*<$?dataAccess>\?) */
+    /**Set from ZBNF:  (\?*<$?dataText>\?) */
     public ScriptElement new_dataText(){ return new ScriptElement('e', null); }
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void add_dataText(ScriptElement val){ subContent.content.add(val); }
     
-    /**Set from ZBNF:  (\?*<$?dataAccess>\?) */
+    /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
@@ -783,7 +805,7 @@ public class TextGenScript {
     
     public void add_genFile(ScriptElement val){  }
     
-    /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
+    /**Defines a variable with initial value. <= <variableDef?textVariable> \<\.=\>
      */
     public ScriptElement new_textVariable(){ return new ScriptElement('v', null); }
 
