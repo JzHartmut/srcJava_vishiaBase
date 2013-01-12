@@ -15,6 +15,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.StringPart;
@@ -34,17 +35,21 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-13 Hartmut chg: The {@link Expression#ascertainValue(Object, Map, boolean, boolean, boolean)} is moved
+   *   and adapted from TextGenerator.getContent. It is a feauture from the Expression to ascertain its value.
+   *   That method and {@link Expression#text()} can be invoked from a user script immediately.
+   *   The {@link Expression} is used in {@link org.vishia.zmake.ZmakeUserScript}.
    * <li>2013-01-02 Hartmut chg: localVariableScripts removed. The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    * <li>2012-12-24 Hartmut chg: Now the 'ReferencedData' are 'namedArgument' and it uses 'dataAccess' inside. 
-   *   The 'dataAccess' is represented by a new {@link ScriptElement}('e',...) which can have {@link SumExpression#constValue} 
-   *   instead a {@link SumExpression#datapath}. 
+   *   The 'dataAccess' is represented by a new {@link ScriptElement}('e',...) which can have {@link Expression#constValue} 
+   *   instead a {@link Expression#datapath}. 
    * <li>2012-12-24 Hartmut chg: {@link ZbnfDataPathElement} is a derived class of {@link DataAccess.DatapathElement}
    *   which contains destinations for argument parsing of a called Java-subroutine in a dataPath.  
    * <li>2012-12-23 Hartmut chg: A {@link ScriptElement} and a {@link Argument} have the same usage aspects for arguments
    *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link SumExpression#text} if a data path is given, use for formatting a numerical value.   
+   * <li>2012-12-23 Hartmut new: formatText in the {@link Expression#text} if a data path is given, use for formatting a numerical value.   
    * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #translateAndSetGenCtrl(StringPart)} etc.
    * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
    * <li>2012-11-24 Hartmut chg: @{@link ScriptElement#datapath} with {@link DataAccess.DatapathElement} 
@@ -248,10 +253,10 @@ public class TextGenScript {
   {
     //List<ZbnfDataPathElement> actualArguments;
     
-    List<SumExpression> actualValue;
+    List<Expression> actualValue;
     
-    public SumExpression new_argument(){
-      SumExpression actualArgument = new SumExpression();
+    public Expression new_argument(){
+      Expression actualArgument = new Expression();
       //ScriptElement actualArgument = new ScriptElement('e', null);
       //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
       return actualArgument;
@@ -264,8 +269,8 @@ public class TextGenScript {
      * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
      * @param val The Scriptelement which describes how to get the value.
      */
-    public void add_argument(SumExpression val){ 
-      if(actualValue == null){ actualValue = new LinkedList<SumExpression>(); }
+    public void add_argument(Expression val){ 
+      if(actualValue == null){ actualValue = new LinkedList<Expression>(); }
       actualValue.add(val);
     } 
     
@@ -280,15 +285,110 @@ public class TextGenScript {
   /**
   *
   */
-  public static class SumExpression{
+  public static class Expression{
   
     List<SumValue> values = new ArrayList<SumValue>();
   
   
-    public SumValue new_sumValue(){ return new SumValue(); }
+    public SumValue new_value(){ return new SumValue(); }
     
-    public void add_sumValue(SumValue val){ values.add(val); }
+    public void add_value(SumValue val){ values.add(val); }
   
+    
+    
+    /**Ascertains the value which is represented by this expression. 
+     * It accessed to data using {@link DataAccess#getData(String, Object, boolean, boolean)}.
+     * @param data The data pool to access.
+     * @param localVariables additonal container for data references
+     * @param accessPrivate
+     * @param bContainer true than should return an container.
+     * @param bWriteErrorInOutput
+     * @return the Object which represents the expression in the given environment.
+     * @throws IllegalArgumentException
+     */
+    Object ascertainValue(Object data, Map<String, Object> localVariables, boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput)
+    throws IllegalArgumentException
+    { Object dataRet = null;
+      for(TextGenScript.SumValue value: this.values){
+      
+        List<DataAccess.DatapathElement> dataRef = value.datapath;
+        Object dataValue;
+        if(dataRef !=null){
+          if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$checkDeps"))
+            Assert.stop();
+          //calculate all actual arguments:
+          for(DataAccess.DatapathElement dataElement : value.datapath){  //loop over all elements of the path with or without arguments.
+            ZbnfDataPathElement zd;
+            if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
+              //it is a element with arguments, usual a method call. 
+              zd.removeAllActualArguments();
+              /*
+              for(TextGenScript.Argument zarg: zd.actualArguments){
+                Object oValue = getContent(zarg, localVariables, false);
+                zd.addActualArgument(oValue);
+              }
+              */
+              for(TextGenScript.Expression expr: zd.actualValue){
+                Object oValue = expr.ascertainValue(data, localVariables, accessPrivate, false, bWriteErrorInOutput);
+                if(oValue == null){
+                  oValue = "<? path access: " + dataRef + "?>";
+                  if(!bWriteErrorInOutput){
+                    throw new IllegalArgumentException(oValue.toString());
+                  }
+                }
+                zd.addActualArgument(oValue);
+              }
+            }
+          }
+          try{
+            dataValue = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
+          } catch(NoSuchFieldException exc){
+            dataValue = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
+            if(!bWriteErrorInOutput){
+              throw new IllegalArgumentException(dataValue.toString());
+            }
+          }
+        } else {
+          dataValue = value.constValue;
+        }
+        if(dataRet == null){
+          dataRet = dataValue;
+        } else {
+          //execute operation
+          if(dataRet instanceof CharSequence){
+            //It is only string concatenation, don't check the operator, '+'or '-' are admissible.
+            if(!(dataRet instanceof StringBuilder)){
+              dataRet = new StringBuilder((CharSequence)dataRet);
+            }
+            ((StringBuilder)dataRet).append(dataValue);
+          }
+          else if(dataRet instanceof Object){
+            
+          }
+        }
+      }
+      return dataRet;
+    }
+    
+
+    /**ascertains the text which is described in this Expression. Invokes {@link #ascertainValue(Object, Map, boolean, boolean, boolean)}
+     * and converts it to String.<br>
+     * This method does not support getting from any additional container or from datapool. Only environment variables
+     * or invocation of static methods are supported.
+     * @return
+     */
+    public String text(){ 
+      boolean bWriteErrorInOutput = true;
+      boolean bContainer = false;
+      boolean accessPrivate = true;
+      Object data = null;
+      Map<String, Object> localVariables = null;
+      Object value = ascertainValue(data, localVariables, accessPrivate, bContainer, bWriteErrorInOutput);
+      return DataAccess.getStringFromObject(value, null);
+    }
+    
+
+    
   }
   
   
@@ -385,7 +485,7 @@ public class TextGenScript {
     
     public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
 
-    @Override public String toString(){ return "sumExpression"; }
+    @Override public String toString(){ return "value"; }
 
   }
   
@@ -396,11 +496,11 @@ public class TextGenScript {
     /**Name of the argument. It is the key to assign calling argument values. */
     public String name;
     
-    SumExpression sumExpression;
+    Expression expression;
   
-    public SumExpression new_sumExpression(){ return new SumExpression(); }
+    public Expression new_expression(){ return new Expression(); }
     
-    public void add_sumExpression(SumExpression val){ sumExpression = val; }
+    public void add_expression(Expression val){ expression = val; }
     
     
   }
@@ -670,7 +770,7 @@ public class TextGenScript {
       case 'v': return "<=" + name + ">";
       case 'o': return "(?outp." + text + "?)";
       case 'i': return "(?inp." + text + "?)";
-      case 'e': return "<*" +   ">";  //sumExpressions.get(0).datapath
+      case 'e': return "<*" +   ">";  //expressions.get(0).datapath
       //case 'g': return "<$" + path + ">";
       case 's': return "<*subtext:" + name + ">";
       case 'I': return "(?forInput?)...(/?)";
@@ -714,8 +814,8 @@ public class TextGenScript {
     
     public void add_cmpOperation(ScriptElement val){
       String text;
-      if(val.sumExpression !=null && val.sumExpression.values !=null && val.sumExpression.values.size()==1
-        && (text = val.sumExpression.values.get(0).text) !=null && text.equals("else") ){
+      if(val.expression !=null && val.expression.values !=null && val.expression.values.size()==1
+        && (text = val.expression.values.get(0).text) !=null && text.equals("else") ){
         bElse = true;
       }
         

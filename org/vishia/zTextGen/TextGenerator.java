@@ -52,16 +52,17 @@ public class TextGenerator {
   
   /**Version and history
    * <ul>
+   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link TextGenScript.Expression#ascertainValue(Object, Map, boolean, boolean, boolean)}.
    * <li>2013-01-12 Hartmut chg: improvements while documentation. Some syntax details. Especially handling of visibility of variables.
    * <li>2013-01-02 Hartmut chg: The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    *   But a script-global variable referred with {@link #listScriptVariables} is defined only one time on start of text generation
    *   with the routine {@link TextGenerator#genScriptVariables(TextGenScript, Object, boolean)}.  
-   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zTextGen.TextGenScript.SumExpression, Map, boolean)} now uses
-   *   an {@link TextGenScript.SumExpression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
+   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zTextGen.TextGenScript.Expression, Map, boolean)} now uses
+   *   an {@link TextGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
    *   without extra dataPath, only with a ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link TextGenScript.SumExpression#text} if a data path is given, use for formatting a numerical value.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link TextGenScript.Expression#text} if a data path is given, use for formatting a numerical value.
    * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
    *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
@@ -105,18 +106,18 @@ public class TextGenerator {
   @SuppressWarnings("hiding")
   static final public int version = 20121010;
 
-  Object data;
+  protected Object data;
   
-  String sError = null;
+  protected String sError = null;
   
   /**Variable for any exception while accessing any java ressources. It is the $error variable of the script. */
-  String accessError = null;
+  protected String accessError = null;
   
   public final boolean bWriteErrorInOutput;
   
   private boolean accessPrivate;
   
-  final MainCmdLogging_ifc log;
+  protected final MainCmdLogging_ifc log;
   
   /**The java prepared generation script. */
   TextGenScript genScript;
@@ -248,7 +249,8 @@ public class TextGenerator {
   public String genContent(TextGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
   throws IOException
   {
-    this.accessPrivate = accessPrivate;this.data = userData;
+    this.accessPrivate = accessPrivate;
+    this.data = userData;
     this.genScript = genScript;
 
     if(!bScriptVariableGenerated){
@@ -266,75 +268,9 @@ public class TextGenerator {
   
   Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException
-  { return getContent(arg.sumExpression, localVariables, bContainer);
+  { return arg.expression.ascertainValue(data, localVariables, accessPrivate, bContainer, bWriteErrorInOutput);
   }
   
-  
-
-  
-  Object getContent(TextGenScript.SumExpression arg, Map<String, Object> localVariables, boolean bContainer)
-  throws IllegalArgumentException
-  { Object dataRet = null;
-    for(TextGenScript.SumValue value: arg.values){
-    
-      List<DataAccess.DatapathElement> dataRef = value.datapath;
-      Object dataValue;
-      if(dataRef !=null){
-        if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$checkDeps"))
-          Assert.stop();
-        //calculate all actual arguments:
-        for(DataAccess.DatapathElement dataElement : value.datapath){  //loop over all elements of the path with or without arguments.
-          ZbnfDataPathElement zd;
-          if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
-            //it is a element with arguments, usual a method call. 
-            zd.removeAllActualArguments();
-            /*
-            for(TextGenScript.Argument zarg: zd.actualArguments){
-              Object oValue = getContent(zarg, localVariables, false);
-              zd.addActualArgument(oValue);
-            }
-            */
-            for(TextGenScript.SumExpression expr: zd.actualValue){
-              Object oValue = getContent(expr, localVariables, false);
-              if(oValue == null){
-                oValue = "<? path access: " + dataRef + "?>";
-                if(!bWriteErrorInOutput){
-                  throw new IllegalArgumentException(oValue.toString());
-                }
-              }
-              zd.addActualArgument(oValue);
-            }
-          }
-        }
-        try{
-          dataValue = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
-        } catch(NoSuchFieldException exc){
-          dataValue = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
-          if(!bWriteErrorInOutput){
-            throw new IllegalArgumentException(dataValue.toString());
-          }
-        }
-      } else {
-        dataValue = value.constValue;
-      }
-      if(dataRet == null){
-        dataRet = dataValue;
-      } else {
-        //execute operation
-        if(dataRet instanceof CharSequence){
-          //It is only string concatenation, don't check the operator, '+'or '-' are admissible.
-          if(!(dataRet instanceof StringBuilder)){
-            dataRet = new StringBuilder((CharSequence)dataRet);
-          }
-          ((StringBuilder)dataRet).append(dataValue);
-        }
-        else if(dataRet instanceof Object){
-          
-        }
-      }
-    }
-    return dataRet;
-  }
   
 
   
@@ -435,7 +371,7 @@ public class TextGenerator {
           if(contentElement.text !=null && contentElement.text.equals("target")){
             //generates all targets, only advisable in the (?:file?)
             //genUserTargets(out);
-          } else if(contentElement.sumExpression/*.datapath*/ !=null){
+          } else if(contentElement.expression/*.datapath*/ !=null){
             Object oContent = getContent(contentElement, localVariables, false);
             text = DataAccess.getStringFromObject(oContent, contentElement.text);
             //text = getTextofVariable(userTarget, contentElement.text, this);
@@ -642,7 +578,7 @@ public class TextGenerator {
             for(Map.Entry<String, CheckArgument> checkArg : check.entrySet()){
               CheckArgument arg = checkArg.getValue();
               if(!arg.used){
-                if(arg.formalArg.sumExpression !=null){
+                if(arg.formalArg.expression !=null){
                   Object ref = getContent(arg.formalArg, localVariables, false);
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.name, ref);

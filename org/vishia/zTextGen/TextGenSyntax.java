@@ -5,7 +5,7 @@ public final class TextGenSyntax {
   
   /**Version, history and license.
    * <ul>
-   * <li>2013-01-05 Hartmut new: A sumExpression is a concatenation of strings or + or - of numerics. It is used for all value expressions.
+   * <li>2013-01-05 Hartmut new: A expression is a concatenation of strings or + or - of numerics. It is used for all value expressions.
    *   In this kind an argument of <*path.method("text" + $$eNV_VAR + dataPath) is possible.
    *   Also <*path + path2> is possible whereby its the same like <*$path><*$path2> in that case.
    * <li>2012-12-26 Hartmut creation of this class: The syntax should be in a separate file, better for navigation.
@@ -82,22 +82,22 @@ public final class TextGenSyntax {
     + "\n"
     + "\n"
     + "\n"
-    + "callSubtext::=[<\"\"?name>|<sumExpression>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
+    + "callSubtext::=[<\"\"?name>|<expression>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
-    + "dataText::=<sumExpression>[ : <\"\"?formatText>].\n"  //<*dataText>
+    + "dataText::=<expression>[ : <\"\"?formatText>].\n"  //<*dataText>
     + "\n"
-    + "sumExpression::={ <sumValue> ? [! + | -] }.\n"
+    + "expression::={ <value> ? [! + | -] }.\n"
     + "\n"
-    + "sumValue::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
+    + "value::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
     + "              | $new\\  <newJavaClass> | $!<staticJavaMethod> | $$<$?envVariable> | <datapath>].\n"
     + "\n"
-    + "newJavaClass::= <$\\.?javapath> [ ({ <sumExpression?argument> ? , } )].\n" ///
-    + "staticJavaMethod::= <$\\.?javapath> ( [ { <sumExpression?argument> ? , } ] ).\n"
+    + "newJavaClass::= <$\\.?javapath> [ ({ <expression?argument> ? , } )].\n" ///
+    + "staticJavaMethod::= <$\\.?javapath> ( [ { <expression?argument> ? , } ] ).\n"
     + "##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
     + "\n"
     + "datapath::=<?> $<$?startVariable>[\\.{ <datapathElement> ? \\.}] |{ <datapathElement> ? \\.}.  \n"
     + "\n"
-    + "datapathElement::=<$@-?ident> [( [{ <sumExpression?argument> ? ,}])<?whatisit=r>].\n"  
+    + "datapathElement::=<$@-?ident> [( [{ <expression?argument> ? ,}])<?whatisit=r>].\n"  
     + "\n"
     + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
     + "{ [?\\<\\.\\>]              ##abort on <.> \n"
@@ -108,18 +108,18 @@ public final class TextGenSyntax {
     + "\n"
     + "variableDef::=<?> <textVariable> | <objVariable>.\n"
     + "textVariable::= <$?name> \\> <genContent?>  \\<\\.=\\>.\n"
-    + "objVariable::= <$?name> : <sumExpression> \\>.\n"
+    + "objVariable::= <$?name> : <expression> \\>.\n"
     + "\n"
-    + "namedArgument::= <$?name>[ = <sumExpression>].\n"
+    + "namedArgument::= <$?name>[ = <expression>].\n"
     + "\n"
-    + "forContainer::= [$]<$?@name> : <sumExpression> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
+    + "forContainer::= [$]<$?@name> : <expression> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
     + "\n"
     + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <genContent?elseBlock> ] \\<\\.if\\>.\n"
     + "ifBlock::= <condition> \\> <genContent?>.\n"
     + "\n"
-    + "condition::=<?><sumExpression> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
+    + "condition::=<?><expression> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
     + "\n"
-    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <sumExpression>\n"
+    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <expression>\n"
     + "\n"
     + "\n"
     + "\n"

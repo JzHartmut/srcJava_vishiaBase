@@ -9,6 +9,7 @@ import java.util.TreeMap;
 
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
+import org.vishia.zTextGen.TextGenScript;
 
 
 public class ZmakeUserScript
@@ -91,11 +92,11 @@ public class ZmakeUserScript
    * <li><b>General path</b>: If this file entry is member of a file set, the file set can have a general path.
    *   It is given by the {@link UserFileset#srcpath}. A given general path is used for all methods. 
    *   Only this entry describes an absolute path the general path is not used. 
-   * <li><b>Drive letter or select path<b>: On windows systems a drive letter can be used in form <code>A:</code>.
+   * <li><b>Drive letter or select path</b>: On windows systems a drive letter can be used in form <code>A:</code>.
    *   The path should not be absolute. For example <code>"X:mypath\file.ext"</code> describes a file starting from the 
    *   current directory of the <code>X</code> drive. Any drive has its own current directory. A user can use this capability
    *   of windows to set different current directories in special maybe substitute drives.
-   * <li><b>Drive letter as select path<b>:  
+   * <li><b>Drive letter as select path</b>:  
    *   It may be possible (future extension) to use this capability independent of windows in this class. 
    *   For that the {@link #parent} can have some paths associated to drive letters with local meaning,
    *   If the path starts with a drive letter, the associated path is searched in the parents drive list. 
@@ -104,7 +105,7 @@ public class ZmakeUserScript
    *   calling {@link #absFile()} or adequate and the path is not given as absolute path, then the current directory is used
    *   as prefix for the path. The current directory is a property of the {@link UserScript#sCurrDir}. The current directory
    *   of the operation system is not used for that. 
-   * <li><b>opeation systems current directory<b>: In opposite if you generate a relative path and the executing system
+   * <li><b>opeation systems current directory</b>: In opposite if you generate a relative path and the executing system
    *   expects a normal path then it may use the operation system's current directory. But that behaviour is outside of this tool.
    * <li><b>Slash or backslash</b>: The user script can contain slash characters for path directory separation also for windows systems.
    *   It is recommended to use slash. The script which should be generate may expect back slashes on windows systems.
@@ -218,7 +219,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public void set_allTree(){ allTree = true; }
     
     public void set_ext(String val){
-      if(val.charAt(0) == '.' || file.length() >0){ ext = val; }
+      if((val.length() >0 && val.charAt(0) == '.') || file.length() >0){ ext = val; }
       else { file = val; }  //file is empty and ext does not start with dot. It is a filename without extension.
     }
     
@@ -709,15 +710,23 @@ fileset::=
   { final UserScript script;
     public String name;
     UserFileset fileset;
-    public UserString string;
+    
+    TextGenScript.Expression expression;
+    
+    //public UserString string;
     
     ScriptVariable(UserScript script){
       this.script = script;
     }
     public UserFileset new_fileset(){ return fileset = new UserFileset(script); }
     public void add_fileset(UserFileset val){ }
-    public UserString new_string(){ return string = new UserString(); }
-    public void set_string(UserString val){} //left empty, is set already.
+    
+    public TextGenScript.Expression new_expression(){ return new TextGenScript.Expression(); }
+    
+    public void add_expression(TextGenScript.Expression val){ expression = val; }
+    
+    //public UserString new_string(){ return string = new UserString(); }
+    //public void set_string(UserString val){} //left empty, is set already.
     
     /**For textscript: <*var.name.files()>
      * @return The List of files. 
@@ -726,14 +735,14 @@ fileset::=
     
     
     @Override public String toString(){
-      return name + ":" + (string !=null ? string : fileset);
+      return name + ":" + (expression !=null ? expression : fileset);
     }
     
     
     /**For textscript: <*var.name.text()>
      * @return The text of the script variable. 
      */
-    public CharSequence text(){ return string !=null ? string.getText() : ""; }
+    public CharSequence text(){ return expression !=null ? expression.text() : ""; }
     
   }
   
@@ -813,8 +822,9 @@ fileset::=
               int pos = u.length();
               u.append("<??error ZmakeScriptvariable not found: ").append(element.referVariable).append(" ??>");
               parentTarget.script.abortOnError(u,pos);
-            } else if(variable.string !=null){
-              variable.string.addtext(u);
+            } else if(variable.expression !=null){
+              u.append(variable.expression.text());
+              //variable.expression.addtext(u);
             } else {
               int pos = u.length();
               u.append("<??error ZmakeScriptvariable as string expected: ").append(element.referVariable).append(" ??>");
@@ -931,21 +941,21 @@ input::=
    */
   public final static class UserTarget //extends UserFileset
   {
-    final UserScript script;
+    public final UserScript script;
     
     /**From ZBNF srcpath = <""?!prepSrcpath>. It is a part of the base path anyway. It may be absolute, but usually relative. 
      * If null then unused. */
     //UserFilepath srcpath;
     
-    UserFilepath output;
+    public UserFilepath output;
     
     public String name;
     
     public String translator;
     
-    List<TargetInput> inputs = new LinkedList<TargetInput>();
+    public List<TargetInput> inputs = new LinkedList<TargetInput>();
     
-    Map<String,TargetParam> params;
+    public Map<String,TargetParam> params;
     
     UserTarget(UserScript script){
       this.script = script;
@@ -958,8 +968,14 @@ input::=
     //@Override
     //public void set_srcpath(UserFilepath value){  }
     
+    /**From Zbnf: < output>.
+     * @return instance to store the parse result of the component output::=
+     */
     public UserFilepath new_output(){ return output = new UserFilepath(script); } //this); }
     
+    /**From Zbnf: < output>.
+     * @param instance contains the parse result of the component output::=
+     */
     public void set_output(UserFilepath value){  }
     
     /**From ZBNF < inputSet>*
@@ -981,6 +997,7 @@ input::=
       if(params ==null){ params = new TreeMap<String,TargetParam>(); }
       params.put(val.name, new TargetParam(val)); 
     }
+
     /**From ZBNF < ?!prepInputfile> < ?input>*/
     public TargetInput new_input()
     { TargetInput userInput = new TargetInput(this);
@@ -988,16 +1005,22 @@ input::=
       return userInput; 
     }
 
+    /**From ZBNF < ?!prepInputfile> < ?input>*/
     public void add_input(TargetInput val){}
 
     
+    /**From Zbnf: < inputarg>.
+     * @return instance to store the parse result of the component inputarg::=
+     */
     public TargetInput new_inputarg()
     { TargetInput userInput = new TargetInput(this);
-      inputs.add(userInput);
       return userInput; 
     }
 
-    public void add_inputarg(TargetInput val){}
+    /**From Zbnf: < inputarg>.
+     * @param instance contains the parse result of the component inputarg::=
+     */
+    public void add_inputarg(TargetInput val){ inputs.add(val);}
 
     
     /**FromZbnf: <$?inputSet>
