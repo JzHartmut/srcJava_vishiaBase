@@ -17,6 +17,8 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-19 Hartmut chg: All access methods to {@link UserFilepath} are renamed and improved. Changing of Zbnf-Syntax
+   *   for the "prepFilePath::=..."
    * <li>2013-01-02 Hartmut chg: The {@link TargetParam} is established now, it can contain some {@link TargetParam#referVariables}
    *   in that kind a parameter can describe more as one fileset for other files then the input file set. Changed syntax see Component zbnfjax.
    * <li>2012-12-29 Hartmut chg: A {@link UserFilepath} is independent from a target and describes a non-completely relative path usually.
@@ -162,19 +164,19 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public boolean absPath;
     
     /**Path-part before a ':'. */
-    public String pathbase;
+    String pathbase;
     
     /**Localpath after ':' or the whole path. */
-    public String path = "";
+    String path = "";
     
     /**From Zbnf: The filename without extension. */
-    public String file = "";
+    String name = "";
     
     
     /**From Zbnf: The extension inclusive the leading dot. */
-    public String ext = "";
+    String ext = "";
     
-    boolean allTree, someFiles, wildcardExt;
+    boolean allTree, someFiles;
     
     private static UserFilepath emptyParent = new UserFilepath();
     
@@ -200,172 +202,61 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       this.drive = src.drive;
       this.absPath = src.absPath;
       if(pathbase0 == null || pathbase0.length() == 0){
-        this.pathbase = src.basePath().toString();
+        this.pathbase = src.basepath().toString();
       } else {
         StringBuilder u = new StringBuilder(pathbase0);
-        u.append(src.basePath());
+        u.append(src.basepath());
         this.pathbase = u.toString();
       }
       this.path = src.path;
-      this.file = src.file;
+      this.name = src.name;
       this.ext = src.ext;
       this.allTree = src.allTree;
       this.someFiles = src.someFiles;
-      this.wildcardExt = src.wildcardExt;
     }
     
-    public void set_someFiles(){ someFiles = true; }
-    public void set_wildcardExt(){ wildcardExt = true; }
-    public void set_allTree(){ allTree = true; }
+    //public void set_someFiles(){ someFiles = true; }
+    //public void set_wildcardExt(){ wildcardExt = true; }
+    //public void set_allTree(){ allTree = true; }
     
+    /**FromZbnf. */
+    public void set_pathbase(String val){
+      pathbase = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
+      allTree = val.indexOf('*')>=0;
+    }
+    
+    /**FromZbnf. */
+    public void set_path(String val){
+      path = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
+      allTree = val.indexOf('*')>=0;
+    }
+    
+    /**FromZbnf. */
+    public void set_name(String val){
+      name = val;   //file is empty and ext does not start with dot. It is a filename without extension.
+      someFiles |= val.indexOf('*')>=0;
+    }
+    
+    /**FromZbnf. If the name is empty, it is not the extension but the name.*/
     public void set_ext(String val){
-      if((val.length() >0 && val.charAt(0) == '.') || file.length() >0){ ext = val; }
-      else { file = val; }  //file is empty and ext does not start with dot. It is a filename without extension.
-    }
-    
-    String getPath(){ return file; }
-    
-    /**Method can be called in the generation script: <*path.localPathName()>. 
-     * @return the local path part with file without extension.
-     */
-    public CharSequence localPathName(){ 
-      StringBuilder uRet = new StringBuilder(path);
-      uRet.append(file);
-      return uRet; 
-    }
-    
-    public CharSequence localPathNameW(){ return toWindows(localPathName()); }
-
-    
-    /**Method can be called in the generation script: <*path.localFile()>. 
-     * @return the local path to this file.
-     */
-    public CharSequence localFile(){ 
-      StringBuilder uRet = new StringBuilder();
-      return addLocalFile(uRet);
-    }
-
-    public CharSequence localFileW(){ return toWindows(localFile()); }
-
-    
-    private CharSequence addLocalFile(StringBuilder uRet){ 
-      int pos;
-      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(this.path);
-      uRet.append(this.file);
-      if(this.someFiles){ uRet.append('*'); }
-      if(this.wildcardExt){ uRet.append(".*"); }
-      uRet.append(this.ext);
-      return uRet;
-    }
-    
-    
-    /**Method can be called in the generation script: <*path.localDir()>. 
-     * @return the local path part with file without extension.
-     */
-    public String localDir(){ return path; }
-    
-    /**Method can be called in the generation script: <*path.localDir()>. 
-     * @return the local path part with file without extension.
-     */
-    public String localDirW(){ return path.replace('/', '\\'); }
-    
-    /**Method can be called in the generation script: <*path.localPathName()>. 
-     * @return the local path part with file without extension.
-     * @deprecated use {@link #localDir()}
-     */
-    @Deprecated public String localPath(){ return path; }
-    
-    /**Method can be called in the generation script: <*path.localPathName()>. 
-     * @return the local path part with file without extension.
-     */
-    public String name(){ return file; }
-    
-    /**Method can be called in the generation script: <*path.localPathName()>. 
-     * @return the local path part with file without extension.
-     */
-    public CharSequence nameExt(){ StringBuilder uRet = new StringBuilder(); return uRet.append(file).append(ext); }
-    
-    /**Method can be called in the generation script: <*path.localPathName()>. 
-     * @return the local path part with file without extension.
-     */
-    public String ext(){ return ext; }
-    
-    
-    /**Method can be called in the generation script: <*basePath()>. 
-     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
-     *   till a ':' in the input path or an empty string.
-     *   Either as absolute or as relative path how it is given.
-     */
-    public CharSequence basePath(){ return basePath(null); }
-     
-    
-    /**Method can be called in the generation script: <*basePath(<*abspath>)>. 
-     * @param accesspath a String given path which is written before the given base path if the path is not absolute in this.
-     *   If null, it is ignored. If this path is absolute, the result is a absolute path of course.
-     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
-     *   till a ':' in the input path or an empty string.
-     *   Either as absolute or as relative path how it is given.
-     */
-    public CharSequence basePath(String accesspath){ 
-      UserFilepath generalPath = parent !=null && parent.srcpath !=null ? parent.srcpath : emptyParent;
-      if(pathbase !=null || (generalPath.pathbase !=null)){
-        StringBuilder uRet = new StringBuilder();
-        if(this.drive !=null){ uRet.append(this.drive).append(':'); }
-        else if(generalPath.drive !=null){
-          uRet.append(parent.srcpath.drive).append(':'); 
-        }
-        if(absPath){ uRet.append('/'); }
-        else if(generalPath.absPath){ uRet.append('/'); }
-        else if(accesspath !=null){
-          uRet.append(accesspath);
-        }
-        int pos;
-        //
-        //append a general path completely firstly.
-        if(generalPath.pathbase !=null){
-          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-          uRet.append(generalPath.pathbase).append('/'); 
-        }
-        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-        uRet.append(generalPath.path).append(generalPath.file).append(generalPath.ext);
-        if(this.pathbase !=null){
-          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-          uRet.append(this.pathbase);
-        }
-        return uRet;
-      } else if(drive !=null){
-        StringBuilder uRet = new StringBuilder();
-        uRet.append(drive).append(":");
-        if(absPath){ uRet.append('/'); }
-        else if(accesspath !=null){
-          uRet.append(accesspath);
-        }
-        return uRet;
-      } else if(generalPath.drive !=null){
-        StringBuilder uRet = new StringBuilder();
-        uRet.append(generalPath.drive).append(":");
-        if(generalPath.absPath){ uRet.append('/'); }
-        else if(accesspath !=null){
-          uRet.append(accesspath);
-        }
-        return uRet;
-      } else {
-        return accesspath !=null ? accesspath : "";
+      if(val.equals(".") && name.equals(".")){
+        name = "..";
       }
+      else if((val.length() >0 && val.charAt(0) == '.') || name.length() >0  ){ 
+        ext = val;  // it is really the extension 
+      } else { 
+        //a file name is not given, only an extension is parsed. Use it as file name because it is not an extension!
+        name = val;   //file is empty and ext does not start with dot. It is a filename without extension.
+      }
+      someFiles |= val.indexOf('*')>=0;
     }
     
-    
-    
-    public CharSequence basePathW(){ return toWindows(basePath()); }
-    
-    
-    /**Method can be called in the generation script: <*absBasePath()>. 
-     * @return the whole path inclusive a given general path in a {@link UserFileSet}.
-     *   Either as absolute or as relative path.
+
+    /**Method can be called in the generation script: <*absbasepath()>. 
+     * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
      */
-    public CharSequence absBasePath(){ 
-      CharSequence basePath = basePath();
+    public CharSequence absbasepath(){ 
+      CharSequence basePath = basepath();
       if(this.absPath){ return basePath; }
       else if(basePath instanceof StringBuilder){
         //not an absolute path, complete it with the global given base path:
@@ -394,82 +285,254 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     }
     
     
-    public CharSequence absBasePathW(){ return toWindows(absBasePath()); }
+    public CharSequence absbasepathW(){ return toWindows(absbasepath()); }
     
-    /**Method can be called in the generation script: <*data.pathName()>. 
+
+    
+    /**Method can be called in the generation script: <*path.absdir()>. 
+     * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
+     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+     */
+    public CharSequence absdir(){ 
+      CharSequence basePath = absbasepath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      int zpath = (path == null) ? 0 : path.length();
+      if(zpath > 0){
+        int pos;
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(path.substring(0,zpath-1));
+      }
+      return uRet;
+    }
+    
+    public CharSequence absdirW(){ return toWindows(absdir()); }
+    
+    
+    /**Method can be called in the generation script: <*data.absname()>. 
      * @return the whole path with file name but without extension inclusive a given general path in a {@link UserFileSet}.
      *   Either as absolute or as relative path.
      */
-    public CharSequence pathName(){ 
-      CharSequence basePath = basePath();
+    public CharSequence absname(){ 
+      CharSequence basePath = absbasepath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
       int pos;
       if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
       uRet.append(this.path);
-      uRet.append(this.file);
+      uRet.append(this.name);
       return uRet;
     }
     
-    public CharSequence pathNameW(){ return toWindows(pathName()); }
+    public CharSequence absnameW(){ return toWindows(absname()); }
     
 
+
+    
+    /**Method can be called in the generation script: <*path.absfile()>. 
+     * @return the whole path inclusive a given general path .
+     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+     */
+    public CharSequence absfile(){ 
+      CharSequence basePath = absbasepath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      addLocalName(uRet);
+      uRet.append(ext);
+      return uRet;
+    }
+    
+    public CharSequence absfileW(){ return toWindows(absfile()); }
+    
+    
+    /**Method can be called in the generation script: <*basepath()>. 
+     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
+     *   till a ':' in the input path or an empty string.
+     *   Either as absolute or as relative path how it is given.
+     */
+    public CharSequence basepath(){ return basepath(null); }
+     
+    
+    /**Method can be called in the generation script: <*basePath(<*abspath>)>. 
+     * @param accesspath a String given path which is written before the given base path if the path is not absolute in this.
+     *   If null, it is ignored. If this path is absolute, the result is a absolute path of course.
+     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
+     *   till a ':' in the input path or an empty string.
+     *   Either as absolute or as relative path how it is given.
+     */
+    public CharSequence basepath(String accesspath){ 
+      UserFilepath generalPath = parent !=null && parent.srcpath !=null ? parent.srcpath : emptyParent;
+      if(pathbase !=null || (generalPath.pathbase !=null)){
+        StringBuilder uRet = new StringBuilder();
+        if(this.drive !=null){ uRet.append(this.drive).append(':'); }
+        else if(generalPath.drive !=null){
+          uRet.append(parent.srcpath.drive).append(':'); 
+        }
+        if(absPath){ uRet.append('/'); }
+        else if(generalPath.absPath){ uRet.append('/'); }
+        else if(accesspath !=null){
+          uRet.append(accesspath);
+        }
+        int pos;
+        //
+        //append a general path completely firstly.
+        if(generalPath.pathbase !=null){
+          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+          uRet.append(generalPath.pathbase).append('/'); 
+        }
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(generalPath.path).append(generalPath.name).append(generalPath.ext);
+        if(this.pathbase !=null){
+          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+          uRet.append(this.pathbase);
+        }
+        return uRet;
+      } else if(drive !=null){
+        StringBuilder uRet = new StringBuilder();
+        uRet.append(drive).append(":");
+        if(absPath){ uRet.append('/'); }
+        else if(accesspath !=null){
+          uRet.append(accesspath);
+        }
+        return uRet;
+      } else if(generalPath.drive !=null){
+        StringBuilder uRet = new StringBuilder();
+        uRet.append(generalPath.drive).append(":");
+        if(generalPath.absPath){ uRet.append('/'); }
+        else if(accesspath !=null){
+          uRet.append(accesspath);
+        }
+        return uRet;
+      } else {
+        return accesspath !=null ? accesspath : "";
+      }
+    }
+    
+    
+    
+    public CharSequence basepathW(){ return toWindows(basepath()); }
+    
+    
+    
+    /**Method can be called in the generation script: <*path.dir()>. 
+     * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
+     *   The path is absolute or relative like it is given.
+     */
+    public CharSequence dir(){ 
+      CharSequence basePath = basepath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      int zpath = (path == null) ? 0 : path.length();
+      if(zpath > 0){
+        int pos;
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(path.substring(0,zpath-1));
+      }
+      return uRet;
+    }
+
+    
+    
+    public CharSequence dirW(){ return toWindows(dir()); }
+    
+    /**Method can be called in the generation script: <*data.pathname()>. 
+     * @return the whole path with file name but without extension inclusive a given general path in a {@link UserFileSet}.
+     *   The path is absolute or relative like it is given.
+     */
+    public CharSequence pathname(){ 
+      CharSequence basePath = basepath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      int pos;
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+      uRet.append(this.path);
+      uRet.append(this.name);
+      return uRet;
+    }
+    
+    public CharSequence pathnameW(){ return toWindows(pathname()); }
+    
+
+    
     /**Method can be called in the generation script: <*data.file()>. 
      * @return the whole path with file name and extension inclusive a given general path in a {@link UserFileSet}.
-     *   Either as absolute or as relative path.
+     *   The path is absolute or relative like it is given.
      */
     public CharSequence file(){ 
-      CharSequence basePath = basePath();
+      CharSequence basePath = basepath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      return addLocalFile(uRet);
+      addLocalName(uRet);
+      return uRet.append(ext);
     }
     
     public CharSequence fileW(){ return toWindows(file()); }
     
     
     
-    /**Method can be called in the generation script: <*path.file()>. 
-     * @return the whole path inclusive a given general path in a {@link UserFileSet}.
-     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+  
+    /**Method can be called in the generation script: <*path.localdir()>. 
+     * @return the local path part of the directory of the file without ending slash. 
+     *   If no directory is given in the local part, it returns "./". 
      */
-    public CharSequence absFile(){ 
-      CharSequence basePath = absBasePath();
-      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      return addLocalFile(uRet);
+    public String localdir(){
+      int length = path == null ? 0 : path.length();
+      return length == 0 ? "." : path.substring(0, length-1); 
     }
     
-    public CharSequence absFileW(){ return toWindows(absFile()); }
-    
-    
-    /**Method can be called in the generation script: <*path.absDir()>. 
-     * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
-     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+    /**Method can be called in the generation script: <*path.localDir()>. 
+     * @return the local path part with file without extension.
      */
-    public CharSequence dir(){ 
-      CharSequence basePath = basePath();
-      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+    public String localdirW(){ return path.replace('/', '\\'); }
+    
+
+    
+    /**Method can be called in the generation script: <*path.localname()>. 
+     * @return the local path part with file without extension.
+     */
+    public CharSequence localname(){ 
+      StringBuilder uRet = new StringBuilder();
+      return addLocalName(uRet); 
+    }
+    
+    public CharSequence localnameW(){ return toWindows(localname()); }
+
+    
+    /**Method can be called in the generation script: <*path.localfile()>. 
+     * @return the local path to this file inclusive name and extension of the file.
+     */
+    public CharSequence localfile(){ 
+      StringBuilder uRet = new StringBuilder();
+      addLocalName(uRet);
+      uRet.append(this.ext);
+      return uRet;
+    }
+
+    public CharSequence localfileW(){ return toWindows(localfile()); }
+
+    
+    private CharSequence addLocalName(StringBuilder uRet){ 
       int pos;
       if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(path);
+      uRet.append(this.path);
+      uRet.append(name);
       return uRet;
     }
     
-    public CharSequence dirW(){ return toWindows(dir()); }
     
-    
-    /**Method can be called in the generation script: <*path.absDir()>. 
-     * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
-     *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+    /**Method can be called in the generation script: <*path.name()>. 
+     * @return the name of the file without extension.
      */
-    public CharSequence absDir(){ 
-      CharSequence basePath = absBasePath();
-      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      int pos;
-      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(path);
+    public CharSequence name(){ return name; }
+    
+    /**Method can be called in the generation script: <*path.namext()>. 
+     * @return the file name with extension.
+     */
+    public CharSequence namext(){ 
+      StringBuilder uRet = new StringBuilder(); 
+      uRet.append(name);
+      uRet.append(ext);
       return uRet;
     }
     
-    public CharSequence absDirW(){ return toWindows(absDir()); }
+    /**Method can be called in the generation script: <*path.ext()>. 
+     * @return the file extension.
+     */
+    public CharSequence ext(){ return ext; }
     
     
     private static CharSequence toWindows(CharSequence inp)
@@ -494,8 +557,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      */
     void expandFiles(List<UserFilepath> listToadd, CharSequence srcpath, File currdir){
       List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
-      final CharSequence basePath = srcpath.toString() + "/" + this.basePath(); //getPartsFromFilepath(file, null, "absBasePath").toString();
-      final CharSequence localfilePath = this.localFile(); //getPartsFromFilepath(file, null, "file").toString();
+      final CharSequence basePath = srcpath.toString() + "/" + this.basepath(); //getPartsFromFilepath(file, null, "absBasePath").toString();
+      final CharSequence localfilePath = this.localfile(); //getPartsFromFilepath(file, null, "file").toString();
       final String sPathSearch = basePath + ":" + localfilePath;
       try{ FileSystem.addFilesWithBasePath(currdir, sPathSearch, listFiles);
       } catch(FileNotFoundException exc){
@@ -525,7 +588,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
         if(posExt < 0){ sExt = ""; sName = file1.localPath.substring(posName); }
         else { sExt = file1.localPath.substring(posExt); sName = file1.localPath.substring(posName, posExt); }
         filepath2.path = sPath;
-        filepath2.file = sName;
+        filepath2.name = sName;
         filepath2.ext = sExt;
         listToadd.add(filepath2);
       }
@@ -605,7 +668,7 @@ fileset::=
     
     /**From ZBNF: < file>. */
     public void add_file(UserFilepath val){ 
-      if(val.pathbase !=null || val.path.length() >0 || val.file.length() >0 || val.someFiles || val.drive !=null){
+      if(val.pathbase !=null || val.path.length() >0 || val.name.length() >0 || val.drive !=null){
         //only if any field is set. not on empty val
         filesOfFileset.add(val); 
       }
@@ -615,7 +678,7 @@ fileset::=
     void listFilesExpanded(List<UserFilepath> files, CharSequence accesspath) {  ////
       boolean expandFiles = true;
       for(UserFilepath filepath: filesOfFileset){
-        if(expandFiles && filepath.someFiles || filepath.wildcardExt || filepath.allTree){
+        if(expandFiles && filepath.someFiles || filepath.allTree){
           filepath.expandFiles(files, accesspath, script.currDir);
         } else {
           //clone filepath! add srcpath
@@ -1101,7 +1164,7 @@ input::=
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
                 UserFilepath errorhint = new UserFilepath(script);
-                errorhint.file = "<?error not found; " + targetInputParam.referVariable + ">";
+                errorhint.name = "<?error not found; " + targetInputParam.referVariable + ">";
                 files.add(errorhint);
               }
             } else {

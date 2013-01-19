@@ -1475,7 +1475,7 @@ public class ZbnfSyntaxPrescript
     { String sWhat; // = "Syntax:" + getDefinitionIdent();
       switch(eType)
       { case kSyntaxDefinition:
-        { sWhat = "Syntax:" + getDefinitionIdent() + "::=";
+        { sWhat = "!" + getDefinitionIdent() + "::=";
         } break;
         case kTerminalSymbol: sWhat = ":" + sConstantSyntax; break;
         case kSimpleOption:
@@ -1503,7 +1503,7 @@ public class ZbnfSyntaxPrescript
         { sWhat = "{...}";
         } break;
         case kOnlySemantic:
-        { sWhat = "<";
+        { sWhat = "<?";
         } break;
         case kSyntaxComponent:
         { sWhat = "<" + getDefinitionIdent();

@@ -44,11 +44,11 @@ import java.util.regex.Pattern;
 import org.vishia.util.Assert;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNodeSimple;
-import org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement;
 
-//import vishia.mainCmd.Report;
 import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 
 /**An instance of ZbnfParser contains a syntax prescript inside and is able to parse a text, test the syntax and output
@@ -123,6 +123,7 @@ public class ZbnfParser
   /**Version-ident.
    * list of changes:
    * <ul>
+   * <li>2013-01-18 Hartmut chg, new: Log-output improved. New inner class {@link LogParsing}.
    * <li>2013-01-04 Hartmut new {@link #alreadyParsedCmpn}. It may be speed up the parsing process but only if the same component
    *   is requested  at the same position inside another component. It is not used yet. 
    *   Todo: position of text for <syntax?!subsyntax) starts with position 0, it is faulty for that.
@@ -323,7 +324,7 @@ public class ZbnfParser
         }
       }
       if(nReportLevel >= nLevelReportComponentParsing)  
-      { reportParsing("parseComp ", idReportComponentParsing, resultlet.syntaxPrescript, nRecursion, bOk);
+      { log.reportParsing("parseComp ", idReportComponentParsing, resultlet.syntaxPrescript, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, bOk);
       }
       if(bOk){
         if(ixStoreStart >= parserStoreInPrescript.items.size())
@@ -777,7 +778,7 @@ public class ZbnfParser
             }
             if(!bTerminalFoundInComment){
               sReport = nReportLevel < nLevelReportBranchParsing ? ""
-                : "parseItem " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
+                : "item " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
 
               String sSrc = null;  //parsed string
               int posSrc = -1;     //position of the string
@@ -907,7 +908,7 @@ public class ZbnfParser
               parserStoreInPrescript.setCurrentPosition(posParseResult);
             }
             if(nReportLevel >= nLevelReportBranchParsing)  ////  
-            { reportParsing(sReport, idReportBranchParsing, syntaxItem, nRecursion, bOk);
+            { log.reportParsing(sReport, idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)posInput, nRecursion, bOk);
             }
           }//default
         }//switch
@@ -1529,7 +1530,7 @@ public class ZbnfParser
         input.setCurrentPosition(posInput);
         parserStoreInPrescript.setCurrentPosition(posParseResult);
         if(nReportLevel >= nLevelReportBranchParsing)  ////  
-        { reportParsing("parseNegV ", idReportBranchParsing, syntaxNegativ, nRecursion, bOk);
+        { log.reportParsing("parseNegV ", idReportBranchParsing, syntaxNegativ, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, bOk);
         }  
         return !bOk;  //negation, it is not ok if the result matches.
       }
@@ -1745,25 +1746,50 @@ public class ZbnfParser
   
     }
   
-    private void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, int nRecursion, boolean bOk){
-      String sReport = sWhat + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
-      StringBuilder syntaxReport = new StringBuilder(syntax.toString());  /*new StringBuilder("<" 
-        + (syntax.sDefinitionIdent.equals(syntax.sSemantic) ? "" : syntax.sDefinitionIdent + "?")
-        + syntax.sSemantic + ">"); */
-      int zz = syntaxReport.length();
-      if(zz < 20){ syntaxReport.append("                    ".substring(zz)); }
-      else { syntaxReport.setLength(20); }
-      report.reportln(nReport, sReport
-        + (bOk ? " ok    " : " error ") + nRecursion 
-        + syntaxReport
-        //+ " <?" + (sSemanticForStoring == null ? "" : sSemanticForStoring) + "> in "  
-        + " in " + sReportParentComponents);
-    }
-
 
   
   }//class PrescriptParser
 
+  
+  
+  
+  /**This class contains some information to create a log output which logs the parsing process.
+   * @since 2013-01-19, improvement possible.
+   *
+   */
+  static class LogParsing
+  { ///
+    final StringFormatter line = new StringFormatter(250);
+ 
+    final MainCmdLogging_ifc logOut;
+  
+    LogParsing(MainCmdLogging_ifc logOut){ this.logOut = logOut;}
+    
+    void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, String sReportParentComponents
+        , StringPart input, int posInput, int nRecursion, boolean bOk){
+      
+      int nrofCharsParsed = (int)(input.getCurrentPosition() - posInput);
+      line.reset().add(sWhat).pos(10)
+      .addint(posInput,"22221").add('+').addint(nrofCharsParsed, "221").add(": ")
+      .addReplaceLinefeed(input.getPart(posInput, 30), "|-||", 30)
+      .pos(50)
+      .add(bOk ?  "  ok    " : "  error ")
+      .add(syntax.toString()).pos(70)
+      .add( " in ").add(sReportParentComponents);
+      ;
+      
+      
+      logOut.reportln(nReport, line.getContent());
+      
+    }
+
+
+  }
+  
+  
+  
+  
+  
 
   /**To Report something.*/
   protected final Report report;
@@ -1821,6 +1847,8 @@ public class ZbnfParser
 
   /**Maximum number of shown parsing results on error. */
   private int maxParseResultEntriesOnError = 0; 
+  
+  private final LogParsing log; 
   
   /**founded content on rightest parsing error position. This list will be filled with current parse result
    * if it is the rightest position. 
@@ -1915,6 +1943,7 @@ public class ZbnfParser
     listSubPrescript = new TreeMap<String,ZbnfSyntaxPrescript>(); //ListPrescripts();
     //cc080318 create it at start of parse(): parserStore = new ZbnfParserStore();
     //prescriptParserTopLevel = new PrescriptParser(null, "topLevelSyntax"/*cc080318 , parserStore, null*/); 
+    log = new LogParsing(report);
     this.maxParseResultEntriesOnError = maxParseResultEntriesOnError;
     listParseResultOnError = maxParseResultEntriesOnError >0 
                            ? new ArrayList<ZbnfParseResultItem>(maxParseResultEntriesOnError)
@@ -2586,7 +2615,7 @@ public class ZbnfParser
 
 
 
-  CharSequence inputCurrent(StringPart input)
+  static CharSequence inputCurrent(StringPart input)
   {
     StringBuilder u = new StringBuilder(input.getCurrent(40));
     char c;
