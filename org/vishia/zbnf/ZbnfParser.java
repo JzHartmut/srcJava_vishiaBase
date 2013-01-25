@@ -47,7 +47,7 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNodeSimple;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 
@@ -135,7 +135,7 @@ public class ZbnfParser
    * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
    * 
    * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
-   *     (set with Report.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
+   *     (set with MainCmdLogging_ifc.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
    *     in respect to the syntax prescript is able to view. It is if some uncertainty about the correctness of the given syntax is in question. 
    * <li>2011-01-09 Creation of this variable to show the changes in the javadoc.    
    * <li>2010-05-04 Hartmut: corr: sEndlineCommentStringStart: The \n is not included, it will be skipped either as whitespace or it is necessary for the linemode.
@@ -594,8 +594,8 @@ public class ZbnfParser
           input.setCurrentPosition(posInput);
           parserStoreInPrescript.setCurrentPosition(posParseResult);
           idxAlternative +=1;
-          if(nReportLevel >= Report.fineDebug)
-          { report.reportln(Report.fineDebug
+          if(nReportLevel >= MainCmdLogging_ifc.fineDebug)
+          { report.reportln(MainCmdLogging_ifc.fineDebug
               , "parse Error, reset to:  " + input.getCurrent(30)
               + "...... idxResult = " + posParseResult
               + " idxAlternative = " + idxAlternative
@@ -1299,7 +1299,7 @@ public class ZbnfParser
         }
         else
         { bOk = false;
-          report.reportln(Report.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
+          report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
           String sError = "prescript for : <" + sDefinitionIdent 
           + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
           + "> not found.";
@@ -1670,7 +1670,7 @@ public class ZbnfParser
        */
       private void saveError(String sSyntax)
       { if(input.length() < input.lengthMaxPart())
-        { report.reportln(Report.error," saveError: actual length of input is to less");
+        { report.reportln(MainCmdLogging_ifc.error," saveError: actual length of input is to less");
         }
         int posInput = (int)input.getCurrentPosition() + posInputbase;
         if(posRightestError < posInput)
@@ -1791,8 +1791,8 @@ public class ZbnfParser
   
   
 
-  /**To Report something.*/
-  protected final Report report;
+  /**To MainCmdLogging_ifc something.*/
+  protected final MainCmdLogging_ifc report;
 
   /**The current report level. 
    * This value is used to compare wether the report arguments are prepared or not.
@@ -1806,13 +1806,13 @@ public class ZbnfParser
    * */
   protected int nLevelReportParsing, nLevelReportComponentParsing, nLevelReportInfo, nLevelReportError;
 
-  protected int nLevelReportBranchParsing = Report.debug;
+  protected int nLevelReportBranchParsing = MainCmdLogging_ifc.debug;
   /**The ident to report the progress of parsing. */
-  protected int idReportParsing = Report.fineDebug;
-  protected int idReportComponentParsing = Report.debug;
-  protected int idReportBranchParsing = Report.debug;
-  protected int idReportInfo = Report.info;
-  protected int idReportError = Report.error;
+  protected int idReportParsing = MainCmdLogging_ifc.fineDebug;
+  protected int idReportComponentParsing = MainCmdLogging_ifc.debug;
+  protected int idReportBranchParsing = MainCmdLogging_ifc.debug;
+  protected int idReportInfo = MainCmdLogging_ifc.info;
+  protected int idReportError = MainCmdLogging_ifc.error;
   
   
   /** The list of some sub syntax definitons.*/
@@ -1926,7 +1926,7 @@ public class ZbnfParser
   /**Creates a empty parser instance. 
    * @param report A report output
    * */
-  public ZbnfParser( Report report)
+  public ZbnfParser( MainCmdLogging_ifc report)
   { this(report, 0);
   }
   
@@ -1937,7 +1937,7 @@ public class ZbnfParser
    *        If >0, than the last founded parse result is stored to support better analysis of syntax errors,
    *        but the parser is slower.
    */
-  public ZbnfParser( Report report, int maxParseResultEntriesOnError)
+  public ZbnfParser( MainCmdLogging_ifc report, int maxParseResultEntriesOnError)
   { this.report = report;
     //parserStore = new ParserStore();
     listSubPrescript = new TreeMap<String,ZbnfSyntaxPrescript>(); //ListPrescripts();
@@ -2249,7 +2249,7 @@ public class ZbnfParser
   
   
   /**sets the ident number for report of the progress of parsing. 
-   * If the idents are  >0 and < Report.fineDebug, theay are used directly as report level.
+   * If the idents are  >0 and < MainCmdLogging_ifc.fineDebug, theay are used directly as report level.
    * @param identError ident for error and warning outputs.
    * @param identInfo ident for progress information output.
    * @param identComponent ident for output if a component is parsing
@@ -2362,7 +2362,7 @@ public class ZbnfParser
 
 
   /** Reports the syntax.*/
-  public void reportSyntax(Report report, int reportLevel)
+  public void reportSyntax(MainCmdLogging_ifc report, int reportLevel)
   {
       mainScript.reportContent(report, reportLevel);
       Iterator<String> iter = listSubPrescript.keySet().iterator();
@@ -2393,24 +2393,24 @@ public class ZbnfParser
    * @param reportLevel level of report. This level is shown in output. 
    *        If the current valid reportLevel of report is less than this parameter, no action is done.
    */
-  public void reportStore(Report report, int reportLevel, String sTitle)
+  public void reportStore(MainCmdLogging_ifc report, int reportLevel, String sTitle)
   { if(report.getReportLevel()>=reportLevel)
-    { report.reportln(reportLevel, 0, "== Report ParserStore " + sTitle + " ==");
+    { report.reportln(reportLevel, 0, "== MainCmdLogging_ifc ParserStore " + sTitle + " ==");
       reportStoreComponent(getFirstParseResult(), report, 1, null, reportLevel);
       report.flushReport();
     }  
   }
 
-  public void reportStore(Report report, int reportLevel)
+  public void reportStore(MainCmdLogging_ifc report, int reportLevel)
   { reportStore(report, reportLevel, "");
   }
 
-  /**Reports the whole content of the parse result in the Report.fineInfo-level. 
-   * @see {@link reportStore(Report report, int reportLevel)}.
+  /**Reports the whole content of the parse result in the MainCmdLogging_ifc.fineInfo-level. 
+   * @see {@link reportStore(MainCmdLogging_ifc report, int reportLevel)}.
    * @param report The report output instance.
    */
-  public void reportStore(Report report)
-  { reportStore(report, Report.fineInfo);
+  public void reportStore(MainCmdLogging_ifc report)
+  { reportStore(report, MainCmdLogging_ifc.fineInfo);
   }
 
   
@@ -2423,7 +2423,7 @@ public class ZbnfParser
    * @return The number of written lines.
    * */
   @SuppressWarnings("deprecation")
-  private int reportStoreComponent(ZbnfParseResultItem parseResultItem, Report report, int level, ZbnfParseResultItem parent, int reportLevel)
+  private int reportStoreComponent(ZbnfParseResultItem parseResultItem, MainCmdLogging_ifc report, int level, ZbnfParseResultItem parent, int reportLevel)
   { int countLines = 0;
     while(parseResultItem != null)
     { countLines +=1;
@@ -2431,7 +2431,7 @@ public class ZbnfParser
       if(parseResultItem.isComponent())
       { //int nLines = 
         reportStoreComponent(parseResultItem.nextSkipIntoComponent(parseResultItem), report, level+1, parseResultItem, reportLevel);
-        //if(nLines >1) report.reportln(Report.info, 0, "parseResult: " + sEmpty.substring(0, level) + "</?" + "> Component");
+        //if(nLines >1) report.reportln(MainCmdLogging_ifc.info, 0, "parseResult: " + sEmpty.substring(0, level) + "</?" + "> Component");
       }
       //parseResultItem = parseResultItem.next();
       parseResultItem = parseResultItem.next(parent);

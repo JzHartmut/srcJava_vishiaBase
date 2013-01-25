@@ -20,7 +20,7 @@
  * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2010-01-24: Hartmut docu improved, Report-output before exception on error in called routine to visit the problem.
+ * 2010-01-24: Hartmut docu improved, MainCmdLogging_ifc-output before exception on error in called routine to visit the problem.
  * 2009-04-26: Hartmut corr: Now all float or int parse result can set a int, long, float double fields and set_method(value).
  * 2009-04-26: Hartmut corr: better Exception text if access a non public field as components output.
  * 2009-03-23: Hartmut chg: total new structuring. Functional change is: 
@@ -45,7 +45,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 
@@ -183,7 +183,7 @@ public class ZbnfJavaOutput
    */
   public final static int versionStamp = 0x20101203;
   
-  private final Report report;
+  private final MainCmdLogging_ifc report;
   
   /**If it is set, only set_ or add_-methods and new_-methods are accepted,
    * no fields and no inner classes as container.
@@ -216,14 +216,14 @@ public class ZbnfJavaOutput
    */
   
   /**Empty constructor. 
-   * @param report for logging the process of associated, only {@link org.vishia.mainCmd.Report#fineDebug} will be used.
+   * @param report for logging the process of associated, only {@link org.vishia.mainCmd.MainCmdLogging_ifc#fineDebug} will be used.
    */
-  public ZbnfJavaOutput(Report report)
+  public ZbnfJavaOutput(MainCmdLogging_ifc report)
   { this.report = report;
     init();
   }
 
-  private ZbnfJavaOutput(Report report, boolean strict, boolean methods)
+  private ZbnfJavaOutput(MainCmdLogging_ifc report, boolean strict, boolean methods)
   { this.report = report;
     init();
     this.bOnlyMethods = methods; 
@@ -295,7 +295,7 @@ public class ZbnfJavaOutput
    * @throws IllegalArgumentException 
    * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */
-  public static void setOutputStrict(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report) 
+  public static void setOutputStrict(Object topLevelOutput, ZbnfParseResultItem resultItem, MainCmdLogging_ifc report) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { setOutput(topLevelOutput, resultItem, report, true, true);
   }
@@ -309,7 +309,7 @@ public class ZbnfJavaOutput
    * @throws IllegalArgumentException 
    * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */
-  public static void setOutputFields(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report) 
+  public static void setOutputFields(Object topLevelOutput, ZbnfParseResultItem resultItem, MainCmdLogging_ifc report) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { setOutput(topLevelOutput, resultItem, report, true, false);
   }
@@ -324,7 +324,7 @@ public class ZbnfJavaOutput
    * @throws IllegalArgumentException 
    * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */
-  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report, boolean strict, boolean bOnlyMethods) 
+  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, MainCmdLogging_ifc report, boolean strict, boolean bOnlyMethods) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { //instance of writer only for temporary help to organize, no data are stored here: 
     ZbnfJavaOutput instance = new ZbnfJavaOutput(report, strict, bOnlyMethods);  
@@ -339,8 +339,8 @@ public class ZbnfJavaOutput
     }
   }
 
-  /**@deprecated, use {@link #setOutputStrict(Object, ZbnfParseResultItem, Report)}
-   * or {@link #setOutputFields(Object, ZbnfParseResultItem, Report)}
+  /**@deprecated, use {@link #setOutputStrict(Object, ZbnfParseResultItem, MainCmdLogging_ifc)}
+   * or {@link #setOutputFields(Object, ZbnfParseResultItem, MainCmdLogging_ifc)}
    * @param topLevelOutput
    * @param resultItem
    * @param report
@@ -349,7 +349,7 @@ public class ZbnfJavaOutput
    * @throws InstantiationException
    */
   @SuppressWarnings("deprecation")
-  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, Report report) 
+  public static void setOutput(Object topLevelOutput, ZbnfParseResultItem resultItem, MainCmdLogging_ifc report) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { //instance of writer only for temporary help to organize, no data are stored here: 
     ZbnfJavaOutput instance = new ZbnfJavaOutput(report, false, false);  
@@ -391,7 +391,7 @@ public class ZbnfJavaOutput
     if(semantic.length() >0){ ///
       if(semantic.equals("operator"))
         stop();
-      report.reportln(Report.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
+      report.reportln(MainCmdLogging_ifc.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
         
       if(resultItem.isComponent())
       { 
@@ -641,7 +641,7 @@ public class ZbnfJavaOutput
           }
           if(element != null)
           { //an element with the desired name is found, write the value to it:
-            report.report(Report.fineDebug, semanticLowerCase);
+            report.report(MainCmdLogging_ifc.fineDebug, semanticLowerCase);
             child = getComponentsOutputField(element, component.instance);
           }
           else
@@ -863,7 +863,7 @@ public class ZbnfJavaOutput
                      );  
               if(element != null)
               { //an element with the desired name is found, write the value to it:
-                report.report(Report.fineDebug, semanticLowerCase);
+                report.report(MainCmdLogging_ifc.fineDebug, semanticLowerCase);
                 writeInField(element, destComponent.instance, resultItem);
               }
               else
@@ -900,7 +900,7 @@ public class ZbnfJavaOutput
   throws IllegalAccessException
   { String sType = element.getType().getName();
     String debugValue = "???";
-    boolean debug = report.getReportLevel() >= Report.fineDebug;
+    boolean debug = report.getReportLevel() >= MainCmdLogging_ifc.fineDebug;
     boolean isFloat = resultItem.isFloat();
     double floatVal = isFloat ? resultItem.getParsedFloat() : resultItem.getParsedInteger();
     long intVal = isFloat ? (long)resultItem.getParsedFloat() : resultItem.getParsedInteger();
@@ -970,7 +970,7 @@ public class ZbnfJavaOutput
     {
       throw new IllegalAccessException("access to field is denied: " + outputInstance.getClass().getName() + "." + element.getName() + " /Type: " + sType); 
     }
-    report.report(Report.fineDebug, " \""+ debugValue + "\" written in Element Type " + sType);
+    report.report(MainCmdLogging_ifc.fineDebug, " \""+ debugValue + "\" written in Element Type " + sType);
   }
 
   
@@ -1066,11 +1066,11 @@ public class ZbnfJavaOutput
    * @param result The instance, it have to be of type 'resultType', but may be derived.
    * @param fInput The input file to parse.
    * @param fSyntax The syntax file using ZBNF
-   * @param report  Report for parsing process and errors
+   * @param report  MainCmdLogging_ifc for parsing process and errors
    * @param msgRange A start number of created messages in report.
    * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
-  public static String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, File fSyntax, Report report, int msgRange) 
+  public static String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, File fSyntax, MainCmdLogging_ifc report, int msgRange) 
   { ZbnfJavaOutput javaOutput = new ZbnfJavaOutput(report);
     return javaOutput.parseFileAndFillJavaObject(resultType, result, fInput, fSyntax);
   }
@@ -1155,7 +1155,7 @@ public class ZbnfJavaOutput
       }
     }  
     if(sError == null)
-    {   zbnfParser.setReportIdents(Report.error, Report.info, Report.fineDebug, Report.fineDebug);
+    {   zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.fineDebug, MainCmdLogging_ifc.fineDebug);
       //parse the file:
       int lenFileInput = (int)fInput.length();
       try{ spInput = new StringPartFromFileLines(fInput, lenFileInput, null, null); }
@@ -1182,7 +1182,7 @@ public class ZbnfJavaOutput
       //The content of the setting file is stored inside the parser as 'parse result'.
       //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.
       //The class settings contains the necessary elements appropriate to the semantic keywords in the syntax prescript.
-      zbnfParser.reportStore(report, Report.debug);
+      zbnfParser.reportStore(report, MainCmdLogging_ifc.debug);
     }
     if(sError == null)
     { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 

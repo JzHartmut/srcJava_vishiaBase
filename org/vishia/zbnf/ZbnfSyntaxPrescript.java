@@ -28,7 +28,7 @@ import java.util.regex.PatternSyntaxException;
 
 import org.vishia.util.StringPart;
 
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 /** This class is a node of the syntax tree. 
  *  <h2>Structure of a node</h2>
@@ -328,8 +328,8 @@ public class ZbnfSyntaxPrescript
   /** The syntax of this element.*/
   //final Syntax syntaxLists;
 
-  /** Report something*/
-  final Report report;
+  /** MainCmdLogging_ifc something*/
+  final MainCmdLogging_ifc report;
 
 
   /** Top level item of a syntaxdefinition.*/
@@ -439,7 +439,7 @@ public class ZbnfSyntaxPrescript
     /**If it is a Regular Expression, the compiled regex is available here. */
     Pattern regex = null;
 
-    ComplexSyntax(ZbnfSyntaxPrescript parent, Report report, boolean bWithSyntaxList)
+    ComplexSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
     { super(parent, report, bWithSyntaxList);
     }
 
@@ -716,13 +716,13 @@ public class ZbnfSyntaxPrescript
     /** Syntax of the repetition path */
     ZbnfSyntaxPrescript backward;
 
-    RepetitionSyntax(ZbnfSyntaxPrescript parent, Report report, boolean bWithSyntaxList)
+    RepetitionSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
     { super(parent, report, bWithSyntaxList);
     }
   }
 
   /** Constructor only fills the data.*/
-  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, Report report, boolean bWithSyntaxList)
+  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
   { this.report = report;
     this.parent =parent;
     //syntaxLists = bWithSyntaxList ? new Syntax() : null;
@@ -738,7 +738,7 @@ public class ZbnfSyntaxPrescript
   
 
   /*
-  public static SyntaxPrescript createWithSyntax(String sInput, Report report)
+  public static SyntaxPrescript createWithSyntax(String sInput, MainCmdLogging_ifc report)
   throws ParseException
   { return createWithSyntax(new StringPart(sInput), report);
   }
@@ -757,7 +757,7 @@ public class ZbnfSyntaxPrescript
    * @throws ParseException on error of input syntax. The message of the exception
    *         contains a information about the error position.
    */  
-  static ZbnfSyntaxPrescript createWithSyntax(StringPart spInput, Report report)
+  static ZbnfSyntaxPrescript createWithSyntax(StringPart spInput, MainCmdLogging_ifc report)
   throws ParseException
   {
     ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(null, report, true);
@@ -1276,13 +1276,13 @@ public class ZbnfSyntaxPrescript
 
 
 
-  void reportContent(Report report, int nLevel)
+  void reportContent(MainCmdLogging_ifc report, int nLevel)
   {
     reportItem(nLevel, "+-", false, report);
   }
 
 
-  private void reportItem(int nLevel, String sIndent, boolean bHasNext, Report report)
+  private void reportItem(int nLevel, String sIndent, boolean bHasNext, MainCmdLogging_ifc report)
   {
     {
       String sReport;
@@ -1313,7 +1313,7 @@ public class ZbnfSyntaxPrescript
             }
           }
           if(iterPrescriptNext != null)
-          { //report.reportln(Report.info, 0, "SyntaxPrescript:" + sIndent + "................");
+          { //report.reportln(MainCmdLogging_ifc.info, 0, "SyntaxPrescript:" + sIndent + "................");
           }
         }
         */
