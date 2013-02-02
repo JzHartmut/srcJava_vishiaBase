@@ -271,7 +271,7 @@ public class CheckDeps
       //FileSystem.addFileToList(srcDir.dirSrc, "**/*.h" , listFilesSrcAll);
       //FileSystem.addFileToList(srcDir.dirSrc, "**/*.H" , listFilesSrcAll);
       listFilesSrcAll.addAll(listFilesSrcC);  //complete all list with c list
-    } catch(FileNotFoundException exc){
+    } catch(Exception exc){
       console.writeError("File not found", exc);
     }
     //write report of all files:

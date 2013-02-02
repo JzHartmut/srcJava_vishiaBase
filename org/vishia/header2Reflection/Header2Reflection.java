@@ -368,8 +368,8 @@ public class Header2Reflection
     { fileIn.posPath = -1;
     }
     if(bOk)
-    { try{ FileSystem.addFileToList(dir, sMask, fileIn.listFileIn); }
-      catch(FileNotFoundException exc)
+    { bOk= FileSystem.addFileToList(dir, sMask, fileIn.listFileIn); 
+      if(!bOk)
       { bOk = false;
         if(dir!=null)
         { console.writeError("input files not found:" + sMask + " in dir:" + dir.getAbsolutePath());

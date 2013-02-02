@@ -561,7 +561,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       final CharSequence localfilePath = this.localfile(); //getPartsFromFilepath(file, null, "file").toString();
       final String sPathSearch = basePath + ":" + localfilePath;
       try{ FileSystem.addFilesWithBasePath(currdir, sPathSearch, listFiles);
-      } catch(FileNotFoundException exc){
+      } catch(Exception exc){
         //let it empty.
       }
       for(FileSystem.FileAndBasePath file1: listFiles){

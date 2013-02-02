@@ -151,7 +151,7 @@ public class C2DataDeps  extends MainCmd {
           writeError("file not found: " + sFile);
           bOk = false;
         }
-      } catch(FileNotFoundException exc){
+      } catch(Exception exc){
         writeError("file not found: " + sFile);
         bOk = false;
       }
