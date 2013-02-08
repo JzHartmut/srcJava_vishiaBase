@@ -17,6 +17,7 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-02-09 Hartmut new: {@link UserFilepath#base_localfile()}
    * <li>2013-01-19 Hartmut chg: All access methods to {@link UserFilepath} are renamed and improved. Changing of Zbnf-Syntax
    *   for the "prepFilePath::=..."
    * <li>2013-01-02 Hartmut chg: The {@link TargetParam} is established now, it can contain some {@link TargetParam#referVariables}
@@ -196,17 +197,31 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       this.script = script;
     }
     
+    /**Creates a UserFilepath entry with an additonal pathbase.
+     * if the basepath of src is given and the pathbase0 is given, both are joined: pathbase0/src.pathbase.
+     * @param script  Reference to the script, necessary for the current directory
+     * @param src The source (clone source)
+     * @param pathbase0 additional pre-pathbase
+     */
     UserFilepath(UserScript script, UserFilepath src, CharSequence pathbase0){
       this.parent = null;
       this.script = script;
       this.drive = src.drive;
       this.absPath = src.absPath;
-      if(pathbase0 == null || pathbase0.length() == 0){
+      if(pathbase0 == null || pathbase0.length() == 0 || this.absPath){
         this.pathbase = src.basepath().toString();
       } else {
-        StringBuilder u = new StringBuilder(pathbase0);
-        u.append(src.basepath());
-        this.pathbase = u.toString();
+        CharSequence srcbase = src.basepath();
+        if(srcbase .length() >0){
+          StringBuilder u = new StringBuilder(pathbase0);
+          if(u.charAt(u.length()-1) !='/'){
+            u.append('/');
+          }
+          u.append(src.basepath());
+          this.pathbase = u.toString();
+        } else {
+          this.pathbase = pathbase0.toString();
+        }
       }
       this.path = src.path;
       this.name = src.name;
@@ -464,6 +479,39 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     
     
+    /**Method can be called in the generation script: <*data.base_localdir()>. 
+     * @return the basepath:localpath in a {@link UserFileSet} with given wildcards 
+     *   inclusive a given general path. The path is absolute or relative like it is given.
+     */
+    public CharSequence base_localdir(){ 
+      CharSequence basePath = basepath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      if( uRet.length() >0){ uRet.append(":"); }
+      uRet.append(this.path);
+      return uRet;
+    }
+    
+    public CharSequence base_localdirW(){ return toWindows(base_localdir()); }
+    
+    
+    /**Method can be called in the generation script: <*data.base_localfile()>. 
+     * @return the basepath:localpath/name.ext in a {@link UserFileSet} with given wildcards 
+     *   inclusive a given general path. The path is absolute or relative like it is given.
+     */
+    public CharSequence base_localfile(){ 
+      CharSequence basePath = basepath();
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      if( uRet.length() >0){ uRet.append(":"); }
+      uRet.append(this.path);
+      uRet.append(this.name);
+      uRet.append(this.ext);
+      return uRet;
+    }
+    
+    public CharSequence base_localfileW(){ return toWindows(base_localfile()); }
+    
+    
+    
   
     /**Method can be called in the generation script: <*path.localdir()>. 
      * @return the local path part of the directory of the file without ending slash. 
@@ -675,10 +723,9 @@ fileset::=
     }
     
     
-    void listFilesExpanded(List<UserFilepath> files, CharSequence accesspath) {  ////
-      boolean expandFiles = true;
+    void listFilesExpanded(List<UserFilepath> files, CharSequence accesspath, boolean expandFiles) {  ////
       for(UserFilepath filepath: filesOfFileset){
-        if(expandFiles && filepath.someFiles || filepath.allTree){
+        if(expandFiles && (filepath.someFiles || filepath.allTree)){
           filepath.expandFiles(files, accesspath, script.currDir);
         } else {
           //clone filepath! add srcpath
@@ -688,14 +735,14 @@ fileset::=
       }
     }
 
-    public List<UserFilepath> listFilesExpanded(CharSequence accesspath) { 
+    public List<UserFilepath> listFilesExpanded(CharSequence accesspath, boolean expandFiles) { 
       List<UserFilepath> files = new LinkedList<UserFilepath>();
-      listFilesExpanded(files, accesspath);
+      listFilesExpanded(files, accesspath, expandFiles);
       return files;
     }
     
     
-    public List<UserFilepath> listFilesExpanded() { return listFilesExpanded(null); }
+    public List<UserFilepath> listFilesExpanded() { return listFilesExpanded(null, true); }
 
       
       
@@ -1168,7 +1215,7 @@ input::=
                 files.add(errorhint);
               }
             } else {
-              variable.fileset.listFilesExpanded(files, srcpath);
+              variable.fileset.listFilesExpanded(files, srcpath, expandFiles);
             }
           }
         }
