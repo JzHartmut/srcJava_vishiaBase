@@ -17,6 +17,18 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-02-10 Hartmut chg/new: UserFilepath#parent removed: A UserFilepath need not know a fileset where it is member of
+   *   because the files can be arranged from more as one fileset with another basepath etc. The fileset with its is 
+   *   {@link UserFileset#commonBasepath} (renamed from 'srcpath') is known if that is evaluated only.
+   *   {@link UserFilepath#expandFiles(List, UserFilepath, CharSequence, File)} 
+   *   and {@link UserFilepath#UserFilepath(UserScript, UserFilepath, UserFilepath, CharSequence)}
+   *   has gotten the additional arguments commonBasepath and accesspath to build the necesarry information.
+   * <li>2013-02-10 Hartmut chg: The element in the ZBNF-syntax <code>basepath = < file?basepath>|...</code> renamed
+   *   from 'srcpath' (old name) and re-provided to usage.
+   * <li>2013-02-10 Hartmut chg: {@link UserFileset}.srcext removed (it was necessary in the past while some XML translations
+   *   were done in Zmake).    
+   * <li>2013-02-10 Hartmut new: {@link UserTarget#allParamFiles(String)} and ...Expanded(paramName)    
+   * <li>2013-02-10 Hartmut new: {@link UserFilepath#file(CharSequence)}   
    * <li>2013-02-09 Hartmut new: {@link UserFilepath#base_localfile()}
    * <li>2013-01-19 Hartmut chg: All access methods to {@link UserFilepath} are renamed and improved. Changing of Zbnf-Syntax
    *   for the "prepFilePath::=..."
@@ -33,7 +45,7 @@ public class ZmakeUserScript
    *   of a text generator using {@link org.vishia.zTextGen.TextGenerator}. That Textgenerator does not know such
    *   file parts and this {@link UserFilepath} class because it is more universal. Access is possible 
    *   with that access methods {@link UserFilepath#localPath()} etc. To implement that a {@link UserFilepath}
-   *   knows its file-set where it is contained in, that is {@link UserFilepath#parent}. 
+   *   knows its file-set where it is contained in, that is {@link UserFilepath#itsFileset}. 
    *   The {@link UserFileset#script} knows the Zmake generation script. In this kind it is possible to use the
    *   common data of a file set and the absolute path.
    * <li>2011-08-14 Hartmut chg: ZmakeGenerator.Gen_Content#genContentForInputset(...) now regards < ?expandFiles>:
@@ -101,7 +113,7 @@ public class ZmakeUserScript
    *   of windows to set different current directories in special maybe substitute drives.
    * <li><b>Drive letter as select path</b>:  
    *   It may be possible (future extension) to use this capability independent of windows in this class. 
-   *   For that the {@link #parent} can have some paths associated to drive letters with local meaning,
+   *   For that the {@link #itsFileset} can have some paths associated to drive letters with local meaning,
    *   If the path starts with a drive letter, the associated path is searched in the parents drive list. 
    * <li><b>Absolute path</b>: If this entry starts with slash or backslash, maybe after a drive designation for windows systems,
    *   it is an absolute path. Elsewhere the parent's general path can be absolute. If an absolute path is requested
@@ -152,8 +164,16 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
    */
   public static class UserFilepath
   {
-    /**Aggregation to a given srcpath in the {@link UserFileset} which is valid for all this files. */
-    private final UserFileset parent;
+    /**Aggregation to a given {@link UserFileset} where this is member of. 
+     * A {@link UserFileset#commonBasepath} which is valid for all files of the {@link #itsFileset} is gotten from there, 
+     * if it is given (not null).
+     * <br> 
+     * This aggregation can be null, especially if this is a member of a list returned from
+     * {@link UserTarget#allInputFiles()} if more as one fileSets are used as the target's input or an accessPath is given.
+     * In that kind the {@link UserFileset#filesOfFileset} are cloned without this aggregation and the commonBasePath
+     * and the accessPath are part of the {@link #basepath} of this.
+     */
+    //private final UserFileset itsFileset;
     
     private final UserScript script;
     
@@ -164,11 +184,11 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     /**From Zbnf: [ [/|\\]<?@absPath>]. Set if the path starts with '/' or '\' maybe after drive letter. */
     public boolean absPath;
     
-    /**Path-part before a ':'. */
-    String pathbase;
+    /**Path-part before a ':'. It is null if the basepath is not given. */
+    String basepath;
     
-    /**Localpath after ':' or the whole path. */
-    String path = "";
+    /**Localpath after ':' or the whole path. It is an empty "" if if a directory is not given*/
+    String localdir = "";
     
     /**From Zbnf: The filename without extension. */
     String name = "";
@@ -179,21 +199,15 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     boolean allTree, someFiles;
     
-    private static UserFilepath emptyParent = new UserFilepath();
+    /**An empty file path which is used as argument if a common base path is not given. */
+    static UserFilepath emptyParent = new UserFilepath();
     
     private UserFilepath(){
-      this.parent = null;
       this.script = null;
     }
     
     
-    UserFilepath(UserFileset parent){
-      this.parent = parent;
-      this.script = parent.script;
-    }
-    
     UserFilepath(UserScript script){
-      this.parent = null;
       this.script = script;
     }
     
@@ -201,29 +215,15 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * if the basepath of src is given and the pathbase0 is given, both are joined: pathbase0/src.pathbase.
      * @param script  Reference to the script, necessary for the current directory
      * @param src The source (clone source)
-     * @param pathbase0 additional pre-pathbase
+     * @param basepath An additional basepath usual stored as <code>basepath=path, ...</code> in a fileset, maybe null
+     * @param pathbase0 additional pre-pathbase before base, maybe null
      */
-    UserFilepath(UserScript script, UserFilepath src, CharSequence pathbase0){
-      this.parent = null;
+    UserFilepath(UserScript script, UserFilepath src, UserFilepath commonBasepath, CharSequence accesspath){
       this.script = script;
       this.drive = src.drive;
       this.absPath = src.absPath;
-      if(pathbase0 == null || pathbase0.length() == 0 || this.absPath){
-        this.pathbase = src.basepath().toString();
-      } else {
-        CharSequence srcbase = src.basepath();
-        if(srcbase .length() >0){
-          StringBuilder u = new StringBuilder(pathbase0);
-          if(u.charAt(u.length()-1) !='/'){
-            u.append('/');
-          }
-          u.append(src.basepath());
-          this.pathbase = u.toString();
-        } else {
-          this.pathbase = pathbase0.toString();
-        }
-      }
-      this.path = src.path;
+      this.basepath = commonBasepath == null? null: commonBasepath.file(accesspath).toString();
+      this.localdir = src.localdir;
       this.name = src.name;
       this.ext = src.ext;
       this.allTree = src.allTree;
@@ -236,13 +236,13 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     /**FromZbnf. */
     public void set_pathbase(String val){
-      pathbase = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
+      basepath = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
       allTree = val.indexOf('*')>=0;
     }
     
     /**FromZbnf. */
     public void set_path(String val){
-      path = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
+      localdir = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
       allTree = val.indexOf('*')>=0;
     }
     
@@ -295,7 +295,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       }
       else {
         //this has no basepath, then return the current dir.
-        return parent.script.sCurrDir;
+        return script.sCurrDir;
       }
     }
     
@@ -311,11 +311,11 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence absdir(){ 
       CharSequence basePath = absbasepath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      int zpath = (path == null) ? 0 : path.length();
+      int zpath = (localdir == null) ? 0 : localdir.length();
       if(zpath > 0){
         int pos;
         if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-        uRet.append(path.substring(0,zpath-1));
+        uRet.append(localdir.substring(0,zpath-1));
       }
       return uRet;
     }
@@ -332,7 +332,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
       int pos;
       if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(this.path);
+      uRet.append(this.localdir);
       uRet.append(this.name);
       return uRet;
     }
@@ -362,7 +362,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      *   till a ':' in the input path or an empty string.
      *   Either as absolute or as relative path how it is given.
      */
-    public CharSequence basepath(){ return basepath(null); }
+    public CharSequence basepath(){ return basepath(emptyParent, null); }
      
     
     /**Method can be called in the generation script: <*basePath(<*abspath>)>. 
@@ -372,13 +372,13 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      *   till a ':' in the input path or an empty string.
      *   Either as absolute or as relative path how it is given.
      */
-    public CharSequence basepath(String accesspath){ 
-      UserFilepath generalPath = parent !=null && parent.srcpath !=null ? parent.srcpath : emptyParent;
-      if(pathbase !=null || (generalPath.pathbase !=null)){
+    public CharSequence basepath(UserFilepath generalPath, CharSequence accesspath){ 
+      if(generalPath == null){ generalPath = emptyParent; }
+      if(basepath !=null || (generalPath != emptyParent)){
         StringBuilder uRet = new StringBuilder();
         if(this.drive !=null){ uRet.append(this.drive).append(':'); }
         else if(generalPath.drive !=null){
-          uRet.append(parent.srcpath.drive).append(':'); 
+          uRet.append(generalPath.drive).append(':'); 
         }
         if(absPath){ uRet.append('/'); }
         else if(generalPath.absPath){ uRet.append('/'); }
@@ -388,15 +388,15 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
         int pos;
         //
         //append a general path completely firstly.
-        if(generalPath.pathbase !=null){
+        if(generalPath.basepath !=null){
           if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-          uRet.append(generalPath.pathbase).append('/'); 
+          uRet.append(generalPath.basepath).append('/'); 
         }
         if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-        uRet.append(generalPath.path).append(generalPath.name).append(generalPath.ext);
-        if(this.pathbase !=null){
+        uRet.append(generalPath.localdir).append(generalPath.name).append(generalPath.ext);
+        if(this.basepath !=null){
           if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-          uRet.append(this.pathbase);
+          uRet.append(this.basepath);
         }
         return uRet;
       } else if(drive !=null){
@@ -433,11 +433,11 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public CharSequence dir(){ 
       CharSequence basePath = basepath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      int zpath = (path == null) ? 0 : path.length();
+      int zpath = (localdir == null) ? 0 : localdir.length();
       if(zpath > 0){
         int pos;
         if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-        uRet.append(path.substring(0,zpath-1));
+        uRet.append(localdir.substring(0,zpath-1));
       }
       return uRet;
     }
@@ -455,7 +455,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
       int pos;
       if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(this.path);
+      uRet.append(this.localdir);
       uRet.append(this.name);
       return uRet;
     }
@@ -464,8 +464,20 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
 
     
+    /**Returns the file path maybe with given commonBasepath and a access path. 
+     * @param accesspath Access path may be given by usage.
+     * @return the whole path with file name and extension.
+     *   The path is absolute or relative like it is given.
+     */
+    public CharSequence file(CharSequence accesspath){ 
+      CharSequence basePath = basepath(emptyParent, accesspath);
+      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      addLocalName(uRet);
+      return uRet.append(ext);
+    }
+    
     /**Method can be called in the generation script: <*data.file()>. 
-     * @return the whole path with file name and extension inclusive a given general path in a {@link UserFileSet}.
+     * @return the whole path with file name and extension.
      *   The path is absolute or relative like it is given.
      */
     public CharSequence file(){ 
@@ -487,7 +499,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       CharSequence basePath = basepath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
       if( uRet.length() >0){ uRet.append(":"); }
-      uRet.append(this.path);
+      uRet.append(this.localdir);
       return uRet;
     }
     
@@ -502,7 +514,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       CharSequence basePath = basepath();
       StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
       if( uRet.length() >0){ uRet.append(":"); }
-      uRet.append(this.path);
+      uRet.append(this.localdir);
       uRet.append(this.name);
       uRet.append(this.ext);
       return uRet;
@@ -515,17 +527,17 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
   
     /**Method can be called in the generation script: <*path.localdir()>. 
      * @return the local path part of the directory of the file without ending slash. 
-     *   If no directory is given in the local part, it returns "./". 
+     *   If no directory is given in the local part, it returns ".". 
      */
     public String localdir(){
-      int length = path == null ? 0 : path.length();
-      return length == 0 ? "." : path.substring(0, length-1); 
+      int length = localdir == null ? 0 : localdir.length();
+      return length == 0 ? "." : localdir.substring(0, length-1); 
     }
     
     /**Method can be called in the generation script: <*path.localDir()>. 
      * @return the local path part with file without extension.
      */
-    public String localdirW(){ return path.replace('/', '\\'); }
+    public String localdirW(){ return localdir.replace('/', '\\'); }
     
 
     
@@ -556,7 +568,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     private CharSequence addLocalName(StringBuilder uRet){ 
       int pos;
       if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(this.path);
+      uRet.append(this.localdir);
       uRet.append(name);
       return uRet;
     }
@@ -603,9 +615,9 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * @param filepathWildcards
      * @param absPath
      */
-    void expandFiles(List<UserFilepath> listToadd, CharSequence srcpath, File currdir){
+    void expandFiles(List<UserFilepath> listToadd, UserFilepath commonBasepath, CharSequence accesspath, File currdir){
       List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
-      final CharSequence basePath = srcpath.toString() + "/" + this.basepath(); //getPartsFromFilepath(file, null, "absBasePath").toString();
+      final CharSequence basePath = this.basepath(commonBasepath, accesspath); //getPartsFromFilepath(file, null, "absBasePath").toString();
       final CharSequence localfilePath = this.localfile(); //getPartsFromFilepath(file, null, "file").toString();
       final String sPathSearch = basePath + ":" + localfilePath;
       try{ FileSystem.addFilesWithBasePath(currdir, sPathSearch, listFiles);
@@ -627,7 +639,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
           }
         }
         */
-        filepath2.pathbase = basePath.toString();  //it is the same. Maybe null
+        filepath2.basepath = basePath.toString();  //it is the same. Maybe null
         int posName = file1.localPath.lastIndexOf('/') +1;  //if not found, set to 0
         int posExt = file1.localPath.lastIndexOf('.');
         final String sPath = file1.localPath.substring(0, posName);  //"" if only name
@@ -635,7 +647,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
         final String sExt;
         if(posExt < 0){ sExt = ""; sName = file1.localPath.substring(posName); }
         else { sExt = file1.localPath.substring(posExt); sName = file1.localPath.substring(posName, posExt); }
-        filepath2.path = sPath;
+        filepath2.localdir = sPath;
         filepath2.name = sName;
         filepath2.ext = sExt;
         listToadd.add(filepath2);
@@ -654,32 +666,44 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
   
   
   
-  /**A < fileset> in the ZmakeStd.zbnf. It is assigned to a script variable if it was created by parsing the user script.
+  /**A < fileset> in the ZmakeStd.zbnf. It is assigned to a script variable if it was created by parsing the ZmakeUserScript.
    * If the fileset is used in a target, it is associated to the target to get the absolute paths of the files
-   * temporary while processing that target. See 
+   * temporary while processing that target.
+   * <br><br>
+   * The Zbnf syntax for parsing is defined as
    * <pre>
-fileset::= 
-{ srcpath = <""?!prepSrcpath>
-| srcext = <""?srcext>
-| <file>
-? , | + 
-}.
-
+   * fileset::= { basepath = <file?basepath> | <file> ? , }.
    * </pre>
-   * @author Hartmut
-   *
+   * The <code>basepath</code> is a general path for all files which is the basepath (in opposite to localpath of each file)
+   * or which is a pre-basepath if any file is given with basepath.
+   * <br><br>
+   * Uml-Notation see {@link org.vishia.util.Docu_UML_simpleNotation}:
+   * <pre>
+   *               UserFileset
+   *                    |------------commonBasepath-------->{@link UserFilepath}
+   *                    |
+   *                    |------------filesOfFileset-------*>{@link UserFilepath}
+   *                                                        -drive:
+   *                                                        -absPath: boolean
+   *                                                        -basepath
+   *                                                        -localdir
+   *                                                        -name
+   *                                                        -someFiles: boolean
+   *                                                        -ext
+   * </pre>
+   * 
    */
   public static class UserFileset
   {
     
     final UserScript script;
     
-    /**From ZBNF srcpath = <""?!prepSrcpath>. It is a part of the base path anyway. It may be absolute, but usually relative. 
+    /**From ZBNF basepath = <""?!prepSrcpath>. It is a part of the base path anyway. It may be absolute, but usually relative. 
      * If null then unused. */
-    UserFilepath srcpath;
+    UserFilepath commonBasepath;
     
     /**From ZBNF srcext = <""?srcext>. If null then unused. */
-    public String srcext;
+    //public String srcext;
     
     
     /**The target which handles with this file set yet. The target can contain an additional part of the base path. */
@@ -708,15 +732,15 @@ fileset::=
      * It sets the base path for all files of this fileset. This basepath is usually relative.
      * @return ZBNF component.
      */
-    public UserFilepath new_srcpath(){ return srcpath = new UserFilepath(script); }  //NOTE: it has not a parent. this is not its parent!
-    public void set_srcpath(UserFilepath val){  }  //it is set already.
+    public UserFilepath new_basepath(){ return commonBasepath = new UserFilepath(script); }  //NOTE: it has not a parent. this is not its parent!
+    public void set_basepath(UserFilepath val){  }  //it is set already.
     
     /**From ZBNF: < file>. */
-    public UserFilepath new_file(){ return new UserFilepath(this); }
+    public UserFilepath new_file(){ return new UserFilepath(script); }
     
     /**From ZBNF: < file>. */
     public void add_file(UserFilepath val){ 
-      if(val.pathbase !=null || val.path.length() >0 || val.name.length() >0 || val.drive !=null){
+      if(val.basepath !=null || val.localdir.length() >0 || val.name.length() >0 || val.drive !=null){
         //only if any field is set. not on empty val
         filesOfFileset.add(val); 
       }
@@ -726,10 +750,10 @@ fileset::=
     void listFilesExpanded(List<UserFilepath> files, CharSequence accesspath, boolean expandFiles) {  ////
       for(UserFilepath filepath: filesOfFileset){
         if(expandFiles && (filepath.someFiles || filepath.allTree)){
-          filepath.expandFiles(files, accesspath, script.currDir);
+          filepath.expandFiles(files, commonBasepath, accesspath, script.currDir);
         } else {
           //clone filepath! add srcpath
-          UserFilepath targetsrc = new UserFilepath(script, filepath, accesspath);
+          UserFilepath targetsrc = new UserFilepath(script, filepath, commonBasepath, accesspath);
           files.add(targetsrc);
         }
       }
@@ -749,7 +773,7 @@ fileset::=
     @Override
     public String toString(){ 
       StringBuilder u = new StringBuilder();
-      if(srcpath !=null) u.append("srcpath="+srcpath+", ");
+      if(commonBasepath !=null) u.append("basepath="+commonBasepath+", ");
       u.append(filesOfFileset);
       return u.toString();
     }
@@ -1142,27 +1166,59 @@ input::=
     }
     
     public List<UserFilepath> allInputFiles(){
-      return prepareInput(false);
+      return prepareFiles(inputs, false);
     }
+    
+    /**Prepares all files which are given with a parameter.
+     * In the ZmakeUserScript it can be given in form (examples)
+     * <pre>
+     * ...target(..., param=fileset1:accesspath + fileset2:accesspath, ...);
+     * ...target(..., param=file1+file2,...)
+     * ...target(..., param=file,...)
+     * ...target(..., param=fileset,...)
+     * </pre>
+     * All files and members of a fileset of this parameter are combined in one List<{@link UserFilepath}> 
+     * which can be used as container for ZmakeGenerationScript.
+     * @return A list of {@link UserFilepath} independent of a {@link UserFileset}.
+     */
+    public List<UserFilepath> allInputFilesExpanded(){
+      return prepareFiles(inputs, true);
+    }
+
+    public List<UserFilepath> allParamFiles(String paramName){ return allParamFiles(paramName, false); }
+
     
     /**Prepares the input of the target.
      * All input files and fileset which are not parameter are combined in one {@link TargetInput} which is used as the fileset
      * @param expandFiles
      * @return
      */
-    public List<UserFilepath> allInputFilesExpanded(){
-      return prepareInput(true);
+    public List<UserFilepath> allParamFilesExpanded(String paramName){ return allParamFiles(paramName, false); }
+    
+    
+    private List<UserFilepath> allParamFiles(String name, boolean expand){
+      TargetParam param = params.get(name);
+      if(param==null){
+        if(script.bWriteErrorInOutputScript){
+          return null;                //no files
+        } else {
+          throw new IllegalArgumentException("Zmake - param not found; " + name);
+        }
+      } else {
+        return prepareFiles(param.referVariables, false);
+      }
     }
     
     
     /**Prepares the input of the target.
-     * @param expandFiles
-     * @return
+     * @param filesOrFilesets A TargetInput contains either some files or some filesets or both.
+     * @param expandFiles true then resolve wildcards and return only existing files.
+     * @return A list of files.
      */
-    private List<UserFilepath> prepareInput(boolean expandFiles) {
+    private List<UserFilepath> prepareFiles( List<TargetInput> filesOrFilesets, boolean expandFiles) {
       List<UserFilepath> files = new LinkedList<UserFilepath>();
       //UserFileset inputfileset = null; 
-      for(TargetInput targetInputParam: inputs){
+      for(TargetInput targetInputParam: filesOrFilesets){
         //UserFileset targetparaminputfileset; 
         { //if(name == null && targetInputParam.name == null || name !=null && name.equals(targetInputParam.name)){ //input or matching parameter?
           CharSequence srcpath = null;
@@ -1199,14 +1255,14 @@ input::=
           //
           if(targetInputParam.inputFile !=null){
             if(expandFiles){
-              targetInputParam.inputFile.expandFiles(files, srcpath, script.currDir);
+              targetInputParam.inputFile.expandFiles(files, null, srcpath, script.currDir);
             } else {
-              UserFilepath targetsrc = new UserFilepath(script, targetInputParam.inputFile, srcpath);
+              UserFilepath targetsrc = new UserFilepath(script, targetInputParam.inputFile, null, srcpath);
               files.add(targetsrc);  
             }
           } else { 
             assert(targetInputParam.referVariable !=null);
-            //search the input Set in the script variables:
+            //search the fileset in the script variables:
             ScriptVariable variable = script.var.get(targetInputParam.referVariable);
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
