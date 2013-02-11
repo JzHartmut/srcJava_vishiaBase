@@ -11,9 +11,8 @@ import java.util.List;
 
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
-import org.vishia.xmlSimple.XmlNodeSimple;
+import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zbnf.Zbnf2Xml;
-import org.vishia.zbnf.ZbnfParseResultItem;
 
 public class Zbnf2Text extends Zbnf2Xml
 {
@@ -70,7 +69,8 @@ public class Zbnf2Text extends Zbnf2Xml
   { boolean bOk = true;
     bOk = super.execute();
     
-    XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
+    //XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
+    XmlNode resultTree = parser.getResultTree(); 
     
     if(args.sFileOut !=null){
       OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sFileOut + "2.xml")); 

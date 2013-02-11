@@ -1,8 +1,6 @@
 package org.vishia.checkDeps_C;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -99,7 +97,7 @@ public class CheckDeps
     }
   
     /**Tests the command line arguments. */
-    @Override public boolean testArgument(String argc, int nArg) throws ParseException {
+    @Override public boolean testArgument(String argc, int nArg) { //throws ParseException {
       boolean bOk = true;  //set to false if the argc is not passed
       if(argc.startsWith("-src="))          { args.pathsSrcGen.add(getArgument(5)); }
       else if(argc.startsWith("-srcBuild="))     { args.sPathSrcMirrorRoot  = getArgument(10); }

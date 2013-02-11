@@ -36,8 +36,7 @@ import java.util.List;
 import org.vishia.util.Assert;
 import org.vishia.util.SortedTreeNode;
 import org.vishia.util.StringPart;
-import org.vishia.util.TreeNodeBase;
-import org.vishia.util.TreeNodeUniqueKey;
+import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
@@ -68,8 +67,16 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
-   * <li>2012-11-02 JaHartmut new {@link ParseResultItemImplement#getText()} to get a textual projection of the content. used for XML presentation.
-   * <li>2012-11-02 JcHartmut: The ParseResultItem has gotten an element {@link ParseResultItemImplement#treeNodeXml}.
+   * <li>2013-09-12 Hartmut chg: {@link #buildTreeNodeRepresentationXml(XmlNode, ParseResultItemImplement, boolean)} now
+   *   returns and works with the interface reference {@link XmlNode} instead the implementation instance reference 
+   *   {@link XmlNodeSimple}. The implementation is the same. All references are adapted.
+   * <li>2013-09-11 Hartmut new {@link PrepareXmlNode}, {@link ConvertWikiStyle}, 
+   *   {@link #buildTreeNodeRepresentationXml(XmlNode, ParseResultItemImplement, boolean)}: All capabilities
+   *   which were located in {@link ZbnfXmlOutput} are implemented here. The class {@link ZbnfXmlOutput} is not necessary
+   *   any more because the intrinsic format of data stored as parse result is XML now.
+   * <li>2013-09-12 Hartmut chg 
+   * <li>2012-11-02 Hartmut new {@link ParseResultItemImplement#getText()} to get a textual projection of the content. used for XML presentation.
+   * <li>2012-11-02 Hartmut: The ParseResultItem has gotten an element {@link ParseResultItemImplement#treeNodeXml}.
    *   It refers to an tree-like result store, whereby the {@link XmlNodeSimple} is used as node.
    *   Therewith the conversion to XML is obviously. As well too, the access to treed data able to use for direct
    *   text conversion using {@link org.vishia.zTextGen.TextGenerator}.
@@ -219,7 +226,8 @@ class ZbnfParserStore
     SortedTreeNode<ZbnfParseResultItem> treeNodeRepresentation = null;
     
     
-    XmlNodeSimple<ZbnfParseResultItem> treeNodeXml = null;
+    //XmlNodeSimple<ZbnfParseResultItem> treeNodeXml = null;
+    XmlNode treeNodeXml = null;
     
     
     ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax)
@@ -635,6 +643,29 @@ class ZbnfParserStore
   }
 
 
+  
+  public interface PrepareXmlNode
+  {
+    
+    void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException;
+  }
+  
+
+  
+  
+  
+  private static class ConvertWikiStyle implements PrepareXmlNode
+  {
+    WikistyleTextToSimpleXml wikistyleText2SimpleXml = new WikistyleTextToSimpleXml();
+
+    public void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException
+    {
+      // TODO Auto-generated method stub
+      wikistyleText2SimpleXml.setWikistyleFormat(text, xmlDst, null, null);
+    }
+    
+  }
+  
 
 
   /** The last item, useable for set... */
@@ -645,6 +676,9 @@ class ZbnfParserStore
 
   /** The index to read out the parse results. See getNextParseResult().*/
   //int idxParserStore;
+
+  
+  static ConvertWikiStyle convertWikiformat = new ConvertWikiStyle(); 
 
 
   /** Constructs a new empty ParserStore.*/
@@ -998,11 +1032,11 @@ class ZbnfParserStore
    * @param bRecursive true then for all children of children.
    * @return
    */
-  static XmlNodeSimple<ZbnfParseResultItem>  buildTreeNodeRepresentationXml(XmlNodeSimple<ZbnfParseResultItem> xmlParent
+  static XmlNode buildTreeNodeRepresentationXml(XmlNode xmlParent
       , ParseResultItemImplement cmpnResult, boolean bRecursive) 
   {
     //long time = System.nanoTime();
-    XmlNodeSimple<ZbnfParseResultItem> xmlNode = cmpnResult.treeNodeXml;
+    XmlNode xmlNode = cmpnResult.treeNodeXml;
     if(xmlNode ==null){
       cmpnResult.treeNodeXml = xmlNode = createXmlNode(xmlParent, cmpnResult);
       if(cmpnResult.isComponent()){
@@ -1010,7 +1044,7 @@ class ZbnfParserStore
         while(iter.hasNext()) { 
           ZbnfParseResultItem item =iter.next(); 
           ParseResultItemImplement childResult = (ParseResultItemImplement)item;
-          XmlNodeSimple<ZbnfParseResultItem> xmlChild = childResult.treeNodeXml;
+          XmlNode xmlChild = childResult.treeNodeXml;
           if( xmlChild !=null){
             //The child component has a treeNodeRepresentation already.
             //It is because it is a component, any component has gotten its treeNodeRepresentation already.
@@ -1038,18 +1072,20 @@ class ZbnfParserStore
   }
   
 
-  static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
-  ( XmlNodeSimple<ZbnfParseResultItem> xmlParent
+  //static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
+  static XmlNode createXmlNode
+  ( XmlNode xmlParent
   , ParseResultItemImplement parseResult
   ){
-    XmlNodeSimple<ZbnfParseResultItem> xmlNode = xmlParent;
+    XmlNode xmlNode = xmlParent;
     String semantic = parseResult.getSemantic();
     int sep;
     do{
       sep = semantic.indexOf('/');
       if(sep >=0){
         String sLeftSemantic = semantic.substring(0, sep);
-        XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
+        XmlNode xmlMeta = xmlNode.getChild(sLeftSemantic);
+        //XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
         if(xmlMeta ==null){
           xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sLeftSemantic);
           if(xmlParent !=null){
@@ -1060,6 +1096,7 @@ class ZbnfParserStore
             }
           }
         } else {
+          assert(xmlMeta instanceof XmlNodeSimple<?>);
           xmlNode = xmlMeta;
         }
         semantic = semantic.substring(sep +1);
@@ -1069,18 +1106,53 @@ class ZbnfParserStore
           if(xmlNode == null){
             xmlNode = xmlParent;
           }
-          xmlNode.setAttribute(semantic.substring(1), parseResult.getText());
+          int posValue = semantic.indexOf('=');              //an attribute can defined in form @name=value
+          String sNameAttribute;
+          if(posValue >=0){ sNameAttribute = semantic.substring(1, posValue); }
+          else{ sNameAttribute = semantic.substring(1); }
+          if(sNameAttribute.length() >0)                      //the given =value is stored if neccessary.
+          { String sValue = posValue >=0 ? semantic.substring(posValue +1) : parseResult.getText();  
+            xmlNode.setAttribute(sNameAttribute, sValue);
+          }
         } else {
-          //creates an attribute node which is added as attribute later.
-          xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(semantic, parseResult);
-          if(!parseResult.isComponent()){
-            //add the textual parse result to a leaf node.
-            String sText = parseResult.getText();
-            if(sText !=null){
-              xmlNode.addContent(sText); 
-            } else {
-              //it is possible to have a node without text!
-              //Assert.check(false);
+          if(semantic.equals("text()") || semantic.equals("."))
+          { /**The last part of the semantic <code>tag/last()</code> is a routine ... TODO */
+            String sValue = parseResult.getText();
+            if(sValue != null && sValue.length() >0)
+            { xmlNode.addContent(sValue);
+            }
+          }
+          else
+          { /**The last part of the semantic <code>path/tag</code> or the whole semantic is an XML-indentifier.
+             * Create a child element with this tagname and add it to the output. 
+             * This child, xmlNew, is the parent of the content.*/
+            final String sTagName;
+            boolean bExpandWikistyle = semantic.endsWith("+");
+            boolean bSetParsedText = semantic.endsWith("&");
+            if(bExpandWikistyle || bSetParsedText)
+            { sTagName = semantic.substring(0, semantic.length()-1);
+            }
+            else
+            { sTagName = semantic;
+            }
+            //creates an attribute node which is added as attribute later.
+            xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sTagName, parseResult);
+            if(!parseResult.isComponent()){
+              //add the textual parse result to a leaf node.
+              String sText = parseResult.getText();
+              if(sText != null && sText.length() >0)
+              { 
+                if(bExpandWikistyle)
+                { try{ convertWikiformat.prepareXmlNode(xmlNode, sText);
+                  
+                  } catch(XmlException exc){
+                    System.err.println("ZbnfParserStore - XmlException convert wikiformat; " + exc.getMessage());
+                  }
+                }
+                else 
+                { xmlNode.addContent(sText);
+                }  
+              }
             }
           }
           if(xmlParent !=null){

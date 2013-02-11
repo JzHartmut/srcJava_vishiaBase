@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -14,7 +13,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
@@ -23,7 +21,7 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.UnexpectedException;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
-import org.vishia.xmlSimple.XmlNodeSimple;
+import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
 
@@ -192,11 +190,11 @@ public class TextGenScript {
   public boolean translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
-    ZbnfParser parserGenCtrl = new ZbnfParser((Report)console);
+    ZbnfParser parserGenCtrl = new ZbnfParser(console);
     parserGenCtrl.setSyntax(sZbnf4GenCtrl);
     if(console.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
       console.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
-      parserGenCtrl.reportSyntax((Report)console, MainCmdLogging_ifc.fineInfo);
+      parserGenCtrl.reportSyntax(console, MainCmdLogging_ifc.fineInfo);
     }
     console.writeInfo(" ... ");
     bOk = parserGenCtrl.parse(spGenCtrl);
@@ -205,7 +203,8 @@ public class TextGenScript {
       throw new ParseException(sError,0);
     }
     if(checkXmlOutput !=null){
-      XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
+      //XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
+      XmlNode xmlParseResult = parserGenCtrl.getResultTree();
       SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
       OutputStreamWriter xmlWriter = new OutputStreamWriter(new FileOutputStream(checkXmlOutput));
       xmlOutputter.write(xmlWriter, xmlParseResult);
@@ -216,7 +215,7 @@ public class TextGenScript {
     //}
     //write into Java classes:
     zTextGenCtrl = new MainGenCtrl();
-    ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput((Report)console);
+    ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(console);
     parserGenCtrl2Java.setContent(zTextGenCtrl.getClass(), zTextGenCtrl, parserGenCtrl.getFirstParseResult());
     return bOk;
   }

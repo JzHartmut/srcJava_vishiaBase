@@ -45,9 +45,9 @@ import org.vishia.util.Assert;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
+import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 
-import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 
@@ -123,6 +123,9 @@ public class ZbnfParser
   /**Version-ident.
    * list of changes:
    * <ul>
+   * <li>2013-09-12 Hartmut chg: {@link #getResultTree()} returns now the interface reference {@link XmlNode} instead the
+   *   implementation instance reference {@link org.vishia.xmlSimple.XmlNodeSimple}. The implementation is the same.
+   *   All references are adapted, especially {@link ParseResultlet#xmlResult}
    * <li>2013-01-18 Hartmut chg, new: Log-output improved. New inner class {@link LogParsing}.
    * <li>2013-01-04 Hartmut new {@link #alreadyParsedCmpn}. It may be speed up the parsing process but only if the same component
    *   is requested  at the same position inside another component. It is not used yet. 
@@ -2575,8 +2578,9 @@ public class ZbnfParser
    * Note that the {@link XmlNodeSimple} can be written as XML textfile or converted to a Java-XML-format (TODO)
    * using {@link @org.vishia.xmlSimple.SimpleXmlOutputter}
    * */
-  public XmlNodeSimple<ZbnfParseResultItem> getResultTree(){
-    if(parserStoreTopLevel.items.size()>0)
+  //public XmlNodeSimple<ZbnfParseResultItem> getResultTree(){
+  public XmlNode getResultTree(){
+        if(parserStoreTopLevel.items.size()>0)
     { //parseResult.idxParserStore = 0;
       ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
       //ZbnfParserStore.buildTreeNodeRepresentationXml(null, firstItem, true);
@@ -2646,7 +2650,7 @@ public class ZbnfParser
     final long startPosText;
     long endPosText;
     
-    XmlNodeSimple<ZbnfParseResultItem> xmlResult;
+    XmlNode xmlResult;
     
     ParseResultlet(ZbnfSyntaxPrescript syntaxPrescript, long startPosText){
       this.syntaxPrescript = syntaxPrescript;

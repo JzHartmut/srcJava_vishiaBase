@@ -21,7 +21,7 @@ import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
-import org.vishia.xmlSimple.XmlNodeSimple;
+import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zTextGen.OutputDataTree;
 import org.vishia.zTextGen.TextGenScript;
 import org.vishia.zTextGen.TextGenSyntax;
@@ -463,7 +463,8 @@ public class Zmake
     
     if(args.sCheckXmlOutput !=null){
       //write ZmakeUserScript into XML output only to check the input script.
-      XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
+      //XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
+      XmlNode xmlTop = parser.getResultTree();
       OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sCheckXmlOutput + "_zmake.xml")); 
       SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
       xmlOut.write(wrXml, xmlTop);
