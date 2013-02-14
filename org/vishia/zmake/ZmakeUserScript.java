@@ -1,13 +1,11 @@
 package org.vishia.zmake;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.zTextGen.TextGenScript;
 
@@ -17,6 +15,7 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-02-15 Hartmut chg/new: More functionality for UserFilePath, essential improved. continue work and test ...
    * <li>2013-02-10 Hartmut chg/new: UserFilepath#parent removed: A UserFilepath need not know a fileset where it is member of
    *   because the files can be arranged from more as one fileset with another basepath etc. The fileset with its is 
    *   {@link UserFileset#commonBasepath} (renamed from 'srcpath') is known if that is evaluated only.
@@ -178,16 +177,17 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     private final UserScript script;
     
     /**From ZBNF: $<$?scriptVariable>. If given, then the {@link #basePath()} starts with it. It is an absolute path then. */
-    public String scriptVariable;
+    String scriptVariable, envVariable;
     
-    public String drive;
+    String drive;
     /**From Zbnf: [ [/|\\]<?@absPath>]. Set if the path starts with '/' or '\' maybe after drive letter. */
-    public boolean absPath;
+    boolean absPath;
     
     /**Path-part before a ':'. It is null if the basepath is not given. */
     String basepath;
     
-    /**Localpath after ':' or the whole path. It is an empty "" if if a directory is not given*/
+    /**Localpath after ':' or the whole path. It is an empty "" if a directory is not given. 
+     * It ends with slash if any content is given. */
     String localdir = "";
     
     /**From Zbnf: The filename without extension. */
@@ -218,87 +218,594 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * @param basepath An additional basepath usual stored as <code>basepath=path, ...</code> in a fileset, maybe null
      * @param pathbase0 additional pre-pathbase before base, maybe null
      */
-    UserFilepath(UserScript script, UserFilepath src, UserFilepath commonBasepath, CharSequence accesspath){
+    UserFilepath(UserScript script, UserFilepath src, UserFilepath commonPath, UserFilepath accessPath){
+      CharSequence basePath = src.basepath(null, commonPath, accessPath);
+      CharSequence localDir = src.localDir(null, commonPath, accessPath);
+      int posbase = isRootpath(basePath);
+      this.drive = posbase >=2 ? Character.toString(basePath.charAt(0)) : null;
+      this.absPath = posbase == 1 || posbase == 3;
+      this.basepath = basePath.subSequence(posbase, basePath.length()).toString();
       this.script = script;
-      this.drive = src.drive;
-      this.absPath = src.absPath;
-      this.basepath = commonBasepath == null? null: commonBasepath.file(accesspath).toString();
-      this.localdir = src.localdir;
+      this.localdir = localDir.toString();
       this.name = src.name;
       this.ext = src.ext;
-      this.allTree = src.allTree;
+      this.allTree = localdir.indexOf('*') >=0;
       this.someFiles = src.someFiles;
     }
     
-    //public void set_someFiles(){ someFiles = true; }
-    //public void set_wildcardExt(){ wildcardExt = true; }
-    //public void set_allTree(){ allTree = true; }
+
     
-    /**FromZbnf. */
-    public void set_pathbase(String val){
-      basepath = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
-      allTree = val.indexOf('*')>=0;
-    }
-    
-    /**FromZbnf. */
-    public void set_path(String val){
-      localdir = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
-      allTree = val.indexOf('*')>=0;
-    }
-    
-    /**FromZbnf. */
-    public void set_name(String val){
-      name = val;   //file is empty and ext does not start with dot. It is a filename without extension.
-      someFiles |= val.indexOf('*')>=0;
-    }
-    
-    /**FromZbnf. If the name is empty, it is not the extension but the name.*/
-    public void set_ext(String val){
-      if(val.equals(".") && name.equals(".")){
-        name = "..";
+    /**Inserts the given drive letter and the root designation on start of buffer. It does nothing if the path is relative.
+     * @param u The buffer
+     * @param commonBasepath An common base path in fileset
+     * @param accesspath An access path while using a fileset
+     * @return true if it is a root path or it has a drive letter.
+     */
+    CharSequence driveRoot(CharSequence basepath, UserFilepath commonBasepath, UserFilepath accesspath){
+      boolean isRoot = false;
+      CharSequence ret = basepath;
+      if(absPath || commonBasepath !=null && commonBasepath.absPath || accesspath !=null && accesspath.absPath){ 
+        StringBuilder u = basepath instanceof StringBuilder? (StringBuilder)basepath : new StringBuilder(basepath);
+        ret = u;
+        u.insert(0, '/'); 
+        isRoot = true; 
       }
-      else if((val.length() >0 && val.charAt(0) == '.') || name.length() >0  ){ 
-        ext = val;  // it is really the extension 
+      if(drive !=null){
+        StringBuilder u = basepath instanceof StringBuilder? (StringBuilder)basepath : new StringBuilder(basepath);
+        ret = u;
+        u.insert(0, drive).insert(1, ':'); 
+        isRoot = true;
+      }
+      else if(commonBasepath !=null && commonBasepath.drive !=null){
+        StringBuilder u = basepath instanceof StringBuilder? (StringBuilder)basepath : new StringBuilder(basepath);
+        ret = u;
+        u.insert(0, commonBasepath.drive).insert(1, ':'); 
+        isRoot = true;
+      }
+      else if(accesspath !=null && accesspath.drive !=null){
+        StringBuilder u = basepath instanceof StringBuilder? (StringBuilder)basepath : new StringBuilder(basepath);
+        ret = u;
+        u.insert(0, accesspath.drive).insert(1, ':'); 
+        isRoot = true;
+      }
+      return ret;
+    }
+    
+    
+    
+    /**Checks whether the given path describes a root directory or drive letter.
+     * returns
+     * <ul>
+     * <li>0 if it is a relative path.
+     * <li>1 if it is a absolute path without drive letter: "/path" or "\path"
+     * <li>2 if it is a relative path with a drive letter: "D:path"
+     * <li>3 if it is an absolute path with a drive letter: "D:/path" or "D:\path"
+     * </ul>
+     * The return value is the start of the non-root path part in textPath.
+     * If return=2 or 3, the drive letter is textPath.charAt(0).
+     * @param textPath
+     * @return 
+     */
+    static int isRootpath(CharSequence textPath){  ///
+      int start;
+      if(textPath.length() >=1 && "\\/".indexOf(textPath.charAt(0)) >=0 ){
+        start =1;
+      } 
+      else if(textPath.length() >=2 && textPath.charAt(1) == ':'){
+        if(textPath.length() >=3 &&  "\\/".indexOf(textPath.charAt(2)) >=0 ){
+          start = 3;
+        } else {
+          start = 2;
+        }
+      } else {
+        start = 0;  //relative path
+      }
+      return start;
+    }
+    
+    
+    
+    /**Method can be called in the generation script: <*basePath(<*abspath>)>.
+     * <br><br>
+     * Constellation true table:
+     * <pre>
+     * given: Reference is not null or is not emptyParent
+     * base:  has a basepath and therefore a local part.
+     * abs:   Is given as absolute path 
+     * 
+     *  access      common            this         basepath build with
+     *  given base  given base abs    base abs
+     *    x    x      x    x    x      1    1      thisBase
+     *    x    x      x    x    x      0    1      ""
+     *    
+     *    0    x      0    x    x      1    0      thisBase
+     *    1    x      0    x    x      1    0      accessFile + thisBase
+   
+     *    x    x      1    x    1      1    0      commonFile + thisBase
+  
+     *    0    x      1    x    0      1    0      commonFile + thisBase
+     *    1    x      1    x    0      1    0      accessFile + commonFile + thisBase
+     *    
+ 
+     *    0    x      0    x    x      0    0      ""
+     *    1    0      0    x    x      0    0      accessFile
+     *    1    1      0    x    x      0    0      accessBase
+     *    
+     *    x    x      1    1    1      0    0      commonBase
+
+     *    0    x      1    1    0      0    0      commonBase
+     *    1    x      1    1    x      0    0      accessFile + commonBase
+     *    
+     *    x    x      1    0    1      0    0      commonFile
+    
+     *    0    x      1    0    0      0    0      commonFile
+     *    1    x      1    0    0      0    0      accessFile + commonFile
+     *    
+     *         
+     * </pre>        
+     * @param uRet If not null then append the result in it.  
+     * @param generalPath if not null then its file() is used as part before the own basepath
+     *   but only if this is not an absolute path.
+     * @param accesspath a String given path which is written before the given base path if the path is not absolute in this.
+     *   If null, it is ignored. If this path is absolute, the result is a absolute path of course.
+     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
+     *   till a ':' in the input path or an empty string.
+     *   Either as absolute or as relative path how it is given.
+     *   The return instance is the given uRet if uRet is not null. 
+     *   It is a StringBuilder if the path is assembled from more as one parts.
+     *   It is a String if uRet is null and the basepath is simple.
+     *   A returned StringBuilder may be used to append some other parts furthermore.
+     */
+    public CharSequence basepath(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath){ 
+      //if(generalPath == null){ generalPath = emptyParent; }
+      //first check singulary conditions
+      int pos;
+      if(this.absPath){
+        if(drive !=null || basepath !=null || uRet !=null){
+          if(uRet == null){ uRet = new StringBuilder(); }  //it is necessary.
+          else { uRet.setLength(0); }
+          if(drive !=null){ 
+            uRet.append(drive).append(":");
+          }
+          uRet.append("/");
+          if(basepath !=null){ 
+            uRet.append(basepath);
+          }
+          return uRet;
+        } else {
+          assert(uRet == null && basepath ==null && drive == null);
+          return "/";
+        }
+      }
+      else if(this.basepath !=null){
+        if(commonPath !=null || accessPath !=null){
+          CharSequence prepath;
+          if(commonPath !=null){
+            prepath = commonPath.file(uRet, accessPath);
+          } else {
+            prepath = accessPath.file(uRet, null);
+          }
+          if(basepath.length() ==0){ 
+            return prepath;
+          } else {
+            if(prepath instanceof StringBuilder){
+              uRet = (StringBuilder)prepath;
+            } else {
+              assert(uRet == null);  //elsewhere it might be used for prepath
+              uRet = new StringBuilder(prepath);
+            }
+            if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+            uRet.append(this.basepath);
+            return uRet;
+          }
+        } else {
+          return basepath;
+        }
       } else { 
-        //a file name is not given, only an extension is parsed. Use it as file name because it is not an extension!
-        name = val;   //file is empty and ext does not start with dot. It is a filename without extension.
+        assert(this.basepath == null); //check whether other parts have a basepath
+        if(commonPath !=null){
+          return commonPath.basepath(uRet, null, accessPath);
+        } else if(accessPath !=null){
+          return accessPath.basepath(uRet, null, null);
+        } else {
+          if(uRet !=null){ return uRet; }
+          else return "";
+        }
+        
       }
-      someFiles |= val.indexOf('*')>=0;
+    }
+    
+    
+    public CharSequence XXXbasepath(StringBuilder uRet, UserFilepath generalPath, UserFilepath accesspath){ 
+        if(generalPath == null){ generalPath = emptyParent; }
+      if(this.absPath){
+        // access      common            this         basepath build with
+        // given base  given base abs    base abs
+        //   x    x      x    x    x      1    1      thisBase
+        //   x    x      x    x    x      0    1      ""
+        if(this.basepath !=null){
+          if(uRet !=null){ uRet.append(this.basepath); return uRet; }
+          else return this.basepath;
+        } else { //basepath == null
+          return uRet !=null ? uRet : "";  //add nothing
+        }
+      } else {  //not a absPath in this
+        if(this.basepath !=null){
+          //This has a basepath, use file() from the other given parts.
+          // access      common            this         basepath build with
+          // given base  given base abs    base abs
+          //   0    x      0    x    x      1    0      thisBase
+          //   1    x      0    x    x      1    0      accessFile + thisBase
+        
+          //   x    x      1    x    1      1    0      commonFile + thisBase
+       
+          //   0    x      1    x    0      1    0      commonFile + thisBase
+          //   1    x      1    x    0      1    0      accessFile + commonFile + thisBase
+          if(generalPath == emptyParent && accesspath == null ){
+            //singulary case: only the this.basepath
+            // access      common            this         basepath build with
+            // given base  given base abs    base abs
+            //   0    x      0    x    x      1    0      thisBase
+            if(uRet !=null){ uRet.append(this.basepath); return uRet; }
+            else return this.basepath;
+          } else {
+            //it needs a StringBuilder
+            if(uRet ==null){ uRet = new StringBuilder(); }
+            if(accesspath !=null && (generalPath == emptyParent || !generalPath.absPath)){ 
+              // access      common            this         basepath build with
+              // given base  given base abs    base abs
+              //   1    x      0    x    x      1    0      accessFile + thisBase
+              //   1    x      1    x    0      1    0      accessFile + commonFile + thisBase
+              accesspath.file(uRet, null); 
+            }
+            if(generalPath !=emptyParent){ 
+              // access      common            this         basepath build with
+              // given base  given base abs    base abs
+              //   x    x      1    x    1      1    0      commonFile + thisBase
+              //   0    x      1    x    0      1    0      commonFile + thisBase
+              //   1    x      1    x    0      1    0      accessFile + commonFile + thisBase
+              generalPath.file(uRet, null); 
+            }
+            uRet.append(this.basepath);
+            return uRet;
+          }
+        } else { //this.basepath ==null
+          //this has not a basepath, test whether the other parts has such one.
+          if(generalPath.absPath || accesspath ==null ){
+            //accesspath is not used!
+            // access      common            this         basepath build with
+            // given base  given base abs    base abs
+            //   x    x      1    ?    1      0    0      commonBase ? commonFile
+            //   0    x      1    ?    0      0    0      commonBase ? commonFile
+            if(generalPath.basepath !=null){
+              // access      common            this         basepath build with
+              // given base  given base abs    base abs
+              //   x    x      1    1    1      0    0      commonBase
+              //   0    x      1    1    0      0    0      commonBase
+              if(uRet !=null){ uRet.append(generalPath.basepath); return uRet; }
+              else return generalPath.basepath;
+            } else { //generalPath.basepath ==null
+              //This has not a basepath, commonPath also not but it is absolute or accesspath doesn't given: 
+              //use commonPath as base path
+              // access      common            this         basepath build with
+              // given base  given base abs    base abs
+              //   x    x      1    0    1      0    0      commonFile
+              //   0    x      1    0    0      0    0      commonFile
+              if(uRet ==null){ uRet = new StringBuilder(); }
+              return generalPath.file(uRet, null);
+            }
+          } else {
+            //use 
+          }
+        }
+      }
+      
+      
+      
+      
+      
+      
+      if(uRet == null && this.basepath !=null 
+          && (this.absPath || generalPath == emptyParent || accesspath == null)){
+        return basepath;
+      } else if(uRet == null && generalPath.basepath != null 
+          && (generalPath.absPath || accesspath == null )){
+        return generalPath.basepath;
+      } else if(uRet == null && accesspath !=null && accesspath.basepath != null ){
+        return accesspath.basepath;
+        
+      } else {
+        if(uRet ==null){ uRet = new StringBuilder(); }
+        
+        if(this.basepath !=null){
+        
+        }
+      }
+      
+      if(!absPath && !generalPath.absPath && accesspath !=null){
+        if(this.basepath !=null || generalPath.basepath !=null){
+          //this hase a basepath, therefore the whole path of the accesspath is used as base
+          accesspath.file(uRet, null);
+        } else {
+          accesspath.file(uRet, null);
+          
+        }
+      }
+      if(!absPath && generalPath != emptyParent){
+        if(this.basepath !=null){
+          generalPath.file(uRet, null);   //accesspath/generalPath.file()/...
+        }
+      } 
+      //the info in generalPath and accesspath is set into uRet.
+      int pos;
+      if(scriptVariable !=null){
+        ScriptVariable var = script.var.get(scriptVariable);
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        if(var.filepath !=null){
+          var.filepath.file(uRet, null); //.../scriptVariable.file()/....
+        } else {                              //NOTE: if it contains a drive or absolute path too it is confuse.
+          uRet.append(var.text());             //.../scriptVariable.text()/....
+        }                                     
+      }
+      if(this.basepath !=null){
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(this.basepath);
+      }
+      return uRet;
     }
     
 
+    
+    /**Returns the basepath of this maybe with environment or script variable content.
+     * The basepath of this is not null. It may be empty if <code>$variable:</code> is given in textual form.
+     * @param uRet The StringBuilder to append
+     * @return 0 if the variable does not contain a drive letter or absolute path.
+     *   <br>'/': if the variable contain an absolute path. The absolute path designation is not appended into the uRet.
+     *   <br>'D': Drive letter in upper cases if the variable contains a drive with absolute path.
+     *   <br>'d': Drive letter in lower cases if the variable contains a drive but not an absolute path.
+     *   
+     */
+    private CharSequence getVariablepath(StringBuilder uRet){
+      final CharSequence textPath;
+      if(envVariable !=null){
+        textPath = System.getenv("envVariable");
+      }
+      else if(scriptVariable !=null){
+        ScriptVariable var = script.var.get(scriptVariable);
+        if(var.filepath !=null){
+          if(uRet == null){ uRet = new StringBuilder(); }
+          var.filepath.file(uRet, null);  //get file, not its basepath because this hase basepath
+          textPath = null;
+        } else {
+          textPath = var.text();
+        }
+      } else {
+        textPath = null;
+      }
+      if(textPath ==null){
+        return uRet !=null ? uRet : "";
+      } else if(uRet !=null){ 
+        assert(textPath !=null);
+        int pos;
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(textPath);
+      } else { 
+        assert(uRet==null && textPath!=null); 
+        return textPath;
+      }
+      return uRet;
+    }
+    
+    
+    
+    private CharSequence XXXnonRootfile(StringBuilder uRet){
+      getVariablepath(uRet);
+      int pos;
+      if(basepath !=null){
+        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+        uRet.append(basepath); 
+      }
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+      uRet.append(localdir).append(name).append(ext);
+      return uRet;
+    }
+    
+    
+    /**Gets the base path if defined or the whole path of the file inclusive its accesspath.
+     * This routine does not check whether
+     * @param uRet
+     * @param accesspath
+     */
+    private CharSequence fileOrBasepath(StringBuilder uRet, UserFilepath accesspath){
+      CharSequence ret;
+      //if(basepath !=null)
+      if(accesspath !=null && !this.absPath){
+        if(this.basepath !=null){
+          ret = accesspath.file(uRet, null);  //get the access.file because this has base
+        } else {
+          ret = accesspath.fileOrBasepath(uRet, null);
+          if(accesspath.basepath !=null){
+            return ret;   //This has not a basepath, but access.base
+          } 
+        }
+      }
+      int pos = uRet.length();
+      ret = getVariablepath(uRet);
+      if(pos >0){  //a content exists before the variable 
+        int posRoot = isRootpath(uRet.subSequence(pos, pos+3));
+        if(posRoot != 0){
+          //The variable contains an absolute path designation, ignore the accesspath:
+          uRet.delete(0, pos);
+        }
+      }
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+      if(this.basepath !=null){
+        uRet.append(this.basepath);
+      } else {
+        uRet.append(localdir).append(name).append(ext);
+      }
+      return ret;
+    }
+    
+
+
+    
+    /**Gets the local directory path.
+     * <ul>
+     * <li>If this instance has a basepath, the local directory is the local directory path part of this.
+     *   In this case the generalPath and the accesspath are not used.
+     * <li>If this has not a basepath but the generalPath is split in a basepath and a localpath,
+     *   the local path part of the generalPath is used as local directory path too.
+     * <li>If this has not a basepath and the generalPath hasn't a basepath or it is null 
+     *   but the accesspath is split in a basepath and a local path,
+     *   the local path part of the accessPath and the whole generalPath is used as local directory path too.
+     * <li>If this has not a basepath but both the generalPath and the accessPath has not a basepath too,
+     *   only this {@link #localdir} is returned as local directory path. In this case the accessPath and the generalPath
+     *   acts as basepath.
+     * </ul>  
+     * If the 
+     * @param uRet If not null, then the local directory path is appended to it and uRet is returned.
+     * @param generalPath
+     * @param accessPath
+     * @return Either the {@link #localdir} as String or a StringBuilder instance. If uRet is given, it is returned.
+     */
+    public CharSequence localDir(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath){
+
+      if(  basepath !=null 
+        || commonPath == null && accessPath == null && scriptVariable == null && envVariable == null){
+        if(uRet == null){
+          return localdir;
+        } else {
+          uRet.append(localdir);
+          return uRet;
+        }
+      }
+      else {
+        assert(basepath == null);
+        if(uRet ==null){ uRet = new StringBuilder(); } //it is necessary. Build it if null.
+        ScriptVariable var;
+        UserFilepath varfile;
+        if(scriptVariable !=null){
+          var = script.var.get(scriptVariable);
+          varfile = var.filepath;
+        } else { 
+          var = null;
+          varfile = null;
+        }
+        if(varfile !=null){
+          varfile.localFile(uRet, commonPath, accessPath);  //The full varfile.localfile should use.
+        }
+        else if(commonPath !=null){
+          commonPath.localFile(uRet, null, accessPath);
+        } 
+        else if(accessPath !=null){
+          accessPath.localDir(uRet, null, null);
+        }
+        //
+        if(var !=null && var.filepath == null){
+          CharSequence varpath = var.text();
+          uRet.append(varpath);
+        }
+        if(envVariable !=null){
+          CharSequence varpath = System.getenv(envVariable);
+          uRet.append(varpath);
+        }
+        int pos;
+        if( localdir.length() >0 && (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+
+        uRet.append(localdir);
+        return uRet;
+      }
+    }
+    
+    
+    private CharSequence localFile(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath){
+      CharSequence dir = localDir(uRet, commonPath, accessPath);
+      if(uRet ==null){
+        uRet = dir instanceof StringBuilder ? (StringBuilder)dir: new StringBuilder(dir);
+      }
+      uRet.append(name).append(ext);
+      return uRet;
+    }
+    
+    
+    
+    public CharSequence XXXlocalDir(StringBuilder uRet, UserFilepath generalPath, UserFilepath accessPath){
+      //TODO variable
+      
+      if(  uRet !=null   //the StringBuilder is given, use it!
+        || this.basepath ==null   //this has not a basepath: possible to use use parts from generalPath and accessPath
+          && !this.absPath           //this is not a absPath
+          && (generalPath.basepath !=null || accessPath.basepath !=null)  //but one of the other is split into base and local
+        ){                //or the StringBuilder is necessary:
+        if(this.basepath == null && (generalPath == null || generalPath.basepath == null) && accessPath != null && accessPath.basepath !=null){
+          //the accesspath has a basepath, all other not, use the localdir part of the accesspath as localdir:
+          uRet.append(accessPath.localdir).append(accessPath.name).append(accessPath.ext);
+          if(generalPath !=null && generalPath.scriptVariable !=null){
+            
+          }
+          uRet.append(generalPath.localdir).append(generalPath.name).append(generalPath.ext);
+        }
+        else if(this.basepath == null && generalPath.basepath != null){
+          //the generalPath has a basepath, but this not, use the localdir part of the generalPath as localdir:
+          uRet.append(generalPath.localdir).append(generalPath.name).append(generalPath.ext);
+        }
+        uRet.append(generalPath.localdir);
+        return uRet;
+      } else {
+        return this.localdir;   //a String. Don't build a StringBuilder if not necessary.
+      }
+    }
+    
+    
+
+    
+    
+    /**Builds the absolute path with given basepath maybe absolute or not, maybe with drive letter or not. 
+     * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
+     */
+    private CharSequence absbasepath(CharSequence basepath){ 
+      CharSequence ret = basepath;
+      if(isRootpath(ret) ==0){       //insert the currdir of the script only if it is not a root directory already:
+        if(ret.length() >0){      //only if ret is not ""
+          StringBuilder uRet;
+          if(ret instanceof StringBuilder){
+            uRet = (StringBuilder)ret;
+          } else {
+            ret = uRet = new StringBuilder(ret);
+          }
+          String sCurrDir = script.sCurrDir;
+          if(uRet.length() >=2 && uRet.charAt(1) == ':'){
+            //a drive is present but it is not a root path
+            if(sCurrDir.length()>=2 && sCurrDir.charAt(1)==':' && uRet.charAt(0) == sCurrDir.charAt(0)){
+              //Same drive letter like sCurrDir: replace the absolute path.
+              uRet.replace(0, 2, sCurrDir);
+            }
+            else {
+              //a drive is present, but it is another drive else in sCurrDir But the path is not absolute:
+              //TODO nothing yet, 
+            }
+          }
+          else {  //a drive is not present.
+            uRet.insert(0, script.sCurrDir);
+          }
+        }
+        else {
+          //ret is "", then return the current dir only.
+          ret = script.sCurrDir;
+        }
+      }
+      return ret;
+    }
+    
     /**Method can be called in the generation script: <*absbasepath()>. 
      * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
      */
     public CharSequence absbasepath(){ 
-      CharSequence basePath = basepath();
-      if(this.absPath){ return basePath; }
-      else if(basePath instanceof StringBuilder){
-        //not an absolute path, complete it with the global given base path:
-        StringBuilder uRet = (StringBuilder)basePath;
-        String sCurrDir = script.sCurrDir;
-        if(uRet.length() >=2 && uRet.charAt(1) == ':'){
-          //a drive is present
-          if(sCurrDir.length()>=2 && sCurrDir.charAt(1)==':' && uRet.charAt(0) == sCurrDir.charAt(0)){
-            //Same drive letter how sCurrDir: replace the absolute path.
-            uRet.replace(0, 2, sCurrDir);
-          }
-          else {
-            //a drive is present, it is another drive else in sCurrDir But the path is not absolute:
-            //TODO nothing yet, 
-          }
-        }
-        else {
-          uRet.insert(0, script.sCurrDir);
-        }
-        return uRet;
-      }
-      else {
-        //this has no basepath, then return the current dir.
-        return script.sCurrDir;
-      }
+      CharSequence basepath = basepath(null, emptyParent, null);
+      basepath = driveRoot(basepath, emptyParent,null);
+      return absbasepath(basepath);
     }
-    
     
     public CharSequence absbasepathW(){ return toWindows(absbasepath()); }
     
@@ -362,65 +869,10 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      *   till a ':' in the input path or an empty string.
      *   Either as absolute or as relative path how it is given.
      */
-    public CharSequence basepath(){ return basepath(emptyParent, null); }
+    public CharSequence basepath(){ return basepath(null, emptyParent, null); }
      
     
-    /**Method can be called in the generation script: <*basePath(<*abspath>)>. 
-     * @param accesspath a String given path which is written before the given base path if the path is not absolute in this.
-     *   If null, it is ignored. If this path is absolute, the result is a absolute path of course.
-     * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
-     *   till a ':' in the input path or an empty string.
-     *   Either as absolute or as relative path how it is given.
-     */
-    public CharSequence basepath(UserFilepath generalPath, CharSequence accesspath){ 
-      if(generalPath == null){ generalPath = emptyParent; }
-      if(basepath !=null || (generalPath != emptyParent)){
-        StringBuilder uRet = new StringBuilder();
-        if(this.drive !=null){ uRet.append(this.drive).append(':'); }
-        else if(generalPath.drive !=null){
-          uRet.append(generalPath.drive).append(':'); 
-        }
-        if(absPath){ uRet.append('/'); }
-        else if(generalPath.absPath){ uRet.append('/'); }
-        else if(accesspath !=null){
-          uRet.append(accesspath);
-        }
-        int pos;
-        //
-        //append a general path completely firstly.
-        if(generalPath.basepath !=null){
-          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-          uRet.append(generalPath.basepath).append('/'); 
-        }
-        if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-        uRet.append(generalPath.localdir).append(generalPath.name).append(generalPath.ext);
-        if(this.basepath !=null){
-          if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-          uRet.append(this.basepath);
-        }
-        return uRet;
-      } else if(drive !=null){
-        StringBuilder uRet = new StringBuilder();
-        uRet.append(drive).append(":");
-        if(absPath){ uRet.append('/'); }
-        else if(accesspath !=null){
-          uRet.append(accesspath);
-        }
-        return uRet;
-      } else if(generalPath.drive !=null){
-        StringBuilder uRet = new StringBuilder();
-        uRet.append(generalPath.drive).append(":");
-        if(generalPath.absPath){ uRet.append('/'); }
-        else if(accesspath !=null){
-          uRet.append(accesspath);
-        }
-        return uRet;
-      } else {
-        return accesspath !=null ? accesspath : "";
-      }
-    }
-    
-    
+  
     
     public CharSequence basepathW(){ return toWindows(basepath()); }
     
@@ -469,12 +921,17 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * @return the whole path with file name and extension.
      *   The path is absolute or relative like it is given.
      */
-    public CharSequence file(CharSequence accesspath){ 
-      CharSequence basePath = basepath(emptyParent, accesspath);
-      StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
-      addLocalName(uRet);
+    public CharSequence file(StringBuilder uRet, UserFilepath accesspath){ 
+      CharSequence basePath = basepath(null, emptyParent, accesspath);
+      uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+      localDir(uRet, emptyParent, accesspath);
+      int pos;
+      if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+      uRet.append(name).append(ext);
       return uRet.append(ext);
     }
+    
+    
     
     /**Method can be called in the generation script: <*data.file()>. 
      * @return the whole path with file name and extension.
@@ -615,31 +1072,29 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * @param filepathWildcards
      * @param absPath
      */
-    void expandFiles(List<UserFilepath> listToadd, UserFilepath commonBasepath, CharSequence accesspath, File currdir){
+    void expandFiles(List<UserFilepath> listToadd, UserFilepath commonPath, UserFilepath accessPath, File currdir){
       List<FileSystem.FileAndBasePath> listFiles = new LinkedList<FileSystem.FileAndBasePath>();
-      final CharSequence basePath = this.basepath(commonBasepath, accesspath); //getPartsFromFilepath(file, null, "absBasePath").toString();
-      final CharSequence localfilePath = this.localfile(); //getPartsFromFilepath(file, null, "file").toString();
-      final String sPathSearch = basePath + ":" + localfilePath;
-      try{ FileSystem.addFilesWithBasePath(currdir, sPathSearch, listFiles);
+      final CharSequence basepath1 = this.basepath(null, commonPath, accessPath); //getPartsFromFilepath(file, null, "absBasePath").toString();
+      int posRoot = isRootpath(basepath1);
+      final CharSequence basePathNonRoot = posRoot == 0 ? basepath1: basepath1.subSequence(posRoot, basepath1.length());
+      final String basepath = basePathNonRoot.toString();  //persistent content.
+      CharSequence basepathroot = driveRoot(basepath, commonPath, accessPath);
+      boolean absPath = isRootpath(basepathroot) >0;
+      String drive = basepathroot.length() >=2 && basepathroot.charAt(1) == ':' ? String.valueOf(basepathroot.charAt(0)): null;
+      
+      final CharSequence absBasepath = absbasepath(basepathroot);
+      
+      final CharSequence localfilePath = this.localFile(null, commonPath, accessPath); //getPartsFromFilepath(file, null, "file").toString();
+      final String sPathSearch = absBasepath + ":" + localfilePath;
+      try{ FileSystem.addFilesWithBasePath(null, sPathSearch, listFiles);
       } catch(Exception exc){
         //let it empty.
       }
       for(FileSystem.FileAndBasePath file1: listFiles){
         ZmakeUserScript.UserFilepath filepath2 = new ZmakeUserScript.UserFilepath(script);
-        /*
-        if(file1.basePath !=null ){
-          int posEnd = file1.basePath.length() -1;  //last char is path separator, file2.pathbase without separator!
-          if(filepathWildcards.absPath){
-            file2.pathbase = file1.basePath.substring(0, posEnd);
-          } else {
-            //The file1.basePath contains the currDir, remove it.
-            if(lengthPathCurrdir < posEnd){
-              file2.pathbase = file1.basePath.substring(lengthPathCurrdir, posEnd);
-            } else {file2.pathbase = "..";}
-          }
-        }
-        */
-        filepath2.basepath = basePath.toString();  //it is the same. Maybe null
+        filepath2.absPath = absPath;
+        filepath2.drive = drive;
+        filepath2.basepath = basepath;  //it is the same. Maybe null
         int posName = file1.localPath.lastIndexOf('/') +1;  //if not found, set to 0
         int posExt = file1.localPath.lastIndexOf('.');
         final String sPath = file1.localPath.substring(0, posName);  //"" if only name
@@ -659,10 +1114,82 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     @Override
     public String toString()
-    { return file().toString();
+    { return base_localfile().toString();
     }
   }
   
+  
+  
+  
+  /**This class is used only temporary while processing the parse result into a instance of {@link UserFilepath}
+   * while running {@link ZbnfJavaOutput}. 
+   */
+  public static class ZbnfUserFilepath{
+    
+    /**The instance which are filled with the components content. It is used for the user's data tree. */
+    final UserFilepath filepath;
+    
+    
+    ZbnfUserFilepath(UserScript script){
+      filepath = new UserFilepath(script);
+    }
+    
+    /**FromZbnf. */
+    public void set_drive(String val){ filepath.drive = val; }
+    
+    
+    /**FromZbnf. */
+    public void set_absPath(boolean val){ filepath.absPath = val; }
+    
+    /**FromZbnf. */
+    public void set_scriptVariable(String val){ filepath.scriptVariable = val; }
+    
+    
+    /**FromZbnf. */
+    public void set_envVariable(String val){ filepath.envVariable = val; }
+    
+    
+
+    
+    //public void set_someFiles(){ someFiles = true; }
+    //public void set_wildcardExt(){ wildcardExt = true; }
+    //public void set_allTree(){ allTree = true; }
+    
+    /**FromZbnf. */
+    public void set_pathbase(String val){
+      filepath.basepath = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
+      filepath.allTree = val.indexOf('*')>=0;
+    }
+    
+    /**FromZbnf. */
+    public void set_path(String val){
+      filepath.localdir = val.replace('\\', '/');   //file is empty and ext does not start with dot. It is a filename without extension.
+      filepath.allTree = val.indexOf('*')>=0;
+    }
+    
+    /**FromZbnf. */
+    public void set_name(String val){
+      filepath.name = val;   //file is empty and ext does not start with dot. It is a filename without extension.
+      filepath.someFiles |= val.indexOf('*')>=0;
+    }
+    
+    /**FromZbnf. If the name is empty, it is not the extension but the name.*/
+    public void set_ext(String val){
+      if(val.equals(".") && filepath.name.equals(".")){
+        filepath.name = "";
+        filepath.localdir += "../";
+      }
+      else if((val.length() >0 && val.charAt(0) == '.') || filepath.name.length() >0  ){ 
+        filepath.ext = val;  // it is really the extension 
+      } else { 
+        //a file name is not given, only an extension is parsed. Use it as file name because it is not an extension!
+        filepath.name = val;   //file is empty and ext does not start with dot. It is a filename without extension.
+      }
+      filepath.someFiles |= val.indexOf('*')>=0;
+    }
+    
+
+  }
   
   
   
@@ -732,14 +1259,15 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
      * It sets the base path for all files of this fileset. This basepath is usually relative.
      * @return ZBNF component.
      */
-    public UserFilepath new_basepath(){ return commonBasepath = new UserFilepath(script); }  //NOTE: it has not a parent. this is not its parent!
-    public void set_basepath(UserFilepath val){  }  //it is set already.
+    public ZbnfUserFilepath new_commonpath(){ return new ZbnfUserFilepath(script); }  //NOTE: it has not a parent. this is not its parent!
+    public void set_commonpath(ZbnfUserFilepath val){ commonBasepath = val.filepath; }
     
     /**From ZBNF: < file>. */
-    public UserFilepath new_file(){ return new UserFilepath(script); }
+    public ZbnfUserFilepath new_file(){ return new ZbnfUserFilepath(script); }
     
     /**From ZBNF: < file>. */
-    public void add_file(UserFilepath val){ 
+    public void add_file(ZbnfUserFilepath valz){ 
+      UserFilepath val =valz.filepath;
       if(val.basepath !=null || val.localdir.length() >0 || val.name.length() >0 || val.drive !=null){
         //only if any field is set. not on empty val
         filesOfFileset.add(val); 
@@ -747,7 +1275,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     }
     
     
-    void listFilesExpanded(List<UserFilepath> files, CharSequence accesspath, boolean expandFiles) {  ////
+    void listFilesExpanded(List<UserFilepath> files, UserFilepath accesspath, boolean expandFiles) {  ////
       for(UserFilepath filepath: filesOfFileset){
         if(expandFiles && (filepath.someFiles || filepath.allTree)){
           filepath.expandFiles(files, commonBasepath, accesspath, script.currDir);
@@ -759,7 +1287,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
       }
     }
 
-    public List<UserFilepath> listFilesExpanded(CharSequence accesspath, boolean expandFiles) { 
+    public List<UserFilepath> listFilesExpanded(UserFilepath accesspath, boolean expandFiles) { 
       List<UserFilepath> files = new LinkedList<UserFilepath>();
       listFilesExpanded(files, accesspath, expandFiles);
       return files;
@@ -845,6 +1373,8 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     public String name;
     UserFileset fileset;
     
+    UserFilepath filepath;
+    
     TextGenScript.Expression expression;
     
     //public UserString string;
@@ -852,8 +1382,12 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     ScriptVariable(UserScript script){
       this.script = script;
     }
-    public UserFileset new_fileset(){ return fileset = new UserFileset(script); }
-    public void add_fileset(UserFileset val){ }
+    
+    public UserFileset new_fileset(){ return new UserFileset(script); }
+    public void add_fileset(UserFileset val){ fileset = val; }
+    
+    public ZbnfUserFilepath new_file(){ return new ZbnfUserFilepath(script); }
+    public void add_file(ZbnfUserFilepath val){ filepath = val.filepath; }
     
     public TextGenScript.Expression new_expression(){ return new TextGenScript.Expression(); }
     
@@ -896,9 +1430,9 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     
     TargetParamZbnf(UserTarget parentTarget){ this.parentTarget = parentTarget; }
     
-    public TargetInput new_inputarg(){ return new TargetInput(parentTarget); }
+    public TargetInput new_inputvalue(){ return new TargetInput(parentTarget); }
 
-    public void add_inputarg(TargetInput val){ 
+    public void add_inputvalue(TargetInput val){ 
       if(referVariables == null){
         referVariables = new LinkedList<TargetInput>();
       }
@@ -949,19 +1483,19 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
           if(element.inputFile !=null){
             u.append(element.inputFile.file());
           } else { 
-            assert(element.referVariable !=null);
+            assert(element.fileset !=null);
             //search the input Set in the script variables:
-            ScriptVariable variable = parentTarget.script.var.get(element.referVariable);
+            ScriptVariable variable = parentTarget.script.var.get(element.fileset);
             if(variable == null){
               int pos = u.length();
-              u.append("<??error ZmakeScriptvariable not found: ").append(element.referVariable).append(" ??>");
+              u.append("<??error ZmakeScriptvariable not found: ").append(element.fileset).append(" ??>");
               parentTarget.script.abortOnError(u,pos);
             } else if(variable.expression !=null){
               u.append(variable.expression.text());
               //variable.expression.addtext(u);
             } else {
               int pos = u.length();
-              u.append("<??error ZmakeScriptvariable as string expected: ").append(element.referVariable).append(" ??>");
+              u.append("<??error ZmakeScriptvariable as string expected: ").append(element.fileset).append(" ??>");
               parentTarget.script.abortOnError(u,pos);
             } 
           }
@@ -996,7 +1530,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     //public String paramvalue;
     
     /**Name of the variable which refers a {@link UserFileset} which's files are used as input. */
-    public String referVariable;
+    public String fileset;  //referVariable;
     
     public String srcpathEnvVariable;
     
@@ -1016,14 +1550,9 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     }
     
     
-    public UserFilepath new_input()
-    { inputFile = new UserFilepath(parentTarget.script);
-      return inputFile; 
-    }
+    public ZbnfUserFilepath new_input(){ return  new ZbnfUserFilepath(parentTarget.script); }
 
-    public void add_input(UserFilepath val){
-      
-    }
+    public void add_input(ZbnfUserFilepath val){ inputFile = val.filepath; }
 
 
     
@@ -1036,7 +1565,7 @@ prepFilePath::=<$NoWhiteSpaces><! *?>
     //UserInput(UserInputSet inputSet){ this.inputSet = inputSet; this.inputFile = null; }
     //UserInput(UserFilepath inputFile){ this.inputSet = null; this.inputFile = inputFile; }
     
-    @Override public String toString(){ return inputFile !=null ? inputFile.toString() : referVariable; }
+    @Override public String toString(){ return inputFile !=null ? inputFile.toString() : fileset; }
     
   }
   
@@ -1105,12 +1634,12 @@ input::=
     /**From Zbnf: < output>.
      * @return instance to store the parse result of the component output::=
      */
-    public UserFilepath new_output(){ return output = new UserFilepath(script); } //this); }
+    public ZbnfUserFilepath new_output(){ return new ZbnfUserFilepath(script); } //this); }
     
     /**From Zbnf: < output>.
      * @param instance contains the parse result of the component output::=
      */
-    public void set_output(UserFilepath value){  }
+    public void set_output(ZbnfUserFilepath value){ output = value.filepath; }
     
     /**From ZBNF < inputSet>*
     public UserInputSet new_inputSet()
@@ -1146,7 +1675,7 @@ input::=
     /**From Zbnf: < inputarg>.
      * @return instance to store the parse result of the component inputarg::=
      */
-    public TargetInput new_inputarg()
+    public TargetInput new_inputvalue()
     { TargetInput userInput = new TargetInput(this);
       return userInput; 
     }
@@ -1154,7 +1683,7 @@ input::=
     /**From Zbnf: < inputarg>.
      * @param instance contains the parse result of the component inputarg::=
      */
-    public void add_inputarg(TargetInput val){ inputs.add(val);}
+    public void add_inputvalue(TargetInput val){ inputs.add(val);}
 
     
     /**FromZbnf: <$?inputSet>
@@ -1253,26 +1782,30 @@ input::=
           //
           //expand file or fileset:
           //
-          if(targetInputParam.inputFile !=null){
-            if(expandFiles){
-              targetInputParam.inputFile.expandFiles(files, null, srcpath, script.currDir);
-            } else {
-              UserFilepath targetsrc = new UserFilepath(script, targetInputParam.inputFile, null, srcpath);
-              files.add(targetsrc);  
+          if(targetInputParam.fileset !=null){
+            if(targetInputParam.inputFile !=null){
+              
             }
-          } else { 
-            assert(targetInputParam.referVariable !=null);
-            //search the fileset in the script variables:
-            ScriptVariable variable = script.var.get(targetInputParam.referVariable);
+            ScriptVariable variable = script.var.get(targetInputParam.fileset);
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
                 UserFilepath errorhint = new UserFilepath(script);
-                errorhint.name = "<?error not found; " + targetInputParam.referVariable + ">";
+                errorhint.name = "<?error not found; " + targetInputParam.fileset + ">";
                 files.add(errorhint);
               }
             } else {
-              variable.fileset.listFilesExpanded(files, srcpath, expandFiles);
+              variable.fileset.listFilesExpanded(files, targetInputParam.inputFile, expandFiles);
             }
+            
+          }
+          else if(targetInputParam.inputFile !=null){
+            if(expandFiles){
+              targetInputParam.inputFile.expandFiles(files, null, null, script.currDir);
+            } else {
+              UserFilepath targetsrc = new UserFilepath(script, targetInputParam.inputFile, null, null);
+              files.add(targetsrc);  
+            }
+          } else { 
           }
         }
       }
