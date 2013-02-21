@@ -1084,7 +1084,7 @@ class ZbnfParserStore
       sep = semantic.indexOf('/');
       if(sep >=0){
         String sLeftSemantic = semantic.substring(0, sep);
-        XmlNode xmlMeta = xmlNode.getChild(sLeftSemantic);
+        XmlNode xmlMeta = xmlNode == null ? null : xmlNode.getChild(sLeftSemantic);
         //XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
         if(xmlMeta ==null){
           xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sLeftSemantic);
