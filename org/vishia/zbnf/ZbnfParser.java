@@ -123,7 +123,11 @@ public class ZbnfParser
   /**Version-ident.
    * list of changes:
    * <ul>
-   * <li>2013-09-12 Hartmut chg: {@link #getResultTree()} returns now the interface reference {@link XmlNode} instead the
+   * <li>2013-02-26 Hartmut bugfix: {@link PrescriptParser#parsePrescript1(String, ZbnfParseResultItem, ZbnfParserStore, ZbnfParserStore, boolean, int)}
+   *   while storing {@link ParseResultlet#xmlResult} in {@link #alreadyParsedCmpn}: If the result is empty, the resultlet
+   *   should be stored with an xmlResult=null (nothing was created), but the syntax is ok. There are some syntax checks
+   *   without result possible.
+   * <li>2013-02-12 Hartmut chg: {@link #getResultTree()} returns now the interface reference {@link XmlNode} instead the
    *   implementation instance reference {@link org.vishia.xmlSimple.XmlNodeSimple}. The implementation is the same.
    *   All references are adapted, especially {@link ParseResultlet#xmlResult}
    * <li>2013-01-18 Hartmut chg, new: Log-output improved. New inner class {@link LogParsing}.
@@ -330,16 +334,18 @@ public class ZbnfParser
       { log.reportParsing("parseComp ", idReportComponentParsing, resultlet.syntaxPrescript, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, bOk);
       }
       if(bOk){
-        if(ixStoreStart >= parserStoreInPrescript.items.size())
-          assert(false);
-        else{
+        if(ixStoreStart < parserStoreInPrescript.items.size()){
           ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
           //Build a part of the XML tree from the start parse result without parent.
           resultlet.xmlResult = ZbnfParserStore.buildTreeNodeRepresentationXml(null, parseResultStart, true);
-          resultlet.endPosText = input.getCurrentPosition();
-          String key = String.format("%9d", resultlet.startPosText) + resultlet.syntaxPrescript.sDefinitionIdent;
-          alreadyParsedCmpn.put(key, resultlet);
+        } else {
+          //it is possible that the parsing is ok but a parse result is not produced because it is a check only
+          //or it has empty options.
+          resultlet.xmlResult = null;
         }
+        resultlet.endPosText = input.getCurrentPosition();
+        String key = String.format("%9d", resultlet.startPosText) + resultlet.syntaxPrescript.sDefinitionIdent;
+        alreadyParsedCmpn.put(key, resultlet);
       }
       return bOk;
     }
