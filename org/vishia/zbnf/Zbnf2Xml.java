@@ -289,7 +289,7 @@ public class Zbnf2Xml
       super.addAboutInfo("Conversion text to XML via ZBNF");
       super.addAboutInfo("made by HSchorrig, 2006-03-20..2013-02-09");
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> -[x|y|z]:<OUTPUT> [{-a:<NAME>=<VALUE>}]");  //[-w[+|-|0]]
-      super.setArguments(argList);
+      super.addArgument(argList);
       super.addStandardHelpInfo();
     }
     

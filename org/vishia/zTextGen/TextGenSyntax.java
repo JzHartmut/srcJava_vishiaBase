@@ -5,6 +5,7 @@ public final class TextGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-03-10 <code><:include:path> and <:scriptclass:JavaPath></code> is supported up to now.
    * <li>2013-01-05 Hartmut new: A expression is a concatenation of strings or + or - of numerics. It is used for all value expressions.
    *   In this kind an argument of <*path.method("text" + $$eNV_VAR + dataPath) is possible.
    *   Also <*path + path2> is possible whereby its the same like <*$path><*$path2> in that case.
@@ -39,7 +40,7 @@ public final class TextGenSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public int version = 20121226;
+  static final public int version = 20131003;
 
   
   public final static String syntax =
@@ -47,7 +48,9 @@ public final class TextGenSyntax {
     + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
     + "\n"
     + "ZTextctrl::= \n"
-    + "{ <subtext> \n"
+    + "{ \\<:scriptclass : <$\\.?scriptclass> \\> \n"
+    + "| \\<:include : <*\\>\\ ?include> \\> \n"
+    + "| <subtext> \n"
     + "| <genFile> \n"
     + "| \\<= <variableDef>\n"
     + "} \\e.\n"

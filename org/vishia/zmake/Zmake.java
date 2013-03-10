@@ -84,13 +84,14 @@ public class Zmake
 
 	/**Changes
 	 * <ul>
+	 * <li>2013-03-10: Hartmut chg: <:scriptclass:JavaPath> is supported up to now. Usage for docu generation with other/more capability.
 	 * <li>2011-08-13: {@link ZmakeGenerator} regards < ?expandFiles>, see there.
 	 * <li>2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
 	 * <li>2011-02-01: Hartmut creation. Before that, the {@link org.vishia.zbnf.Zmake} exists (in the zbnf-package)
 	 *   which produces only ANT files. This solution bases on them, but it is more universal.
 	 * </ul>
 	 */
-	public final static int version = 0x20110813;
+	public final static int version = 0x20130310;
 	
 	
 	private static class CallingArgs
@@ -106,7 +107,6 @@ public class Zmake
     
     /**String path from currdir to a tmp dir. */
     String tmp = "../tmp";  
-    
     
     /**Path of ZBNF script for the input zmake script file*/
     String sZbnfInput = "zmake/ZmakeStd.zbnf";
@@ -250,69 +250,54 @@ public class Zmake
       super.addHelpInfo("* TPATH means a path started from given -ZBNFJAX_HOME:PATH or ZBNFJAX_HOME in environment.");
       super.addHelpInfo("  But if the path starts with . it is from current dir. ");
       super.addHelpInfo("* WPATH means a path started from given -tmp directory (WorkPATH).");
-      super.addHelpInfo("INPUT              The first argument without - is the input file with path and extension.");
-      super.addHelpInfo("-i:INPUT           path to the input file alternatively to INPUT.");
-      super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the output file");
-      super.addHelpInfo("-o=PATH            output-file to generate");
-      super.addHelpInfo("-currdir:PATH       sets the current dir alternatively to command line invocation path.");
-      super.addHelpInfo("-ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.");
-      super.addHelpInfo("-tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".");
-      super.addHelpInfo("-tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml");
-      super.addHelpInfo("-zbnf:TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf");
-      //super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is the internal syntax");
-      super.addHelpInfo("-syntax:PATH       Write an information file which contains the help and the syntax.");
+      //super.addHelpInfo("INPUT              The first argument without - is the input file with path and extension.");
+      //super.addHelpInfo("-i:INPUT           path to the input file alternatively to INPUT.");
+      //super.addHelpInfo("-genCtrl:TPATH     file which describes the generation for the output file");
+      //super.addHelpInfo("-o=PATH            output-file to generate");
+      //super.addHelpInfo("-currdir:PATH       sets the current dir alternatively to command line invocation path.");
+      //super.addHelpInfo("-ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is getted from environment.");
+      //super.addHelpInfo("-tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".");
+      //super.addHelpInfo("-tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml");
+      //super.addHelpInfo("-zbnf:TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf");
+      ////super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is the internal syntax");
+      //super.addHelpInfo("-syntax:PATH       Write an information file which contains the help and the syntax.");
       super.addHelpInfo("One can use either '=' or ':' as separator between option key and value.");
+      super.addArgument(arguments);
       super.addStandardHelpInfo();
       
     }
   
-  
-    /*---------------------------------------------------------------------------------------------*/
-    /** Tests one argument. This method is invoked from parseArgument. It is abstract in the superclass MainCmd
-        and must be overwritten from the user.
-        :TODO: user, test and evaluate the content of the argument string
-        or test the number of the argument and evaluate the content in dependence of the number.
-  
-        @param argc String of the actual parsed argument from cmd line
-        @param nArg number of the argument in order of the command line, the first argument is number 1.
-        @return true is okay,
-                false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
-                the application should be aborted.
-    */
-    @Override protected boolean testArgument(String arg, int nArg)
-    { boolean bOk = true;  //set to false if the argc is not passed
-  
-      if(nArg==0 && !arg.startsWith("-"))      { callingArgs.input = getArgument(0); }
-      else if(arg.startsWith("-i:"))           { callingArgs.input = getArgument(3); }
-      else if(arg.startsWith("-i="))           { callingArgs.input = getArgument(3); }
-      else if(arg.startsWith("-i"))            { callingArgs.input = getArgument(2); }
-      else if(arg.startsWith("-currdir:")      
-            || arg.startsWith("-currdir="))    {
-        String sCurrdir = getArgument(9); 
-        callingArgs.currdir = new File(sCurrdir);
-        if(!callingArgs.currdir.exists()) throw new IllegalArgumentException("Zmake - failed argument -currdir:, not existing; " + sCurrdir);
-      }
-      else if(arg.startsWith("-ZBNFJAX_HOME:")){ callingArgs.zbnfjax_PATH = getArgument(14); }
-      else if(arg.startsWith("-XML_TOOLBASE:")){ callingArgs.zbnfjax_PATH = getArgument(14); }  //older version, compatibility
-      else if(arg.startsWith("-XML_TOOLBASE=")){ callingArgs.zbnfjax_PATH = getArgument(14); }  //older version, compatibility
-      else if(arg.startsWith("-tmp:"))         { callingArgs.tmp = getArgument(5); }
-      else if(arg.startsWith("-tmp="))         { callingArgs.tmp = getArgument(5); } //older version, compatibility
-      else if(arg.startsWith("-checkxml:"))    { callingArgs.sCheckXmlOutput = getArgument(10); }
-      else if(arg.startsWith("-o="))           { callingArgs.sOutput = getArgument(3); }
-      else if(arg.startsWith("-o:"))           { callingArgs.sOutput = getArgument(3); }
-      else if(arg.startsWith("-zbnf="))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
-      else if(arg.startsWith("-zbnf:"))        { callingArgs.sZbnfInput = getArgument(6); }  //older version, compatibility
-      //else if(arg.startsWith("-zGen="))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
-      //else if(arg.startsWith("-zGen:"))        { callingArgs.sZbnfGenCtrl = getArgument(6); }  //older version, compatibility
-      else if(arg.startsWith("-genCtrl="))     { callingArgs.sGenCtrl = getArgument(9); }
-      else if(arg.startsWith("-genCtrl:"))     { callingArgs.sGenCtrl = getArgument(9); }
-      else if(arg.startsWith("-syntax:"))      { callingArgs.sHelpOut = getArgument(8); }
-      else if(arg.startsWith("-syntax="))      { callingArgs.sHelpOut = getArgument(8); }
-      //else if(arg.startsWith("-xslt4ant="))    { sXslt4ant = getArgument(10); }  //older version, compatibility
-      else bOk=false;
-  
-      return bOk;
-    }
+    private final MainCmd.Argument[] arguments =
+    { new MainCmd.Argument("", "INPUT         The first argument without - is the input file with path and extension."
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.input = val; return true; }})
+    , new MainCmd.Argument("-i", "INPUT    path to the input file."
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.input = val; return true; }})
+    , new MainCmd.Argument("-genCtrl", "TPATH     file which describes the generation for the output file"
+      , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.sGenCtrl = val; return true; }})
+    , new MainCmd.Argument("-syntax", "PATH       Write an information file which contains the help and the syntax.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.sHelpOut = val; return true; }})
+    , new MainCmd.Argument("-zbnf", "TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.sZbnfInput = val; return true; }})
+    , new MainCmd.Argument("-o", "PATH            output-file to generate", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.sOutput = val; return true; }})
+    , new MainCmd.Argument("-ZBNFJAX_HOME", "PATH path to the ZBNFJAX_HOME, default it is getted from environment.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+      callingArgs.zbnfjax_PATH = val; return true; }})
+    , new MainCmd.Argument("-currdir", "PATH       sets the current dir alternatively to command line invocation path."
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          String sCurrdir = val; 
+          callingArgs.currdir = new File(sCurrdir);
+          if(!callingArgs.currdir.exists()) throw new IllegalArgumentException("Zmake - failed argument -currdir:, not existing; " + sCurrdir);
+          return true; }})
+    , new MainCmd.Argument("-tmp", "path of tmp dir, will be created if not exists, default=\"../tmp\"", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.tmp = val; return true; }})
+    , new MainCmd.Argument("-checkxml", "CHECK  if given then 3 files will be written"
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          callingArgs.sCheckXmlOutput = val; return true; }})
+    };
+ 
   
     /** Invoked from parseArguments if no argument is given. In the default implementation a help info is written
      * and the application is terminated. The user should overwrite this method if the call without comand line arguments
@@ -369,8 +354,7 @@ public class Zmake
    * @throws IOException
    */
   String execute() throws ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException
-  { boolean bOk = true;
-    String sError = null;
+  { String sError = null;
     
     //the followed line maybe unnecessary because the java cmd line interpretation always cuts the quotion  marks,
     //Such quotion marks appeares if a double click from commandline is happened. 
@@ -405,30 +389,18 @@ public class Zmake
     
     console.writeInfoln("* Zmake: " + args.input);
     
-    //File tmpDir = new File(tmpAbs);
-    //if(!tmpDir.exists()) { tmpDir.mkdir(); }
-    
-    /*
-    if(args.sInputXml == null)
-    { args.sInputXml = inputFile + inputExt + ".xml"; 
-    }
-    File fileZbnfXml = new File(tmpAbs + "/" + args.sInputXml);
-    fileZbnfXml.setWritable(true); 
-    fileZbnfXml.delete();
-    */
-
     File fileOut = new File(args.sOutput);
     fileOut.setWritable(true); 
     fileOut.delete();
-    
-    //File fileZbnf4GenCtrl = new File(args.zbnfjax_PATH + args.sZbnfGenCtrl);
-    //if(!fileZbnf4GenCtrl.exists()) throw new IllegalArgumentException("cannot find -zbnf4GenCtrl=" + fileZbnf4GenCtrl.getAbsolutePath());
-    
+    //
+    //Parses the genctrl
+    //
     final String sFileGenCtrl = args.sGenCtrl.startsWith(".") ? args.sGenCtrl
                               : (args.zbnfjax_PATH + args.sGenCtrl);
     File fileGenCtrl = new File(sFileGenCtrl);
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
+    ///
     
     File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
     genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
@@ -444,8 +416,7 @@ public class Zmake
     ZbnfParser parser = new ZbnfParser(console);
     parser.setSyntax(new File(sZbnf));
     console.writeInfo(" ... ");
-    bOk = parser.parse(spInput);
-    if(!bOk){
+    if(!parser.parse(spInput)){
       sError = parser.getSyntaxErrorReport();
       throw new ParseException(sError,0);
     }
@@ -456,20 +427,36 @@ public class Zmake
     console.writeInfo(" ok, set result ... ");
     ZbnfParseResultItem parseResult = parser.getFirstParseResult();
     //
+    if(args.sCheckXmlOutput !=null){
+      //write ZmakeUserScript into XML output only to check the input script.
+      XmlNode xmlTop = parser.getResultTree();
+      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sCheckXmlOutput + "_zmake.test.xml")); 
+      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
+      xmlOut.write(wrXml, xmlTop);
+      wrXml.close();
+      
+    }
     //write ZmakeUserScript into Java classes:
-    ZmakeUserScript.UserScript zmakeInput = new ZmakeUserScript.UserScript();
+    final ZmakeUserScript.UserScript zmakeInput;
+    String scriptclass = this.genScript.getScriptclass();
+    if(scriptclass !=null){
+      try{
+        @SuppressWarnings("unchecked")
+        Class<ZmakeUserScript.UserScript> classZmake = (Class<ZmakeUserScript.UserScript>)Class.forName(scriptclass);
+        zmakeInput = classZmake.newInstance();
+      } catch (Exception e) {
+        System.err.printf("Zmake - UserScriptClass faulty: %s\n", scriptclass);
+        throw new IllegalArgumentException("error");
+      }
+    } else {
+      zmakeInput = new ZmakeUserScript.UserScript();
+    }
     ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
     parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     
     if(args.sCheckXmlOutput !=null){
-      //write ZmakeUserScript into XML output only to check the input script.
-      //XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
-      XmlNode xmlTop = parser.getResultTree();
-      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sCheckXmlOutput + "_zmake.xml")); 
-      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
-      xmlOut.write(wrXml, xmlTop);
-      wrXml.close();
-      FileWriter outData = new FileWriter(args.sCheckXmlOutput + "_zmake.javadat");
+      //Write the data structure of the ZmakeUserScript into a file to check.
+      FileWriter outData = new FileWriter(args.sCheckXmlOutput + "_zmake.javadat.test");
       OutputDataTree outputterData = new OutputDataTree();
       outputterData.output(0, zmakeInput, outData, false);
       outData.close();

@@ -16,6 +16,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
+import org.vishia.util.FileSystem;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.UnexpectedException;
@@ -33,6 +34,8 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2013-03-10 Hartmut new: <code><:include:path></code> of a sub script is supported up to now.
+   * <li>2013-10-09 Hartmut new: <code><:scriptclass:JavaPath></code> is supported up to now.
    * <li>2013-01-13 Hartmut chg: The {@link Expression#ascertainValue(Object, Map, boolean, boolean, boolean)} is moved
    *   and adapted from TextGenerator.getContent. It is a feauture from the Expression to ascertain its value.
    *   That method and {@link Expression#text()} can be invoked from a user script immediately.
@@ -90,28 +93,35 @@ public class TextGenScript {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public int version = 20121130;
+  static final public int version = 20130310;
 
-  private final MainCmdLogging_ifc console;
+  final MainCmdLogging_ifc console;
 
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
-  MainGenCtrl zTextGenCtrl;
+  //ZbnfMainGenCtrl zTextGenCtrl;
   
-  private final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
+  final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
   
-  private final Map<String, ScriptElement> subtexts = new TreeMap<String, ScriptElement>();
+  final Map<String, ScriptElement> subtextScripts = new TreeMap<String, ScriptElement>();
   
   
   
-  private final Map<String,ScriptElement> indexScriptVariables = new TreeMap<String,ScriptElement>();
+  final Map<String,ScriptElement> indexScriptVariables = new TreeMap<String,ScriptElement>();
 
   /**List of the script variables in order of creation in the zmakeCtrl-file.
    * The script variables can contain inputs of other variables which are defined before.
    * Therefore the order is important.
    */
-  private final List<ScriptElement> listScriptVariables = new LinkedList<ScriptElement>();
+  final List<ScriptElement> listScriptVariables = new LinkedList<ScriptElement>();
 
-  private ScriptElement zbnf_genFile;
+  /**The script element for the whole file. It shall contain calling of <code><*subtext:name:...></code> 
+   */
+  ScriptElement scriptFile;
+  
+
+  public String scriptclassMain;
+
+  
   
   public TextGenScript(MainCmdLogging_ifc console)
   { this.console = console;
@@ -130,34 +140,33 @@ public class TextGenScript {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
-    
-    return translateAndSetGenCtrl(spSyntax, spGenCtrl, checkXmlOut);
-    
+    File fileParent = FileSystem.getDir(fileGenCtrl);
+    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
   }
   
 
+  public boolean translateAndSetGenCtrl(File fileGenCtrl) 
+  throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
+  {
+    return translateAndSetGenCtrl(fileGenCtrl, null);
+  }
+  
+  
   public boolean translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
-    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut);
-  }
-  
-  
-  public boolean translateAndSetGenCtrl(File fileGenCtrl) 
-  throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
-  {
-    int lengthBufferGenctrl = (int)fileGenCtrl.length();
-    StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
-    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), null);
+    File fileParent = FileSystem.getDir(fileGenCtrl);
+    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
   }
   
   
   public boolean translateAndSetGenCtrl(String spGenCtrl) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
-    try{ return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), null);
+    try{ 
+      return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), null, null) !=null;
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -165,7 +174,8 @@ public class TextGenScript {
   public boolean translateAndSetGenCtrl(StringPart spGenCtrl) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
-    try { return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), spGenCtrl, null);
+    try { 
+      return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), spGenCtrl, null, null) !=null;
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -175,19 +185,26 @@ public class TextGenScript {
    * It sets the {@link #zTextGenCtrl} aggregation. This routine must be called before  the script can be used.
    * There are some routines without the parameter sZbnf4GenCtrl, which uses the internal syntax. Use those if possible:
    * {@link #translateAndSetGenCtrl(File)}, {@link #translateAndSetGenCtrl(String)}
+   * <br><br>
+   * This routine will be called recursively if scripts are included.
    * 
    * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link TextGenSyntax#syntax}.
    * @param spGenCtrl The input file with the genCtrl statements.
    * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
-   * @return
+   * @param fileParent directory of the used file as start directory for included scripts. 
+   *   null possible, then the script should not contain includes.
+   * @return a new instance of {@link ZbnfMainGenCtrl}. This instance is temporary only because it is a non-static 
+   *   inner class of this. All substantial data are stored in this. Only the {@link ZbnfMainGenCtrl#scriptclass}
+   *   and the {@link ZbnfMainGenCtrl#scriptFileSub} is read out and stored in @{@link #scriptclassMain} and {@link #scriptFile}
+   *   if it is the first one given. This method returns null if there is an error. 
    * @throws ParseException
    * @throws IllegalArgumentException
    * @throws IllegalAccessException
    * @throws InstantiationException
    * @throws IOException only if xcheckXmlOutput fails
-   * @throws FileNotFoundException only if xcheckXmlOutput file not found or not writeable
+   * @throws FileNotFoundException if a included file was not found or if xcheckXmlOutput file not found or not writeable
    */
-  public boolean translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput) 
+  public ZbnfMainGenCtrl translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser(console);
@@ -197,6 +214,17 @@ public class TextGenScript {
       parserGenCtrl.reportSyntax(console, MainCmdLogging_ifc.fineInfo);
     }
     console.writeInfo(" ... ");
+    return translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent);
+  }
+    
+    
+    
+    
+  private ZbnfMainGenCtrl translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPart spGenCtrl
+      , File checkXmlOutput, File fileParent) 
+  throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
+  { boolean bOk;
+    
     bOk = parserGenCtrl.parse(spGenCtrl);
     if(!bOk){
       String sError = parserGenCtrl.getSyntaxErrorReport();
@@ -214,10 +242,29 @@ public class TextGenScript {
     //  parserGenCtrl.reportStore((Report)console, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
     //}
     //write into Java classes:
-    zTextGenCtrl = new MainGenCtrl();
+    ZbnfMainGenCtrl zbnfGenCtrl = new ZbnfMainGenCtrl();
     ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(console);
-    parserGenCtrl2Java.setContent(zTextGenCtrl.getClass(), zTextGenCtrl, parserGenCtrl.getFirstParseResult());
-    return bOk;
+    parserGenCtrl2Java.setContent(ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
+    if(scriptFile ==null){
+      scriptFile = zbnfGenCtrl.scriptFileSub;   //use the first found <:file>, also from a included script
+    }
+    if(this.scriptclassMain ==null){
+      this.scriptclassMain = zbnfGenCtrl.scriptclass;
+    }
+    if(zbnfGenCtrl.includes !=null){
+      for(String sFileInclude: zbnfGenCtrl.includes){
+        File fileInclude = new File(fileParent, sFileInclude);
+        if(!fileInclude.exists()){
+          System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
+          throw new FileNotFoundException("TextGenScript - translateAndSetGenCtrl, included file not found: " + fileInclude.getAbsolutePath());
+        }
+        File fileIncludeParent = FileSystem.getDir(fileInclude);
+        int lengthBufferGenctrl = (int)fileInclude.length();
+        StringPart spGenCtrlSub = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
+        translateAndSetGenCtrl(parserGenCtrl, spGenCtrlSub, checkXmlOutput, fileIncludeParent);
+      }
+    }
+    return zbnfGenCtrl;
   }
   
   
@@ -231,10 +278,12 @@ public class TextGenScript {
   }
   
   
-  public final ScriptElement getFileScript(){ return zbnf_genFile; }
+  public final String getScriptclass(){ return scriptclassMain; }
+  
+  public final ScriptElement getFileScript(){ return scriptFile; }
   
   
-  public ScriptElement getSubtextScript(String name){ return subtexts.get(name); }
+  public ScriptElement getSubtextScript(String name){ return subtextScripts.get(name); }
   
   public ScriptElement xxxgetScriptVariable(String sName)
   {
@@ -882,14 +931,33 @@ public class TextGenScript {
   
   
   
-  /**Main class for ZBNF parse result 
+  /**Main class for ZBNF parse result.
+   * This class has the enclosing class to store {@link TextGenScript#subtextScripts}, {@link TextGenScript#listScriptVariables}
+   * etc. while parsing the script. The <code><:file>...<.file></code>-script is stored here locally
+   * and used as the main file script only if it is the first one of main or included script. The same behaviour is used  
    * <pre>
    * ZmakeGenctrl::= { <target> } \e.
    * </pre>
    */
-  public final class MainGenCtrl
+  public final class ZbnfMainGenCtrl
   {
 
+    public String scriptclass;
+    
+    List<String> includes;
+    
+    /**The script element for the whole file of this script. 
+     * It is possible that it is from a included script.
+     * It shall contain calling of <code><*subtext:name:...></code> 
+     */
+    ScriptElement scriptFileSub;
+    
+
+    
+    public void set_include(String val){ 
+      if(includes ==null){ includes = new ArrayList<String>(); }
+      includes.add(val); 
+    }
     
     public ScriptElement new_ZmakeTarget(){ return new ScriptElement('Z', null); }
     
@@ -898,9 +966,9 @@ public class TextGenScript {
     
     public ScriptElement new_subtext(){ return new ScriptElement('X', null); }
     
-    public void add_subtext(ScriptElement val){ subtexts.put(val.name, val); }
+    public void add_subtext(ScriptElement val){ subtextScripts.put(val.name, val); }
     
-    public ScriptElement new_genFile(){ return zbnf_genFile = new ScriptElement('Y', null); }
+    public ScriptElement new_genFile(){ return scriptFileSub = new ScriptElement('Y', null); }
     
     public void add_genFile(ScriptElement val){  }
     

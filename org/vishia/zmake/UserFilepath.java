@@ -9,7 +9,6 @@ import org.vishia.util.FileSystem;
 /**This class describes one file entry in a zmake script. The file entry can contain wild cards.
  * It may be a absolute or a relative path. It can have a base path and a local path part.
  * <ul>
- * <li>
  * <li><b>localpath</b>:
  *   If you write <code>anyPath/path:localPath/path/file.ext</code> then it describes a path which part 
  *    from <code>localPath</code> can be used as path to the file in some scripts. 
@@ -17,7 +16,7 @@ import org.vishia.util.FileSystem;
  *    <li>For example in C-compilation object-files can be stored in sub directories of the objects destination directory 
  *      which follows this local path designation.
  *    <li>Another example: copying some files from one directory location to another in designated sub directories.
- *    <ul> 
+ *    </ul> 
  * <li><b>General path</b>: If this file entry is member of a file set, the file set can have a general path.
  *   It is given by the {@link UserFileset#srcpath}. A given general path is used for all methods. 
  *   Only this entry describes an absolute path the general path is not used. 
@@ -38,7 +37,7 @@ import org.vishia.util.FileSystem;
  *   expects a normal path then it may use the operation system's current directory. But that behaviour is outside of this tool.
  * <li><b>Slash or backslash</b>: The user script can contain slash characters for path directory separation also for windows systems.
  *   It is recommended to use slash. The script which should be generate may expect back slashes on windows systems.
- *   Therefore all methods which returns a path are provided in 2 forms: With "W" on end of there name it is the windows version
+ *   Therefore all methods which returns a path are provided in 2 forms: <b>With "W" on end</b> of there name it is the <b>Windows version</b>
  *   which converts given slash characters in backslash in its return value. So the generated script will contain backslash characters.
  *   Note that some tools in windows accept a separation with slash too. Especial in C-sources an <code>#include <path/file.h></code>
  *   should be written with slash or URLs (hyperlinks) should be written with slash in any case.    
@@ -55,8 +54,40 @@ import org.vishia.util.FileSystem;
  *   If a reference is stored for a longer time in multithreading or in complex algorithms, a {@link java.lang.String}
  *   preserves that the content of the referenced String is unchanged in any case. A {@link java.lang.CharSequence} does not
  *   assert that it is unchanged in any case. Therefore in that case the usage of {@link java.lang.String} is recommended.
- * </ul>  
- * <br>
+ * </ul>
+ * <br><br>
+ * <b>Handling of Wildcards</b>:<br>
+ * If a UserFilepath is used in {@link Zmake}, the {@link ZmakeUserScript.UserTarget#allInputFilesExpanded()}
+ * expands given files with wildcards in a list of existing files. That's result are instances of this class which
+ * does no more contain wildcards, because they are expanded already. The expand algorithm is given with
+ * {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
+ * <br><br>
+ * If the file designation of this class contains wildcards (in Zmake for example an <code><*$target.output.file()></code>
+ * either the wildcards are present in the returned value of the access methods or that type of access methods
+ * which have a argument 'replWildc' are used.
+ * <br><br>
+ * <b>Replace wildcards</b>:<br>
+ * All methods with 'replWildc'-argument does the following:
+ * <ul>
+ * <li>The first "*" or "**" wildcard in the local path part is replaced by the whole local path part of the replWildc-argument.
+ *   Usual the local path part of this consists only of a "**" or it consists of a path ending with "**" or it contains
+ *   a prefix and a postfix like "pre/ ** /post". All variants may be proper. 
+ * <li>The first "*" in the name is replaced by the whole name of the 'replWildc' argument. Usual the name may consist only
+ *   of a single "*".
+ * <li>The second "*" in the name is replaced by the whole ext of the 'replWildc' argument. Usual the name.ext of this 
+ *   may consist of "*.*.ext". See examples.      
+ * </ul>       
+ * Examples
+ * <table><tr><th>this </th><th> replWildc</th><th>result</th></tr>
+ * <tr><td>** / *.*.ext</td><td>rlocal/rpath/rname.rxt</td><td>rlocal/rpath/rname.rxt.ext</td></tr>
+ * <tr><td>local/path / *.*.ext</td><td>rlocal/rpath/rname.rxt</td><td>local/path/rname.rxt.ext</td></tr>
+ * <tr><td>local/path/ ** / *.*.ext</td><td>rlocal/rpath/rname.rxt</td><td>local/path/rlocal/rpath/rname.rxt.ext</td></tr>
+ * <tr><td>local/ ** /path / *.*.ext</td><td>rlocal/rpath/rname.rxt</td><td>local/rlocal/rpath/path/rname.rxt.ext</td></tr>
+ * <tr><td>*.*.ext</td><td>rlocal/rpath/rname.rxt</td><td>rname.rxt.ext</td></tr>
+ * <tr><td>*.ext</td><td>rlocal/rpath/rname.rxt</td><td>rname.ext</td></tr>
+ * <tr><td>*.*</td><td>rlocal/rpath/rname.rxt</td><td>rname.rxt</td></tr>
+ * </table>
+ * <br><br>
  * ZBNF-syntax parsing an Zmake input script for this class:
  * <pre>
 prepFilePath::=<$NoWhiteSpaces><! *?>
@@ -79,7 +110,8 @@ public final class UserFilepath {
   
   /**Version, history and license.
    * <ul>
-   * <li>2013-02-12 dissolved from inner class in {@link ZmakeUserScript}
+   * <li>2013-03-10 Hartmut new: Replace wildcards: {@link #absfile(UserFilepath)} (TODO for some more access methods)
+   * <li>2013-02-12 Hartmut chg: dissolved from inner class in {@link ZmakeUserScript}
    * </ul>
    * <b>Copyright/Copyleft</b>:
     * For this source the LGPL Lesser General Public License,
@@ -106,7 +138,7 @@ public final class UserFilepath {
     * 
     * 
     */
-   static final public int version = 20121021;
+   static final public int version = 20130310;
 
 
   
@@ -553,8 +585,12 @@ public final class UserFilepath {
    */
   public CharSequence localDir(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath){
     ///
-    if(  basepath !=null 
-      || commonPath == null && accessPath == null && scriptVariable == null && envVariable == null){
+    if(  basepath !=null     //if a basepath is given, then only this localpath is valid.
+      || (  (commonPath == null || commonPath.basepath ==null) //either no commonPath or commonPath is a basepath completely
+         && (accessPath == null || accessPath.basepath ==null) //either no accessPath or accessPath is a basepath completely
+         && scriptVariable == null  //no Varable
+         && envVariable == null
+      )  ){  //Then only the localdir of this is used. 
       if(uRet == null){
         return localdir;
       } else {
@@ -720,6 +756,19 @@ public final class UserFilepath {
   
   public CharSequence absfileW(){ return toWindows(absfile()); }
   
+  
+  /**Method can be called in the generation script: <*path.absfile()>.
+   * @param replWildc With them localdir and name a wildcard in this.localdir and this.name is replaced.
+   * @return the whole path inclusive a given general path .
+   *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+   */
+  public CharSequence absfile(UserFilepath replWildc){ 
+    CharSequence basePath = absbasepath();
+    StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
+    addLocalName(uRet, replWildc);
+    uRet.append(ext);
+    return uRet;
+  }
   
   /**Method can be called in the generation script: <*basepath()>. 
    * @return the whole base path inclusive a given general path in a {@link UserFileSet}.
@@ -903,6 +952,42 @@ public final class UserFilepath {
     uRet.append(this.localdir);
     if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
     uRet.append(name);
+    return uRet;
+  }
+  
+  /**Adds the local dir and the name, not the extension
+   * @param uRet
+   * @param replWildc With that localdir and name a wildcard in this is replaced.
+   * @return uRet itself to concatenate.
+   */
+  private CharSequence addLocalName(StringBuilder uRet, UserFilepath replWildc){ 
+    int pos;
+    if( this.localdir.length() > 0 && (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+    int posW = localdir.indexOf('*');
+    int posW2 = localdir.length() > posW+1 && localdir.charAt(posW+1) == '*' ? posW+2 : posW+1;
+    if(posW >=0){
+      uRet.append(localdir.substring(0,posW));
+      uRet.append(replWildc.localdir);
+      uRet.append(localdir.substring(posW2));
+    } else{
+      uRet.append(localdir);
+    }
+    if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
+    posW = name.indexOf('*');
+    posW2 = name.indexOf('*', posW+1);
+    if(posW >=0){
+      uRet.append(name.substring(0,posW));     //may be empty
+      uRet.append(replWildc.name);
+      if(posW2 >=0){
+        uRet.append(name.substring(posW+1, posW2));
+        if(replWildc.ext.length() >1){ uRet.append(replWildc.ext.substring(1)); }  //without leading dot
+        uRet.append(name.substring(posW2+1));  //may be empty
+      } else {
+        uRet.append(name.substring(posW+1));   //may be empty
+      }
+    } else{
+      uRet.append(name);
+    }
     return uRet;
   }
   

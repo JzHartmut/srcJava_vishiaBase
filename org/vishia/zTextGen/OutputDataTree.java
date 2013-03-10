@@ -13,6 +13,43 @@ import java.util.TreeMap;
  */
 public class OutputDataTree {
   
+  /**Version, history and license.
+   * <ul>
+   * <li>2013-03-10 Hartmut chg/new: supports superclass content.
+   * <li>2012-12-00 Hartmut improved: circular references with @ 1234 (address) to mark it.
+   * <li>2012-10-08 created. A presentation of the content of a Java data tree was necessary.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  static final public int version = 20130310;
+
+  
+  
+  
   final Map<Integer, Object> processedAlready = new TreeMap<Integer, Object>();
   
   Object data;
@@ -34,49 +71,54 @@ public class OutputDataTree {
         return;
       }
       Class<?> clazz = data.getClass();
-      Field[] fields = clazz.getDeclaredFields();
-      for(Field field: fields){
-        int modi = field.getModifiers();
-        if((modi & Modifier.STATIC)==0){
-          field.setAccessible(true);
-          outIndent(recurs, out);
-          String sName = field.getName();
-          if(sName.equals("whatisit")){
-            stop();
-          }
-          Class<?> type = field.getType();
-          out.append(sName).append(" = ");
-          if(type.isPrimitive()){
-            try{
-              String name = type.getName();
-              if(name.equals("int")){
-                out.append("" + field.getInt(data));
-              } else if(name.equals("short")){
-                out.append("" + field.getShort(data));
-              } else if(name.equals("byte")){
-                out.append("" + field.getByte(data));
-              } else if(name.equals("boolean")){
-                out.append("" + field.getBoolean(data));
-              } else if(name.equals("char")){
-                out.append("" + field.getChar(data));
-              } else if(name.equals("float")){
-                out.append("" + field.getFloat(data));
-              } else if(name.equals("double")){
-                out.append("" + field.getDouble(data));
-              } else if(name.equals("long")){
-                out.append("" + field.getLong(data));
-              }
-            }catch (Exception exc){
-              out.append(" ?access ").append(exc.getMessage());
+      
+      while(clazz !=null){
+        
+        Field[] fields = clazz.getDeclaredFields();
+        for(Field field: fields){
+          int modi = field.getModifiers();
+          if((modi & Modifier.STATIC)==0){
+            field.setAccessible(true);
+            outIndent(recurs, out);
+            String sName = field.getName();
+            if(sName.equals("whatisit")){
+              stop();
             }
-          } else {
-            try{ Object dataField = field.get(data);
-              outData(recurs, field.getName(), dataField, out, bXML);
-            } catch(Exception exc){
-              out.append("not accessible");
+            Class<?> type = field.getType();
+            out.append(sName).append(" = ");
+            if(type.isPrimitive()){
+              try{
+                String name = type.getName();
+                if(name.equals("int")){
+                  out.append("" + field.getInt(data));
+                } else if(name.equals("short")){
+                  out.append("" + field.getShort(data));
+                } else if(name.equals("byte")){
+                  out.append("" + field.getByte(data));
+                } else if(name.equals("boolean")){
+                  out.append("" + field.getBoolean(data));
+                } else if(name.equals("char")){
+                  out.append("" + field.getChar(data));
+                } else if(name.equals("float")){
+                  out.append("" + field.getFloat(data));
+                } else if(name.equals("double")){
+                  out.append("" + field.getDouble(data));
+                } else if(name.equals("long")){
+                  out.append("" + field.getLong(data));
+                }
+              }catch (Exception exc){
+                out.append(" ?access ").append(exc.getMessage());
+              }
+            } else {
+              try{ Object dataField = field.get(data);
+                outData(recurs, field.getName(), dataField, out, bXML);
+              } catch(Exception exc){
+                out.append("not accessible");
+              }
             }
           }
         }
+        clazz = clazz.getSuperclass();
       }
     }
     //out.append("\n");

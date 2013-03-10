@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.FileSystem;
 
 
@@ -94,6 +93,7 @@ public class CheckDependencyFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-03-03 Hartmut chg: catch in {@link #processSrcfile(File, ObjectFileDeps, int)}. It's a fix change.
    * <li>2013-01-06 Hartmut chg: Now supports more as one obj file. This is necessary if one make process compiles several versions.
    *   The routine {@link #setDirObj(String)} is changed in parameter form.
    * <li>2013-01-06 Hartmut chg order of search in {@link #searchInclFileInIncludePath(String, List)}, not at last 'y'.
@@ -130,7 +130,7 @@ public class CheckDependencyFile
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20121225;
+  public static final int version = 20130310;
 
   /**Contains all dependencies, read from file and processed. */
   final CheckData checkData;
@@ -316,33 +316,38 @@ public class CheckDependencyFile
    */
   InfoFileDependencies processSrcfile(File fileSrc, final ObjectFileDeps objDeps, int recursiveCt) 
   {
-    String sFileSrcGenAbs = FileSystem.getCanonicalPath(fileSrc);
-    String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
-    //boolean needTranslation;
-    final File fileSrcMirror = getFileSrcMirror(sLocalPath);
-    //final File fileDeps = getFileDependencies(sLocalPath);
-    //
-    //create info for this file.
     InfoFileDependencies infoFile;
-    if(recursiveCt >=99)
-      stop();
-    
-    String sPathSrcCanonical = FileSystem.getCanonicalPath(fileSrc);
-    infoFile = checkData.indexAllInclFilesAbsPath.get(sPathSrcCanonical);
-    if(infoFile != null){
-      //it is checked already.
-    } else {
-      infoFile = checkDependenciesInputDepFile(sPathSrcCanonical, objDeps, recursiveCt);
-      if(infoFile == null){
-        //dependency file not found. Build it while checking sources.
-        infoFile = checkSource(fileSrc, sFileSrcGenAbs, fileSrcMirror
-          , null, objDeps, recursiveCt+1);
-        String sNewly = infoFile.isNewlyItself() ? "newly; " : 
-                        infoFile.isNewlyOrIncludedNewly() ? " include newly; " : "not changed; ";
-        console.reportln(MainCmdLogging_ifc.fineInfo, "CheckDeps - source file checked; " + sNewly + sFileSrcGenAbs + "");
-        
-      } 
-      checkData.indexAllInclFilesAbsPath.put(infoFile.sAbsolutePath, infoFile);
+    try{
+      String sFileSrcGenAbs = FileSystem.getCanonicalPath(fileSrc);
+      String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
+      //boolean needTranslation;
+      final File fileSrcMirror = getFileSrcMirror(sLocalPath);
+      //final File fileDeps = getFileDependencies(sLocalPath);
+      //
+      //create info for this file.
+      if(recursiveCt >=99)
+        stop();
+      
+      String sPathSrcCanonical = FileSystem.getCanonicalPath(fileSrc);
+      infoFile = checkData.indexAllInclFilesAbsPath.get(sPathSrcCanonical);
+      if(infoFile != null){
+        //it is checked already.
+      } else {
+        infoFile = checkDependenciesInputDepFile(sPathSrcCanonical, objDeps, recursiveCt);
+        if(infoFile == null){
+          //dependency file not found. Build it while checking sources.
+          infoFile = checkSource(fileSrc, sFileSrcGenAbs, fileSrcMirror
+            , null, objDeps, recursiveCt+1);
+          String sNewly = infoFile.isNewlyItself() ? "newly; " : 
+                          infoFile.isNewlyOrIncludedNewly() ? " include newly; " : "not changed; ";
+          console.reportln(MainCmdLogging_ifc.fineInfo, "CheckDeps - source file checked; " + sNewly + sFileSrcGenAbs + "");
+          
+        } 
+        checkData.indexAllInclFilesAbsPath.put(infoFile.sAbsolutePath, infoFile);
+      }
+    } catch(Exception exc){
+      System.err.printf("CheckDependencyFile - any exception; %s\n", exc.getMessage());
+      infoFile = null;
     }
     return infoFile;
   }

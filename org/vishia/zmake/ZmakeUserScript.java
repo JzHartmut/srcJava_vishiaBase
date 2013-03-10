@@ -87,7 +87,7 @@ public class ZmakeUserScript
    * 
    * 
    */
-  static final public int version = 20121021;
+  static final public int version = 20130310;
 
 
   
@@ -723,44 +723,15 @@ input::=
     private List<UserFilepath> prepareFiles( List<TargetInput> filesOrFilesets, boolean expandFiles) {
       if(targetName !=null && targetName.equals("test2"))
         Assert.stop();
+      TargetParam pSrcpath = params.get("srcpath");
+      if(pSrcpath == null){ pSrcpath = params.get("commonpath"); }
+      if(pSrcpath !=null){
+        
+      }
       List<UserFilepath> files = new LinkedList<UserFilepath>();
       //UserFileset inputfileset = null; 
       for(TargetInput targetInputParam: filesOrFilesets){
-        //UserFileset targetparaminputfileset; 
-        { //if(name == null && targetInputParam.name == null || name !=null && name.equals(targetInputParam.name)){ //input or matching parameter?
-          /*
-          CharSequence srcpath = null;
-          if(targetInputParam.srcpathEnvVariable !=null){
-            srcpath = System.getenv(targetInputParam.srcpathEnvVariable);
-            if(srcpath == null){
-              if(script.bWriteErrorInOutputScript){
-                srcpath = "<??missing environment variable: " + targetInputParam.srcpathEnvVariable + "??>";
-              } else throw new IllegalArgumentException("Zmake - environment variable not found; " + targetInputParam.srcpathEnvVariable);
-            }
-          }
-          else if(targetInputParam.srcpathVariable !=null){
-            ScriptVariable var = script.var.get(targetInputParam.srcpathVariable);
-            if(var == null){
-              if(script.bWriteErrorInOutputScript){
-                srcpath = "<??missing script variable: " + targetInputParam.srcpathVariable + "??>";
-              } else throw new IllegalArgumentException("Zmake - script variable not found; " + targetInputParam.srcpathEnvVariable);
-            } else {
-              srcpath = var.text();
-            }
-          }
-          if(targetInputParam.srcpathTargetInput !=null){
-            if(srcpath == null){ srcpath = targetInputParam.srcpathTargetInput; }
-            else {
-              StringBuilder uSrcpath = (srcpath instanceof StringBuilder) ? (StringBuilder) srcpath : new StringBuilder(srcpath);
-              uSrcpath.append(targetInputParam.srcpathTargetInput);
-              srcpath = uSrcpath;
-            }
-          }
-          if(srcpath == null){ srcpath = ""; }
-          */
-          //
-          //
-          //expand file or fileset:
+        { //expand file or fileset:
           //
           if(targetInputParam.fileset !=null){
             ScriptVariable variable = script.var.get(targetInputParam.fileset);

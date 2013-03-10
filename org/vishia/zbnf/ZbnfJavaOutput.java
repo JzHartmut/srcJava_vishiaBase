@@ -850,7 +850,7 @@ public class ZbnfJavaOutput
               String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
               Field element = null;
               Class searchClass = destComponent.clazz;
-              if(semanticLowerCase.equals("operator"))
+              if(semanticLowerCase.equals("cssHtml"))
                 stop();
               do
               { try{ element = searchClass.getDeclaredField(semanticLowerCase);}

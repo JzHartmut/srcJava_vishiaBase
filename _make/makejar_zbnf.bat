@@ -1,6 +1,8 @@
 echo off
-REM generating a jar file which contains all re-useable classes of the ZBNF-component 
-REM inclusive its used classes from the component vishiaBase.
+REM generating a jar file which contains all Main-classes of the ZBNF-component
+REM and all classes from Zbnf and vishiaBase which were able to use in generation scripts. 
+REM It contains all depending classes from the component vishiaBase. 
+REM Therefore no additonal jar is necessary to run, only the java base system of any JRE (rt.jar)
 REM Note that the srcJava_vishiaBase component should be present in the correct version in parallel path of this component. 
 REM examples of ZBNF are not included.
 
