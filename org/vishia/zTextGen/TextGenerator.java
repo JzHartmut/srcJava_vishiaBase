@@ -546,7 +546,7 @@ public class TextGenerator {
       }
       TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
-        ok = writeError("<? *subtext:" + nameSubtext + " not found.?>", out);
+        ok = writeError("??: *subtext:" + nameSubtext + " not found.??", out);
       } else {
         Gen_Content subtextGenerator = new Gen_Content(null, out);
         if(subtextScript.arguments !=null){
@@ -564,13 +564,13 @@ public class TextGenerator {
               if(ref !=null){
                 CheckArgument checkArg = check.get(referenceSetting.name);      //is it a requested argument (per name)?
                 if(checkArg == null){
-                  ok = writeError("<? *subtext;" + nameSubtext + ": " + referenceSetting.name + " faulty argument.?> ", out);
+                  ok = writeError("??: *subtext;" + nameSubtext + ": " + referenceSetting.name + " faulty argument.?? ", out);
                 } else {
                   checkArg.used = true;    //requested and resolved.
                   subtextGenerator.localVariables.put(referenceSetting.name, ref);
                 }
               } else {
-                ok = writeError("<? *subtext;" + nameSubtext + ": " + referenceSetting.name + " = ? not found. ?>", out);
+                ok = writeError("??: *subtext;" + nameSubtext + ": " + referenceSetting.name + " = ? not found.??", out);
               }
             }
             //check whether all formal arguments are given with actual args or get its default values.
@@ -583,7 +583,7 @@ public class TextGenerator {
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.name, ref);
                   } else {
-                    ok = writeError("<? *subtext;" + nameSubtext + ": " + arg.formalArg.name + " = ??> not found. ?>", out);
+                    ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.name + " not found.??", out);
                   }
                 /*
                 if(arg.formalArg.sumExpression.text !=null){
@@ -593,17 +593,17 @@ public class TextGenerator {
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.name, ref);
                   } else {
-                    ok = writeError("<? *subtext;" + nameSubtext + ": " + arg.formalArg.name + " = ??> not found. ?>", out);
+                    ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.name + " = ??> not found. ?>", out);
                   }
                 */  
                 } else {
-                  ok = writeError("<? *subtext;" + nameSubtext + ": " + arg.formalArg.name + " = ??> missing on call. ?>", out);
+                  ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.name + "  missing on call.??", out);
                 }
               }
             }
           }
         } else if(contentElement.getReferenceDataSettings() !=null){
-          ok = writeError("<? *subtext;" + nameSubtext + " called with arguments, it has not one. ?>", out);
+          ok = writeError("??: *subtext;" + nameSubtext + " called with arguments, it has not one.??", out);
         }
         if(ok){
           subtextGenerator.genContent(subtextScript.subContent, false);

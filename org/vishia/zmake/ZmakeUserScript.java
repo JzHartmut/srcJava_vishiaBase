@@ -462,14 +462,14 @@ public class ZmakeUserScript
             ScriptVariable variable = parentTarget.script.var.get(element.fileset);
             if(variable == null){
               int pos = u.length();
-              u.append("<??error ZmakeScriptvariable not found: ").append(element.fileset).append(" ??>");
+              u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
             } else if(variable.expression !=null){
               u.append(variable.expression.text());
               //variable.expression.addtext(u);
             } else {
               int pos = u.length();
-              u.append("<??error ZmakeScriptvariable as string expected: ").append(element.fileset).append(" ??>");
+              u.append("??:error ZmakeScriptvariable as string expected: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
             } 
           }
@@ -723,10 +723,15 @@ input::=
     private List<UserFilepath> prepareFiles( List<TargetInput> filesOrFilesets, boolean expandFiles) {
       if(targetName !=null && targetName.equals("test2"))
         Assert.stop();
+      //
+      //check whether the target has a parameter srcpath=... or commonpath = ....
+      UserFilepath commonPathTarget = null;
       TargetParam pSrcpath = params.get("srcpath");
       if(pSrcpath == null){ pSrcpath = params.get("commonpath"); }
       if(pSrcpath !=null){
-        
+        TargetInput inpSrcpath = pSrcpath.referVariables.get(0);
+        if(inpSrcpath ==null) throw new IllegalArgumentException("ZmakeUserScript - srcpath");
+        commonPathTarget = inpSrcpath.inputFile;
       }
       List<UserFilepath> files = new LinkedList<UserFilepath>();
       //UserFileset inputfileset = null; 
@@ -738,7 +743,7 @@ input::=
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
                 UserFilepath errorhint = new UserFilepath(script);
-                errorhint.name = "<?error not found; " + targetInputParam.fileset + ">";
+                errorhint.name = "??:error not found; " + targetInputParam.fileset + ".??";
                 files.add(errorhint);
               }
             } else {
@@ -748,9 +753,9 @@ input::=
           }
           else if(targetInputParam.inputFile !=null){
             if(expandFiles){
-              targetInputParam.inputFile.expandFiles(files, null, null, script.currDir);
+              targetInputParam.inputFile.expandFiles(files, commonPathTarget, null, script.currDir);
             } else {
-              UserFilepath targetsrc = new UserFilepath(script, targetInputParam.inputFile, null, null);
+              UserFilepath targetsrc = new UserFilepath(script, targetInputParam.inputFile, commonPathTarget, null);
               files.add(targetsrc);  
             }
           } else { 

@@ -379,7 +379,7 @@ public class TextGenScript {
               for(TextGenScript.Expression expr: zd.actualValue){
                 Object oValue = expr.ascertainValue(data, localVariables, accessPrivate, false, bWriteErrorInOutput);
                 if(oValue == null){
-                  oValue = "<? path access: " + dataRef + "?>";
+                  oValue = "??: path access: " + dataRef + "?>";
                   if(!bWriteErrorInOutput){
                     throw new IllegalArgumentException(oValue.toString());
                   }
@@ -391,7 +391,7 @@ public class TextGenScript {
           try{
             dataValue = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
           } catch(NoSuchFieldException exc){
-            dataValue = "<? path access: " + dataRef + "on " + exc.getMessage() + "?>";
+            dataValue = "??: path access: " + dataRef + "on " + exc.getMessage() + ".??";
             if(!bWriteErrorInOutput){
               throw new IllegalArgumentException(dataValue.toString());
             }
