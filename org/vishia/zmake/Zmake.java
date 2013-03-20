@@ -26,6 +26,7 @@ import org.vishia.zTextGen.OutputDataTree;
 import org.vishia.zTextGen.TextGenScript;
 import org.vishia.zTextGen.TextGenSyntax;
 import org.vishia.zTextGen.TextGenerator;
+import org.vishia.zTextGen.Zbnf2Text;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
@@ -79,7 +80,7 @@ import org.vishia.zbnf.ZbnfParser;
  * @author Hartmut Schorrig
  *
  */
-public class Zmake
+public class Zmake extends Zbnf2Text
 {
 
 	/**Changes
@@ -94,7 +95,7 @@ public class Zmake
 	public final static int version = 0x20130310;
 	
 	
-	private static class CallingArgs
+	private static class CallingArgs extends Zbnf2Text.Args
 	{
   
     String input = null;
@@ -203,7 +204,7 @@ public class Zmake
           helpOut.close();
         }
         if(cmdArgs.input != null){
-          sExecuteError = main.execute();
+          sExecuteError = main.parseAndTranslate();
         }
       }
       catch(Exception exception)
@@ -224,13 +225,14 @@ public class Zmake
 
 
   public Zmake(CallingArgs args, MainCmd_ifc console)
-  { this.args = args;
+  { super(args, console);
+    this.args = args;
     this.console = console;
     genScript = new TextGenScript(console);
   }
   
   
-  private static class CmdLine extends MainCmd
+  private static class CmdLine extends Zbnf2Text.CmdLineText
   {
     private final CallingArgs callingArgs;
     
@@ -239,7 +241,7 @@ public class Zmake
         The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
     */
     CmdLine(String[] args, CallingArgs callingArgs)
-    { super(args);
+    { super(callingArgs, args);
       this.callingArgs = callingArgs;
       //:TODO: user, add your help info!
       //super.addHelpInfo(getAboutInfo());
@@ -262,6 +264,7 @@ public class Zmake
       ////super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is the internal syntax");
       //super.addHelpInfo("-syntax:PATH       Write an information file which contains the help and the syntax.");
       super.addHelpInfo("One can use either '=' or ':' as separator between option key and value.");
+      super.addArgument(super.argList);
       super.addArgument(arguments);
       super.addStandardHelpInfo();
       
@@ -353,7 +356,7 @@ public class Zmake
    * @throws IllegalArgumentException 
    * @throws IOException
    */
-  String execute() throws ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException
+  String parseAndTranslate() throws ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException
   { String sError = null;
     
     //the followed line maybe unnecessary because the java cmd line interpretation always cuts the quotion  marks,

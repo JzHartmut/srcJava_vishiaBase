@@ -39,6 +39,7 @@ import java.util.TreeMap;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmd.Argument;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -145,19 +146,20 @@ public class Zbnf2Xml
   public static void main(String [] sArgs)
   { Args args = new Args();
     CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
-    Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
+    mainCmdLine.addCmdLineProperties();
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
     catch(Exception exception)
-    { main.report.report("Argument error:", exception);
-      main.report.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
+    { mainCmdLine.report("Argument error:", exception);
+      mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       bOk = false;
     }
+    Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
     if(bOk)
     { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
           to hold the contact to the command line execution.
       */
-      try{ main.execute(); }
+      try{ main.parseAndWriteXml(); }
       catch(Exception exception)
       { //catch the last level of error. No error is reported direct on command line!
         main.report.report("Uncatched Exception on main level:", exception);
@@ -200,38 +202,38 @@ public class Zbnf2Xml
   { 
   
     MainCmd.SetArgument setInput = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.sFileIn = val; return true;
+      argData.sFileIn = val; return true;
     }};
 
     
     MainCmd.SetArgument setSyntax = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.sFileSyntax = val; return true;
+      argData.sFileSyntax = val; return true;
     }};
 
     
     MainCmd.SetArgument setOutUtf8 = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.sFileOut = val; args.encoding = Charset.forName("UTF-8"); return true;
+      argData.sFileOut = val; argData.encoding = Charset.forName("UTF-8"); return true;
     }};
 
     
     MainCmd.SetArgument setOutAscii = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.sFileOut = val; args.encoding = Charset.forName("US-ASCII"); return true;
+      argData.sFileOut = val; argData.encoding = Charset.forName("US-ASCII"); return true;
     }};
 
     
     MainCmd.SetArgument setOut = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.sFileOut = val; return true;
+      argData.sFileOut = val; return true;
     }};
 
     
     MainCmd.SetArgument setChecknew = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.checknew = true; return true;
+      argData.checknew = true; return true;
     }};
 
     
     
     MainCmd.SetArgument setOutEncoding = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      try{ args.encoding = Charset.forName(val); return true;
+      try{ argData.encoding = Charset.forName(val); return true;
       } catch(Exception exc){ return false; }
     }};
 
@@ -253,17 +255,17 @@ public class Zbnf2Xml
       { addSemantic = sArg;
         addContent = "";
       }
-      if(args.additionalSemantic == null)
-      { args.additionalSemantic = new LinkedList<String>();
+      if(argData.additionalSemantic == null)
+      { argData.additionalSemantic = new LinkedList<String>();
       }
-      args.additionalSemantic.add(addSemantic);
-      args.additionalSemantic.add(addContent);
+      argData.additionalSemantic.add(addSemantic);
+      argData.additionalSemantic.add(addContent);
       return true;
     }};
 
     
     
-    private final MainCmd.Argument[] argList =
+    protected final MainCmd.Argument[] argList =
     { new MainCmd.Argument("-i", ":<INPUT>    inputfilepath, this file is parsing", setInput)
     , new MainCmd.Argument("-s", ":<SYNTAX>   syntax prescript in SBNF format for parsing", setSyntax)
     , new MainCmd.Argument("-x", ":<OUTPUT>   output xml file written in UTF8-encoding", setOutUtf8)
@@ -277,15 +279,19 @@ public class Zbnf2Xml
                             + "   <VALUE> its text, may be in \"\"", setXmlContent)
     };
 
-    public final Args args;
+    public final Args argData;
     
     /*---------------------------------------------------------------------------------------------*/
-    /** Constructor of the main class.
-        The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
-    */
-    protected CmdLine(Args args, String[] sArgs)
-    { super(sArgs);
-      this.args = args;
+    /**Constructor of the cmdline handling class.
+    The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
+*/
+    CmdLine(Args argData, String[] sCmdlineArgs)
+    { super(sCmdlineArgs);
+      this.argData = argData;
+    }
+    
+
+    void addCmdLineProperties(){
       super.addAboutInfo("Conversion text to XML via ZBNF");
       super.addAboutInfo("made by HSchorrig, 2006-03-20..2013-02-09");
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> -[x|y|z]:<OUTPUT> [{-a:<NAME>=<VALUE>}]");  //[-w[+|-|0]]
@@ -293,7 +299,7 @@ public class Zbnf2Xml
       super.addStandardHelpInfo();
     }
     
-  
+
     /*---------------------------------------------------------------------------------------------*/
     /** Tests one argument. This method is invoked from parseArgument. It is abstract in the superclass MainCmd
         and must be overwritten from the user.
@@ -308,17 +314,17 @@ public class Zbnf2Xml
     { boolean bOk = true;  //set to false if the argc is not passed
   
       if(argc.startsWith("--_"))      { /*ignore it. */ }
-      else if(argc.startsWith("-i:")){ args.sFileIn   = getArgument(3); }
-      else if(argc.startsWith("-i")) { args.sFileIn   = getArgument(2); }
-      else if(argc.startsWith("-s:")){ args.sFileSyntax  = getArgument(3); }
-      else if(argc.startsWith("-s")) { args.sFileSyntax  = getArgument(2); }
-      else if(argc.startsWith("-x:")){ args.sFileOut = getArgument(3); args.encoding = Charset.forName("UTF-8"); }
-      else if(argc.startsWith("-x")) { args.sFileOut = getArgument(2); args.encoding = Charset.forName("UTF-8"); }
-      else if(argc.startsWith("-y:")){ args.sFileOut = getArgument(3); }
-      else if(argc.startsWith("-y")) { args.sFileOut = getArgument(2); }
-      else if(argc.startsWith("-z:")){ args.sFileOut = getArgument(3); args.encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-z")) { args.sFileOut = getArgument(2); args.encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-charset:")){ args.encoding = Charset.forName(getArgument(9));  }
+      else if(argc.startsWith("-i:")){ argData.sFileIn   = getArgument(3); }
+      else if(argc.startsWith("-i")) { argData.sFileIn   = getArgument(2); }
+      else if(argc.startsWith("-s:")){ argData.sFileSyntax  = getArgument(3); }
+      else if(argc.startsWith("-s")) { argData.sFileSyntax  = getArgument(2); }
+      else if(argc.startsWith("-x:")){ argData.sFileOut = getArgument(3); argData.encoding = Charset.forName("UTF-8"); }
+      else if(argc.startsWith("-x")) { argData.sFileOut = getArgument(2); argData.encoding = Charset.forName("UTF-8"); }
+      else if(argc.startsWith("-y:")){ argData.sFileOut = getArgument(3); }
+      else if(argc.startsWith("-y")) { argData.sFileOut = getArgument(2); }
+      else if(argc.startsWith("-z:")){ argData.sFileOut = getArgument(3); argData.encoding = Charset.forName("US-ASCII"); }
+      else if(argc.startsWith("-z")) { argData.sFileOut = getArgument(2); argData.encoding = Charset.forName("US-ASCII"); }
+      else if(argc.startsWith("-charset:")){ argData.encoding = Charset.forName(getArgument(9));  }
       else if(argc.startsWith("-a:"))
       { //argument
         String sArg = getArgument(3);
@@ -337,11 +343,11 @@ public class Zbnf2Xml
         { addSemantic = sArg;
           addContent = "";
         }
-        if(args.additionalSemantic == null)
-        { args.additionalSemantic = new LinkedList<String>();
+        if(argData.additionalSemantic == null)
+        { argData.additionalSemantic = new LinkedList<String>();
         }
-        args.additionalSemantic.add(addSemantic);
-        args.additionalSemantic.add(addContent);
+        argData.additionalSemantic.add(addSemantic);
+        argData.additionalSemantic.add(addContent);
       }
   /*
       else if(argc.equals("-w+"))   { mode.setIndent("  "); }
@@ -376,14 +382,14 @@ public class Zbnf2Xml
     protected boolean checkArguments()
     { boolean bOk = true;
   
-      if(args.sFileIn == null)            { bOk = false; writeError("ERROR argument -iInputfile is obligat."); }
-      else if(args.sFileIn.length()==0)   { bOk = false; writeError("ERROR argument -iInputfile without content.");}
+      if(argData.sFileIn == null)            { bOk = false; writeError("ERROR argument -iInputfile is obligat."); }
+      else if(argData.sFileIn.length()==0)   { bOk = false; writeError("ERROR argument -iInputfile without content.");}
   
-      if(args.sFileSyntax == null)            { bOk = false; writeError("ERROR argument -sSyntaxfile is obligat."); }
-      else if(args.sFileSyntax.length()==0)   { bOk = false; writeError("ERROR argument -sSyntaxfile without content.");}
+      if(argData.sFileSyntax == null)            { bOk = false; writeError("ERROR argument -sSyntaxfile is obligat."); }
+      else if(argData.sFileSyntax.length()==0)   { bOk = false; writeError("ERROR argument -sSyntaxfile without content.");}
   
-      if(args.sFileOut == null)           { bOk = false; writeError("argument -y -x or -z: no outputfile is given");}
-      else if(args.sFileOut.length()==0)  { bOk = false; writeError("argument -y -x or -z without content"); }
+      if(argData.sFileOut == null)           { bOk = false; writeError("argument -y -x or -z: no outputfile is given");}
+      else if(argData.sFileOut.length()==0)  { bOk = false; writeError("argument -y -x or -z without content"); }
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
   
       return bOk;
@@ -392,9 +398,16 @@ public class Zbnf2Xml
   }//class CmdLine
 
 
+  
+  /**Executes the parsing process and writes an XML file. 
+   * @deprecated use {@link #parseAndWriteXml()}
+   * @return true if successfull
+   */
+  @Deprecated
+  public final boolean execute(){ return parseAndWriteXml(); }
 
 
-  public boolean execute()
+  public boolean parseAndWriteXml()
   { boolean bOk = true;
     File fileOut = new File(arg.sFileOut);
     File fileIn = new File(arg.sFileIn);

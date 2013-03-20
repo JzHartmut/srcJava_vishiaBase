@@ -286,8 +286,8 @@ public class ZmakeUserScript
   {
     private final char type;
     private String text;
-    private UserStringContent(char type){ this.type = type; }
-    private UserStringContent(char type, String text){ this.type = type; this.text = text; }
+    UserStringContent(char type){ this.type = type; }
+    UserStringContent(char type, String text){ this.type = type; this.text = text; }
   }
   
   
@@ -726,12 +726,14 @@ input::=
       //
       //check whether the target has a parameter srcpath=... or commonpath = ....
       UserFilepath commonPathTarget = null;
-      TargetParam pSrcpath = params.get("srcpath");
-      if(pSrcpath == null){ pSrcpath = params.get("commonpath"); }
-      if(pSrcpath !=null){
-        TargetInput inpSrcpath = pSrcpath.referVariables.get(0);
-        if(inpSrcpath ==null) throw new IllegalArgumentException("ZmakeUserScript - srcpath");
-        commonPathTarget = inpSrcpath.inputFile;
+      if(params !=null){
+        TargetParam pSrcpath = params.get("srcpath");
+        if(pSrcpath == null){ pSrcpath = params.get("commonpath"); }
+        if(pSrcpath !=null){
+          TargetInput inpSrcpath = pSrcpath.referVariables.get(0);
+          if(inpSrcpath ==null) throw new IllegalArgumentException("ZmakeUserScript - srcpath");
+          commonPathTarget = inpSrcpath.inputFile;
+        }
       }
       List<UserFilepath> files = new LinkedList<UserFilepath>();
       //UserFileset inputfileset = null; 
