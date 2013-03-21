@@ -66,6 +66,8 @@ public class Zbnf2Xml
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-03-20 Hartmut bugfix close() on written XML file. Without close the file was not able to access
+   *   in a later step in the same Java program, whereby ending the Java process closes from operation system.
    * <li>2013-02-11 Hartmut chg: now does not use ZbnfXmlOutput but uses the intrinsic Xml tree returned with
    *   {@link ZbnfParser#getResultTree()}. 
    * <li>2012-11-01 Hartmut Some changes in structure of args, non-function-relevant.
@@ -285,7 +287,7 @@ public class Zbnf2Xml
     /**Constructor of the cmdline handling class.
     The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
 */
-    CmdLine(Args argData, String[] sCmdlineArgs)
+    protected CmdLine(Args argData, String[] sCmdlineArgs)
     { super(sCmdlineArgs);
       this.argData = argData;
     }
@@ -512,6 +514,8 @@ public class Zbnf2Xml
         OutputStreamWriter out = new OutputStreamWriter(streamOut, arg.encoding);
         SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
         xmlOutputter.write(out, xmlTop);
+        out.close();
+        streamOut.close();
         report.writeInfo(" done "); report.writeInfoln("");
       }
       catch(IOException exception)

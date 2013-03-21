@@ -309,7 +309,7 @@ public class Zmake extends Zbnf2Text
      *
      */
     @Override
-    protected void callWithoutArguments() throws ParseException
+    protected void callWithoutArguments()
     { //:TODO: overwrite with empty method - if the calling without arguments
       //having equal rights than the calling with arguments - no special action.
       super.callWithoutArguments();  //it needn't be overwritten if it is unnecessary
