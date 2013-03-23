@@ -39,7 +39,7 @@ import java.util.TreeMap;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
-import org.vishia.mainCmd.MainCmd.Argument;
+import org.vishia.util.FileSystem;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -66,6 +66,10 @@ public class Zbnf2Xml
 
   /**Version, history and license.
    * <ul>
+   * <li>2012-03-23 Hartmut new {@link #smain(String[], boolean)} as alternative to {@link #main(String[])}
+   *   to call from other Java parts. The {@link #main(String[])} calls {@link java.lang.System#exit(int)}
+   *   which terminates the JVM. Is it a good idea? Maybe main should only return, but how to deliver a errorlevel
+   *   to a running shell script/batch without System.exit(errlevel). Maybe two methods are necessary.
    * <li>2013-03-20 Hartmut bugfix close() on written XML file. Without close the file was not able to access
    *   in a later step in the same Java program, whereby ending the Java process closes from operation system.
    * <li>2013-02-11 Hartmut chg: now does not use ZbnfXmlOutput but uses the intrinsic Xml tree returned with
@@ -146,34 +150,51 @@ public class Zbnf2Xml
   /*---------------------------------------------------------------------------------------------*/
   /** main started from java*/
   public static void main(String [] sArgs)
-  { Args args = new Args();
-    CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
-    mainCmdLine.addCmdLineProperties();
-    boolean bOk = true;
-    try{ mainCmdLine.parseArguments(); }
-    catch(Exception exception)
-    { mainCmdLine.report("Argument error:", exception);
-      mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
-      bOk = false;
-    }
-    Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
-    if(bOk)
-    { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
-          to hold the contact to the command line execution.
-      */
-      try{ main.parseAndWriteXml(); }
-      catch(Exception exception)
-      { //catch the last level of error. No error is reported direct on command line!
-        main.report.report("Uncatched Exception on main level:", exception);
-        exception.printStackTrace(System.out);
-        main.report.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
-      }
-    }
-    mainCmdLine.exit();
+  { 
+    smain(sArgs, true);
   }
 
 
+  /**Invocation from another java program without exit the JVM
+   * @param sArgs same like {@link #main(String[])}
+   * @return "" or an error String
+   */
+  public static String smain(String[] sArgs){ return smain(sArgs, false); }
 
+  
+  private static String smain(String[] sArgs, boolean shouldExitVM){
+    String sRet;
+    Args args = new Args();
+    CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
+    try{
+      mainCmdLine.addCmdLineProperties();
+      boolean bOk = true;
+      try{ mainCmdLine.parseArguments(); }
+      catch(Exception exception)
+      { mainCmdLine.report("Argument error:", exception);
+        mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
+        bOk = false;
+      }
+      Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
+      if(bOk)
+      { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
+            to hold the contact to the command line execution.
+        */
+        try{ main.parseAndWriteXml(); }
+        catch(Exception exception)
+        { //catch the last level of error. No error is reported direct on command line!
+          main.report.report("Uncatched Exception on main level:", exception);
+          exception.printStackTrace(System.out);
+          main.report.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
+        }
+      }
+      sRet = "";
+    } catch(Exception exc){
+      sRet = exc.getMessage();
+    }
+    if(shouldExitVM) { mainCmdLine.exit(); }
+    return sRet;
+  }
 
 
 
@@ -269,7 +290,7 @@ public class Zbnf2Xml
     
     protected final MainCmd.Argument[] argList =
     { new MainCmd.Argument("-i", ":<INPUT>    inputfilepath, this file is parsing", setInput)
-    , new MainCmd.Argument("-s", ":<SYNTAX>   syntax prescript in SBNF format for parsing", setSyntax)
+    , new MainCmd.Argument("-s", ":<SYNTAX>   syntax prescript in ZBNF format for parsing", setSyntax)
     , new MainCmd.Argument("-x", ":<OUTPUT>   output xml file written in UTF8-encoding", setOutUtf8)
     , new MainCmd.Argument("-y", ":<OUTPUT>   output xml file written in the standard encoding of system\n" 
                             + "               or the given -charset:encoding", setOut)
@@ -302,65 +323,7 @@ public class Zbnf2Xml
     }
     
 
-    /*---------------------------------------------------------------------------------------------*/
-    /** Tests one argument. This method is invoked from parseArgument. It is abstract in the superclass MainCmd
-        and must be overwritten from the user.
-        @param argc String of the actual parsed argument from cmd line
-        @param nArg number of the argument in order of the command line, the first argument is number 1.
-        @return true is okay,
-                false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
-                the application should be aborted.
-    */
-    //@Override
-    public boolean XXXtestArgument(String argc, int nArg)
-    { boolean bOk = true;  //set to false if the argc is not passed
-  
-      if(argc.startsWith("--_"))      { /*ignore it. */ }
-      else if(argc.startsWith("-i:")){ argData.sFileIn   = getArgument(3); }
-      else if(argc.startsWith("-i")) { argData.sFileIn   = getArgument(2); }
-      else if(argc.startsWith("-s:")){ argData.sFileSyntax  = getArgument(3); }
-      else if(argc.startsWith("-s")) { argData.sFileSyntax  = getArgument(2); }
-      else if(argc.startsWith("-x:")){ argData.sFileOut = getArgument(3); argData.encoding = Charset.forName("UTF-8"); }
-      else if(argc.startsWith("-x")) { argData.sFileOut = getArgument(2); argData.encoding = Charset.forName("UTF-8"); }
-      else if(argc.startsWith("-y:")){ argData.sFileOut = getArgument(3); }
-      else if(argc.startsWith("-y")) { argData.sFileOut = getArgument(2); }
-      else if(argc.startsWith("-z:")){ argData.sFileOut = getArgument(3); argData.encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-z")) { argData.sFileOut = getArgument(2); argData.encoding = Charset.forName("US-ASCII"); }
-      else if(argc.startsWith("-charset:")){ argData.encoding = Charset.forName(getArgument(9));  }
-      else if(argc.startsWith("-a:"))
-      { //argument
-        String sArg = getArgument(3);
-        String addSemantic, addContent;
-        int posAssign = sArg.indexOf('=');
-        if(posAssign >=0)
-        { addSemantic = sArg.substring(0, posAssign);
-          if(sArg.length() > (posAssign +2) && sArg.charAt(posAssign+1)=='\"')
-          { addContent = sArg.substring(posAssign +2, sArg.length()-1);  //without "", assumed the arg ends with "
-          }
-          else 
-          { addContent = sArg.substring(posAssign +1);
-          }
-        }
-        else
-        { addSemantic = sArg;
-          addContent = "";
-        }
-        if(argData.additionalSemantic == null)
-        { argData.additionalSemantic = new LinkedList<String>();
-        }
-        argData.additionalSemantic.add(addSemantic);
-        argData.additionalSemantic.add(addContent);
-      }
-  /*
-      else if(argc.equals("-w+"))   { mode.setIndent("  "); }
-      else if(argc.equals("-w-"))   { mode.setIndent(null); }
-      else if(argc.equals("-w0"))   { mode.setIndent(""); }
-  */
-      else bOk=false;
-  
-      return bOk;
-    }
-  
+
     /** Invoked from parseArguments if no argument is given. In the default implementation a help info is written
      * and the application is terminated. The user should overwrite this method if the call without comand line arguments
      * is meaningfull.
@@ -510,6 +473,7 @@ public class Zbnf2Xml
       }
       try
       { 
+        FileSystem.mkDirPath(fileOut);
         FileOutputStream streamOut = new FileOutputStream(fileOut);
         OutputStreamWriter out = new OutputStreamWriter(streamOut, arg.encoding);
         SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();

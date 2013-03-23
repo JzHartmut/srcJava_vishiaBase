@@ -82,7 +82,7 @@ public class Zbnf2Text extends Zbnf2Xml
   public boolean parseAndTranslate(Args args, Object userData) 
   throws IOException, IllegalArgumentException, IllegalAccessException, InstantiationException
   { boolean bOk = true;
-    bOk = super.execute();
+    bOk = super.parseAndWriteXml();
     
     //XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
     XmlNode resultTree = parser.getResultTree(); 
@@ -199,14 +199,6 @@ public class Zbnf2Text extends Zbnf2Xml
     } 
     
     
-    //@Override
-    public boolean XXXtestArgument(String argc, int nArg)
-    { boolean bOk = super.testArgument(argc, nArg);  //set to false if the argc is not passed
-      if(!bOk){ 
-        bOk = XXXtestArgsZbnf2Text(argc, nArg);
-      }
-      return bOk;
-    }
     
     
     public boolean XXXtestArgsZbnf2Text(String argc, int nArg){

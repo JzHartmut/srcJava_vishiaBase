@@ -362,7 +362,7 @@ public class Zmake extends Zbnf2Text
     //the followed line maybe unnecessary because the java cmd line interpretation always cuts the quotion  marks,
     //Such quotion marks appeares if a double click from commandline is happened. 
     if(args.input.startsWith("\"") && args.input.length()>=2){ args.input = args.input.substring(1, args.input.length()-1); }
-
+    ////
     /*Separate input path file ext.*/
     //String inputFile, inputExt;
     { int pos1 = args.input.lastIndexOf(('/'));
@@ -471,7 +471,8 @@ public class Zmake extends Zbnf2Text
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     TextGenerator gen = new TextGenerator(console);
     TextGenScript genScript = new TextGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
-    genScript.translateAndSetGenCtrl(fileGenCtrl);
+    File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
+    genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
     
     Map<String, Object> scriptVariables;
     try{ 
