@@ -487,7 +487,14 @@ public class TextGenerator {
     
     
     boolean generateIfBlock(TextGenScript.IfCondition ifBlock, boolean bIfHasNext) throws IOException{
-      Object check = getContent(ifBlock, localVariables, false);
+      //Object check = getContent(ifBlock, localVariables, false);
+      
+      Object check;
+      try{ 
+        check = ifBlock.expression.ascertainValue(data, localVariables, accessPrivate, false, false);
+      } catch(Exception exc){
+        check = null;
+      }
       boolean bCondition;
       if(ifBlock.condition !=null && ifBlock.bElse){ //condition.sumExpression.constValue !=null && ifBlock.condition.sumExpression.constValue.equals("else")){
         bCondition = true;  //if the else block is found, all others have returned false.

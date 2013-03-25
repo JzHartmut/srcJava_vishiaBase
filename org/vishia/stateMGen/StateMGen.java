@@ -282,8 +282,6 @@ public class StateMGen {
   }
   
   
-  
-  
   /**This class gets and stores the results from a parsed ZBNF-component <code>State</code>.
    * 
    */
@@ -327,7 +325,13 @@ public class StateMGen {
     
     public Exit exit;
     
+    public Entry instate;
+    
     public List<Trans> trans;
+    
+    public Entry new_instate() { return new Entry(); }
+
+    public void set_instate(Entry val) { instate = val; }
     
     @Override public String toString(){ return stateName; }
   }

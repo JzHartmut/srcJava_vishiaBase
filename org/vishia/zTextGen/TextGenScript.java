@@ -391,7 +391,12 @@ public class TextGenScript {
           try{
             dataValue = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
           } catch(NoSuchFieldException exc){
-            dataValue = "??: path access: " + dataRef + "on " + exc.getMessage() + ".??";
+            dataValue = "??: path not found: " + dataRef + "on " + exc.getMessage() + ".??";
+            if(!bWriteErrorInOutput){
+              throw new IllegalArgumentException(dataValue.toString());
+            }
+          } catch(IllegalAccessException exc) {
+            dataValue = "??: path access error: " + dataRef + "on " + exc.getMessage() + ".??";
             if(!bWriteErrorInOutput){
               throw new IllegalArgumentException(dataValue.toString());
             }
