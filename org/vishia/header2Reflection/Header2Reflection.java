@@ -66,6 +66,41 @@ import org.vishia.zbnf.ZbnfParser;
 /**Converts Headerfiles to reflection. */
 public class Header2Reflection
 {
+  /**Version, history and license.
+   * <ul>
+   * <li>2013-04-02 Hartnut chg: if a pointer is given in for exprSizeType($$$) in a offset file, "void*" is used.
+   *   The pointer type may be a unknown type (struct type_t*) and its sizeof(type*) is unknown therefore in compile time.
+   *   use sizeof(void*), it is the same.
+   * <li>2012-10-21 Hartmut created. Some algorithm are copied from {@link org.vishia.zTextGen.TextGenerator} in this class.
+   *   That algorithm are able to use independent in some applications.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  static final public int version = 20130310;
 
   /**Aggregation to the Console implementation class.*/
   Report console;
@@ -1697,7 +1732,8 @@ public class Header2Reflection
           
           
           if(fileOffs != null){
-            String sTypeForSize = nReference>0 ? sType + "*" : sType;
+            //String sTypeForSize = nReference>0 ? sType + "*" : sType;
+            String sTypeForSize = nReference>0 ? "void*" : sType;    //size of a pointer anyway
             String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
             fileOffs.write("\n    , (" + sSize + "<<16) | (" + sOffset + ")");                //Offsetfile: it is a int32
             sbCfile.append(  "\n    , -1   //offset in extra file");
