@@ -68,6 +68,8 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2013-04-12 Hartmut new: #define in Headerfile or #define in cfg-file can be used to set {@link #idxDefines},
+   *   conditional #ifdef ... in headerfile only taken if #define is known.
    * <li>2013-04-02 Hartnut chg: if a pointer is given in for exprSizeType($$$) in a offset file, "void*" is used.
    *   The pointer type may be a unknown type (struct type_t*) and its sizeof(type*) is unknown therefore in compile time.
    *   use sizeof(void*), it is the same.
@@ -100,7 +102,7 @@ public class Header2Reflection
    * 
    * 
    */
-  static final public int version = 20130310;
+  static final public int version = 20130410;
 
   /**Aggregation to the Console implementation class.*/
   Report console;
@@ -221,7 +223,8 @@ public class Header2Reflection
     + "| exprOffsCppObj = <\"\"?exprOffsCppObj> \\n\n"
     + "| exprSizeType = <\"\"?exprSizeType> \\n\n"
     + "| <blockedFile> \\n \n" 
-    + "|<?c_only> c_only \\n\n" 
+    + "|<?c_only> c_only \\n\n"
+    + "|<?define> #define <$?name> <*\\r\\n?value> \n"  //simple #define name zeichenkette
     + "| <reflectionType> \\n \n" 
     + "| \\n\n" 
     + "} \\e.\n"
@@ -282,6 +285,8 @@ public class Header2Reflection
   private final SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
   
   BinOutPrep binOutPrep;
+  
+  final Map<String, String> idxDefines = new TreeMap<String, String>();
   
   
   /**This class holds some informations about a type of a element (attrubute). 
@@ -430,7 +435,8 @@ public class Header2Reflection
 
 
   public void execute() throws Exception
-  { if(readBlockedFilesAndTypes())
+  { System.out.printf("Header2Reflection mady by Hartmut Schorrig, version %d\n", version);
+    if(readBlockedFilesAndTypes())
     //if(readReflectionTypes())
     { if(init()) //here all action are done, testversion.
       {
@@ -604,6 +610,10 @@ public class Header2Reflection
           sExprOffsCppObj = item.getParsedString();
         } else if(semantic.equals("exprSizeType")) {
           sExprSizeType = item.getParsedString();
+        } else if(semantic.equals("define")) {
+          String name = item.getChildString("name");
+          String value = item.getChildString("value");
+          idxDefines.put(name, value);
         } else if(semantic.equals("reflectionType")) {
           char cSign = item.getChild("sign").getParsedText().charAt(0);
           String sType = item.getChild("type").getParsedString();
@@ -984,7 +994,25 @@ public class Header2Reflection
       }
       else if(sSemantic.equals("conditionBlock"))
       { //inside a condition block the same content may be found.S
-        searchAndTranslateClassDef(resultItem, sCLASS_C_name, sFileNameRelative);
+        ZbnfParseResultItem zbnfCondition;
+        String sCondition;
+        boolean bCondition = true;;
+        zbnfCondition = resultItem.getChild("conditionDef");
+        if(zbnfCondition !=null){
+          sCondition = zbnfCondition.getParsedString();
+          bCondition = idxDefines.get(sCondition) !=null;
+        }
+        if(bCondition){
+          searchAndTranslateClassDef(resultItem, sCLASS_C_name, sFileNameRelative);
+        }
+      }
+      else if(sSemantic.equals("defineDefinition"))
+      { //inside a condition block the same content may be found.S
+        ZbnfParseResultItem zbnfName = resultItem.getChild("@name");
+        if(zbnfName !=null){
+          String sName = zbnfName.getParsedString();
+          idxDefines.put(sName, sName);
+        }
       }
     }
   }
@@ -1324,6 +1352,21 @@ public class Header2Reflection
         String sVariantName = zbnfElement.getChildString("@name"); //The name of the struct inside union
         convertElementsInClass(zbnfElement, sVariantName);  //elements of the classVisibilityBlock
       }
+      else if(semantic.equals("structContentInsideCondition"))
+      { //inside a condition block the same content may be found.S
+        ZbnfParseResultItem zbnfCondition;
+        String sCondition;
+        boolean bCondition = true;;
+        zbnfCondition = zbnfElement.getChild("conditionDef");
+        if(zbnfCondition !=null){
+          sCondition = zbnfCondition.getParsedString();
+          bCondition = idxDefines.get(sCondition) !=null;
+        }
+        if(bCondition){
+          convertElementsInClass(zbnfElement, sNameVariant);
+        }
+      }
+
     }
     
     
