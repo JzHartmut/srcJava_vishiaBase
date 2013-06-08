@@ -1716,10 +1716,10 @@ public class ZbnfParser
         PrescriptParser syntaxPreScript1 = PrescriptParser.this;
         while(syntaxPreScript1 != null)
         {
-          { //sbSemantic.insert(0, '.');
-            //sbSemantic.insert(0, syntaxPreScript1.sSemanticIdent);
-            sbSemantic.append('.');
-            sbSemantic.append(syntaxPreScript1.sSemanticIdent);
+          { sbSemantic.insert(0, '.');
+            sbSemantic.insert(0, syntaxPreScript1.sSemanticIdent);
+            //sbSemantic.append('.');
+            //sbSemantic.append(syntaxPreScript1.sSemanticIdent);
             syntaxPreScript1 = syntaxPreScript1.parentPrescriptParser;
           }
         }
@@ -1936,7 +1936,7 @@ public class ZbnfParser
    * @param report A report output
    * */
   public ZbnfParser( MainCmdLogging_ifc report)
-  { this(report, 0);
+  { this(report, 10);
   }
   
   
@@ -2554,7 +2554,7 @@ public class ZbnfParser
     u.append("\nfounded before: ----------------------------------------------"); 
     u.append(( sLastFoundedResultOnError == null 
           ? "-nothing-" 
-          : getLastFoundedResultOnError()
+          : sLastFoundedResultOnError
           ));
     return u.toString();
   }

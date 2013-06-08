@@ -1078,7 +1078,8 @@ public class ZbnfSyntaxPrescript
       }
       */
       if(sSyntaxOnStartForErrorNothingFound != null) 
-        throw new ParseException("the syntax in this element is empty, it isn't correct:" + sSyntaxOnStartForErrorNothingFound, 0);
+        throw new ParseException("the syntax in this element is empty, it isn't correct:" + sSyntaxOnStartForErrorNothingFound
+            + spInput.getCurrent(30), 0);
       return cEnd;
     }
 
