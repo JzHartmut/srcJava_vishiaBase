@@ -274,29 +274,29 @@ public class Zmake extends Zbnf2Text
     { new MainCmd.Argument("", "INPUT         The first argument without - is the input file with path and extension."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.input = val; return true; }})
-    , new MainCmd.Argument("-i", "INPUT    path to the input file."
+    , new MainCmd.Argument("-i", "=INPUT    path to the input file."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.input = val; return true; }})
-    , new MainCmd.Argument("-genCtrl", "TPATH     file which describes the generation for the output file"
+    , new MainCmd.Argument("-genCtrl", "=TPATH     file which describes the generation for the output file"
       , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sGenCtrl = val; return true; }})
-    , new MainCmd.Argument("-syntax", "PATH       Write an information file which contains the help and the syntax.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+    , new MainCmd.Argument("-syntax", "=PATH       Write an information file which contains the help and the syntax.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sHelpOut = val; return true; }})
-    , new MainCmd.Argument("-zbnf", "TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+    , new MainCmd.Argument("-zbnf", "=TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sZbnfInput = val; return true; }})
-    , new MainCmd.Argument("-o", "PATH            output-file to generate", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+    , new MainCmd.Argument("-o", "=PATH            output-file to generate", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sOutput = val; return true; }})
-    , new MainCmd.Argument("-ZBNFJAX_HOME", "PATH path to the ZBNFJAX_HOME, default it is getted from environment.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+    , new MainCmd.Argument("-ZBNFJAX_HOME", "=PATH path to the ZBNFJAX_HOME, default it is getted from environment.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
       callingArgs.zbnfjax_PATH = val; return true; }})
-    , new MainCmd.Argument("-currdir", "PATH       sets the current dir alternatively to command line invocation path."
+    , new MainCmd.Argument("-currdir", "=PATH       sets the current dir alternatively to command line invocation path."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           String sCurrdir = val; 
           callingArgs.currdir = new File(sCurrdir);
           if(!callingArgs.currdir.exists()) throw new IllegalArgumentException("Zmake - failed argument -currdir:, not existing; " + sCurrdir);
           return true; }})
-    , new MainCmd.Argument("-tmp", "path of tmp dir, will be created if not exists, default=\"../tmp\"", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+    , new MainCmd.Argument("-tmp", "=PATH of tmp dir, will be created if not exists, default=\"../tmp\"", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.tmp = val; return true; }})
-    , new MainCmd.Argument("-checkxml", "CHECK  if given then 3 files will be written"
+    , new MainCmd.Argument("-checkxml", "=CHECK  if given then 3 files for debugging will be written"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sCheckXmlOutput = val; return true; }})
     };
