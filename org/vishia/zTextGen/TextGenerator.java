@@ -267,8 +267,8 @@ public class TextGenerator {
 
   
   Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
-  throws IllegalArgumentException
-  { return arg.expression.ascertainValue(data, localVariables, accessPrivate, bContainer, bWriteErrorInOutput);
+  throws IllegalArgumentException, IOException
+  { return arg.expression.ascertainValue(data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput, this);
   }
   
   
@@ -491,7 +491,7 @@ public class TextGenerator {
       
       Object check;
       try{ 
-        check = ifBlock.expression.ascertainValue(data, localVariables, accessPrivate, false, false);
+        check = ifBlock.expression.ascertainValue(data, localVariables, null, accessPrivate, false, false, TextGenerator.this);
       } catch(Exception exc){
         check = null;
       }

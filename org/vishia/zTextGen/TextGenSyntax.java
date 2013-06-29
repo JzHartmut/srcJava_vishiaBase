@@ -5,6 +5,7 @@ public final class TextGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-06-29 Hartmut chg: Now <=var:expr.> should be terminated with .>
    * <li>2013-03-10 <code><:include:path> and <:scriptclass:JavaPath></code> is supported up to now.
    * <li>2013-01-05 Hartmut new: A expression is a concatenation of strings or + or - of numerics. It is used for all value expressions.
    *   In this kind an argument of <*path.method("text" + $$eNV_VAR + dataPath) is possible.
@@ -78,42 +79,49 @@ public final class TextGenSyntax {
     + "| \\<:hasNext\\> <genContent?hasNext> \\<\\.hasNext\\>\n"
     //+ "| \\<+<variableDefment?addToList>\n"
     + "| \\<*subtext : <callSubtext>\n"
-    + "| \\<*<dataText>\\>\n"
+    + "| \\<*<dataText>\n"
     + "| \\<:\\><genContentNoWhitespace?>\\<\\.\\>\n"
-    + "| <*|\\<:|\\<*|\\<\\.?text>                        ##text after whitespace but inclusive trailing whitespaces till next control <: <* <.\n"
+    + "| <text>                        ##text after whitespace but inclusive trailing whitespaces till next control <: <* <.\n"
     + "}.\n"
     + "\n"
+    + "\n"
+    + "text::=<?><*|\\<:|\\<+|\\<=|\\<*|\\<\\.?text>.\n"
     + "\n"
     + "\n"
     + "callSubtext::=[<\"\"?name>|<expression>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
-    + "dataText::=<expression>[ : <\"\"?formatText>].\n"  //<*dataText>
+    + "dataText::=<expression>[ : <\"\"?formatText>]     ##simple expression\n"
+    + "     [ \\> \\<+\\> [{<?actualArgument> \\<:\\><genContentNoWhitespace?>\\<\\.\\> | \\<*<expression>\\> | <text> ? \\<+\\> }] \\<\\.*\\> \n"
+    + "     | \\> ].  ##expression with arguments\n"  ////
     + "\n"
     + "expression::={ <value> ? [! + | -] }.\n"
     + "\n"
-    + "value::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
+    + "value::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"  //[? \\.] 
     + "              | $new\\  <newJavaClass> | $!<staticJavaMethod> | $$<$?envVariable> | <datapath>].\n"
     + "\n"
     + "newJavaClass::= <$\\.?javapath> [ ({ <expression?argument> ? , } )].\n" ///
-    + "staticJavaMethod::= <$\\.?javapath> ( [ { <expression?argument> ? , } ] ).\n"
+    + "staticJavaMethod::= <$\\.?javapath> [ (+)<?extArgs>| ( [ { <expression?argument> ? , } ] )].\n"
     + "##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
     + "\n"
-    + "datapath::=<?> $<$?startVariable>[\\.{ <datapathElement> ? \\.}] |{ <datapathElement> ? \\.}.  \n"
+    + "datapath::=<?> $<$?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}] |{ <datapathElement> ? [?\\. \\>] \\.}.  \n"
     + "\n"
     + "datapathElement::=<$@-?ident> [( [{ <expression?argument> ? ,}])<?whatisit=r>].\n"  
     + "\n"
     + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
     + "{ [?\\<\\.\\>]              ##abort on <.> \n"
-    + "[ \\<*<dataText>\\>\n"
-    + "| <*|\\<:|\\<*|\\<\\.?text>           ##text inclusive leading and trailing whitespaces\n"
+    + "[ \\<*<dataText>\n"
+    + "| <text>           ##text inclusive leading and trailing whitespaces\n"
     + "]\n"
     + "}.\n"
     + "\n"
     + "variableDef::=<?> <textVariable> | <objVariable>.\n"
     + "textVariable::= <$?name> \\> <genContent?>  \\<\\.=\\>.\n"
-    + "objVariable::= <$?name> : <expression> \\>.\n"
+    + "objVariable::= <$?name> : <expression> [ \\.\\>   ##simple expression\n"
+    + "     | \\> [{ \\<:\\><genContentNoWhitespace?>\\<\\.\\> | \\<*<expression>\\> | <text> ? \\<+\\> }] \\<\\.=\\>].  ##expression with arguments\n"  ////
     + "\n"
     + "namedArgument::= <$?name>[ = <expression>].\n"
+    + "\n"
+    + "extArgument::=  \\<:\\><genContentNoWhitespace?>\\<\\.\\> | \\<*<expression>\\> | <text>.\n"
     + "\n"
     + "forContainer::= [$]<$?@name> : <expression> \\> <genContent?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
     + "\n"

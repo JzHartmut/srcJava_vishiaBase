@@ -34,6 +34,7 @@ import org.vishia.zbnf.ZbnfParser;
 public class TextGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2013-06-20 Hartmut new: Syntax with extArg for textual Arguments in extra block
    * <li>2013-03-10 Hartmut new: <code><:include:path></code> of a sub script is supported up to now.
    * <li>2013-10-09 Hartmut new: <code><:scriptclass:JavaPath></code> is supported up to now.
    * <li>2013-01-13 Hartmut chg: The {@link Expression#ascertainValue(Object, Map, boolean, boolean, boolean)} is moved
@@ -303,6 +304,19 @@ public class TextGenScript {
     
     List<Expression> actualValue;
     
+    boolean bExtArgs;
+    
+    /**Set if the arguments are listed outside of the element
+     * 
+     */
+    public void set_extArgs(){
+      if(actualValue == null){ actualValue = new LinkedList<Expression>(); }
+      bExtArgs = true;
+      //Expression actualArgument = new Expression();
+      //actualValue.add(actualArgument);
+    }
+    
+    
     public Expression new_argument(){
       Expression actualArgument = new Expression();
       //ScriptElement actualArgument = new ScriptElement('e', null);
@@ -354,8 +368,9 @@ public class TextGenScript {
      * @return the Object which represents the expression in the given environment.
      * @throws IllegalArgumentException
      */
-    Object ascertainValue(Object data, Map<String, Object> localVariables, boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput)
-    throws IllegalArgumentException
+    Object ascertainValue(Object data, Map<String, Object> localVariables, TextGenScript.Argument arg
+        , boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput, TextGenerator generator)
+    throws IllegalArgumentException, IOException
     { Object dataRet = null;
       for(TextGenScript.SumValue value: this.values){
       
@@ -365,7 +380,7 @@ public class TextGenScript {
           if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$checkDeps"))
             Assert.stop();
           //calculate all actual arguments:
-          for(DataAccess.DatapathElement dataElement : value.datapath){  //loop over all elements of the path with or without arguments.
+          for(DataAccess.DatapathElement dataElement : dataRef){  //loop over all elements of the path with or without arguments.
             ZbnfDataPathElement zd;
             if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
               //it is a element with arguments, usual a method call. 
@@ -376,15 +391,37 @@ public class TextGenScript {
                 zd.addActualArgument(oValue);
               }
               */
-              for(TextGenScript.Expression expr: zd.actualValue){
-                Object oValue = expr.ascertainValue(data, localVariables, accessPrivate, false, bWriteErrorInOutput);
-                if(oValue == null){
-                  oValue = "??: path access: " + dataRef + "?>";
-                  if(!bWriteErrorInOutput){
-                    throw new IllegalArgumentException(oValue.toString());
+              if(zd.bExtArgs && arg instanceof ScriptElement){
+                //Arguments in form <*$!javamethod(+)><+>arg<+>arg<.*>
+                for(Argument extArg: ((ScriptElement)arg).arguments){
+                  if(extArg.subContent !=null){
+                    StringBuilder buffer = new StringBuilder();
+                    TextGenerator.Gen_Content genContent = generator.new Gen_Content(localVariables, buffer);
+                    genContent.genContent(extArg.subContent, false);
+                    zd.addActualArgument(buffer);
+                  } else if(extArg.expression !=null){
+                    Object oValue = extArg.expression.ascertainValue(data, localVariables, null, accessPrivate, false, bWriteErrorInOutput, generator);
+                    if(oValue == null){
+                      oValue = "??: path access: " + dataRef + "?>";
+                      if(!bWriteErrorInOutput){
+                        throw new IllegalArgumentException(oValue.toString());
+                      }
+                    }
+                    zd.addActualArgument(oValue); 
                   }
                 }
-                zd.addActualArgument(oValue);
+              } 
+              else {
+                for(TextGenScript.Expression expr: zd.actualValue){
+                  Object oValue = expr.ascertainValue(data, localVariables, null, accessPrivate, false, bWriteErrorInOutput, generator);
+                  if(oValue == null){
+                    oValue = "??: path access: " + dataRef + "?>";
+                    if(!bWriteErrorInOutput){
+                      throw new IllegalArgumentException(oValue.toString());
+                    }
+                  }
+                  zd.addActualArgument(oValue);
+                }
               }
             }
           }
@@ -436,8 +473,12 @@ public class TextGenScript {
       boolean accessPrivate = true;
       Object data = null;
       Map<String, Object> localVariables = null;
-      Object value = ascertainValue(data, localVariables, accessPrivate, bContainer, bWriteErrorInOutput);
-      return DataAccess.getStringFromObject(value, null);
+      try{ 
+        Object value = ascertainValue(data, localVariables, null, accessPrivate, bContainer, bWriteErrorInOutput, null);
+        return DataAccess.getStringFromObject(value, null);
+      } catch(IOException exc){
+        return "<??IOException>" + exc.getMessage() + "<??>";
+      }
     }
     
 
@@ -544,17 +585,43 @@ public class TextGenScript {
   
   
   
+  /**Superclass for ScriptElement, but used independent for arguments.
+   * @author hartmut
+   *
+   */
   public static class Argument{
     
     /**Name of the argument. It is the key to assign calling argument values. */
     public String name;
+   
+    //public String text;  ////
     
     Expression expression;
   
+    /**If need, a sub-content, maybe null.*/
+    public GenContent subContent;
+    
     public Expression new_expression(){ return new Expression(); }
     
     public void add_expression(Expression val){ expression = val; }
     
+    public void set_text(String text){
+      if(subContent == null){ subContent = new GenContent(false); }
+      subContent.content.add(new ScriptElement('t', text)); 
+    }
+    
+    /**Set from ZBNF:  (\?*<$?dataText>\?) */
+    //@Override
+    public ScriptElement new_dataText(){ return new ScriptElement('e', null); }
+    
+    /**Set from ZBNF:  (\?*<*dataText>\?) */
+    //@Override
+    public void add_dataText(ScriptElement val){ 
+      if(subContent == null){ subContent = new GenContent(false); }
+      subContent.content.add(val); 
+    }
+    
+
     
   }
   
@@ -621,13 +688,10 @@ public class TextGenScript {
     
     //public String elementPart;
     
-    /**If need, a sub-content, maybe null. TODO should be final*/
-    public GenContent subContent;
-    
     public ScriptElement(char whatisit, String text)
     { this.whatisit = whatisit;
       this.text = text;
-      if("NXYZvl".indexOf(whatisit)>=0){
+      if("NXYZvlJ".indexOf(whatisit)>=0){
         subContent = new GenContent(false);
       }
       else if("IVL".indexOf(whatisit)>=0){
@@ -642,8 +706,6 @@ public class TextGenScript {
     public GenContent getSubContent(){ return subContent; }
     
     public void set_name(String name){ this.name = name; }
-    
-    public void set_text(String text){ subContent.content.add(new ScriptElement('t', text)); }
     
     
     public void set_formatText(String text){ this.text = text; }
@@ -681,12 +743,6 @@ public class TextGenScript {
       arguments.add(val); }
     
     
-    
-    /**Set from ZBNF:  (\?*<$?dataText>\?) */
-    public ScriptElement new_dataText(){ return new ScriptElement('e', null); }
-    
-    /**Set from ZBNF:  (\?*<$?forElement>\?) */
-    public void add_dataText(ScriptElement val){ subContent.content.add(val); }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
