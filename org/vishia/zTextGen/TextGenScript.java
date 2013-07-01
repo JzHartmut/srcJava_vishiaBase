@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -113,7 +112,7 @@ public class TextGenScript {
    * The script variables can contain inputs of other variables which are defined before.
    * Therefore the order is important.
    */
-  final List<ScriptElement> listScriptVariables = new LinkedList<ScriptElement>();
+  final List<ScriptElement> listScriptVariables = new ArrayList<ScriptElement>();
 
   /**The script element for the whole file. It shall contain calling of <code><*subtext:name:...></code> 
    */
@@ -122,8 +121,6 @@ public class TextGenScript {
 
   public String scriptclassMain;
 
-  
-  
   public TextGenScript(MainCmdLogging_ifc console)
   { this.console = console;
   }
@@ -310,7 +307,7 @@ public class TextGenScript {
      * 
      */
     public void set_extArgs(){
-      if(actualValue == null){ actualValue = new LinkedList<Expression>(); }
+      if(actualValue == null){ actualValue = new ArrayList<Expression>(); }
       bExtArgs = true;
       //Expression actualArgument = new Expression();
       //actualValue.add(actualArgument);
@@ -332,7 +329,7 @@ public class TextGenScript {
      * @param val The Scriptelement which describes how to get the value.
      */
     public void add_argument(Expression val){ 
-      if(actualValue == null){ actualValue = new LinkedList<Expression>(); }
+      if(actualValue == null){ actualValue = new ArrayList<Expression>(); }
       actualValue.add(val);
     } 
     
@@ -515,7 +512,7 @@ public class TextGenScript {
     
     public void add_datapathElement(ZbnfDataPathElement val){ 
       if(datapath == null){
-        datapath = new LinkedList<DataAccess.DatapathElement>();
+        datapath = new ArrayList<DataAccess.DatapathElement>();
       }
       datapath.add(val); 
     }
@@ -523,7 +520,7 @@ public class TextGenScript {
     
     public void set_envVariable(String ident){
       if(datapath == null){
-        datapath = new LinkedList<DataAccess.DatapathElement>();
+        datapath = new ArrayList<DataAccess.DatapathElement>();
       }
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
       element.whatisit = 'e';
@@ -534,7 +531,7 @@ public class TextGenScript {
 
     public void set_startVariable(String ident){
       if(datapath == null){
-        datapath = new LinkedList<DataAccess.DatapathElement>();
+        datapath = new ArrayList<DataAccess.DatapathElement>();
       }
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
       element.whatisit = 'v';
@@ -594,8 +591,6 @@ public class TextGenScript {
     /**Name of the argument. It is the key to assign calling argument values. */
     public String name;
    
-    //public String text;  ////
-    
     Expression expression;
   
     /**If need, a sub-content, maybe null.*/
@@ -646,6 +641,8 @@ public class TextGenScript {
     /**Designation what presents the element:
      * <table><tr><th>c</th><th>what is it</th></tr>
      * <tr><td>t</td><td>simple constant text</td></tr>
+     * <tr><td>n</td><td>simple newline text</td></tr>
+     * <tr><td>T</td><td>textual output to any variable or file</td></tr>
      * <tr><td>v</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>l</td><td>add to list</td></tr>
      * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
@@ -710,6 +707,19 @@ public class TextGenScript {
     
     public void set_formatText(String text){ this.text = text; }
     
+    /**Gathers a text which is assigned to any variable or output. <+ name>text<.+>
+     */
+    public ScriptElement new_textOut(){ return new ScriptElement('T', null); }
+
+    public void add_textOut(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
+    
+    
+    public void set_newline(){
+      if(subContent == null){ subContent = new GenContent(false); }
+      subContent.content.add(new ScriptElement('n', null));   /// 
+    }
+    
+    
     /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
      */
     public ScriptElement new_textVariable(){ return new ScriptElement('v', null); }
@@ -730,7 +740,7 @@ public class TextGenScript {
     
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
     public void add_formalArgument(Argument val){ 
-      if(arguments == null){ arguments = new LinkedList<Argument>(); }
+      if(arguments == null){ arguments = new ArrayList<Argument>(); }
       arguments.add(val); }
     
     
@@ -739,7 +749,7 @@ public class TextGenScript {
     
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
     public void add_actualArgument(Argument val){ 
-      if(arguments == null){ arguments = new LinkedList<Argument>(); }
+      if(arguments == null){ arguments = new ArrayList<Argument>(); }
       arguments.add(val); }
     
     
@@ -950,17 +960,17 @@ public class TextGenScript {
 
     public String cmpnName;
     
-    public final List<ScriptElement> content = new LinkedList<ScriptElement>();
+    public final List<ScriptElement> content = new ArrayList<ScriptElement>();
     
     /**Scripts for some local variable. This scripts where executed with current data on start of processing this genContent.
      * The generator stores the results in a Map<String, String> localVariable. 
      * 
      */
-    //private final List<ScriptElement> localVariableScripts = new LinkedList<ScriptElement>();
+    //private final List<ScriptElement> localVariableScripts = new ArrayList<ScriptElement>();
     
-    public final List<GenContent> addToList = new LinkedList<GenContent>();
+    public final List<GenContent> addToList = new ArrayList<GenContent>();
     
-    //public List<String> datapath = new LinkedList<String>();
+    //public List<String> datapath = new ArrayList<String>();
     
     public GenContent()
     {this.isContentForInput = false;
@@ -1027,7 +1037,14 @@ public class TextGenScript {
     
     public ScriptElement new_subtext(){ return new ScriptElement('X', null); }
     
-    public void add_subtext(ScriptElement val){ subtextScripts.put(val.name, val); }
+    public void add_subtext(ScriptElement val){ 
+      if(val.name == null){
+        //scriptFileSub = new ScriptElement('Y', null); 
+        
+        val.name = "main";
+      }
+      subtextScripts.put(val.name, val); 
+    }
     
     public ScriptElement new_genFile(){ return scriptFileSub = new ScriptElement('Y', null); }
     

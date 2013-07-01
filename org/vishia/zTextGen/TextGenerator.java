@@ -130,6 +130,11 @@ public class TextGenerator {
   
   private boolean bScriptVariableGenerated;
   
+  
+  /**The newline char sequence. */
+  String newline = "\r\n";
+  
+
   public TextGenerator(MainCmdLogging_ifc log){
     this.log = log;
     bWriteErrorInOutput = true;
@@ -273,8 +278,6 @@ public class TextGenerator {
   
   
 
-  
-  
   /**
    * @param sError
    * @param out
@@ -344,13 +347,24 @@ public class TextGenerator {
             posEnd = contentElement.text.indexOf('\n', posLine);
             if(posEnd >= 0){ 
               uBuffer.append(contentElement.text.substring(posLine, posEnd));   
-              uBuffer.append("\r\n");
+              uBuffer.append(newline);
               posLine = posEnd +1;  //after \n 
             } else {
               uBuffer.append(contentElement.text.substring(posLine));   
             }
             
           } while(posEnd >=0);  //output all lines.
+        } break;
+        case 'n': {
+          uBuffer.append(newline);
+        } break;
+        case 'T': {
+          if(contentElement.name.equals("file")){
+            //output to the main file, it is the out of this class:
+            genContent(contentElement.subContent, false);  //recursively call of this method.
+          } else {
+            textAppendToVarOrOut(contentElement); 
+          }
         } break;
         case 'v': { //create a new local variable.
           StringBuilder uBufferVariable = new StringBuilder();
@@ -535,7 +549,48 @@ public class TextGenerator {
     
     
     
+    /**Invocation for <+name>text<.+>
+     * @param contentElement
+     * @throws IOException 
+     */
+    void textAppendToVarOrOut(TextGenScript.ScriptElement contentElement) throws IOException{
+      
+      String name = contentElement.name;
+      Appendable out1;
+      Object variable = localVariables.get(name);
+      if(variable !=null){
+        if(variable instanceof Appendable){
+          out1 = (Appendable)variable;
+        }
+        else if(variable instanceof CharSequence){
+          out1 = new StringBuilder(((CharSequence)variable));
+        }
+        else {
+          out1 = null;
+        }
+      } else {
+        out1 = null;
+      }
+      if(out1 == null){
+        
+      } else {
+        Gen_Content genContent = new Gen_Content(localVariables, out1);
+        genContent.genContent(contentElement.subContent, false);
+        if(out1 instanceof StringBuilder && variable != out1){
+          if(variable instanceof String){ //a stored String should be replaced by a String.
+            localVariables.put(name, out1.toString());  //replace content.
+          }
+          else if(variable instanceof CharSequence){
+            localVariables.put(name, out1);  //replace content.
+          }
+        } else {
+          //The variable in the container was used, don't put again.
+        }
+      }
+    }
     
+    
+
     
     
     

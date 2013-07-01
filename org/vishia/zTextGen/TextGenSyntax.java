@@ -5,6 +5,7 @@ public final class TextGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-06-20 Hartmut new: Syntax with extArg for textual Arguments in extra block
    * <li>2013-06-29 Hartmut chg: Now <=var:expr.> should be terminated with .>
    * <li>2013-03-10 <code><:include:path> and <:scriptclass:JavaPath></code> is supported up to now.
    * <li>2013-01-05 Hartmut new: A expression is a concatenation of strings or + or - of numerics. It is used for all value expressions.
@@ -53,6 +54,8 @@ public final class TextGenSyntax {
     + "| \\<:include : <*\\>\\ ?include> \\> \n"
     + "| <subtext> \n"
     + "| <genFile> \n"
+    + "| <subScript?subtext> \n"
+    + "| main ( ) <mainScript?genFile> \n"
     + "| \\<= <variableDef>\n"
     + "} \\e.\n"
     + "\n"
@@ -130,11 +133,48 @@ public final class TextGenSyntax {
     + "\n"
     + "condition::=<?><expression> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
     + "\n"
-    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <expression>\n"
+    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <expression>.\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "mainScript::= \\{ <execScript?> \\}. \n"
+    + "\n"
+    + "subScript::=sub <$?name> ( [{ <namedArgument?formalArgument> ? , }] ) \\{ <execScript?> \\}. \n"
+    + "\n"
+    + "execScript::= [{\n"
+    + "\n"
+    + "  var [<varScriptObj?objVariable> | <varScriptText?textVariable>] \n"
+    + "\n"
+    + "| for <forScript?forContainer> \n"
+    + "\n"
+    + "| call <callScript?callSubtext> \n"
+    + "\n"
+    + "| if <ifScript?if> \n"
     + "\n"
     + "\n"
     + "\n"
     + "\n"
+    + "| \\<+ <textOut> \n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "}].\n"
+    + "\n"
+    + "varScriptObj::= <$?name> = <expression> ;.\n"
+    + "\n"
+    + "varScriptText::= <$?name> = \\<:\\><genContentNoWhitespace?>\\<\\.\\>.\n"
+    + "\n"
+    + "\n"
+    + "ifScript::= <ifScriptBlock?ifBlock> [{ elsif <ifScriptBlock?ifBlock>  }][ else \\{ <execScript?elseBlock> \\} ].\n"
+    + "\n"
+    + "ifScriptBlock::= ( <condition> ) \\{ <execScript?> \\}.\n"
+    + "\n"
+    + "forScript::= ( [$]<$?@name> : <expression> )  \\{ <execScript?> \\} .\n"
+    + "\n"
+    + "callScript::= [<\"\"?name>|<expression>] ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
+    + "\n"
+    + "textOut::= <$?name> \\> <genContentNoWhitespace?>[\\<\\.+\\>|\\<\\.n+\\><?newline>].\n"
     + "\n";
  
   
