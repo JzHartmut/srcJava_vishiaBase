@@ -5,6 +5,7 @@ public final class TextGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-07-07 Hartmut new: Now syntax as Java batch, invocation of command lines.
    * <li>2013-06-20 Hartmut new: Syntax with extArg for textual Arguments in extra block
    * <li>2013-06-29 Hartmut chg: Now <=var:expr.> should be terminated with .>
    * <li>2013-03-10 <code><:include:path> and <:scriptclass:JavaPath></code> is supported up to now.
@@ -46,27 +47,29 @@ public final class TextGenSyntax {
 
   
   public final static String syntax =
-    "$comment=(?...?).\n"
+      "$comment=(?...?).\n"
     + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
+    + "$keywords= cmd | for | if | sub | call | java .\n"
+    + "\n"
     + "\n"
     + "ZTextctrl::= \n"
     + "{ \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + "| \\<:include : <*\\>\\ ?include> \\> \n"
-    + "| <subtext> \n"
-    + "| <genFile> \n"
-    + "| <subScript?subtext> \n"
+    + "| \\<:subtext : <subtext> \n"
+    + "| \\<:file\\><genFile> \n"
+    + "| sub <subScript?subtext> \n"
     + "| main ( ) <mainScript?genFile> \n"
     + "| \\<= <variableDef>\n"
     + "} \\e.\n"
     + "\n"
     + "\n"
-    + "subtext::= \\<:subtext : <$?name> [ : { <namedArgument?formalArgument> ? , }] \\><genContent?> \\<\\.subtext\\>.\n"
+    + "subtext::= <$?name> [ : { <namedArgument?formalArgument> ? , }] \\><genContent?> \\<\\.subtext\\>.\n"
     + "\n"
     + "\n"
     + "\n"
     + "##A genControl script should have a part <:file>....<.file> which describes how the whole file should build.\n"
     + "\n"
-    + "genFile::= \\<:file\\>\n"
+    + "genFile::= \n"
     +   "<genContent?>\n"
     + "\\<\\.file\\>.\n"
     +   "\n"
@@ -95,14 +98,14 @@ public final class TextGenSyntax {
     + "\n"
     + "dataText::=<expression>[ : <\"\"?formatText>]     ##simple expression\n"
     + "     [ \\> \\<+\\> [{<?actualArgument> \\<:\\><genContentNoWhitespace?>\\<\\.\\> | \\<*<expression>\\> | <text> ? \\<+\\> }] \\<\\.*\\> \n"
-    + "     | \\> ].  ##expression with arguments\n"  ////
+    + "     | \\> ].  ##expression with arguments\n"  
     + "\n"
-    + "expression::={ <value> ? [! + | -] }.\n"
+    + "expression::={ <value> ? [! + | -] }.\n" ///
     + "\n"
     + "value::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"  //[? \\.] 
-    + "              | $new\\  <newJavaClass> | $!<staticJavaMethod> | $$<$?envVariable> | <datapath>].\n"
+    + "              | [$]new\\  <newJavaClass> | [java\\ |$!]<staticJavaMethod> | $$<$?envVariable> | <datapath>].\n"
     + "\n"
-    + "newJavaClass::= <$\\.?javapath> [ ({ <expression?argument> ? , } )].\n" ///
+    + "newJavaClass::= <$\\.?javapath> [ ({ <expression?argument> ? , } )].\n" 
     + "staticJavaMethod::= <$\\.?javapath> [ (+)<?extArgs>| ( [ { <expression?argument> ? , } ] )].\n"
     + "##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
     + "\n"
@@ -110,6 +113,9 @@ public final class TextGenSyntax {
     + "\n"
     + "datapathElement::=<$@-?ident> [( [{ <expression?argument> ? ,}])<?whatisit=r>].\n"  
     + "\n"
+    
+    + "textExpression::=<?> <\"\"?text> | \\<:\\><genContentNoWhitespace?>\\<\\.\\> | <*\\ \\r\\n?text>.\n"
+    
     + "genContentNoWhitespace::=<$NoWhiteSpaces>\n"
     + "{ [?\\<\\.\\>]              ##abort on <.> \n"
     + "[ \\<*<dataText>\n"
@@ -120,7 +126,7 @@ public final class TextGenSyntax {
     + "variableDef::=<?> <textVariable> | <objVariable>.\n"
     + "textVariable::= <$?name> \\> <genContent?>  \\<\\.=\\>.\n"
     + "objVariable::= <$?name> : <expression> [ \\.\\>   ##simple expression\n"
-    + "     | \\> [{ \\<:\\><genContentNoWhitespace?>\\<\\.\\> | \\<*<expression>\\> | <text> ? \\<+\\> }] \\<\\.=\\>].  ##expression with arguments\n"  ////
+    + "     | \\> [{ \\<:\\><genContentNoWhitespace?>\\<\\.\\> | \\<*<expression>\\> | <text> ? \\<+\\> }] \\<\\.=\\>].  ##expression with arguments\n" 
     + "\n"
     + "namedArgument::= <$?name>[ = <expression>].\n"
     + "\n"
@@ -139,27 +145,33 @@ public final class TextGenSyntax {
     + "\n"
     + "mainScript::= \\{ <execScript?> \\}. \n"
     + "\n"
-    + "subScript::=sub <$?name> ( [{ <namedArgument?formalArgument> ? , }] ) \\{ <execScript?> \\}. \n"
+    + "subScript::= <$?name> ( [{ <namedArgument?formalArgument> ? , }] ) \\{ <execScript?> \\}. \n"
     + "\n"
-    + "execScript::= [{\n"
+    + "execScript::= [{<execScriptStatement?>}].\n"
     + "\n"
-    + "  var [<varScriptObj?objVariable> | <varScriptText?textVariable>] \n"
-    + "\n"
+    + "execScriptStatement::=\n"
+    + "  Pipe <Pipe> \n"
+    + "| Buffer <Buffer> \n"
+    + "| var [<varScriptObj?objVariable> | <varScriptText?textVariable>] \n"
     + "| for <forScript?forContainer> \n"
-    + "\n"
     + "| call <callScript?callSubtext> \n"
-    + "\n"
     + "| if <ifScript?if> \n"
-    + "\n"
-    + "\n"
-    + "\n"
-    + "\n"
+    + "| [ $<assign?-?> = ] cmd <cmdLine?+?> \n"  ///
+    + "| start <cmdLine?cmdStart> \n"
+    + "| [ $<$?-assign> = ] java <staticJavaMethod?+?> \n"
+    + "| $<$?-assign> = <expression?+?> \n"
     + "| \\<+ <textOut> \n"
+    + ".\n"
     + "\n"
+    
     + "\n"
+    + "assign::= <$?assign>.\n"
     + "\n"
+    
     + "\n"
-    + "}].\n"
+    + "Pipe::= <$?name> ;.\n"
+    + "\n"
+    + "Buffer::= <$?name> ;.\n"
     + "\n"
     + "varScriptObj::= <$?name> = <expression> ;.\n"
     + "\n"
@@ -175,7 +187,20 @@ public final class TextGenSyntax {
     + "callScript::= [<\"\"?name>|<expression>] ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
     + "\n"
     + "textOut::= <$?name> \\> <genContentNoWhitespace?>[\\<\\.+\\>|\\<\\.n+\\><?newline>].\n"
-    + "\n";
+    + "\n"
+    + "cmdLine::= <textExpression?> [{[?;[\\ |\\n|\\r]] [\\<:arg\\>] <textExpression?actualArgument> }] \n"
+    + "  [ \\<:stdout:[ pipe<?pipe>| $<$?stdoutVariable>] \\>] ;.\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+    + "\n"
+       + "\n";
  
   
 

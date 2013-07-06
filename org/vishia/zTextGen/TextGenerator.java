@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.vishia.cmd.CmdExecuter;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
@@ -273,7 +274,17 @@ public class TextGenerator {
   
   Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException, IOException
-  { return arg.expression.ascertainValue(data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput, this);
+  { if(arg.expression !=null){
+      return arg.expression.ascertainValue(data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput, this);
+    } else if(arg.subContent !=null){
+      
+      StringBuilder buffer = new StringBuilder();
+      Gen_Content subtextGenerator = new Gen_Content(localVariables, buffer);
+      subtextGenerator.genContent(arg.subContent, false);
+      return buffer;
+    } else {
+      return null;
+    }
   }
   
   
@@ -374,6 +385,14 @@ public class TextGenerator {
           //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
           localVariables.put(contentElement.name, uBufferVariable);
         } break;
+        case 'p': { //create a new local variable as pipe
+          StringBuilder uBufferVariable = new StringBuilder();
+          localVariables.put(contentElement.name, uBufferVariable);
+        } break;
+        case 'u': { //create a new local variable as pipe
+          StringBuilder uBufferVariable = new StringBuilder();
+          localVariables.put(contentElement.name, uBufferVariable);
+        } break;
         case 'J': {
           if(contentElement.name.equals("checkDeps"))
             stop();
@@ -404,6 +423,9 @@ public class TextGenerator {
         */
         case 's': {
           genSubtext(contentElement);
+        } break;
+        case 'c': {
+          callCmd(contentElement);
         } break;
         case 'C': { //generation <:for:name:path> <genContent> <.for>
           generateForContainer(contentElement);
@@ -674,6 +696,49 @@ public class TextGenerator {
     }
     
 
+    
+    void callCmd(TextGenScript.ScriptElement contentElement) throws IOException{
+      boolean ok = true;
+      final String sCmd;
+      if(contentElement.name == null){
+        //cmd gotten from any data location, variable name
+        Object oName = getContent(contentElement, localVariables, false);
+        sCmd = DataAccess.getStringFromObject(oName, null);
+      } else {
+        sCmd = contentElement.name;
+      }
+      String[] args;
+      if(contentElement.arguments !=null){
+        args = new String[contentElement.arguments.size() +1];
+        int iArg = 1;
+        for(TextGenScript.Argument arg: contentElement.arguments){
+          Object oArg = getContent(arg, localVariables, false);
+          args[iArg++] = oArg.toString();
+        }
+      } else { 
+        args = new String[1]; 
+      }
+      args[0] = sCmd;
+      Appendable outCmd;
+      if(contentElement.sVariableToAssign !=null){
+        Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
+        if(oOutCmd instanceof Appendable){
+          outCmd = (Appendable)oOutCmd;
+        } else {
+          //TODO error
+          outCmd = null;
+        }
+        
+      } else {
+        outCmd = null;
+      }
+      CmdExecuter cmdExecuter = new CmdExecuter();
+      cmdExecuter.execute(args, null, outCmd, null, false);
+    }
+    
+
+    
+    
     
     
     

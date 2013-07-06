@@ -644,6 +644,8 @@ public class TextGenScript {
      * <tr><td>n</td><td>simple newline text</td></tr>
      * <tr><td>T</td><td>textual output to any variable or file</td></tr>
      * <tr><td>v</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>p</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>u</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>l</td><td>add to list</td></tr>
      * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
@@ -653,6 +655,7 @@ public class TextGenScript {
      * <tr><td>XXXg</td><td>content of a data path starting with an internal variable (reference) or value of the variable.</td></tr>
      * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
+     * <tr><td>c</td><td>cmd line invocation.</td></tr>
      * <tr><td>J</td><td>creation of a java class. {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
      * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
@@ -673,6 +676,11 @@ public class TextGenScript {
     
     /**From Zbnf <""?text>, constant text, null if not used. */
     public String text; 
+    
+    
+    /**Any variable name of a script variable where the content should assigned to.
+     * null if not used. */
+    String sVariableToAssign;
 
     //public String value;
     
@@ -727,6 +735,13 @@ public class TextGenScript {
     public void add_textVariable(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
     
     
+    /**Defines a variable which is able to use as pipe.
+     */
+    public ScriptElement new_Pipe(){ return new ScriptElement('p', null); }
+
+    public void add_Pipe(ScriptElement val){ subContent.content.add(val); }
+    
+    
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
     public ScriptElement new_objVariable(){ return new ScriptElement('J', null); } ///
@@ -752,7 +767,15 @@ public class TextGenScript {
       if(arguments == null){ arguments = new ArrayList<Argument>(); }
       arguments.add(val); }
     
+    /**Set from ZBNF:  $<$?-assign> =  */
+    public void set_assign(String val){
+      sVariableToAssign = val;
+    }
     
+    
+    public AssignObj new_assign(){ return new AssignObj(); }
+    
+    public void add_assign(AssignObj val){ sVariableToAssign = val.assign; }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
@@ -819,6 +842,16 @@ public class TextGenScript {
     }
     
     public void add_callSubtext(ScriptElement val){}
+
+    
+
+    public ScriptElement new_cmdLine()
+    { ScriptElement contentElement = new ScriptElement('c', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_cmdLine(ScriptElement val){}
 
     
 
@@ -945,6 +978,20 @@ public class TextGenScript {
 
   }
   
+  
+  
+  
+  
+  public final static class CmdLine
+  {
+    
+    
+    
+  }
+  
+  
+  
+  public final static class AssignObj{ public String assign; }
   
   
   /**Organization class for a list of script elements inside another Scriptelement.
