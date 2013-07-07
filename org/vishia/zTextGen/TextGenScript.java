@@ -60,7 +60,7 @@ public class TextGenScript {
    *   is the component for the genContent-Elements now instead Zbnf_genContent. This class contains attributes of the
    *   content elements. Only if a sub content is need, an instance of Zbnf_genContent is created as {@link ScriptElement#subContent}.
    *   Furthermore the {@link ScriptElement#subContent} should be final because it is only created if need for the special 
-   *   {@link ScriptElement#whatisit}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
+   *   {@link ScriptElement#elementType}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
    * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: datapath::={ <$?path>? \.}. 
    *   instead dataAccess::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
    * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.zTextGen.TextGenerator} now too.
@@ -393,8 +393,8 @@ public class TextGenScript {
                 for(Argument extArg: ((ScriptElement)arg).arguments){
                   if(extArg.subContent !=null){
                     StringBuilder buffer = new StringBuilder();
-                    TextGenerator.Gen_Content genContent = generator.new Gen_Content(localVariables, buffer);
-                    genContent.genContent(extArg.subContent, false);
+                    TextGenerator.Gen_Content genContent = generator.new Gen_Content(localVariables);
+                    genContent.genContent(extArg.subContent, buffer, false);
                     zd.addActualArgument(buffer);
                   } else if(extArg.expression !=null){
                     Object oValue = extArg.expression.ascertainValue(data, localVariables, null, accessPrivate, false, bWriteErrorInOutput, generator);
@@ -534,7 +534,7 @@ public class TextGenScript {
         datapath = new ArrayList<DataAccess.DatapathElement>();
       }
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
-      element.whatisit = 'V';
+      element.whatisit = 'v';
       element.ident = ident;
       datapath.add(element); 
     }
@@ -643,7 +643,6 @@ public class TextGenScript {
      * <tr><td>t</td><td>simple constant text</td></tr>
      * <tr><td>n</td><td>simple newline text</td></tr>
      * <tr><td>T</td><td>textual output to any variable or file</td></tr>
-     * <tr><td>V</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>l</td><td>add to list</td></tr>
      * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
@@ -654,11 +653,11 @@ public class TextGenScript {
      * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>c</td><td>cmd line invocation.</td></tr>
-     * <tr><td>J</td><td>creation of a java class. {@link #name}==its name, {@link #subContent} == null.</td></tr>
-     * <tr><td>P</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
-     * <tr><td>U</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>V</td><td>A variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>J</td><td>Object variable {@link #name}==its name, {@link #subContent} == null.</td></tr>
+     * <tr><td>P</td><td>Pipe variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>U</td><td>Buffer variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
-     * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
      * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,</td></tr>
      *                   whereby subContent.{@link GenContent#name} is the name of the list. </td></tr>
      * <tr><td>B</td><td>statement block</td></tr>
@@ -670,10 +669,10 @@ public class TextGenScript {
      * 
      * <tr><td>Z</td><td>a target,</td></tr>
      * <tr><td>Y</td><td>the file</td></tr>
-     * <tr><td>X</td><td>a subtext definition</td></tr>
+     * <tr><td>xxxX</td><td>a subtext definition</td></tr>
      * </table> 
      */
-    final public char whatisit;    
+    final public char elementType;    
     
     /**From Zbnf <""?text>, constant text, null if not used. */
     public String text; 
@@ -712,7 +711,7 @@ public class TextGenScript {
     boolean bContainsVariableDef;
     
     public ScriptElement(char whatisit, String text)
-    { this.whatisit = whatisit;
+    { this.elementType = whatisit;
       this.text = text;
       if("BNXYZvlJ".indexOf(whatisit)>=0){
         subContent = new GenContent(false);
@@ -936,13 +935,13 @@ public class TextGenScript {
     public void add_forInputContent(ScriptElement val){}
 
     
-    public ScriptElement new_forVariable()
+    public ScriptElement xxxnew_forVariable()
     { ScriptElement contentElement = new ScriptElement('V', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_forVariable(ScriptElement val){} //empty, it is added in new_forList()
+    public void xxxadd_forVariable(ScriptElement val){} //empty, it is added in new_forList()
 
     
     public ScriptElement new_forList()
@@ -975,16 +974,18 @@ public class TextGenScript {
     
     @Override public String toString()
     {
-      switch(whatisit){
+      switch(elementType){
       case 't': return text;
-      case 'v': return "<=" + name + ">";
+      case 'V': return "<=" + name + ">";
+      case 'J': return "<=" + name + ":objVariable>";
+      case 'P': return "Pipe " + name;
+      case 'U': return "Buffer " + name;
       case 'o': return "(?outp." + text + "?)";
       case 'i': return "(?inp." + text + "?)";
       case 'e': return "<*" +   ">";  //expressions.get(0).datapath
       //case 'g': return "<$" + path + ">";
       case 's': return "<*subtext:" + name + ">";
       case 'I': return "(?forInput?)...(/?)";
-      case 'V': return "(?for:" + text + "?)";
       case 'L': return "(?forList " + text + "?)";
       case 'C': return "<:for:Container " + text + "?)";
       case 'F': return "<:if:Container " + text + "?)";
@@ -994,8 +995,7 @@ public class TextGenScript {
       case 'Z': return "<:target:" + name + ">";
       case 'Y': return "<:file>";
       case 'X': return "<:subtext:" + name + ">";
-      case 'J': return "<=" + name + ":objVariable>";
-      default: return "(??" + whatisit + " " + text + "?)";
+      default: return "(??" + elementType + " " + text + "?)";
       }
     }
     
@@ -1172,7 +1172,7 @@ public class TextGenScript {
     
     /**Defines a variable with initial value. <= <variableDef?textVariable> \<\.=\>
      */
-    public ScriptElement new_textVariable(){ return new ScriptElement('v', null); }
+    public ScriptElement new_textVariable(){ return new ScriptElement('V', null); }
 
     public void add_textVariable(ScriptElement val){ listScriptVariables.add(val); } 
     
@@ -1184,7 +1184,7 @@ public class TextGenScript {
     public void add_objVariable(ScriptElement val){ listScriptVariables.add(val); } 
     
     
-    public ScriptElement new_XXXsetVariable(){ return new ScriptElement('v', null); }
+    public ScriptElement new_XXXsetVariable(){ return new ScriptElement('V', null); }
 
     public void add_XXXsetVariable(ScriptElement val)
     { indexScriptVariables.put(val.name, val); 

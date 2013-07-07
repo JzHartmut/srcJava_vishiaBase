@@ -357,7 +357,7 @@ public class TextGenerator {
     
       //Generate direct requested output. It is especially on inner content-scripts.
       for(TextGenScript.ScriptElement contentElement: contentScript.content){
-        switch(contentElement.whatisit){
+        switch(contentElement.elementType){
         case 't': { 
           int posLine = 0;
           int posEnd;
@@ -449,7 +449,7 @@ public class TextGenerator {
           generateIfContainerHasNext(contentElement, out, bContainerHasNext);
         } break;
         default: 
-          uBuffer.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
+          uBuffer.append(" ===ERROR: unknown type '" + contentElement.elementType + "' :ERROR=== ");
         }//switch
         
       }
@@ -515,7 +515,7 @@ public class TextGenerator {
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
         TextGenScript.ScriptElement contentElement = iter.next();
-        switch(contentElement.whatisit){
+        switch(contentElement.elementType){
           case 'G': { //if-block
             
             found = generateIfBlock((TextGenScript.IfCondition)contentElement, out, iter.hasNext());
@@ -526,7 +526,7 @@ public class TextGenerator {
             }
           } break;
           default:{
-            out.append(" ===ERROR: unknown type '" + contentElement.whatisit + "' :ERROR=== ");
+            out.append(" ===ERROR: unknown type '" + contentElement.elementType + "' :ERROR=== ");
           }
         }//switch
       }//for
