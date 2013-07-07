@@ -270,15 +270,6 @@ public class TextGenerator {
 
   
   
-  public String genSubContent(TextGenScript.ScriptElement script, Appendable out) 
-  throws IOException
-  {
-    Gen_Content genContent = new Gen_Content(scriptVariables);
-    return genContent.genContent(script.subContent, out, false);
-  }
-
-  
-  
 
   
   Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
@@ -316,9 +307,8 @@ public class TextGenerator {
   
   
   
-  /**Wrapper to generate a script in a specified output with specified localVariables.
+  /**Wrapper to generate a script with specified localVariables.
    * A new Wrapper is created on <:file>, <:subtext> or on abbreviated output, especially to generate into variables.
-   * @author Hartmut
    *
    */
   final class Gen_Content
@@ -334,11 +324,11 @@ public class TextGenerator {
     public Gen_Content(Map<String, Object> parentVariables)
     { //this.parent = parent;
       //this.out = out;
+      localVariables = new TreeMap<String, Object>();
       if(parentVariables == null){
-        localVariables = new TreeMap<String, Object>();
         localVariables.putAll(scriptVariables);
       } else {
-        this.localVariables = parentVariables;  //use the same if it is not a subText, only a 
+        localVariables.putAll(parentVariables);  //use the same if it is not a subText, only a 
       }
     }
 
@@ -440,7 +430,7 @@ public class TextGenerator {
           generateForContainer(contentElement, out);
         } break;
         case 'B': { //statementBlock
-          TextGenerator.this.genSubContent(contentElement, out);  ///
+          genSubContent(contentElement, out);  ///
         } break;
         case 'F': { 
           generateIfStatement(contentElement, out);
@@ -707,6 +697,30 @@ public class TextGenerator {
       }
     }
     
+    
+    
+    
+    /**Generates or executes any sub content.
+     * @param script
+     * @param out
+     * @return
+     * @throws IOException
+     */
+    public String genSubContent(TextGenScript.ScriptElement script, Appendable out) 
+    throws IOException
+    {
+      Gen_Content genContent;
+      if(script.bContainsVariableDef){
+        genContent = new Gen_Content(localVariables);
+      } else {
+        genContent = this;  //don't use an own instance, save memory and calculation time.
+      }
+      return genContent.genContent(script.subContent, out, false);
+    }
+
+    
+    
+
 
     
     void callCmd(TextGenScript.ScriptElement contentElement) throws IOException{
