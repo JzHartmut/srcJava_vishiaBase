@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -220,7 +221,7 @@ public class ZbnfParser
     /**A string representing the parent components. */ 
     final String sReportParentComponents;
     
-    private PrescriptParser(PrescriptParser parent
+    protected PrescriptParser(PrescriptParser parent
         , ZbnfSyntaxPrescript syntax
         , String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { 
@@ -1921,6 +1922,9 @@ public class ZbnfParser
 
   private Charset charsetInput;
 
+  
+  protected Map<String, String> idxMissingPrescripts;
+  
   /** The actual parse result buffer.*/
   private ZbnfParserStore parserStoreTopLevel; //parseResult;
 
@@ -2362,9 +2366,13 @@ public class ZbnfParser
 
 
 
-  private ZbnfSyntaxPrescript searchSyntaxPrescript(String sSyntax)
+  protected ZbnfSyntaxPrescript searchSyntaxPrescript(String sSyntax)
   { ZbnfSyntaxPrescript foundItem;
     foundItem = listSubPrescript.get(sSyntax);
+    if(foundItem ==null){
+      if(idxMissingPrescripts ==null){ idxMissingPrescripts = new TreeMap<String, String>(); }
+      idxMissingPrescripts.put(sSyntax, sSyntax);
+    }
     return foundItem;
   }
 
@@ -2556,6 +2564,12 @@ public class ZbnfParser
           ? "-nothing-" 
           : sLastFoundedResultOnError
           ));
+    u.append("\n");
+    if(idxMissingPrescripts !=null){
+      for(Map.Entry<String, String> entry: idxMissingPrescripts.entrySet()){
+        u.append("missing prescript: ").append(entry.getValue()).append("\n");
+      }
+    }
     return u.toString();
   }
   

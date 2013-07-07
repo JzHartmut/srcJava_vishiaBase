@@ -534,7 +534,7 @@ public class TextGenScript {
         datapath = new ArrayList<DataAccess.DatapathElement>();
       }
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
-      element.whatisit = 'v';
+      element.whatisit = 'V';
       element.ident = ident;
       datapath.add(element); 
     }
@@ -643,9 +643,7 @@ public class TextGenScript {
      * <tr><td>t</td><td>simple constant text</td></tr>
      * <tr><td>n</td><td>simple newline text</td></tr>
      * <tr><td>T</td><td>textual output to any variable or file</td></tr>
-     * <tr><td>v</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
-     * <tr><td>p</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
-     * <tr><td>u</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>V</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>l</td><td>add to list</td></tr>
      * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
@@ -657,19 +655,22 @@ public class TextGenScript {
      * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>c</td><td>cmd line invocation.</td></tr>
      * <tr><td>J</td><td>creation of a java class. {@link #name}==its name, {@link #subContent} == null.</td></tr>
+     * <tr><td>P</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>U</td><td>content of a variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
      * <tr><td>V</td><td>(?:for:variable?): {@link #subContent} contains build.script for any element of the named global variable or calling parameter</td></tr>
-     * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,
+     * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,</td></tr>
      *                   whereby subContent.{@link GenContent#name} is the name of the list. </td></tr>
-     * <tr><td>C</td><td><:for:path> {@link #subContent} contains build.script for any list element,
-     * <tr><td>E</td><td><:else> {@link #subContent} contains build.script for any list element,
-     * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,
-     * <tr><td>G</td><td><:elsif:condition:path> {@link #subContent} contains build.script for any list element,
-     * <tr><td>?</td><td><:if:...?gt> compare-operation in if
+     * <tr><td>B</td><td>statement block</td></tr>
+     * <tr><td>C</td><td><:for:path> {@link #subContent} contains build.script for any list element,</td></tr>
+     * <tr><td>E</td><td><:else> {@link #subContent} contains build.script for any list element,</td></tr>
+     * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,</td></tr>
+     * <tr><td>G</td><td><:elsif:condition:path> {@link #subContent} contains build.script for any list element,</td></tr>
+     * <tr><td>?</td><td><:if:...?gt> compare-operation in if</td></tr>
      * 
-     * <tr><td>Z</td><td>a target,
-     * <tr><td>Y</td><td>the file
-     * <tr><td>X</td><td>a subtext definition
+     * <tr><td>Z</td><td>a target,</td></tr>
+     * <tr><td>Y</td><td>the file</td></tr>
+     * <tr><td>X</td><td>a subtext definition</td></tr>
      * </table> 
      */
     final public char whatisit;    
@@ -691,12 +692,29 @@ public class TextGenScript {
      * Maybe null if the subtext has not argument. It is null if it is not a subtext call or definition. */
     List<Argument> arguments;
     
-    //public String elementPart;
+    
+    
+    /**The statements in this sub-ScriptElement were executed if an exception throws
+     * or if a command line invocation returns an error level greater or equal the {@link Iferror#errorLevel}.
+     * If it is null, no exception handling is done.
+     * <br><br>
+     * This block can contain any statements as error replacement. If they fails too,
+     * the iferror-Block can contain an iferror too.
+     * 
+     */
+    Iferror iferror;
+    
+    
+    /**True if the block {@link Argument#subContent} contains at least one variable definition.
+     * In this case the execution of the ScriptElement as a block should be done with an separated set
+     * of variables because new variables should not merge between existing of the outer block.
+     */
+    boolean bContainsVariableDef;
     
     public ScriptElement(char whatisit, String text)
     { this.whatisit = whatisit;
       this.text = text;
-      if("NXYZvlJ".indexOf(whatisit)>=0){
+      if("BNXYZvlJ".indexOf(whatisit)>=0){
         subContent = new GenContent(false);
       }
       else if("IVL".indexOf(whatisit)>=0){
@@ -730,23 +748,40 @@ public class TextGenScript {
     
     /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
      */
-    public ScriptElement new_textVariable(){ return new ScriptElement('v', null); }
+    public ScriptElement new_textVariable(){
+      bContainsVariableDef = true; 
+      return new ScriptElement('V', null); 
+    } 
 
     public void add_textVariable(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
     
     
     /**Defines a variable which is able to use as pipe.
      */
-    public ScriptElement new_Pipe(){ return new ScriptElement('p', null); }
+    public ScriptElement new_Pipe(){
+      bContainsVariableDef = true; 
+      return new ScriptElement('P', null); 
+    } 
 
     public void add_Pipe(ScriptElement val){ subContent.content.add(val); }
     
+    /**Defines a variable which is able to use as pipe.
+     */
+    public ScriptElement new_Buffer(){
+      bContainsVariableDef = true; 
+      return new ScriptElement('U', null); 
+    } 
+
+    public void add_Buffer(ScriptElement val){ subContent.content.add(val); }
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
-    public ScriptElement new_objVariable(){ return new ScriptElement('J', null); } ///
+    public ScriptElement new_objVariable(){ 
+      bContainsVariableDef = true; 
+      return new ScriptElement('J', null); 
+    } 
 
-    public void add_objVariable(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
+    public void add_objVariable(ScriptElement val){ subContent.content.add(val); }
     
     
     
@@ -783,6 +818,26 @@ public class TextGenScript {
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     //public void add_valueVariable(ScriptElement val){ subContent.content.add(val); }
     
+    
+    public ScriptElement new_statementBlock(){
+      ScriptElement contentElement = new ScriptElement('B', null);
+      subContent.content.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_statementBlock(ScriptElement val){}
+
+    
+    public Iferror new_iferror(){
+      iferror = new Iferror();
+      return iferror;
+    }
+    
+
+    public void add_iferror(Iferror val){}
+
+      
+      
     public ScriptElement new_forContainer()
     { GenContent subGenContent = new GenContent(true);
       ScriptElement contentElement = new ScriptElement('C', null);
@@ -899,8 +954,8 @@ public class TextGenScript {
     public void add_forList(ScriptElement val){} //empty, it is added in new_forList()
 
     
-    public ScriptElement new_addToList()
-    { ScriptElement subGenContent = new ScriptElement('l', null);
+    public ScriptElement new_addToList(){ 
+      ScriptElement subGenContent = new ScriptElement('l', null);
       subContent.addToList.add(subGenContent.subContent);
       return subGenContent;
     }
@@ -909,6 +964,9 @@ public class TextGenScript {
     {
     }
 
+    
+    
+    
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void axxxdd_fnEmpty(ScriptElement val){  }
@@ -982,12 +1040,27 @@ public class TextGenScript {
   
   
   
-  public final static class CmdLine
+  
+  
+  /**This class contains expressions for error handling.
+   */
+  public final static class Iferror extends ScriptElement
   {
+    /**From ZBNF */
+    public int errorLevel;
     
     
+    /**From ZBNF */
+    public boolean breakBlock;
     
-  }
+    
+ 
+    Iferror(){
+      super('B', null);
+    }
+ }
+  
+  
   
   
   
