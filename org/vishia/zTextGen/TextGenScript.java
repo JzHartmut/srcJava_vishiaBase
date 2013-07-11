@@ -371,9 +371,15 @@ public class TextGenScript {
     { Object dataRet = null;
       for(TextGenScript.SumValue value: this.values){
       
+        
+        
         List<DataAccess.DatapathElement> dataRef = value.datapath;
         Object dataValue;
         if(dataRef !=null){
+          
+          dataValue = generator.getDataObj(dataRef, data, localVariables, bContainer);
+          
+          /*
           if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$checkDeps"))
             Assert.stop();
           //calculate all actual arguments:
@@ -382,12 +388,6 @@ public class TextGenScript {
             if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
               //it is a element with arguments, usual a method call. 
               zd.removeAllActualArguments();
-              /*
-              for(TextGenScript.Argument zarg: zd.actualArguments){
-                Object oValue = getContent(zarg, localVariables, false);
-                zd.addActualArgument(oValue);
-              }
-              */
               if(zd.bExtArgs && arg instanceof ScriptElement){
                 //Arguments in form <*$!javamethod(+)><+>arg<+>arg<.*>
                 for(Argument extArg: ((ScriptElement)arg).arguments){
@@ -435,6 +435,12 @@ public class TextGenScript {
               throw new IllegalArgumentException(dataValue.toString());
             }
           }
+
+          */
+        
+        
+        
+        
         } else {
           dataValue = value.constValue;
         }
@@ -488,7 +494,7 @@ public class TextGenScript {
   /**
    *
    */
-  public static class SumValue{
+  public static class SumValue extends DataPath{
     
     /**Name of the argument. It is the key to assign calling argument values. */
     //public String name;
@@ -501,12 +507,36 @@ public class TextGenScript {
     
     char operator;
 
+    public void set_operator(String val){ operator = val.charAt(0); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_intValue(long val){ constValue = new Long(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_floatValue(double val){ constValue = new Double(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_textValue(String val){ constValue = val; }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_charValue(String val){ constValue = new Character(val.charAt(0)); }
+    
+    @Override public String toString(){ return "value"; }
+
+  }
+  
+
+  
+  public static class DataPath
+  { 
     /**The description of the path to any data if the script-element refers data. It is null if the script element
      * does not refer data. If it is filled, the instances are of type {@link ZbnfDataPathElement}.
      * If it is used in {@link DataAccess}, its base class {@link DataAccess.DatapathElement} are used. The difference
      * are the handling of actual values for method calls. See {@link ZbnfDataPathElement#actualArguments}.
      */
     List<DataAccess.DatapathElement> datapath;
+    
+    //public String assign; 
     
     public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(); }
     
@@ -516,7 +546,6 @@ public class TextGenScript {
       }
       datapath.add(val); 
     }
-    
     
     public void set_envVariable(String ident){
       if(datapath == null){
@@ -540,20 +569,6 @@ public class TextGenScript {
     }
     
     
-    public void set_operator(String val){ operator = val.charAt(0); }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_intValue(long val){ constValue = new Long(val); }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_floatValue(double val){ constValue = new Double(val); }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_textValue(String val){ constValue = val; }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_charValue(String val){ constValue = new Character(val.charAt(0)); }
-    
     public ZbnfDataPathElement new_newJavaClass()
     { ZbnfDataPathElement value = new ZbnfDataPathElement();
       value.whatisit = 'n';
@@ -576,9 +591,11 @@ public class TextGenScript {
     
     public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
 
-    @Override public String toString(){ return "value"; }
 
+    
   }
+  
+  
   
   
   
@@ -680,8 +697,9 @@ public class TextGenScript {
     
     /**Any variable name of a script variable where the content should assigned to.
      * null if not used. */
-    String sVariableToAssign;
-
+    //String sVariableToAssign;
+    DataPath assignObj;
+    
     //public String value;
     
     //public List<String> path;
@@ -802,14 +820,14 @@ public class TextGenScript {
       arguments.add(val); }
     
     /**Set from ZBNF:  $<$?-assign> =  */
-    public void set_assign(String val){
-      sVariableToAssign = val;
+    public void XXXset_assign(String val){
+      //sVariableToAssign = val;
     }
     
     
-    public AssignObj new_assign(){ return new AssignObj(); }
+    public DataPath new_assign(){ return new DataPath(); }
     
-    public void add_assign(AssignObj val){ sVariableToAssign = val.assign; }
+    public void add_assign(DataPath val){ assignObj = val; }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
@@ -1062,9 +1080,6 @@ public class TextGenScript {
   
   
   
-  
-  
-  public final static class AssignObj{ public String assign; }
   
   
   /**Organization class for a list of script elements inside another Scriptelement.

@@ -53,6 +53,7 @@ public final class TextGenSyntax {
     + "\n"
     + "\n"
     + "ZTextctrl::= \n"
+    + "[<*|==jbat==?>==jbat== ]\n"
     + "{ \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + "| \\<:include : <*\\>\\ ?include> \\> \n"
     + "| \\<:subtext : <subtext> \n"
@@ -104,6 +105,8 @@ public final class TextGenSyntax {
     + "\n"
     + "value::= [<?operator> + | -|] [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"  //[? \\.] 
     + "              | [$]new\\  <newJavaClass> | [java\\ |$!]<staticJavaMethod> | $$<$?envVariable> | <datapath>].\n"
+    + "\n"
+    //+ "objvalue::=\n"
     + "\n"
     + "newJavaClass::= <$\\.?javapath> [ ({ <expression?argument> ? , } )].\n" 
     + "staticJavaMethod::= <$\\.?javapath> [ (+)<?extArgs>| ( [ { <expression?argument> ? , } ] )].\n"
@@ -168,7 +171,7 @@ public final class TextGenSyntax {
     + "| for <forScript?forContainer> \n"
     + "| call <callScript?callSubtext> \n"
     + "| if <ifScript?if> \n"
-    + "| [ $<assign?-?> = ] cmd <cmdLine?+?> \n"  ///
+    + "| [ <datapath?-assign> = ] cmd <cmdLine?+?> \n"  ///
     + "| start <cmdLine?cmdStart> \n"
     + "| [ $<$?-assign> = ] java <staticJavaMethod?+?> \n"
     + "| $<$?-assign> = <expression?+?> \n"

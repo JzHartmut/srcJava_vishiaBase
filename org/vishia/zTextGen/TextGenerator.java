@@ -120,6 +120,10 @@ public class TextGenerator {
   
   protected final MainCmdLogging_ifc log;
   
+  /**The output which is given by invocation of {@link #generate(Object, File, Appendable, boolean, Appendable)}
+   */
+  protected Appendable outFile;
+  
   /**The java prepared generation script. */
   TextGenScript genScript;
   
@@ -155,13 +159,14 @@ public class TextGenerator {
    */
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
     String sError = null;
+    this.outFile = out;
     TextGenScript genScript = new TextGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
     try { genScript.translateAndSetGenCtrl(fileScript);
     } catch (Exception exc) {
       sError = exc.getMessage();
     }
     //genScript = parseGenScript(fileScript, testOut);
-    if(sError == null && out !=null){
+    if(sError == null) { // && out !=null){
       try{
         sError = genContent(genScript, userData, accessPrivate, out);
         //out.close();
@@ -288,6 +293,95 @@ public class TextGenerator {
   }
   
   
+  
+  /**Returns the reference from a given datapath.
+   * It can contain only one element which is:
+   * <ul>
+   * <li>An environment variable: returns its String content. 
+   * <li>The designation 'out' or 'err': returns System.out or System.err as Appendable.
+   * <li>The designation 'file': returns the main file output as Appendable.
+   * </ul>
+   * The first element can be
+   * <ul>
+   * <li>An local variable
+   * <li>An element of data1
+   * </ul>
+   * All other elements are elements inside the found element before.
+   * 
+   * @param dataPath List of elements of the datapath. 
+   * @param data1
+   * @param localVariables
+   * @param bContainer
+   * @return An object.
+   * @throws IOException
+   */
+  public Object getDataObj(List<DataAccess.DatapathElement> dataPath
+      , Object data1, Map<String, Object> localVariables
+      , boolean bContainer)
+  throws IOException
+  {  
+    Object dataValue = null;
+    
+    if(dataPath.size() >=1 && dataPath.get(0).ident !=null && dataPath.get(0).ident.equals("$checkDeps"))
+      Assert.stop();
+    //calculate all actual arguments:
+    
+    //out, err, file for the given Appendable output channels.
+    if(dataPath.size()==1){
+      DataAccess.DatapathElement dataElement = dataPath.get(0);
+      if(dataElement.ident.equals("out")){
+        dataValue = System.out;
+      }
+      else if(dataElement.ident.equals("err")){
+        dataValue = System.err;
+      }
+      if(dataElement.ident.equals("file")){
+        dataValue = outFile;
+      }
+    }
+    if(dataValue ==null){
+      for(DataAccess.DatapathElement dataElement : dataPath){  //loop over all elements of the path with or without arguments.
+        ZbnfDataPathElement zd;
+        if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
+          //it is a element with arguments, usual a method call. 
+          zd.removeAllActualArguments();
+          /*
+          for(TextGenScript.Argument zarg: zd.actualArguments){
+            Object oValue = getContent(zarg, localVariables, false);
+            zd.addActualArgument(oValue);
+          }
+          */
+          for(TextGenScript.Expression expr: zd.actualValue){
+            Object oValue = expr.ascertainValue(data1, localVariables, null, accessPrivate, false, bWriteErrorInOutput, this);
+            if(oValue == null){
+              oValue = "??: path access: " + dataPath + "?>";
+              if(!bWriteErrorInOutput){
+                throw new IllegalArgumentException(oValue.toString());
+              }
+            }
+            zd.addActualArgument(oValue);
+          }
+        }
+      }
+      try{
+        dataValue = DataAccess.getData(dataPath, data1, localVariables, accessPrivate, bContainer);
+      } catch(NoSuchFieldException exc){
+        dataValue = "??: path not found: " + dataPath + "on " + exc.getMessage() + ".??";
+        if(!bWriteErrorInOutput){
+          throw new IllegalArgumentException(dataValue.toString());
+        }
+      } catch(IllegalAccessException exc) {
+        dataValue = "??: path access error: " + dataPath + "on " + exc.getMessage() + ".??";
+        if(!bWriteErrorInOutput){
+          throw new IllegalArgumentException(dataValue.toString());
+        }
+      }
+    }
+    return dataValue;
+  }
+  
+  
+  
 
   /**
    * @param sError
@@ -369,7 +463,7 @@ public class TextGenerator {
           uBuffer.append(newline);
         } break;
         case 'T': {
-          if(contentElement.name.equals("file")){
+          if(contentElement.name.equals("file") || contentElement.name.equals("out")){
             //output to the main file, it is the out of this class:
             genContent(contentElement.subContent, out, false);  //recursively call of this method.
           } else {
@@ -746,8 +840,9 @@ public class TextGenerator {
       }
       args[0] = sCmd;
       Appendable outCmd;
-      if(contentElement.sVariableToAssign !=null){
-        Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
+      if(contentElement.assignObj !=null){
+        Object oOutCmd = getDataObj(contentElement.assignObj.datapath, data, localVariables, false);
+        //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
         if(oOutCmd instanceof Appendable){
           outCmd = (Appendable)oOutCmd;
         } else {
