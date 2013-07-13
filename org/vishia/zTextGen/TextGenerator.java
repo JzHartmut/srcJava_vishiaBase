@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -130,7 +131,8 @@ public class TextGenerator {
   /**Instance for the main script part. */
   //Gen_Content genFile;
 
-  /**Generated content of local variables or reference to any data for this content and all sub contents. */
+  /**Generated content of all script variables. The script variables are present in all routines 
+   * in their local variables pool. The value is either a String, CharSequence or any Object pointer.  */
   final Map<String, Object> scriptVariables = new TreeMap<String, Object>();
   
   private boolean bScriptVariableGenerated;
@@ -142,7 +144,7 @@ public class TextGenerator {
 
   public TextGenerator(MainCmdLogging_ifc log){
     this.log = log;
-    bWriteErrorInOutput = true;
+    bWriteErrorInOutput = false;
   }
   
   
@@ -160,6 +162,7 @@ public class TextGenerator {
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
     String sError = null;
     this.outFile = out;
+    scriptVariables.put("file", outFile);
     TextGenScript genScript = new TextGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
     try { genScript.translateAndSetGenCtrl(fileScript);
     } catch (Exception exc) {
@@ -235,6 +238,9 @@ public class TextGenerator {
     scriptVariables.put("mainCmdLogging", log);
     scriptVariables.put("nextNr", nextNr);
     scriptVariables.put("nrElementInContainer", null);
+    scriptVariables.put("out", System.out);
+    scriptVariables.put("err", System.err);
+    scriptVariables.put("jbatAccess", this);
 
     for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
@@ -278,9 +284,9 @@ public class TextGenerator {
 
   
   Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
-  throws IllegalArgumentException, IOException
+  throws IllegalArgumentException, IOException, Throwable
   { if(arg.expression !=null){
-      return arg.expression.ascertainValue(data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput, this);
+      return ascertainValue(arg.expression, data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput);
     } else if(arg.subContent !=null){
       
       StringBuilder buffer = new StringBuilder();
@@ -313,14 +319,17 @@ public class TextGenerator {
    * @param localVariables
    * @param bContainer
    * @return An object.
-   * @throws IOException
+   * @throws Throwable 
    */
   public Object getDataObj(List<DataAccess.DatapathElement> dataPath
       , Object data1, Map<String, Object> localVariables
       , boolean bContainer)
-  throws IOException
+  throws Throwable
   {  
     Object dataValue = null;
+    
+    boolean bWriteErrorInOutput = false;
+    boolean accessPrivate = true;
     
     if(dataPath.size() >=1 && dataPath.get(0).ident !=null && dataPath.get(0).ident.equals("$checkDeps"))
       Assert.stop();
@@ -335,8 +344,8 @@ public class TextGenerator {
       else if(dataElement.ident.equals("err")){
         dataValue = System.err;
       }
-      if(dataElement.ident.equals("file")){
-        dataValue = outFile;
+      if(dataElement.ident.equals("xxxfile")){
+        dataValue = null; //outFile;
       }
     }
     if(dataValue ==null){
@@ -352,7 +361,7 @@ public class TextGenerator {
           }
           */
           for(TextGenScript.Expression expr: zd.actualValue){
-            Object oValue = expr.ascertainValue(data1, localVariables, null, accessPrivate, false, bWriteErrorInOutput, this);
+            Object oValue = ascertainValue(expr, data1, localVariables, null, accessPrivate, false, bWriteErrorInOutput);
             if(oValue == null){
               oValue = "??: path access: " + dataPath + "?>";
               if(!bWriteErrorInOutput){
@@ -365,6 +374,11 @@ public class TextGenerator {
       }
       try{
         dataValue = DataAccess.getData(dataPath, data1, localVariables, accessPrivate, bContainer);
+      } catch(NoSuchMethodException exc){
+        dataValue = "??: path not found: " + dataPath + "on " + exc.getMessage() + ".??";
+        if(!bWriteErrorInOutput){
+          throw new IllegalArgumentException(dataValue.toString());
+        }
       } catch(NoSuchFieldException exc){
         dataValue = "??: path not found: " + dataPath + "on " + exc.getMessage() + ".??";
         if(!bWriteErrorInOutput){
@@ -375,11 +389,91 @@ public class TextGenerator {
         if(!bWriteErrorInOutput){
           throw new IllegalArgumentException(dataValue.toString());
         }
+      } catch(Throwable exc){
+        throw exc;
       }
     }
     return dataValue;
   }
   
+  
+  
+  
+  /**Ascertains the value which is represented by this expression. 
+   * It accessed to data using {@link DataAccess#getData(String, Object, boolean, boolean)}.
+   * @param data The data pool to access.
+   * @param localVariables additonal container for data references
+   * @param accessPrivate
+   * @param bContainer true than should return an container.
+   * @param bWriteErrorInOutput
+   * @return the Object which represents the expression in the given environment.
+   * @throws IllegalArgumentException
+   */
+  Object ascertainValue(TextGenScript.Expression expr, Object data, Map<String, Object> localVariables, TextGenScript.Argument arg
+      , boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput
+  )
+  throws IllegalArgumentException, IOException, Throwable
+  { Object dataRet = null;
+    for(TextGenScript.SumValue value: expr.values){   //All SumValue
+      List<DataAccess.DatapathElement> dataRef = value.datapath;
+      Object dataValue;
+      if(dataRef !=null){
+        
+        dataValue = getDataObj(dataRef, data, localVariables, bContainer);
+      } else if(value.genString !=null){
+        
+        dataValue = new StringBuilder();
+        Gen_Content subtextGenerator = this.new Gen_Content(localVariables);
+        subtextGenerator.genContent(value.genString, (Appendable)dataValue, false);
+      
+      } else {
+        dataValue = value.constValue;
+      }
+      if(dataRet == null){
+        dataRet = dataValue;
+      } else {
+        //execute operation
+        if(dataRet instanceof CharSequence){
+          //It is only string concatenation, don't check the operator, '+'or '-' are admissible.
+          if(!(dataRet instanceof StringBuilder)){
+            dataRet = new StringBuilder((CharSequence)dataRet);
+          }
+          ((StringBuilder)dataRet).append(dataValue);
+        }
+        else if(dataRet instanceof Object){
+          
+        }
+      }
+    }
+    return dataRet;
+  }
+  
+
+  
+  /**ascertains the text which is described in this Expression. Invokes {@link #ascertainValue(Object, Map, boolean, boolean, boolean)}
+   * and converts it to String.<br>
+   * This method does not support getting from any additional container or from datapool. Only environment variables
+   * or invocation of static methods are supported.
+   * @return
+   */
+  public String ascertainText(TextGenScript.Expression expr){ 
+    boolean bWriteErrorInOutput = true;
+    boolean bContainer = false;
+    boolean accessPrivate = true;
+    Object data = null;
+    Map<String, Object> localVariables = null;
+    try{ 
+      Object value = ascertainValue(expr, data, localVariables, null, accessPrivate, bContainer, bWriteErrorInOutput);
+      return DataAccess.getStringFromObject(value, null);
+    } catch(IOException exc){
+      return "<??IOException>" + exc.getMessage() + "<??>";
+    } catch(Throwable exc){
+      return "<??Exception>" + exc.getMessage() + "<??>";
+      
+    }
+  }
+  
+
   
   
 
@@ -409,7 +503,9 @@ public class TextGenerator {
   {
     //final Gen_Content parent;
     
-    /**Generated content of local variables or reference to any data for this content and all sub contents. */
+    /**Generated content of local variables in this nested level including the {@link TextGenerator#scriptVariables}.
+     * The variables are type invariant on language level. The type is checked and therefore 
+     * errors are detected on runtime only. */
     final Map<String, Object> localVariables;
     
     
@@ -432,117 +528,146 @@ public class TextGenerator {
      * @param contentScript
      * @param bContainerHasNext Especially for <:for:element:container>SCRIPT<.for> to implement <:hasNext>
      * @return
-     * @throws IOException if out throws it.
+     * @throws IOException 
      */
-    public String genContent(TextGenScript.GenContent contentScript, final Appendable out, boolean bContainerHasNext) 
-    throws IOException
+    public String genContent(TextGenScript.GenContent contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
+    //throws Exception
     {
+      String sError = null;
       Appendable uBuffer = out;
-    
       //Generate direct requested output. It is especially on inner content-scripts.
-      for(TextGenScript.ScriptElement contentElement: contentScript.content){
-        switch(contentElement.elementType){
-        case 't': { 
-          int posLine = 0;
-          int posEnd;
-          if(contentElement.text.startsWith("'''trans ==> dst"))
-            stop();
-          do{
-            posEnd = contentElement.text.indexOf('\n', posLine);
-            if(posEnd >= 0){ 
-              uBuffer.append(contentElement.text.substring(posLine, posEnd));   
-              uBuffer.append(newline);
-              posLine = posEnd +1;  //after \n 
+      Iterator<TextGenScript.ScriptElement> iter = contentScript.content.iterator();
+      while(iter.hasNext() && sError == null){
+        TextGenScript.ScriptElement contentElement = iter.next();
+        //for(TextGenScript.ScriptElement contentElement: contentScript.content){
+        try{    
+          switch(contentElement.elementType){
+          case 't': { 
+            int posLine = 0;
+            int posEnd;
+            if(contentElement.text.startsWith("'''trans ==> dst"))
+              stop();
+            do{
+              posEnd = contentElement.text.indexOf('\n', posLine);
+              if(posEnd >= 0){ 
+                uBuffer.append(contentElement.text.substring(posLine, posEnd));   
+                uBuffer.append(newline);
+                posLine = posEnd +1;  //after \n 
+              } else {
+                uBuffer.append(contentElement.text.substring(posLine));   
+              }
+              
+            } while(posEnd >=0);  //output all lines.
+          } break;
+          case 'n': {
+            uBuffer.append(newline);
+          } break;
+          case 'T': {
+            if(contentElement.name.equals("file") || contentElement.name.equals("out")){
+              //output to the main file, it is the out of this class:
+              genContent(contentElement.subContent, out, false);  //recursively call of this method.
             } else {
-              uBuffer.append(contentElement.text.substring(posLine));   
+              textAppendToVarOrOut(contentElement); 
             }
-            
-          } while(posEnd >=0);  //output all lines.
-        } break;
-        case 'n': {
-          uBuffer.append(newline);
-        } break;
-        case 'T': {
-          if(contentElement.name.equals("file") || contentElement.name.equals("out")){
-            //output to the main file, it is the out of this class:
-            genContent(contentElement.subContent, out, false);  //recursively call of this method.
-          } else {
-            textAppendToVarOrOut(contentElement); 
-          }
-        } break;
-        case 'V': { //create a new local variable.
-          StringBuilder uBufferVariable = new StringBuilder();
-          Gen_Content genVariable = new Gen_Content(localVariables);
-          TextGenScript.GenContent content = contentElement.getSubContent();
-          genVariable.genContent(content, uBufferVariable, false);
-          //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-          localVariables.put(contentElement.name, uBufferVariable);
-        } break;
-        case 'P': { //create a new local variable as pipe
-          StringBuilder uBufferVariable = new StringBuilder();
-          localVariables.put(contentElement.name, uBufferVariable);
-        } break;
-        case 'U': { //create a new local variable as pipe
-          StringBuilder uBufferVariable = new StringBuilder();
-          localVariables.put(contentElement.name, uBufferVariable);
-        } break;
-        case 'J': {
-          if(contentElement.name.equals("checkDeps"))
-            stop();
-          Object value = getContent(contentElement, localVariables, false);  //not a container
-          localVariables.put(contentElement.name, value);
-        } break;
-        case 'e': {  //value or datapath
-          final CharSequence text;
-          if(contentElement.text !=null && contentElement.text.equals("target")){
-            //generates all targets, only advisable in the (?:file?)
-            //genUserTargets(out);
-          } else if(contentElement.expression/*.datapath*/ !=null){
+          } break;
+          case 'V': { //create a new local variable.
+            StringBuilder uBufferVariable = new StringBuilder();
+            Gen_Content genVariable = new Gen_Content(localVariables);
+            TextGenScript.GenContent content = contentElement.getSubContent();
+            genVariable.genContent(content, uBufferVariable, false);
+            //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
+            localVariables.put(contentElement.name, uBufferVariable);
+          } break;
+          case 'P': { //create a new local variable as pipe
+            StringBuilder uBufferVariable = new StringBuilder();
+            localVariables.put(contentElement.name, uBufferVariable);
+          } break;
+          case 'U': { //create a new local variable as pipe
+            StringBuilder uBufferVariable = new StringBuilder();
+            localVariables.put(contentElement.name, uBufferVariable);
+          } break;
+          case 'J': {
+            if(contentElement.name.equals("checkDeps"))
+              stop();
+            Object value = getContent(contentElement, localVariables, false);  //not a container
+            localVariables.put(contentElement.name, value);
+          } break;
+          case 'e': {  //value or datapath
+            final CharSequence text;
+            if(contentElement.text !=null && contentElement.text.equals("target")){
+              //generates all targets, only advisable in the (?:file?)
+              //genUserTargets(out);
+            } else if(contentElement.expression/*.datapath*/ !=null){
+              Object oContent = getContent(contentElement, localVariables, false);
+              text = DataAccess.getStringFromObject(oContent, contentElement.text);
+              //text = getTextofVariable(userTarget, contentElement.text, this);
+              uBuffer.append(text); 
+            } else {
+              //uBuffer.append(listElement);
+            }
+          } break;
+          /*
+          case 'g': {
+            final CharSequence text;
             Object oContent = getContent(contentElement, localVariables, false);
-            text = DataAccess.getStringFromObject(oContent, contentElement.text);
-            //text = getTextofVariable(userTarget, contentElement.text, this);
+            text = DataAccess.getStringFromObject(oContent);
             uBuffer.append(text); 
-          } else {
-            //uBuffer.append(listElement);
+          } break;
+          */
+          case 's': {
+            genSubtext(contentElement, out);
+          } break;
+          case 'c': {
+            callCmd(contentElement);
+          } break;
+          case 'C': { //generation <:for:name:path> <genContent> <.for>
+            generateForContainer(contentElement, out);
+          } break;
+          case 'B': { //statementBlock
+            genSubContent(contentElement, out);  ///
+          } break;
+          case 'F': { 
+            generateIfStatement(contentElement, out);
+          } break;
+          case 'N': {
+            generateIfContainerHasNext(contentElement, out, bContainerHasNext);
+          } break;
+          case 'b': {
+            sError = "break";
+          } break;
+          default: 
+            uBuffer.append(" ===ERROR: unknown type '" + contentElement.elementType + "' :ERROR=== ");
+          }//switch
+          
+        } catch(Throwable exc){
+          //check onerror
+          boolean found = false;
+          if(contentElement.onerror !=null){
+            String sError1 = exc.getMessage();
+            localVariables.put("errorMsg", sError1);
+            Iterator<TextGenScript.Onerror> iterError = contentElement.onerror.iterator();
+            while(!found && iterError.hasNext()) {
+              TextGenScript.Onerror onerror = iterError.next();
+              found = onerror.errorType == '?';
+              if(found){
+                sError = genSubContent(onerror, out);
+              }
+            }
           }
-        } break;
-        /*
-        case 'g': {
-          final CharSequence text;
-          Object oContent = getContent(contentElement, localVariables, false);
-          text = DataAccess.getStringFromObject(oContent);
-          uBuffer.append(text); 
-        } break;
-        */
-        case 's': {
-          genSubtext(contentElement, out);
-        } break;
-        case 'c': {
-          callCmd(contentElement);
-        } break;
-        case 'C': { //generation <:for:name:path> <genContent> <.for>
-          generateForContainer(contentElement, out);
-        } break;
-        case 'B': { //statementBlock
-          genSubContent(contentElement, out);  ///
-        } break;
-        case 'F': { 
-          generateIfStatement(contentElement, out);
-        } break;
-        case 'N': {
-          generateIfContainerHasNext(contentElement, out, bContainerHasNext);
-        } break;
-        default: 
-          uBuffer.append(" ===ERROR: unknown type '" + contentElement.elementType + "' :ERROR=== ");
-        }//switch
-        
+          if(!found){
+            sError = exc.getMessage();
+            System.err.println("Jbat - execute-exception; " + exc.getMessage());
+            //throw exc;
+            throw new IllegalArgumentException (exc.getMessage());
+          }
+        }
       }
-      return null;
+      return sError;
     }
     
     
     
-    void generateForContainer(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException
+    void generateForContainer(TextGenScript.ScriptElement contentElement, Appendable out) throws Throwable
     {
       TextGenScript.GenContent subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
@@ -593,8 +718,9 @@ public class TextGenerator {
     
     
     
-    /**it contains maybe more as one if block and else. */
-    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Appendable out) throws IOException{
+    /**it contains maybe more as one if block and else. 
+     * @throws Throwable */
+    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Appendable out) throws Throwable{
       Iterator<TextGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
@@ -618,12 +744,14 @@ public class TextGenerator {
     
     
     
-    boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) throws IOException{
+    boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
+    throws Throwable
+    {
       //Object check = getContent(ifBlock, localVariables, false);
       
       Object check;
       try{ 
-        check = ifBlock.expression.ascertainValue(data, localVariables, null, accessPrivate, false, false, TextGenerator.this);
+        check = ascertainValue(ifBlock.expression, data, localVariables, null, accessPrivate, false, false);
       } catch(Exception exc){
         check = null;
       }
@@ -714,7 +842,9 @@ public class TextGenerator {
     
     
     
-    void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) throws IOException{
+    void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) 
+    throws IllegalArgumentException, Throwable
+    {
       boolean ok = true;
       final String nameSubtext;
       if(contentElement.name == null){
@@ -804,7 +934,7 @@ public class TextGenerator {
     throws IOException
     {
       Gen_Content genContent;
-      if(script.bContainsVariableDef){
+      if(script.subContent.bContainsVariableDef){
         genContent = new Gen_Content(localVariables);
       } else {
         genContent = this;  //don't use an own instance, save memory and calculation time.
@@ -817,7 +947,8 @@ public class TextGenerator {
 
 
     
-    void callCmd(TextGenScript.ScriptElement contentElement) throws IOException{
+    void callCmd(TextGenScript.ScriptElement contentElement) 
+    throws IllegalArgumentException, Throwable{
       boolean ok = true;
       final String sCmd;
       if(contentElement.name == null){
@@ -839,22 +970,24 @@ public class TextGenerator {
         args = new String[1]; 
       }
       args[0] = sCmd;
-      Appendable outCmd;
+      List<Appendable> outCmd;
       if(contentElement.assignObj !=null){
-        Object oOutCmd = getDataObj(contentElement.assignObj.datapath, data, localVariables, false);
-        //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
-        if(oOutCmd instanceof Appendable){
-          outCmd = (Appendable)oOutCmd;
-        } else {
-          //TODO error
-          outCmd = null;
+        outCmd = new LinkedList<Appendable>();
+        for(TextGenScript.DataPath assignObj1 : contentElement.assignObj){
+          Object oOutCmd = getDataObj(assignObj1.datapath, data, localVariables, false);
+          //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
+          if(oOutCmd instanceof Appendable){
+            outCmd.add((Appendable)oOutCmd);
+          } else {
+            //TODO error
+            //outCmd = null;
+          }
         }
-        
       } else {
         outCmd = null;
       }
       CmdExecuter cmdExecuter = new CmdExecuter();
-      cmdExecuter.execute(args, null, outCmd, null, false);
+      cmdExecuter.execute(args, null, outCmd, null);
     }
     
 

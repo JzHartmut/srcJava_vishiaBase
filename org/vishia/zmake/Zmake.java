@@ -12,8 +12,10 @@ import java.util.Map;
 
 
 import org.vishia.mainCmd.MainCmd;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StringPart;
@@ -348,6 +350,94 @@ public class Zmake extends Zbnf2Text
 
     
   
+  
+  
+  
+  
+  
+  
+  /**Parse a user's zmake-script and provide a Java data view to its content.
+   * @param fileZmakeUserscript The user script
+   * @param sZbnf The syntax.
+   * @param console 
+   * @param sCheckXmlOutput if not null, then intermedia info are outputted
+   * @return
+   * @throws IllegalArgumentException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws FileNotFoundException
+   * @throws IOException
+   * @throws ParseException
+   */
+  public static ZmakeUserScript.UserScript parseUserScript(File fileZmakeUserscript
+  , String sZbnf, MainCmdLogging_ifc console, TextGenerator jbatExecuter, String sCheckXmlOutput) 
+  throws IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException, ParseException 
+  {
+    ZmakeUserScript.UserScript zmakeInput;
+    try{
+      StringPart spInput = new StringPartFromFileLines(fileZmakeUserscript);
+      ZbnfParser parser = new ZbnfParser(console);
+      parser.setSyntax(new File(sZbnf));
+      console.writeInfo(" ... ");
+      if(!parser.parse(spInput)){
+        String sError = parser.getSyntaxErrorReport();
+        throw new ParseException(sError,0);
+      }
+      spInput.close();
+      if(console.getReportLevel() >= Report.fineInfo){
+        parser.reportStore(console, Report.fineInfo, "User-ZmakeScript");
+      }
+      console.writeInfo(" ok, set result ... ");
+      ZbnfParseResultItem parseResult = parser.getFirstParseResult();
+      //
+      if(sCheckXmlOutput !=null){
+        //write ZmakeUserScript into XML output only to check the input script.
+        XmlNode xmlTop = parser.getResultTree();
+        OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(sCheckXmlOutput + "_zmake.test.xml")); 
+        SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
+        xmlOut.write(wrXml, xmlTop);
+        wrXml.close();
+        
+      }
+      //write ZmakeUserScript into Java classes:
+      /*
+      String scriptclass = this.genScript.getScriptclass();
+      if(scriptclass !=null){
+        try{
+          @SuppressWarnings("unchecked")
+          Class<ZmakeUserScript.UserScript> classZmake = (Class<ZmakeUserScript.UserScript>)Class.forName(scriptclass);
+          zmakeInput = classZmake.newInstance();
+        } catch (Exception e) {
+          System.err.printf("Zmake - UserScriptClass faulty: %s\n", scriptclass);
+          throw new IllegalArgumentException("error");
+        }
+      } else */{
+        zmakeInput = new ZmakeUserScript.UserScript(jbatExecuter);
+      }
+      ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
+      parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
+      
+      if(sCheckXmlOutput !=null){
+        //Write the data structure of the ZmakeUserScript into a file to check.
+        FileWriter outData = new FileWriter(sCheckXmlOutput + "_zmake.javadat.test");
+        OutputDataTree outputterData = new OutputDataTree();
+        outputterData.output(0, zmakeInput, outData, false);
+        outData.close();
+        
+      }
+    } catch(Exception exc){
+      Assert.throwCompleteExceptionMessage("Zmake - parseUserScript;", exc);
+      zmakeInput = null;
+    }
+    return zmakeInput;
+    
+  }
+  
+  
+  
+  
+  
+  
   /** Execute the task of the class. 
    * @throws ParseException 
    * @throws XmlException 
@@ -413,60 +503,11 @@ public class Zmake extends Zbnf2Text
     //call the parser from input, it produces a temporary xml file.
     String sZbnf = args.zbnfjax_PATH + args.sZbnfInput;
     
+    
     //String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
     fileInput = new File(args.currdir, args.input);
-    StringPart spInput = new StringPartFromFileLines(fileInput);
-    ZbnfParser parser = new ZbnfParser(console);
-    parser.setSyntax(new File(sZbnf));
-    console.writeInfo(" ... ");
-    if(!parser.parse(spInput)){
-      sError = parser.getSyntaxErrorReport();
-      throw new ParseException(sError,0);
-    }
-    spInput.close();
-    if(console.getReportLevel() >= Report.fineInfo){
-      parser.reportStore(console, Report.fineInfo, "User-ZmakeScript");
-    }
-    console.writeInfo(" ok, set result ... ");
-    ZbnfParseResultItem parseResult = parser.getFirstParseResult();
-    //
-    if(args.sCheckXmlOutput !=null){
-      //write ZmakeUserScript into XML output only to check the input script.
-      XmlNode xmlTop = parser.getResultTree();
-      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sCheckXmlOutput + "_zmake.test.xml")); 
-      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
-      xmlOut.write(wrXml, xmlTop);
-      wrXml.close();
-      
-    }
-    //write ZmakeUserScript into Java classes:
-    final ZmakeUserScript.UserScript zmakeInput;
-    String scriptclass = this.genScript.getScriptclass();
-    if(scriptclass !=null){
-      try{
-        @SuppressWarnings("unchecked")
-        Class<ZmakeUserScript.UserScript> classZmake = (Class<ZmakeUserScript.UserScript>)Class.forName(scriptclass);
-        zmakeInput = classZmake.newInstance();
-      } catch (Exception e) {
-        System.err.printf("Zmake - UserScriptClass faulty: %s\n", scriptclass);
-        throw new IllegalArgumentException("error");
-      }
-    } else {
-      zmakeInput = new ZmakeUserScript.UserScript();
-    }
-    ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
-    parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
     
-    if(args.sCheckXmlOutput !=null){
-      //Write the data structure of the ZmakeUserScript into a file to check.
-      FileWriter outData = new FileWriter(args.sCheckXmlOutput + "_zmake.javadat.test");
-      OutputDataTree outputterData = new OutputDataTree();
-      outputterData.output(0, zmakeInput, outData, false);
-      outData.close();
-      
-    }
-        
-    
+    //Parse the users zmake script:
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     TextGenerator gen = new TextGenerator(console);
@@ -476,11 +517,13 @@ public class Zmake extends Zbnf2Text
     
     Map<String, Object> scriptVariables;
     try{ 
-      scriptVariables = gen.genScriptVariables(genScript, zmakeInput, true);
+      scriptVariables = gen.genScriptVariables(genScript, null, true);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
       scriptVariables = null;
     }
+    final ZmakeUserScript.UserScript zmakeInput = parseUserScript(fileInput, sZbnf, console, gen, args.sCheckXmlOutput);
+    
     setScriptVariablesCurrDir(zmakeInput, scriptVariables);
     
     Writer out = new FileWriter(fileOut);

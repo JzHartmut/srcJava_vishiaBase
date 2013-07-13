@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.zTextGen.TextGenScript;
+import org.vishia.zTextGen.TextGenerator;
 
 
 public class ZmakeUserScript
@@ -384,7 +385,7 @@ public class ZmakeUserScript
     /**For textscript: <*var.name.text()>
      * @return The text of the script variable. 
      */
-    public CharSequence text(){ return expression !=null ? expression.text() : ""; }
+    public CharSequence text(){ return expression !=null ? script.jbatexecuter.ascertainText(expression) : ""; }
     
   }
   
@@ -465,7 +466,8 @@ public class ZmakeUserScript
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
             } else if(variable.expression !=null){
-              u.append(variable.expression.text());
+              TextGenerator gen = parentTarget.script.jbatexecuter;
+              u.append(gen.ascertainText(variable.expression));
               //variable.expression.addtext(u);
             } else {
               int pos = u.length();
@@ -781,6 +783,11 @@ input::=
    */
   public static class UserScript
   {
+    /**It may be necessary to evaluate parts of zmake user script, especially script variables. 
+     * 
+     */
+    final TextGenerator jbatexecuter;
+    
     int nextNr = 0;
     
     /**The current directory for access to all files which are necessary as absolute file.
@@ -806,6 +813,11 @@ input::=
     public UserTarget new_target(){ return new UserTarget(this); }
     
     public void add_target(UserTarget value){ targets.add(value); }
+    
+    
+    public UserScript(TextGenerator jbatexecuter){
+      this.jbatexecuter = jbatexecuter;
+    }
     
     /**This method can be called from a user script.
      * @return an incremented number started from 1.

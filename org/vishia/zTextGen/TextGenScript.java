@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -354,138 +355,6 @@ public class TextGenScript {
     public void add_value(SumValue val){ values.add(val); }
   
     
-    
-    /**Ascertains the value which is represented by this expression. 
-     * It accessed to data using {@link DataAccess#getData(String, Object, boolean, boolean)}.
-     * @param data The data pool to access.
-     * @param localVariables additonal container for data references
-     * @param accessPrivate
-     * @param bContainer true than should return an container.
-     * @param bWriteErrorInOutput
-     * @return the Object which represents the expression in the given environment.
-     * @throws IllegalArgumentException
-     */
-    Object ascertainValue(Object data, Map<String, Object> localVariables, TextGenScript.Argument arg
-        , boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput, TextGenerator generator)
-    throws IllegalArgumentException, IOException
-    { Object dataRet = null;
-      for(TextGenScript.SumValue value: this.values){
-      
-        
-        
-        List<DataAccess.DatapathElement> dataRef = value.datapath;
-        Object dataValue;
-        if(dataRef !=null){
-          
-          dataValue = generator.getDataObj(dataRef, data, localVariables, bContainer);
-          
-          /*
-          if(dataRef.size() >=1 && dataRef.get(0).ident !=null && dataRef.get(0).ident.equals("$checkDeps"))
-            Assert.stop();
-          //calculate all actual arguments:
-          for(DataAccess.DatapathElement dataElement : dataRef){  //loop over all elements of the path with or without arguments.
-            ZbnfDataPathElement zd;
-            if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
-              //it is a element with arguments, usual a method call. 
-              zd.removeAllActualArguments();
-              if(zd.bExtArgs && arg instanceof ScriptElement){
-                //Arguments in form <*$!javamethod(+)><+>arg<+>arg<.*>
-                for(Argument extArg: ((ScriptElement)arg).arguments){
-                  if(extArg.subContent !=null){
-                    StringBuilder buffer = new StringBuilder();
-                    TextGenerator.Gen_Content genContent = generator.new Gen_Content(localVariables);
-                    genContent.genContent(extArg.subContent, buffer, false);
-                    zd.addActualArgument(buffer);
-                  } else if(extArg.expression !=null){
-                    Object oValue = extArg.expression.ascertainValue(data, localVariables, null, accessPrivate, false, bWriteErrorInOutput, generator);
-                    if(oValue == null){
-                      oValue = "??: path access: " + dataRef + "?>";
-                      if(!bWriteErrorInOutput){
-                        throw new IllegalArgumentException(oValue.toString());
-                      }
-                    }
-                    zd.addActualArgument(oValue); 
-                  }
-                }
-              } 
-              else {
-                for(TextGenScript.Expression expr: zd.actualValue){
-                  Object oValue = expr.ascertainValue(data, localVariables, null, accessPrivate, false, bWriteErrorInOutput, generator);
-                  if(oValue == null){
-                    oValue = "??: path access: " + dataRef + "?>";
-                    if(!bWriteErrorInOutput){
-                      throw new IllegalArgumentException(oValue.toString());
-                    }
-                  }
-                  zd.addActualArgument(oValue);
-                }
-              }
-            }
-          }
-          try{
-            dataValue = DataAccess.getData(dataRef, data, localVariables, accessPrivate, bContainer);
-          } catch(NoSuchFieldException exc){
-            dataValue = "??: path not found: " + dataRef + "on " + exc.getMessage() + ".??";
-            if(!bWriteErrorInOutput){
-              throw new IllegalArgumentException(dataValue.toString());
-            }
-          } catch(IllegalAccessException exc) {
-            dataValue = "??: path access error: " + dataRef + "on " + exc.getMessage() + ".??";
-            if(!bWriteErrorInOutput){
-              throw new IllegalArgumentException(dataValue.toString());
-            }
-          }
-
-          */
-        
-        
-        
-        
-        } else {
-          dataValue = value.constValue;
-        }
-        if(dataRet == null){
-          dataRet = dataValue;
-        } else {
-          //execute operation
-          if(dataRet instanceof CharSequence){
-            //It is only string concatenation, don't check the operator, '+'or '-' are admissible.
-            if(!(dataRet instanceof StringBuilder)){
-              dataRet = new StringBuilder((CharSequence)dataRet);
-            }
-            ((StringBuilder)dataRet).append(dataValue);
-          }
-          else if(dataRet instanceof Object){
-            
-          }
-        }
-      }
-      return dataRet;
-    }
-    
-
-    /**ascertains the text which is described in this Expression. Invokes {@link #ascertainValue(Object, Map, boolean, boolean, boolean)}
-     * and converts it to String.<br>
-     * This method does not support getting from any additional container or from datapool. Only environment variables
-     * or invocation of static methods are supported.
-     * @return
-     */
-    public String text(){ 
-      boolean bWriteErrorInOutput = true;
-      boolean bContainer = false;
-      boolean accessPrivate = true;
-      Object data = null;
-      Map<String, Object> localVariables = null;
-      try{ 
-        Object value = ascertainValue(data, localVariables, null, accessPrivate, bContainer, bWriteErrorInOutput, null);
-        return DataAccess.getStringFromObject(value, null);
-      } catch(IOException exc){
-        return "<??IOException>" + exc.getMessage() + "<??>";
-      }
-    }
-    
-
-    
   }
   
   
@@ -506,8 +375,16 @@ public class TextGenScript {
     public Object constValue;
     
     char operator;
+    
+    char unaryOperator;
+    
+    /**If need, a sub-content, maybe null.*/
+    public GenContent genString;
+    
 
     public void set_operator(String val){ operator = val.charAt(0); }
+    
+    public void set_unaryOperator(String val){ unaryOperator = val.charAt(0); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
     public void set_intValue(long val){ constValue = new Long(val); }
@@ -520,6 +397,11 @@ public class TextGenScript {
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
     public void set_charValue(String val){ constValue = new Character(val.charAt(0)); }
+    
+    /**From Zbnf, a part <:>...<.> */
+    public GenContent new_genString(){ return genString = new GenContent(); }
+    
+    public void add_genString(GenContent val){}
     
     @Override public String toString(){ return "value"; }
 
@@ -674,14 +556,15 @@ public class TextGenScript {
      * <tr><td>J</td><td>Object variable {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>P</td><td>Pipe variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>U</td><td>Buffer variable, {@link #text} contains the name of the variable</td></tr>
-     * <tr><td>I</td><td>(?:forInput?): {@link #subContent} contains build.script for any input element</td></tr>
-     * <tr><td>L</td><td>(?:forList?): {@link #subContent} contains build.script for any list element,</td></tr>
-     *                   whereby subContent.{@link GenContent#name} is the name of the list. </td></tr>
+     * <tr><td>S</td><td>String variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>L</td><td>Container variable, a list</td></tr>
+     * <tr><td>=</td><td>assignment of an expression to a variable.</td></tr>
      * <tr><td>B</td><td>statement block</td></tr>
      * <tr><td>C</td><td><:for:path> {@link #subContent} contains build.script for any list element,</td></tr>
      * <tr><td>E</td><td><:else> {@link #subContent} contains build.script for any list element,</td></tr>
      * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,</td></tr>
      * <tr><td>G</td><td><:elsif:condition:path> {@link #subContent} contains build.script for any list element,</td></tr>
+     * <tr><td>b</td><td>break</td></tr>
      * <tr><td>?</td><td><:if:...?gt> compare-operation in if</td></tr>
      * 
      * <tr><td>Z</td><td>a target,</td></tr>
@@ -698,7 +581,7 @@ public class TextGenScript {
     /**Any variable name of a script variable where the content should assigned to.
      * null if not used. */
     //String sVariableToAssign;
-    DataPath assignObj;
+    List<DataPath> assignObj;
     
     //public String value;
     
@@ -709,8 +592,6 @@ public class TextGenScript {
      * Maybe null if the subtext has not argument. It is null if it is not a subtext call or definition. */
     List<Argument> arguments;
     
-    
-    
     /**The statements in this sub-ScriptElement were executed if an exception throws
      * or if a command line invocation returns an error level greater or equal the {@link Iferror#errorLevel}.
      * If it is null, no exception handling is done.
@@ -719,14 +600,10 @@ public class TextGenScript {
      * the iferror-Block can contain an iferror too.
      * 
      */
-    Iferror iferror;
+    List<Onerror> onerror;
     
     
-    /**True if the block {@link Argument#subContent} contains at least one variable definition.
-     * In this case the execution of the ScriptElement as a block should be done with an separated set
-     * of variables because new variables should not merge between existing of the outer block.
-     */
-    boolean bContainsVariableDef;
+
     
     public ScriptElement(char whatisit, String text)
     { this.elementType = whatisit;
@@ -766,7 +643,8 @@ public class TextGenScript {
     /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
      */
     public ScriptElement new_textVariable(){
-      bContainsVariableDef = true; 
+      if(subContent == null){ subContent = new GenContent(); }
+      subContent.bContainsVariableDef = true; 
       return new ScriptElement('V', null); 
     } 
 
@@ -776,7 +654,8 @@ public class TextGenScript {
     /**Defines a variable which is able to use as pipe.
      */
     public ScriptElement new_Pipe(){
-      bContainsVariableDef = true; 
+      if(subContent == null){ subContent = new GenContent(); }
+      subContent.bContainsVariableDef = true; 
       return new ScriptElement('P', null); 
     } 
 
@@ -784,17 +663,39 @@ public class TextGenScript {
     
     /**Defines a variable which is able to use as pipe.
      */
-    public ScriptElement new_Buffer(){
-      bContainsVariableDef = true; 
+    public ScriptElement new_Stringb(){
+      if(subContent == null){ subContent = new GenContent(); }
+      subContent.bContainsVariableDef = true; 
       return new ScriptElement('U', null); 
     } 
 
-    public void add_Buffer(ScriptElement val){ subContent.content.add(val); }
+    public void add_Stringb(ScriptElement val){ subContent.content.add(val); }
+    
+    /**Defines a variable which is able to use as pipe.
+     */
+    public ScriptElement new_String(){
+      if(subContent == null){ subContent = new GenContent(); }
+      subContent.bContainsVariableDef = true; 
+      return new ScriptElement('S', null); 
+    } 
+
+    public void add_String(ScriptElement val){ subContent.content.add(val); }
+    
+    /**Defines a variable which is able to use as pipe.
+     */
+    public ScriptElement new_List(){
+      if(subContent == null){ subContent = new GenContent(); }
+      subContent.bContainsVariableDef = true; 
+      return new ScriptElement('L', null); 
+    } 
+
+    public void add_List(ScriptElement val){ subContent.content.add(val); }
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
     public ScriptElement new_objVariable(){ 
-      bContainsVariableDef = true; 
+      if(subContent == null){ subContent = new GenContent(); }
+      subContent.bContainsVariableDef = true; 
       return new ScriptElement('J', null); 
     } 
 
@@ -819,15 +720,38 @@ public class TextGenScript {
       if(arguments == null){ arguments = new ArrayList<Argument>(); }
       arguments.add(val); }
     
-    /**Set from ZBNF:  $<$?-assign> =  */
-    public void XXXset_assign(String val){
-      //sVariableToAssign = val;
-    }
     
-    
+    /**From Zbnf: [{ <datapath?-assign> = }] 
+     */
     public DataPath new_assign(){ return new DataPath(); }
     
-    public void add_assign(DataPath val){ assignObj = val; }
+    public void add_assign(DataPath val){ 
+      if(assignObj == null){ assignObj = new LinkedList<DataPath>(); }
+      assignObj.add(val); 
+    }
+
+    
+    public ScriptElement new_assignment(){ 
+      return new ScriptElement('=', null); 
+    } 
+
+    public void add_assignment(ScriptElement val){ subContent.content.add(val); }
+    
+    
+    /**From ZBNF: <code>< expression?+assignment></code>.
+     * The {@link #new_assignment()} creates this class, but the syntax is expression.
+     * Therefore SumValue are added to the @{@link Argument#expression} of this {@link ScriptElement}
+     * @return A new {@link SumValue} as syntax component
+     */
+    public SumValue new_value(){ return new SumValue(); }
+    
+    public void add_value(SumValue val){ 
+      if(expression == null){ expression = new Expression(); }
+      expression.values.add(val); 
+    }
+  
+    
+
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
@@ -845,15 +769,24 @@ public class TextGenScript {
     public void add_statementBlock(ScriptElement val){}
 
     
-    public Iferror new_iferror(){
-      iferror = new Iferror();
-      return iferror;
+    public Onerror new_onerror(){
+      return new Onerror();
     }
     
 
-    public void add_iferror(Iferror val){}
+    public void add_onerror(Onerror val){
+      if(subContent == null){ subContent = new GenContent(); }
+      if(onerror ==null){ onerror = new LinkedList<Onerror>(); }
+      onerror.add(val);      
+    }
 
-      
+    
+    public void set_breakBlock(){ 
+      ScriptElement contentElement = new ScriptElement('b', null);
+      subContent.content.add(contentElement);
+    }
+    
+ 
       
     public ScriptElement new_forContainer()
     { GenContent subGenContent = new GenContent(true);
@@ -1012,6 +945,7 @@ public class TextGenScript {
       case 'E': return "<:else>";
       case 'Z': return "<:target:" + name + ">";
       case 'Y': return "<:file>";
+      case 'b': return "break;";
       case 'X': return "<:subtext:" + name + ">";
       default: return "(??" + elementType + " " + text + "?)";
       }
@@ -1020,6 +954,17 @@ public class TextGenScript {
     
   }
 
+  
+  
+  public static class CmdLine extends ScriptElement
+  {
+    
+    CmdLine(){
+      super('c', null);
+    }
+    
+  };
+  
   
   
   public static class IfCondition extends ScriptElement
@@ -1062,18 +1007,15 @@ public class TextGenScript {
   
   /**This class contains expressions for error handling.
    */
-  public final static class Iferror extends ScriptElement
+  public final static class Onerror extends ScriptElement
   {
     /**From ZBNF */
     public int errorLevel;
     
     
-    /**From ZBNF */
-    public boolean breakBlock;
-    
-    
+    char errorType = '?';
  
-    Iferror(){
+    Onerror(){
       super('B', null);
     }
  }
@@ -1097,6 +1039,14 @@ public class TextGenScript {
     
     public final List<ScriptElement> content = new ArrayList<ScriptElement>();
     
+    
+    /**True if the block {@link Argument#subContent} contains at least one variable definition.
+     * In this case the execution of the ScriptElement as a block should be done with an separated set
+     * of variables because new variables should not merge between existing of the outer block.
+     */
+    boolean bContainsVariableDef;
+
+    
     /**Scripts for some local variable. This scripts where executed with current data on start of processing this genContent.
      * The generator stores the results in a Map<String, String> localVariable. 
      * 
@@ -1117,6 +1067,18 @@ public class TextGenScript {
         
     
     //public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
+    
+    /**Set from ZBNF:  (\?*<$?dataText>\?) */
+    public ScriptElement new_dataText(){ return new ScriptElement('e', null); }
+    
+    /**Set from ZBNF:  (\?*<*dataText>\?) */
+    public void add_dataText(ScriptElement val){ 
+      content.add(val); 
+    }
+    
+    public void set_text(String text){
+      content.add(new ScriptElement('t', text)); 
+    }
     
     
     public void set_name(String name){
