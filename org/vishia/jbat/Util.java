@@ -1,13 +1,13 @@
-package org.vishia.zText;
+package org.vishia.jbat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class Support
+public class Util
 {
   
-  protected static Support singleton = new Support();
+  protected static Util singleton = new Util();
   
   protected PrintStream systemOutOld, systemErrOld;
   protected ByteArrayOutputStream consoleOut = new ByteArrayOutputStream();

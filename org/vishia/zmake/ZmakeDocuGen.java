@@ -3,7 +3,8 @@ package org.vishia.zmake;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.vishia.zTextGen.TextGenerator;
+
+import org.vishia.jbat.JbatExecuter;
 import org.vishia.zmake.ZmakeUserScript.ZbnfUserFilepath;
 
 /**This class extends a ZmakeUserScript.UserScript to hold the data from a docuGen description file for generating
@@ -81,7 +82,7 @@ public class ZmakeDocuGen extends ZmakeUserScript.UserScript
   
   
   
-  public ZmakeDocuGen(TextGenerator jbatExecuter){
+  public ZmakeDocuGen(JbatExecuter jbatExecuter){
     super(jbatExecuter);
   }
  

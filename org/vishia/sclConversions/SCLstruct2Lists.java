@@ -11,15 +11,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+
 import org.vishia.byteData.PositionElementInStruct;
+import org.vishia.jbat.JbatExecuter;
+import org.vishia.jbat.JbatGenScript;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.util.ShortenString;
-import org.vishia.zTextGen.TextGenScript;
-import org.vishia.zTextGen.TextGenerator;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
@@ -883,7 +884,7 @@ variablenBlock::=
      */
     private boolean generateOutFiles(String sPathSrc) throws IOException
     {
-      TextGenerator textGen = new TextGenerator(console);
+      JbatExecuter textGen = new JbatExecuter(console);
       
       if(output !=null){
         output.write("# WinCC flexible 2008 Variablen-Import\r\n");
@@ -925,7 +926,7 @@ variablenBlock::=
       + "<.file>"
       ;
       Writer sclOut;
-      TextGenScript genScript = new TextGenScript(console);
+      JbatGenScript genScript = new JbatGenScript(console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{

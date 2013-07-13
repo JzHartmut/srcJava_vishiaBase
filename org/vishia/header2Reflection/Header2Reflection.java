@@ -73,7 +73,7 @@ public class Header2Reflection
    * <li>2013-04-02 Hartnut chg: if a pointer is given in for exprSizeType($$$) in a offset file, "void*" is used.
    *   The pointer type may be a unknown type (struct type_t*) and its sizeof(type*) is unknown therefore in compile time.
    *   use sizeof(void*), it is the same.
-   * <li>2012-10-21 Hartmut created. Some algorithm are copied from {@link org.vishia.zTextGen.TextGenerator} in this class.
+   * <li>2012-10-21 Hartmut created. Some algorithm are copied from {@link org.vishia.jbat.JbatExecuter} in this class.
    *   That algorithm are able to use independent in some applications.
    * </ul>
    * 

@@ -36,6 +36,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
 
+
+import org.vishia.jbat.Zbnf2Text;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
@@ -45,7 +47,6 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
-import org.vishia.zTextGen.Zbnf2Text;
 import org.vishia.zbnf.ZbnfParser;
 
 

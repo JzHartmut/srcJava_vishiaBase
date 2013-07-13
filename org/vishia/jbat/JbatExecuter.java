@@ -1,4 +1,4 @@
-package org.vishia.zTextGen;
+package org.vishia.jbat;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,12 +11,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+
 import org.vishia.cmd.CmdExecuter;
+import org.vishia.jbat.JbatGenScript.ZbnfDataPathElement;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
-import org.vishia.zTextGen.TextGenScript.ZbnfDataPathElement;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -49,32 +50,32 @@ import org.vishia.zTextGen.TextGenScript.ZbnfDataPathElement;
  * @author Hartmut
  *
  */
-public class TextGenerator {
+public class JbatExecuter {
   
   
   /**Version and history
    * <ul>
-   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link TextGenScript.Expression#ascertainValue(Object, Map, boolean, boolean, boolean)}.
+   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link JbatGenScript.Expression#ascertainValue(Object, Map, boolean, boolean, boolean)}.
    * <li>2013-01-12 Hartmut chg: improvements while documentation. Some syntax details. Especially handling of visibility of variables.
    * <li>2013-01-02 Hartmut chg: The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    *   But a script-global variable referred with {@link #listScriptVariables} is defined only one time on start of text generation
-   *   with the routine {@link TextGenerator#genScriptVariables(TextGenScript, Object, boolean)}.  
-   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zTextGen.TextGenScript.Expression, Map, boolean)} now uses
-   *   an {@link TextGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
+   *   with the routine {@link JbatExecuter#genScriptVariables(JbatGenScript, Object, boolean)}.  
+   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.jbat.JbatGenScript.Expression, Map, boolean)} now uses
+   *   an {@link JbatGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
    *   without extra dataPath, only with a ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link TextGenScript.Expression#text} if a data path is given, use for formatting a numerical value.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link JbatGenScript.Expression#text} if a data path is given, use for formatting a numerical value.
    * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
    *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
-   *   {@link #genContent(TextGenScript, Object, boolean, Appendable)} able to call extra especially for Zmake, currDir.
+   *   {@link #genContent(JbatGenScript, Object, boolean, Appendable)} able to call extra especially for Zmake, currDir.
    *   It is possible to define any script variables in the generating script and use it then to control getting data 
    *   from the input data.
    * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-11-04 Hartmut chg: adaption to DataAccess respectively distinguish between getting a container or an simple element.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
-   * <li>2012-10-10 Usage of {@link TextGenScript}.
+   * <li>2012-10-10 Usage of {@link JbatGenScript}.
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
    *   was need.
@@ -126,7 +127,7 @@ public class TextGenerator {
   protected Appendable outFile;
   
   /**The java prepared generation script. */
-  TextGenScript genScript;
+  JbatGenScript genScript;
   
   /**Instance for the main script part. */
   //Gen_Content genFile;
@@ -142,7 +143,7 @@ public class TextGenerator {
   String newline = "\r\n";
   
 
-  public TextGenerator(MainCmdLogging_ifc log){
+  public JbatExecuter(MainCmdLogging_ifc log){
     this.log = log;
     bWriteErrorInOutput = false;
   }
@@ -163,7 +164,7 @@ public class TextGenerator {
     String sError = null;
     this.outFile = out;
     scriptVariables.put("file", outFile);
-    TextGenScript genScript = new TextGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
+    JbatGenScript genScript = new JbatGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
     try { genScript.translateAndSetGenCtrl(fileScript);
     } catch (Exception exc) {
       sError = exc.getMessage();
@@ -186,11 +187,11 @@ public class TextGenerator {
   /**Parses and returns a Java-prepared generation script form a file.
    * @param fileScript The file which contains the script.
    * @param testOut If not null, the content of the generation script will be reported there.
-   * @return The generation script ready to use for {@link #genContent(TextGenScript, Object, boolean, Appendable)}.
+   * @return The generation script ready to use for {@link #genContent(JbatGenScript, Object, boolean, Appendable)}.
    */
-  public TextGenScript XXXparseGenScript(File fileScript, Appendable testOut)
+  public JbatGenScript XXXparseGenScript(File fileScript, Appendable testOut)
   {
-    genScript = new TextGenScript(log);
+    genScript = new JbatGenScript(log);
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     try{ 
       genScript.translateAndSetGenCtrl(fileZbnf4GenCtrl, fileScript);
@@ -217,17 +218,17 @@ public class TextGenerator {
   
   /**Generates script-global variables.
    * 
-   * @param genScript It should be the same how used on {@link #genContent(TextGenScript, Object, boolean, Appendable)}
+   * @param genScript It should be the same how used on {@link #genContent(JbatGenScript, Object, boolean, Appendable)}
    *   but it may be another one for special cases.
    * @param userData Used userdata for content of scriptvariables. It should be the same how used on 
-   *   {@link #genContent(TextGenScript, Object, boolean, Appendable)} but it may be another one for special cases.
+   *   {@link #genContent(JbatGenScript, Object, boolean, Appendable)} but it may be another one for special cases.
    * @param accessPrivate true than access to private data of userData
    * @return The built script variables. 
-   *   One can evaluate some script variables before running {@link #genContent(TextGenScript, Object, boolean, Appendable)}.
+   *   One can evaluate some script variables before running {@link #genContent(JbatGenScript, Object, boolean, Appendable)}.
    *   Especially it is used for {@link org.vishia.zmake.Zmake to set the currDir.} 
    * @throws IOException
    */
-  public Map<String, Object> genScriptVariables(TextGenScript genScript, Object userData, boolean accessPrivate) 
+  public Map<String, Object> genScriptVariables(JbatGenScript genScript, Object userData, boolean accessPrivate) 
   throws IOException
   {
     this.genScript = genScript;
@@ -242,7 +243,7 @@ public class TextGenerator {
     scriptVariables.put("err", System.err);
     scriptVariables.put("jbatAccess", this);
 
-    for(TextGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
+    for(JbatGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
       Gen_Content genVariable = new Gen_Content(scriptVariables); //NOTE: use recent scriptVariables.
       genVariable.genContent(scriptVariableScript.getSubContent(), uVariable, false);
@@ -263,7 +264,7 @@ public class TextGenerator {
    * @return If null, it is okay. Elsewhere a readable error message.
    * @throws IOException only if out.append throws it.
    */
-  public String genContent(TextGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
+  public String genContent(JbatGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
   throws IOException
   {
     this.accessPrivate = accessPrivate;
@@ -273,7 +274,7 @@ public class TextGenerator {
     if(!bScriptVariableGenerated){
       genScriptVariables(genScript, userData, accessPrivate);
     }
-    TextGenScript.ScriptElement contentScript = genScript.getFileScript();
+    JbatGenScript.ScriptElement contentScript = genScript.getFileScript();
     Gen_Content genFile = new Gen_Content(scriptVariables);
     String sError = genFile.genContent(contentScript.subContent, out, false);
     return sError;
@@ -283,7 +284,7 @@ public class TextGenerator {
   
 
   
-  Object getContent(TextGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
+  Object getContent(JbatGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
   throws IllegalArgumentException, IOException, Throwable
   { if(arg.expression !=null){
       return ascertainValue(arg.expression, data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput);
@@ -360,7 +361,7 @@ public class TextGenerator {
             zd.addActualArgument(oValue);
           }
           */
-          for(TextGenScript.Expression expr: zd.actualValue){
+          for(JbatGenScript.Expression expr: zd.actualValue){
             Object oValue = ascertainValue(expr, data1, localVariables, null, accessPrivate, false, bWriteErrorInOutput);
             if(oValue == null){
               oValue = "??: path access: " + dataPath + "?>";
@@ -409,12 +410,12 @@ public class TextGenerator {
    * @return the Object which represents the expression in the given environment.
    * @throws IllegalArgumentException
    */
-  Object ascertainValue(TextGenScript.Expression expr, Object data, Map<String, Object> localVariables, TextGenScript.Argument arg
+  Object ascertainValue(JbatGenScript.Expression expr, Object data, Map<String, Object> localVariables, JbatGenScript.Argument arg
       , boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput
   )
   throws IllegalArgumentException, IOException, Throwable
   { Object dataRet = null;
-    for(TextGenScript.SumValue value: expr.values){   //All SumValue
+    for(JbatGenScript.SumValue value: expr.values){   //All SumValue
       List<DataAccess.DatapathElement> dataRef = value.datapath;
       Object dataValue;
       if(dataRef !=null){
@@ -456,7 +457,7 @@ public class TextGenerator {
    * or invocation of static methods are supported.
    * @return
    */
-  public String ascertainText(TextGenScript.Expression expr){ 
+  public String ascertainText(JbatGenScript.Expression expr){ 
     boolean bWriteErrorInOutput = true;
     boolean bContainer = false;
     boolean accessPrivate = true;
@@ -503,7 +504,7 @@ public class TextGenerator {
   {
     //final Gen_Content parent;
     
-    /**Generated content of local variables in this nested level including the {@link TextGenerator#scriptVariables}.
+    /**Generated content of local variables in this nested level including the {@link JbatExecuter#scriptVariables}.
      * The variables are type invariant on language level. The type is checked and therefore 
      * errors are detected on runtime only. */
     final Map<String, Object> localVariables;
@@ -530,15 +531,15 @@ public class TextGenerator {
      * @return
      * @throws IOException 
      */
-    public String genContent(TextGenScript.GenContent contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
+    public String genContent(JbatGenScript.GenContent contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
     //throws Exception
     {
       String sError = null;
       Appendable uBuffer = out;
       //Generate direct requested output. It is especially on inner content-scripts.
-      Iterator<TextGenScript.ScriptElement> iter = contentScript.content.iterator();
+      Iterator<JbatGenScript.ScriptElement> iter = contentScript.content.iterator();
       while(iter.hasNext() && sError == null){
-        TextGenScript.ScriptElement contentElement = iter.next();
+        JbatGenScript.ScriptElement contentElement = iter.next();
         //for(TextGenScript.ScriptElement contentElement: contentScript.content){
         try{    
           switch(contentElement.elementType){
@@ -573,7 +574,7 @@ public class TextGenerator {
           case 'V': { //create a new local variable.
             StringBuilder uBufferVariable = new StringBuilder();
             Gen_Content genVariable = new Gen_Content(localVariables);
-            TextGenScript.GenContent content = contentElement.getSubContent();
+            JbatGenScript.GenContent content = contentElement.getSubContent();
             genVariable.genContent(content, uBufferVariable, false);
             //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
             localVariables.put(contentElement.name, uBufferVariable);
@@ -645,9 +646,9 @@ public class TextGenerator {
           if(contentElement.onerror !=null){
             String sError1 = exc.getMessage();
             localVariables.put("errorMsg", sError1);
-            Iterator<TextGenScript.Onerror> iterError = contentElement.onerror.iterator();
+            Iterator<JbatGenScript.Onerror> iterError = contentElement.onerror.iterator();
             while(!found && iterError.hasNext()) {
-              TextGenScript.Onerror onerror = iterError.next();
+              JbatGenScript.Onerror onerror = iterError.next();
               found = onerror.errorType == '?';
               if(found){
                 sError = genSubContent(onerror, out);
@@ -667,9 +668,9 @@ public class TextGenerator {
     
     
     
-    void generateForContainer(TextGenScript.ScriptElement contentElement, Appendable out) throws Throwable
+    void generateForContainer(JbatGenScript.ScriptElement contentElement, Appendable out) throws Throwable
     {
-      TextGenScript.GenContent subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
+      JbatGenScript.GenContent subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
         stop();
       Object container = getContent(contentElement, localVariables, true);
@@ -709,7 +710,7 @@ public class TextGenerator {
     
     
     
-    void generateIfContainerHasNext(TextGenScript.ScriptElement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
+    void generateIfContainerHasNext(JbatGenScript.ScriptElement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
       if(bContainerHasNext){
         //(new Gen_Content(this, false)).
         genContent(hasNextScript.getSubContent(), out, false);
@@ -720,15 +721,15 @@ public class TextGenerator {
     
     /**it contains maybe more as one if block and else. 
      * @throws Throwable */
-    void generateIfStatement(TextGenScript.ScriptElement ifStatement, Appendable out) throws Throwable{
-      Iterator<TextGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
+    void generateIfStatement(JbatGenScript.ScriptElement ifStatement, Appendable out) throws Throwable{
+      Iterator<JbatGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
-        TextGenScript.ScriptElement contentElement = iter.next();
+        JbatGenScript.ScriptElement contentElement = iter.next();
         switch(contentElement.elementType){
           case 'G': { //if-block
             
-            found = generateIfBlock((TextGenScript.IfCondition)contentElement, out, iter.hasNext());
+            found = generateIfBlock((JbatGenScript.IfCondition)contentElement, out, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
@@ -744,7 +745,7 @@ public class TextGenerator {
     
     
     
-    boolean generateIfBlock(TextGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
+    boolean generateIfBlock(JbatGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
     throws Throwable
     {
       //Object check = getContent(ifBlock, localVariables, false);
@@ -799,7 +800,7 @@ public class TextGenerator {
      * @param contentElement
      * @throws IOException 
      */
-    void textAppendToVarOrOut(TextGenScript.ScriptElement contentElement) throws IOException{
+    void textAppendToVarOrOut(JbatGenScript.ScriptElement contentElement) throws IOException{
       
       String name = contentElement.name;
       Appendable out1;
@@ -842,7 +843,7 @@ public class TextGenerator {
     
     
     
-    void genSubtext(TextGenScript.ScriptElement contentElement, Appendable out) 
+    void genSubtext(JbatGenScript.ScriptElement contentElement, Appendable out) 
     throws IllegalArgumentException, Throwable
     {
       boolean ok = true;
@@ -854,7 +855,7 @@ public class TextGenerator {
       } else {
         nameSubtext = contentElement.name;
       }
-      TextGenScript.ScriptElement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
+      JbatGenScript.ScriptElement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
         ok = writeError("??: *subtext:" + nameSubtext + " not found.??", out);
       } else {
@@ -862,13 +863,13 @@ public class TextGenerator {
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
-          for(TextGenScript.Argument formalArg: subtextScript.arguments) {
+          for(JbatGenScript.Argument formalArg: subtextScript.arguments) {
             check.put(formalArg.name, new CheckArgument(formalArg));
           }
           //process all actual arguments:
-          List<TextGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
+          List<JbatGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
           if(referenceSettings !=null){
-            for( TextGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
+            for( JbatGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
               Object ref;
               ref = getContent(referenceSetting, localVariables, false);       //actual value
               if(ref !=null){
@@ -930,7 +931,7 @@ public class TextGenerator {
      * @return
      * @throws IOException
      */
-    public String genSubContent(TextGenScript.ScriptElement script, Appendable out) 
+    public String genSubContent(JbatGenScript.ScriptElement script, Appendable out) 
     throws IOException
     {
       Gen_Content genContent;
@@ -947,7 +948,7 @@ public class TextGenerator {
 
 
     
-    void callCmd(TextGenScript.ScriptElement contentElement) 
+    void callCmd(JbatGenScript.ScriptElement contentElement) 
     throws IllegalArgumentException, Throwable{
       boolean ok = true;
       final String sCmd;
@@ -962,7 +963,7 @@ public class TextGenerator {
       if(contentElement.arguments !=null){
         args = new String[contentElement.arguments.size() +1];
         int iArg = 1;
-        for(TextGenScript.Argument arg: contentElement.arguments){
+        for(JbatGenScript.Argument arg: contentElement.arguments){
           Object oArg = getContent(arg, localVariables, false);
           args[iArg++] = oArg.toString();
         }
@@ -973,7 +974,7 @@ public class TextGenerator {
       List<Appendable> outCmd;
       if(contentElement.assignObj !=null){
         outCmd = new LinkedList<Appendable>();
-        for(TextGenScript.DataPath assignObj1 : contentElement.assignObj){
+        for(JbatGenScript.DataPath assignObj1 : contentElement.assignObj){
           Object oOutCmd = getDataObj(assignObj1.datapath, data, localVariables, false);
           //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
           if(oOutCmd instanceof Appendable){
@@ -1014,12 +1015,12 @@ public class TextGenerator {
   private class CheckArgument
   {
     /**Reference to the formal argument. */
-    final TextGenScript.Argument formalArg;
+    final JbatGenScript.Argument formalArg;
     
     /**Set to true if this argument is used. */
     boolean used;
     
-    CheckArgument(TextGenScript.Argument formalArg){ this.formalArg = formalArg; }
+    CheckArgument(JbatGenScript.Argument formalArg){ this.formalArg = formalArg; }
   }
   
   

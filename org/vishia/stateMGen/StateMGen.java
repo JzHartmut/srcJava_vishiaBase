@@ -11,12 +11,13 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
+
+import org.vishia.jbat.JbatExecuter;
+import org.vishia.jbat.OutputDataTree;
+import org.vishia.jbat.Zbnf2Text;
+import org.vishia.jbat.Zbnf2Text.Out;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.zTextGen.OutputDataTree;
-import org.vishia.zTextGen.TextGenerator;
-import org.vishia.zTextGen.Zbnf2Text;
-import org.vishia.zTextGen.Zbnf2Text.Out;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
@@ -518,7 +519,7 @@ public class StateMGen {
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        TextGenerator generator = new TextGenerator(console);
+        JbatExecuter generator = new JbatExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }

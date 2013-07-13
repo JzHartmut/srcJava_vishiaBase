@@ -1,4 +1,4 @@
-package org.vishia.zTextGen;
+package org.vishia.jbat;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -24,13 +24,13 @@ public class Jbat
   
   protected final Args args;
   
-  protected final TextGenerator executer;
+  protected final JbatExecuter executer;
   
   
   public Jbat(Args args, MainCmdLogging_ifc log){
     this.log = log;
     this.args = args;
-    this.executer = new TextGenerator(log);
+    this.executer = new JbatExecuter(log);
   }
   
   

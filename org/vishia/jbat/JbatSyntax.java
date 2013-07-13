@@ -1,6 +1,6 @@
-package org.vishia.zTextGen;
+package org.vishia.jbat;
 
-public final class TextGenSyntax {
+public final class JbatSyntax {
 
   
   /**Version, history and license.

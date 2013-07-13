@@ -1,4 +1,4 @@
-package org.vishia.zTextGen;
+package org.vishia.jbat;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,7 +31,7 @@ import org.vishia.zbnf.ZbnfParser;
  * @author Hartmut Schorrig
  *
  */
-public class TextGenScript {
+public class JbatGenScript {
   /**Version, history and license.
    * <ul>
    * <li>2013-06-20 Hartmut new: Syntax with extArg for textual Arguments in extra block
@@ -64,7 +64,7 @@ public class TextGenScript {
    *   {@link ScriptElement#elementType}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
    * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: datapath::={ <$?path>? \.}. 
    *   instead dataAccess::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
-   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.zTextGen.TextGenerator} now too.
+   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.jbat.JbatExecuter} now too.
    * <li>2011-03-00 created.
    *   It is the concept of specialized {@link GralWidget}.
    * </ul>
@@ -122,7 +122,7 @@ public class TextGenScript {
 
   public String scriptclassMain;
 
-  public TextGenScript(MainCmdLogging_ifc console)
+  public JbatGenScript(MainCmdLogging_ifc console)
   { this.console = console;
   }
 
@@ -140,7 +140,7 @@ public class TextGenScript {
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
+    return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
   }
   
 
@@ -157,7 +157,7 @@ public class TextGenScript {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
+    return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
   }
   
   
@@ -165,7 +165,7 @@ public class TextGenScript {
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), new StringPart(spGenCtrl), null, null) !=null;
+      return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), null, null) !=null;
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -174,7 +174,7 @@ public class TextGenScript {
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      return translateAndSetGenCtrl(new StringPart(TextGenSyntax.syntax), spGenCtrl, null, null) !=null;
+      return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), spGenCtrl, null, null) !=null;
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -187,7 +187,7 @@ public class TextGenScript {
    * <br><br>
    * This routine will be called recursively if scripts are included.
    * 
-   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link TextGenSyntax#syntax}.
+   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link JbatSyntax#syntax}.
    * @param spGenCtrl The input file with the genCtrl statements.
    * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
    * @param fileParent directory of the used file as start directory for included scripts. 
@@ -1100,7 +1100,7 @@ public class TextGenScript {
   
   
   /**Main class for ZBNF parse result.
-   * This class has the enclosing class to store {@link TextGenScript#subtextScripts}, {@link TextGenScript#listScriptVariables}
+   * This class has the enclosing class to store {@link JbatGenScript#subtextScripts}, {@link JbatGenScript#listScriptVariables}
    * etc. while parsing the script. The <code><:file>...<.file></code>-script is stored here locally
    * and used as the main file script only if it is the first one of main or included script. The same behaviour is used  
    * <pre>

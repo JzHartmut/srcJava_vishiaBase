@@ -1,4 +1,4 @@
-package org.vishia.zTextGen;
+package org.vishia.jbat;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -111,7 +111,7 @@ public class Zbnf2Text extends Zbnf2Xml
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        TextGenerator generator = new TextGenerator(console);
+        JbatExecuter generator = new JbatExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }

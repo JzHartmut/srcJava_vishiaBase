@@ -6,10 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+
+import org.vishia.jbat.JbatExecuter;
+import org.vishia.jbat.JbatGenScript;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
-import org.vishia.zTextGen.TextGenScript;
-import org.vishia.zTextGen.TextGenerator;
 
 
 public class ZmakeUserScript
@@ -43,7 +44,7 @@ public class ZmakeUserScript
    * <li>2012-12-08 Hartmut chg: improve access rotoutines.
    * <li>2012-11-29 Hartmut new: The {@link UserFilePath} now contains all access routines to parts of the file path
    *   which were contained in the ZmakeGenerator class before. This allows to use this with the common concept
-   *   of a text generator using {@link org.vishia.zTextGen.TextGenerator}. That Textgenerator does not know such
+   *   of a text generator using {@link org.vishia.jbat.JbatExecuter}. That Textgenerator does not know such
    *   file parts and this {@link UserFilepath} class because it is more universal. Access is possible 
    *   with that access methods {@link UserFilepath#localPath()} etc. To implement that a {@link UserFilepath}
    *   knows its file-set where it is contained in, that is {@link UserFilepath#itsFileset}. 
@@ -350,7 +351,7 @@ public class ZmakeUserScript
     
     UserFilepath filepath;
     
-    TextGenScript.Expression expression;
+    JbatGenScript.Expression expression;
     
     //public UserString string;
     
@@ -364,9 +365,9 @@ public class ZmakeUserScript
     public ZbnfUserFilepath new_file(){ return new ZbnfUserFilepath(script); }
     public void add_file(ZbnfUserFilepath val){ filepath = val.filepath; }
     
-    public TextGenScript.Expression new_expression(){ return new TextGenScript.Expression(); }
+    public JbatGenScript.Expression new_expression(){ return new JbatGenScript.Expression(); }
     
-    public void add_expression(TextGenScript.Expression val){ expression = val; }
+    public void add_expression(JbatGenScript.Expression val){ expression = val; }
     
     //public UserString new_string(){ return string = new UserString(); }
     //public void set_string(UserString val){} //left empty, is set already.
@@ -466,7 +467,7 @@ public class ZmakeUserScript
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
             } else if(variable.expression !=null){
-              TextGenerator gen = parentTarget.script.jbatexecuter;
+              JbatExecuter gen = parentTarget.script.jbatexecuter;
               u.append(gen.ascertainText(variable.expression));
               //variable.expression.addtext(u);
             } else {
@@ -786,7 +787,7 @@ input::=
     /**It may be necessary to evaluate parts of zmake user script, especially script variables. 
      * 
      */
-    final TextGenerator jbatexecuter;
+    final JbatExecuter jbatexecuter;
     
     int nextNr = 0;
     
@@ -815,7 +816,7 @@ input::=
     public void add_target(UserTarget value){ targets.add(value); }
     
     
-    public UserScript(TextGenerator jbatexecuter){
+    public UserScript(JbatExecuter jbatexecuter){
       this.jbatexecuter = jbatexecuter;
     }
     

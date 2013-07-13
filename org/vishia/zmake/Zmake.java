@@ -11,6 +11,12 @@ import java.text.ParseException;
 import java.util.Map;
 
 
+
+import org.vishia.jbat.JbatExecuter;
+import org.vishia.jbat.JbatGenScript;
+import org.vishia.jbat.JbatSyntax;
+import org.vishia.jbat.OutputDataTree;
+import org.vishia.jbat.Zbnf2Text;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -24,11 +30,6 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
-import org.vishia.zTextGen.OutputDataTree;
-import org.vishia.zTextGen.TextGenScript;
-import org.vishia.zTextGen.TextGenSyntax;
-import org.vishia.zTextGen.TextGenerator;
-import org.vishia.zTextGen.Zbnf2Text;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
@@ -143,7 +144,7 @@ public class Zmake extends Zbnf2Text
   /**
    * 
    */
-  private final TextGenScript genScript;
+  private final JbatGenScript genScript;
   
   /**String path for the absolute tmp dir. */
   //private String tmpAbs;  
@@ -201,7 +202,7 @@ public class Zmake extends Zbnf2Text
           }
           helpOut.append("\n\n\n");
           helpOut.append("==Syntax of the ZmakeGenCtrlScript================================================================================\n");
-          helpOut.append(TextGenSyntax.syntax);
+          helpOut.append(JbatSyntax.syntax);
           helpOut.append("==================================================================================================================\n");
           helpOut.close();
         }
@@ -230,7 +231,7 @@ public class Zmake extends Zbnf2Text
   { super(args, console);
     this.args = args;
     this.console = console;
-    genScript = new TextGenScript(console);
+    genScript = new JbatGenScript(console);
   }
   
   
@@ -370,7 +371,7 @@ public class Zmake extends Zbnf2Text
    * @throws ParseException
    */
   public static ZmakeUserScript.UserScript parseUserScript(File fileZmakeUserscript
-  , String sZbnf, MainCmdLogging_ifc console, TextGenerator jbatExecuter, String sCheckXmlOutput) 
+  , String sZbnf, MainCmdLogging_ifc console, JbatExecuter jbatExecuter, String sCheckXmlOutput) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException, ParseException 
   {
     ZmakeUserScript.UserScript zmakeInput;
@@ -510,8 +511,8 @@ public class Zmake extends Zbnf2Text
     //Parse the users zmake script:
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
-    TextGenerator gen = new TextGenerator(console);
-    TextGenScript genScript = new TextGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
+    JbatExecuter gen = new JbatExecuter(console);
+    JbatGenScript genScript = new JbatGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
     File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
     genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
     
