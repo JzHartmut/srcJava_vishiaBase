@@ -45,23 +45,23 @@ public class JbatGenScript {
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    * <li>2012-12-24 Hartmut chg: Now the 'ReferencedData' are 'namedArgument' and it uses 'dataAccess' inside. 
-   *   The 'dataAccess' is represented by a new {@link ScriptElement}('e',...) which can have {@link Expression#constValue} 
+   *   The 'dataAccess' is represented by a new {@link Statement}('e',...) which can have {@link Expression#constValue} 
    *   instead a {@link Expression#datapath}. 
    * <li>2012-12-24 Hartmut chg: {@link ZbnfDataPathElement} is a derived class of {@link DataAccess.DatapathElement}
    *   which contains destinations for argument parsing of a called Java-subroutine in a dataPath.  
-   * <li>2012-12-23 Hartmut chg: A {@link ScriptElement} and a {@link Argument} have the same usage aspects for arguments
+   * <li>2012-12-23 Hartmut chg: A {@link Statement} and a {@link Argument} have the same usage aspects for arguments
    *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
    * <li>2012-12-23 Hartmut new: formatText in the {@link Expression#text} if a data path is given, use for formatting a numerical value.   
    * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #translateAndSetGenCtrl(StringPart)} etc.
    * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
-   * <li>2012-11-24 Hartmut chg: @{@link ScriptElement#datapath} with {@link DataAccess.DatapathElement} 
+   * <li>2012-11-24 Hartmut chg: @{@link Statement#datapath} with {@link DataAccess.DatapathElement} 
    * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
-   * <li>2012-10-19 Hartmut chg: Renaming: {@link ScriptElement} instead Zbnf_ScriptElement (shorter). The Scriptelement
+   * <li>2012-10-19 Hartmut chg: Renaming: {@link Statement} instead Zbnf_ScriptElement (shorter). The Scriptelement
    *   is the component for the genContent-Elements now instead Zbnf_genContent. This class contains attributes of the
-   *   content elements. Only if a sub content is need, an instance of Zbnf_genContent is created as {@link ScriptElement#subContent}.
-   *   Furthermore the {@link ScriptElement#subContent} should be final because it is only created if need for the special 
-   *   {@link ScriptElement#elementType}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
+   *   content elements. Only if a sub content is need, an instance of Zbnf_genContent is created as {@link Statement#subContent}.
+   *   Furthermore the {@link Statement#subContent} should be final because it is only created if need for the special 
+   *   {@link Statement#elementType}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
    * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: datapath::={ <$?path>? \.}. 
    *   instead dataAccess::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
    * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.jbat.JbatExecuter} now too.
@@ -101,23 +101,23 @@ public class JbatGenScript {
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
   //ZbnfMainGenCtrl zTextGenCtrl;
   
-  final Map<String, ScriptElement> zmakeTargets = new TreeMap<String, ScriptElement>();
+  final Map<String, Statement> zmakeTargets = new TreeMap<String, Statement>();
   
-  final Map<String, ScriptElement> subtextScripts = new TreeMap<String, ScriptElement>();
+  final Map<String, Statement> subtextScripts = new TreeMap<String, Statement>();
   
   
   
-  final Map<String,ScriptElement> indexScriptVariables = new TreeMap<String,ScriptElement>();
+  final Map<String,Statement> indexScriptVariables = new TreeMap<String,Statement>();
 
   /**List of the script variables in order of creation in the zmakeCtrl-file.
    * The script variables can contain inputs of other variables which are defined before.
    * Therefore the order is important.
    */
-  final List<ScriptElement> listScriptVariables = new ArrayList<ScriptElement>();
+  final List<Statement> listScriptVariables = new ArrayList<Statement>();
 
   /**The script element for the whole file. It shall contain calling of <code><*subtext:name:...></code> 
    */
-  ScriptElement scriptFile;
+  Statement scriptFile;
   
 
   public String scriptclassMain;
@@ -271,28 +271,28 @@ public class JbatGenScript {
    * @param name The name of given < ?translator> in the end-users script.
    * @return null if the Zmake-target is not found.
    */
-  public final GenContent searchZmakeTaget(String name){ 
-    ScriptElement target = zmakeTargets.get(name);
+  public final StatementList searchZmakeTaget(String name){ 
+    Statement target = zmakeTargets.get(name);
     return target == null ? null : target.subContent;
   }
   
   
   public final String getScriptclass(){ return scriptclassMain; }
   
-  public final ScriptElement getFileScript(){ return scriptFile; }
+  public final Statement getFileScript(){ return scriptFile; }
   
   
-  public ScriptElement getSubtextScript(String name){ return subtextScripts.get(name); }
+  public Statement getSubtextScript(String name){ return subtextScripts.get(name); }
   
-  public ScriptElement xxxgetScriptVariable(String sName)
+  public Statement xxxgetScriptVariable(String sName)
   {
-    ScriptElement content = indexScriptVariables.get(sName);
+    Statement content = indexScriptVariables.get(sName);
     return content;
   }
   
   
   
-  public List<ScriptElement> getListScriptVariables(){ return listScriptVariables; }
+  public List<Statement> getListScriptVariables(){ return listScriptVariables; }
 
 
 
@@ -324,7 +324,7 @@ public class JbatGenScript {
 
     
     /**From Zbnf.
-     * The Arguments of type {@link ScriptElement} have to be resolved by evaluating its value in the data context. 
+     * The Arguments of type {@link Statement} have to be resolved by evaluating its value in the data context. 
      * The value is stored in {@link DataAccess.DatapathElement#addActualArgument(Object)}.
      * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
      * @param val The Scriptelement which describes how to get the value.
@@ -379,7 +379,7 @@ public class JbatGenScript {
     char unaryOperator;
     
     /**If need, a sub-content, maybe null.*/
-    public GenContent genString;
+    public StatementList genString;
     
 
     public void set_operator(String val){ operator = val.charAt(0); }
@@ -399,9 +399,9 @@ public class JbatGenScript {
     public void set_charValue(String val){ constValue = new Character(val.charAt(0)); }
     
     /**From Zbnf, a part <:>...<.> */
-    public GenContent new_genString(){ return genString = new GenContent(); }
+    public StatementList new_genString(){ return genString = new StatementList(); }
     
-    public void add_genString(GenContent val){}
+    public void add_genString(StatementList val){}
     
     @Override public String toString(){ return "value"; }
 
@@ -493,25 +493,25 @@ public class JbatGenScript {
     Expression expression;
   
     /**If need, a sub-content, maybe null.*/
-    public GenContent subContent;
+    public StatementList subContent;
     
     public Expression new_expression(){ return new Expression(); }
     
     public void add_expression(Expression val){ expression = val; }
     
     public void set_text(String text){
-      if(subContent == null){ subContent = new GenContent(false); }
-      subContent.content.add(new ScriptElement('t', text)); 
+      if(subContent == null){ subContent = new StatementList(false); }
+      subContent.content.add(new Statement('t', text)); 
     }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //@Override
-    public ScriptElement new_dataText(){ return new ScriptElement('e', null); }
+    public Statement new_dataText(){ return new Statement('e', null); }
     
     /**Set from ZBNF:  (\?*<*dataText>\?) */
     //@Override
-    public void add_dataText(ScriptElement val){ 
-      if(subContent == null){ subContent = new GenContent(false); }
+    public void add_dataText(Statement val){ 
+      if(subContent == null){ subContent = new StatementList(false); }
       subContent.content.add(val); 
     }
     
@@ -535,7 +535,7 @@ public class JbatGenScript {
    * </pre> 
    *
    */
-  public static class ScriptElement extends Argument
+  public static class Statement extends Argument
   {
     /**Designation what presents the element:
      * <table><tr><th>c</th><th>what is it</th></tr>
@@ -605,14 +605,14 @@ public class JbatGenScript {
     
 
     
-    public ScriptElement(char whatisit, String text)
+    public Statement(char whatisit, String text)
     { this.elementType = whatisit;
       this.text = text;
       if("BNXYZvlJ".indexOf(whatisit)>=0){
-        subContent = new GenContent(false);
+        subContent = new StatementList(false);
       }
       else if("IVL".indexOf(whatisit)>=0){
-        subContent = new GenContent(true);
+        subContent = new StatementList(true);
       }
     }
     
@@ -620,7 +620,7 @@ public class JbatGenScript {
     
     public List<Argument> getReferenceDataSettings(){ return arguments; }
     
-    public GenContent getSubContent(){ return subContent; }
+    public StatementList getSubContent(){ return subContent; }
     
     public void set_name(String name){ this.name = name; }
     
@@ -629,77 +629,77 @@ public class JbatGenScript {
     
     /**Gathers a text which is assigned to any variable or output. <+ name>text<.+>
      */
-    public ScriptElement new_textOut(){ return new ScriptElement('T', null); }
+    public Statement new_textOut(){ return new Statement('T', null); }
 
-    public void add_textOut(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
+    public void add_textOut(Statement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
     
     
     public void set_newline(){
-      if(subContent == null){ subContent = new GenContent(false); }
-      subContent.content.add(new ScriptElement('n', null));   /// 
+      if(subContent == null){ subContent = new StatementList(false); }
+      subContent.content.add(new Statement('n', null));   /// 
     }
     
     
     /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
      */
-    public ScriptElement new_textVariable(){
-      if(subContent == null){ subContent = new GenContent(); }
+    public Statement new_textVariable(){
+      if(subContent == null){ subContent = new StatementList(); }
       subContent.bContainsVariableDef = true; 
-      return new ScriptElement('V', null); 
+      return new Statement('V', null); 
     } 
 
-    public void add_textVariable(ScriptElement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
+    public void add_textVariable(Statement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
     
     
     /**Defines a variable which is able to use as pipe.
      */
-    public ScriptElement new_Pipe(){
-      if(subContent == null){ subContent = new GenContent(); }
+    public Statement new_Pipe(){
+      if(subContent == null){ subContent = new StatementList(); }
       subContent.bContainsVariableDef = true; 
-      return new ScriptElement('P', null); 
+      return new Statement('P', null); 
     } 
 
-    public void add_Pipe(ScriptElement val){ subContent.content.add(val); }
+    public void add_Pipe(Statement val){ subContent.content.add(val); }
     
     /**Defines a variable which is able to use as pipe.
      */
-    public ScriptElement new_Stringb(){
-      if(subContent == null){ subContent = new GenContent(); }
+    public Statement new_Stringb(){
+      if(subContent == null){ subContent = new StatementList(); }
       subContent.bContainsVariableDef = true; 
-      return new ScriptElement('U', null); 
+      return new Statement('U', null); 
     } 
 
-    public void add_Stringb(ScriptElement val){ subContent.content.add(val); }
+    public void add_Stringb(Statement val){ subContent.content.add(val); }
     
     /**Defines a variable which is able to use as pipe.
      */
-    public ScriptElement new_String(){
-      if(subContent == null){ subContent = new GenContent(); }
+    public Statement new_String(){
+      if(subContent == null){ subContent = new StatementList(); }
       subContent.bContainsVariableDef = true; 
-      return new ScriptElement('S', null); 
+      return new Statement('S', null); 
     } 
 
-    public void add_String(ScriptElement val){ subContent.content.add(val); }
+    public void add_String(Statement val){ subContent.content.add(val); }
     
     /**Defines a variable which is able to use as pipe.
      */
-    public ScriptElement new_List(){
-      if(subContent == null){ subContent = new GenContent(); }
+    public Statement new_List(){
+      if(subContent == null){ subContent = new StatementList(); }
       subContent.bContainsVariableDef = true; 
-      return new ScriptElement('L', null); 
+      return new Statement('L', null); 
     } 
 
-    public void add_List(ScriptElement val){ subContent.content.add(val); }
+    public void add_List(Statement val){ subContent.content.add(val); }
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
-    public ScriptElement new_objVariable(){ 
-      if(subContent == null){ subContent = new GenContent(); }
+    public Statement new_objVariable(){ 
+      if(subContent == null){ subContent = new StatementList(); }
       subContent.bContainsVariableDef = true; 
-      return new ScriptElement('J', null); 
+      return new Statement('J', null); 
     } 
 
-    public void add_objVariable(ScriptElement val){ subContent.content.add(val); }
+    public void add_objVariable(Statement val){ subContent.content.add(val); }
     
     
     
@@ -731,16 +731,16 @@ public class JbatGenScript {
     }
 
     
-    public ScriptElement new_assignment(){ 
-      return new ScriptElement('=', null); 
+    public Statement new_assignment(){ 
+      return new Statement('=', null); 
     } 
 
-    public void add_assignment(ScriptElement val){ subContent.content.add(val); }
+    public void add_assignment(Statement val){ subContent.content.add(val); }
     
     
     /**From ZBNF: <code>< expression?+assignment></code>.
      * The {@link #new_assignment()} creates this class, but the syntax is expression.
-     * Therefore SumValue are added to the @{@link Argument#expression} of this {@link ScriptElement}
+     * Therefore SumValue are added to the @{@link Argument#expression} of this {@link Statement}
      * @return A new {@link SumValue} as syntax component
      */
     public SumValue new_value(){ return new SumValue(); }
@@ -760,13 +760,13 @@ public class JbatGenScript {
     //public void add_valueVariable(ScriptElement val){ subContent.content.add(val); }
     
     
-    public ScriptElement new_statementBlock(){
-      ScriptElement contentElement = new ScriptElement('B', null);
+    public Statement new_statementBlock(){
+      Statement contentElement = new Statement('B', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_statementBlock(ScriptElement val){}
+    public void add_statementBlock(Statement val){}
 
     
     public Onerror new_onerror(){
@@ -775,43 +775,43 @@ public class JbatGenScript {
     
 
     public void add_onerror(Onerror val){
-      if(subContent == null){ subContent = new GenContent(); }
+      if(subContent == null){ subContent = new StatementList(); }
       if(onerror ==null){ onerror = new LinkedList<Onerror>(); }
       onerror.add(val);      
     }
 
     
     public void set_breakBlock(){ 
-      ScriptElement contentElement = new ScriptElement('b', null);
+      Statement contentElement = new Statement('b', null);
       subContent.content.add(contentElement);
     }
     
  
       
-    public ScriptElement new_forContainer()
-    { GenContent subGenContent = new GenContent(true);
-      ScriptElement contentElement = new ScriptElement('C', null);
+    public Statement new_forContainer()
+    { StatementList subGenContent = new StatementList(true);
+      Statement contentElement = new Statement('C', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_forContainer(ScriptElement val){}
+    public void add_forContainer(Statement val){}
 
     
-    public ScriptElement new_if()
-    { GenContent subGenContent = new GenContent(true);
-      ScriptElement contentElement = new ScriptElement('F', null);
+    public Statement new_if()
+    { StatementList subGenContent = new StatementList(true);
+      Statement contentElement = new Statement('F', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_if(ScriptElement val){}
+    public void add_if(Statement val){}
 
     
     public IfCondition new_ifBlock()
-    { GenContent subGenContent = new GenContent(true);
+    { StatementList subGenContent = new StatementList(true);
       IfCondition contentElement = new IfCondition('G');
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
@@ -820,43 +820,43 @@ public class JbatGenScript {
     
     public void add_ifBlock(IfCondition val){}
 
-    public ScriptElement new_hasNext()
-    { ScriptElement contentElement = new ScriptElement('N', null);
+    public Statement new_hasNext()
+    { Statement contentElement = new Statement('N', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_hasNext(ScriptElement val){}
+    public void add_hasNext(Statement val){}
 
-    public ScriptElement new_elseBlock()
-    { GenContent subGenContent = new GenContent(true);
-      ScriptElement contentElement = new ScriptElement('E', null);
+    public Statement new_elseBlock()
+    { StatementList subGenContent = new StatementList(true);
+      Statement contentElement = new Statement('E', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_elseBlock(ScriptElement val){}
+    public void add_elseBlock(Statement val){}
 
     
     
-    public ScriptElement new_callSubtext()
-    { ScriptElement contentElement = new ScriptElement('s', null);
+    public Statement new_callSubtext()
+    { Statement contentElement = new Statement('s', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_callSubtext(ScriptElement val){}
+    public void add_callSubtext(Statement val){}
 
     
 
-    public ScriptElement new_cmdLine()
-    { ScriptElement contentElement = new ScriptElement('c', null);
+    public Statement new_cmdLine()
+    { Statement contentElement = new Statement('c', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_cmdLine(ScriptElement val){}
+    public void add_cmdLine(Statement val){}
 
     
 
@@ -864,53 +864,53 @@ public class JbatGenScript {
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void set_fnEmpty(String val){ 
-      ScriptElement contentElement = new ScriptElement('f', val);
+      Statement contentElement = new Statement('f', val);
       subContent.content.add(contentElement);
     }
     
-    public void set_outputValue(String text){ subContent.content.add(new ScriptElement('o', text)); }
+    public void set_outputValue(String text){ subContent.content.add(new Statement('o', text)); }
     
-    public void set_inputValue(String text){ subContent.content.add(new ScriptElement('i', text)); }
+    public void set_inputValue(String text){ subContent.content.add(new Statement('i', text)); }
     
     //public void set_variableValue(String text){ subContent.content.add(new ScriptElement('v', text)); }
     
     /**Set from ZBNF:  (\?*\?)<?listElement> */
     //public void set_listElement(){ subContent.content.add(new ScriptElement('e', null)); }
     
-    public ScriptElement new_forInputContent()
-    { ScriptElement contentElement = new ScriptElement('I', null);
+    public Statement new_forInputContent()
+    { Statement contentElement = new Statement('I', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_forInputContent(ScriptElement val){}
+    public void add_forInputContent(Statement val){}
 
     
-    public ScriptElement xxxnew_forVariable()
-    { ScriptElement contentElement = new ScriptElement('V', null);
+    public Statement xxxnew_forVariable()
+    { Statement contentElement = new Statement('V', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void xxxadd_forVariable(ScriptElement val){} //empty, it is added in new_forList()
+    public void xxxadd_forVariable(Statement val){} //empty, it is added in new_forList()
 
     
-    public ScriptElement new_forList()
-    { ScriptElement contentElement = new ScriptElement('L', null);
+    public Statement new_forList()
+    { Statement contentElement = new Statement('L', null);
       subContent.content.add(contentElement);
       return contentElement;
     }
     
-    public void add_forList(ScriptElement val){} //empty, it is added in new_forList()
+    public void add_forList(Statement val){} //empty, it is added in new_forList()
 
     
-    public ScriptElement new_addToList(){ 
-      ScriptElement subGenContent = new ScriptElement('l', null);
+    public Statement new_addToList(){ 
+      Statement subGenContent = new Statement('l', null);
       subContent.addToList.add(subGenContent.subContent);
       return subGenContent;
     }
    
-    public void add_addToList(ScriptElement val)
+    public void add_addToList(Statement val)
     {
     }
 
@@ -919,7 +919,7 @@ public class JbatGenScript {
     
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
-    public void axxxdd_fnEmpty(ScriptElement val){  }
+    public void axxxdd_fnEmpty(Statement val){  }
     
 
     
@@ -956,7 +956,7 @@ public class JbatGenScript {
 
   
   
-  public static class CmdLine extends ScriptElement
+  public static class CmdLine extends Statement
   {
     
     CmdLine(){
@@ -967,10 +967,10 @@ public class JbatGenScript {
   
   
   
-  public static class IfCondition extends ScriptElement
+  public static class IfCondition extends Statement
   {
     
-    ScriptElement condition;
+    Statement condition;
     
     boolean bElse;
     
@@ -980,12 +980,12 @@ public class JbatGenScript {
       super(whatis, null);
     }
     
-    public ScriptElement new_cmpOperation()
-    { condition = new ScriptElement('?', null);
+    public Statement new_cmpOperation()
+    { condition = new Statement('?', null);
       return condition;
     }
     
-    public void add_cmpOperation(ScriptElement val){
+    public void add_cmpOperation(Statement val){
       String text;
       if(val.expression !=null && val.expression.values !=null && val.expression.values.size()==1
         && (text = val.expression.values.get(0).text) !=null && text.equals("else") ){
@@ -1007,7 +1007,7 @@ public class JbatGenScript {
   
   /**This class contains expressions for error handling.
    */
-  public final static class Onerror extends ScriptElement
+  public final static class Onerror extends Statement
   {
     /**From ZBNF */
     public int errorLevel;
@@ -1027,7 +1027,7 @@ public class JbatGenScript {
   /**Organization class for a list of script elements inside another Scriptelement.
    *
    */
-  public final static class GenContent
+  public final static class StatementList
   {
     /**True if < genContent> is called for any input, (?:forInput?) */
     public final boolean isContentForInput;
@@ -1037,7 +1037,7 @@ public class JbatGenScript {
 
     public String cmpnName;
     
-    public final List<ScriptElement> content = new ArrayList<ScriptElement>();
+    public final List<Statement> content = new ArrayList<Statement>();
     
     
     /**True if the block {@link Argument#subContent} contains at least one variable definition.
@@ -1053,15 +1053,15 @@ public class JbatGenScript {
      */
     //private final List<ScriptElement> localVariableScripts = new ArrayList<ScriptElement>();
     
-    public final List<GenContent> addToList = new ArrayList<GenContent>();
+    public final List<StatementList> addToList = new ArrayList<StatementList>();
     
     //public List<String> datapath = new ArrayList<String>();
     
-    public GenContent()
+    public StatementList()
     {this.isContentForInput = false;
     }
         
-    public GenContent(boolean isContentForInput)
+    public StatementList(boolean isContentForInput)
     {this.isContentForInput = isContentForInput;
     }
         
@@ -1069,15 +1069,15 @@ public class JbatGenScript {
     //public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
-    public ScriptElement new_dataText(){ return new ScriptElement('e', null); }
+    public Statement new_dataText(){ return new Statement('e', null); }
     
     /**Set from ZBNF:  (\?*<*dataText>\?) */
-    public void add_dataText(ScriptElement val){ 
+    public void add_dataText(Statement val){ 
       content.add(val); 
     }
     
     public void set_text(String text){
-      content.add(new ScriptElement('t', text)); 
+      content.add(new Statement('t', text)); 
     }
     
     
@@ -1118,7 +1118,7 @@ public class JbatGenScript {
      * It is possible that it is from a included script.
      * It shall contain calling of <code><*subtext:name:...></code> 
      */
-    ScriptElement scriptFileSub;
+    Statement scriptFileSub;
     
 
     
@@ -1127,14 +1127,14 @@ public class JbatGenScript {
       includes.add(val); 
     }
     
-    public ScriptElement new_ZmakeTarget(){ return new ScriptElement('Z', null); }
+    public Statement new_ZmakeTarget(){ return new Statement('Z', null); }
     
-    public void add_ZmakeTarget(ScriptElement val){ zmakeTargets.put(val.name, val); }
+    public void add_ZmakeTarget(Statement val){ zmakeTargets.put(val.name, val); }
     
     
-    public ScriptElement new_subtext(){ return new ScriptElement('X', null); }
+    public Statement new_subtext(){ return new Statement('X', null); }
     
-    public void add_subtext(ScriptElement val){ 
+    public void add_subtext(Statement val){ 
       if(val.name == null){
         //scriptFileSub = new ScriptElement('Y', null); 
         
@@ -1143,27 +1143,27 @@ public class JbatGenScript {
       subtextScripts.put(val.name, val); 
     }
     
-    public ScriptElement new_genFile(){ return scriptFileSub = new ScriptElement('Y', null); }
+    public Statement new_genFile(){ return scriptFileSub = new Statement('Y', null); }
     
-    public void add_genFile(ScriptElement val){  }
+    public void add_genFile(Statement val){  }
     
     /**Defines a variable with initial value. <= <variableDef?textVariable> \<\.=\>
      */
-    public ScriptElement new_textVariable(){ return new ScriptElement('V', null); }
+    public Statement new_textVariable(){ return new Statement('V', null); }
 
-    public void add_textVariable(ScriptElement val){ listScriptVariables.add(val); } 
+    public void add_textVariable(Statement val){ listScriptVariables.add(val); } 
     
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
-    public ScriptElement new_objVariable(){ return new ScriptElement('J', null); } ///
+    public Statement new_objVariable(){ return new Statement('J', null); } ///
 
-    public void add_objVariable(ScriptElement val){ listScriptVariables.add(val); } 
+    public void add_objVariable(Statement val){ listScriptVariables.add(val); } 
     
     
-    public ScriptElement new_XXXsetVariable(){ return new ScriptElement('V', null); }
+    public Statement new_XXXsetVariable(){ return new Statement('V', null); }
 
-    public void add_XXXsetVariable(ScriptElement val)
+    public void add_XXXsetVariable(Statement val)
     { indexScriptVariables.put(val.name, val); 
       listScriptVariables.add(val);
     } 

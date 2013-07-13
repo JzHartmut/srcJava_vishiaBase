@@ -243,10 +243,10 @@ public class JbatExecuter {
     scriptVariables.put("err", System.err);
     scriptVariables.put("jbatAccess", this);
 
-    for(JbatGenScript.ScriptElement scriptVariableScript: genScript.getListScriptVariables()){
+    for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
-      Gen_Content genVariable = new Gen_Content(scriptVariables); //NOTE: use recent scriptVariables.
-      genVariable.genContent(scriptVariableScript.getSubContent(), uVariable, false);
+      ExecuteLevel genVariable = new ExecuteLevel(scriptVariables); //NOTE: use recent scriptVariables.
+      genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
       scriptVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
     }
     bScriptVariableGenerated = true;
@@ -274,9 +274,9 @@ public class JbatExecuter {
     if(!bScriptVariableGenerated){
       genScriptVariables(genScript, userData, accessPrivate);
     }
-    JbatGenScript.ScriptElement contentScript = genScript.getFileScript();
-    Gen_Content genFile = new Gen_Content(scriptVariables);
-    String sError = genFile.genContent(contentScript.subContent, out, false);
+    JbatGenScript.Statement contentScript = genScript.getFileScript();
+    ExecuteLevel genFile = new ExecuteLevel(scriptVariables);
+    String sError = genFile.execute(contentScript.subContent, out, false);
     return sError;
   }
 
@@ -291,8 +291,8 @@ public class JbatExecuter {
     } else if(arg.subContent !=null){
       
       StringBuilder buffer = new StringBuilder();
-      Gen_Content subtextGenerator = new Gen_Content(localVariables);
-      subtextGenerator.genContent(arg.subContent, buffer, false);
+      ExecuteLevel subtextGenerator = new ExecuteLevel(localVariables);
+      subtextGenerator.execute(arg.subContent, buffer, false);
       return buffer;
     } else {
       return null;
@@ -424,8 +424,8 @@ public class JbatExecuter {
       } else if(value.genString !=null){
         
         dataValue = new StringBuilder();
-        Gen_Content subtextGenerator = this.new Gen_Content(localVariables);
-        subtextGenerator.genContent(value.genString, (Appendable)dataValue, false);
+        ExecuteLevel subtextGenerator = this.new ExecuteLevel(localVariables);
+        subtextGenerator.execute(value.genString, (Appendable)dataValue, false);
       
       } else {
         dataValue = value.constValue;
@@ -500,7 +500,7 @@ public class JbatExecuter {
    * A new Wrapper is created on <:file>, <:subtext> or on abbreviated output, especially to generate into variables.
    *
    */
-  final class Gen_Content
+  final class ExecuteLevel
   {
     //final Gen_Content parent;
     
@@ -512,7 +512,7 @@ public class JbatExecuter {
     
     
     
-    public Gen_Content(Map<String, Object> parentVariables)
+    public ExecuteLevel(Map<String, Object> parentVariables)
     { //this.parent = parent;
       //this.out = out;
       localVariables = new TreeMap<String, Object>();
@@ -531,15 +531,15 @@ public class JbatExecuter {
      * @return
      * @throws IOException 
      */
-    public String genContent(JbatGenScript.GenContent contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
+    public String execute(JbatGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
     //throws Exception
     {
       String sError = null;
       Appendable uBuffer = out;
       //Generate direct requested output. It is especially on inner content-scripts.
-      Iterator<JbatGenScript.ScriptElement> iter = contentScript.content.iterator();
+      Iterator<JbatGenScript.Statement> iter = contentScript.content.iterator();
       while(iter.hasNext() && sError == null){
-        JbatGenScript.ScriptElement contentElement = iter.next();
+        JbatGenScript.Statement contentElement = iter.next();
         //for(TextGenScript.ScriptElement contentElement: contentScript.content){
         try{    
           switch(contentElement.elementType){
@@ -566,16 +566,16 @@ public class JbatExecuter {
           case 'T': {
             if(contentElement.name.equals("file") || contentElement.name.equals("out")){
               //output to the main file, it is the out of this class:
-              genContent(contentElement.subContent, out, false);  //recursively call of this method.
+              execute(contentElement.subContent, out, false);  //recursively call of this method.
             } else {
               textAppendToVarOrOut(contentElement); 
             }
           } break;
           case 'V': { //create a new local variable.
             StringBuilder uBufferVariable = new StringBuilder();
-            Gen_Content genVariable = new Gen_Content(localVariables);
-            JbatGenScript.GenContent content = contentElement.getSubContent();
-            genVariable.genContent(content, uBufferVariable, false);
+            ExecuteLevel genVariable = new ExecuteLevel(localVariables);
+            JbatGenScript.StatementList content = contentElement.getSubContent();
+            genVariable.execute(content, uBufferVariable, false);
             //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
             localVariables.put(contentElement.name, uBufferVariable);
           } break;
@@ -616,22 +616,22 @@ public class JbatExecuter {
           } break;
           */
           case 's': {
-            genSubtext(contentElement, out);
+            executeSubroutine(contentElement, out);
           } break;
           case 'c': {
-            callCmd(contentElement);
+            executeCmdline(contentElement);
           } break;
           case 'C': { //generation <:for:name:path> <genContent> <.for>
-            generateForContainer(contentElement, out);
+            executeForContainer(contentElement, out);
           } break;
           case 'B': { //statementBlock
-            genSubContent(contentElement, out);  ///
+            executeSubLevel(contentElement, out);  ///
           } break;
           case 'F': { 
-            generateIfStatement(contentElement, out);
+            executeIfStatement(contentElement, out);
           } break;
           case 'N': {
-            generateIfContainerHasNext(contentElement, out, bContainerHasNext);
+            executeIfContainerHasNext(contentElement, out, bContainerHasNext);
           } break;
           case 'b': {
             sError = "break";
@@ -651,7 +651,7 @@ public class JbatExecuter {
               JbatGenScript.Onerror onerror = iterError.next();
               found = onerror.errorType == '?';
               if(found){
-                sError = genSubContent(onerror, out);
+                sError = executeSubLevel(onerror, out);
               }
             }
           }
@@ -668,9 +668,9 @@ public class JbatExecuter {
     
     
     
-    void generateForContainer(JbatGenScript.ScriptElement contentElement, Appendable out) throws Throwable
+    void executeForContainer(JbatGenScript.Statement contentElement, Appendable out) throws Throwable
     {
-      JbatGenScript.GenContent subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
+      JbatGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
         stop();
       Object container = getContent(contentElement, localVariables, true);
@@ -686,7 +686,7 @@ public class JbatExecuter {
             //genFor.
             localVariables.put(contentElement.name, foreachData);
             //genFor.
-            genContent(subContent, out, iter.hasNext());
+            execute(subContent, out, iter.hasNext());
           }
         }
       }
@@ -702,7 +702,7 @@ public class JbatExecuter {
             //genFor.
             localVariables.put(contentElement.name, foreachData);
             //genFor.
-            genContent(subContent, out, iter.hasNext());
+            execute(subContent, out, iter.hasNext());
           }
         }
       }
@@ -710,10 +710,10 @@ public class JbatExecuter {
     
     
     
-    void generateIfContainerHasNext(JbatGenScript.ScriptElement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
+    void executeIfContainerHasNext(JbatGenScript.Statement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
       if(bContainerHasNext){
         //(new Gen_Content(this, false)).
-        genContent(hasNextScript.getSubContent(), out, false);
+        execute(hasNextScript.getSubContent(), out, false);
       }
     }
     
@@ -721,19 +721,19 @@ public class JbatExecuter {
     
     /**it contains maybe more as one if block and else. 
      * @throws Throwable */
-    void generateIfStatement(JbatGenScript.ScriptElement ifStatement, Appendable out) throws Throwable{
-      Iterator<JbatGenScript.ScriptElement> iter = ifStatement.subContent.content.iterator();
+    void executeIfStatement(JbatGenScript.Statement ifStatement, Appendable out) throws Throwable{
+      Iterator<JbatGenScript.Statement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
-        JbatGenScript.ScriptElement contentElement = iter.next();
+        JbatGenScript.Statement contentElement = iter.next();
         switch(contentElement.elementType){
           case 'G': { //if-block
             
-            found = generateIfBlock((JbatGenScript.IfCondition)contentElement, out, iter.hasNext());
+            found = executeIfBlock((JbatGenScript.IfCondition)contentElement, out, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
-              genContent(contentElement.subContent, out, false);
+              execute(contentElement.subContent, out, false);
             }
           } break;
           default:{
@@ -745,7 +745,7 @@ public class JbatExecuter {
     
     
     
-    boolean generateIfBlock(JbatGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
+    boolean executeIfBlock(JbatGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
     throws Throwable
     {
       //Object check = getContent(ifBlock, localVariables, false);
@@ -788,7 +788,7 @@ public class JbatExecuter {
         }
       }
       if(bCondition){
-        genContent(ifBlock.subContent, out, bIfHasNext);
+        execute(ifBlock.subContent, out, bIfHasNext);
       }
       return bCondition;
     }
@@ -800,7 +800,7 @@ public class JbatExecuter {
      * @param contentElement
      * @throws IOException 
      */
-    void textAppendToVarOrOut(JbatGenScript.ScriptElement contentElement) throws IOException{
+    void textAppendToVarOrOut(JbatGenScript.Statement contentElement) throws IOException{
       
       String name = contentElement.name;
       Appendable out1;
@@ -821,8 +821,8 @@ public class JbatExecuter {
       if(out1 == null){
         
       } else {
-        Gen_Content genContent = new Gen_Content(localVariables);
-        genContent.genContent(contentElement.subContent, out1, false);
+        ExecuteLevel genContent = new ExecuteLevel(localVariables);
+        genContent.execute(contentElement.subContent, out1, false);
         if(out1 instanceof StringBuilder && variable != out1){
           if(variable instanceof String){ //a stored String should be replaced by a String.
             localVariables.put(name, out1.toString());  //replace content.
@@ -843,7 +843,7 @@ public class JbatExecuter {
     
     
     
-    void genSubtext(JbatGenScript.ScriptElement contentElement, Appendable out) 
+    void executeSubroutine(JbatGenScript.Statement contentElement, Appendable out) 
     throws IllegalArgumentException, Throwable
     {
       boolean ok = true;
@@ -855,11 +855,11 @@ public class JbatExecuter {
       } else {
         nameSubtext = contentElement.name;
       }
-      JbatGenScript.ScriptElement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
+      JbatGenScript.Statement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
         ok = writeError("??: *subtext:" + nameSubtext + " not found.??", out);
       } else {
-        Gen_Content subtextGenerator = new Gen_Content(null);
+        ExecuteLevel subtextGenerator = new ExecuteLevel(null);
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
@@ -917,7 +917,7 @@ public class JbatExecuter {
           ok = writeError("??: *subtext;" + nameSubtext + " called with arguments, it has not one.??", out);
         }
         if(ok){
-          subtextGenerator.genContent(subtextScript.subContent, out, false);
+          subtextGenerator.execute(subtextScript.subContent, out, false);
         }
       }
     }
@@ -931,16 +931,16 @@ public class JbatExecuter {
      * @return
      * @throws IOException
      */
-    public String genSubContent(JbatGenScript.ScriptElement script, Appendable out) 
+    public String executeSubLevel(JbatGenScript.Statement script, Appendable out) 
     throws IOException
     {
-      Gen_Content genContent;
+      ExecuteLevel genContent;
       if(script.subContent.bContainsVariableDef){
-        genContent = new Gen_Content(localVariables);
+        genContent = new ExecuteLevel(localVariables);
       } else {
         genContent = this;  //don't use an own instance, save memory and calculation time.
       }
-      return genContent.genContent(script.subContent, out, false);
+      return genContent.execute(script.subContent, out, false);
     }
 
     
@@ -948,7 +948,7 @@ public class JbatExecuter {
 
 
     
-    void callCmd(JbatGenScript.ScriptElement contentElement) 
+    void executeCmdline(JbatGenScript.Statement contentElement) 
     throws IllegalArgumentException, Throwable{
       boolean ok = true;
       final String sCmd;
