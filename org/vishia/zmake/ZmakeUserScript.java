@@ -18,6 +18,8 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-07-11 Hartmut chg/new: {@link ScriptVariable} inherits from {@link JbatGenScript.Argument},
+   *   this concept are merged into: The ZmakeUserScript has properties of the Jbat generation for the ScriptVariables.
    * <li>2013-02-15 Hartmut chg/new: More functionality for UserFilePath, essential improved. continue work and test ...
    * <li>2013-02-10 Hartmut chg/new: UserFilepath#parent removed: A UserFilepath need not know a fileset where it is member of
    *   because the files can be arranged from more as one fileset with another basepath etc. The fileset with its is 
@@ -344,18 +346,19 @@ public class ZmakeUserScript
    * variable::=<$?@name> = [ fileset ( <fileset> ) | <string> | { <execCmd> } ].
    *
    */
-  public static class ScriptVariable
+  public static class ScriptVariable extends JbatGenScript.Argument
   { final UserScript script;
-    public String name;
+    //public String name;
     UserFileset fileset;
     
     UserFilepath filepath;
     
-    JbatGenScript.Expression expression;
+    //JbatGenScript.Expression expression;
     
     //public UserString string;
     
     ScriptVariable(UserScript script){
+      super(null);  //No parent statement list.
       this.script = script;
     }
     
@@ -365,9 +368,11 @@ public class ZmakeUserScript
     public ZbnfUserFilepath new_file(){ return new ZbnfUserFilepath(script); }
     public void add_file(ZbnfUserFilepath val){ filepath = val.filepath; }
     
-    public JbatGenScript.Expression new_expression(){ return new JbatGenScript.Expression(); }
+    //@Override
+    //public JbatGenScript.Expression new_expression(){ return new JbatGenScript.Expression(this); }
     
-    public void add_expression(JbatGenScript.Expression val){ expression = val; }
+    //@Override
+    //public void add_expression(JbatGenScript.Expression val){ expression = val; }
     
     //public UserString new_string(){ return string = new UserString(); }
     //public void set_string(UserString val){} //left empty, is set already.

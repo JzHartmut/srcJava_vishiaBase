@@ -245,7 +245,7 @@ public class JbatExecuter {
 
     for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
-      ExecuteLevel genVariable = new ExecuteLevel(scriptVariables); //NOTE: use recent scriptVariables.
+      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables); //NOTE: use recent scriptVariables.
       genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
       scriptVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
     }
@@ -275,7 +275,7 @@ public class JbatExecuter {
       genScriptVariables(genScript, userData, accessPrivate);
     }
     JbatGenScript.Statement contentScript = genScript.getFileScript();
-    ExecuteLevel genFile = new ExecuteLevel(scriptVariables);
+    ExecuteLevel genFile = new ExecuteLevel(null, scriptVariables);
     String sError = genFile.execute(contentScript.subContent, out, false);
     return sError;
   }
@@ -283,23 +283,6 @@ public class JbatExecuter {
   
   
 
-  
-  Object getContent(JbatGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
-  throws IllegalArgumentException, IOException, Throwable
-  { if(arg.expression !=null){
-      return ascertainValue(arg.expression, data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput);
-    } else if(arg.subContent !=null){
-      
-      StringBuilder buffer = new StringBuilder();
-      ExecuteLevel subtextGenerator = new ExecuteLevel(localVariables);
-      subtextGenerator.execute(arg.subContent, buffer, false);
-      return buffer;
-    } else {
-      return null;
-    }
-  }
-  
-  
   
   /**Returns the reference from a given datapath.
    * It can contain only one element which is:
@@ -424,7 +407,7 @@ public class JbatExecuter {
       } else if(value.genString !=null){
         
         dataValue = new StringBuilder();
-        ExecuteLevel subtextGenerator = this.new ExecuteLevel(localVariables);
+        ExecuteLevel subtextGenerator = this.new ExecuteLevel(null, localVariables);
         subtextGenerator.execute(value.genString, (Appendable)dataValue, false);
       
       } else {
@@ -502,7 +485,11 @@ public class JbatExecuter {
    */
   final class ExecuteLevel
   {
-    //final Gen_Content parent;
+    /**Not used yet. Only for debug?
+     * 
+     */
+    final ExecuteLevel parent;
+    
     
     /**Generated content of local variables in this nested level including the {@link JbatExecuter#scriptVariables}.
      * The variables are type invariant on language level. The type is checked and therefore 
@@ -512,9 +499,15 @@ public class JbatExecuter {
     
     
     
-    public ExecuteLevel(Map<String, Object> parentVariables)
-    { //this.parent = parent;
-      //this.out = out;
+    /**Constructs data for a local execution level.
+     * @param parentVariables if given this variable are copied to the local ones.
+     *   They contains the script variables too. If not given (null), only the script variables
+     *   are copied into the {@link #localVariables}. Note that subroutines do not know the
+     *   local variables of its calling routine! This argument is only set if nested statement blocks
+     *   are to execute. 
+     */
+    public ExecuteLevel(ExecuteLevel parent, Map<String, Object> parentVariables)
+    { this.parent = parent;
       localVariables = new TreeMap<String, Object>();
       if(parentVariables == null){
         localVariables.putAll(scriptVariables);
@@ -573,7 +566,7 @@ public class JbatExecuter {
           } break;
           case 'V': { //create a new local variable.
             StringBuilder uBufferVariable = new StringBuilder();
-            ExecuteLevel genVariable = new ExecuteLevel(localVariables);
+            ExecuteLevel genVariable = new ExecuteLevel(this, localVariables);
             JbatGenScript.StatementList content = contentElement.getSubContent();
             genVariable.execute(content, uBufferVariable, false);
             //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
@@ -821,7 +814,7 @@ public class JbatExecuter {
       if(out1 == null){
         
       } else {
-        ExecuteLevel genContent = new ExecuteLevel(localVariables);
+        ExecuteLevel genContent = new ExecuteLevel(this, localVariables);
         genContent.execute(contentElement.subContent, out1, false);
         if(out1 instanceof StringBuilder && variable != out1){
           if(variable instanceof String){ //a stored String should be replaced by a String.
@@ -859,7 +852,7 @@ public class JbatExecuter {
       if(subtextScript == null){
         ok = writeError("??: *subtext:" + nameSubtext + " not found.??", out);
       } else {
-        ExecuteLevel subtextGenerator = new ExecuteLevel(null);
+        ExecuteLevel subtextGenerator = new ExecuteLevel(this, null);
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
@@ -936,7 +929,7 @@ public class JbatExecuter {
     {
       ExecuteLevel genContent;
       if(script.subContent.bContainsVariableDef){
-        genContent = new ExecuteLevel(localVariables);
+        genContent = new ExecuteLevel(this, localVariables);
       } else {
         genContent = this;  //don't use an own instance, save memory and calculation time.
       }
@@ -992,6 +985,32 @@ public class JbatExecuter {
     }
     
 
+    
+    /**Executes any argument or such part.
+     * @param arg argument execution script
+     * @param localVariables of the environemnt
+     * @param bContainer true: expect a container as return, false: returns the first element if a container is found.
+     * @return any object. The execution may be a side effect. The goal of this invocation is get data.
+     * @throws IllegalArgumentException
+     * @throws IOException
+     * @throws Throwable
+     */
+    Object getContent(JbatGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
+    throws IllegalArgumentException, IOException, Throwable
+    { if(arg.expression !=null){
+        return ascertainValue(arg.expression, data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput);
+      } else if(arg.subContent !=null){
+        
+        StringBuilder buffer = new StringBuilder();
+        ExecuteLevel subtextGenerator = new ExecuteLevel(this, localVariables);
+        subtextGenerator.execute(arg.subContent, buffer, false);
+        return buffer;
+      } else {
+        return null;
+      }
+    }
+    
+    
     
     
     
