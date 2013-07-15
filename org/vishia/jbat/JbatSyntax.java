@@ -153,7 +153,7 @@ public final class JbatSyntax {
     + "subScript::= <$?name> ( [{ <namedArgument?formalArgument> ? , }] ) <execScript?>. \n"
 
     + "\n"
-    + "execScript::= \\{ [{ <execScriptStatement?> }] \\}  [ onerror <onerror> ].\n"
+    + "execScript::= \\{ [{ <execScriptStatement?> }] \\}.\n"
 
     + "execScriptStatement::=\n"
     + "  <execScript?statementBlock> \n"
@@ -172,10 +172,11 @@ public final class JbatSyntax {
     + "| [{ <datapath?-assign> = }] <expression?+assignment> ; \n"
     + "| break <?breakBlock> ;\n"
     + "| exit <#?exitScript> ;\n"
+    + "| onerror <onerror> \n"
     + ".\n"
 
     + "\n"
-    + "onerror::= [<#?errorLevel>] [<?errortype> data| file | null|] <execScript?> .\n"
+    + "onerror::= [<#?errorLevel>] [<?errortype> notfound | file | internal|] <execScript?> .\n"
     + "\n"
 
     + "\n"

@@ -549,6 +549,7 @@ public class JbatGenScript {
     public void add_dataText(Statement val){ 
       if(subContent == null){ subContent = new StatementList(this); }
       subContent.content.add(val); 
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);
     }
     
 
@@ -685,7 +686,7 @@ public class JbatGenScript {
       return new Statement(parentList, 'V', null); 
     } 
 
-    public void add_textVariable(Statement val){ subContent.content.add(val); } //localVariableScripts.add(val); } 
+    public void add_textVariable(Statement val){ subContent.content.add(val); subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);} 
     
     
     /**Defines a variable which is able to use as pipe.
@@ -696,7 +697,7 @@ public class JbatGenScript {
       return new Statement(parentList, 'P', null); 
     } 
 
-    public void add_Pipe(Statement val){ subContent.content.add(val); }
+    public void add_Pipe(Statement val){ subContent.content.add(val); subContent.onerrorAccu = null; subContent.withoutOnerror.add(val); }
     
     /**Defines a variable which is able to use as pipe.
      */
@@ -706,7 +707,7 @@ public class JbatGenScript {
       return new Statement(parentList, 'U', null); 
     } 
 
-    public void add_Stringb(Statement val){ subContent.content.add(val); }
+    public void add_Stringb(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     /**Defines a variable which is able to use as pipe.
      */
@@ -716,7 +717,7 @@ public class JbatGenScript {
       return new Statement(parentList, 'S', null); 
     } 
 
-    public void add_String(Statement val){ subContent.content.add(val); }
+    public void add_String(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     /**Defines a variable which is able to use as pipe.
      */
@@ -726,7 +727,7 @@ public class JbatGenScript {
       return new Statement(parentList, 'L', null); 
     } 
 
-    public void add_List(Statement val){ subContent.content.add(val); }
+    public void add_List(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
@@ -736,7 +737,7 @@ public class JbatGenScript {
       return new Statement(parentList, 'J', null); 
     } 
 
-    public void add_objVariable(Statement val){ subContent.content.add(val); }
+    public void add_objVariable(Statement val){ subContent.content.add(val); subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     
     
@@ -772,7 +773,7 @@ public class JbatGenScript {
       return new Statement(parentList, '=', null); 
     } 
 
-    public void add_assignment(Statement val){ subContent.content.add(val); }
+    public void add_assignment(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     
     /**From ZBNF: <code>< expression?+assignment></code>.
@@ -794,12 +795,13 @@ public class JbatGenScript {
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
-    //public void add_valueVariable(ScriptElement val){ subContent.content.add(val); }
+    //public void add_valueVariable(ScriptElement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     
     public Statement new_statementBlock(){
       Statement contentElement = new Statement(parentList, 'B', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -813,8 +815,12 @@ public class JbatGenScript {
 
     public void add_onerror(Onerror val){
       if(subContent == null){ subContent = new StatementList(this); }
-      if(onerror ==null){ onerror = new LinkedList<Onerror>(); }
-      onerror.add(val);      
+      if(subContent.onerrorAccu == null){ subContent.onerrorAccu = new LinkedList<Onerror>(); }
+      for( Statement previousStatement: subContent.withoutOnerror){
+        previousStatement.onerror = onerror;  
+        //use the same onerror list for all previous statements without error designation.
+      }
+      subContent.withoutOnerror.clear();  //remove all entries, they are processed.
     }
 
     
@@ -830,6 +836,7 @@ public class JbatGenScript {
       Statement contentElement = new Statement(parentList, 'C', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -841,6 +848,7 @@ public class JbatGenScript {
       Statement contentElement = new Statement(parentList, 'F', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -852,6 +860,7 @@ public class JbatGenScript {
       IfCondition contentElement = new IfCondition(parentList, 'G');
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -860,6 +869,7 @@ public class JbatGenScript {
     public Statement new_hasNext()
     { Statement contentElement = new Statement(parentList, 'N', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -870,6 +880,7 @@ public class JbatGenScript {
       Statement contentElement = new Statement(parentList, 'E', null);
       contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -880,6 +891,7 @@ public class JbatGenScript {
     public Statement new_callSubtext()
     { Statement contentElement = new Statement(parentList, 's', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -890,6 +902,7 @@ public class JbatGenScript {
     public Statement new_cmdLine()
     { Statement contentElement = new Statement(parentList, 'c', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -903,11 +916,20 @@ public class JbatGenScript {
     public void set_fnEmpty(String val){ 
       Statement contentElement = new Statement(parentList, 'f', val);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
     }
     
-    public void set_outputValue(String text){ subContent.content.add(new Statement(parentList, 'o', text)); }
+    public void set_outputValue(String text){ 
+      Statement contentElement = new Statement(parentList, 'o', text);
+      subContent.content.add(contentElement); 
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
+    }
     
-    public void set_inputValue(String text){ subContent.content.add(new Statement(parentList, 'i', text)); }
+    public void set_inputValue(String text){ 
+      Statement contentElement = new Statement(parentList, 'i', text);
+      subContent.content.add(contentElement); 
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
+    }
     
     //public void set_variableValue(String text){ subContent.content.add(new ScriptElement('v', text)); }
     
@@ -917,6 +939,7 @@ public class JbatGenScript {
     public Statement new_forInputContent()
     { Statement contentElement = new Statement(parentList, 'I', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -926,6 +949,7 @@ public class JbatGenScript {
     public Statement xxxnew_forVariable()
     { Statement contentElement = new Statement(parentList, 'V', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -935,6 +959,7 @@ public class JbatGenScript {
     public Statement new_forList()
     { Statement contentElement = new Statement(parentList, 'L', null);
       subContent.content.add(contentElement);
+      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
@@ -1043,14 +1068,33 @@ public class JbatGenScript {
   
   
   /**This class contains expressions for error handling.
-   */
+   * The statements in this sub-ScriptElement were executed if an exception throws
+   * or if a command line invocation returns an error level greater or equal the {@link Iferror#errorLevel}.
+   * If it is null, no exception handling is done.
+   * <br><br>
+   * This block can contain any statements as error replacement. If they fails too,
+   * the iferror-Block can contain an iferror too.
+   * 
+ */
   public final static class Onerror extends Statement
   {
     /**From ZBNF */
     public int errorLevel;
     
     
+    /**
+     * <ul>
+     * <li>'n' for notfound
+     * <li>'f' file error
+     * <li>'i' any internal exception.
+     * </ul>
+     * 
+     */
     char errorType = '?';
+    
+    public void set_errortype(String type){
+      errorType = type.charAt(0); //n, i, f
+    }
  
     Onerror(StatementList parentList){
       super(parentList, 'B', null);
@@ -1077,6 +1121,15 @@ public class JbatGenScript {
     public String cmpnName;
     
     public final List<Statement> content = new ArrayList<Statement>();
+    
+
+    /**List of currently onerror statements.
+     * 
+     */
+    List<Onerror> onerrorAccu;
+
+    
+    List<Statement> withoutOnerror = new LinkedList<Statement>();
     
     
     /**True if the block {@link Argument#subContent} contains at least one variable definition.
@@ -1119,11 +1172,12 @@ public class JbatGenScript {
     
     /**Set from ZBNF:  (\?*<*dataText>\?) */
     public void add_dataText(Statement val){ 
-      content.add(val); 
+      content.add(val);
+      withoutOnerror.add(val);
     }
     
     public void set_text(String text){
-      content.add(new Statement(this, 't', text)); 
+      content.add(new Statement(this, 't', text));
     }
     
     

@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -672,14 +673,16 @@ public class JbatExecuter {
       }
       else if(container !=null && container instanceof Iterable<?>){
         Iterator<?> iter = ((Iterable<?>)container).iterator();
+        ExecuteLevel forExecuter = new ExecuteLevel(this, localVariables);
+        //a new level for the for... statements. It contains the foreachData and maybe some more variables.
         while(iter.hasNext()){
           Object foreachData = iter.next();
           if(foreachData !=null){
             //Gen_Content genFor = new Gen_Content(this, false);
             //genFor.
-            localVariables.put(contentElement.name, foreachData);
+            forExecuter.localVariables.put(contentElement.name, foreachData);
             //genFor.
-            execute(subContent, out, iter.hasNext());
+            forExecuter.execute(subContent, out, iter.hasNext());
           }
         }
       }
@@ -850,7 +853,7 @@ public class JbatExecuter {
       }
       JbatGenScript.Statement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
-        ok = writeError("??: *subtext:" + nameSubtext + " not found.??", out);
+        throw new NoSuchElementException("JbatExecuter - subroutine not found; " + nameSubtext);
       } else {
         ExecuteLevel subtextGenerator = new ExecuteLevel(this, null);
         if(subtextScript.arguments !=null){
