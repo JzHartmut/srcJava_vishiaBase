@@ -2,7 +2,9 @@ package org.vishia.jbat;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -161,12 +163,12 @@ public class JbatExecuter {
    * @param testOut if not null then outputs a data tree of the generate script.
    * @return null if no error or an error string.
    */
-  public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, Appendable testOut){
+  public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, File testOut){
     String sError = null;
     this.outFile = out;
     scriptVariables.put("file", outFile);
     JbatGenScript genScript = new JbatGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
-    try { genScript.translateAndSetGenCtrl(fileScript);
+    try { genScript.translateAndSetGenCtrl(fileScript, testOut);
     } catch (Exception exc) {
       sError = exc.getMessage();
     }
@@ -236,6 +238,9 @@ public class JbatExecuter {
     this.data = userData;
     this.accessPrivate = accessPrivate;
     
+    File currDir = new File(".").getAbsoluteFile().getParentFile();
+    
+    scriptVariables.put("currDir", currDir);
     scriptVariables.put("error", accessError);
     scriptVariables.put("mainCmdLogging", log);
     scriptVariables.put("nextNr", nextNr);
@@ -346,7 +351,7 @@ public class JbatExecuter {
           }
           */
           for(JbatGenScript.Expression expr: zd.actualValue){
-            Object oValue = ascertainValue(expr, data1, localVariables, null, accessPrivate, false, bWriteErrorInOutput);
+            Object oValue = ascertainValue(expr, data1, localVariables, false);
             if(oValue == null){
               oValue = "??: path access: " + dataPath + "?>";
               if(!bWriteErrorInOutput){
@@ -394,8 +399,8 @@ public class JbatExecuter {
    * @return the Object which represents the expression in the given environment.
    * @throws IllegalArgumentException
    */
-  Object ascertainValue(JbatGenScript.Expression expr, Object data, Map<String, Object> localVariables, JbatGenScript.Argument arg
-      , boolean accessPrivate, boolean bContainer, boolean bWriteErrorInOutput
+  Object ascertainValue(JbatGenScript.Expression expr, Object data, Map<String, Object> localVariables
+      , boolean bContainer
   )
   throws IllegalArgumentException, IOException, Throwable
   { Object dataRet = null;
@@ -442,13 +447,10 @@ public class JbatExecuter {
    * @return
    */
   public String ascertainText(JbatGenScript.Expression expr){ 
-    boolean bWriteErrorInOutput = true;
     boolean bContainer = false;
-    boolean accessPrivate = true;
-    Object data = null;
     Map<String, Object> localVariables = null;
     try{ 
-      Object value = ascertainValue(expr, data, localVariables, null, accessPrivate, bContainer, bWriteErrorInOutput);
+      Object value = ascertainValue(expr, data, localVariables, bContainer);
       return DataAccess.getStringFromObject(value, null);
     } catch(IOException exc){
       return "<??IOException>" + exc.getMessage() + "<??>";
@@ -456,6 +458,21 @@ public class JbatExecuter {
       return "<??Exception>" + exc.getMessage() + "<??>";
       
     }
+  }
+  
+
+  /**ascertains the text which is described in this Expression. Invokes {@link #ascertainValue(Object, Map, boolean, boolean, boolean)}
+   * and converts it to String.<br>
+   * This method does not support getting from any additional container or from datapool. Only environment variables
+   * or invocation of static methods are supported.
+   * @return
+   * @throws Throwable 
+   * @throws IOException 
+   * @throws IllegalArgumentException 
+   */
+  public String ascertainText(JbatGenScript.Expression expr, Map<String, Object> localVariables) throws IllegalArgumentException, IOException, Throwable{ 
+    Object value = ascertainValue(expr, data, localVariables, false);
+    return DataAccess.getStringFromObject(value, null);
   }
   
 
@@ -581,34 +598,24 @@ public class JbatExecuter {
             StringBuilder uBufferVariable = new StringBuilder();
             localVariables.put(contentElement.name, uBufferVariable);
           } break;
+          case 'L': {
+            Object value = ascertainValue(contentElement.expression, data, localVariables, true); 
+              //getContent(contentElement, localVariables, false);  //not a container
+            localVariables.put(contentElement.name, value);
+            if(!(value instanceof Iterable<?>)) 
+                throw new NoSuchFieldException("JbatExecuter - exec variable must be of type Iterable ;" + contentElement.name);
+          } break;
+          case 'W': executeOpenfile(contentElement); break;
           case 'J': {
             if(contentElement.name.equals("checkDeps"))
               stop();
-            Object value = getContent(contentElement, localVariables, false);  //not a container
+            Object value = ascertainValue(contentElement.expression, data, localVariables, false);  //not a container
             localVariables.put(contentElement.name, value);
           } break;
-          case 'e': {  //value or datapath
-            final CharSequence text;
-            if(contentElement.text !=null && contentElement.text.equals("target")){
-              //generates all targets, only advisable in the (?:file?)
-              //genUserTargets(out);
-            } else if(contentElement.expression/*.datapath*/ !=null){
-              Object oContent = getContent(contentElement, localVariables, false);
-              text = DataAccess.getStringFromObject(oContent, contentElement.text);
-              //text = getTextofVariable(userTarget, contentElement.text, this);
-              uBuffer.append(text); 
-            } else {
-              //uBuffer.append(listElement);
-            }
-          } break;
-          /*
-          case 'g': {
-            final CharSequence text;
-            Object oContent = getContent(contentElement, localVariables, false);
-            text = DataAccess.getStringFromObject(oContent);
+          case 'e': {  //<*datatext>
+            final CharSequence text = ascertainText(contentElement.expression, localVariables);
             uBuffer.append(text); 
           } break;
-          */
           case 's': {
             executeSubroutine(contentElement, out);
           } break;
@@ -667,7 +674,7 @@ public class JbatExecuter {
       JbatGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
         stop();
-      Object container = getContent(contentElement, localVariables, true);
+      Object container = ascertainValue(contentElement.expression, data, localVariables, true);
       if(container instanceof String && ((String)container).startsWith("<?")){
         writeError((String)container, out);
       }
@@ -748,7 +755,7 @@ public class JbatExecuter {
       
       Object check;
       try{ 
-        check = ascertainValue(ifBlock.expression, data, localVariables, null, accessPrivate, false, false);
+        check = ascertainValue(ifBlock.expression, data, localVariables, false);
       } catch(Exception exc){
         check = null;
       }
@@ -764,7 +771,8 @@ public class JbatExecuter {
           ifBlock.expr.addExprToStack(1, ifBlock.condition.name);
         }
         if(ifBlock.expr != null){
-          Object cmp = getContent(ifBlock.condition, localVariables, false);
+          Object cmp = ascertainValue(ifBlock.condition.expression, data, localVariables, false); 
+            //getContent(ifBlock.condition, localVariables, false);
           CalculatorExpr.Value result = ifBlock.expr.calc(check, cmp);
           bCondition = result.booleanValue();
         } else {
@@ -846,7 +854,7 @@ public class JbatExecuter {
       final String nameSubtext;
       if(contentElement.name == null){
         //subtext name gotten from any data location, variable name
-        Object oName = getContent(contentElement, localVariables, false);
+        Object oName = ascertainText(contentElement.expression, localVariables); //getContent(contentElement, localVariables, false);
         nameSubtext = DataAccess.getStringFromObject(oName, null);
       } else {
         nameSubtext = contentElement.name;
@@ -867,7 +875,7 @@ public class JbatExecuter {
           if(referenceSettings !=null){
             for( JbatGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
               Object ref;
-              ref = getContent(referenceSetting, localVariables, false);       //actual value
+              ref = ascertainValue(referenceSetting.expression, data, localVariables, false);       //actual value
               if(ref !=null){
                 CheckArgument checkArg = check.get(referenceSetting.name);      //is it a requested argument (per name)?
                 if(checkArg == null){
@@ -945,12 +953,13 @@ public class JbatExecuter {
 
     
     void executeCmdline(JbatGenScript.Statement contentElement) 
-    throws IllegalArgumentException, Throwable{
+    throws IllegalArgumentException, Throwable
+    {
       boolean ok = true;
       final String sCmd;
       if(contentElement.name == null){
         //cmd gotten from any data location, variable name
-        Object oName = getContent(contentElement, localVariables, false);
+        Object oName = ascertainText(contentElement.expression, localVariables);
         sCmd = DataAccess.getStringFromObject(oName, null);
       } else {
         sCmd = contentElement.name;
@@ -960,8 +969,8 @@ public class JbatExecuter {
         args = new String[contentElement.arguments.size() +1];
         int iArg = 1;
         for(JbatGenScript.Argument arg: contentElement.arguments){
-          Object oArg = getContent(arg, localVariables, false);
-          args[iArg++] = oArg.toString();
+          String sArg = ascertainText(arg.expression, localVariables);
+          args[iArg++] = sArg;
         }
       } else { 
         args = new String[1]; 
@@ -984,10 +993,23 @@ public class JbatExecuter {
         outCmd = null;
       }
       CmdExecuter cmdExecuter = new CmdExecuter();
+      File currDir = (File)localVariables.get("currDir");
+      cmdExecuter.setCurrentDir(currDir);
       cmdExecuter.execute(args, null, outCmd, null);
     }
     
 
+    
+    void executeOpenfile(JbatGenScript.Statement contentElement) 
+    throws IllegalArgumentException, Throwable
+    {
+      String sFilename = ascertainText(contentElement.expression, localVariables);
+      Writer writer = new FileWriter(sFilename);
+      localVariables.put(contentElement.name, writer);
+    }
+    
+    
+    
     
     /**Executes any argument or such part.
      * @param arg argument execution script
@@ -1000,8 +1022,9 @@ public class JbatExecuter {
      */
     Object getContent(JbatGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
     throws IllegalArgumentException, IOException, Throwable
-    { if(arg.expression !=null){
-        return ascertainValue(arg.expression, data, localVariables, arg, accessPrivate, bContainer, bWriteErrorInOutput);
+    { assert(arg.expression !=null);
+      if(arg.expression !=null){
+        return ascertainValue(arg.expression, data, localVariables, bContainer);
       } else if(arg.subContent !=null){
         
         StringBuilder buffer = new StringBuilder();

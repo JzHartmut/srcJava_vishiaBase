@@ -102,9 +102,9 @@ public class Zbnf2Text extends Zbnf2Xml
     }
     
     if(bOk){
-      FileWriter outData;
+      File outData;
       if(args.sScriptCheck !=null){
-        outData = new FileWriter(args.sScriptCheck);
+        outData = new File(args.sScriptCheck);
       } else {
         outData = null;
       }
@@ -113,7 +113,7 @@ public class Zbnf2Text extends Zbnf2Xml
         File fileScript = new File(outArgs.sFileScript);
         JbatExecuter generator = new JbatExecuter(console);
         if(outData !=null) {
-          outData.append("===================").append(outArgs.sFileScript);
+          //outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
         String sError = generator.generate(resultTree, fileScript, out, true, outData);
@@ -125,7 +125,7 @@ public class Zbnf2Text extends Zbnf2Xml
         }
       }
       if(outData !=null) {
-        outData.close();
+        //outData.close();
       }
     }
     return bOk;

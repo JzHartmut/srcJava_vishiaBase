@@ -348,6 +348,9 @@ class ZbnfParserStore
       
       sRet += "<...?" + sSemantic + ">";
 
+      if(sSemantic.equals("operator"))
+        Assert.stop();
+      
       sRet += " ";
       int nrofAlternative = getNrofAlternative();
       if(nrofAlternative>=0 && nrofAlternative!=1)

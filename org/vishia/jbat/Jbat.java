@@ -17,6 +17,8 @@ public class Jbat
     String sFileIn;
     
     String sFileOut;
+    
+    File fileTestOut;
   }
   
 
@@ -55,7 +57,7 @@ public class Jbat
     try{
       try{ mainCmdLine.parseArguments(); }
       catch(Exception exception)
-      { sRet = "Jbat - Argument error;" + exception.getMessage();
+      { sRet = "Jbat - Argument error ;" + exception.getMessage();
         mainCmdLine.report(sRet, exception);
         mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       }
@@ -102,7 +104,7 @@ public class Jbat
       out = System.out;
     }
     File fileIn = new File(args.sFileIn);
-    sError = executer.generate(null, fileIn, out, true, null);
+    sError = executer.generate(null, fileIn, out, true, args.fileTestOut);
     return sError;
   }
   
@@ -121,6 +123,10 @@ public class Jbat
     , new MainCmd.Argument("-t", ":<OUTEXT> text-File for output"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.sFileOut = val; return true;
+        }})
+    , new MainCmd.Argument("-debug", ":<TEST.xml> Test-File"
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          argData.fileTestOut = new File(val); return true;
         }})
     };
 

@@ -524,7 +524,7 @@ public class StateMGen {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        String sError = generator.generate(stateData, fileScript, out, true, outData);
+        String sError = generator.generate(stateData, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck));
         out.close();
         if(sError !=null){
           console.writeError(sError);

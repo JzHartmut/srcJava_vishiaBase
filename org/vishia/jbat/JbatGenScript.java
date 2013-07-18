@@ -523,6 +523,9 @@ public class JbatGenScript {
    
     public Expression expression;
   
+    /**From Zbnf <""?textInStatement>, constant text, null if not used. */
+    public String text; 
+    
     /**If need, a sub-content, maybe null.*/
     public StatementList subContent;
     
@@ -538,6 +541,10 @@ public class JbatGenScript {
     public void set_text(String text){
       if(subContent == null){ subContent = new StatementList(this); }
       subContent.content.add(new Statement(parentList, 't', text)); 
+    }
+    
+    public void XXXset_textInStatement(String text){
+      this.text = text;
     }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
@@ -584,7 +591,7 @@ public class JbatGenScript {
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>o</td><td>content of the output, {@link #text} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
-     * <tr><td>e</td><td>A value, maybe content of a data path or a constant value.</td></tr>
+     * <tr><td>e</td><td>A datatext, from <*expression> or such.</td></tr>
      * <tr><td>XXXg</td><td>content of a data path starting with an internal variable (reference) or value of the variable.</td></tr>
      * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
@@ -595,6 +602,7 @@ public class JbatGenScript {
      * <tr><td>U</td><td>Buffer variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>S</td><td>String variable, {@link #text} contains the name of the variable</td></tr>
      * <tr><td>L</td><td>Container variable, a list</td></tr>
+     * <tr><td>W</td><td>Opened file, a Writer in Java</td></tr>
      * <tr><td>=</td><td>assignment of an expression to a variable.</td></tr>
      * <tr><td>B</td><td>statement block</td></tr>
      * <tr><td>C</td><td><:for:path> {@link #subContent} contains build.script for any list element,</td></tr>
@@ -610,9 +618,6 @@ public class JbatGenScript {
      * </table> 
      */
     final public char elementType;    
-    
-    /**From Zbnf <""?text>, constant text, null if not used. */
-    public String text; 
     
     
     /**Any variable name of a script variable where the content should assigned to.
@@ -728,6 +733,20 @@ public class JbatGenScript {
     } 
 
     public void add_List(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
+    
+    /**Defines a variable which is able to use as pipe.
+     */
+    public Statement new_Openfile(){
+      if(subContent == null){ subContent = new StatementList(this); }
+      subContent.bContainsVariableDef = true; 
+      return new Statement(parentList, 'W', null); 
+    } 
+
+    public void add_Openfile(Statement val){ 
+      subContent.content.add(val);  
+      subContent.onerrorAccu = null; 
+      subContent.withoutOnerror.add(val);
+    }
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
