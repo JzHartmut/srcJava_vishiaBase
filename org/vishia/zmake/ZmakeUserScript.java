@@ -466,7 +466,7 @@ public class ZmakeUserScript
           } else { 
             assert(element.fileset !=null);
             //search the input Set in the script variables:
-            ScriptVariable variable = parentTarget.script.var.get(element.fileset);
+            ScriptVariable variable = parentTarget.script.scriptVarZmake.get(element.fileset);
             if(variable == null){
               int pos = u.length();
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
@@ -489,6 +489,9 @@ public class ZmakeUserScript
     
     public CharSequence textW(){ return UserFilepath.toWindows(text()); }
   
+    @Override public String toString(){
+      return "TargetParam " + name + " = " + value;
+    }
   
   }
   
@@ -547,7 +550,12 @@ public class ZmakeUserScript
     //UserInput(UserInputSet inputSet){ this.inputSet = inputSet; this.inputFile = null; }
     //UserInput(UserFilepath inputFile){ this.inputSet = null; this.inputFile = inputFile; }
     
-    @Override public String toString(){ return inputFile !=null ? inputFile.toString() : fileset; }
+    @Override public String toString(){
+      StringBuilder ret = new StringBuilder();
+      if(inputFile !=null){ ret.append(inputFile.toString()); }
+      if(fileset !=null){ ret.append('&').append(fileset); }
+      return ret.toString();
+    }
     
   }
   
@@ -749,7 +757,7 @@ input::=
         { //expand file or fileset:
           //
           if(targetInputParam.fileset !=null){
-            ScriptVariable variable = script.var.get(targetInputParam.fileset);
+            ScriptVariable variable = script.scriptVarZmake.get(targetInputParam.fileset);
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
                 UserFilepath errorhint = new UserFilepath(script);
@@ -799,22 +807,22 @@ input::=
     /**The current directory for access to all files which are necessary as absolute file.
      * It should be end with slash!
      */
-    String sCurrDir = "";
+    private String sCurrDir = "";
     
-    File currDir;
+    private File currDir;
     
     boolean bWriteErrorInOutputScript = true;
     
     //Map<String, String> currDir = new TreeMap<String, String>();
     
-    Map<String, ScriptVariable> var = new TreeMap<String, ScriptVariable>();
+    Map<String, ScriptVariable> scriptVarZmake = new TreeMap<String, ScriptVariable>();
     
     List<UserTarget> targets = new LinkedList<UserTarget>();
     
     /**From ZBNF: < variable> */
     public ScriptVariable new_variable(){ return new ScriptVariable(this); }
     
-    public void add_variable(ScriptVariable  value){ var.put(value.name, value); }
+    public void add_variable(ScriptVariable  value){ scriptVarZmake.put(value.name, value); }
     
     public UserTarget new_target(){ return new UserTarget(this); }
     
@@ -833,6 +841,8 @@ input::=
       return Integer.toString(nextNr);
     }
     
+    
+    public String sCurrDir(){ return sCurrDir; }
     
     /**This method should be called after parsing the input script maybe from information from the script
      * maybe inside a text generating script.

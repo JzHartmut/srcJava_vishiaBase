@@ -287,7 +287,7 @@ public class JbatExecuter {
   }
 
   
-  
+  public Object getScriptVariable(String name){ return scriptVariables.get(name); }
 
   
   /**Returns the reference from a given datapath.
@@ -404,8 +404,8 @@ public class JbatExecuter {
   )
   throws IllegalArgumentException, IOException, Throwable
   { Object dataRet = null;
-    for(JbatGenScript.SumValue value: expr.values){   //All SumValue
-      List<DataAccess.DatapathElement> dataRef = value.datapath;
+    for(JbatGenScript.ZbnfValue value: expr.XXXvalues){   //All SumValue
+      List<DataAccess.DatapathElement> dataRef = value.datapath();
       Object dataValue;
       if(dataRef !=null){
         
@@ -417,7 +417,7 @@ public class JbatExecuter {
         subtextGenerator.execute(value.genString, (Appendable)dataValue, false);
       
       } else {
-        dataValue = value.constValue;
+        dataValue = value.objValue();
       }
       if(dataRet == null){
         dataRet = dataValue;
@@ -634,6 +634,7 @@ public class JbatExecuter {
           case 'N': {
             executeIfContainerHasNext(contentElement, out, bContainerHasNext);
           } break;
+          case '=': executeAssign(contentElement); break;
           case 'b': {
             sError = "break";
           } break;
@@ -979,8 +980,8 @@ public class JbatExecuter {
       List<Appendable> outCmd;
       if(contentElement.assignObj !=null){
         outCmd = new LinkedList<Appendable>();
-        for(JbatGenScript.DataPath assignObj1 : contentElement.assignObj){
-          Object oOutCmd = getDataObj(assignObj1.datapath, data, localVariables, false);
+        for(JbatGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
+          Object oOutCmd = getDataObj(assignObj1.datapath(), data, localVariables, false);
           //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
           if(oOutCmd instanceof Appendable){
             outCmd.add((Appendable)oOutCmd);
@@ -1008,7 +1009,53 @@ public class JbatExecuter {
       localVariables.put(contentElement.name, writer);
     }
     
-    
+    /**Executes a <code>assignment::= [{ < datapath?assign > = }] < expression > ;.</code>.
+     * If the datapath to assign is only a localVariable (one simple name), then the expression
+     * is assigned to this local variable, a new variable will be created.
+     * If the datapath to assign is more complex, the object which is described with it
+     * will be gotten. Then an assignment will be done depending on its type:
+     * <ul>
+     * <li>Appendable: appends the gotten expression.toString(). An Appendable may be especially
+     * <li>All others cause an error. 
+     * </ul>
+     * @param contentElement
+     * @throws IllegalArgumentException
+     * @throws Throwable
+     */
+    void executeAssign(JbatGenScript.Statement contentElement) 
+    throws IllegalArgumentException, Throwable
+    {
+      Object val = ascertainValue(contentElement.expression, data, localVariables, false);
+      if(contentElement.assignObj !=null){
+        for(JbatGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
+        
+          //It is a path to any object, get it:
+          Object oOut = getDataObj(assignObj1.datapath(), data, localVariables, false);
+          //
+          if(oOut == null){
+            //not found.
+            if(assignObj1.datapath().size()==1){
+              //only a name of a localVariable is given: 
+              String name = assignObj1.datapath().get(0).ident;
+              localVariables.put(name, val);
+            } else {
+              throw new NoSuchFieldException("AssignObject not found: " + assignObj1.datapath().toString());
+            }
+          } else {
+            //
+            //check its type:
+            //
+            if(oOut instanceof Appendable){
+              ((Appendable)oOut).append(val.toString());
+            } else {
+              
+              throw new NoSuchFieldException("AssignObject type not supported: " + assignObj1.datapath().toString());
+            }
+          }
+        }
+      }
+      
+    }
     
     
     /**Executes any argument or such part.

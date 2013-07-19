@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.checkDeps_C.AddDependency_InfoFileDependencies;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
@@ -355,40 +356,147 @@ public class JbatGenScript {
   /**
   *
   */
-  public static class Expression{
+  public static class Expression extends CalculatorExpr
+  {
   
     final Argument parentStatement;
     
-    List<SumValue> values = new ArrayList<SumValue>();
+    /**If need, a sub-content, maybe null.*/
+    public StatementList genString;
+    
+    List<ZbnfValue> XXXvalues = new ArrayList<ZbnfValue>();
   
   
     public Expression(Argument statement){
       this.parentStatement = statement;  
     }
     
-    public SumValue new_value(){ return new SumValue(parentStatement); }
+    //public ZbnfValue new_value(){ return new ZbnfValue(parentStatement); }
     
-    public void add_value(SumValue val){ values.add(val); }
+    //public void add_value(ZbnfValue val){ values.add(val); }
   
     
+    public ZbnfOperation new_startOperation(){ return new ZbnfOperation('!', parentStatement); }
+    
+    public void add_startOperation(ZbnfOperation val){ addToStack(val); }
+  
+    /**From Zbnf, a part <:>...<.> */
+    public StatementList new_genString(){ return genString = new StatementList(); }
+    
+    public void add_genString(StatementList val){}
+    
+
   }
   
   
   
   
-  /**
+  public static class ZbnfOperation extends CalculatorExpr.Operation
+  {
+    final Argument parentStatement;
+    
+    ZbnfOperation(char operator, Argument parentStatement){ 
+      super(operator); 
+      this.parentStatement = parentStatement;
+    }
+
+  
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_intValue(long val){ this.value = new CalculatorExpr.Value(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_floatValue(double val){ this.value = new CalculatorExpr.Value(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_textValue(String val){ this.value = new CalculatorExpr.Value(val); }
+    
+    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    public void set_charValue(String val){ this.value = new CalculatorExpr.Value(val.charAt(0)); }
+    
+    /**ZBNF: <code>info ( < datapath? > <?datapath > )</code>.
+     * 
+     * @return this. The syntax supports only datapath elements. But the instance is the same.
+     */
+    public void set_datapath(){ 
+      if(this.value == null){ this.value = new CalculatorExpr.Value(); }
+    }
+    
+    /**ZBNF: <code>info ( < datapath? > <?info > )</code>.
+     * 
+     * @return this. The syntax supports only datapath elements. But the instance is the same.
+     */
+    public void set_info(){ 
+      if(this.value == null){ this.value = new CalculatorExpr.Value(); }
+      this.value.setInfoType();
+    }
+    
+    public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(parentStatement); }
+    
+    public void add_datapathElement(ZbnfDataPathElement val){ 
+      super.add_datapathElement(val); 
+    }
+    
+    public void set_envVariable(String ident){
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+      element.whatisit = 'e';
+      element.ident = ident;
+      add_datapathElement(element);
+    }
+    
+
+    public void set_startVariable(String ident){
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+      element.whatisit = 'v';
+      element.ident = ident;
+      add_datapathElement(element);
+    }
+    
+    
+    public ZbnfDataPathElement new_newJavaClass()
+    { ZbnfDataPathElement value = new ZbnfDataPathElement(parentStatement);
+      value.whatisit = 'n';
+      //ScriptElement contentElement = new ScriptElement('J', null); ///
+      //subContent.content.add(contentElement);
+      return value;
+    }
+    
+    public void add_newJavaClass(ZbnfDataPathElement val) { add_datapathElement(val); }
+
+
+    public ZbnfDataPathElement new_staticJavaMethod()
+    { ZbnfDataPathElement value = new ZbnfDataPathElement(parentStatement);
+      value.whatisit = 's';
+      return value;
+      //ScriptElement contentElement = new ScriptElement('j', null); ///
+      //subContent.content.add(contentElement);
+      //return contentElement;
+    }
+    
+    public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
+
+
+
+  
+  }
+  
+  
+  
+  /**A Value of a expression or a left value. The syntax determines what is admissible.
    *
    */
-  public static class SumValue extends DataPath{
+  public static class ZbnfValue extends CalculatorExpr.Value {
+    
+    final Argument parentStatement;
+    
     
     /**Name of the argument. It is the key to assign calling argument values. */
     //public String name;
     
     /**From Zbnf <""?text>, constant text, null if not used. */
-    public String text; 
+    //public String text; 
     
     /**Maybe a constant value, also a String. */
-    public Object constValue;
+    //public Object constValue;
     
     char operator;
     
@@ -398,55 +506,37 @@ public class JbatGenScript {
     public StatementList genString;
     
     
-    public SumValue(Argument statement){ super(statement); }
+    public ZbnfValue(Argument statement){ 
+      this.parentStatement = statement;
+    }
 
     public void set_operator(String val){ operator = val.charAt(0); }
     
     public void set_unaryOperator(String val){ unaryOperator = val.charAt(0); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_intValue(long val){ constValue = new Long(val); }
+    public void set_intValue(long val){ type = 'o'; oVal = new Long(val); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_floatValue(double val){ constValue = new Double(val); }
+    public void set_floatValue(double val){ type = 'o'; oVal = new Double(val); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_textValue(String val){ constValue = val; }
+    public void set_textValue(String val){ type = 'o'; oVal = val; }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_charValue(String val){ constValue = new Character(val.charAt(0)); }
+    public void set_charValue(String val){ type = 'o'; oVal = new Character(val.charAt(0)); }
     
-    /**From Zbnf, a part <:>...<.> */
-    public StatementList new_genString(){ return genString = new StatementList(); }
-    
-    public void add_genString(StatementList val){}
-    
-    @Override public String toString(){ return "value"; }
-
-  }
-  
-
-  
-  public static class DataPath
-  { 
-    
-    /**
+    /**ZBNF: <code>info ( < datapath? > <?datapath > )</code>.
      * 
+     * @return this. The syntax supports only datapath elements. But the instance is the same.
      */
-    final Argument parentStatement;
+    public void set_datapath(){ type = 'd'; } 
     
-    /**The description of the path to any data if the script-element refers data. It is null if the script element
-     * does not refer data. If it is filled, the instances are of type {@link ZbnfDataPathElement}.
-     * If it is used in {@link DataAccess}, its base class {@link DataAccess.DatapathElement} are used. The difference
-     * are the handling of actual values for method calls. See {@link ZbnfDataPathElement#actualArguments}.
+    /**ZBNF: <code>info ( < datapath? > <?info > )</code>.
+     * 
+     * @return this. The syntax supports only datapath elements. But the instance is the same.
      */
-    List<DataAccess.DatapathElement> datapath;
-    
-    public DataPath(Argument statement){
-      this.parentStatement = statement;
-    }
-    
-    //public String assign; 
+    public void set_info(){ type = 'i'; } 
     
     public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(parentStatement); }
     
@@ -502,8 +592,16 @@ public class JbatGenScript {
     public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
 
 
+    /**From Zbnf, a part <:>...<.> */
+    public StatementList new_genString(){ return genString = new StatementList(); }
     
+    public void add_genString(StatementList val){}
+    
+    @Override public String toString(){ return "value"; }
+
   }
+  
+
   
   
   
@@ -623,7 +721,7 @@ public class JbatGenScript {
     /**Any variable name of a script variable where the content should assigned to.
      * null if not used. */
     //String sVariableToAssign;
-    List<DataPath> assignObj;
+    List<ZbnfValue> assignObj;
     
     //public String value;
     
@@ -780,10 +878,10 @@ public class JbatGenScript {
     
     /**From Zbnf: [{ <datapath?-assign> = }] 
      */
-    public DataPath new_assign(){ return new DataPath(this); }
+    public ZbnfValue new_assign(){ return new ZbnfValue(this); }
     
-    public void add_assign(DataPath val){ 
-      if(assignObj == null){ assignObj = new LinkedList<DataPath>(); }
+    public void add_assign(ZbnfValue val){ 
+      if(assignObj == null){ assignObj = new LinkedList<ZbnfValue>(); }
       assignObj.add(val); 
     }
 
@@ -792,19 +890,25 @@ public class JbatGenScript {
       return new Statement(parentList, '=', null); 
     } 
 
-    public void add_assignment(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
+    public void add_assignment(Statement val){ 
+      subContent.content.add(val);  
+      subContent.onerrorAccu = null; 
+      subContent.withoutOnerror.add(val);
+    }
     
     
-    /**From ZBNF: <code>< expression?+assignment></code>.
-     * The {@link #new_assignment()} creates this class, but the syntax is expression.
-     * Therefore SumValue are added to the @{@link Argument#expression} of this {@link Statement}
-     * @return A new {@link SumValue} as syntax component
+    /**From ZBNF: <code>< value></code>.
+     * @return A new {@link ZbnfValue} as syntax component
      */
-    public SumValue new_value(){ return new SumValue(this); }
+    public ZbnfValue XXXnew_value(){ return new ZbnfValue(this); }
     
-    public void add_value(SumValue val){ 
+    /**From ZBNF: <code>< value></code>.
+     * The val is added to the @{@link Argument#expression} of this {@link Statement}.
+     * @param val
+     */
+    public void XXXadd_value(ZbnfValue val){ 
       if(expression == null){ expression = new Expression(this); }
-      expression.values.add(val); 
+      //expression.values.add(val); 
     }
   
     
@@ -1067,12 +1171,14 @@ public class JbatGenScript {
     }
     
     public void add_cmpOperation(Statement val){
+      Assert.stop();
+      /*
       String text;
       if(val.expression !=null && val.expression.values !=null && val.expression.values.size()==1
-        && (text = val.expression.values.get(0).text) !=null && text.equals("else") ){
+        && (text = val.expression.values.get(0).stringValue()) !=null && text.equals("else") ){
         bElse = true;
       }
-        
+      */        
     }
 
 
@@ -1143,7 +1249,10 @@ public class JbatGenScript {
     
 
     /**List of currently onerror statements.
-     * 
+     * This list is referenced in the appropriate {@link Statement#onerror} too. 
+     * If an onerror statement will be gotten next, it is added to this list using this reference.
+     * If another statement will be gotten next, this reference is cleared. So a new list will be created
+     * for a later getting onerror statement. 
      */
     List<Onerror> onerrorAccu;
 
@@ -1199,6 +1308,12 @@ public class JbatGenScript {
       content.add(new Statement(this, 't', text));
     }
     
+    
+    public void set_newline(){
+      content.add(new Statement(this, 'n', null));   /// 
+    }
+    
+
     
     public void set_name(String name){
       cmpnName = name;

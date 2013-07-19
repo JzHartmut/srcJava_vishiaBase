@@ -359,8 +359,9 @@ public class Zmake extends Zbnf2Text
   
   /**Parse a user's zmake-script and provide a Java data view to its content.
    * @param fileZmakeUserscript The user script
-   * @param sZbnf The syntax.
+   * @param sZbnf The syntax file for Zmake user script.
    * @param console 
+   * @param jbatExecuter It is used to get the current dir and to help evaluate expressions.
    * @param sCheckXmlOutput if not null, then intermedia info are outputted
    * @return
    * @throws IllegalArgumentException
@@ -417,6 +418,9 @@ public class Zmake extends Zbnf2Text
       }
       ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
       parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
+      
+      File currDir = (File)jbatExecuter.getScriptVariable("currDir");
+      zmakeInput.setCurrentDir(currDir);
       
       if(sCheckXmlOutput !=null){
         //Write the data structure of the ZmakeUserScript into a file to check.

@@ -368,7 +368,7 @@ public final class UserFilepath {
     UserFilepath varfile;
     if((basepath !=null || useBaseFile !=null && useBaseFile[0]) && scriptVariable !=null){
       //get the variable if a base path is given or the file may be used as base path
-      var = script.var.get(scriptVariable);
+      var = script.scriptVarZmake.get(scriptVariable);
       varfile = var.filepath;
     } else { 
       var = null;
@@ -604,7 +604,7 @@ public final class UserFilepath {
       ZmakeUserScript.ScriptVariable var;
       UserFilepath varfile;
       if(scriptVariable !=null){
-        var = script.var.get(scriptVariable);
+        var = script.scriptVarZmake.get(scriptVariable);
         varfile = var.filepath;
       } else { 
         var = null;
@@ -666,7 +666,7 @@ public final class UserFilepath {
         } else {
           ret = uRet = new StringBuilder(ret);
         }
-        String sCurrDir = script.sCurrDir;
+        String sCurrDir = script.sCurrDir();
         if(uRet.length() >=2 && uRet.charAt(1) == ':'){
           //a drive is present but it is not a root path
           if(sCurrDir.length()>=2 && sCurrDir.charAt(1)==':' && uRet.charAt(0) == sCurrDir.charAt(0)){
@@ -679,12 +679,12 @@ public final class UserFilepath {
           }
         }
         else {  //a drive is not present.
-          uRet.insert(0, script.sCurrDir);
+          uRet.insert(0, script.sCurrDir());
         }
       }
       else {
         //ret is "", then return the current dir only.
-        ret = script.sCurrDir;
+        ret = script.sCurrDir();
       }
     }
     return ret;
