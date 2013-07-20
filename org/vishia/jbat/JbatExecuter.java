@@ -501,7 +501,7 @@ public class JbatExecuter {
    * A new Wrapper is created on <:file>, <:subtext> or on abbreviated output, especially to generate into variables.
    *
    */
-  final class ExecuteLevel
+  public final class ExecuteLevel
   {
     /**Not used yet. Only for debug?
      * 
@@ -1102,7 +1102,7 @@ public class JbatExecuter {
     }
     
     
-    String evalString(JbatGenScript.Argument arg) throws Throwable{
+    public String evalString(JbatGenScript.Argument arg) throws Throwable{
       if(arg.text !=null) return arg.text;
       else if(arg.datapath() !=null){
         Object o = DataAccess.getData(arg.datapath(), null, localVariables, accessPrivate, false);
@@ -1130,7 +1130,7 @@ public class JbatExecuter {
      * @return
      * @throws Throwable
      */
-    Object evalObject(JbatGenScript.Argument arg, boolean bContainer) throws Throwable{
+    public Object evalObject(JbatGenScript.Argument arg, boolean bContainer) throws Throwable{
       Object obj;
       if(arg.text !=null) return arg.text;
       else if(arg.datapath() !=null){
@@ -1146,6 +1146,7 @@ public class JbatExecuter {
           u.append("; Type=");
           u.append(clazz.getCanonicalName());
           u.append("; toString=").append(obj.toString());
+          u.append(" ??>\n");
           obj = u.toString();
         }
       } else if(arg.subContent !=null){

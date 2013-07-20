@@ -449,14 +449,15 @@ public class ZmakeUserScript
      * <ul>
      * <li>If the parameter is given with a constant stringLiteral, it is returned without any effort. 
      * <li>If the parameter refers a string script variable, its content is evaluated and returned.
-     * <li>If the parameter referes a concatenation of script variables, it is returned.
+     * <li>If the parameter refers a concatenation of script variables, it is returned.
      * </ul>
      * <br><br> 
      * If the scriptVariable or any of them in a concatenation was not found, either a IllegalArgumentException is thrown
      * or a "<??errorText??> will be produced.
      * @return Any case a string if no exception.
+     * @throws Throwable 
      */
-    public CharSequence text(){
+    public CharSequence text() throws Throwable{
       if(value !=null) return value;
       else {
         StringBuilder u = new StringBuilder();
@@ -471,15 +472,12 @@ public class ZmakeUserScript
               int pos = u.length();
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
-            } else if(variable.expression !=null){
-              JbatExecuter gen = parentTarget.script.jbatexecuter;
-              u.append(gen.ascertainText(variable.expression));
-              //variable.expression.addtext(u);
             } else {
-              int pos = u.length();
-              u.append("??:error ZmakeScriptvariable as string expected: ").append(element.fileset).append(".??");
-              parentTarget.script.abortOnError(u,pos);
-            } 
+              JbatExecuter gen = parentTarget.script.jbatexecuter;
+              JbatExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
+              CharSequence content = genLevel.evalString(variable);
+              u.append(content);
+            }
           }
         }
         return u;
@@ -487,10 +485,14 @@ public class ZmakeUserScript
     }
 
     
-    public CharSequence textW(){ return UserFilepath.toWindows(text()); }
+    public CharSequence textW() throws Throwable{ return UserFilepath.toWindows(text()); }
   
     @Override public String toString(){
-      return "TargetParam " + name + " = " + value;
+      StringBuilder u = new StringBuilder();
+      u.append("TargetParam ").append(name);
+      if(value !=null){ u.append( "=\"").append(value).append("\" "); }
+      if(referVariables !=null){ u.append( "=").append(referVariables.toString()); }
+      return u.toString();
     }
   
   }
