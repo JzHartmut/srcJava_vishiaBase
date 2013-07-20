@@ -817,7 +817,7 @@ input::=
     
     Map<String, ScriptVariable> scriptVarZmake = new TreeMap<String, ScriptVariable>();
     
-    List<UserTarget> targets = new LinkedList<UserTarget>();
+    public List<UserTarget> targets = new LinkedList<UserTarget>();
     
     /**From ZBNF: < variable> */
     public ScriptVariable new_variable(){ return new ScriptVariable(this); }

@@ -141,6 +141,9 @@ public class Zmake extends Zbnf2Text
   /** Aggregation to the Console implementation class.*/
   private final MainCmd_ifc console;
 
+  
+  final JbatExecuter gen;
+  
   /**
    * 
    */
@@ -231,7 +234,8 @@ public class Zmake extends Zbnf2Text
   { super(args, console);
     this.args = args;
     this.console = console;
-    genScript = new JbatGenScript(console);
+    gen = new JbatExecuter(console);
+    genScript = new JbatGenScript(gen, console);
   }
   
   
@@ -515,8 +519,7 @@ public class Zmake extends Zbnf2Text
     //Parse the users zmake script:
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
-    JbatExecuter gen = new JbatExecuter(console);
-    JbatGenScript genScript = new JbatGenScript(console); //gen.parseGenScript(fileGenCtrl, null);
+    JbatGenScript genScript = new JbatGenScript(gen, console); //gen.parseGenScript(fileGenCtrl, null);
     File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
     genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
     

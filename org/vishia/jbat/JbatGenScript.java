@@ -121,11 +121,14 @@ public class JbatGenScript {
    */
   Statement scriptFile;
   
+  
+  final JbatExecuter executer;
 
   public String scriptclassMain;
 
-  public JbatGenScript(MainCmdLogging_ifc console)
+  public JbatGenScript(JbatExecuter executer, MainCmdLogging_ifc console)
   { this.console = console;
+    this.executer = executer;
   }
 
   
@@ -298,14 +301,15 @@ public class JbatGenScript {
 
 
 
-  public static class ZbnfDataPathElement extends DataAccess.DatapathElement
+  public static class ZbnfDataPathElement extends CalculatorExpr.DataPathItem
   {
     final Argument parentStatement;
     
-    
+    protected List<Argument> paramArgument;
+
     //List<ZbnfDataPathElement> actualArguments;
     
-    List<Expression> actualValue;
+    List<Expression> XXXactualValue;
     
     boolean bExtArgs;
     
@@ -318,15 +322,15 @@ public class JbatGenScript {
     /**Set if the arguments are listed outside of the element
      * 
      */
-    public void set_extArgs(){
-      if(actualValue == null){ actualValue = new ArrayList<Expression>(); }
+    public void XXXset_extArgs(){
+      //if(actualValue == null){ actualValue = new ArrayList<Expression>(); }
       bExtArgs = true;
       //Expression actualArgument = new Expression();
       //actualValue.add(actualArgument);
     }
     
     
-    public Expression new_argument(){
+    public Expression XXXnew_argument(){
       Expression actualArgument = new Expression(parentStatement);
       //ScriptElement actualArgument = new ScriptElement('e', null);
       //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
@@ -340,9 +344,28 @@ public class JbatGenScript {
      * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
      * @param val The Scriptelement which describes how to get the value.
      */
-    public void add_argument(Expression val){ 
-      if(actualValue == null){ actualValue = new ArrayList<Expression>(); }
-      actualValue.add(val);
+    public void XXXadd_argument(Expression val){ 
+      if(paramExpr == null){ paramExpr = new ArrayList<CalculatorExpr>(); }
+      paramExpr.add(val);
+    } 
+    
+    public Argument new_argument(){
+      Argument actualArgument = new Argument(parentStatement.parentList);
+      //ScriptElement actualArgument = new ScriptElement('e', null);
+      //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
+      return actualArgument;
+    }
+
+    
+    /**From Zbnf.
+     * The Arguments of type {@link Statement} have to be resolved by evaluating its value in the data context. 
+     * The value is stored in {@link DataAccess.DatapathElement#addActualArgument(Object)}.
+     * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
+     * @param val The Scriptelement which describes how to get the value.
+     */
+    public void add_argument(Argument val){ 
+      if(paramArgument == null){ paramArgument = new ArrayList<Argument>(); }
+      paramArgument.add(val);
     } 
     
     public void set_javapath(String text){ this.ident = text; }
@@ -376,7 +399,7 @@ public class JbatGenScript {
     //public void add_value(ZbnfValue val){ values.add(val); }
   
     
-    public ZbnfOperation new_startOperation(){ return new ZbnfOperation('!', parentStatement); }
+    public ZbnfOperation new_startOperation(){ return new ZbnfOperation("!", parentStatement); }
     
     public void add_startOperation(ZbnfOperation val){ addToStack(val); }
   
@@ -385,6 +408,18 @@ public class JbatGenScript {
     
     public void add_genString(StatementList val){}
     
+    
+    @Override public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
+    throws Throwable{
+      if(genString !=null){
+        JbatExecuter.ExecuteLevel executer = (JbatExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
+        StringBuilder u = new StringBuilder();
+        executer.executeNewlevel(genString, u, false);
+        return new CalculatorExpr.Value(u.toString());
+      } else {
+        return super.calcDataAccess(javaVariables, args);
+      }
+    }
 
   }
   
@@ -395,7 +430,7 @@ public class JbatGenScript {
   {
     final Argument parentStatement;
     
-    ZbnfOperation(char operator, Argument parentStatement){ 
+    ZbnfOperation(String operator, Argument parentStatement){ 
       super(operator); 
       this.parentStatement = parentStatement;
     }
@@ -611,7 +646,7 @@ public class JbatGenScript {
    * @author hartmut
    *
    */
-  public static class Argument{
+  public static class Argument extends CalculatorExpr.Datapath{
     
     
     final StatementList parentList;
@@ -640,6 +675,71 @@ public class JbatGenScript {
       if(subContent == null){ subContent = new StatementList(this); }
       subContent.content.add(new Statement(parentList, 't', text)); 
     }
+    
+    
+    /**From Zbnf, a part <:>...<.> */
+    public StatementList new_genString(){ return subContent = new StatementList(); }
+    
+    public void add_genString(StatementList val){}
+    
+    /**ZBNF: <code>info ( < datapath? > <?info > )</code>.
+     * 
+     * @return this. The syntax supports only datapath elements. But the instance is the same.
+     */
+    public void set_info(){ 
+      this.name = "@info";
+    }
+    
+
+    public ZbnfDataPathElement new_newJavaClass()
+    { ZbnfDataPathElement value = new ZbnfDataPathElement(this);
+      value.whatisit = 'n';
+      //ScriptElement contentElement = new ScriptElement('J', null); ///
+      //subContent.content.add(contentElement);
+      return value;
+    }
+    
+    public void add_newJavaClass(ZbnfDataPathElement val) { add_datapathElement(val); }
+
+
+    public ZbnfDataPathElement new_staticJavaMethod()
+    { ZbnfDataPathElement value = new ZbnfDataPathElement(this);
+      value.whatisit = 's';
+      return value;
+      //ScriptElement contentElement = new ScriptElement('j', null); ///
+      //subContent.content.add(contentElement);
+      //return contentElement;
+    }
+    
+    public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
+
+
+
+    public void set_envVariable(String ident){
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+      element.whatisit = 'e';
+      element.ident = ident;
+      add_datapathElement(element);
+    }
+    
+
+    
+    public void set_startVariable(String ident){
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+      element.whatisit = 'v';
+      element.ident = ident;
+      super.add_datapathElement(element); 
+    }
+    
+    
+    public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(this); }
+    
+    public void add_datapathElement(ZbnfDataPathElement val){ 
+      super.add_datapathElement(val); 
+    }
+    
+
+
     
     public void XXXset_textInStatement(String text){
       this.text = text;
@@ -749,7 +849,7 @@ public class JbatGenScript {
     { super(parentList);
       this.elementType = whatisit;
       this.text = text;
-      if("BNXYZvlJ".indexOf(whatisit)>=0){
+      if("BNXYZvl".indexOf(whatisit)>=0){
         subContent = new StatementList();
       }
       else if("IVL".indexOf(whatisit)>=0){
@@ -1011,14 +1111,14 @@ public class JbatGenScript {
 
     
     
-    public Statement new_callSubtext()
-    { Statement contentElement = new Statement(parentList, 's', null);
+    public CallStatement new_callSubtext()
+    { CallStatement contentElement = new CallStatement(parentList);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
     }
     
-    public void add_callSubtext(Statement val){}
+    public void add_callSubtext(CallStatement val){}
 
     
 
@@ -1147,6 +1247,23 @@ public class JbatGenScript {
     CmdLine(StatementList parentList){
       super(parentList, 'c', null);
     }
+    
+  };
+  
+  
+  
+  public static class CallStatement extends Statement
+  {
+    
+    Argument callName;
+    
+    CallStatement(StatementList parentList){
+      super(parentList, 's', null);
+    }
+    
+    public Argument new_callName(){ return callName = new Argument(parentList); }
+    
+    public void set_callName(Argument val){}
     
   };
   

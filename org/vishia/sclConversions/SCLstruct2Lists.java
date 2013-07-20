@@ -926,7 +926,7 @@ variablenBlock::=
       + "<.file>"
       ;
       Writer sclOut;
-      JbatGenScript genScript = new JbatGenScript(console);
+      JbatGenScript genScript = new JbatGenScript(textGen, console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{

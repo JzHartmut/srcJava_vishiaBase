@@ -167,7 +167,7 @@ public class JbatExecuter {
     String sError = null;
     this.outFile = out;
     scriptVariables.put("file", outFile);
-    JbatGenScript genScript = new JbatGenScript(log); //gen.parseGenScript(fileGenCtrl, null);
+    JbatGenScript genScript = new JbatGenScript(this, log); //gen.parseGenScript(fileGenCtrl, null);
     try { genScript.translateAndSetGenCtrl(fileScript, testOut);
     } catch (Exception exc) {
       sError = exc.getMessage();
@@ -194,7 +194,7 @@ public class JbatExecuter {
    */
   public JbatGenScript XXXparseGenScript(File fileScript, Appendable testOut)
   {
-    genScript = new JbatGenScript(log);
+    genScript = new JbatGenScript(this, log);
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     try{ 
       genScript.translateAndSetGenCtrl(fileZbnf4GenCtrl, fileScript);
@@ -341,7 +341,7 @@ public class JbatExecuter {
     if(dataValue ==null){
       for(DataAccess.DatapathElement dataElement : dataPath){  //loop over all elements of the path with or without arguments.
         ZbnfDataPathElement zd;
-        if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).actualValue !=null){
+        if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).XXXactualValue !=null){
           //it is a element with arguments, usual a method call. 
           zd.removeAllActualArguments();
           /*
@@ -350,7 +350,7 @@ public class JbatExecuter {
             zd.addActualArgument(oValue);
           }
           */
-          for(JbatGenScript.Expression expr: zd.actualValue){
+          for(JbatGenScript.Expression expr: zd.XXXactualValue){
             Object oValue = ascertainValue(expr, data1, localVariables, false);
             if(oValue == null){
               oValue = "??: path access: " + dataPath + "?>";
@@ -532,8 +532,20 @@ public class JbatExecuter {
       } else {
         localVariables.putAll(parentVariables);  //use the same if it is not a subText, only a 
       }
+      localVariables.put("jbatExecuteLevel", this);
     }
 
+    
+    public String executeNewlevel(JbatGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) 
+    throws IOException 
+    { final ExecuteLevel level;
+      if(contentScript.bContainsVariableDef){
+        level = new ExecuteLevel(this, localVariables);
+      } else {
+        level = this;
+      }
+      return level.execute(contentScript, out, bContainerHasNext);
+    }
 
   
     /**
@@ -599,7 +611,7 @@ public class JbatExecuter {
             localVariables.put(contentElement.name, uBufferVariable);
           } break;
           case 'L': {
-            Object value = ascertainValue(contentElement.expression, data, localVariables, true); 
+            Object value = evalObject(contentElement, true); 
               //getContent(contentElement, localVariables, false);  //not a container
             localVariables.put(contentElement.name, value);
             if(!(value instanceof Iterable<?>)) 
@@ -609,11 +621,11 @@ public class JbatExecuter {
           case 'J': {
             if(contentElement.name.equals("checkDeps"))
               stop();
-            Object value = ascertainValue(contentElement.expression, data, localVariables, false);  //not a container
+            Object value = evalObject(contentElement, false);
             localVariables.put(contentElement.name, value);
           } break;
           case 'e': {  //<*datatext>
-            final CharSequence text = ascertainText(contentElement.expression, localVariables);
+            final CharSequence text = evalString(contentElement); //ascertainText(contentElement.expression, localVariables);
             uBuffer.append(text); 
           } break;
           case 's': {
@@ -675,7 +687,7 @@ public class JbatExecuter {
       JbatGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.name.equals("state1"))
         stop();
-      Object container = ascertainValue(contentElement.expression, data, localVariables, true);
+      Object container = evalObject(contentElement, true);
       if(container instanceof String && ((String)container).startsWith("<?")){
         writeError((String)container, out);
       }
@@ -756,7 +768,8 @@ public class JbatExecuter {
       
       Object check;
       try{ 
-        check = ascertainValue(ifBlock.expression, data, localVariables, false);
+        check = ifBlock.expression.calcDataAccess(localVariables);
+        //check = ascertainValue(ifBlock.expression, data, localVariables, false);
       } catch(Exception exc){
         check = null;
       }
@@ -851,15 +864,18 @@ public class JbatExecuter {
     void executeSubroutine(JbatGenScript.Statement contentElement, Appendable out) 
     throws IllegalArgumentException, Throwable
     {
+      JbatGenScript.CallStatement callStatement = (JbatGenScript.CallStatement)contentElement;
       boolean ok = true;
       final String nameSubtext;
+      /*
       if(contentElement.name == null){
         //subtext name gotten from any data location, variable name
         Object oName = ascertainText(contentElement.expression, localVariables); //getContent(contentElement, localVariables, false);
         nameSubtext = DataAccess.getStringFromObject(oName, null);
       } else {
         nameSubtext = contentElement.name;
-      }
+      }*/
+      nameSubtext = evalString(callStatement.callName); 
       JbatGenScript.Statement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
         throw new NoSuchElementException("JbatExecuter - subroutine not found; " + nameSubtext);
@@ -876,7 +892,8 @@ public class JbatExecuter {
           if(referenceSettings !=null){
             for( JbatGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
               Object ref;
-              ref = ascertainValue(referenceSetting.expression, data, localVariables, false);       //actual value
+              ref = evalObject(referenceSetting, false);
+              //ref = ascertainValue(referenceSetting.expression, data, localVariables, false);       //actual value
               if(ref !=null){
                 CheckArgument checkArg = check.get(referenceSetting.name);      //is it a requested argument (per name)?
                 if(checkArg == null){
@@ -1004,7 +1021,7 @@ public class JbatExecuter {
     void executeOpenfile(JbatGenScript.Statement contentElement) 
     throws IllegalArgumentException, Throwable
     {
-      String sFilename = ascertainText(contentElement.expression, localVariables);
+      String sFilename = evalString(contentElement);
       Writer writer = new FileWriter(sFilename);
       localVariables.put(contentElement.name, writer);
     }
@@ -1025,7 +1042,8 @@ public class JbatExecuter {
     void executeAssign(JbatGenScript.Statement contentElement) 
     throws IllegalArgumentException, Throwable
     {
-      Object val = ascertainValue(contentElement.expression, data, localVariables, false);
+      Object val = evalObject(contentElement, false);
+      //Object val = ascertainValue(contentElement.expression, data, localVariables, false);
       if(contentElement.assignObj !=null){
         for(JbatGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
         
@@ -1084,10 +1102,91 @@ public class JbatExecuter {
     }
     
     
+    String evalString(JbatGenScript.Argument arg) throws Throwable{
+      if(arg.text !=null) return arg.text;
+      else if(arg.datapath() !=null){
+        Object o = DataAccess.getData(arg.datapath(), null, localVariables, accessPrivate, false);
+        return o.toString();
+      } else if(arg.subContent !=null){
+        StringBuilder u = new StringBuilder();
+        executeNewlevel(arg.subContent, u, false);
+        return u.toString();
+      } else if(arg.expression !=null){
+        CalculatorExpr.Value value = arg.expression.calcDataAccess(localVariables);
+        return value.stringValue();
+      } else throw new IllegalArgumentException("JbatExecuter - unexpected, faulty syntax");
+    }
     
     
     
+    /**Gets the value of the given Argument. Either it is a 
+     * <ul>
+     * <li>String from {@link JbatGenScript.Argument#text}
+     * <li>Object from {@link JbatGenScript.Argument#datapath()}
+     * <li>Object from {@link JbatGenScript.Argument#expression}
+     * <li>
+     * </ul>
+     * @param arg
+     * @return
+     * @throws Throwable
+     */
+    Object evalObject(JbatGenScript.Argument arg, boolean bContainer) throws Throwable{
+      Object obj;
+      if(arg.text !=null) return arg.text;
+      else if(arg.datapath() !=null){
+        obj = evalGetData(arg.datapath(), bContainer);
+        if(arg.name !=null && arg.name.equals("@info")){
+          //Build an information string about the object:
+          StringBuilder u = new StringBuilder();
+          Class<?> clazz = obj.getClass();
+          u.append("<?? info ");
+          for(DataAccess.DatapathElement item: arg.datapath()){
+            u.append(item.ident).append('.');
+          }
+          u.append("; Type=");
+          u.append(clazz.getCanonicalName());
+          u.append("; toString=").append(obj.toString());
+          obj = u.toString();
+        }
+      } else if(arg.subContent !=null){
+        StringBuilder u = new StringBuilder();
+        executeNewlevel(arg.subContent, u, false);
+        obj = u.toString();
+      } else if(arg.expression !=null){
+        CalculatorExpr.Value value = arg.expression.calcDataAccess(localVariables);
+        obj = value.objValue();
+      } else throw new IllegalArgumentException("JbatExecuter - unexpected, faulty syntax");
+      return obj;
+    }
     
+    
+    
+    /**Prepares the data access. First the arguments should be evaluated if a method will be called.
+     * @param datapath
+     * @return
+     * @throws Throwable
+     */
+    Object evalGetData(List<DataAccess.DatapathElement> datapath, boolean bContainer)
+    throws Throwable {
+      for(DataAccess.DatapathElement dataElement : datapath){  
+        //loop over all elements of the path to check whether it is a method and it have arguments.
+        ZbnfDataPathElement zd = dataElement instanceof ZbnfDataPathElement ? (ZbnfDataPathElement)dataElement : null;
+        //A DatapathItem contains the path to parameter.
+        if(zd !=null && zd.paramArgument !=null){
+          //it is a element with arguments, usual a method call. 
+          zd.removeAllActualArguments();
+          for(JbatGenScript.Argument expr: zd.paramArgument){
+            //evaluate its value.
+            Object value = evalObject(expr, bContainer);
+            zd.addActualArgument(value);
+          }
+        }
+      }
+      //Now access the data.
+      Object oVal2 = DataAccess.getData(datapath, null, localVariables, false, bContainer);
+      return oVal2;
+
+    }    
     
   }    
   /**Small class instance to build a next number. 
