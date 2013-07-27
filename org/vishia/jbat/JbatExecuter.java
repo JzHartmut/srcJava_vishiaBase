@@ -68,7 +68,7 @@ public class JbatExecuter {
    * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.jbat.JbatGenScript.Expression, Map, boolean)} now uses
    *   an {@link JbatGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
    *   without extra dataPath, only with a ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link JbatGenScript.Expression#text} if a data path is given, use for formatting a numerical value.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link JbatGenScript.Expression#textArg} if a data path is given, use for formatting a numerical value.
    * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
    *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
@@ -248,6 +248,7 @@ public class JbatExecuter {
     scriptVariables.put("out", System.out);
     scriptVariables.put("err", System.err);
     scriptVariables.put("jbatAccess", this);
+    scriptVariables.put("debug", new JbatDebugHelper());
 
     for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
@@ -309,12 +310,12 @@ public class JbatExecuter {
    * @param localVariables
    * @param bContainer
    * @return An object.
-   * @throws Throwable 
+   * @throws Exception 
    */
   public Object getDataObj(List<DataAccess.DatapathElement> dataPath
       , Object data1, Map<String, Object> localVariables
       , boolean bContainer)
-  throws Throwable
+  throws Exception
   {  
     Object dataValue = null;
     
@@ -379,7 +380,7 @@ public class JbatExecuter {
         if(!bWriteErrorInOutput){
           throw new IllegalArgumentException(dataValue.toString());
         }
-      } catch(Throwable exc){
+      } catch(Exception exc){
         throw exc;
       }
     }
@@ -397,12 +398,12 @@ public class JbatExecuter {
    * @param bContainer true than should return an container.
    * @param bWriteErrorInOutput
    * @return the Object which represents the expression in the given environment.
-   * @throws IllegalArgumentException
+   * @throws Exception 
    */
   Object ascertainValue(JbatGenScript.Expression expr, Object data, Map<String, Object> localVariables
       , boolean bContainer
   )
-  throws IllegalArgumentException, IOException, Throwable
+  throws Exception
   { Object dataRet = null;
     for(JbatGenScript.ZbnfValue value: expr.XXXvalues){   //All SumValue
       List<DataAccess.DatapathElement> dataRef = value.datapath();
@@ -454,7 +455,7 @@ public class JbatExecuter {
       return DataAccess.getStringFromObject(value, null);
     } catch(IOException exc){
       return "<??IOException>" + exc.getMessage() + "<??>";
-    } catch(Throwable exc){
+    } catch(Exception exc){
       return "<??Exception>" + exc.getMessage() + "<??>";
       
     }
@@ -466,11 +467,11 @@ public class JbatExecuter {
    * This method does not support getting from any additional container or from datapool. Only environment variables
    * or invocation of static methods are supported.
    * @return
-   * @throws Throwable 
+   * @throws Exception 
    * @throws IOException 
    * @throws IllegalArgumentException 
    */
-  public String ascertainText(JbatGenScript.Expression expr, Map<String, Object> localVariables) throws IllegalArgumentException, IOException, Throwable{ 
+  public String ascertainText(JbatGenScript.Expression expr, Map<String, Object> localVariables) throws IllegalArgumentException, IOException, Exception{ 
     Object value = ascertainValue(expr, data, localVariables, false);
     return DataAccess.getStringFromObject(value, null);
   }
@@ -569,16 +570,16 @@ public class JbatExecuter {
           case 't': { 
             int posLine = 0;
             int posEnd;
-            if(contentElement.text.startsWith("'''trans ==> dst"))
+            if(contentElement.textArg.startsWith("'''trans ==> dst"))
               stop();
             do{
-              posEnd = contentElement.text.indexOf('\n', posLine);
+              posEnd = contentElement.textArg.indexOf('\n', posLine);
               if(posEnd >= 0){ 
-                uBuffer.append(contentElement.text.substring(posLine, posEnd));   
+                uBuffer.append(contentElement.textArg.substring(posLine, posEnd));   
                 uBuffer.append(newline);
                 posLine = posEnd +1;  //after \n 
               } else {
-                uBuffer.append(contentElement.text.substring(posLine));   
+                uBuffer.append(contentElement.textArg.substring(posLine));   
               }
               
             } while(posEnd >=0);  //output all lines.
@@ -654,7 +655,7 @@ public class JbatExecuter {
             uBuffer.append(" ===ERROR: unknown type '" + contentElement.elementType + "' :ERROR=== ");
           }//switch
           
-        } catch(Throwable exc){
+        } catch(Exception exc){
           //check onerror
           boolean found = false;
           if(contentElement.onerror !=null){
@@ -682,10 +683,10 @@ public class JbatExecuter {
     
     
     
-    void executeForContainer(JbatGenScript.Statement contentElement, Appendable out) throws Throwable
+    void executeForContainer(JbatGenScript.Statement contentElement, Appendable out) throws Exception
     {
       JbatGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
-      if(contentElement.name.equals("state1"))
+      if(contentElement.name.equals("include1"))
         stop();
       Object container = evalObject(contentElement, true);
       if(container instanceof String && ((String)container).startsWith("<?")){
@@ -736,8 +737,8 @@ public class JbatExecuter {
     
     
     /**it contains maybe more as one if block and else. 
-     * @throws Throwable */
-    void executeIfStatement(JbatGenScript.Statement ifStatement, Appendable out) throws Throwable{
+     * @throws Exception */
+    void executeIfStatement(JbatGenScript.Statement ifStatement, Appendable out) throws Exception{
       Iterator<JbatGenScript.Statement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
@@ -762,7 +763,7 @@ public class JbatExecuter {
     
     
     boolean executeIfBlock(JbatGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
-    throws Throwable
+    throws Exception
     {
       //Object check = getContent(ifBlock, localVariables, false);
       
@@ -862,7 +863,7 @@ public class JbatExecuter {
     
     
     void executeSubroutine(JbatGenScript.Statement contentElement, Appendable out) 
-    throws IllegalArgumentException, Throwable
+    throws IllegalArgumentException, Exception
     {
       JbatGenScript.CallStatement callStatement = (JbatGenScript.CallStatement)contentElement;
       boolean ok = true;
@@ -971,7 +972,7 @@ public class JbatExecuter {
 
     
     void executeCmdline(JbatGenScript.Statement contentElement) 
-    throws IllegalArgumentException, Throwable
+    throws IllegalArgumentException, Exception
     {
       boolean ok = true;
       final String sCmd;
@@ -1019,7 +1020,7 @@ public class JbatExecuter {
 
     
     void executeOpenfile(JbatGenScript.Statement contentElement) 
-    throws IllegalArgumentException, Throwable
+    throws IllegalArgumentException, Exception
     {
       String sFilename = evalString(contentElement);
       Writer writer = new FileWriter(sFilename);
@@ -1037,10 +1038,10 @@ public class JbatExecuter {
      * </ul>
      * @param contentElement
      * @throws IllegalArgumentException
-     * @throws Throwable
+     * @throws Exception
      */
     void executeAssign(JbatGenScript.Statement contentElement) 
-    throws IllegalArgumentException, Throwable
+    throws IllegalArgumentException, Exception
     {
       Object val = evalObject(contentElement, false);
       //Object val = ascertainValue(contentElement.expression, data, localVariables, false);
@@ -1083,10 +1084,10 @@ public class JbatExecuter {
      * @return any object. The execution may be a side effect. The goal of this invocation is get data.
      * @throws IllegalArgumentException
      * @throws IOException
-     * @throws Throwable
+     * @throws Exception
      */
     Object getContent(JbatGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
-    throws IllegalArgumentException, IOException, Throwable
+    throws IllegalArgumentException, IOException, Exception
     { assert(arg.expression !=null);
       if(arg.expression !=null){
         return ascertainValue(arg.expression, data, localVariables, bContainer);
@@ -1102,10 +1103,10 @@ public class JbatExecuter {
     }
     
     
-    public String evalString(JbatGenScript.Argument arg) throws Throwable{
-      if(arg.text !=null) return arg.text;
+    public String evalString(JbatGenScript.Argument arg) throws Exception{
+      if(arg.textArg !=null) return arg.textArg;
       else if(arg.datapath() !=null){
-        Object o = DataAccess.getData(arg.datapath(), null, localVariables, accessPrivate, false);
+        Object o = evalGetData(arg.datapath(), false);
         return o.toString();
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
@@ -1121,18 +1122,18 @@ public class JbatExecuter {
     
     /**Gets the value of the given Argument. Either it is a 
      * <ul>
-     * <li>String from {@link JbatGenScript.Argument#text}
+     * <li>String from {@link JbatGenScript.Argument#textArg}
      * <li>Object from {@link JbatGenScript.Argument#datapath()}
      * <li>Object from {@link JbatGenScript.Argument#expression}
      * <li>
      * </ul>
      * @param arg
      * @return
-     * @throws Throwable
+     * @throws Exception
      */
-    public Object evalObject(JbatGenScript.Argument arg, boolean bContainer) throws Throwable{
+    public Object evalObject(JbatGenScript.Argument arg, boolean bContainer) throws Exception{
       Object obj;
-      if(arg.text !=null) return arg.text;
+      if(arg.textArg !=null) return arg.textArg;
       else if(arg.datapath() !=null){
         obj = evalGetData(arg.datapath(), bContainer);
         if(arg.name !=null && arg.name.equals("@info")){
@@ -1165,10 +1166,10 @@ public class JbatExecuter {
     /**Prepares the data access. First the arguments should be evaluated if a method will be called.
      * @param datapath
      * @return
-     * @throws Throwable
+     * @throws Exception
      */
     Object evalGetData(List<DataAccess.DatapathElement> datapath, boolean bContainer)
-    throws Throwable {
+    throws Exception {
       for(DataAccess.DatapathElement dataElement : datapath){  
         //loop over all elements of the path to check whether it is a method and it have arguments.
         ZbnfDataPathElement zd = dataElement instanceof ZbnfDataPathElement ? (ZbnfDataPathElement)dataElement : null;
@@ -1217,6 +1218,9 @@ public class JbatExecuter {
   
   
   
-  void stop(){}
+  void stop(){
+    
+    
+  }
 
 }

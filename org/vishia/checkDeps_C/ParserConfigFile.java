@@ -146,6 +146,9 @@ public class ParserConfigFile
       if(sValue == null) {
         sValue = System.getenv(sName);  //read from environment variable
       }
+      if(sValue == null) {
+        sValue = System.getProperty(sName);  //read from Java system property
+      }
       if(sValue == null) throw new IllegalArgumentException("config file - env-variable not found; " + sName);
       uInclPath.replace(posVariable, posEnd+1, sValue);
     }

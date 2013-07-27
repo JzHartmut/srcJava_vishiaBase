@@ -12,7 +12,15 @@ import org.vishia.jbat.JbatGenScript;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 
-
+/**This class's subclasses contains all information which are parsed from a Zmake User script.
+ * The toplevel instance is {@link UserScript}. That contains all script variables: {@link UserScript#varZmake}
+ * all {@link UserScript#targets} and the current directory {@link UserScript#sCurrDir()}.
+ * The subclasses are appropriate in its structure to the ZmakeStd.zbnf syntax. To set its content
+ * the {@link org.vishia.zbnf.ZbnfJavaOutput} functionality is used.
+ *  
+ * @author hartmut Schorrig
+ *
+ */
 public class ZmakeUserScript
 {
   
@@ -343,7 +351,7 @@ public class ZmakeUserScript
   }
   
   /**A < variable> in the ZmakeStd.zbnf is
-   * variable::=<$?@name> = [ fileset ( <fileset> ) | <string> | { <execCmd> } ].
+   * variable::=<$?@name> = [ fileset ( <fileset> ) | <string>  } ].
    *
    */
   public static class ScriptVariable extends JbatGenScript.Argument
@@ -388,11 +396,28 @@ public class ZmakeUserScript
     }
     
     
+    /**For textscript: <*var.name.text(appendable)>
+     * @param u appends built content to it.
+     * @throws Exception
+     */
+    public void text(Appendable u) throws Exception{ 
+      JbatExecuter gen = script.jbatexecuter;
+      JbatExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
+      CharSequence content = genLevel.evalString(this);
+      u.append(content);
+    }
+
+    
+    
     /**For textscript: <*var.name.text()>
      * @return The text of the script variable. 
+     * @throws Exception 
      */
-    public CharSequence text(){ return expression !=null ? script.jbatexecuter.ascertainText(expression) : ""; }
-    
+    public CharSequence text() throws Exception{
+      StringBuilder u = new StringBuilder();
+      text(u);
+      return u;
+    }
   }
   
   public static class TargetParamZbnf
@@ -455,9 +480,9 @@ public class ZmakeUserScript
      * If the scriptVariable or any of them in a concatenation was not found, either a IllegalArgumentException is thrown
      * or a "<??errorText??> will be produced.
      * @return Any case a string if no exception.
-     * @throws Throwable 
+     * @throws Exception 
      */
-    public CharSequence text() throws Throwable{
+    public CharSequence text() throws Exception{
       if(value !=null) return value;
       else {
         StringBuilder u = new StringBuilder();
@@ -467,7 +492,7 @@ public class ZmakeUserScript
           } else { 
             assert(element.fileset !=null);
             //search the input Set in the script variables:
-            ScriptVariable variable = parentTarget.script.scriptVarZmake.get(element.fileset);
+            ScriptVariable variable = parentTarget.script.varZmake.get(element.fileset);
             if(variable == null){
               int pos = u.length();
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
@@ -485,7 +510,7 @@ public class ZmakeUserScript
     }
 
     
-    public CharSequence textW() throws Throwable{ return UserFilepath.toWindows(text()); }
+    public CharSequence textW() throws Exception{ return UserFilepath.toWindows(text()); }
   
     @Override public String toString(){
       StringBuilder u = new StringBuilder();
@@ -759,7 +784,7 @@ input::=
         { //expand file or fileset:
           //
           if(targetInputParam.fileset !=null){
-            ScriptVariable variable = script.scriptVarZmake.get(targetInputParam.fileset);
+            ScriptVariable variable = script.varZmake.get(targetInputParam.fileset);
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
                 UserFilepath errorhint = new UserFilepath(script);
@@ -817,19 +842,34 @@ input::=
     
     //Map<String, String> currDir = new TreeMap<String, String>();
     
-    Map<String, ScriptVariable> scriptVarZmake = new TreeMap<String, ScriptVariable>();
+    /**All variables which are defined in the Zmake user script.
+     * Because this container is public one can add, delete or change variables.
+     * That is possible and a assured feature, but it is not recommended in normal cases.
+     * One can access variables calling <code>script.varZmake.name.text()</code>
+     * or <code>script.varZmake.name.files()</code> in an Zmake generation script.
+     */
+    public Map<String, ScriptVariable> varZmake = new TreeMap<String, ScriptVariable>();
     
     public List<UserTarget> targets = new LinkedList<UserTarget>();
     
     /**From ZBNF: < variable> */
     public ScriptVariable new_variable(){ return new ScriptVariable(this); }
     
-    public void add_variable(ScriptVariable  value){ scriptVarZmake.put(value.name, value); }
+    public void add_variable(ScriptVariable  value){ varZmake.put(value.name, value); }
     
     public UserTarget new_target(){ return new UserTarget(this); }
     
     public void add_target(UserTarget value){ targets.add(value); }
     
+    
+    /**Returns a script variable's content, able to use in zmake scripts.
+     * This is an alternate way to access script variables. 
+     * invoke <code>script.varZmake("name").text()</code> whereby the parameter "name"
+     * can be a variables content.
+     * @param name Name of the Zmake script variable
+     * @return the variable
+     */
+    public ScriptVariable varZmake(String name){ return varZmake.get(name); }
     
     public UserScript(JbatExecuter jbatexecuter){
       this.jbatexecuter = jbatexecuter;

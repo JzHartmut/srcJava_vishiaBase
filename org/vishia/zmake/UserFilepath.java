@@ -196,8 +196,9 @@ public final class UserFilepath {
    * @param src The source (clone source)
    * @param basepath An additional basepath usual stored as <code>basepath=path, ...</code> in a fileset, maybe null
    * @param pathbase0 additional pre-pathbase before base, maybe null
+   *  
    */
-  UserFilepath(ZmakeUserScript.UserScript script, UserFilepath src, UserFilepath commonPath, UserFilepath accessPath){
+  UserFilepath(ZmakeUserScript.UserScript script, UserFilepath src, UserFilepath commonPath, UserFilepath accessPath) {
     CharSequence basePath = src.basepath(null, commonPath, accessPath, null);
     CharSequence localDir = src.localDir(null, commonPath, accessPath);
     int posbase = isRootpath(basePath);
@@ -358,8 +359,10 @@ public final class UserFilepath {
    *   It is a StringBuilder if the path is assembled from more as one parts.
    *   It is a String if uRet is null and the basepath is simple.
    *   A returned StringBuilder may be used to append some other parts furthermore.
+   *  
    */
-  protected CharSequence basepath(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath, boolean[] useBaseFile){ 
+  protected CharSequence basepath(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath, boolean[] useBaseFile) 
+  { 
     //if(generalPath == null){ generalPath = emptyParent; }
     //first check singulary conditions
     ///
@@ -368,7 +371,7 @@ public final class UserFilepath {
     UserFilepath varfile;
     if((basepath !=null || useBaseFile !=null && useBaseFile[0]) && scriptVariable !=null){
       //get the variable if a base path is given or the file may be used as base path
-      var = script.scriptVarZmake.get(scriptVariable);
+      var = script.varZmake.get(scriptVariable);
       varfile = var.filepath;
     } else { 
       var = null;
@@ -451,7 +454,8 @@ public final class UserFilepath {
         }
         final CharSequence text;
         if(var !=null && varfile == null){
-          text = var.text();
+          try{ text = var.text(); }
+          catch(Exception exc){ throw new IllegalArgumentException(exc.getMessage()); }
         }  
         else if(envVariable !=null){
           text = System.getenv(envVariable);
@@ -582,8 +586,9 @@ public final class UserFilepath {
    * @param generalPath
    * @param accessPath
    * @return Either the {@link #localdir} as String or a StringBuilder instance. If uRet is given, it is returned.
+   *  
    */
-  public CharSequence localDir(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath){
+  public CharSequence localDir(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath) {
     ///
     if(  basepath !=null     //if a basepath is given, then only this localpath is valid.
       || (  (commonPath == null || commonPath.basepath ==null) //either no commonPath or commonPath is a basepath completely
@@ -604,7 +609,7 @@ public final class UserFilepath {
       ZmakeUserScript.ScriptVariable var;
       UserFilepath varfile;
       if(scriptVariable !=null){
-        var = script.scriptVarZmake.get(scriptVariable);
+        var = script.varZmake.get(scriptVariable);
         varfile = var.filepath;
       } else { 
         var = null;
@@ -621,8 +626,11 @@ public final class UserFilepath {
       }
       //
       if(var !=null && var.filepath == null){
-        CharSequence varpath = var.text();
-        uRet.append(varpath);
+        try{ 
+          CharSequence varpath = var.text();
+          uRet.append(varpath);
+        } 
+        catch(Exception exc){ throw new IllegalArgumentException(exc.getMessage()); }
       }
       if(envVariable !=null){
         CharSequence varpath = System.getenv(envVariable);
@@ -637,7 +645,7 @@ public final class UserFilepath {
   }
   
   
-  public CharSequence localFile(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath){
+  public CharSequence localFile(StringBuilder uRet, UserFilepath commonPath, UserFilepath accessPath) {
     CharSequence dir = localDir(uRet, commonPath, accessPath);
     if(uRet ==null){
       uRet = dir instanceof StringBuilder ? (StringBuilder)dir: new StringBuilder(dir);
@@ -692,22 +700,24 @@ public final class UserFilepath {
   
   /**Method can be called in the generation script: <*absbasepath()>. 
    * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
+   *  
    */
-  public CharSequence absbasepath(){ 
+  public CharSequence absbasepath() { 
     CharSequence basepath = basepath(null, emptyParent, null, null);
     //basepath = driveRoot(basepath, emptyParent,null);
     return absbasepath(basepath);
   }
   
-  public CharSequence absbasepathW(){ return toWindows(absbasepath()); }
+  public CharSequence absbasepathW() { return toWindows(absbasepath()); }
   
 
   
   /**Method can be called in the generation script: <*path.absdir()>. 
    * @return the whole path to the parent of this file inclusive a given general path in a {@link UserFileSet}.
    *   The path is absolute. If it is given as relative path, the general current directory of the script is used.
+   *   
    */
-  public CharSequence absdir(){ 
+  public CharSequence absdir()  { 
     CharSequence basePath = absbasepath();
     StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
     int zpath = (localdir == null) ? 0 : localdir.length();

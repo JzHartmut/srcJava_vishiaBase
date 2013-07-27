@@ -275,11 +275,11 @@ public class CheckDependencyFile
 
   
   /**Check of one source file for newly against the associated result file of translation (object-file for C-compilation). 
-   * @param fileSrc
-   * @param sLocalPathName
-   * @param sObjExt
-   * @param recursiveCt
-   * @return
+   * @param fileSrc The source file
+   * @param sLocalPathName The local part of name, it is the name of the object file
+   * @param sObjExt extension of the object file
+   * @return An ample information about dependencies. This information is used to produce
+   *  the {@link #writeDependencies(String)} line for this file.
    */
   public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt) 
   {

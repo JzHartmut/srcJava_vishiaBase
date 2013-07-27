@@ -18,6 +18,7 @@ import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
+import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.UnexpectedException;
@@ -53,7 +54,7 @@ public class JbatGenScript {
    *   which contains destinations for argument parsing of a called Java-subroutine in a dataPath.  
    * <li>2012-12-23 Hartmut chg: A {@link Statement} and a {@link Argument} have the same usage aspects for arguments
    *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link Expression#text} if a data path is given, use for formatting a numerical value.   
+   * <li>2012-12-23 Hartmut new: formatText in the {@link Expression#textArg} if a data path is given, use for formatting a numerical value.   
    * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #translateAndSetGenCtrl(StringPart)} etc.
    * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
    * <li>2012-11-24 Hartmut chg: @{@link Statement#datapath} with {@link DataAccess.DatapathElement} 
@@ -410,7 +411,7 @@ public class JbatGenScript {
     
     
     @Override public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
-    throws Throwable{
+    throws Exception{
       if(genString !=null){
         JbatExecuter.ExecuteLevel executer = (JbatExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
         StringBuilder u = new StringBuilder();
@@ -448,22 +449,6 @@ public class JbatGenScript {
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
     public void set_charValue(String val){ this.value = new CalculatorExpr.Value(val.charAt(0)); }
     
-    /**ZBNF: <code>info ( < datapath? > <?datapath > )</code>.
-     * 
-     * @return this. The syntax supports only datapath elements. But the instance is the same.
-     */
-    public void set_datapath(){ 
-      if(this.value == null){ this.value = new CalculatorExpr.Value(); }
-    }
-    
-    /**ZBNF: <code>info ( < datapath? > <?info > )</code>.
-     * 
-     * @return this. The syntax supports only datapath elements. But the instance is the same.
-     */
-    public void set_info(){ 
-      if(this.value == null){ this.value = new CalculatorExpr.Value(); }
-      this.value.setInfoType();
-    }
     
     public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(parentStatement); }
     
@@ -657,7 +642,7 @@ public class JbatGenScript {
     public Expression expression;
   
     /**From Zbnf <""?textInStatement>, constant text, null if not used. */
-    public String text; 
+    protected String textArg; 
     
     /**If need, a sub-content, maybe null.*/
     public StatementList subContent;
@@ -672,9 +657,20 @@ public class JbatGenScript {
     public void add_expression(Expression val){ expression = val; }
     
     public void set_text(String text){
+      if(text.contains("testt"))
+        Assert.stop();
       if(subContent == null){ subContent = new StatementList(this); }
-      subContent.content.add(new Statement(parentList, 't', text)); 
+      subContent.set_text(text);
     }
+    
+    
+    public void set_nonEmptyText(String text){
+      if(!StringFunctions.isEmptyOrOnlyWhitespaces(text)){
+        if(subContent == null){ subContent = new StatementList(this); }
+        subContent.set_text(text);
+      }
+    }
+    
     
     
     /**From Zbnf, a part <:>...<.> */
@@ -742,7 +738,7 @@ public class JbatGenScript {
 
     
     public void XXXset_textInStatement(String text){
-      this.text = text;
+      this.textArg = text;
     }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
@@ -785,20 +781,20 @@ public class JbatGenScript {
      * <tr><td>n</td><td>simple newline text</td></tr>
      * <tr><td>T</td><td>textual output to any variable or file</td></tr>
      * <tr><td>l</td><td>add to list</td></tr>
-     * <tr><td>i</td><td>content of the input, {@link #text} describes the build-prescript, 
+     * <tr><td>i</td><td>content of the input, {@link #textArg} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
-     * <tr><td>o</td><td>content of the output, {@link #text} describes the build-prescript, 
+     * <tr><td>o</td><td>content of the output, {@link #textArg} describes the build-prescript, 
      *                   see {@link ZmakeGenerator#getPartsFromFilepath(org.vishia.zmake.ZmakeUserScript.UserFilepath, String)}</td></tr>
      * <tr><td>e</td><td>A datatext, from <*expression> or such.</td></tr>
      * <tr><td>XXXg</td><td>content of a data path starting with an internal variable (reference) or value of the variable.</td></tr>
-     * <tr><td>s</td><td>call of a subtext by name. {@link #text}==null, {@link #subContent} == null.</td></tr>
+     * <tr><td>s</td><td>call of a subtext by name. {@link #textArg}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>c</td><td>cmd line invocation.</td></tr>
-     * <tr><td>V</td><td>A variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>V</td><td>A variable, {@link #textArg} contains the name of the variable</td></tr>
      * <tr><td>J</td><td>Object variable {@link #name}==its name, {@link #subContent} == null.</td></tr>
-     * <tr><td>P</td><td>Pipe variable, {@link #text} contains the name of the variable</td></tr>
-     * <tr><td>U</td><td>Buffer variable, {@link #text} contains the name of the variable</td></tr>
-     * <tr><td>S</td><td>String variable, {@link #text} contains the name of the variable</td></tr>
+     * <tr><td>P</td><td>Pipe variable, {@link #textArg} contains the name of the variable</td></tr>
+     * <tr><td>U</td><td>Buffer variable, {@link #textArg} contains the name of the variable</td></tr>
+     * <tr><td>S</td><td>String variable, {@link #textArg} contains the name of the variable</td></tr>
      * <tr><td>L</td><td>Container variable, a list</td></tr>
      * <tr><td>W</td><td>Opened file, a Writer in Java</td></tr>
      * <tr><td>=</td><td>assignment of an expression to a variable.</td></tr>
@@ -848,7 +844,7 @@ public class JbatGenScript {
     public Statement(StatementList parentList, char whatisit, String text)
     { super(parentList);
       this.elementType = whatisit;
-      this.text = text;
+      this.textArg = text;
       if("BNXYZvl".indexOf(whatisit)>=0){
         subContent = new StatementList();
       }
@@ -866,7 +862,7 @@ public class JbatGenScript {
     public void set_name(String name){ this.name = name; }
     
     
-    public void set_formatText(String text){ this.text = text; }
+    public void set_formatText(String text){ this.textArg = text; }
     
     /**Gathers a text which is assigned to any variable or output. <+ name>text<.+>
      */
@@ -904,13 +900,13 @@ public class JbatGenScript {
     
     /**Defines a variable which is able to use as pipe.
      */
-    public Statement new_Stringb(){
+    public Statement new_StringAppend(){
       if(subContent == null){ subContent = new StatementList(this); }
       subContent.bContainsVariableDef = true; 
       return new Statement(parentList, 'U', null); 
     } 
 
-    public void add_Stringb(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
+    public void add_StringAppend(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
     /**Defines a variable which is able to use as pipe.
      */
@@ -941,6 +937,7 @@ public class JbatGenScript {
     } 
 
     public void add_Openfile(Statement val){ 
+      if(subContent == null){ subContent = new StatementList(this); }
       subContent.content.add(val);  
       subContent.onerrorAccu = null; 
       subContent.withoutOnerror.add(val);
@@ -991,6 +988,7 @@ public class JbatGenScript {
     } 
 
     public void add_assignment(Statement val){ 
+      if(subContent == null){ subContent = new StatementList(this); }
       subContent.content.add(val);  
       subContent.onerrorAccu = null; 
       subContent.withoutOnerror.add(val);
@@ -1022,6 +1020,7 @@ public class JbatGenScript {
     
     
     public Statement new_statementBlock(){
+      if(subContent == null){ subContent = new StatementList(this); }
       Statement contentElement = new Statement(parentList, 'B', null);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
@@ -1048,6 +1047,7 @@ public class JbatGenScript {
 
     
     public void set_breakBlock(){ 
+      if(subContent == null){ subContent = new StatementList(this); }
       Statement contentElement = new Statement(parentList, 'b', null);
       subContent.content.add(contentElement);
     }
@@ -1055,12 +1055,8 @@ public class JbatGenScript {
  
       
     public Statement new_forContainer()
-    { StatementList subGenContent = new StatementList(this, true);
-      Statement contentElement = new Statement(parentList, 'C', null);
-      contentElement.subContent = subGenContent;  //The contentElement contains a genContent. 
-      subContent.content.add(contentElement);
-      subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
-      return contentElement;
+    { if(subContent == null) { subContent = new StatementList(this); }
+      return subContent.new_forContainer();
     }
     
     public void add_forContainer(Statement val){}
@@ -1112,7 +1108,8 @@ public class JbatGenScript {
     
     
     public CallStatement new_callSubtext()
-    { CallStatement contentElement = new CallStatement(parentList);
+    { if(subContent == null){ subContent = new StatementList(this); }
+      CallStatement contentElement = new CallStatement(parentList);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
@@ -1123,7 +1120,8 @@ public class JbatGenScript {
     
 
     public Statement new_cmdLine()
-    { Statement contentElement = new Statement(parentList, 'c', null);
+    { if(subContent == null){ subContent = new StatementList(this); }
+      Statement contentElement = new Statement(parentList, 'c', null);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
@@ -1137,18 +1135,21 @@ public class JbatGenScript {
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void set_fnEmpty(String val){ 
+      if(subContent == null){ subContent = new StatementList(this); }
       Statement contentElement = new Statement(parentList, 'f', val);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
     }
     
     public void set_outputValue(String text){ 
+      if(subContent == null){ subContent = new StatementList(this); }
       Statement contentElement = new Statement(parentList, 'o', text);
       subContent.content.add(contentElement); 
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
     }
     
     public void set_inputValue(String text){ 
+      if(subContent == null){ subContent = new StatementList(this); }
       Statement contentElement = new Statement(parentList, 'i', text);
       subContent.content.add(contentElement); 
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
@@ -1160,7 +1161,8 @@ public class JbatGenScript {
     //public void set_listElement(){ subContent.content.add(new ScriptElement('e', null)); }
     
     public Statement new_forInputContent()
-    { Statement contentElement = new Statement(parentList, 'I', null);
+    { if(subContent == null){ subContent = new StatementList(this); }
+      Statement contentElement = new Statement(parentList, 'I', null);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
@@ -1170,7 +1172,8 @@ public class JbatGenScript {
 
     
     public Statement xxxnew_forVariable()
-    { Statement contentElement = new Statement(parentList, 'V', null);
+    { if(subContent == null){ subContent = new StatementList(this); }
+      Statement contentElement = new Statement(parentList, 'V', null);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
@@ -1180,7 +1183,8 @@ public class JbatGenScript {
 
     
     public Statement new_forList()
-    { Statement contentElement = new Statement(parentList, 'L', null);
+    { if(subContent == null){ subContent = new StatementList(this); }
+      Statement contentElement = new Statement(parentList, 'L', null);
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
       return contentElement;
@@ -1211,28 +1215,28 @@ public class JbatGenScript {
     @Override public String toString()
     {
       switch(elementType){
-      case 't': return text;
+      case 't': return textArg;
       case 'V': return "<=" + name + ">";
       case 'J': return "<=" + name + ":objVariable>";
       case 'P': return "Pipe " + name;
       case 'U': return "Buffer " + name;
-      case 'o': return "(?outp." + text + "?)";
-      case 'i': return "(?inp." + text + "?)";
+      case 'o': return "(?outp." + textArg + "?)";
+      case 'i': return "(?inp." + textArg + "?)";
       case 'e': return "<*" +   ">";  //expressions.get(0).datapath
       //case 'g': return "<$" + path + ">";
       case 's': return "<*subtext:" + name + ">";
       case 'I': return "(?forInput?)...(/?)";
-      case 'L': return "(?forList " + text + "?)";
-      case 'C': return "<:for:Container " + text + "?)";
-      case 'F': return "<:if:Container " + text + "?)";
-      case 'G': return "<:elsif-condition " + text + "?)";
+      case 'L': return "(?forList " + textArg + "?)";
+      case 'C': return "<:for:Container " + textArg + "?)";
+      case 'F': return "<:if:Container " + textArg + "?)";
+      case 'G': return "<:elsif-condition " + textArg + "?)";
       case 'N': return "<:hasNext> content <.hasNext>";
       case 'E': return "<:else>";
       case 'Z': return "<:target:" + name + ">";
       case 'Y': return "<:file>";
       case 'b': return "break;";
       case 'X': return "<:subtext:" + name + ">";
-      default: return "(??" + elementType + " " + text + "?)";
+      default: return "(??" + elementType + " " + textArg + "?)";
       }
     }
     
@@ -1422,15 +1426,39 @@ public class JbatGenScript {
     }
     
     public void set_text(String text){
-      content.add(new Statement(this, 't', text));
+      Statement contentElement = new Statement(this, 't', text);
+      content.add(contentElement);
+      onerrorAccu = null; withoutOnerror.add(contentElement);
+    }
+    
+    
+    public void set_nonEmptyText(String text){
+      if(!StringFunctions.isEmptyOrOnlyWhitespaces(text)){
+        Statement contentElement = new Statement(this, 't', text);
+        content.add(contentElement);
+        onerrorAccu = null; withoutOnerror.add(contentElement);
+      }
     }
     
     
     public void set_newline(){
-      content.add(new Statement(this, 'n', null));   /// 
+      Statement contentElement = new Statement(this, 'n', null);
+      content.add(contentElement);
+      onerrorAccu = null; withoutOnerror.add(contentElement);
     }
     
 
+    public Statement new_forContainer()
+    { Statement contentElement = new Statement(this, 'C', null);
+      content.add(contentElement);
+      onerrorAccu = null; withoutOnerror.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_forContainer(Statement val){}
+
+
+    
     
     public void set_name(String name){
       cmpnName = name;
