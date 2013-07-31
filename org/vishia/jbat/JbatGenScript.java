@@ -36,6 +36,8 @@ import org.vishia.zbnf.ZbnfParser;
 public class JbatGenScript {
   /**Version, history and license.
    * <ul>
+   * <li>2014-07-30 Hartmut chg {@link #translateAndSetGenCtrl(File)} returns void.
+   * <li>2014-07-20 Hartmut chg Some syntactical changes.
    * <li>2013-07-14 Hartmut tree traverse enable because {@link Argument#parentList} and {@link StatementList#parentStatement}
    * <li>2013-06-20 Hartmut new: Syntax with extArg for textual Arguments in extra block
    * <li>2013-03-10 Hartmut new: <code><:include:path></code> of a sub script is supported up to now.
@@ -101,6 +103,9 @@ public class JbatGenScript {
 
   final MainCmdLogging_ifc console;
 
+  /**Helper to transfer parse result into the java classes {@link ZbnfMainGenCtrl} etc. */
+  final ZbnfJavaOutput parserGenCtrl2Java;
+
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
   //ZbnfMainGenCtrl zTextGenCtrl;
   
@@ -125,15 +130,17 @@ public class JbatGenScript {
   
   final JbatExecuter executer;
 
-  public String scriptclassMain;
+  //public String scriptclassMain;
 
   public JbatGenScript(JbatExecuter executer, MainCmdLogging_ifc console)
   { this.console = console;
     this.executer = executer;
+    this.parserGenCtrl2Java = new ZbnfJavaOutput(console);
+
   }
 
   
-  public boolean translateAndSetGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl, File checkXmlOut) 
+  public void translateAndSetGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IOException
     , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
   { console.writeInfoln("* Zmake: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
@@ -146,41 +153,41 @@ public class JbatGenScript {
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
+    translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
   }
   
 
-  public boolean translateAndSetGenCtrl(File fileGenCtrl) 
+  public void translateAndSetGenCtrl(File fileGenCtrl) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
-    return translateAndSetGenCtrl(fileGenCtrl, null);
+    translateAndSetGenCtrl(fileGenCtrl, null);
   }
   
   
-  public boolean translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut) 
+  public void translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent) !=null;
+    translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
   }
   
   
-  public boolean translateAndSetGenCtrl(String spGenCtrl) 
+  public void translateAndSetGenCtrl(String spGenCtrl) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), null, null) !=null;
+      translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), null, null);
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
   
-  public boolean translateAndSetGenCtrl(StringPart spGenCtrl) 
+  public void translateAndSetGenCtrl(StringPart spGenCtrl) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      return translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), spGenCtrl, null, null) !=null;
+      translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), spGenCtrl, null, null);
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -198,10 +205,7 @@ public class JbatGenScript {
    * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
    * @param fileParent directory of the used file as start directory for included scripts. 
    *   null possible, then the script should not contain includes.
-   * @return a new instance of {@link ZbnfMainGenCtrl}. This instance is temporary only because it is a non-static 
-   *   inner class of this. All substantial data are stored in this. Only the {@link ZbnfMainGenCtrl#scriptclass}
-   *   and the {@link ZbnfMainGenCtrl#scriptFileSub} is read out and stored in @{@link #scriptclassMain} and {@link #scriptFile}
-   *   if it is the first one given. This method returns null if there is an error. 
+   * @return a new instance of {@link ZbnfMainGenCtrl}. This method returns null if there is an error. 
    * @throws ParseException
    * @throws IllegalArgumentException
    * @throws IllegalAccessException
@@ -209,7 +213,7 @@ public class JbatGenScript {
    * @throws IOException only if xcheckXmlOutput fails
    * @throws FileNotFoundException if a included file was not found or if xcheckXmlOutput file not found or not writeable
    */
-  public ZbnfMainGenCtrl translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput, File fileParent) 
+  public void translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser(console);
@@ -219,13 +223,13 @@ public class JbatGenScript {
       parserGenCtrl.reportSyntax(console, MainCmdLogging_ifc.fineInfo);
     }
     console.writeInfo(" ... ");
-    return translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent);
+    translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent);
   }
     
     
     
     
-  private ZbnfMainGenCtrl translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPart spGenCtrl
+  private void translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPart spGenCtrl
       , File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
@@ -248,15 +252,13 @@ public class JbatGenScript {
     //}
     //write into Java classes:
     ZbnfMainGenCtrl zbnfGenCtrl = new ZbnfMainGenCtrl();
-    ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(console);
     parserGenCtrl2Java.setContent(ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
-    if(scriptFile ==null){
-      scriptFile = zbnfGenCtrl.scriptFileSub;   //use the first found <:file>, also from a included script
-    }
-    if(this.scriptclassMain ==null){
-      this.scriptclassMain = zbnfGenCtrl.scriptclass;
-    }
+    //if(this.scriptclassMain ==null){
+    //this.scriptclassMain = zbnfGenCtrl.scriptclass;
+    //}
     if(zbnfGenCtrl.includes !=null){
+      //parse includes after processing this file, because the zbnfGenCtrl.includes are not set before.
+      //If one include contain a main, use it. But override the main after them, see below.
       for(String sFileInclude: zbnfGenCtrl.includes){
         File fileInclude = new File(fileParent, sFileInclude);
         if(!fileInclude.exists()){
@@ -269,7 +271,11 @@ public class JbatGenScript {
         translateAndSetGenCtrl(parserGenCtrl, spGenCtrlSub, checkXmlOutput, fileIncludeParent);
       }
     }
-    return zbnfGenCtrl;
+    if(zbnfGenCtrl.scriptFileSub !=null){
+      //use the last found main, also from a included script but firstly from main.
+      scriptFile = zbnfGenCtrl.scriptFileSub;   
+    }
+
   }
   
   
@@ -283,7 +289,7 @@ public class JbatGenScript {
   }
   
   
-  public final String getScriptclass(){ return scriptclassMain; }
+  //public final String getScriptclass(){ return scriptclassMain; }
   
   public final Statement getFileScript(){ return scriptFile; }
   
@@ -1489,7 +1495,7 @@ public class JbatGenScript {
   public final class ZbnfMainGenCtrl
   {
 
-    public String scriptclass;
+    //public String scriptclass;
     
     List<String> includes;
     

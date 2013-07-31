@@ -17,7 +17,7 @@ public class OutputDataTree {
   
   /**Version, history and license.
    * <ul>
-   * <li>2013-03-10 Hartmut chg/new: now writes XML
+   * <li>2013-07-28 Hartmut chg/new: now writes XML
    * <li>2013-03-10 Hartmut chg/new: supports superclass content.
    * <li>2012-12-00 Hartmut improved: circular references with @ 1234 (address) to mark it.
    * <li>2012-10-08 created. A presentation of the content of a Java data tree was necessary.

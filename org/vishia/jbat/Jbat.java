@@ -61,25 +61,29 @@ public class Jbat
         mainCmdLine.report(sRet, exception);
         mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       }
-      Jbat main = new Jbat(args, mainCmdLine);     //the main instance
-      if(sRet == null)
-      { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
-            to hold the contact to the command line execution.
-        */
-        try{ 
-          sRet = main.execute();
-          if(sRet !=null){
-            mainCmdLine.writeError(sRet);
+      if(args.sFileIn !=null){
+        Jbat main = new Jbat(args, mainCmdLine);     //the main instance
+        if(sRet == null)
+        { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
+              to hold the contact to the command line execution.
+          */
+          try{ 
+            sRet = main.execute();
+            if(sRet !=null){
+              mainCmdLine.writeError(sRet);
+            }
+          }
+          catch(Exception exception)
+          { //catch the last level of error. No error is reported direct on command line!
+            sRet = "Jbat - Any internal error;" + exception.getMessage();
+            mainCmdLine.report(sRet, exception);
+            exception.printStackTrace(System.out);
+            mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
           }
         }
-        catch(Exception exception)
-        { //catch the last level of error. No error is reported direct on command line!
-          sRet = "Jbat - Any internal error;" + exception.getMessage();
-          mainCmdLine.report(sRet, exception);
-          exception.printStackTrace(System.out);
-          mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
-        }
-      } 
+      } else {
+        mainCmdLine.writeHelpInfo();
+      }
     } catch(Exception exc){
       sRet = exc.getMessage();
     }
@@ -141,17 +145,22 @@ public class Jbat
       
     }
     
-    @Override
-    protected void callWithoutArguments()
+    @Override protected void callWithoutArguments()
     { //overwrite with empty method - it is admissible.
     }
 
     
-    @Override
-    protected boolean checkArguments()
+    @Override protected boolean checkArguments()
     {
       return true;
     } 
+    
+    @Override public void writeHelpInfo(){
+      super.writeHelpInfo();
+      System.out.println("=== Syntax of a jbat script===");
+      System.out.println(JbatSyntax.syntax);
+    }
+
   }
   
   
