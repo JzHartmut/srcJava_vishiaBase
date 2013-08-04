@@ -109,20 +109,20 @@ public class JbatGenScript {
   /**Mirror of the content of the zmake-genctrl-file. Filled from ZBNF-ParseResult*/
   //ZbnfMainGenCtrl zTextGenCtrl;
   
-  final Map<String, Statement> zmakeTargets = new TreeMap<String, Statement>();
+  //final Map<String, Statement> zmakeTargets = new TreeMap<String, Statement>();
   
   final Map<String, Statement> subtextScripts = new TreeMap<String, Statement>();
   
   
   
-  final Map<String,Statement> indexScriptVariables = new TreeMap<String,Statement>();
-
-  /**List of the script variables in order of creation in the zmakeCtrl-file.
+  /**List of the script variables in order of creation in the jbat script file.
    * The script variables can contain inputs of other variables which are defined before.
    * Therefore the order is important.
    */
-  final List<Statement> listScriptVariables = new ArrayList<Statement>();
+  private final List<Statement> listScriptVariables = new ArrayList<Statement>();
 
+  private final List<Statement> listScriptEnvVariables = new LinkedList<Statement>();
+  
   /**The script element for the whole file. It shall contain calling of <code><*subtext:name:...></code> 
    */
   Statement scriptFile;
@@ -282,11 +282,11 @@ public class JbatGenScript {
   /**Searches the Zmake-target by name (binary search. TreeMap.get(name).
    * @param name The name of given < ?translator> in the end-users script.
    * @return null if the Zmake-target is not found.
-   */
   public final StatementList searchZmakeTaget(String name){ 
     Statement target = zmakeTargets.get(name);
     return target == null ? null : target.subContent;
   }
+   */
   
   
   //public final String getScriptclass(){ return scriptclassMain; }
@@ -296,15 +296,10 @@ public class JbatGenScript {
   
   public Statement getSubtextScript(String name){ return subtextScripts.get(name); }
   
-  public Statement xxxgetScriptVariable(String sName)
-  {
-    Statement content = indexScriptVariables.get(sName);
-    return content;
-  }
   
-  
-  
-  public List<Statement> getListScriptVariables(){ return listScriptVariables; }
+  List<Statement> getListScriptVariables(){ return listScriptVariables; }
+
+  List<Statement> getListScriptEnvVariables(){ return listScriptEnvVariables; }
 
 
 
@@ -777,11 +772,14 @@ public class JbatGenScript {
    *                                  |----content-----*>|
    * 
    * </pre> 
-   *
+   * A Statement which presents an variable contains the building algorithm for the content of the variable.
+   * Script variable's content were determined on startup of the script execution. There values are stored in specific
+   * Maps: TODO
    */
   public static class Statement extends Argument
   {
-    /**Designation what presents the element:
+    /**Designation what presents the element.
+     * 
      * <table><tr><th>c</th><th>what is it</th></tr>
      * <tr><td>t</td><td>simple constant text</td></tr>
      * <tr><td>n</td><td>simple newline text</td></tr>
@@ -796,6 +794,7 @@ public class JbatGenScript {
      * <tr><td>s</td><td>call of a subtext by name. {@link #textArg}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>c</td><td>cmd line invocation.</td></tr>
+     * <tr><td>$</td><td>An environment variable.</td></tr>
      * <tr><td>V</td><td>A variable, {@link #textArg} contains the name of the variable</td></tr>
      * <tr><td>J</td><td>Object variable {@link #name}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>P</td><td>Pipe variable, {@link #textArg} contains the name of the variable</td></tr>
@@ -1419,7 +1418,16 @@ public class JbatGenScript {
       this.isContentForInput = isContentForInput;
     }
         
+    /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
+     */
+    public Statement new_envVar(){ return new Statement(null, '$', null); } ///
+
+    public void add_envVar(Statement val){ 
+      content.add(val); 
+      onerrorAccu = null; withoutOnerror.add(val);
+    } 
     
+
     //public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
@@ -1428,7 +1436,7 @@ public class JbatGenScript {
     /**Set from ZBNF:  (\?*<*dataText>\?) */
     public void add_dataText(Statement val){ 
       content.add(val);
-      withoutOnerror.add(val);
+      onerrorAccu = null; withoutOnerror.add(val);
     }
     
     public void set_text(String text){
@@ -1512,9 +1520,9 @@ public class JbatGenScript {
       includes.add(val); 
     }
     
-    public Statement new_ZmakeTarget(){ return new Statement(null, 'Z', null); }
+    //public Statement new_ZmakeTarget(){ return new Statement(null, 'Z', null); }
     
-    public void add_ZmakeTarget(Statement val){ zmakeTargets.put(val.name, val); }
+    //public void add_ZmakeTarget(Statement val){ zmakeTargets.put(val.name, val); }
     
     
     public Statement new_subtext(){ return new Statement(null, 'X', null); }
@@ -1546,12 +1554,12 @@ public class JbatGenScript {
     public void add_objVariable(Statement val){ listScriptVariables.add(val); } 
     
     
-    public Statement new_XXXsetVariable(){ return new Statement(null, 'V', null); }
+    /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
+     */
+    public Statement new_envVar(){ return new Statement(null, '$', null); } ///
 
-    public void add_XXXsetVariable(Statement val)
-    { indexScriptVariables.put(val.name, val); 
-      listScriptVariables.add(val);
-    } 
+    public void add_envVar(Statement val){ listScriptEnvVariables.add(val); } 
+    
     
 
   }

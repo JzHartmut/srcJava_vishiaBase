@@ -139,6 +139,10 @@ public class JbatExecuter {
    * in their local variables pool. The value is either a String, CharSequence or any Object pointer.  */
   final Map<String, Object> scriptVariables = new TreeMap<String, Object>();
   
+  /**Generated content of all script environment variables. The script variables are present in all routines 
+   * in their local variables pool. The value is either a String, CharSequence or any Object pointer.  */
+  final Map<String, String> scriptEnvVariables = new TreeMap<String, String>();
+  
   private boolean bScriptVariableGenerated;
   
   
@@ -252,9 +256,15 @@ public class JbatExecuter {
 
     for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
-      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables); //NOTE: use recent scriptVariables.
+      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables, scriptEnvVariables); //NOTE: use recent scriptVariables.
       genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
       scriptVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
+    }
+    for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptEnvVariables()){
+      StringBuilder uVariable = new StringBuilder();
+      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables, scriptEnvVariables); //NOTE: use recent scriptVariables.
+      genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
+      scriptEnvVariables.put(scriptVariableScript.name, uVariable.toString()); //Buffer.toString());
     }
     bScriptVariableGenerated = true;
     return scriptVariables;
@@ -282,7 +292,7 @@ public class JbatExecuter {
       genScriptVariables(genScript, userData, accessPrivate);
     }
     JbatGenScript.Statement contentScript = genScript.getFileScript();
-    ExecuteLevel genFile = new ExecuteLevel(null, scriptVariables);
+    ExecuteLevel genFile = new ExecuteLevel(null, scriptVariables, scriptEnvVariables);
     String sError = genFile.execute(contentScript.subContent, out, false);
     return sError;
   }
@@ -414,7 +424,7 @@ public class JbatExecuter {
       } else if(value.genString !=null){
         
         dataValue = new StringBuilder();
-        ExecuteLevel subtextGenerator = this.new ExecuteLevel(null, localVariables);
+        ExecuteLevel subtextGenerator = this.new ExecuteLevel(null, localVariables, null);
         subtextGenerator.execute(value.genString, (Appendable)dataValue, false);
       
       } else {
@@ -515,6 +525,11 @@ public class JbatExecuter {
      * errors are detected on runtime only. */
     final Map<String, Object> localVariables;
     
+    /**Generated content of environment variables in this nested level including the {@link JbatExecuter#scriptEnvVariables}.
+     * The variables are type invariant on language level. The type is checked and therefore 
+     * errors are detected on runtime only. */
+    final Map<String, String> envVariables;
+    
     
     
     
@@ -525,7 +540,7 @@ public class JbatExecuter {
      *   local variables of its calling routine! This argument is only set if nested statement blocks
      *   are to execute. 
      */
-    public ExecuteLevel(ExecuteLevel parent, Map<String, Object> parentVariables)
+    public ExecuteLevel(ExecuteLevel parent, Map<String, Object> parentVariables, Map<String, String> parentEnvVariables)
     { this.parent = parent;
       localVariables = new TreeMap<String, Object>();
       if(parentVariables == null){
@@ -534,6 +549,12 @@ public class JbatExecuter {
         localVariables.putAll(parentVariables);  //use the same if it is not a subText, only a 
       }
       localVariables.put("jbatExecuteLevel", this);
+      envVariables = new TreeMap<String, String>();
+      if(parentVariables == null){
+        envVariables.putAll(scriptEnvVariables);
+      } else {
+        envVariables.putAll(parentEnvVariables);  //use the same if it is not a subText, only a 
+      }
     }
 
     
@@ -541,7 +562,7 @@ public class JbatExecuter {
     throws IOException 
     { final ExecuteLevel level;
       if(contentScript.bContainsVariableDef){
-        level = new ExecuteLevel(this, localVariables);
+        level = new ExecuteLevel(this, localVariables, envVariables);
       } else {
         level = this;
       }
@@ -597,7 +618,7 @@ public class JbatExecuter {
           } break;
           case 'V': { //create a new local variable.
             StringBuilder uBufferVariable = new StringBuilder();
-            ExecuteLevel genVariable = new ExecuteLevel(this, localVariables);
+            ExecuteLevel genVariable = new ExecuteLevel(this, localVariables, envVariables);
             JbatGenScript.StatementList content = contentElement.getSubContent();
             genVariable.execute(content, uBufferVariable, false);
             //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
@@ -694,7 +715,7 @@ public class JbatExecuter {
       }
       else if(container !=null && container instanceof Iterable<?>){
         Iterator<?> iter = ((Iterable<?>)container).iterator();
-        ExecuteLevel forExecuter = new ExecuteLevel(this, localVariables);
+        ExecuteLevel forExecuter = new ExecuteLevel(this, localVariables, envVariables);
         //a new level for the for... statements. It contains the foreachData and maybe some more variables.
         while(iter.hasNext()){
           Object foreachData = iter.next();
@@ -840,7 +861,7 @@ public class JbatExecuter {
       if(out1 == null){
         
       } else {
-        ExecuteLevel genContent = new ExecuteLevel(this, localVariables);
+        ExecuteLevel genContent = new ExecuteLevel(this, localVariables, envVariables);
         genContent.execute(contentElement.subContent, out1, false);
         if(out1 instanceof StringBuilder && variable != out1){
           if(variable instanceof String){ //a stored String should be replaced by a String.
@@ -881,7 +902,7 @@ public class JbatExecuter {
       if(subtextScript == null){
         throw new NoSuchElementException("JbatExecuter - subroutine not found; " + nameSubtext);
       } else {
-        ExecuteLevel subtextGenerator = new ExecuteLevel(this, null);
+        ExecuteLevel subtextGenerator = new ExecuteLevel(this, null, null);
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
@@ -959,7 +980,7 @@ public class JbatExecuter {
     {
       ExecuteLevel genContent;
       if(script.subContent.bContainsVariableDef){
-        genContent = new ExecuteLevel(this, localVariables);
+        genContent = new ExecuteLevel(this, localVariables, envVariables);
       } else {
         genContent = this;  //don't use an own instance, save memory and calculation time.
       }
@@ -1094,7 +1115,7 @@ public class JbatExecuter {
       } else if(arg.subContent !=null){
         
         StringBuilder buffer = new StringBuilder();
-        ExecuteLevel subtextGenerator = new ExecuteLevel(this, localVariables);
+        ExecuteLevel subtextGenerator = new ExecuteLevel(this, localVariables, envVariables);
         subtextGenerator.execute(arg.subContent, buffer, false);
         return buffer;
       } else {
