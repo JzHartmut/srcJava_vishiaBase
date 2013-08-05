@@ -666,7 +666,7 @@ variablenBlock::=
     /**Generates the config file for all variable. 
      * The config-file is able to use to access to the data of a DB, which are stored in a file.
      * More as one DB can be stored in file.
-     * @param name Name of the variable in the DB
+     * @param identArgJbat Name of the variable in the DB
      * @param type conversion information of the type of the variable
      * @param block configuration of translation for this FB, DB or UDT. 
      *        Here pre- and suffixes and the position of the data in the file are found.
@@ -1195,7 +1195,7 @@ variablenBlock::=
      * <li>S7.scl code
      * <li>Headerfile
      * </ul>
-     * @param name
+     * @param identArgJbat
      * @param type
      * @param block
      */

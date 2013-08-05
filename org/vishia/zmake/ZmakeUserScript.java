@@ -392,7 +392,7 @@ public class ZmakeUserScript
     
     
     @Override public String toString(){
-      return name + ":" + (expression !=null ? expression : fileset);
+      return identArgJbat + ":" + (expression !=null ? expression : fileset);
     }
     
     
@@ -402,7 +402,7 @@ public class ZmakeUserScript
      */
     public void text(Appendable u) throws Exception{ 
       JbatExecuter gen = script.jbatexecuter;
-      JbatExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null, null);
+      JbatExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
       CharSequence content = genLevel.evalString(this);
       u.append(content);
     }
@@ -499,7 +499,7 @@ public class ZmakeUserScript
               parentTarget.script.abortOnError(u,pos);
             } else {
               JbatExecuter gen = parentTarget.script.jbatexecuter;
-              JbatExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null, null);
+              JbatExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
               CharSequence content = genLevel.evalString(variable);
               u.append(content);
             }
@@ -855,7 +855,7 @@ input::=
     /**From ZBNF: < variable> */
     public ScriptVariable new_variable(){ return new ScriptVariable(this); }
     
-    public void add_variable(ScriptVariable  value){ varZmake.put(value.name, value); }
+    public void add_variable(ScriptVariable  value){ varZmake.put(value.getIdent(), value); }
     
     public UserTarget new_target(){ return new UserTarget(this); }
     

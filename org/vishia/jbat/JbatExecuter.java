@@ -256,15 +256,9 @@ public class JbatExecuter {
 
     for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
-      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables, scriptEnvVariables); //NOTE: use recent scriptVariables.
+      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables); //NOTE: use recent scriptVariables.
       genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
-      scriptVariables.put(scriptVariableScript.name, uVariable); //Buffer.toString());
-    }
-    for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptEnvVariables()){
-      StringBuilder uVariable = new StringBuilder();
-      ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables, scriptEnvVariables); //NOTE: use recent scriptVariables.
-      genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
-      scriptEnvVariables.put(scriptVariableScript.name, uVariable.toString()); //Buffer.toString());
+      scriptVariables.put(scriptVariableScript.identArgJbat, uVariable); //Buffer.toString());
     }
     bScriptVariableGenerated = true;
     return scriptVariables;
@@ -292,7 +286,7 @@ public class JbatExecuter {
       genScriptVariables(genScript, userData, accessPrivate);
     }
     JbatGenScript.Statement contentScript = genScript.getFileScript();
-    ExecuteLevel genFile = new ExecuteLevel(null, scriptVariables, scriptEnvVariables);
+    ExecuteLevel genFile = new ExecuteLevel(null, scriptVariables);
     String sError = genFile.execute(contentScript.subContent, out, false);
     return sError;
   }
@@ -424,7 +418,7 @@ public class JbatExecuter {
       } else if(value.genString !=null){
         
         dataValue = new StringBuilder();
-        ExecuteLevel subtextGenerator = this.new ExecuteLevel(null, localVariables, null);
+        ExecuteLevel subtextGenerator = this.new ExecuteLevel(null, localVariables);
         subtextGenerator.execute(value.genString, (Appendable)dataValue, false);
       
       } else {
@@ -525,12 +519,6 @@ public class JbatExecuter {
      * errors are detected on runtime only. */
     final Map<String, Object> localVariables;
     
-    /**Generated content of environment variables in this nested level including the {@link JbatExecuter#scriptEnvVariables}.
-     * The variables are type invariant on language level. The type is checked and therefore 
-     * errors are detected on runtime only. */
-    final Map<String, String> envVariables;
-    
-    
     
     
     /**Constructs data for a local execution level.
@@ -540,7 +528,7 @@ public class JbatExecuter {
      *   local variables of its calling routine! This argument is only set if nested statement blocks
      *   are to execute. 
      */
-    public ExecuteLevel(ExecuteLevel parent, Map<String, Object> parentVariables, Map<String, String> parentEnvVariables)
+    public ExecuteLevel(ExecuteLevel parent, Map<String, Object> parentVariables)
     { this.parent = parent;
       localVariables = new TreeMap<String, Object>();
       if(parentVariables == null){
@@ -549,20 +537,42 @@ public class JbatExecuter {
         localVariables.putAll(parentVariables);  //use the same if it is not a subText, only a 
       }
       localVariables.put("jbatExecuteLevel", this);
-      envVariables = new TreeMap<String, String>();
-      if(parentVariables == null){
-        envVariables.putAll(scriptEnvVariables);
-      } else {
-        envVariables.putAll(parentEnvVariables);  //use the same if it is not a subText, only a 
-      }
     }
 
+    
+    
+    /**Put a value to a maybe inner local variable written with "name.subname.name".
+     * Get the content is supported by {@link DataAccess}
+     * @param ident May contain dots
+     * @param value The value to store.
+     */
+    void putLocalVariable(String ident, Object value){
+      int start=0, end;
+      Map<String, Object> var1 = localVariables;
+      String ident1;
+      while( (end = ident.indexOf('.')) >0){
+        ident1 = ident.substring(start, end);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> var2 = (Map<String, Object>)localVariables.get(ident1);
+        if(var2 ==null){
+          var2 = new TreeMap<String, Object>();
+          var1.put(ident1, var2);
+        }
+        var1 = var2;
+        start = end+1;
+      }
+      ident1 = ident.substring(start);
+      var1.put(ident1, value);
+    }
+    
+    
+    
     
     public String executeNewlevel(JbatGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) 
     throws IOException 
     { final ExecuteLevel level;
       if(contentScript.bContainsVariableDef){
-        level = new ExecuteLevel(this, localVariables, envVariables);
+        level = new ExecuteLevel(this, localVariables);
       } else {
         level = this;
       }
@@ -608,43 +618,36 @@ public class JbatExecuter {
           case 'n': {
             uBuffer.append(newline);
           } break;
-          case 'T': {
-            if(contentElement.name.equals("file") || contentElement.name.equals("out")){
-              //output to the main file, it is the out of this class:
-              execute(contentElement.subContent, out, false);  //recursively call of this method.
-            } else {
-              textAppendToVarOrOut(contentElement); 
-            }
-          } break;
-          case 'V': { //create a new local variable.
+          case 'T': textAppendToVarOrOut(contentElement); break; 
+          case 'S': { //create a new local variable.
             StringBuilder uBufferVariable = new StringBuilder();
-            ExecuteLevel genVariable = new ExecuteLevel(this, localVariables, envVariables);
+            ExecuteLevel genVariable = new ExecuteLevel(this, localVariables);
             JbatGenScript.StatementList content = contentElement.getSubContent();
             genVariable.execute(content, uBufferVariable, false);
             //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-            localVariables.put(contentElement.name, uBufferVariable);
+            putLocalVariable(contentElement.identArgJbat, uBufferVariable);
           } break;
           case 'P': { //create a new local variable as pipe
             StringBuilder uBufferVariable = new StringBuilder();
-            localVariables.put(contentElement.name, uBufferVariable);
+            localVariables.put(contentElement.identArgJbat, uBufferVariable);
           } break;
           case 'U': { //create a new local variable as pipe
             StringBuilder uBufferVariable = new StringBuilder();
-            localVariables.put(contentElement.name, uBufferVariable);
+            localVariables.put(contentElement.identArgJbat, uBufferVariable);
           } break;
           case 'L': {
             Object value = evalObject(contentElement, true); 
               //getContent(contentElement, localVariables, false);  //not a container
-            localVariables.put(contentElement.name, value);
+            localVariables.put(contentElement.identArgJbat, value);
             if(!(value instanceof Iterable<?>)) 
-                throw new NoSuchFieldException("JbatExecuter - exec variable must be of type Iterable ;" + contentElement.name);
+                throw new NoSuchFieldException("JbatExecuter - exec variable must be of type Iterable ;" + contentElement.identArgJbat);
           } break;
           case 'W': executeOpenfile(contentElement); break;
           case 'J': {
-            if(contentElement.name.equals("checkDeps"))
+            if(contentElement.identArgJbat.equals("checkDeps"))
               stop();
             Object value = evalObject(contentElement, false);
-            localVariables.put(contentElement.name, value);
+            localVariables.put(contentElement.identArgJbat, value);
           } break;
           case 'e': {  //<*datatext>
             final CharSequence text = evalString(contentElement); //ascertainText(contentElement.expression, localVariables);
@@ -707,7 +710,7 @@ public class JbatExecuter {
     void executeForContainer(JbatGenScript.Statement contentElement, Appendable out) throws Exception
     {
       JbatGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
-      if(contentElement.name.equals("include1"))
+      if(contentElement.identArgJbat.equals("include1"))
         stop();
       Object container = evalObject(contentElement, true);
       if(container instanceof String && ((String)container).startsWith("<?")){
@@ -715,14 +718,14 @@ public class JbatExecuter {
       }
       else if(container !=null && container instanceof Iterable<?>){
         Iterator<?> iter = ((Iterable<?>)container).iterator();
-        ExecuteLevel forExecuter = new ExecuteLevel(this, localVariables, envVariables);
+        ExecuteLevel forExecuter = new ExecuteLevel(this, localVariables);
         //a new level for the for... statements. It contains the foreachData and maybe some more variables.
         while(iter.hasNext()){
           Object foreachData = iter.next();
           if(foreachData !=null){
             //Gen_Content genFor = new Gen_Content(this, false);
             //genFor.
-            forExecuter.localVariables.put(contentElement.name, foreachData);
+            forExecuter.localVariables.put(contentElement.identArgJbat, foreachData);
             //genFor.
             forExecuter.execute(subContent, out, iter.hasNext());
           }
@@ -738,7 +741,7 @@ public class JbatExecuter {
           if(foreachData !=null){
             //Gen_Content genFor = new Gen_Content(this, false);
             //genFor.
-            localVariables.put(contentElement.name, foreachData);
+            localVariables.put(contentElement.identArgJbat, foreachData);
             //genFor.
             execute(subContent, out, iter.hasNext());
           }
@@ -804,7 +807,7 @@ public class JbatExecuter {
             
           ifBlock.expr = new CalculatorExpr();
           ifBlock.expr.addExprToStack(0, "!");
-          ifBlock.expr.addExprToStack(1, ifBlock.condition.name);
+          ifBlock.expr.addExprToStack(1, ifBlock.condition.identArgJbat);
         }
         if(ifBlock.expr != null){
           Object cmp = ascertainValue(ifBlock.condition.expression, data, localVariables, false); 
@@ -842,7 +845,7 @@ public class JbatExecuter {
      */
     void textAppendToVarOrOut(JbatGenScript.Statement contentElement) throws IOException{
       
-      String name = contentElement.name;
+      String name = contentElement.identArgJbat;
       Appendable out1;
       Object variable = localVariables.get(name);
       if(variable !=null){
@@ -861,7 +864,7 @@ public class JbatExecuter {
       if(out1 == null){
         
       } else {
-        ExecuteLevel genContent = new ExecuteLevel(this, localVariables, envVariables);
+        ExecuteLevel genContent = new ExecuteLevel(this, localVariables);
         genContent.execute(contentElement.subContent, out1, false);
         if(out1 instanceof StringBuilder && variable != out1){
           if(variable instanceof String){ //a stored String should be replaced by a String.
@@ -902,12 +905,12 @@ public class JbatExecuter {
       if(subtextScript == null){
         throw new NoSuchElementException("JbatExecuter - subroutine not found; " + nameSubtext);
       } else {
-        ExecuteLevel subtextGenerator = new ExecuteLevel(this, null, null);
+        ExecuteLevel subtextGenerator = new ExecuteLevel(this, null);
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
           for(JbatGenScript.Argument formalArg: subtextScript.arguments) {
-            check.put(formalArg.name, new CheckArgument(formalArg));
+            check.put(formalArg.identArgJbat, new CheckArgument(formalArg));
           }
           //process all actual arguments:
           List<JbatGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
@@ -917,15 +920,15 @@ public class JbatExecuter {
               ref = evalObject(referenceSetting, false);
               //ref = ascertainValue(referenceSetting.expression, data, localVariables, false);       //actual value
               if(ref !=null){
-                CheckArgument checkArg = check.get(referenceSetting.name);      //is it a requested argument (per name)?
+                CheckArgument checkArg = check.get(referenceSetting.identArgJbat);      //is it a requested argument (per name)?
                 if(checkArg == null){
-                  ok = writeError("??: *subtext;" + nameSubtext + ": " + referenceSetting.name + " faulty argument.?? ", out);
+                  ok = writeError("??: *subtext;" + nameSubtext + ": " + referenceSetting.identArgJbat + " faulty argument.?? ", out);
                 } else {
                   checkArg.used = true;    //requested and resolved.
-                  subtextGenerator.localVariables.put(referenceSetting.name, ref);
+                  subtextGenerator.localVariables.put(referenceSetting.identArgJbat, ref);
                 }
               } else {
-                ok = writeError("??: *subtext;" + nameSubtext + ": " + referenceSetting.name + " = ? not found.??", out);
+                ok = writeError("??: *subtext;" + nameSubtext + ": " + referenceSetting.identArgJbat + " = ? not found.??", out);
               }
             }
             //check whether all formal arguments are given with actual args or get its default values.
@@ -936,9 +939,9 @@ public class JbatExecuter {
                 if(arg.formalArg.expression !=null){
                   Object ref = getContent(arg.formalArg, localVariables, false);
                   if(ref !=null){
-                    subtextGenerator.localVariables.put(arg.formalArg.name, ref);
+                    subtextGenerator.localVariables.put(arg.formalArg.identArgJbat, ref);
                   } else {
-                    ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.name + " not found.??", out);
+                    ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.identArgJbat + " not found.??", out);
                   }
                 /*
                 if(arg.formalArg.sumExpression.text !=null){
@@ -952,7 +955,7 @@ public class JbatExecuter {
                   }
                 */  
                 } else {
-                  ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.name + "  missing on call.??", out);
+                  ok = writeError("??: *subtext;" + nameSubtext + ": " + arg.formalArg.identArgJbat + "  missing on call.??", out);
                 }
               }
             }
@@ -980,7 +983,7 @@ public class JbatExecuter {
     {
       ExecuteLevel genContent;
       if(script.subContent.bContainsVariableDef){
-        genContent = new ExecuteLevel(this, localVariables, envVariables);
+        genContent = new ExecuteLevel(this, localVariables);
       } else {
         genContent = this;  //don't use an own instance, save memory and calculation time.
       }
@@ -997,12 +1000,12 @@ public class JbatExecuter {
     {
       boolean ok = true;
       final String sCmd;
-      if(contentElement.name == null){
+      if(contentElement.identArgJbat == null){
         //cmd gotten from any data location, variable name
         Object oName = ascertainText(contentElement.expression, localVariables);
         sCmd = DataAccess.getStringFromObject(oName, null);
       } else {
-        sCmd = contentElement.name;
+        sCmd = contentElement.identArgJbat;
       }
       String[] args;
       if(contentElement.arguments !=null){
@@ -1034,6 +1037,7 @@ public class JbatExecuter {
       }
       CmdExecuter cmdExecuter = new CmdExecuter();
       File currDir = (File)localVariables.get("currDir");
+      //localVariables.
       cmdExecuter.setCurrentDir(currDir);
       cmdExecuter.execute(args, null, outCmd, null);
     }
@@ -1045,7 +1049,7 @@ public class JbatExecuter {
     {
       String sFilename = evalString(contentElement);
       Writer writer = new FileWriter(sFilename);
-      localVariables.put(contentElement.name, writer);
+      localVariables.put(contentElement.identArgJbat, writer);
     }
     
     /**Executes a <code>assignment::= [{ < datapath?assign > = }] < expression > ;.</code>.
@@ -1115,7 +1119,7 @@ public class JbatExecuter {
       } else if(arg.subContent !=null){
         
         StringBuilder buffer = new StringBuilder();
-        ExecuteLevel subtextGenerator = new ExecuteLevel(this, localVariables, envVariables);
+        ExecuteLevel subtextGenerator = new ExecuteLevel(this, localVariables);
         subtextGenerator.execute(arg.subContent, buffer, false);
         return buffer;
       } else {
@@ -1157,20 +1161,6 @@ public class JbatExecuter {
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.datapath() !=null){
         obj = evalGetData(arg.datapath(), bContainer);
-        if(arg.name !=null && arg.name.equals("@info")){
-          //Build an information string about the object:
-          StringBuilder u = new StringBuilder();
-          Class<?> clazz = obj.getClass();
-          u.append("<?? info ");
-          for(DataAccess.DatapathElement item: arg.datapath()){
-            u.append(item.ident).append('.');
-          }
-          u.append("; Type=");
-          u.append(clazz.getCanonicalName());
-          u.append("; toString=").append(obj.toString());
-          u.append(" ??>\n");
-          obj = u.toString();
-        }
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
         executeNewlevel(arg.subContent, u, false);

@@ -121,8 +121,6 @@ public class JbatGenScript {
    */
   private final List<Statement> listScriptVariables = new ArrayList<Statement>();
 
-  private final List<Statement> listScriptEnvVariables = new LinkedList<Statement>();
-  
   /**The script element for the whole file. It shall contain calling of <code><*subtext:name:...></code> 
    */
   Statement scriptFile;
@@ -280,7 +278,7 @@ public class JbatGenScript {
   
   
   /**Searches the Zmake-target by name (binary search. TreeMap.get(name).
-   * @param name The name of given < ?translator> in the end-users script.
+   * @param identArgJbat The name of given < ?translator> in the end-users script.
    * @return null if the Zmake-target is not found.
   public final StatementList searchZmakeTaget(String name){ 
     Statement target = zmakeTargets.get(name);
@@ -298,8 +296,6 @@ public class JbatGenScript {
   
   
   List<Statement> getListScriptVariables(){ return listScriptVariables; }
-
-  List<Statement> getListScriptEnvVariables(){ return listScriptEnvVariables; }
 
 
 
@@ -638,7 +634,7 @@ public class JbatGenScript {
     final StatementList parentList;
     
     /**Name of the argument. It is the key to assign calling argument values. */
-    public String name;
+    protected String identArgJbat;
    
     public Expression expression;
   
@@ -652,6 +648,9 @@ public class JbatGenScript {
       this.parentList = parentList;
     }
     
+    public void set_name(String name){ this.identArgJbat = name; }
+    
+    public String getIdent(){ return identArgJbat; }
     
     public Expression new_expression(){ return new Expression(this); }
     
@@ -684,7 +683,7 @@ public class JbatGenScript {
      * @return this. The syntax supports only datapath elements. But the instance is the same.
      */
     public void set_info(){ 
-      this.name = "@info";
+      this.identArgJbat = "@info";
     }
     
 
@@ -792,11 +791,9 @@ public class JbatGenScript {
      * <tr><td>e</td><td>A datatext, from <*expression> or such.</td></tr>
      * <tr><td>XXXg</td><td>content of a data path starting with an internal variable (reference) or value of the variable.</td></tr>
      * <tr><td>s</td><td>call of a subtext by name. {@link #textArg}==null, {@link #subContent} == null.</td></tr>
-     * <tr><td>j</td><td>call of a static java method. {@link #name}==its name, {@link #subContent} == null.</td></tr>
+     * <tr><td>j</td><td>call of a static java method. {@link #identArgJbat}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>c</td><td>cmd line invocation.</td></tr>
-     * <tr><td>$</td><td>An environment variable.</td></tr>
-     * <tr><td>V</td><td>A variable, {@link #textArg} contains the name of the variable</td></tr>
-     * <tr><td>J</td><td>Object variable {@link #name}==its name, {@link #subContent} == null.</td></tr>
+     * <tr><td>J</td><td>Object variable {@link #identArgJbat}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>P</td><td>Pipe variable, {@link #textArg} contains the name of the variable</td></tr>
      * <tr><td>U</td><td>Buffer variable, {@link #textArg} contains the name of the variable</td></tr>
      * <tr><td>S</td><td>String variable, {@link #textArg} contains the name of the variable</td></tr>
@@ -864,7 +861,8 @@ public class JbatGenScript {
     
     public StatementList getSubContent(){ return subContent; }
     
-    public void set_name(String name){ this.name = name; }
+    @Override
+    public void set_name(String name){ this.identArgJbat = name; }
     
     
     public void set_formatText(String text){ this.textArg = text; }
@@ -887,7 +885,7 @@ public class JbatGenScript {
     public Statement new_textVariable(){
       if(subContent == null){ subContent = new StatementList(this); }
       subContent.bContainsVariableDef = true; 
-      return new Statement(parentList, 'V', null); 
+      return new Statement(parentList, 'S', null); 
     } 
 
     public void add_textVariable(Statement val){ subContent.content.add(val); subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);} 
@@ -903,7 +901,7 @@ public class JbatGenScript {
 
     public void add_Pipe(Statement val){ subContent.content.add(val); subContent.onerrorAccu = null; subContent.withoutOnerror.add(val); }
     
-    /**Defines a variable which is able to use as pipe.
+    /**Defines a variable which is able to use as String buffer.
      */
     public Statement new_StringAppend(){
       if(subContent == null){ subContent = new StatementList(this); }
@@ -913,17 +911,8 @@ public class JbatGenScript {
 
     public void add_StringAppend(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
     
-    /**Defines a variable which is able to use as pipe.
-     */
-    public Statement new_String(){
-      if(subContent == null){ subContent = new StatementList(this); }
-      subContent.bContainsVariableDef = true; 
-      return new Statement(parentList, 'S', null); 
-    } 
-
-    public void add_String(Statement val){ subContent.content.add(val);  subContent.onerrorAccu = null; subContent.withoutOnerror.add(val);}
-    
-    /**Defines a variable which is able to use as pipe.
+        
+    /**Defines a variable which is able to use as container.
      */
     public Statement new_List(){
       if(subContent == null){ subContent = new StatementList(this); }
@@ -1221,15 +1210,15 @@ public class JbatGenScript {
     {
       switch(elementType){
       case 't': return textArg;
-      case 'V': return "<=" + name + ">";
-      case 'J': return "<=" + name + ":objVariable>";
-      case 'P': return "Pipe " + name;
-      case 'U': return "Buffer " + name;
+      case 'V': return "<=" + identArgJbat + ">";
+      case 'J': return "<=" + identArgJbat + ":objVariable>";
+      case 'P': return "Pipe " + identArgJbat;
+      case 'U': return "Buffer " + identArgJbat;
       case 'o': return "(?outp." + textArg + "?)";
       case 'i': return "(?inp." + textArg + "?)";
       case 'e': return "<*" +   ">";  //expressions.get(0).datapath
       //case 'g': return "<$" + path + ">";
-      case 's': return "<*subtext:" + name + ">";
+      case 's': return "<*subtext:" + identArgJbat + ">";
       case 'I': return "(?forInput?)...(/?)";
       case 'L': return "(?forList " + textArg + "?)";
       case 'C': return "<:for:Container " + textArg + "?)";
@@ -1237,10 +1226,10 @@ public class JbatGenScript {
       case 'G': return "<:elsif-condition " + textArg + "?)";
       case 'N': return "<:hasNext> content <.hasNext>";
       case 'E': return "<:else>";
-      case 'Z': return "<:target:" + name + ">";
+      case 'Z': return "<:target:" + identArgJbat + ">";
       case 'Y': return "<:file>";
       case 'b': return "break;";
-      case 'X': return "<:subtext:" + name + ">";
+      case 'X': return "<:subtext:" + identArgJbat + ">";
       default: return "(??" + elementType + " " + textArg + "?)";
       }
     }
@@ -1420,9 +1409,10 @@ public class JbatGenScript {
         
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
-    public Statement new_envVar(){ return new Statement(null, '$', null); } ///
+    public Statement new_setEnvVar(){ return new Statement(null, 'S', null); } ///
 
     public void add_envVar(Statement val){ 
+      val.identArgJbat = "$" + val.identArgJbat;
       content.add(val); 
       onerrorAccu = null; withoutOnerror.add(val);
     } 
@@ -1528,12 +1518,12 @@ public class JbatGenScript {
     public Statement new_subtext(){ return new Statement(null, 'X', null); }
     
     public void add_subtext(Statement val){ 
-      if(val.name == null){
+      if(val.identArgJbat == null){
         //scriptFileSub = new ScriptElement('Y', null); 
         
-        val.name = "main";
+        val.identArgJbat = "main";
       }
-      subtextScripts.put(val.name, val); 
+      subtextScripts.put(val.identArgJbat, val); 
     }
     
     public Statement new_genFile(){ return scriptFileSub = new Statement(null, 'Y', null); }
@@ -1553,12 +1543,6 @@ public class JbatGenScript {
 
     public void add_objVariable(Statement val){ listScriptVariables.add(val); } 
     
-    
-    /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
-     */
-    public Statement new_envVar(){ return new Statement(null, '$', null); } ///
-
-    public void add_envVar(Statement val){ listScriptEnvVariables.add(val); } 
     
     
 
