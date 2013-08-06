@@ -216,9 +216,13 @@ public class OutputDataTree {
         if(bXML){ out.append("<element "); }
         else { out.append(sName).append("[]"); }
         Object element = iter.next();
-        boolean bOneLineElement = output(recurs+2, element, out, bXML);
-        //boolean bOneLineELement = outData(recurs+1, "", iterData, out, bXML);
-        if(bXML && !bOneLineElement){ outIndent(recurs+1, out, bXML); out.append("</element>"); }
+        if(element == null){
+          out.append("value=\"null\" ");
+        } else {
+          boolean bOneLineElement = output(recurs+2, element, out, bXML);
+          //boolean bOneLineELement = outData(recurs+1, "", iterData, out, bXML);
+          if(bXML && !bOneLineElement){ outIndent(recurs+1, out, bXML); out.append("</element>"); }
+        }
       }
     } 
     else if(dataField instanceof CharSequence){

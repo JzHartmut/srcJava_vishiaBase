@@ -21,6 +21,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
+import org.vishia.util.IndexMultiTable;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -137,11 +138,11 @@ public class JbatExecuter {
 
   /**Generated content of all script variables. The script variables are present in all routines 
    * in their local variables pool. The value is either a String, CharSequence or any Object pointer.  */
-  final Map<String, Object> scriptVariables = new TreeMap<String, Object>();
+  final Map<String, Object> scriptVariables = new_Variables();
   
   /**Generated content of all script environment variables. The script variables are present in all routines 
    * in their local variables pool. The value is either a String, CharSequence or any Object pointer.  */
-  final Map<String, String> scriptEnvVariables = new TreeMap<String, String>();
+  //final Map<String, String> scriptEnvVariables = new TreeMap<String, String>();
   
   private boolean bScriptVariableGenerated;
   
@@ -154,6 +155,9 @@ public class JbatExecuter {
     this.log = log;
     bWriteErrorInOutput = false;
   }
+  
+  
+  
   
   
   
@@ -481,7 +485,15 @@ public class JbatExecuter {
   }
   
 
+  protected Map<String, Object> xnew_Variables(){
+    return new TreeMap<String, Object>();
+    
+  }
   
+
+  protected Map<String, Object> new_Variables(){
+    return new IndexMultiTable<String, Object>(IndexMultiTable.providerString);
+  }
   
 
   /**
@@ -530,7 +542,7 @@ public class JbatExecuter {
      */
     public ExecuteLevel(ExecuteLevel parent, Map<String, Object> parentVariables)
     { this.parent = parent;
-      localVariables = new TreeMap<String, Object>();
+      localVariables = new_Variables();
       if(parentVariables == null){
         localVariables.putAll(scriptVariables);
       } else {
@@ -682,6 +694,7 @@ public class JbatExecuter {
         } catch(Exception exc){
           //check onerror
           boolean found = false;
+          exc.printStackTrace();
           if(contentElement.onerror !=null){
             String sError1 = exc.getMessage();
             localVariables.put("errorMsg", sError1);

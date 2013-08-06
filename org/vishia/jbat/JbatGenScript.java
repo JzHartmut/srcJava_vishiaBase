@@ -115,9 +115,15 @@ public class JbatGenScript {
   
   
   
-  /**List of the script variables in order of creation in the jbat script file.
+  /**List of the script variables in order of creation in the jbat script file and all includes.
    * The script variables can contain inputs of other variables which are defined before.
    * Therefore the order is important.
+   * This list is stored firstly in the {@link StatementList#content} in an instance of 
+   * {@link ZbnfMainGenCtrl} and then transferred from all includes and from the main script 
+   * to this container because the {@link ZbnfMainGenCtrl} is only temporary and a ensemble of all
+   * Statements should be present from all included files. The statements do not contain
+   * any other type of statement than script variables because only ScriptVariables are admissible
+   * in the syntax. Outside of subroutines and main there should only exist variable definitions. 
    */
   private final List<Statement> listScriptVariables = new ArrayList<Statement>();
 
@@ -251,6 +257,7 @@ public class JbatGenScript {
     //write into Java classes:
     ZbnfMainGenCtrl zbnfGenCtrl = new ZbnfMainGenCtrl();
     parserGenCtrl2Java.setContent(ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
+    
     //if(this.scriptclassMain ==null){
     //this.scriptclassMain = zbnfGenCtrl.scriptclass;
     //}
@@ -273,7 +280,9 @@ public class JbatGenScript {
       //use the last found main, also from a included script but firstly from main.
       scriptFile = zbnfGenCtrl.scriptFileSub;   
     }
-
+    if(zbnfGenCtrl.content !=null){
+      listScriptVariables.addAll(zbnfGenCtrl.content);
+    }
   }
   
   
@@ -879,6 +888,13 @@ public class JbatGenScript {
       subContent.content.add(new Statement(parentList, 'n', null));   /// 
     }
     
+    public Statement new_setEnvVar(){ 
+      if(subContent == null){ subContent = new StatementList(this); }
+      return subContent.new_setEnvVar(); 
+    }
+
+    public void add_setEnvVar(Statement val){ subContent.add_setEnvVar(val); } 
+    
     
     /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
      */
@@ -1210,15 +1226,15 @@ public class JbatGenScript {
     {
       switch(elementType){
       case 't': return textArg;
-      case 'V': return "<=" + identArgJbat + ">";
-      case 'J': return "<=" + identArgJbat + ":objVariable>";
+      case 'S': return "String " + identArgJbat;
+      case 'J': return "Obj " + identArgJbat;
       case 'P': return "Pipe " + identArgJbat;
       case 'U': return "Buffer " + identArgJbat;
       case 'o': return "(?outp." + textArg + "?)";
       case 'i': return "(?inp." + textArg + "?)";
       case 'e': return "<*" +   ">";  //expressions.get(0).datapath
       //case 'g': return "<$" + path + ">";
-      case 's': return "<*subtext:" + identArgJbat + ">";
+      case 's': return "call " + identArgJbat;
       case 'I': return "(?forInput?)...(/?)";
       case 'L': return "(?forList " + textArg + "?)";
       case 'C': return "<:for:Container " + textArg + "?)";
@@ -1348,7 +1364,7 @@ public class JbatGenScript {
   /**Organization class for a list of script elements inside another Scriptelement.
    *
    */
-  public final static class StatementList
+  public static class StatementList
   {
     final Argument parentStatement;
     
@@ -1411,7 +1427,7 @@ public class JbatGenScript {
      */
     public Statement new_setEnvVar(){ return new Statement(null, 'S', null); } ///
 
-    public void add_envVar(Statement val){ 
+    public void add_setEnvVar(Statement val){ 
       val.identArgJbat = "$" + val.identArgJbat;
       content.add(val); 
       onerrorAccu = null; withoutOnerror.add(val);
@@ -1490,7 +1506,7 @@ public class JbatGenScript {
    * ZmakeGenctrl::= { <target> } \e.
    * </pre>
    */
-  public final class ZbnfMainGenCtrl
+  public final class ZbnfMainGenCtrl extends StatementList
   {
 
     //public String scriptclass;
@@ -1532,16 +1548,16 @@ public class JbatGenScript {
     
     /**Defines a variable with initial value. <= <variableDef?textVariable> \<\.=\>
      */
-    public Statement new_textVariable(){ return new Statement(null, 'V', null); }
+    //public Statement new_textVariable(){ return new Statement(null, 'V', null); }
 
-    public void add_textVariable(Statement val){ listScriptVariables.add(val); } 
+    //public void add_textVariable(Statement val){ listScriptVariables.add(val); } 
     
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
-    public Statement new_objVariable(){ return new Statement(null, 'J', null); } ///
+    //public Statement new_objVariable(){ return new Statement(null, 'J', null); } ///
 
-    public void add_objVariable(Statement val){ listScriptVariables.add(val); } 
+    //public void add_objVariable(Statement val){ listScriptVariables.add(val); } 
     
     
     
