@@ -1,6 +1,6 @@
-package org.vishia.jbat;
+package org.vishia.zbatch;
 
-public class JbatDebugHelper
+public class ZbatchDebugHelper
 {
 
 

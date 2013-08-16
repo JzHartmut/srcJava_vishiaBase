@@ -1,4 +1,4 @@
-package org.vishia.jbat;
+package org.vishia.zbatch;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -16,12 +16,12 @@ import java.util.TreeMap;
 
 
 import org.vishia.cmd.CmdExecuter;
-import org.vishia.jbat.JbatGenScript.ZbnfDataPathElement;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.IndexMultiTable;
+import org.vishia.zbatch.ZbatchGenScript.ZbnfDataPathElement;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -54,32 +54,32 @@ import org.vishia.util.IndexMultiTable;
  * @author Hartmut
  *
  */
-public class JbatExecuter {
+public class ZbatchExecuter {
   
   
   /**Version and history
    * <ul>
-   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link JbatGenScript.Expression#ascertainValue(Object, Map, boolean, boolean, boolean)}.
+   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link ZbatchGenScript.Expression#ascertainValue(Object, Map, boolean, boolean, boolean)}.
    * <li>2013-01-12 Hartmut chg: improvements while documentation. Some syntax details. Especially handling of visibility of variables.
    * <li>2013-01-02 Hartmut chg: The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    *   But a script-global variable referred with {@link #listScriptVariables} is defined only one time on start of text generation
-   *   with the routine {@link JbatExecuter#genScriptVariables(JbatGenScript, Object, boolean)}.  
-   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.jbat.JbatGenScript.Expression, Map, boolean)} now uses
-   *   an {@link JbatGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
+   *   with the routine {@link ZbatchExecuter#genScriptVariables(ZbatchGenScript, Object, boolean)}.  
+   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zbatch.ZbatchGenScript.Expression, Map, boolean)} now uses
+   *   an {@link ZbatchGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
    *   without extra dataPath, only with a ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link JbatGenScript.Expression#textArg} if a data path is given, use for formatting a numerical value.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link ZbatchGenScript.Expression#textArg} if a data path is given, use for formatting a numerical value.
    * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
    *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
-   *   {@link #genContent(JbatGenScript, Object, boolean, Appendable)} able to call extra especially for Zmake, currDir.
+   *   {@link #genContent(ZbatchGenScript, Object, boolean, Appendable)} able to call extra especially for Zmake, currDir.
    *   It is possible to define any script variables in the generating script and use it then to control getting data 
    *   from the input data.
    * <li>2012-11-25 Hartmut chg: Now Variables are designated starting with $.
    * <li>2012-11-04 Hartmut chg: adaption to DataAccess respectively distinguish between getting a container or an simple element.
    * <li>2012-10-19 Hartmut chg: <:if...> works.
-   * <li>2012-10-10 Usage of {@link JbatGenScript}.
+   * <li>2012-10-10 Usage of {@link ZbatchGenScript}.
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
    *   was need.
@@ -131,7 +131,7 @@ public class JbatExecuter {
   protected Appendable outFile;
   
   /**The java prepared generation script. */
-  JbatGenScript genScript;
+  ZbatchGenScript genScript;
   
   /**Instance for the main script part. */
   //Gen_Content genFile;
@@ -151,7 +151,7 @@ public class JbatExecuter {
   String newline = "\r\n";
   
 
-  public JbatExecuter(MainCmdLogging_ifc log){
+  public ZbatchExecuter(MainCmdLogging_ifc log){
     this.log = log;
     bWriteErrorInOutput = false;
   }
@@ -175,7 +175,7 @@ public class JbatExecuter {
     String sError = null;
     this.outFile = out;
     scriptVariables.put("file", outFile);
-    JbatGenScript genScript = new JbatGenScript(this, log); //gen.parseGenScript(fileGenCtrl, null);
+    ZbatchGenScript genScript = new ZbatchGenScript(this, log); //gen.parseGenScript(fileGenCtrl, null);
     try { genScript.translateAndSetGenCtrl(fileScript, testOut);
     } catch (Exception exc) {
       sError = exc.getMessage();
@@ -198,11 +198,11 @@ public class JbatExecuter {
   /**Parses and returns a Java-prepared generation script form a file.
    * @param fileScript The file which contains the script.
    * @param testOut If not null, the content of the generation script will be reported there.
-   * @return The generation script ready to use for {@link #genContent(JbatGenScript, Object, boolean, Appendable)}.
+   * @return The generation script ready to use for {@link #genContent(ZbatchGenScript, Object, boolean, Appendable)}.
    */
-  public JbatGenScript XXXparseGenScript(File fileScript, Appendable testOut)
+  public ZbatchGenScript XXXparseGenScript(File fileScript, Appendable testOut)
   {
-    genScript = new JbatGenScript(this, log);
+    genScript = new ZbatchGenScript(this, log);
     File fileZbnf4GenCtrl = new File("D:/vishia/ZBNF/sf/ZBNF/zbnfjax/zmake/ZmakeGenctrl.zbnf");
     try{ 
       genScript.translateAndSetGenCtrl(fileZbnf4GenCtrl, fileScript);
@@ -229,17 +229,17 @@ public class JbatExecuter {
   
   /**Generates script-global variables.
    * 
-   * @param genScript It should be the same how used on {@link #genContent(JbatGenScript, Object, boolean, Appendable)}
+   * @param genScript It should be the same how used on {@link #genContent(ZbatchGenScript, Object, boolean, Appendable)}
    *   but it may be another one for special cases.
    * @param userData Used userdata for content of scriptvariables. It should be the same how used on 
-   *   {@link #genContent(JbatGenScript, Object, boolean, Appendable)} but it may be another one for special cases.
+   *   {@link #genContent(ZbatchGenScript, Object, boolean, Appendable)} but it may be another one for special cases.
    * @param accessPrivate true than access to private data of userData
    * @return The built script variables. 
-   *   One can evaluate some script variables before running {@link #genContent(JbatGenScript, Object, boolean, Appendable)}.
+   *   One can evaluate some script variables before running {@link #genContent(ZbatchGenScript, Object, boolean, Appendable)}.
    *   Especially it is used for {@link org.vishia.zmake.Zmake to set the currDir.} 
    * @throws IOException
    */
-  public Map<String, Object> genScriptVariables(JbatGenScript genScript, Object userData, boolean accessPrivate) 
+  public Map<String, Object> genScriptVariables(ZbatchGenScript genScript, Object userData, boolean accessPrivate) 
   throws IOException
   {
     this.genScript = genScript;
@@ -256,9 +256,9 @@ public class JbatExecuter {
     scriptVariables.put("out", System.out);
     scriptVariables.put("err", System.err);
     scriptVariables.put("jbatAccess", this);
-    scriptVariables.put("debug", new JbatDebugHelper());
+    scriptVariables.put("debug", new ZbatchDebugHelper());
 
-    for(JbatGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
+    for(ZbatchGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
       ExecuteLevel genVariable = new ExecuteLevel(null, scriptVariables); //NOTE: use recent scriptVariables.
       genVariable.execute(scriptVariableScript.getSubContent(), uVariable, false);
@@ -279,7 +279,7 @@ public class JbatExecuter {
    * @return If null, it is okay. Elsewhere a readable error message.
    * @throws IOException only if out.append throws it.
    */
-  public String genContent(JbatGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
+  public String genContent(ZbatchGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
   throws IOException
   {
     this.accessPrivate = accessPrivate;
@@ -289,7 +289,7 @@ public class JbatExecuter {
     if(!bScriptVariableGenerated){
       genScriptVariables(genScript, userData, accessPrivate);
     }
-    JbatGenScript.Statement contentScript = genScript.getFileScript();
+    ZbatchGenScript.Statement contentScript = genScript.getFileScript();
     ExecuteLevel genFile = new ExecuteLevel(null, scriptVariables);
     String sError = genFile.execute(contentScript.subContent, out, false);
     return sError;
@@ -359,7 +359,7 @@ public class JbatExecuter {
             zd.addActualArgument(oValue);
           }
           */
-          for(JbatGenScript.Expression expr: zd.XXXactualValue){
+          for(ZbatchGenScript.Expression expr: zd.XXXactualValue){
             Object oValue = ascertainValue(expr, data1, localVariables, false);
             if(oValue == null){
               oValue = "??: path access: " + dataPath + "?>";
@@ -408,12 +408,12 @@ public class JbatExecuter {
    * @return the Object which represents the expression in the given environment.
    * @throws Exception 
    */
-  Object ascertainValue(JbatGenScript.Expression expr, Object data, Map<String, Object> localVariables
+  Object ascertainValue(ZbatchGenScript.Expression expr, Object data, Map<String, Object> localVariables
       , boolean bContainer
   )
   throws Exception
   { Object dataRet = null;
-    for(JbatGenScript.ZbnfValue value: expr.XXXvalues){   //All SumValue
+    for(ZbatchGenScript.ZbnfValue value: expr.XXXvalues){   //All SumValue
       List<DataAccess.DatapathElement> dataRef = value.datapath();
       Object dataValue;
       if(dataRef !=null){
@@ -455,7 +455,7 @@ public class JbatExecuter {
    * or invocation of static methods are supported.
    * @return
    */
-  public String ascertainText(JbatGenScript.Expression expr){ 
+  public String ascertainText(ZbatchGenScript.Expression expr){ 
     boolean bContainer = false;
     Map<String, Object> localVariables = null;
     try{ 
@@ -479,7 +479,7 @@ public class JbatExecuter {
    * @throws IOException 
    * @throws IllegalArgumentException 
    */
-  public String ascertainText(JbatGenScript.Expression expr, Map<String, Object> localVariables) throws IllegalArgumentException, IOException, Exception{ 
+  public String ascertainText(ZbatchGenScript.Expression expr, Map<String, Object> localVariables) throws IllegalArgumentException, IOException, Exception{ 
     Object value = ascertainValue(expr, data, localVariables, false);
     return DataAccess.getStringFromObject(value, null);
   }
@@ -526,7 +526,7 @@ public class JbatExecuter {
     final ExecuteLevel parent;
     
     
-    /**Generated content of local variables in this nested level including the {@link JbatExecuter#scriptVariables}.
+    /**Generated content of local variables in this nested level including the {@link ZbatchExecuter#scriptVariables}.
      * The variables are type invariant on language level. The type is checked and therefore 
      * errors are detected on runtime only. */
     final Map<String, Object> localVariables;
@@ -580,7 +580,7 @@ public class JbatExecuter {
     
     
     
-    public String executeNewlevel(JbatGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) 
+    public String executeNewlevel(ZbatchGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) 
     throws IOException 
     { final ExecuteLevel level;
       if(contentScript.bContainsVariableDef){
@@ -598,15 +598,15 @@ public class JbatExecuter {
      * @return
      * @throws IOException 
      */
-    public String execute(JbatGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
+    public String execute(ZbatchGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
     //throws Exception
     {
       String sError = null;
       Appendable uBuffer = out;
       //Generate direct requested output. It is especially on inner content-scripts.
-      Iterator<JbatGenScript.Statement> iter = contentScript.content.iterator();
+      Iterator<ZbatchGenScript.Statement> iter = contentScript.content.iterator();
       while(iter.hasNext() && sError == null){
-        JbatGenScript.Statement contentElement = iter.next();
+        ZbatchGenScript.Statement contentElement = iter.next();
         //for(TextGenScript.ScriptElement contentElement: contentScript.content){
         try{    
           switch(contentElement.elementType){
@@ -634,7 +634,7 @@ public class JbatExecuter {
           case 'S': { //create a new local variable.
             StringBuilder uBufferVariable = new StringBuilder();
             ExecuteLevel genVariable = new ExecuteLevel(this, localVariables);
-            JbatGenScript.StatementList content = contentElement.getSubContent();
+            ZbatchGenScript.StatementList content = contentElement.getSubContent();
             genVariable.execute(content, uBufferVariable, false);
             //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
             putLocalVariable(contentElement.identArgJbat, uBufferVariable);
@@ -698,9 +698,9 @@ public class JbatExecuter {
           if(contentElement.onerror !=null){
             String sError1 = exc.getMessage();
             localVariables.put("errorMsg", sError1);
-            Iterator<JbatGenScript.Onerror> iterError = contentElement.onerror.iterator();
+            Iterator<ZbatchGenScript.Onerror> iterError = contentElement.onerror.iterator();
             while(!found && iterError.hasNext()) {
-              JbatGenScript.Onerror onerror = iterError.next();
+              ZbatchGenScript.Onerror onerror = iterError.next();
               found = onerror.errorType == '?';
               if(found){
                 sError = executeSubLevel(onerror, out);
@@ -720,9 +720,9 @@ public class JbatExecuter {
     
     
     
-    void executeForContainer(JbatGenScript.Statement contentElement, Appendable out) throws Exception
+    void executeForContainer(ZbatchGenScript.Statement contentElement, Appendable out) throws Exception
     {
-      JbatGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
+      ZbatchGenScript.StatementList subContent = contentElement.getSubContent();  //The same sub content is used for all container elements.
       if(contentElement.identArgJbat.equals("include1"))
         stop();
       Object container = evalObject(contentElement, true);
@@ -764,7 +764,7 @@ public class JbatExecuter {
     
     
     
-    void executeIfContainerHasNext(JbatGenScript.Statement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
+    void executeIfContainerHasNext(ZbatchGenScript.Statement hasNextScript, Appendable out, boolean bContainerHasNext) throws IOException{
       if(bContainerHasNext){
         //(new Gen_Content(this, false)).
         execute(hasNextScript.getSubContent(), out, false);
@@ -775,15 +775,15 @@ public class JbatExecuter {
     
     /**it contains maybe more as one if block and else. 
      * @throws Exception */
-    void executeIfStatement(JbatGenScript.Statement ifStatement, Appendable out) throws Exception{
-      Iterator<JbatGenScript.Statement> iter = ifStatement.subContent.content.iterator();
+    void executeIfStatement(ZbatchGenScript.Statement ifStatement, Appendable out) throws Exception{
+      Iterator<ZbatchGenScript.Statement> iter = ifStatement.subContent.content.iterator();
       boolean found = false;  //if block found
       while(iter.hasNext() && !found ){
-        JbatGenScript.Statement contentElement = iter.next();
+        ZbatchGenScript.Statement contentElement = iter.next();
         switch(contentElement.elementType){
           case 'G': { //if-block
             
-            found = executeIfBlock((JbatGenScript.IfCondition)contentElement, out, iter.hasNext());
+            found = executeIfBlock((ZbatchGenScript.IfCondition)contentElement, out, iter.hasNext());
           } break;
           case 'E': { //elsef
             if(!found){
@@ -799,7 +799,7 @@ public class JbatExecuter {
     
     
     
-    boolean executeIfBlock(JbatGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
+    boolean executeIfBlock(ZbatchGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
     throws Exception
     {
       //Object check = getContent(ifBlock, localVariables, false);
@@ -856,7 +856,7 @@ public class JbatExecuter {
      * @param contentElement
      * @throws IOException 
      */
-    void textAppendToVarOrOut(JbatGenScript.Statement contentElement) throws IOException{
+    void textAppendToVarOrOut(ZbatchGenScript.Statement contentElement) throws IOException{
       
       String name = contentElement.identArgJbat;
       Appendable out1;
@@ -899,10 +899,10 @@ public class JbatExecuter {
     
     
     
-    void executeSubroutine(JbatGenScript.Statement contentElement, Appendable out) 
+    void executeSubroutine(ZbatchGenScript.Statement contentElement, Appendable out) 
     throws IllegalArgumentException, Exception
     {
-      JbatGenScript.CallStatement callStatement = (JbatGenScript.CallStatement)contentElement;
+      ZbatchGenScript.CallStatement callStatement = (ZbatchGenScript.CallStatement)contentElement;
       boolean ok = true;
       final String nameSubtext;
       /*
@@ -914,7 +914,7 @@ public class JbatExecuter {
         nameSubtext = contentElement.name;
       }*/
       nameSubtext = evalString(callStatement.callName); 
-      JbatGenScript.Statement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
+      ZbatchGenScript.Statement subtextScript = genScript.getSubtextScript(nameSubtext);  //the subtext script to call
       if(subtextScript == null){
         throw new NoSuchElementException("JbatExecuter - subroutine not found; " + nameSubtext);
       } else {
@@ -922,13 +922,13 @@ public class JbatExecuter {
         if(subtextScript.arguments !=null){
           //build a Map temporary to check which arguments are used:
           TreeMap<String, CheckArgument> check = new TreeMap<String, CheckArgument>();
-          for(JbatGenScript.Argument formalArg: subtextScript.arguments) {
+          for(ZbatchGenScript.Argument formalArg: subtextScript.arguments) {
             check.put(formalArg.identArgJbat, new CheckArgument(formalArg));
           }
           //process all actual arguments:
-          List<JbatGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
+          List<ZbatchGenScript.Argument> referenceSettings = contentElement.getReferenceDataSettings();
           if(referenceSettings !=null){
-            for( JbatGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
+            for( ZbatchGenScript.Argument referenceSetting: referenceSettings){  //process all actual arguments
               Object ref;
               ref = evalObject(referenceSetting, false);
               //ref = ascertainValue(referenceSetting.expression, data, localVariables, false);       //actual value
@@ -991,7 +991,7 @@ public class JbatExecuter {
      * @return
      * @throws IOException
      */
-    public String executeSubLevel(JbatGenScript.Statement script, Appendable out) 
+    public String executeSubLevel(ZbatchGenScript.Statement script, Appendable out) 
     throws IOException
     {
       ExecuteLevel genContent;
@@ -1008,7 +1008,7 @@ public class JbatExecuter {
 
 
     
-    void executeCmdline(JbatGenScript.Statement contentElement) 
+    void executeCmdline(ZbatchGenScript.Statement contentElement) 
     throws IllegalArgumentException, Exception
     {
       boolean ok = true;
@@ -1024,7 +1024,7 @@ public class JbatExecuter {
       if(contentElement.arguments !=null){
         args = new String[contentElement.arguments.size() +1];
         int iArg = 1;
-        for(JbatGenScript.Argument arg: contentElement.arguments){
+        for(ZbatchGenScript.Argument arg: contentElement.arguments){
           String sArg = ascertainText(arg.expression, localVariables);
           args[iArg++] = sArg;
         }
@@ -1035,7 +1035,7 @@ public class JbatExecuter {
       List<Appendable> outCmd;
       if(contentElement.assignObj !=null){
         outCmd = new LinkedList<Appendable>();
-        for(JbatGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
+        for(ZbatchGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
           Object oOutCmd = getDataObj(assignObj1.datapath(), data, localVariables, false);
           //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
           if(oOutCmd instanceof Appendable){
@@ -1057,7 +1057,7 @@ public class JbatExecuter {
     
 
     
-    void executeOpenfile(JbatGenScript.Statement contentElement) 
+    void executeOpenfile(ZbatchGenScript.Statement contentElement) 
     throws IllegalArgumentException, Exception
     {
       String sFilename = evalString(contentElement);
@@ -1078,13 +1078,13 @@ public class JbatExecuter {
      * @throws IllegalArgumentException
      * @throws Exception
      */
-    void executeAssign(JbatGenScript.Statement contentElement) 
+    void executeAssign(ZbatchGenScript.Statement contentElement) 
     throws IllegalArgumentException, Exception
     {
       Object val = evalObject(contentElement, false);
       //Object val = ascertainValue(contentElement.expression, data, localVariables, false);
       if(contentElement.assignObj !=null){
-        for(JbatGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
+        for(ZbatchGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
         
           //It is a path to any object, get it:
           Object oOut = getDataObj(assignObj1.datapath(), data, localVariables, false);
@@ -1124,7 +1124,7 @@ public class JbatExecuter {
      * @throws IOException
      * @throws Exception
      */
-    Object getContent(JbatGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
+    Object getContent(ZbatchGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
     throws IllegalArgumentException, IOException, Exception
     { assert(arg.expression !=null);
       if(arg.expression !=null){
@@ -1141,7 +1141,7 @@ public class JbatExecuter {
     }
     
     
-    public String evalString(JbatGenScript.Argument arg) throws Exception{
+    public String evalString(ZbatchGenScript.Argument arg) throws Exception{
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.datapath() !=null){
         Object o = evalGetData(arg.datapath(), false);
@@ -1160,16 +1160,16 @@ public class JbatExecuter {
     
     /**Gets the value of the given Argument. Either it is a 
      * <ul>
-     * <li>String from {@link JbatGenScript.Argument#textArg}
-     * <li>Object from {@link JbatGenScript.Argument#datapath()}
-     * <li>Object from {@link JbatGenScript.Argument#expression}
+     * <li>String from {@link ZbatchGenScript.Argument#textArg}
+     * <li>Object from {@link ZbatchGenScript.Argument#datapath()}
+     * <li>Object from {@link ZbatchGenScript.Argument#expression}
      * <li>
      * </ul>
      * @param arg
      * @return
      * @throws Exception
      */
-    public Object evalObject(JbatGenScript.Argument arg, boolean bContainer) throws Exception{
+    public Object evalObject(ZbatchGenScript.Argument arg, boolean bContainer) throws Exception{
       Object obj;
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.datapath() !=null){
@@ -1201,7 +1201,7 @@ public class JbatExecuter {
         if(zd !=null && zd.paramArgument !=null){
           //it is a element with arguments, usual a method call. 
           zd.removeAllActualArguments();
-          for(JbatGenScript.Argument expr: zd.paramArgument){
+          for(ZbatchGenScript.Argument expr: zd.paramArgument){
             //evaluate its value.
             Object value = evalObject(expr, bContainer);
             zd.addActualArgument(value);
@@ -1232,12 +1232,12 @@ public class JbatExecuter {
   private class CheckArgument
   {
     /**Reference to the formal argument. */
-    final JbatGenScript.Argument formalArg;
+    final ZbatchGenScript.Argument formalArg;
     
     /**Set to true if this argument is used. */
     boolean used;
     
-    CheckArgument(JbatGenScript.Argument formalArg){ this.formalArg = formalArg; }
+    CheckArgument(ZbatchGenScript.Argument formalArg){ this.formalArg = formalArg; }
   }
   
   

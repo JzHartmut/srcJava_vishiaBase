@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-import org.vishia.jbat.JbatExecuter;
+import org.vishia.zbatch.ZbatchExecuter;
 import org.vishia.zmake.ZmakeUserScript.ZbnfUserFilepath;
 
 /**This class extends a ZmakeUserScript.UserScript to hold the data from a docuGen description file for generating
@@ -82,7 +82,7 @@ public class ZmakeDocuGen extends ZmakeUserScript.UserScript
   
   
   
-  public ZmakeDocuGen(JbatExecuter jbatExecuter){
+  public ZmakeDocuGen(ZbatchExecuter jbatExecuter){
     super(jbatExecuter);
   }
  

@@ -508,24 +508,28 @@ public class ZbnfParser
         if(syntaxPrescript.getSemantic()!=null)
         { sSemanticForError = sSemanticForErrorP = syntaxPrescript.getSemantic();
         }
-        if(sSemanticForStoring != null && sSemanticForStoring.equals("variableDefinition"))
-          stop();
+        if(sSemanticForStoring != null && sSemanticForStoring.equals("startVariable"))
+          Assert.stop();
         /** Index in parse Result to rewind on error*/
         int idxCurrentStore = -1;
         
         /** Index in parseResult of the item of the alternative like [<?semantic>...*/
         int idxStoreAlternativeAndOffsetToEnd;
+        final ZbnfParserStore.ParseResultItemImplement resultItem;
         if(sSemanticForStoring != null && sSemanticForStoring.equals("@"))
         { //##d
+          assert(false);  //deprecated
+          resultItem = null;
           idxStoreAlternativeAndOffsetToEnd = -1;
         }
         else if(sSemanticForStoring != null && sSemanticForStoring.length()>0)
-        { idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = 
-            parserStoreInPrescript.addAlternative(sSemanticForStoring, resultType, parentOfParentResultItem, input);
-          parentResultItem = parserStoreInPrescript.getItem(idxCurrentStore);
+        { resultItem = parserStoreInPrescript.addAlternative(sSemanticForStoring, resultType, parentOfParentResultItem, input);
+          idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = parserStoreInPrescript.items.size() -1; 
+          parentResultItem = resultItem; //parserStoreInPrescript.getItem(idxCurrentStore);
         }
         else 
         { idxStoreAlternativeAndOffsetToEnd = -1;
+          resultItem = null;  //component without semantic, it has not a resultitem.
           parentResultItem = parentOfParentResultItem;
         }
         
@@ -577,8 +581,8 @@ public class ZbnfParser
             { 
               if(testSkipSpaceAndComment()){ bSkipSpaceAndComment = true; }
               if(idxPrescript < listPrescripts.size())  //consider spaces on end of prescript.
-              { if(input.getCurrentPosition()==705)
-                  stop();
+              { if(input.getCurrentPosition()==31)
+                  Assert.stop();
               
                 bOk = parseItem(bSkipSpaceAndComment); //, thisParseResult, addParseResult);  //##s
                 bSkipSpaceAndComment = false; 
@@ -612,10 +616,16 @@ public class ZbnfParser
               );
           }
         }
-        
+        final String parsedInput;
         if(!bFound)
         { //remove added entries
           parserStoreInPrescript.setCurrentPosition(idxCurrentStore);
+          parsedInput = null;
+        } else {
+          parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
+          if(resultItem !=null){
+            resultItem.sInput = parsedInput;
+          }
         }
 
         if(!bFound && syntaxPrescript.isPossibleEmptyOption())
@@ -635,15 +645,16 @@ public class ZbnfParser
              * An option result item has no more essential informations. 
              * This information helps to evaluate such constructs as [<?semantic>green|red|yellow].
              */
-            String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
-            parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
-            parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
+            //parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
+            //parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
+            assert(resultItem !=null);  //elsewhere the syntax does not match
+            resultItem.parsedString = parsedInput.trim();
           }
         }
         
         if( syntaxPrescript.sSubSyntax != null)
         { /**If <code>[<?!subsyntax> ... ]</code> is given, execute it! */
-          String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
+          //String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
           bFound = addResultOrSubsyntax(parsedInput, posInputForStore, sSemanticForStoring, syntaxPrescript.sSubSyntax);
         }
         

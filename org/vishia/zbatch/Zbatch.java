@@ -1,4 +1,4 @@
-package org.vishia.jbat;
+package org.vishia.zbatch;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -8,7 +8,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
 
-public class Jbat
+public class Zbatch
 {
   
   protected static class Args{
@@ -26,13 +26,13 @@ public class Jbat
   
   protected final Args args;
   
-  protected final JbatExecuter executer;
+  protected final ZbatchExecuter executer;
   
   
-  public Jbat(Args args, MainCmdLogging_ifc log){
+  public Zbatch(Args args, MainCmdLogging_ifc log){
     this.log = log;
     this.args = args;
-    this.executer = new JbatExecuter(log);
+    this.executer = new ZbatchExecuter(log);
   }
   
   
@@ -62,7 +62,7 @@ public class Jbat
         mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       }
       if(args.sFileIn !=null){
-        Jbat main = new Jbat(args, mainCmdLine);     //the main instance
+        Zbatch main = new Zbatch(args, mainCmdLine);     //the main instance
         if(sRet == null)
         { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
               to hold the contact to the command line execution.
@@ -158,7 +158,7 @@ public class Jbat
     @Override public void writeHelpInfo(){
       super.writeHelpInfo();
       System.out.println("=== Syntax of a jbat script===");
-      System.out.println(JbatSyntax.syntax);
+      System.out.println(ZbatchSyntax.syntax);
     }
 
   }

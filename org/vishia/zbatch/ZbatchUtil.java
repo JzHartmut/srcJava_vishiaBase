@@ -1,13 +1,13 @@
-package org.vishia.jbat;
+package org.vishia.zbatch;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class Util
+public class ZbatchUtil
 {
   
-  protected static Util singleton = new Util();
+  protected static ZbatchUtil singleton = new ZbatchUtil();
   
   protected PrintStream systemOutOld, systemErrOld;
   protected ByteArrayOutputStream consoleOut = new ByteArrayOutputStream();

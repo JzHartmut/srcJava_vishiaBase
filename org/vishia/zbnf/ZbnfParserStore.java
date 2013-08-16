@@ -79,7 +79,7 @@ class ZbnfParserStore
    * <li>2012-11-02 Hartmut: The ParseResultItem has gotten an element {@link ParseResultItemImplement#treeNodeXml}.
    *   It refers to an tree-like result store, whereby the {@link XmlNodeSimple} is used as node.
    *   Therewith the conversion to XML is obviously. As well too, the access to treed data able to use for direct
-   *   text conversion using {@link org.vishia.jbat.JbatExecuter}.
+   *   text conversion using {@link org.vishia.zbatch.ZbatchExecuter}.
    *   A new method {@link #buildTreeNodeRepresentationXml(XmlNodeSimple, ParseResultItemImplement, boolean)} is offered to use.    
    * <li>2008-03-28 JcHartmut: The ParserStore is not cleared, only the reference is assigned new.
    *   So outside the ParserStore can be used from an older parsing.
@@ -377,6 +377,7 @@ class ZbnfParserStore
       if(sParsedText != null)
       { sRet += " read: \"" + sParsedText + "\"";
       }
+      if(treeNodeXml !=null){ sRet += " xmlNode=" + treeNodeXml; }
       return sRet;
     }
 
@@ -719,7 +720,7 @@ class ZbnfParserStore
    * @param nColumn
    * @return The position of this entry, using for rewind(posititon);
    */
-  private int add(String sSemantic, String sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
+  private ParseResultItemImplement add(String sSemantic, String sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
   { item = new ParseResultItemImplement(this, sSemantic, parent, "?");
     item.sInput = sInput;
     if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
@@ -739,11 +740,12 @@ class ZbnfParserStore
     if(parent != null)
     { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
-    return items.size() -1;  //position of the entry
+    return item;
+    //return items.size() -1;  //position of the entry
   }
 
 
-  int addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
+  ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
   { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
   }
 
@@ -768,40 +770,35 @@ class ZbnfParserStore
    * 
    * @param sInput the parsed text
    */
-  void setParsedText(int idxStore, String sInput)
+  void XXXsetParsedText(int idxStore, String sInput)
   {
     ParseResultItemImplement item = items.get(idxStore);
     item.sInput = sInput;
   }
   
-  void setParsedString(int idxStore, String ss)
+  void XXXsetParsedString(int idxStore, String ss)
   {
     ParseResultItemImplement item = items.get(idxStore);
     item.parsedString = ss;
   }
   
   
-  int addRepetition(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
+  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
   { return add(sSemantic, null, countRepetition, start, end, nLine, nColumn, parent);
   }
 
 
-  int addRepetitionRepeat(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
+  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
   { return add(sSemantic, null, -countRepetition, start, end, nLine, nColumn, parent);
   }
 
 
-  int addConstantSyntax(String sInput, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
+  ParseResultItemImplement addConstantSyntax(String sInput, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
   { return add(null, sInput, kTerminalSymbol, start, end, nLine, nColumn, parent);
   }
 
 
-  int xxxaddString(String sInput, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
-  { return add(null, sInput, kTerminalSymbol, start, end, nLine, nColumn, parent);
-  }
-
-
-  int addSemantic(String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addSemantic(String sSemantic, ZbnfParseResultItem parent)
   { return add(sSemantic, null, kOnlySemantic, 0,0,0,0, parent);
   }
 
@@ -811,7 +808,7 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  int addString(StringPart spInput, String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfParseResultItem parent)
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
     int nLine = spInput.getLineCt();
@@ -824,7 +821,7 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  int addString(String src, String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(String src, String sSemantic, ZbnfParseResultItem parent)
   { return add(sSemantic, src, kString, -1, -1, -1, -1, parent);
   }
 

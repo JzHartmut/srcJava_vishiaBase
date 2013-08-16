@@ -1,4 +1,4 @@
-package org.vishia.jbat;
+package org.vishia.zbatch;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -33,7 +33,7 @@ import org.vishia.zbnf.ZbnfParser;
  * @author Hartmut Schorrig
  *
  */
-public class JbatGenScript {
+public class ZbatchGenScript {
   /**Version, history and license.
    * <ul>
    * <li>2014-07-30 Hartmut chg {@link #translateAndSetGenCtrl(File)} returns void.
@@ -69,7 +69,7 @@ public class JbatGenScript {
    *   {@link Statement#elementType}-types (TODO). This version works for {@link org.vishia.stateMGen.StateMGen}.
    * <li>2012-10-11 Hartmut chg Syntax changed of ZmakeGenCtrl.zbnf: datapath::={ <$?path>? \.}. 
    *   instead dataAccess::=<$?name>\.<$?elementPart>., it is more universal. adapted. 
-   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.jbat.JbatExecuter} now too.
+   * <li>2012-10-10 new: Some enhancements, it is used for {@link org.vishia.zbatch.ZbatchExecuter} now too.
    * <li>2011-03-00 created.
    *   It is the concept of specialized {@link GralWidget}.
    * </ul>
@@ -132,11 +132,11 @@ public class JbatGenScript {
   Statement scriptFile;
   
   
-  final JbatExecuter executer;
+  final ZbatchExecuter executer;
 
   //public String scriptclassMain;
 
-  public JbatGenScript(JbatExecuter executer, MainCmdLogging_ifc console)
+  public ZbatchGenScript(ZbatchExecuter executer, MainCmdLogging_ifc console)
   { this.console = console;
     this.executer = executer;
     this.parserGenCtrl2Java = new ZbnfJavaOutput(console);
@@ -157,7 +157,7 @@ public class JbatGenScript {
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
+    translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
   }
   
 
@@ -174,7 +174,7 @@ public class JbatGenScript {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
+    translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
   }
   
   
@@ -182,7 +182,7 @@ public class JbatGenScript {
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), new StringPart(spGenCtrl), null, null);
+      translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), new StringPart(spGenCtrl), null, null);
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -191,7 +191,7 @@ public class JbatGenScript {
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      translateAndSetGenCtrl(new StringPart(JbatSyntax.syntax), spGenCtrl, null, null);
+      translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), spGenCtrl, null, null);
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -204,7 +204,7 @@ public class JbatGenScript {
    * <br><br>
    * This routine will be called recursively if scripts are included.
    * 
-   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link JbatSyntax#syntax}.
+   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link ZbatchSyntax#syntax}.
    * @param spGenCtrl The input file with the genCtrl statements.
    * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
    * @param fileParent directory of the used file as start directory for included scripts. 
@@ -386,7 +386,7 @@ public class JbatGenScript {
   /**
   *
   */
-  public static class Expression extends CalculatorExpr
+  public static class Expression extends ZbatchZbnfExpression
   {
   
     final Argument parentStatement;
@@ -406,8 +406,10 @@ public class JbatGenScript {
     //public void add_value(ZbnfValue val){ values.add(val); }
   
     
+    @Override
     public ZbnfOperation new_startOperation(){ return new ZbnfOperation("!", parentStatement); }
     
+    @Override
     public void add_startOperation(ZbnfOperation val){ addToStack(val); }
   
     /**From Zbnf, a part <:>...<.> */
@@ -419,7 +421,7 @@ public class JbatGenScript {
     @Override public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
     throws Exception{
       if(genString !=null){
-        JbatExecuter.ExecuteLevel executer = (JbatExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
+        ZbatchExecuter.ExecuteLevel executer = (ZbatchExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
         StringBuilder u = new StringBuilder();
         executer.executeNewlevel(genString, u, false);
         return new CalculatorExpr.Value(u.toString());
@@ -661,9 +663,17 @@ public class JbatGenScript {
     
     public String getIdent(){ return identArgJbat; }
     
+    public Expression new_boolExpr(){ return new Expression(this); }
+    
+    public void add_boolExpr(Expression val){ expression = val; }
+    
     public Expression new_expression(){ return new Expression(this); }
     
     public void add_expression(Expression val){ expression = val; }
+    
+    public Expression new_orCondition(){ return new Expression(this); }
+    
+    public void add_orCondition(Expression val){ expression = val; }
     
     public void set_text(String text){
       if(text.contains("testt"))
@@ -814,6 +824,7 @@ public class JbatGenScript {
      * <tr><td>E</td><td><:else> {@link #subContent} contains build.script for any list element,</td></tr>
      * <tr><td>F</td><td><:if:condition:path> {@link #subContent} contains build.script for any list element,</td></tr>
      * <tr><td>G</td><td><:elsif:condition:path> {@link #subContent} contains build.script for any list element,</td></tr>
+     * <tr><td>w</td><td>while(cond) {@link #subContent} contains build.script for any list element,</td></tr>
      * <tr><td>b</td><td>break</td></tr>
      * <tr><td>?</td><td><:if:...?gt> compare-operation in if</td></tr>
      * 
@@ -1069,7 +1080,15 @@ public class JbatGenScript {
       return subContent.new_forContainer();
     }
     
-    public void add_forContainer(Statement val){}
+    public void add_forContainer(Statement val){subContent.add_forContainer(val);}
+
+    
+    public Statement new_whileBlock()
+    { if(subContent == null) { subContent = new StatementList(this); }
+      return subContent.new_whileBlock();
+    }
+    
+    public void add_whileBlock(Statement val){subContent.add_whileBlock(val); }
 
     
     public Statement new_if()
@@ -1478,6 +1497,16 @@ public class JbatGenScript {
     public void add_forContainer(Statement val){}
 
 
+    public Statement new_whileBlock()
+    { Statement contentElement = new Statement(this, 'w', null);
+      content.add(contentElement);
+      onerrorAccu = null; withoutOnerror.add(contentElement);
+      return contentElement;
+    }
+    
+    public void add_whileBlock(Statement val){}
+
+
     
     
     public void set_name(String name){
@@ -1499,7 +1528,7 @@ public class JbatGenScript {
   
   
   /**Main class for ZBNF parse result.
-   * This class has the enclosing class to store {@link JbatGenScript#subtextScripts}, {@link JbatGenScript#listScriptVariables}
+   * This class has the enclosing class to store {@link ZbatchGenScript#subtextScripts}, {@link ZbatchGenScript#listScriptVariables}
    * etc. while parsing the script. The <code><:file>...<.file></code>-script is stored here locally
    * and used as the main file script only if it is the first one of main or included script. The same behaviour is used  
    * <pre>

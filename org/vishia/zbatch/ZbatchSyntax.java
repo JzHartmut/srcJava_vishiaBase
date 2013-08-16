@@ -1,6 +1,6 @@
-package org.vishia.jbat;
+package org.vishia.zbatch;
 
-public final class JbatSyntax {
+public final class ZbatchSyntax {
 
   
   /**Version, history and license.
@@ -62,7 +62,6 @@ public final class JbatSyntax {
   public final static String syntax =
       "$comment=(?...?).\n"
     + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
-    + "$keywords= cmd | for | if | sub | main | call | break | java | new | Set | set | String | StringAppend | Obj | List | Pipe.\n"
     + "\n"
     + "\n"
     + "jbat::= \n"
@@ -102,16 +101,23 @@ public final class JbatSyntax {
     + "  | $$<$?envVariable> | <datapath?> .\n"
     + "\n"
     + "\n"
+    + "condition::=<andExpr?> [{\\|\\| <andExpr?orValue>}].\n"
+    + "\n"
+    + "andExpr::= <boolExpr> [{ && <boolExpr?andValue>}].\n"
+    + "\n"
+    + "boolExpr::=[<?not> ! | not|] <expression?objExpr> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
+    + "\n"
+    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <expression>.\n"
     + "\n"
     + "expression::= \\<:\\><textExpr?genString>\\<\\.\\> \n"
     + "            | <multExpr?> [{ + <multExpr?addOperation> | - <multExpr?subOperation>}].\n"
     + "\n"
     + "\n"
-    + "multExpr::= <value?startOperation> [{ * <value?multOperation> | / <value?divOperation> }].\n"
+    + "multExpr::= <value?> [{ * <value?multOperation> | / <value?divOperation> }].\n"
     + "\n"
     + "value::= [<?operator> + | - |] [<?unaryOperator> ! | ~ |]\n"
     + "   [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
-    + "   \n" 
+    + "   | ( <expression> ) \n" 
     + "   | new <newJavaClass> | [java |$!] <staticJavaMethod> \n" 
     + "   | $$<$?envVariable> | <datapath?> ].\n"
     + "\n"
@@ -121,7 +127,11 @@ public final class JbatSyntax {
     + "staticJavaMethod::= <$\\.?javapath> [ (+)<?extArgs>| ( [ { <objExpr?argument> ? , } ] )].\n"
     + "##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
     + "\n"
-    + "datapath::=<?> [$] <$?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n" // |{ <datapathElement> ? [?\\. \\>] \\.}.  \n"
+    + "datapath::=<?> \n"
+    + "[ [<?startVariable> $<![1-9]?>|xxx]    ## $1 .. $9 are the arguments of jbat \n"
+    + "| [$] <$?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}]\n"
+    //+ "| <$?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}]\n"
+    + "].\n" // |{ <datapathElement> ? [?\\. \\>] \\.}.  \n"
     + "\n"
     + "datapathElement::=<$@-?ident> [( [{ <objExpr?argument> ? ,}])<?whatisit=r>].\n"  
     + "\n"
@@ -146,11 +156,6 @@ public final class JbatSyntax {
     + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <textExpr?elseBlock> ] \\<\\.if\\>.\n"
     + "ifBlock::= <condition> \\> <textExpr?>.\n"
     + "\n"
-    + "condition::=<?><expression> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
-    + "\n"
-    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <expression>.\n"
-    + "\n"
-    + "\n"
     + "\n"
     + "mainScript::= <execScript?> . \n"
     + "\n"
@@ -166,13 +171,16 @@ public final class JbatSyntax {
     + "| <DefVariables?> \n"
     + "| for <forScript?forContainer> \n"
     + "| call <callScript?callSubtext> \n"
+    + "| cd [<textExpr?cd> | <*\\ ;?cd> ; ]  ##change current directory \n"
     + "| if <ifScript?if> \n"
+    + "| while <whileScript?> \n"
     + "| \\<+ <textOut> \n"
     + "| [{ <datapath?-assign> = }] cmd <cmdLine?+?> \n"  ///
     + "| start <cmdLine?cmdStart> \n"
     //+ "| [{ <datapath?-assign> = }] java <staticJavaMethod?+?> \n"
     + "| <assignment> \n"
     + "| break <?breakBlock> ;\n"
+    + "| return <textValue?return> ;\n"
     + "| exit <#?exitScript> ;\n"
     + "| onerror <onerror> \n"
     + "| ; \n"
@@ -191,6 +199,8 @@ public final class JbatSyntax {
     + "Openfile::= <$\\.?name> = <textValue?> .\n"
     + "\n"
     + "ifScript::= <ifScriptBlock?ifBlock> [{ elsif <ifScriptBlock?ifBlock>  }][ else <execScript?elseBlock> ].\n"
+    + "\n"
+    + "whileScript::= <ifScriptBlock?whileBlock> .\n"
     + "\n"
     + "ifScriptBlock::= ( <condition> ) <execScript?> .\n"
     + "\n"
