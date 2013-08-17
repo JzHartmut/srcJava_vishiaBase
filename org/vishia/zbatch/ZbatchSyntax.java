@@ -107,7 +107,7 @@ public final class ZbatchSyntax {
     + "\n"
     + "boolExpr::=[<?not> ! | not|] <expression?objExpr> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
     + "\n"
-    + "cmpOperation::=[ \\?[<?name>gt|ge|lt|le|eq|ne] |  [<?name> != | == ]] <expression>.\n"
+    + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <expression?>.\n"
     + "\n"
     + "expression::= \\<:\\><textExpr?genString>\\<\\.\\> \n"
     + "            | <multExpr?> [{ + <multExpr?addOperation> | - <multExpr?subOperation>}].\n"

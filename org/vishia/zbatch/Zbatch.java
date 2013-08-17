@@ -3,6 +3,8 @@ package org.vishia.zbatch;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
@@ -19,6 +21,8 @@ public class Zbatch
     String sFileOut;
     
     File fileTestOut;
+    
+    List<String> userArgs = new ArrayList<String>();
   }
   
 
@@ -108,6 +112,11 @@ public class Zbatch
       out = System.out;
     }
     File fileIn = new File(args.sFileIn);
+    char nrArg = '1';
+    for(String argu: args.userArgs){
+      executer.scriptVariables.put("$" + nrArg, argu);
+      nrArg +=1;
+    }
     sError = executer.generate(null, fileIn, out, true, args.fileTestOut);
     return sError;
   }
@@ -122,7 +131,9 @@ public class Zbatch
     protected final MainCmd.Argument[] argList =
     { new MainCmd.Argument("", "<INPUT>    jbat-File to execute"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.sFileIn = val; return true;
+          if(argData.sFileIn == null){ argData.sFileIn = val; }
+          else {argData.userArgs.add(val); }
+          return true; 
         }})
     , new MainCmd.Argument("-t", ":<OUTEXT> text-File for output"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
@@ -131,6 +142,11 @@ public class Zbatch
     , new MainCmd.Argument("-debug", ":<TEST.xml> Test-File"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.fileTestOut = new File(val); return true;
+        }})
+    , new MainCmd.Argument("-u", "userargs"
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          argData.userArgs.add(val); 
+          return true; 
         }})
     };
 

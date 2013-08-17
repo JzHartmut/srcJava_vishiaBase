@@ -632,12 +632,12 @@ public class ZbatchExecuter {
           } break;
           case 'T': textAppendToVarOrOut(contentElement); break; 
           case 'S': { //create a new local variable.
-            StringBuilder uBufferVariable = new StringBuilder();
-            ExecuteLevel genVariable = new ExecuteLevel(this, localVariables);
-            ZbatchGenScript.StatementList content = contentElement.getSubContent();
-            genVariable.execute(content, uBufferVariable, false);
-            //genVariable.gen_Content(uBufferVariable, null, userTarget, variableScript, forElements, srcPath);
-            putLocalVariable(contentElement.identArgJbat, uBufferVariable);
+            CharSequence text = evalString(contentElement);
+            //StringBuilder uBufferVariable = new StringBuilder();
+            //ExecuteLevel genVariable = new ExecuteLevel(this, localVariables);
+            //ZbatchGenScript.StatementList content = contentElement.getSubContent();
+            //genVariable.execute(content, uBufferVariable, false);
+            putLocalVariable(contentElement.identArgJbat, text);
           } break;
           case 'P': { //create a new local variable as pipe
             StringBuilder uBufferVariable = new StringBuilder();

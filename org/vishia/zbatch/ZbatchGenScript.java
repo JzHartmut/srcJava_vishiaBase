@@ -406,12 +406,6 @@ public class ZbatchGenScript {
     //public void add_value(ZbnfValue val){ values.add(val); }
   
     
-    @Override
-    public ZbnfOperation new_startOperation(){ return new ZbnfOperation("!", parentStatement); }
-    
-    @Override
-    public void add_startOperation(ZbnfOperation val){ addToStack(val); }
-  
     /**From Zbnf, a part <:>...<.> */
     public StatementList new_genString(){ return genString = new StatementList(); }
     
@@ -452,6 +446,7 @@ public class ZbatchGenScript {
     public void set_floatValue(double val){ this.value = new CalculatorExpr.Value(val); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
+    @Override
     public void set_textValue(String val){ this.value = new CalculatorExpr.Value(val); }
     
     /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
@@ -663,6 +658,10 @@ public class ZbatchGenScript {
     
     public String getIdent(){ return identArgJbat; }
     
+    public Expression new_condition(){ return new Expression(this); }
+    
+    public void add_condition(Expression val){ expression = val; }
+    
     public Expression new_boolExpr(){ return new Expression(this); }
     
     public void add_boolExpr(Expression val){ expression = val; }
@@ -812,6 +811,7 @@ public class ZbatchGenScript {
      * <tr><td>s</td><td>call of a subtext by name. {@link #textArg}==null, {@link #subContent} == null.</td></tr>
      * <tr><td>j</td><td>call of a static java method. {@link #identArgJbat}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>c</td><td>cmd line invocation.</td></tr>
+     * <tr><td>d</td><td>cd change current directory.</td></tr>
      * <tr><td>J</td><td>Object variable {@link #identArgJbat}==its name, {@link #subContent} == null.</td></tr>
      * <tr><td>P</td><td>Pipe variable, {@link #textArg} contains the name of the variable</td></tr>
      * <tr><td>U</td><td>Buffer variable, {@link #textArg} contains the name of the variable</td></tr>
@@ -1158,6 +1158,13 @@ public class ZbatchGenScript {
     
     public void add_cmdLine(Statement val){}
 
+    
+
+    public void set_cd(String val)
+    { if(subContent == null){ subContent = new StatementList(this); }
+      subContent.set_cd(val);
+    }
+    
     
 
     
@@ -1507,6 +1514,13 @@ public class ZbatchGenScript {
     public void add_whileBlock(Statement val){}
 
 
+    public void set_cd(String val)
+    { Statement contentElement = new Statement(this, 'd', null);
+      contentElement.textArg = val;
+      content.add(contentElement);
+      onerrorAccu = null; withoutOnerror.add(contentElement);
+    }
+    
     
     
     public void set_name(String name){

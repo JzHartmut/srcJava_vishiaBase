@@ -1,6 +1,10 @@
 package org.vishia.zbatch;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.vishia.util.CalculatorExpr;
+import org.vishia.util.DataAccess;
 
 /**This class provides a Zbnf interface to the CalculatorExpr. It contains only methods
  * to store Zbnf parse results for the expression.
@@ -42,21 +46,25 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   static final public int version = 20131003;
 
 
-  public ZbatchZbnfExpression new_orCondition(){
+  private Operation actOperation = new Operation("!");
+  
+  
+  
+  public ZbatchZbnfExpression new_orValue(){
     return this;
   }
   
   
-  public void add_orCondition(ZbatchZbnfExpression val){ }
+  public void add_orValue(ZbatchZbnfExpression val){ }
   
   
   
-  public ZbatchZbnfExpression new_andCondition(){
+  public ZbatchZbnfExpression new_andValue(){
     return this;
   }
   
   
-  public void add_andCondition(ZbatchZbnfExpression val){ }
+  public void add_andValue(ZbatchZbnfExpression val){ }
   
   
   public void set_not(String val){
@@ -64,7 +72,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   }
   
 
-  public ZbatchZbnfExpression XXXnew_boolExpr(){ 
+  public ZbatchZbnfExpression new_boolExpr(){ 
     return this;
   }
 
@@ -76,6 +84,22 @@ public class ZbatchZbnfExpression extends CalculatorExpr
     return this;
   }
 
+  public ZbatchZbnfExpression new_cmpOperation(){
+    if(actOperation !=null){
+      
+    }
+    actOperation = new Operation("c");
+    return this;
+  }
+  
+  public void add_cmpOperation(ZbatchZbnfExpression val){
+    addToStack(actOperation); 
+  }
+
+  
+  public void set_cmpOperator(String val){
+    actOperation.setOperator(val);
+  }
   
   public void add_objExpr(ZbatchZbnfExpression  val){ }
 
@@ -89,20 +113,127 @@ public class ZbatchZbnfExpression extends CalculatorExpr
 
   
   
-  public ZbatchGenScript.ZbnfOperation new_startOperation(){
-    return new ZbatchGenScript.ZbnfOperation("!", null);
-    //return this;
+  public ZbatchZbnfExpression new_expression(){
+    return this;
   }
   
-  public void add_startOperation(ZbatchGenScript.ZbnfOperation val){
-    addToStack(val); 
+  public void add_expression(ZbatchZbnfExpression val){
+     
+  }
+
+  public ZbatchZbnfExpression new_startOperation(){
+    if(actOperation !=null){
+      
+    }
+    actOperation = new Operation("!");
+    return this;
+  }
+  
+  public void add_startOperation(ZbatchZbnfExpression val){
+    addToStack(actOperation); 
   }
 
 
+  public ZbatchZbnfExpression new_addOperation(){
+    if(actOperation !=null){
+      
+    }
+    actOperation = new Operation("+");
+    return this;
+  }
+  
+  public void add_addOperation(ZbatchZbnfExpression val){
+    addToStack(actOperation); 
+  }
+
+  public ZbatchZbnfExpression new_multOperation(){
+    if(actOperation !=null){
+      
+    }
+    actOperation = new Operation("*");
+    return this;
+  }
+  
+  public void add_multOperation(ZbatchZbnfExpression val){
+    addToStack(actOperation); 
+  }
+
+
+  public void set_intValue(int val){
+    actOperation.set_intValue(val);
+  }
+  
+  
+  
+  public void set_text(String val){
+    actOperation.set_textValue(val);
+  }
+  
+  
+  
+  
+  
+  public void set_startVariable(String ident){
+    DataAccess.DatapathElement element = new DataAccess.DatapathElement();
+    element.whatisit = 'v';
+    element.ident = ident;
+    actOperation.add_datapathElement(element);
+  }
+  
+  public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(null); }
+  
+  public void add_datapathElement(ZbnfDataPathElement val){ 
+    actOperation.add_datapathElement(val); 
+  }
+  
+
+  
+  
   @Override
   public void addToStack(Operation operation){
     stackExpr.add(operation);
   }
 
 
+  
+  
+  public static class ZbnfDataPathElement extends CalculatorExpr.DataPathItem
+  {
+    final CalculatorExpr.Datapath parentStatement;
+    
+    //protected List<CalculatorExpr.Datapath> paramArgument;
+
+    
+    
+    public ZbnfDataPathElement(CalculatorExpr.Datapath statement){
+      this.parentStatement = statement;
+    }
+    
+    
+    
+    public ZbatchZbnfExpression new_argument(){
+      ZbatchZbnfExpression actualArgument = new ZbatchZbnfExpression();
+      return actualArgument;
+    }
+
+    
+    /**From Zbnf.
+     * The Arguments of type {@link Statement} have to be resolved by evaluating its value in the data context. 
+     * The value is stored in {@link DataAccess.DatapathElement#addActualArgument(Object)}.
+     * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
+     * @param val The Scriptelement which describes how to get the value.
+     */
+    public void add_argument(ZbatchZbnfExpression val){ 
+      if(paramExpr == null){ paramExpr = new ArrayList<CalculatorExpr>(); }
+      paramExpr.add(val);
+    } 
+    
+    public void set_javapath(String text){ this.ident = text; }
+    
+
+
+  }
+  
+
+  
 }
