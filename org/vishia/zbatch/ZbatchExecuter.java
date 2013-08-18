@@ -21,7 +21,6 @@ import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.IndexMultiTable;
-import org.vishia.zbatch.ZbatchGenScript.ZbnfDataPathElement;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -299,190 +298,7 @@ public class ZbatchExecuter {
   public Object getScriptVariable(String name){ return scriptVariables.get(name); }
 
   
-  /**Returns the reference from a given datapath.
-   * It can contain only one element which is:
-   * <ul>
-   * <li>An environment variable: returns its String content. 
-   * <li>The designation 'out' or 'err': returns System.out or System.err as Appendable.
-   * <li>The designation 'file': returns the main file output as Appendable.
-   * </ul>
-   * The first element can be
-   * <ul>
-   * <li>An local variable
-   * <li>An element of data1
-   * </ul>
-   * All other elements are elements inside the found element before.
-   * 
-   * @param dataPath List of elements of the datapath. 
-   * @param data1
-   * @param localVariables
-   * @param bContainer
-   * @return An object.
-   * @throws Exception 
-   */
-  public Object getDataObj(List<DataAccess.DatapathElement> dataPath
-      , Object data1, Map<String, Object> localVariables
-      , boolean bContainer)
-  throws Exception
-  {  
-    Object dataValue = null;
-    
-    boolean bWriteErrorInOutput = false;
-    boolean accessPrivate = true;
-    
-    if(dataPath.size() >=1 && dataPath.get(0).ident !=null && dataPath.get(0).ident.equals("$checkDeps"))
-      Assert.stop();
-    //calculate all actual arguments:
-    
-    //out, err, file for the given Appendable output channels.
-    if(dataPath.size()==1){
-      DataAccess.DatapathElement dataElement = dataPath.get(0);
-      if(dataElement.ident.equals("out")){
-        dataValue = System.out;
-      }
-      else if(dataElement.ident.equals("err")){
-        dataValue = System.err;
-      }
-      if(dataElement.ident.equals("xxxfile")){
-        dataValue = null; //outFile;
-      }
-    }
-    if(dataValue ==null){
-      for(DataAccess.DatapathElement dataElement : dataPath){  //loop over all elements of the path with or without arguments.
-        ZbnfDataPathElement zd;
-        if(dataElement instanceof ZbnfDataPathElement && (zd = (ZbnfDataPathElement)dataElement).XXXactualValue !=null){
-          //it is a element with arguments, usual a method call. 
-          zd.removeAllActualArguments();
-          /*
-          for(TextGenScript.Argument zarg: zd.actualArguments){
-            Object oValue = getContent(zarg, localVariables, false);
-            zd.addActualArgument(oValue);
-          }
-          */
-          for(ZbatchGenScript.Expression expr: zd.XXXactualValue){
-            Object oValue = ascertainValue(expr, data1, localVariables, false);
-            if(oValue == null){
-              oValue = "??: path access: " + dataPath + "?>";
-              if(!bWriteErrorInOutput){
-                throw new IllegalArgumentException(oValue.toString());
-              }
-            }
-            zd.addActualArgument(oValue);
-          }
-        }
-      }
-      try{
-        dataValue = DataAccess.getData(dataPath, data1, localVariables, accessPrivate, bContainer);
-      } catch(NoSuchMethodException exc){
-        dataValue = "??: path not found: " + dataPath + "on " + exc.getMessage() + ".??";
-        if(!bWriteErrorInOutput){
-          throw new IllegalArgumentException(dataValue.toString());
-        }
-      } catch(NoSuchFieldException exc){
-        dataValue = "??: path not found: " + dataPath + "on " + exc.getMessage() + ".??";
-        if(!bWriteErrorInOutput){
-          throw new IllegalArgumentException(dataValue.toString());
-        }
-      } catch(IllegalAccessException exc) {
-        dataValue = "??: path access error: " + dataPath + "on " + exc.getMessage() + ".??";
-        if(!bWriteErrorInOutput){
-          throw new IllegalArgumentException(dataValue.toString());
-        }
-      } catch(Exception exc){
-        throw exc;
-      }
-    }
-    return dataValue;
-  }
   
-  
-  
-  
-  /**Ascertains the value which is represented by this expression. 
-   * It accessed to data using {@link DataAccess#getData(String, Object, boolean, boolean)}.
-   * @param data The data pool to access.
-   * @param localVariables additonal container for data references
-   * @param accessPrivate
-   * @param bContainer true than should return an container.
-   * @param bWriteErrorInOutput
-   * @return the Object which represents the expression in the given environment.
-   * @throws Exception 
-   */
-  Object ascertainValue(ZbatchGenScript.Expression expr, Object data, Map<String, Object> localVariables
-      , boolean bContainer
-  )
-  throws Exception
-  { Object dataRet = null;
-    for(ZbatchGenScript.ZbnfValue value: expr.XXXvalues){   //All SumValue
-      List<DataAccess.DatapathElement> dataRef = value.datapath();
-      Object dataValue;
-      if(dataRef !=null){
-        
-        dataValue = getDataObj(dataRef, data, localVariables, bContainer);
-      } else if(value.genString !=null){
-        
-        dataValue = new StringBuilder();
-        ExecuteLevel subtextGenerator = this.new ExecuteLevel(null, localVariables);
-        subtextGenerator.execute(value.genString, (Appendable)dataValue, false);
-      
-      } else {
-        dataValue = value.objValue();
-      }
-      if(dataRet == null){
-        dataRet = dataValue;
-      } else {
-        //execute operation
-        if(dataRet instanceof CharSequence){
-          //It is only string concatenation, don't check the operator, '+'or '-' are admissible.
-          if(!(dataRet instanceof StringBuilder)){
-            dataRet = new StringBuilder((CharSequence)dataRet);
-          }
-          ((StringBuilder)dataRet).append(dataValue);
-        }
-        else if(dataRet instanceof Object){
-          
-        }
-      }
-    }
-    return dataRet;
-  }
-  
-
-  
-  /**ascertains the text which is described in this Expression. Invokes {@link #ascertainValue(Object, Map, boolean, boolean, boolean)}
-   * and converts it to String.<br>
-   * This method does not support getting from any additional container or from datapool. Only environment variables
-   * or invocation of static methods are supported.
-   * @return
-   */
-  public String ascertainText(ZbatchGenScript.Expression expr){ 
-    boolean bContainer = false;
-    Map<String, Object> localVariables = null;
-    try{ 
-      Object value = ascertainValue(expr, data, localVariables, bContainer);
-      return DataAccess.getStringFromObject(value, null);
-    } catch(IOException exc){
-      return "<??IOException>" + exc.getMessage() + "<??>";
-    } catch(Exception exc){
-      return "<??Exception>" + exc.getMessage() + "<??>";
-      
-    }
-  }
-  
-
-  /**ascertains the text which is described in this Expression. Invokes {@link #ascertainValue(Object, Map, boolean, boolean, boolean)}
-   * and converts it to String.<br>
-   * This method does not support getting from any additional container or from datapool. Only environment variables
-   * or invocation of static methods are supported.
-   * @return
-   * @throws Exception 
-   * @throws IOException 
-   * @throws IllegalArgumentException 
-   */
-  public String ascertainText(ZbatchGenScript.Expression expr, Map<String, Object> localVariables) throws IllegalArgumentException, IOException, Exception{ 
-    Object value = ascertainValue(expr, data, localVariables, false);
-    return DataAccess.getStringFromObject(value, null);
-  }
   
 
   protected Map<String, Object> xnew_Variables(){
@@ -812,20 +628,12 @@ public class ZbatchExecuter {
         check = null;
       }
       boolean bCondition;
-      if(ifBlock.condition !=null && ifBlock.bElse){ //condition.sumExpression.constValue !=null && ifBlock.condition.sumExpression.constValue.equals("else")){
+      if(ifBlock.XXXcondition !=null && ifBlock.bElse){ //condition.sumExpression.constValue !=null && ifBlock.condition.sumExpression.constValue.equals("else")){
         bCondition = true;  //if the else block is found, all others have returned false.
       }
       else {
-        if(ifBlock.expr == null && ifBlock.condition !=null){
-            
-          ifBlock.expr = new CalculatorExpr();
-          ifBlock.expr.addExprToStack(0, "!");
-          ifBlock.expr.addExprToStack(1, ifBlock.condition.identArgJbat);
-        }
         if(ifBlock.expr != null){
-          Object cmp = ascertainValue(ifBlock.condition.expression, data, localVariables, false); 
-            //getContent(ifBlock.condition, localVariables, false);
-          CalculatorExpr.Value result = ifBlock.expr.calc(check, cmp);
+          CalculatorExpr.Value result = ifBlock.expr.calc(check);
           bCondition = result.booleanValue();
         } else {
           /*
@@ -950,7 +758,7 @@ public class ZbatchExecuter {
               CheckArgument arg = checkArg.getValue();
               if(!arg.used){
                 if(arg.formalArg.expression !=null){
-                  Object ref = getContent(arg.formalArg, localVariables, false);
+                  Object ref = evalObject(arg.formalArg, false);
                   if(ref !=null){
                     subtextGenerator.localVariables.put(arg.formalArg.identArgJbat, ref);
                   } else {
@@ -1015,8 +823,7 @@ public class ZbatchExecuter {
       final String sCmd;
       if(contentElement.identArgJbat == null){
         //cmd gotten from any data location, variable name
-        Object oName = ascertainText(contentElement.expression, localVariables);
-        sCmd = DataAccess.getStringFromObject(oName, null);
+        sCmd = evalString(contentElement); 
       } else {
         sCmd = contentElement.identArgJbat;
       }
@@ -1025,7 +832,7 @@ public class ZbatchExecuter {
         args = new String[contentElement.arguments.size() +1];
         int iArg = 1;
         for(ZbatchGenScript.Argument arg: contentElement.arguments){
-          String sArg = ascertainText(arg.expression, localVariables);
+          String sArg = evalString(arg); //XXXascertainText(arg.expression, localVariables);
           args[iArg++] = sArg;
         }
       } else { 
@@ -1035,8 +842,8 @@ public class ZbatchExecuter {
       List<Appendable> outCmd;
       if(contentElement.assignObj !=null){
         outCmd = new LinkedList<Appendable>();
-        for(ZbatchGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
-          Object oOutCmd = getDataObj(assignObj1.datapath(), data, localVariables, false);
+        for(DataAccess assignObj1 : contentElement.assignObj){
+          Object oOutCmd = assignObj1.getDataObj(localVariables, false);
           //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
           if(oOutCmd instanceof Appendable){
             outCmd.add((Appendable)oOutCmd);
@@ -1084,10 +891,10 @@ public class ZbatchExecuter {
       Object val = evalObject(contentElement, false);
       //Object val = ascertainValue(contentElement.expression, data, localVariables, false);
       if(contentElement.assignObj !=null){
-        for(ZbatchGenScript.ZbnfValue assignObj1 : contentElement.assignObj){
+        for(DataAccess assignObj1 : contentElement.assignObj){
         
           //It is a path to any object, get it:
-          Object oOut = getDataObj(assignObj1.datapath(), data, localVariables, false);
+          Object oOut = assignObj1.getDataObj(localVariables, false);
           //
           if(oOut == null){
             //not found.
@@ -1115,36 +922,11 @@ public class ZbatchExecuter {
     }
     
     
-    /**Executes any argument or such part.
-     * @param arg argument execution script
-     * @param localVariables of the environemnt
-     * @param bContainer true: expect a container as return, false: returns the first element if a container is found.
-     * @return any object. The execution may be a side effect. The goal of this invocation is get data.
-     * @throws IllegalArgumentException
-     * @throws IOException
-     * @throws Exception
-     */
-    Object getContent(ZbatchGenScript.Argument arg, Map<String, Object> localVariables, boolean bContainer)
-    throws IllegalArgumentException, IOException, Exception
-    { assert(arg.expression !=null);
-      if(arg.expression !=null){
-        return ascertainValue(arg.expression, data, localVariables, bContainer);
-      } else if(arg.subContent !=null){
-        
-        StringBuilder buffer = new StringBuilder();
-        ExecuteLevel subtextGenerator = new ExecuteLevel(this, localVariables);
-        subtextGenerator.execute(arg.subContent, buffer, false);
-        return buffer;
-      } else {
-        return null;
-      }
-    }
-    
     
     public String evalString(ZbatchGenScript.Argument arg) throws Exception{
       if(arg.textArg !=null) return arg.textArg;
-      else if(arg.datapath() !=null){
-        Object o = evalGetData(arg.datapath(), false);
+      else if(arg.dataAccess !=null){
+        Object o = arg.dataAccess.getDataObj(localVariables, false);
         return o.toString();
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
@@ -1172,8 +954,8 @@ public class ZbatchExecuter {
     public Object evalObject(ZbatchGenScript.Argument arg, boolean bContainer) throws Exception{
       Object obj;
       if(arg.textArg !=null) return arg.textArg;
-      else if(arg.datapath() !=null){
-        obj = evalGetData(arg.datapath(), bContainer);
+      else if(arg.dataAccess !=null){
+        obj = arg.dataAccess.getDataObj(localVariables, false);
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
         executeNewlevel(arg.subContent, u, false);
@@ -1186,33 +968,6 @@ public class ZbatchExecuter {
     }
     
     
-    
-    /**Prepares the data access. First the arguments should be evaluated if a method will be called.
-     * @param datapath
-     * @return
-     * @throws Exception
-     */
-    Object evalGetData(List<DataAccess.DatapathElement> datapath, boolean bContainer)
-    throws Exception {
-      for(DataAccess.DatapathElement dataElement : datapath){  
-        //loop over all elements of the path to check whether it is a method and it have arguments.
-        ZbnfDataPathElement zd = dataElement instanceof ZbnfDataPathElement ? (ZbnfDataPathElement)dataElement : null;
-        //A DatapathItem contains the path to parameter.
-        if(zd !=null && zd.paramArgument !=null){
-          //it is a element with arguments, usual a method call. 
-          zd.removeAllActualArguments();
-          for(ZbatchGenScript.Argument expr: zd.paramArgument){
-            //evaluate its value.
-            Object value = evalObject(expr, bContainer);
-            zd.addActualArgument(value);
-          }
-        }
-      }
-      //Now access the data.
-      Object oVal2 = DataAccess.getData(datapath, null, localVariables, false, bContainer);
-      return oVal2;
-
-    }    
     
   }    
   /**Small class instance to build a next number. 

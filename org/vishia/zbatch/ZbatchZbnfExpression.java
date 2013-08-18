@@ -46,7 +46,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   static final public int version = 20131003;
 
 
-  private Operation actOperation = new Operation("!");
+  private Operation actOperation; // = new Operation("!");
   
   
   
@@ -68,7 +68,10 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   
   
   public void set_not(String val){
-    
+    if(actOperation ==null){
+      actOperation = new Operation();
+    }
+    actOperation.setUnaryOperator("~");
   }
   
 
@@ -84,88 +87,122 @@ public class ZbatchZbnfExpression extends CalculatorExpr
     return this;
   }
 
-  public ZbatchZbnfExpression new_cmpOperation(){
-    if(actOperation !=null){
-      
+  public void add_objExpr(ZbatchZbnfExpression  val){ 
+    if(actOperation ==null){
+      actOperation = new Operation();
+      actOperation.setStackOperand();  
     }
-    actOperation = new Operation("c");
+    addToOperations(); 
+  }
+
+  public ZbatchZbnfExpression new_cmpOperation(){
     return this;
   }
   
   public void add_cmpOperation(ZbatchZbnfExpression val){
-    addToStack(actOperation); 
+    addToOperations(); 
   }
 
   
   public void set_cmpOperator(String val){
+    if(actOperation ==null){
+      actOperation = new Operation("c");
+    }
     actOperation.setOperator(val);
   }
   
-  public void add_objExpr(ZbatchZbnfExpression  val){ }
-
   
   public ZbatchZbnfExpression xxxnew_numExpression(){ 
     return this;
   }
 
   
-  public void add_numExpression(ZbatchZbnfExpression  val){ }
+  public void xxxadd_numExpression(ZbatchZbnfExpression  val){ 
+    
+  }
 
   
   
+  /**Designates, that a expression in parenthesis is given, which should be calculated firstly.
+   * @return this
+   */
   public ZbatchZbnfExpression new_expression(){
+    if(actOperation !=null){ //A start operation before
+      addToOperations();
+    }
     return this;
   }
   
+  /**Designates the end of an expression in any syntax tree.
+   * @param val unused, it is this.
+   */
   public void add_expression(ZbatchZbnfExpression val){
-     
+    //assert(actOperation == null);  //it was added before on end of expression.   
+    if(actOperation !=null){
+      addToOperations();  //if it is a start operation.
+    }
+    //actOperation = new Operation();
+    //actOperation.setStackOperand();  //NOTE the operation will be set by following set_multOperation() etc.
   }
 
-  public ZbatchZbnfExpression new_startOperation(){
-    if(actOperation !=null){
-      
-    }
-    actOperation = new Operation("!");
+  public ZbatchZbnfExpression XXXnew_startOperation(){
     return this;
   }
   
-  public void add_startOperation(ZbatchZbnfExpression val){
-    addToStack(actOperation); 
+  public void XXXadd_startOperation(ZbatchZbnfExpression val){
+    addToOperations(); 
   }
 
-
+  /**Designates the start of a new adding operation. The first start value should be taken into the
+   * stackOperation statement list as start operation.
+   * @return this
+   */
   public ZbatchZbnfExpression new_addOperation(){
-    if(actOperation !=null){
-      
-    }
-    actOperation = new Operation("+");
-    return this;
+    if(actOperation !=null){ addToOperations(); }
+    assert(actOperation == null);  //will be set by values. operator will be set by add_addOperation
+    return this;  
   }
   
+  /**Designates the end of an add operation. Takes the operation into the expression list.
+   * @param val this, unused
+   */
   public void add_addOperation(ZbatchZbnfExpression val){
-    addToStack(actOperation); 
+    if(actOperation ==null){
+      actOperation = new Operation();
+      actOperation.setStackOperand();  
+    }
+    actOperation.setOperator("+");
+    addToOperations(); 
   }
 
   public ZbatchZbnfExpression new_multOperation(){
-    if(actOperation !=null){
-      
-    }
-    actOperation = new Operation("*");
+    if(actOperation !=null){ addToOperations(); }
+    assert(actOperation == null);  //will be set by values. operator will be set by add_addOperation
     return this;
   }
   
   public void add_multOperation(ZbatchZbnfExpression val){
-    addToStack(actOperation); 
+    if(actOperation ==null){
+      actOperation = new Operation();
+      actOperation.setStackOperand();  
+    }
+    actOperation.setOperator("*");
+    addToOperations(); 
   }
 
 
+  /**Sets a value to the current operation. 
+   * @param val
+   */
   public void set_intValue(int val){
+    if(actOperation == null){ actOperation = new Operation(); }
     actOperation.set_intValue(val);
   }
   
   
   
   public void set_text(String val){
+    if(actOperation == null){ actOperation = new Operation(); }
     actOperation.set_textValue(val);
   }
   
@@ -174,24 +211,43 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   
   
   public void set_startVariable(String ident){
+    if(actOperation == null){ actOperation = new Operation(); }
     DataAccess.DatapathElement element = new DataAccess.DatapathElement();
     element.whatisit = 'v';
     element.ident = ident;
     actOperation.add_datapathElement(element);
   }
   
+  public ZbatchZbnfExpression new_datapath(){ return this; }
+  
+  public void add_datapath(ZbatchZbnfExpression val){ 
+    //actOperation.add_datapathElement(val); 
+  }
+  
+
   public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(null); }
   
   public void add_datapathElement(ZbnfDataPathElement val){ 
+    if(actOperation == null){ actOperation = new Operation(); }
     actOperation.add_datapathElement(val); 
   }
   
 
+  /**This routine must be called at least. It adds a simple value to the operation list.
+   * If any second value was added already, the routine does nothing.
+   */
+  public void closeExprPreparation(){
+    if(actOperation !=null){
+      addToOperations();
+    }
+  }
   
-  
-  @Override
-  public void addToStack(Operation operation){
-    stackExpr.add(operation);
+  private void addToOperations(){
+    if(!actOperation.hasOperator()){
+      actOperation.setOperator("!");  //it is initial value
+    }
+    super.addOperation(actOperation);
+    actOperation = null;  //a new one is necessary.
   }
 
 

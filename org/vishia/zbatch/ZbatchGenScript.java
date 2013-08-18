@@ -308,7 +308,7 @@ public class ZbatchGenScript {
 
 
 
-  public static class ZbnfDataPathElement extends CalculatorExpr.DataPathItem
+  public static class XXXZbnfDataPathElement extends CalculatorExpr.DataPathItem
   {
     final Argument parentStatement;
     
@@ -321,7 +321,7 @@ public class ZbatchGenScript {
     boolean bExtArgs;
     
     
-    public ZbnfDataPathElement(Argument statement){
+    public XXXZbnfDataPathElement(Argument statement){
       this.parentStatement = statement;
     }
     
@@ -394,7 +394,7 @@ public class ZbatchGenScript {
     /**If need, a sub-content, maybe null.*/
     public StatementList genString;
     
-    List<ZbnfValue> XXXvalues = new ArrayList<ZbnfValue>();
+    List<XXXZbnfValue> XXXvalues = new ArrayList<XXXZbnfValue>();
   
   
     public Expression(Argument statement){
@@ -429,11 +429,11 @@ public class ZbatchGenScript {
   
   
   
-  public static class ZbnfOperation extends CalculatorExpr.Operation
+  public static class XXXXZbnfOperation extends CalculatorExpr.Operation
   {
     final Argument parentStatement;
     
-    ZbnfOperation(String operator, Argument parentStatement){ 
+    XXXXZbnfOperation(String operator, Argument parentStatement){ 
       super(operator); 
       this.parentStatement = parentStatement;
     }
@@ -453,9 +453,9 @@ public class ZbatchGenScript {
     public void set_charValue(String val){ this.value = new CalculatorExpr.Value(val.charAt(0)); }
     
     
-    public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(parentStatement); }
+    public XXXZbnfDataPathElement new_datapathElement(){ return new XXXZbnfDataPathElement(parentStatement); }
     
-    public void add_datapathElement(ZbnfDataPathElement val){ 
+    public void add_datapathElement(XXXZbnfDataPathElement val){ 
       super.add_datapathElement(val); 
     }
     
@@ -475,19 +475,19 @@ public class ZbatchGenScript {
     }
     
     
-    public ZbnfDataPathElement new_newJavaClass()
-    { ZbnfDataPathElement value = new ZbnfDataPathElement(parentStatement);
+    public XXXZbnfDataPathElement new_newJavaClass()
+    { XXXZbnfDataPathElement value = new XXXZbnfDataPathElement(parentStatement);
       value.whatisit = 'n';
       //ScriptElement contentElement = new ScriptElement('J', null); ///
       //subContent.content.add(contentElement);
       return value;
     }
     
-    public void add_newJavaClass(ZbnfDataPathElement val) { add_datapathElement(val); }
+    public void add_newJavaClass(XXXZbnfDataPathElement val) { add_datapathElement(val); }
 
 
-    public ZbnfDataPathElement new_staticJavaMethod()
-    { ZbnfDataPathElement value = new ZbnfDataPathElement(parentStatement);
+    public XXXZbnfDataPathElement new_staticJavaMethod()
+    { XXXZbnfDataPathElement value = new XXXZbnfDataPathElement(parentStatement);
       value.whatisit = 's';
       return value;
       //ScriptElement contentElement = new ScriptElement('j', null); ///
@@ -495,7 +495,7 @@ public class ZbatchGenScript {
       //return contentElement;
     }
     
-    public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
+    public void add_staticJavaMethod(XXXZbnfDataPathElement val) { add_datapathElement(val); }
 
 
 
@@ -507,7 +507,7 @@ public class ZbatchGenScript {
   /**A Value of a expression or a left value. The syntax determines what is admissible.
    *
    */
-  public static class ZbnfValue extends CalculatorExpr.Value {
+  public static class XXXZbnfValue extends CalculatorExpr.Value {
     
     final Argument parentStatement;
     
@@ -529,7 +529,7 @@ public class ZbatchGenScript {
     public StatementList genString;
     
     
-    public ZbnfValue(Argument statement){ 
+    public XXXZbnfValue(Argument statement){ 
       this.parentStatement = statement;
     }
 
@@ -561,60 +561,11 @@ public class ZbatchGenScript {
      */
     public void set_info(){ type = 'i'; } 
     
-    public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(parentStatement); }
+    public XXXZbnfDataPathElement new_datapathElement(){ return new XXXZbnfDataPathElement(parentStatement); }
     
-    public void add_datapathElement(ZbnfDataPathElement val){ 
-      if(datapath == null){
-        datapath = new ArrayList<DataAccess.DatapathElement>();
-      }
-      datapath.add(val); 
+    public void add_datapathElement(XXXZbnfDataPathElement val){ 
     }
     
-    public void set_envVariable(String ident){
-      if(datapath == null){
-        datapath = new ArrayList<DataAccess.DatapathElement>();
-      }
-      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
-      element.whatisit = 'e';
-      element.ident = ident;
-      datapath.add(element); 
-    }
-    
-
-    public void set_startVariable(String ident){
-      if(datapath == null){
-        datapath = new ArrayList<DataAccess.DatapathElement>();
-      }
-      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
-      element.whatisit = 'v';
-      element.ident = ident;
-      datapath.add(element); 
-    }
-    
-    
-    public ZbnfDataPathElement new_newJavaClass()
-    { ZbnfDataPathElement value = new ZbnfDataPathElement(parentStatement);
-      value.whatisit = 'n';
-      //ScriptElement contentElement = new ScriptElement('J', null); ///
-      //subContent.content.add(contentElement);
-      return value;
-    }
-    
-    public void add_newJavaClass(ZbnfDataPathElement val) { add_datapathElement(val); }
-
-
-    public ZbnfDataPathElement new_staticJavaMethod()
-    { ZbnfDataPathElement value = new ZbnfDataPathElement(parentStatement);
-      value.whatisit = 's';
-      return value;
-      //ScriptElement contentElement = new ScriptElement('j', null); ///
-      //subContent.content.add(contentElement);
-      //return contentElement;
-    }
-    
-    public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
-
-
     /**From Zbnf, a part <:>...<.> */
     public StatementList new_genString(){ return genString = new StatementList(); }
     
@@ -634,7 +585,7 @@ public class ZbatchGenScript {
    * @author hartmut
    *
    */
-  public static class Argument extends CalculatorExpr.Datapath{
+  public static class Argument  { //CalculatorExpr.Datapath{
     
     
     final StatementList parentList;
@@ -643,6 +594,9 @@ public class ZbatchGenScript {
     protected String identArgJbat;
    
     public Expression expression;
+    
+    
+    DataAccess dataAccess;
   
     /**From Zbnf <""?textInStatement>, constant text, null if not used. */
     protected String textArg; 
@@ -658,21 +612,30 @@ public class ZbatchGenScript {
     
     public String getIdent(){ return identArgJbat; }
     
+    /**Designates a boolean expression as any condition, etc. if, while
+     * @return The expression component.
+     */
     public Expression new_condition(){ return new Expression(this); }
     
-    public void add_condition(Expression val){ expression = val; }
+    public void add_condition(Expression val){ 
+      val.closeExprPreparation();
+      expression = val; 
+    }
     
-    public Expression new_boolExpr(){ return new Expression(this); }
+    public Expression XXXnew_boolExpr(){ return new Expression(this); }
     
-    public void add_boolExpr(Expression val){ expression = val; }
+    public void XXXadd_boolExpr(Expression val){ expression = val; }
     
     public Expression new_expression(){ return new Expression(this); }
     
-    public void add_expression(Expression val){ expression = val; }
+    public void add_expression(Expression val){ 
+      val.closeExprPreparation();
+      expression = val; 
+    }
     
-    public Expression new_orCondition(){ return new Expression(this); }
+    public Expression XXXnew_orCondition(){ return new Expression(this); }
     
-    public void add_orCondition(Expression val){ expression = val; }
+    public void XXXadd_orCondition(Expression val){ expression = val; }
     
     public void set_text(String text){
       if(text.contains("testt"))
@@ -704,52 +667,11 @@ public class ZbatchGenScript {
       this.identArgJbat = "@info";
     }
     
-
-    public ZbnfDataPathElement new_newJavaClass()
-    { ZbnfDataPathElement value = new ZbnfDataPathElement(this);
-      value.whatisit = 'n';
-      //ScriptElement contentElement = new ScriptElement('J', null); ///
-      //subContent.content.add(contentElement);
-      return value;
-    }
     
-    public void add_newJavaClass(ZbnfDataPathElement val) { add_datapathElement(val); }
-
-
-    public ZbnfDataPathElement new_staticJavaMethod()
-    { ZbnfDataPathElement value = new ZbnfDataPathElement(this);
-      value.whatisit = 's';
-      return value;
-      //ScriptElement contentElement = new ScriptElement('j', null); ///
-      //subContent.content.add(contentElement);
-      //return contentElement;
-    }
+    public DataAccess.DataAccessSet new_datapath(){ return new DataAccess.DataAccessSet(); }
     
-    public void add_staticJavaMethod(ZbnfDataPathElement val) { add_datapathElement(val); }
-
-
-
-    public void set_envVariable(String ident){
-      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
-      element.whatisit = 'e';
-      element.ident = ident;
-      add_datapathElement(element);
-    }
-    
-
-    
-    public void set_startVariable(String ident){
-      DataAccess.DatapathElement element = new DataAccess.DatapathElement();
-      element.whatisit = 'v';
-      element.ident = ident;
-      super.add_datapathElement(element); 
-    }
-    
-    
-    public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(this); }
-    
-    public void add_datapathElement(ZbnfDataPathElement val){ 
-      super.add_datapathElement(val); 
+    public void add_datapath(DataAccess.DataAccessSet val){ 
+      dataAccess = val;
     }
     
 
@@ -836,10 +758,10 @@ public class ZbatchGenScript {
     final public char elementType;    
     
     
-    /**Any variable name of a script variable where the content should assigned to.
+    /**Any variable given by name or java instance  which is used to assign to it.
+     * A variable is given by the start element of the data path. An instance is given by any more complex datapath
      * null if not used. */
-    //String sVariableToAssign;
-    List<ZbnfValue> assignObj;
+    List<DataAccess> assignObj;
     
     //public String value;
     
@@ -996,10 +918,10 @@ public class ZbatchGenScript {
     
     /**From Zbnf: [{ <datapath?-assign> = }] 
      */
-    public ZbnfValue new_assign(){ return new ZbnfValue(this); }
+    public DataAccess new_assign(){ return new DataAccess(); }
     
-    public void add_assign(ZbnfValue val){ 
-      if(assignObj == null){ assignObj = new LinkedList<ZbnfValue>(); }
+    public void add_assign(DataAccess val){ 
+      if(assignObj == null){ assignObj = new LinkedList<DataAccess>(); }
       assignObj.add(val); 
     }
 
@@ -1019,13 +941,13 @@ public class ZbatchGenScript {
     /**From ZBNF: <code>< value></code>.
      * @return A new {@link ZbnfValue} as syntax component
      */
-    public ZbnfValue XXXnew_value(){ return new ZbnfValue(this); }
+    public XXXZbnfValue XXXnew_value(){ return new XXXZbnfValue(this); }
     
     /**From ZBNF: <code>< value></code>.
      * The val is added to the @{@link Argument#expression} of this {@link Statement}.
      * @param val
      */
-    public void XXXadd_value(ZbnfValue val){ 
+    public void XXXadd_value(XXXZbnfValue val){ 
       if(expression == null){ expression = new Expression(this); }
       //expression.values.add(val); 
     }
@@ -1312,7 +1234,7 @@ public class ZbatchGenScript {
   public static class IfCondition extends Statement
   {
     
-    Statement condition;
+    Statement XXXcondition;
     
     boolean bElse;
     
@@ -1322,9 +1244,9 @@ public class ZbatchGenScript {
       super(parentList, whatis, null);
     }
     
-    public Statement new_cmpOperation()
-    { condition = new Statement(parentList, '?', null);
-      return condition;
+    public Statement XXXnew_cmpOperation()
+    { XXXcondition = new Statement(parentList, '?', null);
+      return XXXcondition;
     }
     
     public void add_cmpOperation(Statement val){
