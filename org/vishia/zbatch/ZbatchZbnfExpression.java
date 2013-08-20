@@ -50,28 +50,50 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   
   
   
-  public ZbatchZbnfExpression new_orValue(){
+  public ZbatchZbnfExpression new_boolOrOperation(){
+    if(actOperation !=null){ addToOperations(); }
     return this;
   }
   
   
-  public void add_orValue(ZbatchZbnfExpression val){ }
+  /**Designates the end of a multiplication operation. Takes the operation into the expression list.
+   * @param val this, unused
+   */
+  public void add_boolOrOperation(ZbatchZbnfExpression val){
+    if(actOperation ==null){
+      actOperation = new Operation();
+      actOperation.setStackOperand();  
+    }
+    actOperation.setOperator("||");
+    addToOperations(); 
+  }
   
   
   
-  public ZbatchZbnfExpression new_andValue(){
+  public ZbatchZbnfExpression new_boolAndOperation(){
+    if(actOperation !=null){ addToOperations(); }
     return this;
   }
   
   
-  public void add_andValue(ZbatchZbnfExpression val){ }
+  /**Designates the end of a multiplication operation. Takes the operation into the expression list.
+   * @param val this, unused
+   */
+  public void add_boolAndOperation(ZbatchZbnfExpression val){
+    if(actOperation ==null){
+      actOperation = new Operation();
+      actOperation.setStackOperand();  
+    }
+    actOperation.setOperator("&&");
+    addToOperations(); 
+  }
   
   
-  public void set_not(String val){
+  public void set_boolNot(String val){
     if(actOperation ==null){
       actOperation = new Operation();
     }
-    actOperation.setUnaryOperator("~");
+    actOperation.setUnaryOperator("b!");
   }
   
 
@@ -80,14 +102,21 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   }
 
   
-  public void add_boolExpr(ZbatchZbnfExpression  val){ }
+  public void add_boolExpr(ZbatchZbnfExpression  val){ 
+    if(actOperation !=null){
+      if(actOperation.hasOperator()){
+        actOperation.setUnaryOperator("bool");
+      }
+      addToOperations();
+    }
+  }
 
   
-  public ZbatchZbnfExpression new_objExpr(){ 
+  public ZbatchZbnfExpression XXXnew_objExpr(){ 
     return this;
   }
 
-  public void add_objExpr(ZbatchZbnfExpression  val){ 
+  public void XXXadd_objExpr(ZbatchZbnfExpression  val){ 
     if(actOperation ==null){
       actOperation = new Operation();
       actOperation.setStackOperand();  
@@ -126,7 +155,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   /**Designates, that a expression in parenthesis is given, which should be calculated firstly.
    * @return this
    */
-  public ZbatchZbnfExpression new_expression(){
+  public ZbatchZbnfExpression new_parenthesisExpr(){
     if(actOperation !=null){ //A start operation before
       addToOperations();
     }
@@ -136,7 +165,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   /**Designates the end of an expression in any syntax tree.
    * @param val unused, it is this.
    */
-  public void add_expression(ZbatchZbnfExpression val){
+  public void add_parenthesisExpr(ZbatchZbnfExpression val){
     //assert(actOperation == null);  //it was added before on end of expression.   
     if(actOperation !=null){
       addToOperations();  //if it is a start operation.
@@ -181,6 +210,9 @@ public class ZbatchZbnfExpression extends CalculatorExpr
     return this;
   }
   
+  /**Designates the end of a multiplication operation. Takes the operation into the expression list.
+   * @param val this, unused
+   */
   public void add_multOperation(ZbatchZbnfExpression val){
     if(actOperation ==null){
       actOperation = new Operation();

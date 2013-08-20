@@ -99,11 +99,11 @@ public final class ZbatchSyntax {
     + "textValue::=  <\"\"?text> | \\<:\\><textExpr?genString>\\<\\.\\> | <datapath> .\n"
     + "\n"
     + "\n"
-    + "condition::=<andExpr?> [{\\|\\| <andExpr?orValue>}].\n"
+    + "condition::=<andExpr?> [{\\|\\| <andExpr?boolOrOperation>}].\n"
     + "\n"
-    + "andExpr::= <boolExpr> [{ && <boolExpr?andValue>}].\n"
+    + "andExpr::= <boolExpr> [{ && <boolExpr?boolAndOperation>}].\n"
     + "\n"
-    + "boolExpr::=[<?not> ! | not|] <expression?objExpr> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
+    + "boolExpr::=[<?boolNot> ! | not|] <expression?> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
     + "\n"
     + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <expression?>.\n"
     + "\n"
@@ -115,7 +115,7 @@ public final class ZbatchSyntax {
     + "\n"
     + "value::= [<?operator> + | - |] [<?unaryOperator> ! | ~ |]\n"
     + "   [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
-    + "   | ( <expression> ) \n" 
+    + "   | ( <expression?parenthesisExpr> ) \n" 
     + "   | <datapath> ].\n"
     + "\n"
     //+ "objvalue::=\n"
