@@ -328,7 +328,14 @@ public class ZbatchExecuter {
 
   }
   
-  
+  /**This class wraps any Object which is used for a local variable.
+   * If an inner level changes the Object of the variable, all references to the variable's content
+   * should be changed in all outer levels too. This can be done by unchanged reference to the variable itself
+   * in all {@link ExecuteLevel#localVariables} maps but change of the reference of {@link LocalVariable#var}.
+   */
+  static class LocalVariable{
+    Object var;
+  }
   
   /**Wrapper to generate a script with specified localVariables.
    * A new Wrapper is created on <:file>, <:subtext> or on abbreviated output, especially to generate into variables.
@@ -396,6 +403,21 @@ public class ZbatchExecuter {
     
     
     
+    /**Executes an inner script part maybe with a new level of nested local variables.
+     * If the contentScript does not contain any variable definition 
+     * (see @link {@link ZbatchGenScript.StatementList#bContainsVariableDef}) then this level is used,
+     * it prevents a non necessary instantiation of an {@link ExecuteLevel} and copying of local variables. 
+     * If new variables are to build in the statements, a new instance of {@link ExecuteLevel} is created
+     * and all variables of this.{@link #localVariables} are copied to it. It means the nested level
+     * knows the same variables but it can add new variables without effect to this level. Changing
+     * of existing variables effects all outer levels. That is necessary, an outer-defined variable can be changed
+     * in an inner level. That is guaranteed because only the reference is changed.
+     * @param contentScript of the inner level.
+     * @param out The main output
+     * @param bContainerHasNext only used for for-statement
+     * @return an error hint.
+     * @throws IOException
+     */
     public String executeNewlevel(ZbatchGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) 
     throws IOException 
     { final ExecuteLevel level;
@@ -414,8 +436,8 @@ public class ZbatchExecuter {
      * @return
      * @throws IOException 
      */
-    public String execute(ZbatchGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) throws IOException 
-    //throws Exception
+    public String execute(ZbatchGenScript.StatementList contentScript, final Appendable out, boolean bContainerHasNext) 
+    throws IOException 
     {
       String sError = null;
       Appendable uBuffer = out;
@@ -493,9 +515,8 @@ public class ZbatchExecuter {
           case 'B': { //statementBlock
             executeSubLevel(contentElement, out);  ///
           } break;
-          case 'F': { 
-            executeIfStatement(contentElement, out);
-          } break;
+          case 'F': executeIfStatement(contentElement, out); break;
+          case 'w': executeWhileStatement(contentElement, out); break;
           case 'N': {
             executeIfContainerHasNext(contentElement, out, bContainerHasNext);
           } break;
@@ -615,6 +636,25 @@ public class ZbatchExecuter {
     
     
     
+    /**Executes a while statement. 
+     * @throws Exception */
+    void executeWhileStatement(ZbatchGenScript.Statement whileStatement, Appendable out) throws Exception {
+      boolean cond;
+      do{
+        try{ 
+          CalculatorExpr.Value check = whileStatement.expression.calcDataAccess(localVariables);
+          cond = check.booleanValue();
+        } catch(Exception exc){
+          cond = false;
+        }
+        if(cond){
+          executeNewlevel(whileStatement.subContent, out, false);
+        }
+      } while(cond);  //if executed, check cond again.  
+    }
+    
+    
+    
     boolean executeIfBlock(ZbatchGenScript.IfCondition ifBlock, Appendable out, boolean bIfHasNext) 
     throws Exception
     {
@@ -712,7 +752,7 @@ public class ZbatchExecuter {
     {
       ZbatchGenScript.CallStatement callStatement = (ZbatchGenScript.CallStatement)contentElement;
       boolean ok = true;
-      final String nameSubtext;
+      final CharSequence nameSubtext;
       /*
       if(contentElement.name == null){
         //subtext name gotten from any data location, variable name
@@ -820,7 +860,7 @@ public class ZbatchExecuter {
     throws IllegalArgumentException, Exception
     {
       boolean ok = true;
-      final String sCmd;
+      final CharSequence sCmd;
       if(contentElement.identArgJbat == null){
         //cmd gotten from any data location, variable name
         sCmd = evalString(contentElement); 
@@ -832,13 +872,13 @@ public class ZbatchExecuter {
         args = new String[contentElement.arguments.size() +1];
         int iArg = 1;
         for(ZbatchGenScript.Argument arg: contentElement.arguments){
-          String sArg = evalString(arg); //XXXascertainText(arg.expression, localVariables);
+          String sArg = evalString(arg).toString(); //XXXascertainText(arg.expression, localVariables);
           args[iArg++] = sArg;
         }
       } else { 
         args = new String[1]; 
       }
-      args[0] = sCmd;
+      args[0] = sCmd.toString();
       List<Appendable> outCmd;
       if(contentElement.assignObj !=null){
         outCmd = new LinkedList<Appendable>();
@@ -867,7 +907,7 @@ public class ZbatchExecuter {
     void executeOpenfile(ZbatchGenScript.Statement contentElement) 
     throws IllegalArgumentException, Exception
     {
-      String sFilename = evalString(contentElement);
+      String sFilename = evalString(contentElement).toString();
       Writer writer = new FileWriter(sFilename);
       localVariables.put(contentElement.identArgJbat, writer);
     }
@@ -923,7 +963,7 @@ public class ZbatchExecuter {
     
     
     
-    public String evalString(ZbatchGenScript.Argument arg) throws Exception{
+    public CharSequence evalString(ZbatchGenScript.Argument arg) throws Exception{
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.dataAccess !=null){
         Object o = arg.dataAccess.getDataObj(localVariables, false);

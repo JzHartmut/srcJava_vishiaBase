@@ -301,7 +301,7 @@ public class ZbatchGenScript {
   public final Statement getFileScript(){ return scriptFile; }
   
   
-  public Statement getSubtextScript(String name){ return subtextScripts.get(name); }
+  public Statement getSubtextScript(CharSequence name){ return subtextScripts.get(name.toString()); }
   
   
   List<Statement> getListScriptVariables(){ return listScriptVariables; }
@@ -918,9 +918,9 @@ public class ZbatchGenScript {
     
     /**From Zbnf: [{ <datapath?-assign> = }] 
      */
-    public DataAccess new_assign(){ return new DataAccess(); }
+    public DataAccess.DataAccessSet new_assign(){ return new DataAccess.DataAccessSet(); }
     
-    public void add_assign(DataAccess val){ 
+    public void add_assign(DataAccess.DataAccessSet val){ 
       if(assignObj == null){ assignObj = new LinkedList<DataAccess>(); }
       assignObj.add(val); 
     }
