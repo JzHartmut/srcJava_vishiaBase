@@ -285,7 +285,12 @@ public class ZbatchZbnfExpression extends CalculatorExpr
 
   
   
-  public static class ZbnfDataPathElement extends CalculatorExpr.DataPathItem
+  /**TODO use {@link DataAccess.DatapathElementSet} instead.
+   * @author Hartmut
+   *
+   */
+  @Deprecated
+  public static class ZbnfDataPathElement extends DataAccess.DatapathElement
   {
     final CalculatorExpr.Datapath parentStatement;
     
@@ -312,8 +317,9 @@ public class ZbatchZbnfExpression extends CalculatorExpr
      * @param val The Scriptelement which describes how to get the value.
      */
     public void add_argument(ZbatchZbnfExpression val){ 
-      if(paramExpr == null){ paramExpr = new ArrayList<CalculatorExpr>(); }
-      paramExpr.add(val);
+      if(fnArgsExpr == null){ fnArgsExpr = new ArrayList<CalculatorExpr>(); }
+      val.closeExprPreparation();
+      fnArgsExpr.add(val);
     } 
     
     public void set_javapath(String text){ this.ident = text; }

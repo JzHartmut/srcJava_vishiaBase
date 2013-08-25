@@ -308,7 +308,7 @@ public class ZbatchGenScript {
 
 
 
-  public static class XXXZbnfDataPathElement extends CalculatorExpr.DataPathItem
+  public static class XXXZbnfDataPathElement extends DataAccess.DatapathElement  //CalculatorExpr.DataPathItem
   {
     final Argument parentStatement;
     
@@ -344,17 +344,6 @@ public class ZbatchGenScript {
       return actualArgument;
     }
 
-    
-    /**From Zbnf.
-     * The Arguments of type {@link Statement} have to be resolved by evaluating its value in the data context. 
-     * The value is stored in {@link DataAccess.DatapathElement#addActualArgument(Object)}.
-     * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
-     * @param val The Scriptelement which describes how to get the value.
-     */
-    public void XXXadd_argument(Expression val){ 
-      if(paramExpr == null){ paramExpr = new ArrayList<CalculatorExpr>(); }
-      paramExpr.add(val);
-    } 
     
     public Argument new_argument(){
       Argument actualArgument = new Argument(parentStatement.parentList);

@@ -20,6 +20,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
+import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
@@ -121,7 +122,7 @@ public class ZbatchExecuter {
   
   public final boolean bWriteErrorInOutput;
   
-  private boolean accessPrivate;
+  private boolean bAccessPrivate;
   
   protected final MainCmdLogging_ifc log;
   
@@ -173,7 +174,7 @@ public class ZbatchExecuter {
   public String generate(Object userData, File fileScript, Appendable out, boolean accessPrivate, File testOut){
     String sError = null;
     this.outFile = out;
-    scriptVariables.put("file", outFile);
+    scriptVariables.put("text", outFile);
     ZbatchGenScript genScript = new ZbatchGenScript(this, log); //gen.parseGenScript(fileGenCtrl, null);
     try { genScript.translateAndSetGenCtrl(fileScript, testOut);
     } catch (Exception exc) {
@@ -243,7 +244,7 @@ public class ZbatchExecuter {
   {
     this.genScript = genScript;
     this.data = userData;
-    this.accessPrivate = accessPrivate;
+    this.bAccessPrivate = accessPrivate;
     
     File currDir = new File(".").getAbsoluteFile().getParentFile();
     
@@ -254,8 +255,9 @@ public class ZbatchExecuter {
     scriptVariables.put("nrElementInContainer", null);
     scriptVariables.put("out", System.out);
     scriptVariables.put("err", System.err);
-    scriptVariables.put("jbatAccess", this);
+    scriptVariables.put("jbat", this);
     scriptVariables.put("debug", new ZbatchDebugHelper());
+    scriptVariables.put("file", new FileSystem());
 
     for(ZbatchGenScript.Statement scriptVariableScript: genScript.getListScriptVariables()){
       StringBuilder uVariable = new StringBuilder();
@@ -281,7 +283,7 @@ public class ZbatchExecuter {
   public String genContent(ZbatchGenScript genScript, Object userData, boolean accessPrivate, Appendable out) 
   throws IOException
   {
-    this.accessPrivate = accessPrivate;
+    this.bAccessPrivate = accessPrivate;
     this.data = userData;
     this.genScript = genScript;
 
@@ -333,7 +335,7 @@ public class ZbatchExecuter {
    * should be changed in all outer levels too. This can be done by unchanged reference to the variable itself
    * in all {@link ExecuteLevel#localVariables} maps but change of the reference of {@link LocalVariable#var}.
    */
-  static class LocalVariable{
+  static class XXXLocalVariable{
     Object var;
   }
   
@@ -516,7 +518,7 @@ public class ZbatchExecuter {
             executeSubLevel(contentElement, out);  ///
           } break;
           case 'F': executeIfStatement(contentElement, out); break;
-          case 'w': executeWhileStatement(contentElement, out); break;
+          case 'w': whileStatement(contentElement, out); break;
           case 'N': {
             executeIfContainerHasNext(contentElement, out, bContainerHasNext);
           } break;
@@ -638,17 +640,15 @@ public class ZbatchExecuter {
     
     /**Executes a while statement. 
      * @throws Exception */
-    void executeWhileStatement(ZbatchGenScript.Statement whileStatement, Appendable out) throws Exception {
+    void whileStatement(ZbatchGenScript.Statement whileStatement, Appendable out) 
+    throws Exception 
+    {
       boolean cond;
       do{
-        try{ 
-          CalculatorExpr.Value check = whileStatement.expression.calcDataAccess(localVariables);
-          cond = check.booleanValue();
-        } catch(Exception exc){
-          cond = false;
-        }
+        CalculatorExpr.Value check = whileStatement.expression.calcDataAccess(localVariables);
+        cond = check.booleanValue();
         if(cond){
-          executeNewlevel(whileStatement.subContent, out, false);
+          execute(whileStatement.subContent, out, false);
         }
       } while(cond);  //if executed, check cond again.  
     }
@@ -883,7 +883,7 @@ public class ZbatchExecuter {
       if(contentElement.assignObj !=null){
         outCmd = new LinkedList<Appendable>();
         for(DataAccess assignObj1 : contentElement.assignObj){
-          Object oOutCmd = assignObj1.getDataObj(localVariables, false);
+          Object oOutCmd = assignObj1.getDataObj(localVariables, bAccessPrivate, false);
           //Object oOutCmd = localVariables.get(contentElement.sVariableToAssign);
           if(oOutCmd instanceof Appendable){
             outCmd.add((Appendable)oOutCmd);
@@ -934,7 +934,7 @@ public class ZbatchExecuter {
         for(DataAccess assignObj1 : contentElement.assignObj){
         
           //It is a path to any object, get it:
-          Object oOut = assignObj1.getDataObj(localVariables, false);
+          Object oOut = assignObj1.getDataObj(localVariables, bAccessPrivate, false);
           //
           if(oOut == null){
             //not found.
@@ -966,7 +966,7 @@ public class ZbatchExecuter {
     public CharSequence evalString(ZbatchGenScript.Argument arg) throws Exception{
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.dataAccess !=null){
-        Object o = arg.dataAccess.getDataObj(localVariables, false);
+        Object o = arg.dataAccess.getDataObj(localVariables, bAccessPrivate, false);
         return o.toString();
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
@@ -995,7 +995,7 @@ public class ZbatchExecuter {
       Object obj;
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.dataAccess !=null){
-        obj = arg.dataAccess.getDataObj(localVariables, false);
+        obj = arg.dataAccess.getDataObj(localVariables, bAccessPrivate, false);
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
         executeNewlevel(arg.subContent, u, false);
