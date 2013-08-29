@@ -21,6 +21,7 @@ import org.vishia.util.FileSystem;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.util.StringSeq;
 import org.vishia.util.UnexpectedException;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
@@ -588,7 +589,7 @@ public class ZbatchGenScript {
     DataAccess dataAccess;
   
     /**From Zbnf <""?textInStatement>, constant text, null if not used. */
-    protected String textArg; 
+    protected StringSeq textArg; 
     
     /**If need, a sub-content, maybe null.*/
     public StatementList subContent;
@@ -665,11 +666,6 @@ public class ZbatchGenScript {
     
 
 
-    
-    public void XXXset_textInStatement(String text){
-      this.textArg = text;
-    }
-    
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //@Override
     public Statement new_dataText(){ return new Statement(parentList, 'e', null); }
@@ -774,7 +770,7 @@ public class ZbatchGenScript {
     
 
     
-    public Statement(StatementList parentList, char whatisit, String text)
+    public Statement(StatementList parentList, char whatisit, StringSeq text)
     { super(parentList);
       this.elementType = whatisit;
       this.textArg = text;
@@ -796,7 +792,7 @@ public class ZbatchGenScript {
     public void set_name(String name){ this.identArgJbat = name; }
     
     
-    public void set_formatText(String text){ this.textArg = text; }
+    public void set_formatText(String text){ this.textArg = StringSeq.create(text); }
     
     /**Gathers a text which is assigned to any variable or output. <+ name>text<.+>
      */
@@ -1078,26 +1074,38 @@ public class ZbatchGenScript {
     
     
 
+    public Statement new_cd()
+    { if(subContent == null){ subContent = new StatementList(this); }
+      return subContent.new_cd();
+    }
+    
+    
+    public void add_cd(Statement val)
+    { subContent.add_cd(val);
+    }
+    
+    
+
     
     
     /**Set from ZBNF:  (\?*<$?forElement>\?) */
     public void set_fnEmpty(String val){ 
       if(subContent == null){ subContent = new StatementList(this); }
-      Statement contentElement = new Statement(parentList, 'f', val);
+      Statement contentElement = new Statement(parentList, 'f', StringSeq.create(val));
       subContent.content.add(contentElement);
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
     }
     
     public void set_outputValue(String text){ 
       if(subContent == null){ subContent = new StatementList(this); }
-      Statement contentElement = new Statement(parentList, 'o', text);
+      Statement contentElement = new Statement(parentList, 'o', StringSeq.create(text));
       subContent.content.add(contentElement); 
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
     }
     
     public void set_inputValue(String text){ 
       if(subContent == null){ subContent = new StatementList(this); }
-      Statement contentElement = new Statement(parentList, 'i', text);
+      Statement contentElement = new Statement(parentList, 'i', StringSeq.create(text));
       subContent.content.add(contentElement); 
       subContent.onerrorAccu = null; subContent.withoutOnerror.add(contentElement);
     }
@@ -1162,7 +1170,7 @@ public class ZbatchGenScript {
     @Override public String toString()
     {
       switch(elementType){
-      case 't': return textArg;
+      case 't': return textArg.toString();
       case 'S': return "String " + identArgJbat;
       case 'J': return "Obj " + identArgJbat;
       case 'P': return "Pipe " + identArgJbat;
@@ -1383,7 +1391,7 @@ public class ZbatchGenScript {
     }
     
     public void set_text(String text){
-      Statement contentElement = new Statement(this, 't', text);
+      Statement contentElement = new Statement(this, 't', StringSeq.create(text));
       content.add(contentElement);
       onerrorAccu = null; withoutOnerror.add(contentElement);
     }
@@ -1391,7 +1399,7 @@ public class ZbatchGenScript {
     
     public void set_nonEmptyText(String text){
       if(!StringFunctions.isEmptyOrOnlyWhitespaces(text)){
-        Statement contentElement = new Statement(this, 't', text);
+        Statement contentElement = new Statement(this, 't', StringSeq.create(text));
         content.add(contentElement);
         onerrorAccu = null; withoutOnerror.add(contentElement);
       }
@@ -1427,10 +1435,21 @@ public class ZbatchGenScript {
 
     public void set_cd(String val)
     { Statement contentElement = new Statement(this, 'd', null);
-      contentElement.textArg = val;
+      contentElement.textArg = StringSeq.create(val);
       content.add(contentElement);
       onerrorAccu = null; withoutOnerror.add(contentElement);
     }
+    
+    
+    public Statement new_cd(){
+      Statement contentElement = new Statement(this, 'd', null);
+      content.add(contentElement);
+      onerrorAccu = null; withoutOnerror.add(contentElement);
+      return contentElement;
+    }
+    
+    
+    public void add_cd(Statement val){}
     
     
     

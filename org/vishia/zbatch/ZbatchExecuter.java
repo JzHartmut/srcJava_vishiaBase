@@ -22,6 +22,7 @@ import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
+import org.vishia.util.StringSeq;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -508,9 +509,8 @@ public class ZbatchExecuter {
           case 's': {
             executeSubroutine(contentElement, out);
           } break;
-          case 'c': {
-            executeCmdline(contentElement);
-          } break;
+          case 'c': executeCmdline(contentElement); break;
+          case 'd': executeChangeCurrDir(contentElement); break;
           case 'C': { //generation <:for:name:path> <genContent> <.for>
             executeForContainer(contentElement, out);
           } break;
@@ -853,9 +853,6 @@ public class ZbatchExecuter {
 
     
     
-
-
-    
     void executeCmdline(ZbatchGenScript.Statement contentElement) 
     throws IllegalArgumentException, Exception
     {
@@ -903,6 +900,22 @@ public class ZbatchExecuter {
     }
     
 
+    void executeChangeCurrDir(ZbatchGenScript.Statement statement)
+    throws Exception
+    {
+      StringSeq arg = evalString(statement);
+      if(FileSystem.isAbsolutePathOrDrive(arg)){
+        localVariables.put("$CD", arg);          //sets the absolute path
+      } else {
+        StringSeq cd1 = (StringSeq)localVariables.get("$CD");
+        StringBuilder u = cd1.changeIt(); //new StringBuilder(cd1.length() + arg.length()+1);
+        u.append('/').append(arg);   //concatenate a relativ path
+        cd1.change(FileSystem.normalizePath(u));   //resolve "xxx/../xxx"
+        //localVariables.put("$CD", cd1);
+      }
+    }
+
+     
     
     void executeOpenfile(ZbatchGenScript.Statement contentElement) 
     throws IllegalArgumentException, Exception
@@ -963,15 +976,15 @@ public class ZbatchExecuter {
     
     
     
-    public CharSequence evalString(ZbatchGenScript.Argument arg) throws Exception{
+    public StringSeq evalString(ZbatchGenScript.Argument arg) throws Exception{
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.dataAccess !=null){
         Object o = arg.dataAccess.getDataObj(localVariables, bAccessPrivate, false);
-        return o.toString();
+        return StringSeq.create(o.toString());
       } else if(arg.subContent !=null){
         StringBuilder u = new StringBuilder();
         executeNewlevel(arg.subContent, u, false);
-        return u.toString();
+        return StringSeq.create(u);
       } else if(arg.expression !=null){
         CalculatorExpr.Value value = arg.expression.calcDataAccess(localVariables);
         return value.stringValue();
