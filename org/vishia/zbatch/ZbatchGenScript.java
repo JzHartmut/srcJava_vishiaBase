@@ -376,7 +376,7 @@ public class ZbatchGenScript {
   /**
   *
   */
-  public static class Expression extends ZbatchZbnfExpression
+  public static class Expression extends CalculatorExpr.SetExpr //ZbatchZbnfExpression
   {
   
     final Argument parentStatement;
