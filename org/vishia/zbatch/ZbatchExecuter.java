@@ -246,10 +246,10 @@ public class ZbatchExecuter {
     this.genScript = genScript;
     this.data = userData;
     this.bAccessPrivate = accessPrivate;
+    CurrDir currDirWrapper = new CurrDir();
+    currDirWrapper.currDir = new File(".").getAbsoluteFile().getParentFile();
     
-    File currDir = new File(".").getAbsoluteFile().getParentFile();
-    
-    scriptVariables.put("currDir", currDir);
+    scriptVariables.put("currDir", currDirWrapper);
     scriptVariables.put("error", accessError);
     scriptVariables.put("mainCmdLogging", log);
     scriptVariables.put("nextNr", nextNr);
@@ -893,9 +893,10 @@ public class ZbatchExecuter {
         outCmd = null;
       }
       CmdExecuter cmdExecuter = new CmdExecuter();
-      File currDir = (File)localVariables.get("currDir");
+      
+      CurrDir currDir = (CurrDir)localVariables.get("currDir");
       //localVariables.
-      cmdExecuter.setCurrentDir(currDir);
+      cmdExecuter.setCurrentDir(currDir.currDir);
       cmdExecuter.execute(args, null, outCmd, null);
     }
     
@@ -904,15 +905,21 @@ public class ZbatchExecuter {
     throws Exception
     {
       StringSeq arg = evalString(statement);
+      String sCurrDir;
       if(FileSystem.isAbsolutePathOrDrive(arg)){
         localVariables.put("$CD", arg);          //sets the absolute path
+        sCurrDir = arg.toString();
       } else {
         StringSeq cd1 = (StringSeq)localVariables.get("$CD");
         StringBuilder u = cd1.changeIt(); //new StringBuilder(cd1.length() + arg.length()+1);
         u.append('/').append(arg);   //concatenate a relativ path
         cd1.change(FileSystem.normalizePath(u));   //resolve "xxx/../xxx"
+        sCurrDir = cd1.toString();
         //localVariables.put("$CD", cd1);
       }
+      CurrDir currDirWrapper = (CurrDir)localVariables.get("currDir");
+      currDirWrapper.currDir = new File(sCurrDir);
+     
     }
 
      
@@ -1048,7 +1055,15 @@ public class ZbatchExecuter {
     CheckArgument(ZbatchGenScript.Argument formalArg){ this.formalArg = formalArg; }
   }
   
-  
+  /**It wrapps the File currDir because only this instance is referred in all localVariables.
+   * Changing the currDir should not change the content of a localVariables association
+   * but the reference of {@link CurrDir#currDir} instead. In this case all localvariables
+   * and the scriptVariable gets the changed current directory.
+   */
+  protected static class CurrDir{
+    File currDir;
+    @Override public String toString(){ return currDir.getAbsolutePath(); }
+  }
   
   void stop(){
     

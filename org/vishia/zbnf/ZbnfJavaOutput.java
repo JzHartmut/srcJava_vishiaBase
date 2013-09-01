@@ -160,6 +160,8 @@ public class ZbnfJavaOutput
   /**Version, able to read as hex yyyymmdd.
    * Changes:
    * <ul>
+   * <li>2013-09-02 Hartmut chg: The {@link Component#clazz} is build from the instance instead from the
+   *   given clazz Argument. It means an derived instance can contain other set_, add_method.
    * <li>2012-12-26 Hartmut new: {@link #writeInField(Field, Object, ZbnfParseResultItem)} supports a char field too,
    *   it gets the first char of a parsed string or the numeric value converted in a char (ASCII, UTF-16).
    * <li>2012-10-07 Hartmut bugfix on writing in a public List<String> getParsedString() should be used too.
@@ -449,7 +451,7 @@ public class ZbnfJavaOutput
     {
       assert(instance !=null);
       this.instance = instance;
-      this.clazz = clazz;
+      this.clazz = instance.getClass(); //clazz;
       this.parent = parent;
     }
     

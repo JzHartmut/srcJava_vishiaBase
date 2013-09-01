@@ -23,6 +23,7 @@ import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringSeq;
 import org.vishia.util.UnexpectedException;
+import org.vishia.util.CalculatorExpr.SetExpr;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
@@ -309,63 +310,47 @@ public class ZbatchGenScript {
 
 
 
-  public static class XXXZbnfDataPathElement extends DataAccess.DatapathElement  //CalculatorExpr.DataPathItem
+  public static class ZbatchDataPathElement extends DataAccess.DatapathElementSet  //CalculatorExpr.DataPathItem
   {
     final Argument parentStatement;
     
-    protected List<Argument> paramArgument;
+    //protected List<Argument> paramArgument;
 
     //List<ZbnfDataPathElement> actualArguments;
     
-    List<Expression> XXXactualValue;
-    
-    boolean bExtArgs;
+    //List<Expression> XXXactualValue;
     
     
-    public XXXZbnfDataPathElement(Argument statement){
+    public ZbatchDataPathElement(Argument statement){
       this.parentStatement = statement;
     }
     
     
-    /**Set if the arguments are listed outside of the element
-     * 
+    
+    
+    /**An argument of a method in a {@link DataAccess.DatapathElement}.
+     * It can contain a String expression like <:>string<.>
+     * Note: The associated {@link #add_argument(Argument)} method is in the super class.
+     * @return
      */
-    public void XXXset_extArgs(){
-      //if(actualValue == null){ actualValue = new ArrayList<Expression>(); }
-      bExtArgs = true;
-      //Expression actualArgument = new Expression();
-      //actualValue.add(actualArgument);
-    }
-    
-    
-    public Expression XXXnew_argument(){
-      Expression actualArgument = new Expression(parentStatement);
-      //ScriptElement actualArgument = new ScriptElement('e', null);
-      //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
-      return actualArgument;
+    @Override public Expression new_argument(){
+      Expression argument = new Expression(parentStatement);
+      return argument;
     }
 
     
-    public Argument new_argument(){
+    public void add_argument(Expression val){
+      super.add_argument(val);
+    }
+    
+    
+    public Argument XXXnew_argument(){
       Argument actualArgument = new Argument(parentStatement.parentList);
       //ScriptElement actualArgument = new ScriptElement('e', null);
       //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
       return actualArgument;
     }
 
-    
-    /**From Zbnf.
-     * The Arguments of type {@link Statement} have to be resolved by evaluating its value in the data context. 
-     * The value is stored in {@link DataAccess.DatapathElement#addActualArgument(Object)}.
-     * See {@link #add_datapathElement(org.vishia.util.DataAccess.DatapathElement)}.
-     * @param val The Scriptelement which describes how to get the value.
-     */
-    public void add_argument(Argument val){ 
-      if(paramArgument == null){ paramArgument = new ArrayList<Argument>(); }
-      paramArgument.add(val);
-    } 
-    
-    public void set_javapath(String text){ this.ident = text; }
     
 
 
@@ -384,13 +369,26 @@ public class ZbatchGenScript {
     /**If need, a sub-content, maybe null.*/
     public StatementList genString;
     
-    List<XXXZbnfValue> XXXvalues = new ArrayList<XXXZbnfValue>();
-  
-  
     public Expression(Argument statement){
       super();
       this.parentStatement = statement;  
     }
+    
+    
+    public Expression(Argument statement, CalculatorExpr.SetExpr parent){
+      super(parent);
+      this.parentStatement = statement;  
+    }
+    
+    
+    @Override public Expression new_SetExpr(CalculatorExpr.SetExpr parent){ 
+      return new Expression(parentStatement, parent); 
+    }
+
+    @Override public DataAccess.DatapathElementSet new_datapathElement(){ 
+      return new ZbatchDataPathElement(parentStatement); 
+    }
+
     
     //public ZbnfValue new_value(){ return new ZbnfValue(parentStatement); }
     
@@ -444,11 +442,6 @@ public class ZbatchGenScript {
     public void set_charValue(String val){ this.value = new CalculatorExpr.Value(val.charAt(0)); }
     
     
-    public XXXZbnfDataPathElement new_datapathElement(){ return new XXXZbnfDataPathElement(parentStatement); }
-    
-    public void add_datapathElement(XXXZbnfDataPathElement val){ 
-      super.add_datapathElement(val); 
-    }
     
     public void set_envVariable(String ident){
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
@@ -465,29 +458,6 @@ public class ZbatchGenScript {
       add_datapathElement(element);
     }
     
-    
-    public XXXZbnfDataPathElement new_newJavaClass()
-    { XXXZbnfDataPathElement value = new XXXZbnfDataPathElement(parentStatement);
-      value.whatisit = 'n';
-      //ScriptElement contentElement = new ScriptElement('J', null); ///
-      //subContent.content.add(contentElement);
-      return value;
-    }
-    
-    public void add_newJavaClass(XXXZbnfDataPathElement val) { add_datapathElement(val); }
-
-
-    public XXXZbnfDataPathElement new_staticJavaMethod()
-    { XXXZbnfDataPathElement value = new XXXZbnfDataPathElement(parentStatement);
-      value.whatisit = 's';
-      return value;
-      //ScriptElement contentElement = new ScriptElement('j', null); ///
-      //subContent.content.add(contentElement);
-      //return contentElement;
-    }
-    
-    public void add_staticJavaMethod(XXXZbnfDataPathElement val) { add_datapathElement(val); }
-
 
 
   
@@ -495,78 +465,6 @@ public class ZbatchGenScript {
   
   
   
-  /**A Value of a expression or a left value. The syntax determines what is admissible.
-   *
-   */
-  public static class XXXZbnfValue extends CalculatorExpr.Value {
-    
-    final Argument parentStatement;
-    
-    
-    /**Name of the argument. It is the key to assign calling argument values. */
-    //public String name;
-    
-    /**From Zbnf <""?text>, constant text, null if not used. */
-    //public String text; 
-    
-    /**Maybe a constant value, also a String. */
-    //public Object constValue;
-    
-    char operator;
-    
-    char unaryOperator;
-    
-    /**If need, a sub-content, maybe null.*/
-    public StatementList genString;
-    
-    
-    public XXXZbnfValue(Argument statement){ 
-      this.parentStatement = statement;
-    }
-
-    public void set_operator(String val){ operator = val.charAt(0); }
-    
-    public void set_unaryOperator(String val){ unaryOperator = val.charAt(0); }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_intValue(long val){ type = 'o'; oVal = new Long(val); }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_floatValue(double val){ type = 'o'; oVal = new Double(val); }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_textValue(String val){ type = 'o'; oVal = val; }
-    
-    /**Set a integer (long) argument of a access method. From Zbnf <#?intArg>. */
-    public void set_charValue(String val){ type = 'o'; oVal = new Character(val.charAt(0)); }
-    
-    /**ZBNF: <code>info ( < datapath? > <?datapath > )</code>.
-     * 
-     * @return this. The syntax supports only datapath elements. But the instance is the same.
-     */
-    public void set_datapath(){ type = 'd'; } 
-    
-    /**ZBNF: <code>info ( < datapath? > <?info > )</code>.
-     * 
-     * @return this. The syntax supports only datapath elements. But the instance is the same.
-     */
-    public void set_info(){ type = 'i'; } 
-    
-    public XXXZbnfDataPathElement new_datapathElement(){ return new XXXZbnfDataPathElement(parentStatement); }
-    
-    public void add_datapathElement(XXXZbnfDataPathElement val){ 
-    }
-    
-    /**From Zbnf, a part <:>...<.> */
-    public StatementList new_genString(){ return genString = new StatementList(); }
-    
-    public void add_genString(StatementList val){}
-    
-    @Override public String toString(){ return "value"; }
-
-  }
-  
-
   
   
   
@@ -924,22 +822,6 @@ public class ZbatchGenScript {
     }
     
     
-    /**From ZBNF: <code>< value></code>.
-     * @return A new {@link ZbnfValue} as syntax component
-     */
-    public XXXZbnfValue XXXnew_value(){ return new XXXZbnfValue(this); }
-    
-    /**From ZBNF: <code>< value></code>.
-     * The val is added to the @{@link Argument#expression} of this {@link Statement}.
-     * @param val
-     */
-    public void XXXadd_value(XXXZbnfValue val){ 
-      if(expression == null){ expression = new Expression(this); }
-      //expression.values.add(val); 
-    }
-  
-    
-
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
     //public ScriptElement new_valueVariable(){ return new ScriptElement('g', null); }
