@@ -62,7 +62,9 @@ public final class ZbatchSyntax {
   public final static String syntax =
       "$comment=(?...?).\n"
     + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
-    + "\n"
+    + "$keywords= cmd | start | stdout | stdin | stderr | pipe | subtext | sub | main | call | cd "
+    + "| StringAppend | String | List | Openfile | Obj | Set | set | include | jbat "
+    + "| break | return | exit | onerror | for | while | if | elsif | else . \n"
     + "\n"
     + "jbat::= \n"
     + "[<*|==jbat==?>==jbat== ]\n"
@@ -99,11 +101,16 @@ public final class ZbatchSyntax {
     + "textValue::=  <\"\"?text> | \\<:\\><textExpr?genString>\\<\\.\\> | <datapath> .\n"
     + "\n"
     + "\n"
-    + "condition::=<andExpr?> [{\\|\\| <andExpr?boolOrOperation>}].\n"
+    + "condition::=<andExpr?> [{\\|\\| <andExpr?boolOrOperation>}].\n"  // || of <andExpr> 
     + "\n"
-    + "andExpr::= <boolExpr> [{ && <boolExpr?boolAndOperation>}].\n"
+    + "andExpr::= <boolExpr?> [{ && <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
+    + "\n"  
+    + "\n"    
     + "\n"
-    + "boolExpr::=[<?boolNot> ! | not|] <expression?> [<cmpOperation>].\n"  //NOTE: it is stored in the ifBlock.
+    + "boolExpr::= [<?boolNot> ! | not|]\n"
+    + "[ ( <condition?parenthesisCondition> ) \n"                //boolean in paranthesis
+    + "| <expression?> [<cmpOperation>]\n"  //simple boolean
+    + "].\n"  
     + "\n"
     + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <expression?>.\n"
     + "\n"
@@ -113,10 +120,13 @@ public final class ZbatchSyntax {
     + "\n"
     + "multExpr::= <value?> [{ * <value?multOperation> | / <value?divOperation> }].\n"
     + "\n"
-    + "value::= [<?operator> + | - |] [<?unaryOperator> ! | ~ |]\n"
-    + "   [<#?intValue> | 0x<#x?intValue> | <#f?floatValue> | '<!.?charValue>' | <\"\"?textValue> \n"
-    + "   | ( <expression?parenthesisExpr> ) \n" 
-    + "   | <datapath> ].\n"
+    + "value::= <#?intValue> | <#f?floatValue> |   ##unary - associated to value.\n"
+    + "[{[<?unaryOperator> ! | ~ | - | + ]}]        ##additional unary operators.\n"
+    + "[<#?intValue> | 0x<#x?intValue> | <#f?floatValue> ##ones of kind of value:\n"
+    + "| '<!.?charValue>' | <\"\"?textValue> \n"
+    + "| ( <expression?parenthesisExpr> ) \n" 
+    + "| <datapath> \n"
+    + "].\n"
     + "\n"
     //+ "objvalue::=\n"
     + "\n"
@@ -175,7 +185,7 @@ public final class ZbatchSyntax {
     + "| if <ifScript?if> \n"
     + "| while <whileScript?> \n"
     + "| \\<+ <textOut> \n"
-    + "| [{ <datapath?-assign> = }] cmd <cmdLine?+?> \n"  ///
+    + "| <cmdLineWait?cmdLine> \n"  ///
     + "| start <cmdLine?cmdStart> \n"
     //+ "| [{ <datapath?-assign> = }] java <staticJavaMethod?+?> \n"
     + "| <assignment> \n"
@@ -210,6 +220,8 @@ public final class ZbatchSyntax {
     + "callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
     + "textOut::= <$\\.?name> \\> <textExpr?>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + "\n"
+    + "cmdLineWait::=[{ <datapath?assign> = }] cmd <cmdLine?>.\n"
     + "\n"
     + "cmdLine::= <textValue?> [{[?;[\\ |\\n|\\r]] [\\<:arg\\>] <textValue?actualArgument> }] \n"
     + "  [ \\<:stdout:[ pipe<?pipe>| [$]<$?stdoutVariable>] \\>] ;.\n"

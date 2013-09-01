@@ -48,6 +48,7 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
+import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
@@ -124,6 +125,13 @@ public class ZbnfParser
   /**Version-ident.
    * list of changes:
    * <ul>
+   * <li>2013-09-02 Hartmut TODO forex "[{ <datapath?-assign> = }] cmd " saves the {@link PrescriptParser#parseResultToOtherComponent} of "assign"
+   *   because that {@link SubParser#parseComponent(StringPart, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
+   *   fails because the "=" is not present. In this case the {@link PrescriptParser#parseResultToOtherComponent} should be removed if it comes
+   *   from an inner SubParser which is not used. The solution should be: The parseResultToOtherComponent should be an attribute of {@link SubParser}
+   *   instead the {@link PrescriptParser}, the {@link PrescriptParser} should know it via a List<ParserStore> and all levels of SubParser should 
+   *   have a List<ParserStore> for its own or inner Result items for other component. If a SubParser's syntax does not match, all ParserStores, 
+   *   inclusive the inner ones, can and should be removed. 
    * <li>2013-02-26 Hartmut bugfix: {@link PrescriptParser#parsePrescript1(String, ZbnfParseResultItem, ZbnfParserStore, ZbnfParserStore, boolean, int)}
    *   while storing {@link ParseResultlet#xmlResult} in {@link #alreadyParsedCmpn}: If the result is empty, the resultlet
    *   should be stored with an xmlResult=null (nothing was created), but the syntax is ok. There are some syntax checks
@@ -1308,6 +1316,8 @@ public class ZbnfParser
           }
           if(bOk)
           { //parseResult.setOffsetToEnd(posResult); 
+            if(sSemanticForStoring !=null && sSemanticForStoring.equals("assign"))
+              Assert.stop();
             if(nReportLevel >= nLevelReportParsing)
             { report.reportln(idReportParsing, "parseCompOk;            " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent-ok(" + nRecursion + ") <?" + sSemanticForError + ">");
             }

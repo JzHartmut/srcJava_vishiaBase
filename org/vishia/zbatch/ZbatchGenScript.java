@@ -388,6 +388,7 @@ public class ZbatchGenScript {
   
   
     public Expression(Argument statement){
+      super();
       this.parentStatement = statement;  
     }
     
@@ -402,7 +403,7 @@ public class ZbatchGenScript {
     public void add_genString(StatementList val){}
     
     
-    @Override public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
+    public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
     throws Exception{
       if(genString !=null){
         ZbatchExecuter.ExecuteLevel executer = (ZbatchExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
@@ -410,7 +411,7 @@ public class ZbatchGenScript {
         executer.executeNewlevel(genString, u, false);
         return new CalculatorExpr.Value(u.toString());
       } else {
-        return super.calcDataAccess(javaVariables, args);
+        return expr.calcDataAccess(javaVariables, args);
       }
     }
 
@@ -424,7 +425,7 @@ public class ZbatchGenScript {
     final Argument parentStatement;
     
     XXXXZbnfOperation(String operator, Argument parentStatement){ 
-      super(operator); 
+      //super(operator); 
       this.parentStatement = parentStatement;
     }
 

@@ -1,7 +1,9 @@
 package org.vishia.zbatch;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
@@ -11,7 +13,7 @@ import org.vishia.util.DataAccess;
  * @author Hartmut Schorrig
  *
  */
-public class ZbatchZbnfExpression extends CalculatorExpr
+public class ZbatchZbnfExpression //extends CalculatorExpr
 {
   /**Version, history and license.
    * <ul>
@@ -46,8 +48,24 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   static final public int version = 20131003;
 
 
-  private Operation actOperation; // = new Operation("!");
+  private CalculatorExpr.Operation actOperation; // = new Operation("!");
   
+  private List<CalculatorExpr.Operator> unaryOperators = new ArrayList<CalculatorExpr.Operator>(); // = new Operation("!");
+  
+  public final CalculatorExpr expr;
+  
+  private final ZbatchZbnfExpression parent;
+  
+  public ZbatchZbnfExpression(){
+    this.expr = new CalculatorExpr();
+    this.parent = null;
+  }
+  
+  
+  public ZbatchZbnfExpression(ZbatchZbnfExpression parent){
+    this.expr = parent.expr;
+    this.parent = parent;
+  }
   
   
   public ZbatchZbnfExpression new_boolOrOperation(){
@@ -61,13 +79,29 @@ public class ZbatchZbnfExpression extends CalculatorExpr
    */
   public void add_boolOrOperation(ZbatchZbnfExpression val){
     if(actOperation ==null){
-      actOperation = new Operation();
+      actOperation = new CalculatorExpr.Operation();
       actOperation.setStackOperand();  
     }
     actOperation.setOperator("||");
     addToOperations(); 
   }
   
+  
+  
+  public ZbatchZbnfExpression new_boolStartOperation(){
+    //if(actOperation !=null){ addToOperations(); }
+    assert(actOperation == null);
+    actOperation = new CalculatorExpr.Operation("!", -1);
+    return this;
+  }
+  
+  
+  /**Designates the end of a multiplication operation. Takes the operation into the expression list.
+   * @param val this, unused
+   */
+  public void add_boolStartOperation(ZbatchZbnfExpression val){
+    addToOperations(); 
+  }
   
   
   public ZbatchZbnfExpression new_boolAndOperation(){
@@ -81,7 +115,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
    */
   public void add_boolAndOperation(ZbatchZbnfExpression val){
     if(actOperation ==null){
-      actOperation = new Operation();
+      actOperation = new CalculatorExpr.Operation();
       actOperation.setStackOperand();  
     }
     actOperation.setOperator("&&");
@@ -90,13 +124,25 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   
   
   public void set_boolNot(String val){
-    if(actOperation ==null){
-      actOperation = new Operation();
-    }
-    actOperation.setUnaryOperator("b!");
+    unaryOperators.add(CalculatorExpr.getOperator("u!"));
   }
   
+  public ZbatchZbnfExpression new_parenthesisCondition(){ 
+    ZbatchZbnfExpression subExpr = new ZbatchZbnfExpression(this);
+    return subExpr;
+  }
+  
+  public void add_parenthesisCondition(ZbatchZbnfExpression val){
+    if(val.actOperation !=null){
+      val.addToOperations();  //if it is a start operation.
+    }
+    if(unaryOperators !=null){
+      addUnaryToOperations();
+    }
+  }
 
+  
+  
   public ZbatchZbnfExpression new_boolExpr(){ 
     return this;
   }
@@ -105,7 +151,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   public void add_boolExpr(ZbatchZbnfExpression  val){ 
     if(actOperation !=null){
       if(actOperation.hasOperator()){
-        actOperation.setUnaryOperator("bool");
+        actOperation.addUnaryOperator("b");
       }
       addToOperations();
     }
@@ -118,13 +164,17 @@ public class ZbatchZbnfExpression extends CalculatorExpr
 
   public void XXXadd_objExpr(ZbatchZbnfExpression  val){ 
     if(actOperation ==null){
-      actOperation = new Operation();
+      actOperation = new CalculatorExpr.Operation();
       actOperation.setStackOperand();  
     }
     addToOperations(); 
   }
 
   public ZbatchZbnfExpression new_cmpOperation(){
+    if(actOperation !=null){
+      addToOperations();  //if it is a start operation.
+    }
+    actOperation = new CalculatorExpr.Operation();
     return this;
   }
   
@@ -135,7 +185,8 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   
   public void set_cmpOperator(String val){
     if(actOperation ==null){
-      actOperation = new Operation("c");
+      assert(false);
+      actOperation = new CalculatorExpr.Operation();
     }
     actOperation.setOperator(val);
   }
@@ -152,6 +203,12 @@ public class ZbatchZbnfExpression extends CalculatorExpr
 
   
   
+  public void set_unaryOperator(String op){
+    CalculatorExpr.Operator unaryOp = CalculatorExpr.getOperator("u" + op);
+    assert(unaryOp !=null);  //should match to syntax prescript
+    unaryOperators.add(unaryOp);
+  }
+  
   /**Designates, that a expression in parenthesis is given, which should be calculated firstly.
    * @return this
    */
@@ -162,9 +219,6 @@ public class ZbatchZbnfExpression extends CalculatorExpr
     return this;
   }
   
-  /**Designates the end of an expression in any syntax tree.
-   * @param val unused, it is this.
-   */
   public void add_parenthesisExpr(ZbatchZbnfExpression val){
     //assert(actOperation == null);  //it was added before on end of expression.   
     if(actOperation !=null){
@@ -197,7 +251,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
    */
   public void add_addOperation(ZbatchZbnfExpression val){
     if(actOperation ==null){
-      actOperation = new Operation();
+      actOperation = new CalculatorExpr.Operation();
       actOperation.setStackOperand();  
     }
     actOperation.setOperator("+");
@@ -215,7 +269,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
    */
   public void add_multOperation(ZbatchZbnfExpression val){
     if(actOperation ==null){
-      actOperation = new Operation();
+      actOperation = new CalculatorExpr.Operation();
       actOperation.setStackOperand();  
     }
     actOperation.setOperator("*");
@@ -227,14 +281,14 @@ public class ZbatchZbnfExpression extends CalculatorExpr
    * @param val
    */
   public void set_intValue(int val){
-    if(actOperation == null){ actOperation = new Operation(); }
+    if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
     actOperation.set_intValue(val);
   }
   
   
   
   public void set_text(String val){
-    if(actOperation == null){ actOperation = new Operation(); }
+    if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
     actOperation.set_textValue(val);
   }
   
@@ -243,7 +297,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   
   
   public void set_startVariable(String ident){
-    if(actOperation == null){ actOperation = new Operation(); }
+    if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
     DataAccess.DatapathElement element = new DataAccess.DatapathElement();
     element.whatisit = 'v';
     element.ident = ident;
@@ -260,7 +314,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
   public ZbnfDataPathElement new_datapathElement(){ return new ZbnfDataPathElement(null); }
   
   public void add_datapathElement(ZbnfDataPathElement val){ 
-    if(actOperation == null){ actOperation = new Operation(); }
+    if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
     actOperation.add_datapathElement(val); 
   }
   
@@ -278,8 +332,36 @@ public class ZbatchZbnfExpression extends CalculatorExpr
     if(!actOperation.hasOperator()){
       actOperation.setOperator("!");  //it is initial value
     }
-    super.addOperation(actOperation);
+    if(unaryOperators.size()==1){
+        actOperation.addUnaryOperator(unaryOperators.get(0));
+    } else if(unaryOperators.size()>1) {
+      ListIterator<CalculatorExpr.Operator> iter = unaryOperators.listIterator();
+      while(iter.hasPrevious()){
+        CalculatorExpr.Operator unary = iter.previous();
+        actOperation.addUnaryOperator(unary);
+      }
+    }
+    unaryOperators.clear();  //a new one is necessary.
+    expr.addOperation(actOperation);
     actOperation = null;  //a new one is necessary.
+  }
+
+
+  
+  /**Adds the {@link #actUnaryOperation} to the expression statements.
+   * 
+   */
+  private void addUnaryToOperations(){
+    if(unaryOperators !=null){
+      ListIterator<CalculatorExpr.Operator> iter = unaryOperators.listIterator();
+      while(iter.hasNext()){ iter.next(); }  //walk to end
+      while(iter.hasPrevious()){             //operate backward
+        CalculatorExpr.Operator unaryOp = iter.previous();
+        CalculatorExpr.Operation unaryOperation = new CalculatorExpr.Operation(unaryOp, CalculatorExpr.Operation.kUnaryOperation);
+        expr.addOperation(unaryOperation);    //add the unary as operation. Apply on accu.
+      }
+      unaryOperators.clear();  //a new one is necessary.
+    }
   }
 
 
@@ -319,7 +401,7 @@ public class ZbatchZbnfExpression extends CalculatorExpr
     public void add_argument(ZbatchZbnfExpression val){ 
       if(fnArgsExpr == null){ fnArgsExpr = new ArrayList<CalculatorExpr>(); }
       val.closeExprPreparation();
-      fnArgsExpr.add(val);
+      fnArgsExpr.add(val.expr);
     } 
     
     public void set_javapath(String text){ this.ident = text; }
