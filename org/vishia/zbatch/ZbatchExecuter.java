@@ -23,6 +23,7 @@ import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringSeq;
+import org.vishia.zbatch.ZbatchGenScript.StatementList;
 
 /**This class helps to generate texts from any Java-stored data controlled with a script. 
  * An instance of this class is used while {@link #generate(Object, File, File, boolean, Appendable)} is running.
@@ -60,17 +61,17 @@ public class ZbatchExecuter {
   
   /**Version and history
    * <ul>
-   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link ZbatchGenScript.Expression#ascertainValue(Object, Map, boolean, boolean, boolean)}.
+   * <li>2013-01-13 Hartmut chg: The method getContent is moved and adapted to {@link ZbatchGenScript.ZbatchExpressionSet#ascertainValue(Object, Map, boolean, boolean, boolean)}.
    * <li>2013-01-12 Hartmut chg: improvements while documentation. Some syntax details. Especially handling of visibility of variables.
    * <li>2013-01-02 Hartmut chg: The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    *   But a script-global variable referred with {@link #listScriptVariables} is defined only one time on start of text generation
    *   with the routine {@link ZbatchExecuter#genScriptVariables(ZbatchGenScript, Object, boolean)}.  
-   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zbatch.ZbatchGenScript.Expression, Map, boolean)} now uses
-   *   an {@link ZbatchGenScript.Expression} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
+   * <li>2012-12-23 Hartmut chg: {@link #getContent(org.vishia.zbatch.ZbatchGenScript.ZbatchExpressionSet, Map, boolean)} now uses
+   *   an {@link ZbatchGenScript.ZbatchExpressionSet} instead a List<{@link DataAccess.DatapathElement}>. Therewith const values are able to use
    *   without extra dataPath, only with a ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link ZbatchGenScript.Expression#textArg} if a data path is given, use for formatting a numerical value.
+   * <li>2012-12-23 Hartmut new: formatText in the {@link ZbatchGenScript.ZbatchExpressionSet#textArg} if a data path is given, use for formatting a numerical value.
    * <li>2012-12-08 Hartmut new: <:subtext:name:formalargs> has formal arguments now. On call it will be checked and
    *   maybe default values will be gotten.
    * <li>2012-12-08 Hartmut chg: {@link #parseGenScript(File, Appendable)}, {@link #genScriptVariables()}, 
@@ -904,7 +905,7 @@ public class ZbatchExecuter {
     void executeChangeCurrDir(ZbatchGenScript.Statement statement)
     throws Exception
     {
-      StringSeq arg = evalString(statement);
+      CharSequence arg = evalString(statement);
       String sCurrDir;
       if(FileSystem.isAbsolutePathOrDrive(arg)){
         localVariables.put("$CD", arg);          //sets the absolute path
@@ -983,7 +984,7 @@ public class ZbatchExecuter {
     
     
     
-    public StringSeq evalString(ZbatchGenScript.Argument arg) throws Exception{
+    public CharSequence evalString(ZbatchGenScript.Argument arg) throws Exception{
       if(arg.textArg !=null) return arg.textArg;
       else if(arg.dataAccess !=null){
         Object o = arg.dataAccess.getDataObj(localVariables, bAccessPrivate, false);
@@ -1042,6 +1043,38 @@ public class ZbatchExecuter {
     }
   };
   
+  
+  
+  /**This class enhances {@link CalculatorExpr} to process also a string expression <:>...<.>
+   * as capability of Zbatch.
+   */
+  public static class ZbatchExpression extends CalculatorExpr
+  {
+    /**If need, a sub-content, maybe null.*/
+    public StatementList genString;
+
+    
+    
+    /**Calculates a normal expression or a String expression of Zbatch style "<:>...<.>".
+     * see {@link CalculatorExpr#calcDataAccess(java.util.Map, java.lang.Object[])}
+     */
+    @Override public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
+    throws Exception{
+      if(genString !=null){
+        ZbatchExecuter.ExecuteLevel executer = (ZbatchExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
+        StringBuilder u = new StringBuilder();
+        executer.executeNewlevel(genString, u, false);
+        return new CalculatorExpr.Value(u.toString());
+      } else {
+        return super.calcDataAccess(javaVariables, args);
+      }
+    }
+    
+  }
+  
+  
+  
+
   
   /**Class only to check argument lists and use default values for arguments. */
   private class CheckArgument

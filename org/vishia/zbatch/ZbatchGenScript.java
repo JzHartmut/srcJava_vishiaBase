@@ -44,21 +44,21 @@ public class ZbatchGenScript {
    * <li>2013-06-20 Hartmut new: Syntax with extArg for textual Arguments in extra block
    * <li>2013-03-10 Hartmut new: <code><:include:path></code> of a sub script is supported up to now.
    * <li>2013-10-09 Hartmut new: <code><:scriptclass:JavaPath></code> is supported up to now.
-   * <li>2013-01-13 Hartmut chg: The {@link Expression#ascertainValue(Object, Map, boolean, boolean, boolean)} is moved
+   * <li>2013-01-13 Hartmut chg: The {@link ZbatchExpressionSet#ascertainValue(Object, Map, boolean, boolean, boolean)} is moved
    *   and adapted from TextGenerator.getContent. It is a feauture from the Expression to ascertain its value.
-   *   That method and {@link Expression#text()} can be invoked from a user script immediately.
-   *   The {@link Expression} is used in {@link org.vishia.zmake.ZmakeUserScript}.
+   *   That method and {@link ZbatchExpressionSet#text()} can be invoked from a user script immediately.
+   *   The {@link ZbatchExpressionSet} is used in {@link org.vishia.zmake.ZmakeUserScript}.
    * <li>2013-01-02 Hartmut chg: localVariableScripts removed. The variables in each script part are processed
    *   in the order of statements of generation. In that kind a variable can be redefined maybe with its own value (cummulative etc.).
    *   A ZText_scriptVariable is valid from the first definition in order of generation statements.
    * <li>2012-12-24 Hartmut chg: Now the 'ReferencedData' are 'namedArgument' and it uses 'dataAccess' inside. 
-   *   The 'dataAccess' is represented by a new {@link Statement}('e',...) which can have {@link Expression#constValue} 
-   *   instead a {@link Expression#datapath}. 
+   *   The 'dataAccess' is represented by a new {@link Statement}('e',...) which can have {@link ZbatchExpressionSet#constValue} 
+   *   instead a {@link ZbatchExpressionSet#datapath}. 
    * <li>2012-12-24 Hartmut chg: {@link ZbnfDataPathElement} is a derived class of {@link DataAccess.DatapathElement}
    *   which contains destinations for argument parsing of a called Java-subroutine in a dataPath.  
    * <li>2012-12-23 Hartmut chg: A {@link Statement} and a {@link Argument} have the same usage aspects for arguments
    *   which represents values either as constants or dataPath. Use Argument as super class for ScriptElement.
-   * <li>2012-12-23 Hartmut new: formatText in the {@link Expression#textArg} if a data path is given, use for formatting a numerical value.   
+   * <li>2012-12-23 Hartmut new: formatText in the {@link ZbatchExpressionSet#textArg} if a data path is given, use for formatting a numerical value.   
    * <li>2012-12-22 Hartmut new: Syntax as constant string inside. Some enhancements to set control: {@link #translateAndSetGenCtrl(StringPart)} etc.
    * <li>2012-12-22 Hartmut chg: <:if:...> uses {@link CalculatorExpr} for expressions.
    * <li>2012-11-24 Hartmut chg: @{@link Statement#datapath} with {@link DataAccess.DatapathElement} 
@@ -325,7 +325,10 @@ public class ZbatchGenScript {
       this.parentStatement = statement;
     }
     
-    
+    /**Creates a new instance of {@link ZbatchExpression}. 
+     */
+    @Override public CalculatorExpr new_CaluclatorExpr(){ return new ZbatchExecuter.ZbatchExpression(); }
+
     
     
     /**An argument of a method in a {@link DataAccess.DatapathElement}.
@@ -333,24 +336,16 @@ public class ZbatchGenScript {
      * Note: The associated {@link #add_argument(Argument)} method is in the super class.
      * @return
      */
-    @Override public Expression new_argument(){
-      Expression argument = new Expression(parentStatement);
+    @Override public ZbatchExpressionSet new_argument(){
+      ZbatchExpressionSet argument = new ZbatchExpressionSet(parentStatement);
       return argument;
     }
 
     
-    public void add_argument(Expression val){
+    public void add_argument(ZbatchExpressionSet val){
       super.add_argument(val);
     }
     
-    
-    public Argument XXXnew_argument(){
-      Argument actualArgument = new Argument(parentStatement.parentList);
-      //ScriptElement actualArgument = new ScriptElement('e', null);
-      //ZbnfDataPathElement actualArgument = new ZbnfDataPathElement();
-      return actualArgument;
-    }
-
     
 
 
@@ -358,31 +353,30 @@ public class ZbatchGenScript {
   
   
 
-  /**
-  *
-  */
-  public static class Expression extends CalculatorExpr.SetExpr //ZbatchZbnfExpression
+  /**This class enhances {@link CalculatorExpr.SetExpr} to accept a string expression <:>...<.>
+   * both as expression and as expression in a {@link DataAccess} method's argument
+   * to use the capabilities of Zbatch in Expression calculation. 
+   *
+   */
+  public static class ZbatchExpressionSet extends CalculatorExpr.SetExpr //ZbatchZbnfExpression
   {
   
     final Argument parentStatement;
     
-    /**If need, a sub-content, maybe null.*/
-    public StatementList genString;
-    
-    public Expression(Argument statement){
-      super();
+    public ZbatchExpressionSet(Argument statement){
+      super(new ZbatchExecuter.ZbatchExpression());
       this.parentStatement = statement;  
     }
     
     
-    public Expression(Argument statement, CalculatorExpr.SetExpr parent){
+    public ZbatchExpressionSet(Argument statement, CalculatorExpr.SetExpr parent){
       super(parent);
       this.parentStatement = statement;  
     }
     
     
-    @Override public Expression new_SetExpr(CalculatorExpr.SetExpr parent){ 
-      return new Expression(parentStatement, parent); 
+    @Override public ZbatchExpressionSet new_SetExpr(CalculatorExpr.SetExpr parent){ 
+      return new ZbatchExpressionSet(parentStatement, parent); 
     }
 
     @Override public DataAccess.DatapathElementSet new_datapathElement(){ 
@@ -396,24 +390,16 @@ public class ZbatchGenScript {
   
     
     /**From Zbnf, a part <:>...<.> */
-    public StatementList new_genString(){ return genString = new StatementList(); }
+    public StatementList new_genString(){ 
+      ZbatchExecuter.ZbatchExpression expr = (ZbatchExecuter.ZbatchExpression)super.expr;
+      return expr.genString = new StatementList(); }
     
+    /**From Zbnf, a part <:>...<.> */
     public void add_genString(StatementList val){}
     
     
-    public CalculatorExpr.Value calcDataAccess(Map<String, Object> javaVariables, Object... args) 
-    throws Exception{
-      if(genString !=null){
-        ZbatchExecuter.ExecuteLevel executer = (ZbatchExecuter.ExecuteLevel)javaVariables.get("jbatExecuteLevel");
-        StringBuilder u = new StringBuilder();
-        executer.executeNewlevel(genString, u, false);
-        return new CalculatorExpr.Value(u.toString());
-      } else {
-        return expr.calcDataAccess(javaVariables, args);
-      }
-    }
-
   }
+  
   
   
   
@@ -482,7 +468,7 @@ public class ZbatchGenScript {
     /**Name of the argument. It is the key to assign calling argument values. */
     protected String identArgJbat;
    
-    public Expression expression;
+    public CalculatorExpr expression;
     
     
     DataAccess dataAccess;
@@ -501,30 +487,18 @@ public class ZbatchGenScript {
     
     public String getIdent(){ return identArgJbat; }
     
-    /**Designates a boolean expression as any condition, etc. if, while
-     * @return The expression component.
+    public ZbatchExpressionSet new_expression(){ return new ZbatchExpressionSet(this); }
+    
+    public void add_expression(ZbatchExpressionSet val){ 
+      val.closeExprPreparation();
+      expression = val.expr; 
+    }
+    
+    /**From Zbnf: < condition>. A condition is an expression. It is the same like {@link #new_expression()}
      */
-    public Expression new_condition(){ return new Expression(this); }
+    public ZbatchExpressionSet new_condition(){ return new_expression(); }
     
-    public void add_condition(Expression val){ 
-      val.closeExprPreparation();
-      expression = val; 
-    }
-    
-    public Expression XXXnew_boolExpr(){ return new Expression(this); }
-    
-    public void XXXadd_boolExpr(Expression val){ expression = val; }
-    
-    public Expression new_expression(){ return new Expression(this); }
-    
-    public void add_expression(Expression val){ 
-      val.closeExprPreparation();
-      expression = val; 
-    }
-    
-    public Expression XXXnew_orCondition(){ return new Expression(this); }
-    
-    public void XXXadd_orCondition(Expression val){ expression = val; }
+    public void add_condition(ZbatchExpressionSet val){ add_expression(val); }
     
     public void set_text(String text){
       if(text.contains("testt"))
@@ -548,13 +522,6 @@ public class ZbatchGenScript {
     
     public void add_genString(StatementList val){}
     
-    /**ZBNF: <code>info ( < datapath? > <?info > )</code>.
-     * 
-     * @return this. The syntax supports only datapath elements. But the instance is the same.
-     */
-    public void set_info(){ 
-      this.identArgJbat = "@info";
-    }
     
     
     public DataAccess.DataAccessSet new_datapath(){ return new DataAccess.DataAccessSet(); }
