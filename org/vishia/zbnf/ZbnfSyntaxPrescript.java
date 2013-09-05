@@ -221,6 +221,8 @@ public class ZbnfSyntaxPrescript
   /**Version-ident.
    * list of changes:
    * <ul>
+   * <li>2013-09-07 Hartmut chg: usage of {@link StringPart#scanTranscriptionToAnyChar(CharSequence[], String, char, char, char)}
+   *   for constant syntax. There was a bug if a non-end character was transcript, especially "\\<\\:" 
    * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
    * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
    * in the construct with inner syntax, in the form ,,<""?!innerSyntax?semantic>,,. 
@@ -954,8 +956,11 @@ public class ZbnfSyntaxPrescript
       }
       char cEnd = 0;
       childSyntaxPrescripts = null;
+      int catastrophicCt = 0;
       while(cEnd == 0)
-      { spInput.seekNoWhitespaceOrComments();
+      { if(++catastrophicCt > 1000000)
+          stop();
+        spInput.seekNoWhitespaceOrComments();
         if(spInput.found() && bWhiteSpaces)
         {
           childsAdd(new ZbnfSyntaxPrescript(this, kSkipSpaces));
@@ -1034,13 +1039,19 @@ public class ZbnfSyntaxPrescript
             case '.':
             case '?':
             case '}':
-            case ']':
+            case ']': case '>':
             { throwParseException(spInput, "unexpected \"" + cc + "\", expected endChars are " + charsEnd );
             }break;
             default: //childsAdd(convertConstantSyntax(spInput));
             { //no special char found, it is a terminal syntax!
               char cFirst = spInput.getCurrentChar();
-              String sTerminateChars;
+              //String sTerminateChars;
+              CharSequence[] sqTerminateChars = new CharSequence[1];
+              char quotationChar = cFirst == '\"' ? cFirst: 0;  //scan after a quotation if a " is the current one.
+              boolean bOk = spInput.scanStart().scanTranscriptionToAnyChar(sqTerminateChars
+                  , "[|]{?}<>. \r\n\t\f"+StringPart.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
+              assert(bOk);  //because scan to end of text.
+              /*
               if(cFirst == '\"') 
               { sTerminateChars = spInput.getCircumScriptionToAnyCharOutsideQuotion("[|]{?}<>. \r\n\t\f");
                 int length = sTerminateChars.length();
@@ -1050,13 +1061,18 @@ public class ZbnfSyntaxPrescript
                 }
               }
               else
-              { sTerminateChars = spInput.getCircumScriptionToAnyChar("[|]{?}<>. \r\n\t\f");
+              { sTerminateChars = spInput.getCircumScriptionToAnyChar("[|]{?}<>. \r\n\t\f"+StringPart.cEndOfText);
               }
-              ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
-              terminateSyntax.eType = kTerminalSymbol;
-              terminateSyntax.sDefinitionIdent = "i-text";
-              terminateSyntax.sConstantSyntax = sTerminateChars;
-              childsAdd(terminateSyntax );
+              */
+              if(sqTerminateChars[0].length() >0){
+                ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
+                terminateSyntax.eType = kTerminalSymbol;
+                terminateSyntax.sDefinitionIdent = "i-text";
+                terminateSyntax.sConstantSyntax = sqTerminateChars[0].toString(); //sTerminateChars;
+                childsAdd(terminateSyntax );
+              } else {
+                throwParseException(spInput, "internal error: any constant syntax expected." );
+              }
             }
           }
         }

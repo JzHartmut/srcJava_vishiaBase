@@ -390,12 +390,12 @@ public class ZbatchGenScript {
   
     
     /**From Zbnf, a part <:>...<.> */
-    public StatementList new_genString(){ 
+    public StatementList new_textExpr(){ 
       ZbatchExecuter.ZbatchExpression expr = (ZbatchExecuter.ZbatchExpression)super.expr;
       return expr.genString = new StatementList(); }
     
     /**From Zbnf, a part <:>...<.> */
-    public void add_genString(StatementList val){}
+    public void add_textExpr(StatementList val){}
     
     
   }
@@ -518,9 +518,9 @@ public class ZbatchGenScript {
     
     
     /**From Zbnf, a part <:>...<.> */
-    public StatementList new_genString(){ return subContent = new StatementList(); }
+    public StatementList new_textExpr(){ return subContent = new StatementList(); }
     
-    public void add_genString(StatementList val){}
+    public void add_textExpr(StatementList val){}
     
     
     
