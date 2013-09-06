@@ -9,8 +9,8 @@ import java.util.TreeMap;
 
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
-import org.vishia.zbatch.ZbatchExecuter;
-import org.vishia.zbatch.ZbatchGenScript;
+import org.vishia.cmd.JbatchExecuter;
+import org.vishia.cmd.JbatchScript;
 
 /**This class's subclasses contains all information which are parsed from a Zmake User script.
  * The toplevel instance is {@link UserScript}. That contains all script variables: {@link UserScript#varZmake}
@@ -26,7 +26,7 @@ public class ZmakeUserScript
   
   /**Version, history and license.
    * <ul>
-   * <li>2013-07-11 Hartmut chg/new: {@link ScriptVariable} inherits from {@link ZbatchGenScript.Argument},
+   * <li>2013-07-11 Hartmut chg/new: {@link ScriptVariable} inherits from {@link JbatchScript.Argument},
    *   this concept are merged into: The ZmakeUserScript has properties of the Jbat generation for the ScriptVariables.
    * <li>2013-02-15 Hartmut chg/new: More functionality for UserFilePath, essential improved. continue work and test ...
    * <li>2013-02-10 Hartmut chg/new: UserFilepath#parent removed: A UserFilepath need not know a fileset where it is member of
@@ -54,7 +54,7 @@ public class ZmakeUserScript
    * <li>2012-12-08 Hartmut chg: improve access rotoutines.
    * <li>2012-11-29 Hartmut new: The {@link UserFilePath} now contains all access routines to parts of the file path
    *   which were contained in the ZmakeGenerator class before. This allows to use this with the common concept
-   *   of a text generator using {@link org.vishia.zbatch.ZbatchExecuter}. That Textgenerator does not know such
+   *   of a text generator using {@link org.vishia.zbatch.JbatchExecuter}. That Textgenerator does not know such
    *   file parts and this {@link UserFilepath} class because it is more universal. Access is possible 
    *   with that access methods {@link UserFilepath#localPath()} etc. To implement that a {@link UserFilepath}
    *   knows its file-set where it is contained in, that is {@link UserFilepath#itsFileset}. 
@@ -354,7 +354,7 @@ public class ZmakeUserScript
    * variable::=<$?@name> = [ fileset ( <fileset> ) | <string>  } ].
    *
    */
-  public static class ScriptVariable extends ZbatchGenScript.Argument
+  public static class ScriptVariable extends JbatchScript.Argument
   { final UserScript script;
     //public String name;
     UserFileset fileset;
@@ -401,8 +401,8 @@ public class ZmakeUserScript
      * @throws Exception
      */
     public void text(Appendable u) throws Exception{ 
-      ZbatchExecuter gen = script.jbatexecuter;
-      ZbatchExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
+      JbatchExecuter gen = script.jbatexecuter;
+      JbatchExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
       CharSequence content = genLevel.evalString(this);
       u.append(content);
     }
@@ -498,8 +498,8 @@ public class ZmakeUserScript
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
             } else {
-              ZbatchExecuter gen = parentTarget.script.jbatexecuter;
-              ZbatchExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
+              JbatchExecuter gen = parentTarget.script.jbatexecuter;
+              JbatchExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
               CharSequence content = genLevel.evalString(variable);
               u.append(content);
             }
@@ -827,7 +827,7 @@ input::=
     /**It may be necessary to evaluate parts of zmake user script, especially script variables. 
      * 
      */
-    final ZbatchExecuter jbatexecuter;
+    final JbatchExecuter jbatexecuter;
     
     int nextNr = 0;
     
@@ -871,7 +871,7 @@ input::=
      */
     public ScriptVariable varZmake(String name){ return varZmake.get(name); }
     
-    public UserScript(ZbatchExecuter jbatexecuter){
+    public UserScript(JbatchExecuter jbatexecuter){
       this.jbatexecuter = jbatexecuter;
     }
     

@@ -25,8 +25,9 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
-import org.vishia.zbatch.ZbatchExecuter;
-import org.vishia.zbatch.ZbatchGenScript;
+import org.vishia.cmd.JbatchExecuter;
+import org.vishia.cmd.JbatchScript;
+import org.vishia.zbatch.Zbatch;
 import org.vishia.zbatch.ZbatchSyntax;
 import org.vishia.zbatch.OutputDataTree;
 import org.vishia.zbatch.Zbnf2Text;
@@ -142,12 +143,12 @@ public class Zmake extends Zbnf2Text
   private final MainCmd_ifc console;
 
   
-  final ZbatchExecuter gen;
+  final JbatchExecuter gen;
   
   /**
    * 
    */
-  private final ZbatchGenScript genScript;
+  private final JbatchScript genScript;
   
   /**String path for the absolute tmp dir. */
   //private String tmpAbs;  
@@ -234,8 +235,8 @@ public class Zmake extends Zbnf2Text
   { super(args, console);
     this.args = args;
     this.console = console;
-    gen = new ZbatchExecuter(console);
-    genScript = new ZbatchGenScript(gen, console);
+    gen = new JbatchExecuter(console);
+    genScript = new JbatchScript(gen, console);
   }
   
   
@@ -376,7 +377,7 @@ public class Zmake extends Zbnf2Text
    * @throws ParseException
    */
   public static ZmakeUserScript.UserScript parseUserScript(File fileZmakeUserscript
-  , String sZbnf, MainCmdLogging_ifc console, ZbatchExecuter jbatExecuter, String sCheckXmlOutput) 
+  , String sZbnf, MainCmdLogging_ifc console, JbatchExecuter jbatExecuter, String sCheckXmlOutput) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException, ParseException 
   {
     ZmakeUserScript.UserScript zmakeInput;
@@ -503,9 +504,12 @@ public class Zmake extends Zbnf2Text
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
     ///
+    Zbatch.Args argsZ = new Zbatch.Args();
+    Zbatch zbatch = new Zbatch(argsZ, console);
+    JbatchScript genScript; // = new JbatchScript(textGen, console);
     
-    File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
-    genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
+    //File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
+    //genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
     
     console.writeInfoln("* Zmake: parsing user.zmake \"" + args.currdir + args.input + "\" with \"" 
       + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
@@ -519,9 +523,9 @@ public class Zmake extends Zbnf2Text
     //Parse the users zmake script:
     //evaluate
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
-    ZbatchGenScript genScript = new ZbatchGenScript(gen, console); //gen.parseGenScript(fileGenCtrl, null);
+    //JbatchScript genScript = new JbatchScript(gen, console); //gen.parseGenScript(fileGenCtrl, null);
     File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
-    genScript.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
+    genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
     
     Map<String, Object> scriptVariables;
     try{ 

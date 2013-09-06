@@ -14,8 +14,9 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.zbatch.ZbatchExecuter;
+import org.vishia.cmd.JbatchExecuter;
 import org.vishia.zbatch.OutputDataTree;
+import org.vishia.zbatch.Zbatch;
 import org.vishia.zbatch.Zbnf2Text;
 import org.vishia.zbatch.Zbnf2Text.Out;
 import org.vishia.zbnf.ZbnfJavaOutput;
@@ -519,12 +520,15 @@ public class StateMGen {
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        ZbatchExecuter generator = new ZbatchExecuter(console);
+        Zbatch.Args argsZ = new Zbatch.Args();
+        Zbatch zbatch = new Zbatch(argsZ, console);
+        JbatchExecuter generator = new JbatchExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        String sError = generator.generate(stateData, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck));
+        generator.setScriptVariable("state", stateData);
+        String sError = zbatch.generate(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck));
         out.close();
         if(sError !=null){
           console.writeError(sError);

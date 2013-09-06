@@ -30,14 +30,14 @@ import org.vishia.zbnf.ZbnfParser;
 public class Zbatch
 {
   
-  protected static class Args{
+  public static class Args{
     
     /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
-    String sFileIn;
+    String sFileScript;
     
-    String sFileOut;
+    String sFileTextOut;
     
-    File fileTestOut;
+    File fileTestXml;
     
     List<String> userArgs = new ArrayList<String>();
   }
@@ -82,7 +82,7 @@ public class Zbatch
         mainCmdLine.report(sRet, exception);
         mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       }
-      if(args.sFileIn !=null){
+      if(args.sFileScript !=null){
         Zbatch main = new Zbatch(args, mainCmdLine);     //the main instance
         if(sRet == null)
         { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
@@ -118,9 +118,9 @@ public class Zbatch
   public String execute(){
     String sError = null;
     Appendable out = null;
-    if(args.sFileOut !=null){
+    if(args.sFileTextOut !=null){
       try{
-        File fileOut = new File(args.sFileOut);
+        File fileOut = new File(args.sFileTextOut);
         out = new FileWriter(fileOut);
       } catch(IOException exc){
         sError = "Jbat - cannot create output text file;"; 
@@ -128,13 +128,13 @@ public class Zbatch
     } else {
       out = System.out;
     }
-    File fileIn = new File(args.sFileIn);
+    File fileIn = new File(args.sFileScript);
     char nrArg = '1';
     for(String argu: args.userArgs){
       executer.setScriptVariable("$" + nrArg, argu);
       nrArg +=1;
     }
-    sError = generate(executer, fileIn, out, true, args.fileTestOut);
+    sError = generate(executer, fileIn, out, true, args.fileTestXml);
     return sError;
   }
   
@@ -191,10 +191,10 @@ public class Zbatch
   }
   
 
-  public void translateAndSetGenCtrl(File fileGenCtrl) 
+  public JbatchScript translateAndSetGenCtrl(File fileGenCtrl) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
-    translateAndSetGenCtrl(fileGenCtrl, null);
+    return translateAndSetGenCtrl(fileGenCtrl, null);
   }
   
   
@@ -326,17 +326,17 @@ public class Zbatch
     protected final MainCmd.Argument[] argList =
     { new MainCmd.Argument("", "<INPUT>    jbat-File to execute"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          if(argData.sFileIn == null){ argData.sFileIn = val; }
+          if(argData.sFileScript == null){ argData.sFileScript = val; }
           else {argData.userArgs.add(val); }
           return true; 
         }})
     , new MainCmd.Argument("-t", ":<OUTEXT> text-File for output"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.sFileOut = val; return true;
+          argData.sFileTextOut = val; return true;
         }})
     , new MainCmd.Argument("-debug", ":<TEST.xml> Test-File"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.fileTestOut = new File(val); return true;
+          argData.fileTestXml = new File(val); return true;
         }})
     , new MainCmd.Argument("-u", "userargs"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 

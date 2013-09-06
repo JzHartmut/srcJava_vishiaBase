@@ -19,8 +19,9 @@ import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.util.ShortenString;
-import org.vishia.zbatch.ZbatchExecuter;
-import org.vishia.zbatch.ZbatchGenScript;
+import org.vishia.cmd.JbatchExecuter;
+import org.vishia.cmd.JbatchScript;
+import org.vishia.zbatch.Zbatch;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
@@ -884,7 +885,7 @@ variablenBlock::=
      */
     private boolean generateOutFiles(String sPathSrc) throws IOException
     {
-      ZbatchExecuter textGen = new ZbatchExecuter(console);
+      JbatchExecuter textGen = new JbatchExecuter(console);
       
       if(output !=null){
         output.write("# WinCC flexible 2008 Variablen-Import\r\n");
@@ -926,14 +927,16 @@ variablenBlock::=
       + "<.file>"
       ;
       Writer sclOut;
-      ZbatchGenScript genScript = new ZbatchGenScript(textGen, console);
+      Zbatch.Args argsZ = new Zbatch.Args();
+      Zbatch zbatch = new Zbatch(argsZ, console);
+      JbatchScript genScript; // = new JbatchScript(textGen, console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{
           if(args.sFileSclCtrl !=null){
-            genScript.translateAndSetGenCtrl(new File(args.sFileSclCtrl));
+            genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileSclCtrl));
           } else {
-            genScript.translateAndSetGenCtrl(sGenCtrlSclOamAssigment);
+            genScript = zbatch.translateAndSetGenCtrl(sGenCtrlSclOamAssigment);
           }
         } catch(Exception exc){ throw new RuntimeException(exc); }
         textGen.genContent(genScript, SCLstruct2Lists.this, true, sclOut);
@@ -953,7 +956,7 @@ variablenBlock::=
       if(args.sFileOamVariables != null){
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl));
+          genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl));
         } catch(Exception exc){ throw new RuntimeException(exc); }
         textGen.genContent(genScript, SCLstruct2Lists.this, true, sclOut);
         /*
