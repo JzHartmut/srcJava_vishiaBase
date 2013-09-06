@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.checkDeps_C.AddDependency_InfoFileDependencies;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
@@ -23,7 +22,6 @@ import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringSeq;
 import org.vishia.util.UnexpectedException;
-import org.vishia.util.CalculatorExpr.SetExpr;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
@@ -127,20 +125,20 @@ public class ZbatchGenScript {
    * any other type of statement than script variables because only ScriptVariables are admissible
    * in the syntax. Outside of subroutines and main there should only exist variable definitions. 
    */
-  private final List<Statement> listScriptVariables = new ArrayList<Statement>();
+  public final List<Statement> listScriptVariables = new ArrayList<Statement>();
 
   /**The script element for the whole file. It shall contain calling of <code><*subtext:name:...></code> 
    */
   Statement scriptFile;
   
   
-  final ZbatchExecuter executer;
+  final ZbatchExecuter XXXexecuter;
 
   //public String scriptclassMain;
 
   public ZbatchGenScript(ZbatchExecuter executer, MainCmdLogging_ifc console)
   { this.console = console;
-    this.executer = executer;
+    this.XXXexecuter = executer;
     this.parserGenCtrl2Java = new ZbnfJavaOutput(console);
 
   }
@@ -306,7 +304,7 @@ public class ZbatchGenScript {
   public Statement getSubtextScript(CharSequence name){ return subtextScripts.get(name.toString()); }
   
   
-  List<Statement> getListScriptVariables(){ return listScriptVariables; }
+  public List<Statement> getListScriptVariables(){ return listScriptVariables; }
 
 
 
@@ -466,15 +464,15 @@ public class ZbatchGenScript {
     final StatementList parentList;
     
     /**Name of the argument. It is the key to assign calling argument values. */
-    protected String identArgJbat;
+    public String identArgJbat;
    
     public CalculatorExpr expression;
     
     
-    DataAccess dataAccess;
+    public DataAccess dataAccess;
   
     /**From Zbnf <""?textInStatement>, constant text, null if not used. */
-    protected StringSeq textArg; 
+    public StringSeq textArg; 
     
     /**If need, a sub-content, maybe null.*/
     public StatementList subContent;
@@ -612,7 +610,7 @@ public class ZbatchGenScript {
     /**Any variable given by name or java instance  which is used to assign to it.
      * A variable is given by the start element of the data path. An instance is given by any more complex datapath
      * null if not used. */
-    List<DataAccess> assignObj;
+    public List<DataAccess> assignObj;
     
     //public String value;
     
@@ -621,7 +619,7 @@ public class ZbatchGenScript {
     
     /**Argument list either actual or formal if this is a subtext call or subtext definition. 
      * Maybe null if the subtext has not argument. It is null if it is not a subtext call or definition. */
-    List<Argument> arguments;
+    public List<Argument> arguments;
     
     /**The statements in this sub-ScriptElement were executed if an exception throws
      * or if a command line invocation returns an error level greater or equal the {@link Iferror#errorLevel}.
@@ -631,7 +629,7 @@ public class ZbatchGenScript {
      * the iferror-Block can contain an iferror too.
      * 
      */
-    List<Onerror> onerror;
+    public List<Onerror> onerror;
     
     
 
@@ -1064,7 +1062,7 @@ public class ZbatchGenScript {
   public static class CallStatement extends Statement
   {
     
-    Argument callName;
+    public Argument callName;
     
     CallStatement(StatementList parentList){
       super(parentList, 's', null);
@@ -1081,11 +1079,11 @@ public class ZbatchGenScript {
   public static class IfCondition extends Statement
   {
     
-    Statement XXXcondition;
+    public Statement XXXcondition;
     
-    boolean bElse;
+    public boolean bElse;
     
-    CalculatorExpr expr;
+    public CalculatorExpr expr;
     
     IfCondition(StatementList parentList, char whatis){
       super(parentList, whatis, null);
@@ -1141,7 +1139,7 @@ public class ZbatchGenScript {
      * </ul>
      * 
      */
-    char errorType = '?';
+    public char errorType = '?';
     
     public void set_errortype(String type){
       errorType = type.charAt(0); //n, i, f
@@ -1190,7 +1188,7 @@ public class ZbatchGenScript {
      * In this case the execution of the ScriptElement as a block should be done with an separated set
      * of variables because new variables should not merge between existing of the outer block.
      */
-    boolean bContainsVariableDef;
+    public boolean bContainsVariableDef;
 
     
     /**Scripts for some local variable. This scripts where executed with current data on start of processing this genContent.
