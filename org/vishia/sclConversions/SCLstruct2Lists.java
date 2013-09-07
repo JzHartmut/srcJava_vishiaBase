@@ -25,8 +25,48 @@ import org.vishia.zbatch.Zbatch;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
+/**Converts some SCL source files to one source file which gathers all variables and one configuration file
+ * for an operation-and-monitoring application. The conversion is controlled by a script.
+ * @author Hartmut Schorrig
+ *
+ */
 public class SCLstruct2Lists
 {
+  
+  /**Version, history and license.
+   * <ul>
+   * <li>2013-09-07 Hartmut chg: Adaption to Jbatch
+   * <li>2013-02-00 Hartmut chg: Script controlled
+   * <li>2011-00-00 Hartmut created: first version non-script controlled.
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   */
+  public final static int version = 20130908; 
+
+  
+  
 
   /** Aggregation to the Console implementation class.*/
   final MainCmd_ifc console;
@@ -934,12 +974,13 @@ variablenBlock::=
         sclOut = new FileWriter(args.sFileScl);
         try{
           if(args.sFileSclCtrl !=null){
-            genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileSclCtrl));
+            genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileSclCtrl), new File(args.sFileSclCtrl + ".test.xml"));
           } else {
             genScript = zbatch.translateAndSetGenCtrl(sGenCtrlSclOamAssigment);
           }
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.genContent(genScript, SCLstruct2Lists.this, true, sclOut);
+        textGen.setScriptVariable("scl", SCLstruct2Lists.this);
+        textGen.genContent(genScript, true, sclOut);
         
         /*
         sclOut.write("FUNCTION_BLOCK OamVariables");
@@ -956,9 +997,9 @@ variablenBlock::=
       if(args.sFileOamVariables != null){
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl));
+          genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"));
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.genContent(genScript, SCLstruct2Lists.this, true, sclOut);
+        textGen.genContent(genScript, true, sclOut);
         /*
         sclOut.write("==OamVariables==");
         sclOut.write(oamList.toString());

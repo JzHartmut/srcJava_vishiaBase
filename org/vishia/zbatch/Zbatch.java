@@ -152,8 +152,6 @@ public class Zbatch
    */
   public String generate(JbatchExecuter executer, File fileScript, Appendable out, boolean accessPrivate, File testOut){
     String sError = null;
-    executer.setOutfile(out);
-    executer.setScriptVariable("text", executer.outFile());
     JbatchScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     try { genScript = translateAndSetGenCtrl(fileScript, testOut);
     } catch (Exception exc) {
@@ -162,7 +160,7 @@ public class Zbatch
     //genScript = parseGenScript(fileScript, testOut);
     if(sError == null) { // && out !=null){
       try{
-        sError = executer.genContent(genScript, null, accessPrivate, out);
+        sError = executer.genContent(genScript, accessPrivate, out);
         //out.close();
       } catch(IOException exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));

@@ -527,20 +527,23 @@ public class Zmake extends Zbnf2Text
     File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
     genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
     
+    //The users make file:
+    final ZmakeUserScript.UserScript zmakeInput = parseUserScript(fileInput, sZbnf, console, gen, args.sCheckXmlOutput);
+
+    Writer out = new FileWriter(fileOut);
     Map<String, Object> scriptVariables;
     try{ 
-      scriptVariables = gen.genScriptVariables(genScript, null, true);
+      scriptVariables = gen.genScriptVariables(genScript, true);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
       scriptVariables = null;
     }
-    final ZmakeUserScript.UserScript zmakeInput = parseUserScript(fileInput, sZbnf, console, gen, args.sCheckXmlOutput);
     
     setScriptVariablesCurrDir(zmakeInput, scriptVariables);
     
-    Writer out = new FileWriter(fileOut);
     try{ 
-      sError = gen.genContent(genScript, zmakeInput, true, out);
+      gen.setScriptVariable("zmake", zmakeInput);
+      sError = gen.genContent(genScript, true, out);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
     }
