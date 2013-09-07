@@ -57,6 +57,16 @@ public class Zbatch
   }
   
   
+  /**Does not support {@link #execute()}, only {@link #translateAndSetGenCtrl(File, File)}.
+   * @param log
+   */
+  public Zbatch(MainCmdLogging_ifc log){
+    this.log = log;
+    this.args = null;
+    this.executer = null;
+  }
+  
+  
   /** main started from java*/
   public static void main(String [] sArgs)
   { 
