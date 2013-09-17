@@ -980,7 +980,7 @@ variablenBlock::=
           }
         } catch(Exception exc){ throw new RuntimeException(exc); }
         textGen.setScriptVariable("scl", SCLstruct2Lists.this);
-        textGen.genContent(genScript, true, sclOut);
+        textGen.execute(genScript, true, false, sclOut);
         
         /*
         sclOut.write("FUNCTION_BLOCK OamVariables");
@@ -999,7 +999,7 @@ variablenBlock::=
         try{
           genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"));
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.genContent(genScript, true, sclOut);
+        textGen.execute(genScript, true, false, sclOut);
         /*
         sclOut.write("==OamVariables==");
         sclOut.write(oamList.toString());

@@ -543,7 +543,7 @@ public class Zmake extends Zbnf2Text
     
     try{ 
       gen.setScriptVariable("zmake", zmakeInput);
-      sError = gen.genContent(genScript, true, out);
+      gen.execute(genScript, true, true, out);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
     }

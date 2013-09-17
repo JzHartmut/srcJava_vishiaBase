@@ -170,7 +170,7 @@ public class Zbatch
     //genScript = parseGenScript(fileScript, testOut);
     if(sError == null) { // && out !=null){
       try{
-        sError = executer.genContent(genScript, accessPrivate, out);
+        executer.execute(genScript, accessPrivate, true, out);
         //out.close();
       } catch(IOException exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));
