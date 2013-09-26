@@ -242,7 +242,7 @@ public final class ZbatchSyntax {
     + "\n"
     + "textOut::= <$\\.?name> \\> <textExpr?>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
     + "\n"
-    + "cmdLineWait::=[{ <datapath?assign> = }] cmd <cmdLine?>.\n"
+    + "cmdLineWait::=[{ <datapath?assign> += }] cmd <cmdLine?>.\n"
     + "\n"
     + "cmdLine::= <textValue?> [{[?;[\\ |\\n|\\r]] [ \\<\\:arg\\><textExpr?argExpr>\\<\\.arg\\> |<textValue?actualArgument>] }] \n"
     + "  [ \\<:stdout:[ pipe<?pipe>| [$]<$?stdoutVariable>] \\>] ;.\n"

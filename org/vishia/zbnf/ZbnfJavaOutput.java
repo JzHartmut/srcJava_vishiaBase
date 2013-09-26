@@ -1188,6 +1188,7 @@ public class ZbnfJavaOutput
     }
     if(sError == null)
     { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 
+      System.out.println("ZbnfJavaOutput - fillin;" + resultType.getCanonicalName());
       try{ setContent(resultType, result, zbnfParser.getFirstParseResult()); } 
       catch (IllegalAccessException exc)
       { sError = "ZbnfJavaOutput - ERROR access to elements;. Hint: The elements should be public!: " + exc.getMessage();
