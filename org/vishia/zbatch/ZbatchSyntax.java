@@ -200,7 +200,7 @@ public final class ZbatchSyntax {
     + "| cd [<textValue?cd> | <*\\ ;?cd> ; ]  ##change current directory \n"
     + "| if <ifScript?if> \n"
     + "| while <whileScript?> \n"
-    + "| thread <execScript?threadBlock> \n"
+    + "| <threadBlock> \n"
     + "| \\<+ <textOut> \n"
     + "| <cmdLineWait?cmdLine> \n"  ///
     + "| start <cmdLine?cmdStart> \n"
@@ -216,6 +216,8 @@ public final class ZbatchSyntax {
     + ".\n"
     + "\n"
     + "assignment::= [{ <datapath?assign> = }] <objExpr?> ;.\n"
+    + "\n"
+    + "threadBlock::=[ <datapath?assign> = ] thread <execScript?>.\n"
     + "\n"
     + "srcdst::= <textValue?p1> <textValue?p2> .\n"
     + "\n"
