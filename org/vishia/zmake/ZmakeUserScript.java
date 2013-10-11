@@ -492,7 +492,7 @@ public class ZmakeUserScript
           } else { 
             assert(element.fileset !=null);
             //search the input Set in the script variables:
-            ScriptVariable variable = parentTarget.script.varZmake.get(element.fileset);
+            ScriptVariable variable = parentTarget.script.var.get(element.fileset);
             if(variable == null){
               int pos = u.length();
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
@@ -784,7 +784,7 @@ input::=
         { //expand file or fileset:
           //
           if(targetInputParam.fileset !=null){
-            ScriptVariable variable = script.varZmake.get(targetInputParam.fileset);
+            ScriptVariable variable = script.var.get(targetInputParam.fileset);
             if(variable == null || variable.fileset == null){
               if(script.bWriteErrorInOutputScript){
                 UserFilepath errorhint = new UserFilepath(script);
@@ -848,14 +848,14 @@ input::=
      * One can access variables calling <code>script.varZmake.name.text()</code>
      * or <code>script.varZmake.name.files()</code> in an Zmake generation script.
      */
-    public Map<String, ScriptVariable> varZmake = new TreeMap<String, ScriptVariable>();
+    public Map<String, ScriptVariable> var = new TreeMap<String, ScriptVariable>();
     
     public List<UserTarget> targets = new LinkedList<UserTarget>();
     
     /**From ZBNF: < variable> */
     public ScriptVariable new_variable(){ return new ScriptVariable(this); }
     
-    public void add_variable(ScriptVariable  value){ varZmake.put(value.getIdent(), value); }
+    public void add_variable(ScriptVariable  value){ var.put(value.getIdent(), value); }
     
     public UserTarget new_target(){ return new UserTarget(this); }
     
@@ -869,7 +869,7 @@ input::=
      * @param name Name of the Zmake script variable
      * @return the variable
      */
-    public ScriptVariable varZmake(String name){ return varZmake.get(name); }
+    public ScriptVariable varZmake(String name){ return var.get(name); }
     
     public UserScript(JbatchExecuter jbatexecuter){
       this.jbatexecuter = jbatexecuter;

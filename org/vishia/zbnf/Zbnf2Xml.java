@@ -116,10 +116,10 @@ public class Zbnf2Xml
   protected static class Args{
     
     /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
-    String sFileIn = null;
+    public String sFileIn = null;
   
     /**Cmdline-argument, set on -y option. Inputfile to to something. :TODO: its a example.*/
-    String sFileSyntax = null;
+    public String sFileSyntax = null;
   
   
   
@@ -131,10 +131,10 @@ public class Zbnf2Xml
     
     /**Encoding given from cmdline argument -x, -y or -z
      */
-    Charset encoding = Charset.defaultCharset();
+    public Charset encoding = Charset.defaultCharset();
     
     
-    List<String> additionalSemantic;
+    public List<String> additionalSemantic;
   
     /** Type of the conversion, set in dependence of the -o or -x -option. */
     //private XslConvertMode mode = new XslConvertMode();

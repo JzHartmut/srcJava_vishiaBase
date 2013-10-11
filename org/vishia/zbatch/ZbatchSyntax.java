@@ -74,6 +74,7 @@ public final class ZbatchSyntax {
     + "| subtext  <subtext?subScript> \n"
     + "| sub <subScript> \n"
     + "| main ( ) <mainScript?genFile> \n"
+    + "| ==end-zbatch==<*\\e?> \n"
     + "} \\e.\n"
     + "\n"
     + "DefVariables::=Pipe <DefObjVar?Pipe> ; \n"

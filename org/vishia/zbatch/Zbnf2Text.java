@@ -137,7 +137,7 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   
-  /**This class holds the got arguments from command line. 
+  /**This class holds the gotten arguments from command line. 
    * It is possible that some more operations with arguments as a simple get process.
    * The arguments may got also from configuration files named in cmd line arguments or other.
    * The user of arguments should know (reference) only this instance, not all other things arround MainCmd,
@@ -145,10 +145,14 @@ public class Zbnf2Text extends Zbnf2Xml
    */
   public static class Args extends Zbnf2Xml.Args
   {
+    
+    /**File name for a file to check the script. It contains the content of the script after parsing. */
     public String sScriptCheck = null;
     
+    /**List of pairs of scripts and output files. */
     public List<Out> listOut = new LinkedList<Out>();
     
+    /**Only the current pair of script and output. It is added to listOut if filled. */
     public Out lastOut;
   }
 

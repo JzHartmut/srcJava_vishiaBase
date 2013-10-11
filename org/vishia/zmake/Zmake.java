@@ -102,7 +102,7 @@ public class Zmake extends Zbnf2Text
 	private static class CallingArgs extends Zbnf2Text.Args
 	{
   
-    String input = null;
+    //String input = null;
     
     /**String path to the XML_TOOLBASE Directory. */
     String zbnfjax_PATH;
@@ -114,7 +114,7 @@ public class Zmake extends Zbnf2Text
     String tmp = "../tmp";  
     
     /**Path of ZBNF script for the input zmake script file*/
-    String sZbnfInput = "zmake/ZmakeStd.zbnf";
+    //String sZbnfInput = "zmake/ZmakeStd.zbnf";
     
     /**Path of ZBNF script to read the sGenCtrl*/
     String sZbnfGenCtrl = "zmake/ZmakeGenctrl.zbnf";
@@ -185,6 +185,7 @@ public class Zmake extends Zbnf2Text
   public static void main(String [] args)
   { //creates the args-class before creating the main class and fills it:
     Zmake.CallingArgs cmdArgs = new Zmake.CallingArgs();
+    cmdArgs.sFileSyntax = "zmake/ZmakeStd.zbnf";
     CmdLine mainCmdLine = new CmdLine(args, cmdArgs); //the instance to parse arguments and others.
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
@@ -210,7 +211,7 @@ public class Zmake extends Zbnf2Text
           helpOut.append("==================================================================================================================\n");
           helpOut.close();
         }
-        if(cmdArgs.input != null){
+        if(cmdArgs.sFileIn != null){
           sExecuteError = main.parseAndTranslate();
         }
       }
@@ -281,17 +282,21 @@ public class Zmake extends Zbnf2Text
     private final MainCmd.Argument[] arguments =
     { new MainCmd.Argument("", "INPUT         The first argument without - is the input file with path and extension."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          callingArgs.input = val; return true; }})
+          callingArgs.sFileIn = val; return true; }})
+   /*
     , new MainCmd.Argument("-i", "=INPUT    path to the input file."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.input = val; return true; }})
+    */      
     , new MainCmd.Argument("-genCtrl", "=TPATH     file which describes the generation for the output file"
       , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sGenCtrl = val; return true; }})
-    , new MainCmd.Argument("-syntax", "=PATH       Write an information file which contains the help and the syntax.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+    , new MainCmd.Argument("-helpsyntax", "=PATH       Write an information file which contains the help and the syntax.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sHelpOut = val; return true; }})
+    /*
     , new MainCmd.Argument("-zbnf", "=TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sZbnfInput = val; return true; }})
+    */
     , new MainCmd.Argument("-o", "=PATH            output-file to generate", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sOutput = val; return true; }})
     , new MainCmd.Argument("-ZBNFJAX_HOME", "=PATH path to the ZBNFJAX_HOME, default it is getted from environment.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
@@ -337,14 +342,14 @@ public class Zmake extends Zbnf2Text
     { boolean bOk = true;
   
       if(callingArgs.sHelpOut ==null){
-        if(callingArgs.input == null)              
+        if(callingArgs.sFileIn == null)              
         { bOk = false; 
-          writeError("ERROR argument -i:INP is obligate."); 
+          writeError("ERROR argument -i=INP is obligate."); 
         }
     
         if(callingArgs.sOutput == null)              
         { bOk = false; 
-          writeError("ERROR argument -o:OUT is obligate."); 
+          writeError("ERROR argument -o=OUT is obligate."); 
         }
       }
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
@@ -424,8 +429,8 @@ public class Zmake extends Zbnf2Text
       ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
       parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
       
-      File currDir = (File)jbatExecuter.getScriptVariable("currDir");
-      zmakeInput.setCurrentDir(currDir);
+      //TODO File currDir = (File)jbatExecuter.getScriptVariable("currDir");
+      //zmakeInput.setCurrentDir(currDir);
       
       if(sCheckXmlOutput !=null){
         //Write the data structure of the ZmakeUserScript into a file to check.
@@ -461,20 +466,20 @@ public class Zmake extends Zbnf2Text
     
     //the followed line maybe unnecessary because the java cmd line interpretation always cuts the quotion  marks,
     //Such quotion marks appeares if a double click from commandline is happened. 
-    if(args.input.startsWith("\"") && args.input.length()>=2){ args.input = args.input.substring(1, args.input.length()-1); }
+    if(args.sFileIn.startsWith("\"") && args.sFileIn.length()>=2){ args.sFileIn = args.sFileIn.substring(1, args.sFileIn.length()-1); }
     ////
     /*Separate input path file ext.*/
     //String inputFile, inputExt;
-    { int pos1 = args.input.lastIndexOf(('/'));
-      int pos2 = args.input.lastIndexOf(('\\'));
-      int pos3 = args.input.lastIndexOf((':'));
+    { int pos1 = args.sFileIn.lastIndexOf(('/'));
+      int pos2 = args.sFileIn.lastIndexOf(('\\'));
+      int pos3 = args.sFileIn.lastIndexOf((':'));
       if(pos2 > pos1){ pos1 = pos2; }
       if(pos3 > pos1){ pos1 = pos3; }
       if(pos1 < 0){ pos1 = -1; }
-      int pos9 = args.input.lastIndexOf('.');
-      if(pos9 < pos1) { pos9 = args.input.length(); }
-      //inputFile = args.input.substring(pos1 + 1, pos9); //, pos9);
-      //inputExt =  args.input.substring(pos9);
+      int pos9 = args.sFileIn.lastIndexOf('.');
+      if(pos9 < pos1) { pos9 = args.sFileIn.length(); }
+      //inputFile = args.sFileIn.substring(pos1 + 1, pos9); //, pos9);
+      //inputExt =  args.sFileIn.substring(pos9);
       
     }
     
@@ -490,7 +495,7 @@ public class Zmake extends Zbnf2Text
     }
     args.zbnfjax_PATH += "/";
     
-    console.writeInfoln("* Zmake: " + args.input);
+    console.writeInfoln("* Zmake: " + args.sFileIn);
     
     File fileOut = new File(args.sOutput);
     fileOut.setWritable(true); 
@@ -511,14 +516,14 @@ public class Zmake extends Zbnf2Text
     //File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
     //genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
     
-    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.currdir + args.input + "\" with \"" 
-      + args.zbnfjax_PATH + args.sZbnfInput + "\" to \""  + fileOut.getAbsolutePath() + "\"");
+    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.currdir + args.sFileIn + "\" with \"" 
+      + args.zbnfjax_PATH + args.sFileSyntax + "\" to \""  + fileOut.getAbsolutePath() + "\"");
     //call the parser from input, it produces a temporary xml file.
-    String sZbnf = args.zbnfjax_PATH + args.sZbnfInput;
+    String sZbnf = args.zbnfjax_PATH + args.sFileSyntax;
     
     
     //String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
-    fileInput = new File(args.currdir, args.input);
+    fileInput = new File(args.currdir, args.sFileIn);
     
     //Parse the users zmake script:
     //evaluate

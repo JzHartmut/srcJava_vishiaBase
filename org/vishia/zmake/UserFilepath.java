@@ -371,7 +371,7 @@ public final class UserFilepath {
     UserFilepath varfile;
     if((basepath !=null || useBaseFile !=null && useBaseFile[0]) && scriptVariable !=null){
       //get the variable if a base path is given or the file may be used as base path
-      var = script.varZmake.get(scriptVariable);
+      var = script.var.get(scriptVariable);
       varfile = var.filepath;
     } else { 
       var = null;
@@ -609,7 +609,7 @@ public final class UserFilepath {
       ZmakeUserScript.ScriptVariable var;
       UserFilepath varfile;
       if(scriptVariable !=null){
-        var = script.varZmake.get(scriptVariable);
+        var = script.var.get(scriptVariable);
         varfile = var.filepath;
       } else { 
         var = null;
