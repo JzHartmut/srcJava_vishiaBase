@@ -222,7 +222,7 @@ public final class ZbatchSyntax {
     + "\n"
     + "srcdst::= <textValue?p1> <textValue?p2> .\n"
     + "\n"
-    + "onerror::= [<#?errorLevel>] [<?errortype> notfound | file | internal|] <execScript?> .\n"
+    + "onerror::= [<#?errorLevel> | [<?errortype> notfound | file | internal | exit [<#?errorLevel>] ]|] <execScript?> .\n"
     + "\n"
 
     + "\n"

@@ -93,6 +93,9 @@ public class CheckDependencyFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-10-13 Hartmut chg: prevent circular including with a Map of already processed files, idxOnce as Thread data (Parameter).
+   *   TODO: It does not enter the cyclic included files in the dependency of the deeper file. 
+   *   a->b->c->a  a depends on b and c, but b depends on a too, c depends on a,b. If a will be processed first, the dependency of b, c to a are not entered.
    * <li>2013-03-03 Hartmut chg: catch in {@link #processSrcfile(File, ObjectFileDeps, int)}. It's a fix change.
    * <li>2013-01-06 Hartmut chg: Now supports more as one obj file. This is necessary if one make process compiles several versions.
    *   The routine {@link #setDirObj(String)} is changed in parameter form.
@@ -294,7 +297,7 @@ public class CheckDependencyFile
     } else {
       objDeps = null;
     }
-    InfoFileDependencies infoFile = processSrcfile(fileSrc, objDeps, 0);
+    InfoFileDependencies infoFile = processSrcfile(fileSrc, objDeps, 0, new TreeMap<String, String>());
     if(objDeps.isObjDeleted()){ 
       checkData.nrofDelObj +=1; 
     }
@@ -314,7 +317,7 @@ public class CheckDependencyFile
    * @return Instance for this file, where dependency information are stored for further occurrence
    *         of the same file. Then the file is processed already.
    */
-  InfoFileDependencies processSrcfile(File fileSrc, final ObjectFileDeps objDeps, int recursiveCt) 
+  InfoFileDependencies processSrcfile(File fileSrc, final ObjectFileDeps objDeps, int recursiveCt, Map<String, String> idxOnce) 
   {
     InfoFileDependencies infoFile;
     try{
@@ -333,11 +336,11 @@ public class CheckDependencyFile
       if(infoFile != null){
         //it is checked already.
       } else {
-        infoFile = checkDependenciesInputDepFile(sPathSrcCanonical, objDeps, recursiveCt);
+        infoFile = checkDependenciesInputDepFile(sPathSrcCanonical, objDeps, recursiveCt, idxOnce);
         if(infoFile == null){
           //dependency file not found. Build it while checking sources.
           infoFile = checkSource(fileSrc, sFileSrcGenAbs, fileSrcMirror
-            , null, objDeps, recursiveCt+1);
+            , null, objDeps, recursiveCt+1, idxOnce);
           String sNewly = infoFile.isNewlyItself() ? "newly; " : 
                           infoFile.isNewlyOrIncludedNewly() ? " include newly; " : "not changed; ";
           console.reportln(MainCmdLogging_ifc.fineInfo, "CheckDeps - source file checked; " + sNewly + sFileSrcGenAbs + "");
@@ -353,7 +356,7 @@ public class CheckDependencyFile
   }
   
   
-  InfoFileDependencies checkDependenciesInputDepFile(String sPathSrcCanonical, ObjectFileDeps objDeps, int nRecursion)
+  InfoFileDependencies checkDependenciesInputDepFile(String sPathSrcCanonical, ObjectFileDeps objDeps, int nRecursion, Map<String, String> idxOnce)
   {
     if(nRecursion > 99){
       throw new IllegalArgumentException("CheckDeps - recursion to deep;" + sPathSrcCanonical);
@@ -370,20 +373,24 @@ public class CheckDependencyFile
         InfoFileDependencies including = includedEntry.getValue();
         //check all included files. 
         String sAbsName = including.sAbsolutePath;
-        if(sAbsName.contains("PLATFORM_os_time.h"))
+        if(sAbsName.contains("Fw_Exception.h"))
           stop();
         InfoFileDependencies includingReal = checkData.indexAllInclFilesAbsPath.get(sAbsName);
         if(includingReal !=null){
           //file checked already:
         } else {
-          includingReal = checkDependenciesInputDepFile(sAbsName, objDeps, nRecursion +1);
+          //put a dummy (empty) instance to the index, to prevent circular including.
+          //In C either guards or pragma once is used to prevent circular including.
+          //TODO experience: checkData.indexAllInclFilesAbsPath.put(sAbsName, new InfoFileDependencies(sAbsName, console));
+          
+          includingReal = checkDependenciesInputDepFile(sAbsName, objDeps, nRecursion +1, idxOnce);
           if(includingReal == null){
             //The file isn't found in the input dependencies. It means either, it is unknown up to now
             //or it means, it is changed. Changed files are not stored in the indexInfoInput.
             //Therefore check the file directly. Compare source with mirror.
             File fileSrc = new File(sAbsName);
             if(fileSrc.exists()){
-              includingReal = processSrcfile(fileSrc, objDeps, nRecursion +1);
+              includingReal = processSrcfile(fileSrc, objDeps, nRecursion +1, idxOnce);
             } else {
               //The source file from dependency tree of another file isn't found. 
               //It means either, the file is necessary but lost, or the file isn't necessary further more.
@@ -433,7 +440,7 @@ public class CheckDependencyFile
       , File fileSrcMirror
       , TreeMap<String, File> checkedFiles
        , ObjectFileDeps objDeps
-       , int recursion){
+       , int recursion, Map<String, String> idxOnce){
     int nEqual;
     long timestampSrcNewest = 0;
     final String sFileSrcGenName = fileSrcGen.getName();
@@ -471,7 +478,7 @@ public class CheckDependencyFile
               long timestampSrcNewestInner = 0;
               //InfoFileDependencies infoFileIncl =  
               processIncludeLine(sDirCurrentFile, sLineSrc
-                , infoDepsOfFile, objDeps, checkedFiles, sFileSrgGenAbs, recursion);
+                , infoDepsOfFile, objDeps, checkedFiles, sFileSrgGenAbs, recursion, idxOnce);
               //bChanged |= bChangedInner;
               boolean bCopiedRecursive = false; 
               //objDeps.checkedNewer(timestampSrcNewestInner, sSrcFilePathAbs);
@@ -596,7 +603,7 @@ public class CheckDependencyFile
       , AddDependency_InfoFileDependencies infoFileParent
       , ObjectFileDeps objDeps
       , TreeMap<String, File> checkedFiles
-      , String sSrcPath, int recursion) 
+      , String sSrcPath, int recursion, Map<String, String> idxOnce) 
   throws FileNotFoundException {
     //System.out.println(sLine);
     //long timestampSrcNewest = 0;
@@ -667,10 +674,14 @@ public class CheckDependencyFile
             //The fileInfo may be found with its absolute path. It is if different #include <path/name.h>-notations are used.
             inclFileInfo = checkData.indexAllInclFilesAbsPath.get(sInclFileAbs);
             if(inclFileInfo == null){ //not found yet
-              //
-              //This file is included, is contained in the source-pool or not, and it s not checked yet.
-              //Check it, build the InfoFileDependencies, maybe recursively call of that routine.
-              inclFileInfo = processSrcfile(fileIncl, objDeps, recursion);
+              if(idxOnce.get(sInclFileAbs) == null){
+                //
+                idxOnce.put(sInclFileAbs, sInclFileAbs);  //prevent multiple include, only once. It is like guards in C
+                //
+                //This file is included, is contained in the source-pool or not, and it s not checked yet.
+                //Check it, build the InfoFileDependencies, maybe recursively call of that routine.
+                inclFileInfo = processSrcfile(fileIncl, objDeps, recursion, idxOnce);
+              }
             }
           }
         }
