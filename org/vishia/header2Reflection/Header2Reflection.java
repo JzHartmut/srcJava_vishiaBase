@@ -42,6 +42,7 @@ import java.util.TreeMap;
 import org.vishia.byteData.ByteDataAccess;
 import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.FileSystem;
 
@@ -68,6 +69,7 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2013-10-19 Hartmut chg: now invoke-able from ZGen, public methods etc. Only formalism
    * <li>2013-04-12 Hartmut new: #define in Headerfile or #define in cfg-file can be used to set {@link #idxDefines},
    *   conditional #ifdef ... in headerfile only taken if #define is known.
    * <li>2013-04-02 Hartnut chg: if a pointer is given in for exprSizeType($$$) in a offset file, "void*" is used.
@@ -105,7 +107,7 @@ public class Header2Reflection
   static final public int version = 20130410;
 
   /**Aggregation to the Console implementation class.*/
-  Report console;
+  MainCmdLogging_ifc console;
 
   private static class FileIn
   {
@@ -308,24 +310,28 @@ public class Header2Reflection
   
   
   
-  void setSyntax(String sFileZbnf)
+  public void setSyntax(String sFileZbnf)
   { this.sFileZbnf = sFileZbnf;
   }
 
-  void setReflectionTypes(String sFile)
+  public void setReflectionTypes(String sFile)
   { this.sFileReflectionTypes = sFile;
   }
 
-  void setReflectionTypesOut(String sFile, boolean bNew)
+  public void setReflectionTypesOut(String sFile, boolean bNew)
   { this.sFileReflectionTypesOut = sFile;
     bNewFileReflectionTypesOut = bNew;
   }
 
-  void setReflectionBlockedTypes(String sFile)
+  public void setReflectionBlockedTypes(String sFile)
   { this.fileReflectionBlockedTypes = new File(sFile);
   }
 
-  boolean setOutC(String sFile)
+  public void setCfg(String sFile)
+  { this.fileReflectionBlockedTypes = new File(sFile);
+  }
+
+  public boolean setOutC(String sFile)
   { boolean bOk = true;
     this.sFileAllC = sFile.replace('\\', '/');
     try { FileSystem.mkDirPath(sFileAllC);}      //create if not exist
@@ -336,7 +342,7 @@ public class Header2Reflection
     return bOk;
   }
 
-  boolean setOutOffset(String sFile)
+  public boolean setOutOffset(String sFile)
   { boolean bOk = true;
     this.sFileOffset = sFile.replace('\\', '/');
     try { FileSystem.mkDirPath(sFileOffset);}     //create if not exist
@@ -347,7 +353,7 @@ public class Header2Reflection
     return bOk;
   }
 
-  boolean setOutBin(String sFile, boolean bigEndian, boolean hexBin)
+  public boolean setOutBin(String sFile, boolean bigEndian, boolean hexBin)
   { boolean bOk = true;
     this.sFileBin = sFile.replace('\\', '/');
     this.fileBinBigEndian = bigEndian;
@@ -360,7 +366,7 @@ public class Header2Reflection
     return bOk;
   }
 
-  boolean setOutDir(String sFile)
+  public boolean setOutDir(String sFile)
   { boolean bOk = true;
     this.sOutDir = sFile.replace('\\', '/');
     try { FileSystem.mkDirPath(sOutDir);} 
@@ -378,7 +384,7 @@ public class Header2Reflection
    * @param sMask
    * @return
    */
-  boolean addInputFilemask(String sMask)
+  public boolean addInputFilemask(String sMask)
   { boolean bOk = true;
     int posSep = sMask.indexOf(':');
     FileIn fileIn = new FileIn();
@@ -426,16 +432,16 @@ public class Header2Reflection
 
 
   /**The Constructor is called after parsing CmdLine arguments. */
-  Header2Reflection(Report report)
+  public Header2Reflection(MainCmdLogging_ifc report)
   { this.console = report;
     parser = new ZbnfParser(console, 10);
-    parser.setReportIdents(Report.error, Report.fineInfo, Report.debug, Report.fineDebug);
+    parser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.fineInfo, MainCmdLogging_ifc.debug, MainCmdLogging_ifc.fineDebug);
   }
 
 
 
   public void execute() throws Exception
-  { System.out.printf("Header2Reflection mady by Hartmut Schorrig, version %d\n", version);
+  { System.out.printf("Header2Reflection made by Hartmut Schorrig, version %d\n", version);
     if(readBlockedFilesAndTypes())
     //if(readReflectionTypes())
     { if(init()) //here all action are done, testversion.
@@ -444,7 +450,7 @@ public class Header2Reflection
         long timestampLast = 0;
         for(FileIn fileIn: listFileIn){
           for(File file: fileIn.listFileIn){
-            if(!file.exists()){ console.reportln(Report.error, "File not found: " + file.getAbsolutePath()); 
+            if(!file.exists()){ console.reportln(MainCmdLogging_ifc.error, "File not found: " + file.getAbsolutePath()); 
             } else {
               long timestamp = file.lastModified();
               if(timestamp > timestampLast){
@@ -578,7 +584,7 @@ public class Header2Reflection
    * @throws FileNotFoundException
    * @throws IOException
    */
-  boolean readBlockedFilesAndTypes()
+  private boolean readBlockedFilesAndTypes()
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { ZbnfParser parser = new ZbnfParser(console, 10);
     console.writeInfoln("read ctrl-file: " + fileReflectionBlockedTypes.getAbsolutePath());
@@ -656,7 +662,7 @@ public class Header2Reflection
 
 
 
-  StringBuilder getLeaderTrailerText(ZbnfParseResultItem zbnfResult, StringBuilder lines){
+  private StringBuilder getLeaderTrailerText(ZbnfParseResultItem zbnfResult, StringBuilder lines){
     //StringBuilder lines = new StringBuilder(500);
     if(lines == null){ lines = new StringBuilder(500); }
     List<ZbnfParseResultItem> listLine = zbnfResult.listChildren("line");
@@ -762,7 +768,7 @@ public class Header2Reflection
 
 
 
-  void writeReflectionTypes()
+  private void writeReflectionTypes()
   throws IOException
   { BufferedWriter wrTypes = new BufferedWriter(new FileWriter(new File(sFileReflectionTypesOut), true));
     wrTypes.append("//***********************************************************************************\n");
@@ -803,7 +809,7 @@ public class Header2Reflection
 
 
 
-  boolean init()
+  private boolean init()
   throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { boolean bOk= true;
     if(sFileZbnf == null) {
@@ -839,7 +845,7 @@ public class Header2Reflection
 
 
 
-  void translate(File headerFile, String sFilePath)
+  private void translate(File headerFile, String sFilePath)
   throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException, ParseException
   {
     String sFileName = headerFile.getName();
@@ -954,7 +960,7 @@ public class Header2Reflection
   
   
   
-  void searchAndTranslateClassDef(final ZbnfParseResultItem zbnfParent, String sCLASS_C_name, String sFileNameRelative) 
+  private void searchAndTranslateClassDef(final ZbnfParseResultItem zbnfParent, String sCLASS_C_name, String sFileNameRelative) 
   throws IOException
   { final String sCLASS_C_name_s = sCLASS_C_name + "_s";  //stucture names are often ending with _s  
     final String sCLASS_C_name_i = sCLASS_C_name + "_i";  //stucture names are often ending with _s  
@@ -1023,7 +1029,7 @@ public class Header2Reflection
   
 
 
-  class ConverterClass
+  private class ConverterClass
   {
     
     boolean cppClass;
