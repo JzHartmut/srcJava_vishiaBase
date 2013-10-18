@@ -46,8 +46,8 @@ import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
-import org.vishia.zbatch.Zbnf2Text;
 import org.vishia.zbnf.ZbnfParser;
+import org.vishia.zgen.Zbnf2Text;
 
 
 

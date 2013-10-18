@@ -1,13 +1,13 @@
-package org.vishia.zbatch;
+package org.vishia.zgen;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class ZbatchUtil
+public class ZGenUtil
 {
   
-  protected static ZbatchUtil singleton = new ZbatchUtil();
+  protected static ZGenUtil singleton = new ZGenUtil();
   
   protected PrintStream systemOutOld, systemErrOld;
   protected ByteArrayOutputStream consoleOut = new ByteArrayOutputStream();

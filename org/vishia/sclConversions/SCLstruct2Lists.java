@@ -19,10 +19,10 @@ import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.util.ShortenString;
-import org.vishia.cmd.JbatchExecuter;
-import org.vishia.cmd.JbatchScript;
-import org.vishia.zbatch.Zbatch;
+import org.vishia.cmd.ZGenExecuter;
+import org.vishia.cmd.ZGenScript;
 import org.vishia.zbnf.ZbnfJavaOutput;
+import org.vishia.zgen.ZGen;
 
 
 /**Converts some SCL source files to one source file which gathers all variables and one configuration file
@@ -925,7 +925,7 @@ variablenBlock::=
      */
     private boolean generateOutFiles(String sPathSrc) throws IOException
     {
-      JbatchExecuter textGen = new JbatchExecuter(console);
+      ZGenExecuter textGen = new ZGenExecuter(console);
       
       if(output !=null){
         output.write("# WinCC flexible 2008 Variablen-Import\r\n");
@@ -967,9 +967,9 @@ variablenBlock::=
       + "<.file>"
       ;
       Writer sclOut;
-      Zbatch.Args argsZ = new Zbatch.Args();
-      Zbatch zbatch = new Zbatch(argsZ, console);
-      JbatchScript genScript; // = new JbatchScript(textGen, console);
+      ZGen.Args argsZ = new ZGen.Args();
+      ZGen zbatch = new ZGen(argsZ, console);
+      ZGenScript genScript; // = new JbatchScript(textGen, console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{

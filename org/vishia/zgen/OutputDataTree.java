@@ -1,4 +1,4 @@
-package org.vishia.zbatch;
+package org.vishia.zgen;
 
 import java.io.IOException;
 import java.lang.reflect.Field;

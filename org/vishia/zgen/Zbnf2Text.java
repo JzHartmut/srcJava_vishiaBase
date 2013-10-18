@@ -1,4 +1,4 @@
-package org.vishia.zbatch;
+package org.vishia.zgen;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -9,7 +9,7 @@ import java.io.Writer;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.vishia.cmd.JbatchExecuter;
+import org.vishia.cmd.ZGenExecuter;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -112,9 +112,9 @@ public class Zbnf2Text extends Zbnf2Xml
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        Zbatch.Args argsZ = new Zbatch.Args();
-        Zbatch zbatch = new Zbatch(argsZ, console);
-        JbatchExecuter generator = new JbatchExecuter(console);
+        ZGen.Args argsZ = new ZGen.Args();
+        ZGen zbatch = new ZGen(argsZ, console);
+        ZGenExecuter generator = new ZGenExecuter(console);
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
         }

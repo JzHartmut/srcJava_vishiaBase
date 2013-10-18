@@ -1,4 +1,4 @@
-package org.vishia.zbatch;
+package org.vishia.zgen;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,8 +10,8 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.vishia.cmd.JbatchExecuter;
-import org.vishia.cmd.JbatchScript;
+import org.vishia.cmd.ZGenExecuter;
+import org.vishia.cmd.ZGenScript;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -27,7 +27,7 @@ import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
 
 
-public class Zbatch
+public class ZGen
 {
   
   public static class Args{
@@ -47,20 +47,20 @@ public class Zbatch
   
   protected final Args args;
   
-  protected final JbatchExecuter executer;
+  protected final ZGenExecuter executer;
   
   
-  public Zbatch(Args args, MainCmdLogging_ifc log){
+  public ZGen(Args args, MainCmdLogging_ifc log){
     this.log = log;
     this.args = args;
-    this.executer = new JbatchExecuter(log);
+    this.executer = new ZGenExecuter(log);
   }
   
   
   /**Does not support {@link #execute()}, only {@link #translateAndSetGenCtrl(File, File)}.
    * @param log
    */
-  public Zbatch(MainCmdLogging_ifc log){
+  public ZGen(MainCmdLogging_ifc log){
     this.log = log;
     this.args = null;
     this.executer = null;
@@ -93,7 +93,7 @@ public class Zbatch
         mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       }
       if(args.sFileScript !=null){
-        Zbatch main = new Zbatch(args, mainCmdLine);     //the main instance
+        ZGen main = new ZGen(args, mainCmdLine);     //the main instance
         if(sRet == null)
         { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
               to hold the contact to the command line execution.
@@ -160,9 +160,9 @@ public class Zbatch
    * @param testOut if not null then outputs a data tree of the generate script.
    * @return null if no error or an error string.
    */
-  public String generate(JbatchExecuter executer, File fileScript, Appendable out, boolean accessPrivate, File testOut){
+  public String generate(ZGenExecuter executer, File fileScript, Appendable out, boolean accessPrivate, File testOut){
     String sError = null;
-    JbatchScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+    ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     try { genScript = translateAndSetGenCtrl(fileScript, testOut);
     } catch (Exception exc) {
       sError = exc.getMessage();
@@ -182,7 +182,7 @@ public class Zbatch
   
   
 
-  public JbatchScript translateAndSetGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl, File checkXmlOut) 
+  public ZGenScript translateAndSetGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IOException
     , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
   { log.writeInfoln("* Zbatch: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
@@ -195,41 +195,41 @@ public class Zbatch
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
+    return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
   }
   
 
-  public JbatchScript translateAndSetGenCtrl(File fileGenCtrl) 
+  public ZGenScript translateAndSetGenCtrl(File fileGenCtrl) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     return translateAndSetGenCtrl(fileGenCtrl, null);
   }
   
   
-  public JbatchScript translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut) 
+  public ZGenScript translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
+    return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
   }
   
   
-  public JbatchScript translateAndSetGenCtrl(String spGenCtrl) 
+  public ZGenScript translateAndSetGenCtrl(String spGenCtrl) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      return translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), new StringPart(spGenCtrl), null, null);
+      return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), new StringPart(spGenCtrl), null, null);
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
   
-  public JbatchScript translateAndSetGenCtrl(StringPart spGenCtrl) 
+  public ZGenScript translateAndSetGenCtrl(StringPart spGenCtrl) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      return translateAndSetGenCtrl(new StringPart(ZbatchSyntax.syntax), spGenCtrl, null, null);
+      return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), spGenCtrl, null, null);
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -242,7 +242,7 @@ public class Zbatch
    * <br><br>
    * This routine will be called recursively if scripts are included.
    * 
-   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link ZbatchSyntax#syntax}.
+   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link ZGenSyntax#syntax}.
    * @param spGenCtrl The input file with the genCtrl statements.
    * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
    * @param fileParent directory of the used file as start directory for included scripts. 
@@ -255,7 +255,7 @@ public class Zbatch
    * @throws IOException only if xcheckXmlOutput fails
    * @throws FileNotFoundException if a included file was not found or if xcheckXmlOutput file not found or not writeable
    */
-  public JbatchScript translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput, File fileParent) 
+  public ZGenScript translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser(log); //console);
@@ -271,7 +271,7 @@ public class Zbatch
     
     
     
-  private JbatchScript translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPart spGenCtrl
+  private ZGenScript translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPart spGenCtrl
       , File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
@@ -296,9 +296,9 @@ public class Zbatch
     /**Helper to transfer parse result into the java classes {@link ZbnfMainGenCtrl} etc. */
     final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(log);
 
-    JbatchScript script = new JbatchScript(null, log);
-    JbatchScript.ZbnfMainGenCtrl zbnfGenCtrl = script.new ZbnfMainGenCtrl();
-    parserGenCtrl2Java.setContent(JbatchScript.ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
+    ZGenScript script = new ZGenScript(null, log);
+    ZGenScript.ZbnfMainGenCtrl zbnfGenCtrl = script.new ZbnfMainGenCtrl();
+    parserGenCtrl2Java.setContent(ZGenScript.ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
     
     //if(this.scriptclassMain ==null){
     //this.scriptclassMain = zbnfGenCtrl.scriptclass;
@@ -377,7 +377,7 @@ public class Zbatch
     @Override public void writeHelpInfo(){
       super.writeHelpInfo();
       System.out.println("=== Syntax of a jbat script===");
-      System.out.println(ZbatchSyntax.syntax);
+      System.out.println(ZGenSyntax.syntax);
     }
 
   }

@@ -1,6 +1,6 @@
-package org.vishia.zbatch;
+package org.vishia.zgen;
 
-public class ZbatchDebugHelper
+public class ZGenDebugHelper
 {
 
 

@@ -14,12 +14,12 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.cmd.JbatchExecuter;
-import org.vishia.zbatch.OutputDataTree;
-import org.vishia.zbatch.Zbatch;
-import org.vishia.zbatch.Zbnf2Text;
-import org.vishia.zbatch.Zbnf2Text.Out;
+import org.vishia.cmd.ZGenExecuter;
 import org.vishia.zbnf.ZbnfJavaOutput;
+import org.vishia.zgen.OutputDataTree;
+import org.vishia.zgen.ZGen;
+import org.vishia.zgen.Zbnf2Text;
+import org.vishia.zgen.Zbnf2Text.Out;
 
 
 public class StateMGen {
@@ -520,9 +520,9 @@ public class StateMGen {
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        Zbatch.Args argsZ = new Zbatch.Args();
-        Zbatch zbatch = new Zbatch(argsZ, console);
-        JbatchExecuter generator = new JbatchExecuter(console);
+        ZGen.Args argsZ = new ZGen.Args();
+        ZGen zbatch = new ZGen(argsZ, console);
+        ZGenExecuter generator = new ZGenExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }

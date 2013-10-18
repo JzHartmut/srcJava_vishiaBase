@@ -1,6 +1,6 @@
-package org.vishia.zbatch;
+package org.vishia.zgen;
 
-public final class ZbatchSyntax {
+public final class ZGenSyntax {
 
   
   /**Version, history and license.
