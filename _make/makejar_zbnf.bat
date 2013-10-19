@@ -21,6 +21,7 @@ set MANIFEST_JAVAC=zbnf.manifest
 
 REM Input for javac, only choice of primary sources, relativ path from current (make)-directory:
 set INPUT_JAVAC=
+set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/util/test/TestString67.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/bridgeC/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/byteData/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/byteData/reflection_Jc/*.java
@@ -36,13 +37,13 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zbnf/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/checkDeps_C/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/stateMGen/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zbatch/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zgen/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zmake/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/header2Reflection/CmdHeader2Reflection.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/sclConversions/*.java
 
 
-REM Sets the CLASSPATH variable for compilation (used jar-libraries). do not leaf empty also it aren't needed:
+REM Sets the CLASSPATH variable for compilation (used jar-libraries). do not left empty also it aren't needed:
 set CLASSPATH_JAVAC=nothing
 
 REM Sets the src-path for further necessary sources:

@@ -536,7 +536,7 @@ public class Zmake extends Zbnf2Text
     final ZmakeUserScript.UserScript zmakeInput = parseUserScript(fileInput, sZbnf, console, gen, args.sCheckXmlOutput);
 
     Writer out = new FileWriter(fileOut);
-    Map<String, Object> scriptVariables;
+    Map<String, DataAccess.Variable> scriptVariables;
     try{ 
       scriptVariables = gen.genScriptVariables(genScript, true);
     } catch(IOException exc){
@@ -563,7 +563,7 @@ public class Zmake extends Zbnf2Text
 
   
   
-  void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, Object> scriptVariables) 
+  void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, DataAccess.Variable> scriptVariables) 
   throws FileNotFoundException{
     File currdir = args.currdir;
     String sCurrdir;
