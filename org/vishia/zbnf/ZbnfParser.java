@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 
 //import org.vishia.util.SortedTreeNode;
 import org.vishia.util.Assert;
-import org.vishia.util.StringPart;
+import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNode;
@@ -76,7 +76,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  * <h2>The syntax</h2>
  * The Syntax given as argument of {@link setSyntax(StringPart)} is to be defined in the Semantic Backus Naur-Form 
  * (ZBNF, Z is a reverse S for Semantic). 
- * It is given as a String or {@link StringPart}.
+ * It is given as a String or {@link StringPartOld}.
  * The method setSyntax, reads the string and convert it in internal data. The input string (mostly readed from a file)
  * may be consist of a sequence of <b>variables</b> beginning with $ and <b>syntax terms</b>. A syntax term is described 
  * on the class {@link ZbnfSyntaxPrescript}, because this class converts a syntax term in an internal tree of syntax nodes.
@@ -126,7 +126,7 @@ public class ZbnfParser
    * list of changes:
    * <ul>
    * <li>2013-09-02 Hartmut TODO forex "[{ <datapath?-assign> = }] cmd " saves the {@link PrescriptParser#parseResultToOtherComponent} of "assign"
-   *   because that {@link SubParser#parseComponent(StringPart, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
+   *   because that {@link SubParser#parseComponent(StringPartOld, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
    *   fails because the "=" is not present. In this case the {@link PrescriptParser#parseResultToOtherComponent} should be removed if it comes
    *   from an inner SubParser which is not used. The solution should be: The parseResultToOtherComponent should be an attribute of {@link SubParser}
    *   instead the {@link PrescriptParser}, the {@link PrescriptParser} should know it via a List<ParserStore> and all levels of SubParser should 
@@ -148,7 +148,7 @@ public class ZbnfParser
    *   This result may be re-used later in another context (not programmed yet, only prepared).
    *   In that context any component's result is converted to an XML tree presentation. This may be the new strategy for parse result storing.
    * <li>2012-10-23 Hartmut Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
-   * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPart#getLastScannedFloatNumber()}.
+   * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPartOld#getLastScannedFloatNumber()}.
    * 
    * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
    *     (set with MainCmdLogging_ifc.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
@@ -195,7 +195,7 @@ public class ZbnfParser
        * but the references to the same input and parse result are assigend. 
        * By using the Parser for another parsing execution, a new input and parseResult is used.
        */
-    protected final StringPart input;
+    protected final StringPartOld input;
     
     /**Position where the input String is located in the whole input. */
     protected final int posInputbase;
@@ -231,7 +231,7 @@ public class ZbnfParser
     
     protected PrescriptParser(PrescriptParser parent
         , ZbnfSyntaxPrescript syntax
-        , String sSemantic, StringPart input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
+        , String sSemantic, StringPartOld input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { 
       resultlet = new ParseResultlet(syntax, input.getCurrentPosition());
       //System.out.println("ZbnfParser - PrescriptPaser; " + input.debugString() + syntax.sSemantic);
@@ -254,7 +254,7 @@ public class ZbnfParser
      * The input is given in the constructor, calld from the outer class {@link ZbnfParser}.
      * It is running in a while()-loop. The loop breaks at end of syntax-prescript or
      * if no path in syntax prescript matches to the input. Inside the method 
-     * {@link ZbnfParser.PrescriptParser.SubParser#parseComponent(StringPart, int, String, String, boolean, boolean, boolean)}
+     * {@link ZbnfParser.PrescriptParser.SubParser#parseComponent(StringPartOld, int, String, String, boolean, boolean, boolean)}
      * this method may be called recursively, if the syntax prescript contains &lt;<i>syntax</i>...&gt;.<br/>
      *
      * If a semantic for storing is given as input argument sSemanticForStoring, 
@@ -492,7 +492,7 @@ public class ZbnfParser
        * @throws ParseException 
        */
       public boolean parseSub
-      ( StringPart input
+      ( StringPartOld input
       , String sSemanticForErrorP
       , int resultType
       , String sSemanticForStoring
@@ -953,7 +953,7 @@ public class ZbnfParser
        */
       boolean parseSubSyntax(String sSrc, int posSrc, String subSyntax) 
       throws ParseException
-      { StringPart partOfInput = new StringPart(sSrc);
+      { StringPartOld partOfInput = new StringPartOld(sSrc);
         return parseComponent(partOfInput, posSrc, subSyntax, null, false, false, false);
       }
       
@@ -1166,7 +1166,7 @@ public class ZbnfParser
       private boolean parseStringUntilRightEndchar(String sConstantSyntax, boolean bInclusive, int maxNrofChars, String sSemanticForStoring, ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseStrTilRightChar;   " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <stringtolastinclChar?" + sSemanticForError + ">");
-        input.lentoAnyChar(sConstantSyntax, maxNrofChars, StringPart.seekBack);
+        input.lentoAnyChar(sConstantSyntax, maxNrofChars, StringPartOld.seekBack);
         bOk = input.found();
         if(bOk)
         { if(bInclusive) 
@@ -1209,7 +1209,7 @@ public class ZbnfParser
       ) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseStrTilTermString;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-        { int mode = bInclusive ? StringPart.seekEnd : StringPart.seekNormal;
+        { int mode = bInclusive ? StringPartOld.seekEnd : StringPartOld.seekNormal;
           input.setLengthMax().lentoAnyString(syntaxItem.getListStrings().toArray(new String[1]), maxNrofChars, mode);
         }  
         bOk = input.found();
@@ -1257,7 +1257,7 @@ public class ZbnfParser
        * @throws ParseException 
        */
       private boolean parseComponent
-      ( StringPart sInputP
+      ( StringPartOld sInputP
       , int posInputbase
       , String sDefinitionIdent
       , String sSemanticForStoring
@@ -1354,7 +1354,7 @@ public class ZbnfParser
         { //##i
           if(sSemanticForStoring !=null)
             stop();
-          StringPart partOfInput = new StringPart(sResult);
+          StringPartOld partOfInput = new StringPartOld(sResult);
           bOk = parseComponent(partOfInput, (int)posSrc, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
@@ -1426,7 +1426,7 @@ public class ZbnfParser
         do  //if once of whitespace, comment or endlinecomment is found, try again.
         { bFoundAnySpaceOrComment = false;
           if(  sConstantSyntax != null 
-            && sConstantSyntax.charAt(0) == StringPart.cEndOfText
+            && sConstantSyntax.charAt(0) == StringPartOld.cEndOfText
             && input.length()==0
             )
           { bFoundConstantSyntax = true;
@@ -1453,7 +1453,7 @@ public class ZbnfParser
               posCurrent = posNew;
             }
             if(!bFoundAnySpaceOrComment && sCommentStringStart != null && input.startsWith(sCommentStringStart))
-            { input.lento(sCommentStringEnd, StringPart.seekEnd);
+            { input.lento(sCommentStringEnd, StringPartOld.seekEnd);
               if(input.length()>0)
               { bFoundAnySpaceOrComment = true;
       
@@ -1797,7 +1797,7 @@ public class ZbnfParser
     LogParsing(MainCmdLogging_ifc logOut){ this.logOut = logOut;}
     
     void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, String sReportParentComponents
-        , StringPart input, int posInput, int nRecursion, boolean bOk){
+        , StringPartOld input, int posInput, int nRecursion, boolean bOk){
       
       int nrofCharsParsed = (int)(input.getCurrentPosition() - posInput);
       line.reset().add(sWhat).pos(10)
@@ -1992,7 +1992,7 @@ public class ZbnfParser
    */
   public void setSyntax(String syntax)
   throws ParseException
-  { setSyntax(new StringPart(syntax));
+  { setSyntax(new StringPartOld(syntax));
   }
 
 
@@ -2006,7 +2006,7 @@ public class ZbnfParser
   public void setSyntax(File fileSyntax) 
   throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException, ParseException
   {
-    StringPart spSyntax = null;
+    StringPartOld spSyntax = null;
     int lengthFile = (int)fileSyntax.length();
     spSyntax = new StringPartFromFileLines(fileSyntax, lengthFile, "encoding", null);
     String sDirParent = fileSyntax.getParent();
@@ -2044,7 +2044,7 @@ public class ZbnfParser
    * @throws ParseException If any wrong syntax is containing in the ZBNF-string. A string-wise information
    * of the error location is given.
    */
-  public void setSyntax(StringPart syntax)
+  public void setSyntax(StringPartOld syntax)
   throws ParseException
   { try{ setSyntax(syntax, null); }
     catch(FileNotFoundException exc){ throw new ParseException("import in ZBNF-script is not supported here.",0); }
@@ -2062,12 +2062,12 @@ public class ZbnfParser
    * @throws FileNotFoundException
    * @throws IOException
    */
-  public void setSyntax(StringPart syntax, String sDirImport)
+  public void setSyntax(StringPartOld syntax, String sDirImport)
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { List<String> listImports = null;
     boolean bSetMainscript = false;
     if(syntax.startsWith("<?SBNF") || syntax.startsWith("<?ZBNF"))
-    { syntax.seek("?>", StringPart.seekEnd); 
+    { syntax.seek("?>", StringPartOld.seekEnd); 
     }
     while(syntax.seekNoWhitespace().length()>0)
     { String sCurrentInput = syntax.getCurrent(30);
@@ -2148,7 +2148,7 @@ public class ZbnfParser
         else throw new ParseException("$inputEncodingKeyword=",0);
       }
       else if(sCurrentInput.startsWith("##")) //##s
-      { syntax.seek('\n', StringPart.seekEnd); 
+      { syntax.seek('\n', StringPartOld.seekEnd); 
       }
       else if(sCurrentInput.startsWith("$main=")) //##s
       { syntax.seek(6); 
@@ -2308,7 +2308,7 @@ public class ZbnfParser
 
   public boolean parse(String input)
   {
-    StringPart spInput = new StringPart(input);
+    StringPartOld spInput = new StringPartOld(input);
     return parse(spInput);
   }
 
@@ -2326,7 +2326,7 @@ public class ZbnfParser
    * @param input The source to be parsed.
    * @return true if the input is matched to the syntax, otherwise false.
    */
-  public boolean parse(StringPart input)
+  public boolean parse(StringPartOld input)
   { return parse(input, null);
   }
    
@@ -2339,7 +2339,7 @@ public class ZbnfParser
    *        whereas the elements [1], [3] etc. contains the information content.
    * @return true if the input is matched to the syntax, otherwise false.
    */
-  public boolean parse(StringPart input, List<String> additionalInfo)
+  public boolean parse(StringPartOld input, List<String> additionalInfo)
   { nLevelReportParsing = report.getReportLevelFromIdent(idReportParsing);  
     nLevelReportComponentParsing = report.getReportLevelFromIdent(idReportComponentParsing);  
     nLevelReportInfo = report.getReportLevelFromIdent(idReportInfo);  
@@ -2660,7 +2660,7 @@ public class ZbnfParser
 
 
 
-  static CharSequence inputCurrent(StringPart input)
+  static CharSequence inputCurrent(StringPartOld input)
   {
     StringBuilder u = new StringBuilder(input.getCurrent(40));
     char c;

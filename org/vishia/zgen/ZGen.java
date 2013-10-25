@@ -17,7 +17,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPart;
+import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.UnexpectedException;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -189,13 +189,13 @@ public class ZGen
     + "\" with \"" + fileGenCtrl.getAbsolutePath() + "\"");
 
     int lengthBufferSyntax = (int)fileZbnf4GenCtrl.length();
-    StringPart spSyntax = new StringPartFromFileLines(fileZbnf4GenCtrl, lengthBufferSyntax, "encoding", null);
+    StringPartOld spSyntax = new StringPartFromFileLines(fileZbnf4GenCtrl, lengthBufferSyntax, "encoding", null);
 
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
-    StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
+    StringPartOld spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
 
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
+    return translateAndSetGenCtrl(new StringPartOld(ZGenSyntax.syntax), new StringPartOld(spGenCtrl), checkXmlOut, fileParent);
   }
   
 
@@ -210,9 +210,9 @@ public class ZGen
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
-    StringPart spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
+    StringPartOld spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), new StringPart(spGenCtrl), checkXmlOut, fileParent);
+    return translateAndSetGenCtrl(new StringPartOld(ZGenSyntax.syntax), new StringPartOld(spGenCtrl), checkXmlOut, fileParent);
   }
   
   
@@ -220,16 +220,16 @@ public class ZGen
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), new StringPart(spGenCtrl), null, null);
+      return translateAndSetGenCtrl(new StringPartOld(ZGenSyntax.syntax), new StringPartOld(spGenCtrl), null, null);
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
   
-  public ZGenScript translateAndSetGenCtrl(StringPart spGenCtrl) 
+  public ZGenScript translateAndSetGenCtrl(StringPartOld spGenCtrl) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      return translateAndSetGenCtrl(new StringPart(ZGenSyntax.syntax), spGenCtrl, null, null);
+      return translateAndSetGenCtrl(new StringPartOld(ZGenSyntax.syntax), spGenCtrl, null, null);
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -255,7 +255,7 @@ public class ZGen
    * @throws IOException only if xcheckXmlOutput fails
    * @throws FileNotFoundException if a included file was not found or if xcheckXmlOutput file not found or not writeable
    */
-  public ZGenScript translateAndSetGenCtrl(StringPart sZbnf4GenCtrl, StringPart spGenCtrl, File checkXmlOutput, File fileParent) 
+  public ZGenScript translateAndSetGenCtrl(StringPartOld sZbnf4GenCtrl, StringPartOld spGenCtrl, File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser(log); //console);
@@ -271,7 +271,7 @@ public class ZGen
     
     
     
-  private ZGenScript translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPart spGenCtrl
+  private ZGenScript translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPartOld spGenCtrl
       , File checkXmlOutput, File fileParent) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
@@ -314,7 +314,7 @@ public class ZGen
         }
         File fileIncludeParent = FileSystem.getDir(fileInclude);
         int lengthBufferGenctrl = (int)fileInclude.length();
-        StringPart spGenCtrlSub = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
+        StringPartOld spGenCtrlSub = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
         translateAndSetGenCtrl(parserGenCtrl, spGenCtrlSub, checkXmlOutput, fileIncludeParent);
       }
     }

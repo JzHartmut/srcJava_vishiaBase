@@ -13,7 +13,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPart;
+import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
@@ -265,7 +265,7 @@ public class C2DataDeps  extends MainCmd {
   
   boolean parseCfile(File headerFile){
     boolean bOk = true;
-    StringPart spInput = null;
+    StringPartOld spInput = null;
     try{ 
       spInput = new StringPartFromFileLines(headerFile,-1, null, null);
     } catch(FileNotFoundException exc){

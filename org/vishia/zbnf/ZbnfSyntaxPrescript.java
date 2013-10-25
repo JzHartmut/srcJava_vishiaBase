@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.vishia.util.StringPart;
+import org.vishia.util.StringPartOld;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
@@ -221,7 +221,7 @@ public class ZbnfSyntaxPrescript
   /**Version-ident.
    * list of changes:
    * <ul>
-   * <li>2013-09-07 Hartmut chg: usage of {@link StringPart#scanTranscriptionToAnyChar(CharSequence[], String, char, char, char)}
+   * <li>2013-09-07 Hartmut chg: usage of {@link StringPartOld#scanTranscriptionToAnyChar(CharSequence[], String, char, char, char)}
    *   for constant syntax. There was a bug if a non-end character was transcript, especially "\\<\\:" 
    * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
    * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
@@ -470,7 +470,7 @@ public class ZbnfSyntaxPrescript
      * @param spInput syntaxPrescript in textual form
      * @throws ParseException
      */
-    void convertSyntaxComponent(StringPart spInput)
+    void convertSyntaxComponent(StringPartOld spInput)
     throws ParseException
     { char cc;
       { //TRICKY: sDefinitionIdent and eType blanketed the class variable, to test assignment from compiler in all branches.
@@ -759,7 +759,7 @@ public class ZbnfSyntaxPrescript
    * @throws ParseException on error of input syntax. The message of the exception
    *         contains a information about the error position.
    */  
-  static ZbnfSyntaxPrescript createWithSyntax(StringPart spInput, MainCmdLogging_ifc report)
+  static ZbnfSyntaxPrescript createWithSyntax(StringPartOld spInput, MainCmdLogging_ifc report)
   throws ParseException
   {
     ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(null, report, true);
@@ -774,7 +774,7 @@ public class ZbnfSyntaxPrescript
    *                in a expression <..?...>. 
    *                The actual position after work is at the '>'.
    * */
-  void getSemantic(StringPart spInput)
+  void getSemantic(StringPartOld spInput)
   { //TRICKY: sSemantic blanketed the class variable, to test assignment from compiler in all branches.
     String sSemantic;
     boolean bSemantic = true;
@@ -859,7 +859,7 @@ public class ZbnfSyntaxPrescript
      * @param spInput The SBNF string with start position at syntax definition ident.
      * @throws ParseException
      */
-    private void convertSyntaxDefinition(StringPart spInput)
+    private void convertSyntaxDefinition(StringPartOld spInput)
     throws ParseException
     { spInput.setIgnoreWhitespaces(true);
       //spInput.setIgnoreComment("/*", "*/");
@@ -899,7 +899,7 @@ public class ZbnfSyntaxPrescript
      * @return the semantic identifier.
      * @throws ParseException
      */
-    boolean convertAssociatedSemantic(StringPart spInput) //aa
+    boolean convertAssociatedSemantic(StringPartOld spInput) //aa
     throws ParseException
     {
       if(spInput.startsWith("<?"))  //##a
@@ -940,7 +940,7 @@ public class ZbnfSyntaxPrescript
      * @return The founded end char.
      * @throws ParseException if the content do not match.
      */
-    char convertTheStringGivenSyntax(StringPart spInput, final String charsEnd, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFound)
+    char convertTheStringGivenSyntax(StringPartOld spInput, final String charsEnd, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFound)
     throws ParseException
     {
       
@@ -973,12 +973,12 @@ public class ZbnfSyntaxPrescript
           { spInput.seek(1);
             cEnd = cc;
           }
-          else if(cc == StringPart.cEndOfText)
+          else if(cc == StringPartOld.cEndOfText)
           { cEnd = cc;
           }
         }
         else
-        { cEnd = StringPart.cEndOfText;
+        { cEnd = StringPartOld.cEndOfText;
           cc = 0;
         }
         if(cEnd == 0)
@@ -1049,7 +1049,7 @@ public class ZbnfSyntaxPrescript
               CharSequence[] sqTerminateChars = new CharSequence[1];
               char quotationChar = cFirst == '\"' ? cFirst: 0;  //scan after a quotation if a " is the current one.
               boolean bOk = spInput.scanStart().scanTranscriptionToAnyChar(sqTerminateChars
-                  , "[|]{?}<>. \r\n\t\f"+StringPart.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
+                  , "[|]{?}<>. \r\n\t\f"+StringPartOld.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
               assert(bOk);  //because scan to end of text.
               /*
               if(cFirst == '\"') 
@@ -1130,7 +1130,7 @@ public class ZbnfSyntaxPrescript
      * @return The neu ComplexSyntax item
      * @throws ParseException
      */
-    private ComplexSyntax convertSyntaxComponent(StringPart spInput)
+    private ComplexSyntax convertSyntaxComponent(StringPartOld spInput)
     throws ParseException
     {
       ComplexSyntax actionItem = new ComplexSyntax(this, report, false);
@@ -1140,7 +1140,7 @@ public class ZbnfSyntaxPrescript
     }
 
 
-    private ZbnfSyntaxPrescript convertOptionSyntax(StringPart spInput, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFoundChild)
+    private ZbnfSyntaxPrescript convertOptionSyntax(StringPartOld spInput, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFoundChild)
     throws ParseException
     {
       ZbnfSyntaxPrescript optionItem = new ZbnfSyntaxPrescript(this, report, true);
@@ -1192,7 +1192,7 @@ public class ZbnfSyntaxPrescript
     }
 
 
-    private RepetitionSyntax convertRepetitionSyntax(StringPart spInput, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFoundChild)
+    private RepetitionSyntax convertRepetitionSyntax(StringPartOld spInput, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFoundChild)
     throws ParseException
     {
       RepetitionSyntax repetitionItem = new RepetitionSyntax(this, report, true);
@@ -1571,7 +1571,7 @@ public class ZbnfSyntaxPrescript
    * @param sMsg
    * @throws IndexOutOfBoundsException
    */
-  protected void throwParseException(StringPart spInput, String sMsg)
+  protected void throwParseException(StringPartOld spInput, String sMsg)
   throws ParseException
   { //reportContent(report, 0);
     throw new ParseException(sMsg + ", found: " + spInput.getCurrent(60), spInput.getLineCt());

@@ -55,7 +55,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Iterator;
 
-import org.vishia.util.StringPart;
+import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
@@ -589,7 +589,7 @@ public class Header2Reflection
   { ZbnfParser parser = new ZbnfParser(console, 10);
     console.writeInfoln("read ctrl-file: " + fileReflectionBlockedTypes.getAbsolutePath());
     parser.setSyntax(sSyntaxReflectionTypes);
-    StringPart spInput = null;
+    StringPartOld spInput = null;
     spInput = new StringPartFromFileLines(fileReflectionBlockedTypes,-1, null, null);
     boolean bOk = parser.parse(spInput);
     if(!bOk)
@@ -706,7 +706,7 @@ public class Header2Reflection
   { ZbnfParser parser = new ZbnfParser(console, 10);
     console.writeInfoln("read reflection types: " + sFileReflectionTypes);
     parser.setSyntax(sSyntaxReflectionTypes);
-    StringPart spInput = null;
+    StringPartOld spInput = null;
     spInput = new StringPartFromFileLines(new File(sFileReflectionTypes),-1, null, null);
     boolean bOk = parser.parse(spInput);
     if(!bOk)
@@ -868,7 +868,7 @@ public class Header2Reflection
     */
     TypeEntry typeEntry = identifierRelacements.get(sFilePath);
     if(typeEntry == null || (typeEntry.sign !='#' && typeEntry.sign !='-'))
-    { StringPart spInput = null;
+    { StringPartOld spInput = null;
       spInput = new StringPartFromFileLines(headerFile,-1, null, null);
       boolean bOk = parser.parse(spInput);
       if(!bOk)
@@ -1783,7 +1783,7 @@ public class Header2Reflection
           if(fileOffs != null){
             //String sTypeForSize = nReference>0 ? sType + "*" : sType;
             String sTypeForSize = nReference>0 ? "void*" : sType;    //size of a pointer anyway
-            String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
+            String sSize = StringPartOld.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
             fileOffs.write("\n    , (" + sSize + "<<16) | (" + sOffset + ")");                //Offsetfile: it is a int32
             sbCfile.append(  "\n    , -1   //offset in extra file");
             
@@ -1821,24 +1821,24 @@ public class Header2Reflection
       String[] sReplacement = new String[]{ sCppClassName, sAttributeName };  //order of sExprTokens
       
       //String sOffset = "((int32)(&((" + sCppClassName + "*)(0x1000))->" + sAttributeName + ") ";
-      String sOffset = StringPart.replace(sExprOffsField, sExprTokens, sReplacement, null);
+      String sOffset = StringPartOld.replace(sExprOffsField, sExprTokens, sReplacement, null);
       if(bObjectJcpp)
       { assert(cppClass);
         //sOffset += "- (int32)(static_cast<ObjectJc*>(static_cast<ObjectJcpp*>((" + sCppClassName+ "*)0x1000))))";
-        sOffset += "-" + StringPart.replace(sExprOffsObjJcpp, sExprTokens, sReplacement, null);
+        sOffset += "-" + StringPartOld.replace(sExprOffsObjJcpp, sExprTokens, sReplacement, null);
       }
       else if(bClassBasedOnObjectJc)
       { if(c_only || !cppClass){
           //sOffset += "- (int32)&((" + sCppClassName + "*)0x1000)->base.object)";
-          sOffset += "-" + StringPart.replace(sExprOffsObj, sExprTokens, sReplacement, null);
+          sOffset += "-" + StringPartOld.replace(sExprOffsObj, sExprTokens, sReplacement, null);
         } else {
           //sOffset += "- (int32)(static_cast<ObjectJc*>((" + sCppClassName+ "*)0x1000)))";
-          sOffset += "-" + StringPart.replace(sExprOffsCppObj, sExprTokens, sReplacement, null);
+          sOffset += "-" + StringPartOld.replace(sExprOffsCppObj, sExprTokens, sReplacement, null);
         }
       }
       else
       { //sOffset += "- (int32)(" + sCppClassName+ "*)0x1000)";
-        sOffset += "-" + StringPart.replace(sExprOffsBase, sExprTokens, sReplacement, null);
+        sOffset += "-" + StringPartOld.replace(sExprOffsBase, sExprTokens, sReplacement, null);
       }
       return sOffset;
     }
