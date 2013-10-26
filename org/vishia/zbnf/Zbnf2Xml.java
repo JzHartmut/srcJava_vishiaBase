@@ -41,7 +41,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPartOld;
+import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
@@ -418,7 +418,7 @@ public class Zbnf2Xml
     if(bOk)
     { parser.reportSyntax(report, Report.fineInfo);
     }
-    StringPartOld spToParse = null;
+    StringPartScan spToParse = null;
     if(bOk)
     { Charset inputEncoding = parser.getInputEncoding();
       String sInputEncodingKeyword = parser.getInputEncodingKeyword();

@@ -19,7 +19,7 @@ import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPartOld;
+import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
 //import org.vishia.util.StringPartFromFile;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -387,7 +387,7 @@ public class Zmake extends Zbnf2Text
   {
     ZmakeUserScript.UserScript zmakeInput;
     try{
-      StringPartOld spInput = new StringPartFromFileLines(fileZmakeUserscript);
+      StringPartScan spInput = new StringPartFromFileLines(fileZmakeUserscript);
       ZbnfParser parser = new ZbnfParser(console);
       parser.setSyntax(new File(sZbnf));
       console.writeInfo(" ... ");

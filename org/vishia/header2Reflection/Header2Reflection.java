@@ -57,6 +57,7 @@ import java.util.Iterator;
 
 import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.util.StringPartScan;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
 
@@ -589,7 +590,7 @@ public class Header2Reflection
   { ZbnfParser parser = new ZbnfParser(console, 10);
     console.writeInfoln("read ctrl-file: " + fileReflectionBlockedTypes.getAbsolutePath());
     parser.setSyntax(sSyntaxReflectionTypes);
-    StringPartOld spInput = null;
+    StringPartScan spInput = null;
     spInput = new StringPartFromFileLines(fileReflectionBlockedTypes,-1, null, null);
     boolean bOk = parser.parse(spInput);
     if(!bOk)
@@ -706,7 +707,7 @@ public class Header2Reflection
   { ZbnfParser parser = new ZbnfParser(console, 10);
     console.writeInfoln("read reflection types: " + sFileReflectionTypes);
     parser.setSyntax(sSyntaxReflectionTypes);
-    StringPartOld spInput = null;
+    StringPartScan spInput = null;
     spInput = new StringPartFromFileLines(new File(sFileReflectionTypes),-1, null, null);
     boolean bOk = parser.parse(spInput);
     if(!bOk)
@@ -868,7 +869,7 @@ public class Header2Reflection
     */
     TypeEntry typeEntry = identifierRelacements.get(sFilePath);
     if(typeEntry == null || (typeEntry.sign !='#' && typeEntry.sign !='-'))
-    { StringPartOld spInput = null;
+    { StringPartScan spInput = null;
       spInput = new StringPartFromFileLines(headerFile,-1, null, null);
       boolean bOk = parser.parse(spInput);
       if(!bOk)

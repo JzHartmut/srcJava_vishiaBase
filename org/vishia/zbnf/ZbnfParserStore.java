@@ -35,7 +35,7 @@ import java.util.List;
 
 import org.vishia.util.Assert;
 import org.vishia.util.SortedTreeNode;
-import org.vishia.util.StringPartOld;
+import org.vishia.util.StringPartBase;
 import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
@@ -720,11 +720,11 @@ class ZbnfParserStore
    * @param nColumn
    * @return The position of this entry, using for rewind(posititon);
    */
-  private ParseResultItemImplement add(String sSemantic, String sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
+  private ParseResultItemImplement add(String sSemantic, CharSequence sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
   { item = new ParseResultItemImplement(this, sSemantic, parent, "?");
-    item.sInput = sInput;
+    item.sInput = sInput == null ? null : sInput.toString();
     if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
-      item.parsedString = sInput;
+      item.parsedString = item.sInput;
     }
     if(item.kind ==0){  //it is not 0 if it was set in constructor, especially on sSemantic = "name=value".
       item.kind = nAlternative;
@@ -745,7 +745,7 @@ class ZbnfParserStore
   }
 
 
-  ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPartOld input)
+  ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPartBase input)
   { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
   }
 
@@ -808,12 +808,12 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(StringPartOld spInput, String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(StringPartBase spInput, String sSemantic, ZbnfParseResultItem parent)
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
     int nLine = spInput.getLineCt();
     int nColumn = 0;
-    return add(sSemantic, spInput.getCurrentPart(), kString, start, end, nLine, nColumn, parent);
+    return add(sSemantic, spInput.getCurrentPart().toString(), kString, start, end, nLine, nColumn, parent);
   }
 
   /** Adds a founded string to the parsers store. It is called at as the issue of
@@ -821,7 +821,7 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(String src, String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(CharSequence src, String sSemantic, ZbnfParseResultItem parent)
   { return add(sSemantic, src, kString, -1, -1, -1, -1, parent);
   }
 
