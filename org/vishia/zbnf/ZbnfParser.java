@@ -44,12 +44,10 @@ import java.util.regex.Pattern;
 //import org.vishia.util.SortedTreeNode;
 import org.vishia.util.Assert;
 import org.vishia.util.StringFunctions;
-import org.vishia.util.StringPartBase;
-import org.vishia.util.StringPartOld;
+import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
-import org.vishia.util.StringPartScan;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
@@ -628,7 +626,7 @@ public class ZbnfParser
               );
           }
         }
-        final StringPartBase.Part parsedInput;
+        final StringPart.Part parsedInput;
         if(!bFound)
         { //remove added entries
           parserStoreInPrescript.setCurrentPosition(idxCurrentStore);
@@ -1221,7 +1219,7 @@ public class ZbnfParser
         { if(bInclusive) 
           { input.lento(input.length()+1);  //inclusive termintated char.
           } 
-          StringPartBase.Part sResult = input.getCurrentPart();
+          StringPart.Part sResult = input.getCurrentPart();
           if(bTrim){ 
             sResult = sResult.trim();
           }

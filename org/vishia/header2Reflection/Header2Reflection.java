@@ -55,8 +55,8 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Iterator;
 
-import org.vishia.util.StringPartBase;
-import org.vishia.util.StringPartBase;
+import org.vishia.util.StringPart;
+import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 import org.vishia.zbnf.ZbnfParseResultItem;
@@ -1785,7 +1785,7 @@ public class Header2Reflection
           if(fileOffs != null){
             //String sTypeForSize = nReference>0 ? sType + "*" : sType;
             String sTypeForSize = nReference>0 ? "void*" : sType;    //size of a pointer anyway
-            String sSize = StringPartBase.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
+            String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
             fileOffs.write("\n    , (" + sSize + "<<16) | (" + sOffset + ")");                //Offsetfile: it is a int32
             sbCfile.append(  "\n    , -1   //offset in extra file");
             
@@ -1823,24 +1823,24 @@ public class Header2Reflection
       String[] sReplacement = new String[]{ sCppClassName, sAttributeName };  //order of sExprTokens
       
       //String sOffset = "((int32)(&((" + sCppClassName + "*)(0x1000))->" + sAttributeName + ") ";
-      String sOffset = StringPartBase.replace(sExprOffsField, sExprTokens, sReplacement, null);
+      String sOffset = StringPart.replace(sExprOffsField, sExprTokens, sReplacement, null);
       if(bObjectJcpp)
       { assert(cppClass);
         //sOffset += "- (int32)(static_cast<ObjectJc*>(static_cast<ObjectJcpp*>((" + sCppClassName+ "*)0x1000))))";
-        sOffset += "-" + StringPartBase.replace(sExprOffsObjJcpp, sExprTokens, sReplacement, null);
+        sOffset += "-" + StringPart.replace(sExprOffsObjJcpp, sExprTokens, sReplacement, null);
       }
       else if(bClassBasedOnObjectJc)
       { if(c_only || !cppClass){
           //sOffset += "- (int32)&((" + sCppClassName + "*)0x1000)->base.object)";
-          sOffset += "-" + StringPartBase.replace(sExprOffsObj, sExprTokens, sReplacement, null);
+          sOffset += "-" + StringPart.replace(sExprOffsObj, sExprTokens, sReplacement, null);
         } else {
           //sOffset += "- (int32)(static_cast<ObjectJc*>((" + sCppClassName+ "*)0x1000)))";
-          sOffset += "-" + StringPartBase.replace(sExprOffsCppObj, sExprTokens, sReplacement, null);
+          sOffset += "-" + StringPart.replace(sExprOffsCppObj, sExprTokens, sReplacement, null);
         }
       }
       else
       { //sOffset += "- (int32)(" + sCppClassName+ "*)0x1000)";
-        sOffset += "-" + StringPartBase.replace(sExprOffsBase, sExprTokens, sReplacement, null);
+        sOffset += "-" + StringPart.replace(sExprOffsBase, sExprTokens, sReplacement, null);
       }
       return sOffset;
     }

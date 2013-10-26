@@ -35,7 +35,7 @@ import java.util.List;
 
 import org.vishia.util.Assert;
 import org.vishia.util.SortedTreeNode;
-import org.vishia.util.StringPartBase;
+import org.vishia.util.StringPart;
 import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
@@ -745,7 +745,7 @@ class ZbnfParserStore
   }
 
 
-  ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPartBase input)
+  ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
   { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
   }
 
@@ -808,7 +808,7 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(StringPartBase spInput, String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfParseResultItem parent)
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
     int nLine = spInput.getLineCt();

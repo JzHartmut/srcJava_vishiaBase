@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
