@@ -48,6 +48,7 @@ import java.util.Map;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
+import org.vishia.util.StringPartScan;
 
 
 
@@ -1092,8 +1093,8 @@ public class ZbnfJavaOutput
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, File fSyntax) 
   { String sError = null;
     int lenFileSyntax = (int)fSyntax.length();
-    StringPartOld spSyntax = null;
-    try{ spSyntax = new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null); }
+    StringPartScan spSyntax = null;
+    try{ spSyntax = new StringPartScan(new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null)); }
     catch(FileNotFoundException exc)
     { sError = "ZbnfJavaOutput - Syntax file not found; " + fSyntax.getAbsolutePath();
     }
@@ -1127,7 +1128,7 @@ public class ZbnfJavaOutput
    * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, String sSyntax) 
-  { StringPartOld spSyntax = new StringPartOld(sSyntax);
+  { StringPartScan spSyntax = new StringPartScan(sSyntax);
     return parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
   }
   
@@ -1143,7 +1144,7 @@ public class ZbnfJavaOutput
    * @param spSyntax The syntax using ZBNF
    * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
-  public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartOld spSyntax) 
+  public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartScan spSyntax) 
   //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
   { String sError = null;
     //configure the parser:

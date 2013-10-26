@@ -43,9 +43,11 @@ import java.util.regex.Pattern;
 
 //import org.vishia.util.SortedTreeNode;
 import org.vishia.util.Assert;
+import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartOld;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
+import org.vishia.util.StringPartScan;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
@@ -1992,7 +1994,7 @@ public class ZbnfParser
    */
   public void setSyntax(String syntax)
   throws ParseException
-  { setSyntax(new StringPartOld(syntax));
+  { setSyntax(new StringPartScan(syntax));
   }
 
 
@@ -2006,9 +2008,10 @@ public class ZbnfParser
   public void setSyntax(File fileSyntax) 
   throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException, ParseException
   {
-    StringPartOld spSyntax = null;
+    StringPartOld spSyntax1 = null;
     int lengthFile = (int)fileSyntax.length();
-    spSyntax = new StringPartFromFileLines(fileSyntax, lengthFile, "encoding", null);
+    spSyntax1 = new StringPartFromFileLines(fileSyntax, lengthFile, "encoding", null);
+    StringPartScan spSyntax = new StringPartScan(spSyntax1);
     String sDirParent = fileSyntax.getParent();
     setSyntax(spSyntax, sDirParent);
   }
@@ -2044,7 +2047,7 @@ public class ZbnfParser
    * @throws ParseException If any wrong syntax is containing in the ZBNF-string. A string-wise information
    * of the error location is given.
    */
-  public void setSyntax(StringPartOld syntax)
+  public void setSyntax(StringPartScan syntax)
   throws ParseException
   { try{ setSyntax(syntax, null); }
     catch(FileNotFoundException exc){ throw new ParseException("import in ZBNF-script is not supported here.",0); }
@@ -2062,7 +2065,7 @@ public class ZbnfParser
    * @throws FileNotFoundException
    * @throws IOException
    */
-  public void setSyntax(StringPartOld syntax, String sDirImport)
+  public void setSyntax(StringPartScan syntax, String sDirImport)
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { List<String> listImports = null;
     boolean bSetMainscript = false;
@@ -2070,9 +2073,9 @@ public class ZbnfParser
     { syntax.seek("?>", StringPartOld.seekEnd); 
     }
     while(syntax.seekNoWhitespace().length()>0)
-    { String sCurrentInput = syntax.getCurrent(30);
+    { CharSequence sCurrentInput = syntax.getCurrent(30);
       syntax.scanStart();  //NOTE: sets the restore position for scan error on current position.
-      if(sCurrentInput.startsWith("$keywords"))
+      if(StringFunctions.startsWith(sCurrentInput, "$keywords"))
       { syntax.seek(9);  //TODO skip also over ::=
         if(syntax.startsWith("::=")){ syntax.seek(3);}
         else if(syntax.startsWith("=")){ syntax.seek(1);}
@@ -2082,7 +2085,7 @@ public class ZbnfParser
         { syntax.seekNoWhitespace().lentoIdentifier();
           if(syntax.length()>0)
           { //listKeywords.addNew(syntax.getCurrentPart());
-            String sKeyword = syntax.getCurrentPart();
+            String sKeyword = syntax.getCurrentPart().toString();
             listKeywords.put(sKeyword, sKeyword);
           }
           cc = syntax.fromEnd().seekNoWhitespace().getCurrentChar();
@@ -2090,16 +2093,16 @@ public class ZbnfParser
         }while(cc == '|');
         if(cc != '.') throw new ParseException("expected \".\" on end of \"$keywords\"", syntax.getLineCt());
       }
-      else if(sCurrentInput.startsWith("$Whitespaces=")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "$Whitespaces=")) //##s
       { syntax.seek(12); 
-        String sWhitespaces = syntax.getCircumScriptionToAnyChar(".");
+        String sWhitespaces = syntax.getCircumScriptionToAnyChar(".").toString();
         if(sWhitespaces.length()==0 || sWhitespaces.indexOf('\n')>=0){ 
           throw new ParseException("expected \".\" on end of \"$Whitespaces=\"", syntax.getLineCt());
         }
         syntax.seek(1);
         setWhiteSpaces(sWhiteSpaces);
       }
-      else if(sCurrentInput.startsWith("$setLinemode")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "$setLinemode")) //##s
       { syntax.seek(12); 
         if(syntax.getCurrentChar() == '.')
         { syntax.seek(1);
@@ -2107,22 +2110,22 @@ public class ZbnfParser
         }
         else throw new ParseException("expected \".\" on end of \"$setLinemode\"", syntax.getLineCt());
       }
-      else if(sCurrentInput.startsWith("$endlineComment=")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "$endlineComment=")) //##s
       { syntax.seek(16); 
-        sEndlineCommentStringStart = syntax.getCircumScriptionToAnyChar(".");
+        sEndlineCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString();
         if(sEndlineCommentStringStart.length()==0){ sEndlineCommentStringStart = null; }
         else if(sEndlineCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineCt());
         syntax.seek(1);
       }
-      else if(sCurrentInput.startsWith("$comment=")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "$comment=")) //##s
       { syntax.seek(9); 
-        sCommentStringStart = syntax.getCircumScriptionToAnyChar(".");
+        sCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString();
         if(sCommentStringStart.length()==0){ sCommentStringStart = null; }
         else if(sCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineCt());
         else
         { if(!syntax.startsWith("...")) throw new ParseException("$comment, must have ... betwenn comment strings.", syntax.getLineCt());
           syntax.seek(3);
-          sCommentStringEnd = syntax.getCircumScriptionToAnyChar(".");
+          sCommentStringEnd = syntax.getCircumScriptionToAnyChar(".").toString();
           if(sCommentStringEnd.length()==0) throw new ParseException("$comment: no endchars found.", syntax.getLineCt());
           else if(sCommentStringEnd.length()>5) throw new ParseException("SyntaxPrescript: more as 5 chars as $endlineComment-end unexpected", syntax.getLineCt());
           syntax.seek(1);  //skip "."
@@ -2147,20 +2150,20 @@ public class ZbnfParser
         }
         else throw new ParseException("$inputEncodingKeyword=",0);
       }
-      else if(sCurrentInput.startsWith("##")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "##")) //##s
       { syntax.seek('\n', StringPartOld.seekEnd); 
       }
-      else if(sCurrentInput.startsWith("$main=")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "$main=")) //##s
       { syntax.seek(6); 
         //overwrites a older mainscript, especially the first prescript.
         mainScript = ZbnfSyntaxPrescript.createWithSyntax(syntax, report);
         listSubPrescript.put(mainScript.getDefinitionIdent(), mainScript);
       }
-      else if(sCurrentInput.startsWith("$xmlns:")) //##s
+      else if(StringFunctions.startsWith(sCurrentInput, "$xmlns:")) //##s
       { syntax.seek(7); 
         //overwrites a older mainscript, especially the first prescript.
-        String sNamespaceKey = syntax.lento("=").getCurrentPart();
-        String sNamespace = syntax.fromEnd().seek(1).lentoQuotionEnd('\"', Integer.MAX_VALUE).getCurrentPart();
+        String sNamespaceKey = syntax.lento("=").getCurrentPart().toString();
+        String sNamespace = syntax.fromEnd().seek(1).lentoQuotionEnd('\"', Integer.MAX_VALUE).getCurrentPart().toString();
         if(sNamespaceKey.length() > 0 && sNamespace.length()>2)
         { if(xmlnsList == null){ xmlnsList = new TreeMap<String, String>(); }
           //NOTE: sNamespace should be have " left and right, do not save it in xmlnsList.
@@ -2174,7 +2177,7 @@ public class ZbnfParser
       }
       else if(syntax.scan("$import").scanOk()) //##s
       { String[] result = new String[1];
-        if(  syntax.seekNoWhitespace().scanQuotion("\"", "\"", result).scan(".").scanOk())
+        if(  syntax.seekNoWhitespace().scan().scanQuotion("\"", "\"", result).scan(".").scanOk())
         { if(listImports == null){ listImports = new LinkedList<String>(); }
           //listImports.add(result[0]);
           importScript(result[0], sDirImport);

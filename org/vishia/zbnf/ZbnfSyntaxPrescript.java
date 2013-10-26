@@ -26,7 +26,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.vishia.util.StringPartOld;
+import org.vishia.util.StringFunctions;
+import org.vishia.util.StringPartScan;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
@@ -221,7 +222,7 @@ public class ZbnfSyntaxPrescript
   /**Version-ident.
    * list of changes:
    * <ul>
-   * <li>2013-09-07 Hartmut chg: usage of {@link StringPartOld#scanTranscriptionToAnyChar(CharSequence[], String, char, char, char)}
+   * <li>2013-09-07 Hartmut chg: usage of {@link StringPartScan#scanTranscriptionToAnyChar(CharSequence[], String, char, char, char)}
    *   for constant syntax. There was a bug if a non-end character was transcript, especially "\\<\\:" 
    * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
    * <li>New_1.10.005 Hartmut 2011-0118: The ZBNF-syntax supports now a semantic ident 
@@ -470,7 +471,7 @@ public class ZbnfSyntaxPrescript
      * @param spInput syntaxPrescript in textual form
      * @throws ParseException
      */
-    void convertSyntaxComponent(StringPartOld spInput)
+    void convertSyntaxComponent(StringPartScan spInput)
     throws ParseException
     { char cc;
       { //TRICKY: sDefinitionIdent and eType blanketed the class variable, to test assignment from compiler in all branches.
@@ -484,7 +485,7 @@ public class ZbnfSyntaxPrescript
             cc = spInput.getCurrentChar();
           } while( cc >='0' && cc <='9');
         }
-        { String sTest = spInput.getCurrentPart();
+        { String sTest = spInput.getCurrentPart().toString();
           cc = sTest.charAt(0);
           if(cc == '#')
           { cc = spInput.seek(1).getCurrentChar();
@@ -513,13 +514,13 @@ public class ZbnfSyntaxPrescript
           { eType = kIdentifier;
             sDefinitionIdent = "i-Identifier";
             spInput.seek(1);
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(cc == '!')
           { eType = kRegularExpression;
             sDefinitionIdent = "i-RegularExpression";
             spInput.seek(1);
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
             try{ regex = Pattern.compile(sConstantSyntax); }
             catch(PatternSyntaxException exc)
             { throw new ParseException("failed regex syntax:" + sConstantSyntax,0);
@@ -532,7 +533,7 @@ public class ZbnfSyntaxPrescript
             listStrings = new LinkedList<String>();
             boolean bContinue = true;
             while(bContinue)
-            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>");
+            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>").toString();
               listStrings.add(sConstantSyntax);
               if(spInput.getCurrentChar() == '|')
               { spInput.seek(1);
@@ -547,7 +548,7 @@ public class ZbnfSyntaxPrescript
             listStrings = new LinkedList<String>();
             boolean bContinue = true;
             while(bContinue)
-            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>");
+            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>").toString();
               listStrings.add(sConstantSyntax);
               if(spInput.getCurrentChar() == '|')
               { spInput.seek(1);
@@ -562,7 +563,7 @@ public class ZbnfSyntaxPrescript
             listStrings = new LinkedList<String>();
             boolean bContinue = true;
             while(bContinue)
-            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>");
+            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>").toString();
               listStrings.add(sConstantSyntax);
               if(spInput.getCurrentChar() == '|')
               { spInput.seek(1);
@@ -575,19 +576,19 @@ public class ZbnfSyntaxPrescript
           { eType = kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
             spInput.seek(3); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("stringtolastExclChar"))
           { eType = kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
             spInput.seek(20); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("toLastChar:"))
           { eType = kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
             spInput.seek(11); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
             //spInput.seek(1);  //skip over ), ?> will be accept later.
           }
           
@@ -595,25 +596,25 @@ public class ZbnfSyntaxPrescript
           { eType = kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(3); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("stringtolastinclChar"))
           { eType = kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(20); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("toLastCharIncl:"))
           { eType = kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(15); //read sConstantSyntax from "|"
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
             //spInput.seek(1);  //skip over ), ?> will be accept later.
           }
           
           else if(sTest.startsWith("*{"))
           { spInput.seek(2); //read sConstantSyntax from "|"
-            sIndentChars = spInput.getCircumScriptionToAnyChar("}");
+            sIndentChars = spInput.getCircumScriptionToAnyChar("}").toString();
             if(!spInput.found()) throwParseException(spInput, "\"}\"expected");
             spInput.seek(1);
             cc=spInput.getCurrentChar();
@@ -624,7 +625,7 @@ public class ZbnfSyntaxPrescript
               listStrings = new LinkedList<String>();
               boolean bContinue = true;
               while(bContinue)
-              { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>");
+              { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>").toString();
                 listStrings.add(sConstantSyntax);
                 if(spInput.getCurrentChar() == '|')
                 { spInput.seek(1);
@@ -636,26 +637,26 @@ public class ZbnfSyntaxPrescript
             { eType = kStringUntilEndcharWithIndent; //##k
               sDefinitionIdent = "i-StringUntilEndcharWithIndent";
               spInput.seek(1);
-              sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+              sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
             }
           }
           else if(sTest.startsWith("*\"\""))
           { eType = kStringUntilEndcharOutsideQuotion;
             sDefinitionIdent = "i-StringUntilEndcharOutsideQuotion";
             spInput.seek(3);
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(cc == '*')
           { eType = kStringUntilEndchar;
             sDefinitionIdent = "i-StringUntilEndChar";
             spInput.seek(1);
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(cc == '+')
           { eType = kStringUntilEndcharInclusive;
             sDefinitionIdent = "i-StringUntilEndCharInclusive";
             spInput.seek(1);
-            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>");
+            sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("\"\""))
           { eType = kQuotedString;
@@ -677,7 +678,7 @@ public class ZbnfSyntaxPrescript
           { spInput.lentoIdentifier();
             if(spInput.length()>0)
             { eType = kSyntaxComponent;
-              sDefinitionIdent = spInput.getCurrentPart();
+              sDefinitionIdent = spInput.getCurrentPart().toString();
               spInput.fromEnd();
             }
             else
@@ -759,7 +760,7 @@ public class ZbnfSyntaxPrescript
    * @throws ParseException on error of input syntax. The message of the exception
    *         contains a information about the error position.
    */  
-  static ZbnfSyntaxPrescript createWithSyntax(StringPartOld spInput, MainCmdLogging_ifc report)
+  static ZbnfSyntaxPrescript createWithSyntax(StringPartScan spInput, MainCmdLogging_ifc report)
   throws ParseException
   {
     ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(null, report, true);
@@ -774,7 +775,7 @@ public class ZbnfSyntaxPrescript
    *                in a expression <..?...>. 
    *                The actual position after work is at the '>'.
    * */
-  void getSemantic(StringPartOld spInput)
+  void getSemantic(StringPartScan spInput)
   { //TRICKY: sSemantic blanketed the class variable, to test assignment from compiler in all branches.
     String sSemantic;
     boolean bSemantic = true;
@@ -799,7 +800,7 @@ public class ZbnfSyntaxPrescript
     { //call of an inner parsing
       spInput.seek(1).lentoIdentifier();
       if(spInput.length()>0)
-      { sSubSyntax = spInput.getCurrentPart();
+      { sSubSyntax = spInput.getCurrentPart().toString();
       }
       else ; //no sDefintionIdent and no Semantic
       spInput.fromEnd();
@@ -812,15 +813,11 @@ public class ZbnfSyntaxPrescript
       { spInput.seek(1);
         sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
       }
-      else if(false && spInput.startsWith("text()"))
-      { spInput.seek(6);
-        sSemantic="text()";
-      }
       else
       { //behind ? the semantic is defined. It may be a null-Semantic.
         spInput.lentoAnyChar(">");
         if(spInput.length()>0)
-        { sSemantic = spInput.getCurrentPart();
+        { sSemantic = spInput.getCurrentPart().toString();
         }
         else
         { sSemantic = null;  //<..?>: without semantic
@@ -859,7 +856,7 @@ public class ZbnfSyntaxPrescript
      * @param spInput The SBNF string with start position at syntax definition ident.
      * @throws ParseException
      */
-    private void convertSyntaxDefinition(StringPartOld spInput)
+    private void convertSyntaxDefinition(StringPartScan spInput)
     throws ParseException
     { spInput.setIgnoreWhitespaces(true);
       //spInput.setIgnoreComment("/*", "*/");
@@ -874,13 +871,13 @@ public class ZbnfSyntaxPrescript
       else
       { spInput.lentoIdentifier();
         if(spInput.length()>0)
-        { sDefinitionIdent = spInput.getCurrentPart();
+        { sDefinitionIdent = spInput.getCurrentPart().toString();
           sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
           eType = kSyntaxDefinition;
           spInput.fromEnd();
         }
-        else throwParseException(spInput, "identifier::=... for prescript expected");
-        if(!spInput.seekNoWhitespace().scan("::=").scanOk())
+        else throwParseException(spInput, "ZbnfSyntaxPrescript - identifier for prescript expected;");
+        if(!spInput.seekNoWhitespace().scan().scan("::=").scanOk())
         { throwParseException(spInput, "::= expected");
         }
         convertTheStringGivenSyntax(spInput, ".",true, spInput.getCurrent(20));
@@ -899,7 +896,7 @@ public class ZbnfSyntaxPrescript
      * @return the semantic identifier.
      * @throws ParseException
      */
-    boolean convertAssociatedSemantic(StringPartOld spInput) //aa
+    boolean convertAssociatedSemantic(StringPartScan spInput) //aa
     throws ParseException
     {
       if(spInput.startsWith("<?"))  //##a
@@ -940,12 +937,12 @@ public class ZbnfSyntaxPrescript
      * @return The founded end char.
      * @throws ParseException if the content do not match.
      */
-    char convertTheStringGivenSyntax(StringPartOld spInput, final String charsEnd, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFound)
+    char convertTheStringGivenSyntax(StringPartScan spInput, final String charsEnd, boolean bWhiteSpaces, CharSequence sSyntaxOnStartForErrorNothingFound)
     throws ParseException
     {
       
-      { String sInput = spInput.getCurrent(30);
-        if(sInput.startsWith("<?return"))
+      { CharSequence sInput = spInput.getCurrent(30);
+        if(StringFunctions.startsWith(sInput, "<?return"))
           stop();
       }
       //first test wether <?semantic> is written:
@@ -965,7 +962,7 @@ public class ZbnfSyntaxPrescript
         {
           childsAdd(new ZbnfSyntaxPrescript(this, kSkipSpaces));
         }
-        String sSyntaxOnStartForErrorNothingFoundChild = spInput.getCurrent(20);
+        CharSequence sSyntaxOnStartForErrorNothingFoundChild = spInput.getCurrent(20);
         char cc;
         if(spInput.length() >0)
         { cc = spInput.getCurrentChar();
@@ -973,12 +970,12 @@ public class ZbnfSyntaxPrescript
           { spInput.seek(1);
             cEnd = cc;
           }
-          else if(cc == StringPartOld.cEndOfText)
+          else if(cc == StringPartScan.cEndOfText)
           { cEnd = cc;
           }
         }
         else
-        { cEnd = StringPartOld.cEndOfText;
+        { cEnd = StringPartScan.cEndOfText;
           cc = 0;
         }
         if(cEnd == 0)
@@ -988,8 +985,8 @@ public class ZbnfSyntaxPrescript
             case '|':
             { //alternative in syntax-expression maybe outside [...] or inside.
               spInput.seek(1);
-              { String sInput = spInput.getCurrent(30);
-                if(sInput.startsWith("|<?return"))
+              { CharSequence sInput = spInput.getCurrent(30);
+                if(StringFunctions.startsWith(sInput, "|<?return"))
                   stop();
               }
               if(childSyntaxPrescripts == null)
@@ -1049,7 +1046,7 @@ public class ZbnfSyntaxPrescript
               CharSequence[] sqTerminateChars = new CharSequence[1];
               char quotationChar = cFirst == '\"' ? cFirst: 0;  //scan after a quotation if a " is the current one.
               boolean bOk = spInput.scanStart().scanTranscriptionToAnyChar(sqTerminateChars
-                  , "[|]{?}<>. \r\n\t\f"+StringPartOld.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
+                  , "[|]{?}<>. \r\n\t\f"+StringPartScan.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
               assert(bOk);  //because scan to end of text.
               /*
               if(cFirst == '\"') 
@@ -1130,7 +1127,7 @@ public class ZbnfSyntaxPrescript
      * @return The neu ComplexSyntax item
      * @throws ParseException
      */
-    private ComplexSyntax convertSyntaxComponent(StringPartOld spInput)
+    private ComplexSyntax convertSyntaxComponent(StringPartScan spInput)
     throws ParseException
     {
       ComplexSyntax actionItem = new ComplexSyntax(this, report, false);
@@ -1140,7 +1137,7 @@ public class ZbnfSyntaxPrescript
     }
 
 
-    private ZbnfSyntaxPrescript convertOptionSyntax(StringPartOld spInput, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFoundChild)
+    private ZbnfSyntaxPrescript convertOptionSyntax(StringPartScan spInput, boolean bWhiteSpaces, CharSequence sSyntaxOnStartForErrorNothingFoundChild)
     throws ParseException
     {
       ZbnfSyntaxPrescript optionItem = new ZbnfSyntaxPrescript(this, report, true);
@@ -1192,7 +1189,7 @@ public class ZbnfSyntaxPrescript
     }
 
 
-    private RepetitionSyntax convertRepetitionSyntax(StringPartOld spInput, boolean bWhiteSpaces, String sSyntaxOnStartForErrorNothingFoundChild)
+    private RepetitionSyntax convertRepetitionSyntax(StringPartScan spInput, boolean bWhiteSpaces, CharSequence sSyntaxOnStartForErrorNothingFoundChild)
     throws ParseException
     {
       RepetitionSyntax repetitionItem = new RepetitionSyntax(this, report, true);
@@ -1571,7 +1568,7 @@ public class ZbnfSyntaxPrescript
    * @param sMsg
    * @throws IndexOutOfBoundsException
    */
-  protected void throwParseException(StringPartOld spInput, String sMsg)
+  protected void throwParseException(StringPartScan spInput, String sMsg)
   throws ParseException
   { //reportContent(report, 0);
     throw new ParseException(sMsg + ", found: " + spInput.getCurrent(60), spInput.getLineCt());
