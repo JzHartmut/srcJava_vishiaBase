@@ -87,16 +87,42 @@ import org.vishia.zgen.Zbnf2Text;
 public class Zmake extends Zbnf2Text
 {
 
-	/**Changes
-	 * <ul>
-	 * <li>2013-03-10: Hartmut chg: <:scriptclass:JavaPath> is supported up to now. Usage for docu generation with other/more capability.
-	 * <li>2011-08-13: {@link ZmakeGenerator} regards < ?expandFiles>, see there.
-	 * <li>2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
-	 * <li>2011-02-01: Hartmut creation. Before that, the {@link org.vishia.zbnf.Zmake} exists (in the zbnf-package)
-	 *   which produces only ANT files. This solution bases on them, but it is more universal.
-	 * </ul>
-	 */
-	public final static int version = 0x20130310;
+  /**Version and history
+   * <ul>
+   * <li>2013-03-10: Hartmut chg: <:scriptclass:JavaPath> is supported up to now. Usage for docu generation with other/more capability.
+   * <li>2011-08-13: {@link ZmakeGenerator} regards < ?expandFiles>, see there.
+   * <li>2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
+   * <li>2011-02-01: Hartmut creation. Before that, the {@link org.vishia.zbnf.Zmake} exists (in the zbnf-package)
+   *   which produces only ANT files. This solution bases on them, but it is more universal.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  @SuppressWarnings("hiding")
+  static final public int version = 20131029;
 	
 	
 	private static class CallingArgs extends Zbnf2Text.Args
@@ -509,9 +535,9 @@ public class Zmake extends Zbnf2Text
     if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
     
     ///
-    ZGen.Args argsZ = new ZGen.Args();
-    ZGen zbatch = new ZGen(argsZ, console);
-    ZGenScript genScript; // = new JbatchScript(textGen, console);
+    //ZGen.Args argsZ = new ZGen.Args();
+    //ZGen zbatch = new ZGen(argsZ, console);
+    //ZGenScript genScript; // = new JbatchScript(textGen, console);
     
     //File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
     //genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
@@ -530,7 +556,7 @@ public class Zmake extends Zbnf2Text
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     //JbatchScript genScript = new JbatchScript(gen, console); //gen.parseGenScript(fileGenCtrl, null);
     File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
-    genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl);
+    ZGenScript genScript = ZGen.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl, console);
     
     //The users make file:
     final ZmakeUserScript.UserScript zmakeInput = parseUserScript(fileInput, sZbnf, console, gen, args.sCheckXmlOutput);
@@ -547,7 +573,7 @@ public class Zmake extends Zbnf2Text
     setScriptVariablesCurrDir(zmakeInput, scriptVariables);
     
     try{ 
-      gen.setScriptVariable("zmake", zmakeInput);
+      gen.setScriptVariable("zmake", 'O', zmakeInput);
       gen.execute(genScript, true, true, out);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());

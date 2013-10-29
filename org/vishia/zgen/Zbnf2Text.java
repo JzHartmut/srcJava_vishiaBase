@@ -113,14 +113,14 @@ public class Zbnf2Text extends Zbnf2Xml
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
         ZGen.Args argsZ = new ZGen.Args();
-        ZGen zbatch = new ZGen(argsZ, console);
+        //ZGen zbatch = new ZGen(argsZ, console);
         ZGenExecuter generator = new ZGenExecuter(console);
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        generator.setScriptVariable("xml", resultTree);
-        String sError = zbatch.generate(generator, fileScript, out, true, outData);
+        generator.setScriptVariable("xml", 'O', resultTree);
+        String sError = ZGen.execute(generator, fileScript, out, true, outData, console);
         out.close();
         if(sError !=null){
           console.writeError(sError);

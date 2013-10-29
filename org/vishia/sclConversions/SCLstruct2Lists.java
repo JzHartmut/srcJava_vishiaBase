@@ -967,19 +967,19 @@ variablenBlock::=
       + "<.file>"
       ;
       Writer sclOut;
-      ZGen.Args argsZ = new ZGen.Args();
-      ZGen zbatch = new ZGen(argsZ, console);
+      //ZGen.Args argsZ = new ZGen.Args();
+      //ZGen zbatch = new ZGen(argsZ, console);
       ZGenScript genScript; // = new JbatchScript(textGen, console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{
           if(args.sFileSclCtrl !=null){
-            genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileSclCtrl), new File(args.sFileSclCtrl + ".test.xml"));
+            genScript = ZGen.translateAndSetGenCtrl(new File(args.sFileSclCtrl), new File(args.sFileSclCtrl + ".test.xml"), console);
           } else {
-            genScript = zbatch.translateAndSetGenCtrl(sGenCtrlSclOamAssigment);
+            genScript = ZGen.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.setScriptVariable("scl", SCLstruct2Lists.this);
+        textGen.setScriptVariable("scl", 'O', SCLstruct2Lists.this);
         textGen.execute(genScript, true, false, sclOut);
         
         /*
@@ -997,7 +997,7 @@ variablenBlock::=
       if(args.sFileOamVariables != null){
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript = zbatch.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"));
+          genScript = ZGen.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"), console);
         } catch(Exception exc){ throw new RuntimeException(exc); }
         textGen.execute(genScript, true, false, sclOut);
         /*

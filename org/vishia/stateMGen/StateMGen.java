@@ -521,14 +521,14 @@ public class StateMGen {
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
         ZGen.Args argsZ = new ZGen.Args();
-        ZGen zbatch = new ZGen(argsZ, console);
+        //ZGen zbatch = new ZGen(argsZ, console);
         ZGenExecuter generator = new ZGenExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        generator.setScriptVariable("state", stateData);
-        String sError = zbatch.generate(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck));
+        generator.setScriptVariable("state", 'O', stateData);
+        String sError = ZGen.execute(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
         out.close();
         if(sError !=null){
           console.writeError(sError);

@@ -91,7 +91,7 @@ public final class ZGenSyntax {
     + "\n"
     //+ "setEnvVar::= [<?name>[$]<$?>] = <textDatapath?> .\n"
     + "\n"
-    + "DefStringVar::= [{ <variable?assign> = }] <textDatapath?> .\n"
+    + "DefStringVar::= <variable?defString> [ = <textDatapath?>].\n"  //[{ <variable?assign> = }] <textDatapath?> .\n"
     + "\n"
     + "Openfile::= <$\\.?name> = <textDatapath?> .\n"
     + "\n"
