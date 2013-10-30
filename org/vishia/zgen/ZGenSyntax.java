@@ -234,7 +234,7 @@ public final class ZGenSyntax {
     + "\n"
     + "assignment::= [{ <variable?assign> = }] <objExpr?> ;.\n"
     + "\n"
-    + "threadBlock::=[ <variable?assign> = ] thread <statementBlock?>.\n"
+    + "threadBlock::= Thread <variable?defThreadVar> [;| = [thread] <statementBlock>] | [<variable?assignThreadVar> =] thread <statementBlock?>.\n"
     + "\n"
     + "srcdst::= <textValue?p1> <textValue?p2> .\n"
     + "\n"

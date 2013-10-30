@@ -193,6 +193,7 @@ public class ZGen
    * @return TODO ? any error string. null if successfull.
    */
   public static String jbatch(String script, ZGenExecuter.ExecuteLevel zgenExecuteLevel){
+    boolean bWaitForThreads = false;
     StringBuilder u = new StringBuilder();
     //ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     MainCmdLogging_ifc log = zgenExecuteLevel.log();
@@ -209,7 +210,8 @@ public class ZGen
         DataAccess.Variable var = entry.getValue();
         zgen.executer.setScriptVariable(var.name(), var.type(), var.value());
       }
-      zgen.executer.execute(genScript, true, true, u);
+      
+      zgen.executer.execute(genScript, true, bWaitForThreads, u);
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Exception exc) {
       String sError = exc.getMessage();
