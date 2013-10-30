@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.vishia.cmd.ZGenExecuter;
 import org.vishia.cmd.ZGenScript;
@@ -17,6 +18,7 @@ import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.Assert;
+import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
@@ -192,12 +194,23 @@ public class ZGen
    */
   public static String jbatch(String script, ZGenExecuter.ExecuteLevel zgenExecuteLevel){
     StringBuilder u = new StringBuilder();
-    ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+    //ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     MainCmdLogging_ifc log = zgenExecuteLevel.log();
+    Args args = new Args();
+    args.sFileScript = script;
+    ZGen zgen = new ZGen(args, log);
+    //Copy all local variables of the calling level as script variables.
     try { 
       File fileScript = new File(script);
-      genScript = translateAndSetGenCtrl(fileScript, null, log);
-      zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
+      ZGenScript genScript = translateAndSetGenCtrl(fileScript, null, log);
+      zgen.executer.genScriptVariables(genScript, true);
+      //after setting the standard script variable, copy from given. It may override a script variable by its value.
+      for(Map.Entry<String, DataAccess.Variable> entry: zgenExecuteLevel.localVariables.entrySet()){
+        DataAccess.Variable var = entry.getValue();
+        zgen.executer.setScriptVariable(var.name(), var.type(), var.value());
+      }
+      zgen.executer.execute(genScript, true, true, u);
+      //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Exception exc) {
       String sError = exc.getMessage();
       System.err.println(sError);
@@ -345,11 +358,11 @@ public class ZGen
   { boolean bOk;
     ZbnfParser parserGenCtrl = new ZbnfParser(log); //console);
     parserGenCtrl.setSyntax(sZbnf4GenCtrl);
-    if(log.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
+    if(log !=null && log.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
       log.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
       parserGenCtrl.reportSyntax(log, MainCmdLogging_ifc.fineInfo);
     }
-    log.writeInfo(" ... ");
+    //log.writeInfo(" ... ");
     return translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent, log);
   }
     
