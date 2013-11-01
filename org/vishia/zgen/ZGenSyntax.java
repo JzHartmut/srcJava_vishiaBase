@@ -129,7 +129,7 @@ public final class ZGenSyntax {
     
     
     
-    + "subtext::= <$?name> ( [ { <namedArgument?formalArgument> ? , }] ) <textExpr?>.\n"
+    + "subtext::= <$?name> ( [ { <namedArgument?formalArgument> ? , }] ) <textExpr>.\n"
     + "\n"
     + "envVar::= <$?name> = <textDatapath?>.\n"
     + "\n"
@@ -185,7 +185,7 @@ public final class ZGenSyntax {
     + "| \\<*<dataText>\n"
     + "| \\<:n\\><?newline>\n"
     + "| \\<:\\><textExprNoWhiteSpaces?>\\<\\.\\>"               //flat nesting
-    + "| <*|\\<:|\\<+|\\<=|\\<*|\\<\\.?nonEmptyText>    ##text inclusive leading and trailing whitespaces\n"
+    + "| <*|\\<:|\\<+|\\<=|\\<*|\\<\\.?nonEmptyText>    ##non-empty text inclusive leading and trailing whitespaces\n"
     + "]\n"
     + "}.\n"
     + "\n"
@@ -199,16 +199,16 @@ public final class ZGenSyntax {
     + "| \\<*<dataText>\n"
     + "| \\<:n\\><?newline>\n"
     + "| \\<:\\><textExpr?>\\<\\.\\>"               //flat nesting
-    + "| <*|\\<:|\\<+|\\<=|\\<*|\\<\\.?textReplf>    ##text inclusive leading and trailing whitespaces\n"
+    + "| <*|\\<:|\\<+|\\<=|\\<*|\\<\\.?textReplLf>    ##text inclusive leading and trailing whitespaces\n"
     + "]\n"
     + "}.\n"
     + "\n"
     + "dataText::=<datapath>[ : <\"\"?formatText>] \\>.     ##<*expr: format>\n"
     + "\n"
-    + "forContainer::= [$]<$?@name> : <objExpr?> \\> <textExpr?> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
+    + "forContainer::= [$]<$?@name> : <objExpr?> \\> <textExpr> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
     + "\n"
     + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <textExpr?elseBlock> ] \\<\\.if\\>.\n"
-    + "ifBlock::= <condition> \\> <textExpr?>.\n"
+    + "ifBlock::= <condition> \\> <textExpr>.\n"
     + "\n"
     + "\n"
     + "subScript::= <$?name> ( [{ <namedArgument?formalArgument> ? , }] ) <statementBlock?>. \n"
@@ -227,7 +227,7 @@ public final class ZGenSyntax {
     + "| if <ifScript?if> \n"
     + "| while <whileScript?> \n"
     + "| <threadBlock> \n"
-    + "| \\<+ <textOut> \n"
+    + "| <textOut> \n"
     + "| <cmdLineWait?cmdLine> \n"  ///
     + "| start <cmdLine?cmdStart> \n"
     + "| move <srcdst?move> ; \n"
@@ -262,7 +262,7 @@ public final class ZGenSyntax {
     + "callSubroutine::= <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
     + "callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
-    + "textOut::= <variable?assign> \\> <textExpr?>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + "textOut::= \\<+ <variable?assign> \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
     + "\n"
     + "cmdLineWait::=[{ <variable?assign> += }] cmd <cmdLine?>.\n"
     + "\n"
