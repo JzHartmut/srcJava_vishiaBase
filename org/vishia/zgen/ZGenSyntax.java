@@ -73,7 +73,9 @@ public final class ZGenSyntax {
     + "{ <DefVariables?> \n"
     + "| subtext  <subtext?subScript> \n"
     + "| sub <subScript> \n"
+    + "| class <subClass> \n"
     + "| main ( ) <statementBlock?mainScript> \n"
+    + "| // <*\\n?> ##line comment in C style\n"
     + "| ==endZGen==<*\\e?> \n"
     + "} \\e.\n"
     + "\n"
@@ -87,13 +89,13 @@ public final class ZGenSyntax {
     + "| set <DefStringVar?setEnvVar> ; \n"
     + ".\n" ///
     + "\n"
-    + "DefObjVar::= <$\\.?name> [ = <objExpr?>].\n"  //a text or object or expression
+    + "DefObjVar::= <variable?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
     + "\n"
     //+ "setEnvVar::= [<?name>[$]<$?>] = <textDatapath?> .\n"
     + "\n"
-    + "DefStringVar::= <variable?defString> [ = <textDatapath?>].\n"  //[{ <variable?assign> = }] <textDatapath?> .\n"
+    + "DefStringVar::= <variable?defVariable> [ = <textDatapath?>].\n"  //[{ <variable?assign> = }] <textDatapath?> .\n"
     + "\n"
-    + "Openfile::= <$\\.?name> = <textDatapath?> .\n"
+    + "Openfile::= <variable?defVariable> = <textDatapath?> .\n"
     + "\n"
     + "\n"
     + "variable::= <$@-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
@@ -116,6 +118,13 @@ public final class ZGenSyntax {
     
     
     
+    + "subClass::= <$?name> \\{ \n"
+    + "{ <DefVariables?> \n"
+    + "| subtext  <subtext?subScript> \n"
+    + "| sub <subScript> \n"
+    + "| class <subClass> \n"
+    + "} \\}. \n"
+    + "\n"
     
     
     
@@ -209,8 +218,8 @@ public final class ZGenSyntax {
 
     + "statement::=\n"
     + "  <statementBlock?statementBlock> \n"
-    + "| REM <*\n?> ##Remark like in batch files\n"
-    + "| // <*\n?> ##line commment in C style\n"
+    + "| REM <*\\n?> ##Remark like in batch files\n"
+    + "| // <*\\n?> ##line commment in C style\n"
     + "| <DefVariables?> \n"
     + "| for <forScript?forContainer> \n"
     + "| call <callSubroutine?call> \n"
@@ -253,7 +262,7 @@ public final class ZGenSyntax {
     + "callSubroutine::= <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
     + "callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
-    + "textOut::= <$\\.?name> \\> <textExpr?>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + "textOut::= <variable?assign> \\> <textExpr?>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
     + "\n"
     + "cmdLineWait::=[{ <variable?assign> += }] cmd <cmdLine?>.\n"
     + "\n"
