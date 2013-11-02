@@ -7,7 +7,9 @@ import org.vishia.util.DataAccess;
 
 public class ZGenUserExample
 {
-  public final String simpeTestString = "the simple test string.";
+  public final String simpeTestFinalString = "the final simple test string.";
+  
+  public String simpeTestString = "the simple test string.";
   
   
   public final Map<String, DataAccess.Variable> testVariables = new TreeMap<String, DataAccess.Variable>();

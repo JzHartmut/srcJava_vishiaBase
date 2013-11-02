@@ -397,7 +397,7 @@ public class ZGen
     final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(log);
 
     ZGenScript script = new ZGenScript(null, log);
-    ZGenScript.ZbnfMainGenCtrl zbnfGenCtrl = script.new ZbnfMainGenCtrl();
+    ZGenScript.ZbnfMainGenCtrl zbnfGenCtrl = new ZGenScript.ZbnfMainGenCtrl(script);
     parserGenCtrl2Java.setContent(ZGenScript.ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
     
     //if(this.scriptclassMain ==null){
