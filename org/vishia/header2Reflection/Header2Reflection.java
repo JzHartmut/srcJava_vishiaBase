@@ -111,7 +111,7 @@ public class Header2Reflection
   /**Aggregation to the Console implementation class.*/
   MainCmdLogging_ifc console;
 
-  private static class FileIn
+  static class FileIn
   {
     /**Input files. */
     final List<File> listFileIn = new LinkedList<File>();
@@ -296,7 +296,7 @@ public class Header2Reflection
   /**This class holds some informations about a type of a element (attrubute). 
    * Instances of this class are used only in Stack for temporary values.
    */
-  private static class FieldTypeInfos
+  static class FieldTypeInfos
   {
     /**Information about scalar basic types. */
     int bytesScalarType;

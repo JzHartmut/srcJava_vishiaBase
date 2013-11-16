@@ -18,7 +18,7 @@ public class BillofMaterialData_Methods implements BillOfMaterial_Zbnf_ifc.ZbnfS
 {
 
   
-  private static class DateAndOrder 
+  static class DateAndOrder 
     implements BillOfMaterial_Zbnf_ifc.ZbnfStore_date, BillOfMaterial_Zbnf_ifc.ZbnfStore_order
   {
     /**In the example the part number should be composed with the 3 separate numbers. */
@@ -51,7 +51,7 @@ public class BillofMaterialData_Methods implements BillOfMaterial_Zbnf_ifc.ZbnfS
   
   
   /**ZBNF: class to store values with semantic "position". */
-  private static class Position implements BillOfMaterial_Zbnf_ifc.ZbnfStore_position
+  static class Position implements BillOfMaterial_Zbnf_ifc.ZbnfStore_position
   {
     /**ZBNF: element to store values with semantic "amount" inside syntax-prescript "position". */
     public int amount;
@@ -80,6 +80,7 @@ public class BillofMaterialData_Methods implements BillOfMaterial_Zbnf_ifc.ZbnfS
     { this.value = value;
     }
 
+    @Override
     public String toString()
     { return "" + amount + " x " + code + " " + value;
     }
@@ -119,6 +120,7 @@ public class BillofMaterialData_Methods implements BillOfMaterial_Zbnf_ifc.ZbnfS
    * useable to debug view in eclipse or for debug reports.
    * @see java.lang.Object#toString()
    */
+  @Override
   public String toString()
   { return "Bill of material, order=0x" + Integer.toHexString(basicData.partNumber) + " from date "
            + basicData.date + ", " + positions.size() + " positions.";
