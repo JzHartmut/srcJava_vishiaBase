@@ -35,14 +35,16 @@ public class ByteDataSymbolicAccessReadConfig extends ByteDataSymbolicAccess {
   /**Version, able to read as hex yyyymmdd.
 	 * Changes:
 	 * <ul>
-	 * <li>2012-03-02 Hartmut new: extract from its super class, only
+   * <li>2013-11-22 Hartmut new: {@link #readVariableCfg(String, String)}, supports more as one instances
+   *   with the same variable configuration, but from divergent sources. The variables should have a prefix. 
+   * <li>2012-03-02 Hartmut new: extract from its super class, only
 	 * </ul>
 	 */
 	public final static int versionStamp = 0x20120302;
 
 
 	public class ZbnfResult
-	{ private List<Variable> variable1 = new LinkedList<Variable>();
+	{ private final List<Variable> variable1 = new LinkedList<Variable>();
 	  //public Variable new_variable(){ return new Variable(); }
 
 		/**New instance for ZBNF-component: <variable> */
@@ -75,8 +77,18 @@ public class ByteDataSymbolicAccessReadConfig extends ByteDataSymbolicAccess {
     super(log);
   }
 
-	public int readVariableCfg(String sFileCfg)
-	{
+  
+  
+  public int readVariableCfg(String sFileCfg)
+  {
+    return readVariableCfg("", sFileCfg); 
+  }
+  
+  
+  
+  
+  public int readVariableCfg(String preName, String sFileCfg)
+  {
 		ZbnfJavaOutput parser = new ZbnfJavaOutput(log);
 		ZbnfResult rootParseResult = new ZbnfResult();
 		File fileConfig = new File(sFileCfg);
@@ -88,7 +100,7 @@ public class ByteDataSymbolicAccessReadConfig extends ByteDataSymbolicAccess {
 	  } else {
 	  	//success parsing
 	  	for(Variable item: rootParseResult.variable1){
-	  		addVariable(item.name, item);
+	  		addVariable(preName + item.name, item);
 	  		nrofVariable +=1;
 	  	}
 		}
