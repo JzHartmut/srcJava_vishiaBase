@@ -263,8 +263,12 @@ public class ZGen
     String sError = null;
     ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     try { genScript = translateAndSetGenCtrl(fileScript, testOut, log);
+    } catch (ParseException exc){
+      sError = exc.getMessage();
+      System.err.println("ZGen - Error parsing genscript; " + fileScript.getAbsolutePath() + "; " + sError); 
     } catch (Exception exc) {
       sError = exc.getMessage();
+      System.err.println(Assert.exceptionInfo("ZGen - exception execute parsing;", exc,0,10));
     }
     //genScript = parseGenScript(fileScript, testOut);
     if(sError == null) { // && out !=null){
@@ -357,15 +361,18 @@ public class ZGen
   public static ZGenScript translateAndSetGenCtrl(StringPartScan sZbnf4GenCtrl, StringPartScan spGenCtrl
       , File checkXmlOutput, File fileParent, MainCmdLogging_ifc log) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
-  { boolean bOk;
-    ZbnfParser parserGenCtrl = new ZbnfParser(log); //console);
+  { final MainCmdLogging_ifc log1;
+    if(log == null){
+      log1 = new MainCmdLoggingStream(System.out);
+    } else { log1 = log; }
+    ZbnfParser parserGenCtrl = new ZbnfParser(log1); //console);
     parserGenCtrl.setSyntax(sZbnf4GenCtrl);
-    if(log !=null && log.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
-      log.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
-      parserGenCtrl.reportSyntax(log, MainCmdLogging_ifc.fineInfo);
+    if(log1.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
+      log1.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
+      parserGenCtrl.reportSyntax(log1, MainCmdLogging_ifc.fineInfo);
     }
-    //log.writeInfo(" ... ");
-    return translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent, log);
+    //log1.writeInfo(" ... ");
+    return translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent, log1);
   }
     
     
