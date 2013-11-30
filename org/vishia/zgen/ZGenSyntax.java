@@ -5,6 +5,7 @@ public final class ZGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-12-01 Hartmut new debug 
    * <li>2013-07-07 Hartmut improved: The older text generation view is now removed.
    *   <ul>
    *   <li>include "file" instead <:include:file>
@@ -56,13 +57,13 @@ public final class ZGenSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public int version = 20131003;
+  static final public int version = 20131201;
 
   
   public final static String syntax =
       "$comment=(?...?).\n"
     + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
-    + "$keywords= new | java | cmd | start | stdout | stdin | stderr | pipe | subtext | sub | main | call | cd "
+    + "$keywords= new | java | cmd | start | debug | stdout | stdin | stderr | pipe | subtext | sub | main | call | cd "
     + "| StringBuffer | String | List | Openfile | Obj | Set | set | include | zbatch "
     + "| break | return | exit | onerror | for | while | if | elsif | else . \n"
     + "\n"
@@ -75,7 +76,8 @@ public final class ZGenSyntax {
     + "| sub <subScript> \n"
     + "| class <subClass> \n"
     + "| main ( ) <statementBlock?mainScript> \n"
-    + "| // <*\\n?> ##line comment in C style\n"
+    + "| //<*\\n?> ##line comment in C style\n"
+    + "| /*<*|*/?>*/ ##block commment in C style\n"
     + "| ==endZGen==<*\\e?> \n"
     + "} \\e.\n"
     + "\n"
@@ -219,7 +221,8 @@ public final class ZGenSyntax {
     + "statement::=\n"
     + "  <statementBlock?statementBlock> \n"
     + "| REM <*\\n?> ##Remark like in batch files\n"
-    + "| // <*\\n?> ##line commment in C style\n"
+    + "| //<*\\n?> ##line commment in C style\n"
+    + "| /*<*|*/?>*/ ##block commment in C style\n"
     + "| <DefVariables?> \n"
     + "| for <forScript?forContainer> \n"
     + "| call <callSubroutine?call> \n"
@@ -238,6 +241,7 @@ public final class ZGenSyntax {
     + "| return <textValue?return> ;\n"
     + "| exit <#?exitScript> ;\n"
     + "| onerror <onerror> \n"
+    + "| debug <textValue?debug> ; \n"
     + "| ; \n"
     + ".\n"
     + "\n"
