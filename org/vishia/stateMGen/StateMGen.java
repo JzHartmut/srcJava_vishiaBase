@@ -500,7 +500,7 @@ public class StateMGen {
   }
   
   
-  void execute(Args args) throws IOException
+  void execute(Args args) throws IOException, IllegalAccessException
   {
     ZbnfResultData stateData = parseAndStoreInput(args);
     if(stateData != null){
@@ -527,7 +527,7 @@ public class StateMGen {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        generator.setScriptVariable("state", 'O', stateData);
+        generator.setScriptVariable("state", 'O', stateData, true);
         String sError = ZGen.execute(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
         out.close();
         if(sError !=null){

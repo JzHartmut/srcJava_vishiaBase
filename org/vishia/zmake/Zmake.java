@@ -564,7 +564,7 @@ public class Zmake extends Zbnf2Text
     Writer out = new FileWriter(fileOut);
     Map<String, DataAccess.Variable> scriptVariables;
     try{ 
-      scriptVariables = gen.genScriptVariables(genScript, true);
+      scriptVariables = gen.genScriptVariables(genScript, true, null);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
       scriptVariables = null;
@@ -573,7 +573,7 @@ public class Zmake extends Zbnf2Text
     setScriptVariablesCurrDir(zmakeInput, scriptVariables);
     
     try{ 
-      gen.setScriptVariable("zmake", 'O', zmakeInput);
+      gen.setScriptVariable("zmake", 'O', zmakeInput, true);
       gen.execute(genScript, true, true, out);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());

@@ -175,8 +175,9 @@ public class ZGen
    * Therefore it is a 'Java batch executer'.
    * @param script Path to the script.
    * @return any error string. null if successfull.
+   * @throws IllegalAccessException 
    */
-  public static String jbatch(String script){
+  public static String jbatch(String script) throws IllegalAccessException{
     
     Args args = new Args();
     args.sFileScript = script;
@@ -187,7 +188,7 @@ public class ZGen
   
   
   
-  /**Parses the script and executes it independent from any other inputs but uses a current ZGen ExecuterLevel.
+  /**Parses the script and executes it with a given ZGen ExecuterLevel.
    * That is the possibility to start a independent ZGen execution in a ZGen script itself.
    * @param script Path to the script.
    * @return TODO ? any error string. null if successfull.
@@ -204,13 +205,8 @@ public class ZGen
     try { 
       File fileScript = new File(script);
       ZGenScript genScript = translateAndSetGenCtrl(fileScript, null, log);
-      zgen.executer.genScriptVariables(genScript, true);
-      //after setting the standard script variable, copy from given. It may override a script variable by its value.
-      for(Map.Entry<String, DataAccess.Variable> entry: zgenExecuteLevel.localVariables.entrySet()){
-        DataAccess.Variable var = entry.getValue();
-        zgen.executer.setScriptVariable(var.name(), var.type(), var.value());
-      }
-      
+      //the script variables are build from the local ones of the calling script:
+      zgen.executer.genScriptVariables(genScript, true, zgenExecuteLevel.localVariables);
       zgen.executer.execute(genScript, true, bWaitForThreads, u);
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Exception exc) {
@@ -223,7 +219,7 @@ public class ZGen
   
   
   
-  public String execute(){
+  public String execute() throws IllegalAccessException{
     String sError = null;
     Appendable out = null;
     if(args.sFileTextOut !=null){
@@ -239,7 +235,7 @@ public class ZGen
     File fileIn = new File(args.sFileScript);
     char nrArg = '1';
     for(String argu: args.userArgs){
-      executer.setScriptVariable("$" + nrArg, 'S', argu);
+      executer.setScriptVariable("$" + nrArg, 'S', argu, true);
       nrArg +=1;
     }
     sError = execute(executer, fileIn, out, true, args.fileTestXml, log);
@@ -259,7 +255,7 @@ public class ZGen
    * @return null if no error or an error string.
    */
   public static String execute(ZGenExecuter executer, File fileScript, Appendable out, boolean accessPrivate
-      , File testOut, MainCmdLogging_ifc log){
+      , File testOut, MainCmdLogging_ifc log) {
     String sError = null;
     ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     try { genScript = translateAndSetGenCtrl(fileScript, testOut, log);
@@ -275,7 +271,7 @@ public class ZGen
       try{
         executer.execute(genScript, accessPrivate, true, out);
         //out.close();
-      } catch(IOException exc){
+      } catch(Exception exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));
       }
     }

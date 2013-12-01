@@ -402,7 +402,7 @@ public class ZmakeUserScript
      */
     public void text(Appendable u) throws Exception{ 
       ZGenExecuter gen = script.jbatexecuter;
-      ZGenExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
+      ZGenExecuter.ExecuteLevel genLevel = gen.scriptLevel(); //new ExecuteLevel(null, null);
       CharSequence content = genLevel.evalString(this);
       u.append(content);
     }
@@ -499,7 +499,7 @@ public class ZmakeUserScript
               parentTarget.script.abortOnError(u,pos);
             } else {
               ZGenExecuter gen = parentTarget.script.jbatexecuter;
-              ZGenExecuter.ExecuteLevel genLevel = gen.new ExecuteLevel(null, null);
+              ZGenExecuter.ExecuteLevel genLevel = gen.scriptLevel(); //.new ExecuteLevel(null, null);
               CharSequence content = genLevel.evalString(variable);
               u.append(content);
             }

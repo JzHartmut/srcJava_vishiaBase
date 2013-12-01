@@ -766,8 +766,9 @@ variablenBlock::=
   /**Main execution routine.
    * @param args The args, typical got from the command line invocation.
    * @throws IOException
+   * @throws IllegalAccessException 
    */
-  void execute(Args args) throws IOException
+  void execute(Args args) throws IOException, IllegalAccessException
   {
     boolean bOk;
     ZbnfResultDataCfg configData;
@@ -922,8 +923,9 @@ variablenBlock::=
      * @calls {@link #generateStructure()}
      * @return true if success
      * @throws IOException
+     * @throws IllegalAccessException 
      */
-    private boolean generateOutFiles(String sPathSrc) throws IOException
+    private boolean generateOutFiles(String sPathSrc) throws IOException, IllegalAccessException
     {
       ZGenExecuter textGen = new ZGenExecuter(console);
       
@@ -979,7 +981,7 @@ variablenBlock::=
             genScript = ZGen.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.setScriptVariable("scl", 'O', SCLstruct2Lists.this);
+        textGen.setScriptVariable("scl", 'O', SCLstruct2Lists.this, true);
         textGen.execute(genScript, true, false, sclOut);
         
         /*

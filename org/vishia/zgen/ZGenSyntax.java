@@ -175,7 +175,7 @@ public final class ZGenSyntax {
     + "\n"
     //+ "objvalue::=\n"
     + "\n"
-    + "namedArgument::= <$?name>[ = <objExpr?>].\n"
+    + "namedArgument::= [<?name>[$]<$?>|xxx][ = <objExpr?>].\n"
     + "\n"
     
     + "textExpr::=\n"

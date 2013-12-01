@@ -119,7 +119,7 @@ public class Zbnf2Text extends Zbnf2Xml
           //outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        generator.setScriptVariable("xml", 'O', resultTree);
+        generator.setScriptVariable("xml", 'O', resultTree, true);
         String sError = ZGen.execute(generator, fileScript, out, true, outData, console);
         out.close();
         if(sError !=null){
