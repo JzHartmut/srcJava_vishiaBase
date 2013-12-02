@@ -2541,7 +2541,7 @@ public class ZbnfParser
    * @return The part of input on error position.
    */
   public String getFoundedInputOnError()
-  { StringBuilder u = new StringBuilder(sRightestError);
+  { //StringBuilder u = new StringBuilder(sRightestError);
     
     //TODO use u to correct
     String sError = sRightestError.toString();
