@@ -35,6 +35,9 @@ public class SCLstruct2Lists
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-09-07 Hartmut chg: Now recognizes AT, refactoring: The {@link GenerateVariableImport#posOamVariable}
+   *   is the main instance which counts the byte-position of variable. For ,,struct,, there is a local instance
+   *   {@link SaveDataStruct#position}.     
    * <li>2013-09-07 Hartmut chg: Adaption to Jbatch
    * <li>2013-02-00 Hartmut chg: Script controlled
    * <li>2011-00-00 Hartmut created: first version non-script controlled.
@@ -121,6 +124,10 @@ public class SCLstruct2Lists
   
   /**This index assigns the S7-Types to the appropriate types for header-files, WinCC etc. */
   private final Map<String, TypeConversion> indexTypes = new TreeMap<String, TypeConversion>();
+  
+  
+  /**Index of all variables which its position to search a AT alias. */
+  final Map<String, Variable> indexVariables = new TreeMap<String, Variable>();
   
   
   ShortenString shortenScl24Names = new ShortenString(24);
@@ -308,9 +315,9 @@ public class SCLstruct2Lists
   static class PositionOfVariable extends PositionElementInStruct
   {
     /**Position of variable in the all-Variable-byte[] red from a file-image of DB or from IP-Telg. */
-    int posVariable = 0;
+    int XXXposVariable = 0;
     /**Bit mask for boolean variables, 0..8000 for Oam-Access */
-    int bitMask = 0x1;
+    int XXXbitMask = 0x1;
     
     
     
@@ -327,6 +334,10 @@ public class SCLstruct2Lists
     /**From ZBNF: <$?name>. */
     public List<String> name;
     
+    /**From ZBNF {@link #set_atName(String)}, [AT <$?atName>] 
+     * If this atName is given, the variable does not need memory space.
+     */
+    String atName;
     
     private List<ZbnfVariable> structZbnfVariables;
     
@@ -367,6 +378,10 @@ public class SCLstruct2Lists
     /**from ZBNF: set if '<?oam>' is found. Only if it is set, a variable should be generated. */
     public void set_oam()
     { oam = true;
+    }
+    
+    public void set_atName(String val){
+      atName = val;
     }
     
     //public boolean noVariable;
@@ -514,7 +529,7 @@ variablenBlock::=
    */
   static class Variable
   { String sName;
-    int pos;
+    int posVarAbs;
     int boolMask;
     TypeConversion type;
     
@@ -534,7 +549,7 @@ variablenBlock::=
     Variable(ZbnfVariable zbnfVariable){ this.zbnfVariable = zbnfVariable; }
     
     
-    @Override public String toString(){ return sName + "@" + pos + ":" + (type==null? "?" : type.typeCharS7); }
+    @Override public String toString(){ return sName + "@" + posVarAbs + ":" + (type==null? "?" : type.typeCharS7); }
     
   }
 
@@ -552,8 +567,6 @@ variablenBlock::=
     
     public SaveDataStruct(String name) 
     { super(0, 'O', 'O', name, name, name);
-      this.position.posVariable = 0;
-      this.position.bitMask = 0x1;
     }
 
 
@@ -604,36 +617,31 @@ variablenBlock::=
   static void completeVariableWithType(Variable variable, TypeConversion type, PositionOfVariable position) //, VariablenBlock block)
   {
     if(type.typeCharJava == 'Z'){
-      variable.boolMask = position.bitMask;
+      variable.boolMask = position.getMaskBit();
       variable.nrofBytes = 0;
-      variable.pos = position.posVariable;
-      while(--variable.nrofElements >=0){
-        position.bitMask <<=1;
-        if(position.bitMask >0x80){
-          position.bitMask = 0x1;  //for the next boolean.
-          position.posVariable += 1;
-        }
-      }
+      variable.posVarAbs = position.getIxByte();
     } else {
-      if(position.bitMask != 0x1){
-        position.bitMask = 0x1;  //start next boolean with it.
-        position.posVariable +=1; //rest of BOOL unused.
-      }
-      if(type.nrofBytes >1 && (position.posVariable & 1) !=0){
-        //even address, use odd
-        position.posVariable +=1;
-      }
-      variable.pos = position.posVariable;
+      variable.posVarAbs = position.getIxByte();
       if(type.typeCharJava == 's'){
-        position.posVariable += (variable.zbnfVariable.stringlen +2)* variable.nrofElements;
         variable.nrofBytes = variable.zbnfVariable.stringlen +2;
       } else {
-        position.posVariable += type.nrofBytes * variable.nrofElements;
         variable.nrofBytes = type.nrofBytes;
       }  
     }
   }
   
+  
+  
+  static void completeVariableStruct(Variable variable, PositionOfVariable position) //, VariablenBlock block)
+  {
+    variable.posVarAbs = position.getIxByte();
+  }
+  
+  
+  
+  static void completeVariableAfterStructGeneration(Variable variable, int nrofBytesStruct){
+    variable.nrofBytes = nrofBytesStruct;
+  }
   
   
   /**This inner class encapsulates the conversion of the parsed Data 
@@ -725,10 +733,10 @@ variablenBlock::=
         String sMask = Integer.toHexString(bitMask);
         dbList.append("\n").append(block.winCCfolder).append('/').append(sVariable).append(": ")
           .append(src.type.typeCharJava).append(" @")
-          .append(src.pos+posBase).append(".0x").append(Integer.toHexString(src.boolMask)).append(";//DB").append(block.nrDB);
+          .append(src.posVarAbs+posBase).append(".0x").append(Integer.toHexString(src.boolMask)).append(";//DB").append(block.nrDB);
       } else {
         dbList.append("\n").append(block.winCCfolder).append('/').append(sVariable).append(": ").append(src.type.typeCharJava)
-          .append(" @").append(src.pos+posBase).append(" +").append(src.nrofBytes);
+          .append(" @").append(src.posVarAbs + posBase).append(" +").append(src.nrofBytes);
         if(src.nrofElements >1){
           dbList.append(" *").append(src.nrofElements);
         }
@@ -796,6 +804,7 @@ variablenBlock::=
       }
       
       generateVariableImport = new GenerateVariableImport(sFileVariableImport, configData, output);
+      
       generateVariableImport.generateOutFiles(args.sSrcPath);
       if(output !=null)
       { output.close();
@@ -870,6 +879,15 @@ variablenBlock::=
     //int posOamVariable = 0;
     
     
+    /**Counts the position of variables for the cfg output file.
+     * <ul>
+     * <li>If a the SCL-File for variable gathering is generated, only variables with (@ oam) are gathered
+     *   and counted here.
+     * <li>If argument -all {@link Args#bAllVariable} is given, all variables are countered. Usual there come
+     *   from only one SCL-Input-File.
+     * </ul>  
+     * 
+     */
     PositionOfVariable posOamVariable = new PositionOfVariable();
     
     //StringBuilder sclVariables = new StringBuilder(8000);
@@ -942,9 +960,9 @@ variablenBlock::=
       } else {
         sPathUDTbase = dirIn.getAbsolutePath() + "/";
       }
-      
+      posOamVariable.setStartPos(0);
       for(ZbnfVariablenBlock block: configData.variablenBlock) {
-        generateOneSclFile.generateOneSclFile(sPathUDTbase, block);
+        generateOneSclFile.generateOneSclFile(sPathUDTbase, block, posOamVariable);
       }
       
       String sGenCtrlSclOamAssigment = 
@@ -1032,7 +1050,7 @@ variablenBlock::=
     /**Result data of parsing the UDT-Files. */
     ZbnfResultFileSCL zbnfResultDataUDT; 
  
-    final PositionOfVariable positionElementAll = new PositionOfVariable();
+    //final PositionOfVariable positionElementAll = new PositionOfVariable();
     
     GenerateOneSCLfile()
     {
@@ -1070,7 +1088,7 @@ variablenBlock::=
     
     
     
-    void generateOneSclFile(String sPathUDTbase, ZbnfVariablenBlock block) 
+    void generateOneSclFile(String sPathUDTbase, ZbnfVariablenBlock block, PositionOfVariable posOamVariable) 
     throws IOException
     {
       //block.lengthPreSuffix = (block.prefix !=null ? block.prefix.length() : 0) + (block.suffix !=null ? block.suffix.length() : 0);
@@ -1084,8 +1102,8 @@ variablenBlock::=
           dataStruct.position.adjustNonBool(nrofBytes);
           dataStruct.nrofBytes = nrofBytes;
         } else {
-          positionElementAll.setStartPos(block.nrByte);
-          generateForVariables("", zbnfResultDataUDT.variable, null, block, positionElementAll,  0);
+          //positionElementAll.setStartPos(block.nrByte);
+          generateForVariables("", zbnfResultDataUDT.variable, null, block, posOamVariable,  0);
         }
       }
     }    
@@ -1110,55 +1128,26 @@ variablenBlock::=
       for(Variable variable: variables){
         if(variable.sName.equals("cub2"))
           stop();
-        if(variable.structVariables !=null){  //internal data struct inside the fb
-          if(recursiveCt > 10) throw new IllegalArgumentException("too many recursions");
-          //String nameStruct2 = nameStruct + variable.sName + ".";
-          bytePos += generateForVariables(nameStruct, variable.structVariables, dataStruct, block, positionElement, recursiveCt+1);  
-        }
-        else {
-          variable.type = indexTypes.get(variable.zbnfVariable.type);  //basicTypes
-          if(variable.type == null){
-            //not a basic type
-            String structType = variable.zbnfVariable.type;
-            if(structType.equals("SES_ctrl_CalcUcapbmax"))
-              Assert.stop();
-            if(structType.equals("SES_capb_ActValues_t"))
-              Assert.stop();
-            variable.type = allDataStruct.get(structType);
+        if(variable.zbnfVariable.atName !=null){
+          //it is an alias or union, search its position.
+          Variable atVariable = indexVariables.get(variable.zbnfVariable.atName);
+          PositionOfVariable posAt = new PositionOfVariable();
+          posAt.setStartPos(atVariable.posVarAbs);
+          int nrofBytes = generateForSimpleOrStructVariable(nameStruct, variable, dataStruct, block, posAt, recursiveCt);
+          variable.nrofElements = nrofBytes;
+          Assert.stop();
+        } else {
+          if(variable.structVariables !=null){  //internal data struct inside the fb
+            if(recursiveCt > 10) throw new IllegalArgumentException("too many recursions");
+            completeVariableStruct(variable, positionElement);
+            int nrofBytesStruct = generateForVariables(nameStruct, variable.structVariables, dataStruct, block, positionElement, recursiveCt+1);  
+            completeVariableAfterStructGeneration(variable, nrofBytesStruct);
+            indexVariables.put(variable.sName, variable);
+            bytePos += nrofBytesStruct;
           }
-          //either a simple variable or an external data struct, other FB etc.
-          if(variable.type == null){
-            console.writeError("unknown type: " + variable.zbnfVariable.type);
-          } else {
-            completeVariableWithType(variable, variable.type, positionElement);
-            if(dataStruct !=null){
-              dataStruct.saveVariable(variable); //, block);
-            } 
-            else {
-              
-              if(variable.type.typeCharS7 == 'O'){  //a complex structure
-                //includes the variables from structure.
-                SaveDataStruct dataStructIncl = (SaveDataStruct) variable.type;
-                
-                String nameStruct2 = nameStruct + variable.sName + ".";
-                bytePos += generateForVariables(nameStruct2, dataStructIncl.variables, dataStruct, block, positionElement, recursiveCt+1);
-                if(genDbConfig != null){
-                  for(Variable variableIncl: dataStructIncl.variables){
-                    String sName = variable.sName + "." + variableIncl.sName;
-                    genDbConfig.generateDbVariableLine(variable, variable.sName + ".", block, genDbConfig.posVariable);
-                    
-                  }
-                  //The next position.
-                  genDbConfig.posVariable += dataStructIncl.position.posVariable;
-                }
-              } else {
-                
-                //Type of variable is given, simpe type
-                generateForSimpleVariables(nameStruct, variable, dataStruct, block, positionElement);
-                //
-              }
-            }
-            bytePos += variable.type.nrofBytes;
+          else {
+            int nrofBytes = generateForSimpleOrStructVariable(nameStruct, variable, dataStruct, block, positionElement, recursiveCt);
+            bytePos += nrofBytes;  //in a struct.
           }
         }
       }
@@ -1169,10 +1158,64 @@ variablenBlock::=
     
     
     
+    int generateForSimpleOrStructVariable(String nameStruct, Variable variable, SaveDataStruct dataStruct
+        , ZbnfVariablenBlock block, PositionOfVariable positionElement, int recursiveCt) throws IOException {
+      final int bytesOfVariable;
+      variable.type = indexTypes.get(variable.zbnfVariable.type);  //basicTypes
+      if(variable.type == null){
+        //not a basic type
+        String structType = variable.zbnfVariable.type;
+        if(structType.equals("SES_ctrl_CalcUcapbmax"))
+          Assert.stop();
+        if(structType.equals("SES_capb_ActValues_t"))
+          Assert.stop();
+        variable.type = allDataStruct.get(structType);
+      }
+      //either a simple variable or an external data struct, other FB etc.
+      if(variable.type == null){
+        console.writeError("unknown type: " + variable.zbnfVariable.type);
+        bytesOfVariable = 0;
+      } else {
+        completeVariableWithType(variable, variable.type, positionElement);
+        if(dataStruct !=null){
+          dataStruct.saveVariable(variable); //, block);
+          bytesOfVariable = 0;   //TODO correct?
+        } 
+        else {
+          
+          if(variable.type.typeCharS7 == 'O'){  //a complex structure
+            //includes the variables from structure.
+            SaveDataStruct dataStructIncl = (SaveDataStruct) variable.type;
+            
+            String nameStruct2 = nameStruct + variable.sName + ".";
+            bytesOfVariable = generateForVariables(nameStruct2, dataStructIncl.variables, dataStruct, block, positionElement, recursiveCt+1);
+            if(genDbConfig != null){
+              for(Variable variableIncl: dataStructIncl.variables){
+                String sName = variable.sName + "." + variableIncl.sName;
+                genDbConfig.generateDbVariableLine(variable, variable.sName + ".", block, genDbConfig.posVariable);
+                
+              }
+              //The next position.
+              genDbConfig.posVariable += dataStructIncl.position.getIxByte();
+            }
+          } else {
+            
+            //Type of variable is given, simpe type
+            generateForSimpleVariables(nameStruct, variable, dataStruct, block, positionElement);
+            bytesOfVariable = variable.type.nrofBytes;
+            //
+          }
+        }
+        indexVariables.put(variable.sName, variable);
+      }
+      return bytesOfVariable;
+    }
+    
+    
     void generateForSimpleVariables(String nameStruct, Variable variable, SaveDataStruct dataStruct
-        , ZbnfVariablenBlock block, PositionElementInStruct positionElement) 
+        , ZbnfVariablenBlock block, PositionOfVariable positionElement) 
     throws IOException
-    { positionElement.adjustNonBool(variable.type.nrofBytes);
+    { //positionElement.adjustNonBool(variable.type.nrofBytes);
       console.reportln(Report.fineInfo, "DB" + positionElement.getIxByte() + " " + variable.sName + ":" + variable.type.winccType);
       if(dataStruct != null){
         //save only the struct, generate nothing:
@@ -1193,14 +1236,14 @@ variablenBlock::=
         }
         if(args.bAllVariable || variable.zbnfVariable.oam || variable.zbnfVariable.winCC){
           ////Generate the scl-FB for all oam-Variables and the access list for the Java-GUI
-          generateVariableOam(nameStruct, variable, block);
+          generateVariableOam(nameStruct, variable, block, positionElement);
         }
         if(genDbConfig != null){
           //TODO what is this, not used 10-09-30
           genDbConfig.generateDbVariableLine(variable.sName, variable.type, block);
         }
         //increment ix
-        positionElement.incrPos(variable.zbnfVariable.arrayStartIx, variable.zbnfVariable.arrayEndIx, variable.type.nrofBytes);
+        //TT positionElement.incrPos(variable.zbnfVariable.arrayStartIx, variable.zbnfVariable.arrayEndIx, variable.type.nrofBytes);
         
       }//saveStruct else generate  
       
@@ -1246,9 +1289,10 @@ variablenBlock::=
      * @param type
      * @param block
      */
-    void generateVariableOam(String nameStruct, Variable variable, ZbnfVariablenBlock block)
+    void generateVariableOam(String nameStruct, Variable variable, ZbnfVariablenBlock block
+        , PositionOfVariable posOamVariable)
     { String name = variable.sName;
-      if(name.equals("modulVoltg"))
+      if(name.equals("ev"))
         stop();
       /*
       if(name.length() > 24 - block.lengthPreSuffix){
@@ -1271,16 +1315,22 @@ variablenBlock::=
       
       int maskBitInByte;
       if(variable.type.typeCharJava == 'Z'){
-        maskBitInByte = generateVariableImport.posOamVariable.getMaskBit();
+        maskBitInByte = posOamVariable.getMaskBit();
       } else {
-        generateVariableImport.posOamVariable.adjustNonBool(variable.type.nrofBytes);
+        posOamVariable.adjustNonBool(variable.type.nrofBytes);
         maskBitInByte = 0;
       }
-      int posByte = generateVariableImport.posOamVariable.getIxByte();
+      int posByte = posOamVariable.getIxByte();
       oamVariables.add(new OamVariable(sVariable24, variable, nameStruct, sVariable, posByte, maskBitInByte, block));
 
-      generateVariableImport.posOamVariable.incrPos(variable.zbnfVariable.arrayStartIx, variable.zbnfVariable.arrayEndIx, variable.type.nrofBytes); 
       
+      ////
+      if(variable.type.typeCharJava == 's'){
+        variable.nrofBytes = variable.zbnfVariable.stringlen +2;
+        posOamVariable.incrPos(0, variable.nrofBytes, 1); 
+      } else {
+        posOamVariable.incrPos(variable.zbnfVariable.arrayStartIx, variable.zbnfVariable.arrayEndIx, variable.type.nrofBytes); 
+      }
       /*
       generateVariableImport.sclVariables.append("\n").append(sVariable24).append(": ");
       if(variable.zbnfVariable.arrayEndIx > variable.zbnfVariable.arrayStartIx || variable.zbnfVariable.arrayStartIx >0){
