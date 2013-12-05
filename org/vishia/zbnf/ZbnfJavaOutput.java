@@ -1172,15 +1172,15 @@ public class ZbnfJavaOutput
         sError = "ZbnfJavaOutput - Input file charset problems; " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
       }
     }
-    if(sError == null)
+    if(sError == null && spInput !=null)
     { 
       boolean bOk = zbnfParser.parse(spInput);
-      spInput.close();
       if(!bOk)
       { final String sParserError = zbnfParser.getSyntaxErrorReport();
         sError = "ZbnfJavaOutput - ERROR syntax in input file; " + fInput.getAbsolutePath() + "\n" + sParserError;
         //report.writeError(sError);
       }
+      spInput.close();
       //The content of the setting file is stored inside the parser as 'parse result'.
       //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.
       //The class settings contains the necessary elements appropriate to the semantic keywords in the syntax prescript.

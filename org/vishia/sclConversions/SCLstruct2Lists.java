@@ -1131,11 +1131,14 @@ variablenBlock::=
         if(variable.zbnfVariable.atName !=null){
           //it is an alias or union, search its position.
           Variable atVariable = indexVariables.get(variable.zbnfVariable.atName);
-          PositionOfVariable posAt = new PositionOfVariable();
-          posAt.setStartPos(atVariable.posVarAbs);
-          int nrofBytes = generateForSimpleOrStructVariable(nameStruct, variable, dataStruct, block, posAt, recursiveCt);
-          variable.nrofElements = nrofBytes;
-          Assert.stop();
+          if(atVariable == null){
+            System.err.println("SCLstruct2List - AT-variable not found; " + variable.zbnfVariable.atName);
+          } else {
+            PositionOfVariable posAt = new PositionOfVariable();
+            posAt.setStartPos(atVariable.posVarAbs);
+            int nrofBytes = generateForSimpleOrStructVariable(nameStruct, variable, dataStruct, block, posAt, recursiveCt);
+            variable.nrofElements = nrofBytes;
+          }
         } else {
           if(variable.structVariables !=null){  //internal data struct inside the fb
             if(recursiveCt > 10) throw new IllegalArgumentException("too many recursions");

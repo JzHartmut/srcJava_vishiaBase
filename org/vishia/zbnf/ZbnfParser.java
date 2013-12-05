@@ -127,6 +127,8 @@ public class ZbnfParser
   /**Version-ident.
    * list of changes:
    * <ul>
+   * <li>2013-09-02 Hartmut nice fix: trim spaces in $comment and $endlineComment. A user may write white spaces, it didn't recognize comments.
+   *   Now white spaces are admissable.
    * <li>2013-09-02 Hartmut TODO forex "[{ <datapath?-assign> = }] cmd " saves the {@link PrescriptParser#parseResultToOtherComponent} of "assign"
    *   because that {@link SubParser#parseComponent(StringPartScan, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
    *   fails because the "=" is not present. In this case the {@link PrescriptParser#parseResultToOtherComponent} should be removed if it comes
@@ -177,7 +179,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  static final String sVersionStamp = "2011-01-14";
+  static final String sVersionStamp = "2013-12-06";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -2110,20 +2112,23 @@ public class ZbnfParser
       }
       else if(StringFunctions.startsWith(sCurrentInput, "$endlineComment=")) //##s
       { syntax.seek(16); 
-        sEndlineCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString();
+        syntax.seekNoWhitespace();
+        sEndlineCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString().trim();
         if(sEndlineCommentStringStart.length()==0){ sEndlineCommentStringStart = null; }
         else if(sEndlineCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineCt());
         syntax.seek(1);
       }
       else if(StringFunctions.startsWith(sCurrentInput, "$comment=")) //##s
-      { syntax.seek(9); 
-        sCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString();
+      { syntax.seek(9);
+        syntax.seekNoWhitespace();
+        sCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString().trim();
         if(sCommentStringStart.length()==0){ sCommentStringStart = null; }
         else if(sCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineCt());
         else
         { if(!syntax.startsWith("...")) throw new ParseException("$comment, must have ... betwenn comment strings.", syntax.getLineCt());
           syntax.seek(3);
-          sCommentStringEnd = syntax.getCircumScriptionToAnyChar(".").toString();
+          syntax.seekNoWhitespace();
+          sCommentStringEnd = syntax.getCircumScriptionToAnyChar(".").toString().trim();
           if(sCommentStringEnd.length()==0) throw new ParseException("$comment: no endchars found.", syntax.getLineCt());
           else if(sCommentStringEnd.length()>5) throw new ParseException("SyntaxPrescript: more as 5 chars as $endlineComment-end unexpected", syntax.getLineCt());
           syntax.seek(1);  //skip "."
