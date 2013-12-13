@@ -122,7 +122,7 @@ public class SCLstruct2Lists
   /**Data to generate either the wincc variable import or the structure of a record for all oam-data, see {@link Args#sFileScl}. */
   GenerateVariableImport generateVariableImport;
   
-  /**This index assigns the S7-Types to the appropriate types for header-files, WinCC etc. */
+  /**This index assigns the S7-Types to the appropriate types for header-files etc. */
   private final Map<String, TypeConversion> indexTypes = new TreeMap<String, TypeConversion>();
   
   
@@ -192,7 +192,7 @@ public class SCLstruct2Lists
       super.addHelpInfo("made by Hartmut Schorrig, 2010-08-01, 2010-10-15");
       super.addHelpInfo("-srcpath=PATH Path base to sources, additional to config file. If not given,");
       super.addHelpInfo("              then the source path is the directory of the config file.");
-      super.addHelpInfo("-z:ZBNFPATH syntaxpath, should contain winCCVarCfg.zbnf and sclStruct.zbnf.");
+      super.addHelpInfo("-z:ZBNFPATH syntaxpath, should contain sclVarCfg.zbnf and sclStruct.zbnf.");
       super.addHelpInfo("param: TODO");
       super.addStandardHelpInfo();
     }
@@ -339,6 +339,8 @@ public class SCLstruct2Lists
      */
     String atName;
     
+    boolean isShortPtr;
+    
     private List<ZbnfVariable> structZbnfVariables;
     
     /**From ZBNF: <$?type>. */
@@ -463,9 +465,22 @@ variablenBlock::=
    * @author Hartmut Schorrig
    *
    */
-  public static class ZbnfResultFileSCL
+  public static class ZbnfResult_SclStruct
   {
     private final List<Variable> variable = new LinkedList<Variable>();
+    
+    
+    public String typeIdent;
+    
+    public ZbnfVariable new_shortPtr()
+    { ZbnfVariable var =  new ZbnfVariable();
+      var.isShortPtr = true;
+      return var;
+    }
+    
+    public void add_shortPtr(ZbnfVariable value)
+    { add_variable(value);
+    }
     
     public ZbnfVariable new_variable()
     { return new ZbnfVariable();
@@ -503,6 +518,7 @@ variablenBlock::=
   {
     private final List<ZbnfVariablenBlock> variablenBlock = new LinkedList<ZbnfVariablenBlock>();
     
+    public int startOffset;
     
     public ZbnfVariablenBlock new_variablenBlock()
     { return new ZbnfVariablenBlock();
@@ -828,7 +844,7 @@ variablenBlock::=
     ZbnfResultDataCfg zbnfResultData = new ZbnfResultDataCfg();
     /**This call processes the whole parsing and storing action: */
     File fileIn = new File(args.sFileCfg);
-    File fileSyntax = new File(args.sPathZbnf + "/winCCVarCfg.zbnf");
+    File fileSyntax = new File(args.sPathZbnf + "/sclVarCfg.zbnf");
     String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(zbnfResultData.getClass(), zbnfResultData, fileIn, fileSyntax, console, 1200);
     if(sError != null)
     { /**there is any problem while parsing, report it: */
@@ -960,7 +976,7 @@ variablenBlock::=
       } else {
         sPathUDTbase = dirIn.getAbsolutePath() + "/";
       }
-      posOamVariable.setStartPos(0);
+      posOamVariable.setStartPos(configData.startOffset);  //often 0, from cfg file 
       for(ZbnfVariablenBlock block: configData.variablenBlock) {
         generateOneSclFile.generateOneSclFile(sPathUDTbase, block, posOamVariable);
       }
@@ -1048,7 +1064,7 @@ variablenBlock::=
   {
 
     /**Result data of parsing the UDT-Files. */
-    ZbnfResultFileSCL zbnfResultDataUDT; 
+    ZbnfResult_SclStruct zbnfResultDataUDT; 
  
     //final PositionOfVariable positionElementAll = new PositionOfVariable();
     
@@ -1063,12 +1079,14 @@ variablenBlock::=
      * @return The parsed content.
      * @throws IOException
      */
-    ZbnfResultFileSCL parseSclFile(String sFileScl)
+    ZbnfResult_SclStruct parseSclFile(String sFileScl)
     throws IOException
     {
       /**The instance to store the data of parsing result is created locally and private visible: */
-      ZbnfResultFileSCL zbnfResultData = new ZbnfResultFileSCL();
+      ZbnfResult_SclStruct zbnfResultData = new ZbnfResult_SclStruct();
       /**This call processes the whole parsing and storing action: */
+      if(sFileScl.contains("VariablesHead.SCL"))
+        Assert.stop();
       File fileIn = new File(sFileScl);
       File fileSyntax = new File(args.sPathZbnf + "/sclStruct.zbnf");
       String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(zbnfResultData.getClass(), zbnfResultData, fileIn, fileSyntax, console, 1200);
@@ -1078,7 +1096,7 @@ variablenBlock::=
         return null;
       }
       else
-      { console.writeInfoln("SUCCESS parsed: " + fileIn.getCanonicalPath());
+      { console.writeInfoln("SCLstruct2Lists - SUCCESS parsed; " + fileIn.getCanonicalPath() + ";  ");
         return zbnfResultData;
       }
     
@@ -1168,9 +1186,9 @@ variablenBlock::=
       if(variable.type == null){
         //not a basic type
         String structType = variable.zbnfVariable.type;
-        if(structType.equals("SES_ctrl_CalcUcapbmax"))
+        if(structType.equals("TEST"))
           Assert.stop();
-        if(structType.equals("SES_capb_ActValues_t"))
+        if(structType.equals("TEST_t"))
           Assert.stop();
         variable.type = allDataStruct.get(structType);
       }
