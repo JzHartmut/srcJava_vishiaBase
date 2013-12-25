@@ -31,6 +31,10 @@ import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
 
 
+/**Script executer and text generator with main.
+ * @author Hartmut Schorrig
+ *
+ */
 public class ZGen
 {
   
@@ -435,21 +439,21 @@ public class ZGen
     public final Args argData;
 
     protected final MainCmd.Argument[] argList =
-    { new MainCmd.Argument("", "<INPUT>    jbat-File to execute"
+    { new MainCmd.Argument("", "<INPUT>    pathTo ZGen-File to execute"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           if(argData.sFileScript == null){ argData.sFileScript = val; }
           else {argData.userArgs.add(val); }
           return true; 
         }})
-    , new MainCmd.Argument("-t", ":<OUTEXT> text-File for output"
+    , new MainCmd.Argument("-t", ":<OUTEXT> pathTo text-File for output"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.sFileTextOut = val; return true;
         }})
-    , new MainCmd.Argument("-debug", ":<TEST.xml> Test-File"
+    , new MainCmd.Argument("-debug", ":<TEST.xml> pathTo Test-File"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.fileTestXml = new File(val); return true;
         }})
-    , new MainCmd.Argument("-u", "userargs"
+    , new MainCmd.Argument("-u", ":userArgs"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.userArgs.add(val); 
           return true; 
@@ -460,8 +464,8 @@ public class ZGen
     protected CmdLine(Args argData, String[] sCmdlineArgs){
       super(sCmdlineArgs);
       this.argData = argData;
-      super.addAboutInfo("Execution and Generation of jbat-Files");
-      super.addAboutInfo("made by HSchorrig, Version 1.0, 2013-07-11..2013-07-11");
+      super.addAboutInfo("Execution and Generation of ZGen-Files");
+      super.addAboutInfo("made by HSchorrig, Version 1.0, 2013-07-11..2013-12-31");
       super.addArgument(argList);
       super.addStandardHelpInfo();
       
