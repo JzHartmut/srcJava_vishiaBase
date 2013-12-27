@@ -386,7 +386,7 @@ public class ZGen
     bOk = parserGenCtrl.parse(spGenCtrl);
     if(!bOk){
       String sError = parserGenCtrl.getSyntaxErrorReport();
-      throw new ParseException(sError,0);
+      throw new ParseException("\n" + sError,0);
     }
     if(checkXmlOutput !=null){
       //XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();

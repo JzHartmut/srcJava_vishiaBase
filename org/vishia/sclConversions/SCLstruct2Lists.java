@@ -1015,8 +1015,8 @@ variablenBlock::=
           } else {
             genScript = ZGen.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
+          textGen.execute(genScript, true, false, sclOut);
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.execute(genScript, true, false, sclOut);
         
         /*
         sclOut.write("FUNCTION_BLOCK OamVariables");
@@ -1035,8 +1035,8 @@ variablenBlock::=
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
           genScript = ZGen.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"), console);
+          textGen.execute(genScript, true, false, sclOut);
         } catch(Exception exc){ throw new RuntimeException(exc); }
-        textGen.execute(genScript, true, false, sclOut);
         /*
         sclOut.write("==OamVariables==");
         sclOut.write(oamList.toString());
