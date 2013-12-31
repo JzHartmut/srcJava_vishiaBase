@@ -105,7 +105,7 @@ public final class ZGenSyntax {
     + "| /*<*|*/?>*/ ##block commment in C style\n"
     + "| <DefVariable?> ; \n"
     + "| for <forScript?forContainer> \n"
-    + "| call <callSubroutine?call> \n"
+    + "| <callSubroutine?call> \n"
     + "| cd [<textValue?cd> | <*\\ ;?cd> ; ]  ##change current directory \n"
     + "| if <ifScript?if> \n"
     + "| while <whileScript?> \n"
@@ -261,7 +261,7 @@ public final class ZGenSyntax {
     + "ifScriptBlock::= ( <condition> ) \\{ <statementBlock> \\} .\n"
     + "\n"
     //Note: the for-variable is adequate a DefVariable
-    + "callSubroutine::= <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
+    + "callSubroutine::= [{ <variable?assign> [ = | += <?append>] }] call <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
     + "callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
     + "namedArgument::= [<?name>[$]<$?>|xxx][ = <objExpr?>].\n"
