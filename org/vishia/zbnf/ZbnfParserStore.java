@@ -248,47 +248,51 @@ class ZbnfParserStore
     /**Gets the semantic of the item.
      *
      */
-    public String getSemantic()
+    @Override public String getSemantic()
     { return (sSemantic != null) ? sSemantic : "Null-Semantic";
     }
 
-    public String getParsedText()
+    @Override public String getParsedText()
     { return sInput;
     }
 
-    public double getParsedFloat()
+    @Override public double getParsedFloat()
     { return parsedFloatNumber;
     }
 
-    public long getParsedInteger()
+    @Override public long getParsedInteger()
     { return parsedIntegerNumber;
     }
 
-    public String getParsedString()
+    @Override public String getParsedString()
     { return parsedString;
     }
 
-    public int getInputColumn()
+    @Override public int getInputLine()
+    { return nLine;
+    }
+    
+    @Override public int getInputColumn()
     { return nColumn;
     }
     
-    public boolean isComponent()
+    @Override public boolean isComponent()
     { return (offsetAfterEnd > 1) || kind == kComponent;
     }
 
-    public boolean isInteger()
+    @Override public boolean isInteger()
     { return kind == kIntegerNumber;
     }
 
-    public boolean isFloat()
+    @Override public boolean isFloat()
     { return kind == kFloatNumber;
     }
 
-    public boolean isString()
+    @Override public boolean isString()
     { return kind == kString;
     }
 
-    public boolean isTerminalSymbol()
+    @Override public boolean isTerminalSymbol()
     { return kind == kTerminalSymbol;
     }
 
@@ -296,19 +300,19 @@ class ZbnfParserStore
     //{ return kind == kSingleOption;
     //}
 
-    public boolean isIdentifier()
+    @Override public boolean isIdentifier()
     { return kind == kIdentifier;
     }
 
-    public boolean isOnlySemantic()
+    @Override public boolean isOnlySemantic()
     { return kind == kOnlySemantic;
     }
 
-    public int isRepeat()
+    @Override public int isRepeat()
     { return (kind < 0 && kind > -kMaxRepetition ? -kind : -1);
     }
 
-    public int isRepetition()
+    @Override public int isRepetition()
     { return (kind > 0 && kind < kMaxRepetition ? kind : -1);
     }
 
@@ -335,7 +339,7 @@ class ZbnfParserStore
       return sRet;
     }
 
-    public String getDescription()
+    @Override public String getDescription()
     { String sSemantic = getSemantic();
       if(sSemantic.equals("doubleNumber"))
         stop();
@@ -425,13 +429,13 @@ class ZbnfParserStore
     }
 
     /** Implements from ParseResultItem */
-    public ZbnfParseResultItem nextSkipIntoComponent(/*Parser.ParserStore store, */ZbnfParseResultItem parent)
+    @Override public ZbnfParseResultItem nextSkipIntoComponent(/*Parser.ParserStore store, */ZbnfParseResultItem parent)
     { return next(parent, 1);
     }
 
 
     /** Implements from ParseResultItem */
-    public ZbnfParseResultItem next(/*Parser.ParserStore store, */ZbnfParseResultItem parent)
+    @Override public ZbnfParseResultItem next(/*Parser.ParserStore store, */ZbnfParseResultItem parent)
     { return next(parent, offsetAfterEnd);
     }
 
@@ -488,12 +492,12 @@ class ZbnfParserStore
      * and the option doesn't match, it returns 0. If there were any alternatives
      * to test, the method returns the founded alternative, count from 1.
      */
-    public int getNrofAlternative()
+    @Override public int getNrofAlternative()
     { return nrofAlternative;
     }
 
 
-    public boolean isOption()
+    @Override public boolean isOption()
     { return kind == kOption;
     }
 
@@ -798,8 +802,8 @@ class ZbnfParserStore
   }
 
 
-  ParseResultItemImplement addSemantic(String sSemantic, ZbnfParseResultItem parent)
-  { return add(sSemantic, null, kOnlySemantic, 0,0,0,0, parent);
+  ParseResultItemImplement addSemantic(String sSemantic, StringPart input, ZbnfParseResultItem parent)
+  { return add(sSemantic, null, kOnlySemantic, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
   }
 
 
@@ -821,8 +825,8 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(CharSequence src, String sSemantic, ZbnfParseResultItem parent)
-  { return add(sSemantic, src, kString, -1, -1, -1, -1, parent);
+  ParseResultItemImplement addString(CharSequence src, String sSemantic, StringPart spInput, ZbnfParseResultItem parent)
+  { return add(sSemantic, src, kString, -1, -1, spInput.getLineCt(), spInput.getCurrentColumn(), parent);
   }
 
   void addIdentifier(String sSemantic, String sIdent, ZbnfParseResultItem parent)

@@ -124,10 +124,15 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 public class ZbnfParser
 {
   
-  /**Version-ident.
-   * list of changes:
+  /**Version, history and license.
    * <ul>
-   * <li>2013-09-02 Hartmut nice fix: trim spaces in $comment and $endlineComment. A user may write white spaces, it didn't recognize comments.
+   * <li>2014-01-01 Hartmut new: Line number transfer to parse result items. Idea TODO: transfer the line numbers only
+   *   on finish of parsing, store position in input file while parsing: There are some more items stored in the parse process
+   *   than remain on finish. Getting line numbers form {@link org.vishia.util.StringPartFromFileLines#getLineCt()}
+   *   is a binary search process of association position to line numbers. It should only be done on end only for the
+   *   remaining parse result items. Time measurement: Parsing of about 30 Headerfiles with line numbers: 15 seconds,
+   *   without line numbers: 14 second. 
+   * <li>2013-12-06 Hartmut nice fix: trim spaces in $comment and $endlineComment. A user may write white spaces, it didn't recognize comments.
    *   Now white spaces are admissable.
    * <li>2013-09-02 Hartmut TODO forex "[{ <datapath?-assign> = }] cmd " saves the {@link PrescriptParser#parseResultToOtherComponent} of "assign"
    *   because that {@link SubParser#parseComponent(StringPartScan, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
@@ -179,7 +184,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  static final String sVersionStamp = "2013-12-06";
+  public static final String sVersionStamp = "2014-01-01";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -667,7 +672,7 @@ public class ZbnfParser
         if( syntaxPrescript.sSubSyntax != null)
         { /**If <code>[<?!subsyntax> ... ]</code> is given, execute it! */
           //String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
-          bFound = addResultOrSubsyntax(parsedInput, posInputForStore, sSemanticForStoring, syntaxPrescript.sSubSyntax);
+          bFound = addResultOrSubsyntax(parsedInput, posInputForStore, sSemanticForStoring, syntaxPrescript.sSubSyntax, input);
         }
         
         if(!bFound && idxCurrentStore >=0)
@@ -774,7 +779,7 @@ public class ZbnfParser
           case ZbnfSyntaxPrescript.kOnlySemantic:
           { bOk = true;
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem only Semantic;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
-            parserStoreInPrescript.addSemantic(sSemanticForStoring, parentResultItem);
+            parserStoreInPrescript.addSemantic(sSemanticForStoring, input, parentResultItem);
           } break; //do nothing
           case ZbnfSyntaxPrescript.kSyntaxComponent:
           { bOk = parseComponent
@@ -854,7 +859,7 @@ public class ZbnfParser
                 { CharSequence sResult = input.getCurrentPart();
                   long posResult = input.getCurrentPosition();
     
-                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
                   /* NOTE: is it necessary to store the line numbers etc?
                       if(input.length()>0 && sSemanticForStoring != null)
                       { parseResult.addString(input, sSemanticForStoring);
@@ -931,7 +936,7 @@ public class ZbnfParser
                 { //parserStoreInPrescript.addString(sSrc, sSemanticForStoring, parentResultItem);
                   CharSequence sResult = input.getCurrentPart();
                   long posResult = input.getCurrentPosition();
-                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
                 }
               }                
             }//if bTerminalFound
@@ -1016,7 +1021,7 @@ public class ZbnfParser
           if(sSemanticForStoring != null)
           { CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
             //parseResult.addString(input, sSemanticForStoring, parentResultItem);
           }
           if(bOk){ input.fromEnd(); }
@@ -1142,7 +1147,7 @@ public class ZbnfParser
           { input.lento(len);
             CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
             //if(sSemanticForStoring != null)
             //{ parseResult.addString(input, sSemanticForStoring);
             //}
@@ -1179,7 +1184,7 @@ public class ZbnfParser
           if(input.length() >0)
           { CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
           }
           input.fromEnd();
         }
@@ -1226,7 +1231,7 @@ public class ZbnfParser
             sResult = sResult.trim();
           }
           long posResult = input.getCurrentPosition();
-          bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+          bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
           if(bOk){ input.fromEnd(); }
         }
         else
@@ -1349,7 +1354,7 @@ public class ZbnfParser
         
       
       
-      private boolean addResultOrSubsyntax(CharSequence sResult, long posSrc, String sSemanticForStoring, String subSyntax) throws ParseException
+      private boolean addResultOrSubsyntax(CharSequence sResult, long posSrc, String sSemanticForStoring, String subSyntax, StringPart spInput) throws ParseException
       { //##ss
         boolean bOk;
         //String sSrc = input.getCurrentPart();
@@ -1362,7 +1367,7 @@ public class ZbnfParser
           bOk = parseComponent(partOfInput, (int)posSrc, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
-        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, parentResultItem);
+        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, spInput, parentResultItem);
           bOk = true;
         }
         else { bOk = true; }
@@ -1390,7 +1395,7 @@ public class ZbnfParser
             input.lento(len-2);  //without end quotion mark
             CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax());
+            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
             //if(sSemanticForStoring != null)
             //{ parseResult.addString(input, sSemanticForStoring);
             //}
@@ -2368,7 +2373,7 @@ public class ZbnfParser
       while(iterAdditionalInfo.hasNext())
       { String addSemantic = iterAdditionalInfo.next();
         String addContent = iterAdditionalInfo.hasNext() ? iterAdditionalInfo.next() : "";
-        addParseResult.addString(addContent, addSemantic, null);
+        addParseResult.addString(addContent, addSemantic, input, null);
         /**NOTE: it is false to : parserStoreTopLevel.addString(addContent, addSemantic, null);
          * because the first item should be a syntax components with all content inside (like XML-toplevel argument).
          * instead use addParseResult as argument for prescriptParserTopLevel.parsePrescript1(...).  

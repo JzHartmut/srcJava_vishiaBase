@@ -145,6 +145,9 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
   public String getDescription();
   
   
+  /**returns the line of the input line while parsing. */
+  public int getInputLine();
+  
   /**returns the column of the input line while parsing. */
   public int getInputColumn();
   
@@ -220,6 +223,7 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
    *         the next item of the level above is returned. It is not tested here.
    * @deprecated use instead {@link iteratorChildren()} or {@link getChildren()} from the parent item.
    */
+  @Deprecated
   ZbnfParseResultItem next();
 
   /** Gets the next item or component followed by the current item in the current tree level.
@@ -232,6 +236,7 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
    * @return The next item or null on end of parent or end of all.
    * @deprecated use instead {@link iteratorChildren()} or {@link getChildren()} from the parent item.
    */
+  @Deprecated
   ZbnfParseResultItem next(/*Parser.ParserStore store, */ZbnfParseResultItem parent);
 
   /** Gets the next item immediate after this item 
@@ -247,6 +252,7 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
    * @return The next item after a meta morphem or null on end.
    * @deprecated use instead {@link iteratorChildren()} or {@link getChildren()} from the current item.
    */
+  @Deprecated
   ZbnfParseResultItem nextSkipIntoComponent(/*Parser.ParserStore store, */ZbnfParseResultItem parent);
 
   

@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.DataAccess;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
@@ -139,11 +140,16 @@ import org.vishia.util.StringPartScan;
  * </ul>
  * <br><br> 
  * <br><br> 
- * <b>Special functionality for storing the column-number of the input text</b> 
+ * <b>Special functionality for storing the line and column number of the input text</b> 
  * <br><br> 
- * An element <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
- * if the input column were the parsed text is found should be stored. 
- * This is important at example if line structures were parsed.
+ * The user class should have an element <code>public int inputLine_</code> or a method <code>set_inputLine_(int)</code>
+ * to store the line number of the input text. To capture the line number a {@link org.vishia.util.StringPartFromFileLines}
+ * have to be used for input for the ZBNF parser, because only this class overrides the {@link org.vishia.util.StringPart#getLineCt()}
+ * method with a really line number. This class reads a file line per line.
+ * <br><br> 
+ * The user class should have an element <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
+ * if the input column of the parsed text should be stored. 
+ * This is important for example if line structures were parsed.
  * <br><br>
  * <br><br>
  * <b>Error detecting and handling</b>
@@ -157,9 +163,10 @@ import org.vishia.util.StringPartScan;
 @SuppressWarnings("unchecked")
 public class ZbnfJavaOutput
 {
-  /**Version, able to read as hex yyyymmdd.
-   * Changes:
+  /**Version, history and license.
    * <ul>
+   * <li>2014-01-01 Hartmut new: {@link #trySetInputLine(Component, int)}. Uses {@link DataAccess} first time.
+   *   there are some parallel functionality of this class and DataAccess. The DataAccess is the more universal one. 
    * <li>2013-09-02 Hartmut chg: The {@link Component#clazz} is build from the instance instead from the
    *   given clazz Argument. It means an derived instance can contain other set_, add_method.
    * <li>2012-12-26 Hartmut new: {@link #writeInField(Field, Object, ZbnfParseResultItem)} supports a char field too,
@@ -183,7 +190,7 @@ public class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public final static int versionStamp = 0x20101203;
+  public static final String sVersionStamp = "2014-01-01";
   
   private final MainCmdLogging_ifc report;
   
@@ -414,8 +421,11 @@ public class ZbnfJavaOutput
            * That instance may also be an new element of a container
            */
           /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
+          Component compn = new Component(component, componentsInstance.clazz, componentsInstance.instance);
+          int inputLine = resultItem.getInputLine();
+          trySetInputLine(compn, inputLine);
           int inputColumn = resultItem.getInputColumn();
-          trySetInputColumn("", new Component(component, componentsInstance.clazz, componentsInstance.instance), inputColumn);
+          trySetInputColumn("", compn, inputColumn);
           /** skip into the component resultItem: */
           Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
           while(iterChildren.hasNext())
@@ -975,6 +985,53 @@ public class ZbnfJavaOutput
     report.report(MainCmdLogging_ifc.fineDebug, " \""+ debugValue + "\" written in Element Type " + sType);
   }
 
+  
+  
+  
+  
+  
+  /**Tries if an field <code>inputColumn_<i>semantic</i></code> or a method
+   * <code>set_inputColumn_<i>semantic</i></code> exists and set resp. calls it.
+   * If such a field or method isn't found, nothing is done. It is oksy.
+   * @param semantic Name, it may be emtpy especially to search <code>inputColumn_</code> for the component.
+   * @param destinationClass Class where searched.
+   * @param destinationInstance Associated instance where set or called.
+   * @param column The value of column. If it is negative, nothing is done. A negative value may indicate,
+   *               that no valid column is given to set.
+   * @throws IllegalAccessException If any problem with the set-method exists.
+   */
+  private void trySetInputLine(Component destComponent, int line) 
+  throws IllegalAccessException
+  { if(line >=0)
+    { DataAccess.DatapathElement datapath = new DataAccess.DatapathElement("inputLine_");
+      try
+      { //if an field inputColumn_ is found, write to it.
+        Field elementColumn = destComponent.clazz.getField("inputLine_");
+        elementColumn.setInt(destComponent.instance, line);
+      }
+      catch(NoSuchFieldException exception)
+      { /**do nothing if the field isn't found.*/ 
+        //not an element with the postulated name found,
+        //search an appropriate method:
+        Method method;
+        Class[] argTypes1 = new Class[1]; 
+        argTypes1[0] = Integer.TYPE;
+        try
+        { datapath.set("set_inputLine_()");
+          datapath.addActualArgument(new Integer(line));
+          DataAccess.invokeMethod(datapath, destComponent.instance);
+          //method = destComponent.clazz.getDeclaredMethod("set_inputLine_", argTypes1);
+          //Object[] argMethod1 = new Object[1];
+          //argMethod1[0] = new Integer(line);
+          //method.invoke(destComponent.instance, argMethod1);
+        }
+        catch(NoSuchMethodException exception1){ /**do nothing if the field isn't found.*/ }
+        catch(InvocationTargetException exc)
+        { throw new IllegalAccessException(exc.getMessage()); 
+        }
+      }
+    }  
+  }
   
   
   

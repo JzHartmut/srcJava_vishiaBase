@@ -576,7 +576,7 @@ public class Zmake extends Zbnf2Text
       gen.setScriptVariable("zmake", 'O', zmakeInput, true);
       gen.execute(genScript, true, true, out);
     } catch(Exception exc){
-      CharSequence sMsg = Assert.stackInfo("Zmake - unexpected IOexception while generation; ", 10);
+      CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
       System.err.println(sMsg);
     }
     out.close();

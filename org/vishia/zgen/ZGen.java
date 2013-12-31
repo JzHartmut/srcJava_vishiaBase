@@ -285,23 +285,6 @@ public class ZGen
   
   
 
-  public static ZGenScript translateAndSetGenCtrl(File fileZbnf4GenCtrl, File fileGenCtrl, File checkXmlOut, MainCmdLogging_ifc log) 
-  throws FileNotFoundException, IOException
-    , ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException
-  { log.writeInfoln("* Zbatch: parsing gen script \"" + fileZbnf4GenCtrl.getAbsolutePath() 
-    + "\" with \"" + fileGenCtrl.getAbsolutePath() + "\"");
-
-    int lengthBufferSyntax = (int)fileZbnf4GenCtrl.length();
-    StringPartScan spSyntax = new StringPartFromFileLines(fileZbnf4GenCtrl, lengthBufferSyntax, "encoding", null);
-
-    int lengthBufferGenctrl = (int)fileGenCtrl.length();
-    StringPartScan spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
-
-    File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPartScan(ZGenSyntax.syntax), new StringPartScan(spGenCtrl), checkXmlOut, fileParent, log);
-  }
-  
-
   public static ZGenScript translateAndSetGenCtrl(File fileGenCtrl, MainCmdLogging_ifc log) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
@@ -315,7 +298,7 @@ public class ZGen
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPartScan spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPartScan(ZGenSyntax.syntax), new StringPartScan(spGenCtrl), checkXmlOut, fileParent, log);
+    return translateAndSetGenCtrl(new StringPartScan(ZGenSyntax.syntax), spGenCtrl, checkXmlOut, fileParent, log);
   }
   
   
