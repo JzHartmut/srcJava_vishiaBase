@@ -408,7 +408,11 @@ public class ZGen
         translateAndSetGenCtrl(parserGenCtrl, spGenCtrlSub, checkXmlOutput, fileIncludeParent, log);
       }
     }
-    script.setFromIncludedScript(zbnfGenCtrl);
+    ZGenScript.Subroutine mainRoutine = zbnfGenCtrl.getMainRoutine();
+    if(mainRoutine !=null){  //the main routine of the main file wins against includes if exists.
+      script.setMainRoutine(mainRoutine);
+    }
+    //script.setFromIncludedScript(zbnfGenCtrl);
     return script;
   }
   

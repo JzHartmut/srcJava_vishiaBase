@@ -190,7 +190,7 @@ public class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public static final String sVersionStamp = "2014-01-01";
+  public static final String sVersion = "2014-01-01";
   
   private final MainCmdLogging_ifc report;
   
