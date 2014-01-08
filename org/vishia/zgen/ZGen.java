@@ -20,6 +20,7 @@ import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
+import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
@@ -91,29 +92,30 @@ public class ZGen
   }
   
 
-  protected final MainCmdLogging_ifc log;
+  //protected final MainCmdLogging_ifc log;
   
-  protected final Args args;
+  //protected final Args args;
   
-  protected final ZGenExecuter executer;
+  //protected final ZGenExecuter executer;
   
-  
+  /*
   public ZGen(Args args, MainCmdLogging_ifc log){
     this.log = log;
     this.args = args;
     this.executer = new ZGenExecuter(log);
   }
-  
+  */
   
   /**Does not support {@link #execute()}, only {@link #translateAndSetGenCtrl(File, File)}.
    * @param log
    */
+  /*
   public ZGen(MainCmdLogging_ifc log){
     this.log = log;
     this.args = null;
     this.executer = null;
   }
-  
+  */
   
   /** main started from java*/
   public static void main(String [] sArgs)
@@ -141,20 +143,38 @@ public class ZGen
         mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
       }
       if(args.sFileScript !=null){
-        ZGen main = new ZGen(args, mainCmdLine);     //the main instance
         if(sRet == null)
         { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
               to hold the contact to the command line execution.
           */
           try{ 
-            sRet = main.execute();
+            ZGenExecuter executer = new ZGenExecuter(mainCmdLine);
+            Appendable out = null;
+            if(args.sFileTextOut !=null){
+              try{
+                File fileOut = new File(args.sFileTextOut);
+                out = new FileWriter(fileOut);
+              } catch(IOException exc){
+                sRet = "ZGen - cannot create output text file;"; 
+              }
+            } else {
+              out = System.out;
+            }
+            File fileIn = new File(args.sFileScript);
+            char nrArg = '1';
+            for(String argu: args.userArgs){
+              executer.setScriptVariable("$" + nrArg, 'S', argu, true);
+              nrArg +=1;
+            }
+            CharSequence cRet = execute(executer, fileIn, out, true, args.fileTestXml, mainCmdLine);
+            sRet = cRet == null ? null : cRet.toString();
             if(sRet !=null){
               mainCmdLine.writeError(sRet);
             }
           }
           catch(Exception exception)
           { //catch the last level of error. No error is reported direct on command line!
-            sRet = "Jbat - Any internal error;" + exception.getMessage();
+            sRet = "ZGen - Any internal error;" + exception.getMessage();
             mainCmdLine.report(sRet, exception);
             exception.printStackTrace(System.out);
             mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
@@ -181,37 +201,30 @@ public class ZGen
    * @return any error string. null if successfull.
    * @throws IllegalAccessException 
    */
-  public static String jbatch(String script) throws IllegalAccessException{
-    
-    Args args = new Args();
-    args.sFileScript = script;
-    MainCmdLogging_ifc log = new MainCmdLoggingStream(System.out);
-    ZGen zGen = new ZGen(args, log);
-    return zGen.execute();
+  public static CharSequence jbatch(String script) throws IllegalAccessException{
+    return execute(script);
   }
-  
   
   
   /**Parses the script and executes it with a given ZGen ExecuterLevel.
    * That is the possibility to start a independent ZGen execution in a ZGen script itself.
    * @param script Path to the script.
-   * @return TODO ? any error string. null if successfull.
+   * @return TODO ? any error string. null if successfully.
    */
-  public static String jbatch(String script, ZGenExecuter.ExecuteLevel zgenExecuteLevel){
+  public static CharSequence jbatch(File script, ZGenExecuter.ExecuteLevel execLevel) throws IllegalAccessException{
+    //return execute(script, execLevel.log());
+    
     boolean bWaitForThreads = false;
     StringBuilder u = new StringBuilder();
     //ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
-    MainCmdLogging_ifc log = zgenExecuteLevel.log();
-    Args args = new Args();
-    args.sFileScript = script;
-    ZGen zgen = new ZGen(args, log);
+    MainCmdLogging_ifc log = execLevel.log();
+    ZGenExecuter executer = new ZGenExecuter(log);
     //Copy all local variables of the calling level as script variables.
     try { 
-      File fileScript = new File(script);
-      ZGenScript genScript = translateAndSetGenCtrl(fileScript, null, log);
+      ZGenScript genScript = translateAndSetGenCtrl(script, null, log);
       //the script variables are build from the local ones of the calling script:
-      zgen.executer.genScriptVariables(genScript, true, zgenExecuteLevel.localVariables);
-      zgen.executer.execute(genScript, true, bWaitForThreads, u);
+      executer.genScriptVariables(genScript, true, execLevel.localVariables);
+      executer.execute(genScript, true, bWaitForThreads, u);
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Exception exc) {
       String sError = exc.getMessage();
@@ -221,33 +234,36 @@ public class ZGen
   }
   
   
+  public static CharSequence execute(String script){
+    StringPartScan spScript = new StringPartScan(script);
+    MainCmdLogging_ifc log = new MainCmdLoggingStream(System.out);
+    ZGenExecuter zgenExecuter = new ZGenExecuter(log);
+    return execute(zgenExecuter, spScript, null, true, null, log);
+  }
   
   
-  public String execute() throws IllegalAccessException{
-    String sError = null;
-    Appendable out = null;
-    if(args.sFileTextOut !=null){
-      try{
-        File fileOut = new File(args.sFileTextOut);
-        out = new FileWriter(fileOut);
-      } catch(IOException exc){
-        sError = "Jbat - cannot create output text file;"; 
-      }
-    } else {
-      out = System.out;
-    }
-    File fileIn = new File(args.sFileScript);
-    char nrArg = '1';
-    for(String argu: args.userArgs){
-      executer.setScriptVariable("$" + nrArg, 'S', argu, true);
-      nrArg +=1;
-    }
-    sError = execute(executer, fileIn, out, true, args.fileTestXml, log);
-    return sError;
+  public static CharSequence execute(File script, MainCmdLogging_ifc log){
+    return execute(null, script, null, true, null, log);
   }
   
   
   
+  
+  public static CharSequence execute(ZGenExecuter executer, File fileScript, Appendable out, boolean accessPrivate
+      , File testOut, MainCmdLogging_ifc log) {
+    String sError = null;
+    int lengthBufferGenctrl = (int)fileScript.length();
+    try { StringPartScan spGenCtrl = new StringPartFromFileLines(fileScript, lengthBufferGenctrl, "encoding", null);
+      File fileParent = FileSystem.getDir(fileScript);
+      return execute(executer, spGenCtrl, out, accessPrivate, testOut, log);
+    } catch(IOException exc){
+      sError = exc.getMessage();
+      System.err.println("ZGen - Error script nor found; " + fileScript.getAbsolutePath() + "; " + sError); 
+      
+    }
+    return sError;
+  }  
+
   /**Generates a text described with a file given script from any data. This is the main routine of this class.
    * @param userData The data pool where all data are stored
    * @param fileScript The script to generate the text context
@@ -258,14 +274,15 @@ public class ZGen
    * @param testOut if not null then outputs a data tree of the generate script.
    * @return null if no error or an error string.
    */
-  public static String execute(ZGenExecuter executer, File fileScript, Appendable out, boolean accessPrivate
+  public static CharSequence execute(ZGenExecuter executer, StringPartScan script, Appendable out, boolean accessPrivate
       , File testOut, MainCmdLogging_ifc log) {
-    String sError = null;
+    CharSequence sError = null;
+    MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
     ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
-    try { genScript = translateAndSetGenCtrl(fileScript, testOut, log);
+    try { genScript = translateAndSetGenCtrl(null, script, log, testOut);
     } catch (ParseException exc){
       sError = exc.getMessage();
-      System.err.println("ZGen - Error parsing genscript; " + fileScript.getAbsolutePath() + "; " + sError); 
+      System.err.println("ZGen - Error parsing genscript; "  + sError); 
     } catch (Exception exc) {
       sError = exc.getMessage();
       System.err.println(Assert.exceptionInfo("ZGen - exception execute parsing;", exc,0,10));
@@ -273,7 +290,8 @@ public class ZGen
     //genScript = parseGenScript(fileScript, testOut);
     if(sError == null) { // && out !=null){
       try{
-        executer.execute(genScript, accessPrivate, true, out);
+        ZGenExecuter executer1 = executer == null ? new ZGenExecuter(log) : executer;
+        sError = executer1.execute(genScript, accessPrivate, true, out);
         //out.close();
       } catch(Exception exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));
@@ -284,11 +302,11 @@ public class ZGen
   }
   
   
-
-  public static ZGenScript translateAndSetGenCtrl(File fileGenCtrl, MainCmdLogging_ifc log) 
+  
+  public static ZGenScript translateAndSetGenCtrl(File fileScript, MainCmdLogging_ifc log) 
   throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
-    return translateAndSetGenCtrl(fileGenCtrl, null, log);
+    return translateAndSetGenCtrl(fileScript, null, log);
   }
   
   
@@ -298,7 +316,7 @@ public class ZGen
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPartScan spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(new StringPartScan(ZGenSyntax.syntax), spGenCtrl, checkXmlOut, fileParent, log);
+    return translateAndSetGenCtrl(fileParent, spGenCtrl, log, checkXmlOut);
   }
   
   
@@ -306,63 +324,86 @@ public class ZGen
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      return translateAndSetGenCtrl(new StringPartScan(ZGenSyntax.syntax), new StringPartScan(spGenCtrl), null, null, log);
+      return translateAndSetGenCtrl(null, new StringPartScan(spGenCtrl), log, null);
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
   
+  /**Translates with a new Parser and the given script in text format.
+   * @param fileParent The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
+   * @param spGenCtrl The script in form of StringPartScan. User new {@link StringPartScan#StringPartScan(CharSequence)}
+   *   to create one with a String given syntax.
+   * @param checkXmlOutput may be null, for output the script in XML form.
+   * @param log
+   * @return
+   * @throws ParseException
+   * @throws IllegalArgumentException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
   public static ZGenScript translateAndSetGenCtrl(StringPartScan spGenCtrl, MainCmdLogging_ifc log) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      return translateAndSetGenCtrl(new StringPartScan(ZGenSyntax.syntax), spGenCtrl, null, null, log);
+      return translateAndSetGenCtrl(null, spGenCtrl, log, null);
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
   
   
-  /**Translate the generation control file - core routine.
-   * It sets the {@link #zTextGenCtrl} aggregation. This routine must be called before  the script can be used.
-   * There are some routines without the parameter sZbnf4GenCtrl, which uses the internal syntax. Use those if possible:
-   * {@link #translateAndSetGenCtrl(File)}, {@link #translateAndSetGenCtrl(String)}
-   * <br><br>
-   * This routine will be called recursively if scripts are included.
-   * 
-   * @param sZbnf4GenCtrl The syntax. This routine can use a special syntax. The default syntax is {@link ZGenSyntax#syntax}.
-   * @param spGenCtrl The input file with the genCtrl statements.
-   * @param checkXmlOut If not null then writes the parse result to this file, only for check of the parse result.
-   * @param fileParent directory of the used file as start directory for included scripts. 
-   *   null possible, then the script should not contain includes.
-   * @return a new instance of {@link ZbnfMainGenCtrl}. This method returns null if there is an error. 
+  /**Translates with a new Parser and the given script in text format.
+   * @param fileParent The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
+   * @param spGenCtrl The script in form of StringPartScan. User new {@link StringPartScan#StringPartScan(CharSequence)}
+   *   to create one with a String given syntax.
+   * @param checkXmlOutput may be null, for output the script in XML form.
+   * @param log
+   * @return
    * @throws ParseException
    * @throws IllegalArgumentException
    * @throws IllegalAccessException
    * @throws InstantiationException
-   * @throws IOException only if xcheckXmlOutput fails
-   * @throws FileNotFoundException if a included file was not found or if xcheckXmlOutput file not found or not writeable
+   * @throws FileNotFoundException
+   * @throws IOException
    */
-  public static ZGenScript translateAndSetGenCtrl(StringPartScan sZbnf4GenCtrl, StringPartScan spGenCtrl
-      , File checkXmlOutput, File fileParent, MainCmdLogging_ifc log) 
+  private static ZGenScript translateAndSetGenCtrl(File fileParent, StringPartScan spGenCtrl, 
+      MainCmdLogging_ifc log, File checkXmlOutput) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
-  { final MainCmdLogging_ifc log1;
+  { MainCmdLogging_ifc log1;
     if(log == null){
       log1 = new MainCmdLoggingStream(System.out);
     } else { log1 = log; }
     ZbnfParser parserGenCtrl = new ZbnfParser(log1); //console);
-    parserGenCtrl.setSyntax(sZbnf4GenCtrl);
-    if(log1.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
-      log1.reportln(MainCmdLogging_ifc.fineInfo, "== Syntax GenCtrl ==");
-      parserGenCtrl.reportSyntax(log1, MainCmdLogging_ifc.fineInfo);
-    }
-    //log1.writeInfo(" ... ");
-    return translateAndSetGenCtrl(parserGenCtrl, spGenCtrl, checkXmlOutput, fileParent, log1);
+    parserGenCtrl.setSyntax(ZGenSyntax.syntax);
+
+    return translateAndSetGenCtrl(parserGenCtrl, fileParent, spGenCtrl, checkXmlOutput, log1);
   }
     
-    
-    
-    
-  private static ZGenScript translateAndSetGenCtrl(ZbnfParser parserGenCtrl, StringPartScan spGenCtrl
-      , File checkXmlOutput, File fileParent, MainCmdLogging_ifc log) 
+  
+  
+  
+  
+  /**Translates with a given parser which knows the syntax of ZGen already.
+   * The parser may be reused if more as one script should be translated on after another.
+   * @param parserGenCtrl The parser should know the correct syntax already. One should use
+   *   {@link ZGenSyntax#syntax} to set {@link ZbnfParser#setSyntax(String)}. One should use an 
+   *   abbreviating syntax for experience.
+   * @param fileParent The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
+   * @param spGenCtrl The script in form of StringPartScan. User new {@link StringPartScan#StringPartScan(CharSequence)}
+   *   to create one with a String given syntax.
+   * @param checkXmlOutput may be null, for output the script in XML form.
+   * @param log
+   * @return
+   * @throws ParseException
+   * @throws IllegalArgumentException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  private static ZGenScript translateAndSetGenCtrl(ZbnfParser parserGenCtrl, File fileParent, StringPartScan spGenCtrl
+      , File checkXmlOutput, MainCmdLogging_ifc log) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
     
@@ -405,7 +446,9 @@ public class ZGen
         File fileIncludeParent = FileSystem.getDir(fileInclude);
         int lengthBufferGenctrl = (int)fileInclude.length();
         StringPartScan spGenCtrlSub = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
-        translateAndSetGenCtrl(parserGenCtrl, spGenCtrlSub, checkXmlOutput, fileIncludeParent, log);
+        //
+        //included script, call recursively.
+        translateAndSetGenCtrl(parserGenCtrl, fileIncludeParent, spGenCtrlSub, checkXmlOutput, log);
       }
     }
     ZGenScript.Subroutine mainRoutine = zbnfGenCtrl.getMainRoutine();

@@ -528,10 +528,10 @@ public class StateMGen {
         }
         Writer out = new FileWriter(fOut);
         generator.setScriptVariable("state", 'O', stateData, true);
-        String sError = ZGen.execute(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
+        CharSequence sError = ZGen.execute(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
         out.close();
         if(sError !=null){
-          console.writeError(sError);
+          console.writeError(sError.toString());
         } else {
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
         }
