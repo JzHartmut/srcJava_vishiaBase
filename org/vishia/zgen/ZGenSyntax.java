@@ -65,7 +65,7 @@ public final class ZGenSyntax {
     + "$endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
     + "$keywords= new | java | cmd | start | debug | stdout | stdin | stderr \n" 
     + "  | subtext | sub | main | call | cd \n"
-    + "  | Pipe | StringBuffer | String | List | Openfile | Obj | Set | set | include | zbatch \n"
+    + "  | Pipe | StringBuffer | Stringjar | String | List | Openfile | Obj | Set | set | include | zbatch \n"
     + "  | break | XXXreturn | exit | onerror | for | while | if | elsif | else . \n"
     + "\n"
     + "ZGen::= \n"
@@ -127,7 +127,8 @@ public final class ZGenSyntax {
     + "\n"
     + "\n"
     + "DefVariable::=String\\  <DefStringVar?textVariable> \n"  //note: without ; because used in sub argument list
-    + "| StringBuffer\\  <DefObjVar?StringBuffer> \n"
+    + "| StringBuffer\\  <DefObjVar?Stringjar> \n"
+    + "| Stringjar\\  <DefObjVar?Stringjar> \n"
     + "| Pipe\\  <DefObjVar?Pipe> \n"
     + "| List\\  <DefObjVar?List> \n"
     + "| Map\\  <DefMapVar> \n"
@@ -170,7 +171,7 @@ public final class ZGenSyntax {
     + "\n"
     + "\n"
     + "objExpr::= <textDatapath?> \n"         //either a text or a datapath, which may be any object, 
-    + "  | <expression>.\n"              //or an expression
+    + "  | <expression?>.\n"              //or an expression
     + "\n"
     + "\n"
     + "textDatapath::=  <\"\"?text> | \\<:\\><textExprNoWhiteSpaces?textExpr>\\<\\.\\> | <datapath> .\n"
