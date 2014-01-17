@@ -158,11 +158,12 @@ public final class ZGenSyntax {
     + "| <variable?> \n" 
     + "| new <newJavaClass> \n" 
     + "| java <staticJavaMethod> \n" 
+    + "| %<staticJavaMethod> \n" 
     + "].\n"
     + "\n"
     + "\n"
     + "newJavaClass::= <$\\.?javapath> [ ( [{ <objExpr?argument> ? , }] )].\n" 
-    + "staticJavaMethod::= <$\\.?javapath> [ (+)<?extArgs>| ( [ { <objExpr?argument> ? , } ] )].\n"
+    + "staticJavaMethod::= <$\\.?javapath> [( [ { <objExpr?argument> ? , } ] )].\n"
     + "##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
     + "\n"
     
@@ -178,21 +179,32 @@ public final class ZGenSyntax {
     + "\n"
     + "textValue::=  <\"\"?text> | \\<:\\><textExprNoWhiteSpaces?textExpr>\\<\\.\\> | * <datapath> | <*;(\\ \\r\\n?text> .\n"
     + "\n"
+    + "conditionInText::=<andExprInText?> [{\\|\\| <andExprInText?boolOrOperation>}].\n"  // || of <andExpr> 
+    + "\n"
+    + "andExprInText::= <boolExprInText?> [{ && <boolExprInText?boolAndOperation>}].\n"    // && of <boolExpr>
+    + "\n"  
+    + "boolExprInText::= [<?boolNot> ! | not|]\n"
+    + "[ ( <conditionInText?parenthesisCondition> ) \n"                //boolean in paranthesis
+    + "| <expression?> [<cmpOperationInText>]\n"  //simple boolean
+    + "].\n"  
+    + "\n"
+    + "cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <expression?>.\n"
+    + "\n"
+    + "\n"
     + "\n"
     + "condition::=<andExpr?> [{\\|\\| <andExpr?boolOrOperation>}].\n"  // || of <andExpr> 
     + "\n"
     + "andExpr::= <boolExpr?> [{ && <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
     + "\n"  
-    + "\n"    
-    + "\n"
     + "boolExpr::= [<?boolNot> ! | not|]\n"
     + "[ ( <condition?parenthesisCondition> ) \n"                //boolean in paranthesis
     + "| <expression?> [<cmpOperation>]\n"  //simple boolean
     + "].\n"  
     + "\n"
-    + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <expression?>.\n"
+    + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == | \\>= | \\> | \\<= | \\< ]] <expression?>.\n"
     + "\n"
     + "expression::= \\<:\\><textExprNoWhiteSpaces?textExpr>\\<\\.\\> \n"
+    + "            | bool ( <boolExpr> ) \n"
     + "            | <multExpr?> [{ + <multExpr?addOperation> | - <multExpr?subOperation>}].\n"
     + "\n"
     + "\n"
@@ -244,7 +256,7 @@ public final class ZGenSyntax {
     + "forContainer::= <$?forVariable> : <datapath?forContainer> \\> <textExpr> \\<\\.for[ : <$?@name> ]\\>. ##name is the name of the container element data reference\n"
     + "\n"
     + "if::= <ifBlock> [{ \\<:elsif : <ifBlock>  }][ \\<:else\\> <textExpr?elseBlock> ] \\<\\.if\\>.\n"
-    + "ifBlock::= <condition> \\> <textExpr>.\n"
+    + "ifBlock::= <conditionInText> \\> <textExpr>.\n"
     + "\n"
     + "assignExpr::= [{ <variable?assign> [ = | += <?append>] }] <objExpr?> ;.\n"
     + "\n"
@@ -260,7 +272,7 @@ public final class ZGenSyntax {
     + "\n"
     + "whileScript::= <ifScriptBlock?whileBlock> .\n"
     + "\n"
-    + "ifScriptBlock::= ( <condition> ) \\{ <statementBlock> \\} .\n"
+    + "ifScriptBlock::= [ ( <datapath> ) | ( <condition> ) ] \\{ <statementBlock> \\} .\n"
     + "\n"
     //Note: the for-variable is adequate a DefVariable
     + "callSubroutine::= [{ <variable?assign> [ = | += <?append>] }] call <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
