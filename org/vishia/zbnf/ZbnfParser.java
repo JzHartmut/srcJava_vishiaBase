@@ -126,6 +126,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-01-23 Hartmut bugfix: The <code><*{ }></code> for indented lines does not work. Testing and fixing. 
    * <li>2014-01-01 Hartmut new: Line number transfer to parse result items. Idea TODO: transfer the line numbers only
    *   on finish of parsing, store position in input file while parsing: There are some more items stored in the parse process
    *   than remain on finish. Getting line numbers form {@link org.vishia.util.StringPartFromFileLines#getLineCt()}
@@ -818,8 +819,8 @@ public class ZbnfParser
               sReport = nReportLevel < nLevelReportBranchParsing ? ""
                 : "item " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
 
-              String sSrc = null;  //parsed string
-              int posSrc = -1;     //position of the string
+              //String sSrc = null;  //parsed string
+              //int posSrc = -1;     //position of the string
               switch(nType)
               {
               case ZbnfSyntaxPrescript.kTerminalSymbol: 
@@ -892,19 +893,20 @@ public class ZbnfParser
               { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
                 StringBuilder buffer = new StringBuilder();
                 input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
-                sSrc = buffer.toString();
-                posSrc = (int)input.getCurrentPosition();
                 bOk = input.found();
-                if(bOk)
-                { input.fromEnd();
-  
-                if(sSrc.startsWith("Sets the reflection class."))
-                  stop();
-  
+                if(bOk) {
+                  if(StringFunctions.startsWith(buffer,"First line"))
+                    stop();
+                  if( sSemanticForStoring != null)
+                  { long posResult = input.getCurrentPosition();
+                    bOk = addResultOrSubsyntax(buffer, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+                  }
+                  //posSrc = (int)input.getCurrentPosition();
+                  input.fromEnd();
                 }
                 else
                 { input.setLengthMax();  //not found: length() was setted to 0
-                saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
+                  saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
                 }
               } break;
               case ZbnfSyntaxPrescript.kStringUntilEndcharOutsideQuotion:
@@ -926,19 +928,6 @@ public class ZbnfParser
                 bOk = false;
               }
               }//switch
-              if(sSrc != null)  //##ss
-              { //something parsed as string, may be also an empty string:
-                if(syntaxItem.getSubSyntax()!= null)
-                { //##i
-                  bOk = parseSubSyntax(sSrc, posSrc, syntaxItem.getSubSyntax());
-                }
-                else if( sSemanticForStoring != null)
-                { //parserStoreInPrescript.addString(sSrc, sSemanticForStoring, parentResultItem);
-                  CharSequence sResult = input.getCurrentPart();
-                  long posResult = input.getCurrentPosition();
-                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
-                }
-              }                
             }//if bTerminalFound
             if(!bOk)
             { //position before parseWhiteSpaceAndComment().

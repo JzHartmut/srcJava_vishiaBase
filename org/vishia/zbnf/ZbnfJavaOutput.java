@@ -165,6 +165,7 @@ public class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-01-01 Hartmut new: {@link #parseFileAndFillJavaObject(Object, File, String)}
    * <li>2014-01-01 Hartmut new: {@link #trySetInputLine(Component, int)}. Uses {@link DataAccess} first time.
    *   there are some parallel functionality of this class and DataAccess. The DataAccess is the more universal one. 
    * <li>2013-09-02 Hartmut chg: The {@link Component#clazz} is build from the instance instead from the
@@ -1186,6 +1187,22 @@ public class ZbnfJavaOutput
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, String sSyntax) 
   { StringPartScan spSyntax = new StringPartScan(sSyntax);
     return parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
+  }
+  
+  
+  /**Parses the given file with given syntax and fills the parsed result into the result object.
+   * This is a simple common use-able routine to transfer textual content into content of a Java object.
+   * <br>
+   * The non static variant allows to set some options using class methods.
+   * 
+   * @param result The instance to store the result.
+   * @param fInput The input file to parse.
+   * @param sSyntax The syntax using ZBNF
+   * @return null if no error, else a short error text. The explicitly error text is written in report.
+   */
+  public String parseFileAndFillJavaObject(Object result, File fInput, String sSyntax) 
+  { StringPartScan spSyntax = new StringPartScan(sSyntax);
+    return parseFileAndFillJavaObject(result.getClass(), result, fInput, spSyntax);
   }
   
   
