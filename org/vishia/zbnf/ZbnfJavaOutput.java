@@ -766,8 +766,8 @@ public class ZbnfJavaOutput
     ChildInstanceAndClass child = null;
           
     final String semantic = semanticRaw.startsWith("@") ? semanticRaw.substring(1) : semanticRaw;
-    if(semantic.equals("operator"))
-      stop();      //test special not component (scalar) field
+    if(semantic.equals("posIndent"))
+      stop();     
     int posSeparator = semantic.lastIndexOf('/');
     if(posSeparator >0)
     { String sematicFirst = semantic.substring(0, posSeparator);

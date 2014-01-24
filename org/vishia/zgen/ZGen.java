@@ -149,25 +149,31 @@ public class ZGen
           */
           try{ 
             ZGenExecuter executer = new ZGenExecuter(mainCmdLine);
+            FileWriter fout = null;
             Appendable out = null;
             if(args.sFileTextOut !=null){
               try{
                 File fileOut = new File(args.sFileTextOut);
-                out = new FileWriter(fileOut);
+                out = fout = new FileWriter(fileOut);
               } catch(IOException exc){
                 sRet = "ZGen - cannot create output text file;"; 
               }
             } else {
               out = System.out;
             }
-            File fileIn = new File(args.sFileScript);
-            char nrArg = '1';
-            for(String argu: args.userArgs){
-              executer.setScriptVariable("$" + nrArg, 'S', argu, true);
-              nrArg +=1;
+            if(sRet == null){
+              File fileIn = new File(args.sFileScript);
+              char nrArg = '1';
+              for(String argu: args.userArgs){
+                executer.setScriptVariable("$" + nrArg, 'S', argu, true);
+                nrArg +=1;
+              }
+              CharSequence cRet = execute(executer, fileIn, out, true, args.fileTestXml, mainCmdLine);
+              sRet = cRet == null ? null : cRet.toString();
             }
-            CharSequence cRet = execute(executer, fileIn, out, true, args.fileTestXml, mainCmdLine);
-            sRet = cRet == null ? null : cRet.toString();
+            if(fout !=null){
+              fout.close();
+            }
             if(sRet !=null){
               mainCmdLine.writeError(sRet);
             }

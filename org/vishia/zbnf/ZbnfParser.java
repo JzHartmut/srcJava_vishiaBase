@@ -126,6 +126,15 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-01-23 Hartmut chg: {@link SubParser#parseSub(StringPartScan, String, int, String, boolean, ZbnfParserStore)}:
+   *   Whitespaces skipped before <code>parserStoreInPrescript.addAlternative(...)</code> is called because the position in input
+   *   should be stored in the alternative ParseResultItem after the whitespaces. Especially the correct line
+   *   should be noted. 
+   * <li>2014-01-23 Hartmut chg: {@link SubParser#parseWhiteSpaceAndCommentOrTerminalSymbol(String, ZbnfParserStore)}:
+   *   the <code>parseResult</code> argument is used only if <code>sConstantSyntax</code> is not null. Changed consequently.
+   *   Now it is possible to invoke this routine with <code>parseWhiteSpaceAndCommentOrTerminalSymbol(null, null)</code>
+   *   to only skip white spaces and comments. Therefore {@link SubParser#parseWhiteSpaceAndComment()} is possible
+   *   without the 'parseResult' argument. 
    * <li>2014-01-23 Hartmut bugfix: The <code><*{ }></code> for indented lines does not work. Testing and fixing. 
    * <li>2014-01-01 Hartmut new: Line number transfer to parse result items. Idea TODO: transfer the line numbers only
    *   on finish of parsing, store position in input file while parsing: There are some more items stored in the parse process
@@ -526,8 +535,23 @@ public class ZbnfParser
         if(syntaxPrescript.getSemantic()!=null)
         { sSemanticForError = sSemanticForErrorP = syntaxPrescript.getSemantic();
         }
-        if(sSemanticForStoring != null && sSemanticForStoring.equals("startVariable"))
+
+        if(sSemanticForStoring != null && sSemanticForStoring.equals("textOut"))
           Assert.stop();
+
+        //NOTE: new Position of parseWhiteSpaceAndComment
+        long posInput  = input.getCurrentPosition();
+        //int nLineInput = input.getLineCt();
+        if(  bSkipSpaceAndComment 
+          && resultType == ZbnfParserStore.kOption  //if another one, it is possible to parse a comment inside the component.
+          && sSemanticForStoring != null
+          )
+        { //only if a syntax [<?semantic>x|y|z] is given:
+          parseWhiteSpaceAndComment();
+          //the input.getCurrentPosition() is the position after any whitespace or comment  
+        }
+        long posInputForStore  = input.getCurrentPosition();
+
         /** Index in parse Result to rewind on error*/
         int idxCurrentStore = -1;
         
@@ -561,18 +585,8 @@ public class ZbnfParser
         report.reportln(nLevelReportParsing, "parseSub                " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " semantic=" + sSemanticForStoring + " errormsg=" + sSemanticForError );
         
         int posParseResult = parserStoreInPrescript.getNextPosition();
-        long posInput  = input.getCurrentPosition();
-        //int nLineInput = input.getLineCt();
-        if(  bSkipSpaceAndComment 
-          && resultType == ZbnfParserStore.kOption
-          && sSemanticForStoring != null
-          )
-        { //only if a syntax [<?semantic>x|y|z] is given:
-          parseWhiteSpaceAndComment(parserStoreInPrescript);
-          //the input.getCurrentPosition() is the position after any whitespace or comment  
-        }
-        long posInputForStore  = input.getCurrentPosition();
-        
+        //NOTE here was SkipWhitespace
+
         
         int idxAlternative = 0;
         
@@ -1405,18 +1419,19 @@ public class ZbnfParser
       }
   
   
-      /**
-       * If a syntaxItem is given, the terminal symbol (constant syntax) must be found.
+      /**Skips white spaces and parses a given constant syntax before checking and skipping comments.
+       * Other comment parts are skipped.
+       * If the sConstantSyntax is given, it have to be found. 
        * Otherwise the current position of input is rewind to the start before this
        * method is calling (no whitespaces and comments are skipped!).
+       * If the constant syntax is not given, all comments and white spaces are skipped.
        * @param sConstantSyntax The string to test as terminal symbol or null. 
+       * @param parseResult can be null if sConstantSyntax is null.
        * @return true if the constant syntax given by syntaxItem is found. 
        *         false if it is not found or syntaxItem == null.
-       ##s
        */
       private boolean parseWhiteSpaceAndCommentOrTerminalSymbol(String sConstantSyntax, ZbnfParserStore parseResult)
-      { int posParseResult = parseResult.getNextPosition();
-        long posInput  = input.getCurrentPosition();
+      { long posInput  = input.getCurrentPosition();
         
         long posCurrent = input.getCurrentPosition();
         boolean bFoundConstantSyntax;  
@@ -1474,10 +1489,14 @@ public class ZbnfParser
         if(sConstantSyntax != null && !bFoundConstantSyntax)
         { saveError("\"" + sConstantSyntax + "\"");
           input.setCurrentPosition(posInput);
+          int posParseResult = parseResult.getNextPosition();
           parseResult.setCurrentPosition(posParseResult);
         }
         return bFoundConstantSyntax;
       }
+      
+      
+      
 
       /** Parses at start of an option.
        * 
@@ -1684,8 +1703,8 @@ public class ZbnfParser
       }
   
   
-      private boolean parseWhiteSpaceAndComment(ZbnfParserStore parseResult)
-      { return parseWhiteSpaceAndCommentOrTerminalSymbol(null, parseResult);
+      private boolean parseWhiteSpaceAndComment() //ZbnfParserStore parseResult)
+      { return parseWhiteSpaceAndCommentOrTerminalSymbol(null, null);
       }
   
       /** Sets the rightest position of matched input. Usefull to support the

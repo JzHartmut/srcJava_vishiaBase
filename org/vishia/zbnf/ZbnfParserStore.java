@@ -725,7 +725,9 @@ class ZbnfParserStore
    * @return The position of this entry, using for rewind(posititon);
    */
   private ParseResultItemImplement add(String sSemantic, CharSequence sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement(this, sSemantic, parent, "?");
+  { if(sSemantic.equals("textOut"))
+      stop();
+    item = new ParseResultItemImplement(this, sSemantic, parent, "?");
     item.sInput = sInput == null ? null : sInput.toString();
     if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
       item.parsedString = item.sInput;

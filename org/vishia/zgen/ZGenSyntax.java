@@ -110,7 +110,7 @@ public final class ZGenSyntax {
     + "| if <ifScript?if> \n"
     + "| while <whileScript?> \n"
     + "| <threadBlock> \n"
-    + "| <textOut> \n"
+    + "| \\<+ <textOut> \n"
     + "| <cmdLineWait?cmdWait> \n"  ///
     + "| start <cmdLine?cmdStart> \n"
     + "| move <srcdst?move> ; \n"
@@ -157,7 +157,7 @@ public final class ZGenSyntax {
     + "textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | * <datapath> | <*;(\\ \\r\\n?text> .\n"
     + "\n"
     + "\n"
-    + "objExpr::= <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <datapath> | <numExpression?>.\n"
+    + "objExpr::= <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <datapath> | <numExpr>.\n"
     + "\n"
     + "\n"
     + "datapath::= \n"
@@ -183,10 +183,10 @@ public final class ZGenSyntax {
     + "\n"  
     + "boolExpr::= [<?boolNot> ! | not|]\n"
     + "[ ( <condition?parenthesisCondition> ) \n"                //boolean in paranthesis
-    + "| <numExpression?> [<cmpOperation>]\n"  //simple boolean
+    + "| <numExpr?> [<cmpOperation>]\n"  //simple boolean
     + "].\n"  
     + "\n"
-    + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == | \\>= | \\> | \\<= | \\< ]] <numExpression?>.\n"
+    + "cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == | \\>= | \\> | \\<= | \\< ]] <numExpr?>.\n"
     + "\n"
     + "conditionInText::=<andExprInText?> [{\\|\\| <andExprInText?boolOrOperation>}].\n"  // || of <andExpr> 
     + "\n"
@@ -194,13 +194,13 @@ public final class ZGenSyntax {
     + "\n"  
     + "boolExprInText::= [<?boolNot> ! | not|]\n"
     + "[ ( <conditionInText?parenthesisCondition> ) \n"                //boolean in paranthesis
-    + "| <numExpression?> [<cmpOperationInText>]\n"  //simple boolean
+    + "| <numExpr?> [<cmpOperationInText>]\n"  //simple boolean
     + "].\n"  
     + "\n"
-    + "cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <numExpression?>.\n"
+    + "cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <numExpr?>.\n"
     + "\n"
     + "\n"
-    + "numExpression::=" //  \\<:\\><textExprNoWhiteSpaces?textExpr>\\<\\.\\> |\n"
+    + "numExpr::=" //  \\<:\\><textExprNoWhiteSpaces?textExpr>\\<\\.\\> |\n"
     + "              bool ( <boolExpr> ) \n"
     + "            | <multExpr?> [{ + <multExpr?addOperation> | - <multExpr?subOperation>}].\n"
     + "\n"
@@ -211,7 +211,7 @@ public final class ZGenSyntax {
     + "[{[<?unaryOperator> ! | ~ | - | + ]}]        ##additional unary operators.\n"
     + "[<#?intValue> | 0x<#x?intValue> | <#f?floatValue> ##ones of kind of value:\n"
     + "| '<!.?charValue>' | <\"\"?textValue> \n"
-    + "| ( <numExpression?parenthesisExpr> ) \n" 
+    + "| ( <numExpr?parenthesisExpr> ) \n" 
     + "| <datapath> \n"
     + "].\n"
     + "\n"
@@ -225,16 +225,21 @@ public final class ZGenSyntax {
     + "| \\<:hasNext\\> <textExpr?hasNext> \\<\\.hasNext\\>\n"
     + "| \\<*subtext : <callSubtext?call>\n"
     + "| \\<*<dataText>\n"
-    + "| \\<:[<?transcription>n|r|t|\\<]\\>\n"
-    + "| \\<:n\\><?newline>\n"
-    + "| \\<:\\ \\><!\\\\s*?>\n"      //skip all whitespaces
+    + "| \\<: [<?transcription> n | r | t | \\< | # ] \\>\n"
+    + "| \\<:lf\\><?newline>\n"
+    + "| \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
+    + "| \\#\\#<*\\r\\n?>{\\r|\\n} \n"  //skip comment till inclusively newline
     + "| \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
-    + "| <*{ \\t}|\\<:|\\<+|\\<=|\\<*|\\<\\.?nonEmptyText>\n"
+    + "| <*|\\<:|\\<+|\\<=|\\<*|\\<\\.?plainText>\n"
     + "]\n"
     + "}.\n"
     + "\n"
     + "\n"
-    + "dataText::=<datapath>[ : <\"\"?formatText>] \\>.     ##<*expr: format>\n"
+    + "dataText::=<datapath>[ : <*\\>?formatText>] \\>.     ##<*expr: format>\n"
+    + "\n"
+    + "textOut::= [<variable?assign>] \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + "\n"      //<?posIndent>
+    + "\n"
     + "\n"
       //Note: the for-variable is adequate a DefVariable
     + "forScript::= ( <$?forVariable> : <datapath?forContainer> )  \\{ <statementBlock> \\} .\n"
@@ -265,8 +270,6 @@ public final class ZGenSyntax {
     + "\n"
     + "assignExpr::= [{ <variable?assign> [ = | += <?append>] }] <objExpr?> ;.\n"
     + "\n"
-    + "textOut::= \\<+ <variable?assign> \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
-    + "\n"
     + "cmdLineWait::=[{ <variable?assign> += }] cmd <cmdLine?>.\n"
     + "\n"
     + "cmdLine::= <textValue?> [{[?;[\\ |\\n|\\r]] [ \\<\\:arg\\><textExpr?actualArgument>\\<\\.arg\\> |<textValue?actualArgument>] }] \n"
@@ -275,7 +278,7 @@ public final class ZGenSyntax {
     + "\n"
     + "threadBlock::= Thread <variable?defThreadVar> [;| = [thread] \\{ <statementBlock> \\}] | [<variable?assignThreadVar> =] thread \\{ <statementBlock> \\}.\n"
     + "\n"
-    ;
+    ;  
  
   
 
