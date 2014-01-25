@@ -157,7 +157,8 @@ public final class ZGenSyntax {
     + "textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | * <datapath> | <*;(\\ \\r\\n?text> .\n"
     + "\n"
     + "\n"
-    + "objExpr::= <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <datapath> | <numExpr>.\n"
+    //+ "objExpr::= <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <datapath> | <numExpr>.\n"
+    + "objExpr::= <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <numExpr>.\n" //special handling if numExpr contains only a datapath.
     + "\n"
     + "\n"
     + "datapath::= \n"
@@ -259,7 +260,8 @@ public final class ZGenSyntax {
     + "\n"
     + "whileScript::= <ifScriptBlock?whileBlock> .\n"
     + "\n"
-    + "ifScriptBlock::= [ ( <datapath> ) | ( <condition> ) ] \\{ <statementBlock> \\} .\n"
+    + "ifScriptBlock::= ( <condition> ) \\{ <statementBlock> \\} .\n"
+    //+ "ifScriptBlock::= [ ( <datapath> ) | ( <condition> ) ] \\{ <statementBlock> \\} .\n"
     + "\n"
     //Note: the for-variable is adequate a DefVariable
     + "callSubroutine::= [{ <variable?assign> [ = | += <?append>] }] call <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
