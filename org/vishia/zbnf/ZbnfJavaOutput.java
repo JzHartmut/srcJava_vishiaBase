@@ -1019,7 +1019,7 @@ public class ZbnfJavaOutput
         argTypes1[0] = Integer.TYPE;
         try
         { datapath.set("set_inputLine_()");
-          datapath.addActualArgument(new Integer(line));
+          datapath.setActualArguments(new Integer(line));
           DataAccess.invokeMethod(datapath, destComponent.instance);
           //method = destComponent.clazz.getDeclaredMethod("set_inputLine_", argTypes1);
           //Object[] argMethod1 = new Object[1];
