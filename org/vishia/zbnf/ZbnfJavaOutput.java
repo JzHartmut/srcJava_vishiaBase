@@ -1020,14 +1020,14 @@ public class ZbnfJavaOutput
         try
         { datapath.set("set_inputLine_()");
           datapath.setActualArguments(new Integer(line));
-          DataAccess.invokeMethod(datapath, destComponent.instance);
+          DataAccess.invokeMethod(datapath, destComponent.instance, false);
           //method = destComponent.clazz.getDeclaredMethod("set_inputLine_", argTypes1);
           //Object[] argMethod1 = new Object[1];
           //argMethod1[0] = new Integer(line);
           //method.invoke(destComponent.instance, argMethod1);
         }
         catch(NoSuchMethodException exception1){ /**do nothing if the field isn't found.*/ }
-        catch(InvocationTargetException exc)
+        catch(Exception exc)
         { throw new IllegalAccessException(exc.getMessage()); 
         }
       }
