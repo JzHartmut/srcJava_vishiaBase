@@ -154,10 +154,6 @@ public class Zmake extends Zbnf2Text
     /**Path of XSL script to generate the ant.xml*/
     //String sXslt4ant = "xsl/ZmakeStd.xslp";
     
-    /**Path without extension of a file which outputs the text generation scripts parse result and the Zmake input parse result. 
-     * */
-    String sCheckXmlOutput = null;
-    
     /**Path of the ant.xml*/
     String sOutput = null;
     
@@ -299,13 +295,13 @@ public class Zmake extends Zbnf2Text
       ////super.addHelpInfo("-zGen:TPATH        zbnf-file to parse the genCtrl file, default is the internal syntax");
       //super.addHelpInfo("-syntax:PATH       Write an information file which contains the help and the syntax.");
       super.addHelpInfo("One can use either '=' or ':' as separator between option key and value.");
-      super.addArgument(super.argList);
-      super.addArgument(arguments);
+      super.addArgument(argumentsZbnf2Xml);
+      super.addArgument(argumentsZmake);
       super.addStandardHelpInfo();
       
     }
   
-    private final MainCmd.Argument[] arguments =
+    private final MainCmd.Argument[] argumentsZmake =
     { new MainCmd.Argument("", "INPUT         The first argument without - is the input file with path and extension."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sFileIn = val; return true; }})
@@ -556,6 +552,8 @@ public class Zmake extends Zbnf2Text
     console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
     //JbatchScript genScript = new JbatchScript(gen, console); //gen.parseGenScript(fileGenCtrl, null);
     File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
+    
+    //The generation script:
     ZGenScript genScript = ZGen.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl, console);
     
     //The users make file:

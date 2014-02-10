@@ -155,7 +155,7 @@ public final class ZGenSyntax {
     + "\n"
     + "variable::= <$@-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + "\n"
-    + "datapathElement::= <$@-?ident> [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
+    + "datapathElement::= [<?ident>[@]<$-?>] [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
     + "\n"
     + "\n"
     + "textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <datapath> .\n"

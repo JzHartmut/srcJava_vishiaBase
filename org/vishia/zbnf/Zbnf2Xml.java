@@ -289,7 +289,7 @@ public class Zbnf2Xml
 
     
     
-    protected final MainCmd.Argument[] argList =
+    public final MainCmd.Argument[] argumentsZbnf2Xml =
     { new MainCmd.Argument("-i", ":<INPUT>    inputfilepath, this file is parsing", setInput)
     , new MainCmd.Argument("-s", ":<SYNTAX>   syntax prescript in ZBNF format for parsing", setSyntax)
     , new MainCmd.Argument("-x", ":<OUTPUT>   output xml file written in UTF8-encoding", setOutUtf8)
@@ -319,7 +319,7 @@ public class Zbnf2Xml
       super.addAboutInfo("Conversion text to XML via ZBNF");
       super.addAboutInfo("made by HSchorrig, 2006-03-20..2013-02-09");
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> -[x|y|z]:<OUTPUT> [{-a:<NAME>=<VALUE>}]");  //[-w[+|-|0]]
-      super.addArgument(argList);
+      super.addArgument(argumentsZbnf2Xml);
       super.addStandardHelpInfo();
     }
     

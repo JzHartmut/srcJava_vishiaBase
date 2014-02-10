@@ -6,20 +6,33 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.vishia.cmd.ZGenExecuter;
+import org.vishia.cmd.ZGenScript;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
+import org.vishia.util.Assert;
+import org.vishia.util.DataAccess;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
+import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zbnf.Zbnf2Xml;
 import org.vishia.zbnf.ZbnfJavaOutput;
+import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
 
 public class Zbnf2Text extends Zbnf2Xml
 {
+  
+  
+  public interface PreparerParsedData{
+    void prepareParsedData(XmlNode zbnfResult, ZGenExecuter zgen);
+  }
+  
 
   /** Aggregation to the Console implementation class.*/
   final MainCmd_ifc console;
@@ -48,7 +61,7 @@ public class Zbnf2Text extends Zbnf2Xml
     { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
           to hold the contact to the command line execution.
       */
-      try{ main.parseAndTranslate(arg, null); }
+      try{ main.parseAndTranslate(arg, null, main.setZbnfResult); }
       catch(Exception exception)
       { //catch the last level of error. No error is reported direct on command line!
         main.report.report("Uncatched Exception on main level:", exception);
@@ -67,6 +80,14 @@ public class Zbnf2Text extends Zbnf2Xml
   }
   
   
+  PreparerParsedData setZbnfResult = new PreparerParsedData(){
+    @Override public void prepareParsedData(XmlNode zbnfResult, ZGenExecuter zgen)
+    { try{ zgen.setScriptVariable("xml", 'O', zbnfResult, true);
+      } catch(Exception exc){
+        throw new RuntimeException(exc);
+      }
+    }
+  };
   
   
   /**Executes the parsing and translation to the destination files
@@ -79,9 +100,11 @@ public class Zbnf2Text extends Zbnf2Xml
    * @throws IllegalArgumentException
    * @throws IllegalAccessException
    * @throws InstantiationException
+   * @throws XmlException 
+   * @throws ParseException 
    */
-  public boolean parseAndTranslate(Args args, Object userData) 
-  throws IOException, IllegalArgumentException, IllegalAccessException, InstantiationException
+  public boolean parseAndTranslate(Args args, Object userData, PreparerParsedData preparerParsedData) 
+  throws IOException, IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException, XmlException
   { boolean bOk = true;
     bOk = super.parseAndWriteXml();
     
@@ -118,15 +141,29 @@ public class Zbnf2Text extends Zbnf2Xml
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
         }
+
+        File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
+        //The generation script:
+        ZGenScript genScript = ZGen.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
+        
         Writer out = new FileWriter(fOut);
-        generator.setScriptVariable("xml", 'O', resultTree, true);
-        CharSequence sError = ZGen.execute(generator, fileScript, out, true, outData, console);
-        out.close();
-        if(sError !=null){
-          console.writeError(sError.toString());
-        } else {
-          console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
+        Map<String, DataAccess.Variable<Object>> scriptVariables;
+        try{ 
+          scriptVariables = generator.genScriptVariables(genScript, true, null);
+        } catch(IOException exc){
+          System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
+          scriptVariables = null;
         }
+        preparerParsedData.prepareParsedData(resultTree, generator);
+        try{ 
+
+          CharSequence sError = generator.execute(genScript, true, true, out);
+        } catch(Exception exc){
+          CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
+          System.err.println(sMsg);
+        }
+
+        out.close();
       }
       if(outData !=null) {
         //outData.close();
@@ -149,6 +186,10 @@ public class Zbnf2Text extends Zbnf2Xml
     /**File name for a file to check the script. It contains the content of the script after parsing. */
     public String sScriptCheck = null;
     
+    /**Path without extension of a file which outputs the text generation scripts parse result and the Zmake input parse result. 
+     * */
+    public String sCheckXmlOutput = null;
+
     /**List of pairs of scripts and output files. */
     public List<Out> listOut = new LinkedList<Out>();
     
@@ -178,7 +219,7 @@ public class Zbnf2Text extends Zbnf2Xml
 
     //Args cmdlineArgs;  
     
-    private final MainCmd.Argument[] arguments =
+    protected final MainCmd.Argument[] argumentsZbnf2Text =
     { new MainCmd.Argument("-t", "<TEXTOUT> name of the output file to generate"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
@@ -193,13 +234,14 @@ public class Zbnf2Text extends Zbnf2Xml
           cmdlineArgs.lastOut.sFileScript  = val;
           if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
           return true; }})
-    , new MainCmd.Argument("", "-c... -t... more as one output file with this pair of arguments", null)
+    , new MainCmd.Argument("  ", "-c... -t... more as one output file with this pair of arguments", null)
     };
     
     
     protected CmdLineText(Args arg, String[] args) {
       super(arg, args);
-      super.addArgument(arguments);
+      super.addArgument(argumentsZbnf2Xml);
+      super.addArgument(argumentsZbnf2Text);
       //cmdlineArgs = new Args();
       //super.addHelpInfo("-c:<OUTCTRL> name of a file to control the output");
       //super.addHelpInfo("-t:<TEXTOUT> name of the output file to generate");
