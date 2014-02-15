@@ -124,7 +124,7 @@ public class Zbnf2Xml
   
   
     /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
-    public String sFileOut = null;
+    public String sFileXmlOut = null;
     
     /**If true then executes parsing only if the output file does not exist or the input is newer. */
     public boolean checknew;
@@ -214,7 +214,7 @@ public class Zbnf2Xml
     arg = new Args();
     
     this.arg.sFileIn = input;
-    this.arg.sFileOut = output;
+    this.arg.sFileXmlOut = output;
     this.arg.sFileSyntax = syntax;
     this.report = report;
   }
@@ -236,17 +236,17 @@ public class Zbnf2Xml
 
     
     MainCmd.SetArgument setOutUtf8 = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      argData.sFileOut = val; argData.encoding = Charset.forName("UTF-8"); return true;
+      argData.sFileXmlOut = val; argData.encoding = Charset.forName("UTF-8"); return true;
     }};
 
     
     MainCmd.SetArgument setOutAscii = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      argData.sFileOut = val; argData.encoding = Charset.forName("US-ASCII"); return true;
+      argData.sFileXmlOut = val; argData.encoding = Charset.forName("US-ASCII"); return true;
     }};
 
     
     MainCmd.SetArgument setOut = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      argData.sFileOut = val; return true;
+      argData.sFileXmlOut = val; return true;
     }};
 
     
@@ -354,8 +354,8 @@ public class Zbnf2Xml
       if(argData.sFileSyntax == null)            { bOk = false; writeError("ERROR argument -sSyntaxfile is obligat."); }
       else if(argData.sFileSyntax.length()==0)   { bOk = false; writeError("ERROR argument -sSyntaxfile without content.");}
   
-      if(argData.sFileOut == null)           { bOk = false; writeError("argument -y -x or -z: no outputfile is given");}
-      else if(argData.sFileOut.length()==0)  { bOk = false; writeError("argument -y -x or -z without content"); }
+      if(argData.sFileXmlOut == null)           { bOk = false; writeError("argument -y -x or -z: no outputfile is given");}
+      else if(argData.sFileXmlOut.length()==0)  { bOk = false; writeError("argument -y -x or -z without content"); }
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
   
       return bOk;
@@ -375,11 +375,11 @@ public class Zbnf2Xml
 
   public boolean parseAndWriteXml()
   { boolean bOk = true;
-    File fileOut = new File(arg.sFileOut);
+    File fileXmlOut = arg.sFileXmlOut == null ? null : new File(arg.sFileXmlOut);
     File fileIn = new File(arg.sFileIn);
     if(arg.checknew){
-      if(fileOut.exists() && fileIn.exists() && fileOut.lastModified() > fileIn.lastModified()){
-        report.writeInfo("Zbnf2Xml - is uptodate; " + fileOut.getAbsolutePath()); report.writeInfoln("");
+      if(fileXmlOut !=null && fileXmlOut.exists() && fileIn.exists() && fileXmlOut.lastModified() > fileIn.lastModified()){
+        report.writeInfo("Zbnf2Xml - is uptodate; " + fileXmlOut.getAbsolutePath()); report.writeInfoln("");
         return true;
       }
     }
@@ -472,22 +472,23 @@ public class Zbnf2Xml
       if(arg.encoding == null) 
       { arg.encoding = Charset.forName("UTF-8");
       }
-      try
-      { 
-        FileSystem.mkDirPath(fileOut);
-        FileOutputStream streamOut = new FileOutputStream(fileOut);
-        OutputStreamWriter out = new OutputStreamWriter(streamOut, arg.encoding);
-        SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
-        xmlOutputter.write(out, xmlTop);
-        out.close();
-        streamOut.close();
-        report.writeInfo(" done "); report.writeInfoln("");
-      }
-      catch(IOException exception)
-      { report.writeError("file not writeable:" + fileOut.getAbsolutePath());
-        bOk = false;
-      }
-      
+      if(fileXmlOut !=null){
+        try
+        { 
+          FileSystem.mkDirPath(fileXmlOut);
+          FileOutputStream streamOut = new FileOutputStream(fileXmlOut);
+          OutputStreamWriter out = new OutputStreamWriter(streamOut, arg.encoding);
+          SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
+          xmlOutputter.write(out, xmlTop);
+          out.close();
+          streamOut.close();
+          report.writeInfo(" done "); report.writeInfoln("");
+        }
+        catch(IOException exception)
+        { report.writeError("file not writeable:" + fileXmlOut.getAbsolutePath());
+          bOk = false;
+        }
+      }      
     }
     return bOk;
   }

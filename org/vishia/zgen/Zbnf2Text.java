@@ -30,7 +30,7 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   public interface PreparerParsedData{
-    void prepareParsedData(XmlNode zbnfResult, ZGenExecuter zgen);
+    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen);
   }
   
 
@@ -81,8 +81,8 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   PreparerParsedData setZbnfResult = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode zbnfResult, ZGenExecuter zgen)
-    { try{ zgen.setScriptVariable("xml", 'O', zbnfResult, true);
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen)
+    { try{ zgen.setScriptVariable("data", 'O', xmlResult, true);
       } catch(Exception exc){
         throw new RuntimeException(exc);
       }
@@ -110,16 +110,15 @@ public class Zbnf2Text extends Zbnf2Xml
     
     //XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
     XmlNode resultTree = parser.getResultTree(); 
-    if(userData == null){
-      userData = resultTree;
-    } else {
+    ZbnfParseResultItem zbnfResult = parser.getFirstParseResult();
+    if(userData != null){
       ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
-      parser2Java.setContent(userData.getClass(), userData, parser.getFirstParseResult());
+      parser2Java.setContent(userData.getClass(), userData, zbnfResult);
     }
     
     
-    if(args.sFileOut !=null){
-      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sFileOut + "2.xml")); 
+    if(args.sFileXmlOut !=null){ //TODO contained in super.parseAndWriteXml()
+      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sFileXmlOut + "2.xml")); 
       SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
       xmlOut.write(wrXml, resultTree);
       wrXml.close();
@@ -154,7 +153,7 @@ public class Zbnf2Text extends Zbnf2Xml
           System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
           scriptVariables = null;
         }
-        preparerParsedData.prepareParsedData(resultTree, generator);
+        preparerParsedData.prepareParsedData(resultTree, zbnfResult, generator);
         try{ 
 
           CharSequence sError = generator.execute(genScript, true, true, out);
@@ -190,6 +189,10 @@ public class Zbnf2Text extends Zbnf2Xml
      * */
     public String sCheckXmlOutput = null;
 
+    
+    /**Command line argument for a current directory. May be null if not given. */
+    public String sCurrDir;
+    
     /**List of pairs of scripts and output files. */
     public List<Out> listOut = new LinkedList<Out>();
     
@@ -220,7 +223,12 @@ public class Zbnf2Text extends Zbnf2Xml
     //Args cmdlineArgs;  
     
     protected final MainCmd.Argument[] argumentsZbnf2Text =
-    { new MainCmd.Argument("-t", "<TEXTOUT> name of the output file to generate"
+    { new MainCmd.Argument("-currdir", "<PATH> name of the directory for currdir"
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          Args cmdlineArgs = (Args)CmdLineText.super.argData;
+          cmdlineArgs.sCurrDir = val;
+          return true; }})
+    , new MainCmd.Argument("-t", "<TEXTOUT> name of the output file to generate"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
           if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }

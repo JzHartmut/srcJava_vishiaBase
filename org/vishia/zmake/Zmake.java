@@ -134,7 +134,7 @@ public class Zmake extends Zbnf2Text
     String zbnfjax_PATH;
     
     /**String path to the current dir from calling. */
-    File currdir = null;  //default: actual dir
+    //File currdir = null;  //default: actual dir
     
     /**String path from currdir to a tmp dir. */
     String tmp = "../tmp";  
@@ -164,6 +164,8 @@ public class Zmake extends Zbnf2Text
   /** Aggregation to the Console implementation class.*/
   private final MainCmd_ifc console;
 
+  
+  private final ZmakeUserScript.UserScript zmakeInput;
   
   final ZGenExecuter gen;
   
@@ -234,7 +236,8 @@ public class Zmake extends Zbnf2Text
           helpOut.close();
         }
         if(cmdArgs.sFileIn != null){
-          sExecuteError = main.parseAndTranslate();
+          main.execMake();
+          //sExecuteError = main.parseAndTranslate();
         }
       }
       catch(Exception exception)
@@ -259,6 +262,7 @@ public class Zmake extends Zbnf2Text
     this.args = args;
     this.console = console;
     gen = new ZGenExecuter(console);
+    zmakeInput = new ZmakeUserScript.UserScript(gen);
     genScript = new ZGenScript(gen, console);
   }
   
@@ -323,12 +327,6 @@ public class Zmake extends Zbnf2Text
           callingArgs.sOutput = val; return true; }})
     , new MainCmd.Argument("-ZBNFJAX_HOME", "=PATH path to the ZBNFJAX_HOME, default it is getted from environment.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
       callingArgs.zbnfjax_PATH = val; return true; }})
-    , new MainCmd.Argument("-currdir", "=PATH       sets the current dir alternatively to command line invocation path."
-        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          String sCurrdir = val; 
-          callingArgs.currdir = new File(sCurrdir);
-          if(!callingArgs.currdir.exists()) throw new IllegalArgumentException("Zmake - failed argument -currdir:, not existing; " + sCurrdir);
-          return true; }})
     , new MainCmd.Argument("-tmp", "=PATH of tmp dir, will be created if not exists, default=\"../tmp\"", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.tmp = val; return true; }})
     , new MainCmd.Argument("-checkxml", "=CHECK  if given then 3 files for debugging will be written"
@@ -369,9 +367,11 @@ public class Zmake extends Zbnf2Text
           writeError("ERROR argument -i=INP is obligate."); 
         }
     
-        if(callingArgs.sOutput == null)              
+        //if(callingArgs.sOutput == null)              
+        if(callingArgs.listOut.size() ==0)
         { bOk = false; 
-          writeError("ERROR argument -o=OUT is obligate."); 
+          writeError("Zmake: arguments -c=genctrl -t=textOut is obligate.");
+          //writeError("ERROR argument -o=OUT is obligate."); 
         }
       }
       if(!bOk) setExitErrorLevel(exitWithArgumentError);
@@ -408,6 +408,7 @@ public class Zmake extends Zbnf2Text
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException, ParseException 
   {
     ZmakeUserScript.UserScript zmakeInput;
+
     try{
       StringPartScan spInput = new StringPartFromFileLines(fileZmakeUserscript);
       ZbnfParser parser = new ZbnfParser(console);
@@ -470,9 +471,39 @@ public class Zmake extends Zbnf2Text
     
   }
   
+
+  
+  PreparerParsedData prepareZmake = new PreparerParsedData(){
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen) { 
+      try{ 
+        zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
+      } catch(Exception exc){
+        throw new RuntimeException(exc);
+      }
+    }
+  };
   
   
+
   
+  private void execMake() throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
+    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
+    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
+    if(args.zbnfjax_PATH == null)
+    { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
+    }
+    if(args.zbnfjax_PATH.startsWith("\"") && args.zbnfjax_PATH.length()>=2){ 
+      args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
+    }
+    args.zbnfjax_PATH += "/";
+    if(args.sFileSyntax !=null && !FileSystem.isAbsolutePath(args.sFileSyntax) && !args.sFileSyntax.startsWith("./")){
+      args.sFileSyntax = args.zbnfjax_PATH + args.sFileSyntax;
+    }
+
+    
+    console.writeInfoln("* Zmake: " + args.sFileIn);
+    super.parseAndTranslate(args, zmakeInput, prepareZmake);
+  }
   
   
   /** Execute the task of the class. 
@@ -538,14 +569,14 @@ public class Zmake extends Zbnf2Text
     //File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
     //genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
     
-    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.currdir + args.sFileIn + "\" with \"" 
+    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.sCurrDir + args.sFileIn + "\" with \"" 
       + args.zbnfjax_PATH + args.sFileSyntax + "\" to \""  + fileOut.getAbsolutePath() + "\"");
     //call the parser from input, it produces a temporary xml file.
     String sZbnf = args.zbnfjax_PATH + args.sFileSyntax;
     
     
     //String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
-    fileInput = new File(args.currdir, args.sFileIn);
+    fileInput = new File(args.sFileIn);
     
     //Parse the users zmake script:
     //evaluate
@@ -590,6 +621,7 @@ public class Zmake extends Zbnf2Text
   
   void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, DataAccess.Variable<Object>> scriptVariables) 
   throws FileNotFoundException{
+    /*
     File currdir = args.currdir;
     String sCurrdir;
     if(args.currdir == null){
@@ -610,6 +642,7 @@ public class Zmake extends Zbnf2Text
     } else {
       zmakeInput.setCurrentDir(currdir);
     }
+    */
   }
 
 }
