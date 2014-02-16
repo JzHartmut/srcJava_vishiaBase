@@ -172,8 +172,6 @@ public class Zmake extends Zbnf2Text
   /**
    * 
    */
-  private final ZGenScript genScript;
-  
   /**String path for the absolute tmp dir. */
   //private String tmpAbs;  
   
@@ -263,7 +261,6 @@ public class Zmake extends Zbnf2Text
     this.console = console;
     gen = new ZGenExecuter(console);
     zmakeInput = new ZmakeUserScript.UserScript(gen);
-    genScript = new ZGenScript(gen, console);
   }
   
   
@@ -477,6 +474,8 @@ public class Zmake extends Zbnf2Text
     @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen) { 
       try{ 
         zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
+        File currdir = (File)zgen.getScriptVariable("currdir").value();  //set in script level
+        zmakeInput.setCurrentDir(currdir); //use for build absolute paths. 
       } catch(Exception exc){
         throw new RuntimeException(exc);
       }
@@ -569,7 +568,7 @@ public class Zmake extends Zbnf2Text
     //File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
     //genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
     
-    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.sCurrDir + args.sFileIn + "\" with \"" 
+    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.sCurrdir + args.sFileIn + "\" with \"" 
       + args.zbnfjax_PATH + args.sFileSyntax + "\" to \""  + fileOut.getAbsolutePath() + "\"");
     //call the parser from input, it produces a temporary xml file.
     String sZbnf = args.zbnfjax_PATH + args.sFileSyntax;
@@ -593,7 +592,7 @@ public class Zmake extends Zbnf2Text
     Writer out = new FileWriter(fileOut);
     Map<String, DataAccess.Variable<Object>> scriptVariables;
     try{ 
-      scriptVariables = gen.genScriptVariables(genScript, true, null);
+      scriptVariables = gen.genScriptVariables(genScript, true, null, args.sCurrdir);
     } catch(IOException exc){
       System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
       scriptVariables = null;
@@ -603,7 +602,7 @@ public class Zmake extends Zbnf2Text
     
     try{ 
       gen.setScriptVariable("zmake", 'O', zmakeInput, true);
-      gen.execute(genScript, true, true, out);
+      gen.execute(genScript, true, true, out, args.sCurrdir);
     } catch(Exception exc){
       CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
       System.err.println(sMsg);

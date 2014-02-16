@@ -109,7 +109,9 @@ public final class UserFilepath {
   
   
   /**Version, history and license.
-   * <ul>
+   * <ul>   
+   * <li>2013-03-10 Hartmut new: {@link FileSystem#normalizePath(CharSequence)} called in {@link #absbasepath(CharSequence)}
+   *   offers the normalize path for all absolute file paths. 
    * <li>2013-03-10 Hartmut new: Replace wildcards: {@link #absfile(UserFilepath)} (TODO for some more access methods)
    * <li>2013-02-12 Hartmut chg: dissolved from inner class in {@link ZmakeUserScript}
    * </ul>
@@ -666,7 +668,7 @@ public final class UserFilepath {
    */
   private CharSequence absbasepath(CharSequence basepath){ 
     CharSequence ret = basepath;
-    if(isRootpath(ret) ==0){       //insert the currdir of the script only if it is not a root directory already:
+    if(isRootpath(ret) ==0){ //a relative path: insert the currdir of the script only if it is not a root directory already:
       if(ret.length() >0){      //only if ret is not ""
         StringBuilder uRet;
         if(ret instanceof StringBuilder){
@@ -695,6 +697,7 @@ public final class UserFilepath {
         ret = script.sCurrDir();
       }
     }
+    ret = FileSystem.normalizePath(ret);
     return ret;
   }
   

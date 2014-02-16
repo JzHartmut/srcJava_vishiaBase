@@ -528,7 +528,7 @@ public class StateMGen {
         }
         Writer out = new FileWriter(fOut);
         generator.setScriptVariable("state", 'O', stateData, true);
-        CharSequence sError = ZGen.execute(generator, fileScript, out, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
+        CharSequence sError = ZGen.execute(generator, fileScript, out, args.sCurrdir, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
         out.close();
         if(sError !=null){
           console.writeError(sError.toString());

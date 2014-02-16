@@ -1015,7 +1015,7 @@ variablenBlock::=
           } else {
             genScript = ZGen.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
-          textGen.execute(genScript, true, false, sclOut);
+          textGen.execute(genScript, true, false, sclOut, null);
         } catch(Exception exc){ throw new RuntimeException(exc); }
         
         /*
@@ -1035,7 +1035,7 @@ variablenBlock::=
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
           genScript = ZGen.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"), console);
-          textGen.execute(genScript, true, false, sclOut);
+          textGen.execute(genScript, true, false, sclOut, null);
         } catch(Exception exc){ throw new RuntimeException(exc); }
         /*
         sclOut.write("==OamVariables==");

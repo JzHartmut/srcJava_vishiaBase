@@ -28,7 +28,43 @@ import org.vishia.zbnf.ZbnfParser;
 public class Zbnf2Text extends Zbnf2Xml
 {
   
-  
+  /**Version, history and license.
+   * <ul>
+   * <li>2014-02-16 Hartmut chg: Argument -currdir=PATH for command line invocation {@link #main(String[])}
+   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.ZGenExecuter.ExecuteLevel)}
+   * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
+   *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
+   *   was need.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  //@SuppressWarnings("hiding")
+  static final public String sVersion = "2014-02-16";
+
   public interface PreparerParsedData{
     void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen);
   }
@@ -91,17 +127,20 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   /**Executes the parsing and translation to the destination files
-   * @param args
+   * @param args Zbnf2Text command line calling arguments.
    * @param userData If null then the xmlResultTree of {@link ZbnfParser#getResultTree()} is used as data to produce the output texts.
    *   If given then {@link ZbnfJavaOutput} is used to set its content with the parsers result. 
    *   If this instance is instance of {@link java.lang.Runnable} then its run method will be execute after filling.
+   * @param preparerParsedData This is a callback which is called after generating the script variable
+   *   and before execution the script. The user can set additional script variables before execution
+   *   or can use script variables to get its content for any userData evaluation. 
    * @return
    * @throws IOException
    * @throws IllegalArgumentException
    * @throws IllegalAccessException
    * @throws InstantiationException
-   * @throws XmlException 
-   * @throws ParseException 
+   * @throws ParseException
+   * @throws XmlException
    */
   public boolean parseAndTranslate(Args args, Object userData, PreparerParsedData preparerParsedData) 
   throws IOException, IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException, XmlException
@@ -148,7 +187,7 @@ public class Zbnf2Text extends Zbnf2Xml
         Writer out = new FileWriter(fOut);
         Map<String, DataAccess.Variable<Object>> scriptVariables;
         try{ 
-          scriptVariables = generator.genScriptVariables(genScript, true, null);
+          scriptVariables = generator.genScriptVariables(genScript, true, null, args.sCurrdir);
         } catch(IOException exc){
           System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
           scriptVariables = null;
@@ -156,7 +195,7 @@ public class Zbnf2Text extends Zbnf2Xml
         preparerParsedData.prepareParsedData(resultTree, zbnfResult, generator);
         try{ 
 
-          CharSequence sError = generator.execute(genScript, true, true, out);
+          CharSequence sError = generator.execute(genScript, true, true, out, args.sCurrdir);
         } catch(Exception exc){
           CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
           System.err.println(sMsg);
@@ -190,8 +229,10 @@ public class Zbnf2Text extends Zbnf2Xml
     public String sCheckXmlOutput = null;
 
     
-    /**Command line argument for a current directory. May be null if not given. */
-    public String sCurrDir;
+    /**If given the absolute or maybe relative path for the start currdir.
+     * This value is used as absolute start path for a <code>currdir = < objExpr?path></code> - assignment in the script.
+     */
+    public String sCurrdir;
     
     /**List of pairs of scripts and output files. */
     public List<Out> listOut = new LinkedList<Out>();
@@ -223,19 +264,19 @@ public class Zbnf2Text extends Zbnf2Xml
     //Args cmdlineArgs;  
     
     protected final MainCmd.Argument[] argumentsZbnf2Text =
-    { new MainCmd.Argument("-currdir", "<PATH> name of the directory for currdir"
+    { new MainCmd.Argument("-currdir", ":<PATH> path of the current dir. If file-path, then it's dir."
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
-          cmdlineArgs.sCurrDir = val;
+          cmdlineArgs.sCurrdir = val;
           return true; }})
-    , new MainCmd.Argument("-t", "<TEXTOUT> name of the output file to generate"
+    , new MainCmd.Argument("-t", ":<TEXTOUT> name of the output file to generate"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
           if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
           cmdlineArgs.lastOut.sFileOut  = val;
           if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
           return true; }})
-    , new MainCmd.Argument("-c", "<OUTCTRL> name of the output file to generate"
+    , new MainCmd.Argument("-c", ":<OUTCTRL> name of the generate script for the output file"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
           if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
