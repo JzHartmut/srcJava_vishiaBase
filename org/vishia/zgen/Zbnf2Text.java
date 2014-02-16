@@ -66,7 +66,7 @@ public class Zbnf2Text extends Zbnf2Xml
   static final public String sVersion = "2014-02-16";
 
   public interface PreparerParsedData{
-    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen);
+    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen);
   }
   
 
@@ -117,9 +117,13 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   PreparerParsedData setZbnfResult = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen)
-    { try{ zgen.setScriptVariable("data", 'O', xmlResult, true);
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen)
+    { try{ 
+        Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zbnf2Text.this.argsx;
+        zgen.genScriptVariables(zgenscript, true, null, argsZtext.sCurrdir);
+        zgen.setScriptVariable("data", 'O', xmlResult, true);
       } catch(Exception exc){
+        System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
         throw new RuntimeException(exc);
       }
     }
@@ -179,28 +183,24 @@ public class Zbnf2Text extends Zbnf2Xml
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
         }
-
         File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
         //The generation script:
+        //
         ZGenScript genScript = ZGen.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
-        
+        //
+        //preparation as callback:
+        //
+        preparerParsedData.prepareParsedData(resultTree, zbnfResult, genScript, generator);
+        //
         Writer out = new FileWriter(fOut);
-        Map<String, DataAccess.Variable<Object>> scriptVariables;
         try{ 
-          scriptVariables = generator.genScriptVariables(genScript, true, null, args.sCurrdir);
-        } catch(IOException exc){
-          System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
-          scriptVariables = null;
-        }
-        preparerParsedData.prepareParsedData(resultTree, zbnfResult, generator);
-        try{ 
-
+          //
           CharSequence sError = generator.execute(genScript, true, true, out, args.sCurrdir);
+          //
         } catch(Exception exc){
           CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
           System.err.println(sMsg);
         }
-
         out.close();
       }
       if(outData !=null) {

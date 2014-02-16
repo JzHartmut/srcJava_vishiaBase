@@ -471,19 +471,49 @@ public class Zmake extends Zbnf2Text
 
   
   PreparerParsedData prepareZmake = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenExecuter zgen) { 
-      try{ 
-        zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
-        File currdir = (File)zgen.getScriptVariable("currdir").value();  //set in script level
-        zmakeInput.setCurrentDir(currdir); //use for build absolute paths. 
-      } catch(Exception exc){
-        throw new RuntimeException(exc);
-      }
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen) { 
+      prepareZmake(zgenscript, zgen);
     }
   };
   
+
+  /*
+  private void generateVariablesInZmakeUserscript(ZGenExecuter zgen) throws Exception{
+    for(Map.Entry<String, ZmakeUserScript.ScriptVariable> entry: zmakeInput.var.entrySet()){
+      ZmakeUserScript.ScriptVariable var = entry.getValue();
+      CharSequence value = zgen.scriptLevel().evalString(var);
+    }
+  }
+  */
   
 
+  private void prepareZmake(ZGenScript zgenscript, ZGenExecuter zgen) { 
+    try{ 
+      //generateVariablesInZmakeUserscript(zgen);
+      Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zmake.this.argsx;
+      String sCurrdir;
+      if(argsZtext.sCurrdir !=null){
+        sCurrdir = argsZtext.sCurrdir;
+      } else {
+        sCurrdir = (new File(argsZtext.sFileIn)).getAbsoluteFile().getParent(); 
+      }
+      ZmakeUserScript.ScriptVariable varCurrdir = zmakeInput.var.get("currdir");
+      if(varCurrdir !=null) {
+        CharSequence sCurrdirZmakescript = zgen.scriptLevel().evalString(varCurrdir);
+        sCurrdir += "/" + sCurrdirZmakescript;
+      }
+      zgen.genScriptVariables(zgenscript, true, null, sCurrdir);
+      zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
+      File currdir = (File)zgen.getScriptVariable("currdir").value();  //set in script level
+      zmakeInput.setCurrentDir(currdir); //use for build absolute paths. 
+    } catch(Exception exc){
+      throw new RuntimeException(exc);
+    }
+    
+  }
+  
+  
+  
   
   private void execMake() throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
     if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }

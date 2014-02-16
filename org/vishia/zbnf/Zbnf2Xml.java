@@ -143,7 +143,7 @@ public class Zbnf2Xml
   /** Help reference to name the report output.*/
   protected final Report report;
 
-  final Args arg;
+  protected final Args argsx;
   
   protected ZbnfParser parser = null;
   
@@ -204,18 +204,18 @@ public class Zbnf2Xml
       The command line arguments are parsed here. After them the execute class is created as composition of Zbnf2Xml.
   */
   public Zbnf2Xml(Args args, Report report)
-  { this.arg = args;
+  { this.argsx = args;
     this.report = report;
   }
 
 
   public Zbnf2Xml(String input, String syntax, String output, Report report)
   {
-    arg = new Args();
+    argsx = new Args();
     
-    this.arg.sFileIn = input;
-    this.arg.sFileXmlOut = output;
-    this.arg.sFileSyntax = syntax;
+    this.argsx.sFileIn = input;
+    this.argsx.sFileXmlOut = output;
+    this.argsx.sFileSyntax = syntax;
     this.report = report;
   }
 
@@ -375,9 +375,9 @@ public class Zbnf2Xml
 
   public boolean parseAndWriteXml()
   { boolean bOk = true;
-    File fileXmlOut = arg.sFileXmlOut == null ? null : new File(arg.sFileXmlOut);
-    File fileIn = new File(arg.sFileIn);
-    if(arg.checknew){
+    File fileXmlOut = argsx.sFileXmlOut == null ? null : new File(argsx.sFileXmlOut);
+    File fileIn = new File(argsx.sFileIn);
+    if(argsx.checknew){
       if(fileXmlOut !=null && fileXmlOut.exists() && fileIn.exists() && fileXmlOut.lastModified() > fileIn.lastModified()){
         report.writeInfo("Zbnf2Xml - is uptodate; " + fileXmlOut.getAbsolutePath()); report.writeInfoln("");
         return true;
@@ -387,7 +387,7 @@ public class Zbnf2Xml
       parser.setReportIdents(Report.error, Report.info, Report.debug, Report.fineDebug);
       try
       { parser.setSkippingComment("/*", "*/", true);
-        parser.setSyntax(new File(arg.sFileSyntax));
+        parser.setSyntax(new File(argsx.sFileSyntax));
       }
       catch (ParseException exception)
       { report.writeError("Parser Syntax reading error: " + exception.getMessage());
@@ -397,21 +397,21 @@ public class Zbnf2Xml
       } 
       catch (IllegalCharsetNameException e)
       {
-        report.writeError("The " + arg.sFileSyntax + " contains an illegal charset-name");
+        report.writeError("The " + argsx.sFileSyntax + " contains an illegal charset-name");
         bOk = false;
       } 
       catch (UnsupportedCharsetException e)
       {
-        report.writeError("The charset in " + arg.sFileSyntax + " is not supported");
+        report.writeError("The charset in " + argsx.sFileSyntax + " is not supported");
         bOk = false;
       } 
       catch (FileNotFoundException e)
       {
-        report.writeError("file not found:" + arg.sFileSyntax);
+        report.writeError("file not found:" + argsx.sFileSyntax);
         bOk = false;
       } catch (IOException e)
       {
-        report.writeError("file read error:" + arg.sFileSyntax);
+        report.writeError("file read error:" + argsx.sFileSyntax);
         bOk = false;
       }
     }
@@ -436,8 +436,8 @@ public class Zbnf2Xml
       }
     }
     if(bOk)
-    { report.writeInfoln("parsing " + arg.sFileIn);
-      try{ bOk = parser.parse(spToParse, arg.additionalSemantic); }
+    { report.writeInfoln("parsing " + argsx.sFileIn);
+      try{ bOk = parser.parse(spToParse, argsx.additionalSemantic); }
       catch(Exception exception)
       { report.writeError("any exception while parsing:" + exception.getMessage());
         
@@ -469,15 +469,15 @@ public class Zbnf2Xml
           }
         }      
       }
-      if(arg.encoding == null) 
-      { arg.encoding = Charset.forName("UTF-8");
+      if(argsx.encoding == null) 
+      { argsx.encoding = Charset.forName("UTF-8");
       }
       if(fileXmlOut !=null){
         try
         { 
           FileSystem.mkDirPath(fileXmlOut);
           FileOutputStream streamOut = new FileOutputStream(fileXmlOut);
-          OutputStreamWriter out = new OutputStreamWriter(streamOut, arg.encoding);
+          OutputStreamWriter out = new OutputStreamWriter(streamOut, argsx.encoding);
           SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
           xmlOutputter.write(out, xmlTop);
           out.close();

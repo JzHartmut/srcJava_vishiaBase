@@ -401,7 +401,7 @@ public class ZmakeUserScript
      * @throws Exception
      */
     public void text(Appendable u) throws Exception{ 
-      ZGenExecuter gen = script.jbatexecuter;
+      ZGenExecuter gen = script.zgenexecuter;
       ZGenExecuter.ExecuteLevel genLevel = gen.scriptLevel(); //new ExecuteLevel(null, null);
       CharSequence content = genLevel.evalString(this);
       u.append(content);
@@ -498,7 +498,7 @@ public class ZmakeUserScript
               u.append("??:error ZmakeScriptvariable not found: ").append(element.fileset).append(".??");
               parentTarget.script.abortOnError(u,pos);
             } else {
-              ZGenExecuter gen = parentTarget.script.jbatexecuter;
+              ZGenExecuter gen = parentTarget.script.zgenexecuter;
               ZGenExecuter.ExecuteLevel genLevel = gen.scriptLevel(); //.new ExecuteLevel(null, null);
               CharSequence content = genLevel.evalString(variable);
               u.append(content);
@@ -827,7 +827,7 @@ input::=
     /**It may be necessary to evaluate parts of zmake user script, especially script variables. 
      * 
      */
-    final ZGenExecuter jbatexecuter;
+    final ZGenExecuter zgenexecuter;
     
     int nextNr = 0;
     
@@ -871,8 +871,8 @@ input::=
      */
     public ScriptVariable varZmake(String name){ return var.get(name); }
     
-    public UserScript(ZGenExecuter jbatexecuter){
-      this.jbatexecuter = jbatexecuter;
+    public UserScript(ZGenExecuter zgenexecuter){
+      this.zgenexecuter = zgenexecuter;
     }
     
     /**This method can be called from a user script.
