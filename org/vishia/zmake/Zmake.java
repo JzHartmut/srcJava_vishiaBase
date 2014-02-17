@@ -8,6 +8,7 @@ import java.text.ParseException;
 
 
 import org.vishia.mainCmd.MainCmd;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.FileSystem;
 import org.vishia.xmlSimple.XmlException;
@@ -121,40 +122,16 @@ public class Zmake extends Zbnf2Text
    * 
    */
   @SuppressWarnings("hiding")
-  static final public int version = 20131029;
+  static final public String sVersion = "2014-02-16";
 	
 	
 	private static class CallingArgs extends Zbnf2Text.Args
 	{
-  
-    //String input = null;
-    
     /**String path to the XML_TOOLBASE Directory. */
     String zbnfjax_PATH;
     
-    /**String path to the current dir from calling. */
-    //File currdir = null;  //default: actual dir
-    
-    /**String path from currdir to a tmp dir. */
-    String tmp = "../tmp";  
-    
-    /**Path of ZBNF script for the input zmake script file*/
-    //String sZbnfInput = "zmake/ZmakeStd.zbnf";
-    
-    /**Path of ZBNF script to read the sGenCtrl*/
-    String sZbnfGenCtrl = "zmake/ZmakeGenctrl.zbnf";
-    
-    /**Path of script to control the generation of the output file. */
-    String sGenCtrl = "xsl/ZmakeStd2Ant.genctrl";
-    
     /**Output file for help with syntax information. */
     String sHelpOut;
-    
-    /**Path of XSL script to generate the ant.xml*/
-    //String sXslt4ant = "xsl/ZmakeStd.xslp";
-    
-    /**Path of the ant.xml*/
-    String sOutput = null;
     
     CallingArgs(){}
   };
@@ -166,40 +143,19 @@ public class Zmake extends Zbnf2Text
   
   private final ZmakeUserScript.UserScript zmakeInput;
   
+  /**ZGen in the user script is executed by another ZGenExecuter than the execution of the translation script.
+   * The both scripts should be independently.
+   */
   final ZGenExecuter zgenUserScript;
   
-  /**
-   * 
-   */
-  /**String path for the absolute tmp dir. */
-  //private String tmpAbs;  
-  
 
-  final CallingArgs args;
+  final CallingArgs argsZmake;
   
   
-  /*---------------------------------------------------------------------------------------------*/
-  /**Invocation from command line. 
-   * <br>code in constructor to generate help info:<pre>
-     Zmake generator                                               
-     invoke>java -cp zbnf.jar org.vishia.zmake.Zmake [INPUT] [{OPTIONS}]
-     + pathes to files or dirs are absolute or relativ from cmd line invocation.               
-     + TPATH means a path started from given -ZBNFJAX_HOME:PATH or ZBNFJAX_HOME in environment.
-       But if the path starts with . it is from current dir, 
-     + WPATH means a path started from given -tmp directory (WorkPATH).
-     + INPUTFILE is the only filename without path and without extension dissolved from INPUT                        
-     INPUT              The first argument without - is the input file with path and extension.
-     -i:INPUT           path to the input file alternatively to INPUT.                         
-     -currdir:PATH       sets the current dir alternatively to command line invocation path.     
-     -ZBNFJAX_HOME:PATH path to the ZBNFJAX_HOME, default it is gotten from environment.       
-     -tmp:PATH          path of tmp dir, will be created if not exists, default=\"../tmp\".    
-     -tmpinputxml:WPATH name of the temporary file parsed from input, default=INPUTFILE.xml   
-     -o=PATH            output-file for generate the target                        
-     -zbnf=TPATH        zbnf-file to parse the input                                           
-     -genCtrl=TPATH     Zmake-genScript-file to generate the output file
-     One can use either '=' or ':' as separator between option key and value.                                      
-     </pre>
-   *
+  /**Invocation from command line. Invoke without arguments to get help.
+   * All options of {@link org.vishia.zbnf.Zbnf2Xml} and {@link Zbnf2Text} all valid too because there are
+   * super classes of this. The command line argument <code>-s:Syntax</code> for the parsing of the 
+   * Zmake user script is set to <code>zmake/ZmakeStd.zbnf</code> per default. This option is not necessary.
    */
   public static void main(String [] args)
   { //creates the args-class before creating the main class and fills it:
@@ -209,7 +165,7 @@ public class Zmake extends Zbnf2Text
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
     catch(Exception exception)
-    { mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
+    { mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
       bOk = false;
     }
     Zmake main = new Zmake(cmdArgs, mainCmdLine);     //the main instance
@@ -239,12 +195,12 @@ public class Zmake extends Zbnf2Text
       { //catch the last level of error. No error is reported direct on command line!
         main.console.report("Uncatched Exception on main level:", exception);
         exception.printStackTrace(System.err);
-        main.console.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
+        main.console.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
       }
       if(sExecuteError != null)
       { 
         main.console.reportln(0, sExecuteError);
-        main.console.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
+        main.console.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
       }
     }
     main.console.writeInfoln("* ");
@@ -254,7 +210,7 @@ public class Zmake extends Zbnf2Text
 
   public Zmake(CallingArgs args, MainCmd_ifc console)
   { super(args, console);
-    this.args = args;
+    this.argsZmake = args;
     this.console = console;
     zgenUserScript = new ZGenExecuter(console);
     zmakeInput = new ZmakeUserScript.UserScript(zgenUserScript);
@@ -288,22 +244,22 @@ public class Zmake extends Zbnf2Text
 
 
   private void execMake() throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
-    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
-    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
-    if(args.zbnfjax_PATH == null)
+    if(argsZmake.zbnfjax_PATH==null) { argsZmake.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
+    if(argsZmake.zbnfjax_PATH==null) { argsZmake.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
+    if(argsZmake.zbnfjax_PATH == null)
     { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
     }
-    if(args.zbnfjax_PATH.startsWith("\"") && args.zbnfjax_PATH.length()>=2){ 
-      args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
+    if(argsZmake.zbnfjax_PATH.startsWith("\"") && argsZmake.zbnfjax_PATH.length()>=2){ 
+      argsZmake.zbnfjax_PATH = argsZmake.zbnfjax_PATH.substring(1, argsZmake.zbnfjax_PATH.length()-1); 
     }
-    args.zbnfjax_PATH += "/";
-    if(args.sFileSyntax !=null && !FileSystem.isAbsolutePath(args.sFileSyntax) && !args.sFileSyntax.startsWith("./")){
-      args.sFileSyntax = args.zbnfjax_PATH + args.sFileSyntax;
+    argsZmake.zbnfjax_PATH += "/";
+    if(argsZmake.sFileSyntax !=null && !FileSystem.isAbsolutePath(argsZmake.sFileSyntax) && !argsZmake.sFileSyntax.startsWith("./")){
+      argsZmake.sFileSyntax = argsZmake.zbnfjax_PATH + argsZmake.sFileSyntax;
     }
   
     
-    console.writeInfoln("* Zmake: " + args.sFileIn);
-    super.parseAndTranslate(args, zmakeInput, prepareZmake);
+    console.writeInfoln("* Zmake: " + argsZmake.sFileIn);
+    super.parseAndTranslate(argsZmake, zmakeInput, prepareZmake);
   }
 
 
@@ -361,40 +317,19 @@ public class Zmake extends Zbnf2Text
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.input = val; return true; }})
     */      
-    , new MainCmd.Argument("-genCtrl", "=TPATH     file which describes the generation for the output file"
-      , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          callingArgs.sGenCtrl = val; return true; }})
     , new MainCmd.Argument("-helpsyntax", "=PATH       Write an information file which contains the help and the syntax.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sHelpOut = val; return true; }})
     /*
     , new MainCmd.Argument("-zbnf", "=TPATH        zbnf-file to parse the input, default is zmake/ZmakeStd.zbnf", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sZbnfInput = val; return true; }})
     */
-    , new MainCmd.Argument("-o", "=PATH            output-file to generate", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          callingArgs.sOutput = val; return true; }})
     , new MainCmd.Argument("-ZBNFJAX_HOME", "=PATH path to the ZBNFJAX_HOME, default it is getted from environment.", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
       callingArgs.zbnfjax_PATH = val; return true; }})
-    , new MainCmd.Argument("-tmp", "=PATH of tmp dir, will be created if not exists, default=\"../tmp\"", new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          callingArgs.tmp = val; return true; }})
     , new MainCmd.Argument("-checkxml", "=CHECK  if given then 3 files for debugging will be written"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           callingArgs.sCheckXmlOutput = val; return true; }})
     };
  
-  
-    /** Invoked from parseArguments if no argument is given. In the default implementation a help info is written
-     * and the application is terminated. The user should overwrite this method if the call without comand line arguments
-     * is meaningfull.
-     * @throws ParseException 
-     *
-     */
-    @Override
-    protected void callWithoutArguments()
-    { //:TODO: overwrite with empty method - if the calling without arguments
-      //having equal rights than the calling with arguments - no special action.
-      super.callWithoutArguments();  //it needn't be overwritten if it is unnecessary
-    }
-  
   
   
   

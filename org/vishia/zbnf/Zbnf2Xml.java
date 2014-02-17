@@ -323,19 +323,6 @@ public class Zbnf2Xml
       super.addStandardHelpInfo();
     }
     
-
-
-    /** Invoked from parseArguments if no argument is given. In the default implementation a help info is written
-     * and the application is terminated. The user should overwrite this method if the call without comand line arguments
-     * is meaningfull.
-     *
-     */
-    @Override
-    protected void callWithoutArguments()
-    { //overwrite with empty method - if the calling without arguments
-      //having equal rights than the calling with arguments - no special action.
-    }
-  
   
   
   
