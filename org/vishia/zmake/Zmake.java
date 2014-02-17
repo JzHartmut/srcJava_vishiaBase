@@ -1,50 +1,33 @@
 package org.vishia.zmake;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.text.ParseException;
-import java.util.Map;
 
 
 
 import org.vishia.mainCmd.MainCmd;
-import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.mainCmd.Report;
-import org.vishia.util.Assert;
-import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPartScan;
-import org.vishia.util.StringPartFromFileLines;
-//import org.vishia.util.StringPartFromFile;
-import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.cmd.ZGenExecuter;
 import org.vishia.cmd.ZGenScript;
-import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
-import org.vishia.zbnf.ZbnfParser;
-import org.vishia.zgen.OutputDataTree;
-import org.vishia.zgen.ZGen;
 import org.vishia.zgen.ZGenSyntax;
 import org.vishia.zgen.Zbnf2Text;
 
 
 
 /**The Zmake translator translates between a Zmake user script and the ready-to-run make-script. 
- * The zmake user script describes what's how to make in a more simple syntax than most of the other known 
- * make scripts. The outputted make-script may be an ANT.xml-make file, an old-style make file, 
+ * The Zmake user script describes what's how to make in a more simple syntax than most of the other known 
+ * make scripts. The output make-script may be an ANT.xml-make file, an old-style make file, 
  * a simple batch or script file or any other control file for a make process. 
- * The translator is able for universal usage, it  controls which text is produced for the output.
+ * The Zmake translator is sufficient for universal usage, it  controls which text is produced for the output.
  * <pre>
   Zmake
-  user    =====Z===translator=====> make script
+  user    ====ZBNF====ZGen========> make script
   script       ^        ^           ready to run
                |        |
                |        |  (user level)
@@ -61,26 +44,41 @@ import org.vishia.zgen.Zbnf2Text;
  * <ul>
  * <li> Parsing the Zmake user script: A Zmake.zbnf syntax script describes the syntax of the zmake user script 
  *   and controls the ZBNF-parser.
- * <li> Generate the output script: The translation script controls it. The translation script is parsed too 
- * before it is used. The [[zbnfjax/xsl/ZmakeGenctrl.zbnf]] contains the syntax for it.
+ * <li> Generate the output script: Therefore the {@link ZGenExecuter} is used. The translation script controls it. 
+ *   The translation script is parsed too before it is used. The Syntax for ZGen is determined by the 
+ *   {@link org.vishia.zgen.ZGenSyntax}. The usage of ZGen and the syntax is described in 
+ *   {@linkplain www.vishia.org/ZBNF/sf/ZBNF/docu/Zgen.html}.
  * </ul>
  * The three scripts below are designated as ',,admin level,,' in the figure above. 
  * Where the end user writes its Zmake script and starts the make process for its sources, a person 
- * which administrates the make-tools edits and determines the ''translation script''. 
+ * which administered the make-tools edits and determines the ''translation script''. 
  * The ''translation script'' can contain some more options for the compiler or other translator tools, 
  * which are usage specific, but without influence possibility of the end-user. 
  * For example some standard include paths or compiling options may be determined from the administrator only. 
  * The translation script may be usage-unspecific also, whereby all options are supplied in the user script.
  * <br><br>
- * The [[zbnfjax:zmake/ZmakeStd.zbnf]] script determines the syntax and semantic of the user script. 
- * The given script containing in ,,zbnfjax/zmake/zmake.zbnf,, contains enough possibilities to formulate 
- * the users requests. It is adjusted with the Java-algorithm of the translator. 
+ * The syntax of the Zmake user script, named <code>zmake.zbnf</code> in the figure above, can be set 
+ * by the command line option <code>-s:zmake.zbnf</code>. If that option is not given the <code>zbnfjax/ZmakeStd.zbnf</code>
+ * is used. The directory where <code>zbnfjax</code> is found have to be determined either by an environment variable
+ * <code>ZBNFJAX_HOME</code> or by the command line option <code>-ZBNFJAX_HOME:PATH</code>.  
+ * The given <code>zbnfjax/ZmakeStd.zbnf</code> contains enough possibilities to formulate 
+ * the users requests. It is adjusted with the class {@link ZmakeUserScript} which holds the parsed data 
+ * (using {@link org.vishia.zbnf.ZbnfJavaOutput}). 
  * But some enhancements are possible without changing the translator-program.
  * <br><br>
- * The [[zbnfjax:xsl/ZmakeGenctrl.zbnf]] controls the syntax of the translation script. 
- * It is adjusted with the internals of the translator. Only for special cases an adaption may be sensitive.
- * The translator itself, a Java-program, is not specialized to any input or output form.
- *
+ * The newness of a file which forces a compilation is not tested in the Zmake class. The Zmake is only 
+ * a management of translation. The newness can be tested with the capability of {@link org.vishia.checkDeps_C.CheckDeps}
+ * which is written for C and C++ files. That class can be used inside the translation script. 
+ * <br><br>
+ * All components including the Zmake are bundled in a download zip file with this sources, documentation, 
+ * examples.
+ * <ul>
+ * <li>{@linkplain sf.net/ZBNF} Project on sourceforge
+ * <li>{@linkplain www.vishia.org/indexDownload.html} vishia download page
+ * <li>{@linkplain www.vishia.org/ZBNF/sf/ZBNF/Docu/readme_ZBNF.html} The main description in the download component
+ * <li>{@linkplain www.vishia.org/ZBNF/sf/ZBNF/Docu/Zmake.html}
+ * <li>{@linkplain www.vishia.org/ZBNF/sf/ZBNF/Docu/ZGen.html}
+ * </ul> 
  * @author Hartmut Schorrig
  *
  */
@@ -89,6 +87,7 @@ public class Zmake extends Zbnf2Text
 
   /**Version and history
    * <ul>
+   * <li>2014-02-16: Hartmut chg: conjunction with {@link Zbnf2Text}, redesign of ZGen concept. 
    * <li>2013-03-10: Hartmut chg: <:scriptclass:JavaPath> is supported up to now. Usage for docu generation with other/more capability.
    * <li>2011-08-13: {@link ZmakeGenerator} regards < ?expandFiles>, see there.
    * <li>2011-03-07: cmdline arguments removed -zbnf4ant, -tmpAntXml, new -o=OUT -zbnf=
@@ -167,7 +166,7 @@ public class Zmake extends Zbnf2Text
   
   private final ZmakeUserScript.UserScript zmakeInput;
   
-  final ZGenExecuter gen;
+  final ZGenExecuter zgenUserScript;
   
   /**
    * 
@@ -178,8 +177,6 @@ public class Zmake extends Zbnf2Text
 
   final CallingArgs args;
   
-  
-  File fileInput;
   
   /*---------------------------------------------------------------------------------------------*/
   /**Invocation from command line. 
@@ -259,11 +256,64 @@ public class Zmake extends Zbnf2Text
   { super(args, console);
     this.args = args;
     this.console = console;
-    gen = new ZGenExecuter(console);
-    zmakeInput = new ZmakeUserScript.UserScript(gen);
+    zgenUserScript = new ZGenExecuter(console);
+    zmakeInput = new ZmakeUserScript.UserScript(zgenUserScript);
   }
   
   
+  private void prepareZmake(ZGenScript zgenscript, ZGenExecuter zgen) { 
+    try{ 
+      //generateVariablesInZmakeUserscript(zgen);
+      Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zmake.this.argsx;
+      String sCurrdir;
+      if(argsZtext.sCurrdir !=null){
+        sCurrdir = argsZtext.sCurrdir;
+      } else {
+        sCurrdir = (new File(argsZtext.sFileIn)).getAbsoluteFile().getParent(); 
+      }
+      ZmakeUserScript.ScriptVariable varCurrdir = zmakeInput.var.get("currdir");
+      if(varCurrdir !=null) {
+        CharSequence sCurrdirZmakescript = varCurrdir.text(); //zgen.scriptLevel().evalString(varCurrdir);
+        sCurrdir += "/" + sCurrdirZmakescript;
+      }
+      zgen.genScriptVariables(zgenscript, true, null, sCurrdir);
+      zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
+      File currdir = (File)zgen.getScriptVariable("currdir").value();  //set in script level
+      zmakeInput.setCurrentDir(currdir); //use for build absolute paths. 
+    } catch(Exception exc){
+      throw new RuntimeException(exc);
+    }
+    
+  }
+
+
+  private void execMake() throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
+    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
+    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
+    if(args.zbnfjax_PATH == null)
+    { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
+    }
+    if(args.zbnfjax_PATH.startsWith("\"") && args.zbnfjax_PATH.length()>=2){ 
+      args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
+    }
+    args.zbnfjax_PATH += "/";
+    if(args.sFileSyntax !=null && !FileSystem.isAbsolutePath(args.sFileSyntax) && !args.sFileSyntax.startsWith("./")){
+      args.sFileSyntax = args.zbnfjax_PATH + args.sFileSyntax;
+    }
+  
+    
+    console.writeInfoln("* Zmake: " + args.sFileIn);
+    super.parseAndTranslate(args, zmakeInput, prepareZmake);
+  }
+
+
+  PreparerParsedData prepareZmake = new PreparerParsedData(){
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen) { 
+      prepareZmake(zgenscript, zgen);
+    }
+  };
+
+
   private static class CmdLine extends Zbnf2Text.CmdLineText
   {
     private final CallingArgs callingArgs;
@@ -377,301 +427,6 @@ public class Zmake extends Zbnf2Text
     
     }
   }//class CmdLine
-
-    
   
   
-  
-  
-  
-  
-  
-  /**Parse a user's zmake-script and provide a Java data view to its content.
-   * @param fileZmakeUserscript The user script
-   * @param sZbnf The syntax file for Zmake user script.
-   * @param console 
-   * @param jbatExecuter It is used to get the current dir and to help evaluate expressions.
-   * @param sCheckXmlOutput if not null, then intermedia info are outputted
-   * @return
-   * @throws IllegalArgumentException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
-   * @throws FileNotFoundException
-   * @throws IOException
-   * @throws ParseException
-   */
-  public static ZmakeUserScript.UserScript parseUserScript(File fileZmakeUserscript
-  , String sZbnf, MainCmdLogging_ifc console, ZGenExecuter jbatExecuter, String sCheckXmlOutput) 
-  throws IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException, ParseException 
-  {
-    ZmakeUserScript.UserScript zmakeInput;
-
-    try{
-      StringPartScan spInput = new StringPartFromFileLines(fileZmakeUserscript);
-      ZbnfParser parser = new ZbnfParser(console);
-      parser.setSyntax(new File(sZbnf));
-      console.writeInfo(" ... ");
-      if(!parser.parse(spInput)){
-        String sError = parser.getSyntaxErrorReport();
-        throw new ParseException(sError,0);
-      }
-      spInput.close();
-      if(console.getReportLevel() >= Report.fineInfo){
-        parser.reportStore(console, Report.fineInfo, "User-ZmakeScript");
-      }
-      console.writeInfo(" ok, set result ... ");
-      ZbnfParseResultItem parseResult = parser.getFirstParseResult();
-      //
-      if(sCheckXmlOutput !=null){
-        //write ZmakeUserScript into XML output only to check the input script.
-        XmlNode xmlTop = parser.getResultTree();
-        OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(sCheckXmlOutput + "_zmake.test.xml")); 
-        SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
-        xmlOut.write(wrXml, xmlTop);
-        wrXml.close();
-        
-      }
-      //write ZmakeUserScript into Java classes:
-      /*
-      String scriptclass = this.genScript.getScriptclass();
-      if(scriptclass !=null){
-        try{
-          @SuppressWarnings("unchecked")
-          Class<ZmakeUserScript.UserScript> classZmake = (Class<ZmakeUserScript.UserScript>)Class.forName(scriptclass);
-          zmakeInput = classZmake.newInstance();
-        } catch (Exception e) {
-          System.err.printf("Zmake - UserScriptClass faulty: %s\n", scriptclass);
-          throw new IllegalArgumentException("error");
-        }
-      } else */{
-        zmakeInput = new ZmakeUserScript.UserScript(jbatExecuter);
-      }
-      ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
-      parser2Java.setContent(zmakeInput.getClass(), zmakeInput, parseResult);
-      
-      //TODO File currDir = (File)jbatExecuter.getScriptVariable("currDir");
-      //zmakeInput.setCurrentDir(currDir);
-      
-      if(sCheckXmlOutput !=null){
-        //Write the data structure of the ZmakeUserScript into a file to check.
-        FileWriter outData = new FileWriter(sCheckXmlOutput + "_zmake.javadat.test");
-        OutputDataTree outputterData = new OutputDataTree();
-        outputterData.output(0, zmakeInput, outData, false);
-        outData.close();
-        
-      }
-    } catch(Exception exc){
-      Assert.throwCompleteExceptionMessage("Zmake - parseUserScript;", exc);
-      zmakeInput = null;
-    }
-    return zmakeInput;
-    
-  }
-  
-
-  
-  PreparerParsedData prepareZmake = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen) { 
-      prepareZmake(zgenscript, zgen);
-    }
-  };
-  
-
-  /*
-  private void generateVariablesInZmakeUserscript(ZGenExecuter zgen) throws Exception{
-    for(Map.Entry<String, ZmakeUserScript.ScriptVariable> entry: zmakeInput.var.entrySet()){
-      ZmakeUserScript.ScriptVariable var = entry.getValue();
-      CharSequence value = zgen.scriptLevel().evalString(var);
-    }
-  }
-  */
-  
-
-  private void prepareZmake(ZGenScript zgenscript, ZGenExecuter zgen) { 
-    try{ 
-      //generateVariablesInZmakeUserscript(zgen);
-      Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zmake.this.argsx;
-      String sCurrdir;
-      if(argsZtext.sCurrdir !=null){
-        sCurrdir = argsZtext.sCurrdir;
-      } else {
-        sCurrdir = (new File(argsZtext.sFileIn)).getAbsoluteFile().getParent(); 
-      }
-      ZmakeUserScript.ScriptVariable varCurrdir = zmakeInput.var.get("currdir");
-      if(varCurrdir !=null) {
-        CharSequence sCurrdirZmakescript = zgen.scriptLevel().evalString(varCurrdir);
-        sCurrdir += "/" + sCurrdirZmakescript;
-      }
-      zgen.genScriptVariables(zgenscript, true, null, sCurrdir);
-      zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
-      File currdir = (File)zgen.getScriptVariable("currdir").value();  //set in script level
-      zmakeInput.setCurrentDir(currdir); //use for build absolute paths. 
-    } catch(Exception exc){
-      throw new RuntimeException(exc);
-    }
-    
-  }
-  
-  
-  
-  
-  private void execMake() throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
-    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
-    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
-    if(args.zbnfjax_PATH == null)
-    { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
-    }
-    if(args.zbnfjax_PATH.startsWith("\"") && args.zbnfjax_PATH.length()>=2){ 
-      args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
-    }
-    args.zbnfjax_PATH += "/";
-    if(args.sFileSyntax !=null && !FileSystem.isAbsolutePath(args.sFileSyntax) && !args.sFileSyntax.startsWith("./")){
-      args.sFileSyntax = args.zbnfjax_PATH + args.sFileSyntax;
-    }
-
-    
-    console.writeInfoln("* Zmake: " + args.sFileIn);
-    super.parseAndTranslate(args, zmakeInput, prepareZmake);
-  }
-  
-  
-  /** Execute the task of the class. 
-   * @throws ParseException 
-   * @throws XmlException 
-   * @throws InstantiationException 
-   * @throws IllegalAccessException 
-   * @throws IllegalArgumentException 
-   * @throws IOException
-   */
-  String parseAndTranslate() throws ParseException, XmlException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException
-  { String sError = null;
-    
-    //the followed line maybe unnecessary because the java cmd line interpretation always cuts the quotion  marks,
-    //Such quotion marks appeares if a double click from commandline is happened. 
-    if(args.sFileIn.startsWith("\"") && args.sFileIn.length()>=2){ args.sFileIn = args.sFileIn.substring(1, args.sFileIn.length()-1); }
-    ////
-    /*Separate input path file ext.*/
-    //String inputFile, inputExt;
-    { int pos1 = args.sFileIn.lastIndexOf(('/'));
-      int pos2 = args.sFileIn.lastIndexOf(('\\'));
-      int pos3 = args.sFileIn.lastIndexOf((':'));
-      if(pos2 > pos1){ pos1 = pos2; }
-      if(pos3 > pos1){ pos1 = pos3; }
-      if(pos1 < 0){ pos1 = -1; }
-      int pos9 = args.sFileIn.lastIndexOf('.');
-      if(pos9 < pos1) { pos9 = args.sFileIn.length(); }
-      //inputFile = args.sFileIn.substring(pos1 + 1, pos9); //, pos9);
-      //inputExt =  args.sFileIn.substring(pos9);
-      
-    }
-    
-    //tmpAbs = args.currdir +args.tmp;
-    
-    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
-    if(args.zbnfjax_PATH==null) { args.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
-    if(args.zbnfjax_PATH == null)
-    { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
-    }
-    if(args.zbnfjax_PATH.startsWith("\"") && args.zbnfjax_PATH.length()>=2){ 
-      args.zbnfjax_PATH = args.zbnfjax_PATH.substring(1, args.zbnfjax_PATH.length()-1); 
-    }
-    args.zbnfjax_PATH += "/";
-    
-    console.writeInfoln("* Zmake: " + args.sFileIn);
-    
-    File fileOut = new File(args.sOutput);
-    fileOut.setWritable(true); 
-    fileOut.delete();
-    //
-    //Parses the genctrl
-    //
-    final String sFileGenCtrl = args.sGenCtrl.startsWith(".") ? args.sGenCtrl
-                              : (args.zbnfjax_PATH + args.sGenCtrl);
-    File fileGenCtrl = new File(sFileGenCtrl);
-    if(!fileGenCtrl.exists()) throw new IllegalArgumentException("cannot find -genCtrl=" + fileGenCtrl.getAbsolutePath());
-    
-    ///
-    //ZGen.Args argsZ = new ZGen.Args();
-    //ZGen zbatch = new ZGen(argsZ, console);
-    //ZGenScript genScript; // = new JbatchScript(textGen, console);
-    
-    //File checkXmlGenctrl = args.sCheckXmlOutput==null ? null : new File(args.sCheckXmlOutput + "_ZText.xml");
-    //genScript = zbatch.translateAndSetGenCtrl(fileGenCtrl, checkXmlGenctrl);
-    
-    console.writeInfoln("* Zmake: parsing user.zmake \"" + args.sCurrdir + args.sFileIn + "\" with \"" 
-      + args.zbnfjax_PATH + args.sFileSyntax + "\" to \""  + fileOut.getAbsolutePath() + "\"");
-    //call the parser from input, it produces a temporary xml file.
-    String sZbnf = args.zbnfjax_PATH + args.sFileSyntax;
-    
-    
-    //String sInputAbs_xml = tmpAbs + "/" + args.sInputXml;
-    fileInput = new File(args.sFileIn);
-    
-    //Parse the users zmake script:
-    //evaluate
-    console.writeInfoln("* generate script \"" + fileOut.getAbsolutePath() + "\"\n");
-    //JbatchScript genScript = new JbatchScript(gen, console); //gen.parseGenScript(fileGenCtrl, null);
-    File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
-    
-    //The generation script:
-    ZGenScript genScript = ZGen.translateAndSetGenCtrl(fileGenCtrl, checkXmlOutGenCtrl, console);
-    
-    //The users make file:
-    final ZmakeUserScript.UserScript zmakeInput = parseUserScript(fileInput, sZbnf, console, gen, args.sCheckXmlOutput);
-
-    Writer out = new FileWriter(fileOut);
-    Map<String, DataAccess.Variable<Object>> scriptVariables;
-    try{ 
-      scriptVariables = gen.genScriptVariables(genScript, true, null, args.sCurrdir);
-    } catch(IOException exc){
-      System.err.println("Zmake - unexpected IOexception while generation; " + exc.getMessage());
-      scriptVariables = null;
-    }
-    
-    setScriptVariablesCurrDir(zmakeInput, scriptVariables);
-    
-    try{ 
-      gen.setScriptVariable("zmake", 'O', zmakeInput, true);
-      gen.execute(genScript, true, true, out, args.sCurrdir);
-    } catch(Exception exc){
-      CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
-      System.err.println(sMsg);
-    }
-    out.close();
-    //ZmakeGenerator mng = new ZmakeGenerator(fileOut, zmakeInput, genScript, console);
-    //mng.gen_ZmakeOutput();
-    console.writeInfoln("* done");
-    
-        
-    return sError;
-  }
-
-  
-  
-  void setScriptVariablesCurrDir(ZmakeUserScript.UserScript zmakeInput, Map<String, DataAccess.Variable<Object>> scriptVariables) 
-  throws FileNotFoundException{
-    /*
-    File currdir = args.currdir;
-    String sCurrdir;
-    if(args.currdir == null){
-      File dirInput = FileSystem.getDirectory(fileInput);
-      //The gen script may contain a currdir variable. Set the current directory of Zmake therewith.
-      //the variable <=currdir><.=> may exist. Get it:
-      Object oCurrDir = scriptVariables.get("currdir");
-      if(oCurrDir != null){
-        //Set the current dir in the user script. It is needed there for file path building.
-        sCurrdir = DataAccess.getStringFromObject(oCurrDir, null);
-        currdir = new File(dirInput, sCurrdir);
-      } else {
-        currdir = dirInput;
-      }
-    }
-    if(!currdir.exists()){
-      throw new FileNotFoundException("Zmake - currdir does not exist; " + currdir.getAbsolutePath());
-    } else {
-      zmakeInput.setCurrentDir(currdir);
-    }
-    */
-  }
-
 }
