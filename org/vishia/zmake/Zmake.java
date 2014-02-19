@@ -256,7 +256,12 @@ public class Zmake extends Zbnf2Text
     if(argsZmake.sFileSyntax !=null && !FileSystem.isAbsolutePath(argsZmake.sFileSyntax) && !argsZmake.sFileSyntax.startsWith("./")){
       argsZmake.sFileSyntax = argsZmake.zbnfjax_PATH + argsZmake.sFileSyntax;
     }
-  
+    for(Zbnf2Text.Out item: argsZmake.listOut){
+      if(item.sFileScript !=null && !FileSystem.isAbsolutePath(item.sFileScript) && !item.sFileScript.startsWith("./")){
+        item.sFileScript = argsZmake.zbnfjax_PATH + item.sFileScript;
+      }
+    }
+    
     
     console.writeInfoln("* Zmake: " + argsZmake.sFileIn);
     super.parseAndTranslate(argsZmake, zmakeInput, prepareZmake);

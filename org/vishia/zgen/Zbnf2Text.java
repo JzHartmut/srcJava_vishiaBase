@@ -151,23 +151,16 @@ public class Zbnf2Text extends Zbnf2Xml
   { boolean bOk = true;
     bOk = super.parseAndWriteXml();
     
-    //XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
-    XmlNode resultTree = parser.getResultTree(); 
-    ZbnfParseResultItem zbnfResult = parser.getFirstParseResult();
-    if(userData != null){
-      ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
-      parser2Java.setContent(userData.getClass(), userData, zbnfResult);
-    }
-    
-    
-    if(args.sFileXmlOut !=null){ //TODO contained in super.parseAndWriteXml()
-      OutputStreamWriter wrXml = new OutputStreamWriter(new FileOutputStream(args.sFileXmlOut + "2.xml")); 
-      SimpleXmlOutputter xmlOut = new SimpleXmlOutputter();
-      xmlOut.write(wrXml, resultTree);
-      wrXml.close();
-    }
-    
     if(bOk){
+
+      //XmlNodeSimple<ZbnfParseResultItem> resultTree = parser.getResultTree(); 
+      XmlNode resultTree = parser.getResultTree(); 
+      ZbnfParseResultItem zbnfResult = parser.getFirstParseResult();
+      if(userData != null){
+        ZbnfJavaOutput parser2Java = new ZbnfJavaOutput(console);
+        parser2Java.setContent(userData.getClass(), userData, zbnfResult);
+      }
+    
       File outData;
       if(args.sScriptCheck !=null){
         outData = new File(args.sScriptCheck);

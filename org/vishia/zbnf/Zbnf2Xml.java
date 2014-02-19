@@ -115,15 +115,15 @@ public class Zbnf2Xml
   
   protected static class Args{
     
-    /**Cmdline-argument, set on -i option. Inputfile to to something. :TODO: its a example.*/
+    /**Cmdline-argument, set on -i option.*/
     public String sFileIn = null;
   
-    /**Cmdline-argument, set on -y option. Inputfile to to something. :TODO: its a example.*/
+    /**Cmdline-argument, set on -s option. */
     public String sFileSyntax = null;
   
   
   
-    /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
+    /**Cmdline-argument, set on -x, -y -z option.*/
     public String sFileXmlOut = null;
     
     /**If true then executes parsing only if the output file does not exist or the input is newer. */
