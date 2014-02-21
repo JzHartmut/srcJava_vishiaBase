@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Map;
 
 
 
@@ -219,7 +220,6 @@ public class Zmake extends Zbnf2Text
   
   private void prepareZmake(ZGenScript zgenscript, ZGenExecuter zgen) { 
     try{ 
-      //generateVariablesInZmakeUserscript(zgen);
       Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zmake.this.argsx;
       String sCurrdir;
       if(argsZtext.sCurrdir !=null){

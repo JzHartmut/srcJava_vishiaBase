@@ -853,9 +853,9 @@ input::=
     public List<UserTarget> targets = new LinkedList<UserTarget>();
     
     /**From ZBNF: < variable> */
-    public ScriptVariable new_variable(){ return new ScriptVariable(this); }
+    public ScriptVariable new_ZmakeVariable(){ return new ScriptVariable(this); }
     
-    public void add_variable(ScriptVariable  value){ var.put(value.getIdent(), value); }
+    public void add_ZmakeVariable(ScriptVariable  value){ var.put(value.getIdent(), value); }
     
     public UserTarget new_target(){ return new UserTarget(this); }
     

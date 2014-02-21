@@ -135,15 +135,21 @@ public final class ZGenSyntax {
     + "DefVariable::=String\\  <DefStringVar?textVariable> \n"  //note: without ; because used in sub argument list
     + "| StringBuffer\\  <DefObjVar?Stringjar> \n"
     + "| Stringjar\\  <DefObjVar?Stringjar> \n"
+    + "| Num\\  <DefNumVar> \n"
+    + "| Bool\\  <DefBoolVar> \n"
     + "| Pipe\\  <DefObjVar?Pipe> \n"
     + "| List\\  <DefObjVar?List> \n"
     + "| Map\\  <DefMapVar> \n"
-    + "| Obj\\  <DefObjVar?objVariable> \n"
+    + "| Obj\\  <DefObjVar> \n"
     + "| Openfile\\  <Openfile> \n"
     + "| Set\\  <DefStringVar?setEnvVar> \n"
     + "| set\\  <DefStringVar?setEnvVar> \n"
     + "| SET\\  <DefStringVar?setEnvVar> \n"
     + ".\n" ///
+    + "\n"
+    + "DefNumVar::= <variable?defVariable>  [ = <numExpr>].\n"  //a text or object or expression
+    + "\n"
+    + "DefBoolVar::= <variable?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
     + "\n"
     + "DefObjVar::= <variable?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
     + "\n"
@@ -208,7 +214,7 @@ public final class ZGenSyntax {
     + "\n"
     + "\n"
     + "numExpr::=" //  \\<:\\><textExprNoWhiteSpaces?textExpr>\\<\\.\\> |\n"
-    + "              bool ( <boolExpr> ) \n"
+    + "              bool ( <boolExpr?> ) \n"
     + "            | <multExpr?> [{ + <multExpr?addOperation> | - <multExpr?subOperation>}].\n"
     + "\n"
     + "\n"
