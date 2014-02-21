@@ -83,7 +83,7 @@ public class ZmakeDocuGen extends ZmakeUserScript.UserScript
   
   
   public ZmakeDocuGen(ZGenExecuter jbatExecuter){
-    super(jbatExecuter);
+    super();
   }
  
   public class ImportXsl

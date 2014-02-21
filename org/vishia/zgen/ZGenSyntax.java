@@ -5,6 +5,7 @@ public final class ZGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-02-22 Hartmut new: Bool and Num as variable types.
    * <li>2013-12-01 Hartmut new debug 
    * <li>2013-07-07 Hartmut improved: The older text generation view is now removed.
    *   <ul>

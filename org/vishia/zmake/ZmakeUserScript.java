@@ -827,7 +827,7 @@ input::=
     /**It may be necessary to evaluate parts of zmake user script, especially script variables. 
      * 
      */
-    final ZGenExecuter zgenexecuter;
+    ZGenExecuter zgenexecuter;
     
     int nextNr = 0;
     
@@ -852,6 +852,9 @@ input::=
     
     public List<UserTarget> targets = new LinkedList<UserTarget>();
     
+    public UserScript(){
+    }
+    
     /**From ZBNF: < variable> */
     public ScriptVariable new_ZmakeVariable(){ return new ScriptVariable(this); }
     
@@ -860,7 +863,16 @@ input::=
     public UserTarget new_target(){ return new UserTarget(this); }
     
     public void add_target(UserTarget value){ targets.add(value); }
+
     
+    /**Sets the executer used to evaluate variables with {@link ScriptVariable#text()} and
+     * {@link TargetParam#text()}. This method is invoked in {@link Zmake#prepareZmake} on startup
+     * of the Zmake execution. 
+     * @param zgen
+     */
+    public void setZGen(ZGenExecuter zgen){
+      this.zgenexecuter = zgen;
+    }
     
     /**Returns a script variable's content, able to use in zmake scripts.
      * This is an alternate way to access script variables. 
@@ -870,10 +882,6 @@ input::=
      * @return the variable
      */
     public ScriptVariable varZmake(String name){ return var.get(name); }
-    
-    public UserScript(ZGenExecuter zgenexecuter){
-      this.zgenexecuter = zgenexecuter;
-    }
     
     /**This method can be called from a user script.
      * @return an incremented number started from 1.

@@ -147,7 +147,7 @@ public class Zmake extends Zbnf2Text
   /**ZGen in the user script is executed by another ZGenExecuter than the execution of the translation script.
    * The both scripts should be independently.
    */
-  final ZGenExecuter zgenUserScript;
+  //final ZGenExecuter zgenUserScript;
   
 
   final CallingArgs argsZmake;
@@ -213,12 +213,13 @@ public class Zmake extends Zbnf2Text
   { super(args, console);
     this.argsZmake = args;
     this.console = console;
-    zgenUserScript = new ZGenExecuter(console);
-    zmakeInput = new ZmakeUserScript.UserScript(zgenUserScript);
+    //zgenUserScript = new ZGenExecuter(console);
+    zmakeInput = new ZmakeUserScript.UserScript();
   }
   
   
   private void prepareZmake(ZGenScript zgenscript, ZGenExecuter zgen) { 
+    zmakeInput.setZGen(zgen);
     try{ 
       Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zmake.this.argsx;
       String sCurrdir;
