@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 
 /**This class describes one file entry in a zmake script. The file entry can contain wild cards.
@@ -168,7 +169,7 @@ public final class UserFilepath {
   String basepath;
   
   /**Localpath after ':' or the whole path. It is an empty "" if a directory is not given. 
-   * It ends with slash if any content is given. */
+   * It does not contain a separating slash on end. */
   String localdir = "";
   
   /**From Zbnf: The filename without extension. */
@@ -209,6 +210,10 @@ public final class UserFilepath {
     this.basepath = basePath.subSequence(posbase, basePath.length()).toString();
     this.script = script;
     this.localdir = localDir.toString();
+    if(!this.localdir.endsWith("/"))
+      Assert.stop();
+    else
+      Assert.stop();
     this.name = src.name;
     this.ext = src.ext;
     this.allTree = localdir.indexOf('*') >=0;
@@ -724,10 +729,10 @@ public final class UserFilepath {
     CharSequence basePath = absbasepath();
     StringBuilder uRet = basePath instanceof StringBuilder ? (StringBuilder)basePath : new StringBuilder(basePath);
     int zpath = (localdir == null) ? 0 : localdir.length();
-    if(zpath > 0){
+    if(zpath > 0){ //not empty
       int pos;
       if( (pos = uRet.length()) >0 && uRet.charAt(pos-1) != '/'){ uRet.append("/"); }
-      uRet.append(localdir.substring(0,zpath-1));
+      uRet.append(localdir);
     }
     return uRet;
   }
@@ -1079,6 +1084,7 @@ public final class UserFilepath {
       if(posExt < 0){ sExt = ""; sName = file1.localPath.substring(posName); }
       else { sExt = file1.localPath.substring(posExt); sName = file1.localPath.substring(posName, posExt); }
       filepath2.localdir = sPath;
+      assert(!sPath.endsWith("/"));
       filepath2.name = sName;
       filepath2.ext = sExt;
       listToadd.add(filepath2);

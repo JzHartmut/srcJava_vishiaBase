@@ -14,6 +14,7 @@ import java.util.Map;
 import org.vishia.cmd.ZGenExecuter;
 import org.vishia.cmd.ZGenScript;
 import org.vishia.mainCmd.MainCmd;
+import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
@@ -232,6 +233,19 @@ public class Zbnf2Text extends Zbnf2Xml
     
     /**Only the current pair of script and output. It is added to listOut if filled. */
     public Out lastOut;
+    
+    /**Adds a pair of ZGen generation files.
+     * @param sFileScript The script to generate
+     * @param sFileOut the produced outfile.
+     */
+    public void addZGen(String sFileScript, String sFileOut){
+      Out out = new Out();
+      out.sFileOut = sFileOut;
+      out.sFileScript = sFileScript;
+      listOut.add(out);
+    }
+    
+    
   }
 
 
@@ -244,6 +258,8 @@ public class Zbnf2Text extends Zbnf2Xml
     public String sFileOut = null;
 
     public String sFileScript = null;
+
+    @Override public String toString(){ return sFileScript + "==>" + sFileOut; }
   }
 
 

@@ -126,7 +126,9 @@ public class Zmake extends Zbnf2Text
   static final public String sVersion = "2014-02-16";
 	
 	
-	private static class CallingArgs extends Zbnf2Text.Args
+	/**Calling arguments of Zmake. It is used from outside on ZGen/Zbat invocation
+	 */
+	public static class CallingArgs extends Zbnf2Text.Args
 	{
     /**String path to the XML_TOOLBASE Directory. */
     String zbnfjax_PATH;
@@ -134,12 +136,12 @@ public class Zmake extends Zbnf2Text
     /**Output file for help with syntax information. */
     String sHelpOut;
     
-    CallingArgs(){}
+    //public CallingArgs(){}
   };
 
   
   /** Aggregation to the Console implementation class.*/
-  private final MainCmd_ifc console;
+  //private final MainCmd_ifc console;
 
   
   private final ZmakeUserScript.UserScript zmakeInput;
@@ -194,17 +196,17 @@ public class Zmake extends Zbnf2Text
       }
       catch(Exception exception)
       { //catch the last level of error. No error is reported direct on command line!
-        main.console.report("Uncatched Exception on main level:", exception);
+        mainCmdLine.report("Uncatched Exception on main level:", exception);
         exception.printStackTrace(System.err);
-        main.console.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
+        mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
       }
       if(sExecuteError != null)
       { 
-        main.console.reportln(0, sExecuteError);
-        main.console.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
+        mainCmdLine.reportln(0, sExecuteError);
+        mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
       }
     }
-    main.console.writeInfoln("* ");
+    mainCmdLine.writeInfoln("* ");
     mainCmdLine.exit();
   }
 
@@ -212,7 +214,7 @@ public class Zmake extends Zbnf2Text
   public Zmake(CallingArgs args, MainCmd_ifc console)
   { super(args, console);
     this.argsZmake = args;
-    this.console = console;
+    //this.console = console;
     //zgenUserScript = new ZGenExecuter(console);
     zmakeInput = new ZmakeUserScript.UserScript();
   }
@@ -244,11 +246,35 @@ public class Zmake extends Zbnf2Text
   }
 
 
+  /**Execute Zmake with given arguments.
+   * The following arguments should be given / are replaced by defaults:
+   * <ul>
+   * <li>TODO
+   * </ul>
+   * @param args
+   * @throws IllegalArgumentException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws IOException
+   * @throws ParseException
+   * @throws XmlException
+   */
+  public static void execute(CallingArgs args, MainCmd_ifc console) 
+  throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
+    Zmake zmake = new Zmake(args, console);
+    zmake.execMake();
+  }
+  
+  
   private void execMake() throws IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException{
-    if(argsZmake.zbnfjax_PATH==null) { argsZmake.zbnfjax_PATH = System.getenv("ZBNFJAX_HOME"); }
+    String sZbnfJaxHome = System.getenv("ZBNFJAX_HOME");
+    if(argsZmake.zbnfjax_PATH==null) { argsZmake.zbnfjax_PATH = sZbnfJaxHome; }
     if(argsZmake.zbnfjax_PATH==null) { argsZmake.zbnfjax_PATH = System.getenv("XML_TOOLBASE"); }
     if(argsZmake.zbnfjax_PATH == null)
     { throw new ParseException("ZBNFJAX_HOME is not set. Either you should set a environment variable with this name or you should use the -ZBNFJAX_HOME: cmdline-Argument.", 0);
+    }
+    if(sZbnfJaxHome == null){
+      System.setProperty("ZBNFJAX_HOME", argsZmake.zbnfjax_PATH);
     }
     if(argsZmake.zbnfjax_PATH.startsWith("\"") && argsZmake.zbnfjax_PATH.length()>=2){ 
       argsZmake.zbnfjax_PATH = argsZmake.zbnfjax_PATH.substring(1, argsZmake.zbnfjax_PATH.length()-1); 
@@ -262,9 +288,11 @@ public class Zmake extends Zbnf2Text
         item.sFileScript = argsZmake.zbnfjax_PATH + item.sFileScript;
       }
     }
+    if(argsZmake.sFileSyntax ==null){
+      argsZmake.sFileSyntax = argsZmake.zbnfjax_PATH + "zmake/ZmakeStd.zbnf";
+    }
     
-    
-    console.writeInfoln("* Zmake: " + argsZmake.sFileIn);
+    //console.writeInfoln("* Zmake: " + argsZmake.sFileIn);
     super.parseAndTranslate(argsZmake, zmakeInput, prepareZmake);
   }
 

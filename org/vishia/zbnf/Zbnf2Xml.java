@@ -402,7 +402,7 @@ public class Zbnf2Xml
         bOk = false;
       }
     }
-    if(bOk)
+    if(bOk && report !=null)
     { parser.reportSyntax(report, Report.fineInfo);
     }
     StringPartScan spToParse = null;
