@@ -308,7 +308,7 @@ public class ZGen
     CharSequence sError = null;
     MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
     ZGenScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
-    try { genScript = translateAndSetGenCtrl(fileScript, null, script, log, testOut);
+    try { genScript = translateAndSetGenCtrl(fileScript, script, log, testOut);
     } catch (ParseException exc){
       sError = exc.getMessage();
       System.err.println("ZGen - Error parsing genscript; "  + sError); 
@@ -344,8 +344,7 @@ public class ZGen
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
     StringPartScan spGenCtrl = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
-    File fileParent = FileSystem.getDir(fileGenCtrl);
-    return translateAndSetGenCtrl(fileGenCtrl, fileParent, spGenCtrl, log, checkXmlOut);
+    return translateAndSetGenCtrl(fileGenCtrl, spGenCtrl, log, checkXmlOut);
   }
   
   
@@ -353,7 +352,7 @@ public class ZGen
   throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   {
     try{ 
-      return translateAndSetGenCtrl(null, null, new StringPartScan(spGenCtrl), log, null);
+      return translateAndSetGenCtrl(null, new StringPartScan(spGenCtrl), log, null);
     } catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -376,7 +375,7 @@ public class ZGen
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   {
     try { 
-      return translateAndSetGenCtrl(null, null, spGenCtrl, log, null);
+      return translateAndSetGenCtrl(null, spGenCtrl, log, null);
     }catch(IOException exc){ throw new UnexpectedException(exc); }
   }
   
@@ -396,7 +395,7 @@ public class ZGen
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private static ZGenScript translateAndSetGenCtrl(File fileScript, File fileParent, StringPartScan spGenCtrl, 
+  private static ZGenScript translateAndSetGenCtrl(File fileScript, StringPartScan spGenCtrl, 
       MainCmdLogging_ifc log, File checkXmlOutput) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { MainCmdLogging_ifc log1;
@@ -406,7 +405,9 @@ public class ZGen
     ZbnfParser parserGenCtrl = new ZbnfParser(log1); //console);
     parserGenCtrl.setSyntax(ZGenSyntax.syntax);
     ZGenScript script = new ZGenScript(log, fileScript);
-    translateAndSetGenCtrl(script, parserGenCtrl, fileParent, spGenCtrl, checkXmlOutput, log1);
+    File fileParent = FileSystem.getDir(fileScript);
+    ZGenScript.ZbnfZGenScript zbnfGenCtrl = new ZGenScript.ZbnfZGenScript(script);
+    translateAndSetGenCtrl(script, zbnfGenCtrl, parserGenCtrl, fileParent, spGenCtrl, checkXmlOutput, log1);
     return script;
   }
     
@@ -432,7 +433,7 @@ public class ZGen
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private static void translateAndSetGenCtrl(ZGenScript script, ZbnfParser parserGenCtrl, File fileParent, StringPartScan spGenCtrl
+  private static void translateAndSetGenCtrl(ZGenScript script, ZGenScript.ZbnfZGenScript zbnfGenCtrl, ZbnfParser parserGenCtrl, File fileParent, StringPartScan spGenCtrl
       , File checkXmlOutput, MainCmdLogging_ifc log) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
@@ -454,20 +455,27 @@ public class ZGen
     //  parserGenCtrl.reportStore((Report)log, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
     //}
     //write into Java classes:
-    /**Helper to transfer parse result into the java classes {@link ZbnfMainGenCtrl} etc. */
+    /**Helper to transfer parse result into the java classes {@link ZbnfZGenScript} etc. */
     final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(log);
-
-    ZGenScript.ZbnfMainGenCtrl zbnfGenCtrl = new ZGenScript.ZbnfMainGenCtrl(script);
-    parserGenCtrl2Java.setContent(ZGenScript.ZbnfMainGenCtrl.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
-    
-    //if(this.scriptclassMain ==null){
-    //this.scriptclassMain = zbnfGenCtrl.scriptclass;
-    //}
-    if(zbnfGenCtrl.includes !=null){
+    //
+    //create a new instance of script-file for any file, especially for included.
+    zbnfGenCtrl.scriptfile = new ZGenScript.Scriptfile();
+    parserGenCtrl2Java.setContent(ZGenScript.ZbnfZGenScript.class, zbnfGenCtrl, parserGenCtrl.getFirstParseResult());
+    //
+    //get the main routine from the first parsed file, store it, set it after processing includefiles.
+    //
+    ZGenScript.Subroutine mainRoutine = zbnfGenCtrl.scriptfile.getMainRoutine();
+    //
+    if(zbnfGenCtrl.scriptfile.includes !=null){
       //parse includes after processing this file, because the zbnfGenCtrl.includes are not set before.
       //If one include contain a main, use it. But override the main after them, see below.
-      for(String sFileInclude: zbnfGenCtrl.includes){
-        File fileInclude = new File(fileParent, sFileInclude);
+      for(String sFileInclude: zbnfGenCtrl.scriptfile.includes){
+        final File fileInclude;
+        if(FileSystem.isAbsolutePath(sFileInclude)){
+          fileInclude= new File(sFileInclude);
+        } else {
+          fileInclude= new File(fileParent, sFileInclude);
+        }
         if(!fileInclude.exists()){
           System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
           throw new FileNotFoundException("TextGenScript - translateAndSetGenCtrl, included file not found: " + fileInclude.getAbsolutePath());
@@ -477,14 +485,15 @@ public class ZGen
         StringPartScan spGenCtrlSub = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
         //
         //included script, call recursively.
-        translateAndSetGenCtrl(script, parserGenCtrl, fileIncludeParent, spGenCtrlSub, checkXmlOutput, log);
+        translateAndSetGenCtrl(script, zbnfGenCtrl, parserGenCtrl, fileIncludeParent, spGenCtrlSub, checkXmlOutput, log);
       }
     }
-    ZGenScript.Subroutine mainRoutine = zbnfGenCtrl.getMainRoutine();
+    //
+    //set the main routine from the first parsed file if existing:
+    //
     if(mainRoutine !=null){  //the main routine of the main file wins against includes if exists.
       script.setMainRoutine(mainRoutine);
     }
-    //script.setFromIncludedScript(zbnfGenCtrl);
   }
   
   
