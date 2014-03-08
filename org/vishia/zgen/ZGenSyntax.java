@@ -5,6 +5,7 @@ public final class ZGenSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-03-07 Hartmut new:  currdir without definition, Filepath as type of a named argument.
    * <li>2014-03-07 Hartmut new: All capabilities from Zmake are joined here. Only one concept!
    * <li>2014-02-22 Hartmut new: Bool and Num as variable types.
    * <li>2013-12-01 Hartmut new debug 
@@ -74,7 +75,9 @@ public final class ZGenSyntax {
     + "[<*|==ZGen==?>==ZGen== ]\n"
     //+ "{ \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + "[ ! checkZGen = <textValue?checkZGen> ; ]\n"
-    + "[{ include [<\"\"?include> | <*;\\ ?include>] ; }] \n"
+    + "[{ include [<\"\"?include> | <*;\\ ?include>] ; \n"
+    + " | currdir = <textDatapath?scriptCurrdir> ;\n"
+    + "}] \n"
     + "{ <DefVariable?> ; \n"
     + "| subtext  <subtext?subroutine> \n"
     + "| sub <subroutine> \n"
@@ -313,7 +316,11 @@ public final class ZGenSyntax {
     + "\n"
     + "callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + "\n"
-    + "namedArgument::= [<?name>[$]<$?>|xxx] = <objExpr?>.\n"
+    + "namedArgument::= \n"
+    + "Filepath\\ <$?name> = <Filepath>\n"
+    + "\n"
+    + "| [<?name>[$]<$?>|xxx] = <objExpr?>\n"
+    + ".\n"
     + "\n"
     + "zmake::=<output> := <textValue?callName> ( { <namedArgument?actualArgument> | <zmakeInput> ? ,} ).\n"
     + "\n"
