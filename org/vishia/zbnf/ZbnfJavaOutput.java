@@ -507,12 +507,16 @@ public class ZbnfJavaOutput
    */
   private Method searchMethod(Class outputClass, String name, Class[][] argTypesVariants)      
   { Method method;
+    //System.out.println("ZbnfJavaOutput - search method; " + name + "; in class; " + outputClass.getName());
     do
     { int ixArgTypes = 0;
       do
       { Class[] argTypes = argTypesVariants[ixArgTypes];
         try{ method = outputClass.getDeclaredMethod(name, argTypes);}
-        catch(NoSuchMethodException exception){ method = null; }
+        catch(NoSuchMethodException exception){ 
+          method = null; 
+          //System.out.println("ZbnfJavaOutput - search method, not found, try argument types; " + name + "; in class; " + outputClass.getName());
+        }
       } 
       while(  method == null               //not found 
            && ++ixArgTypes < argTypesVariants.length  //but there are some variants to test.
@@ -523,6 +527,8 @@ public class ZbnfJavaOutput
       { outputClass = outputClass.getSuperclass();
         if(outputClass == Object.class)
         { outputClass = null; 
+        } else {
+          //System.out.println("ZbnfJavaOutput - search method in superclass; " + name + "; in class; " + outputClass.getName());
         }
       }
     } while(  method == null       //not found 

@@ -242,7 +242,7 @@ public final class ZGenSyntax {
     + " \n"  
     + " boolExprInText::= [<?boolNot> ! | not|]\n"
     + " [ ( <conditionInText?parenthesisCondition> ) \n"                //boolean in paranthesis
-    + " | <numExpr?> [<cmpOperationInText>]\n"  //simple boolean
+    + " | <numExpr?> [<cmpOperationInText?cmpOperation>]\n"  //simple boolean
     + " ].\n"  
     + " \n"
     + " cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <numExpr?>.\n"
@@ -271,14 +271,15 @@ public final class ZGenSyntax {
     + " [ \\<:for:<forInText?forCtrl>\n"
     + " | \\<:if: <ifInText?ifCtrl>\n"
     + " | \\<:hasNext\\> <textExpr?hasNext> \\<\\.hasNext\\>\n"
-    + " | \\<*subtext : <callSubtext?call>\n"
-    + " | \\<*<dataText>\n"
+    + " | \\<&subtext : <callSubtext?call>\n"
+    + " | \\<&<dataText>\n"
     + " | \\<: [<?transcription> n | r | t | \\< | # ] \\>\n"
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
-    + " | \\#\\#<*\\r\\n?>{\\r|\\n} \n"  //skip comment till inclusively newline
+    + " | \\#\\#<*\\r\\n?>{\\r|\\n}   ##skip comment in text\n"  //skip comment till inclusively newline
+    + " | \\<:@<#?setColumn> [ + <#?minChars>] \\>  \n"               //set column
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
-    + " | <*|\\<:|\\<+|\\<=|\\<*|\\<\\.?plainText>\n"
+    + " | <*|\\<:|\\<+|\\<=|\\<&|\\<\\.?plainText>\n"
     + " ]\n"
     + " }.\n"
     + " \n"
