@@ -142,7 +142,8 @@ public final class ZGenSyntax {
     + " srcdst::= [src=] <textValue?actualArgument> [dst=] <textValue?actualArgument> .\n"
     + " \n"
     + " \n"
-    + " DefVariable::=String\\  <DefStringVar?textVariable> \n"  //note: without ; because used in sub argument list
+    + " DefVariable::=\n"
+    + "   String\\  <DefStringVar?textVariable> \n"  //note: without ; because used in sub argument list
     + " | StringBuffer\\  <DefObjVar?Stringjar> \n"
     + " | Stringjar\\  <DefObjVar?Stringjar> \n"
     + " | Num\\  <DefNumVar> \n"
@@ -159,25 +160,30 @@ public final class ZGenSyntax {
     + " | SET\\  <DefStringVar?setEnvVar> \n"
     + " .\n" ///
     + " \n"
-    + " DefNumVar::= <dataPath?defVariable>  [ = <numExpr>].\n"  //a text or object or expression
+    + " DefNumVar::= [const <?const>] <definePath?defVariable>  [ = <numExpr>].\n"  //a text or object or expression
     + " \n"
-    + " DefBoolVar::= <dataPath?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
+    + " DefBoolVar::= [const <?const>] <definePath?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
     + " \n"
-    + " DefObjVar::= <dataPath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
+    + " DefObjVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
     + " \n"
-    + " DefStringVar::= <dataPath?defVariable> [ = <textDatapath?>].\n"  //[{ <dataPath?assign> = }] <textDatapath?> .\n"
+    + " DefStringVar::= [const <?const>] <definePath?defVariable> [ = <textDatapath?>].\n"  //[{ <definePath?assign> = }] <textDatapath?> .\n"
     + " \n"
-    + " DefMapVar::= <dataPath?defVariable>.\n"  //[{ <dataPath?assign> = }] <textDatapath?> .\n"
+    + " DefMapVar::= [const <?const>] <definePath?defVariable>.\n"  //[{ <definePath?assign> = }] <textDatapath?> .\n"
     + " \n"
-    + " Openfile::= <dataPath?defVariable> = <textDatapath?> .\n"
+    + " Openfile::= [const <?const>] <definePath?defVariable> = <textDatapath?> .\n"
     + " \n"
-    + " DefFileset::= <dataPath?defVariable> =  ( \n"
+    + " \n"
+    + " definePath::= <$-?startVariable>[ [?\\. \\>] \\.{ <defineSubelement?datapathElement> ? [?\\. \\>] \\.}].\n"
+    + " \n"
+    + " defineSubelement::= <$-?ident> [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
+    + " \n"
+    + " \n"
+    + " DefFileset::= <definePath?defVariable> =  ( \n"
     + " [ commonpath = <Filepath?commonpath> , ] \n"
     + " { <Filepath> ? , } \n"
     + " ) .\n"
     + " \n"
-    + " \n"
-    + " DefFilepath::= <dataPath?defVariable> = <Filepath>. \n"
+    + " DefFilepath::= <definePath?defVariable> = <Filepath>. \n"
     + " \n"
     + " \n"
     + " Filepath::=<\"\"?!prepFilePath>|<*;\\ \\r\\n,)?!prepFilePath>. \n"
