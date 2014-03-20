@@ -126,6 +126,11 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-03-21 Hartmut bugfix: Parsing kStringUntilEndStringWithIndent and regular expression: There was a check
+   *   'if(sSemanticForStoring != null)' before calling addResultOrSubsyntax(...), therefore 
+   *   <code><*{ * }|* /?!test_description></code> has not write the result of the sub syntax.
+   *   It is not correct. Originally there was set sSrc and addResultOrSubsyntax(...) was invoked if(sSrc !=null).
+   *   That code is reconstructed again. 
    * <li>2014-01-23 Hartmut chg: {@link SubParser#parseSub(StringPartScan, String, int, String, boolean, ZbnfParserStore)}:
    *   Whitespaces skipped before <code>parserStoreInPrescript.addAlternative(...)</code> is called because the position in input
    *   should be stored in the alternative ParseResultItem after the whitespaces. Especially the correct line
@@ -194,7 +199,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2014-01-01";
+  public static final String sVersion = "2014-03-21";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -536,7 +541,7 @@ public class ZbnfParser
         { sSemanticForError = sSemanticForErrorP = syntaxPrescript.getSemantic();
         }
 
-        if(sSemanticForStoring != null && sSemanticForStoring.equals("textOut"))
+        if(sSemanticForStoring != null && sSemanticForStoring.equals("description"))
           Assert.stop();
 
         //NOTE: new Position of parseWhiteSpaceAndComment
@@ -615,7 +620,7 @@ public class ZbnfParser
               if(idxPrescript < listPrescripts.size())  //consider spaces on end of prescript.
               { if(input.getCurrentPosition()==31)
                   Assert.stop();
-              
+                //------------>
                 bOk = parseItem(bSkipSpaceAndComment); //, thisParseResult, addParseResult);  //##s
                 bSkipSpaceAndComment = false; 
               }  
@@ -745,6 +750,8 @@ public class ZbnfParser
         }
         if(sSemanticForStoring != null)
         { sSemanticForError = sSemanticForStoring;
+          if(sSemanticForStoring.equals("semantic"))
+            stop();
         }
         int maxNrofChars = syntaxItem.getMaxNrofCharsFromComplexItem();
         if(maxNrofChars < -1)
@@ -813,6 +820,7 @@ public class ZbnfParser
             int posParseResult = parserStoreInPrescript.getNextPosition();
             long posInput  = input.getCurrentPosition();
             final boolean bTerminalFoundInComment;
+            
             String sReport = null;
             if(bSkipSpaceAndComment)
             { final String sConstantText;
@@ -830,10 +838,13 @@ public class ZbnfParser
               bOk = bTerminalFoundInComment = false; 
             }
             if(!bTerminalFoundInComment){
+              assert(!bOk);  //it is set to false in branch above.
+              CharSequence sSrc = null;  //parsed string
+              //either set bOk to true or sSrc to !=null if successfully parsed.
+              //
               sReport = nReportLevel < nLevelReportBranchParsing ? ""
                 : "item " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
 
-              //String sSrc = null;  //parsed string
               //int posSrc = -1;     //position of the string
               switch(nType)
               {
@@ -871,16 +882,7 @@ public class ZbnfParser
                 bOk = true;  //whole length
                 }
                 if(bOk)
-                { CharSequence sResult = input.getCurrentPart();
-                  long posResult = input.getCurrentPosition();
-    
-                  bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
-                  /* NOTE: is it necessary to store the line numbers etc?
-                      if(input.length()>0 && sSemanticForStoring != null)
-                      { parseResult.addString(input, sSemanticForStoring);
-                      }
-                   */
-                  input.fromEnd();
+                { sSrc = input.getCurrentPart();
                 }
                 else
                 { input.setLengthMax();
@@ -907,16 +909,8 @@ public class ZbnfParser
               { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
                 StringBuilder buffer = new StringBuilder();
                 input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
-                bOk = input.found();
-                if(bOk) {
-                  if(StringFunctions.startsWith(buffer,"First line"))
-                    stop();
-                  if( sSemanticForStoring != null)
-                  { long posResult = input.getCurrentPosition();
-                    bOk = addResultOrSubsyntax(buffer, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
-                  }
-                  //posSrc = (int)input.getCurrentPosition();
-                  input.fromEnd();
+                if(input.found()) {
+                  sSrc = buffer;
                 }
                 else
                 { input.setLengthMax();  //not found: length() was setted to 0
@@ -942,6 +936,20 @@ public class ZbnfParser
                 bOk = false;
               }
               }//switch
+              //
+              //check whether anything was parsed stored in sSrc:
+              //then input refers to the start position of the parsed one with its current part.
+              //
+            	if(sSrc != null)
+              { //something parsed as string, may be also an empty string:
+                if(StringFunctions.startsWith(sSrc,"First line"))
+                  stop();
+                long posResult = input.getCurrentPosition();
+                //TODO store line and column.
+                bOk = addResultOrSubsyntax(sSrc, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+                //posSrc = (int)input.getCurrentPosition();
+                input.fromEnd();
+              }                
             }//if bTerminalFound
             if(!bOk)
             { //position before parseWhiteSpaceAndComment().
@@ -963,7 +971,7 @@ public class ZbnfParser
        * @return successful or not
        * @throws ParseException if the subsyntax should match and it isn*t so.
        */
-      boolean parseSubSyntax(String sSrc, int posSrc, String subSyntax) 
+      boolean XXXparseSubSyntax(String sSrc, int posSrc, String subSyntax) 
       throws ParseException
       { StringPartScan partOfInput = new StringPartScan(sSrc);
         return parseComponent(partOfInput, posSrc, subSyntax, null, false, false, false);
@@ -1021,7 +1029,7 @@ public class ZbnfParser
         }
         if(bOk)
         { input.lento(posEnd);
-          if(sSemanticForStoring != null)
+          //if(sSemanticForStoring != null)
           { CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
             bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
@@ -1285,7 +1293,7 @@ public class ZbnfParser
         }
           
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + sDefinitionIdent + "?" + sSemanticForError + ">");
-        if(sDefinitionIdent.equals("type"))
+        if(sDefinitionIdent.equals("description"))
         { stop();
         
         }

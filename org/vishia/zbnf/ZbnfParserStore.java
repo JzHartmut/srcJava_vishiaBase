@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.vishia.util.Assert;
+import org.vishia.util.Debugutil;
 import org.vishia.util.SortedTreeNode;
 import org.vishia.util.StringPart;
 import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
@@ -1044,6 +1045,8 @@ class ZbnfParserStore
     //long time = System.nanoTime();
     XmlNode xmlNode = cmpnResult.treeNodeXml;
     if(xmlNode ==null){
+      if(cmpnResult.sSemantic.equals("description"))
+        Debugutil.stop();
       cmpnResult.treeNodeXml = xmlNode = createXmlNode(xmlParent, cmpnResult);
       if(cmpnResult.isComponent()){
         Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
