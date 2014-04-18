@@ -1,4 +1,4 @@
-package org.vishia.zgen;
+package org.vishia.zcmd;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -11,8 +11,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.vishia.cmd.ZGenExecuter;
-import org.vishia.cmd.ZGenScript;
+import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZcmdScript;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -32,7 +32,7 @@ public class Zbnf2Text extends Zbnf2Xml
   /**Version, history and license.
    * <ul>
    * <li>2014-02-16 Hartmut chg: Argument -currdir=PATH for command line invocation {@link #main(String[])}
-   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.ZGenExecuter.ExecuteLevel)}
+   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)}
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
    *   was need.
@@ -67,7 +67,7 @@ public class Zbnf2Text extends Zbnf2Xml
   static final public String sVersion = "2014-02-16";
 
   public interface PreparerParsedData{
-    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen);
+    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZcmdScript zgenscript, JZcmdExecuter zgen);
   }
   
 
@@ -118,7 +118,7 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   PreparerParsedData setZbnfResult = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen)
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZcmdScript zgenscript, JZcmdExecuter zgen)
     { try{ 
         Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zbnf2Text.this.argsx;
         zgen.genScriptVariables(zgenscript, true, null, argsZtext.sCurrdir);
@@ -171,16 +171,16 @@ public class Zbnf2Text extends Zbnf2Xml
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        ZGen.Args argsZ = new ZGen.Args();
-        //ZGen zbatch = new ZGen(argsZ, console);
-        ZGenExecuter generator = new ZGenExecuter(console);
+        JZcmd.Args argsZ = new JZcmd.Args();
+        //JZcmd zbatch = new JZcmd(argsZ, console);
+        JZcmdExecuter generator = new JZcmdExecuter(console);
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
         }
         File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
         //The generation script:
         //
-        ZGenScript genScript = ZGen.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
+        JZcmdScript genScript = JZcmd.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
         //
         //preparation as callback:
         //
@@ -234,11 +234,11 @@ public class Zbnf2Text extends Zbnf2Xml
     /**Only the current pair of script and output. It is added to listOut if filled. */
     public Out lastOut;
     
-    /**Adds a pair of ZGen generation files.
+    /**Adds a pair of JZcmd generation files.
      * @param sFileScript The script to generate
      * @param sFileOut the produced outfile.
      */
-    public void addZGen(String sFileScript, String sFileOut){
+    public void addJZcmd(String sFileScript, String sFileOut){
       Out out = new Out();
       out.sFileOut = sFileOut;
       out.sFileScript = sFileScript;

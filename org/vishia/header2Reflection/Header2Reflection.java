@@ -71,7 +71,7 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
-   * <li>2013-10-19 Hartmut chg: now invoke-able from ZGen, public methods etc. Only formalism
+   * <li>2013-10-19 Hartmut chg: now invoke-able from JZcmd, public methods etc. Only formalism
    * <li>2013-04-12 Hartmut new: #define in Headerfile or #define in cfg-file can be used to set {@link #idxDefines},
    *   conditional #ifdef ... in headerfile only taken if #define is known.
    * <li>2013-04-02 Hartnut chg: if a pointer is given in for exprSizeType($$$) in a offset file, "void*" is used.

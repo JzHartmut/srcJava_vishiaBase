@@ -14,11 +14,11 @@ import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.FileSystem;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
-import org.vishia.cmd.ZGenExecuter;
-import org.vishia.cmd.ZGenScript;
+import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZcmdScript;
 import org.vishia.zbnf.ZbnfParseResultItem;
-import org.vishia.zgen.ZGenSyntax;
-import org.vishia.zgen.Zbnf2Text;
+import org.vishia.zcmd.JZcmdSyntax;
+import org.vishia.zcmd.Zbnf2Text;
 
 
 
@@ -46,9 +46,9 @@ import org.vishia.zgen.Zbnf2Text;
  * <ul>
  * <li> Parsing the Zmake user script: A Zmake.zbnf syntax script describes the syntax of the zmake user script 
  *   and controls the ZBNF-parser.
- * <li> Generate the output script: Therefore the {@link ZGenExecuter} is used. The translation script controls it. 
+ * <li> Generate the output script: Therefore the {@link JZcmdExecuter} is used. The translation script controls it. 
  *   The translation script is parsed too before it is used. The Syntax for ZGen is determined by the 
- *   {@link org.vishia.zgen.ZGenSyntax}. The usage of ZGen and the syntax is described in 
+ *   {@link org.vishia.zcmd.JZcmdSyntax}. The usage of ZGen and the syntax is described in 
  *   {@linkplain www.vishia.org/ZBNF/sf/ZBNF/docu/Zgen.html}.
  * </ul>
  * The three scripts below are designated as ',,admin level,,' in the figure above. 
@@ -185,7 +185,7 @@ public class Zmake extends Zbnf2Text
           }
           helpOut.append("\n\n\n");
           helpOut.append("==Syntax of the ZmakeGenCtrlScript================================================================================\n");
-          helpOut.append(ZGenSyntax.syntax);
+          helpOut.append(JZcmdSyntax.syntax);
           helpOut.append("==================================================================================================================\n");
           helpOut.close();
         }
@@ -220,7 +220,7 @@ public class Zmake extends Zbnf2Text
   }
   
   
-  private void prepareZmake(ZGenScript zgenscript, ZGenExecuter zgen) { 
+  private void prepareZmake(JZcmdScript zgenscript, JZcmdExecuter zgen) { 
     zmakeInput.setZGen(zgen);
     try{ 
       Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zmake.this.argsx;
@@ -298,7 +298,7 @@ public class Zmake extends Zbnf2Text
 
 
   PreparerParsedData prepareZmake = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, ZGenScript zgenscript, ZGenExecuter zgen) { 
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZcmdScript zgenscript, JZcmdExecuter zgen) { 
       prepareZmake(zgenscript, zgen);
     }
   };

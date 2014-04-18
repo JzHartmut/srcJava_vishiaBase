@@ -1,6 +1,6 @@
-package org.vishia.zgen;
+package org.vishia.zcmd;
 
-public final class ZGenSyntax {
+public final class JZcmdSyntax {
 
   
   /**Version, history and license.
@@ -73,10 +73,11 @@ public final class ZGenSyntax {
     + "   | Pipe | StringBuffer | Stringjar | String | List | Openfile | Fileset | Obj | Set | set | include | zbatch \n"
     + "   | break | XXXreturn | exit | onerror | for | while | do | if | elsif | else | throw . \n"
     + " \n"
-    + " ZGen::= \n"
+    + " JZcmd::= \n"
     + " [<*|==ZGen==?>==ZGen== ]\n"
+    + " [<*|==JZcmd==?>==JZcmd== ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
-    + " [ ! checkZGen = <textValue?checkZGen> ; ]\n"
+    + " [ ! checkJZcmd = <textValue?checkJZcmd> ; ]\n"
     + " [{ include [<\"\"?include> | <*;\\ ?include>] ; \n"
     + "  | currdir = <textDatapath?scriptCurrdir> ;\n"
     + " }] \n"
@@ -87,7 +88,7 @@ public final class ZGenSyntax {
     + " | main ( ) \\{ <statementBlock?mainRoutine> \\} \n"
     + " | //<*\\n\\r?> ##line comment in C style\n"
     + " | /*<*|*/?>*/ ##block commment in C style\n"
-    + " | ==endZGen==<*\\e?> \n"
+    + " | ==endJZcmd==<*\\e?> \n"
     + " } \\e.\n"
     + " \n"
     + " \n"

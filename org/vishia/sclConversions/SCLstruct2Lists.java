@@ -19,10 +19,10 @@ import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.util.ShortenString;
-import org.vishia.cmd.ZGenExecuter;
-import org.vishia.cmd.ZGenScript;
+import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZcmdScript;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zgen.ZGen;
+import org.vishia.zcmd.JZcmd;
 
 
 /**Converts some SCL source files to one source file which gathers all variables and one configuration file
@@ -961,7 +961,7 @@ variablenBlock::=
      */
     protected boolean generateOutFiles(String sPathSrc) throws IOException, IllegalAccessException
     {
-      ZGenExecuter textGen = new ZGenExecuter(console);
+      JZcmdExecuter textGen = new JZcmdExecuter(console);
       textGen.setScriptVariable("scl", 'O', SCLstruct2Lists.this, true);
 
       if(output !=null){
@@ -1006,14 +1006,14 @@ variablenBlock::=
       Writer sclOut;
       //ZGen.Args argsZ = new ZGen.Args();
       //ZGen zbatch = new ZGen(argsZ, console);
-      ZGenScript genScript; // = new JbatchScript(textGen, console);
+      JZcmdScript genScript; // = new JbatchScript(textGen, console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{
           if(args.sFileSclCtrl !=null){
-            genScript = ZGen.translateAndSetGenCtrl(new File(args.sFileSclCtrl), new File(args.sFileSclCtrl + ".test.xml"), console);
+            genScript = JZcmd.translateAndSetGenCtrl(new File(args.sFileSclCtrl), new File(args.sFileSclCtrl + ".test.xml"), console);
           } else {
-            genScript = ZGen.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
+            genScript = JZcmd.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
           textGen.execute(genScript, true, false, sclOut, null);
         } catch(Exception exc){ throw new RuntimeException(exc); }
@@ -1034,7 +1034,7 @@ variablenBlock::=
       if(args.sFileOamVariables != null){
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript = ZGen.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"), console);
+          genScript = JZcmd.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"), console);
           textGen.execute(genScript, true, false, sclOut, null);
         } catch(Exception exc){ throw new RuntimeException(exc); }
         /*

@@ -14,12 +14,12 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.cmd.ZGenExecuter;
+import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zgen.OutputDataTree;
-import org.vishia.zgen.ZGen;
-import org.vishia.zgen.Zbnf2Text;
-import org.vishia.zgen.Zbnf2Text.Out;
+import org.vishia.zcmd.OutputDataTree;
+import org.vishia.zcmd.JZcmd;
+import org.vishia.zcmd.Zbnf2Text;
+import org.vishia.zcmd.Zbnf2Text.Out;
 
 
 public class StateMGen {
@@ -520,15 +520,15 @@ public class StateMGen {
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        ZGen.Args argsZ = new ZGen.Args();
+        JZcmd.Args argsZ = new JZcmd.Args();
         //ZGen zbatch = new ZGen(argsZ, console);
-        ZGenExecuter generator = new ZGenExecuter(console);
+        JZcmdExecuter generator = new JZcmdExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
         generator.setScriptVariable("state", 'O', stateData, true);
-        CharSequence sError = ZGen.execute(generator, fileScript, out, args.sCurrdir, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
+        CharSequence sError = JZcmd.execute(generator, fileScript, out, args.sCurrdir, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
         out.close();
         if(sError !=null){
           console.writeError(sError.toString());
