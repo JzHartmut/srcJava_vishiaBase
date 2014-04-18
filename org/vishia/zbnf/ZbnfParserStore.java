@@ -68,6 +68,8 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-04-21 Hartmut new: {@link #createXmlNode(XmlNode, ParseResultItemImplement)}: writes src-line, src-col
+   *   and start of src in the xml element. 
    * <li>2013-09-12 Hartmut chg: {@link #buildTreeNodeRepresentationXml(XmlNode, ParseResultItemImplement, boolean)} now
    *   returns and works with the interface reference {@link XmlNode} instead the implementation instance reference 
    *   {@link XmlNodeSimple}. The implementation is the same. All references are adapted.
@@ -1080,41 +1082,62 @@ class ZbnfParserStore
     return xmlNode;
   }
   
+  
+  
+  private static XmlNode createXmlNodeIntern(String sTagName, XmlNode xmlParent
+  , ParseResultItemImplement parseResult
+  ){
+    XmlNode xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sTagName, parseResult);
+    if(xmlParent !=null){
+      try { 
+        xmlParent.addContent(xmlNode);
+      } catch (XmlException e) {
+        throw new IllegalArgumentException(e);
+      }
+    }
+    if(parseResult.sInput !=null){
+      String srctext;
+      if(parseResult.sInput.length()>30){
+        srctext = parseResult.sInput.substring(0,30);
+      } else {
+        srctext = parseResult.sInput;
+      }
+      xmlNode.setAttribute("src-text", srctext);
+    }
+    if(parseResult.nLine >0){
+      xmlNode.setAttribute("src-line", Integer.toString(parseResult.nLine));
+    }
+    if(parseResult.nColumn >0){
+      xmlNode.setAttribute("src-col", Integer.toString(parseResult.nColumn));
+    }
+    return xmlNode;
+  }
 
   //static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
   static XmlNode createXmlNode
-  ( XmlNode xmlParent
+  ( XmlNode xmlParentP
   , ParseResultItemImplement parseResult
   ){
-    XmlNode xmlNode = xmlParent;
+    XmlNode xmlNode = xmlParentP;
     String semantic = parseResult.getSemantic();
     int sep;
-    do{
+    do { //loop for semantic/child/... : builds the node and children.
       sep = semantic.indexOf('/');
-      if(sep >=0){
+      if(sep >=0){ //should build a child
         String sLeftSemantic = semantic.substring(0, sep);
         XmlNode xmlMeta = xmlNode == null ? null : xmlNode.getChild(sLeftSemantic);
         //XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
         if(xmlMeta ==null){
-          xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sLeftSemantic);
-          if(xmlParent !=null){
-            try { 
-              xmlParent.addContent(xmlNode);
-            } catch (XmlException e) {
-              throw new IllegalArgumentException(e);
-            }
-          }
-        } else {
+          xmlNode = createXmlNodeIntern(sLeftSemantic, xmlNode, parseResult);  //create new node as child of xmlNode
+        } else { //child already existent.
           assert(xmlMeta instanceof XmlNodeSimple<?>);
           xmlNode = xmlMeta;
         }
         semantic = semantic.substring(sep +1);
       } else {
-        
-        if((xmlNode !=null || xmlParent !=null) && semantic.startsWith("@")){
-          if(xmlNode == null){
-            xmlNode = xmlParent;
-          }
+        //no children, or last child:
+        if((xmlNode !=null) && semantic.startsWith("@")){
+          //write result as attribute of the given node.
           int posValue = semantic.indexOf('=');              //an attribute can defined in form @name=value
           String sNameAttribute;
           if(posValue >=0){ sNameAttribute = semantic.substring(1, posValue); }
@@ -1123,52 +1146,42 @@ class ZbnfParserStore
           { String sValue = posValue >=0 ? semantic.substring(posValue +1) : parseResult.getText();  
             xmlNode.setAttribute(sNameAttribute, sValue);
           }
-        } else {
-          if(semantic.equals("text()") || semantic.equals("."))
-          { /**The last part of the semantic <code>tag/last()</code> is a routine ... TODO */
+        } else if(xmlNode !=null && (semantic.equals("text()") || semantic.equals("."))) { //write result as text.
+            /**The last part of the semantic <code>tag/last()</code> is a routine ... TODO */
             String sValue = parseResult.getText();
             if(sValue != null && sValue.length() >0)
             { xmlNode.addContent(sValue);
             }
+        }
+        else
+        { /**The last part of the semantic <code>path/tag</code> or the whole semantic is an XML-indentifier.
+           * Create a child element with this tagname and add it to the output. 
+           * This child, xmlNew, is the parent of the content.*/
+          final String sTagName;
+          boolean bExpandWikistyle = semantic.endsWith("+");
+          boolean bSetParsedText = semantic.endsWith("&");
+          if(bExpandWikistyle || bSetParsedText)
+          { sTagName = semantic.substring(0, semantic.length()-1);
           }
           else
-          { /**The last part of the semantic <code>path/tag</code> or the whole semantic is an XML-indentifier.
-             * Create a child element with this tagname and add it to the output. 
-             * This child, xmlNew, is the parent of the content.*/
-            final String sTagName;
-            boolean bExpandWikistyle = semantic.endsWith("+");
-            boolean bSetParsedText = semantic.endsWith("&");
-            if(bExpandWikistyle || bSetParsedText)
-            { sTagName = semantic.substring(0, semantic.length()-1);
-            }
-            else
-            { sTagName = semantic;
-            }
-            //creates an attribute node which is added as attribute later.
-            xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sTagName, parseResult);
-            if(!parseResult.isComponent()){
-              //add the textual parse result to a leaf node.
-              String sText = parseResult.getText();
-              if(sText != null && sText.length() >0)
-              { 
-                if(bExpandWikistyle)
-                { try{ convertWikiformat.prepareXmlNode(xmlNode, sText);
-                  
-                  } catch(XmlException exc){
-                    System.err.println("ZbnfParserStore - XmlException convert wikiformat; " + exc.getMessage());
-                  }
-                }
-                else 
-                { xmlNode.addContent(sText);
-                }  
-              }
-            }
+          { sTagName = semantic;
           }
-          if(xmlParent !=null){
-            try { 
-              xmlParent.addContent(xmlNode);
-            } catch (XmlException e) {
-              throw new IllegalArgumentException(e);
+          xmlNode = createXmlNodeIntern(sTagName, xmlNode, parseResult);  //create new node as child of xmlNode
+          if(!parseResult.isComponent()){
+            //add the textual parse result to a leaf node.
+            String sText = parseResult.getText();
+            if(sText != null && sText.length() >0)
+            { 
+              if(bExpandWikistyle)
+              { try{ convertWikiformat.prepareXmlNode(xmlNode, sText);
+                
+                } catch(XmlException exc){
+                  System.err.println("ZbnfParserStore - XmlException convert wikiformat; " + exc.getMessage());
+                }
+              }
+              else 
+              { xmlNode.addContent(sText);
+              }  
             }
           }
         }
