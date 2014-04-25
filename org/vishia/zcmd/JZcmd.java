@@ -213,7 +213,7 @@ public class JZcmd
    * It executes the script like a batch with access to any Java classes.
    * Therefore it is a 'Java batch executer'.
    * @param script Path to the script.
-   * @return any error string. null if successfull.
+   * @return The text which are created in the script using <:>text<.>
    * @throws IllegalAccessException 
    */
   public static CharSequence jbatch(String script) throws IllegalAccessException{
@@ -227,7 +227,7 @@ public class JZcmd
    * @param execLevel subroutine level where this is called.
    *   All variables of this level are used as script variables for the script to execute.
    *   Especially the currdir of the level is used as script level currdir
-   * @return TODO ? any error string. null if successfully.
+   * @return The text which are created in the script using <:>text<.>
    */
   public static CharSequence jbatch(
       File script
@@ -255,6 +255,12 @@ public class JZcmd
   }
   
   
+  /**Executes a JZcmd script.
+   * A log output using the <code>console</code> script variable is written to {@link System#out}.
+   * 
+   * @param script the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @return An error text or null.
+   */
   public static CharSequence execute(String script){
     StringPartScan spScript = new StringPartScan(script);
     MainCmdLogging_ifc log = new MainCmdLoggingStream(System.out);
@@ -263,6 +269,11 @@ public class JZcmd
   }
   
   
+  /**Executes a JZcmd script.
+   * @param script the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param log A given log output
+   * @return An error text or null.
+   */
   public static CharSequence execute(File script, MainCmdLogging_ifc log){
     return execute(null, script, null, null, true, null, log);
   }
@@ -270,6 +281,18 @@ public class JZcmd
   
   
   
+  /**Executes a JZcmd script.
+   * @param executer A given instance of the executer. 
+   * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param out Output channel for <+text>...<.+>
+   * @param sCurrdir The start value for currdir
+   * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
+   *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
+   *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
+   * @param testOut if not null then outputs a data tree of the generate script.
+   * @param log A given log output
+   * @return The text which are created in the script using <:>text<.>
+   */
   public static CharSequence execute(JZcmdExecuter executer, File fileScript, Appendable out, String sCurrdir, boolean accessPrivate
       , File testOut, MainCmdLogging_ifc log) {
     String sError = null;
@@ -293,7 +316,7 @@ public class JZcmd
    *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
    *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
    * @param testOut if not null then outputs a data tree of the generate script.
-   * @return null if no error or an error string.
+   * @return An error text or null.
    */
   public static CharSequence execute(
       JZcmdExecuter executer
@@ -320,13 +343,11 @@ public class JZcmd
     if(sError == null) { // && out !=null){
       try{
         JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
-        sError = executer1.execute(genScript, accessPrivate, true, out, sCurrdir);
-        //out.close();
+        executer1.execute(genScript, accessPrivate, true, out, sCurrdir);
       } catch(Exception exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));
       }
     }
-    //String sError = generator.generate(zbnfResultData, fileScript, fOut, true);
     return sError;
   }
   

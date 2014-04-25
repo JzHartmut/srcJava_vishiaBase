@@ -120,7 +120,8 @@ public final class JZcmdSyntax {
     + " | while <whileCtrl> \n"
     + " | do <dowhileCtrl> \n"
     + " | <threadBlock> \n"
-    + " | \\<+ <textOut> \n"
+    + " | \\<:\\><textAppend> \n"     
+    + " | \\<+ <textAppendToVar?textAppend> \n"
     + " | <cmdLineWait?cmdWait> \n"  ///
     + " | start <cmdLine?cmdStart> \n"
     + " | zmake <zmake> \n"
@@ -296,7 +297,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " dataText::=<dataAccess>[ : <*\\>?formatText>] \\>.     ##<*expr: format>\n"
     + " \n"
-    + " textOut::= [<dataPath?assign>] \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + " textAppend::= <textExpr>[ \\<\\.\\> | \\<\\.n\\><?newline>].\n"
+    + " \n"
+    + " textAppendToVar::= [<dataPath?assign>] \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
     + " \n"      //<?posIndent>
     + " \n"
     + " \n"

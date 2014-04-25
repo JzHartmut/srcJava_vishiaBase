@@ -189,10 +189,10 @@ public class Zbnf2Text extends Zbnf2Xml
         Writer out = new FileWriter(fOut);
         try{ 
           //
-          CharSequence sError = generator.execute(genScript, true, true, out, args.sCurrdir);
+          generator.execute(genScript, true, true, out, args.sCurrdir);
           //
         } catch(Exception exc){
-          CharSequence sMsg = Assert.exceptionInfo("Zmake - Exception; ", exc, 0, 10);
+          CharSequence sMsg = Assert.exceptionInfo("Zbnf2Text - Exception; ", exc, 0, 10);
           System.err.println(sMsg);
         }
         out.close();
