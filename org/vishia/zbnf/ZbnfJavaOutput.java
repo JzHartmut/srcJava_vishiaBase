@@ -45,6 +45,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.vishia.mainCmd.MainCmd;
+import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
 import org.vishia.util.StringPartFromFileLines;
@@ -165,6 +167,7 @@ public class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-04-27 Hartmut new: ctor without {@link MainCmdLogging_ifc} for simple usage. 
    * <li>2014-01-01 Hartmut new: {@link #parseFileAndFillJavaObject(Object, File, String)}
    * <li>2014-01-01 Hartmut new: {@link #trySetInputLine(Component, int)}. Uses {@link DataAccess} first time.
    *   there are some parallel functionality of this class and DataAccess. The DataAccess is the more universal one. 
@@ -191,7 +194,7 @@ public class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public static final String sVersion = "2014-01-01";
+  public static final String sVersion = "2014-04-27";
   
   private final MainCmdLogging_ifc report;
   
@@ -210,22 +213,22 @@ public class ZbnfJavaOutput
   private boolean bExceptionIfnotFound;
   
   /**Buffer to note errors during working. 
-   * Its content will be returned as String-returnvalue of {@link #setContent(Class, Object, ZbnfParseResultItem)}.
+   * Its content will be returned as String-return value of {@link #setContent(Class, Object, ZbnfParseResultItem)}.
    */
   private  StringBuffer errors;
   
   private Class[] outputClasses; 
   
-  /**Empty constructor. 
+  /**Empty constructor. The {@link MainCmdLogging_ifc}-output will be build with a {@link MainCmdLoggingStream}
+   * if the {@link MainCmd} is not used.
    * 
-  
+   */
   public ZbnfJavaOutput()
-  { report = null;
+  { report = MainCmd.getLogging_ifc();
     init();
   }
-   */
   
-  /**Empty constructor. 
+  /**Constructor with given log output. 
    * @param report for logging the process of associated, only {@link org.vishia.mainCmd.MainCmdLogging_ifc#fineDebug} will be used.
    */
   public ZbnfJavaOutput(MainCmdLogging_ifc report)
@@ -1140,6 +1143,24 @@ public class ZbnfJavaOutput
   { ZbnfJavaOutput javaOutput = new ZbnfJavaOutput(report);
     return javaOutput.parseFileAndFillJavaObject(resultType, result, fInput, fSyntax);
   }
+  
+
+  
+  /**Parses the given file with given syntax and fills the parsed result into the result object.
+   * This is a simple common use-able routine to transfer textual content into content of a Java object.
+   * <br>
+   * The non static variant allows to set some options using class methods.
+   * 
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param fInput The input file to parse.
+   * @param fSyntax The syntax file using ZBNF
+   * @return null if no error, else a short error text. The explicitly error text is written in report.
+   */
+  public String parseFileAndFillJavaObject(Object result, File fInput, File fSyntax){
+    return parseFileAndFillJavaObject(result.getClass(), result, fInput, fSyntax);
+  }
+
   
   
   /**Parses the given file with given syntax and fills the parsed result into the result object.

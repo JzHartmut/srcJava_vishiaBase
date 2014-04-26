@@ -126,6 +126,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-03-21 Hartmut new: {@link #setSyntaxFile(File)} and {@link #setSyntaxString(String)}
+   *   for ambiguous names called from a JZcmd script.
    * <li>2014-03-21 Hartmut bugfix: Parsing kStringUntilEndStringWithIndent and regular expression: There was a check
    *   'if(sSemanticForStoring != null)' before calling addResultOrSubsyntax(...), therefore 
    *   <code><*{ * }|* /?!test_description></code> has not write the result of the sub syntax.
@@ -2011,7 +2013,6 @@ public class ZbnfParser
 
   
   /** Sets the syntax from given string.
-   * Further expanations, see <a href="#setSyntax(vishia.StringScan.StringPart)">setSyntax(vishia.StringScan.StringPart)</a>
    * @param syntax The ZBNF-Syntax.
    */
   public void setSyntax(String syntax)
@@ -2019,12 +2020,31 @@ public class ZbnfParser
   { setSyntax(new StringPartScan(syntax));
   }
 
-
-  protected void setSyntax(InputStream input)
-  throws ParseException
-  { 
-  }
+ 
   
+  /** Sets the syntax from given string. This method should be used in an JZcmd script to distinguish
+   * between {@link #setSyntax(File)} and {@link #setSyntax(String)}.
+   * @param syntax The ZBNF-Syntax.
+   */
+  public void setSyntaxString(String syntax)
+  throws ParseException
+  { setSyntax(new StringPartScan(syntax));
+  }
+
+ 
+  
+  /**Sets the syntax from a file. This method should be used in an JZcmd script to distinguish
+   * between {@link #setSyntax(File)} and {@link #setSyntax(String)}.
+   * @param fileSyntax The file which contains the syntax prescription.
+   * @throws IllegalCharsetNameException
+   * @throws UnsupportedCharsetException
+   * @throws FileNotFoundException
+   * @throws IOException
+   * @throws ParseException
+   */
+  public void setSyntaxFile(File fileSyntax) 
+  throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException, ParseException 
+  { setSyntax(fileSyntax); }
   
   
   public void setSyntax(File fileSyntax) 
@@ -2326,8 +2346,43 @@ public class ZbnfParser
   
   
   
-  /**Parsed a given Input and produces a parse result.
-   * See <a href="#parse(vishia.StringScan.StringPart)">parse(StringPart)</a>.
+  /**Parses a given file with standard encoding, produces a parse result.
+   * @param fInput
+   * @return true if successfully parsed, false then use {@link #getSyntaxErrorReport()}
+   * @throws IOException 
+   * @throws FileNotFoundException 
+   * @throws UnsupportedCharsetException 
+   * @throws IllegalCharsetNameException 
+   */
+
+  public boolean parseFile(File fInput, int maxBuffer, String sEncodingDetect, Charset charset) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
+  {
+    StringPartScan spInput = new StringPartFromFileLines(fInput, maxBuffer, sEncodingDetect, charset); 
+    return parse(spInput);
+  }
+
+
+
+  /**Parses a given file with standard encoding, produces a parse result.
+   * @param fInput
+   * @return true if successfully parsed, false then use {@link #getSyntaxErrorReport()}
+   * @throws IOException 
+   * @throws FileNotFoundException 
+   * @throws UnsupportedCharsetException 
+   * @throws IllegalCharsetNameException 
+   */
+
+  public boolean parseFile(File fInput) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException 
+  {
+    int maxBuffer = 0;  //auto detect, use file size.
+    StringPartScan spInput = new StringPartFromFileLines(fInput, maxBuffer, null, null); 
+    return parse(spInput);
+  }
+
+
+
+  /**Parses a given Input and produces a parse result.
+   * See {@link #parse(StringPartScan)}</a>.
    *
    * @param input
    * @return

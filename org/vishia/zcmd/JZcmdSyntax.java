@@ -120,8 +120,7 @@ public final class JZcmdSyntax {
     + " | while <whileCtrl> \n"
     + " | do <dowhileCtrl> \n"
     + " | <threadBlock> \n"
-    + " | \\<:\\><textAppend> \n"     
-    + " | \\<+ <textAppendToVar?textAppend> \n"
+    + " | \\<+<textOut> \n"
     + " | <cmdLineWait?cmdWait> \n"  ///
     + " | start <cmdLine?cmdStart> \n"
     + " | zmake <zmake> \n"
@@ -154,6 +153,7 @@ public final class JZcmdSyntax {
     + " | List\\  <DefObjVar?List> \n"
     + " | Map\\  <DefMapVar> \n"
     + " | Obj\\  <DefObjVar> \n"
+    + " | Class\\  <DefClassVar> \n"
     + " | Openfile\\  <Openfile> \n"
     + " | Fileset\\  <DefFileset> \n"
     + " | Filepath\\ <DefFilepath> \n"
@@ -167,6 +167,8 @@ public final class JZcmdSyntax {
     + " DefBoolVar::= [const <?const>] <definePath?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
     + " \n"
     + " DefObjVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
+    + " \n"
+    + " DefClassVar::= [const] <definePath?defVariable>  = <textValue?>.\n"  //a text or object or expression
     + " \n"
     + " DefStringVar::= [const <?const>] <definePath?defVariable> [ = <textDatapath?>].\n"  //[{ <definePath?assign> = }] <textDatapath?> .\n"
     + " \n"
@@ -213,13 +215,17 @@ public final class JZcmdSyntax {
     + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | * <dataAccess> | <*;(\\ \\r\\n?text> .\n"
     + " \n"
     + " \n"
-    + " objExpr::= <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <numExpr>.\n" //special handling if numExpr contains only a dataAccess.
+    + " objExpr::= \\{ <dataStruct> \\} | <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <numExpr>.\n" //special handling if numExpr contains only a dataAccess.
+    + " \n"
+    + " dataStruct::= { <DefVariable?> ; }.\n"
+    + " \n"
+    + " \n"
     + " \n"
     + " \n"
     + " dataAccess::= \n"
     + " [ $<$?envVariable> \n" 
     + " | [<?startVariable> $<![1-9]?>| $<$?>]    ## $1 .. $9 are the arguments of Jbatch, $name for environment \n"
-    + " | new <newJavaClass> \n" 
+    + " | [java] new <newJavaClass> \n" 
     + " | [%|java] <staticJavaMethod> \n" 
     + " | <dataPath?> \n" 
     + " ].\n"
@@ -295,11 +301,9 @@ public final class JZcmdSyntax {
     + " }.\n"
     + " \n"
     + " \n"
-    + " dataText::=<dataAccess>[ : <*\\>?formatText>] \\>.     ##<*expr: format>\n"
+    + " dataText::=<dataAccess>[ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
     + " \n"
-    + " textAppend::= <textExpr>[ \\<\\.\\> | \\<\\.n\\><?newline>].\n"
-    + " \n"
-    + " textAppendToVar::= [<dataPath?assign>] \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + " textOut::= [<dataPath?assign>] \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
     + " \n"      //<?posIndent>
     + " \n"
     + " \n"

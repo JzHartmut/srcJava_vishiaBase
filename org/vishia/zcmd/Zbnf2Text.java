@@ -278,6 +278,11 @@ public class Zbnf2Text extends Zbnf2Xml
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
           cmdlineArgs.sCurrdir = val;
           return true; }})
+    , new MainCmd.Argument("-checkzcmd", "=CHECK  if given then 3 files for debugging will be written"
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          Args cmdlineArgs = (Args)CmdLineText.super.argData;
+          cmdlineArgs.sCheckXmlOutput = val; 
+          return true; }})
     , new MainCmd.Argument("-t", ":<TEXTOUT> name of the output file to generate"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
