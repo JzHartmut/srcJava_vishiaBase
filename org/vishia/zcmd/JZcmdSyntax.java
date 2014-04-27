@@ -5,6 +5,9 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-04-24 Hartmut some changes, especially datapath uses a regular expression for second identifiers,
+   *   not a ZBNF identifier (< $?>), therefore the JZcmd keywords are possible to use for internal data identifier.
+   *   There should not be restrictions.
    * <li>2014-03-07 Hartmut new:  currdir without definition, Filepath as type of a named argument.
    * <li>2014-03-07 Hartmut new: All capabilities from Zmake are joined here. Only one concept!
    * <li>2014-02-22 Hartmut new: Bool and Num as variable types.
@@ -237,7 +240,8 @@ public final class JZcmdSyntax {
     + " \n"
     + " dataPath::= <$@-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + " \n"
-    + " datapathElement::= [<?ident>[@]<$-?>] [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
+    //+ " datapathElement::= [<?ident>[@]<$-?>] [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
+    + " datapathElement::= [<?ident>[@]<![\\\\w-]*?>] [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
     + " \n"
     + " \n"
     + " \n"
