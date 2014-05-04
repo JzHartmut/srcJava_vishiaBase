@@ -159,7 +159,7 @@ public class CheckDeps
     //
     //
     //checker for all files:
-    checkerDependencyFile = new CheckDependencyFile(console);
+    checkerDependencyFile = new CheckDependencyFile(console, false);
     this.checkData = checkerDependencyFile.checkData;
     this.cfgData = checkerDependencyFile.cfgData;
   }
@@ -215,14 +215,15 @@ public class CheckDeps
       if(sError !=null) throw new IllegalArgumentException(sError);
     }
 
-    sError = checkerDependencyFile.readCfgData(args.sFileCfg);
+    File currdir = new File(".");
+    sError = checkerDependencyFile.readCfgData(args.sFileCfg, currdir);
     if(sError !=null) throw new IllegalArgumentException(sError);
     
     sError = checkerDependencyFile.readDependencies(args.sFileDep);
     if(sError !=null) throw new IllegalArgumentException(sError);
     
     for(String sPathSrc : args.pathsSrcGen){
-      InputSrc srcInfo = new InputSrc(sPathSrc);
+      InputSrc srcInfo = new InputSrc(sPathSrc, currdir);
       cfgData.listProcessPaths.add(srcInfo);  //store for usage immediately
       cfgData.listSourcePaths.add(srcInfo);
       //checkData.sPathsSrc.add(srcInfo);  //to detect whether a file is in the source pool.

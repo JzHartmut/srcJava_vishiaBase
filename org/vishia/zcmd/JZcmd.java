@@ -490,7 +490,15 @@ public class JZcmd
     if(zbnfGenCtrl.scriptfile.includes !=null){
       //parse includes after processing this file, because the zbnfGenCtrl.includes are not set before.
       //If one include contain a main, use it. But override the main after them, see below.
-      for(String sFileInclude: zbnfGenCtrl.scriptfile.includes){
+      for(JZcmdScript.JZcmdInclude include: zbnfGenCtrl.scriptfile.includes){
+        String sFileInclude;
+        if(include.envVar !=null){
+          String sEnv = System.getenv(include.envVar);
+          if(sEnv == null) throw new IllegalArgumentException("JZcmd.include - cannot find environment variable;" + include.envVar);
+          sFileInclude = sEnv + '/' + include.path;
+        } else {
+          sFileInclude = include.path;
+        }
         final File fileInclude;
         if(FileSystem.isAbsolutePath(sFileInclude)){
           fileInclude= new File(sFileInclude);

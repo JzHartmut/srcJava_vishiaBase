@@ -300,7 +300,6 @@ public class ZbnfParser
      * Also an empty option is considered.
      *
      * 
-     * @param input The input to parse,it is a reference to the same instance as in parent.
      * @param sSemanticForErrorP The semantic superior semantic. This semantic is used for error report.<br/>
      * @param resultType type of the result item of this component. It may one of ParserStore.kOption etc or
      *        a less positiv or negativ number used for repetition and backward repetition. 

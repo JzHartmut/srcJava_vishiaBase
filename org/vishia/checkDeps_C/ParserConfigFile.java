@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.FileSystem;
 
 /**This class is create temporary to parse the config file.
  * The results are written to a created instance of {@link CfgData}. Only this is used then.
@@ -61,10 +62,13 @@ public class ParserConfigFile
 
   private final CfgData data; 
 
+  private final File currdir;
   
-  public ParserConfigFile(CfgData cfgData, MainCmdLogging_ifc console)
+  
+  public ParserConfigFile(CfgData cfgData, MainCmdLogging_ifc console, File currdir)
   { this.console = console;
     this.data = cfgData;
+    this.currdir = currdir;
   }
 
 
@@ -77,7 +81,7 @@ public class ParserConfigFile
    * @param sFileCfg
    * @throws IOException
    */
-  public String parseConfigFile(String sFileCfg){
+  String parseConfigFile(String sFileCfg){
     try{
       File fileCfg = new File(sFileCfg);
       BufferedReader reader = new BufferedReader(new FileReader(fileCfg));
@@ -158,7 +162,8 @@ public class ParserConfigFile
       uInclPath.setCharAt(posSep, '/');
     }
     String sInclPath = uInclPath.toString();
-    File dirIncludePath = new File(sInclPath);
+    boolean bAbspath = FileSystem.isAbsolutePath(sInclPath);
+    File dirIncludePath = bAbspath ? new File(sInclPath) : new File(currdir, sInclPath);
     if(!dirIncludePath.exists()) {
       console.writeWarning("config file - include path not found; " + sInclPath);
     } else if(!dirIncludePath.isDirectory()) {
@@ -166,7 +171,7 @@ public class ParserConfigFile
     } else {
       switch(cWhat){
         case 's': case 'i':{
-          InputSrc srcInfo = new InputSrc(sInclPathLocalSep);
+          InputSrc srcInfo = new InputSrc(sInclPathLocalSep, currdir);
           data.listSourcePaths.add(srcInfo);  //to detect whether a file is in the source pool.
           data.listInclPaths.add(dirIncludePath);
           if(cWhat == 's'){

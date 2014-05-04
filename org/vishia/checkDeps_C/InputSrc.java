@@ -67,7 +67,7 @@ public class InputSrc
    * which allows the association of any source to the sourcepool.
    * @param sPathSrcP Maybe a relative path.
    */
-  public InputSrc(final String sPathSrcP)
+  public InputSrc(final String sPathSrcP, File currdir)
   { final String sPathSrc = sPathSrcP.replace('\\', '/');
     final String sPathSrcDir;
     int nSep = sPathSrc.indexOf(':', 2);  //from relative path.
@@ -78,7 +78,7 @@ public class InputSrc
       sLocalSrcPath = "";
       sPathSrcDir = sPathSrc;
     }
-    dirSrcBase = new File(sPathSrcDir);
+    dirSrcBase = new File(currdir, sPathSrcDir);
     if(!dirSrcBase.exists()){
       if(!dirSrcBase.exists()) throw new IllegalArgumentException("CheckDeps - src directory not found: " + dirSrcBase.getAbsolutePath());
       if(!dirSrcBase.isDirectory()) throw new IllegalArgumentException("CheckDeps -src=PATH should be a directory: " + dirSrcBase.getAbsolutePath()); 

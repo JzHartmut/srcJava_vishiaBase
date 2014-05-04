@@ -138,6 +138,10 @@ public class CheckDependencyFile
   /**Contains all dependencies, read from file and processed. */
   final CheckData checkData;
   
+  /**If true then an IllegalArgumentException will be thrown instead text return. 
+   * That is the standard java behavior. */
+  final boolean bExc;
+  
   /**Junction between the dependency data in {@link #checkData} and the dependency input and output textual file. */
   final CheckAllDepFile readerInputDepFile;
 
@@ -161,6 +165,11 @@ public class CheckDependencyFile
   File XXXdirObjRoot;
 
   
+  /**The dependency-file which war read. Used for write.
+   * 
+   */
+  String sFileDeps;
+  
   List<String> dirObjRoots = new LinkedList<String>();
 
   
@@ -170,9 +179,10 @@ public class CheckDependencyFile
    * @param dirSrcMirrorRoot If null, then the comparison of content isn't done. 
    * @param dirObjRoot Base directory, where the objects and dependency files are located.
    */
-  public CheckDependencyFile(MainCmdLogging_ifc log)
+  public CheckDependencyFile(MainCmdLogging_ifc log, boolean bExc)
   {
     CheckData checkData = new CheckData();
+    this.bExc = bExc;
     this.cfgData = new CfgData();
     this.checkData = checkData;
     this.readerInputDepFile = new CheckAllDepFile(cfgData, log, checkData);
@@ -218,13 +228,14 @@ public class CheckDependencyFile
    * It is not a part of constructor because it may be evaluated separately.
    * Any error in config file provides a string return.  
    * @param sFileCfgData The file
+   * @param currdir the directory which is used as base to build the path if the config file contains relative paths.
    * @return null if no error. An error message. If not null, this class is not able to use.
    */
-  public String readCfgData(String sFileCfgData)
+  public String readCfgData(String sFileCfgData, File currdir)
   {
-    ParserConfigFile parserCfg = new ParserConfigFile(cfgData, console);
+    ParserConfigFile parserCfg = new ParserConfigFile(cfgData, console, currdir);
     String sError = parserCfg.parseConfigFile(sFileCfgData);
-    
+    if(sError !=null && bExc) throw new IllegalArgumentException("CheckDependencyFile.readCfgData - read error; " + sError);
     return sError;
   }
   
@@ -240,6 +251,7 @@ public class CheckDependencyFile
    * @return null if no error. An error message. If not null, this class is not able to use.
    */
   public String readDependencies(String sFileDepenencies){
+    this.sFileDeps = sFileDepenencies;
     readerInputDepFile.readDepFile(sFileDepenencies);
 
     return null;
@@ -869,7 +881,19 @@ public class CheckDependencyFile
    * @param sFileDeps The file to write into.
    * @return
    */
-  public String writeDependencies(String sFileDeps){
+  public String writeDependencies(String sFileDependencies){
+    InfoFileDependencies.writeAllBackDeps(sFileDependencies, checkData.indexAllInclFilesAbsPath);
+    return "";
+  }
+  
+  
+  
+  
+  /**Writes the dependencies which are checked after creation of this class in the given file.
+   * @param sFileDeps The file to write into.
+   * @return
+   */
+  public String writeDependencies(){
     InfoFileDependencies.writeAllBackDeps(sFileDeps, checkData.indexAllInclFilesAbsPath);
     return "";
   }
