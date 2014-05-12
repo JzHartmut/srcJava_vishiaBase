@@ -93,6 +93,8 @@ public class CheckDependencyFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-10 Hartmut new: {@link #processSrcfile(File, String, File, String)} with given Object file.
+   *   Therefore the routine {@link #setDirObj(String)} is not necessary to call before. Any file can have its object directory.
    * <li>2013-10-13 Hartmut chg: prevent circular including with a Map of already processed files, idxOnce as Thread data (Parameter).
    *   TODO: It does not enter the cyclic included files in the dependency of the deeper file. 
    *   a->b->c->a  a depends on b and c, but b depends on a too, c depends on a,b. If a will be processed first, the dependency of b, c to a are not entered.
@@ -287,6 +289,40 @@ public class CheckDependencyFile
   }
 
 
+
+  
+  /**Check of one source file for newly against the associated result file of translation (object-file for C-compilation). 
+   * @param fileSrc The source file
+   * @param sLocalPathName The local part of name, it is the name of the object file
+   * @param sObjExt extension of the object file
+   * @return An ample information about dependencies. This information is used to produce
+   *  the {@link #writeDependencies(String)} line for this file.
+   */
+  public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, File dirObjRoot, String sObjExt) 
+  {
+    final ObjectFileDeps objDeps;
+    
+    int posExt = sLocalPathName.lastIndexOf('.');
+    String sExt = sLocalPathName.substring(posExt+1);
+    //
+    if(sExt.startsWith("c") || sExt.startsWith("C") || sExt.equals("s") || sExt.equals("S")){
+      objDeps = new ObjectFileDeps(dirObjRoot, sLocalPathName, sObjExt); 
+      objDeps.createObjDir(console);
+    } else {
+      objDeps = null;
+    }
+    InfoFileDependencies infoFile = processSrcfile(fileSrc, objDeps, 0, new TreeMap<String, String>());
+    if(objDeps !=null && objDeps.isObjDeleted()){ 
+      checkData.nrofDelObj +=1; 
+    }
+    if(objDeps !=null && objDeps.isObjRecompile()){ 
+      checkData.nrofRecompilings +=1; 
+    }
+    return infoFile;
+  }
+
+
+  
 
   
   /**Check of one source file for newly against the associated result file of translation (object-file for C-compilation). 

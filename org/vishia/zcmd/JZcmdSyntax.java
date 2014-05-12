@@ -132,6 +132,7 @@ public final class JZcmdSyntax {
     + " | zmake <zmake> \n"
     + " | move <srcdst?move> ; \n"
     + " | copy <srcdst?copy> ; \n"
+    + " | [rm|del] <oneArg?del> ; \n"
     + " | break <?breakBlock> ; \n" 
     + " | return <?return> ; \n" 
     + " | exit <#?exitScript> ;\n"
@@ -147,6 +148,7 @@ public final class JZcmdSyntax {
     + " debug::= xxx.\n"
     + " \n"
     + " srcdst::= [src=] <textValue?actualArgument> [dst=] <textValue?actualArgument> .\n"
+    + " oneArg::= <textValue?actualArgument> .\n"
     + " \n"
     + " \n"
     + " DefVariable::=\n"
@@ -297,7 +299,9 @@ public final class JZcmdSyntax {
     + " | \\<&subtext : <callSubtext?call>\n"
     + " | \\<:debug[:<textDatapath?debug>| <?debug>]\\>\n"
     + " | \\<&<dataText>\n"
-    + " | \\<: [<?transcription> n | r | t | \\< | # ] \\>\n"
+    //+ " | \\<: [<?transcription> n | r | t | \\< | # | \\\" ] \\>\n"
+    + " | \\<: [<?transcription>n|r|t|[\\<|#|\\\"]<*\\>?>] \\>\n"
+
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
     + " | \\#\\#<*\\r\\n?>{\\r|\\n}   ##skip comment in text\n"  //skip comment till inclusively newline
@@ -310,7 +314,10 @@ public final class JZcmdSyntax {
     + " \n"
     + " dataText::=<dataAccess>[ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
     + " \n"
-    + " textOut::= [<dataPath?assign>] \\> <textExpr>[ \\<\\.+\\> | \\<\\.n+\\><?newline>].\n"
+    + " textOut::= [<dataPath?assign>] \\> <textExpr>[ \\<\\.+\\> \n"
+    + "   | \\<\\.n+\\><?newline> | \\<\\.+n\\><?newline> \n"
+    + "   | \\<\\.+n+flush\\><?newline><?flush> | \\<\\.+flush\\><?flush>\n"
+    + "   | \\<\\.+n+close\\><?close> | \\<\\.+close\\><?close>].\n"
     + " \n"      //<?posIndent>
     + " \n"
     + " \n"
@@ -361,7 +368,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " cmdLineWait::=[{ <dataPath?assign> += }] cmd\\  <cmdLine?>.\n"
     + " \n"
-    + " cmdLine::= [\\!argsCheck!<?argsCheck>] <textValue?> [{[?;[\\ |\\n|\\r]] [ \\<\\:arg\\><textExpr?actualArgument>\\<\\.arg\\> |<textValue?actualArgument>] }] \n"
+    + " cmdLine::= [\\!argsCheck!<?argsCheck>] <textValue?> [{[?;[\\ |\\n|\\r]] [ \\<\\:arg\\><textExpr?actualArgument>\\<\\.arg\\> | \\<\\:args:<dataAccess?argList>\\> |<textValue?actualArgument>] }] \n"
     + "   [ \\<:stdout:[ pipe<?pipe>| [$]<$?stdoutVariable>] \\>] ;.\n"
     + " \n"
     + " iferrorlevel::= <#?errorLevel> \\{ [<statementBlock>] \\}.\n"

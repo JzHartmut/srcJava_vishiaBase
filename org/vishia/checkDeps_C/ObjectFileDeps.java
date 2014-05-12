@@ -27,6 +27,7 @@ class ObjectFileDeps
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-10 Hartmut chg: {@link #ObjectFileDeps(File, String, String)} for one Object directory. 
    * <li>2013-01-06 Hartmut chg: Now supports more as one obj file. This is necessary if one make process compiles several versions.
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
@@ -89,14 +90,26 @@ class ObjectFileDeps
   }
   
   
+  /**Creates an instance.
+   * @param dirObjRoot File object to the object root directory. It should be a directory.
+   *   It does not need existing. 
+   * @param sLocalPath The file path and name.ext of the source file as local path. 
+   *   It is used as object path, without the extension.
+   * @param sExtObj Extension for object files inclusively dot, usual ".obj" or ".o"
+   */
   ObjectFileDeps(File dirObjRoot, String sLocalPath, String sExtObj){
     int posExt = sLocalPath.lastIndexOf('.');
     File fileObj = new File(dirObjRoot, sLocalPath.substring(0, posExt) + sExtObj);
-    //this.fileObj = fileObj;
-    //timestampObj = fileObj == null ? Long.MAX_VALUE: fileObj.lastModified();
+    fileObjs.add(fileObj);
   }
   
   
+  /**Creates an instance.
+   * @param dirObjRoots List of Strings in form "path/to/objdir/*.obj"
+   *   The object-file(s) are build with replacement of "*" with the sLocalPath without extension
+   * @param sLocalPath The file path and name.ext of the source file as local path. 
+   *   It is used as object path, without the extension.
+   */
   ObjectFileDeps(List<String> dirObjRoots, String sLocalPath){
     int posExt = sLocalPath.lastIndexOf('.');
     for(String sDirObjRoot: dirObjRoots){
@@ -159,7 +172,7 @@ class ObjectFileDeps
     for(File fileObj: fileObjs){
       try{ FileSystem.mkDirPath(fileObj); }
       catch(IOException exc){
-        console.writeError("Problem creating directory for: " + fileObj.getAbsolutePath());
+        console.writeError("ObjectFileDeps.createObjDir - Problem creating directory for: " + fileObj.getAbsolutePath());
       }
     }
   }
