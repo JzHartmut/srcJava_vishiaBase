@@ -41,6 +41,10 @@ public class JZcmd
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-02-16 Hartmut new: {@link #jbatch(File, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)} is deprecated now,
+   *   instead {@link #execSub(File, String, Map, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)} used.
+   *   The difference: No scriptlevel created for the new compiled script, with given scriptlevel
+   *   the subroutine is executed. 
    * <li>2014-02-16 Hartmut chg: execute(... String sCurrdir) now with current directory from outside.
    *   translateAndSetGenCtrl( File fileScript, ...) with the script file.
    *   Argument -currdir=PATH for command line invocation {@link #main(String[])}
@@ -229,7 +233,7 @@ public class JZcmd
    *   Especially the currdir of the level is used as script level currdir
    * @return The text which are created in the script using <:>text<.>
    */
-  public static CharSequence jbatch(
+  @Deprecated public static CharSequence jbatch(
       File script
     , JZcmdExecuter.ExecuteLevel execLevel
   ) throws IllegalAccessException{
@@ -244,7 +248,7 @@ public class JZcmd
     try { 
       JZcmdScript genScript = translateAndSetGenCtrl(script, null, log);
       //the script variables are build from the local ones of the calling script:
-      executer.genScriptVariables(genScript, true, execLevel.localVariables, null);
+      executer.genScriptVariables(genScript, true, execLevel.localVariables, execLevel.currdir());
       executer.execute(genScript, true, bWaitForThreads, u, null);
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Exception exc) {
@@ -253,6 +257,48 @@ public class JZcmd
     }
     return u.toString();
   }
+  
+  
+  
+  /**Executes a sub routine in a given script, which should be translated firstly.
+   * This routine can be called inside another script with invocation:
+   * <pre>
+   * { ## any KZcmd script
+   *     Map args;
+   *     String args.name  = value;
+   *     java org.vishia.zcmd.JZcmd.execSub(File:"path/JZcmdscript.jzcmd", "class.subroutine-Name", args, jzcmdsub);
+   * }
+   * </pre>
+   * @param fileScript The file which contains the script
+   * @param subroutine name of the subroutine in the script.
+   * @param args Arguments for this subroutine.
+   * @param execLevel Execution level where this routine from where it is called.
+   * @return
+   */
+  public static CharSequence execSub(File fileScript, String subroutine
+      , Map<String, DataAccess.Variable<Object>> args
+      , JZcmdExecuter.ExecuteLevel execLevel)
+  {
+    
+    MainCmdLogging_ifc log = execLevel.log();
+    //boolean bWaitForThreads = false;
+    //Copy all local variables of the calling level as script variables.
+    try { 
+      JZcmdScript jzscript = translateAndSetGenCtrl(fileScript, null, log);
+      JZcmdScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
+      //the script variables are build from the local ones of the calling script:
+      execLevel.execSubroutine(substatement, args, null, -1);
+      //executer.execute(genScript, true, bWaitForThreads, null, null);
+      //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
+    } catch (Exception exc) {
+      String sError = exc.getMessage();
+      System.err.println(sError);
+    }
+    
+    return "";    
+    
+  }
+  
   
   
   /**Executes a JZcmd script.
@@ -403,11 +449,15 @@ public class JZcmd
   
   
   /**Translates with a new Parser and the given script in text format.
-   * @param fileParent The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
-   * @param spGenCtrl The script in form of StringPartScan. User new {@link StringPartScan#StringPartScan(CharSequence)}
-   *   to create one with a String given syntax.
-   * @param checkXmlOutput may be null, for output the script in XML form.
+   * @param fileScript The file which has contained the script. It is used only to provide the variables
+   *   'scriptdir' and 'scriptfile' for execution. The file is not evaluated. It means, it does not need
+   *   to exist.<br>
+   *   The fileScript's parent is the directory which is the anchor for included scripts. 
+   *   Maybe null if included scripts are not used and the variable 'scriptfile' and 'scriptdir' are not used in the script.s 
+   * @param spGenCtrl The content of fileScript or from any other source. This is the script source. 
+   *   Use new {@link StringPartScan#StringPartScan(CharSequence)} to create one with a String given syntax.
    * @param log
+   * @param checkXmlOutput may be null, for output the script in XML form.
    * @return
    * @throws ParseException
    * @throws IllegalArgumentException
@@ -426,9 +476,9 @@ public class JZcmd
     ZbnfParser parserGenCtrl = new ZbnfParser(log1); //console);
     parserGenCtrl.setSyntax(JZcmdSyntax.syntax);
     JZcmdScript script = new JZcmdScript(log, fileScript);
-    File fileParent = FileSystem.getDir(fileScript);
+    File dirIncludeBase = FileSystem.getDir(fileScript);
     JZcmdScript.ZbnfJZcmdScript zbnfGenCtrl = new JZcmdScript.ZbnfJZcmdScript(script);
-    translateAndSetGenCtrl(script, zbnfGenCtrl, parserGenCtrl, fileParent, spGenCtrl, checkXmlOutput, log1);
+    translateAndSetGenCtrl(script, zbnfGenCtrl, parserGenCtrl, dirIncludeBase, spGenCtrl, checkXmlOutput, log1);
     return script;
   }
     
@@ -441,7 +491,7 @@ public class JZcmd
    * @param parserGenCtrl The parser should know the correct syntax already. One should use
    *   {@link JZcmdSyntax#syntax} to set {@link ZbnfParser#setSyntax(String)}. One should use an 
    *   abbreviating syntax for experience.
-   * @param fileParent The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
+   * @param dirIncludeBase The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
    * @param spGenCtrl The script in form of StringPartScan. User new {@link StringPartScan#StringPartScan(CharSequence)}
    *   to create one with a String given syntax.
    * @param checkXmlOutput may be null, for output the script in XML form.
@@ -454,7 +504,8 @@ public class JZcmd
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private static void translateAndSetGenCtrl(JZcmdScript script, JZcmdScript.ZbnfJZcmdScript zbnfGenCtrl, ZbnfParser parserGenCtrl, File fileParent, StringPartScan spGenCtrl
+  private static void translateAndSetGenCtrl(JZcmdScript script, JZcmdScript.ZbnfJZcmdScript zbnfGenCtrl
+      , ZbnfParser parserGenCtrl, File dirIncludeBase, StringPartScan spGenCtrl
       , File checkXmlOutput, MainCmdLogging_ifc log) 
   throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { boolean bOk;
@@ -503,7 +554,7 @@ public class JZcmd
         if(FileSystem.isAbsolutePath(sFileInclude)){
           fileInclude= new File(sFileInclude);
         } else {
-          fileInclude= new File(fileParent, sFileInclude);
+          fileInclude= new File(dirIncludeBase, sFileInclude);
         }
         if(!fileInclude.exists()){
           System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
