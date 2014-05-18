@@ -5,6 +5,9 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-18 Hartmut chg: DefFilepath now uses a textValue and divides the path to its components
+   *   at runtime, doesn't use the prepFilePath in ZBNF. Reason: More flexibility. The path can be assmebled
+   *   on runtime.  
    * <li>2014-04-24 Hartmut some changes, especially datapath uses a regular expression for second identifiers,
    *   not a ZBNF identifier (< $?>), therefore the JZcmd keywords are possible to use for internal data identifier.
    *   There should not be restrictions.
@@ -82,7 +85,7 @@ public final class JZcmdSyntax {
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + " [ ! checkJZcmd = <textValue?checkJZcmd> ; ]\n"
     + " [{ include <include> ; \n"
-    + "  | currdir = <textDatapath?scriptCurrdir> ;\n"
+    + "  | currdir = <textDatapath?cd> ;\n"
     + " }] \n"
     + " { <DefVariable?> ; \n"
     + " | subtext  <subtext?subroutine> \n"
@@ -196,7 +199,7 @@ public final class JZcmdSyntax {
     + " { [{ //<*\\n\\r?>}] <Filepath> [{ //<*\\n\\r?>}] ? , } \n"
     + " ) ] .\n"
     + " \n"
-    + " DefFilepath::= <definePath?defVariable> [ = <Filepath> ]. \n"
+    + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
     + " \n"
     + " \n"
     + " Filepath::=<\"\"?!prepFilePath>|<*;\\ \\r\\n,)?!prepFilePath>. \n"
@@ -219,7 +222,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " \n"
-    + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | <dataAccess> .\n"
+    + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | [&] <dataAccess> .\n"
     + " \n"
     + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;(\\ \\r\\n?text> .\n"
     + " \n"
@@ -237,7 +240,7 @@ public final class JZcmdSyntax {
     + " | [<?startVariable> $<![1-9]?>| $<$?>]    ## $1 .. $9 are the arguments of Jbatch, $name for environment \n"
     + " | [java] new <newJavaClass> \n" 
     + " | [%|java] <staticJavaMethod> \n" 
-    + " | [&]<dataPath?> \n" 
+    + " | <dataPath?> \n" 
     + " ].\n"
     + " \n"
     + " \n"
@@ -249,7 +252,7 @@ public final class JZcmdSyntax {
     + " dataPath::= <startDatapath>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + " \n"
     + " ## A datapath cannot start with an JZcmd keyword! \n"
-    + " startDatapath::= <$-?ident> <?whatisit=@> [( [{ <objExpr?argument> ? ,}])<?whatisit=+>].\n"  
+    + " startDatapath::= [ & ( <dataPath> ) | <$-?ident> ] <?whatisit=@> [( [{ <objExpr?argument> ? ,}])<?whatisit=+>].\n"  
     + " ## Use regex for the second datapath element, it can be a JZcmd keyword too! \n"
     + " datapathElement::= [<?ident>[@]<![\\\\w-]+?>] [( [{ <objExpr?argument> ? ,}])<?whatisit=(>].\n"  
     + " \n"
@@ -290,7 +293,7 @@ public final class JZcmdSyntax {
     + " [<#?intValue> | 0x<#x?intValue> ##ones of kind of value:\n"
     + " | '<!.?charValue>' | <\"\"?textValue> \n"
     + " | ( <numExpr?parenthesisExpr> ) \n" 
-    + " | <dataAccess> \n"
+    + " | [&] <dataAccess> \n"
     + " ].\n"
     + " \n"
     //+ " objvalue::=\n"
@@ -356,8 +359,8 @@ public final class JZcmdSyntax {
     + " callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + " \n"
     + " namedArgument::= <$?name> = \n"
-    + " [ Filepath\\ <Filepath>\n"
-    + " | Fileset\\ <zmakeInput>\n"
+    + " [ Filepath: <textValue?filepath>\n"
+    + " | Fileset: <zmakeInput>\n"
     + " | <objExpr?>\n"
     + " ].\n"
     + " \n"
