@@ -49,6 +49,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
+import org.vishia.util.SetLineColumn_ifc;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
@@ -167,6 +168,10 @@ public class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-23 Hartmut chg: remove invocation of set_inputColumn_ and set_InputInfo_. Instead
+   *   use interface {@link SetLineColumn_ifc}. It is faster, because a method which does not exists often
+   *   should not be invoked. Only 'instanceof' is checked. This needs adaption of user classes
+   *   which uses the method set_inputColumn_(int).
    * <li>2014-05-22 Hartmut chg: instead trySetInputLine {@link #trySetInputInfo(Component, int, int, String)}.
    *   The destination class should provide <code> boolean set_InputInfo_(int, int, String)</code> 
    * <li>2014-04-27 Hartmut new: ctor without {@link MainCmdLogging_ifc} for simple usage. 
@@ -428,12 +433,27 @@ public class ZbnfJavaOutput
            */
           /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
           Component compn = new Component(component, componentsInstance.clazz, componentsInstance.instance);
+          if(compn.instance instanceof SetLineColumn_ifc){
+            SetLineColumn_ifc check = (SetLineColumn_ifc) compn.instance;
+            int mode = check.setLineColumnFileMode();
+            final int inputLine, inputColumn;
+            String inputFile;
+            if((mode & SetLineColumn_ifc.mColumn) !=0){ inputColumn = resultItem.getInputColumn(); } 
+            else { inputColumn = -1; }
+            if((mode & SetLineColumn_ifc.mLine) !=0){ inputLine = resultItem.getInputLine(); } 
+            else { inputLine = -1; }
+            if((mode & SetLineColumn_ifc.mFile) !=0){ inputFile = resultItem.getInputFile(); } 
+            else { inputFile = null; }
+            check.setLineColumnFile(inputLine, inputColumn, inputFile);
+          }
+          /*
           int inputLine = resultItem.getInputLine();
           int inputColumn = resultItem.getInputColumn();
           String inputFile = resultItem.getInputFile();
           if(!trySetInputInfo(compn, inputLine, inputColumn, inputFile)){
             trySetInputColumn("", compn, inputColumn);
           }
+          */
           /** skip into the component resultItem: */
           Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
           while(iterChildren.hasNext())
