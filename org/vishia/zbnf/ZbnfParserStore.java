@@ -68,6 +68,8 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-22 Hartmut new: Save srcFile in {@link ZbnfParserStore.ParseResultItemImplement#sFile},
+   *   for information in written results, especially with {@link ZbnfJavaOutput}. 
    * <li>2014-04-21 Hartmut new: {@link #createXmlNode(XmlNode, ParseResultItemImplement)}: writes src-line, src-col
    *   and start of src in the xml element. 
    * <li>2013-09-12 Hartmut chg: {@link #buildTreeNodeRepresentationXml(XmlNode, ParseResultItemImplement, boolean)} now
@@ -218,6 +220,8 @@ class ZbnfParserStore
     /** The line and column nr for debugging*/
     int nLine, nColumn;
 
+    /**The file or adequate ressource from which this result comes from. */
+    String sFile;
     
     /**The syntax identifications which has produced the stored result.
      * With this information a re-using of result can be do if the same syntax is detect 
@@ -278,6 +282,9 @@ class ZbnfParserStore
     @Override public int getInputColumn()
     { return nColumn;
     }
+    
+    @Override public String getInputFile(){ return sFile; }
+
     
     @Override public boolean isComponent()
     { return (offsetAfterEnd > 1) || kind == kComponent;
@@ -727,7 +734,7 @@ class ZbnfParserStore
    * @param nColumn
    * @return The position of this entry, using for rewind(posititon);
    */
-  private ParseResultItemImplement add(String sSemantic, CharSequence sInput, int nAlternative, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent)
+  private ParseResultItemImplement add(String sSemantic, CharSequence sInput, int nAlternative, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent)
   { if(sSemantic.equals("textOut"))
       stop();
     item = new ParseResultItemImplement(this, sSemantic, parent, "?");
@@ -742,6 +749,7 @@ class ZbnfParserStore
     item.end = end;
     item.nLine = nLine;
     item.nColumn = nColumn;
+    item.sFile = sFile;
     item.idxOwn = items.size();
     if(item.idxOwn == 221)
       stop();
@@ -755,7 +763,7 @@ class ZbnfParserStore
 
 
   ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
-  { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
+  { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), input.getInputfile(), parent);
   }
 
   /** Sets the number of the alternative into a existing item.
@@ -792,23 +800,23 @@ class ZbnfParserStore
   }
   
   
-  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
-  { return add(sSemantic, null, countRepetition, start, end, nLine, nColumn, parent);
+  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(sSemantic, null, countRepetition, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
-  { return add(sSemantic, null, -countRepetition, start, end, nLine, nColumn, parent);
+  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(sSemantic, null, -countRepetition, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addConstantSyntax(String sInput, long start, long end, int nLine, int nColumn, ZbnfParseResultItem parent )
-  { return add(null, sInput, kTerminalSymbol, start, end, nLine, nColumn, parent);
+  ParseResultItemImplement addConstantSyntax(String sInput, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(null, sInput, kTerminalSymbol, start, end, nLine, nColumn, sFile, parent);
   }
 
 
   ParseResultItemImplement addSemantic(String sSemantic, StringPart input, ZbnfParseResultItem parent)
-  { return add(sSemantic, null, kOnlySemantic, 0,0, input.getLineCt(), input.getCurrentColumn(), parent);
+  { return add(sSemantic, null, kOnlySemantic, 0,0, input.getLineCt(), input.getCurrentColumn(), input.getInputfile(), parent);
   }
 
 
@@ -821,8 +829,9 @@ class ZbnfParserStore
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
     int nLine = spInput.getLineCt();
-    int nColumn = 0;
-    return add(sSemantic, spInput.getCurrentPart().toString(), kString, start, end, nLine, nColumn, parent);
+    String sFile = spInput.getInputfile();
+    int nColumn = spInput.getCurrentColumn();
+    return add(sSemantic, spInput.getCurrentPart().toString(), kString, start, end, nLine, nColumn, sFile, parent);
   }
 
   /** Adds a founded string to the parsers store. It is called at as the issue of
@@ -831,7 +840,7 @@ class ZbnfParserStore
    * @return
    */
   ParseResultItemImplement addString(CharSequence src, String sSemantic, StringPart spInput, ZbnfParseResultItem parent)
-  { return add(sSemantic, src, kString, -1, -1, spInput.getLineCt(), spInput.getCurrentColumn(), parent);
+  { return add(sSemantic, src, kString, -1, -1, spInput.getLineCt(), spInput.getCurrentColumn(), spInput.getInputfile(), parent);
   }
 
   void addIdentifier(String sSemantic, String sIdent, ZbnfParseResultItem parent)

@@ -126,6 +126,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-22 Hartmut new: Save srcFile in {@link ZbnfParserStore.ParseResultItemImplement#sFile},
+   *   for information in written results, especially with {@link ZbnfJavaOutput}. 
    * <li>2014-03-21 Hartmut new: {@link #setSyntaxFile(File)} and {@link #setSyntaxString(String)}
    *   for ambiguous names called from a JZcmd script.
    * <li>2014-03-21 Hartmut bugfix: Parsing kStringUntilEndStringWithIndent and regular expression: There was a check
@@ -989,6 +991,7 @@ public class ZbnfParser
       { boolean bOk;
         long nStart = input.getCurrentPosition();
         int nLineInput = input.getLineCt();
+        String sFile = input.getInputfile();
         String sConstantSyntax = syntaxItem.getConstantSyntax();
         //if(sConstantSyntax.equals(";") && input.getCurrentPosition()==28925)
           //stop();
@@ -998,7 +1001,7 @@ public class ZbnfParser
         { bOk = true;
           //input.seek(sConstantSyntax.length());
           if(bConstantSyntaxAsParseResult)
-          { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, parentResultItem);
+          { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, sFile, parentResultItem);
           }
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseTerminalSymbol;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
         }
@@ -1462,7 +1465,8 @@ public class ZbnfParser
             int nLineInput = input.getLineCt();
             input.seek(sConstantSyntax.length());
             if(bConstantSyntaxAsParseResult)
-            { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, parentResultItem);
+            { String sFileInput = input.getInputfile();
+              parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, sFileInput, parentResultItem);
             }
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseConstInComment;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
           }

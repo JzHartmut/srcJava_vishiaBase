@@ -151,6 +151,9 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
   /**returns the column of the input line while parsing. */
   public int getInputColumn();
   
+  /**returns the file of the input line while parsing. */
+  public String getInputFile();
+  
   /** Tests if the actual item is a start item of a component. A component
    * is a complex part of the parsed input file, represent by the appropriated items
    * after this item here, determined by a non-terminal symbol of syntax.

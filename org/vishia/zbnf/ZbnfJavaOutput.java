@@ -167,6 +167,8 @@ public class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-22 Hartmut chg: instead trySetInputLine {@link #trySetInputInfo(Component, int, int, String)}.
+   *   The destination class should provide <code> boolean set_InputInfo_(int, int, String)</code> 
    * <li>2014-04-27 Hartmut new: ctor without {@link MainCmdLogging_ifc} for simple usage. 
    * <li>2014-01-01 Hartmut new: {@link #parseFileAndFillJavaObject(Object, File, String)}
    * <li>2014-01-01 Hartmut new: {@link #trySetInputLine(Component, int)}. Uses {@link DataAccess} first time.
@@ -427,9 +429,11 @@ public class ZbnfJavaOutput
           /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
           Component compn = new Component(component, componentsInstance.clazz, componentsInstance.instance);
           int inputLine = resultItem.getInputLine();
-          trySetInputLine(compn, inputLine);
           int inputColumn = resultItem.getInputColumn();
-          trySetInputColumn("", compn, inputColumn);
+          String inputFile = resultItem.getInputFile();
+          if(!trySetInputInfo(compn, inputLine, inputColumn, inputFile)){
+            trySetInputColumn("", compn, inputColumn);
+          }
           /** skip into the component resultItem: */
           Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
           while(iterChildren.hasNext())
@@ -1000,47 +1004,72 @@ public class ZbnfJavaOutput
   
   
   
-  /**Tries if an field <code>inputColumn_<i>semantic</i></code> or a method
-   * <code>set_inputColumn_<i>semantic</i></code> exists and set resp. calls it.
-   * If such a field or method isn't found, nothing is done. It is oksy.
+  /**Tries if an field <code>inputLine_</code> or a method
+   * <code>set_inputInfo_</code> exists and set resp. calls it.
+   * The method <code>set_inputInfo_</code> have to return any object, not null, to detect whether it is existence.
+   * Use boolean as return value.
+   * If such a field or method isn't found, nothing is done. It is okay.
    * @param semantic Name, it may be emtpy especially to search <code>inputColumn_</code> for the component.
    * @param destinationClass Class where searched.
    * @param destinationInstance Associated instance where set or called.
    * @param column The value of column. If it is negative, nothing is done. A negative value may indicate,
    *               that no valid column is given to set.
+   * @return true if the method "set_InputInfo(int, int, String)" was found.              
    * @throws IllegalAccessException If any problem with the set-method exists.
    */
-  private void trySetInputLine(Component destComponent, int line) 
+  private boolean trySetInputInfo(Component destComponent, int line, int column, String sFile) 
   throws IllegalAccessException
-  { if(line >=0)
+  { boolean bok = false;
+    if(line >=0)
     { DataAccess.DatapathElement datapath = new DataAccess.DatapathElement("inputLine_");
       try
       { //if an field inputColumn_ is found, write to it.
         Field elementColumn = destComponent.clazz.getField("inputLine_");
         elementColumn.setInt(destComponent.instance, line);
+        bok = true;  //successfull, no exception
       }
       catch(NoSuchFieldException exception)
       { /**do nothing if the field isn't found.*/ 
         //not an element with the postulated name found,
         //search an appropriate method:
-        Method method;
-        Class[] argTypes1 = new Class[1]; 
-        argTypes1[0] = Integer.TYPE;
         try
-        { datapath.set("set_inputLine_()");
-          datapath.setActualArguments(new Integer(line));
-          DataAccess.invokeMethod(datapath, destComponent.clazz, destComponent.instance, false, true);
+        { //NOTE: use DataAccess to find in super classes, manually it is complex.
+          datapath.set("set_inputInfo_()");
+          datapath.setActualArguments(new Integer(line),  new Integer(column),  sFile);
+          Object ok = DataAccess.invokeMethod(datapath, destComponent.clazz, destComponent.instance, false, true);
+          bok = ok !=null;   
           //method = destComponent.clazz.getDeclaredMethod("set_inputLine_", argTypes1);
           //Object[] argMethod1 = new Object[1];
           //argMethod1[0] = new Integer(line);
           //method.invoke(destComponent.instance, argMethod1);
         }
-        catch(NoSuchMethodException exception1){ /**do nothing if the field isn't found.*/ }
+        catch(NoSuchMethodException exception1){ 
+          /*
+          try{
+            Method method;
+            Class[] argTypes1 = new Class[3]; 
+            argTypes1[0] = Integer.TYPE;
+            argTypes1[1] = Integer.TYPE;
+            argTypes1[2] = sFile.getClass();
+            method = destComponent.clazz.getDeclaredMethod("set_inputInfo_", argTypes1);
+            Object[] argMethod1 = new Object[3];
+            argMethod1[0] = new Integer(line);
+            argMethod1[1] = new Integer(column);
+            argMethod1[2] = sFile;
+            method.invoke(destComponent.instance, argMethod1);
+          }
+          catch(NoSuchMethodException exception2){ } //do nothing if the field isn't found.
+          catch(Exception exc)
+          { throw new IllegalAccessException(exc.getMessage()); 
+          }
+          */
+        }
         catch(Exception exc)
         { throw new IllegalAccessException(exc.getMessage()); 
         }
       }
     }  
+    return bok;
   }
   
   
