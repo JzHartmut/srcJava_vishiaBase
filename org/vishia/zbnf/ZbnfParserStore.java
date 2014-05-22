@@ -68,6 +68,8 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
+   *   because it is faster. 
    * <li>2014-05-22 Hartmut new: Save srcFile in {@link ZbnfParserStore.ParseResultItemImplement#sFile},
    *   for information in written results, especially with {@link ZbnfJavaOutput}. 
    * <li>2014-04-21 Hartmut new: {@link #createXmlNode(XmlNode, ParseResultItemImplement)}: writes src-line, src-col
@@ -692,6 +694,9 @@ class ZbnfParserStore
   /** List of items to store, instaceof ParseResultItem */
   final ArrayList<ParseResultItemImplement> items;
 
+  /**Temporary store for column. */
+  private final int[] column = new int[1];
+  
   /** The index to read out the parse results. See getNextParseResult().*/
   //int idxParserStore;
 
@@ -737,6 +742,8 @@ class ZbnfParserStore
   private ParseResultItemImplement add(String sSemantic, CharSequence sInput, int nAlternative, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent)
   { if(sSemantic.equals("textOut"))
       stop();
+    if(nLine == 47 && nColumn == 12)
+      stop();
     item = new ParseResultItemImplement(this, sSemantic, parent, "?");
     item.sInput = sInput == null ? null : sInput.toString();
     if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
@@ -763,7 +770,7 @@ class ZbnfParserStore
 
 
   ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
-  { return add(sSemantic, null, type, 0,0, input.getLineCt(), input.getCurrentColumn(), input.getInputfile(), parent);
+  { return add(sSemantic, null, type, 0,0, input.getLineAndColumn(column), column[0], input.getInputfile(), parent);
   }
 
   /** Sets the number of the alternative into a existing item.
@@ -816,7 +823,7 @@ class ZbnfParserStore
 
 
   ParseResultItemImplement addSemantic(String sSemantic, StringPart input, ZbnfParseResultItem parent)
-  { return add(sSemantic, null, kOnlySemantic, 0,0, input.getLineCt(), input.getCurrentColumn(), input.getInputfile(), parent);
+  { return add(sSemantic, null, kOnlySemantic, 0,0, input.getLineAndColumn(column), column[0], input.getInputfile(), parent);
   }
 
 
@@ -828,10 +835,9 @@ class ZbnfParserStore
   ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfParseResultItem parent)
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
-    int nLine = spInput.getLineCt();
+    int nLine = spInput.getLineAndColumn(column);
     String sFile = spInput.getInputfile();
-    int nColumn = spInput.getCurrentColumn();
-    return add(sSemantic, spInput.getCurrentPart().toString(), kString, start, end, nLine, nColumn, sFile, parent);
+    return add(sSemantic, spInput.getCurrentPart().toString(), kString, start, end, nLine, column[0], sFile, parent);
   }
 
   /** Adds a founded string to the parsers store. It is called at as the issue of
@@ -840,7 +846,7 @@ class ZbnfParserStore
    * @return
    */
   ParseResultItemImplement addString(CharSequence src, String sSemantic, StringPart spInput, ZbnfParseResultItem parent)
-  { return add(sSemantic, src, kString, -1, -1, spInput.getLineCt(), spInput.getCurrentColumn(), spInput.getInputfile(), parent);
+  { return add(sSemantic, src, kString, -1, -1, spInput.getLineAndColumn(column), column[0], spInput.getInputfile(), parent);
   }
 
   void addIdentifier(String sSemantic, String sIdent, ZbnfParseResultItem parent)

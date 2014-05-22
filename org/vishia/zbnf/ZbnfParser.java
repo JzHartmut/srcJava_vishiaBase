@@ -126,6 +126,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
+   *   because it is faster. 
    * <li>2014-05-22 Hartmut new: Save srcFile in {@link ZbnfParserStore.ParseResultItemImplement#sFile},
    *   for information in written results, especially with {@link ZbnfJavaOutput}. 
    * <li>2014-03-21 Hartmut new: {@link #setSyntaxFile(File)} and {@link #setSyntaxString(String)}
@@ -147,7 +149,7 @@ public class ZbnfParser
    * <li>2014-01-23 Hartmut bugfix: The <code><*{ }></code> for indented lines does not work. Testing and fixing. 
    * <li>2014-01-01 Hartmut new: Line number transfer to parse result items. Idea TODO: transfer the line numbers only
    *   on finish of parsing, store position in input file while parsing: There are some more items stored in the parse process
-   *   than remain on finish. Getting line numbers form {@link org.vishia.util.StringPartFromFileLines#getLineCt()}
+   *   than remain on finish. Getting line numbers form {@link org.vishia.util.StringPartFromFileLines#getLineAndColumn(column)}
    *   is a binary search process of association position to line numbers. It should only be done on end only for the
    *   remaining parse result items. Time measurement: Parsing of about 30 Headerfiles with line numbers: 15 seconds,
    *   without line numbers: 14 second. 
@@ -990,7 +992,7 @@ public class ZbnfParser
       private boolean parseTerminalSymbol(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult)
       { boolean bOk;
         long nStart = input.getCurrentPosition();
-        int nLineInput = input.getLineCt();
+        int nLineInput = input.getLineAndColumn(column);
         String sFile = input.getInputfile();
         String sConstantSyntax = syntaxItem.getConstantSyntax();
         //if(sConstantSyntax.equals(";") && input.getCurrentPosition()==28925)
@@ -1462,7 +1464,7 @@ public class ZbnfParser
           { bFoundConstantSyntax = true;
             bFoundAnySpaceOrComment = false;
             long nStart = input.getCurrentPosition();
-            int nLineInput = input.getLineCt();
+            int nLineInput = input.getLineAndColumn(column);
             input.seek(sConstantSyntax.length());
             if(bConstantSyntaxAsParseResult)
             { String sFileInput = input.getInputfile();
@@ -1978,7 +1980,10 @@ public class ZbnfParser
   /** The actual parse result buffer.*/
   private ZbnfParserStore parserStoreTopLevel; //parseResult;
 
-  
+  /**Temporary store for column. */
+  private final int[] column = new int[1];
+
+ 
   /**Already parsed components with the same input text which should be requested in another context. 
    * The usage of the already detected parse result speeds up the parsing process. 
    * The syntax may be designed with such reused parts especially. 
@@ -2123,7 +2128,7 @@ public class ZbnfParser
       { syntax.seek(9);  //TODO skip also over ::=
         if(syntax.startsWith("::=")){ syntax.seek(3);}
         else if(syntax.startsWith("=")){ syntax.seek(1);}
-        else throw new ParseException("expected \"=\" behind \"$keywords\"", syntax.getLineCt());
+        else throw new ParseException("expected \"=\" behind \"$keywords\"", syntax.getLineAndColumn(column));
         char cc;
         do
         { syntax.seekNoWhitespace().lentoIdentifier();
@@ -2135,13 +2140,13 @@ public class ZbnfParser
           cc = syntax.fromEnd().seekNoWhitespace().getCurrentChar();
           syntax.seek(1);
         }while(cc == '|');
-        if(cc != '.') throw new ParseException("expected \".\" on end of \"$keywords\"", syntax.getLineCt());
+        if(cc != '.') throw new ParseException("expected \".\" on end of \"$keywords\"", syntax.getLineAndColumn(column));
       }
       else if(StringFunctions.startsWith(sCurrentInput, "$Whitespaces=")) //##s
       { syntax.seek(12); 
         String sWhitespaces = syntax.getCircumScriptionToAnyChar(".").toString();
         if(sWhitespaces.length()==0 || sWhitespaces.indexOf('\n')>=0){ 
-          throw new ParseException("expected \".\" on end of \"$Whitespaces=\"", syntax.getLineCt());
+          throw new ParseException("expected \".\" on end of \"$Whitespaces=\"", syntax.getLineAndColumn(column));
         }
         syntax.seek(1);
         setWhiteSpaces(sWhiteSpaces);
@@ -2152,14 +2157,14 @@ public class ZbnfParser
         { syntax.seek(1);
           setLinemode(true);
         }
-        else throw new ParseException("expected \".\" on end of \"$setLinemode\"", syntax.getLineCt());
+        else throw new ParseException("expected \".\" on end of \"$setLinemode\"", syntax.getLineAndColumn(column));
       }
       else if(StringFunctions.startsWith(sCurrentInput, "$endlineComment=")) //##s
       { syntax.seek(16); 
         syntax.seekNoWhitespace();
         sEndlineCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString().trim();
         if(sEndlineCommentStringStart.length()==0){ sEndlineCommentStringStart = null; }
-        else if(sEndlineCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineCt());
+        else if(sEndlineCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineAndColumn(column));
         syntax.seek(1);
       }
       else if(StringFunctions.startsWith(sCurrentInput, "$comment=")) //##s
@@ -2167,14 +2172,14 @@ public class ZbnfParser
         syntax.seekNoWhitespace();
         sCommentStringStart = syntax.getCircumScriptionToAnyChar(".").toString().trim();
         if(sCommentStringStart.length()==0){ sCommentStringStart = null; }
-        else if(sCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineCt());
+        else if(sCommentStringStart.length()>5) throw new ParseException("more as 5 chars as $endlineComment unexpected", syntax.getLineAndColumn(column));
         else
-        { if(!syntax.startsWith("...")) throw new ParseException("$comment, must have ... betwenn comment strings.", syntax.getLineCt());
+        { if(!syntax.startsWith("...")) throw new ParseException("$comment, must have ... betwenn comment strings.", syntax.getLineAndColumn(column));
           syntax.seek(3);
           syntax.seekNoWhitespace();
           sCommentStringEnd = syntax.getCircumScriptionToAnyChar(".").toString().trim();
-          if(sCommentStringEnd.length()==0) throw new ParseException("$comment: no endchars found.", syntax.getLineCt());
-          else if(sCommentStringEnd.length()>5) throw new ParseException("SyntaxPrescript: more as 5 chars as $endlineComment-end unexpected", syntax.getLineCt());
+          if(sCommentStringEnd.length()==0) throw new ParseException("$comment: no endchars found.", syntax.getLineAndColumn(column));
+          else if(sCommentStringEnd.length()>5) throw new ParseException("SyntaxPrescript: more as 5 chars as $endlineComment-end unexpected", syntax.getLineAndColumn(column));
           syntax.seek(1);  //skip "."
         }
       }
@@ -2216,11 +2221,11 @@ public class ZbnfParser
           //NOTE: sNamespace should be have " left and right, do not save it in xmlnsList.
           xmlnsList.put(sNamespaceKey, sNamespace.substring(1, sNamespace.length()-1));
         }
-        else throw new ParseException("SyntaxPrescript: $xmlns:ns:\"string\". :failed syntax.", syntax.getLineCt());
+        else throw new ParseException("SyntaxPrescript: $xmlns:ns:\"string\". :failed syntax.", syntax.getLineAndColumn(column));
         if(syntax.fromEnd().getCurrentChar() == '.')
         { syntax.seek(1);
         }
-        else throw new ParseException("SyntaxPrescript: $xmlns:ns:\"string\". :no dot on end.", syntax.getLineCt());
+        else throw new ParseException("SyntaxPrescript: $xmlns:ns:\"string\". :no dot on end.", syntax.getLineAndColumn(column));
       }
       else if(syntax.scan("$import").scanOk()) //##s
       { String[] result = new String[1];
