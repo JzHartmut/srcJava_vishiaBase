@@ -139,6 +139,8 @@ public final class JZcmdSyntax {
     + " | throw on errorlevel <#?throwonerror> \n"
     + " | throw <textDataPath?throw> \n" 
     + " | onerror <onerror> \n"
+    + " | errortoOutput off <?errorToOutput=0> \n"
+    + " | errortoOutput <?errorToOutput=1> \n"
     + " | if errorlevel <iferrorlevel> \n"
     + " | debug [<textValue?debug>| <?debug>] ; \n"
     + " | <callSubroutine?call> \n"
