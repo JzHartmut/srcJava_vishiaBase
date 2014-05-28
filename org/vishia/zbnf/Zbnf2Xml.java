@@ -317,7 +317,7 @@ public class Zbnf2Xml
 
     void addCmdLineProperties(){
       super.addAboutInfo("Conversion text to XML via ZBNF");
-      super.addAboutInfo("made by HSchorrig, 2006-03-20..2013-02-09");
+      super.addAboutInfo("made by HSchorrig, 2006-03-20..2014-05-29");
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> -[x|y|z]:<OUTPUT> [{-a:<NAME>=<VALUE>}]");  //[-w[+|-|0]]
       super.addArgument(argumentsZbnf2Xml);
       super.addStandardHelpInfo();

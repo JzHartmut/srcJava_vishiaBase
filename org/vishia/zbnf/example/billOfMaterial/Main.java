@@ -61,7 +61,7 @@ public class Main
         main.console.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
       }
     }
-    mainCmdLine.exit();
+    //mainCmdLine.exit();
   }
 
   
@@ -179,7 +179,14 @@ public class Main
      * In this basic example the data won't be used never, therefore please set a breakpoint here
      * and check the data manually.
      */ 
-    String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(bill.getClass(), bill, new File(args.sFileIn), new File("./billOfMaterial.zbnf"), console, 1200);
+    String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(
+        bill.getClass()
+        , bill
+        , new File(console.currdir(), args.sFileIn)
+        , new File(console.currdir(), "./billOfMaterial.zbnf")
+        , console
+        , 1200
+        );
     if(sError != null)
     { /**there is any problem while parsing, report it: */
       console.writeError("ERROR Parsing bill of material, file: " + args.sFileIn + "\n" + sError);
@@ -210,7 +217,14 @@ public class Main
      * In this basic example the data won't be used never, therefore please set a breakpoint here
      * and check the data manually.
      */ 
-    String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(BillOfMaterial_Zbnf_ifc.ZbnfStore_BillOfMaterial.class, bill, new File(args.sFileIn), new File("./billOfMaterial.zbnf"), console, 1200);
+    String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(
+        BillOfMaterial_Zbnf_ifc.ZbnfStore_BillOfMaterial.class
+      , bill
+      , new File(console.currdir(), args.sFileIn)
+      , new File(console.currdir(), "./billOfMaterial.zbnf")
+      , console
+      , 1200
+      );
     if(sError != null)
     { /**there is any problem while parsing, report it: */
       console.writeError("ERROR Parsing bill of material, file: " + args.sFileIn + "\n" + sError);
