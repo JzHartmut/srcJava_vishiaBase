@@ -71,6 +71,7 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-05-31 Hartmut chg: ':' aus separator between base and local path only after position 2, elsewhere ambigous with D:
    * <li>2013-10-19 Hartmut chg: now invoke-able from JZcmd, public methods etc. Only formalism
    * <li>2013-04-12 Hartmut new: #define in Headerfile or #define in cfg-file can be used to set {@link #idxDefines},
    *   conditional #ifdef ... in headerfile only taken if #define is known.
@@ -329,6 +330,10 @@ public class Header2Reflection
   { this.fileReflectionBlockedTypes = new File(sFile);
   }
 
+  public void setConfig(String sFile)
+  { this.fileReflectionBlockedTypes = new File(sFile);
+  }
+
   public void setCfg(String sFile)
   { this.fileReflectionBlockedTypes = new File(sFile);
   }
@@ -388,7 +393,7 @@ public class Header2Reflection
    */
   public boolean addInputFilemask(String sMask)
   { boolean bOk = true;
-    int posSep = sMask.indexOf(':');
+    int posSep = sMask.indexOf(':',2);
     FileIn fileIn = new FileIn();
     File dir = null;
     if(posSep > 2)

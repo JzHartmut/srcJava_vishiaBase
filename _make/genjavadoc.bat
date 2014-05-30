@@ -10,7 +10,7 @@ set SRC=%SRC% -subpackages org.vishia.sclConversions
 set SRC=%SRC% -subpackages org.vishia.stateMGen
 set SRC=%SRC% -subpackages org.vishia.zbnf
 set SRC=%SRC% -subpackages org.vishia.zmake
-set SRC=%SRC% -subpackages org.vishia.zgen
+set SRC=%SRC% -subpackages org.vishia.zcmd
 set SRC=%SRC% -subpackages org.vishia.header2Reflection 
 set SRC=%SRC% ../org/vishia/byteData/*.java
 
