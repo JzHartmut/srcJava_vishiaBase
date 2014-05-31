@@ -257,7 +257,7 @@ public class JZcmd implements Compilable
       executer.genScriptVariables(genScript, true, execLevel.localVariables, execLevel.currdir());
       executer.execute(genScript, true, bWaitForThreads, u, null);
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
-    } catch (Exception exc) {
+    } catch (Throwable exc) {
       String sError = exc.getMessage();
       System.err.println(sError);
     }
@@ -396,7 +396,7 @@ public class JZcmd implements Compilable
       try{
         JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
         executer1.execute(genScript, accessPrivate, true, out, sCurrdir);
-      } catch(Exception exc){
+      } catch(Throwable exc){
         System.err.println(Assert.exceptionInfo("", exc, 0, 4));
       }
     }

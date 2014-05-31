@@ -191,7 +191,7 @@ public class Zbnf2Text extends Zbnf2Xml
           //
           generator.execute(genScript, true, true, out, args.sCurrdir);
           //
-        } catch(Exception exc){
+        } catch(Throwable exc){
           CharSequence sMsg = Assert.exceptionInfo("Zbnf2Text - Exception; ", exc, 0, 10);
           System.err.println(sMsg);
         }
