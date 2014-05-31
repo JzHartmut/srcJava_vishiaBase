@@ -250,7 +250,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " newJavaClass::= <$\\.$?javapath> [ ( [{ <objExpr?argument> ? , }] )].\n" 
-    + " staticJavaMethod::= <$\\.$?javapath> [( [ { <objExpr?argument> ? , } ] )].\n"
+    + " staticJavaMethod::= [: <dataAccess?loader> : ] <$\\.$?javapath> [( [ { <objExpr?argument> ? , } ] )].\n"
     + " ##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
     + " \n"
     //+ " dataPath::= <$-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
