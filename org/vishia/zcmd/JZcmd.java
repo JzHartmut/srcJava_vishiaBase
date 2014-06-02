@@ -12,8 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.script.Bindings;
 import javax.script.Compilable;
 import javax.script.CompiledScript;
+import javax.script.ScriptContext;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
 import javax.script.ScriptException;
 
 import org.vishia.cmd.JZcmdExecuter;
@@ -41,7 +45,7 @@ import org.vishia.zbnf.ZbnfParser;
  * @author Hartmut Schorrig
  *
  */
-public class JZcmd implements Compilable
+public class JZcmd implements ScriptEngine, Compilable
 {
   
   /**Version, history and license.
@@ -702,6 +706,120 @@ public class JZcmd implements Compilable
     } catch(IOException exc){ throw new ScriptException(exc); }
     String source = new String(buffer, 0, length);
     return compile(source);
+  }
+
+
+  @Override
+  public Bindings createBindings()
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object eval(String script) throws ScriptException
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object eval(Reader reader) throws ScriptException
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object eval(String script, ScriptContext context)
+      throws ScriptException
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object eval(Reader reader, ScriptContext context)
+      throws ScriptException
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object eval(String script, Bindings n) throws ScriptException
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object eval(Reader reader, Bindings n) throws ScriptException
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Object get(String key)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public Bindings getBindings(int scope)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public ScriptContext getContext()
+  {
+    JZcmdExecuter executer = new JZcmdExecuter();
+    return executer.scriptLevel();
+  }
+
+
+  @Override
+  public ScriptEngineFactory getFactory()
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public void put(String key, Object value)
+  {
+    // TODO Auto-generated method stub
+    
+  }
+
+
+  @Override
+  public void setBindings(Bindings bindings, int scope)
+  {
+    // TODO Auto-generated method stub
+    
+  }
+
+
+  @Override
+  public void setContext(ScriptContext context)
+  {
+    // TODO Auto-generated method stub
+    
   }
   
   
