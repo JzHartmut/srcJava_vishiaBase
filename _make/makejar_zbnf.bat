@@ -12,6 +12,8 @@ set TMP_JAVAC=..\..\..\tmp_javac
 REM Output dir and jar-file with path and filename relative from current dir:
 REM The output dir is exe usually but zbnfjax if this file is compiled in the ZBNF download preparation.
 set OUTDIR_JAVAC=..\..\exe
+REM regard environment zbnfjax:
+if exist ..\..\zbnfjax\ set OUTDIR_JAVAC=..\..\zbnfjax
 set JAR_JAVAC=zbnf.jar
 
 
