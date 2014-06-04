@@ -29,7 +29,7 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/mainCmd/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/util/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/msgDispatch/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/stateMachine/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xml/*.java
+::set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xml/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xmlSimple/*.java
 
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java

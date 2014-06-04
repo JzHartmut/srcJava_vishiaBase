@@ -123,7 +123,7 @@ public class Zbnf2Text extends Zbnf2Xml
         Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zbnf2Text.this.argsx;
         zgen.genScriptVariables(zgenscript, true, null, argsZtext.sCurrdir);
         zgen.setScriptVariable("data", 'O', xmlResult, true);
-      } catch(Exception exc){
+      } catch(Throwable exc){
         System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
         throw new RuntimeException(exc);
       }

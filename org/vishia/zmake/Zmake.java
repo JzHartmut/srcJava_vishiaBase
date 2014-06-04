@@ -239,7 +239,7 @@ public class Zmake extends Zbnf2Text
       zgen.setScriptVariable("zmake", 'O', zmakeInput, true);
       File currdir = (File)zgen.getScriptVariable("currdir").value();  //set in script level
       zmakeInput.setCurrentDir(currdir); //use for build absolute paths. 
-    } catch(Exception exc){
+    } catch(Throwable exc){
       throw new RuntimeException(exc);
     }
     

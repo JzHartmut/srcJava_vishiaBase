@@ -185,7 +185,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefClassVar::= [const] <definePath?defVariable>  = <textValue?>.\n"  //a text or object or expression
     + " \n"
-    + " DefClasspath::= [const] <definePath?defVariable>  = [<$?parent> : ] <filesetAccess>.\n"  //a text or object or expression
+    + " DefClasspath::= [const] <definePath?defVariable>  = [ : <$?parentClasspath> : ] { <filesetAccess> ? , }.\n"  //a text or object or expression
     + " \n"
     + " DefStringVar::= [const <?const>] <definePath?defVariable> [ = <textDatapath?>].\n"  //[{ <definePath?assign> = }] <textDatapath?> .\n"
     + " \n"
@@ -229,7 +229,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | [&] <dataAccess> .\n"
     + " \n"
-    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;(\\ \\r\\n?text> .\n"
+    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n?text> .\n"
     + " \n"
     + " \n"
     + " objExpr::= \n"
@@ -382,8 +382,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " ## An accessPath is a Filepath, see prepFilepath::=, but analyzed on Java level. \n"
     + " filesetAccess::= [ \n"
-    + "                   <\"\"?accessPath>| [<?accessPathOrFilesetVariable> [&]<*\\ \\r\\n,)&;?>] \n"
-    + "               ] [ & <$?zmakeFilesetVariable>] . \n"
+    + "                    <\"\"?accessPath> | \\<:\\><textExpr>\\<\\.\\> \n"
+    + "                  | [<?accessPathOrFilesetVariable> [&]<*\\ \\r\\n,)&;?>] \n"
+    + "                  ] [ & <$?zmakeFilesetVariable>] . \n"
     + " \n"
     + " \n"
     + " cmdLineWait::=[{ <dataPath?assign> += }] cmd\\  <cmdLine?>.\n"
