@@ -5,6 +5,9 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-06-07 Hartmut new: Class var = :loader: package.path.Class; with a loader. 
+   * <li>2014-06-07 Hartmut new: new &datapath.Classvar:(args) and java &datapath.Classvar:method(args):
+   *   Using a Class variable instead constant package.path.Class possible. 
    * <li>2014-05-18 Hartmut chg: DefFilepath now uses a textValue and divides the path to its components
    *   at runtime, doesn't use the prepFilePath in ZBNF. Reason: More flexibility. The path can be assmebled
    *   on runtime.  
@@ -183,7 +186,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefObjVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
     + " \n"
-    + " DefClassVar::= [const] <definePath?defVariable>  = <textValue?>.\n"  //a text or object or expression
+    + " DefClassVar::= [const] <definePath?defVariable>  = \n"  //a text or object or expression
+    + "   [: <dataAccess?loader> : ]  ## a datapath to a ClassLoader instance, a Classpath variable. \n"  
+    + "   <textValue?>.               ## The package path maybe contained in any expression\n"  
     + " \n"
     + " DefClasspath::= [const] <definePath?defVariable>  = [ : <$?parentClasspath> : ] { <filesetAccess> ? , }.\n"  //a text or object or expression
     + " \n"
@@ -253,8 +258,10 @@ public final class JZcmdSyntax {
     + " ].\n"
     + " \n"
     + " \n"
-    + " staticJavaAccess::= [: <dataAccess?loader> : ] <$\\.$?javapath> [( [ { <objExpr?argument> ? , } ])].\n"
-    + " ##a javapath is the full package path and class [.staticmetod] separated by dot. \n"
+    + " staticJavaAccess::=        ## Access to a Java class \n"
+    + "   [ & <dataAccess?classVar> : [<$\\.$?javapath>]           ## access via Class variable .element\n"
+    + "   | [: <dataAccess?loader> : ] <$\\.$?javapath>  ## immediate package.path.Class.element\n"
+    + "   ] [( [ { <objExpr?argument> ? , } ])].         ## arguments\n"
     + " \n"
     //+ " dataPath::= <$-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + " dataPath::= <startDatapath>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
