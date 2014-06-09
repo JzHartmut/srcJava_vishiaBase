@@ -11,6 +11,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.script.ScriptException;
+
 import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.cmd.JZcmdScript;
 import org.vishia.mainCmd.MainCmd;
@@ -178,20 +180,20 @@ public class Zbnf2Text extends Zbnf2Xml
           //outData.append("===================").append(outArgs.sFileScript);
         }
         File checkXmlOutGenCtrl = args.sCheckXmlOutput == null ? null : new File(args.sCheckXmlOutput + "_check.genctrl");
-        //The generation script:
-        //
-        JZcmdScript genScript = JZcmd.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
-        //
-        //preparation as callback:
-        //
-        preparerParsedData.prepareParsedData(resultTree, zbnfResult, genScript, generator);
-        //
         Writer out = new FileWriter(fOut);
         try{ 
+          //The generation script:
+          //
+          JZcmdScript genScript = JZcmd.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
+          //
+          //preparation as callback:
+          //
+          preparerParsedData.prepareParsedData(resultTree, zbnfResult, genScript, generator);
+          //
           //
           generator.execute(genScript, true, true, out, args.sCurrdir);
           //
-        } catch(Throwable exc){
+        } catch(ScriptException exc){
           CharSequence sMsg = Assert.exceptionInfo("Zbnf2Text - Exception; ", exc, 0, 10);
           System.err.println(sMsg);
         }

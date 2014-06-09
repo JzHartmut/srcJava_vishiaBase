@@ -11,6 +11,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.script.ScriptException;
+
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -528,13 +530,14 @@ public class StateMGen {
         }
         Writer out = new FileWriter(fOut);
         generator.setScriptVariable("state", 'O', stateData, true);
-        CharSequence sError = JZcmd.execute(generator, fileScript, out, args.sCurrdir, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
-        out.close();
-        if(sError !=null){
-          console.writeError(sError.toString());
-        } else {
+        try{ 
+          JZcmd.execute(generator, fileScript, out, args.sCurrdir, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
+        } catch(ScriptException exc){
+          console.writeError(exc.getMessage());
         }
+        out.close();
+        
       }
       if(outData !=null) {
         outData.close();
