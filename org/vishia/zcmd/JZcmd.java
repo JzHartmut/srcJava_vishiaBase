@@ -798,8 +798,7 @@ public class JZcmd implements JZcmdEngine, Compilable
         String sFileInclude;
         if(include.envVar !=null){
           String sEnv = System.getenv(include.envVar);
-          if(sEnv == null) throw new IllegalArgumentException("JZcmd.include - cannot find environment variable;" + include.envVar);
-          sFileInclude = sEnv + '/' + include.path;
+          if(sEnv == null) throw include.scriptException("JZcmd.include - cannot find environment variable;" + include.envVar);          sFileInclude = sEnv + '/' + include.path;
         } else {
           sFileInclude = include.path;
         }
