@@ -164,11 +164,11 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefVariable::=\n"
     + "   String\\  <DefStringVar?textVariable> \n"  //note: without ; because used in sub argument list
-    + " | Stringjar\\  <DefObjVar?Stringjar> \n"
+    + " | Stringjar\\  <DefSpecVar?Stringjar> \n"
     + " | Num\\  <DefNumVar> \n"
     + " | Bool\\  <DefBoolVar> \n"
-    + " | Pipe\\  <DefObjVar?Pipe> \n"
-    + " | List\\  <DefObjVar?List> \n"
+    + " | Pipe\\  <DefSpecVar?Pipe> \n"
+    + " | List\\  <DefSpecVar?List> \n"
     + " | Map\\  <DefMapVar> \n"
     + " | Obj\\  <DefObjVar> \n"
     + " | Class\\  <DefClassVar> \n"
@@ -185,7 +185,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefBoolVar::= [const <?const>] <definePath?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
     + " \n"
-    + " DefObjVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
+    + " DefSpecVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
+    + " \n"
+    + " DefObjVar::= [const <?const>] <definePath?defVariable> [ : <$\\.?type>]  [ = <objExpr?>].\n"  //a text or object or expression
     + " \n"
     + " DefClassVar::= [const] <definePath?defVariable>  = \n"  //a text or object or expression
     + "   [: <dataAccess?loader> : ]  ## a datapath to a ClassLoader instance, a Classpath variable. \n"  
@@ -383,9 +385,9 @@ public final class JZcmdSyntax {
     + " ].\n"
     + " \n"
     + " \n"
-    + " zmake::= [ : <$-?name> :[?=] ] <output> := <textValue?callName> ( { <namedArgument?actualArgument> | <filesetAccess> ? ,} ).\n"
+    + " zmake::= [ : <$-?name> :[?=] ] <textValue?zmakeOutput> := <textValue?callName> ( { <namedArgument?actualArgument> | <filesetAccess> ? ,} ).\n"
     + " \n"
-    + " output::=<*|\\ |\\r|\\n|:=?!prepFilePath>.\n"
+    //+ " output::=<*|\\ |\\r|\\n|:=?!prepFilePath>.\n"
     + " \n"
     + " \n"
     + " ## An accessPath is a Filepath, see prepFilepath::=, but analyzed on Java level. \n"
