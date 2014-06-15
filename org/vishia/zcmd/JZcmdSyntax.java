@@ -5,6 +5,8 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-06-15 Hartmut new: zmake &filepath := ... output as Filepath instance
+   * <li>2014-06-15 Hartmut new: Obj name : type possible, not used yet, see {@link org.vishia.util.DataAccess.Variable#clazz}
    * <li>2014-06-07 Hartmut new: Class var = :loader: package.path.Class; with a loader. 
    * <li>2014-06-07 Hartmut new: new &datapath.Classvar:(args) and java &datapath.Classvar:method(args):
    *   Using a Class variable instead constant package.path.Class possible. 
@@ -87,7 +89,8 @@ public final class JZcmdSyntax {
     + " [<*|==JZcmd==?>==JZcmd== ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + " [ ! checkJZcmd = <textValue?checkJZcmd> ; ]\n"
-    + " [{ include <include> ; \n"
+    + " [{ [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
+    + "  | include <include> ; \n"
     + "  | currdir = <textDatapath?cd> ;\n"
     + " }] \n"
     + " { [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
