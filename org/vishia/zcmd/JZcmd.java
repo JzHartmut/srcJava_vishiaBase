@@ -197,7 +197,7 @@ public class JZcmd implements JZcmdEngine, Compilable
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.sFileTextOut = val; return true;
         }})
-    , new MainCmd.Argument("-debug", ":TEST.xml pathTo XML output of parsed script"
+    , new MainCmd.Argument("-debug", ":INPUT.xml pathTo XML output of parsed script"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           argData.fileTestXml = new File(val); 
           try { FileSystem.mkDirPath(argData.fileTestXml);
@@ -220,8 +220,13 @@ public class JZcmd implements JZcmdEngine, Compilable
       this.argData = argData;
       super.addAboutInfo("Compilation and Execution of JZcmd-Files");
       super.addAboutInfo("made by HSchorrig, Version 1.0, 2013-07-11..2014-06-09");
+      super.addHelpInfo("args JZcmd_SCRIPTFILE [-t:OUTEXT] [-debug:SCRIPTFILE.xml]");
       super.addArgument(argList);
+      super.addHelpInfo("==Standard arguments of MainCmd==");
       super.addStandardHelpInfo();
+      super.addHelpInfo("==Syntax of a JZcmd script==");
+      super.addHelpInfo(JZcmdSyntax.syntax);
+
       
     }
     
@@ -232,17 +237,10 @@ public class JZcmd implements JZcmdEngine, Compilable
     
     @Override protected boolean checkArguments()
     {
-      return true;
+      if(argData.sFileScript ==null) return false;
+      else return true;
     } 
     
-    /**It is overridden because the JZcmd syntax is shown too.
-     * @see org.vishia.mainCmd.MainCmd#writeHelpInfo()
-     */
-    @Override public void writeHelpInfo(){
-      super.writeHelpInfo();
-      System.out.println("=== Syntax of a JZcmd script===");
-      System.out.println(JZcmdSyntax.syntax);
-    }
   
   }
 
@@ -274,7 +272,7 @@ public class JZcmd implements JZcmdEngine, Compilable
         mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
       }
       if(args.sFileScript ==null){
-        mainCmdLine.writeHelpInfo();
+        mainCmdLine.writeHelpInfo(null);
       } else {
         if(sRet == null)
         { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class

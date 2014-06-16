@@ -531,7 +531,7 @@ public class StateMGen {
         Writer out = new FileWriter(fOut);
         generator.setScriptVariable("state", 'O', stateData, true);
         try{ 
-          JZcmd.execute(generator, fileScript, out, args.sCurrdir, true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
+          JZcmd.execute(generator, fileScript, out, console.currdir(), true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
         } catch(ScriptException exc){
           console.writeError(exc.getMessage());

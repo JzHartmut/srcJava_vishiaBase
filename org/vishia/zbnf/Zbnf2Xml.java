@@ -38,8 +38,7 @@ import java.util.TreeMap;
 
 
 import org.vishia.mainCmd.MainCmd;
-import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
@@ -143,8 +142,9 @@ public class Zbnf2Xml
   }  
   
   /** Help reference to name the report output.*/
-  protected final Report report;
+  protected final MainCmdLogging_ifc logmaincmd;
 
+  /**Arguments from main of this class. */
   protected final Args argsx;
   
   protected ZbnfParser parser = null;
@@ -171,24 +171,24 @@ public class Zbnf2Xml
     CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
     try{
       mainCmdLine.addCmdLineProperties();
-      boolean bOk = true;
-      try{ mainCmdLine.parseArguments(); }
+      boolean bOk;
+      try{ bOk = mainCmdLine.parseArguments(); }
       catch(Exception exception)
       { mainCmdLine.report("Argument error:", exception);
-        mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
+        mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
         bOk = false;
       }
-      Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
       if(bOk)
-      { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
-            to hold the contact to the command line execution.
+      { Zbnf2Xml main = new Zbnf2Xml(args, mainCmdLine);     //the main instance
+        /* The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
+           to hold the contact to the command line execution.
         */
         try{ main.parseAndWriteXml(); }
         catch(Exception exception)
         { //catch the last level of error. No error is reported direct on command line!
-          main.report.report("Uncatched Exception on main level:", exception);
+          main.logmaincmd.report("Uncatched Exception on main level:", exception);
           exception.printStackTrace(System.out);
-          main.report.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
+          main.logmaincmd.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
         }
       }
       sRet = "";
@@ -205,20 +205,20 @@ public class Zbnf2Xml
   /** Constructor of the main class.
       The command line arguments are parsed here. After them the execute class is created as composition of Zbnf2Xml.
   */
-  public Zbnf2Xml(Args args, Report report)
+  public Zbnf2Xml(Args args, MainCmdLogging_ifc report)
   { this.argsx = args;
-    this.report = report;
+    this.logmaincmd = report;
   }
 
 
-  public Zbnf2Xml(String input, String syntax, String output, Report report)
+  public Zbnf2Xml(String input, String syntax, String output, MainCmdLogging_ifc report)
   {
     argsx = new Args();
     
     this.argsx.sFileIn = input;
     this.argsx.sFileXmlOut = output;
     this.argsx.sFileSyntax = syntax;
-    this.report = report;
+    this.logmaincmd = report;
   }
 
   /**The inner class CmdLine helps to evaluate the command line arguments
@@ -292,13 +292,13 @@ public class Zbnf2Xml
     
     
     public final MainCmd.Argument[] argumentsZbnf2Xml =
-    { new MainCmd.Argument("-i", ":<INPUT>    inputfilepath, this file is parsing", setInput)
-    , new MainCmd.Argument("-s", ":<SYNTAX>   syntax prescript in ZBNF format for parsing", setSyntax)
-    , new MainCmd.Argument("-x", ":<OUTPUT>   output xml file written in UTF8-encoding", setOutUtf8)
-    , new MainCmd.Argument("-y", ":<OUTPUT>   output xml file written in the standard encoding of system\n" 
-                            + "               or the given -charset:encoding", setOut)
-    , new MainCmd.Argument("-z", ":<OUTPUT>   output xml file written in US-ASCII-encoding", setOutAscii)
-    , new MainCmd.Argument("-xmlSrcline", "[:[off|on]]   sets line and column info in XML output", new MainCmd.SetArgument(){ 
+    { new MainCmd.Argument("-i", ":<INPUT>     input file-path, file to parse", setInput)
+    , new MainCmd.Argument("-s", ":<SYNTAX>    syntax prescript in ZBNF format for parsing", setSyntax)
+    , new MainCmd.Argument("-x", ":<OUTPUT>    output xml file-path written in UTF8-encoding", setOutUtf8)
+    , new MainCmd.Argument("-y", ":<OUTPUT>    output xml file-path written in the standard encoding of system\n" 
+                         + "                   or the given -charset:encoding", setOut)
+    , new MainCmd.Argument("-z", ":<OUTPUT>    output xml file-path written in US-ASCII-encoding", setOutAscii)
+    , new MainCmd.Argument("-xmlSrcline", "[:[off|on]]   sets source line and column info in XML tags", new MainCmd.SetArgument(){ 
       @Override public boolean setArgument(String val){ 
         if(!val.contains("off")){ 
           if(val.length() <=11 || val.contains("on")){
@@ -307,7 +307,7 @@ public class Zbnf2Xml
         }
         argData.xmlWrModeSet |= ZbnfParser.mXmlSrcline_xmlWrmode;  return true;
       }})
-    , new MainCmd.Argument("-xmlSrctext", "[:[off|on]]   sets line and column info in XML output", new MainCmd.SetArgument(){ 
+    , new MainCmd.Argument("-xmlSrctext", "[:[off|on]]   sets source text info in XML tags", new MainCmd.SetArgument(){ 
       @Override public boolean setArgument(String val){ 
         if(!val.contains("off")){ 
           if(val.length() <=11 || val.contains("on")){
@@ -316,11 +316,11 @@ public class Zbnf2Xml
         }
         argData.xmlWrModeSet |= ZbnfParser.mXmlSrctext_xmlWrmode;  return true;
       }})
-    , new MainCmd.Argument("-checknew", "     executes only if output not exists or input is newer", setChecknew)
+    , new MainCmd.Argument("-checknew", "      executes only if output not exists or input is newer", setChecknew)
     , new MainCmd.Argument("-charset", ":<CHARSET> use this encoding.", setOutEncoding)
     , new MainCmd.Argument("-a", ":<NAME>=<VALUE> set an additional xml information\n" 
-                            + "   <NAME> of a additional XML infomation, typical @attribute" 
-                            + "   <VALUE> its text, may be in \"\"", setXmlContent)
+                            + "   <NAME>       of the additional XML infomation, typical @attribute\n" 
+                            + "   <VALUE>      its text, may be in \"\"", setXmlContent)
     };
 
     public final Args argData;
@@ -340,6 +340,7 @@ public class Zbnf2Xml
       super.addAboutInfo("made by HSchorrig, 2006-03-20..2014-05-29");
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> -[x|y|z]:<OUTPUT> [{-a:<NAME>=<VALUE>}]");  //[-w[+|-|0]]
       super.addArgument(argumentsZbnf2Xml);
+      super.addHelpInfo("==Standard arguments of MainCmd==");
       super.addStandardHelpInfo();
     }
     
@@ -386,39 +387,39 @@ public class Zbnf2Xml
     File fileIn = new File(argsx.sFileIn);
     if(argsx.checknew){
       if(fileXmlOut !=null && fileXmlOut.exists() && fileIn.exists() && fileXmlOut.lastModified() > fileIn.lastModified()){
-        report.writeInfo("Zbnf2Xml - is uptodate; " + fileXmlOut.getAbsolutePath()); report.writeInfoln("");
+        logmaincmd.writeInfo("Zbnf2Xml - is uptodate; " + fileXmlOut.getAbsolutePath()); logmaincmd.writeInfoln("");
         return true;
       }
     }
-    { parser = new ZbnfParser(report);
-      parser.setReportIdents(Report.error, Report.info, Report.debug, Report.fineDebug);
+    { parser = new ZbnfParser(logmaincmd);
+      parser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.debug, MainCmdLogging_ifc.fineDebug);
       try
       { parser.setSkippingComment("/*", "*/", true);
         parser.setSyntax(new File(argsx.sFileSyntax));
       }
       catch (ParseException exception)
-      { report.writeError("Parser Syntax reading error: " + exception.getMessage());
+      { logmaincmd.writeError("Parser Syntax reading error: " + exception.getMessage());
         //writeError("Stack:" + e.getStackTrace());
         exception.printStackTrace();
         bOk = false;
       } 
       catch (IllegalCharsetNameException e)
       {
-        report.writeError("The " + argsx.sFileSyntax + " contains an illegal charset-name");
+        logmaincmd.writeError("The " + argsx.sFileSyntax + " contains an illegal charset-name");
         bOk = false;
       } 
       catch (UnsupportedCharsetException e)
       {
-        report.writeError("The charset in " + argsx.sFileSyntax + " is not supported");
+        logmaincmd.writeError("The charset in " + argsx.sFileSyntax + " is not supported");
         bOk = false;
       } 
       catch (FileNotFoundException e)
       {
-        report.writeError("file not found:" + argsx.sFileSyntax);
+        logmaincmd.writeError("file not found:" + argsx.sFileSyntax);
         bOk = false;
       } catch (IOException e)
       {
-        report.writeError("file read error:" + argsx.sFileSyntax);
+        logmaincmd.writeError("file read error:" + argsx.sFileSyntax);
         bOk = false;
       }
     }
@@ -428,8 +429,8 @@ public class Zbnf2Xml
     if((argsx.xmlWrModeSet & ZbnfParser.mXmlSrctext_xmlWrmode)!=0){
       parser.setXmlSrctext((argsx.xmlWrMode & ZbnfParser.mXmlSrctext_xmlWrmode)!=0);
     }
-    if(bOk && report !=null)
-    { parser.reportSyntax(report, Report.fineInfo);
+    if(bOk && logmaincmd !=null)
+    { parser.reportSyntax(logmaincmd, MainCmdLogging_ifc.fineInfo);
     }
     StringPartScan spToParse = null;
     if(bOk)
@@ -440,34 +441,34 @@ public class Zbnf2Xml
         spToParse = new StringPartFromFileLines(fileIn, -1, sInputEncodingKeyword, inputEncoding);
       }
       catch(FileNotFoundException exception)
-      { report.writeError("file not found:" + fileIn.getAbsolutePath());
+      { logmaincmd.writeError("file not found:" + fileIn.getAbsolutePath());
         bOk = false;
       }
       catch(IOException exception)
-      { report.writeError("file read error:" + fileIn.getAbsolutePath());
+      { logmaincmd.writeError("file read error:" + fileIn.getAbsolutePath());
         bOk = false;
       }
     }
     if(bOk)
-    { report.writeInfoln("parsing " + argsx.sFileIn);
+    { logmaincmd.writeInfoln("parsing " + argsx.sFileIn);
       try{ bOk = parser.parse(spToParse, argsx.additionalSemantic); }
       catch(Exception exception)
-      { report.writeError("any exception while parsing:" + exception.getMessage());
+      { logmaincmd.writeError("any exception while parsing:" + exception.getMessage());
         
-        report.report("any exception while parsing", exception);
-        parser.reportStore(report);
+        logmaincmd.report("any exception while parsing", exception);
+        parser.reportStore(logmaincmd);
         //evaluateStore(parser.getFirstParseResult());
         bOk = false;
       }
       if(!bOk)
-      { report.writeError(parser.getSyntaxErrorReport());
-        parser.reportStore(report);
+      { logmaincmd.writeError(parser.getSyntaxErrorReport());
+        parser.reportStore(logmaincmd);
         //evaluateStore(parser.getFirstParseResult());
       }
     }
     if(bOk)
-    { parser.reportStore(report);
-      report.writeInfo(" XML: ");
+    { parser.reportStore(logmaincmd);
+      logmaincmd.writeInfo(" XML: ");
       //XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
       XmlNode xmlTop = parser.getResultTree();
       TreeMap<String, String> xmlnsList = parser.getXmlnsFromSyntaxPrescript();
@@ -495,10 +496,10 @@ public class Zbnf2Xml
           xmlOutputter.write(out, xmlTop);
           out.close();
           streamOut.close();
-          report.writeInfo(" done "); report.writeInfoln("");
+          logmaincmd.writeInfo(" done "); logmaincmd.writeInfoln("");
         }
         catch(IOException exception)
-        { report.writeError("file not writeable:" + fileXmlOut.getAbsolutePath());
+        { logmaincmd.writeError("file not writeable:" + fileXmlOut.getAbsolutePath());
           bOk = false;
         }
       }      

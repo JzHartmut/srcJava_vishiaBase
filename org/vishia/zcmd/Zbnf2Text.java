@@ -1,26 +1,21 @@
 package org.vishia.zcmd;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import javax.script.ScriptException;
 
 import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.cmd.JZcmdScript;
 import org.vishia.mainCmd.MainCmd;
-import org.vishia.mainCmd.MainCmdLoggingStream;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.Assert;
-import org.vishia.util.DataAccess;
-import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.zbnf.Zbnf2Xml;
@@ -65,7 +60,7 @@ public class Zbnf2Text extends Zbnf2Xml
    * 
    * 
    */
-  //@SuppressWarnings("hiding")
+  @SuppressWarnings("hiding")
   static final public String sVersion = "2014-02-16";
 
   public interface PreparerParsedData{
@@ -87,25 +82,25 @@ public class Zbnf2Text extends Zbnf2Xml
   public static void main(String [] sArgs)
   { Args arg = new Args();
     CmdLineText mainCmdLine = new CmdLineText(arg, sArgs); //the instance to parse arguments and others.
-    Zbnf2Text main = new Zbnf2Text(arg, mainCmdLine);     //the main instance
-    boolean bOk = true;
-    try{ mainCmdLine.parseArguments(); }
+    boolean bOk;
+    try{ bOk = mainCmdLine.parseArguments(); }
     catch(Exception exception)
-    { main.report.report("Argument error:", exception);
-      main.report.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
-      mainCmdLine.writeHelpInfo();
+    { mainCmdLine.report("Argument error:", exception);
+      mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
+      mainCmdLine.writeHelpInfo(null);
       bOk = false;
     }
     if(bOk)
     { /** The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
           to hold the contact to the command line execution.
       */
+      Zbnf2Text main = new Zbnf2Text(arg, mainCmdLine);     //the main instance
       try{ main.parseAndTranslate(arg, null, main.setZbnfResult); }
       catch(Exception exception)
       { //catch the last level of error. No error is reported direct on command line!
-        main.report.report("Uncatched Exception on main level:", exception);
+        main.logmaincmd.report("Uncatched Exception on main level:", exception);
         exception.printStackTrace(System.out);
-        main.report.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
+        main.logmaincmd.setExitErrorLevel(MainCmdLogging_ifc.exitWithErrors);
       }
     }
     mainCmdLine.exit();
@@ -122,8 +117,7 @@ public class Zbnf2Text extends Zbnf2Xml
   PreparerParsedData setZbnfResult = new PreparerParsedData(){
     @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZcmdScript zgenscript, JZcmdExecuter zgen)
     { try{ 
-        Zbnf2Text.Args argsZtext = (Zbnf2Text.Args)Zbnf2Text.this.argsx;
-        zgen.genScriptVariables(zgenscript, true, null, argsZtext.sCurrdir);
+        zgen.genScriptVariables(zgenscript, true, null, console.currdir());
         zgen.setScriptVariable("data", 'O', xmlResult, true);
       } catch(Throwable exc){
         System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());
@@ -173,8 +167,6 @@ public class Zbnf2Text extends Zbnf2Xml
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        JZcmd.Args argsZ = new JZcmd.Args();
-        //JZcmd zbatch = new JZcmd(argsZ, console);
         JZcmdExecuter generator = new JZcmdExecuter(console);
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
@@ -191,7 +183,7 @@ public class Zbnf2Text extends Zbnf2Xml
           preparerParsedData.prepareParsedData(resultTree, zbnfResult, genScript, generator);
           //
           //
-          generator.execute(genScript, true, true, out, args.sCurrdir);
+          generator.execute(genScript, true, true, out, console.currdir());
           //
         } catch(ScriptException exc){
           CharSequence sMsg = Assert.exceptionInfo("Zbnf2Text - Exception; ", exc, 0, 10);
@@ -224,11 +216,6 @@ public class Zbnf2Text extends Zbnf2Xml
      * */
     public String sCheckXmlOutput = null;
 
-    
-    /**If given the absolute or maybe relative path for the start currdir.
-     * This value is used as absolute start path for a <code>currdir = < objExpr?path></code> - assignment in the script.
-     */
-    public String sCurrdir;
     
     /**List of pairs of scripts and output files. */
     public List<Out> listOut = new LinkedList<Out>();
@@ -275,12 +262,7 @@ public class Zbnf2Text extends Zbnf2Xml
     //Args cmdlineArgs;  
     
     protected final MainCmd.Argument[] argumentsZbnf2Text =
-    { new MainCmd.Argument("-currdir", ":<PATH> path of the current dir. If file-path, then it's dir."
-        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          Args cmdlineArgs = (Args)CmdLineText.super.argData;
-          cmdlineArgs.sCurrdir = val;
-          return true; }})
-    , new MainCmd.Argument("-checkzcmd", "=CHECK  if given then 3 files for debugging will be written"
+    { new MainCmd.Argument("-checkzcmd", "=CHECK  if given then 3 files for debugging will be written"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
           cmdlineArgs.sCheckXmlOutput = val; 
@@ -305,34 +287,19 @@ public class Zbnf2Text extends Zbnf2Xml
     
     protected CmdLineText(Args arg, String[] args) {
       super(arg, args);
+      super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> [-[x|y|z]:<OUTPUT>] [{-t:<TEXTFILE> -c<JZcmd_CTRLFILE>}]");  //[-w[+|-|0]]
+      super.addHelpInfo("==Arguments of Zbnf2Xml==");
       super.addArgument(argumentsZbnf2Xml);
+      super.addHelpInfo("==Additional arguments of Zbnf2Text==");
       super.addArgument(argumentsZbnf2Text);
-      //cmdlineArgs = new Args();
-      //super.addHelpInfo("-c:<OUTCTRL> name of a file to control the output");
-      //super.addHelpInfo("-t:<TEXTOUT> name of the output file to generate");
-      //super.addHelpInfo("-c:<TEXTOUT> -t:<TEXTOUT> more as one output file with this pair of arguments");
+      super.addHelpInfo("Syntax of a JZcmd_CTRLFILE: It is the JZcmd syntax, see JZcmd --help or www.vishia.org/ZBNF/sf/docu/JZcmd.html");
+      super.addHelpInfo("==Standard arguments of MainCmd==");
+      super.addStandardHelpInfo();
     } 
     
     
     
     
-    public boolean XXXtestArgsZbnf2Text(String argc, int nArg){
-      boolean bOk = true;
-      if(argc.startsWith("-t:")) {
-        Args cmdlineArgs = (Args)super.argData;
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
-        cmdlineArgs.lastOut.sFileOut  = getArgument(3);
-        if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
-      }
-      else if(argc.startsWith("-c:")) {
-        Args cmdlineArgs = (Args)super.argData;
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
-        cmdlineArgs.lastOut.sFileScript  = getArgument(3);
-        if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
-      }
-      else bOk = false;
-      return bOk;
-    }
   }
 
 
