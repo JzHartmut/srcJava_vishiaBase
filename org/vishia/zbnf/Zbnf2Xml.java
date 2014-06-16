@@ -67,6 +67,8 @@ public class Zbnf2Xml
 
   /**Version, history and license.
    * <ul>
+   * <li>2014-06-17 Hartmut new: options -xmsSrcline[:[on|off]] -xmsSrctext[:[on|off]] and controls 
+   *   whether srcline="xx" and srctext="text" will be written to a XML output  
    * <li>2012-03-23 Hartmut new {@link #smain(String[], boolean)} as alternative to {@link #main(String[])}
    *   to call from other Java parts. The {@link #main(String[])} calls {@link java.lang.System#exit(int)}
    *   which terminates the JVM. Is it a good idea? Maybe main should only return, but how to deliver a errorlevel
@@ -104,7 +106,7 @@ public class Zbnf2Xml
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20121101;
+  public static final String sVersion = "2014-06-17";
 
   
   public interface PrepareXmlNode
@@ -121,7 +123,7 @@ public class Zbnf2Xml
     /**Cmdline-argument, set on -s option. */
     public String sFileSyntax = null;
   
-  
+    public int xmlWrMode, xmlWrModeSet;
   
     /**Cmdline-argument, set on -x, -y -z option.*/
     public String sFileXmlOut = null;
@@ -296,6 +298,24 @@ public class Zbnf2Xml
     , new MainCmd.Argument("-y", ":<OUTPUT>   output xml file written in the standard encoding of system\n" 
                             + "               or the given -charset:encoding", setOut)
     , new MainCmd.Argument("-z", ":<OUTPUT>   output xml file written in US-ASCII-encoding", setOutAscii)
+    , new MainCmd.Argument("-xmlSrcline", "[:[off|on]]   sets line and column info in XML output", new MainCmd.SetArgument(){ 
+      @Override public boolean setArgument(String val){ 
+        if(!val.contains("off")){ 
+          if(val.length() <=11 || val.contains("on")){
+            argData.xmlWrMode |= ZbnfParser.mXmlSrcline_xmlWrmode; 
+          } else throw new IllegalArgumentException("faulty option -xmlSrctext[:[on|off]]");
+        }
+        argData.xmlWrModeSet |= ZbnfParser.mXmlSrcline_xmlWrmode;  return true;
+      }})
+    , new MainCmd.Argument("-xmlSrctext", "[:[off|on]]   sets line and column info in XML output", new MainCmd.SetArgument(){ 
+      @Override public boolean setArgument(String val){ 
+        if(!val.contains("off")){ 
+          if(val.length() <=11 || val.contains("on")){
+            argData.xmlWrMode |= ZbnfParser.mXmlSrctext_xmlWrmode; 
+          } else throw new IllegalArgumentException("faulty option -xmlSrctext[:[on|off]]");
+        }
+        argData.xmlWrModeSet |= ZbnfParser.mXmlSrctext_xmlWrmode;  return true;
+      }})
     , new MainCmd.Argument("-checknew", "     executes only if output not exists or input is newer", setChecknew)
     , new MainCmd.Argument("-charset", ":<CHARSET> use this encoding.", setOutEncoding)
     , new MainCmd.Argument("-a", ":<NAME>=<VALUE> set an additional xml information\n" 
@@ -401,6 +421,12 @@ public class Zbnf2Xml
         report.writeError("file read error:" + argsx.sFileSyntax);
         bOk = false;
       }
+    }
+    if((argsx.xmlWrModeSet & ZbnfParser.mXmlSrcline_xmlWrmode)!=0){
+      parser.setXmlSrcline((argsx.xmlWrMode & ZbnfParser.mXmlSrcline_xmlWrmode)!=0);
+    }
+    if((argsx.xmlWrModeSet & ZbnfParser.mXmlSrctext_xmlWrmode)!=0){
+      parser.setXmlSrctext((argsx.xmlWrMode & ZbnfParser.mXmlSrctext_xmlWrmode)!=0);
     }
     if(bOk && report !=null)
     { parser.reportSyntax(report, Report.fineInfo);

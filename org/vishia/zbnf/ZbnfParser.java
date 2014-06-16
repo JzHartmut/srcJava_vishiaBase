@@ -126,6 +126,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-06-17 Hartmut new: {@link #setXmlSrcline(boolean)} and {@link #setXmlSrctext(boolean)} to control 
+   *   whether srcline="xx" and srctext="text" will be written to a XML output  
    * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
    *   because it is faster. 
    * <li>2014-05-22 Hartmut new: Save srcFile in {@link ZbnfParserStore.ParseResultItemImplement#sFile},
@@ -205,10 +207,13 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2014-03-21";
+  public static final String sVersion = "2014-06-17";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
+
+
+  /*package private*/ final static int mXmlSrcline_xmlWrmode = 0x1, mXmlSrctext_xmlWrmode = 0x2;
 
 
   
@@ -375,7 +380,7 @@ public class ZbnfParser
         if(ixStoreStart < parserStoreInPrescript.items.size()){
           ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
           //Build a part of the XML tree from the start parse result without parent.
-          resultlet.xmlResult = ZbnfParserStore.buildTreeNodeRepresentationXml(null, parseResultStart, true);
+          resultlet.xmlResult = builderTreeNodeXml.buildTreeNodeRepresentationXml(null, parseResultStart, true);
         } else {
           //it is possible that the parsing is ok but a parse result is not produced because it is a check only
           //or it has empty options.
@@ -1980,6 +1985,10 @@ public class ZbnfParser
   /** The actual parse result buffer.*/
   private ZbnfParserStore parserStoreTopLevel; //parseResult;
 
+  
+  private final ZbnfParserStore.BuilderTreeNodeXml builderTreeNodeXml = new ZbnfParserStore.BuilderTreeNodeXml();
+  
+  
   /**Temporary store for column. */
   private final int[] column = new int[1];
 
@@ -2159,6 +2168,22 @@ public class ZbnfParser
         }
         else throw new ParseException("expected \".\" on end of \"$setLinemode\"", syntax.getLineAndColumn(column));
       }
+      else if(StringFunctions.startsWith(sCurrentInput, "$setXmlSrcline")) //##s
+      { syntax.seek(16); 
+        if(syntax.getCurrentChar() == '.')
+        { syntax.seek(1);
+          setXmlSrcline(true);
+        }
+        else throw new ParseException("expected \".\" on end of \"$setXmlSrcline\"", syntax.getLineAndColumn(column));
+      }
+      else if(StringFunctions.startsWith(sCurrentInput, "$setXmlSrctext")) //##s
+      { syntax.seek(16); 
+        if(syntax.getCurrentChar() == '.')
+        { syntax.seek(1);
+          setXmlSrctext(true);
+        }
+        else throw new ParseException("expected \".\" on end of \"$setXmlSrctext\"", syntax.getLineAndColumn(column));
+      }
       else if(StringFunctions.startsWith(sCurrentInput, "$endlineComment=")) //##s
       { syntax.seek(16); 
         syntax.seekNoWhitespace();
@@ -2319,7 +2344,7 @@ public class ZbnfParser
   }
   
   
-  /** Sets the line mode or not. The line mode means, a new line character
+  /**Sets the line mode or not. The line mode means, a new line character
    * is not recognize as whitespace, it must considered in syntax prescript
    * as a signifying element.
    * This mehtod is equal to the using of the syntaxprescript variable $setLinemode,
@@ -2335,6 +2360,31 @@ public class ZbnfParser
     { sWhiteSpaces += '\n'; 
     }
   }
+  
+  
+  
+  /**Sets the mode of output source line and column in XML. 
+   * This method is equal to the using of the syntax-prescript variable $setSrclineInXml,
+   * but after invocation of setSyntax(...) the mode can be changed.
+   * @see setSyntax(String).
+   * @parameter bValue if true than set the mode of output source line and column in XML, false, then No source line an column output.
+   */  
+  public void setXmlSrcline(boolean bValue){
+    builderTreeNodeXml.bXmlSrcline = bValue;
+  }
+  
+  
+  
+  /**Sets the mode of output source line and column in XML. 
+   * This method is equal to the using of the syntax-prescript variable $setSrctextInXml,
+   * but after invocation of setSyntax(...) the mode can be changed.
+   * @see setSyntax(String).
+   * @parameter bValue if true than set the mode of output source line and column in XML, false, then No source line an column output.
+   */  
+  public void setXmlSrctext(boolean bValue){
+    builderTreeNodeXml.bXmlSrctext = bValue;
+  }
+
   
   
   /**sets the ident number for report of the progress of parsing. 

@@ -68,6 +68,8 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-06-17 Hartmut chg: new {@link BuilderTreeNodeXml} with attributes {@link BuilderTreeNodeXml#bXmlSrcline}
+   *   and bXmlSrctext controls whether srcline="xx" and srctext="text" will be written to a XML output. 
    * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
    *   because it is faster. 
    * <li>2014-05-22 Hartmut new: Save srcFile in {@link ZbnfParserStore.ParseResultItemImplement#sFile},
@@ -119,7 +121,7 @@ class ZbnfParserStore
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de, www.vishia.org
    * 
    */
-  public static final int version = 20121102;
+  public static final String sVersion = "2014-06-17";
 
   
   /** Constant to detect the entry describes a terminate symbol. -32767*/
@@ -707,7 +709,6 @@ class ZbnfParserStore
   /** Constructs a new empty ParserStore.*/
   public ZbnfParserStore()
   { items = new ArrayList<ParseResultItemImplement>();
-
   }
 
   
@@ -1048,164 +1049,178 @@ class ZbnfParserStore
   }
 
   
-  /**Builds an XML tree node representation for the current element and its children of a parser result item.
-   * @param xmlParent null if a  {@link ZbnfParser.ParseResultlet#xmlResult} is built 
-   *   in {@link ZbnfParser.PrescriptParser#parsePrescript1(String, ZbnfParseResultItem, ZbnfParserStore, ZbnfParserStore, boolean, int)}.
-   *   in this case the node has not a parent. The parent if this method is called recursively internally.
-   * @param cmpnResult The Zbnf result component in the Zbnf Arraylist presentation.
-   * @param bRecursive true then for all children of children.
-   * @return
-   */
-  static XmlNode buildTreeNodeRepresentationXml(XmlNode xmlParent
-      , ParseResultItemImplement cmpnResult, boolean bRecursive) 
+  
+  /*package private*/ static class BuilderTreeNodeXml 
   {
-    //long time = System.nanoTime();
-    XmlNode xmlNode = cmpnResult.treeNodeXml;
-    if(xmlNode ==null){
-      if(cmpnResult.sSemantic.equals("description"))
-        Debugutil.stop();
-      cmpnResult.treeNodeXml = xmlNode = createXmlNode(xmlParent, cmpnResult);
-      if(cmpnResult.isComponent()){
-        Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
-        while(iter.hasNext()) { 
-          ZbnfParseResultItem item =iter.next(); 
-          ParseResultItemImplement childResult = (ParseResultItemImplement)item;
-          XmlNode xmlChild = childResult.treeNodeXml;
-          if( xmlChild !=null){
-            //The child component has a treeNodeRepresentation already.
-            //It is because it is a component, any component has gotten its treeNodeRepresentation already.
-            assert(xmlNode !=null);
-            if(xmlChild.getParent() !=null){
-              Assert.check(false);
-            }
-            try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
-          } else {
-            //assert(!childResult.isComponent());
-            //No component. Build a leaf and add it.
-            if(bRecursive){
-              buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
-              xmlChild = childResult.treeNodeXml;
+    
+    
+    
+    /**Will be set in {@link ZbnfParser#setXmlSrcline(boolean)}, {@link ZbnfParser#setXmlSrctext(boolean)}. */
+    /*package private*/ boolean bXmlSrcline, bXmlSrctext;
+    
+    
+    BuilderTreeNodeXml(){}
+    
+    
+  
+    /**Builds an XML tree node representation for the current element and its children of a parser result item.
+     * @param xmlParent null if a  {@link ZbnfParser.ParseResultlet#xmlResult} is built 
+     *   in {@link ZbnfParser.PrescriptParser#parsePrescript1(String, ZbnfParseResultItem, ZbnfParserStore, ZbnfParserStore, boolean, int)}.
+     *   in this case the node has not a parent. The parent if this method is called recursively internally.
+     * @param cmpnResult The Zbnf result component in the Zbnf Arraylist presentation.
+     * @param bRecursive true then for all children of children.
+     * @return
+     */
+    XmlNode buildTreeNodeRepresentationXml(XmlNode xmlParent
+        , ParseResultItemImplement cmpnResult, boolean bRecursive) 
+    {
+      //long time = System.nanoTime();
+      XmlNode xmlNode = cmpnResult.treeNodeXml;
+      if(xmlNode ==null){
+        if(cmpnResult.sSemantic.equals("description"))
+          Debugutil.stop();
+        cmpnResult.treeNodeXml = xmlNode = createXmlNode(xmlParent, cmpnResult);
+        if(cmpnResult.isComponent()){
+          Iterator<ZbnfParseResultItem> iter = cmpnResult.iteratorChildren();
+          while(iter.hasNext()) { 
+            ZbnfParseResultItem item =iter.next(); 
+            ParseResultItemImplement childResult = (ParseResultItemImplement)item;
+            XmlNode xmlChild = childResult.treeNodeXml;
+            if( xmlChild !=null){
+              //The child component has a treeNodeRepresentation already.
+              //It is because it is a component, any component has gotten its treeNodeRepresentation already.
+              assert(xmlNode !=null);
+              if(xmlChild.getParent() !=null){
+                Assert.check(false);
+              }
+              try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
             } else {
-              createXmlNode(xmlParent, childResult);
+              //assert(!childResult.isComponent());
+              //No component. Build a leaf and add it.
+              if(bRecursive){
+                buildTreeNodeRepresentationXml(xmlNode, childResult, bRecursive);
+                xmlChild = childResult.treeNodeXml;
+              } else {
+                createXmlNode(xmlParent, childResult);
+              }
             }
           }
         }
       }
+      //time = System.nanoTime() - time;
+      //System.out.println("buildTreeNodeRepresentationXml; " + time + "; " + cmpnResult.sSemantic);
+      return xmlNode;
     }
-    //time = System.nanoTime() - time;
-    //System.out.println("buildTreeNodeRepresentationXml; " + time + "; " + cmpnResult.sSemantic);
-    return xmlNode;
-  }
-  
-  
-  
-  private static XmlNode createXmlNodeIntern(String sTagName, XmlNode xmlParent
-  , ParseResultItemImplement parseResult
-  ){
-    XmlNode xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sTagName, parseResult);
-    if(xmlParent !=null){
-      try { 
-        xmlParent.addContent(xmlNode);
-      } catch (XmlException e) {
-        throw new IllegalArgumentException(e);
-      }
-    }
-    if(parseResult.sInput !=null){
-      String srctext;
-      if(parseResult.sInput.length()>30){
-        srctext = parseResult.sInput.substring(0,30);
-      } else {
-        srctext = parseResult.sInput;
-      }
-      xmlNode.setAttribute("src-text", srctext);
-    }
-    if(parseResult.nLine >0){
-      xmlNode.setAttribute("src-line", Integer.toString(parseResult.nLine));
-    }
-    if(parseResult.nColumn >0){
-      xmlNode.setAttribute("src-col", Integer.toString(parseResult.nColumn));
-    }
-    return xmlNode;
-  }
-
-  //static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
-  static XmlNode createXmlNode
-  ( XmlNode xmlParentP
-  , ParseResultItemImplement parseResult
-  ){
-    XmlNode xmlNode = xmlParentP;
-    String semantic = parseResult.getSemantic();
-    int sep;
-    do { //loop for semantic/child/... : builds the node and children.
-      sep = semantic.indexOf('/');
-      if(sep >=0){ //should build a child
-        String sLeftSemantic = semantic.substring(0, sep);
-        XmlNode xmlMeta = xmlNode == null ? null : xmlNode.getChild(sLeftSemantic);
-        //XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
-        if(xmlMeta ==null){
-          xmlNode = createXmlNodeIntern(sLeftSemantic, xmlNode, parseResult);  //create new node as child of xmlNode
-        } else { //child already existent.
-          assert(xmlMeta instanceof XmlNodeSimple<?>);
-          xmlNode = xmlMeta;
+    
+    
+    
+    private XmlNode createXmlNodeIntern(String sTagName, XmlNode xmlParent
+    , ParseResultItemImplement parseResult
+    ){
+      XmlNode xmlNode = new XmlNodeSimple<ZbnfParseResultItem>(sTagName, parseResult);
+      if(xmlParent !=null){
+        try { 
+          xmlParent.addContent(xmlNode);
+        } catch (XmlException e) {
+          throw new IllegalArgumentException(e);
         }
-        semantic = semantic.substring(sep +1);
-      } else {
-        //no children, or last child:
-        if((xmlNode !=null) && semantic.startsWith("@")){
-          //write result as attribute of the given node.
-          int posValue = semantic.indexOf('=');              //an attribute can defined in form @name=value
-          String sNameAttribute;
-          if(posValue >=0){ sNameAttribute = semantic.substring(1, posValue); }
-          else{ sNameAttribute = semantic.substring(1); }
-          if(sNameAttribute.length() >0)                      //the given =value is stored if neccessary.
-          { String sValue = posValue >=0 ? semantic.substring(posValue +1) : parseResult.getText();  
-            xmlNode.setAttribute(sNameAttribute, sValue);
+      }
+      if(bXmlSrctext && parseResult.sInput !=null){
+        String srctext;
+        if(parseResult.sInput.length()>30){
+          srctext = parseResult.sInput.substring(0,30);
+        } else {
+          srctext = parseResult.sInput;
+        }
+        xmlNode.setAttribute("src-text", srctext);
+      }
+      if(bXmlSrcline && parseResult.nLine >0){
+        xmlNode.setAttribute("src-line", Integer.toString(parseResult.nLine));
+      }
+      if(bXmlSrcline && parseResult.nColumn >0){
+        xmlNode.setAttribute("src-col", Integer.toString(parseResult.nColumn));
+      }
+      return xmlNode;
+    }
+  
+    //static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
+    XmlNode createXmlNode
+    ( XmlNode xmlParentP
+    , ParseResultItemImplement parseResult
+    ){
+      XmlNode xmlNode = xmlParentP;
+      String semantic = parseResult.getSemantic();
+      int sep;
+      do { //loop for semantic/child/... : builds the node and children.
+        sep = semantic.indexOf('/');
+        if(sep >=0){ //should build a child
+          String sLeftSemantic = semantic.substring(0, sep);
+          XmlNode xmlMeta = xmlNode == null ? null : xmlNode.getChild(sLeftSemantic);
+          //XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
+          if(xmlMeta ==null){
+            xmlNode = createXmlNodeIntern(sLeftSemantic, xmlNode, parseResult);  //create new node as child of xmlNode
+          } else { //child already existent.
+            assert(xmlMeta instanceof XmlNodeSimple<?>);
+            xmlNode = xmlMeta;
           }
-        } else if(xmlNode !=null && (semantic.equals("text()") || semantic.equals("."))) { //write result as text.
-            /**The last part of the semantic <code>tag/last()</code> is a routine ... TODO */
-            String sValue = parseResult.getText();
-            if(sValue != null && sValue.length() >0)
-            { xmlNode.addContent(sValue);
+          semantic = semantic.substring(sep +1);
+        } else {
+          //no children, or last child:
+          if((xmlNode !=null) && semantic.startsWith("@")){
+            //write result as attribute of the given node.
+            int posValue = semantic.indexOf('=');              //an attribute can defined in form @name=value
+            String sNameAttribute;
+            if(posValue >=0){ sNameAttribute = semantic.substring(1, posValue); }
+            else{ sNameAttribute = semantic.substring(1); }
+            if(sNameAttribute.length() >0)                      //the given =value is stored if neccessary.
+            { String sValue = posValue >=0 ? semantic.substring(posValue +1) : parseResult.getText();  
+              xmlNode.setAttribute(sNameAttribute, sValue);
             }
-        }
-        else
-        { /**The last part of the semantic <code>path/tag</code> or the whole semantic is an XML-indentifier.
-           * Create a child element with this tagname and add it to the output. 
-           * This child, xmlNew, is the parent of the content.*/
-          final String sTagName;
-          boolean bExpandWikistyle = semantic.endsWith("+");
-          boolean bSetParsedText = semantic.endsWith("&");
-          if(bExpandWikistyle || bSetParsedText)
-          { sTagName = semantic.substring(0, semantic.length()-1);
+          } else if(xmlNode !=null && (semantic.equals("text()") || semantic.equals("."))) { //write result as text.
+              /**The last part of the semantic <code>tag/last()</code> is a routine ... TODO */
+              String sValue = parseResult.getText();
+              if(sValue != null && sValue.length() >0)
+              { xmlNode.addContent(sValue);
+              }
           }
           else
-          { sTagName = semantic;
-          }
-          xmlNode = createXmlNodeIntern(sTagName, xmlNode, parseResult);  //create new node as child of xmlNode
-          if(!parseResult.isComponent()){
-            //add the textual parse result to a leaf node.
-            String sText = parseResult.getText();
-            if(sText != null && sText.length() >0)
-            { 
-              if(bExpandWikistyle)
-              { try{ convertWikiformat.prepareXmlNode(xmlNode, sText);
-                
-                } catch(XmlException exc){
-                  System.err.println("ZbnfParserStore - XmlException convert wikiformat; " + exc.getMessage());
+          { /**The last part of the semantic <code>path/tag</code> or the whole semantic is an XML-indentifier.
+             * Create a child element with this tagname and add it to the output. 
+             * This child, xmlNew, is the parent of the content.*/
+            final String sTagName;
+            boolean bExpandWikistyle = semantic.endsWith("+");
+            boolean bSetParsedText = semantic.endsWith("&");
+            if(bExpandWikistyle || bSetParsedText)
+            { sTagName = semantic.substring(0, semantic.length()-1);
+            }
+            else
+            { sTagName = semantic;
+            }
+            xmlNode = createXmlNodeIntern(sTagName, xmlNode, parseResult);  //create new node as child of xmlNode
+            if(!parseResult.isComponent()){
+              //add the textual parse result to a leaf node.
+              String sText = parseResult.getText();
+              if(sText != null && sText.length() >0)
+              { 
+                if(bExpandWikistyle)
+                { try{ convertWikiformat.prepareXmlNode(xmlNode, sText);
+                  
+                  } catch(XmlException exc){
+                    System.err.println("ZbnfParserStore - XmlException convert wikiformat; " + exc.getMessage());
+                  }
                 }
+                else 
+                { xmlNode.addContent(sText);
+                }  
               }
-              else 
-              { xmlNode.addContent(sText);
-              }  
             }
           }
         }
-      }
-    } while(sep >=0 && semantic.length() >0);
-    return xmlNode;
-  }
-  
-
+      } while(sep >=0 && semantic.length() >0);
+      return xmlNode;
+    }
+    
+  }//class BuilderTreeNodeXml
   
   @Override
   public String toString()
