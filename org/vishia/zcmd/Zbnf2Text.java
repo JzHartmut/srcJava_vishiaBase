@@ -117,7 +117,7 @@ public class Zbnf2Text extends Zbnf2Xml
   PreparerParsedData setZbnfResult = new PreparerParsedData(){
     @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZcmdScript zgenscript, JZcmdExecuter zgen)
     { try{ 
-        zgen.genScriptVariables(zgenscript, true, null, console.currdir());
+        zgen.initialize(zgenscript, true, null, console.currdir());
         zgen.setScriptVariable("data", 'O', xmlResult, true);
       } catch(Throwable exc){
         System.err.println("Zbnf2Text - unexpected IOexception while generation; " + exc.getMessage());

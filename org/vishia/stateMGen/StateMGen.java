@@ -522,8 +522,6 @@ public class StateMGen {
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        JZcmd.Args argsZ = new JZcmd.Args();
-        //ZGen zbatch = new ZGen(argsZ, console);
         JZcmdExecuter generator = new JZcmdExecuter(console);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
