@@ -242,25 +242,32 @@ public class JZcmd implements JZcmdEngine, Compilable
     try{ //for unexpected exceptions
       int exitlevel = smain(sArgs);
       System.exit(exitlevel);
-    } catch(ScriptException exc) {
+    } catch(Exception exc) {
       //catch the last level of error. No error is reported direct on command line!
-      String sFile = exc.getFileName();
-      if(sFile !=null){
-        String sRet = "JZcmd - Error in ;" + exc.getFileName() + "; line,col: " + exc.getLineNumber() 
-          + ", " + exc.getColumnNumber() + "; " + exc.getMessage();
-        System.err.println(sRet);
+      Throwable exc1 = exc.getCause();
+      if(exc1 == null){ exc1 = exc; }
+      String sFile = null; int line=0,col=0;
+      String sMsg;
+      /*
+      if(exc instanceof ScriptException){
+        ScriptException excs = (ScriptException)exc;
+        sMsg = excs.super.getMessage(); //get from super because without line and col
+        sFile = excs.getFileName();
+        line = excs.getLineNumber();
+        col = excs.getColumnNumber();
       } else {
-        Throwable exc1 = exc.getCause();
-        if(exc1 ==null){
-          System.err.println("JZcmd.main - exception; " + exc.getMessage());
-        } else {
-          System.err.println("JZcmd.main - unexpected exception; " + exc1);
-          exc1.printStackTrace(System.out);
-        }
+        sMsg = exc1.getMessage();
       }
-      System.exit(MainCmdLogging_ifc.exitWithErrors);
-    } catch(Exception exc){
-      System.err.println(exc.getMessage());
+      */
+      if(sFile !=null){
+        String sRet = "JZcmd.main() - uncaught ERROR in ;" + sFile + "; line,col: " + line 
+          + ", " + col + "; " + exc1.getMessage();
+        System.err.println(sRet);
+        
+      } else {
+        System.err.println("JZcmd.main() - uncaught ERROR; "); // + exc1.getMessage());
+      }
+      exc1.printStackTrace(System.err);
       System.exit(MainCmdLogging_ifc.exitWithErrors);
     }
   }
