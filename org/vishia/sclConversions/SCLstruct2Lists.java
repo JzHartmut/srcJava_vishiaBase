@@ -110,8 +110,11 @@ public class SCLstruct2Lists
     /**Cmdline-argument, set on -db= option. Outputfile for a config-file which describes the oam-Variable. */
     String sFileDbVariables = null;
 
-    /**Cmdline-argument, set on -z: option. Zbnf-path for syntax files. */
+    /**Cmdline-argument, set on -z: option. zbnfjax-path for syntax and script files. */
     String sPathZbnf = null;
+    
+    /**Cmdline-argument, set on -y: option. path for Xml output files. */
+    String sCheckXml = null;
     
     /**True than generate for all found variables. */
     boolean bAllVariable = false;
@@ -192,7 +195,8 @@ public class SCLstruct2Lists
       super.addHelpInfo("made by Hartmut Schorrig, 2010-08-01, 2010-10-15");
       super.addHelpInfo("-srcpath=PATH Path base to sources, additional to config file. If not given,");
       super.addHelpInfo("              then the source path is the directory of the config file.");
-      super.addHelpInfo("-z:ZBNFPATH syntaxpath, should contain sclVarCfg.zbnf and sclStruct.zbnf.");
+      super.addHelpInfo("-z:ZBNFPATH path, should contain sclVarCfg.zbnf and sclStruct.zbnf.");
+      super.addHelpInfo("-y:TEST start path for some intermediate files for checking the translation.");
       super.addHelpInfo("param: TODO");
       super.addStandardHelpInfo();
     }
@@ -228,6 +232,7 @@ public class SCLstruct2Lists
       else if(arg.startsWith("-oamCtrl=")) cmdlineArgs.sFileOamVariablesCtrl  = getArgument(9);
       else if(arg.startsWith("-db=")) cmdlineArgs.sFileDbVariables  = getArgument(4);
       else if(arg.startsWith("-z=")) cmdlineArgs.sPathZbnf  = getArgument(3);
+      else if(arg.startsWith("-y=")) cmdlineArgs.sCheckXml  = getArgument(3);
       else if(arg.startsWith("-all")) cmdlineArgs.bAllVariable = true;
       else bOk=false;
   
@@ -1010,8 +1015,13 @@ variablenBlock::=
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{
+          File fileSclCtrl = new File(args.sPathZbnf + "/" + args.sFileSclCtrl);
+          if(!fileSclCtrl.exists()){
+            fileSclCtrl = new File(args.sFileSclCtrl);
+          }
+          File fileCheck = args.sCheckXml == null ? null : new File(args.sCheckXml + "_checkCtrl.txt");
           if(args.sFileSclCtrl !=null){
-            genScript = JZcmd.translateAndSetGenCtrl(new File(args.sFileSclCtrl), new File(args.sFileSclCtrl + ".test.xml"), console);
+            genScript = JZcmd.translateAndSetGenCtrl(fileSclCtrl, fileCheck, console);
           } else {
             genScript = JZcmd.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
@@ -1027,14 +1037,19 @@ variablenBlock::=
         sclOut.write(sclAssignment.toString());
         sclOut.write("\nEND_FUNCTION_BLOCK");
         sclOut.write("\n");
-        */
+         */
         sclOut.close();
         textGen.removeScriptVariable("text");
       }
       if(args.sFileOamVariables != null){
+        File fileSclCtrl = new File(args.sPathZbnf + "/" + args.sFileOamVariablesCtrl);
+        if(!fileSclCtrl.exists()){
+          fileSclCtrl = new File(args.sFileOamVariablesCtrl);
+        }
+        File fileCheck = args.sCheckXml == null ? null : new File(args.sCheckXml + args.sFileOamVariablesCtrl + "_check.txt");
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript = JZcmd.translateAndSetGenCtrl(new File(args.sFileOamVariablesCtrl), new File(args.sFileOamVariablesCtrl + ".test.xml"), console);
+          genScript = JZcmd.translateAndSetGenCtrl(fileSclCtrl, fileCheck, console);
           textGen.execute(genScript, true, false, sclOut, null);
         } catch(Throwable exc){ throw new RuntimeException(exc); }
         /*
@@ -1252,7 +1267,8 @@ variablenBlock::=
           }  
         }
         //generate winCC-variable from name of entry
-        if(variable.zbnfVariable.winCC && (variable.zbnfVariable.otherRepresentation == null || variable.zbnfVariable.additional)){
+        if(generateVariableImport.output !=null && variable.zbnfVariable.winCC 
+          && (variable.zbnfVariable.otherRepresentation == null || variable.zbnfVariable.additional)){
           generatevariableEntry(variable.sName, variable.type, positionElement.getIxByte(), positionElement.getIxBit(), block);
         }
         if(args.bAllVariable || variable.zbnfVariable.oam || variable.zbnfVariable.winCC){

@@ -38,7 +38,7 @@ public class StateMGen {
    * The user of arguments should know (reference) only this instance, not all other things arround MainCmd,
    * it it access to arguments. 
    */
-  static class Args extends Zbnf2Text.Args
+  public static class Args extends Zbnf2Text.Args
   {
     /**Cmdline-argument, set on -i: option. Inputfile to to something. */
     String sFileIn = null;
@@ -49,6 +49,9 @@ public class StateMGen {
     String sFileData = null;
     
     String sScriptCheck = null;
+    
+    
+    public void setInput(String val){ sFileIn = val; }
     
   }
 
@@ -496,7 +499,7 @@ public class StateMGen {
   
   
   
-  StateMGen(MainCmd_ifc console, Args args)
+  public StateMGen(MainCmd_ifc console, Args args)
   {
     this.console = console;
   }
@@ -507,12 +510,6 @@ public class StateMGen {
     ZbnfResultData stateData = parseAndStoreInput(args);
     if(stateData != null){
       prepareStateData(stateData);
-      if(args.sFileData !=null){
-        FileWriter outData = new FileWriter(args.sFileData);
-        OutputDataTree outputterData = new OutputDataTree();
-        outputterData.output(0, stateData, outData, false);
-        outData.close();
-      }
       FileWriter outData;
       if(args.sScriptCheck !=null){
         outData = new FileWriter(args.sScriptCheck);

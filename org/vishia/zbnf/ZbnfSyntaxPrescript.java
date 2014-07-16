@@ -547,13 +547,19 @@ public class ZbnfSyntaxPrescript
             spInput.seek(3); //read sConstantSyntax from "|"
             listStrings = new LinkedList<String>();
             boolean bContinue = true;
-            while(bContinue)
-            { sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>").toString();
-              listStrings.add(sConstantSyntax);
-              if(spInput.getCurrentChar() == '|')
-              { spInput.seek(1);
+            while(bContinue) { 
+              CharSequence[] dst = new CharSequence[1];
+              if(spInput.scanStart().scanToAnyChar(dst, "|?>", '\\', '\0', '\0').scanOk()){
+                sConstantSyntax = dst[0].toString();
+                //sConstantSyntax = spInput.getCircumScriptionToAnyChar("|?>").toString();
+                listStrings.add(sConstantSyntax);
+                if(spInput.getCurrentChar() == '|')
+                { spInput.seek(1);
+                }
+                else bContinue = false;
+              } else {
+                throwParseException(spInput, "ZbnfSyntaxPrescript.convertSyntaxComponent - <* |...argument error");
               }
-              else bContinue = false;
             }
           }
           else if(sTest.startsWith("+|"))
@@ -1045,7 +1051,7 @@ public class ZbnfSyntaxPrescript
               //String sTerminateChars;
               CharSequence[] sqTerminateChars = new CharSequence[1];
               char quotationChar = cFirst == '\"' ? cFirst: 0;  //scan after a quotation if a " is the current one.
-              boolean bOk = spInput.scanStart().scanTranscriptionToAnyChar(sqTerminateChars
+              boolean bOk = spInput.scanStart().scanToAnyChar(sqTerminateChars
                   , "[|]{?}<>. \r\n\t\f"+StringPartScan.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
               assert(bOk);  //because scan to end of text.
               /*
