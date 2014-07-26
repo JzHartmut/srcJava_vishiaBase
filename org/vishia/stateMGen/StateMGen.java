@@ -463,6 +463,14 @@ public class StateMGen {
       //return dstState; 
     }
 
+    public void set_condP(String val){
+      int ix = val.lastIndexOf(')');  //the condP ends with ')' in any case, don't store it
+      if(ix>0){                       //because it is ( cond  ) {
+        cond = val.substring(0, ix);  //without last )
+      }
+    }
+    
+    
     //public void add_dstState(DstState val){} 
     
   }

@@ -5,6 +5,7 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-07-27 Hartmut new: ## in text expression don't skip over newline. Write a <: > before to prevent newline.
    * <li>2014-06-15 Hartmut new: zmake &filepath := ... output as Filepath instance
    * <li>2014-06-15 Hartmut new: Obj name : type possible, not used yet, see {@link org.vishia.util.DataAccess.Variable#clazz}
    * <li>2014-06-07 Hartmut new: Class var = :loader: package.path.Class; with a loader. 
@@ -328,6 +329,7 @@ public final class JZcmdSyntax {
     + " { [?\\<\\.\\>]                             ##abort on <.> \n"
     + " [ \\<&-<*\\>?>\\>                          ##<&- it is comment> \n"
     + " | \\<:-<*\\>?>\\><textExpr?>\\<\\.-<*\\>?>\\> ##<:-comment> comment <.- > \n"
+    + " | \\#\\#<*\\r\\n?>   ##comment to eol in a text Expression\n"
     + " | \\<:for:<forInText?forCtrl>\n"
     + " | \\<:if: <ifInText?ifCtrl>\n"
     + " | \\<:hasNext\\> <textExpr?hasNext> \\<\\.hasNext\\>\n"
@@ -335,15 +337,15 @@ public final class JZcmdSyntax {
     + " | \\<:scriptdir<?scriptdir>\\>\n"
     + " | \\<:debug[:<textDatapath?debug>| <?debug>]\\>\n"
     + " | \\<&<dataText>\n"
-    //+ " | \\<: [<?transcription> n | r | t | \\< | # | \\\" ] \\>\n"
-    + " | \\<: [<?transcription>n|r|t|[\\<|#|\\\"]<*\\>?>] \\>\n"
+    //+ " | \\<: [<?transliteration> n | r | t | \\< | # | \\\" ] \\>\n"
+    + " | \\<: [<?transliteration>n|r|t|[\\<|#|\\\"]<*\\>?>] \\>\n"
 
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
-    + " | \\#\\#<*\\r\\n?>{\\r|\\n}   ##skip comment in text\n"  //skip comment till inclusively newline
+    //+ " | \\#\\#<*\\r\\n?>{\\r|\\n}   ##skip comment in text\n"  //skip comment till inclusively newline
     + " | \\<:@<#?setColumn> [ + <#?minChars>] \\>  \n"               //set column
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
-    + " | <*|\\<:|\\<+|\\<=|\\<&|\\<\\.?plainText>\n"
+    + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"
     + " ]\n"
     + " }.\n"
     + " \n"
