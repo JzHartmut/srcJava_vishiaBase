@@ -337,6 +337,8 @@ public class StateMGen {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
     
+    public String stateNr;
+    
     /**From ZBNF: <$?@enclState>. It is the name of the state where this state is member of. */
     public String enclState;
     
@@ -511,6 +513,8 @@ public class StateMGen {
 
     public StateStructure stateStructure;
 
+    public List<String> statefnargs = new LinkedList<String>();
+    
     private final Map<String, State> idxStates = new TreeMap<String, State>();
     
     private final Map<String, State> topStates = new TreeMap<String, State>();
@@ -542,6 +546,8 @@ public class StateMGen {
     public NameValue new_variable(){ return new NameValue(); }
     
     public void add_variable(NameValue inp){ variables.put(inp.name, inp.value); }
+    
+    public void set_statefnarg(String arg){ statefnargs.add(arg); }
     
   }
   
@@ -649,38 +655,42 @@ public class StateMGen {
     State state = stateP;
       if(state.stateName.equals("Set_UfastIctrl"))
         stop();
-      while(state.enclState !=null){
+      boolean bEnclosingStateCheck = true;
+      while(bEnclosingStateCheck && state.enclState !=null){
         String enclStateName = state.enclState;
         State enclState = stateData.idxStates.get(enclStateName);
-        assert(enclState !=null);
-        if(state.parallelState !=null){
-          String parallelStateName = state.parallelState;
-          State parallelState = stateData.idxStates.get(parallelStateName);
-          assert(parallelState !=null);
-          if(enclState.parallelStates ==null){
-            enclState.parallelStates = new TreeMap<String, State>(); 
+        if(enclState !=null) {
+          if(state.parallelState !=null){
+            String parallelStateName = state.parallelState;
+            State parallelState = stateData.idxStates.get(parallelStateName);
+            assert(parallelState !=null);
+            if(enclState.parallelStates ==null){
+              enclState.parallelStates = new TreeMap<String, State>(); 
+            }
+            if(enclState.parallelStates.get(parallelState.stateName) == null){
+              enclState.parallelStates.put(parallelState.stateName, parallelState);
+            }
+            if(parallelState.subStates ==null){
+              parallelState.subStates = new TreeMap<String, State>(); 
+            }
+            if(parallelState.subStates.get(state.stateName) == null){
+              parallelState.subStates.put(state.stateName, state);
+            }
+            
+          } else {
+            if(enclState.subStates ==null){
+              enclState.subStates = new TreeMap<String, State>(); 
+            }
+            if(enclState.subStates.get(state.stateName) == null){
+              enclState.subStates.put(state.stateName, state);
+            }
           }
-          if(enclState.parallelStates.get(parallelState.stateName) == null){
-            enclState.parallelStates.put(parallelState.stateName, parallelState);
-          }
-          if(parallelState.subStates ==null){
-            parallelState.subStates = new TreeMap<String, State>(); 
-          }
-          if(parallelState.subStates.get(state.stateName) == null){
-            parallelState.subStates.put(state.stateName, state);
-          }
-          
-        } else {
-          if(enclState.subStates ==null){
-            enclState.subStates = new TreeMap<String, State>(); 
-          }
-          if(enclState.subStates.get(state.stateName) == null){
-            enclState.subStates.put(state.stateName, state);
-          }
+          state = enclState;
+        }else {
+          bEnclosingStateCheck = false;
         }
-        state = enclState;
       }
-      if(state.enclState == null){
+      if(state.enclState == null || !bEnclosingStateCheck){
         if(stateData.topStates.get(state.stateName) == null){
           stateData.topStates.put(state.stateName, state);
         }
