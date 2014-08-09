@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -13,10 +15,10 @@ import java.util.TreeMap;
 
 import javax.script.ScriptException;
 
-
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.util.Debugutil;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zcmd.OutputDataTree;
 import org.vishia.zcmd.JZcmd;
@@ -342,13 +344,18 @@ public class StateMGen {
     /**From ZBNF: <$?@enclState>. It is the name of the state where this state is member of. */
     public String enclState;
     
-    /**From ZBNF: <$?@enclState>.<$?@parallelState>. It is the name of the state where this state is member of
+    /**From ZBNF: <$?@enclState>.<$?@parallelParentState>. It is the name of the state where this state is member of
      * in a parallel machine of the enclosing state. */
-    public String parallelState;
+    public String parallelParentState;
     
     /**Name of the state which is the container of the parallel state machine. Only set on enclosing state
      * of a parallel state machine. */
     String parallelParent;
+    
+    public boolean hasHistory;
+    
+    /**From ZBNF: the default state of a complex state. */
+    public String startState;
     
     /**All states which are direct sub-states in this state. null if the state has not sub-states. */
     private Map<String, State> subStates;
@@ -368,6 +375,10 @@ public class StateMGen {
     /**From ZBNF: ! <*|\?\.?description>. */
     public String tododescription;
     
+    /**Name of the variable where the state ident is stored in the users code. 
+     * It is "state"<&the name of the parent state>, or the parent of parent if no history is used,  or it is "state" for the first level. */
+    public String stateVariableName;
+    
     public ConstDef constDef;
     
     public Entry entry;
@@ -378,9 +389,14 @@ public class StateMGen {
     
     public List<Trans> trans;
     
+    /**Set to true if the state was prepared already. */
+    boolean isPrepared = false;
+    
     public Entry new_instate() { return new Entry(); }
 
     public void set_instate(Entry val) { instate = val; }
+    
+    public void set_hasHistory(){ hasHistory = true; }
     
     @Override public String toString(){ return stateName; }
   }
@@ -439,6 +455,10 @@ public class StateMGen {
     
     public String time;
     
+    private List<String> joinStatesSrc;
+    
+    public List<State> joinStates;
+    
     public String event;
     
     public String code;
@@ -469,9 +489,31 @@ public class StateMGen {
       int ix = val.lastIndexOf(')');  //the condP ends with ')' in any case, don't store it
       if(ix>0){                       //because it is ( cond  ) {
         cond = val.substring(0, ix);  //without last )
+      } else {
+      	cond = val;
       }
     }
     
+    
+    public void set_timeP(String val){
+      int ix = val.lastIndexOf(')');  //the condP ends with ')' in any case, don't store it
+      if(ix>0){                       //because it is ( cond  ) {
+        time = val.substring(0, ix);  //without last )
+      } else {
+      	time = val;
+      }
+    }
+    
+    
+    public void set_joinState(String val){
+    	if(joinStatesSrc==null){ joinStatesSrc = new LinkedList<String>(); }
+    	joinStatesSrc.add(val);
+    }
+    
+    
+    public void set_history(){
+    	//TODO assign to last add_dstState
+    }
     
     //public void add_dstState(DstState val){} 
     
@@ -513,13 +555,17 @@ public class StateMGen {
 
     public StateStructure stateStructure;
 
+    public List<String> includeLines = new LinkedList<String>();
+    
     public List<String> statefnargs = new LinkedList<String>();
     
     private final Map<String, State> idxStates = new TreeMap<String, State>();
     
+    private final Map<String, String> idxStateVariables = new HashMap<String, String>();
+    
     private final Map<String, State> topStates = new TreeMap<String, State>();
     
-    final List<State> state = new LinkedList<State>();
+    final List<State> state = new ArrayList<State>();
     
     final Map<String, String> variables =new TreeMap<String, String>();
     
@@ -530,13 +576,13 @@ public class StateMGen {
     public void add_state(State value)
     { 
       idxStates.put(value.stateName, value);
-      if(value.parallelState !=null){
-        if(idxStates.get(value.parallelState) ==null){
+      if(value.parallelParentState !=null){
+        if(idxStates.get(value.parallelParentState) ==null){
           State parallel = new State();
-          parallel.stateName = value.parallelState;
+          parallel.stateName = value.parallelParentState;
           parallel.parallelParent = value.enclState;
           parallel.shortdescription = "Parallel state machine inside " + value.enclState;
-          idxStates.put(value.parallelState, parallel);
+          idxStates.put(value.parallelParentState, parallel);
           state.add(parallel);  //add first the parallel self created state.
         }
       }
@@ -548,6 +594,8 @@ public class StateMGen {
     public void add_variable(NameValue inp){ variables.put(inp.name, inp.value); }
     
     public void set_statefnarg(String arg){ statefnargs.add(arg); }
+   
+    public void set_includeLine(String arg){ includeLines.add(arg); }
     
   }
   
@@ -599,9 +647,14 @@ public class StateMGen {
   }
   
   
+  /**Prepares the parsed data to some dependencies of states etc. This routine is called after parse and fill to provide usability data. 
+   * @param stateData The main instance for fill after parse, the main instance for generation.
+   */
   void prepareStateData(ZbnfResultData stateData){
     for(State state: stateData.state){
-      prepareStateStructure(state, stateData);
+    	if(!state.isPrepared){
+        prepareStateStructure(state, stateData, 0);
+    	}
     }
     for(State state: stateData.state){
       if(state.trans !=null){
@@ -650,18 +703,45 @@ public class StateMGen {
   }
 
   
-  void prepareStateStructure(State stateP, ZbnfResultData stateData){
+  /**Prepares the data for one state, called in a loop of all states.
+   * @param stateP
+   * @param stateData
+   */
+  void prepareStateStructure(State stateP, ZbnfResultData stateData, int recurs){
     //stateStructure
-    State state = stateP;
+    if(stateP.isPrepared){
+    	return;
+    }
+  	State state = stateP;
       if(state.stateName.equals("Set_UfastIctrl"))
         stop();
-      boolean bEnclosingStateCheck = true;
+      if(state.enclState !=null){
+      	State enclState = stateData.idxStates.get(state.enclState);
+      	if(!enclState.isPrepared){
+      		//call this routine recursively to assert that all enclosing states are prepared.
+      		if(recurs > 20) throw new IllegalArgumentException("StateMGen - parent states in a loop.");
+      		prepareStateStructure(enclState, stateData, recurs+1);
+      	}
+      	//all parent states are prepared!
+      	if(enclState.hasHistory || enclState.parallelParentState !=null){
+      		stateP.stateVariableName = "state" + enclState.stateName;
+      		stateData.idxStateVariables.put(stateP.stateVariableName, stateP.stateVariableName);  //add only one time because it is a key-map
+      	} else {
+      		stateP.stateVariableName = enclState.stateVariableName;  //use same variable if a history is not necessary.
+      	}
+      }
+      else {
+      	//it is a state of top level:
+      	stateP.stateVariableName = "state"; 
+      }
+      //register the state in all its enclosing states.
+      boolean bEnclosingStateCheck = true;  //set to false on top level
       while(bEnclosingStateCheck && state.enclState !=null){
         String enclStateName = state.enclState;
         State enclState = stateData.idxStates.get(enclStateName);
         if(enclState !=null) {
-          if(state.parallelState !=null){
-            String parallelStateName = state.parallelState;
+          if(state.parallelParentState !=null){
+            String parallelStateName = state.parallelParentState;
             State parallelState = stateData.idxStates.get(parallelStateName);
             assert(parallelState !=null);
             if(enclState.parallelStates ==null){
@@ -687,7 +767,7 @@ public class StateMGen {
           }
           state = enclState;
         }else {
-          bEnclosingStateCheck = false;
+          bEnclosingStateCheck = false;  //top level reached.
         }
       }
       if(state.enclState == null || !bEnclosingStateCheck){
@@ -700,13 +780,33 @@ public class StateMGen {
   }
 
   
+  /**Prepares the primary data of a Transition, produce ready-to-use data for code generation.
+   * @param trans
+   * @param state
+   * @param stateData
+   */
   void prepareStateTrans(Trans trans, State state, ZbnfResultData stateData){
     if(trans.dstState == null && trans.subCondition !=null){
       for(Trans subCond: trans.subCondition){
         prepareStateTrans(subCond, state, stateData);
       }
-    } else if(trans.dstState != null){
+    } else if(trans.dstState != null) {
       
+    	//A transition can contain joinStates, States in a parallel machine which should be active.
+    	if(trans.joinStatesSrc !=null){
+    		trans.joinStates = new LinkedList<State>();
+    		for(String sJoinState: trans.joinStatesSrc){
+          State joinState = stateData.idxStates.get(sJoinState);
+          if(joinState ==null){
+          	System.err.println("faulty joinState");
+          } else {
+            trans.joinStates.add(joinState);          	
+          }
+    		}
+    	}
+    	
+    	
+    	
       int nrofDstStates = trans.dstState.size();
       @SuppressWarnings("unchecked")
       List<State>[] listDst1 = new LinkedList[nrofDstStates];

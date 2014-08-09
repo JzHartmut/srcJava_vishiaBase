@@ -5,6 +5,7 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
    * <li>2014-07-27 Hartmut new: ## in text expression don't skip over newline. Write a <: > before to prevent newline.
    * <li>2014-06-15 Hartmut new: zmake &filepath := ... output as Filepath instance
    * <li>2014-06-15 Hartmut new: Obj name : type possible, not used yet, see {@link org.vishia.util.DataAccess.Variable#clazz}
@@ -79,7 +80,7 @@ public final class JZcmdSyntax {
       " $comment=(?...?).\n"
     + " $endlineComment=\\#\\#.  ##The ## is the start chars for an endline-comment or commented line in the generator script.\n"
     + " $keywords= new | cmd | cmd_check | start \n" 
-    //+ "   | debug | java \n" 
+    + "   | debug | java \n" 
     + "   | stdout | stdin | stderr \n" 
     + "   | subtext | sub | main | call | cd | CD | REM | Rem | rem \n"
     + "   | Pipe | StringBuffer | Stringjar | String | List | Openfile | Fileset | Obj | Set | set | include | zbatch \n"
@@ -89,7 +90,9 @@ public final class JZcmdSyntax {
     + " [<*|==ZGen==?>==ZGen== ]\n"
     + " [<*|==JZcmd==?>==JZcmd== ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
-    + " [ ! checkJZcmd = <textValue?checkJZcmd> ; ]\n"
+    + " [{ ! checkJZcmd = <textValue?checkJZcmdFile> ; \n"
+    + "  | ! checkXml = <textValue?checkXmlFile> ; \n"
+    + " }]\n"
     + " [{ [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
     + "  | include <include> ; \n"
     + "  | currdir = <textDatapath?cd> ;\n"
@@ -159,8 +162,6 @@ public final class JZcmdSyntax {
     + " | ; \n"
     + " .\n"
     + " \n"
-    + " \n"
-    + " debug::= xxx.\n"
     + " \n"
     + " srcdst::= [src=] <textValue?actualArgument> [dst=] <textValue?actualArgument> .\n"
     + " oneArg::= <textValue?actualArgument> .\n"

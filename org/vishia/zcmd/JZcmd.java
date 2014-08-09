@@ -108,6 +108,7 @@ public class JZcmd implements JZcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
    * <li>2014-06-10 Hartmut chg: improved Exception handling of the script.
    * <li>2014-05-18 Hartmut new: try to implement javax.script interfaces, not ready yet
    * <li>2014-02-16 Hartmut new: {@link #jbatch(File, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)} is deprecated now,
@@ -737,7 +738,7 @@ public class JZcmd implements JZcmdEngine, Compilable
       String sError = parserGenCtrl.getSyntaxErrorReport();
       throw new ScriptException("\n" + sError, sourceScript.getInputfile(), -1, -1);
     }
-    if(checkXmlOutput !=null){
+    if(checkXmlOutput !=null){  //may be used if probles with parserGenCtrl2Java.setContent are given.
       //XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
       XmlNode xmlParseResult = parserGenCtrl.getResultTree();
       SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
@@ -760,6 +761,9 @@ public class JZcmd implements JZcmdEngine, Compilable
     try {
       parserGenCtrl2Java.setContent(JZcmdScript.ZbnfJZcmdScript.class, zbnfDstScript, parserGenCtrl.getFirstParseResult());
     } catch (Exception exc) { throw new ScriptException(exc); }
+    if(zbnfDstScript.isXmlSrcNecessary()){
+      zbnfDstScript.setXmlSrc(parserGenCtrl.getResultTree());  //to output XML from Script executer.
+    }
     //
     //get the main routine from the first parsed file, store it, set it after processing includefiles.
     //
