@@ -157,6 +157,7 @@ public final class JZcmdSyntax {
     + " | <callSubroutine?call> \n"
     + " | <threadBlock> \n"
     + " | \\<+<textOut> \n"
+    + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  ///
     + " | <assignExpr> \n"
     + " | ; \n"
@@ -242,7 +243,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | [& [?(] ] <dataAccess> .\n"
     + " \n"
-    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n?text> .\n"
+    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     + " \n"
     + " objExpr::= \n"

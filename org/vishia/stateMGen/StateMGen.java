@@ -37,6 +37,7 @@ public class StateMGen {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-08-10 Hartmut chg: disperse ZBNF result and prepared state data
    * <li>2014-06-15 Hartmut chg: scriptVariable is stateData instead state, better more non-ambiguous.
    * <li>
    * <li>2012-10-07 Hartmut creation 
@@ -253,7 +254,7 @@ public class StateMGen {
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
    */
-  public static class SimpleState
+  public static class XXXSimpleState
   {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
@@ -271,7 +272,7 @@ public class StateMGen {
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
    */
-  public static class CompositeState
+  public static class XXXCompositeState
   {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
@@ -279,11 +280,11 @@ public class StateMGen {
     /**From ZBNF: <""?description>. */
     public String description;
     
-    public List<SimpleState> simpleState;
+    public List<XXXSimpleState> simpleState;
     
-    public List<CompositeState> compositeState;
+    public List<XXXCompositeState> compositeState;
     
-    public List<ParallelState> parallelState;
+    public List<XXXParallelState> parallelState;
     
   }
   
@@ -291,7 +292,7 @@ public class StateMGen {
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
    */
-  public static class ParallelState extends CompositeState
+  public static class XXXParallelState extends XXXCompositeState
   {
   }
   
@@ -299,17 +300,17 @@ public class StateMGen {
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
    */
-  public static class StateStructure
+  public static class XXXStateStructure
   {
     //public List<CompositeState> compositeState;
-    public final List<CompositeState> compositeStates = new LinkedList<CompositeState>();
+    public final List<XXXCompositeState> compositeStates = new LinkedList<XXXCompositeState>();
     
     
-    public CompositeState new_CompositeState()
-    { return new CompositeState();
+    public XXXCompositeState new_CompositeState()
+    { return new XXXCompositeState();
     }
     
-    public void add_CompositeState(CompositeState value)
+    public void add_CompositeState(XXXCompositeState value)
     { 
       compositeStates.add(value);
     }
@@ -330,11 +331,13 @@ public class StateMGen {
      public String code;
   }
   
+
+  
   
   /**This class gets and stores the results from a parsed ZBNF-component <code>State</code>.
    * 
    */
-  public static class State
+  public static class ZbnfState
   {
     /**From ZBNF: <$?@stateName>. */
     public String stateName;
@@ -344,25 +347,14 @@ public class StateMGen {
     /**From ZBNF: <$?@enclState>. It is the name of the state where this state is member of. */
     public String enclState;
     
-    /**From ZBNF: <$?@enclState>.<$?@parallelParentState>. It is the name of the state where this state is member of
-     * in a parallel machine of the enclosing state. */
-    public String parallelParentState;
-    
     /**Name of the state which is the container of the parallel state machine. Only set on enclosing state
      * of a parallel state machine. */
     String parallelParent;
     
-    public boolean hasHistory;
+    /**From ZBNF: <$?@enclState>.<$?@parallelParentState>. It is the name of the state where this state is member of
+     * in a parallel machine of the enclosing state. */
+    public String parallelParentState;
     
-    /**From ZBNF: the default state of a complex state. */
-    public String startState;
-    
-    /**All states which are direct sub-states in this state. null if the state has not sub-states. */
-    private Map<String, State> subStates;
-
-    /**All states which are parallel states in this states. null if the state has not parallel sub-states. */
-    private Map<String, State> parallelStates;
-
     /**From ZBNF: \? <*|\?\.?description>. */
     public String description;
     
@@ -375,11 +367,7 @@ public class StateMGen {
     /**From ZBNF: ! <*|\?\.?description>. */
     public String tododescription;
     
-    /**Name of the variable where the state ident is stored in the users code. 
-     * It is "state"<&the name of the parent state>, or the parent of parent if no history is used,  or it is "state" for the first level. */
-    public String stateVariableName;
-    
-    public ConstDef constDef;
+    public boolean hasHistory;
     
     public Entry entry;
     
@@ -389,16 +377,68 @@ public class StateMGen {
     
     public List<Trans> trans;
     
-    /**Set to true if the state was prepared already. */
-    boolean isPrepared = false;
-    
     public Entry new_instate() { return new Entry(); }
 
     public void set_instate(Entry val) { instate = val; }
     
     public void set_hasHistory(){ hasHistory = true; }
     
+    /**Set to true if the state was prepared already. */
+    boolean isPrepared = false;
+    
     @Override public String toString(){ return stateName; }
+  
+  }
+  
+
+  
+  
+  /**The prepared State.
+   * 
+   */
+  public static class SimpleState
+  { ZbnfState src;
+
+    boolean isComposite;
+  
+    /**Name of the variable where the state ident is stored in the users code. 
+     * It is "state"<&the name of the parent state>, or the parent of parent if no history is used,  or it is "state" for the first level. */
+    public String stateVariableName;
+    
+    SimpleState(ZbnfState src){ this.src = src; }
+  }  
+  
+  
+  
+  /**The prepared State.
+   * 
+   */
+  public static class CompositeState extends SimpleState
+  { 
+    /**From ZBNF: the default state of a complex state. */
+    public String startState;
+    
+    /**All states which are direct sub-states in this state.  */
+    public Map<String, SimpleState> subStates;
+
+    /**All states which uses the state variable of this state. */
+    public Map<String, SimpleState> subStatesVariable;
+
+    /**All states which are parallel states in this states. null if the state has not parallel sub-states. */
+    public Map<String, CompositeState> parallelStates;
+
+    public ConstDef constDef;
+    
+    CompositeState(ZbnfState src){ super(src); isComposite = true; }
+    
+    /**converting from Simple to Composite. */
+    CompositeState(SimpleState src){ 
+      super(src.src); 
+      isComposite = true;
+      stateVariableName = src.stateVariableName;
+    }
+    
+    @Override public String toString(){ return src.stateName; }
   }
   
   
@@ -457,7 +497,7 @@ public class StateMGen {
     
     private List<String> joinStatesSrc;
     
-    public List<State> joinStates;
+    public List<SimpleState> joinStates;
     
     public String event;
     
@@ -466,7 +506,7 @@ public class StateMGen {
     private final List<Trans> subCondition = new LinkedList<Trans>();
 
     
-    private final List<State> exitStates = new LinkedList<State>();
+    private final List<SimpleState> exitStates = new LinkedList<SimpleState>();
     
     private DstState dstStateTree; 
 
@@ -534,9 +574,9 @@ public class StateMGen {
     public String name;
     
     /**The state from which this entry starts. */
-    State srcState;
+    SimpleState srcState;
     
-    State entryState;
+    SimpleState entryState;
     
     private List<DstState> entrySubStates;
     
@@ -553,40 +593,45 @@ public class StateMGen {
   public static class ZbnfResultData
   {
 
-    public StateStructure stateStructure;
+    public XXXStateStructure stateStructure;
 
     public List<String> includeLines = new LinkedList<String>();
     
     public List<String> statefnargs = new LinkedList<String>();
     
-    private final Map<String, State> idxStates = new TreeMap<String, State>();
+    final List<ZbnfState> srcStates = new ArrayList<ZbnfState>();
+    
+    private final Map<String, ZbnfState> idxSrcStates = new TreeMap<String, ZbnfState>();
+    
+    private final Map<String, SimpleState> idxStates = new TreeMap<String, SimpleState>();
     
     private final Map<String, String> idxStateVariables = new HashMap<String, String>();
     
-    private final Map<String, State> topStates = new TreeMap<String, State>();
+    private final Map<String, SimpleState> topStates = new TreeMap<String, SimpleState>();
     
-    final List<State> state = new ArrayList<State>();
+    final List<SimpleState> states = new ArrayList<SimpleState>();
     
     final Map<String, String> variables =new TreeMap<String, String>();
     
-    public State new_state()
-    { return new State();
+    public ZbnfState new_state()
+    { return new ZbnfState();
     }
     
-    public void add_state(State value)
+    public void add_state(ZbnfState value)
     { 
-      idxStates.put(value.stateName, value);
+      //idxSrcStates.put(value.stateName, value);
       if(value.parallelParentState !=null){
         if(idxStates.get(value.parallelParentState) ==null){
-          State parallel = new State();
-          parallel.stateName = value.parallelParentState;
-          parallel.parallelParent = value.enclState;
-          parallel.shortdescription = "Parallel state machine inside " + value.enclState;
+          CompositeState parallel = new CompositeState(new ZbnfState());
+          parallel.src.stateName = value.parallelParentState;
+          parallel.src.parallelParent = value.enclState;
+          parallel.src.shortdescription = "Parallel state machine inside " + value.enclState;
           idxStates.put(value.parallelParentState, parallel);
-          state.add(parallel);  //add first the parallel self created state.
+          //srcStates.add(parallel);  //add first the parallel self created state.
         }
       }
-      state.add(value);
+      srcStates.add(value);
+      idxSrcStates.put(value.stateName, value);
     }
     
     public NameValue new_variable(){ return new NameValue(); }
@@ -651,14 +696,14 @@ public class StateMGen {
    * @param stateData The main instance for fill after parse, the main instance for generation.
    */
   void prepareStateData(ZbnfResultData stateData){
-    for(State state: stateData.state){
-    	if(!state.isPrepared){
-        prepareStateStructure(state, stateData, 0);
-    	}
+    for(ZbnfState state: stateData.srcStates){
+      if(!state.isPrepared){
+        prepareStateStructure(state, stateData, false, 0);
+      }
     }
-    for(State state: stateData.state){
-      if(state.trans !=null){
-        for(Trans trans: state.trans){
+    for(SimpleState state: stateData.states){
+      if(state.src.trans !=null){
+        for(Trans trans: state.src.trans){
           prepareStateTrans(trans, state, stateData);
         }
       }
@@ -666,117 +711,100 @@ public class StateMGen {
   }
   
   
-  void XXXprepareStateStructure(State stateP, ZbnfResultData stateData){
-    //stateStructure
-    State state = stateP;
-    if(state.enclState !=null){
-      if(state.stateName.equals("Set_UfastIctrl"))
-        stop();
-      //search top state, enter it.
-      List<State> enclStates = new LinkedList<State>();
-      State state1 = state;
-      enclStates.add(state);
-      while(state1.enclState !=null){
-        String state1Name = state1.enclState;
-        state1 = stateData.idxStates.get(state1Name);
-        assert(state1 !=null);
-        enclStates.add(state1);
-      }
-      int states = enclStates.size();
-      State enclState1 = enclStates.get(states-1);  //The last in the list is the top state
-      if(stateData.topStates.get(enclState1.stateName) == null){
-        stateData.topStates.put(enclState1.stateName, enclState1);
-      }
-      ListIterator<State> iter = enclStates.listIterator(states-1);
-      while(iter.hasPrevious()){
-        State subState1 = iter.previous();
-        if(enclState1.subStates ==null){
-          enclState1.subStates = new TreeMap<String, State>(); 
-        }
-        if(enclState1.subStates.get(subState1.stateName) == null){
-          enclState1.subStates.put(subState1.stateName, subState1);
-        }
-        enclState1 = subState1;
-      }
-      
-    }
-  }
-
   
   /**Prepares the data for one state, called in a loop of all states.
    * @param stateP
    * @param stateData
    */
-  void prepareStateStructure(State stateP, ZbnfResultData stateData, int recurs){
+  void prepareStateStructure(ZbnfState srcState, ZbnfResultData stateData, boolean composite, int recurs){
     //stateStructure
-    if(stateP.isPrepared){
-    	return;
+    if(srcState.isPrepared){
+      return;
     }
-  	State state = stateP;
-      if(state.stateName.equals("Set_UfastIctrl"))
-        stop();
-      if(state.enclState !=null){
-      	State enclState = stateData.idxStates.get(state.enclState);
-      	if(!enclState.isPrepared){
-      		//call this routine recursively to assert that all enclosing states are prepared.
-      		if(recurs > 20) throw new IllegalArgumentException("StateMGen - parent states in a loop.");
-      		prepareStateStructure(enclState, stateData, recurs+1);
-      	}
-      	//all parent states are prepared!
-      	if(enclState.hasHistory || enclState.parallelParentState !=null){
-      		stateP.stateVariableName = "state" + enclState.stateName;
-      		stateData.idxStateVariables.put(stateP.stateVariableName, stateP.stateVariableName);  //add only one time because it is a key-map
-      	} else {
-      		stateP.stateVariableName = enclState.stateVariableName;  //use same variable if a history is not necessary.
-      	}
-      }
-      else {
-      	//it is a state of top level:
-      	stateP.stateVariableName = "state"; 
-      }
-      //register the state in all its enclosing states.
-      boolean bEnclosingStateCheck = true;  //set to false on top level
-      while(bEnclosingStateCheck && state.enclState !=null){
-        String enclStateName = state.enclState;
-        State enclState = stateData.idxStates.get(enclStateName);
-        if(enclState !=null) {
-          if(state.parallelParentState !=null){
-            String parallelStateName = state.parallelParentState;
-            State parallelState = stateData.idxStates.get(parallelStateName);
-            assert(parallelState !=null);
-            if(enclState.parallelStates ==null){
-              enclState.parallelStates = new TreeMap<String, State>(); 
-            }
-            if(enclState.parallelStates.get(parallelState.stateName) == null){
-              enclState.parallelStates.put(parallelState.stateName, parallelState);
-            }
-            if(parallelState.subStates ==null){
-              parallelState.subStates = new TreeMap<String, State>(); 
-            }
-            if(parallelState.subStates.get(state.stateName) == null){
-              parallelState.subStates.put(state.stateName, state);
-            }
-            
-          } else {
-            if(enclState.subStates ==null){
-              enclState.subStates = new TreeMap<String, State>(); 
-            }
-            if(enclState.subStates.get(state.stateName) == null){
-              enclState.subStates.put(state.stateName, state);
-            }
-          }
-          state = enclState;
-        }else {
-          bEnclosingStateCheck = false;  //top level reached.
-        }
-      }
-      if(state.enclState == null || !bEnclosingStateCheck){
-        if(stateData.topStates.get(state.stateName) == null){
-          stateData.topStates.put(state.stateName, state);
-        }
-          
-      }
+    //ZbnfState state = stateP;
+    final SimpleState state1 = composite ? new CompositeState(srcState) : new SimpleState(srcState);
+    if(srcState.stateName.equals("Active1"))
+      stop();
+    if(srcState.enclState !=null){
       
+      SimpleState enclState = stateData.idxStates.get(srcState.enclState);
+      if(enclState ==null || !enclState.src.isPrepared){
+        //call this routine recursively to assert that all enclosing states are prepared.
+        if(recurs > 20) throw new IllegalArgumentException("StateMGen - parent states in a loop.");
+        ZbnfState srcEnclState = stateData.idxSrcStates.get(srcState.enclState);
+        prepareStateStructure(srcEnclState, stateData, true, recurs+1);
+      }
+      if(!(enclState instanceof CompositeState)){
+        CompositeState encl1 = new CompositeState(enclState);
+        stateData.idxStates.put(encl1.src.stateName, encl1);  //replace old SimpleState.
+      }
+      //all parent states are prepared!
+      if(enclState.src.hasHistory || enclState.src.parallelParentState !=null){
+        state1.stateVariableName = "state" + enclState.src.stateName;
+        stateData.idxStateVariables.put(state1.stateVariableName, state1.stateVariableName);  //add only one time because it is a key-map
+      } else {
+        state1.stateVariableName = enclState.stateVariableName;  //use same variable if a history is not necessary.
+      }
+    }
+    else if(srcState.parallelParentState !=null) {
+      SimpleState parallelState = stateData.idxStates.get(srcState.parallelParentState);
+      if(parallelState == null || !parallelState.src.isPrepared){
+        //call this routine recursively to assert that all enclosing states are prepared.
+        if(recurs > 20) throw new IllegalArgumentException("StateMGen - parent states in a loop.");
+        ZbnfState srcEnclState = stateData.idxSrcStates.get(srcState.enclState);
+        prepareStateStructure(srcEnclState, stateData, true, recurs+1);
+      }
+      //all parent states are prepared!
+      state1.stateVariableName = null;  //The container for the parallel states has not an stateVariable itself.
+    }
+    else {
+      //it is a state of top level:
+      state1.stateVariableName = "state"; 
+      if(stateData.topStates.get(state1.src.stateName) == null){
+        stateData.topStates.put(state1.src.stateName, state1);
+      }
+    }
+    //register the state in all its enclosing states.
+    boolean bEnclosingStateCheck = true;  //set to false on top level
+    SimpleState state = state1;
+    while(bEnclosingStateCheck && state1.src.enclState !=null){
+      String enclStateName = state1.src.enclState;
+      SimpleState enclStateS = stateData.idxStates.get(enclStateName);
+      if(enclStateS !=null) {
+        assert(enclStateS instanceof CompositeState);
+        CompositeState enclState = (CompositeState)enclStateS;
+        if(state1.src.parallelParentState !=null){
+          String parallelStateName = state1.src.parallelParentState;
+          SimpleState parallelStateS = stateData.idxStates.get(parallelStateName);
+          assert(parallelStateS !=null && parallelStateS instanceof CompositeState);
+          CompositeState parallelState = (CompositeState)parallelStateS;
+          if(enclState.parallelStates ==null){
+            enclState.parallelStates = new TreeMap<String, CompositeState>(); 
+          }
+          if(enclState.parallelStates.get(parallelState.src.stateName) == null){
+            enclState.parallelStates.put(parallelState.src.stateName, parallelState);
+          }
+          if(parallelState.subStates ==null){
+            parallelState.subStates = new TreeMap<String, SimpleState>(); 
+          }
+          if(parallelState.subStates.get(state.src.stateName) == null){
+            parallelState.subStates.put(state.src.stateName, state);
+          }
+          
+        } else {
+          if(enclState.subStates ==null){
+            enclState.subStates = new TreeMap<String, SimpleState>(); 
+          }
+          if(enclState.subStates.get(state.src.stateName) == null){
+            enclState.subStates.put(state.src.stateName, state);
+          }
+        }
+        state = enclState;
+      }else {
+        bEnclosingStateCheck = false;  //top level reached.
+      }
+    }
+    state1.src.isPrepared = true;  
   }
 
   
@@ -785,7 +813,7 @@ public class StateMGen {
    * @param state
    * @param stateData
    */
-  void prepareStateTrans(Trans trans, State state, ZbnfResultData stateData){
+  void prepareStateTrans(Trans trans, SimpleState state, ZbnfResultData stateData){
     if(trans.dstState == null && trans.subCondition !=null){
       for(Trans subCond: trans.subCondition){
         prepareStateTrans(subCond, state, stateData);
@@ -794,9 +822,9 @@ public class StateMGen {
       
     	//A transition can contain joinStates, States in a parallel machine which should be active.
     	if(trans.joinStatesSrc !=null){
-    		trans.joinStates = new LinkedList<State>();
+    		trans.joinStates = new LinkedList<SimpleState>();
     		for(String sJoinState: trans.joinStatesSrc){
-          State joinState = stateData.idxStates.get(sJoinState);
+          SimpleState joinState = stateData.idxStates.get(sJoinState);
           if(joinState ==null){
           	System.err.println("faulty joinState");
           } else {
@@ -809,20 +837,20 @@ public class StateMGen {
     	
       int nrofDstStates = trans.dstState.size();
       @SuppressWarnings("unchecked")
-      List<State>[] listDst1 = new LinkedList[nrofDstStates];
-      State[] entryStates = new State[nrofDstStates];
+      List<SimpleState>[] listDst1 = new LinkedList[nrofDstStates];
+      SimpleState[] entryStates = new SimpleState[nrofDstStates];
       int ix = 0;
       for(ix = 0; ix < listDst1.length; ++ix) {
-        listDst1[ix] = new LinkedList<State>();
+        listDst1[ix] = new LinkedList<SimpleState>();
       }
-      State exitState = state;
+      SimpleState exitState = state;
       boolean found = false;
       while(!found){
         trans.exitStates.add(exitState);
-        if(exitState.enclState != null){
-          State exitState2 = stateData.idxStates.get(exitState.enclState);
+        if(exitState.src.enclState != null){
+          SimpleState exitState2 = stateData.idxStates.get(exitState.src.enclState);
           if(exitState2 == null){
-            System.out.println("\nSemantic error: parent state \"" + exitState.enclState + "\" in state \"" + state.stateName + "\"not found. ");
+            System.out.println("\nSemantic error: parent state \"" + exitState.src.enclState + "\" in state \"" + state.src.stateName + "\"not found. ");
             return;
           }
           exitState = exitState2;
@@ -835,17 +863,17 @@ public class StateMGen {
           listDst1[ix].clear();
           entryStates[ix] = stateData.idxStates.get(dstStateName);
           if(entryStates[ix] == null){
-            System.out.println("\nSemantic error: destination state \"" + dstStateName + "\" from state \"" + state.stateName + "\" not found. ");
+            System.out.println("\nSemantic error: destination state \"" + dstStateName + "\" from state \"" + state.src.stateName + "\" not found. ");
             return;
           }
           do { 
             //check entryStates down to either the exitState or down to to top state.
             //If the exit state is equal any entry enclosing state or both are null (top state), then it is the common state.
             listDst1[ix].add(0, entryStates[ix]);
-            if(entryStates[ix].enclState != null){
-              State entryState = stateData.idxStates.get(entryStates[ix].enclState);
+            if(entryStates[ix].src.enclState != null){
+              SimpleState entryState = stateData.idxStates.get(entryStates[ix].src.enclState);
               if(entryState == null){
-                System.out.println("\nSemantic error: parent state \"" + entryStates[ix].enclState + "\" in state \"" + state.stateName + "\"not found. ");
+                System.out.println("\nSemantic error: parent state \"" + entryStates[ix].src.enclState + "\" in state \"" + state.src.stateName + "\"not found. ");
                 return;
               }
               entryStates[ix] = entryState;
@@ -864,10 +892,10 @@ public class StateMGen {
         //dst.entrySubStates.clear();
         trans.dstStateTree = new DstState();
         
-        for(List<State> listEntries: listDst1){
+        for(List<SimpleState> listEntries: listDst1){
           DstState dstStateTreeNode = trans.dstStateTree;
           //dstStateTreeNode = dst;
-          for(State entryState: listEntries){
+          for(SimpleState entryState: listEntries){
             if(dstStateTreeNode.entrySubStates == null){
               dstStateTreeNode.entrySubStates = new LinkedList<DstState>();
             }
@@ -881,7 +909,7 @@ public class StateMGen {
             if(!foundEntry){
               DstState entryDst = new DstState();
               entryDst.entryState = entryState;
-              entryDst.name = entryState.stateName;
+              entryDst.name = entryState.src.stateName;
               dstStateTreeNode.entrySubStates.add(entryDst);
               dstStateTreeNode = entryDst;
             }
