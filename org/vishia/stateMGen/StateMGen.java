@@ -344,6 +344,11 @@ public class StateMGen {
     
     public String stateNr;
     
+    
+    /**From ZBNF: the default state of a complex state. */
+    public String startState;
+    
+
     /**From ZBNF: <$?@enclState>. It is the name of the state where this state is member of. */
     public String enclState;
     
@@ -415,9 +420,6 @@ public class StateMGen {
    */
   public static class CompositeState extends SimpleState
   { 
-    /**From ZBNF: the default state of a complex state. */
-    public String startState;
-    
     /**All states which are direct sub-states in this state.  */
     public Map<String, SimpleState> subStates;
 
@@ -716,13 +718,15 @@ public class StateMGen {
    * @param stateP
    * @param stateData
    */
-  void prepareStateStructure(ZbnfState srcState, ZbnfResultData stateData, boolean composite, int recurs){
+  SimpleState prepareStateStructure(ZbnfState srcState, ZbnfResultData stateData, boolean composite, int recurs){
     //stateStructure
     if(srcState.isPrepared){
-      return;
+      SimpleState ret = stateData.idxStates.get(srcState.stateName);
+      if(ret !=null) return ret;
     }
     //ZbnfState state = stateP;
     final SimpleState state1 = composite ? new CompositeState(srcState) : new SimpleState(srcState);
+    stateData.idxStates.put(state1.src.stateName, state1);  //replace old SimpleState.
     if(srcState.stateName.equals("Active1"))
       stop();
     if(srcState.enclState !=null){
@@ -732,7 +736,7 @@ public class StateMGen {
         //call this routine recursively to assert that all enclosing states are prepared.
         if(recurs > 20) throw new IllegalArgumentException("StateMGen - parent states in a loop.");
         ZbnfState srcEnclState = stateData.idxSrcStates.get(srcState.enclState);
-        prepareStateStructure(srcEnclState, stateData, true, recurs+1);
+        enclState = prepareStateStructure(srcEnclState, stateData, true, recurs+1);
       }
       if(!(enclState instanceof CompositeState)){
         CompositeState encl1 = new CompositeState(enclState);
@@ -766,15 +770,15 @@ public class StateMGen {
     }
     //register the state in all its enclosing states.
     boolean bEnclosingStateCheck = true;  //set to false on top level
-    SimpleState state = state1;
-    while(bEnclosingStateCheck && state1.src.enclState !=null){
-      String enclStateName = state1.src.enclState;
+    SimpleState stateToTop = state1;
+    while(bEnclosingStateCheck && stateToTop.src.enclState !=null){
+      String enclStateName = stateToTop.src.enclState;
       SimpleState enclStateS = stateData.idxStates.get(enclStateName);
       if(enclStateS !=null) {
         assert(enclStateS instanceof CompositeState);
         CompositeState enclState = (CompositeState)enclStateS;
-        if(state1.src.parallelParentState !=null){
-          String parallelStateName = state1.src.parallelParentState;
+        if(stateToTop.src.parallelParentState !=null){
+          String parallelStateName = stateToTop.src.parallelParentState;
           SimpleState parallelStateS = stateData.idxStates.get(parallelStateName);
           assert(parallelStateS !=null && parallelStateS instanceof CompositeState);
           CompositeState parallelState = (CompositeState)parallelStateS;
@@ -787,24 +791,25 @@ public class StateMGen {
           if(parallelState.subStates ==null){
             parallelState.subStates = new TreeMap<String, SimpleState>(); 
           }
-          if(parallelState.subStates.get(state.src.stateName) == null){
-            parallelState.subStates.put(state.src.stateName, state);
+          if(parallelState.subStates.get(stateToTop.src.stateName) == null){
+            parallelState.subStates.put(stateToTop.src.stateName, stateToTop);
           }
           
         } else {
           if(enclState.subStates ==null){
             enclState.subStates = new TreeMap<String, SimpleState>(); 
           }
-          if(enclState.subStates.get(state.src.stateName) == null){
-            enclState.subStates.put(state.src.stateName, state);
+          if(enclState.subStates.get(stateToTop.src.stateName) == null){
+            enclState.subStates.put(stateToTop.src.stateName, stateToTop);
           }
         }
-        state = enclState;
+        stateToTop = enclState;
       }else {
         bEnclosingStateCheck = false;  //top level reached.
       }
     }
     state1.src.isPrepared = true;  
+    return state1;
   }
 
   
