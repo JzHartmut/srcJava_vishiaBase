@@ -22,7 +22,6 @@ public class ExtReflection_Insp_h
       super.assignEmpty(emptyData);
     }
     
-    public void setBigEndian(boolean value){ super.setBigEndian(value); }
     
     void set_sign(int value)
     {  setInt32(kIdx_sign, value);

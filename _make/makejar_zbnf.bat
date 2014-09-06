@@ -6,6 +6,10 @@ REM Therefore no additonal jar is necessary to run, only the java base system of
 REM Note that the srcJava_vishiaBase component should be present in the correct version in parallel path of this component. 
 REM examples of ZBNF are not included.
 
+REM set additional destination for zbnf.jar
+set FCMD_DST=..\..\..\Fcmd\sf\Fcmd\exe
+set ZBNFJAX_DST=..\..\..\ZBNF\sf\ZBNF\zbnfjax
+
 REM The TMP_JAVAC is a directory, which contains only this compiling results. It will be clean in the batch processing.
 set TMP_JAVAC=..\..\..\tmp_javac
 
@@ -52,4 +56,6 @@ set SRCPATH_JAVAC=..;../../srcJava_vishiaBase
 
 call ..\..\srcJava_vishiaBase\_make\+javacjarbase.bat
 
-if exist ..\..\..\ZBNF\sf\ZBNF\zbnfjax copy ..\..\exe\zbnf.jar ..\..\..\ZBNF\sf\ZBNF\zbnfjax\zbnf.jar
+if exist %ZBNFJAX_DST% copy ..\..\exe\zbnf.jar %ZBNFJAX_DST%\zbnf.jar
+if exist %FCMD_DST% copy ..\..\exe\zbnf.jar %FCMD_DST%\zbnf.jar
+

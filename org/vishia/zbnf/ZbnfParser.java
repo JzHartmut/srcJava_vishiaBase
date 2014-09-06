@@ -1906,6 +1906,8 @@ public class ZbnfParser
    */
   protected CharSequence sRightestError = "--noError--";
 
+  protected int nRightestLineError;
+  
   /**Required syntax on rightest parsing error position*/
   protected String sExpectedSyntax = "--noError--";
   
@@ -2492,7 +2494,7 @@ public class ZbnfParser
     sExpectedSyntax = null;
     alreadyParsedCmpn.clear();
     sRightestError = input.getCurrentPart(80); 
-    
+    nRightestLineError = input.getLineAndColumn(null);
     prescriptParserTopLevel = new PrescriptParser(null, mainScript, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
     //subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
     final ZbnfParserStore addParseResult;
@@ -2680,13 +2682,21 @@ public class ZbnfParser
    * @return The part of input on error position.
    */
   public String getFoundedInputOnError()
-  { //StringBuilder u = new StringBuilder(sRightestError);
+  { StringBuilder u = new StringBuilder(120);
     
     //TODO use u to correct
-    String sError = sRightestError.toString();
-    if(sError.length() < 80){sError += "<<<<end of file"; }
-  
-    return sError.replace('\n', '|').replace('\r', ' ');
+    if(nRightestLineError !=0){ 
+      u.append("@line:").append(nRightestLineError).append(": ");
+    }
+    u.append(sRightestError);
+    if(u.length() < 80){u.append("<<<<end of file"); }
+    for(int i=0; i < u.length(); ++i) {
+      char cc = u.charAt(i);
+      if(cc == '\n' || cc == '\r'){ 
+        u.setCharAt(i, '|'); 
+      } 
+    }
+    return u.toString();
   }
 
   
