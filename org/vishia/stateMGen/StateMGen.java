@@ -849,9 +849,10 @@ public class StateMGen {
         listDst1[ix] = new LinkedList<SimpleState>();
       }
       SimpleState exitState = state;
-      boolean found = false;
-      while(!found){
-        trans.exitStates.add(exitState);
+      boolean foundCommonState = false;
+      while(!foundCommonState) {     
+        //loop till the common state for all parallel paths of transitions are found.
+        trans.exitStates.add(exitState);   //at least exit the source state.
         if(exitState.src.enclState != null){
           SimpleState exitState2 = stateData.idxStates.get(exitState.src.enclState);
           if(exitState2 == null){
@@ -862,10 +863,11 @@ public class StateMGen {
         } else {
           exitState = null;  //it is the top state.
         }
-        found = true;  //set to false if any not found.
+        foundCommonState = true;  //set to false if at least one of backward paths from dst state does not touch this exitState.
         ix = 0;
-        for(String dstStateName: trans.dstState){
-          listDst1[ix].clear();
+        for(String dstStateName: trans.dstState) {
+          //check all parallel paths.
+          listDst1[ix].clear();  //build the entry-list newly for all loop walks of exitState.
           entryStates[ix] = stateData.idxStates.get(dstStateName);
           if(entryStates[ix] == null){
             System.out.println("\nSemantic error: destination state \"" + dstStateName + "\" from state \"" + state.src.stateName + "\" not found. ");
@@ -889,7 +891,7 @@ public class StateMGen {
           //the loop is finished if the exitstate and the enclosing entryState are equal or the enclosing entrystate reaches the topstate.
           if(exitState != entryStates[ix]){  //check whether both are equal or both are the top state, it is null.
             //not equal, the exitstate is not a common state of this dst state, it means it is not the common state of all.
-            found = false;
+            foundCommonState = false;
           }
           ix +=1;
         }

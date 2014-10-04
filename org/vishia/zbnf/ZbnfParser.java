@@ -126,6 +126,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-06-17 Hartmut new: {@link #nRightestLineError}, chg: {@link #getFoundedInputOnError()} to write out the line of error, test it.
    * <li>2014-06-17 Hartmut new: {@link #setXmlSrcline(boolean)} and {@link #setXmlSrctext(boolean)} to control 
    *   whether srcline="xx" and srctext="text" will be written to a XML output  
    * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
