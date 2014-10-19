@@ -930,7 +930,7 @@ public class StateMGen {
   }
   
   
-  /**This method reads the input VHDL-script, parses it with ZBNF, 
+  /**This method reads the input script, parses it with ZBNF, 
    * stores all results in the Java-class {@link ZbnfResultData} 
    */
   private ZbnfResultData parseAndStoreInput(Args args)
