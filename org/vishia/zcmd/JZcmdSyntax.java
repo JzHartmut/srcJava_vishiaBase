@@ -203,7 +203,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefStringVar::= [const <?const>] <definePath?defVariable> [ = <textDatapath?>].\n"  //[{ <definePath?assign> = }] <textDatapath?> .\n"
     + " \n"
-    + " DefMapVar::= [const <?const>] <definePath?defVariable>.\n"  //[{ <definePath?assign> = }] <textDatapath?> .\n"
+    + " DefMapVar::= [const <?const>] <definePath?defVariable> [ = \\{ <dataStruct> \\}  ].\n" 
     + " \n"
     + " Openfile::= [const <?const>] <definePath?defVariable> = <textDatapath?> .\n"
     + " \n"
