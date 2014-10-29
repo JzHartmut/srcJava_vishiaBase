@@ -2,31 +2,106 @@ package org.vishia.header2Reflection;
 
 import java.io.File;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
+import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.stateMGen.StateMGen.CompositeState;
-import org.vishia.stateMGen.StateMGen.NameValue;
-import org.vishia.stateMGen.StateMGen.SimpleState;
-import org.vishia.stateMGen.StateMGen.XXXStateStructure;
-import org.vishia.stateMGen.StateMGen.ZbnfState;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPart;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
+import org.vishia.zcmd.JZcmd;
 
-/**This class parses C-files and builds a result tree, which can be proceed.
+/**This class parses C-files and builds a result tree, which can be proceed especially with a JZcmd script.
+ * Therewith output files from headers can be generated with a control script without hard-core Java programming.
+ * This class should be matched stronly to the parser script <code>Cheader.zbnf</code> in the software component 
+ * {@linkplain www.vishia.org/ZBNF/zbnfjax}.
+ * <br><br>
+ * This class contains some <code>public static class</code> Subclasses which are the complements to the parsers result component.
+ * The structure of the syntax of a header file may be able to recognized with them. See the syntax definition.
+ * <br><br>
+ * The class representing the root of the parse result for each header file is {@link ZbnfResultFile}. This class contains new_... and add_.. methods
+ * for the parser's result components of the header file.
+ * <br>
+ * All headerfile's results are stored in an instance of {@link ZbnfResultData} which is returned by the {@link #execute(Args)} method of this class.
+ * <br><br>
+ * To invoke this class from a JZcmd script write a script with content:<pre>
+##A ZZcmd script:
+sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
+{ 
+  Obj headerTranslator = java new org.vishia.header2Reflection.CheaderParser(console);  ##create instance of this class
+
+  Obj args = java new org.vishia.header2Reflection.CheaderParser$Args();     ##arguments have to be filled firstly
+  List inputsExpanded = target.allInputFilesExpanded();
+  for(input:inputsExpanded)
+  { args.addSrc(input.absfile(), input.namext());                            ##input files, here from zmake target.
+  }
+  args.setDst(target.output.absfile());                                      ##the output file
+  args.setZbnfHeader(<:><&scriptdir>/../../zbnfjax/zbnf/Cheader.zbnf<.>);    ##the Zbnf syntax control script. 
+  //
+  Obj headers = headerTranslator.execute(args);              ##executes
+ * </pre> 
+ * The result tree <code>headers</code> is contained in the instance of {@link ZbnfResultData}. That result can be evaluated with JZcmd for example:
+ * <pre>
+  ##A ZZcmd script:
+  for(headerfile: headers.files){
+    for(classC: headerfile.listClassC) {
+      for(entry: classC.entries) {
+        if(entry.whatisit == "structDefinition") {
+          call genStruct(struct=entry, headerName = &headerfile.fileName);
+        }
+      }
+    }
+  }
+
+ * </pre>
+ * 
+ * 
+ * For Zmake see {@linkplain www.vishia.org/ZBNF/sf/docu/Zmake.html}.
+ * <br>
+ * This class can be downloaded from {@linkplain www.sf.net/projects/zbnf}
+ * @see JZcmd
+ * @see JZcmdExecuter
  * @author Hartmut Schorrig
  *
  */
 public class CheaderParser {
 
+  /**Version, history and license.
+   * <ul><li>2014-10-18 created. 
+   * In the past either the parse result was used immediately with a Java programm as generator, for example for {@link CmdHeader2Reflection},
+   * or the generation of some things are done via the XML output from the parser via an XSLT translator.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License, published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  //@SuppressWarnings("hiding")
+  static final public String sVersion = "2014-10-25";
+
+  
   
   public static class SrcFile
   {
