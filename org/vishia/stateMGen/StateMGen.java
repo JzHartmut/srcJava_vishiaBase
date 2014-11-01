@@ -665,11 +665,14 @@ public class StateMGen {
   
   
   public class GenStateMachine extends StateMachine {
+    Map<String, StateSimple> allStates = new TreeMap<String, StateSimple>();
+    
     GenStateMachine(StateSimple[] aFirstStates) 
     { super(aFirstStates);
     }
     
     StateCompositeTop stateTop(){ return topState; }
+    
     
     void prepare() {
       topState.prepare();
@@ -681,21 +684,53 @@ public class StateMGen {
   
   
   
-  static class GenStateSimple extends StateSimple{
-    GenStateSimple(ZbnfState zbnfState){
+  static class GenStateSimple extends StateSimple
+  {
+    
+    public final ZbnfState srcState;
+    
+    GenStateSimple(StateComposite enclState, StateMachine stm, ZbnfState zbnfState){
+      this.srcState = zbnfState;
+      this.enclState = enclState;
+      this.stateMachine = stm;
       stateId = zbnfState.stateName;
     }
+    
+    
+    /**Exports the protected method for this package, respectively this class. */
+    void genStatePrepareTransitions(){ super.prepareTransitions(); }
+    
   }
   
   
   
   static class GenStateComposite extends StateComposite{
     
-    GenStateComposite(GenStateMachine genStm, ZbnfState zbnfComposite)
+    public final ZbnfState srcState;
+    
+    GenStateComposite(StateComposite enclState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(genStm, new StateSimple[zbnfComposite.srcStates.size()] );
+      this.enclState = enclState;
+      this.srcState = zbnfComposite;
       stateId = zbnfComposite.stateName;
     }
     
+    /**Exports the protected method for this package, respectively this class. */
+    void genStatePrepareTransitions(){ super.prepareTransitions(); }
+    
+  }
+  
+  
+  
+  static class GenStateTrans extends StateSimple.StateTrans
+  {
+    
+    public final ZbnfTrans src;
+    
+    GenStateTrans(ZbnfTrans src, StateSimple state, int[] dstKeys){
+      state.super(dstKeys);
+      this.src = src;
+    }
   }
   
   
@@ -761,10 +796,12 @@ public class StateMGen {
   void prepareStateData(ZbnfResultData stateData, StateMachine stm){
     StateSimple[] aStates = new StateSimple[stateData.srcStates.size()];
     genStm = new GenStateMachine(aStates);
-    gatherCompositeState(genStm.stateTop(), stateData);
+    gatherStatesOfComposite(genStm.stateTop(), stateData);
+    gatherAllTransitions();
+    
     genStm.prepare();
     
-    
+    prepareAllTransitions();
     
     
     /*
@@ -787,25 +824,65 @@ public class StateMGen {
    * @param zbnfComposite
    * @return
    */
-  StateComposite gatherCompositeState(StateComposite stateComposite, ZbnfStateCompositeBase zbnfComposite)
+  StateComposite gatherStatesOfComposite(StateComposite stateComposite, ZbnfStateCompositeBase zbnfComposite)
   { 
-    for(ZbnfState state: zbnfComposite.srcStates){
-      if(!state.isPrepared){
+    for(ZbnfState zbnfState: zbnfComposite.srcStates){
+      if(!zbnfState.isPrepared){
         StateSimple state1;
-        if(state.srcStates !=null && state.srcStates.size() >0) {
-          StateComposite stateComposite1 = new GenStateComposite(genStm, state);
-          state1 = gatherCompositeState(stateComposite1, state);
+        if(zbnfState.srcStates !=null && zbnfState.srcStates.size() >0) {
+          GenStateComposite stateComposite1 = new GenStateComposite(stateComposite, genStm, zbnfState);
+          state1 = gatherStatesOfComposite(stateComposite1, zbnfState);
         } else {
-          state1 = new GenStateSimple(state); 
-          
+          state1 = new GenStateSimple(stateComposite, genStm, zbnfState);
         }
-        stateComposite.addState(state1);
+        stateComposite.addState(state1.hashCode(), state1);
+        genStm.allStates.put(state1.getName(), state1);
         //prepareStateStructure(state, stateData, false, 0);
       }
     }
     
     
     return stateComposite;
+  }
+  
+  
+  
+  void gatherAllTransitions() {
+    for(Map.Entry<String, StateSimple> entry : genStm.allStates.entrySet()) {
+      StateSimple genState = entry.getValue();
+      ZbnfState zbnfState = genState instanceof GenStateComposite ? ((GenStateComposite)genState).srcState : ((GenStateSimple)genState).srcState;
+      if(zbnfState.trans !=null && zbnfState.trans.size() >0) {
+        int zTransitions = zbnfState.trans.size();
+        if(zTransitions >0){
+          genState.createTransitions(zTransitions);
+          for(ZbnfTrans zbnfTrans: zbnfState.trans){
+            int[] dstKeys = new int[zbnfTrans.dstState.size()];
+            int ixDst = -1;
+            for(String sDstState : zbnfTrans.dstState) {
+              StateSimple dstState1 = genStm.allStates.get(sDstState);
+              if(dstState1 == null) throw new IllegalArgumentException("faulty dst state in transition;" + sDstState + "; from state " + genState.getName());
+              dstKeys[++ixDst] = dstState1.hashCode();
+            }
+            GenStateTrans trans = new GenStateTrans(zbnfTrans, genState, dstKeys);
+            genState.addTransition(trans);
+          }
+        }
+      }
+    }
+  }
+
+
+  
+  
+  void prepareAllTransitions() {
+    for(Map.Entry<String, StateSimple> entry : genStm.allStates.entrySet()) {
+      StateSimple genState = entry.getValue();
+      if(genState instanceof GenStateSimple) {
+        ((GenStateSimple)genState).genStatePrepareTransitions();
+      } else if(genState instanceof GenStateComposite) {
+        ((GenStateComposite)genState).genStatePrepareTransitions();  //same method like GenStateSimple
+      }
+    }
   }
   
   
