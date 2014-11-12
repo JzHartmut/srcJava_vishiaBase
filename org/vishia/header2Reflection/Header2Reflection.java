@@ -1405,7 +1405,7 @@ public class Header2Reflection
     
     
     /**called inside convertClass to detect inner classes. 
-     * @throws ByteDataAccess.AccessException */
+     */
     void convertInnerClassAndStruct
     ( String sParentCppClassName
     , String sParentReflectionClassName
@@ -1465,7 +1465,6 @@ public class Header2Reflection
      * @param sbForward buffer for forward declarations
      * @return true if it is an attribute, false if nothing is generated.
      * @throws IOException
-     * @throws ByteDataAccess.AccessException 
      */
     private boolean convertAttribute(boolean bFirst, String sSeparator, String sCppClassName
       , String sReflectionClassName

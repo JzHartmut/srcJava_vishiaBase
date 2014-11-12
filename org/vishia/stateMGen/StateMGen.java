@@ -713,6 +713,13 @@ public class StateMGen {
      * If there is a history in a composite state, that is the root state.
      */
     public final StateComposite rootState;
+    
+    /**List of all sub states with the same rootState, it means with the same state-switch-variable.
+     * It is possible that the inner states of a composite states is member of this list too.
+     * That is if the composite state has not a history entry and it is not a StateParallel.
+     * This list remain null if it is a simple state.
+     */
+    public List<StateSimple> subStates;
 
     public GenStateInfo(ZbnfState zsrcState, StateComposite rootState)
     { this.zsrcState = zsrcState;
@@ -863,6 +870,7 @@ public class StateMGen {
     genStm = new GenStateMachine(zbnfSrc, aStates);
     StateComposite stateTop = genStm.stateTop();
     genStm.rootStates.add(stateTop);
+    stateTop.setAuxInfo(new GenStateInfo(null, null));
     gatherStatesOfComposite(stateTop, stateTop, zbnfSrc);
     gatherAllTransitions();
     
@@ -882,7 +890,13 @@ public class StateMGen {
    * @return
    */
   StateComposite gatherStatesOfComposite(StateComposite stateComposite, StateComposite rootState, ZbnfStateCompositeBase zbnfComposite)
-  { for(ZbnfState zbnfState: zbnfComposite.subStates){
+  { 
+    GenStateInfo genStateinfo = (GenStateInfo)rootState.auxInfo();
+    assert (genStateinfo !=null);
+    if(genStateinfo.subStates == null) { 
+      genStateinfo.subStates = new LinkedList<StateSimple>();
+    }
+    for(ZbnfState zbnfState: zbnfComposite.subStates){
       if(!zbnfState.isPrepared){
         StateSimple state1;
         if(zbnfState.subStates !=null && zbnfState.subStates.size() >0) {
@@ -904,6 +918,7 @@ public class StateMGen {
           state1 = new GenStateSimple(stateComposite, rootState, genStm, zbnfState);
         }
         stateComposite.addState(state1.hashCode(), state1);
+        genStateinfo.subStates.add(state1);
         allStates.put(state1.getName(), state1);
         //prepareStateStructure(state, stateData, false, 0);
       }

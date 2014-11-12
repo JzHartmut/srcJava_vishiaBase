@@ -113,11 +113,11 @@ import org.vishia.util.StdHexFormatWriter;
     binOutHead.set_sign(sign);
     
     binOutClass = new RawDataAccess();
-    binOutClass.assignEmpty(binOutData);
+    binOutClass.assignClear(binOutData);
     binOutClass.setBigEndian(fileBinBigEndian);
     
     binOutClassArray = new ObjectArray_Jc();
-    binOutClassArray.assignEmpty(binOutClassArrayData);
+    binOutClassArray.assignClear(binOutClassArrayData);
     binOutClassArray.setBigEndian(fileBinBigEndian);
     binOutClassArray.set_sizeElement(4);  //pointer
     //instances which are used if need as child.
@@ -137,7 +137,8 @@ import org.vishia.util.StdHexFormatWriter;
    * @throws IllegalArgumentException */
   int addClass(String sCppClassName, String sCppClassNameShow) throws IllegalArgumentException
   { 
-    binOutClass.addChildEmpty(binClass);
+    binOutClass.addChild(binClass);
+    binClass.clearData();
     int ixByteClass = binClass.getPositionInBuffer();
     nrofClasses +=1;
     binOutClassArray.addChildInteger(4, ixByteClass);  
@@ -153,7 +154,8 @@ import org.vishia.util.StdHexFormatWriter;
   
   
   void addFieldHead() throws IllegalArgumentException
-  { binOutClass.addChildEmpty(binFieldArray);
+  { binOutClass.addChild(binFieldArray);
+    binFieldArray.clearData();
   }
   
   

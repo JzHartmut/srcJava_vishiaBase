@@ -1,6 +1,5 @@
 package org.vishia.header2Reflection;
 
-import org.vishia.byteData.ByteDataAccess;
 import org.vishia.byteData.Object_Jc;
 
 public class ExtReflection_Insp_h
@@ -18,8 +17,10 @@ public class ExtReflection_Insp_h
       ;
     
     ExtReflection_Insp(byte[] emptyData)
-    { super.setBigEndian(true);
-      super.assignEmpty(emptyData);
+    { super(kIdxAfterLast);
+      super.setBigEndian(true);
+      super.assignClear(emptyData);
+      setInt32(kPos_objIdentSize, 0x1234);  //only for test.
     }
     
     
@@ -39,18 +40,6 @@ public class ExtReflection_Insp_h
     {  setInt32(kIdx_classDataBlock, value);
     }
     
-    @Override
-    protected void specifyEmptyDefaultData()
-    {
-      setInt32(0, 0x1234);
-    }
   
-  
-    @Override
-    public int specifyLengthElementHead()
-    {
-      // TODO Auto-generated method stub
-      return kIdxAfterLast;
-    }
   }  
 }
