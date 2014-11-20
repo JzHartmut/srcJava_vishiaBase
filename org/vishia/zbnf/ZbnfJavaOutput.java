@@ -576,7 +576,7 @@ public class ZbnfJavaOutput
       Object[] noParam = null; //without param.
       try{ childOutputInstance = method.invoke(component.instance, noParam); }
       catch(Exception exc)
-      { throw new IllegalAccessException("cannot access: " + method.toString()); 
+      { throw new IllegalAccessException("exception inside: " + method.toString()); 
       }
       return new ChildInstanceAndClass(childOutputInstance, childClass, true);
     }

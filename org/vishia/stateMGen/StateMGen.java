@@ -685,6 +685,11 @@ public class StateMGen {
     
     public final List<StateComposite> rootStates = new LinkedList<StateComposite>();
     
+    public final List<StateSimple> listStates = new LinkedList<StateSimple>();
+
+    Map<String, StateSimple> allStates = new TreeMap<String, StateSimple>();
+
+    
     GenStateMachine(ZbnfResultData zsrcFile, StateSimple[] aFirstStates) 
     { super(aFirstStates);
       this.zsrcFile = zsrcFile;
@@ -802,8 +807,7 @@ public class StateMGen {
   GenStateMachine genStm;
   
   
-  Map<String, StateSimple> allStates = new TreeMap<String, StateSimple>();
-
+  
 
   public StateMGen(MainCmd_ifc console, Args args)
   {
@@ -919,7 +923,8 @@ public class StateMGen {
         }
         stateComposite.addState(state1.hashCode(), state1);
         genStateinfo.subStates.add(state1);
-        allStates.put(state1.getName(), state1);
+        genStm.allStates.put(state1.getName(), state1);
+        genStm.listStates.add(state1);
         //prepareStateStructure(state, stateData, false, 0);
       }
     }
@@ -931,8 +936,9 @@ public class StateMGen {
   
   
   void gatherAllTransitions() {
-    for(Map.Entry<String, StateSimple> entry : allStates.entrySet()) {
-      StateSimple genState = entry.getValue();
+    for(StateSimple genState : genStm.listStates) {
+    //for(Map.Entry<String, StateSimple> entry : genStm.allStates.entrySet()) {
+      //StateSimple genState = entry.getValue();
       ZbnfState zbnfState = ((GenStateInfo)genState.auxInfo()).zsrcState;
       if(zbnfState.trans !=null && zbnfState.trans.size() >0) {
         int zTransitions = zbnfState.trans.size();
@@ -944,11 +950,11 @@ public class StateMGen {
             int ixDst = -1;
             if(zbnfTrans.dstStates !=null) {
               for(String sDstState : zbnfTrans.dstStates) {
-                StateSimple dstState1 = allStates.get(sDstState);
+                StateSimple dstState1 = genStm.allStates.get(sDstState);
                 if(dstState1 == null) throw new IllegalArgumentException("faulty dst state in transition;" + sDstState + "; from state " + genState.getName());
                 dstKeys[++ixDst] = dstState1.hashCode();
               } }
-            StateSimple dstState1 = allStates.get(zbnfTrans.dstState);
+            StateSimple dstState1 = genStm.allStates.get(zbnfTrans.dstState);
             if(dstState1 == null) throw new IllegalArgumentException("faulty dst state in transition;" + zbnfTrans.dstState + "; from state " + genState.getName());
             dstKeys[++ixDst] = dstState1.hashCode();
             GenStateTrans trans = new GenStateTrans(zbnfTrans, genState, dstKeys);
@@ -963,8 +969,9 @@ public class StateMGen {
   
   
   void prepareAllTransitions() {
-    for(Map.Entry<String, StateSimple> entry : allStates.entrySet()) {
-      StateSimple genState = entry.getValue();
+    for(StateSimple genState : genStm.listStates) {
+      //for(Map.Entry<String, StateSimple> entry : genStm.allStates.entrySet()) {
+      //StateSimple genState = entry.getValue();
       if(genState instanceof GenStateSimple) {
         ((GenStateSimple)genState).genStatePrepareTransitions();
       } else if(genState instanceof GenStateComposite) {

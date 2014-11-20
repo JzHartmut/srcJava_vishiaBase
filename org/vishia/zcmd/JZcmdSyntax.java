@@ -84,7 +84,7 @@ public final class JZcmdSyntax {
     + "   | stdout | stdin | stderr \n" 
     + "   | subtext | sub | main | call | cd | CD | REM | Rem | rem \n"
     + "   | Pipe | StringBuffer | Stringjar | String | List | Openfile | Fileset | Obj | Set | set | include | zbatch \n"
-    + "   | break | XXXreturn | exit | onerror | for | while | do | if | elsif | else | throw . \n"
+    + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | throw . \n"
     + " \n"
     + " JZcmd::= \n"
     + " [<*|==ZGen==?>==ZGen== ]\n"
@@ -130,6 +130,7 @@ public final class JZcmdSyntax {
     + " statement::=\n"
     + "   \\{ [<statementBlock>] \\} \n"
     + " | REM <*\\n\\r?> ##Remark like in batch files\n"
+    + " | ::::{:}     ##Skip over ::::::\n"
     + " | //<*\\n\\r?> ##line commment in C style\n"
     + " | /*<*|*/?>*/ ##block commment in C style\n"
     + " | currdir = <textDatapath?cd> ;   ##set current directory\n"
@@ -291,12 +292,15 @@ public final class JZcmdSyntax {
     + " \n"
     + " andExpr::= <boolExpr?> [{ && <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
     + " \n"  
-    + " boolExpr::= [<?boolNot> ! | not|]\n"
+    + " boolExpr::= [<?boolNot> ! | not| NOT|]\n"
     + " [ ( <condition?parenthesisCondition> ) \n"                //boolean in paranthesis
+    //+ " | <instanceof> \n"                //boolean in paranthesis
     + " | <numExpr?> [<cmpOperation>]\n"  //simple boolean
     + " ].\n"  
     + " \n"
-    + " cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == | \\>= | \\> | \\<= | \\< ]] <numExpr?>.\n"
+    + " cmpOperation::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne|instanceof] |  [<?cmpOperator> != | == | \\>= | \\> | \\<= | \\< ]] <numExpr?>.\n"
+    + " \n"
+    + " instanceof::=<objExpr> instanceof <staticJavaAccess>.\n"
     + " \n"
     + " conditionInText::=<andExprInText?> [{\\|\\| <andExprInText?boolOrOperation>}].\n"  // || of <andExpr> 
     + " \n"
@@ -345,7 +349,8 @@ public final class JZcmdSyntax {
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
     //+ " | \\#\\#<*\\r\\n?>{\\r|\\n}   ##skip comment in text\n"  //skip comment till inclusively newline
-    + " | \\<:@<#?setColumn> [ + <#?minChars>] \\>  \n"               //set column
+  //  + " | \\<:@<#?setColumn> [ + <#?minChars>] \\>  \n"               //set column
+    + " | \\<:@<setColumn>\\>  \n"               //set column ////
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"
     + " ]\n"
@@ -359,6 +364,8 @@ public final class JZcmdSyntax {
     + "   | \\<\\.+n+flush\\><?newline><?flush> | \\<\\.+flush\\><?flush>\n"
     + "   | \\<\\.+n+close\\><?close> | \\<\\.+close\\><?close>].\n"
     + " \n"      //<?posIndent>
+    + " setColumn::=<numExpr> [ + <numExpr?minSpaces>] | + <numExpr?minSpaces>.\n"   ////
+    + " \n"
     + " \n"
     + " \n"
       //Note: the for-variable is adequate a DefVariable

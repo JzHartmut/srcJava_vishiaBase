@@ -71,7 +71,8 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
-   * <li>2014-05-31 Hartmut chg: ':' aus separator between base and local path only after position 2, elsewhere ambigous with D:
+   * <li>2014-11-17 Hartmut chg: Recognized "struct tagname {...};" without typedef.  
+   * <li>2014-05-31 Hartmut chg: ':' as separator between base and local path only after position 2, elsewhere ambiguous with "D:"
    * <li>2013-10-19 Hartmut chg: now invoke-able from JZcmd, public methods etc. Only formalism
    * <li>2013-04-12 Hartmut new: #define in Headerfile or #define in cfg-file can be used to set {@link #idxDefines},
    *   conditional #ifdef ... in headerfile only taken if #define is known.
@@ -980,11 +981,24 @@ public class Header2Reflection
         || ( !c_only && sSemantic.equals("classDef"))
         )
       { //String sClassName =
-        ZbnfParseResultItem itemName = resultItem.getChild("@name");
-        if(itemName != null)
+        final String sClassName;  //maybe "struct tagname"
+        final String sStructName;  //maybe "struct tagname"
+        { ZbnfParseResultItem itemName = resultItem.getChild("@name");
+          if(itemName == null) {
+            itemName = resultItem.getChild("@tagname");  //if un-named struct definition.  ////
+            if(itemName !=null){
+              sClassName = itemName.getParsedString();
+              sStructName = "struct " + sClassName;
+            } else {
+              sStructName = sClassName = null; //can't determine
+            }
+          } else {
+            sStructName = sClassName = itemName.getParsedString();  //child "@name" found.
+          }
+        }
+        if(sClassName != null)
         { if(sSemantic.equals("unionDefinition"))
             stop();
-          String sClassName = itemName.getParsedString();
           if(sClassName.equals("ListItr_LinkedListJcpp"))
             stop();
           if(sClassName.equals("ObjectJcpp"))
@@ -999,7 +1013,7 @@ public class Header2Reflection
             )
           { boolean cppClass = sSemantic.equals("classDef");
             ConverterClass converterClass = new ConverterClass(null);
-            converterClass.convertClass(sClassName, null, null, resultItem, sFileNameRelative, cppClass); //, typesInFile);  //this is a class or struct.
+            converterClass.convertClass(sClassName, sStructName, null, null, resultItem, sFileNameRelative, cppClass); //, typesInFile);  //this is a class or struct.
           }
         }
         else
@@ -1055,6 +1069,8 @@ public class Header2Reflection
 
     String sReflectionClassName;
     String sCppClassName;
+    /**Used for offsetof(sTypeName, */ 
+    String sTypeName;   
     
     /**Current Bit position in Bitfield. */
     int bitfieldPos;
@@ -1102,6 +1118,7 @@ public class Header2Reflection
 
     private void convertClass
     ( String sClassName
+    , String sStructName
     , String sParentCppClassName
     , String sParentReflectionClassName
     , ZbnfParseResultItem classItem
@@ -1113,8 +1130,9 @@ public class Header2Reflection
     { //String sClassName = classItem.getChild("@name").getParsedString();
       this.cppClass = cppClass;
       sReflectionClassName = sParentReflectionClassName != null ? sParentReflectionClassName + "_" + sClassName : sClassName;
-      sCppClassName = sParentCppClassName != null ? sParentCppClassName + "::" + sClassName : sClassName;
-
+      sCppClassName = sParentCppClassName != null ? sParentCppClassName + "::" + sClassName : sClassName;   //used as type identifier
+      sTypeName = sParentCppClassName != null ? sParentCppClassName + "::" + sClassName : sStructName;
+      
       //if(sClassName.startsWith("EntryValue"))
       if(sClassName.equals("ListItr_LinkedListJcpp"))
         stop();
@@ -1136,7 +1154,7 @@ public class Header2Reflection
       String bitModifiers = "0 ";
       int mModifiers = 0;
       
-      console.writeInfo(sClassName + "...");
+      console.writeInfo(sStructName + "...");
 
       if(fileAllH != null)
       { fileAllH.write("\nextern_C const ClassJc reflection_" + sReflectionClassName + ";");
@@ -1421,7 +1439,7 @@ public class Header2Reflection
       { String sTypeName = innerClassItem.getChild("@name").getParsedString();
         innerTypes.put(sTypeName, sParentReflectionClassName);
         ConverterClass converterClass = new ConverterClass(innerTypesP);
-        converterClass.convertClass(sTypeName, sParentCppClassName, sParentReflectionClassName, innerClassItem, sFilePath, cppClass);//, typesInFile);
+        converterClass.convertClass(sTypeName, sTypeName, sParentCppClassName, sParentReflectionClassName, innerClassItem, sFilePath, cppClass);//, typesInFile);
       }
 
       /**2011-04-12: don't convert implicitStructAttribute as extra type. It isn't able in C to do so.
@@ -1768,7 +1786,7 @@ public class Header2Reflection
   
           final String sOffset;
           if(bitfieldNrofBits <0){
-            sOffset = buildOffset(sCppClassName, sAttributeName, cppClass);
+            sOffset = buildOffset(sTypeName, sAttributeName, cppClass);
             bitfieldPos = 0;  //a new bitfield will be start with byte0.bit0
             bitfieldByte = 0;
             lastOffsetBeforeBitfield = sOffset;
@@ -1821,10 +1839,10 @@ public class Header2Reflection
     
 
     
-    String buildOffset(String sCppClassName, String sAttributeNameP, boolean cppClass)
+    String buildOffset(String sTypeName, String sAttributeNameP, boolean cppClass)
     {
       String sAttributeName = sAttributeNameP.replace('-', '.');
-      String[] sReplacement = new String[]{ sCppClassName, sAttributeName };  //order of sExprTokens
+      String[] sReplacement = new String[]{ sTypeName, sAttributeName };  //order of sExprTokens
       
       //String sOffset = "((int32)(&((" + sCppClassName + "*)(0x1000))->" + sAttributeName + ") ";
       String sOffset = StringPart.replace(sExprOffsField, sExprTokens, sReplacement, null);
