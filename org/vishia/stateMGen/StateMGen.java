@@ -18,6 +18,7 @@ import javax.script.ScriptException;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZcmdFilepath;
 import org.vishia.stateMachine.StateCompositeBase;
 import org.vishia.states.StateAddParallel;
 import org.vishia.states.StateComposite;
@@ -725,6 +726,14 @@ public class StateMGen {
      * This list remain null if it is a simple state.
      */
     public List<StateSimple> subStates;
+    
+    /**Set if this state has a time condition. */
+    public String timeCondition;
+    
+    /**Set to true if any of the sub states has a timeout transition 
+     * therefore this state as rootstate should have a timer variable.
+     */
+    public boolean hasTimer;
 
     public GenStateInfo(ZbnfState zsrcState, StateComposite rootState)
     { this.zsrcState = zsrcState;
@@ -845,6 +854,7 @@ public class StateMGen {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
+        generator.setScriptVariable("sOutfile", 'S', fOut.getAbsolutePath(), true);
         generator.setScriptVariable("stm", 'O', genStm, true);
         try{ 
           JZcmd.execute(generator, fileScript, out, console.currdir(), true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
@@ -895,14 +905,15 @@ public class StateMGen {
    */
   StateComposite gatherStatesOfComposite(StateComposite stateComposite, StateComposite rootState, ZbnfStateCompositeBase zbnfComposite)
   { 
-    GenStateInfo genStateinfo = (GenStateInfo)rootState.auxInfo();
+    GenStateInfo genStateinfo = (GenStateInfo)rootState.auxInfo(); //set on construction from the derived instance of StateSimple
     assert (genStateinfo !=null);
     if(genStateinfo.subStates == null) { 
       genStateinfo.subStates = new LinkedList<StateSimple>();
     }
     for(ZbnfState zbnfState: zbnfComposite.subStates){
       if(!zbnfState.isPrepared){
-        StateSimple state1;
+        StateSimple state1;  //either a GenStateSimple or a GenStateComposite, add it after creation and evaluation.
+        //
         if(zbnfState.subStates !=null && zbnfState.subStates.size() >0) {
           final StateComposite stateComposite1;
           if(zbnfState.parallelParentState !=null) {
@@ -921,6 +932,7 @@ public class StateMGen {
         } else {
           state1 = new GenStateSimple(stateComposite, rootState, genStm, zbnfState);
         }
+        //
         stateComposite.addState(state1.hashCode(), state1);
         genStateinfo.subStates.add(state1);
         genStm.allStates.put(state1.getName(), state1);
@@ -939,7 +951,8 @@ public class StateMGen {
     for(StateSimple genState : genStm.listStates) {
     //for(Map.Entry<String, StateSimple> entry : genStm.allStates.entrySet()) {
       //StateSimple genState = entry.getValue();
-      ZbnfState zbnfState = ((GenStateInfo)genState.auxInfo()).zsrcState;
+      GenStateInfo stateInfo = (GenStateInfo)genState.auxInfo();
+      ZbnfState zbnfState = stateInfo.zsrcState;
       if(zbnfState.trans !=null && zbnfState.trans.size() >0) {
         int zTransitions = zbnfState.trans.size();
         if(zTransitions >0){
@@ -959,6 +972,11 @@ public class StateMGen {
             dstKeys[++ixDst] = dstState1.hashCode();
             GenStateTrans trans = new GenStateTrans(zbnfTrans, genState, dstKeys);
             genState.addTransition(trans);
+            if(zbnfTrans.time !=null) { //condition is a time condition.
+              stateInfo.timeCondition = zbnfTrans.time;
+              GenStateInfo rootStateInfo = (GenStateInfo)stateInfo.rootState.auxInfo();
+              rootStateInfo.hasTimer = true;
+            }
           }
         }
       }

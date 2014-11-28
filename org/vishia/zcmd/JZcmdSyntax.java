@@ -5,9 +5,11 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-08-10 Hartmut chg: endlineComment with // only till <+ to support start of text output in an endline comment line.
+   * <li>2014-08-10 Hartmut chg: < :@ columnPos : minSpaces> uses : instead + as separator because + is a part of the columnpos expression.  
    * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
    * <li>2014-07-27 Hartmut new: ## in text expression don't skip over newline. Write a <: > before to prevent newline.
-   * <li>2014-06-15 Hartmut new: zmake &filepath := ... output as Filepath instance
+   * <li>2014-06-15 Hartmut new: zmake &filePath := ... output as Filepath instance
    * <li>2014-06-15 Hartmut new: Obj name : type possible, not used yet, see {@link org.vishia.util.DataAccess.Variable#clazz}
    * <li>2014-06-07 Hartmut new: Class var = :loader: package.path.Class; with a loader. 
    * <li>2014-06-07 Hartmut new: new &datapath.Classvar:(args) and java &datapath.Classvar:method(args):
@@ -130,9 +132,9 @@ public final class JZcmdSyntax {
     + " statement::=\n"
     + "   \\{ [<statementBlock>] \\} \n"
     + " | REM <*\\n\\r?> ##Remark like in batch files\n"
-    + " | ::::{:}     ##Skip over ::::::\n"
-    + " | //<*\\n\\r?> ##line commment in C style\n"
-    + " | /*<*|*/?>*/ ##block commment in C style\n"
+    + " | ::{:}                ##Skip over :::\n"
+    + " | //<*|\\n|\\r|\\<+?>     ##line commment in C style but only till <+\n"
+    + " | /*<*|*/?>*/          ##block commment in C style\n"
     + " | currdir = <textDatapath?cd> ;   ##set current directory\n"
     + " | [cd|CD] [<textValue?cd> | <*\\ ;?cd> ; ]  ##change current directory \n"
     + " | <DefVariable?> ; \n"
@@ -348,8 +350,6 @@ public final class JZcmdSyntax {
 
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
-    //+ " | \\#\\#<*\\r\\n?>{\\r|\\n}   ##skip comment in text\n"  //skip comment till inclusively newline
-  //  + " | \\<:@<#?setColumn> [ + <#?minChars>] \\>  \n"               //set column
     + " | \\<:@<setColumn>\\>  \n"               //set column ////
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"
@@ -364,7 +364,7 @@ public final class JZcmdSyntax {
     + "   | \\<\\.+n+flush\\><?newline><?flush> | \\<\\.+flush\\><?flush>\n"
     + "   | \\<\\.+n+close\\><?close> | \\<\\.+close\\><?close>].\n"
     + " \n"      //<?posIndent>
-    + " setColumn::=<numExpr> [ + <numExpr?minSpaces>] | + <numExpr?minSpaces>.\n"   ////
+    + " setColumn::=<numExpr> [ : <numExpr?minSpaces>] | : <numExpr?minSpaces>.\n"   ////
     + " \n"
     + " \n"
     + " \n"
