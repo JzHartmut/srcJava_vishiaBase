@@ -5,6 +5,8 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-12-06 Hartmut new: //JZcmd will be ignored, possibility to write a JZcmd script in the comment of a Java source file. 
+   * <li>2014-12-06 Hartmut chg: The definition of a return type of a subroutine was never used in the execution. Other concept. removed. 
    * <li>2014-08-10 Hartmut chg: endlineComment with // only till <+ to support start of text output in an endline comment line.
    * <li>2014-08-10 Hartmut chg: < :@ columnPos : minSpaces> uses : instead + as separator because + is a part of the columnpos expression.  
    * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
@@ -91,6 +93,7 @@ public final class JZcmdSyntax {
     + " JZcmd::= \n"
     + " [<*|==ZGen==?>==ZGen== ]\n"
     + " [<*|==JZcmd==?>==JZcmd== ]\n"
+    + " [<*|//JZcmd?>//JZcmd ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + " [{ ! checkJZcmd = <textValue?checkJZcmdFile> ; \n"
     + "  | ! checkXml = <textValue?checkXmlFile> ; \n"
@@ -99,15 +102,17 @@ public final class JZcmdSyntax {
     + "  | include <include> ; \n"
     + "  | currdir = <textDatapath?cd> ;\n"
     + " }] \n"
-    + " { [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
+    + " { ==endJZcmd==<*\\e?> \n"
+    + " | //endJZcmd<*\\e?> \n"
+    + " | [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
     + " | <DefVariable?> ; \n"
     + " | subtext  <subtext?subroutine> \n"
     + " | sub <subroutine> \n"
     + " | class <subClass> \n"
     + " | main ( ) \\{ <statementBlock?mainRoutine> \\} \n"
+    + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*\\n\\r?> ##line comment in C style\n"
     + " | /*<*|*/?>*/ ##block commment in C style\n"
-    + " | ==endJZcmd==<*\\e?> \n"
     + " } \\e.\n"
     + " \n"
     + " \n"
@@ -122,9 +127,9 @@ public final class JZcmdSyntax {
     + " } \\}. \n"
     + " \n"
     + " \n"
-    + " subroutine::= [<?type> String | Append | Openfile | Map | List | Obj |] <$?name> ( [{ <DefVariable?formalArgument> ? , }] ) \\{ [<statementBlock>] \\}. \n"
+    + " subroutine::= <$?name> ( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , }|] ) \\{ [<statementBlock>] \\}. \n"
     + " \n"
-    + " subtext::= <$?name> ( [ { <DefVariable?formalArgument> ? , }] ) \\<:\\><textExpr>\\<\\.\\>.\n"
+    + " subtext::= <$?name> ( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , }|] ) \\<:\\><textExpr>\\<\\.\\>.\n"
     + " \n"
     + " \n"
     + " statementBlock::= { <statement?> }.\n"
@@ -133,6 +138,7 @@ public final class JZcmdSyntax {
     + "   \\{ [<statementBlock>] \\} \n"
     + " | REM <*\\n\\r?> ##Remark like in batch files\n"
     + " | ::{:}                ##Skip over :::\n"
+    + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*|\\n|\\r|\\<+?>     ##line commment in C style but only till <+\n"
     + " | /*<*|*/?>*/          ##block commment in C style\n"
     + " | currdir = <textDatapath?cd> ;   ##set current directory\n"
@@ -161,7 +167,7 @@ public final class JZcmdSyntax {
     + " | <threadBlock> \n"
     + " | \\<+<textOut> \n"
     + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
-    + " | <cmdLineWait?cmdWait> \n"  ///
+    + " | <cmdLineWait?cmdWait> \n"  
     + " | <assignExpr> \n"
     + " | ; \n"
     + " .\n"
@@ -188,7 +194,7 @@ public final class JZcmdSyntax {
     + " | Set\\  <DefStringVar?setEnvVar> \n"
     + " | set\\  <DefStringVar?setEnvVar> \n"
     + " | SET\\  <DefStringVar?setEnvVar> \n"
-    + " .\n" ///
+    + " .\n" 
     + " \n"
     + " DefNumVar::= [const <?const>] <definePath?defVariable>  [ = <numExpr>].\n"  //a text or object or expression
     + " \n"
@@ -218,7 +224,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefFileset::= <definePath?defVariable> [ =  ( \n"
     + " [ commonpath = [<\"\"?commonPath>|<*;,)(\\ \\r\\n?commonPath>] , ] \n"
-    + " { [{ //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //<*\\n\\r?>}] ? , } \n"
+    + " { [{ //JZcmd | //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
     + " ) ] .\n"
     + " \n"
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
@@ -290,9 +296,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " \n"
-    + " condition::=<andExpr?> [{\\|\\| <andExpr?boolOrOperation>}].\n"  // || of <andExpr> 
+    + " condition::=<andExpr?> [{\\|\\| <?boolCheckOrOperation> <andExpr?boolOrOperation>}].\n"  // || of <andExpr> 
     + " \n"
-    + " andExpr::= <boolExpr?> [{ && <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
+    + " andExpr::= <boolExpr?> [{ && <?boolCheckAndOperation> <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
     + " \n"  
     + " boolExpr::= [<?boolNot> ! | not| NOT|]\n"
     + " [ ( <condition?parenthesisCondition> ) \n"                //boolean in paranthesis
@@ -304,9 +310,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " instanceof::=<objExpr> instanceof <staticJavaAccess>.\n"
     + " \n"
-    + " conditionInText::=<andExprInText?> [{\\|\\| <andExprInText?boolOrOperation>}].\n"  // || of <andExpr> 
+    + " conditionInText::=<andExprInText?> [{\\|\\| <?boolCheckOrOperation> <andExprInText?boolOrOperation>}].\n"  // || of <andExpr> 
     + " \n"
-    + " andExprInText::= <boolExprInText?> [{ && <boolExprInText?boolAndOperation>}].\n"    // && of <boolExpr>
+    + " andExprInText::= <boolExprInText?> [{ && <?boolCheckAndOperation> <boolExprInText?boolAndOperation>}].\n"    // && of <boolExpr>
     + " \n"  
     + " boolExprInText::= [<?boolNot> ! | not|]\n"
     + " [ ( <conditionInText?parenthesisCondition> ) \n"                //boolean in paranthesis
@@ -364,7 +370,7 @@ public final class JZcmdSyntax {
     + "   | \\<\\.+n+flush\\><?newline><?flush> | \\<\\.+flush\\><?flush>\n"
     + "   | \\<\\.+n+close\\><?close> | \\<\\.+close\\><?close>].\n"
     + " \n"      //<?posIndent>
-    + " setColumn::=<numExpr> [ : <numExpr?minSpaces>] | : <numExpr?minSpaces>.\n"   ////
+    + " setColumn::=<numExpr> [ : <numExpr?minSpaces>] | : <numExpr?minSpaces>.\n"  
     + " \n"
     + " \n"
     + " \n"

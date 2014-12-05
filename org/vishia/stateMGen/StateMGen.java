@@ -20,7 +20,7 @@ import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.cmd.JZcmdFilepath;
 import org.vishia.stateMachine.StateCompositeBase;
-import org.vishia.states.StateAddParallel;
+import org.vishia.states.StateParallel;
 import org.vishia.states.StateComposite;
 import org.vishia.states.StateMachine;
 import org.vishia.states.StateSimple;
@@ -651,6 +651,10 @@ public class StateMGen {
     public String value;
   }
   
+  
+  /**This is the root class for the Zbnf parsing result.
+   * It refers to the main syntax component.
+   */
   public static class ZbnfResultData extends ZbnfStateCompositeBase
   {
 
@@ -659,6 +663,14 @@ public class StateMGen {
     public List<String> includeLines = new LinkedList<String>();
     
     public List<String> statefnargs = new LinkedList<String>();
+    
+    /**String of all formal arguments for the state routines built from ZBNF result statefnarg. */
+    public StringBuilder formalArgs;
+    
+    /**String of all calling arguments for the state routines built from ZBNF result statefnarg. */
+    public StringBuilder callingArgs;
+    
+    
     
     private final Map<String, String> idxStateVariables = new HashMap<String, String>();
     
@@ -672,7 +684,19 @@ public class StateMGen {
     
     public void add_variable(ZbnfNameValue inp){ variables.put(inp.name, inp.value); }
     
-    public void set_statefnarg(String arg){ statefnargs.add(arg); }
+    public void set_statefnarg(String arg){ 
+      arg = arg.trim();
+      int posIdentifier = arg.lastIndexOf(' ') +1;
+      String ident = arg.substring(posIdentifier);
+      statefnargs.add(arg); 
+      if(formalArgs ==null){ 
+        formalArgs = new StringBuilder(arg);
+        callingArgs = new StringBuilder(ident);
+      } else {
+        formalArgs.append(", ").append(arg);
+        callingArgs.append(", ").append(ident);
+      }
+    }
    
     public void set_includeLine(String arg){ includeLines.add(arg); }
     
@@ -780,7 +804,7 @@ public class StateMGen {
   
   
   
-  static class GenStateParallel extends StateAddParallel{
+  static class GenStateParallel extends StateParallel{
     
     GenStateParallel(StateComposite enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateSimple[zbnfComposite.nrofSubstates]
