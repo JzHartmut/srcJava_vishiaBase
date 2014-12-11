@@ -947,10 +947,10 @@ public class ZbnfSyntaxPrescript
     throws ParseException
     {
       
-      { CharSequence sInput = spInput.getCurrent(30);
-        if(StringFunctions.startsWith(sInput, "<?return"))
-          stop();
-      }
+      CharSequence sCheck = spInput.getCurrent(30);
+      if(StringFunctions.startsWith(sCheck, "<?return"))
+        stop();
+     
       //first test wether <?semantic> is written:
       convertAssociatedSemantic(spInput);
       if(spInput.startsWith("<$NoWhiteSpaces>"))
