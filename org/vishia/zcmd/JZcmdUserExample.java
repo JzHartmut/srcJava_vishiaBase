@@ -1,6 +1,10 @@
 package org.vishia.zcmd;
 
 import java.io.File;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -16,38 +20,42 @@ public class JZcmdUserExample
   public final Map<String, DataAccess.Variable<Object>> testVariables = new TreeMap<String, DataAccess.Variable<Object>>();
 
 
-  public JZcmdUserExample(){
+  
+  private final PrintWriter out;
+  
+  public JZcmdUserExample(Writer out){
+    this.out = new PrintWriter(out);
     DataAccess.Variable<Object> var;
   }
 
   
   @SuppressWarnings("boxing")
   public void methodTest(float x, int y){
-    System.out.printf("x=%f, y=%d\n", x,y);
+    out.printf("x=%f, y=%d\n", x,y);
     
   }
   
   @SuppressWarnings("boxing")
   public void methodTest(char cc){
-    System.out.printf("char=%c\n", cc);
+    out.printf("char=%c\n", cc);
     
   }
   
   @SuppressWarnings("boxing")
   public void methodTest(char cc, String text){
-    System.out.printf("char=%c, text=%s\n", cc, text);
+    out.printf("char=%c, text=%s\n", cc, text);
     
   }
   
   
   public void methodTest(String text){
-    System.out.printf("text=%s\n", text);
+    out.printf("text=%s\n", text);
     
   }
   
   
   public void methodTest(File file){
-    System.out.printf("file=%s\n", file.getPath());
+    out.printf("file=%s\n", file.getPath());
     
   }
   

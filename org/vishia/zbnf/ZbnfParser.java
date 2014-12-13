@@ -126,7 +126,9 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
-   * <li>2014-06-17 Hartmut new: {@link #nRightestLineError}, chg: {@link #getFoundedInputOnError()} to write out the line of error, test it.
+   * <li>2014-12-14 Hartmut chg: Now returns the line and column and the name of the input file on error if that information are available.
+   *   There are available for a {@link org.vishia.util.StringPartFromFile} which is used usual as input for the parser.
+   *   Changed routines: {@link #getSyntaxErrorReport()}, {@link #getFoundedInputOnError()}, new: {@link #buildFoundedInputOnError()}.
    * <li>2014-06-17 Hartmut new: {@link #setXmlSrcline(boolean)} and {@link #setXmlSrctext(boolean)} to control 
    *   whether srcline="xx" and srctext="text" will be written to a XML output  
    * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
@@ -1744,6 +1746,9 @@ public class ZbnfParser
         int posInput = (int)input.getCurrentPosition() + posInputbase;
         if(posRightestError < posInput)
         { posRightestError = posInput;
+          int[] column1 = new int[1];
+          lineError = input.getLineAndColumn(column1);
+          columnError = column1[0];
           sRightestError = input.getCurrentPart(80);
           sExpectedSyntax = "";
           if(listParseResultOnError != null)
@@ -1770,16 +1775,18 @@ public class ZbnfParser
        */
       private String getSemanticTreeForErrorMsg()
       { 
-        StringBuffer sbSemantic = new StringBuffer(100);
+        StringBuilder sbSemantic = new StringBuilder(200);
         
         PrescriptParser syntaxPreScript1 = PrescriptParser.this;
+        String sep = "";
         while(syntaxPreScript1 != null)
         {
-          { sbSemantic.insert(0, '.');
-            sbSemantic.insert(0, syntaxPreScript1.sSemanticIdent);
-            //sbSemantic.append('.');
-            //sbSemantic.append(syntaxPreScript1.sSemanticIdent);
+          { //sbSemantic.insert(0, '.');
+            //sbSemantic.insert(0, syntaxPreScript1.sSemanticIdent);
+            sbSemantic.append(sep);
+            sbSemantic.append(syntaxPreScript1.sSemanticIdent);
             syntaxPreScript1 = syntaxPreScript1.parentPrescriptParser;
+            sep = " <- ";
           }
         }
         
@@ -1895,7 +1902,7 @@ public class ZbnfParser
   /** Set if constant syntax (terminate morphems) also should stored. See setStoringConstantSyntax()*/
   protected boolean bConstantSyntaxAsParseResult = false;
 
-  /**The main syntaxprescript setted from {@link setSyntax(StringPart)}. */
+  /**The main syntax prescript set from {@link setSyntax(StringPart)}. */
   private ZbnfSyntaxPrescript mainScript;
   
   protected PrescriptParser prescriptParserTopLevel;
@@ -1903,11 +1910,11 @@ public class ZbnfParser
   //protected PrescriptParser.SubParser subParserTopLevel;
 
   /** The string and position found on the rightest position of an parse fault.
-   * It is necessarry to report a parsing error.
+   * It is necessary to report a parsing error.
    */
   protected CharSequence sRightestError = "--noError--";
 
-  protected int nRightestLineError;
+  //protected int nRightestLineError;
   
   /**Required syntax on rightest parsing error position*/
   protected String sExpectedSyntax = "--noError--";
@@ -1925,11 +1932,20 @@ public class ZbnfParser
    */
   ArrayList<ZbnfParseResultItem> listParseResultOnError  = null;
 
-  /** The string and position found on the rightest position of an parse fault.
-   * It is necessarry to report a parsing error.
+  /**The position of the most right parse fault. The information will be set newly any time if the parser founds 
+   * a non matching position more right than the last one.
    */
   protected long posRightestError = 0;
+  
+  /**The lineError and columnError will be set if the input supports it, see {@link StringPart#getLineAndColumn(int[])}. 
+   * It is necessary to report a parsing error.
+   */
+  protected int lineError, columnError;
 
+  /**The file or name of the {@link StringPart#getInputfile()} which was parsed on the rightest error position. */
+  protected String sFileError;
+  
+  
   /** Some mode bits, see m...Mode */
   //private int bitMode;
 
@@ -2491,11 +2507,11 @@ public class ZbnfParser
     
     //the old parserStore may be referenced from the evaluation, use anyway a new one!
     parserStoreTopLevel = new ZbnfParserStore(); 
-    posRightestError = 0;
+    posRightestError = 0; lineError = 0; columnError = 0; sFileError = null;
     sExpectedSyntax = null;
     alreadyParsedCmpn.clear();
     sRightestError = input.getCurrentPart(80); 
-    nRightestLineError = input.getLineAndColumn(null);
+    //nRightestLineError = input.getLineAndColumn(null);
     prescriptParserTopLevel = new PrescriptParser(null, mainScript, "topLevelSyntax", input, 0/*cc080318 , parserStore, null*/); 
     //subParserTopLevel = prescriptParserTopLevel.new SubParser(mainScript, null, null, 0);  //true);
     final ZbnfParserStore addParseResult;
@@ -2682,14 +2698,24 @@ public class ZbnfParser
    *
    * @return The part of input on error position.
    */
-  public String getFoundedInputOnError()
+  public StringBuilder buildFoundedInputOnError()
   { StringBuilder u = new StringBuilder(120);
-    
-    //TODO use u to correct
-    if(nRightestLineError !=0){ 
-      u.append("@line:").append(nRightestLineError).append(": ");
+    int column = getInputColumnOnError();
+    int line = getInputLineOnError();
+    CharSequence sFile = getInputFileOnError();
+    u.append("ZbnfParser ERROR ");
+    if(sFile !=null){
+      u.append(" in file ").append(sFile);
     }
-    u.append(sRightestError);
+    if(line ==0 && column == 0){
+      u.append(" @char position: "); 
+      u.append(getInputPositionOnError());
+      u.append("=0x" + Long.toString(getInputPositionOnError(),16) + " ");
+    } else {
+      u.append(" @line, col: ").append(line).append(", ").append(column);
+    }
+    
+    u.append(" >>>>>").append(sRightestError);
     if(u.length() < 80){u.append("<<<<end of file"); }
     for(int i=0; i < u.length(); ++i) {
       char cc = u.charAt(i);
@@ -2697,9 +2723,13 @@ public class ZbnfParser
         u.setCharAt(i, '|'); 
       } 
     }
-    return u.toString();
+    return u;
   }
 
+  /**Invokes {@link #buildFoundedInputOnError()} with String as return value.
+   * If possible use only {@link #buildFoundedInputOnError()} if a CharSequence is sufficient, which are processed in this time.
+   */
+  public String getFoundedInputOnError(){ return buildFoundedInputOnError().toString(); }
   
   /** Returns the position of error in input string. 
    * It is the same number as in report.
@@ -2708,6 +2738,13 @@ public class ZbnfParser
   { return posRightestError;
   }
 
+  public int getInputLineOnError(){ return lineError; }
+  
+  
+  public int getInputColumnOnError(){ return columnError; }
+  
+  public String getInputFileOnError(){ return sFileError; }
+  
   
   /**throws a ParseException with the infos of syntax error from last parsing.
    * This method is simple callable if a routine should be aborted on syntax error.
@@ -2729,12 +2766,7 @@ public class ZbnfParser
    */
   public String getSyntaxErrorReport()
   { String sLastFoundedResultOnError = getLastFoundedResultOnError();
-    StringBuilder u = new StringBuilder(1000);
-    
-    u.append("Parse ERROR at input:"); 
-    u.append(getInputPositionOnError());
-    u.append("(0x" + Long.toString(getInputPositionOnError(),16) + ")");
-    u.append(" >>>>" + getFoundedInputOnError());
+    StringBuilder u = buildFoundedInputOnError();
     u.append("\nexpected: ----------------------------------------------"); 
     u.append(getExpectedSyntaxOnError());
     u.append("\nfounded before: ----------------------------------------------"); 
