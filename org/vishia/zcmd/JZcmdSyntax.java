@@ -109,6 +109,7 @@ public final class JZcmdSyntax {
     + " | //<*\\n\\r?> ##line comment in C style\n"
     + " | /*<*|*/?>*/ ##block commment in C style\n"
     + " | <DefVariable?> ; \n"
+    + " | <statement?>\n"
     + " | subtext  <subtext?subroutine> \n"
     + " | sub <subroutine> \n"
     + " | class <subClass> \n"
