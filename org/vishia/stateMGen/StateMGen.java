@@ -824,13 +824,13 @@ public class StateMGen {
   
   
   
-  static class GenStateTrans extends StateSimple.StateTrans
+  static class GenStateTrans extends StateSimple.Trans
   {
     
     public final ZbnfTrans zsrcTrans;
     
-    GenStateTrans(ZbnfTrans zsrcTrans, StateSimple state, int[] dstKeys){
-      state.super(dstKeys);
+    GenStateTrans(int priority, ZbnfTrans zsrcTrans, StateSimple state, int[] dstKeys){
+      state.super(priority, dstKeys);
       this.zsrcTrans = zsrcTrans;
     }
   }
@@ -981,6 +981,7 @@ public class StateMGen {
         int zTransitions = zbnfState.trans.size();
         if(zTransitions >0){
           genState.createTransitions(zTransitions);
+          int priority = 0;
           for(ZbnfTrans zbnfTrans: zbnfState.trans){
             int nrofForks = zbnfTrans.dstStates !=null ? 1 + zbnfTrans.dstStates.size() : 1; 
             int[] dstKeys = new int[nrofForks];
@@ -994,7 +995,7 @@ public class StateMGen {
             StateSimple dstState1 = genStm.allStates.get(zbnfTrans.dstState);
             if(dstState1 == null) throw new IllegalArgumentException("faulty dst state in transition;" + zbnfTrans.dstState + "; from state " + genState.getName());
             dstKeys[++ixDst] = dstState1.hashCode();
-            GenStateTrans trans = new GenStateTrans(zbnfTrans, genState, dstKeys);
+            GenStateTrans trans = new GenStateTrans(++priority, zbnfTrans, genState, dstKeys);
             genState.addTransition(trans);
             if(zbnfTrans.time !=null) { //condition is a time condition.
               stateInfo.timeCondition = zbnfTrans.time;
