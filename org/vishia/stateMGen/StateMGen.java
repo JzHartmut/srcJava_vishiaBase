@@ -716,7 +716,7 @@ public class StateMGen {
 
     
     GenStateMachine(ZbnfResultData zsrcFile, StateSimple[] aFirstStates) 
-    { super(aFirstStates);
+    { super("StateMGen", aFirstStates);
       this.zsrcFile = zsrcFile;
     }
     
