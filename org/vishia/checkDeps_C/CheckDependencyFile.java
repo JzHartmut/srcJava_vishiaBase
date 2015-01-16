@@ -677,7 +677,7 @@ public class CheckDependencyFile
     } else {
       String sFileIncl = sLine.substring(from+1, to);
       console.reportln(MainCmdLogging_ifc.debug, "processIncludeLine - included File; " + sFileIncl);
-      if(sLine.contains("ccs_1p_BB_limit_signal_processing_public"))
+      if(sLine.contains("../2src/ccs_reflection_offset.crefl"))
         stop();
       
       //is the file checked already? Search it in the indexes of short and absolute paths:

@@ -19,7 +19,6 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.cmd.JZcmdFilepath;
-import org.vishia.stateMachine.StateCompositeBase;
 import org.vishia.states.StateParallel;
 import org.vishia.states.StateComposite;
 import org.vishia.states.StateMachine;
@@ -716,7 +715,7 @@ public class StateMGen {
 
     
     GenStateMachine(ZbnfResultData zsrcFile, StateSimple[] aFirstStates) 
-    { super("StateMGen", aFirstStates);
+    { super(aFirstStates);
       this.zsrcFile = zsrcFile;
     }
     
