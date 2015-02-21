@@ -38,26 +38,19 @@ import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParser;
 
 
-/**Script executer and text generator with main.
- * 
- * <br>
+/**This is the Script executer and text generator started form command line.
+ * The simplest form is:
+ * <pre>
+ * java path/to/zbnf.jar org.vishia.zcmd.JZcmd path/to/scriptFile
+ * </pre>
+ * <br><br>
+ * This class contains the translator which uses the ZBNF parser. The core executer is {@link JZcmdExecuter}.
+ * The translated script is stored in an instance of {@link JZcmdScript} which are both parts of the component
+ * <code>srcJava_vishiaBase</code>.  
  * <br>
  * <b>Execution from command line or from Java with String[]-args:</b>
  * <br>
  * {@link #main(String[])} is the command line start. Arguments:
- * <pre>
-INPUT          pathTo JZcmd-File to execute
--t:OUTEXT      pathTo text-File for output
--debug:TEST.xml pathTo XML output of parsed script
--u:userArgs
---help         show the help for command line and the syntax
---currdir=PATH Set the currdir variable.
- * </pre>
- * The simplest form is:
- * <pre>
- * java path/to/zbnf.jar org.vishia.zcmd.JZcmd path/to/scriptfile
- * </pre>
- * <br>
  * {@link #smain(String[])} is the same as {@link #main(String[])} but without exit the VM. 
  * It can be used to invoke main from inside another Java program. 
  * <br>
@@ -237,7 +230,16 @@ public class JZcmd implements JZcmdEngine, Compilable
   }
 
 
-  /**main started from java*/
+  /**main started from java command line.
+   * <pre>
+INPUT          pathTo JZcmd-File to execute
+-t:OUTEXT      pathTo text-File for output
+-debug:TEST.xml pathTo XML output of parsed script
+-u:userArgs
+--help         show the help for command line and the syntax
+--currdir=PATH Set the currdir variable.
+   * </pre>
+   */
   public static void main(String [] sArgs)
   { 
     try{ //for unexpected exceptions
@@ -827,7 +829,6 @@ public class JZcmd implements JZcmdEngine, Compilable
       //cannot compile
       throw new ScriptException(exc);
     }
-    // TODO Auto-generated method stub
     return compiledScript;
   }
 

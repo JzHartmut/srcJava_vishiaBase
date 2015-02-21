@@ -1,5 +1,17 @@
 package org.vishia.zcmd;
 
+import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZcmdScript;
+
+/**This class contains the syntax as ZBNF string for a JZcmd script.
+ * See {@link JZcmd}, {@link JZcmdScript}, {@link JZcmdExecuter}.
+ * The syntax can be shown by command line
+ * <pre>
+ * java path/to/zbnf.jar org.vishia.zcmd.JZcmd --help
+ * </pre>
+ * @author Hartmut Schorrig
+ *
+ */
 public final class JZcmdSyntax {
 
   
