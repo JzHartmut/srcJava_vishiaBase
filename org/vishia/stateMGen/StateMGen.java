@@ -535,6 +535,17 @@ public class StateMGen {
   }
   
   
+  
+  
+  public static class ZbnfJoinState
+  {
+    public String name;
+  }
+  
+  
+  
+  
+  
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
    * 
    */
@@ -557,7 +568,8 @@ public class StateMGen {
     
     private List<String> joinStatesSrc;
     
-    public List<ZbnfSimpleState> joinStates;
+    //public List<ZbnfSimpleState> joinStates;
+    public List<String> joinStates;
     
     public String event;
     
@@ -619,6 +631,14 @@ public class StateMGen {
     
     public void set_history(){
     	//TODO assign to last add_dstState
+    }
+    
+    
+    public ZbnfJoinState new_joinState(){ return new ZbnfJoinState(); }
+    
+    public void add_joinState(ZbnfJoinState val){ 
+      if(joinStates == null){ joinStates = new LinkedList<String>(); }
+      joinStates.add(val.name);  //only the name is need, garbage the val.
     }
     
     //public void add_dstState(DstState val){} 
@@ -785,9 +805,6 @@ public class StateMGen {
     }
     
     
-    /**Exports the protected method for this package, respectively this class. */
-    void genStatePrepareTransitions(){ super.prepareTransitions(); }
-    
   }
   
   
@@ -802,8 +819,6 @@ public class StateMGen {
       stateId = zbnfComposite.stateName;
     }
     
-    /**Exports the protected method for this package, respectively this class. */
-    void genStatePrepareTransitions(){ super.prepareTransitions(); }
     
   }
   
@@ -818,9 +833,6 @@ public class StateMGen {
       stateId = zbnfComposite.stateName;
     }
     
-    /**Exports the protected method for this package, respectively this class. */
-    void genStatePrepareTransitions(){ super.prepareTransitions(); }
-    
   }
   
   
@@ -834,8 +846,6 @@ public class StateMGen {
       stateId = zbnfComposite.stateName;
     }
     
-    /**Exports the protected method for this package, respectively this class. */
-    void genStatePrepareTransitions(){ super.prepareTransitions(); }
     
   }
   
@@ -934,8 +944,6 @@ public class StateMGen {
     gatherAllTransitions();
     
     genStm.prepare();
-    
-    prepareAllTransitions();
     return genStm;
     
   }
@@ -1049,14 +1057,13 @@ public class StateMGen {
    */
   void gatherAllTransitions() {
     for(StateSimple genState : genStm.listStates) {
-    //for(Map.Entry<String, StateSimple> entry : genStm.allStates.entrySet()) {
-      //StateSimple genState = entry.getValue();
+      StateSimple.PlugStateSimpleToGenState plugState = genState.new PlugStateSimpleToGenState();
       GenStateInfo stateInfo = (GenStateInfo)genState.auxInfo();
       ZbnfState zbnfState = stateInfo.zsrcState;
       if(zbnfState.trans !=null && zbnfState.trans.size() >0) {
         int zTransitions = zbnfState.trans.size();
         if(zTransitions >0){
-          genState.createTransitions(zTransitions);
+          plugState.createTransitions(zTransitions);
           for(ZbnfTrans zbnfTrans: zbnfState.trans){
             int nrofForks = zbnfTrans.dstStates !=null ? 1 + zbnfTrans.dstStates.size() : 1; 
             int[] dstKeys = new int[nrofForks];
@@ -1070,7 +1077,20 @@ public class StateMGen {
             StateSimple dstState1 = genStm.allStates.get(zbnfTrans.dstState);
             if(dstState1 == null) throw new IllegalArgumentException("faulty dst state in transition;" + zbnfTrans.dstState + "; from state " + genState.getName());
             dstKeys[++ixDst] = dstState1.hashCode();
-            GenStateTrans trans = new GenStateTrans(zbnfTrans, genState, dstKeys);
+            StateSimple.Trans trans;
+            if(zbnfTrans.joinStates !=null){
+              trans = genState.new TransJoin("Trans_" + genState.getName() + zbnfTrans.nrTrans, dstKeys); 
+              int[] joinKeys = new int[zbnfTrans.joinStates.size()];
+              int ixJoin = -1;
+              for(String sJoinState: zbnfTrans.joinStates){
+                StateSimple joinState1 = genStm.allStates.get(sJoinState);
+                if(joinState1 == null) throw new IllegalArgumentException("faulty join state in transition;" + sJoinState + "; from state " + genState.getName());
+                joinKeys[++ixJoin] = joinState1.hashCode();
+              }
+              ((StateSimple.TransJoin)trans).srcStates(joinKeys);  //set the hashes of the join sources.
+            } else {
+              trans = new GenStateTrans(zbnfTrans, genState, dstKeys);
+            }
             if(zbnfTrans.time !=null) { //condition is a time condition.
               stateInfo.timeCondition = zbnfTrans.time;
               //genState.transTimeout = trans;
@@ -1078,7 +1098,7 @@ public class StateMGen {
               rootStateInfo.hasTimer = true;
             } else {
             }
-            genState.addTransition(trans);
+            plugState.addTransition(trans);
             
           }
         }
@@ -1088,18 +1108,6 @@ public class StateMGen {
 
 
   
-  
-  void prepareAllTransitions() {
-    for(StateSimple genState : genStm.listStates) {
-      genState.prepareTransitions();
-      /*
-      if(genState instanceof GenStateSimple) {
-        ((GenStateSimple)genState).genStatePrepareTransitions();
-      } else if(genState instanceof GenStateComposite) {
-        ((GenStateComposite)genState).genStatePrepareTransitions();  //same method like GenStateSimple
-      }*/
-    }
-  }
   
   
   
