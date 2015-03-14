@@ -23,6 +23,29 @@ import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
 
+/**This class reads any input text file with given syntay and creates a translated file from that data.
+ * It uses a {@link JZcmdScript} to describe the text generation and the {@link JZcmdExecuter} to generate the text.
+ * The translator from the generate control script is parsed with {@link JZcmd} contained in this package.
+ * The translation process is full script controlled. Therewith the user can define and change the translation 
+ * without study the complexly parsing and translation algorithm in Java, only adapt the maybe given scripts or writing 
+ * own scripts based on examples and the knowledge of the script syntax.
+ * <pre>
+ User                                       Internal                             User 
+ input data --------> ZBNF parser --------> Java data -----> JZcmdExecuter ----> output data
+ (textual)                 ^                 image               ^               usual textual
+ ==========                |                                     |               =============s
+                      ZBNF syntax                            JZcmdScript
+                      script                                     ^
+                      ==========                                 |
+                                                                 |
+                                            JZcmd   -------> JZcmd using
+                                            generation       ZBNF parser
+                                            script
+                                            ==========
+ * </pre>
+ * @author hartmut
+ *
+ */
 public class Zbnf2Text extends Zbnf2Xml
 {
   
