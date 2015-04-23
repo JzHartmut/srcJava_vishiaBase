@@ -305,9 +305,10 @@ public class ZbnfJavaOutput
     //The first child item:
     Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
     //loop of all first level elements, the output is written directly in topLevelOutput:
+    DstInstanceAndClass dst = new DstInstanceAndClass(null, topLevelInstance, topLevelClass, false);
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
-      writeZbnfResult(null, topLevelClass, topLevelInstance, null, child, 1);
+      writeZbnfResult(dst, null, child, 1);
     }
   
     return errors == null ? null : errors.toString();
@@ -361,9 +362,10 @@ public class ZbnfJavaOutput
     //The first child item:
     Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
     //loop of all first level elements, the output is written directly in topLevelOutput:
+    DstInstanceAndClass dst = new DstInstanceAndClass(null, topLevelOutput, topLevelOutput.getClass(), false);
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
-      instance.writeZbnfResult( null, topLevelOutput.getClass(), topLevelOutput, null, child, 1);
+      instance.writeZbnfResult( dst, null, child, 1);
     }
   }
 
@@ -386,8 +388,9 @@ public class ZbnfJavaOutput
     //The first child item:
     ZbnfParseResultItem childItem = resultItem.nextSkipIntoComponent(null /*no parent*/);
     //loop of all first level elements, the output is written directly in topLevelOutput:
+    DstInstanceAndClass dst = new DstInstanceAndClass(null, topLevelOutput, topLevelOutput.getClass(), false);
     while(childItem != null)
-    { instance.writeZbnfResult( null, topLevelOutput.getClass(), topLevelOutput, null, childItem, 1);
+    { instance.writeZbnfResult( dst, null, childItem, 1);
       childItem = childItem.next(resultItem);
     }
   }
@@ -407,15 +410,13 @@ public class ZbnfJavaOutput
    * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */  
   private void writeZbnfResult
-  ( DstInstanceAndClass parent, Class clazz, Object instance  
+  ( DstInstanceAndClass componentxxx  
   , String semanticArg    
   , ZbnfParseResultItem resultItem
   , int recursion
   ) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   {
-    DstInstanceAndClass componentxxx = new DstInstanceAndClass(parent, instance, clazz, false);
-    
     final String semantic1 = resultItem.getSemantic();
     /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
     final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
@@ -458,9 +459,9 @@ public class ZbnfJavaOutput
            * That instance may also be an new element of a container
            */
           /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
-          DstInstanceAndClass compn = new DstInstanceAndClass(componentxxx, componentsInstance.instance, componentsInstance.clazz, false);
-          if(false && compn.instance instanceof SetLineColumn_ifc){
-            SetLineColumn_ifc check = (SetLineColumn_ifc) compn.instance;
+          //DstInstanceAndClass compn = new DstInstanceAndClass(componentxxx, componentsInstance.instance, componentsInstance.clazz, false);
+          if(false && componentsInstance.instance instanceof SetLineColumn_ifc){
+            SetLineColumn_ifc check = (SetLineColumn_ifc) componentsInstance.instance;
             int mode = check.setLineColumnFileMode();
             final int inputLine, inputColumn;
             String inputFile;
@@ -488,7 +489,7 @@ public class ZbnfJavaOutput
           
           
           
-            writeZbnfResult(componentxxx, componentsInstance.clazz, componentsInstance.instance, null, childItem, recursion+1);
+            writeZbnfResult(componentsInstance, null, childItem, recursion+1);
           }
           if(componentsInstance.shouldAdd)
           {
@@ -581,7 +582,7 @@ public class ZbnfJavaOutput
   
   
   
-  DstInstanceAndClass searchCreateMethod(Class<?> inClazz, Object instance, String semantic) 
+  DstInstanceAndClass searchCreateMethod(Class<?> inClazz, Object instance, String semantic, DstInstanceAndClass parent) 
   throws IllegalArgumentException, IllegalAccessException
   {
     Method method = searchMethod(inClazz, "new_" + semantic, new Class[1][0]);
@@ -593,7 +594,7 @@ public class ZbnfJavaOutput
       catch(Exception exc)
       { throw new IllegalAccessException("exception inside: " + method.toString()); 
       }
-      return new DstInstanceAndClass(null, childOutputInstance, childClass, true);
+      return new DstInstanceAndClass(parent, childOutputInstance, childClass, true);
     }
     else return null;
   }
@@ -694,7 +695,7 @@ public class ZbnfJavaOutput
     else
     { Class<?> clazz = component.instance.getClass(); //search in the class
       do {
-        child = searchCreateMethod(clazz, component.instance, semantic);
+        child = searchCreateMethod(clazz, component.instance, semantic, component);
         
         if(child == null)
         { //if(!bOnlyMethods)
