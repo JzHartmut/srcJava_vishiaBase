@@ -250,7 +250,7 @@ public class Zbnf2Text extends Zbnf2Xml
      * @param sFileScript The script to generate
      * @param sFileOut the produced outfile.
      */
-    public void addJZcmd(String sFileScript, String sFileOut){
+    public void addJbat(String sFileScript, String sFileOut){
       Out out = new Out();
       out.sFileOut = sFileOut;
       out.sFileScript = sFileScript;

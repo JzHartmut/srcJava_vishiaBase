@@ -144,16 +144,23 @@ import org.vishia.util.StringPartScan;
  * <br><br> 
  * <br><br> 
  * <b>Special functionality for storing the line and column number of the input text</b> 
- * <br><br> 
- * The user class should have an element <code>public int inputLine_</code> or a method <code>set_inputLine_(int)</code>
- * to store the line number of the input text. To capture the line number a {@link org.vishia.util.StringPartFromFileLines}
- * have to be used for input for the ZBNF parser, because only this class overrides the {@link org.vishia.util.StringPart#getLineCt()}
- * method with a really line number. This class reads a file line per line.
- * <br><br> 
- * The user class should have an element <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
- * if the input column of the parsed text should be stored. 
- * This is important for example if line structures were parsed.
  * <br><br>
+ * The knowledge of the column inside a source line may be important for evaluating the result. That is for example for indented texts
+ * whereby the indentation have a semantic meaning. The line and file may be important especially for some information
+ * which should refer to the source.
+ * <br><br>
+ * The the user's class can implement {@link SetLineColumn_ifc}. Then the column position, the line, the file 
+ * will be stored in the users instance. If only the column is necessary, only it will be stored. The effort to get the line
+ * and the file will be higher, therefore it is not gotten if not necessary. The parser knows the column, line and file it is 
+ * parse result if the input allows to detect it. To capture the line number a {@link org.vishia.util.StringPartFromFileLines}
+ * have to be used for input for the ZBNF parser, because only this class overrides the {@link org.vishia.util.StringPart#getLineCt()}
+ * method with a really line number. This class reads a file line per line.    
+ * <br><br> 
+ * There is an older form: The user class can have an element <code>public int inputLine_</code> or a method <code>set_inputLine_(int)</code>
+ * to store the line number of the input text, respectively <code>public int inputColumn_</code> or a method <code>set_inputColumn_(int)</code>
+ * if the input column of the parsed text should be stored. It will be checked whether that fields are existent,
+ * then this information will be stored.
+ * <br><br> 
  * <br><br>
  * <b>Error detecting and handling</b>
  * <br><br>
@@ -168,23 +175,24 @@ public class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2015-04-25 Hartmut chg: Restructured to get file and line for the top level parse result. Gardening. 
    * <li>2014-05-23 Hartmut chg: remove invocation of set_inputColumn_ and set_InputInfo_. Instead
    *   use interface {@link SetLineColumn_ifc}. It is faster, because a method which does not exists often
    *   should not be invoked. Only 'instanceof' is checked. This needs adaption of user classes
    *   which uses the method set_inputColumn_(int).
-   * <li>2014-05-22 Hartmut chg: instead trySetInputLine {@link #trySetInputInfo(Component, int, int, String)}.
+   * <li>2014-05-22 Hartmut chg: instead trySetInputLine {@link #trySetInputInfo(DstInstanceAndClass, int, int, String)}.
    *   The destination class should provide <code> boolean set_InputInfo_(int, int, String)</code> 
    * <li>2014-04-27 Hartmut new: ctor without {@link MainCmdLogging_ifc} for simple usage. 
    * <li>2014-01-01 Hartmut new: {@link #parseFileAndFillJavaObject(Object, File, String)}
-   * <li>2014-01-01 Hartmut new: {@link #trySetInputLine(Component, int)}. Uses {@link DataAccess} first time.
+   * <li>2014-01-01 Hartmut new: {@link #trySetInputLine(DstInstanceAndClass, int)}. Uses {@link DataAccess} first time.
    *   there are some parallel functionality of this class and DataAccess. The DataAccess is the more universal one. 
-   * <li>2013-09-02 Hartmut chg: The {@link Component#clazz} is build from the instance instead from the
+   * <li>2013-09-02 Hartmut chg: The {@link DstInstanceAndClass#clazz} is build from the instance instead from the
    *   given clazz Argument. It means an derived instance can contain other set_, add_method.
    * <li>2012-12-26 Hartmut new: {@link #writeInField(Field, Object, ZbnfParseResultItem)} supports a char field too,
    *   it gets the first char of a parsed string or the numeric value converted in a char (ASCII, UTF-16).
    * <li>2012-10-07 Hartmut bugfix on writing in a public List<String> getParsedString() should be used too.
    * <li>2012-10-07 Hartmut chg: error text output, able to use for {@link org.vishia.msgDispatch.MsgDispatchSystemOutErr}
-   * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(Component, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
+   * <li>2011-09-03 Hartmut chg: {@link #writeZbnfResult(DstInstanceAndClass, ZbnfParseResultItem, int)}: check semantic, if empty, does nothing
    * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
    * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
    * <li>2010-12-02 Hartmut new: Up to now this version variable, its description contains the version history.
@@ -299,7 +307,7 @@ public class ZbnfJavaOutput
     //loop of all first level elements, the output is written directly in topLevelOutput:
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
-      writeZbnfResult( new Component(null, topLevelClass, topLevelInstance), child, 1);
+      writeZbnfResult(null, topLevelClass, topLevelInstance, null, child, 1);
     }
   
     return errors == null ? null : errors.toString();
@@ -355,7 +363,7 @@ public class ZbnfJavaOutput
     //loop of all first level elements, the output is written directly in topLevelOutput:
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
-      instance.writeZbnfResult( new Component(null, topLevelOutput.getClass(), topLevelOutput), child, 1);
+      instance.writeZbnfResult( null, topLevelOutput.getClass(), topLevelOutput, null, child, 1);
     }
   }
 
@@ -379,7 +387,7 @@ public class ZbnfJavaOutput
     ZbnfParseResultItem childItem = resultItem.nextSkipIntoComponent(null /*no parent*/);
     //loop of all first level elements, the output is written directly in topLevelOutput:
     while(childItem != null)
-    { instance.writeZbnfResult( new Component(null, topLevelOutput.getClass(), topLevelOutput), childItem, 1);
+    { instance.writeZbnfResult( null, topLevelOutput.getClass(), topLevelOutput, null, childItem, 1);
       childItem = childItem.next(resultItem);
     }
   }
@@ -399,12 +407,15 @@ public class ZbnfJavaOutput
    * @throws InstantiationException if a matching class is found but it can't be instanciated. 
    */  
   private void writeZbnfResult
-  ( Component component
+  ( DstInstanceAndClass parent, Class clazz, Object instance  
+  , String semanticArg    
   , ZbnfParseResultItem resultItem
   , int recursion
   ) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   {
+    DstInstanceAndClass componentxxx = new DstInstanceAndClass(parent, instance, clazz, false);
+    
     final String semantic1 = resultItem.getSemantic();
     /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
     final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
@@ -415,25 +426,40 @@ public class ZbnfJavaOutput
         
       if(resultItem.isComponent())
       { 
-        /**Try to save the content also if it is an component. */
+        //write column, line and file into it if expected from the instance type: 
+        if(componentxxx.instance instanceof SetLineColumn_ifc){
+          SetLineColumn_ifc check = (SetLineColumn_ifc) componentxxx.instance;
+          int mode = check.setLineColumnFileMode();
+          final int inputLine, inputColumn;
+          String inputFile;
+          if((mode & SetLineColumn_ifc.mColumn) !=0){ inputColumn = resultItem.getInputColumn(); } 
+          else { inputColumn = -1; }
+          if((mode & SetLineColumn_ifc.mLine) !=0){ inputLine = resultItem.getInputLine(); } 
+          else { inputLine = -1; }
+          if((mode & SetLineColumn_ifc.mFile) !=0){ inputFile = resultItem.getInputFile(); } 
+          else { inputFile = null; }
+          check.setLineColumnFile(inputLine, inputColumn, inputFile);
+        }
+        
+        //Try to save the content also if it is an component:
         if(resultItem.isOption() && resultItem.getParsedString() != null)
-        { searchDestinationAndWriteResult(semantic, component, resultItem);
+        { searchDestinationAndWriteResult(semantic, componentxxx, resultItem);
         }
         
         /**Search an instance (field or method result) which represents the semantic of the component. 
          * That instance will be used to fill the parse result of the component.
          */
-        ChildInstanceAndClass componentsInstance = searchComponentsDestination
+        DstInstanceAndClass componentsInstance = searchComponentsDestination
           ( semantic                //the semantic of the component.
-          , component    //instance where the field or method for the component should be found.
+          , componentxxx    //instance where the field or method for the component should be found.
           );
         if(componentsInstance != null)
         { /**Such an instance is found, use it to fill.
            * That instance may also be an new element of a container
            */
           /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
-          Component compn = new Component(component, componentsInstance.clazz, componentsInstance.instance);
-          if(compn.instance instanceof SetLineColumn_ifc){
+          DstInstanceAndClass compn = new DstInstanceAndClass(componentxxx, componentsInstance.instance, componentsInstance.clazz, false);
+          if(false && compn.instance instanceof SetLineColumn_ifc){
             SetLineColumn_ifc check = (SetLineColumn_ifc) compn.instance;
             int mode = check.setLineColumnFileMode();
             final int inputLine, inputColumn;
@@ -458,11 +484,15 @@ public class ZbnfJavaOutput
           Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
           while(iterChildren.hasNext())
           { ZbnfParseResultItem childItem = iterChildren.next();
-            writeZbnfResult(new Component(component, componentsInstance.clazz, componentsInstance.instance), childItem, recursion+1);
+            
+          
+          
+          
+            writeZbnfResult(componentxxx, componentsInstance.clazz, componentsInstance.instance, null, childItem, recursion+1);
           }
           if(componentsInstance.shouldAdd)
           {
-            searchAddMethodAndInvoke(semantic, component, componentsInstance);
+            searchAddMethodAndInvoke(semantic, componentxxx, componentsInstance);
           }
         }
         else
@@ -471,39 +501,23 @@ public class ZbnfJavaOutput
       }
       else
       { //write the content of the resultItem into the outputInstance:
-        searchDestinationAndWriteResult(semantic, component, resultItem);
+        searchDestinationAndWriteResult(semantic, componentxxx, resultItem);
       }
     }
   }
    
   
-  private static class Component
-  {
-    final Object instance;
-    
-    final Class clazz;
-    
-    final Component parent;
-
-    public Component(Component parent, Class clazz, Object instance)
-    {
-      assert(instance !=null);
-      this.instance = instance;
-      this.clazz = instance.getClass(); //clazz;
-      this.parent = parent;
-    }
-    
-    
-  }
   
   
   /**Instance to bundle a class to search methods or fields and the associated instance.
    * It is used especially for ZBNF-components.
    */
-  private static class ChildInstanceAndClass
+  private static class DstInstanceAndClass
   { 
     /**Doc: see constructors args. */
     final Class clazz; final Object instance; final boolean shouldAdd; 
+    
+    final DstInstanceAndClass parentResult;
     
     //final Object parentInstance;
     /**
@@ -515,9 +529,10 @@ public class ZbnfJavaOutput
      *                  of its parent, because it is got with a new_Semantic()-Method.
      *                  false than the instance is referenced from the parent already.
      */
-    ChildInstanceAndClass(Object instance, Class clazz
+    DstInstanceAndClass(DstInstanceAndClass parent, Object instance, Class clazz
       , boolean shouldAdd)
-    { this.instance = instance; this.clazz = clazz; 
+    { this.parentResult = parent;
+      this.instance = instance; this.clazz = clazz; 
       this.shouldAdd = shouldAdd; 
     }
   }
@@ -566,19 +581,19 @@ public class ZbnfJavaOutput
   
   
   
-  ChildInstanceAndClass searchCreateMethod(Component component, String semantic) 
+  DstInstanceAndClass searchCreateMethod(Class<?> inClazz, Object instance, String semantic) 
   throws IllegalArgumentException, IllegalAccessException
   {
-    Method method = searchMethod(component.clazz, "new_" + semantic, new Class[1][0]);
+    Method method = searchMethod(inClazz, "new_" + semantic, new Class[1][0]);
     if(method != null)
-    { final Class childClass = method.getReturnType();
+    { final Class<?> childClass = method.getReturnType();
       final Object childOutputInstance;
       Object[] noParam = null; //without param.
-      try{ childOutputInstance = method.invoke(component.instance, noParam); }
+      try{ childOutputInstance = method.invoke(instance, noParam); }
       catch(Exception exc)
       { throw new IllegalAccessException("exception inside: " + method.toString()); 
       }
-      return new ChildInstanceAndClass(childOutputInstance, childClass, true);
+      return new DstInstanceAndClass(null, childOutputInstance, childClass, true);
     }
     else return null;
   }
@@ -598,29 +613,34 @@ public class ZbnfJavaOutput
    * @throws IllegalAccessException If the <code>add_<i>semantic</i>(Object)</code>-Method isn't public.
    */
   private void searchAddMethodAndInvoke
-  (String semantic, Component component, ChildInstanceAndClass componentsDestination) 
+  (String semantic, DstInstanceAndClass component, DstInstanceAndClass componentsDestination) 
   throws IllegalArgumentException, IllegalAccessException
-  { Class[][] argtypes = new Class[1][1];
+  { Class<?>[][] argtypes = new Class[1][1];
     argtypes[0][0] = componentsDestination.clazz;
-    Method method = searchMethod(component.clazz, "set_" + semantic, argtypes);
+    Class<?> inClazz = component.instance.getClass();
+    Method method = null;
+    do {
+      method = searchMethod(inClazz, "set_" + semantic, argtypes);
+      if(method == null)
+      { method = searchMethod(inClazz, "add_" + semantic, argtypes);
+      }
+      if(method != null)
+      { Object[] argMethod = new Object[1];
+        argMethod[0] = componentsDestination.instance;
+        try{ method.invoke(component.instance, argMethod); }
+        catch(InvocationTargetException exc)
+        { String sMsg = "The called method " +method.toGenericString() + " throws an Exception: " + exc.getTargetException(); // + ", msg: " + exc.getTargetException().getMessage();
+          if(report!=null){ report.writeWarning(sMsg); }
+          throw new IllegalAccessException( sMsg );
+        }
+        catch(Exception exc)
+        { throw new IllegalAccessException("can not access: " + inClazz.getCanonicalName()  + ".add_" + semantic + "(...) or .set..."); 
+        }
+      }
+    } while(method == null && (inClazz = inClazz.getSuperclass()) != Object.class);
+    //
     if(method == null)
-    { method = searchMethod(component.clazz, "add_" + semantic, argtypes);
-    }
-    if(method != null)
-    { Object[] argMethod = new Object[1];
-      argMethod[0] = componentsDestination.instance;
-      try{ method.invoke(component.instance, argMethod); }
-      catch(InvocationTargetException exc)
-      { String sMsg = "The called method " +method.toGenericString() + " throws an Exception: " + exc.getTargetException(); // + ", msg: " + exc.getTargetException().getMessage();
-        if(report!=null){ report.writeWarning(sMsg); }
-        throw new IllegalAccessException( sMsg );
-      }
-      catch(Exception exc)
-      { throw new IllegalAccessException("can not access: " + component.clazz.getCanonicalName()  + ".add_" + semantic + "(...) or .set..."); 
-      }
-    }
-    else
-    { String sProblem = "method set_- or add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found";
+    { String sProblem = "method set_- or add_" +semantic+"(" + componentsDestination.instance.getClass().getCanonicalName() + ") not found";
       problem(component, sProblem);
     }
   }
@@ -651,54 +671,54 @@ public class ZbnfJavaOutput
    * @param parentType The class where the method or field is searched.
    * @param parentObj The object associated to the class which contains the field or it is the instance to call the new_-method.
    * @return The class and the instance for the component. If a new_-method is called, 
-   *         the attribute {@link ChildInstanceAndClass#shouldAdd} is set true. 
+   *         the attribute {@link DstInstanceAndClass#shouldAdd} is set true. 
    *         Because the add_-method should called also. 
    * @throws IllegalArgumentException If no method or field is found and {@link #bExceptionIfnotFound} is set.
    * @throws IllegalAccessException If a problem with the field or method exists, especially the field or method should be public!
    * @throws InstantiationException If a problem calling the new_-method exists. 
    */
-  private ChildInstanceAndClass searchComponentsDestination(String semantic
-    , Component component) 
+  private DstInstanceAndClass searchComponentsDestination(String semantic
+    , DstInstanceAndClass component) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { /**The returned instance if resultItem is null, and the field is searched. */
-    ChildInstanceAndClass child = null;
+    DstInstanceAndClass child = null;
     int posSeparator = semantic.indexOf('/');
+    String semanticLowerCase = null;
     if(posSeparator >0)
     { String sematicFirst = semantic.substring(0, posSeparator);
       child = searchComponentsDestination(sematicFirst, component);
       String semanticRest = semantic.substring(posSeparator+1);
       //Class outputClassRest = outputInstanceRest.getClass();
-      return searchComponentsDestination(semanticRest, new Component(component, child.clazz, child.instance));
+      return searchComponentsDestination(semanticRest, new DstInstanceAndClass(component, child.instance, child.clazz, false));
     }
     else
-    { child = searchCreateMethod(component, semantic);
+    { Class<?> clazz = component.instance.getClass(); //search in the class
+      do {
+        child = searchCreateMethod(clazz, component.instance, semantic);
+        
+        if(child == null)
+        { //if(!bOnlyMethods)
+          { char firstChar = semantic.charAt(0);
+            semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
+            if(semanticLowerCase.equals("operator"))
+              stop();
+            try{ 
+              Field element = component.clazz.getDeclaredField(semanticLowerCase);
+              //an element with the desired name is found, write the value to it:
+              report.report(MainCmdLogging_ifc.fineDebug, semanticLowerCase);
+              child = getComponentsOutputField(element, component.instance);
+            }
+            catch(NoSuchFieldException exception){}
+          }
+          //else
+          { //if(bStrict) throw new IllegalArgumentException("cannot found: " + sMethodToFind);
+          }
+        }
+      } while(child == null && (clazz = clazz.getSuperclass())!=Object.class);
       if(child == null)
-      { //if(!bOnlyMethods)
-        { Class superClass = component.clazz.getSuperclass();
-          char firstChar = semantic.charAt(0);
-          String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
-          if(semanticLowerCase.equals("operator"))
-            stop();
-          Field element = null;
-          try{ element = component.clazz.getDeclaredField(semanticLowerCase);}
-          catch(NoSuchFieldException exception)
-          { try{ element = superClass.getField(semanticLowerCase);}
-            catch(NoSuchFieldException exc2){ element = null; } 
-          }
-          if(element != null)
-          { //an element with the desired name is found, write the value to it:
-            report.report(MainCmdLogging_ifc.fineDebug, semanticLowerCase);
-            child = getComponentsOutputField(element, component.instance);
-          }
-          else
-          { String sProblem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase; 
-            problem(component, sProblem);
-          }
-        }
-        //else
-        { //if(bStrict) throw new IllegalArgumentException("cannot found: " + sMethodToFind);
-        }
-      }  
+      { String sProblem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase; 
+        problem(component, sProblem);
+      }
     }    
     return child;
   }
@@ -719,9 +739,9 @@ public class ZbnfJavaOutput
    * @throws IllegalAccessException
    * @throws InstantiationException
    */
-  private ChildInstanceAndClass getComponentsOutputField(Field element, Object outputInstance) 
+  private DstInstanceAndClass getComponentsOutputField(Field element, Object outputInstance) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
-  { ChildInstanceAndClass child;
+  { DstInstanceAndClass child;
     Object childInstance;
     try{ childInstance = element.get(outputInstance);}
     catch(IllegalAccessException exc)
@@ -747,7 +767,7 @@ public class ZbnfJavaOutput
       }
       Object childContainerInstance = genericClass.newInstance();
       childContainer.add(childContainerInstance);
-      child = new ChildInstanceAndClass(childContainerInstance, genericClass, false);
+      child = new DstInstanceAndClass(null, childContainerInstance, genericClass, false);
     }  
     else
     { if(childInstance == null)
@@ -758,7 +778,7 @@ public class ZbnfJavaOutput
         }
         element.set(outputInstance, childInstance);
       }
-      child = new ChildInstanceAndClass(childInstance, childClass, false);
+      child = new DstInstanceAndClass(null, childInstance, childClass, false);
     }
     return child;          
   }
@@ -789,14 +809,14 @@ public class ZbnfJavaOutput
    * @throws IllegalArgumentException 
    * @throws InstantiationException if the creation of a child instance fails.
    */
-  private ChildInstanceAndClass searchDestinationAndWriteResult
+  private DstInstanceAndClass searchDestinationAndWriteResult
   ( final String semanticRaw
-  , final Component destComponent
+  , final DstInstanceAndClass destComponent
   , final ZbnfParseResultItem resultItem
   ) throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { 
     /**The returned instance if resultItem is null, and the field is searched. */
-    ChildInstanceAndClass child = null;
+    DstInstanceAndClass child = null;
           
     final String semantic = semanticRaw.startsWith("@") ? semanticRaw.substring(1) : semanticRaw;
     if(semantic.equals("posIndent"))
@@ -807,7 +827,7 @@ public class ZbnfJavaOutput
       child = searchComponentsDestination(sematicFirst, destComponent);
       String semanticRest = semantic.substring(posSeparator+1);
       //NOTE: recursively call is necessary only because the destinationClass etc. are final.
-      return searchDestinationAndWriteResult(semanticRest, new Component(destComponent, child.clazz, child.instance), resultItem);
+      return searchDestinationAndWriteResult(semanticRest, new DstInstanceAndClass(destComponent, child.instance, child.clazz, false), resultItem);
     }
     else
     {
@@ -1037,7 +1057,7 @@ public class ZbnfJavaOutput
    * @return true if the method "set_InputInfo(int, int, String)" was found.              
    * @throws IllegalAccessException If any problem with the set-method exists.
    */
-  private boolean trySetInputInfo(Component destComponent, int line, int column, String sFile) 
+  private boolean trySetInputInfo(DstInstanceAndClass destComponent, int line, int column, String sFile) 
   throws IllegalAccessException
   { boolean bok = false;
     if(line >=0)
@@ -1106,7 +1126,7 @@ public class ZbnfJavaOutput
    *               that no valid column is given to set.
    * @throws IllegalAccessException If any problem with the set-method exists.
    */
-  private void trySetInputColumn(String semantic, Component destComponent, int column) 
+  private void trySetInputColumn(String semantic, DstInstanceAndClass destComponent, int column) 
   throws IllegalAccessException
   { if(column >=0)
     { try
@@ -1136,14 +1156,14 @@ public class ZbnfJavaOutput
   }
   
   
-  private void problem(Component destComponent, String sProblem){
+  private void problem(DstInstanceAndClass destComponent, String sProblem){
     StringBuilder u = new StringBuilder(sProblem);
     u.append("\n");
-    Component parentComponent = destComponent;
+    DstInstanceAndClass parentComponent = destComponent;
     while(parentComponent !=null){
       u.append(" in class ").append(parentComponent.clazz.getCanonicalName())
       .append(" = " + parentComponent.instance.toString()).append("\n");
-      parentComponent = parentComponent.parent;
+      parentComponent = parentComponent.parentResult;
     }
     if(bExceptionIfnotFound) throw new IllegalArgumentException(u.toString());
     else noteError(u);
@@ -1152,8 +1172,8 @@ public class ZbnfJavaOutput
   
   
   
-  ChildInstanceAndClass writeInMap(final String semantic
-      , final Component destComponent
+  DstInstanceAndClass writeInMap(final String semantic
+      , final DstInstanceAndClass destComponent
       , final ZbnfParseResultItem resultItem
   ){
     Map<String, String> dest = (Map)destComponent.instance;

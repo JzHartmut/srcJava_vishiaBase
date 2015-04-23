@@ -100,6 +100,7 @@ public class StateMGen {
     
     String sScriptCheck = null;
     
+    public Args(){}
     
     public void setInput(String val){ sFileIn = val; }
     
@@ -123,7 +124,7 @@ public class StateMGen {
        * It is possible to create some aggregates (final references) first outside depends on args.
        * Therefore the main class is created yet here.
        */
-      StateMGen main = new StateMGen(mainCmdLine, cmdlineArgs);
+      StateMGen main = new StateMGen(mainCmdLine);
       /** The execution class knows the Main class in form of the MainCmd super class
           to hold the contact to the command line execution.
       */
@@ -873,7 +874,7 @@ public class StateMGen {
   
   
 
-  public StateMGen(MainCmd_ifc console, Args args)
+  public StateMGen(MainCmd_ifc console)
   {
     this.console = console;
   }
@@ -881,7 +882,7 @@ public class StateMGen {
   
   void execute(Args args) throws IOException, IllegalAccessException
   {
-    ZbnfResultData zsrcFile = parseAndStoreInput(args);
+    ZbnfResultData zsrcFile = parseAndStoreInput(args);  //parsed and converts into Java data presentation
     if(zsrcFile != null){
       GenStateMachine genStm = prepareStateData(zsrcFile);
       if(args.sFileData!=null) {
