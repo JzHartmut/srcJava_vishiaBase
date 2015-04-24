@@ -211,6 +211,36 @@ public class ZbnfJavaOutput
    */
   public static final String sVersion = "2014-04-27";
   
+  /**Instance to bundle a class to search methods or fields and the associated instance.
+   * It is used especially for ZBNF-components.
+   */
+  private static class DstInstanceAndClass
+  { 
+    /**Doc: see constructors args. */
+    final Class clazz; final Object instance; final boolean shouldAdd; 
+    
+    final DstInstanceAndClass parentResult;
+    
+    //final Object parentInstance;
+    /**
+     * @param instance  The instance where the data should store in.
+     * @param clazz     The type of the reference to the instance, not the type of the instance.
+     *                  That type should be used to find components fields or method.
+     *                  (Note: The type of the instance may be derivated, private or so on.)
+     * @param shouldAdd true than the instance is to be add using an add_Semantic(Object)-method
+     *                  of its parent, because it is got with a new_Semantic()-Method.
+     *                  false than the instance is referenced from the parent already.
+     */
+    DstInstanceAndClass(DstInstanceAndClass parent, Object instance, Class clazz
+      , boolean shouldAdd)
+    { this.parentResult = parent;
+      this.instance = instance; this.clazz = clazz; 
+      this.shouldAdd = shouldAdd; 
+    }
+  }
+
+
+
   private final MainCmdLogging_ifc report;
   
   /**If it is set, only set_ or add_-methods and new_-methods are accepted,
@@ -302,15 +332,17 @@ public class ZbnfJavaOutput
   public String setContent(Class topLevelClass, Object topLevelInstance, ZbnfParseResultItem resultItem) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { errors = null;
+    DstInstanceAndClass dst = new DstInstanceAndClass(null, topLevelInstance, topLevelClass, false);
+    writeZbnfResult(dst, null, resultItem, 1);
+    /*
     //The first child item:
     Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
     //loop of all first level elements, the output is written directly in topLevelOutput:
-    DstInstanceAndClass dst = new DstInstanceAndClass(null, topLevelInstance, topLevelClass, false);
     while(iterChildren.hasNext())
     { ZbnfParseResultItem child = iterChildren.next();
       writeZbnfResult(dst, null, child, 1);
     }
-  
+    */
     return errors == null ? null : errors.toString();
   }
   
@@ -417,18 +449,27 @@ public class ZbnfJavaOutput
   ) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   {
-    final String semantic1 = resultItem.getSemantic();
-    /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
-    final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
-    if(semantic.length() >0){ ///
-      if(semantic.equals("operator"))
-        stop();
-      report.reportln(MainCmdLogging_ifc.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
-        
-      if(resultItem.isComponent())
-      { 
-        //write column, line and file into it if expected from the instance type: 
-        if(componentxxx.instance instanceof SetLineColumn_ifc){
+      //write column, line and file into it if expected from the instance type: 
+      if(componentxxx.instance instanceof SetLineColumn_ifc){
+        SetLineColumn_ifc check = (SetLineColumn_ifc) componentxxx.instance;
+        int mode = check.setLineColumnFileMode();
+        final int inputLine, inputColumn;
+        String inputFile;
+        if((mode & SetLineColumn_ifc.mColumn) !=0){ inputColumn = resultItem.getInputColumn(); } 
+        else { inputColumn = -1; }
+        if((mode & SetLineColumn_ifc.mLine) !=0){ inputLine = resultItem.getInputLine(); } 
+        else { inputLine = -1; }
+        if((mode & SetLineColumn_ifc.mFile) !=0){ inputFile = resultItem.getInputFile(); } 
+        else { inputFile = null; }
+        check.setLineColumnFile(inputLine, inputColumn, inputFile);
+      }
+      
+      { /**Such an instance is found, use it to fill.
+         * That instance may also be an new element of a container
+         */
+        /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
+        //DstInstanceAndClass compn = new DstInstanceAndClass(componentxxx, componentsInstance.instance, componentsInstance.clazz, false);
+        if(false && componentxxx.instance instanceof SetLineColumn_ifc){
           SetLineColumn_ifc check = (SetLineColumn_ifc) componentxxx.instance;
           int mode = check.setLineColumnFileMode();
           final int inputLine, inputColumn;
@@ -441,103 +482,60 @@ public class ZbnfJavaOutput
           else { inputFile = null; }
           check.setLineColumnFile(inputLine, inputColumn, inputFile);
         }
-        
-        //Try to save the content also if it is an component:
-        if(resultItem.isOption() && resultItem.getParsedString() != null)
-        { searchDestinationAndWriteResult(semantic, componentxxx, resultItem);
+        /*
+        int inputLine = resultItem.getInputLine();
+        int inputColumn = resultItem.getInputColumn();
+        String inputFile = resultItem.getInputFile();
+        if(!trySetInputInfo(compn, inputLine, inputColumn, inputFile)){
+          trySetInputColumn("", compn, inputColumn);
         }
-        
-        /**Search an instance (field or method result) which represents the semantic of the component. 
-         * That instance will be used to fill the parse result of the component.
-         */
-        DstInstanceAndClass componentsInstance = searchComponentsDestination
-          ( semantic                //the semantic of the component.
-          , componentxxx    //instance where the field or method for the component should be found.
-          );
-        if(componentsInstance != null)
-        { /**Such an instance is found, use it to fill.
-           * That instance may also be an new element of a container
-           */
-          /**First try if an field <code>inputColumn_</code> exists, than write the line.position there. */
-          //DstInstanceAndClass compn = new DstInstanceAndClass(componentxxx, componentsInstance.instance, componentsInstance.clazz, false);
-          if(false && componentsInstance.instance instanceof SetLineColumn_ifc){
-            SetLineColumn_ifc check = (SetLineColumn_ifc) componentsInstance.instance;
-            int mode = check.setLineColumnFileMode();
-            final int inputLine, inputColumn;
-            String inputFile;
-            if((mode & SetLineColumn_ifc.mColumn) !=0){ inputColumn = resultItem.getInputColumn(); } 
-            else { inputColumn = -1; }
-            if((mode & SetLineColumn_ifc.mLine) !=0){ inputLine = resultItem.getInputLine(); } 
-            else { inputLine = -1; }
-            if((mode & SetLineColumn_ifc.mFile) !=0){ inputFile = resultItem.getInputFile(); } 
-            else { inputFile = null; }
-            check.setLineColumnFile(inputLine, inputColumn, inputFile);
-          }
-          /*
-          int inputLine = resultItem.getInputLine();
-          int inputColumn = resultItem.getInputColumn();
-          String inputFile = resultItem.getInputFile();
-          if(!trySetInputInfo(compn, inputLine, inputColumn, inputFile)){
-            trySetInputColumn("", compn, inputColumn);
-          }
-          */
-          /** skip into the component resultItem: */
-          Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
-          while(iterChildren.hasNext())
-          { ZbnfParseResultItem childItem = iterChildren.next();
-            
+        */
+        /** skip into the component resultItem: */
+        Iterator<ZbnfParseResultItem> iterChildren = resultItem.iteratorChildren();
+        while(iterChildren.hasNext())
+        { ZbnfParseResultItem childItem = iterChildren.next();
           
-          
-          
-            writeZbnfResult(componentsInstance, null, childItem, recursion+1);
-          }
-          if(componentsInstance.shouldAdd)
-          {
-            searchAddMethodAndInvoke(semantic, componentxxx, componentsInstance);
-          }
+          final String semantic1 = childItem.getSemantic();
+          /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
+          final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
+          if(semantic.length() >0){ ///
+            if(semantic.equals("operator"))
+              stop();
+            report.reportln(MainCmdLogging_ifc.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
+              
+            if(childItem.isComponent())
+            { 
+              
+              //Try to save the content also if it is an component:
+              if(childItem.isOption() && childItem.getParsedString() != null)
+              { searchDestinationAndWriteResult(semantic, componentxxx, childItem);
+              }
+              
+              /**Search an instance (field or method result) which represents the semantic of the component. 
+               * That instance will be used to fill the parse result of the component.
+               */
+              DstInstanceAndClass componentsInstance = searchComponentsDestination
+                ( semantic                //the semantic of the component.
+                , componentxxx    //instance where the field or method for the component should be found.
+                );
+              if(componentsInstance != null) {
+                writeZbnfResult(componentsInstance, semantic, childItem, recursion+1);
+                if(componentsInstance.shouldAdd)
+                {
+                  searchAddMethodAndInvoke(semantic, componentxxx, componentsInstance);
+                }
+              }
+            }
+            else
+            { //write the content of the resultItem into the outputInstance:
+              searchDestinationAndWriteResult(semantic, componentxxx, childItem);
+            }
+       
+          } //while
         }
-        else
-        { 
-        }  
-      }
-      else
-      { //write the content of the resultItem into the outputInstance:
-        searchDestinationAndWriteResult(semantic, componentxxx, resultItem);
       }
     }
-  }
    
-  
-  
-  
-  /**Instance to bundle a class to search methods or fields and the associated instance.
-   * It is used especially for ZBNF-components.
-   */
-  private static class DstInstanceAndClass
-  { 
-    /**Doc: see constructors args. */
-    final Class clazz; final Object instance; final boolean shouldAdd; 
-    
-    final DstInstanceAndClass parentResult;
-    
-    //final Object parentInstance;
-    /**
-     * @param instance  The instance where the data should store in.
-     * @param clazz     The type of the reference to the instance, not the type of the instance.
-     *                  That type should be used to find components fields or method.
-     *                  (Note: The type of the instance may be derivated, private or so on.)
-     * @param shouldAdd true than the instance is to be add using an add_Semantic(Object)-method
-     *                  of its parent, because it is got with a new_Semantic()-Method.
-     *                  false than the instance is referenced from the parent already.
-     */
-    DstInstanceAndClass(DstInstanceAndClass parent, Object instance, Class clazz
-      , boolean shouldAdd)
-    { this.parentResult = parent;
-      this.instance = instance; this.clazz = clazz; 
-      this.shouldAdd = shouldAdd; 
-    }
-  }
-  
   
   
   
@@ -693,7 +691,8 @@ public class ZbnfJavaOutput
       return searchComponentsDestination(semanticRest, new DstInstanceAndClass(component, child.instance, child.clazz, false));
     }
     else
-    { Class<?> clazz = component.instance.getClass(); //search in the class
+    { final Class<?> clazz1 = component.instance.getClass(); //search in the class
+      Class<?> clazz = clazz1;
       do {
         child = searchCreateMethod(clazz, component.instance, semantic, component);
         
@@ -704,7 +703,7 @@ public class ZbnfJavaOutput
             if(semanticLowerCase.equals("operator"))
               stop();
             try{ 
-              Field element = component.clazz.getDeclaredField(semanticLowerCase);
+              Field element = clazz.getDeclaredField(semanticLowerCase);
               //an element with the desired name is found, write the value to it:
               report.report(MainCmdLogging_ifc.fineDebug, semanticLowerCase);
               child = getComponentsOutputField(element, component.instance);
