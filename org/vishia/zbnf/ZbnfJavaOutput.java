@@ -176,6 +176,7 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2015-05-27 Hartmut improved output on method not found.
    * <li>2015-04-25 Hartmut chg: The class to search the destination is the {@link DstInstanceAndClass#clazz} 
    *   and not the getClass() of the {@link DstInstanceAndClass#instance}.  
    *   except the interface {@link GetTypeToUse} is implemented by the returned instance of a <code>new_<semantic>()</code>.
@@ -624,7 +625,7 @@ public final class ZbnfJavaOutput
     } while(method == null && (inClazz = inClazz.getSuperclass()) != Object.class);
     //
     if(method == null)
-    { String sProblem = "method set_- or add_" +semantic+"(" + inClazz0.getCanonicalName() + ") not found";
+    { String sProblem = "method " + inClazz0.getCanonicalName() + ".set_- or .add_" +semantic+"(" + componentsDestination.clazz.getCanonicalName() + ") not found";
       problem(component, sProblem);
     }
   }
