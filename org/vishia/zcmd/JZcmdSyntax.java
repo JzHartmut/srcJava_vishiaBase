@@ -288,7 +288,7 @@ public final class JZcmdSyntax {
     + " [ $<$?envVariable> \n" 
     //+ " | [<?startVariable> $<![1-9]?>| $<$?>]    ## $1 .. $9 are the arguments of Jbatch, $name for environment \n"
     + " | [<?startVariable> $<#?>| $<$?>]    ## $1 .. $999 are the arguments of JZcmd, $name for environment \n"
-    + " | [java\\ ] new\\  <staticJavaAccess?newJavaClass> \n" 
+    + " | [|java\\ ] new\\  <staticJavaAccess?newJavaClass> \n" 
     + " | [%|java\\ ] <staticJavaAccess?staticJavaMethod> \n" 
     + " | <dataPath?> \n" 
     + " ].\n"

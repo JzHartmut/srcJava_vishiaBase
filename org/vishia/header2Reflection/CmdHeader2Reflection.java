@@ -111,6 +111,7 @@ public class CmdHeader2Reflection extends MainCmd
     super.addHelpInfo("-obin[b|l]hex:HEXFILE The BINFILE will written in Intel-hex-Format.");
     super.addHelpInfo("-c_only Don't reagard C++-classes, don't generate C++-code especially static_cast<...> .");
     super.addHelpInfo("-b:Types.cfg Config-file for special handled types.");
+    super.addHelpInfo("-always Don't check newness of header input files.");
     super.addHelpInfo("Syntax of the config-file: ------------------------------------------------------------");
     super.addHelpInfo(Header2Reflection.sSyntaxReflectionTypes);
     super.addHelpInfo("---------------------------------------------------------------------------------------");
@@ -159,6 +160,7 @@ public class CmdHeader2Reflection extends MainCmd
     else if(arg.startsWith("-obinlhex:")) bOk = main.setOutBin(getArgument(10), false,true);
     else if(arg.startsWith("-obinbhex:")) bOk = main.setOutBin(getArgument(10), true, true);
     else if(arg.startsWith("-c_only")) main.c_only = true;
+    else if(arg.startsWith("-always")) main.setCheckNewness(false);
     else bOk=false;
 
     return bOk;

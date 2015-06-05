@@ -71,6 +71,7 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2015-06-04 Hartmut new: Argument -always generates always, independing of dst timestamp. Especially for test.
    * <li>2014-11-17 Hartmut chg: Recognized "struct tagname {...};" without typedef.  
    * <li>2014-05-31 Hartmut chg: ':' as separator between base and local path only after position 2, elsewhere ambiguous with "D:"
    * <li>2013-10-19 Hartmut chg: now invoke-able from JZcmd, public methods etc. Only formalism
@@ -153,6 +154,9 @@ public class Header2Reflection
   /**Path and Name of the binary output.h-file. */
   private String sFileBin;
 
+  /**If true, generate only if at least one of the header files are newer then the generate. */
+  private boolean bCheckNewness = true;
+  
   boolean fileBinBigEndian;
   
   boolean fileBinHex;
@@ -318,6 +322,10 @@ public class Header2Reflection
   { this.sFileZbnf = sFileZbnf;
   }
 
+  public void setCheckNewness(boolean value) {
+    bCheckNewness = value;
+  }
+  
   public void setReflectionTypes(String sFile)
   { this.sFileReflectionTypes = sFile;
   }
@@ -455,6 +463,7 @@ public class Header2Reflection
     { if(init()) //here all action are done, testversion.
       {
         boolean dontGenerate = false;
+        File fileAllCFile = sFileAllC !=null ? new File(sFileAllC) : null;
         long timestampLast = 0;
         for(FileIn fileIn: listFileIn){
           for(File file: fileIn.listFileIn){
@@ -469,12 +478,8 @@ public class Header2Reflection
         secondsAfter1970Now = (int)(timestampLast / 1000);
         dateNow = new Date(timestampLast);
         //secondsAfter1970Now = (int)(dateNow.getTime()/1000);
-        File fileAllCFile = null;
-        if(sFileAllC !=null){
-          fileAllCFile = new File(sFileAllC);
-          if(fileAllCFile.exists() && fileAllCFile.lastModified() > timestampLast){
-            dontGenerate = true;  //not necessary
-          }
+        if(bCheckNewness && fileAllC !=null && fileAllCFile.exists() && fileAllCFile.lastModified() > timestampLast){
+          dontGenerate = true;  //not necessary
         }
         if(!dontGenerate){
           if(fileAllCFile != null)

@@ -267,7 +267,7 @@ public class ZbnfSyntaxPrescript
   protected boolean bAddOuterResults = false;
 
   /**Either List of all syntax items one after another of this node
-   * or List of all apternatives if this is an alternativ syntax node.
+   * or List of all alternatives if this is an alternative syntax node.
    * It is an alternative syntax node if( (eType & (kAlternative | kAlternativOption...) !=0).
    *  */
   List<ZbnfSyntaxPrescript> childSyntaxPrescripts;
@@ -287,7 +287,7 @@ public class ZbnfSyntaxPrescript
   //List<ZbnfSyntaxPrescript> listAlternatives;
 
   /** If it is true, it is also matching if no prescript matches to the parsed input.*/
-  boolean alsoEmptyOption;
+  private boolean alsoEmptyOption;
 
   /** A string accordingly to the syntax. The meaning depends on the type of prescript,
    * at example the constant string for terminal characters.
