@@ -345,7 +345,7 @@ public class ZbnfParser
     public boolean parsePrescript1 //##a
     ( //StringPart input
       String sSemanticForStoring
-    , ZbnfParseResultItem parentResultItem
+    , ZbnfParserStore.ParseResultItemImplement parentResultItem
     , ZbnfParserStore parserStoreInPrescriptP  //either main store, or a temporary if <..?->
     , ZbnfParserStore parseResultsFromOtherComponents          //null in main, or if <..?+..>
     , boolean bSkipSpaceAndComment
@@ -442,11 +442,18 @@ public class ZbnfParser
       final SubParser parentParser;
       
       /**Reference to the parent parse result item of the parent, given on constructor. */
-      final ZbnfParseResultItem parentOfParentResultItem;
+      final ZbnfParserStore.ParseResultItemImplement parentOfParentResultItem;
   
       /**Reference to the parent parse result item. */
-      ZbnfParseResultItem parentResultItem;
+      ZbnfParserStore.ParseResultItemImplement parentResultItem;
   
+      
+      /**last parsed column in an item. */
+      private final int[] srcColumn = new int[1];
+
+      /**last parsed line in an item. */
+      private int srcLine;
+      
       /** Constructs a new Parser with a given parsed syntaxPrescript and a given input and output buffer.
        * This constructor is used by recursively calling.
        * @param syntax The prescript is a child of the parents' prescript.
@@ -457,7 +464,7 @@ public class ZbnfParser
        *        It may be null, than create a new temporary parser result buffer.
        * */
       protected SubParser(ZbnfSyntaxPrescript syntax, SubParser parent
-                         , ZbnfParseResultItem parentResultItem, int nRecursion )
+                         , ZbnfParserStore.ParseResultItemImplement parentResultItem, int nRecursion )
       { syntaxPrescript = syntax;
         parentParser = parent;
         this.parentOfParentResultItem = parentResultItem;
@@ -583,7 +590,9 @@ public class ZbnfParser
           idxStoreAlternativeAndOffsetToEnd = -1;
         }
         else if(sSemanticForStoring != null && sSemanticForStoring.length()>0)
-        { resultItem = parserStoreInPrescript.addAlternative(sSemanticForStoring, resultType, parentOfParentResultItem, input);
+        { //the result item for the component is created in advance, it is not tested yet whether it is true.
+          //it will be deleted later if it is not true.
+          resultItem = parserStoreInPrescript.addAlternative(sSemanticForStoring, resultType, parentOfParentResultItem, null);
           idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = parserStoreInPrescript.items.size() -1; 
           parentResultItem = resultItem; //parserStoreInPrescript.getItem(idxCurrentStore);
         }
@@ -739,15 +748,10 @@ public class ZbnfParser
       /** parses one item. In this method a switch-case to the type of syntaxitem is done.
        * Because a terminal symbol or regular expression may be test with including comment parts, 
        * the input is provided with leading white spaces and comments.  
-       * @param iterItems Iterator through the items only used for parseOptions to check the items after the option if set bParseFirstAfterOption
-       * @param syntaxItem The syntax item to check with the input position inside this.
-       * @param bSkipSpaceAndComment true if white spaces and comments are to skip. 
-      */
-      /**
-       * @param syntaxItem
-       * @param bSkipSpaceAndComment
+       * 
+       * @param bSkipSpaceAndComment true if the calling level determines that white spaces and comments are to skip.
        * @return
-       * @throws ParseException 
+       * @throws ParseException
        */
       private boolean parseItem(boolean bSkipSpaceAndComment) throws ParseException //, ParserStore parseResult, ParserStore addParseResult)
       { boolean bOk;
@@ -814,7 +818,9 @@ public class ZbnfParser
           case ZbnfSyntaxPrescript.kOnlySemantic:
           { bOk = true;
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem only Semantic;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
-            parserStoreInPrescript.addSemantic(sSemanticForStoring, input, parentResultItem);
+            srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
+            String srcFile = input.getInputfile();
+            parserStoreInPrescript.addSemantic(sSemanticForStoring, parentResultItem, srcLine, srcColumn[0], srcFile);
           } break; //do nothing
           case ZbnfSyntaxPrescript.kSyntaxComponent:
           { bOk = parseComponent
@@ -1000,7 +1006,7 @@ public class ZbnfParser
       private boolean parseTerminalSymbol(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore parseResult)
       { boolean bOk;
         long nStart = input.getCurrentPosition();
-        int nLineInput = input.getLineAndColumn(column);
+        srcLine = input.getLineAndColumn(srcColumn);
         String sFile = input.getInputfile();
         String sConstantSyntax = syntaxItem.getConstantSyntax();
         //if(sConstantSyntax.equals(";") && input.getCurrentPosition()==28925)
@@ -1011,7 +1017,7 @@ public class ZbnfParser
         { bOk = true;
           //input.seek(sConstantSyntax.length());
           if(bConstantSyntaxAsParseResult)
-          { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, sFile, parentResultItem);
+          { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile, parentResultItem);
           }
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseTerminalSymbol;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
         }
@@ -1072,7 +1078,7 @@ public class ZbnfParser
           else
           { bOk = true;
             if(sSemanticForStoring != null)
-            { parseResult.addIdentifier(sSemanticForStoring, sIdentifier, parentResultItem);
+            { parseResult.addIdentifier(sSemanticForStoring, sIdentifier, parentResultItem, srcLine = input.getLineAndColumn(srcColumn), srcColumn[0], input.getInputfile());
             }
             input.fromEnd();
           }
@@ -1320,7 +1326,7 @@ public class ZbnfParser
             stop();
           //create an own store for results, or use the given store.
           { final ZbnfParserStore store1;
-            ZbnfParseResultItem parentResultItem1;
+            ZbnfParserStore.ParseResultItemImplement parentResultItem1;
             if(bResultToAssignIntoNextComponent)
             { /**the parse result of the sub parser should be stored not in main parse result, to transfer to deeper levels. */
               if(parseResultToOtherComponent == null)
@@ -1392,7 +1398,7 @@ public class ZbnfParser
           bOk = parseComponent(partOfInput, (int)posSrc, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
-        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, spInput, parentResultItem);
+        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, spInput, parentResultItem, srcLine = input.getLineAndColumn(srcColumn), srcColumn[0], input.getInputfile());
           bOk = true;
         }
         else { bOk = true; }
@@ -1471,12 +1477,18 @@ public class ZbnfParser
           else if(sConstantSyntax != null && input.startsWith(sConstantSyntax))
           { bFoundConstantSyntax = true;
             bFoundAnySpaceOrComment = false;
+            if(sConstantSyntax.equals("<:>")){
+              stop();
+            }
             long nStart = input.getCurrentPosition();
-            int nLineInput = input.getLineAndColumn(column);
+            srcLine = input.getLineAndColumn(srcColumn);
+            String sFileInput = input.getInputfile();
             input.seek(sConstantSyntax.length());
             if(bConstantSyntaxAsParseResult)
-            { String sFileInput = input.getInputfile();
-              parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), nLineInput, 0, sFileInput, parentResultItem);
+            { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput, parentResultItem);
+            }
+            else {
+              parentResultItem.setSrcLineColumnFileInParent(srcLine, srcColumn[0], sFileInput);  //especially if it is the first item in component.
             }
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseConstInComment;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
           }
@@ -1730,6 +1742,12 @@ public class ZbnfParser
       { return parseWhiteSpaceAndCommentOrTerminalSymbol(null, null);
       }
   
+      
+      
+  
+  
+      
+      
       /** Sets the rightest position of matched input. Usefull to support the
        * methods getFoundedInputOnError() and getExpectedSyntaxOnError().
        * <br>
@@ -2009,7 +2027,7 @@ public class ZbnfParser
   
   
   /**Temporary store for column. */
-  private final int[] column = new int[1];
+  //private final int[] column = new int[1];
 
  
   /**Already parsed components with the same input text which should be requested in another context. 
@@ -2145,6 +2163,8 @@ public class ZbnfParser
   public void setSyntax(StringPartScan syntax, String sDirImport)
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { List<String> listImports = null;
+    /**Temporary store for column. */
+    final int[] column = new int[1];
     boolean bSetMainscript = false;
     if(syntax.startsWith("<?SBNF") || syntax.startsWith("<?ZBNF"))
     { syntax.seek("?>", StringPartScan.seekEnd); 
@@ -2521,7 +2541,7 @@ public class ZbnfParser
       while(iterAdditionalInfo.hasNext())
       { String addSemantic = iterAdditionalInfo.next();
         String addContent = iterAdditionalInfo.hasNext() ? iterAdditionalInfo.next() : "";
-        addParseResult.addString(addContent, addSemantic, input, null);
+        addParseResult.addString(addContent, addSemantic, input, null, -1, -1, null);
         /**NOTE: it is false to : parserStoreTopLevel.addString(addContent, addSemantic, null);
          * because the first item should be a syntax components with all content inside (like XML-toplevel argument).
          * instead use addParseResult as argument for prescriptParserTopLevel.parsePrescript1(...).  

@@ -178,8 +178,9 @@ public class CheckDependencyFile
   
   /**Constructor. The instance can be used for all files, which are located in the same source pool
    * and in the same object pool.
-   * @param dirSrcMirrorRoot If null, then the comparison of content isn't done. 
-   * @param dirObjRoot Base directory, where the objects and dependency files are located.
+   * @param log for logging output
+   * @param bExc If true then errors throws an exception. false then errors results in an return string which should be test by the application.
+   *   See description of the methods.
    */
   public CheckDependencyFile(MainCmdLogging_ifc log, boolean bExc)
   {
@@ -228,7 +229,7 @@ public class CheckDependencyFile
   
   /**This routine must be called after construction to supply the configuration data.
    * It is not a part of constructor because it may be evaluated separately.
-   * Any error in config file provides a string return.  
+   * Any error in config file provides a string return or an exception depending on the ctor parameter exc  
    * @param sFileCfgData The file
    * @param currdir the directory which is used as base to build the path if the config file contains relative paths.
    * @return null if no error. An error message. If not null, this class is not able to use.
