@@ -43,6 +43,7 @@ import java.util.regex.Pattern;
 
 
 
+
 //import org.vishia.util.SortedTreeNode;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
@@ -128,9 +129,10 @@ public class ZbnfParser
 {
   
   /**Version, history and license.
-   * <ul>Showing components in logfile now from left to right root to special, may be better to read.
-* ZbnfParser: showing position in String on error additional to line and column, need for error analyzing.
-
+   * <ul>
+   * <li>2015-06-07 Hartmut chg: Improved setting line, column and position in parse result items.
+   * <li>2015-06-06 Hartmut chg: Showing components in logfile now from left to right root to special, may be better to read.
+   * <li>2015-06-06 Hartmut chg: showing position in String on error additional to line and column, need for error analyzing.
    * <li>2015-06-06 Hartmut chg: {@link SubParser#parseSub(ZbnfSyntaxPrescript, String, int, String, boolean, ZbnfParserStore)}
    *   gets the syntaxPrescript as argument, not a instance variable. Therewith it is not necessary to have an own instance for parsing
    *   some alternative options. Because that is the most frequently parse task, it should save calculation time to do so.
@@ -717,7 +719,12 @@ public class ZbnfParser
         if( syntaxPrescript.sSubSyntax != null)
         { /**If <code>[<?!subsyntax> ... ]</code> is given, execute it! */
           //String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
-          bFound = addResultOrSubsyntax(parsedInput, posInputForStore, sSemanticForStoring1, syntaxPrescript.sSubSyntax, input);
+          int srcLine = parentResultItem.nLine;
+          int srcColumn = parentResultItem.nColumn;
+          long srcPos = parentResultItem.start;
+          String srcFile = parentResultItem.sFile;
+          bFound = addResultOrSubsyntax(parsedInput, srcPos, srcLine,srcColumn, srcFile, sSemanticForStoring1, syntaxPrescript.sSubSyntax);
+          //bFound = addResultOrSubsyntax(parsedInput, posInputForStore, sSemanticForStoring1, syntaxPrescript.sSubSyntax, input);
         }
         
         if(!bFound && idxCurrentStore >=0)
@@ -1033,8 +1040,8 @@ public class ZbnfParser
                 if(StringFunctions.startsWith(sSrc,"First line"))
                   stop();
                 long posResult = input.getCurrentPosition();
-                //TODO store line and column.
-                bOk = addResultOrSubsyntax(sSrc, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+                int srcLine = input.getLineAndColumn(srcColumn);  //, srcLine, srcColumn[0], input.getInputfile()
+                bOk = addResultOrSubsyntax(sSrc, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, syntaxItem.getSubSyntax());
                 //posSrc = (int)input.getCurrentPosition();
                 input.fromEnd();
               }                
@@ -1065,6 +1072,93 @@ public class ZbnfParser
         return parseComponent(partOfInput, posSrc, subSyntax, null, false, false, false);
       }
       
+      private boolean parseWhiteSpaceAndComment() //ZbnfParserStore parseResult)
+      { return parseWhiteSpaceAndCommentOrTerminalSymbol(null, null);
+      }
+
+      /**Skips white spaces and parses a given constant syntax before checking and skipping comments.
+       * Other comment parts are skipped.
+       * If the sConstantSyntax is given, it have to be found. 
+       * Otherwise the current position of input is rewind to the start before this
+       * method is calling (no whitespaces and comments are skipped!).
+       * If the constant syntax is not given, all comments and white spaces are skipped.
+       * @param sConstantSyntax The string to test as terminal symbol or null. 
+       * @param parseResult can be null if sConstantSyntax is null.
+       * @return true if the constant syntax given by syntaxItem is found. 
+       *         false if it is not found or syntaxItem == null.
+       */
+      private boolean parseWhiteSpaceAndCommentOrTerminalSymbol(String sConstantSyntax, ZbnfParserStore parseResult)
+      { long posInput  = input.getCurrentPosition();
+        
+        long posCurrent = input.getCurrentPosition();
+        boolean bFoundConstantSyntax;  
+        boolean bFoundAnySpaceOrComment;
+        do  //if once of whitespace, comment or endlinecomment is found, try again.
+        { bFoundAnySpaceOrComment = false;
+          if(  sConstantSyntax != null 
+            && sConstantSyntax.charAt(0) == StringPartScan.cEndOfText
+            && input.length()==0
+            )
+          { bFoundConstantSyntax = true;
+            bFoundAnySpaceOrComment = false;
+            if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseWhiteSpace;        " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok EndOfText:");
+          }
+          else if(sConstantSyntax != null && input.startsWith(sConstantSyntax))
+          { bFoundConstantSyntax = true;
+            bFoundAnySpaceOrComment = false;
+            if(sConstantSyntax.equals("<:>")){
+              stop();
+            }
+            long nStart = input.getCurrentPosition();
+            srcLine = input.getLineAndColumn(srcColumn);
+            String sFileInput = input.getInputfile();
+            input.seek(sConstantSyntax.length());
+            if(bConstantSyntaxAsParseResult) { 
+              parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput, parentResultItem);
+            }
+            else {
+              parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput);  //especially if it is the first item in component.
+            }
+            if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseConstInComment;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
+          }
+          else
+          { bFoundConstantSyntax = false;
+            input.seekNoChar(sWhiteSpaces);
+            long posNew = input.getCurrentPosition();
+            if(posNew > posCurrent)
+            { bFoundAnySpaceOrComment = true;
+              posCurrent = posNew;
+            }
+            if(!bFoundAnySpaceOrComment && sCommentStringStart != null && input.startsWith(sCommentStringStart))
+            { input.lento(sCommentStringEnd, StringPartScan.seekEnd);
+              if(input.length()>0)
+              { bFoundAnySpaceOrComment = true;
+      
+                input.fromEnd();
+                posCurrent = input.getCurrentPosition();
+              }
+            }
+      
+            if(!bFoundAnySpaceOrComment && sEndlineCommentStringStart != null && input.startsWith(sEndlineCommentStringStart))
+            { input.lento("\n"); //, StringPart.seekEnd);  //the \n should not included, it will skip either as whitespace or it is necessary for the linemode.
+              if(input.length()>0)
+              { bFoundAnySpaceOrComment = true;
+      
+                input.fromEnd();
+                posCurrent = input.getCurrentPosition();
+              }
+            }
+          }
+        }while(bFoundAnySpaceOrComment);
+        if(sConstantSyntax != null && !bFoundConstantSyntax)
+        { saveError("\"" + sConstantSyntax + "\"");
+          input.setCurrentPosition(posInput);
+          int posParseResult = parseResult.getNextPosition();
+          parseResult.setCurrentPosition(posParseResult);
+        }
+        return bFoundConstantSyntax;
+      }
+
       /**
        * checks a terminal symbol.
        * @param syntaxItem The syntaxitem of a terminal symbol, containing the constant syntax.
@@ -1121,7 +1215,8 @@ public class ZbnfParser
           //if(sSemanticForStoring != null)
           { CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+            int srcLine = input.getLineAndColumn(srcColumn);
+            bOk = addResultOrSubsyntax(sResult, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, syntaxItem.getSubSyntax());
             //parseResult.addString(input, sSemanticForStoring, parentResultItem);
           }
           if(bOk){ input.fromEnd(); }
@@ -1247,7 +1342,8 @@ public class ZbnfParser
           { input.lento(len);
             CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+            int srcLine = input.getLineAndColumn(srcColumn); 
+            bOk = addResultOrSubsyntax(sResult, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, syntaxItem.getSubSyntax());
             //if(sSemanticForStoring != null)
             //{ parseResult.addString(input, sSemanticForStoring);
             //}
@@ -1284,7 +1380,9 @@ public class ZbnfParser
           if(input.length() >0)
           { CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+            srcLine = input.getLineAndColumn(srcColumn);
+            int srcLine = input.getLineAndColumn(srcColumn);
+            bOk = addResultOrSubsyntax(sResult, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, syntaxItem.getSubSyntax());
           }
           input.fromEnd();
         }
@@ -1331,7 +1429,8 @@ public class ZbnfParser
             sResult = sResult.trim();
           }
           long posResult = input.getCurrentPosition();
-          bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+          int srcLine = input.getLineAndColumn(srcColumn);
+          bOk = addResultOrSubsyntax(sResult, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, syntaxItem.getSubSyntax());
           if(bOk){ input.fromEnd(); }
         }
         else
@@ -1455,23 +1554,26 @@ public class ZbnfParser
         
       
       
-      private boolean addResultOrSubsyntax(CharSequence sResult, long posSrc, String sSemanticForStoring, String subSyntax, StringPart spInput) throws ParseException
+      private boolean addResultOrSubsyntax(CharSequence sResult, long srcBegin, int srcLine, int srcColumn, String srcFile, String sSemanticForStoring, String subSyntax) throws ParseException
       { //##ss
         boolean bOk;
         //String sSrc = input.getCurrentPart();
         //int posSrc = (int)input.getCurrentPosition();
         if(subSyntax!= null)
-        { //##i
-          if(sSemanticForStoring !=null)
-            stop();
+        { //The source string of the parsed component is used for further parsing of them by a sub syntax:
+          if(sSemanticForStoring !=null){
+            assert(false);  //it is excluded by the syntax definition.
+          }
           StringPartScan partOfInput = new StringPartScan(sResult);
-          bOk = parseComponent(partOfInput, (int)posSrc, subSyntax, sSemanticForStoring, false, false, false);
+          bOk = parseComponent(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
-        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, spInput, parentResultItem, srcLine = input.getLineAndColumn(srcColumn), srcColumn[0], input.getInputfile());
+        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, null, parentResultItem, srcLine, srcColumn, srcFile);
           bOk = true;
+        } else {
+          parentResultItem.setSrcLineColumnFileInParent(srcBegin, input.getCurrentPosition(), srcLine, srcColumn, srcFile);  //especially if it is the first item in component.
+          bOk = true; 
         }
-        else { bOk = true; }
         return bOk;        
       }
       
@@ -1496,7 +1598,8 @@ public class ZbnfParser
             input.lento(len-2);  //without end quotion mark
             CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
-            bOk = addResultOrSubsyntax(sResult, posResult, sSemanticForStoring, syntaxItem.getSubSyntax(), input);
+            int srcLine = input.getLineAndColumn(srcColumn);  //, srcLine, srcColumn[0], input.getInputfile()
+            bOk = addResultOrSubsyntax(sResult, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, syntaxItem.getSubSyntax());
             //if(sSemanticForStoring != null)
             //{ parseResult.addString(input, sSemanticForStoring);
             //}
@@ -1517,92 +1620,6 @@ public class ZbnfParser
       }
   
   
-      /**Skips white spaces and parses a given constant syntax before checking and skipping comments.
-       * Other comment parts are skipped.
-       * If the sConstantSyntax is given, it have to be found. 
-       * Otherwise the current position of input is rewind to the start before this
-       * method is calling (no whitespaces and comments are skipped!).
-       * If the constant syntax is not given, all comments and white spaces are skipped.
-       * @param sConstantSyntax The string to test as terminal symbol or null. 
-       * @param parseResult can be null if sConstantSyntax is null.
-       * @return true if the constant syntax given by syntaxItem is found. 
-       *         false if it is not found or syntaxItem == null.
-       */
-      private boolean parseWhiteSpaceAndCommentOrTerminalSymbol(String sConstantSyntax, ZbnfParserStore parseResult)
-      { long posInput  = input.getCurrentPosition();
-        
-        long posCurrent = input.getCurrentPosition();
-        boolean bFoundConstantSyntax;  
-        boolean bFoundAnySpaceOrComment;
-        do  //if once of whitespace, comment or endlinecomment is found, try again.
-        { bFoundAnySpaceOrComment = false;
-          if(  sConstantSyntax != null 
-            && sConstantSyntax.charAt(0) == StringPartScan.cEndOfText
-            && input.length()==0
-            )
-          { bFoundConstantSyntax = true;
-            bFoundAnySpaceOrComment = false;
-            if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseWhiteSpace;        " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok EndOfText:");
-          }
-          else if(sConstantSyntax != null && input.startsWith(sConstantSyntax))
-          { bFoundConstantSyntax = true;
-            bFoundAnySpaceOrComment = false;
-            if(sConstantSyntax.equals("<:>")){
-              stop();
-            }
-            long nStart = input.getCurrentPosition();
-            srcLine = input.getLineAndColumn(srcColumn);
-            String sFileInput = input.getInputfile();
-            input.seek(sConstantSyntax.length());
-            if(bConstantSyntaxAsParseResult)
-            { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput, parentResultItem);
-            }
-            else {
-              parentResultItem.setSrcLineColumnFileInParent(srcLine, srcColumn[0], sFileInput);  //especially if it is the first item in component.
-            }
-            if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseConstInComment;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
-          }
-          else
-          { bFoundConstantSyntax = false;
-            input.seekNoChar(sWhiteSpaces);
-            long posNew = input.getCurrentPosition();
-            if(posNew > posCurrent)
-            { bFoundAnySpaceOrComment = true;
-              posCurrent = posNew;
-            }
-            if(!bFoundAnySpaceOrComment && sCommentStringStart != null && input.startsWith(sCommentStringStart))
-            { input.lento(sCommentStringEnd, StringPartScan.seekEnd);
-              if(input.length()>0)
-              { bFoundAnySpaceOrComment = true;
-      
-                input.fromEnd();
-                posCurrent = input.getCurrentPosition();
-              }
-            }
-      
-            if(!bFoundAnySpaceOrComment && sEndlineCommentStringStart != null && input.startsWith(sEndlineCommentStringStart))
-            { input.lento("\n"); //, StringPart.seekEnd);  //the \n should not included, it will skip either as whitespace or it is necessary for the linemode.
-              if(input.length()>0)
-              { bFoundAnySpaceOrComment = true;
-      
-                input.fromEnd();
-                posCurrent = input.getCurrentPosition();
-              }
-            }
-          }
-        }while(bFoundAnySpaceOrComment);
-        if(sConstantSyntax != null && !bFoundConstantSyntax)
-        { saveError("\"" + sConstantSyntax + "\"");
-          input.setCurrentPosition(posInput);
-          int posParseResult = parseResult.getNextPosition();
-          parseResult.setCurrentPosition(posParseResult);
-        }
-        return bFoundConstantSyntax;
-      }
-      
-      
-      
-
       /** Parses at start of an option.
        * 
        * @param options The current syntaxprescript item, a option item.
@@ -1815,16 +1832,6 @@ public class ZbnfParser
       }
   
   
-      private boolean parseWhiteSpaceAndComment() //ZbnfParserStore parseResult)
-      { return parseWhiteSpaceAndCommentOrTerminalSymbol(null, null);
-      }
-  
-      
-      
-  
-  
-      
-      
       /** Sets the rightest position of matched input. Usefull to support the
        * methods getFoundedInputOnError() and getExpectedSyntaxOnError().
        * <br>

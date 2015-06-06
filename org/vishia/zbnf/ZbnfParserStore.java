@@ -673,16 +673,54 @@ class ZbnfParserStore
      * @param srcColumn The column in source on begin of parsed String.
      * @param srcFile The path to the source file.
      */
-    /*package private*/ void setSrcLineColumnFileInParent(int srcLine, int srcColumn, String srcFile)
+    /*package private*/ void setSrcLineColumnFileInParent(long begin, long end, int srcLine, int srcColumn, String srcFile)
     { ParseResultItemImplement parent1 = this;
       do {  
         if(parent1.sFile ==null){
+          parent1.start = begin;
+          parent1.end = end;
           parent1.sFile = srcFile;
           parent1.nLine = srcLine;
           parent1.nColumn = srcColumn;
         }
       } while( (parent1 = parent1.parent) != null); 
     }
+
+
+    /**Adds an item in the parents, that is a component item usually. This method is called for the immediately parent
+     * of a new item added to the store.
+     * It sets also information about the source of parsing in the parent result item, similar to {@link #setSrcLineColumnFileInParent(long, long, int, int, String)}. 
+     * The information are only set if the parent contains null for the source file. Elsewhere the information
+     * was set already by any of the previous result items of this component, more exactly the first one.
+     * @param begin The begin position of the parsed String for this component.
+     * @param end The end of parsed String
+     * @param srcLine The line in source on begin of parsed String.
+     * @param srcColumn The column in source on begin of parsed String.
+     * @param srcFile The path to the source file.
+     */
+    private void addInParent(long begin, long end, int srcLine, int srcColumn, String srcFile)
+    {
+      ParseResultItemImplement parent1 = this;
+        parent1.offsetAfterEnd +=1;
+        if(parent1.sFile ==null && srcFile !=null){
+          parent1.sFile = srcFile;
+          parent1.nLine = srcLine;
+          parent1.nColumn = srcColumn;
+        }
+        //correct also all offsetAfterEnd from all parents. If the parents are not ready parsed yet,
+        //its offsetAfterEnd is not correct, but it is set correctly after parsing the component.
+        //in this case the changing here is not necessary but also not interfering.
+        while( (parent1 = (ParseResultItemImplement)parent1.parent) != null 
+             && parent1.offsetAfterEnd >0
+             )
+        { parent1.offsetAfterEnd +=1;
+          if(parent1.sFile ==null && srcFile !=null){
+            parent1.sFile = srcFile;
+            parent1.nLine = srcLine;
+            parent1.nColumn = srcColumn;
+          }
+        }
+      }
 
 
   }
@@ -752,33 +790,6 @@ class ZbnfParserStore
 
   
   
-  private void addInParent(ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  {
-    if(parent != null)
-    { ParseResultItemImplement parent1 = ((ParseResultItemImplement)(parent));
-      parent1.offsetAfterEnd +=1;
-      if(parent1.sFile ==null && srcFile !=null){
-        parent1.sFile = srcFile;
-        parent1.nLine = srcLine;
-        parent1.nColumn = srcColumn;
-      }
-      //correct also all offsetAfterEnd from all parents. If the parents are not ready parsed yet,
-      //its offsetAfterEnd is not correct, but it is set correctly after parsing the component.
-      //in this case the changing here is not necessary but also not interfering.
-      while( (parent1 = (ParseResultItemImplement)parent1.parent) != null 
-           && parent1.offsetAfterEnd >0
-           )
-      { parent1.offsetAfterEnd +=1;
-        if(parent1.sFile ==null && srcFile !=null){
-          parent1.sFile = srcFile;
-          parent1.nLine = srcLine;
-          parent1.nColumn = srcColumn;
-        }
-      }
-    }
-  }
-  
-  
   /** Adds a new item
    *
    * @param sSemantic
@@ -812,13 +823,15 @@ class ZbnfParserStore
     if(item.idxOwn == 221)
       stop();
     items.add(item);
-    addInParent(parent, srcLine, srcColumn, srcFile);
-    /*
+    if(item.parent !=null){
+      item.parent.setSrcLineColumnFileInParent(start, end, srcLine, srcColumn, srcFile);
+      //item.parent.addInParent(start, end, srcLine, srcColumn, srcFile);
+    }
+    //Only the immediately parent.
     if(parent != null)
     { 
       ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
-    */
     return item;
     //return items.size() -1;  //position of the entry
   }
@@ -917,11 +930,13 @@ class ZbnfParserStore
     if(item.idxOwn == 221)
       stop();
     items.add(item);
-    addInParent(parent, srcLine, srcColumn, srcFile);
-    /*
-    if(parent != null)
-    { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
-    }*/
+    if(item.parent !=null){
+      item.parent.setSrcLineColumnFileInParent(-1, -1, srcLine, srcColumn, srcFile);
+      //item.parent.addInParent(-1, -1, srcLine, srcColumn, srcFile);
+    }
+    if(parent != null) { //only the immediate parent.
+      ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+    }
   }
 
 
@@ -1092,8 +1107,22 @@ class ZbnfParserStore
          * if there are added to the main store, but they must stay there for further using.
          * 
         */
-        ((items.get(ii))).isAdded = false;
+        ParseResultItemImplement item9 = items.get(ii); 
+        item9.isAdded = false;
+        //((items.get(ii))).isAdded = false;
         items.remove(ii);
+        /*//They may be another bug, some addResult methods does not increment the offsetAfterEnd. If this routine cleans it, it seams to be faulty.
+        { ParseResultItemImplement parent = item9.parent;
+          while(parent !=null){
+            if(parent.offsetAfterEnd + parent.idxOwn > ii ){
+              parent.offsetAfterEnd = ii - parent.idxOwn;
+            }
+            parent = parent.parent;
+          }
+          
+        }
+        */
+        //item9.parent = null;
         ii-=1;
       }
     }
