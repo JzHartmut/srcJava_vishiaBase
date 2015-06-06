@@ -130,6 +130,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-06-07 Hartmut chg: {@link PrescriptParser#srcLineOption} etc. created and filled. If given it is the src position for a component.
    * <li>2015-06-07 Hartmut chg: Improved setting line, column and position in parse result items.
    * <li>2015-06-06 Hartmut chg: Showing components in logfile now from left to right root to special, may be better to read.
    * <li>2015-06-06 Hartmut chg: showing position in String on error additional to line and column, need for error analyzing.
@@ -226,7 +227,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2014-06-17";
+  public static final String sVersion = "2015-06-07";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -253,7 +254,14 @@ public class ZbnfParser
     
     /**Position where the input String is located in the whole input. */
     protected final int posInputbase;
-  
+    
+    /**Position in source on the first parsed item in an option, used if a component is used inside the option
+     * and only a constant character item is given before.
+     */
+    protected int srcLineOption = -1;
+    protected final int[] srcColumnOption = new int[1];
+    protected long srcPosOption;
+    
     final PrescriptParser parentPrescriptParser;
 
     /**The parse result buffer is a own reference in each subParser.  
@@ -926,8 +934,7 @@ public class ZbnfParser
               } else {
                 sConstantText = null;
               }
-              bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol
-                (sConstantText, parserStoreInPrescript);
+              bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol(sConstantText, parserStoreInPrescript);
               //parseWhiteSpaceAndComment(parserStoreInPrescript);
             } else { 
               bOk = bTerminalFoundInComment = false; 
@@ -1113,10 +1120,14 @@ public class ZbnfParser
             srcLine = input.getLineAndColumn(srcColumn);
             String sFileInput = input.getInputfile();
             input.seek(sConstantSyntax.length());
-            if(bConstantSyntaxAsParseResult) { 
+            if(bConstantSyntaxAsParseResult) {
+              srcLineOption = -1;
               parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput, parentResultItem);
             }
             else {
+              if(srcLineOption == -1) {  //it is the first item in an option, without result item.
+                srcLineOption = srcLine; srcColumnOption[0] = srcColumn[0]; srcPosOption = nStart; 
+              }
               parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput);  //especially if it is the first item in component.
             }
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseConstInComment;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
@@ -1179,8 +1190,14 @@ public class ZbnfParser
         if(input.scan(sConstantSyntax).scanOk())
         { bOk = true;
           //input.seek(sConstantSyntax.length());
-          if(bConstantSyntaxAsParseResult)
-          { parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile, parentResultItem);
+          if(bConstantSyntaxAsParseResult) {
+            srcLineOption = -1;
+            parseResult.addConstantSyntax(sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile, parentResultItem);
+          } else {
+            if(srcLineOption == -1){  //it is the first item in an option, without result item.
+              srcLineOption = srcLine; srcColumnOption[0] = srcColumn[0]; srcPosOption = nStart; 
+            }
+            parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile);  //especially if it is the first item in component.
           }
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseTerminalSymbol;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
         }
@@ -1320,7 +1337,7 @@ public class ZbnfParser
             if(syntaxItem.getType() == ZbnfSyntaxPrescript.kFloatWithFactor)
             { result *= syntaxItem.getFloatFactor();
             }
-            
+            srcLineOption = -1;
             parseResult.addFloatNumber(sSemanticForStoring, result, parentResultItem);
           }
         }
@@ -1568,10 +1585,14 @@ public class ZbnfParser
           bOk = parseComponent(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
-        { parserStoreInPrescript.addString(sResult, sSemanticForStoring, null, parentResultItem, srcLine, srcColumn, srcFile);
+        { srcLineOption = -1;
+          parserStoreInPrescript.addString(sResult, sSemanticForStoring, null, parentResultItem, srcLine, srcColumn, srcFile);
           bOk = true;
         } else {
-          parentResultItem.setSrcLineColumnFileInParent(srcBegin, input.getCurrentPosition(), srcLine, srcColumn, srcFile);  //especially if it is the first item in component.
+          if(srcLineOption == -1) {  //it is the first item in an option, without result item.
+            srcLineOption = srcLine; srcColumnOption[0] = srcColumn; srcPosOption = srcBegin; 
+          }
+          parentResultItem.setSrcLineColumnFileInParent(srcBegin, srcBegin, srcLine, srcColumn, srcFile);  //especially if it is the first item in component.
           bOk = true; 
         }
         return bOk;        
@@ -1675,8 +1696,8 @@ public class ZbnfParser
         if(!bParseFirstAfterOption || !bOk)  //##cc
         */
         { //now try the option.
-          if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptionFirstAfter;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " try options:");
-                    
+          //if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptionFirstAfter;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " try options:");
+          srcLineOption = -1;  //clear          
           SubParser optionParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
           bOk = optionParser.parseSub(optionPrescript, "[...]"/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment,  null);
           if(!bOk)
