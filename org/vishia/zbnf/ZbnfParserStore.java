@@ -41,7 +41,6 @@ import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
-import org.vishia.zbnf.ZbnfParser.ParseResultlet;
 
 
 /** This class stores an syntax tested item.
@@ -65,6 +64,7 @@ import org.vishia.zbnf.ZbnfParser.ParseResultlet;
  * <tr><td>&lt;*""endchars?semantic></td><td>         &nbsp;</td><td>kString</td><td>add??</td></tr>
  * </table>
  * */
+@SuppressWarnings("synthetic-access") 
 class ZbnfParserStore
 {
   /**Version, history and license.
@@ -222,8 +222,8 @@ class ZbnfParserStore
 
     /** The position from-to of the associated input*/
     long start, end;
-    /** The line and column nr for debugging*/
-    int nLine, nColumn;
+    /** The line and column and the position in the source nr for debugging*/
+    int nLine, nColumn, srcPos;
 
     /**The file or adequate ressource from which this result comes from. */
     String sFile;
@@ -661,6 +661,18 @@ class ZbnfParserStore
       }
     }
 
+    /**Sets information about the source of parsing in the parent result item, that is a component item usually.
+     * This is called especially if a constant (terminate morphem) was parsed which does not generate a result item.
+     * It is similar to {@link #addInParent(long, long, int, int, String)} to the source information.
+     * The information are only set if the parent contains null for the source file. Elsewhere the information
+     * was set already by any of the previous result items of this component, more exactly the first one.
+     * @param parent
+     * @param begin The begin position of the parsed String for this component.
+     * @param end The end of parsed String
+     * @param srcLine The line in source on begin of parsed String.
+     * @param srcColumn The column in source on begin of parsed String.
+     * @param srcFile The path to the source file.
+     */
     /*package private*/ void setSrcLineColumnFileInParent(int srcLine, int srcColumn, String srcFile)
     { ParseResultItemImplement parent1 = this;
       do {  

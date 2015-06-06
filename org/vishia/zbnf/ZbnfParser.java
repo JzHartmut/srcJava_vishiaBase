@@ -128,7 +128,9 @@ public class ZbnfParser
 {
   
   /**Version, history and license.
-   * <ul>
+   * <ul>Showing components in logfile now from left to right root to special, may be better to read.
+* ZbnfParser: showing position in String on error additional to line and column, need for error analyzing.
+
    * <li>2015-06-06 Hartmut chg: {@link SubParser#parseSub(ZbnfSyntaxPrescript, String, int, String, boolean, ZbnfParserStore)}
    *   gets the syntaxPrescript as argument, not a instance variable. Therewith it is not necessary to have an own instance for parsing
    *   some alternative options. Because that is the most frequently parse task, it should save calculation time to do so.
@@ -290,7 +292,8 @@ public class ZbnfParser
       this.input = input;
       this.posInputbase = posInputbase;
       sSemanticIdent = sSemantic;
-      sReportParentComponents = sSemantic + "+" + (parent != null ? parent.sReportParentComponents : "");
+      //sReportParentComponents = sSemantic + "+" + (parent != null ? parent.sReportParentComponents : "");
+      sReportParentComponents = (parent != null ? parent.sReportParentComponents : "") + "+" + sSemantic;
     }
   
     
@@ -758,8 +761,9 @@ public class ZbnfParser
               bSkipSpaceAndComment = true;
             }
             if(idxPrescript < listPrescripts.size()) { //consider spaces on end of prescript.
-              if(input.getCurrentPosition()==31)
-                Assert.stop();
+              if(input.getCurrentPosition()>=6834) 
+                if(StringFunctions.equals(prescriptItem.sDefinitionIdent, "binaryOperator"))
+                  Debugutil.stop();
               ZbnfSyntaxPrescript syntaxItem = listPrescripts.get(idxPrescript); 
               int nType = syntaxItem.getType();
               if(nType == ZbnfSyntaxPrescript.kAlternativeOptionCheckEmptyFirst && !backToFork){
@@ -1346,9 +1350,10 @@ public class ZbnfParser
        * It is possible to parse in mainstream input, in this case this.input should be given as
        * parameter sInputP, or it is possible to parse a detected part of input, escpecially
        * after parsing "<code>&lt;*...?!sDefinitionIdent&gt;</code>".<br>
-       * It is also possible to write the result in the mainstream parse result buffer, or in a extra buffer.
-       * @param sInputP input to parse. This may be the mainstream input from this.
-       * @param posInputbase
+       * It is also possible to write the result in the main parse result buffer, or in a extra buffer.
+       * @param sInputP input to parse. This may be the main input from this.
+       * @param posInputbase The position of the given sInputP in the originally input. Note that this parse routine
+       *   does not use the {@link #input} but parses the sInputP. This is the offset information.
        * @param sDefinitionIdent Identifier of the Syntax prescript, written in ZBNF at "sDefinitionIdent::=..."
        * @param sSemanticForStoring If the semantic is specified outside, it is its identifier. Otherwise it is null 
        * @param bSkipSpaceAndComment True if there are spaces in the prescript before this component.
@@ -2799,11 +2804,10 @@ public class ZbnfParser
     if(sFile !=null){
       u.append(" in file ").append(sFile);
     }
-    if(line ==0 && column == 0){
-      u.append(" @char position: "); 
+    u.append(" @char-pos: "); 
       u.append(getInputPositionOnError());
       u.append("=0x" + Long.toString(getInputPositionOnError(),16) + " ");
-    } else {
+    if(line >0 || column > 0){
       u.append(" @line, col: ").append(line).append(", ").append(column);
     }
     
