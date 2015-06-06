@@ -395,7 +395,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " textOut::=\\<+ [<dataPath?assign>] [:n<?newline>] \\> \n"
     + "   <textExpr>\n"
-    + "   [ \\<\\.+\\> \n                    ## end text variants:"
+    + "   [ \\<\\.+\\>                     ## end text variants: \n"
     + "   | \\<\\.n+\\><?newline>  \n"  
     + "   | \\<\\.+n\\><?newline> \n"
     + "   | \\<\\.+n+flush\\><?newline><?flush>  \n"

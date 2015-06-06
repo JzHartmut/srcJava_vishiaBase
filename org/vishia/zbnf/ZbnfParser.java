@@ -628,9 +628,11 @@ public class ZbnfParser
         
         //Either the List of all syntax items one after another of this node
         // or List of all alternatives if this is an alternative syntax node.
-        List<ZbnfSyntaxPrescript> listPrescripts = syntaxPrescript.getListPrescripts();
         boolean bOk = false;
         if(syntaxPrescript.isAlternative()) { //not for [x|y], only for component::= x | y.
+          if(posInput >= 2537)
+            Debugutil.stop();
+          List<ZbnfSyntaxPrescript> listPrescripts = syntaxPrescript.getListPrescripts();
           Iterator<ZbnfSyntaxPrescript> iter = listPrescripts.iterator();
           while(!bOk && iter.hasNext())
           { idxAlternative +=1;
@@ -641,9 +643,9 @@ public class ZbnfParser
               bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
             } else {
               //the alternative has not a special semantic. Parse it without extra level.
-              //bOk = parsePrescript(alternativePrescript.childSyntaxPrescripts, bSkipSpaceAndComment);
-              SubParser alternativParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
-              bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
+              bOk = parsePrescript(alternativePrescript, bSkipSpaceAndComment);
+              //SubParser alternativParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
+              //bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
             }
             if(nReportLevel >= MainCmdLogging_ifc.fineDebug)
             { report.reportln(MainCmdLogging_ifc.fineDebug
@@ -658,7 +660,7 @@ public class ZbnfParser
         { /* parse the current sub-prescript: 
           */
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse subPrescript;     " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion +") alternative=" + idxAlternative);
-          bOk = parsePrescript(listPrescripts, bSkipSpaceAndComment);
+          bOk = parsePrescript(syntaxPrescript, bSkipSpaceAndComment);
         }  
         if(bOk)
         { bFound = true;
@@ -732,9 +734,9 @@ public class ZbnfParser
        * @return true on success.
        * @throws ParseException
        */
-      boolean parsePrescript(List<ZbnfSyntaxPrescript> listPrescripts, boolean bSkipSpaceAndCommentForward) 
+      boolean parsePrescript(ZbnfSyntaxPrescript prescriptItem, boolean bSkipSpaceAndCommentForward) 
       throws ParseException 
-      {
+      { List<ZbnfSyntaxPrescript> listPrescripts = prescriptItem.getListPrescripts();
         boolean bSkipSpaceAndComment = bSkipSpaceAndCommentForward;
         boolean bOk = false;
         //save the current positions in input and result to restore if the prescript does not match:
