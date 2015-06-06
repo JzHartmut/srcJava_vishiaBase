@@ -178,7 +178,7 @@ public class ZbnfParser
    * <li>2013-12-06 Hartmut nice fix: trim spaces in $comment and $endlineComment. A user may write white spaces, it didn't recognize comments.
    *   Now white spaces are admissable.
    * <li>2013-09-02 Hartmut TODO forex "[{ <datapath?-assign> = }] cmd " saves the {@link PrescriptParser#parseResultToOtherComponent} of "assign"
-   *   because that {@link SubParser#parseComponent(StringPartScan, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
+   *   because that {@link SubParser#parse_Component(StringPartScan, int, String, String, boolean, boolean, boolean)} is ok. But the outer level "{ ... = }"
    *   fails because the "=" is not present. In this case the {@link PrescriptParser#parseResultToOtherComponent} should be removed if it comes
    *   from an inner SubParser which is not used. The solution should be: The parseResultToOtherComponent should be an attribute of {@link SubParser}
    *   instead the {@link PrescriptParser}, the {@link PrescriptParser} should know it via a List<ParserStore> and all levels of SubParser should 
@@ -317,7 +317,7 @@ public class ZbnfParser
      * The input is given in the constructor, calld from the outer class {@link ZbnfParser}.
      * It is running in a while()-loop. The loop breaks at end of syntax-prescript or
      * if no path in syntax prescript matches to the input. Inside the method 
-     * {@link ZbnfParser.PrescriptParser.SubParser#parseComponent(StringPartScan, int, String, String, boolean, boolean, boolean)}
+     * {@link ZbnfParser.PrescriptParser.SubParser#parse_Component(StringPartScan, int, String, String, boolean, boolean, boolean)}
      * this method may be called recursively, if the syntax prescript contains &lt;<i>syntax</i>...&gt;.<br/>
      *
      * If a semantic for storing is given as input argument sSemanticForStoring, 
@@ -617,6 +617,15 @@ public class ZbnfParser
         { //the result item for the component is created in advance, it is not tested yet whether it is true.
           //it will be deleted later if it is not true.
           resultItem = parserStoreInPrescript.addAlternative(sSemanticForStoring1, resultType, parentOfParentResultItem, null);
+          if(parentPrescriptParser !=null && parentPrescriptParser.srcLineOption >=0){
+            //Set the source position from a option start with constant syntax from the parent level if given.
+            resultItem.srcLine = parentPrescriptParser.srcLineOption;
+            resultItem.srcColumn = parentPrescriptParser.srcColumnOption[0];
+            resultItem.srcPos = parentPrescriptParser.srcPosOption;
+            resultItem.sFile = input.getInputfile();
+          } else {
+            Debugutil.stop();
+          }
           idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = parserStoreInPrescript.items.size() -1; 
           parentResultItem = resultItem; //parserStoreInPrescript.getItem(idxCurrentStore);
         }
@@ -727,8 +736,8 @@ public class ZbnfParser
         if( syntaxPrescript.sSubSyntax != null)
         { /**If <code>[<?!subsyntax> ... ]</code> is given, execute it! */
           //String parsedInput = input.substring((int)posInputForStore, (int)input.getCurrentPosition());
-          int srcLine = parentResultItem.nLine;
-          int srcColumn = parentResultItem.nColumn;
+          int srcLine = parentResultItem.srcLine;
+          int srcColumn = parentResultItem.srcColumn;
           long srcPos = parentResultItem.start;
           String srcFile = parentResultItem.sFile;
           bFound = addResultOrSubsyntax(parsedInput, srcPos, srcLine,srcColumn, srcFile, sSemanticForStoring1, syntaxPrescript.sSubSyntax);
@@ -907,7 +916,7 @@ public class ZbnfParser
             parserStoreInPrescript.addSemantic(sSemanticForStoring, parentResultItem, srcLine, srcColumn[0], srcFile);
           } break; //do nothing
           case ZbnfSyntaxPrescript.kSyntaxComponent:
-          { bOk = parseComponent
+          { bOk = parse_Component
                   ( input
                   , posInputbase    
                   , sDefinitionIdent
@@ -1066,18 +1075,6 @@ public class ZbnfParser
         return bOk;
       }
   
-      /**Parses a parsed result String with a subSyntax.
-       * @param sSrc The string, it is the result especially from &lt;*EndChars?!syntax>
-       * @param posSrc Position of the source in the whole string
-       * @param subSyntax The sub syntax prescript identifier.
-       * @return successful or not
-       * @throws ParseException if the subsyntax should match and it isn*t so.
-       */
-      boolean XXXparseSubSyntax(String sSrc, int posSrc, String subSyntax) 
-      throws ParseException
-      { StringPartScan partOfInput = new StringPartScan(sSrc);
-        return parseComponent(partOfInput, posSrc, subSyntax, null, false, false, false);
-      }
       
       private boolean parseWhiteSpaceAndComment() //ZbnfParserStore parseResult)
       { return parseWhiteSpaceAndCommentOrTerminalSymbol(null, null);
@@ -1482,7 +1479,7 @@ public class ZbnfParser
        * @return true if succesfull, false if the input not matches to the prescript. 
        * @throws ParseException 
        */
-      private boolean parseComponent
+      private boolean parse_Component
       ( StringPartScan sInputP
       , int posInputbase
       , String sDefinitionIdent
@@ -1582,7 +1579,7 @@ public class ZbnfParser
             assert(false);  //it is excluded by the syntax definition.
           }
           StringPartScan partOfInput = new StringPartScan(sResult);
-          bOk = parseComponent(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, false, false, false);
+          bOk = parse_Component(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, false, false, false);
         }
         else if( sSemanticForStoring != null)
         { srcLineOption = -1;

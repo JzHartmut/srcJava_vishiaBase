@@ -223,9 +223,10 @@ class ZbnfParserStore
     /** The position from-to of the associated input*/
     long start, end;
     /** The line and column and the position in the source nr for debugging*/
-    int nLine, nColumn, srcPos;
+    int srcLine, srcColumn;
+    long srcPos;
 
-    /**The file or adequate ressource from which this result comes from. */
+    /**The file or adequate resource from which this result comes from. */
     String sFile;
     
     /**The syntax identifications which has produced the stored result.
@@ -245,13 +246,14 @@ class ZbnfParserStore
     ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax)
     { this.store = store;
       int posValue = sSemantic.indexOf('='); 
-      if(posValue>0){
+      if(posValue>0){  //set a value with the given semantic in form "semantic=value"
         String value = sSemantic.substring(posValue+1);
-        sSemantic = sSemantic.substring(0, posValue);
+        this.sSemantic = sSemantic.substring(0, posValue);
         this.parsedString = value;
         this.kind = kString;
+      } else {
+        this.sSemantic = sSemantic;
       }
-      this.sSemantic = sSemantic;
       this.parent = (ParseResultItemImplement)parent;
       this.syntaxIdent = syntax;
     }
@@ -281,11 +283,11 @@ class ZbnfParserStore
     }
 
     @Override public int getInputLine()
-    { return nLine;
+    { return srcLine;
     }
     
     @Override public int getInputColumn()
-    { return nColumn;
+    { return srcColumn;
     }
     
     @Override public String getInputFile(){ return sFile; }
@@ -390,7 +392,7 @@ class ZbnfParserStore
 
       sRet += " syntax=" + syntaxIdent;
       
-      sRet += " input=" + start + ".." + end + "(" + nLine + ", " + nColumn + ")";
+      sRet += " input=" + start + ".." + end + "(" + srcLine + ", " + srcColumn + ")";
       
       String sParsedText = getParsedText();
       if(sParsedText != null)
@@ -680,8 +682,8 @@ class ZbnfParserStore
           parent1.start = begin;
           parent1.end = end;
           parent1.sFile = srcFile;
-          parent1.nLine = srcLine;
-          parent1.nColumn = srcColumn;
+          parent1.srcLine = srcLine;
+          parent1.srcColumn = srcColumn;
         }
       } while( (parent1 = parent1.parent) != null); 
     }
@@ -704,8 +706,8 @@ class ZbnfParserStore
         parent1.offsetAfterEnd +=1;
         if(parent1.sFile ==null && srcFile !=null){
           parent1.sFile = srcFile;
-          parent1.nLine = srcLine;
-          parent1.nColumn = srcColumn;
+          parent1.srcLine = srcLine;
+          parent1.srcColumn = srcColumn;
         }
         //correct also all offsetAfterEnd from all parents. If the parents are not ready parsed yet,
         //its offsetAfterEnd is not correct, but it is set correctly after parsing the component.
@@ -716,8 +718,8 @@ class ZbnfParserStore
         { parent1.offsetAfterEnd +=1;
           if(parent1.sFile ==null && srcFile !=null){
             parent1.sFile = srcFile;
-            parent1.nLine = srcLine;
-            parent1.nColumn = srcColumn;
+            parent1.srcLine = srcLine;
+            parent1.srcColumn = srcColumn;
           }
         }
       }
@@ -816,8 +818,8 @@ class ZbnfParserStore
     }
     item.start = start;
     item.end = end;
-    item.nLine = srcLine;
-    item.nColumn = srcColumn;
+    item.srcLine = srcLine;
+    item.srcColumn = srcColumn;
     item.sFile = srcFile;
     item.idxOwn = items.size();
     if(item.idxOwn == 221)
@@ -1223,11 +1225,11 @@ class ZbnfParserStore
         }
         xmlNode.setAttribute("src-text", srctext);
       }
-      if(bXmlSrcline && parseResult.nLine >0){
-        xmlNode.setAttribute("src-line", Integer.toString(parseResult.nLine));
+      if(bXmlSrcline && parseResult.srcLine >0){
+        xmlNode.setAttribute("src-line", Integer.toString(parseResult.srcLine));
       }
-      if(bXmlSrcline && parseResult.nColumn >0){
-        xmlNode.setAttribute("src-col", Integer.toString(parseResult.nColumn));
+      if(bXmlSrcline && parseResult.srcColumn >0){
+        xmlNode.setAttribute("src-col", Integer.toString(parseResult.srcColumn));
       }
       return xmlNode;
     }

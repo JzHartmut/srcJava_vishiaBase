@@ -734,7 +734,7 @@ INPUT          pathTo JZcmd-File to execute
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   throws ScriptException
   { boolean bOk;
-    
+    parserGenCtrl.setXmlSrcline(checkXmlOutput !=null);
     bOk = parserGenCtrl.parse(sourceScript);
     if(!bOk){
       String sError = parserGenCtrl.getSyntaxErrorReport();
