@@ -222,6 +222,11 @@ public class ZbnfSyntaxPrescript
   /**Version-ident.
    * list of changes:
    * <ul>
+   * <li>2013-09-07 Hartmut new: Now it distinguishs between terminal symbols which are searched in the comment
+   *   and normal terminal symbols. All terminal symbols which are to search in comment starts with one of the comment chars
+   *   because elsewhere there won't be found because the comment is skipped. Therefore a terminal symbols is checked
+   *   whether it starts with a comment string. The comment string is given by the parser script in the first lines.
+   *   There are two types now: {@link #kTerminalSymbolInComment} and {@link #kTerminalSymbol}. 
    * <li>2013-09-07 Hartmut chg: usage of {@link StringPartScan#scanTranscriptionToAnyChar(CharSequence[], String, char, char, char)}
    *   for constant syntax. There was a bug if a non-end character was transcript, especially "\\<\\:" 
    * <li> 2012-10-23 Supports <* |endstring: The parse result is trimmed without leading and trailing white spaces.
@@ -240,7 +245,7 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String sVersionStamp = "2011-01-18";
+  public static final String sVersionStamp = "2015-06-14";
   
   /** Kind of syntay type of the item */
   int eType;
@@ -328,6 +333,10 @@ public class ZbnfSyntaxPrescript
   /** Indent chars if it is a &lt;*{...}?...>-construct.*/
   protected String sIndentChars = null;
 
+  /**Comment start to check whether parse terminal syntax as comment. */
+  private final String sCommentStart1, sCommentStart2;
+  
+  
   /** The syntax of this element.*/
   //final Syntax syntaxLists;
 
@@ -340,6 +349,8 @@ public class ZbnfSyntaxPrescript
 
   static final int kTerminalSymbol = 2;
 
+  static final char kTerminalSymbolInComment = '/';
+  
   static final int kSkipSpaces = 3;
 
   /** One alternative of the syntax prescript must be matched.*/
@@ -733,13 +744,28 @@ public class ZbnfSyntaxPrescript
   /** Constructor only fills the data.*/
   private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
   { this.report = report;
+    this.sCommentStart1 = parent.sCommentStart1;
+    this.sCommentStart2 = parent.sCommentStart2;
+    
     this.parent =parent;
+    //syntaxLists = bWithSyntaxList ? new Syntax() : null;
+  }
+
+  /** Constructor only fills the data.*/
+  private ZbnfSyntaxPrescript(MainCmdLogging_ifc report, boolean bWithSyntaxList, String sCommentStart1, String sCommentStart2)
+  { this.report = report;
+    this.sCommentStart1 = sCommentStart1;
+    this.sCommentStart2 = sCommentStart2;
+    
+    this.parent = null;
     //syntaxLists = bWithSyntaxList ? new Syntax() : null;
   }
 
   /** Constructor only fills the data.*/
   private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, int type)
   { eType = type;
+    this.sCommentStart1 = parent.sCommentStart1;
+    this.sCommentStart2 = parent.sCommentStart2;
     this.parent =parent;
     //syntaxLists = null;
     report = null;
@@ -766,10 +792,10 @@ public class ZbnfSyntaxPrescript
    * @throws ParseException on error of input syntax. The message of the exception
    *         contains a information about the error position.
    */  
-  static ZbnfSyntaxPrescript createWithSyntax(StringPartScan spInput, MainCmdLogging_ifc report)
+  static ZbnfSyntaxPrescript createWithSyntax(StringPartScan spInput, String sCommentStart1, String sCommentStart2, MainCmdLogging_ifc report)
   throws ParseException
   {
-    ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(null, report, true);
+    ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(report, true, sCommentStart1, sCommentStart2);
     ret.convertSyntaxDefinition(spInput);
     return ret;
   }
@@ -1068,10 +1094,12 @@ public class ZbnfSyntaxPrescript
               }
               */
               if(sqTerminateChars[0].length() >0){
+                String sTerminateString = sqTerminateChars[0].toString();
                 ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
-                terminateSyntax.eType = kTerminalSymbol;
+                terminateSyntax.eType = sTerminateString.startsWith(sCommentStart1) || sTerminateString.startsWith(sCommentStart2) 
+                    ? kTerminalSymbolInComment : kTerminalSymbol;
                 terminateSyntax.sDefinitionIdent = "i-text";
-                terminateSyntax.sConstantSyntax = sqTerminateChars[0].toString(); //sTerminateChars;
+                terminateSyntax.sConstantSyntax = sTerminateString; //sTerminateChars;
                 childsAdd(terminateSyntax );
               } else {
                 throwParseException(spInput, "internal error: any constant syntax expected." );

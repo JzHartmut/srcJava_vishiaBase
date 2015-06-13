@@ -130,6 +130,10 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-06-14 Hartmut chg: Writes the start of option parsing in log, "Opti" on level 5. Writes the recursion depths in log.
+   *   Note: The level {@link #nLevelReportParsing} respectively all source parts "report.report..." outside of {@link LogParsing}
+   *   should be removed. They are not reviewed, the usage of {@link LogParsing} is better.  
+   * <li>2015-06-14 Hartmut new: distinguishs between {@link ZbnfSyntaxPrescript#kTerminalSymbolInComment} and {@link ZbnfSyntaxPrescript#kTerminalSymbol}.
    * <li>2015-06-07 Hartmut chg: {@link PrescriptParser#srcLineOption} etc. created and filled. If given it is the src position for a component.
    * <li>2015-06-07 Hartmut chg: Improved setting line, column and position in parse result items.
    * <li>2015-06-06 Hartmut chg: Showing components in logfile now from left to right root to special, may be better to read.
@@ -893,7 +897,9 @@ public class ZbnfParser
           case ZbnfSyntaxPrescript.kSimpleOption:
           case ZbnfSyntaxPrescript.kAlternativeOption:
           case ZbnfSyntaxPrescript.kAlternativeOptionCheckEmptyFirst:
-          {
+          { if(nReportLevel >= nLevelReportBranchParsing){ 
+              log.reportParsing("Opti " + input.getCurrentPosition()+ " " + inputCurrent(input), idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, true); 
+            }
             bOk = parseOptions(syntaxItem, bSkipSpaceAndComment);
           } break;
           case ZbnfSyntaxPrescript.kNegativVariant:
@@ -936,7 +942,7 @@ public class ZbnfParser
             String sReport = null;
             if(bSkipSpaceAndComment)
             { final String sConstantText;
-              if(nType == ZbnfSyntaxPrescript.kTerminalSymbol){
+              if(nType == ZbnfSyntaxPrescript.kTerminalSymbolInComment){
                 sConstantText = syntaxItem.getConstantSyntax();
                 sReport = nReportLevel < nLevelReportBranchParsing ? ""
                   : "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
@@ -1095,6 +1101,10 @@ public class ZbnfParser
       { long posInput  = input.getCurrentPosition();
         
         long posCurrent = input.getCurrentPosition();
+        CharSequence test = input.getCurrent(40);
+        if(StringFunctions.startsWith(test, "  //NOTE all 24 low-bits are 0")){
+          Debugutil.stop();
+        }
         boolean bFoundConstantSyntax;  
         boolean bFoundAnySpaceOrComment;
         do  //if once of whitespace, comment or endlinecomment is found, try again.
@@ -1125,7 +1135,10 @@ public class ZbnfParser
               if(srcLineOption == -1) {  //it is the first item in an option, without result item.
                 srcLineOption = srcLine; srcColumnOption[0] = srcColumn[0]; srcPosOption = nStart; 
               }
-              parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput);  //especially if it is the first item in component.
+              if(parentResultItem !=null) {
+                //especially if it is the first item in component.
+                parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput);  
+              }
             }
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseConstInComment;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
           }
@@ -1194,7 +1207,9 @@ public class ZbnfParser
             if(srcLineOption == -1){  //it is the first item in an option, without result item.
               srcLineOption = srcLine; srcColumnOption[0] = srcColumn[0]; srcPosOption = nStart; 
             }
-            parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile);  //especially if it is the first item in component.
+            if(parentResultItem !=null) {
+              parentResultItem.setSrcLineColumnFileInParent(nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile);  //especially if it is the first item in component.
+            }
           }
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseTerminalSymbol;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse Ok Terminal:" + sConstantSyntax);
         }
@@ -1694,6 +1709,8 @@ public class ZbnfParser
         */
         { //now try the option.
           //if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptionFirstAfter;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " try options:");
+          if(input.getCurrentPosition() == 5354)
+            Debugutil.stop();
           srcLineOption = -1;  //clear          
           SubParser optionParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
           bOk = optionParser.parseSub(optionPrescript, "[...]"/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment,  null);
@@ -1965,6 +1982,7 @@ public class ZbnfParser
       
       int nrofCharsParsed = (int)(input.getCurrentPosition() - posInput);
       line.reset().add(sWhat).pos(10)
+      .addint(nRecursion, "221")
       .addint(posInput,"22221").add('+').addint(nrofCharsParsed, "221").add(": ")
       .addReplaceLinefeed(input.getPart(posInput, 30), "|-||", 30)
       .pos(50)
@@ -2374,7 +2392,7 @@ public class ZbnfParser
       else if(StringFunctions.startsWith(sCurrentInput, "$main=")) //##s
       { syntax.seek(6); 
         //overwrites a older mainscript, especially the first prescript.
-        mainScript = ZbnfSyntaxPrescript.createWithSyntax(syntax, report);
+        mainScript = ZbnfSyntaxPrescript.createWithSyntax(syntax, sEndlineCommentStringStart, sCommentStringStart, report);
         listSubPrescript.put(mainScript.getDefinitionIdent(), mainScript);
       }
       else if(StringFunctions.startsWith(sCurrentInput, "$xmlns:")) //##s
@@ -2404,7 +2422,7 @@ public class ZbnfParser
       } 
       else
       {
-        ZbnfSyntaxPrescript subScript = ZbnfSyntaxPrescript.createWithSyntax(syntax, report);
+        ZbnfSyntaxPrescript subScript = ZbnfSyntaxPrescript.createWithSyntax(syntax, sEndlineCommentStringStart, sCommentStringStart, report);
         //if(mainScript == null)
         if(!bSetMainscript)
         { bSetMainscript = true;   //first script of this level. A setted mainScript of imported scripts will be overwritten.
