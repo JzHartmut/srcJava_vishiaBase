@@ -141,8 +141,8 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " subroutine::= <$?name> ( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , }|] ) \\{ [<statementBlock>] \\}. \n"
-    + " \n"    //NOTE: use <checkTextExpr?textExpr> to set the src column of the component to start of <:>
-    + " subtext::= <$?name> ( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , }|] ) <checkTextExpr?textExpr>.\n"
+    + " \n"
+    + " subtext::= <$?name> ( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , }|] ) \\<:\\><textExpr>\\<\\.\\>.\n"
     + " \n"
     + " \n"
     + " statementBlock::= { <statement?> }.\n"
@@ -182,7 +182,6 @@ public final class JZcmdSyntax {
     + " | <threadBlock> \n"
     + " | <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
     + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
-    //+ " | <checkTextExpr?textExpr> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  
     + " | <assignExpr> \n"
     + " | ; \n"
@@ -364,9 +363,6 @@ public final class JZcmdSyntax {
     + " | [& [?(] ] <dataAccess>   ## & is optional, don't confuse with &(variable) \n"
     + " ].\n"
     + " \n"
-    //+ " objvalue::=\n"
-    + " \n"
-    + " checkTextExpr::=\\<:\\><textExpr?>\\<\\.\\>.\n"
     + " \n"
     + " textExpr::=<$NoWhiteSpaces>\n"
     + " { [?\\<\\.\\>]                             ##abort on <.> \n"
@@ -387,7 +383,7 @@ public final class JZcmdSyntax {
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
-    + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"
+    + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"
     + " }.\n"
     + " \n"

@@ -50,6 +50,7 @@ public class Csv2Data
  
   /**Version, history and license.
    * <ul>
+   * <li>2015-07-04 new {@link #value(String)}, returns a float value if it is possible. 
    * <li>2014-02-09 created. Evaluation from excel content.
    * </ul>
    * 
@@ -292,6 +293,30 @@ public class Csv2Data
   }
   
 
+  
+  
+  public Object value(String cell){
+    if(cell == null || cell.length() ==0){
+      return null;  //no information
+    } 
+    else if(cell.startsWith("\"")){
+      return cell;
+    }
+    else if(cell.startsWith("0x")){
+      return cell;
+    }
+    else {  
+      try{
+        if(cell.indexOf(',')<0)
+          Assert.stop();
+        float val = StringFunctions.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
+        return val;
+      } catch(Exception exc){
+        return 777777.7f;
+      }
+    }
+  }
+  
   
   
   public float floatVal(String cell){

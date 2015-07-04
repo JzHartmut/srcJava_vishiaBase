@@ -130,6 +130,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-07-04 Hartmut bugfix of change on 2015-06-14: It should check kTerminalSymbolInComment if such an symbol is parsed
+   *   inside a part with <code><$NoWhiteSpaces></code> 
    * <li>2015-06-14 Hartmut chg: Writes the start of option parsing in log, "Opti" on level 5. Writes the recursion depths in log.
    *   Note: The level {@link #nLevelReportParsing} respectively all source parts "report.report..." outside of {@link LogParsing}
    *   should be removed. They are not reviewed, the usage of {@link LogParsing} is better.  
@@ -967,6 +969,7 @@ public class ZbnfParser
               //int posSrc = -1;     //position of the string
               switch(nType)
               {
+              case ZbnfSyntaxPrescript.kTerminalSymbolInComment:  //Note: important if bSkipSpaceAndComment = false. 
               case ZbnfSyntaxPrescript.kTerminalSymbol: 
               { bOk = parseTerminalSymbol(syntaxItem, parentResultItem);
               } break;
@@ -1192,6 +1195,8 @@ public class ZbnfParser
       private boolean parseTerminalSymbol(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem)
       { boolean bOk;
         long nStart = input.getCurrentPosition();
+        if(nStart == 1059)
+          { Debugutil.stop();}
         srcLine = input.getLineAndColumn(srcColumn);
         String sFile = input.getInputfile();
         String sConstantSyntax = syntaxItem.getConstantSyntax();
@@ -1896,6 +1901,7 @@ public class ZbnfParser
         { posRightestError = posInput;
           int[] column1 = new int[1];
           lineError = input.getLineAndColumn(column1);
+          sFileError = input.getInputfile();
           columnError = column1[0];
           sRightestError = input.getCurrentPart(80);
           sExpectedSyntax = "";

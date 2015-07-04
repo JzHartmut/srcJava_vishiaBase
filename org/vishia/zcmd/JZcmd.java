@@ -101,6 +101,7 @@ public class JZcmd implements JZcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-08-10 Hartmut new: message "JZcmd - cannot create output text file" with the output file path.
    * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
    * <li>2014-06-10 Hartmut chg: improved Exception handling of the script.
    * <li>2014-05-18 Hartmut new: try to implement javax.script interfaces, not ready yet
@@ -298,11 +299,12 @@ INPUT          pathTo JZcmd-File to execute
         { FileWriter fout = null;
             Appendable out = null;
             if(args.sFileTextOut !=null){
+              File fileOut = null;
               try{
-                File fileOut = new File(args.sFileTextOut);
+                fileOut = new File(args.sFileTextOut);
                 out = fout = new FileWriter(fileOut);
               } catch(IOException exc){
-                sRet = "JZcmd - cannot create output text file;"; 
+                sRet = "JZcmd - cannot create output text file," + fileOut.getAbsolutePath(); 
               }
             } else {
               out = System.out;

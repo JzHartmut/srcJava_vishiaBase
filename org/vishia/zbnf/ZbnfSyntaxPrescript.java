@@ -349,28 +349,28 @@ public class ZbnfSyntaxPrescript
 
   static final int kTerminalSymbol = 2;
 
-  static final char kTerminalSymbolInComment = '/';
+  static final char kTerminalSymbolInComment = '/';  //0x2f
   
-  static final int kSkipSpaces = 3;
+  static final int kSkipSpaces = 3; //' '
 
   /** One alternative of the syntax prescript must be matched.*/
-  static final int kAlternative   = 4;
+  static final int kAlternative   = 4;  //'|'
 
   /** No or one alternative of the syntax prescript must be matched.*/
-  static final int kAlternativeOption   = 5;
+  static final int kAlternativeOption   = 5;  //'['
 
   /** First it is to be tested wether the followed syntax behind this prescript
    *  does match, only if not, this syntaxprescript is to be tested.
    */
-  static final int kAlternativeOptionCheckEmptyFirst   = 6;
+  static final int kAlternativeOptionCheckEmptyFirst   = 6; //']'
 
   /** Simple option is to be tested, if it is not matched, it is ok.*/
-  static final int kSimpleOption   = 7;
+  static final int kSimpleOption   = 7;  //'o'
 
   /** one or more negative variants. If there are matched, it is false.
    *  The use of this possibility is able especially to break in repetitions.
    */
-  static final int kNegativVariant = 8;
+  static final int kNegativVariant = 8;  //'?'
 
   /**Designation of a option written as <code>[>....]</code>
    * If the syntax inside square brackets doesn't match, the whole parsing process is aborted.
@@ -382,63 +382,63 @@ public class ZbnfSyntaxPrescript
    */
   static final char kExpectedVariant = '!';  //33 = 0x21
   
-  static final int kRepetition = 9;
+  static final int kRepetition = 9;  //'{'
 
-  static final int kRepetitionRepeat = 10;
+  static final int kRepetitionRepeat = 10;  //'}'
 
   /** This enum marks, that this item is nor a syntax item.
    * Only a semantic is defined.
    */
-  static final int kOnlySemantic  = 11;
+  static final int kOnlySemantic  = 11;  //'?'
 
   /** This enum marks, that the syntax is defined with another definition.
    * The identifier of the definition is got with getSyntaxFromComplexItem(Object);
    */
-  static final int kSyntaxComponent   = 12;
+  static final int kSyntaxComponent   = 12;    //'='
 
   /** This enum marks, that the syntax of the token should be a float number,
    * but it should be converted to an integer.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
    */
-  static final int kFloatWithFactor     =15;
+  static final int kFloatWithFactor     =15;    //'F'
 
   /** This enum marks, that the syntax of the token should be a positive number.
    * It is a string only with characters '0' to '9'.
    */
-  static final int kPositivNumber = 16;
+  static final int kPositivNumber = 16;    //'d'
   /** This enum marks, that the syntax of the token should be a positive or negative number.
    * At first a '-' is optional. The rest is a string only with characters '0' to '9'.
    */
-  static final int kIntegerNumber = 17;
+  static final int kIntegerNumber = 17;  //'i'
   /** This enum marks, that the syntax of the token should be a hexadecimal number.
    * It is a string only with characters '0' to '9', 'A' to 'F' or 'a' to 'f'.
    */
-  static final int kHexNumber     =18;
+  static final int kHexNumber     =18;  //'x'
   /** This enum marks, that the syntax of the token should be a float number.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
    */
-  static final int kFloatNumber     =19;
+  static final int kFloatNumber     =19;  //'f'
 
   /** This enum marks, that the syntax of the token should be an identifiert.
    * The method getSyntaxFromComplexItem(Object) supplies a list of extra characters
    * there should be also accepted as identifier characters;
    */
-  static final int kIdentifier    = 20;  //0x14
+  static final int kIdentifier    = 20;  //0x14  //'$'
 
   /**Some constants used in switch-case to mark the search type.
    */
-  static final int kStringUntilEndString   = 0x15
-                 , kStringUntilEndchar     = 0x16
-                 , kStringUntilEndcharOutsideQuotion  = 0x17
-                 , kStringUntilEndcharWithIndent     = 0x18
-                 , kStringUntilEndStringWithIndent = 0x19
-                 , kQuotedString = 0x1a
-                 , kStringUntilRightEndchar     = 0x1b
-                 , kRegularExpression = 0x1c
-                 , kStringUntilEndStringTrim= 0x25
-                 , kStringUntilEndStringInclusive   = 0x35
-                 , kStringUntilEndcharInclusive     = 0x36
-                 , kStringUntilRightEndcharInclusive     =0x3b 
+  static final int kStringUntilEndString   = 0x15  //'S'
+                 , kStringUntilEndchar     = 0x16  //'c'
+                 , kStringUntilEndcharOutsideQuotion  = 0x17  //'+'
+                 , kStringUntilEndcharWithIndent     = 0x18  //'t'
+                 , kStringUntilEndStringWithIndent = 0x19  //'T'
+                 , kQuotedString = 0x1a  //'\"'
+                 , kStringUntilRightEndchar     = 0x1b  //'E'
+                 , kRegularExpression = 0x1c  //'%'
+                 , kStringUntilEndStringTrim= 0x25  //'R'
+                 , kStringUntilEndStringInclusive   = 0x35  //'I'
+                 , kStringUntilEndcharInclusive     = 0x36  //'C'
+                 , kStringUntilRightEndcharInclusive     =0x3b  //'H' 
                  ;
 
 
@@ -974,7 +974,7 @@ public class ZbnfSyntaxPrescript
     {
       
       CharSequence sCheck = spInput.getCurrent(30);
-      if(StringFunctions.startsWith(sCheck, "<?return"))
+      if(StringFunctions.startsWith(sCheck, "\\#\\#"))
         stop();
      
       //first test wether <?semantic> is written:
