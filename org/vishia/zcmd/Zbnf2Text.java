@@ -235,6 +235,13 @@ public class Zbnf2Text extends Zbnf2Xml
     /**File name for a file to check the script. It contains the content of the script after parsing. */
     public String sScriptCheck = null;
     
+    /**If this file is given the parsed data will be preseted by either a text, html or xml output file
+     * how they are parsed, without the interpretation of the text generation.
+     */
+    public String sFileSrcData = null;
+    
+
+    
     /**Path without extension of a file which outputs the text generation scripts parse result and the Zmake input parse result. 
      * */
     public String sCheckXmlOutput = null;
@@ -285,7 +292,12 @@ public class Zbnf2Text extends Zbnf2Xml
     //Args cmdlineArgs;  
     
     protected final MainCmd.Argument[] argumentsZbnf2Text =
-    { new MainCmd.Argument("-checkzcmd", "=CHECK  if given then 3 files for debugging will be written"
+    { new MainCmd.Argument("-checkdata", "=CHECK.html if given then a html file for debugging will be written"
+        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+          Args cmdlineArgs = (Args)CmdLineText.super.argData;
+          cmdlineArgs.sFileSrcData = val; 
+          return true; }})
+    , new MainCmd.Argument("-checkzcmd", "=CHECK  if given then 3 files for debugging will be written"
         , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
           Args cmdlineArgs = (Args)CmdLineText.super.argData;
           cmdlineArgs.sCheckXmlOutput = val; 
@@ -308,7 +320,7 @@ public class Zbnf2Text extends Zbnf2Xml
     };
     
     
-    protected CmdLineText(Args arg, String[] args) {
+    public CmdLineText(Args arg, String[] args) {
       super(arg, args);
       super.addHelpInfo("args: -i:<INPUT> -s:<SYNTAX> [-[x|y|z]:<OUTPUT>] [{-t:<TEXTFILE> -c<JZcmd_CTRLFILE>}]");  //[-w[+|-|0]]
       super.addHelpInfo("==Arguments of Zbnf2Xml==");
@@ -321,7 +333,26 @@ public class Zbnf2Text extends Zbnf2Xml
     } 
     
     
-    
+        /**Checks the cmdline arguments relation together.
+       If there is an inconsistents, a message should be written. It may be also a warning.
+       @return true if successfull, false if failed.
+    */
+    @Override
+    protected boolean checkArguments()
+    { boolean bOk = true;
+  
+      if(argData.sFileIn == null)            { bOk = false; writeError("ERROR argument -iInputfile is obligat."); }
+      else if(argData.sFileIn.length()==0)   { bOk = false; writeError("ERROR argument -iInputfile without content.");}
+  
+      if(argData.sFileSyntax == null)            { bOk = false; writeError("ERROR argument -sSyntaxfile is obligat."); }
+      else if(argData.sFileSyntax.length()==0)   { bOk = false; writeError("ERROR argument -sSyntaxfile without content.");}
+  
+      if(!bOk) setExitErrorLevel(exitWithArgumentError);
+  
+      return bOk;
+  
+   }
+
     
   }
 

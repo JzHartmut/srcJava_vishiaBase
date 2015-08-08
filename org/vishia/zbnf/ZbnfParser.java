@@ -1620,7 +1620,9 @@ public class ZbnfParser
           if(srcLineOption == -1) {  //it is the first item in an option, without result item.
             srcLineOption = srcLine; srcColumnOption[0] = srcColumn; srcPosOption = srcBegin; 
           }
-          parentResultItem.setSrcLineColumnFileInParent(srcBegin, srcBegin, srcLine, srcColumn, srcFile);  //especially if it is the first item in component.
+          if(parentResultItem !=null) {
+            parentResultItem.setSrcLineColumnFileInParent(srcBegin, srcBegin, srcLine, srcColumn, srcFile);  //especially if it is the first item in component.
+          }
           bOk = true; 
         }
         return bOk;        

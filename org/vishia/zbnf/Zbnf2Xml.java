@@ -137,6 +137,9 @@ public class Zbnf2Xml
     
     public List<String> additionalSemantic;
   
+    
+    public void setInput(String val){ sFileIn = val; }
+
     /** Type of the conversion, set in dependence of the -o or -x -option. */
     //private XslConvertMode mode = new XslConvertMode();
   }  

@@ -82,37 +82,13 @@ public class StateMGen {
   final MainCmd_ifc console;
 
 
-  /**This class holds the got arguments from command line. 
-   * It is possible that some more operations with arguments as a simple get process.
-   * The arguments may got also from configuration files named in cmd line arguments or other.
-   * The user of arguments should know (reference) only this instance, not all other things arround MainCmd,
-   * it it access to arguments. 
-   */
-  public static class Args extends Zbnf2Text.Args
-  {
-    /**Cmdline-argument, set on -i: option. Inputfile to to something. */
-    String sFileIn = null;
-  
-    /**Cmdline-argument, set on -s: option. Zbnf-file to output something. */
-    String sFileZbnf = null;
-
-    String sFileData = null;
-    
-    String sScriptCheck = null;
-    
-    public Args(){}
-    
-    public void setInput(String val){ sFileIn = val; }
-    
-  }
-
 
 
   /*---------------------------------------------------------------------------------------------*/
   /** main started from java*/
   public static void main(String [] args)
-  { StateMGen.Args cmdlineArgs = new StateMGen.Args();     //holds the command line arguments.
-    CmdLine mainCmdLine = new CmdLine(args, cmdlineArgs); //the instance to parse arguments and others.
+  { Zbnf2Text.Args cmdlineArgs = new Zbnf2Text.Args();     //holds the command line arguments.
+    Zbnf2Text.CmdLineText mainCmdLine = new Zbnf2Text.CmdLineText(cmdlineArgs, args); //the instance to parse arguments and others.
     boolean bOk = true;
     try{ mainCmdLine.parseArguments(); }
     catch(Exception exception)
@@ -141,122 +117,6 @@ public class StateMGen {
   }
 
   
-  
-  /**The inner class CmdLine helps to evaluate the command line arguments
-   * and show help messages on command line.
-   * This class also implements the {@link MainCmd_ifc}, for some cmd-line-respective things
-   * like error level, output of texts, exit handling.  
-   */
-  static class CmdLine extends MainCmd
-  {
-  
-  
-    final Args cmdlineArgs;
-    
-    /*---------------------------------------------------------------------------------------------*/
-    /** Constructor of the main class.
-        The command line arguments are parsed here. After them the execute class is created as composition of SampleCmdLine.
-    */
-    private CmdLine(String[] argsInput, Args cmdlineArgs)
-    { super(argsInput);
-      this.cmdlineArgs = cmdlineArgs;
-      //:TODO: user, add your help info!
-      //super.addHelpInfo(getAboutInfo());
-      super.addAboutInfo("Conversion Statemachine-script to any output");
-      super.addAboutInfo("made by Hartmut Schorrig, 2012-10-06");
-      super.addHelpInfo("Conversion Statemachine-script to any output V 2012-10-06");
-      super.addHelpInfo("param: -i:INPUT -s:ZBNF -c:OUTCTRL -y:OUTPUT");
-      super.addHelpInfo("-i:INPUT    inputfilepath, this file is testing.");
-      super.addHelpInfo("-s:ZBNF     syntaxfilepath, this file is read.");
-      super.addHelpInfo("-c:ZBNF     output script, this file is read.");
-      super.addHelpInfo("-y:OUTPUT   outputfilepath, this file is written.");
-      super.addStandardHelpInfo();
-    }
-  
-  
-  
-  
-  
-  
-    /*---------------------------------------------------------------------------------------------*/
-    /** Tests one argument. This method is invoked from parseArgument. It is abstract in the superclass MainCmd
-        and must be overwritten from the user.
-        :TODO: user, test and evaluate the content of the argument string
-        or test the number of the argument and evaluate the content in dependence of the number.
-  
-        @param argc String of the actual parsed argument from cmd line
-        @param nArg number of the argument in order of the command line, the first argument is number 1.
-        @return true is okay,
-                false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
-                the application should be aborted.
-    */
-    @Override
-    protected boolean testArgument(String arg, int nArg)
-    { boolean bOk = true;  //set to false if the argc is not passed
-  
-      if(arg.startsWith("-i:"))      cmdlineArgs.sFileIn   = getArgument(3);
-      else if(arg.startsWith("-s:")) cmdlineArgs.sFileZbnf  = getArgument(3);
-      else if(arg.startsWith("-d:")) cmdlineArgs.sFileData  = getArgument(3);
-      else if(arg.startsWith("-scriptcheck:")) cmdlineArgs.sScriptCheck  = getArgument(13);
-      else if(arg.startsWith("-y:")) {
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Zbnf2Text.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
-        cmdlineArgs.lastOut.sFileOut  = getArgument(3);
-        if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
-      }
-      else if(arg.startsWith("-c:")) {
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Zbnf2Text.Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
-        cmdlineArgs.lastOut.sFileScript  = getArgument(3);
-        if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
-      }
-      else if(arg.startsWith("-t:")) {
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
-        cmdlineArgs.lastOut.sFileOut  = getArgument(3);
-        if(cmdlineArgs.lastOut.sFileScript !=null){ cmdlineArgs.lastOut = null; } //filled. 
-      }
-      else if(arg.startsWith("-c:")) {
-        if(cmdlineArgs.lastOut == null){ cmdlineArgs.lastOut = new Out(); cmdlineArgs.listOut.add(cmdlineArgs.lastOut); }
-        cmdlineArgs.lastOut.sFileScript  = getArgument(3);
-        if(cmdlineArgs.lastOut.sFileOut !=null){ cmdlineArgs.lastOut = null; } //filled. 
-      }
-  
-      return bOk;
-    }
-  
-    /** Invoked from parseArguments if no argument is given. In the default implementation a help info is written
-     * and the application is terminated. The user should overwrite this method if the call without comand line arguments
-     * is meaningfull.
-     * @throws ParseException 
-     *
-     */
-    @Override
-    protected void callWithoutArguments() throws ParseException
-    { //:TODO: overwrite with empty method - if the calling without arguments
-      //having equal rights than the calling with arguments - no special action.
-      super.callWithoutArguments();  //it needn't be overwritten if it is unnecessary
-    }
-  
-  
-  
-  
-    /*---------------------------------------------------------------------------------------------*/
-    /**Checks the cmdline arguments relation together.
-       If there is an inconsistents, a message should be written. It may be also a warning.
-       :TODO: the user only should determine the specific checks, this is a sample.
-       @return true if successfull, false if failed.
-    */
-    @Override
-    protected boolean checkArguments()
-    { boolean bOk = true;
-  
-      if(cmdlineArgs.sFileIn == null)            { bOk = false; writeError("ERROR argument -i is obligat."); }
-      else if(cmdlineArgs.sFileIn.length()==0)   { bOk = false; writeError("ERROR argument -i without content.");}
-  
-      if(!bOk) setExitErrorLevel(exitWithArgumentError);
-    
-      return bOk;
-    
-    }
-  }//class CmdLine
   
   
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
@@ -343,16 +203,16 @@ public class StateMGen {
   
   
   
+  /**This is the base class both from any {@link ZbnfState} which can be a composite state and the {@link ZbnfResultData}
+   * which presents the whole state machine.
+   */
   public static class ZbnfStateCompositeBase
   {
     List<ZbnfState> subStates;
     
-    int nrofSubstates, nrofParallelStates;
+    int nrofSubstates;
     
-    final Map<String, ZbnfState> idxSrcStates = new TreeMap<String, ZbnfState>();
-    
-    final Map<String, ZbnfSimpleState> idxStates = new TreeMap<String, ZbnfSimpleState>();
-    
+    final Map<String, ZbnfState> XXXidxSrcStates = new TreeMap<String, ZbnfState>();
     
     public ZbnfState new_state()
     { return new ZbnfState();
@@ -360,24 +220,10 @@ public class StateMGen {
     
     public void add_state(ZbnfState value)
     { 
-      //idxSrcStates.put(value.stateName, value);
-      if(value.parallelParentState !=null){
-        if(idxStates.get(value.parallelParentState) ==null){
-          ZbnfCompositeState parallel = new ZbnfCompositeState(new ZbnfState());
-          parallel.src.stateName = value.parallelParentState;
-          //parallel.src.parallelParent = value.enclState;
-          parallel.src.shortdescription = "Parallel state machine inside " + value.parallelParentState;
-          idxStates.put(value.parallelParentState, parallel);
-          //srcStates.add(parallel);  //add first the parallel self created state.
-        }
-        nrofParallelStates +=1;
-      }
-      else {
-        nrofSubstates +=1;
-      }
+      nrofSubstates +=1;
       if(subStates == null) { subStates = new ArrayList<ZbnfState>(); }
       subStates.add(value);
-      idxSrcStates.put(value.stateName, value);
+      XXXidxSrcStates.put(value.stateName, value);
     }
     
 
@@ -397,22 +243,6 @@ public class StateMGen {
     public String stateName;
     
     public String stateNr;
-    
-    
-    /**From ZBNF: the default state of a complex state. */
-    //public String startState;
-    
-
-    /**From ZBNF: <$?@enclState>. It is the name of the state where this state is member of. */
-    //public String enclState;
-    
-    /**Name of the state which is the container of the parallel state machine. Only set on enclosing state
-     * of a parallel state machine. */
-    //String parallelParent;
-    
-    /**From ZBNF: <$?@enclState>.<$?@parallelParentState>. It is the name of the state where this state is member of
-     * in a parallel machine of the enclosing state. */
-    public String parallelParentState;
     
     /**From ZBNF: <?stateParallel>>. Set if it is a parallel state container. */
     public boolean stateParallel;
@@ -454,51 +284,6 @@ public class StateMGen {
   
 
   
-  
-  /**The prepared State.
-   * 
-   */
-  public static class ZbnfSimpleState
-  { ZbnfState src;
-
-    boolean isComposite;
-  
-    /**Name of the variable where the state ident is stored in the users code. 
-     * It is "state"<&the name of the parent state>, or the parent of parent if no history is used,  or it is "state" for the first level. */
-    public String stateVariableName;
-    
-    ZbnfSimpleState(ZbnfState src){ this.src = src; }
-  }  
-  
-  
-  
-  /**The prepared State.
-   * 
-   */
-  public static class ZbnfCompositeState extends ZbnfSimpleState
-  { 
-    /**All states which are direct sub-states in this state.  */
-    public Map<String, ZbnfSimpleState> subStates;
-
-    /**All states which uses the state variable of this state. */
-    public Map<String, ZbnfSimpleState> subStatesVariable;
-
-    /**All states which are parallel states in this states. null if the state has not parallel sub-states. */
-    public Map<String, ZbnfCompositeState> parallelStates;
-
-    public ZbnfConstDef constDef;
-    
-    ZbnfCompositeState(ZbnfState src){ super(src); isComposite = true; }
-    
-    /**converting from Simple to Composite. */
-    ZbnfCompositeState(ZbnfSimpleState src){ 
-      super(src.src); 
-      isComposite = true;
-      stateVariableName = src.stateVariableName;
-    }
-    
-    @Override public String toString(){ return src.stateName; }
-  }
   
   
   /**This class gets and stores the results from a parsed ZBNF-component <code>constant</code>.
@@ -579,8 +364,6 @@ public class StateMGen {
     private final List<ZbnfTrans> subCondition = new LinkedList<ZbnfTrans>();
 
     
-    private final List<ZbnfSimpleState> exitStates = new LinkedList<ZbnfSimpleState>();
-    
     private ZbnfDstState dstStateTree; 
 
     public List<String> dstStates;
@@ -660,11 +443,6 @@ public class StateMGen {
     /**From Zbnf parser: dstState::=<$?name>. */
     public String name;
     
-    /**The state from which this entry starts. */
-    ZbnfSimpleState srcState;
-    
-    ZbnfSimpleState entryState;
-    
     private List<ZbnfDstState> entrySubStates;
     
     @Override public String toString(){ return name; }
@@ -700,16 +478,24 @@ public class StateMGen {
     
     private final Map<String, String> idxStateVariables = new HashMap<String, String>();
     
-    private final Map<String, ZbnfSimpleState> topStates = new TreeMap<String, ZbnfSimpleState>();
-    
-    final List<ZbnfSimpleState> states = new ArrayList<ZbnfSimpleState>();
-    
     final Map<String, String> variables =new TreeMap<String, String>();
     
+    /**From Zbnf: creates an instance for the Zbnf component in the syntax context: <pre>
+     * { static <*;?statefnarg>;  
+     * }
+     * </pre>
+     * @param arg The parsed string to this semantic component.
+     */
     public ZbnfNameValue new_variable(){ return new ZbnfNameValue(); }
     
     public void add_variable(ZbnfNameValue inp){ variables.put(inp.name, inp.value); }
     
+    /**From Zbnf: stores the definition of a function argument in the syntax context: <pre>
+     * { static <*;?statefnarg>;  
+     * }
+     * </pre>
+     * @param arg The parsed string to this semantic component.
+     */
     public void set_statefnarg(String arg){ 
       arg = arg.trim();
       int posIdentifier = arg.lastIndexOf(' ') +1;
@@ -724,6 +510,12 @@ public class StateMGen {
       }
     }
    
+    /**From Zbnf: stores an include line in the syntax context: <pre>
+     * { #include <* \n?includeLine>
+     * }
+     * </pre>
+     * @param arg The parsed string to this semantic component.
+     */
     public void set_includeLine(String arg){ includeLines.add(arg); }
     
   }
@@ -734,6 +526,9 @@ public class StateMGen {
   
     public final ZbnfResultData zsrcFile;
     
+    /**All states with an own state variable and timer, it is the top state, all parallel states
+     * and composite states with a history.
+     */
     public final List<StateComposite> rootStates = new LinkedList<StateComposite>();
     
     public final List<StateSimple> listStates = new LinkedList<StateSimple>();
@@ -751,7 +546,6 @@ public class StateMGen {
     
     void prepare() {
       topState.prepare();
-
     }
     
     
@@ -880,20 +674,47 @@ public class StateMGen {
   }
   
   
-  void execute(Args args) throws IOException, IllegalAccessException
+  void execute(Zbnf2Text.Args args) throws IOException, IllegalAccessException
   {
-    ZbnfResultData zsrcFile = parseAndStoreInput(args);  //parsed and converts into Java data presentation
-    if(zsrcFile != null){
-      GenStateMachine genStm = prepareStateData(zsrcFile);
-      if(args.sFileData!=null) {
-        Writer out = new FileWriter(args.sFileData);
-        DataShow.dataTree(genStm, out, 20);
+    ZbnfResultData zsrcData = parseAndStoreInput(args);  //parsed and converts into Java data presentation
+    if(zsrcData != null){
+      if(args.sFileSrcData!=null) {
+        Writer out  = new FileWriter(args.sFileSrcData);
+        if(args.sFileSrcData.endsWith(".html") || args.sFileSrcData.endsWith(".htm")){
+          DataShow.outHtml(zsrcData, out);
+        }
+        else if(args.sFileSrcData.endsWith(".xml")){
+          DataShow.dataTreeXml(zsrcData, out, 20);
+        }
+        else {
+          DataShow.dataTree(zsrcData, out, 20);
+        }
         out.close();
-        out = new FileWriter(args.sFileData + ".xml");
-        DataShow.dataTreeXml(genStm, out, 20);
-        out.close();
-        out = new FileWriter(args.sFileData + ".html");
-        DataShow.outHtml(genStm, out);
+      }
+      
+      prepareStateData(zsrcData);
+      if(args.sFileSrcData!=null) {
+        Writer out;
+        if(args.sFileSrcData.endsWith(".html")){
+          String sFileDstData = args.sFileSrcData.substring(0, args.sFileSrcData.length()-5) + ".dst.html";
+          out = new FileWriter(sFileDstData);
+          DataShow.outHtml(genStm, out);
+        }
+        else if(args.sFileSrcData.endsWith(".htm")){
+          String sFileDstData = args.sFileSrcData.substring(0, args.sFileSrcData.length()-4) + ".dst.htm";
+          out = new FileWriter(sFileDstData);
+          DataShow.dataTreeXml(genStm, out, 20);
+        }
+        else if(args.sFileSrcData.endsWith(".xml")){
+          String sFileDstData = args.sFileSrcData.substring(0, args.sFileSrcData.length()-4) + ".dst.xml";
+          out = new FileWriter(sFileDstData);
+          DataShow.dataTreeXml(genStm, out, 20);
+        }
+        else {
+          String sFileDstData = args.sFileSrcData + ".dst";
+          out = new FileWriter(sFileDstData);
+          DataShow.dataTree(genStm, out, 20);
+        }
         out.close();
       }
       FileWriter outData;
@@ -905,15 +726,16 @@ public class StateMGen {
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        JZcmdExecuter generator = new JZcmdExecuter(console);
+        File fScriptCheck = args.sScriptCheck == null ? null : new File(args.sScriptCheck);
         if(outData !=null) {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
+        JZcmdExecuter generator = new JZcmdExecuter(console);
         generator.setScriptVariable("sOutfile", 'S', fOut.getAbsolutePath(), true);
         generator.setScriptVariable("stm", 'O', genStm, true);
         try{ 
-          JZcmd.execute(generator, fileScript, out, console.currdir(), true, args.sScriptCheck == null ? null : new File(args.sScriptCheck), console);
+          JZcmd.execute(generator, fileScript, out, console.currdir(), true, fScriptCheck, console);
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
         } catch(ScriptException exc){
           console.writeError(exc.getMessage());
@@ -935,17 +757,18 @@ public class StateMGen {
   /**Prepares the parsed data to some dependencies of states etc. This routine is called after parse and fill to provide usability data. 
    * @param zbnfSrc The main instance for fill after parse, the main instance for generation.
    */
-  GenStateMachine prepareStateData(ZbnfResultData zbnfSrc){
+  void prepareStateData(ZbnfResultData zbnfSrc){
     StateSimple[] aStates = new StateSimple[zbnfSrc.subStates.size()];
+    //creates the instance for all prepared data:
     genStm = new GenStateMachine(zbnfSrc, aStates);
     StateComposite stateTop = genStm.stateTop();
     genStm.rootStates.add(stateTop);
     stateTop.setAuxInfo(new GenStateInfo(null));
+    //gather all states and transitions in the parsed data and add it to the prepared data:
     gatherStatesOfComposite(stateTop, stateTop, zbnfSrc);
     gatherAllTransitions();
-    
+    //invoke prepare, the same as for Java state machines.
     genStm.prepare();
-    return genStm;
     
   }
   
@@ -1116,13 +939,13 @@ public class StateMGen {
   /**This method reads the input script, parses it with ZBNF, 
    * stores all results in the Java-class {@link ZbnfResultData} 
    */
-  private ZbnfResultData parseAndStoreInput(Args args)
+  private ZbnfResultData parseAndStoreInput(Zbnf2Text.Args args)
   {
     /**The instance to store the data of parsing result is created locally and private visible: */
     ZbnfResultData zbnfResultData = new ZbnfResultData();
     /**This call processes the whole parsing and storing action: */
     File fileIn = new File(args.sFileIn);
-    File fileSyntax = new File(args.sFileZbnf);
+    File fileSyntax = new File(args.sFileSyntax);
     String sError = ZbnfJavaOutput.parseFileAndFillJavaObject(zbnfResultData.getClass(), zbnfResultData, fileIn, fileSyntax, console, 1200);
     if(sError != null)
     { /**there is any problem while parsing, report it: */
