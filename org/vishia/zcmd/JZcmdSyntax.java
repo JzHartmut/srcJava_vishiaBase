@@ -17,6 +17,9 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-08-30 Hartmut new: The simple syntax <code>text = newFile;</code> to change the <code><+>output<.+></code>
+   *   has a less semantic effect. Therefore it is replaced by <code><+:create>newFile<.+></code> or <code><+:append>...</code>
+   *   with the possibility of append to an existing file.  
    * <li>2014-12-06 Hartmut new: //JZcmd will be ignored, possibility to write a JZcmd script in the comment of a Java source file. 
    * <li>2014-12-06 Hartmut chg: The definition of a return type of a subroutine was never used in the execution. Other concept. removed. 
    * <li>2014-08-10 Hartmut chg: endlineComment with // only till <+ to support start of text output in an endline comment line.
@@ -98,7 +101,7 @@ public final class JZcmdSyntax {
     + " $keywords= new | cmd | cmd_check | start \n" 
     + "   | debug | java \n" 
     + "   | stdout | stdin | stderr \n" 
-    + "   | subtext | sub | main | call | cd | CD | REM | Rem | rem \n"
+    + "   | subtext | sub | main | call | cd | CD | currdir | REM | Rem | rem \n"
     + "   | Pipe | StringBuffer | Stringjar | String | List | Openfile | Fileset | Obj | Set | set | include | zbatch \n"
     + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | throw . \n"
     + " \n"
@@ -154,7 +157,7 @@ public final class JZcmdSyntax {
     + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*|\\n|\\r|\\<+?>     ##line commment in C style but only till <+\n"
     + " | /*<*|*/?>*/          ##block commment in C style\n"
-    + " | text = <textValue?setTextOut> ;    ##set text output\n"
+    + " | text = <textValue?createTextOut> ;    ##set text output\n"
     + " | currdir = <textDatapath?cd> ;   ##set current directory\n"
     + " | [cd|CD] [<textValue?cd> | <*\\ ;?cd> ; ]  ##change current directory \n"
     + " | mkdir <textValue?mkdir> ;                 ##create any directory if not exists \n"
@@ -180,6 +183,8 @@ public final class JZcmdSyntax {
     + " | debug [<textValue?debug>| <?debug>] ; \n"
     + " | <callSubroutine?call> \n"
     + " | <threadBlock> \n"
+    + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" ////
+    + " | \\<+:append\\><textExpr?appendTextOut>\\<\\.+\\> \n" ////
     + " | <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
     + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  
@@ -303,7 +308,7 @@ public final class JZcmdSyntax {
     //+ " dataPath::= <$-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + " dataPath::= \n"
     + " [ File : <textValue?File>     ##creates a file object with given path\n"
-    + " | <startDatapath> \n" ////
+    + " | <startDatapath> \n" 
     + " ] [ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + " \n"
     + " ## A datapath cannot start with an JZcmd keyword! \n"
@@ -389,7 +394,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " dataText::=<dataAccess>[ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
-    + " \n"
+    + " \n"  ////
     + " textOut::=\\<+ [<dataPath?assign>] [:n<?newline>] \\> \n"
     + "   <textExpr>\n"
     + "   [ \\<\\.+\\>                     ## end text variants: \n"
