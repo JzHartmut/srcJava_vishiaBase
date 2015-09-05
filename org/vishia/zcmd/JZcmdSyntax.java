@@ -101,7 +101,7 @@ public final class JZcmdSyntax {
     + " $keywords= new | cmd | cmd_check | start \n" 
     + "   | debug | java \n" 
     + "   | stdout | stdin | stderr \n" 
-    + "   | subtext | sub | main | call | cd | CD | currdir | REM | Rem | rem \n"
+    + "   | subtext | sub | main | call | cd | CD | REM | Rem | rem \n"
     + "   | Pipe | StringBuffer | Stringjar | String | List | Openfile | Fileset | Obj | Set | set | include | zbatch \n"
     + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | throw . \n"
     + " \n"
@@ -382,8 +382,8 @@ public final class JZcmdSyntax {
     + " | \\<:debug[:<textDatapath?debug>| <?debug>]\\>\n"
     + " | \\<&<dataText>\n"
     //+ " | \\<: [<?transliteration> n | r | t | \\< | # | \\\" ] \\>\n"
-    + " | \\<: [<?transliteration>n|r|t|[\\<|#|\\\"]<*\\>?>] \\>\n"
-
+    + " | \\<: [<?transliteration>n|r|t|b|[\\<|#|\\\"]<*\\>?>] \\>\n"
+    + " | \\<:[<#?utf16code>|x<#x?utf16code>]\\>\n"
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
