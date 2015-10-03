@@ -21,6 +21,7 @@ import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFile;
+import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlNode;
@@ -350,7 +351,7 @@ public class Csv2Data
       File fileIn = new File(sFileIn);
       StringPartScan spInput = null;
       try {
-        spInput = new StringPartFromFile(fileIn);
+        spInput = new StringPartFromFileLines(fileIn);
       } catch (IOException exc) {
         sError = "Csv2Data - input file read fails";
         log.writeError(sError, exc);

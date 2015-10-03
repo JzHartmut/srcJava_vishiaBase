@@ -1,5 +1,9 @@
 @echo off
+set DSTDIR=D:\vishia\Java\
+if exist %DSTDIR% goto :okdstdir
 set DSTDIR=..\..\
+:okdstdir
+echo %DSTDIR%
 set DST=docuSrcJava_Zbnf
 set DST_priv=docuSrcJavaPriv_Zbnf
 
