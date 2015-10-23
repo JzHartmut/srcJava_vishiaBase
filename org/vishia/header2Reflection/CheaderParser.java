@@ -213,8 +213,19 @@ public class CheaderParser {
   {
     public String name;
     
+    public List<IncludeDef> includeDef = new LinkedList<IncludeDef>();
+
+    
     public HeaderBlock new_HeaderBlock(){ return this; }
     public void add_HeaderBlock(HeaderBlock val){}
+    
+    
+    //IncludeDef new_includeDef(){ return new IncludeDef(); }
+    
+    //void add_includeDef(IncludeDef  src){  }
+    
+    
+    
   }
   
   
@@ -484,13 +495,26 @@ public class CheaderParser {
   { AttributeOrTypedef(String whatisit){ super(whatisit); }
     AttributeOrTypedef(){ super("Attribute"); }
   
+    
+    /**Use on component conditionalArgument.
+     * @return this not an extra container.
+     */
+    public AttributeOrTypedef new_typedParameter(){ return this; }
+    
+    public void set_typedParameter(AttributeOrTypedef data){ }
+    
     public Description description;
   
     public Type type;
     
     public String name;
     
+    public String text;
+    
     public int bitField;
+    
+    /**Used only on conditionArgument. */
+    public String conditionDef;
     
     public Arraysize arraysize;
   }
@@ -546,6 +570,12 @@ public class CheaderParser {
     
      
     
+    public AttributeOrTypedef new_conditionalArgument(){ return new AttributeOrTypedef(); }
+    public void add_conditionalArgument(AttributeOrTypedef val){ 
+      if(args == null) { args = new LinkedList<AttributeOrTypedef>(); }
+      args.add(val);
+    }
+
     public AttributeOrTypedef new_typedParameter(){ return new AttributeOrTypedef(); }
     public void add_typedParameter(AttributeOrTypedef val){ 
       if(args == null) { args = new LinkedList<AttributeOrTypedef>(); }
@@ -626,9 +656,15 @@ public class CheaderParser {
     
     public Variable variable;
     
+    public int nrofRefLevels_variable = 0;
+    
     public String assignOperator;
     
     public Value value;
+    
+    public Variable new_Refvariable(){ nrofRefLevels_variable = 1; return variable = new Variable(); }
+    
+    public void add_Refvariable(Variable src){}
   }
   
   
@@ -893,7 +929,7 @@ public class CheaderParser {
         System.err.println("ERROR Parsing file: " + fileIn.getAbsolutePath() + "\n" + sError);
       }
       else {
-        ZbnfResultFile resultFile = new ZbnfResultFile(src.name, src.path);
+        ZbnfResultFile resultFile = new ZbnfResultFile(src.name, src.path);   //Container for the parsed file.
         try{ ZbnfJavaOutput.setOutput(resultFile, resultItem, console); }
         catch(Exception exc) {
           throw new IllegalStateException("CheaderParser - internal ERROR storing parse result; " + exc.getMessage());
