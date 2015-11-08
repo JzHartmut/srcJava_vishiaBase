@@ -44,7 +44,8 @@ public class StateMGen {
   
   /**Version, history and license.
    * <ul>
-   * <li>2014-08-10 Hartmut chg: disperse ZBNF result and prepared state data
+   * <li>2015-11-07 Hartmut chg: some comment and renaming while documentation.
+   * <li>2014-08-10 Hartmut chg: dissipate ZBNF result and prepared state data
    * <li>2014-06-15 Hartmut chg: scriptVariable is stateData instead state, better more non-ambiguous.
    * <li>
    * <li>2012-10-07 Hartmut creation 
@@ -524,7 +525,7 @@ public class StateMGen {
   public static class GenStateMachine extends StateMachine 
   {
   
-    public final ZbnfResultData zsrcFile;
+    public final ZbnfResultData zbnfSrc;
     
     /**All states with an own state variable and timer, it is the top state, all parallel states
      * and composite states with a history.
@@ -536,16 +537,16 @@ public class StateMGen {
     Map<String, StateSimple> allStates = new TreeMap<String, StateSimple>();
 
     
-    GenStateMachine(ZbnfResultData zsrcFile, StateSimple[] aFirstStates) 
-    { super(aFirstStates);
-      this.zsrcFile = zsrcFile;
+    GenStateMachine(ZbnfResultData zbnfSrc) 
+    { super(new StateSimple[zbnfSrc.subStates.size()]);
+      this.zbnfSrc = zbnfSrc;
     }
     
-    StateCompositeTop stateTop(){ return topState; }
+    StateCompositeTop stateTop(){ return stateTop; }
     
     
     void prepare() {
-      topState.prepare();
+      stateTop.prepare();
     }
     
     
@@ -553,29 +554,19 @@ public class StateMGen {
   
   
   
+  /**Instances of this class are added as {@link StateSimple#setAuxInfo(Object)} to get this information
+   * from instances of StateSimple which code generation.
+   */
   static class GenStateInfo
   {
     public final ZbnfState zsrcState;
     
-    /**The state which contains the reference to this state if this state is the active one.
-     * If there are no parallel or history states that is the topState of the statemachine.
-     * If there is a parallel state, it is the composite parallel state.
-     * If there is a history in a composite state, that is the root state.
-     */
-    //public final StateComposite rootState;
-    
-    /**List of all sub states with the same stateCtrl, it means with the same state-switch-variable.
-     * It is possible that the inner states of a composite states is member of this list too.
-     * That is if the composite state has not a history entry and it is not a StateParallel.
-     * This list remain null if it is a simple state.
-     */
-    public List<StateSimple> subStates;
     
     /**Set if this state has a time condition. */
     public String timeCondition;
     
     /**Set to true if any of the sub states has a timeout transition 
-     * therefore this state as rootstate should have a timer variable.
+     * therefore this state as rootState should have a timer variable.
      */
     public boolean hasTimer;
 
@@ -590,11 +581,11 @@ public class StateMGen {
   static class GenStateSimple extends StateSimple
   {
     
-    GenStateSimple(StateSimple enclState, StateComposite stateCtrl, StateMachine stm, ZbnfState zbnfState){
+    GenStateSimple(StateSimple enclState, StateComposite rootState, StateMachine stm, ZbnfState zbnfState){
       super();
       super.setAuxInfo(new GenStateInfo(zbnfState));
       this.enclState = enclState;
-      this.stateCtrl = stateCtrl;
+      this.rootState = rootState;
       this.stateMachine = stm;
       stateId = zbnfState.stateName;
     }
@@ -606,11 +597,11 @@ public class StateMGen {
   
   static class GenStateCompositeFlat extends StateCompositeFlat {
     
-    GenStateCompositeFlat(StateSimple enclState, StateComposite stateCtrl, GenStateMachine genStm, ZbnfState zbnfComposite)
+    GenStateCompositeFlat(StateSimple enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateSimple[zbnfComposite.nrofSubstates] );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
-      this.stateCtrl = stateCtrl;
+      this.rootState = rootState;
       stateId = zbnfComposite.stateName;
     }
     
@@ -620,11 +611,11 @@ public class StateMGen {
   
   static class GenStateComposite extends StateComposite {
     
-    GenStateComposite(StateSimple enclState, StateComposite stateCtrl, GenStateMachine genStm, ZbnfState zbnfComposite)
+    GenStateComposite(StateSimple enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateSimple[zbnfComposite.nrofSubstates] );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
-      this.stateCtrl = stateCtrl;
+      this.rootState = rootState;
       stateId = zbnfComposite.stateName;
     }
     
@@ -633,11 +624,11 @@ public class StateMGen {
   
   static class GenStateParallel extends StateParallel{
     
-    GenStateParallel(StateCompositeFlat enclState, StateComposite stateCtrl, GenStateMachine genStm, ZbnfState zbnfComposite)
+    GenStateParallel(StateCompositeFlat enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateComposite[zbnfComposite.nrofSubstates]  );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
-      this.stateCtrl = stateCtrl;
+      this.rootState = rootState;
       stateId = zbnfComposite.stateName;
     }
     
@@ -758,14 +749,14 @@ public class StateMGen {
    * @param zbnfSrc The main instance for fill after parse, the main instance for generation.
    */
   void prepareStateData(ZbnfResultData zbnfSrc){
-    StateSimple[] aStates = new StateSimple[zbnfSrc.subStates.size()];
     //creates the instance for all prepared data:
-    genStm = new GenStateMachine(zbnfSrc, aStates);
+    genStm = new GenStateMachine(zbnfSrc);
     StateComposite stateTop = genStm.stateTop();
-    genStm.rootStates.add(stateTop);
-    stateTop.setAuxInfo(new GenStateInfo(null));
+    stateTop.setAuxInfo(new GenStateInfo(null)); //instance for Code generation for the top state.  
     //gather all states and transitions in the parsed data and add it to the prepared data:
+    genStm.rootStates.add(stateTop); //the stateTop is the first rootState.
     gatherStatesOfComposite(stateTop, stateTop, zbnfSrc);
+    //
     gatherAllTransitions();
     //invoke prepare, the same as for Java state machines.
     genStm.prepare();
@@ -776,17 +767,24 @@ public class StateMGen {
   
   
   /**Gathers a Composite state from its Zbnf parsers result.
+   * <ul>
+   * <li>It stores all that states as root states, which are composites with history or which are parallel states. 
+   *   For that states an own state variable is necessary. Composite states which are not root states 
+   *   are not threaded extra. All sub states of them gets the transition of the composite only.
+   * </ul>   
    * @param stateComposite
    * @param zbnfComposite
    * @return
    */
-  StateCompositeFlat gatherStatesOfComposite(StateCompositeFlat stateComposite, StateComposite stateCtrl, ZbnfStateCompositeBase zbnfComposite)
+  StateCompositeFlat gatherStatesOfComposite(StateCompositeFlat stateComposite, StateComposite rootState, ZbnfStateCompositeBase zbnfComposite)
   { 
-    GenStateInfo genStateinfo = (GenStateInfo)stateCtrl.auxInfo(); //set on construction from the derived instance of StateSimple
+    GenStateInfo genStateinfo = (GenStateInfo)rootState.auxInfo(); //set on construction from the derived instance of StateSimple
     assert (genStateinfo !=null);
+    /*
     if(genStateinfo.subStates == null) { 
       genStateinfo.subStates = new LinkedList<StateSimple>();
     }
+    */
     for(ZbnfState zbnfState: zbnfComposite.subStates){
       if(!zbnfState.isPrepared){
         StateSimple state1;  //either a GenStateSimple or a GenStateComposite, add it after creation and evaluation.
@@ -794,27 +792,27 @@ public class StateMGen {
         if(zbnfState.subStates !=null && zbnfState.subStates.size() >0) {
           final StateSimple stateComposite1;
           if(zbnfState.stateParallel) {
-            stateComposite1 = new GenStateParallel(stateComposite, stateCtrl, genStm, zbnfState);
-            state1 = gatherStatesOfParallel((StateParallel)stateComposite1, stateCtrl, zbnfState);
+            stateComposite1 = new GenStateParallel(stateComposite, rootState, genStm, zbnfState);
+            state1 = gatherStatesOfParallel((StateParallel)stateComposite1, rootState, zbnfState);
           } else {
             StateComposite rootState1;
             if(zbnfState.hasHistory) { 
-              stateComposite1 = new GenStateComposite(stateComposite, stateCtrl, genStm, zbnfState);
+              stateComposite1 = new GenStateComposite(stateComposite, rootState, genStm, zbnfState);
               rootState1 = (StateComposite)stateComposite1;
               genStm.rootStates.add(rootState1);
             } else { 
-              stateComposite1 = new GenStateCompositeFlat(stateComposite, stateCtrl, genStm, zbnfState);
-              rootState1 = stateCtrl; 
+              stateComposite1 = new GenStateCompositeFlat(stateComposite, rootState, genStm, zbnfState);
+              rootState1 = rootState; 
             }  
             state1 = gatherStatesOfComposite((StateCompositeFlat)stateComposite1, rootState1, zbnfState);
           }
           
         } else {
-          state1 = new GenStateSimple(stateComposite, stateCtrl, genStm, zbnfState);
+          state1 = new GenStateSimple(stateComposite, rootState, genStm, zbnfState);
         }
         //
         stateComposite.addState(state1.hashCode(), state1);
-        genStateinfo.subStates.add(state1);
+        //genStateinfo.subStates.add(state1);
         genStm.allStates.put(state1.getName(), state1);
         genStm.listStates.add(state1);
         //prepareStateStructure(state, stateData, false, 0);
@@ -833,13 +831,15 @@ public class StateMGen {
    * @param zbnfComposite
    * @return
    */
-  StateParallel gatherStatesOfParallel(StateParallel stateParallel, StateComposite stateCtrl, ZbnfStateCompositeBase zbnfParallel)
+  StateParallel gatherStatesOfParallel(StateParallel stateParallel, StateComposite rootState, ZbnfStateCompositeBase zbnfParallel)
   { 
-    GenStateInfo genStateinfo = (GenStateInfo)stateCtrl.auxInfo(); //set on construction from the derived instance of StateSimple
+    GenStateInfo genStateinfo = (GenStateInfo)rootState.auxInfo(); //set on construction from the derived instance of StateSimple
     assert (genStateinfo !=null);
+    /*
     if(genStateinfo.subStates == null) { 
       genStateinfo.subStates = new LinkedList<StateSimple>();
     }
+    */
     for(ZbnfState zbnfState: zbnfParallel.subStates){
       if(!zbnfState.isPrepared){
         StateSimple state1;  //either a GenStateSimple or a GenStateComposite, add it after creation and evaluation.
@@ -857,11 +857,11 @@ public class StateMGen {
           }
           
         } else {
-          state1 = new GenStateSimple(stateParallel, stateCtrl, genStm, zbnfState);
+          state1 = new GenStateSimple(stateParallel, rootState, genStm, zbnfState);
         }
         //
         stateParallel.addState(state1.hashCode(), state1);
-        genStateinfo.subStates.add(state1);
+        //genStateinfo.subStates.add(state1);
         genStm.allStates.put(state1.getName(), state1);
         genStm.listStates.add(state1);
         //prepareStateStructure(state, stateData, false, 0);
@@ -918,7 +918,7 @@ public class StateMGen {
             if(zbnfTrans.time !=null) { //condition is a time condition.
               stateInfo.timeCondition = zbnfTrans.time;
               //genState.transTimeout = trans;
-              GenStateInfo rootStateInfo = (GenStateInfo)genState.stateCtrl().auxInfo();
+              GenStateInfo rootStateInfo = (GenStateInfo)genState.rootState().auxInfo();
               rootStateInfo.hasTimer = true;
             } else {
             }

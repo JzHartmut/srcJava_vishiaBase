@@ -19,6 +19,7 @@ import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringFunctions_C;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFile;
 import org.vishia.util.StringPartFromFileLines;
@@ -310,7 +311,7 @@ public class Csv2Data
       try{
         if(cell.indexOf(',')<0)
           Assert.stop();
-        float val = StringFunctions.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
+        float val = StringFunctions_C.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
         return val;
       } catch(Exception exc){
         return 777777.7f;
@@ -324,7 +325,7 @@ public class Csv2Data
     try{
       if(cell.indexOf(',')<0)
         Assert.stop();
-      float val = StringFunctions.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
+      float val = StringFunctions_C.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
       return val;
     } catch(Exception exc){
       return 777777.7f;

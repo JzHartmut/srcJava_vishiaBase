@@ -386,6 +386,7 @@ public final class JZcmdSyntax {
     + " | \\<:[<#?utf16code>|x<#x?utf16code>]\\>\n"
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
+    + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
