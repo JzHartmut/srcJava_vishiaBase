@@ -7,8 +7,8 @@ REM Note that the srcJava_vishiaBase component should be present in the correct 
 REM examples of ZBNF are not included.
 
 REM set additional destination for zbnf.jar
-set FCMD_DST=..\..\..\Fcmd\sf\Fcmd\exe
-set ZBNFJAX_DST=..\..\..\ZBNF\sf\ZBNF\zbnfjax
+set FCMD_DST=..\..\..\..\..\Fcmd\sf\Fcmd\exe
+set ZBNFJAX_DST=..\..\..\..\..\ZBNF\sf\ZBNF\zbnfjax
 
 REM The TMP_JAVAC is a directory, which contains only this compiling results. It will be clean in the batch processing.
 set TMP_JAVAC=..\..\..\tmp_javac
@@ -58,6 +58,11 @@ set SRCPATH_JAVAC=..;../../srcJava_vishiaBase
 
 call ..\..\srcJava_vishiaBase\_make\+javacjarbase.bat
 
-if exist %ZBNFJAX_DST% copy ..\..\exe\zbnf.jar %ZBNFJAX_DST%\zbnf.jar
-if exist %FCMD_DST% copy ..\..\exe\zbnf.jar %FCMD_DST%\zbnf.jar
+@echo on
+REM if this is the ZBNF folder then copy the result to Java-folder:
+if exist %ZBNFJAX_DST% (
+  copy %OUTDIR_JAVAC%\zbnf.jar D:\vishia\Java\exe\*
+)
+REM support the FCMD:
+if exist %FCMD_DST% copy %OUTDIR_JAVAC%\zbnf.jar %FCMD_DST%\zbnf.jar
 
