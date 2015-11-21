@@ -16,7 +16,8 @@ public final class JZcmdSyntax {
 
   
   /**Version, history and license.
-   * <ul>
+   * <ul> 
+   * <li>2015-08-30 Hartmut chg: textValue ends on a ':' too, important for <subtext:name:...
    * <li>2015-08-30 Hartmut new: The simple syntax <code>text = newFile;</code> to change the <code><+>output<.+></code>
    *   has a less semantic effect. Therefore it is replaced by <code><+:create>newFile<.+></code> or <code><+:append>...</code>
    *   with the possibility of append to an existing file.  
@@ -272,7 +273,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | [& [?(] ] <dataAccess> .\n"
     + " \n"
-    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
+    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     + " \n"
     + " objExpr::= \n"

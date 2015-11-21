@@ -66,3 +66,5 @@ if exist %ZBNFJAX_DST% (
 REM support the FCMD:
 if exist %FCMD_DST% copy %OUTDIR_JAVAC%\zbnf.jar %FCMD_DST%\zbnf.jar
 
+pause
+

@@ -4,35 +4,26 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
 import javax.script.ScriptException;
 
-import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.cmd.JZcmdExecuter;
-import org.vishia.cmd.JZcmdFilepath;
 import org.vishia.states.StateComposite;
 import org.vishia.states.StateCompositeFlat;
+import org.vishia.states.StateDeepHistory;
 import org.vishia.states.StateMachine;
 import org.vishia.states.StateParallel;
 import org.vishia.states.StateSimple;
-import org.vishia.states.StateSimple.PlugStateSimpleToGenState;
-import org.vishia.states.StateSimple.Trans;
 import org.vishia.util.DataShow;
 import org.vishia.util.Debugutil;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zcmd.OutputDataTree;
 import org.vishia.zcmd.JZcmd;
 import org.vishia.zcmd.Zbnf2Text;
-import org.vishia.zcmd.Zbnf2Text.Out;
 
 /**This class prepares information for a state machine from representation in text format 
  * for generation C-code and documentation.
@@ -81,6 +72,11 @@ public class StateMcHgen {
 
   /** Aggregation to the Console implementation class.*/
   final MainCmd_ifc console;
+
+
+
+
+  protected Map<String, ZbnfState> idxState = new TreeMap<String, ZbnfState>();
 
 
 
@@ -201,7 +197,7 @@ public class StateMcHgen {
         Writer out = new FileWriter(fOut);
         JZcmdExecuter generator = new JZcmdExecuter(console);
         generator.setScriptVariable("sOutfile", 'S', fOut.getAbsolutePath(), true);
-        //generator.setScriptVariable("stm", 'O', genStm, true);
+        generator.setScriptVariable("stm", 'O', genStm, true);
         try{ 
           JZcmd.execute(generator, fileScript, out, console.currdir(), true, fScriptCheck, console);
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
@@ -262,7 +258,7 @@ public class StateMcHgen {
     //stateTop.setAuxInfo(new GenStateInfo(null)); //instance for Code generation for the top state.  
     //gather all states and transitions in the parsed data and add it to the prepared data:
     genStm.rootStates.add(stateTop); //the stateTop is the first rootState.
-    gatherStatesOfComposite(stateTop, stateTop, zbnfSrc.topStateStruct);
+    gatherStatesOfComposite(stateTop, stateTop, zbnfSrc);
     //
     gatherAllTransitions();
     //invoke prepare, the same as for Java state machines.
@@ -303,15 +299,18 @@ public class StateMcHgen {
           if(zbnfState.stateParallel) {
             //stateComposite1 = new GenStateParallel(stateComposite, rootState, genStm, zbnfState);
             stateComposite1 = new StateParallel(zbnfState.stateName, genStm, new StateSimple[zbnfState.listSubstates.size()]);
+            stateComposite1.setAuxInfo(zbnfState);
             state1 = gatherStatesOfParallel((StateParallel)stateComposite1, rootState, zbnfState);
           } else {
             StateComposite rootState1;
-            if(zbnfState.hasHistory) { 
-              stateComposite1 = new StateComposite(zbnfState.stateName, genStm, new StateSimple[zbnfState.listSubstates.size()]);
+            if(zbnfState.hasHistory || zbnfState.stateComposite) { 
+              stateComposite1 = new StateComposite(zbnfState.stateName, genStm, new StateSimple[zbnfState.listSubstates.size() +1]);
+              stateComposite1.setAuxInfo(zbnfState);
               rootState1 = (StateComposite)stateComposite1;
               genStm.rootStates.add(rootState1);
             } else { 
               stateComposite1 = new StateCompositeFlat(zbnfState.stateName, genStm, new StateSimple[zbnfState.listSubstates.size()]);
+              stateComposite1.setAuxInfo(zbnfState);
               rootState1 = rootState; 
             }  
             state1 = gatherStatesOfComposite((StateCompositeFlat)stateComposite1, rootState1, zbnfState);
@@ -319,6 +318,7 @@ public class StateMcHgen {
           
         } else {
           state1 = new GenStateSimple(stateComposite, rootState, genStm, zbnfState);
+          state1.setAuxInfo(zbnfState);
         }
         //
         stateComposite.addState(state1.hashCode(), state1);
@@ -327,6 +327,13 @@ public class StateMcHgen {
         genStm.listStates.add(state1);
         //prepareStateStructure(state, stateData, false, 0);
       }
+    }
+    if(zbnfComposite.hasHistory) {
+      StateDeepHistory stateHistory = new StateDeepHistory();
+      stateComposite.addState(stateHistory.hashCode(), stateHistory);
+      //genStateinfo.subStates.add(state1);
+      genStm.allStates.put(zbnfComposite.stateName + "history", stateHistory);
+      //Note: don't add to genStm.listStates, it is only for gatherTransitions.
     }
     
     
@@ -363,6 +370,7 @@ public class StateMcHgen {
           } else {
             StateComposite noRootState = null;
             stateComposite1 = new StateComposite(zbnfState.stateName, genStm, new StateSimple[zbnfState.listSubstates.size()]);
+            stateComposite1.setAuxInfo(zbnfState);
             StateComposite rootState1 = (StateComposite)stateComposite1;
             genStm.rootStates.add(rootState1);
             state1 = gatherStatesOfComposite((StateComposite)stateComposite1, rootState1, zbnfState);
@@ -370,6 +378,7 @@ public class StateMcHgen {
           
         } else {
           state1 = new GenStateSimple(stateParallel, rootState, genStm, zbnfState);
+          state1.setAuxInfo(zbnfState);
         }
         //
         stateParallel.addState(state1.hashCode(), state1);
@@ -422,16 +431,9 @@ public class StateMcHgen {
           int nrofForks = listDst.size(); 
           int[] dstKeys = new int[nrofForks];
           int ixDst = -1;
+          StateSimple.Trans trans;
           for(String sDstState : listDst) {
-            StateSimple.Trans trans;
-            if(sDstState.endsWith("history")) {
-              int lenDstState = sDstState.length() - 7; //without "history"
-              StateSimple dstState1 = genStm.allStates.get(sDstState.substring(0,lenDstState));
-              //trans = dstState1.new TransDeepHistory(zbnfTrans, dstKeys);
-              trans = dstState1.new Trans(zbnfTrans, dstKeys);
-              
-            } else {
-              StateSimple dstState1 = genStm.allStates.get(sDstState);
+            StateSimple dstState1 = genStm.allStates.get(sDstState);
               if(dstState1 == null) throw new IllegalArgumentException("faulty dst state in transition;" + sDstState + "; from state " + genState.getName());
               dstKeys[++ixDst] = dstState1.hashCode();
               /*
@@ -446,10 +448,9 @@ public class StateMcHgen {
                 }
                 ((StateSimple.TransJoin)trans).srcStates(joinKeys);  //set the hashes of the join sources.
               } else */
-              trans = dstState1.new Trans(zbnfTrans, dstKeys);
             }
-            plugState.addTransition(trans);
-          }
+          trans = genState.new Trans(zbnfTrans, dstKeys);
+          plugState.addTransition(trans);
         }
       }
     }
@@ -460,11 +461,13 @@ public class StateMcHgen {
   /**This is the root class for the Zbnf parsing result.
    * It refers to the main syntax component.
    */
-  public static class ZbnfResultData
+  public class ZbnfResultData extends ZbnfState
   {
   
   
     public List<String> includeLines = new LinkedList<String>();
+    
+    public String stateInstance;
     
     public String transFnArgs;
     
@@ -475,6 +478,10 @@ public class StateMcHgen {
     
     public Map<String, ZbnfEntryExitCheck> idxCheck = new TreeMap<String, ZbnfEntryExitCheck>();
     
+    //public List<ZbnfState> topStates = new LinkedList<ZbnfState>();
+    
+    public String topStateType, topStateName, stateName, tagName;
+    
     /**From Zbnf: stores an include line in the syntax context: <pre>
      * { #include <* \n?includeLine>
      * }
@@ -482,6 +489,12 @@ public class StateMcHgen {
      * @param arg The parsed string to this semantic component.
      */
     public void set_includeLine(String arg){ includeLines.add(arg); }
+    
+    
+    public ZbnfState new_stateDef(){ return new ZbnfState(); }
+    
+    public void add_stateDef(ZbnfState val){ idxState.put(val.stateType, val); }
+    
     
     public void set_entryState(String arg){  }
     
@@ -502,10 +515,6 @@ public class StateMcHgen {
     public void add_checkState(ZbnfEntryExitCheck val){ idxCheck.put(val.state, val);  }
  
     
-    public ZbnfState topStateStruct;
-    
-    public String topStateType, topStateName;
-    
   }
   
   
@@ -515,19 +524,70 @@ public class StateMcHgen {
   {
     public String state;
     
-    public String args;
+    public String formalArgList;
+    
+    public List<String> argVariables = new LinkedList<String>();
+    
+    /**From Zbnf, invoked with [<?args> ....] as component in []
+     * @return this as instance for the component. 
+     */
+    public ZbnfEntryExitCheck new_args(){ return this; }
+    
+    /**From Zbnf, invoked with [<?args> ....] as component in []
+     * @param val it is this, not used
+     */
+    public void add_args(ZbnfEntryExitCheck val) {}
+    
+    /**From Zbnf, invoked with [<?args> ....] as String in [], the parsed content is stored as String too.
+     * @param val
+     */
+    public void set_args(String val){
+      formalArgList = val;
+    }
+    
+    /**From Zbnf, invoked with [<?...> {<*,)?arg> ? , }]
+     * @param val One argument till , or )
+     */
+    public void set_arg(String val){
+      int posSpace = val.lastIndexOf(' '); //type name, after space the name starts
+      if(posSpace >0) {
+        argVariables.add(val.substring(posSpace +1));
+      }
+      //else: empty arglist
+    }
+    
     
   }
   
   
-  public static class ZbnfState
+  
+  
+  public static class StateDefInStateStruct {
+    public String stateType, stateName;  
+  }
+  
+  
+  
+  public class ZbnfState
   {
-    public String tagname, stateName;
+    public String tagname;
+    //public String stateNameInStruct;
     
+    /**From Zbnf: <code> ...} <$?stateType> .</code>, the type of a <code>stateDef::=</code> */
+    public String stateType;
+    
+    public String stateName;
+    
+    
+    
+    /**From Zbnf: <code>_<*_; ?stateIdName></code>, the name part befor stateId */
+    public String stateIdName;
+    
+    /**From Zbnf: <code>_<*\ ;?stateId></code>, the number for this state. For example id_0x102 */
     public String stateId;
     
     /**Set from Zbnf: int history <?hasHistory>*/
-    public boolean hasHistory;
+    public boolean hasHistory, stateComposite;
     
     /**Set from Zbnf: int parallel <?stateParallel>*/
     public boolean stateParallel;
@@ -536,11 +596,27 @@ public class StateMcHgen {
     
     List<ZbnfState> listSubstates;
     
+    
+    public StateDefInStateStruct new_stateDefInStateStruct(){ return new StateDefInStateStruct(); }
+    
+    public void add_stateDefInStateStruct(StateDefInStateStruct val){ 
+      ZbnfState state = idxState.get(val.stateType);
+      if(state == null) { 
+        throw new IllegalArgumentException("StateMcHgen: state in stateStruct unknown, " + val.stateType);
+      }
+      state.stateName = val.stateName;
+      add_stateStruct(state);
+    }
+    
+    
+    
+    
     public ZbnfState new_stateStruct() { return new ZbnfState(); }
     
     public void add_stateStruct(ZbnfState val) { 
       if(listSubstates == null) { listSubstates = new LinkedList<ZbnfState>(); }
-      listSubstates.add(val); }
+      listSubstates.add(val); 
+    }
     
     /**Set to true if the state was prepared already. */
     boolean isPrepared = false;
@@ -572,7 +648,7 @@ public class StateMcHgen {
 
     
     GenStateMachine(ZbnfResultData zbnfSrc) 
-    { super(new StateSimple[zbnfSrc.topStateStruct.listSubstates.size()]);
+    { super(new StateSimple[zbnfSrc.listSubstates.size()]);
       this.zbnfSrc = zbnfSrc;
     }
     

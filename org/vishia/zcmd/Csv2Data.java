@@ -52,6 +52,7 @@ public class Csv2Data
  
   /**Version, history and license.
    * <ul>
+   * <li>2015-11-19 new chg All identifier in first line in "" possible. 
    * <li>2015-07-04 new {@link #value(String)}, returns a float value if it is possible. 
    * <li>2014-02-09 created. Evaluation from excel content.
    * </ul>
@@ -171,25 +172,30 @@ public class Csv2Data
    */
   public void createColumns(String sLine){
     columns.clear();
-    String[] aColumns = sLine.split(";");   
-    String[] aColumns2 = sLine.split(",");
-    //detect separator by testing the proper splitting char:
-    if(aColumns.length > aColumns2.length){  
-      separator = ';';
-      cDecimalSep = ',';
-    } else {
-      separator = ',';
-      cDecimalSep = '.';
-      aColumns = aColumns2;
-    }
+    int posQuotion = sLine.indexOf('\"');
+    int posComma = sLine.indexOf(',');
+    int posSemicolon = sLine.indexOf(';');
+    //Check if a semicolon is contained and a comma is not contained in the first line or it is contained later, then the ";" is the separator.
+    //Note: The first word should not contain a , then.
+    if(posSemicolon >=0 && (posComma < 0 || posComma > posSemicolon)){ separator = ';'; }
+    else { separator = ','; } 
+    List<String> listColumns = new LinkedList<String>();
+    int zLine = sLine.length();
+    int pos = 0;
     int col = 0;
-    for(String sColumn1: aColumns){
-      String sColumn = sColumn1.trim();
+    while(pos < zLine) {
+      int posEnd = sLine.indexOf(separator, pos);
+      if(posEnd < 0){ posEnd = zLine; }
+      String sColumn = sLine.substring(pos, posEnd).trim();
+      if(sColumn.startsWith("\"") && sColumn.endsWith("\"")) {
+        sColumn = sColumn.substring(1, sColumn.length()-1);
+      }
       columns.add(sColumn); 
       if(sColumn.equals("Identifier")){
         colident = col;
       }
       col +=1;
+      pos = posEnd +1;
     }
   }
   
@@ -258,7 +264,7 @@ public class Csv2Data
         } else {
           sCell = sLine.substring(posQuotion+1, posEnd);
         }
-        posColon = sLine.indexOf(';', posEnd);
+        posColon = sLine.indexOf(separator, posEnd);
         if(posColon < 0){
           cont = false;
         }
