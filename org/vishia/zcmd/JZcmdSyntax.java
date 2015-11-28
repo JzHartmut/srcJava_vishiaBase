@@ -273,7 +273,11 @@ public final class JZcmdSyntax {
     + " \n"
     + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | [& [?(] ] <dataAccess> .\n"
     + " \n"
-    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
+    //NOTE: a textvalue cannot end on a ':' because command line arguments cannont be parsed with then.
+    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
+    + " \n"
+    //NOTEtextvalue for a text expression in <subtext:name:...> can end on a ':' .
+    + " textValueTextExpr::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     + " \n"
     + " objExpr::= \n"
@@ -440,7 +444,7 @@ public final class JZcmdSyntax {
     + " callSubroutine::= [{ <dataPath?assign> [ = | += <?append>] }] call <textValue?callName> ( [{ <namedArgument?actualArgument> ? , }] ) ; .\n"
     + " \n"
     //+ " callSubtext::=[<\"\"?callName>|<textValue?callNameExpr>] [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
-    + " callSubtext::=<textValue?callName> [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
+    + " callSubtext::=<textValueTextExpr?callName> [ : { <namedArgument?actualArgument> ? , }] \\>.\n"
     + " \n"
     + " namedArgument::= <$?name> = <objExpr?>.\n"
     + " \n"
