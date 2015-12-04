@@ -292,23 +292,23 @@ public class StateMcHgen {
    */
   StateCompositeFlat gatherStatesOfComposite(StateCompositeFlat stateComposite, StateComposite rootState, ZbnfState zbnfComposite)
   { 
-    for(ZbnfState zbnfState: zbnfComposite.listSubstates){
-      addSubstate(rootState, stateComposite, zbnfState);
-    }
+    if(zbnfComposite.listSubstates !=null) {
+      for(ZbnfState zbnfState: zbnfComposite.listSubstates){
+        addSubstate(rootState, stateComposite, zbnfState);
+    } }
     if(zbnfComposite.listSubstatesTag !=null) {
       for(StateDefInStateStruct tag: zbnfComposite.listSubstatesTag){
         ZbnfState zbnfState = idxStateTags.get(tag.stateTag);
+        if(zbnfState == null) {
+          throw new IllegalArgumentException("faulty tag name, " + tag.stateTag);
+        }
         zbnfState.stateName = tag.stateName;
         addSubstate(rootState, stateComposite, zbnfState);
     } }
-    if(zbnfComposite.stateHistory !=null) {
-      //StateDeepHistory stateHistory = new StateDeepHistory();
-      stateComposite.addState(zbnfComposite.stateHistory.hashCode(), zbnfComposite.stateHistory);
-      //genStateinfo.subStates.add(state1);
-      genStm.allStates.put(zbnfComposite.stateName + "history", zbnfComposite.stateHistory);
-      //genStm.allStates.put(zbnfComposite.stateHistory, stateHistory);
-      //Note: don't add to genStm.listStates, it is only for gatherTransitions.
-    }
+    //if(zbnfComposite.stateHistory !=null) {
+    //  stateComposite.addState(zbnfComposite.stateHistory.hashCode(), zbnfComposite.stateHistory);
+    //  genStm.allStates.put(zbnfComposite.stateName + "history", zbnfComposite.stateHistory);
+    //}
     
     
     return stateComposite;
@@ -324,7 +324,8 @@ public class StateMcHgen {
       if(zbnfState.listSubstates !=null || zbnfState.listSubstatesTag !=null) {
         int sizeSubStates = (zbnfState.listSubstates ==null ? 0 : zbnfState.listSubstates.size())
                           + (zbnfState.listSubstatesTag ==null ? 0 : zbnfState.listSubstatesTag.size())
-                          + (zbnfState.stateHistory == null ? 0 : 1);
+                          //+ (zbnfState.stateHistory == null ? 0 : 1)
+                          ;
         final StateSimple stateComposite1;
         if(zbnfState.stateParallel) {
           //stateComposite1 = new GenStateParallel(stateComposite, rootState, genStm, zbnfState);
@@ -333,7 +334,7 @@ public class StateMcHgen {
           state1 = gatherStatesOfParallel((StateParallel)stateComposite1, rootState, zbnfState);
         } else {
           StateComposite rootState1;
-          if(zbnfState.stateHistory !=null || zbnfState.isComposite) { 
+          if(zbnfState.isComposite) {  //zbnfState.stateHistory !=null ||  
             stateComposite1 = new StateComposite(zbnfState.stateName, genStm, new StateSimple[sizeSubStates]);
             stateComposite1.setAuxInfo(zbnfState);
             rootState1 = (StateComposite)stateComposite1;
@@ -345,7 +346,8 @@ public class StateMcHgen {
           }  
           state1 = gatherStatesOfComposite((StateCompositeFlat)stateComposite1, rootState1, zbnfState);
         }
-        
+      } else if(zbnfState.stateType.equals("DeepHistory")){
+        state1 = new StateDeepHistory(zbnfState.stateName);
       } else {
         state1 = new GenStateSimple(stateComposite, rootState, genStm, zbnfState);
         state1.setAuxInfo(zbnfState);
@@ -395,12 +397,9 @@ public class StateMcHgen {
           state1 = new GenStateSimple(stateParallel, rootState, genStm, zbnfState);
           state1.setAuxInfo(zbnfState);
         }
-        //
+        //Adds the parallel composite state to the StateParallel:
         stateParallel.addState(state1.hashCode(), state1);
-        //genStateinfo.subStates.add(state1);
         genStm.allStates.put(state1.getName(), state1);
-        //genStm.listStates.add(state1);
-        //prepareStateStructure(state, stateData, false, 0);
       }
     }
     
@@ -432,9 +431,9 @@ public class StateMcHgen {
       ZbnfState zbnfState = (ZbnfState)genState.auxInfo();
       if(zbnfState !=null) {  //not for auto generated states, for example History state.
         int zTransitions;
-        if(zbnfState.dst_Dst !=null && (zTransitions = zbnfState.dst_Dst.size()) >0) {
+        if(zbnfState.dotransDst !=null && (zTransitions = zbnfState.dotransDst.size()) >0) {
           plugState.createTransitions(zTransitions);
-          for(String zbnfTrans: zbnfState.dst_Dst){
+          for(String zbnfTrans: zbnfState.dotransDst){
             List<String> listDst = new LinkedList<String>();
             int sep = 0;
             while(sep >=0){
@@ -449,10 +448,12 @@ public class StateMcHgen {
             int ixDst = -1;
             StateSimple.Trans trans;
             for(String sDstState : listDst) {
-              boolean bHistory = sDstState.endsWith("history"); 
+              /*
+              boolean bHistory = sDstState.endsWith("history"); //TODO no more necessary
               if(bHistory){
                 sDstState = sDstState.substring(0, sDstState.length() - "history".length());
               }
+              */
               StateSimple dstState1 = genStm.allStates.get(sDstState);
                 if(dstState1 == null){ 
                   dstState1 = genStm.allStates.get(sDstState + "_State"); 
@@ -460,10 +461,12 @@ public class StateMcHgen {
                 if(dstState1 == null) {
                   throw new IllegalArgumentException("faulty dst state in transition;" + sDstState + "; from state " + genState.getName());
                 }
+                /*
                 if(bHistory) {
                   dstState1 = ((ZbnfState)dstState1.auxInfo()).stateHistory;
                   if(dstState1 == null) throw new IllegalArgumentException("history state not found in transition;" + sDstState + "; from state " + genState.getName());
                 }
+                */
                 dstKeys[++ixDst] = dstState1.hashCode();
                 /*
                 if(zbnfTrans.joinStates !=null){
@@ -640,7 +643,7 @@ public class StateMcHgen {
     
     
     //public String stateHistory;
-    StateDeepHistory stateHistory;
+    //StateDeepHistory stateHistory;
     
     
     /**Set from Zbnf: int history <?isComposite>*/
@@ -649,7 +652,7 @@ public class StateMcHgen {
     /**Set from Zbnf: int parallel <?stateParallel>*/
     public boolean stateParallel;
     
-    public List<String> dst_Dst = new LinkedList<String>();
+    public List<String> dotransDst = new LinkedList<String>();
     
     List<ZbnfState> listSubstates;
     
@@ -686,7 +689,13 @@ public class StateMcHgen {
     
     /**Set from Zbnf: int history <$?stateHistory>*/
     public void set_stateHistory(String name){
-      stateHistory = new StateDeepHistory();      
+      if(listSubstates == null) { listSubstates = new LinkedList<ZbnfState>(); }
+      ZbnfState stateHistory = new ZbnfState();
+      stateHistory.stateName = name;
+      stateHistory.stateType = "DeepHistory";
+      listSubstates.add(stateHistory); 
+      
+      //stateHistory = new StateDeepHistory();      
     }
     
     
