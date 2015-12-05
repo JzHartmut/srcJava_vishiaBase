@@ -49,6 +49,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
+import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.SetLineColumn_ifc;
 import org.vishia.util.StringPartFromFileLines;
@@ -176,6 +177,7 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2015-12-06 Hartmut new {@link #parseFileAndFillJavaObject(Class, Object, File, StringPartScan, File)} with the directory of scripts to include. 
    * <li>2015-05-27 Hartmut improved output on method not found.
    * <li>2015-04-25 Hartmut chg: The class to search the destination is the {@link DstInstanceAndClass#clazz} 
    *   and not the getClass() of the {@link DstInstanceAndClass#instance}.  
@@ -1231,7 +1233,11 @@ public final class ZbnfJavaOutput
   { String sError = null;
     int lenFileSyntax = (int)fSyntax.length();
     StringPartScan spSyntax = null;
-    try{ spSyntax = new StringPartScan(new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null)); }
+    File dirSyntax = null;
+    try{
+      dirSyntax = FileSystem.getDirectory(fSyntax);
+      spSyntax = new StringPartScan(new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null)); 
+    }
     catch(FileNotFoundException exc)
     { sError = "ZbnfJavaOutput - Syntax file not found; " + fSyntax.getAbsolutePath();
     }
@@ -1243,7 +1249,7 @@ public final class ZbnfJavaOutput
       sError = "ZbnfJavaOutput - Syntax file charset problems; " + fSyntax.getAbsolutePath() + " msg = " + exc.getMessage();
     }
     if(sError == null)
-    { sError = parseFileAndFillJavaObject(resultType, result, fInput, spSyntax);
+    { sError = parseFileAndFillJavaObject(resultType, result, fInput, spSyntax, dirSyntax);
       if(sError != null && sError.startsWith("ERROR in syntax"))
       { sError += " in file " + fSyntax.getAbsolutePath();
       }
@@ -1285,6 +1291,12 @@ public final class ZbnfJavaOutput
     return parseFileAndFillJavaObject(result.getClass(), result, fInput, spSyntax);
   }
   
+
+  public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartScan spSyntax) 
+  {
+    return parseFileAndFillJavaObject(resultType, result, fInput, spSyntax, null);
+  }
+  
   
   /**Parses the given file with given syntax and fills the parsed result into the result object.
    * This is a simple common use-able routine to transfer textual content into content of a Java object.
@@ -1297,7 +1309,7 @@ public final class ZbnfJavaOutput
    * @param spSyntax The syntax using ZBNF
    * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
-  public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartScan spSyntax) 
+  public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartScan spSyntax, File fSyntaxDir) 
   //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
   { String sError = null;
     //configure the parser:
@@ -1305,9 +1317,15 @@ public final class ZbnfJavaOutput
     ZbnfParser zbnfParser = null;
     if(sError == null)
     { zbnfParser = new ZbnfParser(report);
-      try{ zbnfParser.setSyntax(spSyntax); }
-      catch(ParseException exc)
+      try{ zbnfParser.setSyntax(spSyntax, fSyntaxDir.getAbsolutePath()); }
+      catch(ParseException exc)    
       { sError = "ZbnfJavaOutput - ERROR in syntax prescript; " + exc.getMessage();
+      }
+      catch(FileNotFoundException exc){ 
+        sError = "import in ZBNF-script is not supported here."; 
+      }
+      catch(IOException exc){ 
+        sError = "import in ZBNF-script is not supported here."; 
       }
     }  
     if(sError == null)

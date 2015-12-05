@@ -74,11 +74,12 @@ public class StateMcHgen {
   final MainCmd_ifc console;
 
 
-
+  /**The root of the parsing result data. */
+  ZbnfResultData zsrcData;
 
   protected Map<String, ZbnfState> idxStates = new TreeMap<String, ZbnfState>();
 
-  protected Map<String, ZbnfState> idxStateTags = new TreeMap<String, ZbnfState>();
+  protected Map<String, ZbnfState> XXXidxStateTags = new TreeMap<String, ZbnfState>();
 
 
 
@@ -142,7 +143,7 @@ public class StateMcHgen {
    
   void execute(Zbnf2Text.Args args) throws IOException, IllegalAccessException
   {
-    ZbnfResultData zsrcData = parseAndStoreInput(args);  //parsed and converts into Java data presentation
+    this.zsrcData = parseAndStoreInput(args);  //parsed and converts into Java data presentation
     if(zsrcData != null){
       if(args.sFileSrcData!=null) {
         Writer out  = new FileWriter(args.sFileSrcData);
@@ -296,13 +297,13 @@ public class StateMcHgen {
       for(ZbnfState zbnfState: zbnfComposite.listSubstates){
         addSubstate(rootState, stateComposite, zbnfState);
     } }
-    if(zbnfComposite.listSubstatesTag !=null) {
-      for(StateDefInStateStruct tag: zbnfComposite.listSubstatesTag){
-        ZbnfState zbnfState = idxStateTags.get(tag.stateTag);
+    if(zbnfComposite.XXXlistSubstatesTag !=null) {
+      for(XXXStateDefInStateStruct tag: zbnfComposite.XXXlistSubstatesTag){
+        ZbnfState zbnfState = XXXidxStateTags.get(tag.stateTag);
         if(zbnfState == null) {
           throw new IllegalArgumentException("faulty tag name, " + tag.stateTag);
         }
-        zbnfState.stateName = tag.stateName;
+        zbnfState.XXXstateName = tag.stateName;
         addSubstate(rootState, stateComposite, zbnfState);
     } }
     //if(zbnfComposite.stateHistory !=null) {
@@ -321,33 +322,33 @@ public class StateMcHgen {
     if(!zbnfState.isPrepared){
       StateSimple state1;  //either a GenStateSimple or a GenStateComposite, add it after creation and evaluation.
       //
-      if(zbnfState.listSubstates !=null || zbnfState.listSubstatesTag !=null) {
+      if(zbnfState.listSubstates !=null || zbnfState.XXXlistSubstatesTag !=null) {
         int sizeSubStates = (zbnfState.listSubstates ==null ? 0 : zbnfState.listSubstates.size())
-                          + (zbnfState.listSubstatesTag ==null ? 0 : zbnfState.listSubstatesTag.size())
+                          + (zbnfState.XXXlistSubstatesTag ==null ? 0 : zbnfState.XXXlistSubstatesTag.size())
                           //+ (zbnfState.stateHistory == null ? 0 : 1)
                           ;
         final StateSimple stateComposite1;
         if(zbnfState.stateParallel) {
           //stateComposite1 = new GenStateParallel(stateComposite, rootState, genStm, zbnfState);
-          stateComposite1 = new StateParallel(zbnfState.stateName, genStm, new StateSimple[sizeSubStates]);
+          stateComposite1 = new StateParallel(zbnfState.stateType, genStm, new StateSimple[sizeSubStates]);
           stateComposite1.setAuxInfo(zbnfState);
           state1 = gatherStatesOfParallel((StateParallel)stateComposite1, rootState, zbnfState);
         } else {
           StateComposite rootState1;
           if(zbnfState.isComposite) {  //zbnfState.stateHistory !=null ||  
-            stateComposite1 = new StateComposite(zbnfState.stateName, genStm, new StateSimple[sizeSubStates]);
+            stateComposite1 = new StateComposite(zbnfState.stateType, genStm, new StateSimple[sizeSubStates]);
             stateComposite1.setAuxInfo(zbnfState);
             rootState1 = (StateComposite)stateComposite1;
             genStm.rootStates.add(rootState1);
           } else { 
-            stateComposite1 = new StateCompositeFlat(zbnfState.stateName, genStm, new StateSimple[sizeSubStates]);
+            stateComposite1 = new StateCompositeFlat(zbnfState.stateType, genStm, new StateSimple[sizeSubStates]);
             stateComposite1.setAuxInfo(zbnfState);
             rootState1 = rootState; 
           }  
           state1 = gatherStatesOfComposite((StateCompositeFlat)stateComposite1, rootState1, zbnfState);
         }
       } else if(zbnfState.stateType.equals("DeepHistory")){
-        state1 = new StateDeepHistory(zbnfState.stateName);
+        state1 = new StateDeepHistory(zbnfState.stateType);
       } else {
         state1 = new GenStateSimple(stateComposite, rootState, genStm, zbnfState);
         state1.setAuxInfo(zbnfState);
@@ -386,7 +387,7 @@ public class StateMcHgen {
             throw new IllegalArgumentException("the next level of StateParallel cannot be a StateParallel");
           } else {
             StateComposite noRootState = null;
-            stateComposite1 = new StateComposite(zbnfState.stateName, genStm, new StateSimple[zbnfState.listSubstates.size()]);
+            stateComposite1 = new StateComposite(zbnfState.stateType, genStm, new StateSimple[zbnfState.listSubstates.size()]);
             stateComposite1.setAuxInfo(zbnfState);
             StateComposite rootState1 = (StateComposite)stateComposite1;
             genStm.rootStates.add(rootState1);
@@ -515,7 +516,8 @@ public class StateMcHgen {
     
     public String topStateType, topStateName, stateName, tagName;
     
-    private ZbnfState topState;
+    /**Only necessary for #gatherStatesOfComposite.*/
+    private ZbnfState topState = new ZbnfState();
     
     /**From Zbnf: stores an include line in the syntax context: <pre>
      * { #include <* \n?includeLine>
@@ -530,8 +532,13 @@ public class StateMcHgen {
     
     public void add_stateDef(ZbnfState val){ 
       idxStates.put(val.stateType, val);
+      if(val.zbnfParent == null) {
+        //has not a parent state, it is direct member of the top state.
+        if(topState.listSubstates == null) { topState.listSubstates = new LinkedList<ZbnfState>(); }
+        topState.listSubstates.add(val);
+      }
       if(val.tagname !=null) {
-        idxStateTags.put(val.tagname, val);
+        XXXidxStateTags.put(val.tagname, val);
       }
     }
     
@@ -554,9 +561,9 @@ public class StateMcHgen {
     
     public void add_checkState(ZbnfEntryExitCheck val){ idxCheck.put(val.state, val);  }
  
-    public ZbnfState new_topState(){ return topState = new ZbnfState(); }
+    public ZbnfState XXXnew_topState(){ return topState = new ZbnfState(); }
     
-    public void add_topState(ZbnfState val){  }
+    public void XXXadd_topState(ZbnfState val){  }
     
     
 
@@ -608,7 +615,7 @@ public class StateMcHgen {
   
   
   
-  public static class StateDefInStateStruct {
+  public static class XXXStateDefInStateStruct {
     public String stateType, stateTag, stateName;  
     
     public void XXXXXXXset_stateTag(String val){
@@ -631,7 +638,7 @@ public class StateMcHgen {
     /**From Zbnf: <code> ...} <$?stateType> .</code>, the type of a <code>stateDef::=</code> */
     public String stateType;
     
-    public String stateName;
+    public String XXXstateName;
     
     
     
@@ -645,6 +652,7 @@ public class StateMcHgen {
     //public String stateHistory;
     //StateDeepHistory stateHistory;
     
+    ZbnfState zbnfParent;
     
     /**Set from Zbnf: int history <?isComposite>*/
     public boolean isComposite;
@@ -656,32 +664,67 @@ public class StateMcHgen {
     
     List<ZbnfState> listSubstates;
     
-    List<StateDefInStateStruct> listSubstatesTag;
+    List<XXXStateDefInStateStruct> XXXlistSubstatesTag;
     
     
-    public StateDefInStateStruct new_stateDefInStateStruct(){ return new StateDefInStateStruct(); }
+    /**ZBNF: <code>[<$?parentState> parent ; ]</code>
+     * The parent state should not be referenced from this, but the parent should know its children
+     * in the {@link #listSubstates}. The state with the given name is searched in {@link StateMcHgen#idxStates}.
+     * In that state this instance is added as substate.
+     * @param name type name in C
+     */
+    public void set_parentState(String name) {
+      zbnfParent = StateMcHgen.this.idxStates.get(name);
+      if(zbnfParent == null) {
+        throw new IllegalArgumentException("Parent state not found, " + name);
+      }
+      if(zbnfParent.listSubstates == null) { zbnfParent.listSubstates = new LinkedList<ZbnfState>(); }
+      zbnfParent.listSubstates.add(this);
+    }
     
-    public void add_stateDefInStateStruct(StateDefInStateStruct val){ 
+    
+    
+    /**ZBNF: <code>[<$?parallelParentState> parellelParent ; ]</code>
+     * The parent state should not be referenced from this, but the parent should know its children
+     * in the {@link #listSubstates}. The state with the given name is searched in {@link StateMcHgen#idxStates}.
+     * In that state this instance is added as substate. The parent state is marked as {@link #stateParallel}
+     * @param name type name in C
+     */
+    public void set_parallelParentState(String name) {
+      zbnfParent = StateMcHgen.this.idxStates.get(name);
+      if(zbnfParent == null) {
+        throw new IllegalArgumentException("Parent state not found, " + name);
+      }
+      zbnfParent.stateParallel = true;
+      if(zbnfParent.listSubstates == null) { zbnfParent.listSubstates = new LinkedList<ZbnfState>(); }
+      zbnfParent.listSubstates.add(this);
+    }
+    
+    
+    
+    public XXXStateDefInStateStruct XXXnew_stateDefInStateStruct(){ return new XXXStateDefInStateStruct(); }
+    
+    public void XXXadd_stateDefInStateStruct(XXXStateDefInStateStruct val){ 
       if(val.stateType !=null) {
         ZbnfState state = idxStates.get(val.stateType);
         if(state == null) { 
           throw new IllegalArgumentException("StateMcHgen: state in stateStruct unknown, " + val.stateType);
           
         } 
-        state.stateName = val.stateName;
-        add_stateStruct(state);
+        state.XXXstateName = val.stateName;
+        XXXadd_stateStruct(state);
       } else {
-        if(listSubstatesTag ==null){ listSubstatesTag = new LinkedList<StateDefInStateStruct>(); }
-        listSubstatesTag.add(val);
+        if(XXXlistSubstatesTag ==null){ XXXlistSubstatesTag = new LinkedList<XXXStateDefInStateStruct>(); }
+        XXXlistSubstatesTag.add(val);
       }
     }
     
     
     
     
-    public ZbnfState new_stateStruct() { return new ZbnfState(); }
+    public ZbnfState XXXnew_stateStruct() { return new ZbnfState(); }
     
-    public void add_stateStruct(ZbnfState val) { 
+    public void XXXadd_stateStruct(ZbnfState val) { 
       if(listSubstates == null) { listSubstates = new LinkedList<ZbnfState>(); }
       listSubstates.add(val); 
     }
@@ -691,7 +734,7 @@ public class StateMcHgen {
     public void set_stateHistory(String name){
       if(listSubstates == null) { listSubstates = new LinkedList<ZbnfState>(); }
       ZbnfState stateHistory = new ZbnfState();
-      stateHistory.stateName = name;
+      stateHistory.XXXstateName = name;
       stateHistory.stateType = "DeepHistory";
       listSubstates.add(stateHistory); 
       
@@ -702,7 +745,7 @@ public class StateMcHgen {
     /**Set to true if the state was prepared already. */
     boolean isPrepared = false;
     
-    @Override public String toString(){ return stateType + ": " + stateName; }
+    @Override public String toString(){ return stateType; }
   
 
     
@@ -754,7 +797,7 @@ public class StateMcHgen {
       this.enclState = enclState;
       this.rootState = rootState;
       this.stateMachine = stm;
-      stateId = zbnfState.stateName;
+      stateId = zbnfState.stateType;
     }
     
     
