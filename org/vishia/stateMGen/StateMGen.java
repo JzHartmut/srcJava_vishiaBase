@@ -597,7 +597,7 @@ public class StateMGen {
   
   static class GenStateCompositeFlat extends StateCompositeFlat {
     
-    GenStateCompositeFlat(StateSimple enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
+    GenStateCompositeFlat(StateCompositeFlat enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateSimple[zbnfComposite.nrofSubstates] );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
@@ -624,7 +624,7 @@ public class StateMGen {
   
   static class GenStateParallel extends StateParallel{
     
-    GenStateParallel(StateCompositeFlat enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
+    GenStateParallel(StateSimple enclState, StateComposite rootState, GenStateMachine genStm, ZbnfState zbnfComposite)
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateComposite[zbnfComposite.nrofSubstates]  );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
