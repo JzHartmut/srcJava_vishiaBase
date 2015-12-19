@@ -425,7 +425,7 @@ INPUT          pathTo JZcmd-File to execute
       JZcmdScript jzscript = translateAndSetGenCtrl(fileScript, null, log);
       JZcmdScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
       //the script variables are build from the local ones of the calling script:
-      execLevel.execSubroutine(substatement, args, null, -1);
+      execLevel.exec_Subroutine(substatement, args, null, -1);
       //executer.execute(genScript, true, bWaitForThreads, null, null);
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Exception exc) {

@@ -377,6 +377,7 @@ public final class JZcmdSyntax {
     + " textExpr::=<$NoWhiteSpaces>\n"
     + " { [?\\<\\.\\>]                             ##abort on <.> \n"
     + " [ \\<&-<*\\>?>\\>                          ##<&- it is comment> \n"
+    + " | \\<:---<*|---\\>?>---\\> ##<:--- comment ---> \n"
     + " | \\<:-<*\\>?>\\><textExpr?>\\<\\.-<*\\>?>\\> ##<:-comment> comment <.- > \n"
     + " | \\#\\#<*\\r\\n?>   ##comment to eol in a text Expression\n"
     + " | \\<:for:<forInText?forCtrl>\n"
@@ -417,7 +418,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
       //Note: the for-variable is adequate a DefVariable
-    + " forCtrl::= ( <$?forVariable> : <dataAccess?forContainer> [ && <condition> ])  \\{ <statementBlock> \\} .\n"
+    + " forCtrl::= ( <$?forVariable> : <dataAccess?forContainer> [ && <condition> ] )  \\{ <statementBlock> \\} .\n"
     + " \n"
     + " forInText::= <$?forVariable> : <dataAccess?forContainer> [ && <condition> ] \\> <textExpr> \\<\\.for[ : <$?@checkForVariable> ]\\>. \n"
     + " ##name is the name of the container element data reference\n"

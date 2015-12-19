@@ -259,29 +259,55 @@ public class StateMcHgen {
     //stateTop.setAuxInfo(new GenStateInfo(null)); //instance for Code generation for the top state.  
     //gather all states and transitions in the parsed data and add it to the prepared data:
     zsrc.stateM.rootStates.add(stateTop); //the stateTop is the first rootState.
+    //
+    //
     gatherStatesOfComposite(stateTop, stateTop, zbnfSrc.topState);
     //
-    gatherAllTransitions();
+    for(StateSimple genState1 : zsrc.stateM.stateList()) {
+      gatherAllTransitions(genState1);
+    }
     //complete the stateSrc in the State routines.
     for(Map.Entry<String, ZbnfEntryExitCheck> e: zbnfSrc.idxCheck.entrySet()) {
       ZbnfEntryExitCheck trans = e.getValue();
-      trans.stateSrc = zsrc.stateM.allStates.get(trans.stateName);
+      trans.stateSrc = zsrc.stateM.allStates.get(trans.lastArgType);
     }
     for(Map.Entry<String, ZbnfEntryExitCheck> e: zbnfSrc.idxEntry.entrySet()) {
       ZbnfEntryExitCheck trans = e.getValue();
-      trans.stateSrc = zsrc.stateM.allStates.get(trans.stateName);
+      trans.stateSrc = zsrc.stateM.allStates.get(trans.lastArgType);
     }
     for(Map.Entry<String, ZbnfEntryExitCheck> e: zbnfSrc.idxExit.entrySet()) {
       ZbnfEntryExitCheck trans = e.getValue();
-      trans.stateSrc = zsrc.stateM.allStates.get(trans.stateName);
+      trans.stateSrc = zsrc.stateM.allStates.get(trans.lastArgType);
     }
     
     //invoke prepare, the same as for Java state machines.
     zsrc.stateM.prepare();
+    //
+    //Now build some additional information used for code generation:
+    for(StateSimple state: zsrc.listStates) {
+      completeExitPath(state);  
+    }
     
   }
 
 
+  
+  void completeExitPath(StateSimple state) {
+    ZbnfState zstate = (ZbnfState)state.auxInfo();
+    StateSimple[] statePath = state.statePath();
+    if(statePath !=null) {
+      int i = statePath.length;
+      StateSimple state1;
+      zstate.exitStates = new LinkedList<StateSimple>();
+      state1 = statePath[--i];
+      do {
+        //note: may be instanceof StateCompositeFlat.
+        zstate.exitStates.add(state1);  
+        state1 = statePath[--i];
+      } while(i >0 &&  !(state1 instanceof StateComposite) && !(state1 instanceof StateParallel));
+    }
+  }
+  
 
 
 
@@ -304,7 +330,7 @@ public class StateMcHgen {
    * @return
    */
   StateCompositeFlat gatherStatesOfComposite(StateCompositeFlat stateComposite, StateComposite rootState, ZbnfState zbnfComposite)
-  { 
+  { //add deep and shallow history at last, it is never the default state. But it is parsed firstly.
     if(zbnfComposite.listSubstates !=null) {
       for(ZbnfState zbnfState: zbnfComposite.listSubstates){
         addSubstate(rootState, stateComposite, zbnfState);
@@ -320,7 +346,15 @@ public class StateMcHgen {
     if(!zbnfState.isPrepared){
       StateSimple state1;  //either a GenStateSimple or a GenStateComposite, add it after creation and evaluation.
       //
-      if(zbnfState.listSubstates !=null) {
+        if(zbnfState.stateDeepHistory !=null) {
+          if(zbnfState.listSubstates ==null) { zbnfState.listSubstates = new LinkedList<ZbnfState>(); }
+          zbnfState.listSubstates.add(zbnfState.stateDeepHistory);
+        }
+        if(zbnfState.stateShallowHistory !=null) {
+          if(zbnfState.listSubstates ==null) { zbnfState.listSubstates = new LinkedList<ZbnfState>(); }
+          zbnfState.listSubstates.add(zbnfState.stateShallowHistory);
+        }
+        if(zbnfState.listSubstates !=null) {
         int sizeSubStates = zbnfState.listSubstates.size();
         final StateSimple stateComposite1;
         if(zbnfState.bStateParallel) {
@@ -422,83 +456,83 @@ public class StateMcHgen {
    * in another special way. If the {@link ZbnfTrans#time} is set, the {@link GenStateInfo#timeCondition} will be set and the 
    * {@link GenStateInfo#hasTimer} of the 
    */
-  void gatherAllTransitions() {
-    for(StateSimple genState1 : zsrc.stateM.stateList()) {
-      StateSimple parentState = genState1;
-      List<StateSimple.Trans> listTrans = new LinkedList<StateSimple.Trans>();
-      String parentPath = "";
-      while(parentState !=null) {
-        Object ozbnfState = parentState.auxInfo();
-        ZbnfState zbnfState = (ZbnfState)parentState.auxInfo();
-        if(zbnfState !=null) {  //not for auto generated states, for example History state.
-          int zTransitions;
-          if(zbnfState.dotransDst !=null && (zTransitions = zbnfState.dotransDst.size()) >0) {
-            for(String zbnfTrans: zbnfState.dotransDst){
-              List<String> listDst = new LinkedList<String>();
-              int sep = 0;
-              while(sep >=0){
-                int sepe = zbnfTrans.indexOf('_', sep);
-                String dst = sepe >=0 ? zbnfTrans.substring(sep, sepe) : zbnfTrans.substring(sep);  
-                listDst.add(dst);
-                sep = sepe >=0 ? sepe +1 : sepe;
+  void gatherAllTransitions(StateSimple genState1) {
+    StateSimple parentState = genState1;
+    List<StateSimple.Trans> listTrans = new LinkedList<StateSimple.Trans>();
+    String parentPath = "";
+    while(parentState !=null) {
+      Object ozbnfState = parentState.auxInfo();
+      ZbnfState zbnfState = (ZbnfState)parentState.auxInfo();
+      if(zbnfState !=null) {  //not for auto generated states, for example History state.
+        int zTransitions;
+        if(zbnfState.dotransDst !=null && (zTransitions = zbnfState.dotransDst.size()) >0) {
+          for(String zbnfTrans: zbnfState.dotransDst){
+            List<String> listDst = new LinkedList<String>();
+            int sep = 0;
+            while(sep >=0){
+              int sepe = zbnfTrans.indexOf('_', sep);
+              String dst = sepe >=0 ? zbnfTrans.substring(sep, sepe) : zbnfTrans.substring(sep);  
+              listDst.add(dst);
+              sep = sepe >=0 ? sepe +1 : sepe;
+            }
+            
+            int nrofForks = listDst.size(); 
+            int[] dstKeys = new int[nrofForks];
+            int ixDst = -1;
+            GenTrans trans;
+            for(String sDstState : listDst) {
+              /*
+              boolean bHistory = sDstState.endsWith("history"); //TODO no more necessary
+              if(bHistory){
+                sDstState = sDstState.substring(0, sDstState.length() - "history".length());
               }
-              
-              int nrofForks = listDst.size(); 
-              int[] dstKeys = new int[nrofForks];
-              int ixDst = -1;
-              GenTrans trans;
-              for(String sDstState : listDst) {
+              */
+              //ZbnfState dstState2 = idxStates.get(sDstState);
+              StateSimple dstState1 = zsrc.stateM.allStates.get(sDstState);
+                if(dstState1 == null){ 
+                  dstState1 = zsrc.stateM.allStates.get(sDstState + "_State"); 
+                }
+                if(dstState1 == null) {
+                  throw new IllegalArgumentException("faulty dst state in transition;" + sDstState + "; from state " + parentState.getName());
+                }
+                while(dstState1 instanceof StateCompositeFlat) {
+                  dstState1 = ((StateCompositeFlat)dstState1).stateDefault();
+                }
                 /*
-                boolean bHistory = sDstState.endsWith("history"); //TODO no more necessary
-                if(bHistory){
-                  sDstState = sDstState.substring(0, sDstState.length() - "history".length());
+                if(bHistory) {
+                  dstState1 = ((ZbnfState)dstState1.auxInfo()).stateHistory;
+                  if(dstState1 == null) throw new IllegalArgumentException("history state not found in transition;" + sDstState + "; from state " + genState.getName());
                 }
                 */
-                //ZbnfState dstState2 = idxStates.get(sDstState);
-                StateSimple dstState1 = zsrc.stateM.allStates.get(sDstState);
-                  if(dstState1 == null){ 
-                    dstState1 = zsrc.stateM.allStates.get(sDstState + "_State"); 
+                dstKeys[++ixDst] = dstState1.hashCode();
+                /*
+                if(zbnfTrans.joinStates !=null){
+                  trans = genState.new TransJoin("Trans_" + genState.getName() + zbnfTrans.nrTrans, dstKeys); 
+                  int[] joinKeys = new int[zbnfTrans.joinStates.size()];
+                  int ixJoin = -1;
+                  for(String sJoinState: zbnfTrans.joinStates){
+                    StateSimple joinState1 = zsrc.stateM.allStates.get(sJoinState);
+                    if(joinState1 == null) throw new IllegalArgumentException("faulty join state in transition;" + sJoinState + "; from state " + genState.getName());
+                    joinKeys[++ixJoin] = joinState1.hashCode();
                   }
-                  if(dstState1 == null) {
-                    throw new IllegalArgumentException("faulty dst state in transition;" + sDstState + "; from state " + parentState.getName());
-                  }
-                  /*
-                  if(bHistory) {
-                    dstState1 = ((ZbnfState)dstState1.auxInfo()).stateHistory;
-                    if(dstState1 == null) throw new IllegalArgumentException("history state not found in transition;" + sDstState + "; from state " + genState.getName());
-                  }
-                  */
-                  dstKeys[++ixDst] = dstState1.hashCode();
-                  /*
-                  if(zbnfTrans.joinStates !=null){
-                    trans = genState.new TransJoin("Trans_" + genState.getName() + zbnfTrans.nrTrans, dstKeys); 
-                    int[] joinKeys = new int[zbnfTrans.joinStates.size()];
-                    int ixJoin = -1;
-                    for(String sJoinState: zbnfTrans.joinStates){
-                      StateSimple joinState1 = zsrc.stateM.allStates.get(sJoinState);
-                      if(joinState1 == null) throw new IllegalArgumentException("faulty join state in transition;" + sJoinState + "; from state " + genState.getName());
-                      joinKeys[++ixJoin] = joinState1.hashCode();
-                    }
-                    ((StateSimple.TransJoin)trans).srcStates(joinKeys);  //set the hashes of the join sources.
-                  } else */
-              }
-              trans = new GenTrans(genState1, zbnfTrans, dstKeys);
-              trans.parentPath = parentPath;
-              trans.enclStateName = parentState.getName();
-              listTrans.add(trans);
+                  ((StateSimple.TransJoin)trans).srcStates(joinKeys);  //set the hashes of the join sources.
+                } else */
             }
+            trans = new GenTrans(genState1, zbnfTrans, dstKeys);
+            trans.parentPath = parentPath;
+            trans.enclStateName = parentState.getName();
+            listTrans.add(trans);
           }
         }
-        parentState = null; //don't gather parent transitions. parentState.enclState();
-        if(parentState instanceof StateParallel) { parentPath += ".parallelParent"; }
-        else { parentPath += ".parent"; }
       }
-      StateSimple.PlugStateSimpleToGenState plugState = genState1.new PlugStateSimpleToGenState();
-      plugState.createTransitions(listTrans.size());
-      for(StateSimple.Trans trans: listTrans) {
-        plugState.addTransition(trans);
-      }
-      
+      parentState = null; //don't gather parent transitions. parentState.enclState();
+      if(parentState instanceof StateParallel) { parentPath += ".parallelParent"; }
+      else { parentPath += ".parent"; }
+    }
+    StateSimple.PlugStateSimpleToGenState plugState = genState1.new PlugStateSimpleToGenState();
+    plugState.createTransitions(listTrans.size());
+    for(StateSimple.Trans trans: listTrans) {
+      plugState.addTransition(trans);
     }
   }
 
@@ -510,7 +544,10 @@ public class StateMcHgen {
   public class ZbnfResultData //extends ZbnfState
   {
   
-  
+    public String headerGen;
+    
+    public String headerSrc;
+    
     public List<String> includeLines = new LinkedList<String>();
     
     public String stateInstance;
@@ -520,6 +557,12 @@ public class StateMcHgen {
     public String userDataType;
     
     public String transFnArgs;
+    
+    public String stateRnFormalArgs;
+    
+    public String stateRnActArgs;
+    
+    public List<String> transFnArgNames = new LinkedList<String>();
     
     
     public Map<String, ZbnfEntryExitCheck> idxEntry = new TreeMap<String, ZbnfEntryExitCheck>();
@@ -551,6 +594,44 @@ public class StateMcHgen {
     public void set_includeLine(String arg){ includeLines.add(arg); }
     
     
+    
+    /**From Zbnf, invoked with [<?transFnArgs> ....] as component in []
+     * @return this as instance for the component. 
+     */
+    public ZbnfResultData new_transFnArgs(){ return this; }
+    
+    /**From Zbnf, invoked with [<?transFnArgs> ....] as component in []
+     * @param val it is this, not used
+     */
+    public void add_transFnArgs(ZbnfResultData val) {}
+    
+    /**From Zbnf, invoked with [<?transFnArgs> ....] as String in [], the parsed content is stored as String too.
+     * @param val
+     */
+    public void set_transFnArgs(String val){
+      stateRnFormalArgs = transFnArgs = val;
+    }
+    
+    /**From Zbnf, invoked with [<?...> {<* |,|)?arg> ? , }]
+     * @param val One argument till , or ) but without leading and trailing spaces.
+     */
+    public void set_transFnArg(String val){
+      if(val.length() >0) {
+        //Note: the val has not leading spaces, because of the ZBNF-Syntax <* |...>
+        int posSpace = val.lastIndexOf(' '); //name is the last part of the argument. After space the name starts
+        //Note: A space before the name is necessary.
+        transFnArgNames.add(val.substring(posSpace +1));
+        if(stateRnActArgs == null) {
+          stateRnActArgs = val.substring(posSpace +1);
+        } else {
+          stateRnActArgs += ", " + val.substring(posSpace +1);
+        }
+      }
+      //else: empty arglist
+    }
+    
+
+    
     public ZbnfState new_stateDef(){ return new ZbnfState(); }
     
     public void add_stateDef(ZbnfState val){ 
@@ -565,32 +646,6 @@ public class StateMcHgen {
     }
     
     
-    public void set_entryState(String arg){  }
-    
-    public ZbnfEntryExitCheck new_entryState(){ return new ZbnfEntryExitCheck();  }
-    
-    public void add_entryState(ZbnfEntryExitCheck val){ idxEntry.put(val.stateName, val);  }
-    
-    public void set_exitState(String arg){  }
-    
-    public ZbnfEntryExitCheck new_exitState(){ return new ZbnfEntryExitCheck();  }
-    
-    public void add_exitState(ZbnfEntryExitCheck val){ idxExit.put(val.stateName, val);  }
-    
-    public void set_checkState(String arg){  }
-
-    public ZbnfEntryExitCheck new_checkState(){ return new ZbnfEntryExitCheck();  }
-    
-    public void add_checkState(ZbnfEntryExitCheck val){ 
-      //The last argument in the arglist is the State struct type. Search it.
-      //StringPart args = new StringPart(val.formalArgList);
-      //args.seekBackward(",").seekNoWhitespace().lentoIdentifier();
-      //String stateName = args.toString();
-      idxCheck.put(val.stateName, val);  
-    }
- 
-    
-
     
   }
   
@@ -601,7 +656,9 @@ public class StateMcHgen {
   {
     public String restName;
     
-    String stateName;
+    String lastArgType;
+    
+    final String infoToString;
     
     /**The source state of the transition routine. It is set in {@link StateMcHgen#prepareStateData(ZbnfResultData)}
      * form the {@link #state} */
@@ -611,7 +668,7 @@ public class StateMcHgen {
     
     public List<String> argVariables = new LinkedList<String>();
     
-    ZbnfEntryExitCheck(){}
+    ZbnfEntryExitCheck(String infoToString){ this.infoToString = infoToString; }
     
     /**From Zbnf, invoked with [<?args> ....] as component in []
      * @return this as instance for the component. 
@@ -636,7 +693,7 @@ public class StateMcHgen {
     public void set_arg(String val){
       if(val.length() >0) {
         StringPart spArg = new StringPart(val);
-        this.stateName = spArg.lentoIdentifier().getCurrentPart().toString();  //the last type is the statename.
+        this.lastArgType = spArg.lentoIdentifier().getCurrentPart().toString();  //the last type is the statename.
         String argName = spArg.setLengthMax().seekBackToAnyChar(" *").getCurrentPart().toString();
         argVariables.add(argName);
         //int posSpace = val.lastIndexOf(' '); //type name, after space the name starts
@@ -644,13 +701,13 @@ public class StateMcHgen {
         //  argVariables.add(val.substring(posSpace +1));
         //}
       } else {
-        stateName = restName;
+        lastArgType = restName;
       }
       //else: empty arglist
     }
     
     
-    @Override public String toString(){ return "ZbnfEntryExitCheck: " + stateName + ": " + argVariables; }
+    @Override public String toString(){ return "ZbnfEntryExitCheck: " + lastArgType + ": " + argVariables; }
     
   }
   
@@ -680,6 +737,8 @@ public class StateMcHgen {
     
     ZbnfState zbnfParent;
     
+    ZbnfState stateDeepHistory, stateShallowHistory;
+    
     /**Set from Zbnf: int history <?isComposite>*/
     public boolean isComposite;
     
@@ -688,12 +747,18 @@ public class StateMcHgen {
     
     public List<String> dotransDst = new LinkedList<String>();
     
+    /**This list is filled by parsing a child state with its given parent, see {@link #set_parentState(String)}. 
+     * or {@link #set_parallelParentState(String)}. It is used for preparation, lastly the StateCompositeFlat#aSubStates is built therewith */
     List<ZbnfState> listSubstates;
     
+    /**This information is set after preparation from the statePath. It contains all states to exit till a StateComposite. 
+     * It is used to generate the exitStateGen...()-Routine. See {@link StateMcHgen#completeExitPath(StateSimple)}. */
+    public List<StateSimple> exitStates;
+    
     /**From Zbnf: StateParallel_Fwc <*_;\ ?stateParallel>[_<*\ ;?stateId>]. */
-    public void set_stateParallel(String val) {
+    public void set_stateParallel() {
       bStateParallel = true;
-      stateIdName = val;
+      stateIdName = "parallel";
     }
     
     /**ZBNF: <code>[<$?parentState> parent ; ]</code>
@@ -741,16 +806,47 @@ public class StateMcHgen {
       stateHistory.stateName = name;
       stateHistory.stateIdName = "DeepHistory";
       stateHistory.zbnfParent = this;
-      if(this.listSubstates == null){ this.listSubstates = new LinkedList<ZbnfState>(); }
-      this.listSubstates.add(stateHistory); 
+      stateDeepHistory = stateHistory;
       this.isComposite = true;
       StateMcHgen.this.idxStates.put(name, stateHistory);
       //stateHistory = new StateDeepHistory();      
     }
     
     
+    public void set_entryState(String arg){  }
+    
+    public ZbnfEntryExitCheck new_entryState(){ return new ZbnfEntryExitCheck("entry_" + stateName);  }
+    
+    public void add_entryState(ZbnfEntryExitCheck val){ zsrc.idxEntry.put(this.stateName, val);  }
+    
+    public void set_exitState(String arg){  }
+    
+    public ZbnfEntryExitCheck new_exitState(){ return new ZbnfEntryExitCheck("exit_" + stateName);  }
+    
+    public void add_exitState(ZbnfEntryExitCheck val){ zsrc.idxExit.put(this.stateName, val);  }
+    
+    public void set_checkState(String arg){  }
+
+    public ZbnfEntryExitCheck new_checkState(){ return new ZbnfEntryExitCheck("check_" + stateName);  }
+    
+    public void add_checkState(ZbnfEntryExitCheck val){ 
+      if(!val.lastArgType.equals(this.stateName) ) {
+        throw new IllegalArgumentException("The type of state should be the same as the type of the state struct.");
+      }
+      zsrc.idxCheck.put(this.stateName, val);  
+    }
+ 
+    
+
+
+    
+    
+    
     /**Set to true if the state was prepared already. */
     boolean isPrepared = false;
+    
+    
+    
     
     @Override public String toString(){ return stateName; }
   
@@ -803,6 +899,15 @@ public class StateMcHgen {
   }
   
 
+  
+  static class GenStateAdd
+  {
+    
+    
+  }
+  
+  
+  
   
   
   /**Special Class because StateSimple is abstract, only for construction and non-abstract.
