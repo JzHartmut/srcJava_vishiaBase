@@ -376,7 +376,7 @@ public class StateMcHgen {
           }  
           state1 = gatherStatesOfComposite((StateCompositeFlat)stateComposite1, rootState1, zbnfState);
         }
-      } else if(zbnfState.stateIdName.equals("DeepHistory")){
+      } else if(zbnfState.stateIdName !=null && zbnfState.stateIdName.equals("DeepHistory")){
         state1 = new StateDeepHistory(zbnfState.stateName);
       } else {
         state1 = new GenStateSimple(stateComposite, rootState, zsrc.stateM, zbnfState);
@@ -729,7 +729,7 @@ public class StateMcHgen {
     
     /**From Zbnf: <code>_<*\ ;?stateId></code>, the number for this state. For example id_0x102.
      * Use default value for parallel states. */
-    public String stateId = "0";
+    public String stateId = "0x000";
     
     
     //public String stateHistory;
@@ -743,7 +743,7 @@ public class StateMcHgen {
     public boolean isComposite;
     
     /**Set from Zbnf: int parallel <?stateParallel>*/
-    public boolean bStateParallel;
+    public boolean bStateParallel, bParallelComposite;
     
     public List<String> dotransDst = new LinkedList<String>();
     
@@ -758,8 +758,18 @@ public class StateMcHgen {
     /**From Zbnf: StateParallel_Fwc <*_;\ ?stateParallel>[_<*\ ;?stateId>]. */
     public void set_stateParallel() {
       bStateParallel = true;
-      stateIdName = "parallel";
+      stateIdName = "XXXparallelBase";
     }
+    
+    
+    /**From Zbnf: StateParallel_Fwc <*_;\ ?stateParallel>[_<*\ ;?stateId>]. */
+    public void set_parallelComposite() {
+      bParallelComposite = true;
+      stateIdName = "XXXparallel";
+    }
+    
+    
+    
     
     /**ZBNF: <code>[<$?parentState> parent ; ]</code>
      * The parent state should not be referenced from this, but the parent should know its children
@@ -768,12 +778,23 @@ public class StateMcHgen {
      * @param name type name in C
      */
     public void set_parentState(String name) {
-      zbnfParent = StateMcHgen.this.idxStates.get(name);
-      if(zbnfParent == null) {
-        throw new IllegalArgumentException("Parent state not found, " + name);
+      if(!name.equals("Top")) {   //No parent.
+        zbnfParent = StateMcHgen.this.idxStates.get(name);
+        if(zbnfParent == null) {
+          throw new IllegalArgumentException("Parent state not found, " + name);
+        }
+        if(zbnfParent.listSubstates == null) { zbnfParent.listSubstates = new LinkedList<ZbnfState>(); }
+        zbnfParent.listSubstates.add(this);
       }
-      if(zbnfParent.listSubstates == null) { zbnfParent.listSubstates = new LinkedList<ZbnfState>(); }
-      zbnfParent.listSubstates.add(this);
+      if(bStateParallel){ 
+        stateIdName = "parallelBase_" + name;
+      //} else if(parallelComposite) {
+      //  parallelParent = name;
+      } else if(bParallelComposite){ 
+        stateIdName = "parallel_" + name;
+      } else {
+        stateIdName = name;
+      }
     }
     
     
@@ -784,7 +805,7 @@ public class StateMcHgen {
      * In that state this instance is added as substate. The parent state is marked as {@link #bStateParallel}
      * @param name type name in C
      */
-    public void set_parallelParentState(String name) {
+    public void XXXset_parallelParentState(String name) {
       zbnfParent = StateMcHgen.this.idxStates.get(name);
       if(zbnfParent == null) {
         throw new IllegalArgumentException("Parent state not found, " + name);
