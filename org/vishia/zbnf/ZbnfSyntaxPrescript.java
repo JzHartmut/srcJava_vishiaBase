@@ -219,9 +219,11 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  */
 public class ZbnfSyntaxPrescript
 {
-  /**Version-ident.
+  /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2015-12-29 Hartmut new: Possibility for debug: Write <code> <...?%...> in Syntax, then {@link ZbnfSyntaxPrescript#bDebugParsing} is set for this item.
+   *  It can be tested here to set a specific debug breakpoint for parsing this element. Only for special debugging problems. 
    * <li>2013-09-07 Hartmut new: Now it distinguishs between terminal symbols which are searched in the comment
    *   and normal terminal symbols. All terminal symbols which are to search in comment starts with one of the comment chars
    *   because elsewhere there won't be found because the comment is skipped. Therefore a terminal symbols is checked
@@ -245,7 +247,7 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String sVersionStamp = "2015-06-14";
+  public static final String version = "2015-12-29";
   
   /** Kind of syntay type of the item */
   int eType;
@@ -336,6 +338,8 @@ public class ZbnfSyntaxPrescript
   /**Comment start to check whether parse terminal syntax as comment. */
   private final String sCommentStart1, sCommentStart2;
   
+  /**Set to stop parsing on this item. Write <...?%...> to set it. Set breakpoint where bDebugParsing was set or checked.  */
+  boolean bDebugParsing;
   
   /** The syntax of this element.*/
   //final Syntax syntaxLists;
@@ -813,6 +817,11 @@ public class ZbnfSyntaxPrescript
     boolean bSemantic = true;
     char cc = spInput.getCurrentChar();
 
+    if( cc == '%')
+    { bDebugParsing = true;
+      cc = spInput.seek(1).getCurrentChar();
+    }
+    
     if( cc == '-')
     { bAssignIntoNextComponent = true;
       cc = spInput.seek(1).getCurrentChar();

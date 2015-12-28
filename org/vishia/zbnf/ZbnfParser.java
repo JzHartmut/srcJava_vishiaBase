@@ -130,6 +130,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-12-29 Hartmut new: Possibility for debug: Write <code> <...?%...> in Syntax, then {@link ZbnfSyntaxPrescript#bDebugParsing} is set for this item.
+   *  It can be tested here to set a specific debug breakpoint for parsing this element. Only for special debugging problems. 
    * <li>2015-07-04 Hartmut bugfix of change on 2015-06-14: It should check kTerminalSymbolInComment if such an symbol is parsed
    *   inside a part with <code><$NoWhiteSpaces></code> 
    * <li>2015-06-14 Hartmut chg: Writes the start of option parsing in log, "Opti" on level 5. Writes the recursion depths in log.
@@ -233,7 +235,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2015-06-07";
+  public static final String sVersion = "2015-12-29";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -861,6 +863,9 @@ public class ZbnfParser
         String sDefinitionIdent = syntaxItem.getDefinitionIdent();
         String sSemanticForStoring = syntaxItem.getSemantic();
         
+        if(syntaxItem.bDebugParsing) {
+          Debugutil.stop();   //possible to set a breakpoint here.
+        }
         @SuppressWarnings("unused")
         CharSequence sInput = input.getCurrent(80); //only test.
         if(sSemanticForStoring != null && sSemanticForStoring.length()==0)

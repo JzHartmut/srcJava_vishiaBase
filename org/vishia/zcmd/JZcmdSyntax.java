@@ -17,6 +17,9 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul> 
+   * <li>2015-12-28 Hartmut chg: instanceof operator in cmpOperationInText too, was missing. 
+   * <li>2015-12-28 Hartmut chg: <code><=</code> is not an end of an textExpr, because the possibility of <=variableDefinition is removed. 
+   *   Especially <= is a typical text content for code generation (less or equal). It can be used without subscription now.
    * <li>2015-08-30 Hartmut chg: textValue ends on a ':' too, important for <subtext:name:...
    * <li>2015-08-30 Hartmut new: The simple syntax <code>text = newFile;</code> to change the <code><+>output<.+></code>
    *   has a less semantic effect. Therefore it is replaced by <code><+:create>newFile<.+></code> or <code><+:append>...</code>
@@ -356,7 +359,7 @@ public final class JZcmdSyntax {
     + " | <numExpr?> [<cmpOperationInText?cmpOperation>]\n"  //simple boolean
     + " ].\n"  
     + " \n"
-    + " cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne] |  [<?cmpOperator> != | == ]] <numExpr?>.\n"
+    + " cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne|instanceof] |  [<?cmpOperator> != | == ]] <numExpr?>.\n" ////
     + " \n"
     + " \n"
     + " numExpr::=  bool ( <boolExpr?> ) \n"
@@ -397,7 +400,7 @@ public final class JZcmdSyntax {
     + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
-    + " | <*|\\<:|\\<=|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
+    + " | <*|\\<:|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"
     + " }.\n"
     + " \n"

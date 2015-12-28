@@ -468,7 +468,12 @@ public class StateMcHgen {
         if(zbnfState.dotransDst !=null && (zTransitions = zbnfState.dotransDst.size()) >0) {
           for(String zbnfTrans: zbnfState.dotransDst){
             List<String> listDst = new LinkedList<String>();
-            int sep = 0;
+            int sep = zbnfTrans.indexOf("__");
+            if(sep < 0){ 
+              sep = 0; 
+            } else { 
+              sep +=2; 
+            }
             while(sep >=0){
               int sepe = zbnfTrans.indexOf('_', sep);
               String dst = sepe >=0 ? zbnfTrans.substring(sep, sepe) : zbnfTrans.substring(sep);  
@@ -571,6 +576,8 @@ public class StateMcHgen {
     
     public Map<String, ZbnfEntryExitCheck> idxCheck = new TreeMap<String, ZbnfEntryExitCheck>();
     
+    public Map<String, ZbnfEntryExitCheck> idxTransAction = new TreeMap<String, ZbnfEntryExitCheck>();
+    
     //public List<ZbnfState> topStates = new LinkedList<ZbnfState>();
     
     //public String topStateType, stateName, tagName;
@@ -658,6 +665,8 @@ public class StateMcHgen {
     
     String lastArgType;
     
+    public String srcCode;
+    
     final String infoToString;
     
     /**The source state of the transition routine. It is set in {@link StateMcHgen#prepareStateData(ZbnfResultData)}
@@ -742,8 +751,8 @@ public class StateMcHgen {
     /**Set from Zbnf: int history <?isComposite>*/
     public boolean isComposite;
     
-    /**Set from Zbnf: int parallel <?stateParallel>*/
-    public boolean bStateParallel, bParallelComposite;
+    /**Set from Zbnf: parallelBase_<?stateParallel>*/
+    public boolean bStateParallel;
     
     public List<String> dotransDst = new LinkedList<String>();
     
@@ -759,13 +768,6 @@ public class StateMcHgen {
     public void set_stateParallel() {
       bStateParallel = true;
       stateIdName = "XXXparallelBase";
-    }
-    
-    
-    /**From Zbnf: StateParallel_Fwc <*_;\ ?stateParallel>[_<*\ ;?stateId>]. */
-    public void set_parallelComposite() {
-      bParallelComposite = true;
-      stateIdName = "XXXparallel";
     }
     
     
@@ -788,10 +790,6 @@ public class StateMcHgen {
       }
       if(bStateParallel){ 
         stateIdName = "parallelBase_" + name;
-      //} else if(parallelComposite) {
-      //  parallelParent = name;
-      } else if(bParallelComposite){ 
-        stateIdName = "parallel_" + name;
       } else {
         stateIdName = name;
       }
@@ -855,6 +853,14 @@ public class StateMcHgen {
         throw new IllegalArgumentException("The type of state should be the same as the type of the state struct.");
       }
       zsrc.idxCheck.put(this.stateName, val);  
+    }
+ 
+    
+    public ZbnfEntryExitCheck new_transAction(){ return new ZbnfEntryExitCheck("transAction_" + stateName);  }
+    
+    public void add_transAction(ZbnfEntryExitCheck val){ 
+      String key = this.stateName + "$" + val.restName;
+      zsrc.idxTransAction.put(key, val);  
     }
  
     
@@ -939,7 +945,7 @@ public class StateMcHgen {
       super();
       super.setAuxInfo(zbnfState);
       super.enclState = enclState;
-      super.rootState = rootState;
+      super.compositeState = rootState;
       super.stateMachine = stm;
       super.stateId = zbnfState.stateName;
     }
@@ -955,7 +961,7 @@ public class StateMcHgen {
       super(zbnfState.stateName, stm, aParallelstates);
       super.setAuxInfo(zbnfState);
       super.enclState = enclState;
-      super.rootState = rootState;
+      super.compositeState = rootState;
     }
   }
   
@@ -969,7 +975,7 @@ public class StateMcHgen {
       super(zbnfState.stateName, stm, aSubstates);
       super.setAuxInfo(zbnfState);
       super.enclState = enclState;
-      super.rootState = rootState;
+      super.compositeState = rootState;
     }
   }
   
@@ -983,7 +989,7 @@ public class StateMcHgen {
       super(zbnfState.stateName, stm, aSubstates);
       super.setAuxInfo(zbnfState);
       super.enclState = enclState;
-      super.rootState = rootState;
+      super.compositeState = rootState;
     }
   }
   

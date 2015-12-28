@@ -585,7 +585,7 @@ public class StateMGen {
       super();
       super.setAuxInfo(new GenStateInfo(zbnfState));
       this.enclState = enclState;
-      this.rootState = rootState;
+      this.compositeState = rootState;
       this.stateMachine = stm;
       stateId = zbnfState.stateName;
     }
@@ -601,7 +601,7 @@ public class StateMGen {
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateSimple[zbnfComposite.nrofSubstates] );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
-      this.rootState = rootState;
+      this.compositeState = rootState;
       stateId = zbnfComposite.stateName;
     }
     
@@ -615,7 +615,7 @@ public class StateMGen {
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateSimple[zbnfComposite.nrofSubstates] );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
-      this.rootState = rootState;
+      this.compositeState = rootState;
       stateId = zbnfComposite.stateName;
     }
     
@@ -628,7 +628,7 @@ public class StateMGen {
     { super(zbnfComposite.stateName, genStm, zbnfComposite.nrofSubstates == 0 ? null : new StateComposite[zbnfComposite.nrofSubstates]  );
       super.setAuxInfo(new GenStateInfo(zbnfComposite));
       this.enclState = enclState;
-      this.rootState = rootState;
+      this.compositeState = rootState;
       stateId = zbnfComposite.stateName;
     }
     
@@ -918,7 +918,7 @@ public class StateMGen {
             if(zbnfTrans.time !=null) { //condition is a time condition.
               stateInfo.timeCondition = zbnfTrans.time;
               //genState.transTimeout = trans;
-              GenStateInfo rootStateInfo = (GenStateInfo)genState.rootState().auxInfo();
+              GenStateInfo rootStateInfo = (GenStateInfo)genState.compositeState().auxInfo();
               rootStateInfo.hasTimer = true;
             } else {
             }
