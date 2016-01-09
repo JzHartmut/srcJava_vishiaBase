@@ -17,6 +17,7 @@ public final class JZcmdSyntax {
   
   /**Version, history and license.
    * <ul> 
+   * <li>2016-01-09 Hartmut chg: Syntax for List, new DefSubtext.  
    * <li>2015-12-28 Hartmut chg: instanceof operator in cmpOperationInText too, was missing. 
    * <li>2015-12-28 Hartmut chg: <code><=</code> is not an end of an textExpr, because the possibility of <=variableDefinition is removed. 
    *   Especially <= is a typical text content for code generation (less or equal). It can be used without subscription now.
@@ -96,7 +97,7 @@ public final class JZcmdSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public int version = 20131201;
+  static final public String version = "2016-01-09";
 
   
   public final static String syntax =
@@ -187,8 +188,8 @@ public final class JZcmdSyntax {
     + " | debug [<textValue?debug>| <?debug>] ; \n"
     + " | <callSubroutine?call> \n"
     + " | <threadBlock> \n"
-    + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" ////
-    + " | \\<+:append\\><textExpr?appendTextOut>\\<\\.+\\> \n" ////
+    + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" 
+    + " | \\<+:append\\><textExpr?appendTextOut>\\<\\.+\\> \n" 
     + " | <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
     + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  
@@ -207,7 +208,7 @@ public final class JZcmdSyntax {
     + " | Num\\  <DefNumVar> \n"
     + " | Bool\\  <DefBoolVar> \n"
     + " | Pipe\\  <DefSpecVar?Pipe> \n"
-    + " | List\\  <DefSpecVar?List> \n"
+    + " | List\\  <DefList?List> \n"
     + " | Map\\  <DefMapVar> \n"
     + " | Obj\\  <DefObjVar> \n"
     + " | Class\\  <DefClassVar> \n"
@@ -215,6 +216,7 @@ public final class JZcmdSyntax {
     + " | Openfile\\  <Openfile> \n"
     + " | Fileset\\  <DefFileset> \n"
     + " | Filepath\\ <DefFilepath> \n"
+    + " | Subtext\\ <DefSubtext> \n"
     + " | Set\\  <DefStringVar?setEnvVar> \n"
     + " | set\\  <DefStringVar?setEnvVar> \n"
     + " | SET\\  <DefStringVar?setEnvVar> \n"
@@ -223,6 +225,16 @@ public final class JZcmdSyntax {
     + " DefNumVar::= [const <?const>] <definePath?defVariable>  [ = <numExpr>].\n"  //a text or object or expression
     + " \n"
     + " DefBoolVar::= [const <?const>] <definePath?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
+    + " \n"
+    //+ " DefList::= [const <?const>] <definePath?defVariable>  [ =  {<?element> \\{ { <$?elementName> = <\"\"?elementText> ? , } \\} ? , } | = <objExpr?>].\n"  //a text or object or expression
+    + " DefList::= [const <?const>] <definePath?defVariable>  \n"
+    + "[ = \\[ {<?element> \\{ <dataStruct?dataSet> \\} ? , } \\]  ##some { dataSet, ...} \n" ////
+    //+ "[ =  {<?element> [ \\{ <dataStruct?dataSet> \\} | <DefVariable?>] ? , } \n" ////
+    //+ "[ =  { [ \\{ <dataStruct?dataSet> \\} | <DefVariable>] ? , } \n" ////
+    + "| = \\[ <dataStruct?>   \\]  ##some String or variable (const) definitions in the container.\n"
+    + "| = <objExpr?> [!;]\n"
+    + "| = \\[ { <objExpr?objElement> ? , } \\]\n"
+    + "|].\n"  //a text or object or expression
     + " \n"
     + " DefSpecVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
     + " \n"
@@ -253,6 +265,10 @@ public final class JZcmdSyntax {
     + " \n"
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
     + " \n"
+    + " \n"
+    + " DefSubtext::= <definePath?defVariable> [ = <textValue?> ]. \n"
+    + " \n"
+    //\\<:\\><textExpr>\\<\\.\\>
     + " \n"
     + " XXXFilepath::=<\"\"?!prepFilePath>|<*;\\ \\r\\n,)?!prepFilePath>. \n"
     + " \n"
@@ -292,7 +308,7 @@ public final class JZcmdSyntax {
     + " | \\<:\\><textExpr>\\<\\.\\>           ## It is a text assembled in runtime. \n"
     + " | <numExpr>.                      ## special detection of a simple dataAccess.\n"
     + " \n"
-    + " dataStruct::= { <DefVariable?> ; }.\n"
+    + " dataStruct::= { <DefVariable?> ; } | { <DefStringVar?textVariable> ? , }.\n"  ////
     + " \n"
     + " \n"
     + " \n"

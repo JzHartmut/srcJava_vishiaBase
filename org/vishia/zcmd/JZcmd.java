@@ -112,7 +112,7 @@ public class JZcmd implements JZcmdEngine, Compilable
    * <li>2014-02-16 Hartmut chg: execute(... String sCurrdir) now with current directory from outside.
    *   translateAndSetGenCtrl( File fileScript, ...) with the script file.
    *   Argument -currdir=PATH for command line invocation {@link #main(String[])}
-   *   Build of script variable currdir, scriptfile, scriptdir with them in {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, String)}.
+   *   Build of script variable currdir, scriptfile, scriptdir with them in {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, String, boolean)}.
    * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)}
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
