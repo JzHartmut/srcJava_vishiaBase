@@ -141,8 +141,8 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " subClass::= <$?name> \\{ \n"
-    //+ " { <DefVariable?> ; \n"
-    + " { subtext  <subtext?subroutine> \n"
+    + " { <DefVariable?> ; \n" ////
+    + " | subtext  <subtext?subroutine> \n"
     + " | sub <subroutine> \n"
     + " | class <subClass> \n"
     + " } \\}. \n"

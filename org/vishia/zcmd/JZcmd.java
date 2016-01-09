@@ -43,20 +43,46 @@ import org.vishia.zbnf.ZbnfParser;
  * <pre>
  * java path/to/zbnf.jar org.vishia.zcmd.JZcmd path/to/scriptFile
  * </pre>
- * <br><br>
  * This class contains the translator which uses the ZBNF parser. The core executer is {@link JZcmdExecuter}.
  * The translated script is stored in an instance of {@link JZcmdScript} which are both parts of the component
  * <code>srcJava_vishiaBase</code>.  
  * <br>
  * <b>Execution from command line or from Java with String[]-args:</b>
- * <br>
+ * <br><br>
  * {@link #main(String[])} is the command line start. Arguments:
  * {@link #smain(String[])} is the same as {@link #main(String[])} but without exit the VM. 
  * It can be used to invoke main from inside another Java program. 
  * <br>
  * <br>
- * <b>Execution from a java context</b>
- * <br>
+ * <b>Execution in a java context</b>
+ * <br><br>
+ * There are some differenz possibilities. The motivation to execute a part of a algorithm in a JZcmd script instead in Java pure may be:
+ * <ul>
+ * <li>Text generation: The text is better able to write in the script form. 
+ * <li>Flexibility in application: It does not need to write or change Java source code for any changes
+ * <li>It is possible to create data in the script and use it in Java after invocation.
+ * <li>It is possible to output data in the script which are prepared in java before, especially for code generation.
+ * <li>It is possible to prepare and complete data in the script.
+ * </ul>
+ * The translation of the script without immediate execution can be done calling one of the static routine. 
+ * <ul><li>{@link #translateAndSetGenCtrl(File, MainCmdLogging_ifc)}: simplest form with a file as input
+ * <li>{@link #translateAndSetGenCtrl(String, MainCmdLogging_ifc)}: The script is given as String
+ * <li>{@link #translateAndSetGenCtrl(StringPartScan, MainCmdLogging_ifc, File, File)}: This is the core routine.
+ * </ul>
+ * To execute a compiled script see {@link JZcmdExecuter}.
+ * <br><br>  
+ * This class contains 'execute' routines only for textual given scripts, in different variants:
+ * <ul>
+ * <li>Simple execution with own JZcmdExecuter, without special data exchange. But inside the script static Java data can be used:
+ *   <ul>
+ *   <li>{@link #execute(String)}: for simple algorithms given as String, for example text preparation.
+ *   <li>{@link #execute(File, MainCmdLogging_ifc)}: translate and execute a given script. 
+ *   </ul>
+ * <li>Execution with a given JZcmdExecuter instance:
+ *   <ul>
+ *   <li>{@link #execute(JZcmdExecuter, File, Appendable, String, boolean, File, MainCmdLogging_ifc)}: It reuses a given instance of JZcmdExecuter.
+ *   </ul>
+ * </ul>      
  * If the script is already compiled and stored in {@link JZcmdScript} and an execution environment {@link JZcmdExecuter} 
  * is established, one can invoke a subroutine of the script with 
  * {@link JZcmdExecuter#execSub(org.vishia.cmd.JZcmdScript.Subroutine, Map, boolean, Appendable, File)}
@@ -313,6 +339,7 @@ INPUT          pathTo JZcmd-File to execute
               File fileIn = new File(args.sFileScript);
               int nrArg = 1;
               JZcmdExecuter executer = new JZcmdExecuter(mainCmdLine);
+              executer.initialize(null, false, null, null);
               try{
                 for(String argu: args.userArgs){
                   executer.setScriptVariable("$" + nrArg, 'S', argu, true);
@@ -363,7 +390,8 @@ INPUT          pathTo JZcmd-File to execute
 
   
   
-  /**Parses the script and executes it with a given JZcmd ExecuterLevel.
+  /**Parses the script and executes it in an own environment but with usage of the given local variables,
+   * the current directory and the log of a given JZcmd ExecuterLevel.
    * That is the possibility to start a independent JZcmd execution in a JZcmd script itself.
    * @param script Path to the script.
    * @param execLevel subroutine level where this is called.
@@ -398,10 +426,12 @@ INPUT          pathTo JZcmd-File to execute
   
   
   
-  /**Executes a sub routine in a given script, which should be translated firstly.
+  /**Executes a sub routine in a special script, but uses a given execution environment.
+   * The script level of the special script is not used. The script variables are taken from the existing level.
+   * It means the script should only contain some subroutine codes.
    * This routine can be called inside another script with invocation:
    * <pre>
-   * { ## any KZcmd script
+   * { ## any JZcmd script
    *     Map args;
    *     String args.name  = value;
    *     java org.vishia.zcmd.JZcmd.execSub(File:"path/JZcmdscript.jzcmd", "class.subroutine-Name", args, jzcmdsub);
@@ -439,13 +469,15 @@ INPUT          pathTo JZcmd-File to execute
   
   
   
-  /**Executes a sub routine in a given script, which should be translated firstly.
+  /**Executes a sub routine in a special script, but uses a given execution environment.
+   * The script level of the special script is not used. The script variables are taken from the existing level.
+   * It means the script should only contain some subroutine codes.
    * This routine can be called inside another script with invocation:
    * <pre>
    * { ## any JZcmd script
-   *   Map args;
-   *   String args.name  = value;  ## an actual arg, proper to formal args of the subroutine.
-   *   jzcmdsub.scriptEngine().evalSub(File:"path/to/scriptfile", "subroutine_name", args, jzcmdsub);
+   *     Map args;
+   *     String args.name  = value;
+   *     java org.vishia.zcmd.JZcmd.execSub(File:"path/JZcmdscript.jzcmd", "class.subroutine-Name", args, jzcmdsub);
    * }
    * </pre>
    * @param fileScript The file which contains the script
@@ -529,17 +561,21 @@ INPUT          pathTo JZcmd-File to execute
     }
   }  
 
-  /**Generates a text described with a file given script from any data. This is the main routine of this class.
-   * @param userData The data pool where all data are stored
-   * @param fileScript The script to generate the text context
+  /**Executes a textual given script in a existing instance of a {@link JZcmdExecuter}. 
+   * The executer should be cleared before with {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, CharSequence)} with null as first parameter.
+   * Elsewhere an exception is thrown because it had stored another script.
+   * 
+   * @param executer
+   * @param fileScript This file is used only as information to support the <&scriptdir>.
+   * @param script The input which contains the JZcmd script
    * @param out output for the text
+   * @param sCurrdir
    * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
    *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
    *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
    * @param testOut if not null then outputs a data tree of the generate script.
-   * @return An error text or null.
+   * @param log
    * @throws ScriptException on any non-caught exception in the script
-   * @throws Exception if any unexpected exception occurs. 
    */
   public static void execute(
       JZcmdExecuter executer
@@ -561,6 +597,16 @@ INPUT          pathTo JZcmd-File to execute
   
   
   
+  /**Translates a script into its internal form.
+   * @param fileScript
+   * @param log
+   * @return
+   * @throws ScriptException
+   *    
+   * @see #translateAndSetGenCtrl(String, MainCmdLogging_ifc)
+   * , {@link #translateAndSetGenCtrl(StringPartScan, MainCmdLogging_ifc, File, File)}
+   * , {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)}
+   */
   public static JZcmdScript translateAndSetGenCtrl(File fileScript, MainCmdLogging_ifc log) 
   throws ScriptException
   //throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
@@ -631,6 +677,9 @@ INPUT          pathTo JZcmd-File to execute
    * @throws InstantiationException
    * @throws FileNotFoundException
    * @throws IOException
+   * 
+   * @see #translateAndSetGenCtrl(String, MainCmdLogging_ifc), {@link #translateAndSetGenCtrl(File, MainCmdLogging_ifc)}
+   * , {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)}
    */
   public static JZcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, MainCmdLogging_ifc log) 
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
@@ -658,7 +707,7 @@ INPUT          pathTo JZcmd-File to execute
    *   Maybe null if included scripts are not used and the variable 'scriptfile' and 'scriptdir' are not used in the script.s 
    * @param sourceScript The content of fileScript or from any other source. This is the script source. 
    *   Use new {@link StringPartScan#StringPartScan(CharSequence)} to create one with a String given syntax.
-   * @param log
+   * @param log if null then the {@link MainCmdLoggingStream} is used with System.out.
    * @param checkXmlOutput may be null, for output the script in XML form.
    * @return
    * @throws ParseException
@@ -668,7 +717,7 @@ INPUT          pathTo JZcmd-File to execute
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private static JZcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, 
+  public static JZcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, 
       MainCmdLogging_ifc log, File checkXmlOutput, File fileScript) 
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
