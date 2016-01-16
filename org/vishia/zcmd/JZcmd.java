@@ -562,7 +562,9 @@ INPUT          pathTo JZcmd-File to execute
   }  
 
   /**Executes a textual given script in a existing instance of a {@link JZcmdExecuter}. 
-   * The executer should be cleared before with {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, CharSequence)} with null as first parameter.
+   * The executer should be cleared before with {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, CharSequence)} 
+   * with null as first parameter because the script is translated here only.
+   * But the executer can be filled with some additional variables after initialize(null, ...)
    * Elsewhere an exception is thrown because it had stored another script.
    * 
    * @param executer

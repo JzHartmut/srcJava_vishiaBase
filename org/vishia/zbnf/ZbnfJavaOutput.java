@@ -52,6 +52,7 @@ import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.SetLineColumn_ifc;
+import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
@@ -177,6 +178,7 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2016-01-17 Hartmut new {@link #parseFileAndFillJavaObject(Class, Object, String, String, String, File)} with simple string given input an syntax.
    * <li>2015-12-06 Hartmut new {@link #parseFileAndFillJavaObject(Class, Object, File, StringPartScan, File)} with the directory of scripts to include. 
    * <li>2015-05-27 Hartmut improved output on method not found.
    * <li>2015-04-25 Hartmut chg: The class to search the destination is the {@link DstInstanceAndClass#clazz} 
@@ -222,7 +224,7 @@ public final class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public static final String sVersion = "2014-04-27";
+  public static final String sVersion = "2016-01-17";
   
   /**Helper Instance to bundle a class to search methods or fields and the associated instance.
    * It is the destination to search elements via semantic in its {@link #clazz} and store the data in the {@link #instance}.
@@ -1307,7 +1309,9 @@ public final class ZbnfJavaOutput
    * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
    * @param result The instance, it have to be of type 'resultType', but may be derived.
    * @param fInput The input file to parse.
-   * @param spSyntax The syntax using ZBNF
+   * @param spSyntax The ZBNF-syntax of the fInput, semantic should be proper to the resultType and result.
+   * @param fSyntaxDir directory which is used as base for import statements. It is the directory of the syntax file usually.
+   *   It may be null. The imports are not supported in the syntax.
    * @return null if no error, else a short error text. The explicitly error text is written in report.
    */
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartScan spSyntax, File fSyntaxDir) 
@@ -1315,24 +1319,8 @@ public final class ZbnfJavaOutput
   { String sError = null;
     //configure the parser:
     StringPartFromFileLines spInput = null;
-    ZbnfParser zbnfParser = null;
     if(sError == null)
-    { zbnfParser = new ZbnfParser(report);
-      try{ zbnfParser.setSyntax(spSyntax, fSyntaxDir.getAbsolutePath()); }
-      catch(ParseException exc)    
-      { sError = "ZbnfJavaOutput - ERROR in syntax prescript; " + exc.getMessage();
-      }
-      catch(FileNotFoundException exc){ 
-        sError = "import in ZBNF-script is not supported here."; 
-      }
-      catch(IOException exc){ 
-        sError = "import in ZBNF-script is not supported here."; 
-      }
-    }  
-    if(sError == null)
-    {   zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.fineDebug, MainCmdLogging_ifc.fineDebug);
-      //parse the file:
-      int lenFileInput = (int)fInput.length();
+    { int lenFileInput = (int)fInput.length();
       try{ spInput = new StringPartFromFileLines(fInput, lenFileInput, null, null); }
       catch(FileNotFoundException exc)
       { sError = "ZbnfJavaOutput - Input file not found, " + fInput.getAbsolutePath();
@@ -1345,12 +1333,76 @@ public final class ZbnfJavaOutput
         sError = "ZbnfJavaOutput - Input file charset problems; " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
       }
     }
+    return parseFileAndFillJavaObject(resultType, result, spInput, fInput.getAbsolutePath(), spSyntax, fSyntaxDir);
+  }
+
+
+  
+  
+  /**Parses the given String with given syntax and fills the parsed result into the result object.
+   * This is a simple common use-able routine to transfer textual content into content of a Java object.
+   * <br>
+   * The non static variant allows to set some options using class methods.
+   * 
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param sInput Textual input may read from a file or given as constant, especially by using JZcmd
+   * @param sFileInput This String is used only for output messages on error. It may be ""
+   * @param syntax Textual given syntax in ZBNF format.
+   * @param fSyntaxDir directory which is used as base for import statements. It is the directory of the syntax file usually.
+   *   It may be null. The imports are not supported in the syntax.
+   * @return
+   */
+  public String parseFileAndFillJavaObject(Class resultType, Object result, String sInput, String sFileInput,  String syntax, File fSyntaxDir) 
+  //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
+  { String sError = null;
+    StringPartScan spInput = new StringPartScan(sInput);
+    StringPartScan spSyntax = new StringPartScan(syntax);
+    return parseFileAndFillJavaObject(resultType, result, spInput, sFileInput, spSyntax, fSyntaxDir);
+  }
+  
+  
+  
+  /**Parses the given file with given syntax and fills the parsed result into the result object.
+   * This is a simple common use-able routine to transfer textual content into content of a Java object.
+   * <br>
+   * The non static variant allows to set some options using class methods.
+   * 
+   * @param resultType The type or a interface or basic type of result. The fields and methods are searched in this type.
+   * @param result The instance, it have to be of type 'resultType', but may be derived.
+   * @param spInput
+   * @param sFileInput
+   * @param spSyntax
+   * @param fSyntaxDir directory which is used as base for import statements. It is the directory of the syntax file usually.
+   *   It may be null. The imports are not supported in the syntax.
+   * @return
+   */
+  private String parseFileAndFillJavaObject(Class resultType, Object result, StringPartScan spInput, String sFileInput,  StringPartScan spSyntax, File fSyntaxDir) 
+  //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
+  { String sError = null;
+  
+    ZbnfParser zbnfParser = null;
+    if(sError == null)
+    { zbnfParser = new ZbnfParser(report);
+      try{ zbnfParser.setSyntax(spSyntax, fSyntaxDir == null ? null: fSyntaxDir.getAbsolutePath()); }
+      catch(ParseException exc)    
+      { sError = "ZbnfJavaOutput - ERROR in syntax prescript; " + exc.getMessage();
+      }
+      catch(FileNotFoundException exc){ 
+        sError = "import in ZBNF-script is not supported here."; 
+      }
+      catch(IOException exc){ 
+        sError = "import in ZBNF-script is not supported here."; 
+      }
+    }  
     if(sError == null && spInput !=null)
     { 
+      zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.fineDebug, MainCmdLogging_ifc.fineDebug);
+      //parse the file:
       boolean bOk = zbnfParser.parse(spInput);
       if(!bOk)
       { final String sParserError = zbnfParser.getSyntaxErrorReport();
-        sError = "ZbnfJavaOutput - ERROR syntax in input file; " + fInput.getAbsolutePath() + "\n" + sParserError;
+        sError = "ZbnfJavaOutput - ERROR syntax in input file; " + sFileInput + "\n" + sParserError;
         //report.writeError(sError);
       }
       spInput.close();
@@ -1374,9 +1426,9 @@ public final class ZbnfJavaOutput
       } 
       
     }  
+  
     return sError;
   }
-  
   
 
   /**Adds an error. This method is called if {@link #bExceptionIfnotFound} = false.
