@@ -714,7 +714,7 @@ public class Header2Reflection
    * @throws IOException
    */
   @SuppressWarnings("unused")
-  private boolean readReflectionTypes()
+  private boolean XXXreadReflectionTypes()
   throws ParseException, IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   { ZbnfParser parser = new ZbnfParser(console, 10);
     console.writeInfoln("read reflection types: " + sFileReflectionTypes);
@@ -880,7 +880,7 @@ public class Header2Reflection
     {
     */
     TypeEntry typeEntry = identifierRelacements.get(sFilePath);
-    if(typeEntry == null || (typeEntry.sign !='#' && typeEntry.sign !='-'))
+    if(typeEntry == null || (typeEntry.sign !='#' && typeEntry.sign !='-'))////
     { StringPartScan spInput = null;
       spInput = new StringPartFromFileLines(headerFile,-1, null, null);
       boolean bOk = parser.parse(spInput);

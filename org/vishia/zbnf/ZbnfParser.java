@@ -303,6 +303,8 @@ public class ZbnfParser
         , ZbnfSyntaxPrescript syntax
         , String sSemantic, StringPartScan input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { 
+      if(syntax.sDefinitionIdent.equals("test_description"))
+        Debugutil.stop();
       resultlet = new ParseResultlet(syntax, input.getCurrentPosition());
       //System.out.println("ZbnfParser - PrescriptPaser; " + input.debugString() + syntax.sSemantic);
       parentPrescriptParser = parent;
@@ -597,7 +599,7 @@ public class ZbnfParser
         { sSemanticForError = syntaxPrescript.getSemantic();
         }
 
-        if(sSemanticForStoring1 != null && sSemanticForStoring1.equals("description"))
+        if(sSemanticForStoring1 != null && sSemanticForStoring1.equals("CLASS_C"))
           Assert.stop();
 
         //int nLineInput = input.getLineCt();
@@ -781,7 +783,8 @@ public class ZbnfParser
         //list for fork points only used for right aligned parsing.
         List<ForkPoint> forkPoints = null;  //for option
         boolean backToFork = false;
-        
+        if(parentOfParentResultItem !=null && parentOfParentResultItem.sSemantic.equals("CLASS_C") && sSemanticIdent.equals("headerBlock"))
+          Debugutil.stop();
         int idxPrescript = 0;  //start from first element. Regard that a SubParser instance is used more as one if it is a repetition.
         do { //loop for forkpoint 
           bOk = true;
@@ -1532,7 +1535,7 @@ public class ZbnfParser
         }
           
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + sDefinitionIdent + "?" + sSemanticForError + ">");
-        if(sDefinitionIdent.equals("description"))
+        if(sDefinitionIdent.equals("headerBlock") && parentResultItem.sSemantic.equals("CLASS_C"))
         { stop();
         
         }
@@ -1575,8 +1578,13 @@ public class ZbnfParser
           }
           if(bOk)
           { //parseResult.setOffsetToEnd(posResult); 
-            if(sSemanticForStoring !=null && sSemanticForStoring.equals("assign"))
-              Assert.stop();
+            if(complexItem.sDefinitionIdent.equals("test_description"))
+              Debugutil.stop();
+      
+            if(bResultToAssignIntoNextComponent)
+              Debugutil.stop();
+            if(sSemanticForStoring !=null && sSemanticForStoring.equals("description"))
+              Debugutil.stop();
             if(nReportLevel >= nLevelReportParsing)
             { report.reportln(idReportParsing, "parseCompOk;            " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent-ok(" + nRecursion + ") <?" + sSemanticForError + ">");
             }
