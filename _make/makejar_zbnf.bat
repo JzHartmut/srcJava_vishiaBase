@@ -32,6 +32,7 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/byteData/refle
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/cmd/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/event/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/states/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/math/*.java
 ::set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/stateMachine/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/fileLocalAccessor/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/fileRemote/*.java
