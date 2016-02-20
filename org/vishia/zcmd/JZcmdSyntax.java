@@ -428,7 +428,7 @@ public final class JZcmdSyntax {
     + " }.\n"
     + " \n"
     + " \n"
-    + " dataText::=<dataAccess>[ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
+    + " dataText::=<dataAccess>[ \\:\\?[<\"\"?errorText>|<*\\>:?errorText>]][ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
     + " \n"  ////
     + " textOut::=\\<+ [<dataPath?assign>] [:n<?newline>] \\> \n"
     + "   <textExpr>\n"
