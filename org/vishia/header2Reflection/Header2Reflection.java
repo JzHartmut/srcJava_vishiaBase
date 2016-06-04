@@ -71,6 +71,8 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2016-05-12 Hartmut new: processing of 16-bit-Bitfield, till now only 15 bit are possible. Use bit pattern 0 for 16 bit.
+   *   All usages of Reflection are enhanced too (CRuntimeJavalike). 
    * <li>2015-06-04 Hartmut new: Argument -always generates always, independing of dst timestamp. Especially for test.
    * <li>2014-11-17 Hartmut chg: Recognized "struct tagname {...};" without typedef.  
    * <li>2014-05-31 Hartmut chg: ':' as separator between base and local path only after position 2, elsewhere ambiguous with "D:"
@@ -1676,7 +1678,7 @@ public class Header2Reflection
           
           if(bitfieldNrofBits >=0){
             assert(zbnfArraysize == null);  //bitfield-arrays are not supported
-            nrofArrayElementsOrBitfield = (bitfieldNrofBits <<12) + (bitfieldByte <<3) + bitfieldPos;
+            nrofArrayElementsOrBitfield = ((bitfieldNrofBits <<12)&0xf000) + (bitfieldByte <<3) + bitfieldPos;
             sbCfile.append(  "\n    , 0x" + Integer.toHexString(nrofArrayElementsOrBitfield));
             sbCfile.append(" //bitfield nrofBits=" + bitfieldNrofBits );
             sbCfile.append(", bitPos=").append(bitfieldByte).append(".").append(bitfieldPos);

@@ -16,6 +16,7 @@ import java.util.Map;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
@@ -52,6 +53,7 @@ public class Csv2Data
  
   /**Version, history and license.
    * <ul>
+   * <li>2016-03-30 bugfix: Only one line separation per csv-line was processed, now more as one (text cell, which contains line feed)
    * <li>2015-11-19 new chg All identifier in first line in "" possible. 
    * <li>2015-07-04 new {@link #value(String)}, returns a float value if it is possible. 
    * <li>2014-02-09 created. Evaluation from excel content.
@@ -101,13 +103,15 @@ public class Csv2Data
   /**Column where the identifier is found. */
   int colident;
   
+  int lineNr;
+  
   /**The character which is the separator of columns in the line.
    * It is either ";" or ",", detect from the first line in {@link #createColumns(String)}. 
    */
   char separator;
   
   /**'.' if the {@link #separator} is ',', elsewhere ','. */
-  char cDecimalSep;
+  char cDecimalSep = '.';
   
   public Csv2Data(MainCmdLogging_ifc log){
     this.log = log;
@@ -156,7 +160,9 @@ public class Csv2Data
       try{
         sLine = reader.readLine();
         createColumns(sLine);
+        lineNr = 1;
         while( sError == null && (sLine = reader.readLine())!=null){
+          lineNr +=1;
           parseLine(sLine, reader);
         }
       } catch(IOException exc){ sError = "Csv2Data - readline failed in; " + fileIn.getAbsolutePath(); }
@@ -224,9 +230,13 @@ public class Csv2Data
   
 
   
-  public void parseLine(String sLine, BufferedReader reader){
+  public void parseLine(String sLineStart, BufferedReader reader){
+    String sLine = sLineStart;
     int nCol = 0;
     //List<String> cells = new ArrayList<String>();
+    if(lineNr == 3) 
+            Debugutil.stop();
+    @SuppressWarnings("unused") int lineNr0 = lineNr;  //debug
     Map<String, String> cells = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
     int posQuotion, posEnd, posColon, pos=0;
     boolean cont = true;
@@ -236,23 +246,28 @@ public class Csv2Data
       posQuotion = sLine.indexOf('\"', pos);
       posColon = sLine.indexOf(separator, pos);
       String sCell;
-      if(posColon <0){ 
+      if(posColon <0 && posQuotion < 0){ 
         posColon = sLine.length(); 
         cont = false;
       } 
       
-      if(posQuotion >=0 && posQuotion < posColon){
+      if(posQuotion >=0 && (posColon <0 || posQuotion < posColon)){
         //content in quotion
         posEnd = sLine.indexOf('\"', posQuotion+1);
         if(posEnd < 0){
           //text in "" is continued in the next line, in csv maybe separated with 0a instead 0d0a,
           //but java reads a line till 0a only too.
           sCell = sLine.substring(posQuotion+1);
+          if(sCell.startsWith("(Autark"))
+            Debugutil.stop();
           do { 
             try{ sLine = reader.readLine(); }
             catch(IOException exc){
               sLine = null;  //forces RuntimeException
             }
+            lineNr +=1;
+            if(lineNr == 59) 
+              Debugutil.stop();
             pos = 0;
             posEnd = sLine.indexOf('\"');
             if(posEnd >=0){
