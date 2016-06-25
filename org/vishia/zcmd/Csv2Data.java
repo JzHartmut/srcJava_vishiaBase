@@ -53,6 +53,7 @@ public class Csv2Data
  
   /**Version, history and license.
    * <ul>
+   * <li>2016-06-22 bugfix: A ""text"" inside a text cell should be detected exactly. 
    * <li>2016-03-30 bugfix: Only one line separation per csv-line was processed, now more as one (text cell, which contains line feed)
    * <li>2015-11-19 new chg All identifier in first line in "" possible. 
    * <li>2015-07-04 new {@link #value(String)}, returns a float value if it is possible. 
@@ -232,6 +233,7 @@ public class Csv2Data
   
   public void parseLine(String sLineStart, BufferedReader reader){
     String sLine = sLineStart;
+    int zLine = sLine.length();
     int nCol = 0;
     //List<String> cells = new ArrayList<String>();
     if(lineNr == 3) 
@@ -247,13 +249,17 @@ public class Csv2Data
       posColon = sLine.indexOf(separator, pos);
       String sCell;
       if(posColon <0 && posQuotion < 0){ 
-        posColon = sLine.length(); 
+        posColon = zLine; 
         cont = false;
       } 
       
       if(posQuotion >=0 && (posColon <0 || posQuotion < posColon)){
         //content in quotion
         posEnd = sLine.indexOf('\"', posQuotion+1);
+        while(posEnd >=0 && posEnd < zLine-1 && sLine.charAt(posEnd+1)=='\"') {
+          //"" is a " in text:
+          posEnd = sLine.indexOf('\"', posEnd+2);  //search next.
+        }
         if(posEnd < 0){
           //text in "" is continued in the next line, in csv maybe separated with 0a instead 0d0a,
           //but java reads a line till 0a only too.
@@ -265,6 +271,7 @@ public class Csv2Data
             catch(IOException exc){
               sLine = null;  //forces RuntimeException
             }
+            zLine = sLine.length();
             lineNr +=1;
             if(lineNr == 59) 
               Debugutil.stop();
@@ -318,7 +325,14 @@ public class Csv2Data
 
   
   
-  public Object value(String cell){
+  /**Converts a value
+   * @param cell String given value
+   * @param name the name only for test.
+   * @return Either null, a String or a Float
+   */
+  public Object value(String cell, String name){
+    if(name.equals("URS_MS_INORM"))
+      Debugutil.stop();
     if(cell == null || cell.length() ==0){
       return null;  //no information
     } 

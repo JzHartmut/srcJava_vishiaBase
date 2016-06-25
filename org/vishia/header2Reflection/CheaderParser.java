@@ -231,7 +231,11 @@ public class CheaderParser {
   
   
   public static class HeaderBlock extends HeaderBlockEntry
-  { HeaderBlock(){ super("{}"); }
+  { 
+  
+    HeaderBlock(){ super("{}"); }
+    
+    /**Type of the HeaderBlockEntry as String, checked in JZcmd. */
     HeaderBlock(String whatisit){ super(whatisit); }
   
     List<HeaderBlockEntry> entries = new LinkedList<HeaderBlockEntry>();
@@ -257,6 +261,12 @@ public class CheaderParser {
     
     public StructDefinition new_structDefinition(){ return new StructDefinition(); }
     public void add_structDefinition(StructDefinition val){ entries.add(val); }
+    
+    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition(); }
+    public void add_structContentInsideCondition(StructDefinition val){ entries.add(val); }
+    
+    public UnionDefinition new_unionDefinition(){ return new UnionDefinition(); }
+    public void add_unionDefinition(UnionDefinition val){ entries.add(val); }
     
     public AttributeOrTypedef new_typedef(){ return new AttributeOrTypedef("typedef"); }
     public void add_typedef(AttributeOrTypedef val){ entries.add(val); }
@@ -472,6 +482,44 @@ public class CheaderParser {
   { StructDefinition(){ super("structDefinition"); }
     public String tagname, name;
     public Description description;
+    
+    public String conditionDef;
+  }
+
+  
+  
+  public static class UnionVariante
+  { 
+    StructDefinition struct;
+    AttributeOrTypedef attr;
+    
+    UnionVariante(){ }
+    
+    public StructDefinition new_structDefinition(){ return struct = new StructDefinition(); }
+    public void add_structDefinition(StructDefinition val){ }
+
+    public AttributeOrTypedef  new_attribute(){ return attr = new AttributeOrTypedef (); }
+    public void add_attribute(AttributeOrTypedef  val){ }
+  }
+
+  
+  public static class UnionDefinition extends HeaderBlock
+  { UnionDefinition(){ super("unionDefinition"); }
+    public String tagname, name;
+    public Description description;
+    public List<UnionVariante> listVariantes;
+    
+
+    public void set_variante(String val) {} //only necessary because [<?variante>...] it stores the text.
+
+    public UnionVariante new_variante() {
+      UnionVariante var = new UnionVariante();
+      if(listVariantes == null) { listVariantes = new LinkedList<UnionVariante>(); }
+      listVariantes.add(var);
+      return var;
+    }
+    
+    public void add_variante(UnionVariante val){} //already added.
   }
 
   
