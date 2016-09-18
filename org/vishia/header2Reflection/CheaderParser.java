@@ -4,6 +4,8 @@ import java.io.File;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -271,6 +273,11 @@ public class CheaderParser {
     public AttributeOrTypedef new_typedef(){ return new AttributeOrTypedef("typedef"); }
     public void add_typedef(AttributeOrTypedef val){ entries.add(val); }
   
+  
+    public EnumDefinition new_enumDefinition(){ return new EnumDefinition(); }
+    public void add_enumDefinition(EnumDefinition val){ entries.add(val); }
+  
+  
     public AttributeOrTypedef new_attribute(){ return new AttributeOrTypedef(); }
     public void add_attribute(AttributeOrTypedef val){ entries.add(val); }
   
@@ -486,6 +493,27 @@ public class CheaderParser {
     public String conditionDef;
   }
 
+  
+  
+  public static class EnumDefinition extends HeaderBlockEntry
+  {
+    EnumDefinition() { super("enumDef"); }
+    
+    public String tagname, name;
+    public Map<String, EnumElement> values = new TreeMap<String, EnumElement>();
+    
+    public EnumElement new_enumElement(){ return new EnumElement(); }
+    public void add_enumElement(EnumElement val){ values.put(val.name, val); }
+    
+  }
+  
+  public static class EnumElement
+  {
+    public String name;
+    
+    public long intnumber, hexnumber;
+  }
+  
   
   
   public static class UnionVariante

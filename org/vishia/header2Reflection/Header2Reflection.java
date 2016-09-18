@@ -44,6 +44,7 @@ import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 
 
@@ -71,6 +72,8 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2016-09-14 Hartmut bugfix: if an bitfield is detected and the element before is a pointer, a '*' should be written in sizeof(type),
+   *   especially sizeof(void) does force compiler errors. sizeof(StructType) will be erroneous. 
    * <li>2016-05-12 Hartmut new: processing of 16-bit-Bitfield, till now only 15 bit are possible. Use bit pattern 0 for 16 bit.
    *   All usages of Reflection are enhanced too (CRuntimeJavalike). 
    * <li>2015-06-04 Hartmut new: Argument -always generates always, independing of dst timestamp. Especially for test.
@@ -1797,7 +1800,8 @@ public class Header2Reflection
             bitfieldPos = 0;  //a new bitfield will be start with byte0.bit0
             bitfieldByte = 0;
             lastOffsetBeforeBitfield = sOffset;
-            lastType = sType;
+            lastType = sType + "****".substring(0, nReference);
+            
             
           } else {
             
