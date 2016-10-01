@@ -127,6 +127,7 @@ public class JZcmd implements JZcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2014-08-10 Hartmut bugfix: Now {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)} : close() will be invoked.
    * <li>2014-08-10 Hartmut new: message "JZcmd - cannot create output text file" with the output file path.
    * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
    * <li>2014-06-10 Hartmut chg: improved Exception handling of the script.
@@ -622,19 +623,23 @@ INPUT          pathTo JZcmd-File to execute
   //throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
     int lengthBufferGenctrl = (int)fileGenCtrl.length();
-    StringPartScan sourceScript;
+    StringPartScan sourceScript = null;
     try {
       sourceScript = new StringPartFromFileLines(fileGenCtrl, lengthBufferGenctrl, "encoding", null);
     } catch (IllegalCharsetNameException e) {
+      if(sourceScript !=null) { sourceScript.close(); }
       throw new ScriptException("JZcmd.translate - illegal CharSet in file; ", fileGenCtrl.getAbsolutePath(), -1);
     } catch (UnsupportedCharsetException e) {
+      if(sourceScript !=null) { sourceScript.close(); }
       throw new ScriptException("JZcmd.translate - illegal CharSet in file; ", fileGenCtrl.getAbsolutePath(), -1);
     } catch (FileNotFoundException e) {
       throw new ScriptException("JZcmd.translate - file not found; ", fileGenCtrl.getAbsolutePath(), -1);
     } catch (IOException e) {
       throw new ScriptException("JZcmd.translate - any file error; ", fileGenCtrl.getAbsolutePath(), -1);
     }
-    return translateAndSetGenCtrl(sourceScript, log, checkXmlOut, fileGenCtrl);
+    JZcmdScript scr = translateAndSetGenCtrl(sourceScript, log, checkXmlOut, fileGenCtrl);
+    sourceScript.close();
+    return scr;
   }
   
   
