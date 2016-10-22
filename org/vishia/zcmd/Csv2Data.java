@@ -356,7 +356,7 @@ public class Csv2Data
   
   
   
-  public float floatVal(String cell){
+  public float XXXfloatVal(String cell){
     try{
       if(cell.indexOf(',')<0)
         Assert.stop();

@@ -226,7 +226,8 @@ public class CheaderParser {
     
     //void add_includeDef(IncludeDef  src){  }
     
-    
+    @Override public String toString(){ return name; }
+
     
   }
   
@@ -326,7 +327,7 @@ public class CheaderParser {
   {
     Description(String whatisit){ super(whatisit); }
     public Description(){ super("description"); }
-    public String text;
+    public String text = "";
     public String simulinkTag;
     
     public ParamDescription returnDescription;
@@ -334,6 +335,9 @@ public class CheaderParser {
     public List<ParamDescription> paramDescriptions;
     
     public List<ParamDescription> auxDescriptions;
+    
+    
+    public void set_text(String text){ this.text += text; }
     
     public final ParamDescription new_paramDescription(){ return new ParamDescription();}
     public final void add_paramDescription(ParamDescription val){ 
@@ -358,6 +362,10 @@ public class CheaderParser {
      * @param val
      */
     public final void set_auxDescription(String val){ } 
+   
+   
+    @Override public String toString(){ return text !=null ? text :  ""; }
+
    
   }
   
@@ -491,6 +499,11 @@ public class CheaderParser {
     public Description description;
     
     public String conditionDef;
+  
+  
+    @Override public String toString(){ return name; }
+
+  
   }
 
   
@@ -593,6 +606,14 @@ public class CheaderParser {
     public String conditionDef;
     
     public Arraysize arraysize;
+  
+  
+    public Description new_description() { return description = new Description(); }
+    public void add_description(Description val){ /*already added.*/ } 
+  
+    @Override public String toString(){ return name + ": " + type; }
+  
+  
   }
   
   
@@ -614,6 +635,7 @@ public class CheaderParser {
     /**Modifier const* and const**. */
     public boolean constPointer, constPointer2; 
     
+    @Override public String toString(){ return name; }
   }
   
   
@@ -678,6 +700,9 @@ public class CheaderParser {
   {
     List<Statement> statements = new LinkedList<Statement>();
     
+    
+    String conditionDef;
+    
     public StatementBlock(){ super('{'); }
     
     /**A statement is a syntax component which contains any of the statements. This syntax component is not necessary for extra storing.
@@ -712,7 +737,8 @@ public class CheaderParser {
     }
     public void add_returnAssignment(Value val){}
     
-    
+    public void set_conditionDef(String arg) { conditionDef = arg;}
+
   }
   
   
@@ -761,6 +787,7 @@ public class CheaderParser {
     public Arraysize arraysize;
   
     public Value value;
+    @Override public String toString(){ return name + ": " + type; }
   }
   
   
@@ -822,6 +849,8 @@ public class CheaderParser {
      */
     public Value value_true, value_false;
     
+    public String conditionDef;
+    
     public void set_variable(java.lang.String val){}
     
     public Variable new_variable(){ return new Variable(); }
@@ -829,6 +858,10 @@ public class CheaderParser {
     
     public Value new_value(){ Value entry = new Value(); entry.unaryOperator = this.unaryOperator; this.unaryOperator = null; return entry; }
     public void add_value(Value val){ entries.add(val); }
+    
+    
+    public Value new_referenceAddress(){ return new Value(); }
+    public void add_referenceAddress(Value val){ val.whatisit = '&'; entries.add(val); }
     
     
     public Assignment new_assignment(){ Assignment entry = new Assignment(); entry.unaryOperator = this.unaryOperator; this.unaryOperator = null; return entry; }
@@ -871,7 +904,7 @@ public class CheaderParser {
     public MethodCall new_methodCall(){ return new MethodCall(); }
     public void add_methodCall(MethodCall val){ entries.add(val); }
     
-    
+    public void set_conditionDef(String arg) { conditionDef = arg;}
     
     
     public void set_binaryOperator(String val){ entries.add(new ValueEntry('b', val)); }
@@ -881,6 +914,13 @@ public class CheaderParser {
   
   public static class ValueEntry
   {
+    
+    
+    /**
+     * <ul>
+     * <li>& reference value
+     * </ul>
+     */
     public char whatisit;
     
     public String data;

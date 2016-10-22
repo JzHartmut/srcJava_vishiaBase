@@ -72,6 +72,7 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2016-10-18 Hartmut new: supports implicitUnionAttribute from Cheader.zbnf. Therewith an unnamed union is possible. 
    * <li>2016-09-14 Hartmut bugfix: if an bitfield is detected and the element before is a pointer, a '*' should be written in sizeof(type),
    *   especially sizeof(void) does force compiler errors. sizeof(StructType) will be erroneous. 
    * <li>2016-05-12 Hartmut new: processing of 16-bit-Bitfield, till now only 15 bit are possible. Use bit pattern 0 for 16 bit.
@@ -1366,9 +1367,15 @@ public class Header2Reflection
     private void convertElement(ZbnfParseResultItem zbnfElement, String sNameVariant) 
     throws IOException
     {
-    
+      int lineNr = zbnfElement.getInputLine();
+      if(lineNr >= 41 && lineNr < 44)
+        stop();
       String semantic = zbnfElement.getSemantic();
       if(semantic.equals("implicitStructAttribute")){
+        String sName = zbnfElement.getChildString("@name");
+        convertElementsInClass(zbnfElement, sName);
+      }
+      else if(semantic.equals("implicitUnionAttribute")){
         String sName = zbnfElement.getChildString("@name");
         convertElementsInClass(zbnfElement, sName);
       }
