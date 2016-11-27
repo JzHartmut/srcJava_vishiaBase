@@ -705,6 +705,7 @@ public class StateMcHgen {
         this.lastArgType = spArg.lentoIdentifier().getCurrentPart().toString();  //the last type is the statename.
         String argName = spArg.setLengthMax().seekBackToAnyChar(" *").getCurrentPart().toString();
         argVariables.add(argName);
+        spArg.close();
         //int posSpace = val.lastIndexOf(' '); //type name, after space the name starts
         //if(posSpace >0) {
         //  argVariables.add(val.substring(posSpace +1));

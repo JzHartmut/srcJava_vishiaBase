@@ -109,6 +109,7 @@ public class ParserConfigFile
           }
         }
       }
+      reader.close();
     }catch(IllegalArgumentException exc){
       return "CheckDeps -" + exc.getMessage();
     }catch(IOException exc){

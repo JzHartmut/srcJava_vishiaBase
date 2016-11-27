@@ -962,6 +962,8 @@ public class CheaderParser {
   {
     public List<Value> entries;
     
+    public Value index;
+    
     public void set_association(String val) { 
       Value value = new Value(); 
       value.data = val; 
@@ -972,6 +974,8 @@ public class CheaderParser {
       if(entries == null) { entries = new LinkedList<Value>(); }
       entries.add(val);
     }
+    
+    
   }
   
   

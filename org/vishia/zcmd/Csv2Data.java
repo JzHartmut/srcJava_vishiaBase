@@ -226,6 +226,7 @@ public class Csv2Data
         spLine.fromEnd().seek(1); //skip the separator
       }
     } while(spLine.found());
+    spLine.close();
     return sError;
   }
   
