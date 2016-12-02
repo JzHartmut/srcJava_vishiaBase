@@ -130,6 +130,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2016-12-02 Hartmut new: The syntax element \W in the syntax script is considered via the StringFunction capability already:
+   *    check whether a terminal string ends with a non-identifier character. Check in StringPartScan.scan(text)
    * <li>2015-12-29 Hartmut new: Possibility for debug: Write <code> <...?%...> in Syntax, then {@link ZbnfSyntaxPrescript#bDebugParsing} is set for this item.
    *  It can be tested here to set a specific debug breakpoint for parsing this element. Only for special debugging problems. 
    * <li>2015-07-04 Hartmut bugfix of change on 2015-06-14: It should check kTerminalSymbolInComment if such an symbol is parsed
@@ -1123,7 +1125,7 @@ public class ZbnfParser
         do  //if once of whitespace, comment or endlinecomment is found, try again.
         { bFoundAnySpaceOrComment = false;
           if(  sConstantSyntax != null 
-            && sConstantSyntax.charAt(0) == StringPartScan.cEndOfText
+            && sConstantSyntax.charAt(0) == StringFunctions.cEndOfText
             && input.length()==0
             )
           { bFoundConstantSyntax = true;

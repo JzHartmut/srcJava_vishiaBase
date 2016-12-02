@@ -1011,12 +1011,12 @@ public class ZbnfSyntaxPrescript
           { spInput.seek(1);
             cEnd = cc;
           }
-          else if(cc == StringPartScan.cEndOfText)
+          else if(cc == StringFunctions.cEndOfText)
           { cEnd = cc;
           }
         }
         else
-        { cEnd = StringPartScan.cEndOfText;
+        { cEnd = StringFunctions.cEndOfText;
           cc = 0;
         }
         if(cEnd == 0)
@@ -1087,7 +1087,7 @@ public class ZbnfSyntaxPrescript
               CharSequence[] sqTerminateChars = new CharSequence[1];
               char quotationChar = cFirst == '\"' ? cFirst: 0;  //scan after a quotation if a " is the current one.
               boolean bOk = spInput.scanStart().scanToAnyChar(sqTerminateChars
-                  , "[|]{?}<>. \r\n\t\f"+StringPartScan.cEndOfText, '\\', quotationChar, quotationChar).scanOk();
+                  , "[|]{?}<>. \r\n\t\f"+StringFunctions.cEndOfText+StringFunctions.cNoCidentifier, '\\', quotationChar, quotationChar).scanOk();
               assert(bOk);  //because scan to end of text.
               /*
               if(cFirst == '\"') 

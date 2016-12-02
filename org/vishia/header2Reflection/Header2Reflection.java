@@ -46,7 +46,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
-
+import org.vishia.util.StringFunctions;
 
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -72,6 +72,7 @@ public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
+   * <li>2016-12-02 Hartmut new: sizeof(Type) on bitfields now regards the {@link #sExprSizeType} from the ctrl file. 
    * <li>2016-10-18 Hartmut new: supports implicitUnionAttribute from Cheader.zbnf. Therewith an unnamed union is possible. 
    * <li>2016-09-14 Hartmut bugfix: if an bitfield is detected and the element before is a pointer, a '*' should be written in sizeof(type),
    *   especially sizeof(void) does force compiler errors. sizeof(StructType) will be erroneous. 
@@ -115,7 +116,7 @@ public class Header2Reflection
    * 
    * 
    */
-  static final public int version = 20130410;
+  static final public String version = "2016-12-02";
 
   /**Aggregation to the Console implementation class.*/
   MainCmdLogging_ifc console;
@@ -1368,7 +1369,8 @@ public class Header2Reflection
     throws IOException
     {
       int lineNr = zbnfElement.getInputLine();
-      if(lineNr >= 41 && lineNr < 44)
+      CharSequence sFile = zbnfElement.getInputFile();
+      if(lineNr >= 0 && lineNr < 41 && StringFunctions.equals(sFile, "D:/SFC/SBOX/CCS_UTT2_C/data/XRPDG/simulink/lib/+bus_header/lib_Ctrl_Smlk.h") )
         stop();
       String semantic = zbnfElement.getSemantic();
       if(semantic.equals("implicitStructAttribute")){
@@ -1816,8 +1818,11 @@ public class Header2Reflection
               //the first field is a bitfield.
               sOffset = "0";   //Position is 0.
             } else {
-              //TODO
-              sOffset = lastOffsetBeforeBitfield + " + sizeof(" + lastType + ")";
+              StringBuilder sb = new StringBuilder(299);
+              sb.append(lastOffsetBeforeBitfield + " + ");
+              sOffset = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{lastType}, sb).toString();
+              
+              //sOffset = lastOffsetBeforeBitfield + " + sizeof(" + lastType + ")";
             }
           }
           
@@ -1825,7 +1830,7 @@ public class Header2Reflection
           if(fileOffs != null){
             //String sTypeForSize = nReference>0 ? sType + "*" : sType;
             String sTypeForSize = nReference>0 ? "void*" : sType;    //size of a pointer anyway
-            String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null);
+            String sSize = StringPart.replace(sExprSizeType, sPlaceholderType, new String[]{sTypeForSize}, null).toString();
             fileOffs.write("\n    , (" + sSize + "<<16) | (" + sOffset + ")");                //Offsetfile: it is a int32
             sbCfile.append(  "\n    , -1   //offset in extra file");
             
@@ -1863,7 +1868,7 @@ public class Header2Reflection
       String[] sReplacement = new String[]{ sTypeName, sAttributeName };  //order of sExprTokens
       
       //String sOffset = "((int32)(&((" + sCppClassName + "*)(0x1000))->" + sAttributeName + ") ";
-      String sOffset = StringPart.replace(sExprOffsField, sExprTokens, sReplacement, null);
+      String sOffset = StringPart.replace(sExprOffsField, sExprTokens, sReplacement, null).toString();
       if(bObjectJcpp)
       { assert(cppClass);
         //sOffset += "- (int32)(static_cast<ObjectJc*>(static_cast<ObjectJcpp*>((" + sCppClassName+ "*)0x1000))))";
