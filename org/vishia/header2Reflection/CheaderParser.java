@@ -71,7 +71,12 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
 public class CheaderParser {
 
   /**Version, history and license.
-   * <ul><li>2014-10-18 created. 
+   * <ul>
+   * <li>2014-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
+   *   Therefore the same class {@link StructDefinition} is used for {@link HeaderBlock#new_undefDefinition()} instead the older extra class UnionVariante.
+   *   the {@link StructDefinition#isUnion} designates that it is a union in semantic. Using scripts should be changed.
+   *   Some new definitions {@link StructDefinition#set_implicitUnion()} and {@link StructDefinition#set_implicitStruct()} are added. 
+   * <li>2014-10-18 JzHartmut created. 
    * In the past either the parse result was used immediately with a Java programm as generator, for example for {@link CmdHeader2Reflection},
    * or the generation of some things are done via the XML output from the parser via an XSLT translator.
    * </ul>
@@ -262,14 +267,17 @@ public class CheaderParser {
     public void add_structDecl(StructDecl val){ entries.add(val); }
     
     
-    public StructDefinition new_structDefinition(){ return new StructDefinition(); }
+    public StructDefinition new_structDefinition(){ return new StructDefinition("structDefinition"); }
     public void add_structDefinition(StructDefinition val){ entries.add(val); }
     
-    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition(); }
+    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition("structDefinition"); }
     public void add_structContentInsideCondition(StructDefinition val){ entries.add(val); }
     
-    public UnionDefinition new_unionDefinition(){ return new UnionDefinition(); }
-    public void add_unionDefinition(UnionDefinition val){ entries.add(val); }
+    public StructDefinition new_unionDefinition(){ 
+      StructDefinition struct = new StructDefinition("unionDefinition"); struct.isUnion = true; 
+      return struct; 
+    }
+    public void add_unionDefinition(StructDefinition val){ entries.add(val); }
     
     public AttributeOrTypedef new_typedef(){ return new AttributeOrTypedef("typedef"); }
     public void add_typedef(AttributeOrTypedef val){ entries.add(val); }
@@ -493,14 +501,32 @@ public class CheaderParser {
   }
   
   
-  public static class StructDefinition extends StructContent
-  { StructDefinition(){ super("structDefinition"); }
+  public static class StructDefinition extends HeaderBlock
+  { StructDefinition(String whatisit){ super(whatisit); }
+    public boolean isUnion;
     public String tagname, name;
     public Description description;
     
     public String conditionDef;
   
-  
+    public StructDefinition new_implicitStructAttribute() { return new StructDefinition("unnamedStructAttr"); }
+
+    public void add_implicitStructAttribute(StructDefinition val) { entries.add(val); }
+
+    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition("unnamedUnionAttr"); }
+
+    public void add_implicitUnionAttribute(StructDefinition val) { entries.add(val); }
+
+    public void set_implicitStruct() { name = "?"; }
+    
+    public void set_implicitUnion() { name = "?"; isUnion = true; }
+    
+    public void set_variante(String val) {} //only formally necessary because [<?variante>...] it stores the text.
+
+    public StructDefinition new_variante() { return this; }
+
+    public void add_variante(StructDefinition  val){} //already added.
+
     @Override public String toString(){ return name; }
 
   
@@ -529,49 +555,6 @@ public class CheaderParser {
   
   
   
-  public static class UnionVariante
-  { 
-    StructDefinition struct;
-    AttributeOrTypedef attr;
-    
-    UnionVariante(){ }
-    
-    public StructDefinition new_structDefinition(){ return struct = new StructDefinition(); }
-    public void add_structDefinition(StructDefinition val){ }
-
-    public AttributeOrTypedef  new_attribute(){ return attr = new AttributeOrTypedef (); }
-    public void add_attribute(AttributeOrTypedef  val){ }
-  }
-
-  
-  public static class UnionDefinition extends HeaderBlock
-  { UnionDefinition(){ super("unionDefinition"); }
-    public String tagname, name;
-    public Description description;
-    public List<UnionVariante> listVariantes;
-    
-
-    public void set_variante(String val) {} //only necessary because [<?variante>...] it stores the text.
-
-    public UnionVariante new_variante() {
-      UnionVariante var = new UnionVariante();
-      if(listVariantes == null) { listVariantes = new LinkedList<UnionVariante>(); }
-      listVariantes.add(var);
-      return var;
-    }
-    
-    public void add_variante(UnionVariante val){} //already added.
-  }
-
-  
-  
-  
-  
-  public static class StructContent extends HeaderBlock
-  { StructContent(String whatisit){ super(whatisit); }
-    
-  
-  }
   
   
   
@@ -646,6 +629,9 @@ public class CheaderParser {
     public int value;
     
     public String symbolValue;
+    
+    public Arraysize new_arraysize() { return this; }
+    public void add_arraysize(Arraysize val) {}
   }
   
   

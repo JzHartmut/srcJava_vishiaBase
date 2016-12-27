@@ -464,7 +464,7 @@ public class Header2Reflection
 
 
   public void execute() throws Exception
-  { System.out.printf("Header2Reflection made by Hartmut Schorrig, version %d\n", version);
+  { System.out.printf("Header2Reflection made by Hartmut Schorrig, version %s\n", version);
     if(readBlockedFilesAndTypes())
     //if(readReflectionTypes())
     { if(init()) //here all action are done, testversion.

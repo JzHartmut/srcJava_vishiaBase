@@ -22,6 +22,8 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptException;
 
+import org.vishia.cmd.CmdQueue;
+import org.vishia.cmd.CmdStore;
 import org.vishia.cmd.JZcmdEngine;
 import org.vishia.cmd.JZcmdExecuter;
 import org.vishia.cmd.JZcmdScript;
@@ -172,7 +174,7 @@ public class JZcmd implements JZcmdEngine, Compilable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2014-06-10";
+  static final public String version = "2016-12-27";
 
   
   private static class Args{
@@ -277,27 +279,7 @@ INPUT          pathTo JZcmd-File to execute
       //catch the last level of error. No error is reported direct on command line!
       Throwable exc1 = exc.getCause();
       if(exc1 == null){ exc1 = exc; }
-      String sFile = null; int line=0,col=0;
-      String sMsg;
-      /*
-      if(exc instanceof ScriptException){
-        ScriptException excs = (ScriptException)exc;
-        sMsg = excs.super.getMessage(); //get from super because without line and col
-        sFile = excs.getFileName();
-        line = excs.getLineNumber();
-        col = excs.getColumnNumber();
-      } else {
-        sMsg = exc1.getMessage();
-      }
-      */
-      if(sFile !=null){
-        String sRet = "JZcmd.main() - uncaught ERROR in ;" + sFile + "; line,col: " + line 
-          + ", " + col + "; " + exc1.getMessage();
-        System.err.println(sRet);
-        
-      } else {
-        System.err.println("JZcmd.main() - uncaught ERROR; "); // + exc1.getMessage());
-      }
+      System.err.println("JZcmd.main() - uncaught ERROR; "); // + exc1.getMessage());
       exc1.printStackTrace(System.err);
       System.exit(MainCmdLogging_ifc.exitWithErrors);
     }
@@ -695,6 +677,32 @@ INPUT          pathTo JZcmd-File to execute
   }
   
   
+
+  /**Reads a scriptfile and stores the subroutines, nested in classes too, to the given CmdStore.
+   * The content of the CmdStore can be presented in a choice list or commands can be selected by name later to execute there.
+   * @param dst
+   * @param jzScriptFile
+   * @param log
+   * @param executerToInit The executer will be initialized with the script variables of the parsed script-
+   * @return null if successfully. Elsewhere an error text. 
+   */
+  public static String readJZcmdCfg(CmdStore dst, File jzScriptFile, MainCmdLogging_ifc log, CmdQueue executerToInit) {
+    String error = null;
+    try{ 
+      JZcmdScript script = translateAndSetGenCtrl(jzScriptFile, new File(jzScriptFile.getParentFile(), jzScriptFile.getName() + ".check.xml"), log);
+      dst.addSubOfJZcmdClass(script.scriptClass());
+      executerToInit.initExecuter(script, null);  //NOTE: currdir is not determined.
+      //main.cmdSelector.initExecuter(script);
+    } catch(Throwable exc){
+      
+      log.writeError("CmdStore - JZcmdScript;", exc);
+      error = "CmdStore - JZcmdScript," + exc.getMessage();
+    }
+    return error;
+  }
+  
+  
+
   
   /**The parser knows the correct syntax already. One should use
    *   {@link JZcmdSyntax#syntax} to set {@link ZbnfParser#setSyntax(String)}. One should use an 
