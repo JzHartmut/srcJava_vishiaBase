@@ -22,7 +22,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptException;
 
-import org.vishia.cmd.CmdQueue;
+import org.vishia.cmd.CmdExecuter;
 import org.vishia.cmd.CmdStore;
 import org.vishia.cmd.JZcmdEngine;
 import org.vishia.cmd.JZcmdExecuter;
@@ -129,6 +129,7 @@ public class JZcmd implements JZcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-01-01 Hartmut new {@link #readJZcmdCfg(org.vishia.cmd.JZcmdScript.AddSub2List, File, MainCmdLogging_ifc, CmdExecuter)} 
    * <li>2014-08-10 Hartmut bugfix: Now {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)} : close() will be invoked.
    * <li>2014-08-10 Hartmut new: message "JZcmd - cannot create output text file" with the output file path.
    * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
@@ -687,13 +688,15 @@ INPUT          pathTo JZcmd-File to execute
    * @param executerToInit The executer will be initialized with the script variables of the parsed script-
    * @return null if successfully. Elsewhere an error text. 
    */
-  public static String readJZcmdCfg(JZcmdScript.AddSub2List dst, File jzScriptFile, MainCmdLogging_ifc log, CmdQueue executerToInit) {
+  public static String readJZcmdCfg(JZcmdScript.AddSub2List dst, File jzScriptFile, MainCmdLogging_ifc log, CmdExecuter execToInit) {
     String error = null;
     try{ 
       JZcmdScript script = translateAndSetGenCtrl(jzScriptFile, new File(jzScriptFile.getParentFile(), jzScriptFile.getName() + ".check.xml"), log);
       script.addContentToSelectContainer(dst);
-      executerToInit.initExecuter(script, null);  //NOTE: currdir is not determined.
-      //main.cmdSelector.initExecuter(script);
+      if(execToInit !=null) {
+        execToInit.initJZcmdExecuter(script, null, log);  //NOTE: currdir is not determined.
+      }
+        //main.cmdSelector.initExecuter(script);
     } catch(Throwable exc){
       
       log.writeError("JZcmdScript error,", exc);
