@@ -678,6 +678,7 @@ INPUT          pathTo JZcmd-File to execute
   
   
 
+
   /**Reads a scriptfile and stores the subroutines, nested in classes too, to the given CmdStore.
    * The content of the CmdStore can be presented in a choice list or commands can be selected by name later to execute there.
    * @param dst The command store. Its content won't be cleared, this file is added. invoke {@link CmdStore#clear()} before.
@@ -686,17 +687,17 @@ INPUT          pathTo JZcmd-File to execute
    * @param executerToInit The executer will be initialized with the script variables of the parsed script-
    * @return null if successfully. Elsewhere an error text. 
    */
-  public static String readJZcmdCfg(CmdStore dst, File jzScriptFile, MainCmdLogging_ifc log, CmdQueue executerToInit) {
+  public static String readJZcmdCfg(JZcmdScript.AddSub2List dst, File jzScriptFile, MainCmdLogging_ifc log, CmdQueue executerToInit) {
     String error = null;
     try{ 
       JZcmdScript script = translateAndSetGenCtrl(jzScriptFile, new File(jzScriptFile.getParentFile(), jzScriptFile.getName() + ".check.xml"), log);
-      dst.addSubOfJZcmdClass(script.scriptClass());
+      script.addContentToSelectContainer(dst);
       executerToInit.initExecuter(script, null);  //NOTE: currdir is not determined.
       //main.cmdSelector.initExecuter(script);
     } catch(Throwable exc){
       
-      log.writeError("CmdStore - JZcmdScript;", exc);
-      error = "CmdStore - JZcmdScript," + exc.getMessage();
+      log.writeError("JZcmdScript error,", exc);
+      error = "JZcmdScript error," + exc.getMessage();
     }
     return error;
   }
