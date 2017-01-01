@@ -72,7 +72,7 @@ public class CheaderParser {
 
   /**Version, history and license.
    * <ul>
-   * <li>2014-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
+   * <li>2016-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
    *   Therefore the same class {@link StructDefinition} is used for {@link HeaderBlock#new_undefDefinition()} instead the older extra class UnionVariante.
    *   the {@link StructDefinition#isUnion} designates that it is a union in semantic. Using scripts should be changed.
    *   Some new definitions {@link StructDefinition#set_implicitUnion()} and {@link StructDefinition#set_implicitStruct()} are added. 
@@ -267,16 +267,13 @@ public class CheaderParser {
     public void add_structDecl(StructDecl val){ entries.add(val); }
     
     
-    public StructDefinition new_structDefinition(){ return new StructDefinition("structDefinition"); }
+    public StructDefinition new_structDefinition(){ return new StructDefinition("structDefinition", false); }
     public void add_structDefinition(StructDefinition val){ entries.add(val); }
     
-    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition("structDefinition"); }
+    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition("structDefinition", false); }
     public void add_structContentInsideCondition(StructDefinition val){ entries.add(val); }
     
-    public StructDefinition new_unionDefinition(){ 
-      StructDefinition struct = new StructDefinition("unionDefinition"); struct.isUnion = true; 
-      return struct; 
-    }
+    public StructDefinition new_unionDefinition(){ return new StructDefinition("unionDefinition", true); }
     public void add_unionDefinition(StructDefinition val){ entries.add(val); }
     
     public AttributeOrTypedef new_typedef(){ return new AttributeOrTypedef("typedef"); }
@@ -502,24 +499,24 @@ public class CheaderParser {
   
   
   public static class StructDefinition extends HeaderBlock
-  { StructDefinition(String whatisit){ super(whatisit); }
-    public boolean isUnion;
+  { 
+    StructDefinition(String whatisit, boolean isUnion){ super(whatisit); this.isUnion = isUnion; }
+  
+    public final boolean isUnion;
+    
     public String tagname, name;
-    public Description description;
     
     public String conditionDef;
   
-    public StructDefinition new_implicitStructAttribute() { return new StructDefinition("unnamedStructAttr"); }
+    public StructDefinition new_implicitStructAttribute() { return new StructDefinition("unnamedStructAttr", false); }
 
     public void add_implicitStructAttribute(StructDefinition val) { entries.add(val); }
 
-    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition("unnamedUnionAttr"); }
+    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition("unnamedUnionAttr", true); }
 
     public void add_implicitUnionAttribute(StructDefinition val) { entries.add(val); }
 
     public void set_implicitStruct() { name = "?"; }
-    
-    public void set_implicitUnion() { name = "?"; isUnion = true; }
     
     public void set_variante(String val) {} //only formally necessary because [<?variante>...] it stores the text.
 

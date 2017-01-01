@@ -680,7 +680,7 @@ INPUT          pathTo JZcmd-File to execute
 
   /**Reads a scriptfile and stores the subroutines, nested in classes too, to the given CmdStore.
    * The content of the CmdStore can be presented in a choice list or commands can be selected by name later to execute there.
-   * @param dst
+   * @param dst The command store. Its content won't be cleared, this file is added. invoke {@link CmdStore#clear()} before.
    * @param jzScriptFile
    * @param log
    * @param executerToInit The executer will be initialized with the script variables of the parsed script-
