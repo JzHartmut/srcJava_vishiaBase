@@ -130,6 +130,9 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-01-07 Hartmut bugfix: missing {@link StringPartScan#scanStart()} in {@link PrescriptParser.SubParser#parseTerminalSymbol(ZbnfSyntaxPrescript, org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement)}.
+   *   In follow of that an error in the terminal text shows an faulty position (the position from any scanStart() before). 
+   *   An syntax error in the parsed text was not shown with the exact position. 
    * <li>2016-12-02 Hartmut new: The syntax element \W in the syntax script is considered via the StringFunction capability already:
    *    check whether a terminal string ends with a non-identifier character. Check in StringPartScan.scan(text)
    * <li>2015-12-29 Hartmut new: Possibility for debug: Write <code> <...?%...> in Syntax, then {@link ZbnfSyntaxPrescript#bDebugParsing} is set for this item.
@@ -237,7 +240,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2015-12-29";
+  public static final String sVersion = "2017-01-07";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -1205,16 +1208,12 @@ public class ZbnfParser
       private boolean parseTerminalSymbol(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem)
       { boolean bOk;
         long nStart = input.getCurrentPosition();
-        if(nStart == 1059)
+        if(nStart == 6532)
           { Debugutil.stop();}
         srcLine = input.getLineAndColumn(srcColumn);
         String sFile = input.getInputfile();
         String sConstantSyntax = syntaxItem.getConstantSyntax();
-        //if(sConstantSyntax.equals(";") && input.getCurrentPosition()==28925)
-          //stop();
-        //if(input.scan(sConstantSyntax).scanOk())
-        //if(input.startsWith(sConstantSyntax))
-        if(input.scan(sConstantSyntax).scanOk())
+        if(input.scanStart().scan(sConstantSyntax).scanOk())
         { bOk = true;
           //input.seek(sConstantSyntax.length());
           if(bConstantSyntaxAsParseResult) {

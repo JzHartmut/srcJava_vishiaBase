@@ -16,7 +16,11 @@ public final class JZcmdSyntax {
 
   
   /**Version, history and license.
-   * <ul> 
+   * <ul>
+   * <li>2017-01-07 Hartmut new In a <code>textExpr::=</code> now <code><{ <statementBlock?> }></code> 
+   *   and <code><:<DefVariable?>\\></code> can be written inside. It is documented in JZcmd description.
+   * <li>2017-01-07 Hartmut chg: Comment in <code>textExpr::=</code> is now <code><:---> comment <---></comment> 
+   *   instead <code><:--- comment ---></comment> because it may confuse with XML text generation elsewhere.  
    * <li>2016-01-09 Hartmut chg: Syntax for List, new DefSubtext.  
    * <li>2015-12-28 Hartmut chg: instanceof operator in cmpOperationInText too, was missing. 
    * <li>2015-12-28 Hartmut chg: <code><=</code> is not an end of an textExpr, because the possibility of <=variableDefinition is removed. 
@@ -97,7 +101,7 @@ public final class JZcmdSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2016-01-09";
+  static final public String version = "2017-01-07";
 
   
   public final static String syntax =
@@ -141,7 +145,7 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " subClass::= <$?name> \\{ \n"
-    + " { <DefVariable?> ; \n" ////
+    + " { <DefVariable?> ; \n" 
     + " | subtext  <subtext?subroutine> \n"
     + " | sub <subroutine> \n"
     + " | class <subClass> \n"
@@ -190,7 +194,7 @@ public final class JZcmdSyntax {
     + " | <threadBlock> \n"
     + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" 
     + " | \\<+:append\\><textExpr?appendTextOut>\\<\\.+\\> \n" 
-    + " | <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
+    + " | \\<+ <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
     + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  
     + " | <assignExpr> \n"
@@ -229,9 +233,9 @@ public final class JZcmdSyntax {
     + " \n"
     //+ " DefList::= [const <?const>] <definePath?defVariable>  [ =  {<?element> \\{ { <$?elementName> = <\"\"?elementText> ? , } \\} ? , } | = <objExpr?>].\n"  //a text or object or expression
     + " DefList::= [const <?const>] <definePath?defVariable>  \n"
-    + "[ = \\[ {<?element> \\{ <dataStruct?dataSet> \\} ? , } \\]  ##some { dataSet, ...} \n" ////
-    //+ "[ =  {<?element> [ \\{ <dataStruct?dataSet> \\} | <DefVariable?>] ? , } \n" ////
-    //+ "[ =  { [ \\{ <dataStruct?dataSet> \\} | <DefVariable>] ? , } \n" ////
+    + "[ = \\[ {<?element> \\{ <dataStruct?dataSet> \\} ? , } \\]  ##some { dataSet, ...} \n" 
+    //+ "[ =  {<?element> [ \\{ <dataStruct?dataSet> \\} | <DefVariable?>] ? , } \n" 
+    //+ "[ =  { [ \\{ <dataStruct?dataSet> \\} | <DefVariable>] ? , } \n" 
     + "| = \\[ <dataStruct?>   \\]  ##some String or variable (const) definitions in the container.\n"
     + "| = <objExpr?> [!;]\n"
     + "| = \\[ { <objExpr?objElement> ? , } \\]\n"
@@ -309,7 +313,7 @@ public final class JZcmdSyntax {
     + " | \\<:\\><textExpr>\\<\\.\\>           ## It is a text assembled in runtime. \n"
     + " | <numExpr>.                      ## special detection of a simple dataAccess.\n"
     + " \n"
-    + " dataStruct::= { <DefVariable?> ; } | { <DefStringVar?textVariable> ? , }.\n"  ////
+    + " dataStruct::= { <DefVariable?> ; } | { <DefStringVar?textVariable> ? , }.\n"  
     + " \n"
     + " \n"
     + " \n"
@@ -383,7 +387,7 @@ public final class JZcmdSyntax {
     + " | <numExpr?> [<cmpOperationInText?cmpOperation>]\n"  //simple boolean
     + " ].\n"  
     + " \n"
-    + " cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne|instanceof] |  [<?cmpOperator> != | == ]] <numExpr?>.\n" ////
+    + " cmpOperationInText::=[ \\?[<?cmpOperator>gt|ge|lt|le|eq|ne|instanceof] |  [<?cmpOperator> != | == ]] <numExpr?>.\n" 
     + " \n"
     + " \n"
     + " numExpr::=  bool ( <boolExpr?> ) \n"
@@ -404,15 +408,19 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " textExpr::=<$NoWhiteSpaces>\n"
-    + " { [?\\<\\.\\>]                             ##abort on <.> \n"
+    + " { [?\\<\\.]                             ##abort on <. \n"
+  //+ " { [?\\<\\.\\>]                             ##abort on <.> \n"
     + " [ \\<&-<*\\>?>\\>                          ##<&- it is comment> \n"
-    + " | \\<:---<*|---\\>?>---\\> ##<:--- comment ---> \n"
+    + " | \\<:---\\><*|---\\>?>\\<---\\> ##<:---> comment <---> not confused with XML <--- will be produced as output --->\n"
     + " | \\<:-<*\\>?>\\><textExpr?>\\<\\.-<*\\>?>\\> ##<:-comment> comment <.- > \n"
     + " | \\#\\#<*\\r\\n?>   ##comment to eol in a text Expression\n"
+    + " | \\<:\\{  <statementBlock?%>  <!\\\\s*>  \\}\\>  ##one or more statements inside a text expression, do not produce an output text. \n" ////
+                                    //<!\\\\s*>  Note: on end of <statementBlock> white spaces should be skipped!
     + " | \\<:for:<forInText?forCtrl>\n"
     + " | \\<:if: <ifInText?ifCtrl>\n"
     + " | \\<:hasNext\\> <textExpr?hasNext> \\<\\.hasNext\\>\n"
     + " | \\<:subtext : <callSubtext?call>\n"
+    + " | \\<:call : <callSubtext?call>\n"
     + " | \\<:scriptdir<?scriptdir>\\>\n"
     + " | \\<:debug[:<textDatapath?debug>| <?debug>]\\>\n"
     + " | \\<&<dataText>\n"
@@ -423,6 +431,7 @@ public final class JZcmdSyntax {
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
     + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
+    + " | \\<:<DefVariable?>\\>  \n"
     + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"
@@ -430,9 +439,9 @@ public final class JZcmdSyntax {
     + " \n"
     + " \n"
     + " dataText::=<dataAccess>[ \\:\\?[<\"\"?errorText>|<*\\>:?errorText>]][ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
-    + " \n"  ////
-    + " textOut::=\\<+ [<dataPath?assign>] [:n<?newline>] \\> \n"
-    + "   <textExpr>\n"
+    + " \n"  
+    + " textOut::= [<dataPath?assign>] [:n<?newline>] \\> \n"
+    + "   [<textExpr>]\n"
     + "   [ \\<\\.+\\>                     ## end text variants: \n"
     + "   | \\<\\.n+\\><?newline>  \n"  
     + "   | \\<\\.+n\\><?newline> \n"
