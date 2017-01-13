@@ -2194,7 +2194,7 @@ public class ZbnfParser
    * @param report A report output
    * */
   public ZbnfParser( MainCmdLogging_ifc report)
-  { this(report, 10);
+  { this(report, 20);
   }
   
   
@@ -2939,9 +2939,9 @@ public class ZbnfParser
   public String getSyntaxErrorReport()
   { String sLastFoundedResultOnError = getLastFoundedResultOnError();
     StringBuilder u = buildFoundedInputOnError();
-    u.append("\nexpected: ----------------------------------------------"); 
+    u.append("\n expected: ----------------------------------------------"); 
     u.append(getExpectedSyntaxOnError());
-    u.append("\nfounded before: ----------------------------------------------"); 
+    u.append("\n found before: ----------------------------------------------"); 
     u.append(( sLastFoundedResultOnError == null 
           ? "-nothing-" 
           : sLastFoundedResultOnError

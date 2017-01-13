@@ -13,6 +13,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.script.Bindings;
 import javax.script.Compilable;
@@ -129,6 +130,10 @@ public class JZcmd implements JZcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-01-01 Hartmut chg adaption to {@link JZcmdExecuter}- 
+   *   Now {@link #execute(JZcmdExecuter, File, Appendable, List, String, boolean, File, MainCmdLogging_ifc)}
+   *   with List-given additional variables are available. Note that {@link JZcmdExecuter#setScriptVariable(String, char, Object, boolean)}
+   *   is deprecated now.
    * <li>2017-01-01 Hartmut new {@link #readJZcmdCfg(org.vishia.cmd.JZcmdScript.AddSub2List, File, MainCmdLogging_ifc, CmdExecuter)} 
    * <li>2014-08-10 Hartmut bugfix: Now {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)} : close() will be invoked.
    * <li>2014-08-10 Hartmut new: message "JZcmd - cannot create output text file" with the output file path.
@@ -175,7 +180,7 @@ public class JZcmd implements JZcmdEngine, Compilable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2016-12-27";
+  static final public String version = "2017-01-13";
 
   
   private static class Args{
@@ -292,58 +297,56 @@ INPUT          pathTo JZcmd-File to execute
    * @return the exit level 0 - successful 1..6 see {@link MainCmdLogging_ifc#exitWithArgumentError} etc.
    */
   public static int smain(String[] sArgs) throws ScriptException {
-    String sRet = null;
+    String sError = null;
     Args args = new Args();
     CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
     mainCmdLine.setReportLevel(0);  //over-write if argument given. Don't use a report.txt by default.
-      try{ mainCmdLine.parseArguments(); }
-      catch(Exception exception)
-      { sRet = "JZcmd - Argument error ;" + exception.getMessage();
-        mainCmdLine.report(sRet, exception);
-        mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
-      }
-      if(args.sFileScript ==null){
-        mainCmdLine.writeHelpInfo(null);
-      } else {
-        if(sRet == null)
-        { FileWriter fout = null;
-            Appendable out = null;
-            if(args.sFileTextOut !=null){
-              File fileOut = null;
-              try{
-                fileOut = new File(args.sFileTextOut);
-                out = fout = new FileWriter(fileOut);
-              } catch(IOException exc){
-                sRet = "JZcmd - cannot create output text file," + fileOut.getAbsolutePath(); 
-              }
-            } else {
-              out = System.out;
-            }
-            if(sRet == null){
-              File fileIn = new File(args.sFileScript);
-              int nrArg = 1;
-              JZcmdExecuter executer = new JZcmdExecuter(mainCmdLine);
-              executer.initialize(null, false, null, null);
-              try{
-                for(String argu: args.userArgs){
-                  executer.setScriptVariable("$" + nrArg, 'S', argu, true);
-                  nrArg +=1;
-                }
-              } catch(IllegalAccessException exc){ 
-                throw new ScriptException("JZcmd.smain - cannot set user argument; " + nrArg);
-              }
-              String sCurrdir = mainCmdLine.currdir();
-              execute(executer, fileIn, out, sCurrdir, true, args.fileTestXml, mainCmdLine);
-            }
-            if(fout !=null){
-              try { fout.close(); } catch(IOException exc){ throw new RuntimeException(exc); }
-            }
-            if(sRet !=null){
-              mainCmdLine.writeError(sRet);
-            }
-          }
+    try{ mainCmdLine.parseArguments(); }
+    catch(Exception exception)
+    { sError = "JZcmd - Argument error ;" + exception.getMessage();
+      mainCmdLine.report(sError, exception);
+      mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
+    }
+    if(args.sFileScript ==null){
+      mainCmdLine.writeHelpInfo(null);
+    } else if(sError ==null) {
+      File fileIn = new File(args.sFileScript);
+      int nrArg = 1;
+      JZcmdExecuter executer = new JZcmdExecuter(mainCmdLine);
+      Map<String, DataAccess.Variable<Object>> data = args.userArgs.size() >0 ? new TreeMap<String, DataAccess.Variable<Object>>() :null;
+      try{
+        for(String argu: args.userArgs){
+          DataAccess.createOrReplaceVariable(data, "$" + nrArg, 'S', argu, true);  //User arguments as $
+          nrArg +=1;
         }
-      return mainCmdLine.getExitErrorLevel();
+      } catch(IllegalAccessException exc){ 
+        throw new ScriptException("JZcmd.smain - cannot set user argument; " + nrArg);
+      }
+      FileWriter fout = null;
+      Appendable out = null;
+      if(args.sFileTextOut !=null){
+        File fileOut = null;
+        try{
+          fileOut = new File(args.sFileTextOut);
+          out = fout = new FileWriter(fileOut);
+        } catch(IOException exc){
+          sError = "JZcmd - cannot create output text file," + fileOut.getAbsolutePath(); 
+        }
+      } else {
+        out = System.out;
+      }
+      if(sError == null){
+        String sCurrdir = mainCmdLine.currdir();
+        execute(executer, fileIn, out, data, sCurrdir, true, args.fileTestXml, mainCmdLine);
+      }
+      if(fout !=null){
+        try { fout.close(); } catch(IOException exc){ throw new RuntimeException(exc); }
+      }
+      if(sError !=null){
+        mainCmdLine.writeError(sError);
+      }
+    }
+    return mainCmdLine.getExitErrorLevel();
   }
 
 
@@ -398,8 +401,7 @@ INPUT          pathTo JZcmd-File to execute
     try { 
       JZcmdScript genScript = translateAndSetGenCtrl(script, null, log);
       //the script variables are build from the local ones of the calling script:
-      executer.initialize(genScript, true, execLevel.localVariables, execLevel.currdir());
-      executer.execute(genScript, true, bWaitForThreads, u, null);
+      executer.execute(genScript, true, bWaitForThreads, u, execLevel.localVariables, execLevel.currdir());
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
     } catch (Throwable exc) {
       String sError = exc.getMessage();
@@ -498,7 +500,7 @@ INPUT          pathTo JZcmd-File to execute
     StringPartScan spScript = new StringPartScan(script);
     MainCmdLogging_ifc log = new MainCmdLoggingStream(System.out);
     JZcmdExecuter zgenExecuter = new JZcmdExecuter(log);
-    execute(zgenExecuter, null, spScript, null, null, true, null, log);
+    execute(zgenExecuter, null, spScript, null, null, null, true, null, log);
   }
   
   
@@ -509,14 +511,13 @@ INPUT          pathTo JZcmd-File to execute
    */
   public static void execute(File script, MainCmdLogging_ifc log)
   throws ScriptException 
-  {
-    execute(null, script, null, null, true, null, log);
+  { execute(null, script, null, null, true, null, log);
   }
   
   
   
   
-  /**Executes a JZcmd script.
+  /**Translates and executes a JZcmd script.
    * @param executer A given instance of the executer. 
    * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
    * @param out Output channel for <+text>...<.+>
@@ -529,7 +530,8 @@ INPUT          pathTo JZcmd-File to execute
    * @return The text which are created in the script using <:>text<.>
    * @throws ScriptException 
    */
-  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out, String sCurrdir, boolean accessPrivate
+  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out, Map<String, DataAccess.Variable<Object>> data
+      , String sCurrdir, boolean accessPrivate
       , File testOut, MainCmdLogging_ifc log) 
   throws ScriptException {
     int lengthBufferGenctrl = (int)fileScript.length();
@@ -541,15 +543,89 @@ INPUT          pathTo JZcmd-File to execute
       throw new ScriptException("JZcmd - Error script file not found; " + fileScript.getAbsolutePath() + "; " + sError); 
     }
     if(sourceScript !=null){
-      execute(executer, fileScript, sourceScript, out, sCurrdir, accessPrivate, testOut, log);
+      execute(executer, fileScript, sourceScript, out, data, sCurrdir, accessPrivate, testOut, log);
     }
   }  
 
+
+  
+  
+  /**Translates and executes a JZcmd script.
+   * @param executer A given instance of the executer. 
+   * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param out Output channel for <+text>...<.+>
+   * @param sCurrdir The start value for currdir
+   * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
+   *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
+   *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
+   * @param testOut if not null then outputs a data tree of the generate script.
+   * @param log A given log output
+   * @return The text which are created in the script using <:>text<.>
+   * @throws ScriptException 
+   */
+  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out, List<DataAccess.Variable<Object>> data
+      , String sCurrdir, boolean accessPrivate
+      , File testOut, MainCmdLogging_ifc log) 
+  throws ScriptException {
+    int lengthBufferGenctrl = (int)fileScript.length();
+    StringPartScan sourceScript = null;
+    try { 
+      sourceScript = new StringPartFromFileLines(fileScript, lengthBufferGenctrl, "encoding", null);
+    } catch(IOException exc){
+      String sError = exc.getMessage();
+      throw new ScriptException("JZcmd - Error script file not found; " + fileScript.getAbsolutePath() + "; " + sError); 
+    }
+    if(sourceScript !=null){
+      //MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
+      JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+      genScript = translateAndSetGenCtrl(sourceScript, log, testOut, fileScript);
+      JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
+      executer1.execute(genScript, accessPrivate, true, out, data, sCurrdir);
+    }
+  }  
+
+
+  
+  
+  /**Translates and executes a JZcmd script.
+   * @param executer A given instance of the executer. 
+   * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param out Output channel for <+text>...<.+>
+   * @param sCurrdir The start value for currdir
+   * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
+   *  for debugging. It is not recommended for general purpose! The access mechanism is given with 
+   *  {@link java.lang.reflect.Field#setAccessible(boolean)}.
+   * @param testOut if not null then outputs a data tree of the generate script.
+   * @param log A given log output
+   * @return The text which are created in the script using <:>text<.>
+   * @throws ScriptException 
+   */
+  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out
+      , String sCurrdir, boolean accessPrivate
+      , File testOut, MainCmdLogging_ifc log) 
+  throws ScriptException {
+    int lengthBufferGenctrl = (int)fileScript.length();
+    StringPartScan sourceScript = null;
+    try { 
+      sourceScript = new StringPartFromFileLines(fileScript, lengthBufferGenctrl, "encoding", null);
+    } catch(IOException exc){
+      String sError = exc.getMessage();
+      throw new ScriptException("JZcmd - Error script file not found; " + fileScript.getAbsolutePath() + "; " + sError); 
+    }
+    if(sourceScript !=null){
+      //MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
+      JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+      genScript = translateAndSetGenCtrl(sourceScript, log, testOut, fileScript);
+      JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
+      executer1.execute(genScript, accessPrivate, true, out, sCurrdir);
+    }
+  }  
+
+
+  
+  
+  
   /**Executes a textual given script in a existing instance of a {@link JZcmdExecuter}. 
-   * The executer should be cleared before with {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, CharSequence)} 
-   * with null as first parameter because the script is translated here only.
-   * But the executer can be filled with some additional variables after initialize(null, ...)
-   * Elsewhere an exception is thrown because it had stored another script.
    * 
    * @param executer
    * @param fileScript This file is used only as information to support the <&scriptdir>.
@@ -568,6 +644,7 @@ INPUT          pathTo JZcmd-File to execute
     , File fileScript  
     , StringPartScan script
     , Appendable out
+    , Map<String, DataAccess.Variable<Object>> data
     , String sCurrdir
     , boolean accessPrivate
     , File testOut
@@ -578,7 +655,7 @@ INPUT          pathTo JZcmd-File to execute
     JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     genScript = translateAndSetGenCtrl(script, log, testOut, fileScript);
     JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
-    executer1.execute(genScript, accessPrivate, true, out, sCurrdir);
+    executer1.execute(genScript, accessPrivate, true, out, data, sCurrdir);
   }
   
   

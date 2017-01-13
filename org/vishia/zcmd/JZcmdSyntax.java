@@ -414,7 +414,7 @@ public final class JZcmdSyntax {
     + " | \\<:---\\><*|---\\>?>\\<---\\> ##<:---> comment <---> not confused with XML <--- will be produced as output --->\n"
     + " | \\<:-<*\\>?>\\><textExpr?>\\<\\.-<*\\>?>\\> ##<:-comment> comment <.- > \n"
     + " | \\#\\#<*\\r\\n?>   ##comment to eol in a text Expression\n"
-    + " | \\<:\\{  <statementBlock?%>  <!\\\\s*>  \\}\\>  ##one or more statements inside a text expression, do not produce an output text. \n" ////
+    + " | \\<:\\{  <statementBlock?>  <!\\\\s*>  \\}\\>  ##one or more statements inside a text expression, do not produce an output text. \n" ////
                                     //<!\\\\s*>  Note: on end of <statementBlock> white spaces should be skipped!
     + " | \\<:for:<forInText?forCtrl>\n"
     + " | \\<:if: <ifInText?ifCtrl>\n"

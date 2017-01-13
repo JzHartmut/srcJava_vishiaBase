@@ -24,6 +24,7 @@ import org.vishia.states.StateCompositeFlat;
 import org.vishia.states.StateMachine;
 import org.vishia.states.StateParallel;
 import org.vishia.states.StateSimple;
+import org.vishia.util.DataAccess;
 import org.vishia.util.DataShow;
 import org.vishia.util.Debugutil;
 import org.vishia.zbnf.ZbnfJavaOutput;
@@ -723,10 +724,11 @@ public class StateMGen {
         }
         Writer out = new FileWriter(fOut);
         JZcmdExecuter generator = new JZcmdExecuter(console);
-        generator.setScriptVariable("sOutfile", 'S', fOut.getAbsolutePath(), true);
-        generator.setScriptVariable("stm", 'O', genStm, true);
+        List<DataAccess.Variable<Object>> data = new LinkedList<DataAccess.Variable<Object>>();
+        data.add(new DataAccess.Variable<Object>('S', "sOutfile", fOut.getAbsolutePath(), true));
+        data.add(new DataAccess.Variable<Object>('O', "stm", genStm, true));
         try{ 
-          JZcmd.execute(generator, fileScript, out, console.currdir(), true, fScriptCheck, console);
+          JZcmd.execute(generator, fileScript, out, data, console.currdir(), true, fScriptCheck, console);
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
         } catch(ScriptException exc){
           console.writeError(exc.getMessage());
