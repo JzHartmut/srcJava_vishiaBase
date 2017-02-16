@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZtExecuter;
+import org.vishia.jztcmd.JZtcmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.FileSystem;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
-import org.vishia.zcmd.JZcmd;
 
 /**This class parses C-files and builds a result tree, which can be proceed especially with a JZcmd script.
  * Therewith output files from headers can be generated with a control script without hard-core Java programming.
@@ -63,8 +63,8 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
  * For Zmake see {@linkplain www.vishia.org/ZBNF/sf/docu/Zmake.html}.
  * <br>
  * This class can be downloaded from {@linkplain www.sf.net/projects/zbnf}
- * @see JZcmd
- * @see JZcmdExecuter
+ * @see JZtcmd
+ * @see JZtExecuter
  * @author Hartmut Schorrig
  *
  */

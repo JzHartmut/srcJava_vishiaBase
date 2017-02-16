@@ -1,10 +1,10 @@
-package org.vishia.zcmd;
+package org.vishia.jztcmd;
 
-import org.vishia.cmd.JZcmdExecuter;
-import org.vishia.cmd.JZcmdScript;
+import org.vishia.cmd.JZtExecuter;
+import org.vishia.cmd.JZtScript;
 
 /**This class contains the syntax as ZBNF string for a JZcmd script.
- * See {@link JZcmd}, {@link JZcmdScript}, {@link JZcmdExecuter}.
+ * See {@link JZtcmd}, {@link JZtScript}, {@link JZtExecuter}.
  * The syntax can be shown by command line
  * <pre>
  * java path/to/zbnf.jar org.vishia.zcmd.JZcmd --help
@@ -12,7 +12,7 @@ import org.vishia.cmd.JZcmdScript;
  * @author Hartmut Schorrig
  *
  */
-public final class JZcmdSyntax {
+public final class JZtSyntax {
 
   
   /**Version, history and license.
@@ -112,7 +112,8 @@ public final class JZcmdSyntax {
     + "   | stdout | stdin | stderr \n" 
     + "   | subtext | sub | main | call | cd | CD | REM | Rem | rem \n"
     + "   | Pipe | StringBuffer | Stringjar | String | List | Openfile | Fileset | Obj | Set | set | include | zbatch \n"
-    + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | throw . \n"
+    + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | not | NOT | and | AND | or | OR \n"
+    + "   | throw . \n"
     + " \n"
     + " JZcmd::= \n"
     + " [<*|==ZGen==?>==ZGen== ]\n"
@@ -369,7 +370,7 @@ public final class JZcmdSyntax {
     + " andExpr::= <boolExpr?> [{ && <?boolCheckAndOperation> <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
     + " \n"  
     + " boolExpr::= [<?boolNot> ! | not| NOT|]\n"
-    + " [ ( <condition?parenthesisCondition> ) \n"                //boolean in paranthesis
+    + " [ ( <condition?parenthesisExpr>) \n" //Condition> ) \n"                //boolean in paranthesis
     //+ " | <instanceof> \n"                //boolean in paranthesis
     + " | <numExpr?> [<cmpOperation>]\n"  //simple boolean
     + " ].\n"  
@@ -383,7 +384,7 @@ public final class JZcmdSyntax {
     + " andExprInText::= <boolExprInText?> [{ && <?boolCheckAndOperation> <boolExprInText?boolAndOperation>}].\n"    // && of <boolExpr>
     + " \n"  
     + " boolExprInText::= [<?boolNot> ! | not|]\n"
-    + " [ ( <conditionInText?parenthesisCondition> ) \n"                //boolean in paranthesis
+    + " [ ( <conditionInText?parenthesisExpr>) \n" //Condition> ) \n"                //boolean in paranthesis
     + " | <numExpr?> [<cmpOperationInText?cmpOperation>]\n"  //simple boolean
     + " ].\n"  
     + " \n"
@@ -422,6 +423,7 @@ public final class JZcmdSyntax {
     + " | \\<:subtext : <callSubtext?call>\n"
     + " | \\<:call : <callSubtext?call>\n"
     + " | \\<:scriptdir<?scriptdir>\\>\n"
+    + " | \\<:debug-break\\> <?breakBlock>     ##ends the text, especially for test. \n"
     + " | \\<:debug[:<textDatapath?debug>| <?debug>]\\>\n"
     + " | \\<&<dataText>\n"
     //+ " | \\<: [<?transliteration> n | r | t | \\< | # | \\\" ] \\>\n"

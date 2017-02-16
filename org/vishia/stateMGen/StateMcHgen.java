@@ -13,7 +13,8 @@ import java.util.TreeMap;
 import javax.script.ScriptException;
 
 import org.vishia.mainCmd.MainCmd_ifc;
-import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZtExecuter;
+import org.vishia.jztcmd.JZtcmd;
 import org.vishia.states.StateComposite;
 import org.vishia.states.StateCompositeFlat;
 import org.vishia.states.StateDeepHistory;
@@ -25,7 +26,6 @@ import org.vishia.util.DataShow;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringPart;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zcmd.JZcmd;
 import org.vishia.zcmd.Zbnf2Text;
 
 /**This class prepares information for a state machine from representation in text format 
@@ -197,12 +197,12 @@ public class StateMcHgen {
           outData.append("===================").append(outArgs.sFileScript);
         }
         Writer out = new FileWriter(fOut);
-        JZcmdExecuter generator = new JZcmdExecuter(console);
+        JZtExecuter generator = new JZtExecuter(console);
         List<DataAccess.Variable<Object>> data = new LinkedList<DataAccess.Variable<Object>>();
         data.add(new DataAccess.Variable<Object>('S', "sOutfile", fOut.getAbsolutePath(), true));
         data.add(new DataAccess.Variable<Object>('O', "zsrc", zsrc, true));
         try{ 
-          JZcmd.execute(generator, fileScript, out, data, console.currdir(), true, fScriptCheck, console);
+          JZtcmd.execute(generator, fileScript, out, data, console.currdir(), true, fScriptCheck, console);
           console.writeInfoln("SUCCESS outfile: " + fOut.getAbsolutePath());
         } catch(ScriptException exc){
           console.writeError(exc.getMessage());

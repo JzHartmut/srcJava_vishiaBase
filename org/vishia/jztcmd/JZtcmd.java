@@ -1,4 +1,4 @@
-package org.vishia.zcmd;
+package org.vishia.jztcmd;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,9 +25,9 @@ import javax.script.ScriptException;
 
 import org.vishia.cmd.CmdExecuter;
 import org.vishia.cmd.CmdStore;
-import org.vishia.cmd.JZcmdEngine;
-import org.vishia.cmd.JZcmdExecuter;
-import org.vishia.cmd.JZcmdScript;
+import org.vishia.cmd.JZtEngine;
+import org.vishia.cmd.JZtExecuter;
+import org.vishia.cmd.JZtScript;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
@@ -46,8 +46,8 @@ import org.vishia.zbnf.ZbnfParser;
  * <pre>
  * java path/to/zbnf.jar org.vishia.zcmd.JZcmd path/to/scriptFile
  * </pre>
- * This class contains the translator which uses the ZBNF parser. The core executer is {@link JZcmdExecuter}.
- * The translated script is stored in an instance of {@link JZcmdScript} which are both parts of the component
+ * This class contains the translator which uses the ZBNF parser. The core executer is {@link JZtExecuter}.
+ * The translated script is stored in an instance of {@link JZtScript} which are both parts of the component
  * <code>srcJava_vishiaBase</code>.  
  * <br>
  * <b>Execution from command line or from Java with String[]-args:</b>
@@ -72,7 +72,7 @@ import org.vishia.zbnf.ZbnfParser;
  * <li>{@link #translateAndSetGenCtrl(String, MainCmdLogging_ifc)}: The script is given as String
  * <li>{@link #translateAndSetGenCtrl(StringPartScan, MainCmdLogging_ifc, File, File)}: This is the core routine.
  * </ul>
- * To execute a compiled script see {@link JZcmdExecuter}.
+ * To execute a compiled script see {@link JZtExecuter}.
  * <br><br>  
  * This class contains 'execute' routines only for textual given scripts, in different variants:
  * <ul>
@@ -83,22 +83,22 @@ import org.vishia.zbnf.ZbnfParser;
  *   </ul>
  * <li>Execution with a given JZcmdExecuter instance:
  *   <ul>
- *   <li>{@link #execute(JZcmdExecuter, File, Appendable, String, boolean, File, MainCmdLogging_ifc)}: It reuses a given instance of JZcmdExecuter.
+ *   <li>{@link #execute(JZtExecuter, File, Appendable, String, boolean, File, MainCmdLogging_ifc)}: It reuses a given instance of JZcmdExecuter.
  *   </ul>
  * </ul>      
- * If the script is already compiled and stored in {@link JZcmdScript} and an execution environment {@link JZcmdExecuter} 
+ * If the script is already compiled and stored in {@link JZtScript} and an execution environment {@link JZtExecuter} 
  * is established, one can invoke a subroutine of the script with 
- * {@link JZcmdExecuter#execSub(org.vishia.cmd.JZcmdScript.Subroutine, Map, boolean, Appendable, File)}
- * or run the main routine of the script with {@link JZcmdExecuter#execute(JZcmdScript, boolean, boolean, Appendable, String)}.
+ * {@link JZtExecuter#execSub(org.vishia.cmd.JZtScript.Subroutine, Map, boolean, Appendable, File)}
+ * or run the main routine of the script with {@link JZtExecuter#execute(JZtScript, boolean, boolean, Appendable, String)}.
  * See there.
  * <br><br>
  * This class is only necessary if a script is still to compile. Note that from a compiled script the routine
- * {@link JZcmdScript#getEngine()}, defined in {@link CompiledScript#getEngine()} returns this instance
+ * {@link JZtScript#getEngine()}, defined in {@link CompiledScript#getEngine()} returns this instance
  * if the JZcmdScript was created with this.
  * <ul>
- * <li>{@link #execute(File, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)} 
+ * <li>{@link #execute(File, org.vishia.cmd.JZtExecuter.ExecuteLevel)} 
  *   compiles and executes a script given with file, whereby the given ExecuteLevel is used
- * <li>{@link #execSub(File, String, Map, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)}
+ * <li>{@link #execSub(File, String, Map, org.vishia.cmd.JZtExecuter.ExecuteLevel)}
  * </ul>  
  * <br>
  * <br>
@@ -125,30 +125,30 @@ import org.vishia.zbnf.ZbnfParser;
  * @author Hartmut Schorrig
  *
  */
-public class JZcmd implements JZcmdEngine, Compilable
+public class JZtcmd implements JZtEngine, Compilable
 {
   
   /**Version, history and license.
    * <ul>
-   * <li>2017-01-01 Hartmut chg adaption to {@link JZcmdExecuter}- 
-   *   Now {@link #execute(JZcmdExecuter, File, Appendable, List, String, boolean, File, MainCmdLogging_ifc)}
-   *   with List-given additional variables are available. Note that {@link JZcmdExecuter#setScriptVariable(String, char, Object, boolean)}
+   * <li>2017-01-01 Hartmut chg adaption to {@link JZtExecuter}- 
+   *   Now {@link #execute(JZtExecuter, File, Appendable, List, String, boolean, File, MainCmdLogging_ifc)}
+   *   with List-given additional variables are available. Note that {@link JZtExecuter#setScriptVariable(String, char, Object, boolean)}
    *   is deprecated now.
-   * <li>2017-01-01 Hartmut new {@link #readJZcmdCfg(org.vishia.cmd.JZcmdScript.AddSub2List, File, MainCmdLogging_ifc, CmdExecuter)} 
+   * <li>2017-01-01 Hartmut new {@link #readJZcmdCfg(org.vishia.cmd.JZtScript.AddSub2List, File, MainCmdLogging_ifc, CmdExecuter)} 
    * <li>2014-08-10 Hartmut bugfix: Now {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)} : close() will be invoked.
    * <li>2014-08-10 Hartmut new: message "JZcmd - cannot create output text file" with the output file path.
    * <li>2014-08-10 Hartmut new: !checkXmlFile = filename; 
    * <li>2014-06-10 Hartmut chg: improved Exception handling of the script.
    * <li>2014-05-18 Hartmut new: try to implement javax.script interfaces, not ready yet
-   * <li>2014-02-16 Hartmut new: {@link #jbatch(File, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)} is deprecated now,
-   *   instead {@link #execSub(File, String, Map, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)} used.
+   * <li>2014-02-16 Hartmut new: {@link #jbatch(File, org.vishia.cmd.JZtExecuter.ExecuteLevel)} is deprecated now,
+   *   instead {@link #execSub(File, String, Map, org.vishia.cmd.JZtExecuter.ExecuteLevel)} used.
    *   The difference: No scriptlevel created for the new compiled script, with given scriptlevel
    *   the subroutine is executed. 
    * <li>2014-02-16 Hartmut chg: execute(... String sCurrdir) now with current directory from outside.
    *   translateAndSetGenCtrl( File fileScript, ...) with the script file.
    *   Argument -currdir=PATH for command line invocation {@link #main(String[])}
-   *   Build of script variable currdir, scriptfile, scriptdir with them in {@link JZcmdExecuter#initialize(JZcmdScript, boolean, Map, String, boolean)}.
-   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.JZcmdExecuter.ExecuteLevel)}
+   *   Build of script variable currdir, scriptfile, scriptdir with them in {@link JZtExecuter#initialize(JZtScript, boolean, Map, String, boolean)}.
+   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.JZtExecuter.ExecuteLevel)}
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
    *   was need.
@@ -246,7 +246,7 @@ public class JZcmd implements JZcmdEngine, Compilable
       super.addHelpInfo("==Standard arguments of MainCmd==");
       super.addStandardHelpInfo();
       super.addHelpInfo("==Syntax of a JZcmd script==");
-      super.addHelpInfo(JZcmdSyntax.syntax);
+      super.addHelpInfo(JZtSyntax.syntax);
 
       
     }
@@ -312,7 +312,7 @@ INPUT          pathTo JZcmd-File to execute
     } else if(sError ==null) {
       File fileIn = new File(args.sFileScript);
       int nrArg = 1;
-      JZcmdExecuter executer = new JZcmdExecuter(mainCmdLine);
+      JZtExecuter executer = new JZtExecuter(mainCmdLine);
       Map<String, DataAccess.Variable<Object>> data = args.userArgs.size() >0 ? new TreeMap<String, DataAccess.Variable<Object>>() :null;
       try{
         for(String argu: args.userArgs){
@@ -356,7 +356,7 @@ INPUT          pathTo JZcmd-File to execute
    * It invokes {@link #JZcmd(MainCmdLogging_ifc)} with null as argument.
    * @throws ScriptException
    */
-  public JZcmd() throws ScriptException{
+  public JZtcmd() throws ScriptException{
     this(null);    
   }
 
@@ -365,12 +365,12 @@ INPUT          pathTo JZcmd-File to execute
    * @param log if null then the {@link MainCmdLoggingStream} is used with System.out.
    * @throws ScriptException
    */
-  public JZcmd(MainCmdLogging_ifc log) throws ScriptException{
+  public JZtcmd(MainCmdLogging_ifc log) throws ScriptException{
     if(log == null){
       this.log = new MainCmdLoggingStream(System.out);
     } else { this.log = log; }
     parserGenCtrl = new ZbnfParser(this.log); //console);
-    try{ parserGenCtrl.setSyntax(JZcmdSyntax.syntax);
+    try{ parserGenCtrl.setSyntax(JZtSyntax.syntax);
     } catch(ParseException exc){ throw new ScriptException("JZcmd.ctor - internal syntax error; " + exc.getMessage()); }
   }
 
@@ -388,7 +388,7 @@ INPUT          pathTo JZcmd-File to execute
    */
   public static CharSequence execute(
       File script
-    , JZcmdExecuter.ExecuteLevel execLevel
+    , JZtExecuter.ExecuteLevel execLevel
   ) throws IllegalAccessException{
     //return execute(script, execLevel.log());
     
@@ -396,10 +396,10 @@ INPUT          pathTo JZcmd-File to execute
     StringBuilder u = new StringBuilder();
     //JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     MainCmdLogging_ifc log = execLevel.log();
-    JZcmdExecuter executer = new JZcmdExecuter(log);
+    JZtExecuter executer = new JZtExecuter(log);
     //Copy all local variables of the calling level as script variables.
     try { 
-      JZcmdScript genScript = translateAndSetGenCtrl(script, null, log);
+      JZtScript genScript = translateAndSetGenCtrl(script, null, log);
       //the script variables are build from the local ones of the calling script:
       executer.execute(genScript, true, bWaitForThreads, u, execLevel.localVariables, execLevel.currdir());
       //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
@@ -431,15 +431,15 @@ INPUT          pathTo JZcmd-File to execute
    */
   public static CharSequence execSub(File fileScript, String subroutine
       , Map<String, DataAccess.Variable<Object>> args
-      , JZcmdExecuter.ExecuteLevel execLevel)
+      , JZtExecuter.ExecuteLevel execLevel)
   {
     
     MainCmdLogging_ifc log = execLevel.log();
     //boolean bWaitForThreads = false;
     //Copy all local variables of the calling level as script variables.
     try { 
-      JZcmdScript jzscript = translateAndSetGenCtrl(fileScript, null, log);
-      JZcmdScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
+      JZtScript jzscript = translateAndSetGenCtrl(fileScript, null, log);
+      JZtScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
       //the script variables are build from the local ones of the calling script:
       execLevel.exec_Subroutine(substatement, args, null, -1);
       //executer.execute(genScript, true, bWaitForThreads, null, null);
@@ -474,7 +474,7 @@ INPUT          pathTo JZcmd-File to execute
    */
   public Object evalSub(File fileScript, String subroutine
       , Map<String, DataAccess.Variable<Object>> args
-      , JZcmdExecuter.ExecuteLevel execLevel)
+      , JZtExecuter.ExecuteLevel execLevel)
   throws ScriptException
   {
     
@@ -482,8 +482,8 @@ INPUT          pathTo JZcmd-File to execute
     //Copy all local variables of the calling level as script variables.
       
       
-    JZcmdScript jzscript = compile(fileScript, null);
-    JZcmdScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
+    JZtScript jzscript = compile(fileScript, null);
+    JZtScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
     //the script variables are build from the local ones of the calling script:
     return execLevel.evalSubroutine(substatement, args, null, -1);    
   }
@@ -493,19 +493,19 @@ INPUT          pathTo JZcmd-File to execute
   /**Executes a JZcmd script.
    * A log output using the <code>console</code> script variable is written to {@link System#out}.
    * 
-   * @param script the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param script the script in ASCII-format, syntax see {@link JZtSyntax}
    * @return An error text or null.
    */
   public static void execute(String script) throws ScriptException {
     StringPartScan spScript = new StringPartScan(script);
     MainCmdLogging_ifc log = new MainCmdLoggingStream(System.out);
-    JZcmdExecuter zgenExecuter = new JZcmdExecuter(log);
+    JZtExecuter zgenExecuter = new JZtExecuter(log);
     execute(zgenExecuter, null, spScript, null, null, null, true, null, log);
   }
   
   
   /**Executes a JZcmd script.
-   * @param script the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param script the script in ASCII-format, syntax see {@link JZtSyntax}
    * @param log A given log output
    * @return An error text or null.
    */
@@ -519,7 +519,7 @@ INPUT          pathTo JZcmd-File to execute
   
   /**Translates and executes a JZcmd script.
    * @param executer A given instance of the executer. 
-   * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param fileScript the script in ASCII-format, syntax see {@link JZtSyntax}
    * @param out Output channel for <+text>...<.+>
    * @param sCurrdir The start value for currdir
    * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
@@ -530,7 +530,7 @@ INPUT          pathTo JZcmd-File to execute
    * @return The text which are created in the script using <:>text<.>
    * @throws ScriptException 
    */
-  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out, Map<String, DataAccess.Variable<Object>> data
+  public static void execute(JZtExecuter executer, File fileScript, Appendable out, Map<String, DataAccess.Variable<Object>> data
       , String sCurrdir, boolean accessPrivate
       , File testOut, MainCmdLogging_ifc log) 
   throws ScriptException {
@@ -552,7 +552,7 @@ INPUT          pathTo JZcmd-File to execute
   
   /**Translates and executes a JZcmd script.
    * @param executer A given instance of the executer. 
-   * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param fileScript the script in ASCII-format, syntax see {@link JZtSyntax}
    * @param out Output channel for <+text>...<.+>
    * @param sCurrdir The start value for currdir
    * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
@@ -563,7 +563,7 @@ INPUT          pathTo JZcmd-File to execute
    * @return The text which are created in the script using <:>text<.>
    * @throws ScriptException 
    */
-  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out, List<DataAccess.Variable<Object>> data
+  public static void execute(JZtExecuter executer, File fileScript, Appendable out, List<DataAccess.Variable<Object>> data
       , String sCurrdir, boolean accessPrivate
       , File testOut, MainCmdLogging_ifc log) 
   throws ScriptException {
@@ -577,9 +577,9 @@ INPUT          pathTo JZcmd-File to execute
     }
     if(sourceScript !=null){
       //MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
-      JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+      JZtScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
       genScript = translateAndSetGenCtrl(sourceScript, log, testOut, fileScript);
-      JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
+      JZtExecuter executer1 = executer == null ? new JZtExecuter(log) : executer;
       executer1.execute(genScript, accessPrivate, true, out, data, sCurrdir);
     }
   }  
@@ -589,7 +589,7 @@ INPUT          pathTo JZcmd-File to execute
   
   /**Translates and executes a JZcmd script.
    * @param executer A given instance of the executer. 
-   * @param fileScript the script in ASCII-format, syntax see {@link JZcmdSyntax}
+   * @param fileScript the script in ASCII-format, syntax see {@link JZtSyntax}
    * @param out Output channel for <+text>...<.+>
    * @param sCurrdir The start value for currdir
    * @param accessPrivate if true then private data are accessed too. The accessing of private data may be helpfull
@@ -600,7 +600,7 @@ INPUT          pathTo JZcmd-File to execute
    * @return The text which are created in the script using <:>text<.>
    * @throws ScriptException 
    */
-  public static void execute(JZcmdExecuter executer, File fileScript, Appendable out
+  public static void execute(JZtExecuter executer, File fileScript, Appendable out
       , String sCurrdir, boolean accessPrivate
       , File testOut, MainCmdLogging_ifc log) 
   throws ScriptException {
@@ -614,9 +614,9 @@ INPUT          pathTo JZcmd-File to execute
     }
     if(sourceScript !=null){
       //MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
-      JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+      JZtScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
       genScript = translateAndSetGenCtrl(sourceScript, log, testOut, fileScript);
-      JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
+      JZtExecuter executer1 = executer == null ? new JZtExecuter(log) : executer;
       executer1.execute(genScript, accessPrivate, true, out, sCurrdir);
     }
   }  
@@ -625,7 +625,7 @@ INPUT          pathTo JZcmd-File to execute
   
   
   
-  /**Executes a textual given script in a existing instance of a {@link JZcmdExecuter}. 
+  /**Executes a textual given script in a existing instance of a {@link JZtExecuter}. 
    * 
    * @param executer
    * @param fileScript This file is used only as information to support the <&scriptdir>.
@@ -640,7 +640,7 @@ INPUT          pathTo JZcmd-File to execute
    * @throws ScriptException on any non-caught exception in the script
    */
   public static void execute(
-      JZcmdExecuter executer
+      JZtExecuter executer
     , File fileScript  
     , StringPartScan script
     , Appendable out
@@ -652,9 +652,9 @@ INPUT          pathTo JZcmd-File to execute
   ) throws ScriptException 
   {
     //MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
-    JZcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
+    JZtScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
     genScript = translateAndSetGenCtrl(script, log, testOut, fileScript);
-    JZcmdExecuter executer1 = executer == null ? new JZcmdExecuter(log) : executer;
+    JZtExecuter executer1 = executer == null ? new JZtExecuter(log) : executer;
     executer1.execute(genScript, accessPrivate, true, out, data, sCurrdir);
   }
   
@@ -670,7 +670,7 @@ INPUT          pathTo JZcmd-File to execute
    * , {@link #translateAndSetGenCtrl(StringPartScan, MainCmdLogging_ifc, File, File)}
    * , {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)}
    */
-  public static JZcmdScript translateAndSetGenCtrl(File fileScript, MainCmdLogging_ifc log) 
+  public static JZtScript translateAndSetGenCtrl(File fileScript, MainCmdLogging_ifc log) 
   throws ScriptException
   //throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
@@ -678,7 +678,7 @@ INPUT          pathTo JZcmd-File to execute
   }
   
   
-  public static JZcmdScript translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut, MainCmdLogging_ifc log) 
+  public static JZtScript translateAndSetGenCtrl(File fileGenCtrl, File checkXmlOut, MainCmdLogging_ifc log) 
   throws ScriptException
   //throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
@@ -697,13 +697,13 @@ INPUT          pathTo JZcmd-File to execute
     } catch (IOException e) {
       throw new ScriptException("JZcmd.translate - any file error; ", fileGenCtrl.getAbsolutePath(), -1);
     }
-    JZcmdScript scr = translateAndSetGenCtrl(sourceScript, log, checkXmlOut, fileGenCtrl);
+    JZtScript scr = translateAndSetGenCtrl(sourceScript, log, checkXmlOut, fileGenCtrl);
     sourceScript.close();
     return scr;
   }
   
   
-  public JZcmdScript compile(File fileGenCtrl, File checkXmlOut) 
+  public JZtScript compile(File fileGenCtrl, File checkXmlOut) 
   throws ScriptException
   //throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
   {
@@ -724,7 +724,7 @@ INPUT          pathTo JZcmd-File to execute
   }
   
   
-  public static JZcmdScript translateAndSetGenCtrl(String sourceScript, MainCmdLogging_ifc log) 
+  public static JZtScript translateAndSetGenCtrl(String sourceScript, MainCmdLogging_ifc log) 
   throws ScriptException
   //throws IllegalArgumentException, IllegalAccessException, InstantiationException, ParseException 
   { return translateAndSetGenCtrl(new StringPartScan(sourceScript), log, null, null);
@@ -748,7 +748,7 @@ INPUT          pathTo JZcmd-File to execute
    * @see #translateAndSetGenCtrl(String, MainCmdLogging_ifc), {@link #translateAndSetGenCtrl(File, MainCmdLogging_ifc)}
    * , {@link #translateAndSetGenCtrl(File, File, MainCmdLogging_ifc)}
    */
-  public static JZcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, MainCmdLogging_ifc log) 
+  public static JZtScript translateAndSetGenCtrl(StringPartScan sourceScript, MainCmdLogging_ifc log) 
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   throws ScriptException
   { return translateAndSetGenCtrl(sourceScript, log, null, null);
@@ -765,10 +765,10 @@ INPUT          pathTo JZcmd-File to execute
    * @param executerToInit The executer will be initialized with the script variables of the parsed script-
    * @return null if successfully. Elsewhere an error text. 
    */
-  public static String readJZcmdCfg(JZcmdScript.AddSub2List dst, File jzScriptFile, MainCmdLogging_ifc log, CmdExecuter execToInit) {
+  public static String readJZcmdCfg(JZtScript.AddSub2List dst, File jzScriptFile, MainCmdLogging_ifc log, CmdExecuter execToInit) {
     String error = null;
     try{ 
-      JZcmdScript script = translateAndSetGenCtrl(jzScriptFile, new File(jzScriptFile.getParentFile(), jzScriptFile.getName() + ".check.xml"), log);
+      JZtScript script = translateAndSetGenCtrl(jzScriptFile, new File(jzScriptFile.getParentFile(), jzScriptFile.getName() + ".check.xml"), log);
       script.addContentToSelectContainer(dst);
       if(execToInit !=null) {
         execToInit.initJZcmdExecuter(script, null, log);  //NOTE: currdir is not determined.
@@ -786,7 +786,7 @@ INPUT          pathTo JZcmd-File to execute
 
   
   /**The parser knows the correct syntax already. One should use
-   *   {@link JZcmdSyntax#syntax} to set {@link ZbnfParser#setSyntax(String)}. One should use an 
+   *   {@link JZtSyntax#syntax} to set {@link ZbnfParser#setSyntax(String)}. One should use an 
    *   abbreviating syntax for experience.
    * 
    */
@@ -813,15 +813,15 @@ INPUT          pathTo JZcmd-File to execute
    * @throws FileNotFoundException
    * @throws IOException
    */
-  public static JZcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, 
+  public static JZtScript translateAndSetGenCtrl(StringPartScan sourceScript, 
       MainCmdLogging_ifc log, File checkXmlOutput, File fileScript) 
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;
-    final JZcmd jzcmd = new JZcmd(log); 
-    JZcmdScript compiledScript = new JZcmdScript(log, fileScript, jzcmd);
+    final JZtcmd jzcmd = new JZtcmd(log); 
+    JZtScript compiledScript = new JZtScript(log, fileScript, jzcmd);
     File dirIncludeBase = FileSystem.getDir(fileScript);
-    JZcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZcmdScript.ZbnfJZcmdScript(compiledScript);
+    JZtScript.ZbnfJZcmdScript zbnfDstScript = new JZtScript.ZbnfJZcmdScript(compiledScript);
     jzcmd.translateAndSetGenCtrl(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
     return compiledScript;
   }
@@ -847,13 +847,13 @@ INPUT          pathTo JZcmd-File to execute
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private JZcmdScript compile(StringPartScan sourceScript, File checkXmlOutput, File fileScript) 
+  private JZtScript compile(StringPartScan sourceScript, File checkXmlOutput, File fileScript) 
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;
-    JZcmdScript compiledScript = new JZcmdScript(log, fileScript, this);
+    JZtScript compiledScript = new JZtScript(log, fileScript, this);
     File dirIncludeBase = FileSystem.getDir(fileScript);
-    JZcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZcmdScript.ZbnfJZcmdScript(compiledScript);
+    JZtScript.ZbnfJZcmdScript zbnfDstScript = new JZtScript.ZbnfJZcmdScript(compiledScript);
     this.translateAndSetGenCtrl(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
     return compiledScript;
   }
@@ -875,7 +875,7 @@ INPUT          pathTo JZcmd-File to execute
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private void translateAndSetGenCtrl(StringPartScan sourceScript, JZcmdScript.ZbnfJZcmdScript zbnfDstScript
+  private void translateAndSetGenCtrl(StringPartScan sourceScript, JZtScript.ZbnfJZcmdScript zbnfDstScript
       , File dirIncludeBase 
       , File checkXmlOutput) 
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
@@ -905,10 +905,10 @@ INPUT          pathTo JZcmd-File to execute
     final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(log);
     //
     //create a new instance of script-file for any file, especially for included.
-    zbnfDstScript.scriptfile = new JZcmdScript.Scriptfile();
+    zbnfDstScript.scriptfile = new JZtScript.Scriptfile();
     
     try {
-      parserGenCtrl2Java.setContent(JZcmdScript.ZbnfJZcmdScript.class, zbnfDstScript, parserGenCtrl.getFirstParseResult());
+      parserGenCtrl2Java.setContent(JZtScript.ZbnfJZcmdScript.class, zbnfDstScript, parserGenCtrl.getFirstParseResult());
     } catch (Exception exc) { throw new ScriptException(exc); }
     if(zbnfDstScript.isXmlSrcNecessary()){
       zbnfDstScript.setXmlSrc(parserGenCtrl.getResultTree());  //to output XML from Script executer.
@@ -916,12 +916,12 @@ INPUT          pathTo JZcmd-File to execute
     //
     //get the main routine from the first parsed file, store it, set it after processing includefiles.
     //
-    JZcmdScript.Subroutine mainRoutine = zbnfDstScript.scriptfile.getMainRoutine();
+    JZtScript.Subroutine mainRoutine = zbnfDstScript.scriptfile.getMainRoutine();
     //
     if(zbnfDstScript.scriptfile.includes !=null){
       //parse includes after processing this file, because the zbnfDstScript.includes are not set before.
       //If one include contain a main, use it. But override the main after them, see below.
-      for(JZcmdScript.JZcmdInclude include: zbnfDstScript.scriptfile.includes){
+      for(JZtScript.JZcmdInclude include: zbnfDstScript.scriptfile.includes){
         String sFileInclude;
         if(include.envVar !=null){
           String sEnv = System.getenv(include.envVar);
@@ -969,8 +969,8 @@ INPUT          pathTo JZcmd-File to execute
   public CompiledScript compile(String script) throws ScriptException
   {
     StringPartScan spSource = new StringPartScan(script);
-    JZcmdScript compiledScript = new JZcmdScript(log, null, this);
-    JZcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZcmdScript.ZbnfJZcmdScript(compiledScript);
+    JZtScript compiledScript = new JZtScript(log, null, this);
+    JZtScript.ZbnfJZcmdScript zbnfDstScript = new JZtScript.ZbnfJZcmdScript(compiledScript);
     try{ translateAndSetGenCtrl(spSource, zbnfDstScript, null, null);
     } catch(Exception exc){
       //cannot compile
@@ -1079,7 +1079,7 @@ INPUT          pathTo JZcmd-File to execute
   @Override
   public ScriptContext getContext()
   {
-    JZcmdExecuter executer = new JZcmdExecuter();
+    JZtExecuter executer = new JZtExecuter();
     return executer.scriptLevel();
   }
 

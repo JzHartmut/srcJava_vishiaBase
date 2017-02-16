@@ -995,6 +995,8 @@ public class Header2Reflection
       { //String sClassName =
         final String sClassName;  //maybe "struct tagname"
         final String sStructName;  //maybe "struct tagname"
+        final ZbnfParseResultItem zDescription = resultItem.getChild("description");
+        final String reflTag = zDescription == null ? null : zDescription.getChildString("refl");
         { ZbnfParseResultItem itemName = resultItem.getChild("@name");
           if(itemName == null) {
             itemName = resultItem.getChild("@tagname");  //if un-named struct definition.  ////
@@ -1011,18 +1013,20 @@ public class Header2Reflection
         if(sClassName != null)
         { if(sSemantic.equals("unionDefinition"))
             stop();
-          if(sClassName.equals("ListItr_LinkedListJcpp"))
+          if(sClassName.equals("ObjectJcMTB"))
             stop();
           if(sClassName.equals("ObjectJcpp"))
             stop();
           if(sClassName.equals("ObjectJc"))
             stop();
-          
-          if(  sCLASS_C_name == null             //no wrapper CLASS_C exists
-            || sCLASS_C_name.equals(sClassName)  //or it is the struct associated with CLASS_C
-            || sCLASS_C_name_s.equals(sClassName)
-            || sCLASS_C_name_i.equals(sClassName)
-            )
+          if(reflTag !=null)
+            stop();
+          if( (reflTag == null || !reflTag.equals("no") ) 
+            &&(sCLASS_C_name == null             //no wrapper CLASS_C exists
+              || sCLASS_C_name.equals(sClassName)  //or it is the struct associated with CLASS_C
+              || sCLASS_C_name_s.equals(sClassName)
+              || sCLASS_C_name_i.equals(sClassName)
+            ) )
           { boolean cppClass = sSemantic.equals("classDef");
             ConverterClass converterClass = new ConverterClass(null);
             converterClass.convertClass(sClassName, sStructName, null, null, resultItem, sFileNameRelative, cppClass); //, typesInFile);  //this is a class or struct.

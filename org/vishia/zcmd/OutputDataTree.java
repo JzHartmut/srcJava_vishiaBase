@@ -1,7 +1,7 @@
 package org.vishia.zcmd;
 
 
-import org.vishia.cmd.JZcmdTester;
+import org.vishia.cmd.JZtTester;
 
 /**Writes a data tree to a text file maybe in XML format.
  * @author Hartmut Schorrig
@@ -11,7 +11,7 @@ public class OutputDataTree {
   
   /**Version, history and license.
    * <ul>
-   * <li>2014-06-29 Hartmut chg now all methods are static and part of {@link JZcmdTester}.
+   * <li>2014-06-29 Hartmut chg now all methods are static and part of {@link JZtTester}.
    * <li>2013-07-28 Hartmut chg/new: dataTree now writes XML
    * <li>2013-03-10 Hartmut chg/new: dataTree supports superclass content.
    * <li>2012-12-00 Hartmut improved: dataTree circular references with @ 1234 (address) to mark it.

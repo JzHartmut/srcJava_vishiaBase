@@ -16,14 +16,14 @@ import java.util.TreeMap;
 
 import javax.script.ScriptException;
 
-import org.vishia.cmd.JZcmdExecuter;
+import org.vishia.cmd.JZtExecuter;
+import org.vishia.jztcmd.JZtcmd;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.DataShow;
 import org.vishia.util.FilePath;
 import org.vishia.util.FileSystem;
 import org.vishia.zbnf.ZbnfJavaOutput;
-import org.vishia.zcmd.JZcmd;
 import org.vishia.zcmd.Zbnf2Text;
 
 
