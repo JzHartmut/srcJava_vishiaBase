@@ -1,13 +1,13 @@
-package org.vishia.jztcmd;
+package org.vishia.jzTc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class JZtUtil
+public class JzTcUtil
 {
   
-  protected static JZtUtil singleton = new JZtUtil();
+  protected static JzTcUtil singleton = new JzTcUtil();
   
   protected PrintStream systemOutOld, systemErrOld;
   protected ByteArrayOutputStream consoleOut = new ByteArrayOutputStream();

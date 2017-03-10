@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.cmd.JZtExecuter;
-import org.vishia.jztcmd.JZtcmd;
+import org.vishia.cmd.JzTcExecuter;
+import org.vishia.jzTc.JzTc;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.FileSystem;
 import org.vishia.zbnf.ZbnfJavaOutput;
@@ -63,8 +63,8 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
  * For Zmake see {@linkplain www.vishia.org/ZBNF/sf/docu/Zmake.html}.
  * <br>
  * This class can be downloaded from {@linkplain www.sf.net/projects/zbnf}
- * @see JZtcmd
- * @see JZtExecuter
+ * @see JzTc
+ * @see JzTcExecuter
  * @author Hartmut Schorrig
  *
  */

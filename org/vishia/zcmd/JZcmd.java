@@ -2,13 +2,13 @@ package org.vishia.zcmd;
 
 import javax.script.ScriptException;
 
-import org.vishia.jztcmd.JZtcmd;
+import org.vishia.jzTc.JzTc;
 
-/**This class is the old form of JZtcmd for compatibility. See {@link JZtcmd}
+/**This class is the old form of JZtcmd for compatibility. See {@link JzTc}
  * @author Hartmut Schorrig
  *
  */
-@Deprecated public class JZcmd extends JZtcmd
+@Deprecated public class JZcmd extends JzTc
 {
 
   public JZcmd()  throws ScriptException {
@@ -16,9 +16,9 @@ import org.vishia.jztcmd.JZtcmd;
   }
   
   
-  public static void main(String [] sArgs){ JZtcmd.main(sArgs); }
+  public static void main(String [] sArgs){ JzTc.main(sArgs); }
   
-  public static int smain(String[] sArgs) throws ScriptException { return JZtcmd.smain(sArgs); }
+  public static int smain(String[] sArgs) throws ScriptException { return JzTc.smain(sArgs); }
   
   
   

@@ -10,9 +10,9 @@ import java.util.List;
 
 import javax.script.ScriptException;
 
-import org.vishia.cmd.JZtExecuter;
-import org.vishia.cmd.JZtScript;
-import org.vishia.jztcmd.JZtcmd;
+import org.vishia.cmd.JzTcExecuter;
+import org.vishia.cmd.JzTcScript;
+import org.vishia.jzTc.JzTc;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
@@ -25,8 +25,8 @@ import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
 
 /**This class reads any input text file with given syntay and creates a translated file from that data.
- * It uses a {@link JZtScript} to describe the text generation and the {@link JZtExecuter} to generate the text.
- * The translator from the generate control script is parsed with {@link JZtcmd} contained in this package.
+ * It uses a {@link JzTcScript} to describe the text generation and the {@link JzTcExecuter} to generate the text.
+ * The translator from the generate control script is parsed with {@link JzTc} contained in this package.
  * The translation process is full script controlled. Therewith the user can define and change the translation 
  * without study the complexly parsing and translation algorithm in Java, only adapt the maybe given scripts or writing 
  * own scripts based on examples and the knowledge of the script syntax.
@@ -53,7 +53,7 @@ public class Zbnf2Text extends Zbnf2Xml
   /**Version, history and license.
    * <ul>
    * <li>2014-02-16 Hartmut chg: Argument -currdir=PATH for command line invocation {@link #main(String[])}
-   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.JZtExecuter.ExecuteLevel)}
+   * <li>2013-10-27 Hartmut chg: {@link #jbatch(String, org.vishia.cmd.JzTcExecuter.ExecuteLevel)}
    * <li>2012-10-03 created. Backgorund was the {@link org.vishia.zmake.Zmake} generator, but that is special for make problems.
    *   A generator which converts ZBNF-parsed data from an Java data context to output texts in several form, documenation, C-sources
    *   was need.
@@ -88,7 +88,7 @@ public class Zbnf2Text extends Zbnf2Xml
   static final public String sVersion = "2014-02-16";
 
   public interface PreparerParsedData{
-    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZtScript zgenscript, JZtExecuter zgen);
+    void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JzTcScript zgenscript, JzTcExecuter zgen);
   }
   
 
@@ -139,7 +139,7 @@ public class Zbnf2Text extends Zbnf2Xml
   
   
   PreparerParsedData setZbnfResult = new PreparerParsedData(){
-    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JZtScript zgenscript, JZtExecuter zgen)
+    @Override public void prepareParsedData(XmlNode xmlResult, ZbnfParseResultItem zbnfResult, JzTcScript zgenscript, JzTcExecuter zgen)
     { try{ 
         zgen.initialize(zgenscript, true, console.currdir());
         zgen.setScriptVariable("data", 'O', xmlResult, true);
@@ -191,7 +191,7 @@ public class Zbnf2Text extends Zbnf2Xml
       for(Zbnf2Text.Out outArgs: args.listOut){
         File fOut = new File(outArgs.sFileOut);
         File fileScript = new File(outArgs.sFileScript);
-        JZtExecuter generator = new JZtExecuter(console);
+        JzTcExecuter generator = new JzTcExecuter(console);
         if(outData !=null) {
           //outData.append("===================").append(outArgs.sFileScript);
         }
@@ -200,7 +200,7 @@ public class Zbnf2Text extends Zbnf2Xml
         try{ 
           //The generation script:
           //
-          JZtScript genScript = JZtcmd.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
+          JzTcScript genScript = JzTc.translateAndSetGenCtrl(fileScript, checkXmlOutGenCtrl, console);
           //
           //preparation as callback:
           //
