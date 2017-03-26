@@ -69,6 +69,7 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2017-03-25 Hartmut chg: The syntax item for a parse result is stored in the {@link ParseResultItemImplement#syntaxItem()}.
    * <li>2014-06-17 Hartmut chg: new {@link BuilderTreeNodeXml} with attributes {@link BuilderTreeNodeXml#bXmlSrcline}
    *   and bXmlSrctext controls whether srcline="xx" and srctext="text" will be written to a XML output. 
    * <li>2014-05-23 Hartmut chg: use {@link StringPart#getLineAndColumn(int[])} instead getLineCt() and {@link StringPart#getCurrentColumn()}
@@ -122,7 +123,7 @@ class ZbnfParserStore
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de, www.vishia.org
    * 
    */
-  public static final String sVersion = "2014-06-17";
+  public static final String sVersion = "2017-03-25";
 
   
   /** Constant to detect the entry describes a terminate symbol. -32767*/
@@ -187,6 +188,12 @@ class ZbnfParserStore
     
     /** The action to invoke.*/
     final String sSemantic;
+    
+    final ZbnfSyntaxPrescript syntaxElement;
+    
+    /**Replacement for a non existing syntaxElement instead null-reference. */
+    final static ZbnfSyntaxPrescript null_syntaxElement = new ZbnfSyntaxPrescript(null, 0);
+    
     /** The text from input at the position*/
     String sInput;
 
@@ -243,7 +250,7 @@ class ZbnfParserStore
     XmlNode treeNodeXml = null;
     
     
-    ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax)
+    ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax, ZbnfSyntaxPrescript syntaxElement)
     { this.store = store;
       int posValue = sSemantic.indexOf('='); 
       if(posValue>0){  //set a value with the given semantic in form "semantic=value"
@@ -256,6 +263,7 @@ class ZbnfParserStore
       }
       this.parent = (ParseResultItemImplement)parent;
       this.syntaxIdent = syntax;
+      this.syntaxElement = syntaxElement;
     }
 
 
@@ -428,7 +436,7 @@ class ZbnfParserStore
     
     @Override
     protected ParseResultItemImplement clone()
-    { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null, null);
+    { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null, null, syntaxElement);
       item.kind = kind;
       item.nrofAlternative = nrofAlternative;
       item.parsedFloatNumber = parsedFloatNumber;
@@ -724,6 +732,8 @@ class ZbnfParserStore
         }
       }
 
+    
+    public ZbnfSyntaxPrescript syntaxItem() { return syntaxElement == null ? null_syntaxElement : syntaxElement; }
 
   }
 
@@ -803,12 +813,14 @@ class ZbnfParserStore
    * @param nColumn
    * @return The position of this entry, using for rewind(posititon);
    */
-  private ParseResultItemImplement add(String sSemantic, CharSequence sInput, int nAlternative, long start, long end, int srcLine, int srcColumn, String srcFile, ZbnfParseResultItem parent)
-  { if(sSemantic.equals("textOut"))
-      stop();
-    if(srcLine == 47 && srcColumn == 12)
-      stop();
-    item = new ParseResultItemImplement(this, sSemantic, parent, "?");
+  ParseResultItemImplement add(String sSemantic, ZbnfSyntaxPrescript syntaxElement
+      , CharSequence sInput, int nAlternative, long start, long end, int srcLine, int srcColumn, String srcFile
+     , ZbnfParseResultItem parent)
+  { //if(sSemantic.equals("textExprTEST"))
+    //  stop();
+    //if(srcLine == 726 ) //&& srcColumn == 7)
+    //  stop();
+    item = new ParseResultItemImplement(this, sSemantic, parent, "?", syntaxElement);
     item.sInput = sInput == null ? null : sInput.toString();
     if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
       item.parsedString = item.sInput;
@@ -838,14 +850,6 @@ class ZbnfParserStore
     //return items.size() -1;  //position of the entry
   }
 
-
-  ParseResultItemImplement addAlternative(String sSemantic, int type, ZbnfParseResultItem parent, StringPart input)
-  { if(input ==null){
-      return add(sSemantic, null, type, 0,0, -1, -1, null, parent);
-    } else {
-      return add(sSemantic, null, type, 0,0, input.getLineAndColumn(column), column[0], input.getInputfile(), parent);
-    }
-  }
 
   /** Sets the number of the alternative into a existing item.
    * The item is to be added on begin of parsing the part, and the
@@ -881,23 +885,23 @@ class ZbnfParserStore
   }
   
   
-  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
-  { return add(sSemantic, null, countRepetition, start, end, nLine, nColumn, sFile, parent);
+  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, ZbnfSyntaxPrescript syntaxElement, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(sSemantic, syntaxElement, null, countRepetition, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
-  { return add(sSemantic, null, -countRepetition, start, end, nLine, nColumn, sFile, parent);
+  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, ZbnfSyntaxPrescript syntaxElement, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(sSemantic, syntaxElement, null, -countRepetition, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addConstantSyntax(String sInput, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
-  { return add(null, sInput, kTerminalSymbol, start, end, nLine, nColumn, sFile, parent);
+  ParseResultItemImplement addConstantSyntax(ZbnfSyntaxPrescript syntaxElement, String sInput, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(null, syntaxElement, sInput, kTerminalSymbol, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addSemantic(String sSemantic, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  { return add(sSemantic, null, kOnlySemantic, 0,0, srcLine, srcColumn, srcFile, parent);
+  ParseResultItemImplement addSemantic(String sSemantic, ZbnfSyntaxPrescript syntaxElement, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
+  { return add(sSemantic, syntaxElement, null, kOnlySemantic, 0,0, srcLine, srcColumn, srcFile, parent);
   }
 
 
@@ -906,12 +910,12 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfSyntaxPrescript syntaxElement, ZbnfParseResultItem parent)
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
     int nLine = spInput.getLineAndColumn(column);
     String sFile = spInput.getInputfile();
-    return add(sSemantic, spInput.getCurrentPart().toString(), kString, start, end, nLine, column[0], sFile, parent);
+    return add(sSemantic, syntaxElement, spInput.getCurrentPart().toString(), kString, start, end, nLine, column[0], sFile, parent);
   }
 
   /** Adds a founded string to the parsers store. It is called at as the issue of
@@ -919,12 +923,12 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(CharSequence src, String sSemantic, StringPart spInput, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  { return add(sSemantic, src, kString, -1, -1, srcLine, srcColumn, srcFile, parent);
+  ParseResultItemImplement addString(CharSequence src, String sSemantic, ZbnfSyntaxPrescript syntaxElement, StringPart spInput, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
+  { return add(sSemantic, syntaxElement, src, kString, -1, -1, srcLine, srcColumn, srcFile, parent);
   }
 
-  void addIdentifier(String sSemantic, String sIdent, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  { item = new ParseResultItemImplement(this, sSemantic, parent, "$");
+  void addIdentifier(String sSemantic, ZbnfSyntaxPrescript syntaxElement, String sIdent, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
+  { item = new ParseResultItemImplement(this, sSemantic, parent, "$", syntaxElement);
     item.sInput = null;
     item.kind = kIdentifier;
     item.parsedString = sIdent;
@@ -942,8 +946,8 @@ class ZbnfParserStore
   }
 
 
-  void addIntegerNumber(String sSemantic, long number, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement( this, sSemantic, parent, "#");
+  void addIntegerNumber(String sSemantic, ZbnfSyntaxPrescript syntaxElement, long number, ZbnfParseResultItem parent)
+  { item = new ParseResultItemImplement( this, sSemantic, parent, "#", syntaxElement);
     item.sInput = null;
     item.kind = kIntegerNumber;
     item.parsedIntegerNumber = number;
@@ -957,8 +961,8 @@ class ZbnfParserStore
   }
 
 
-  void addFloatNumber(String sSemantic, double number, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement( this, sSemantic, parent, "#f");
+  void addFloatNumber(String sSemantic, ZbnfSyntaxPrescript syntaxElement, double number, ZbnfParseResultItem parent)
+  { item = new ParseResultItemImplement( this, sSemantic, parent, "#f", syntaxElement);
     item.sInput = null;
     item.kind = kFloatNumber;
     item.parsedFloatNumber = number;
@@ -1067,7 +1071,7 @@ class ZbnfParserStore
    * @return the position of the item in array list.
    */
   int xxxaddComponent(String sSemantic, ZbnfParseResultItem parent, String syntaxIdent)
-  { item = new ParseResultItemImplement(this, sSemantic, parent, syntaxIdent);
+  { item = new ParseResultItemImplement(this, sSemantic, parent, syntaxIdent, null);
     item.kind = kComponent;
     item.idxOwn = items.size();
     if(item.idxOwn == 221)

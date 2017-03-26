@@ -26,6 +26,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.vishia.util.DataAccess;
+import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartScan;
 
@@ -222,6 +224,9 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2017-03-25 Hartmut new: Possibility to add attributes to the syntax item. See ZBNF-core-Documentation, using <...?.name=value?...>
+   *   new: {@link #getAttribute(String)}. 
+   *   Another approach, indent for text, is processed in jzTc. It may be possible to do that in the parser already?
    * <li>2015-12-29 Hartmut new: Possibility for debug: Write <code> <...?%...> in Syntax, then {@link ZbnfSyntaxPrescript#bDebugParsing} is set for this item.
    *  It can be tested here to set a specific debug breakpoint for parsing this element. Only for special debugging problems. 
    * <li>2013-09-07 Hartmut new: Now it distinguishs between terminal symbols which are searched in the comment
@@ -247,7 +252,7 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String version = "2015-12-29";
+  public static final String version = "2017-03-25";
   
   /** Kind of syntay type of the item */
   int eType;
@@ -307,9 +312,17 @@ public class ZbnfSyntaxPrescript
   /** Float-Factor see attribute kFloatToInt */
   double nFloatFactor = 1.0;
 
-  /** Ident number, auto generated, to store in the founded users syntax tree.*/
+  /** Identification number, auto generated, to store in the founded users syntax tree.*/
   protected int nodeIdent;
 
+  /**0 or a usual negative number to define the indentation for a parsed text.
+   * For example in jzTc:
+   * \\<:\\><textExpr?|-3> The indentation is -3 shift left from <textExpr>
+   */
+  //int indentDiff;
+  
+  /**If not null, than attributes of this item. */
+  Map<String, String> attributes = null;
 
   /**Identificator of the sub-syntax. It is the part before ::=
    * <ul>
@@ -339,7 +352,7 @@ public class ZbnfSyntaxPrescript
   private final String sCommentStart1, sCommentStart2;
   
   /**Set to stop parsing on this item. Write <...?%...> to set it. Set breakpoint where bDebugParsing was set or checked.  */
-  boolean bDebugParsing;
+  public boolean bDebugParsing;
   
   /** The syntax of this element.*/
   //final Syntax syntaxLists;
@@ -712,16 +725,16 @@ public class ZbnfSyntaxPrescript
         this.eType = eType;
       }
 
-      { if( (cc = spInput.getCurrentChar()) == '?')
-        { spInput.seek(1);
-          getSemantic(spInput);
-        }
-        else
-        { //no question mark in <...?...>
-          sSemantic = "@";  //use the semantic of the component if no special setting behind ? (<...?Semantic>)
+      sSemantic = "@";  //default: use the semantic of the component if no special setting behind ? (<...?Semantic>)
+      while( (cc = spInput.getCurrentChar()) == '?')
+      { spInput.seekPos(1);
+        if(spInput.getCurrentChar() == '.') {
+          getAttribute(spInput);
+        } else {
+          getSemantic(spInput);  //Note: more as one semantic, the last wins.
         }
       }
-
+      
       if( (cc = spInput.getCurrentChar()) == '>')
       { spInput.seek(1);
       }
@@ -766,10 +779,10 @@ public class ZbnfSyntaxPrescript
   }
 
   /** Constructor only fills the data.*/
-  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, int type)
+  ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, int type)
   { eType = type;
-    this.sCommentStart1 = parent.sCommentStart1;
-    this.sCommentStart2 = parent.sCommentStart2;
+    this.sCommentStart1 = parent ==null ? null : parent.sCommentStart1;
+    this.sCommentStart2 = parent ==null ? null : parent.sCommentStart2;
     this.parent =parent;
     //syntaxLists = null;
     report = null;
@@ -856,7 +869,7 @@ public class ZbnfSyntaxPrescript
       }
       else
       { //behind ? the semantic is defined. It may be a null-Semantic.
-        spInput.lentoAnyChar(">");
+        spInput.lentoAnyChar("?>");
         if(spInput.length()>0)
         { sSemantic = spInput.getCurrentPart().toString();
         }
@@ -872,6 +885,34 @@ public class ZbnfSyntaxPrescript
     if(sSemantic != null && sSemantic.equals("return"))
       stop();
   }
+  
+  
+  
+  void getAttribute(StringPartScan spInput)
+  throws ParseException
+  {
+    spInput.seekPos(1).lentoIdentifier();
+    String name = spInput.getCurrentPart().toString();
+    if(name.length() ==0) { throwParseException(spInput, "semantic attribute identifier expected"); }
+    char cc = spInput.fromEnd().getCurrentChar();
+    if(cc !='='){ throwParseException(spInput, "attribute value expected, note: no spaces between @name=value"); }
+    spInput.seekPos(1).lentoAnyChar("?>");
+    if(!spInput.found()){ throwParseException(spInput, "> or ? missed for attribute value"); }
+    CharSequence svalue = spInput.getCurrentPart();
+    spInput.fromEnd();
+    String value;
+    if(svalue.length() >=2 && svalue.charAt(0) == '\"') {
+      value = svalue.subSequence(1,  svalue.length()-1).toString();  //assume " on end, yet not checked.
+    } else {
+      value = svalue.toString();
+    }
+    if(attributes == null) {
+      attributes = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
+    }
+    attributes.put(name, value);
+  }
+  
+  
   
   /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
   void stop()
@@ -1519,11 +1560,18 @@ public class ZbnfSyntaxPrescript
   ZbnfSyntaxPrescript getRepetitionBackwardPrescript()
   { if(this instanceof RepetitionSyntax)
     { return ((ZbnfSyntaxPrescript.RepetitionSyntax)this).backward;
-
     }
     else return null;  //the user may be check if it is an OptionSyntax.
   }
 
+  
+  /**Reads an attribute of this syntax item. An attribute is given by syntax:
+   * <code><...?.name=value?...></code>. Write a dot after the asterisk.
+   * The attribute can be used in evaluating a parse result by the application.
+   * @param name
+   * @return
+   */
+  public String getAttribute(String name){ return attributes == null ? null: attributes.get(name); }
 
   /**Shows the content in a readable format for debugging. */
   @Override

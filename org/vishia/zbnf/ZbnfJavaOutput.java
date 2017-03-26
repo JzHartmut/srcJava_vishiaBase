@@ -49,6 +49,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.SetLineColumn_ifc;
@@ -178,6 +179,9 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2017-03-25 Hartmut new It is possible that the user provides a method <code>new_semantic(ZbnfParseResultItem zbnfItem)</code>.
+   *   Then the parse result item is supplied. The application can evaluate both the {@link ZbnfParseResultItem} or the {@link ZbnfParseResultItem#syntaxItem()}
+   *   for more informations. Especially the {@link ZbnfSyntaxPrescript#getAttribute(String)} can be used.
    * <li>2016-01-17 Hartmut new {@link #parseFileAndFillJavaObject(Class, Object, String, String, String, File)} with simple string given input an syntax.
    * <li>2015-12-06 Hartmut new {@link #parseFileAndFillJavaObject(Class, Object, File, StringPartScan, File)} with the directory of scripts to include. 
    * <li>2015-05-27 Hartmut improved output on method not found.
@@ -224,7 +228,7 @@ public final class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public static final String sVersion = "2016-01-17";
+  public static final String sVersion = "2017-03-25";
   
   /**Helper Instance to bundle a class to search methods or fields and the associated instance.
    * It is the destination to search elements via semantic in its {@link #clazz} and store the data in the {@link #instance}.
@@ -492,7 +496,7 @@ public final class ZbnfJavaOutput
             //Search an instance (field or method result) which represents the semantic of the component. 
             // That instance will be used to fill the parse result of the component.
             DstInstanceAndClass dstChild = searchComponentsDestination
-              ( semantic                //the semantic of the component.
+              ( semantic, childItem                //the semantic of the component.
               , dst    //instance where the field or method for the component should be found.
               );
             if(dstChild != null) {
@@ -516,12 +520,13 @@ public final class ZbnfJavaOutput
   
   /**Searches a method with given Name and given argument types in the class
    * or in its super-classes and interfaces.
+   * @param retVariant null or int[]. retVariant[0] will be set with the variant of argTypesVariants.
    * @param outputClass
    * @param name
    * @param argTypesVariants
    * @return the method or null if it isn't found.
    */
-  private Method searchMethod(Class<?> outputClass, String name, Class<?>[][] argTypesVariants)      
+  private Method searchMethod(int[] retVariant, Class<?> outputClass, String name, Class<?>[][] argTypesVariants)      
   { Method method;
     //System.out.println("ZbnfJavaOutput - search method; " + name + "; in class; " + outputClass.getName());
     do
@@ -532,6 +537,9 @@ public final class ZbnfJavaOutput
         catch(NoSuchMethodException exception){ 
           method = null; 
           //System.out.println("ZbnfJavaOutput - search method, not found, try argument types; " + name + "; in class; " + outputClass.getName());
+        }
+        if(method !=null && retVariant !=null) {
+          retVariant[0] = ixArgTypes;
         }
       } 
       while(  method == null               //not found 
@@ -568,16 +576,30 @@ public final class ZbnfJavaOutput
    *   the special properties of the derived type are not used to store the parse result, only the return type is substantial.  
    * @throws IllegalAccessException if any error occurs in the found method.
    */
-  protected DstInstanceAndClass searchCreateMethod(Class<?> inClazz, Object instance, String semantic, DstInstanceAndClass parent) 
+  protected DstInstanceAndClass searchCreateMethod(Class<?> inClazz, Object instance, String semantic
+      , DstInstanceAndClass parent, ZbnfParseResultItem zbnfElement) 
       //throws IllegalArgumentException, IllegalAccessException
   throws IllegalAccessException
   {
-    Method method = searchMethod(inClazz, "new_" + semantic, new Class[1][0]);
+    if(semantic.equals("textExprTEST"))
+      Debugutil.stop();
+    Class<?>[][] argtypes = new Class[2][];
+    argtypes[0]= null;
+    argtypes[1] = new Class[1];
+    argtypes[1][0] = ZbnfParseResultItem.class;
+    int[] ixVariant = new int[1];
+    Method method = searchMethod(ixVariant, inClazz, "new_" + semantic, argtypes); //new Class[1][0]);
     if(method != null)
     { final Class<?> childClass = method.getReturnType();
       final Object childOutputInstance;
-      Object[] noParam = null; //without param.
-      try{ childOutputInstance = method.invoke(instance, noParam); }
+      Object[] param;
+      if(ixVariant[0] == 0) {
+        param = null; //without param.
+      } else {
+        param = new Object[1];
+        param[0] = zbnfElement;
+      }
+      try{ childOutputInstance = method.invoke(instance, param); }
       catch(Exception exc)
       { //throw new IllegalAccessException("exception inside: " + method.toString()); 
         throw new RuntimeException("exception inside: " + method.toString(), exc);
@@ -610,9 +632,9 @@ public final class ZbnfJavaOutput
     Class<?> inClazz = inClazz0;
     Method method = null;
     do {
-      method = searchMethod(inClazz, "set_" + semantic, argtypes);
+      method = searchMethod(null, inClazz, "set_" + semantic, argtypes);
       if(method == null)
-      { method = searchMethod(inClazz, "add_" + semantic, argtypes);
+      { method = searchMethod(null, inClazz, "add_" + semantic, argtypes);
       }
       if(method != null)
       { Object[] argMethod = new Object[1];
@@ -668,7 +690,7 @@ public final class ZbnfJavaOutput
    * @throws IllegalAccessException If a problem with the field or method exists, especially the field or method should be public!
    * @throws InstantiationException If a problem calling the new_-method exists. 
    */
-  protected DstInstanceAndClass searchComponentsDestination(String semantic
+  protected DstInstanceAndClass searchComponentsDestination(String semantic, ZbnfParseResultItem zbnfItem
     , DstInstanceAndClass parentDst) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { /**The returned instance if resultItem is null, and the field is searched. */
@@ -677,16 +699,16 @@ public final class ZbnfJavaOutput
     String semanticLowerCase = null;
     if(posSeparator >0)
     { String sematicFirst = semantic.substring(0, posSeparator);
-      child = searchComponentsDestination(sematicFirst, parentDst);
+      child = searchComponentsDestination(sematicFirst, zbnfItem, parentDst);
       String semanticRest = semantic.substring(posSeparator+1);
       //Class outputClassRest = outputInstanceRest.getClass();
-      return searchComponentsDestination(semanticRest, new DstInstanceAndClass(parentDst, semantic, child.instance, child.clazz, false));
+      return searchComponentsDestination(semanticRest, zbnfItem, new DstInstanceAndClass(parentDst, semantic, child.instance, child.clazz, false));
     }
     else
     { final Class<?> clazz1 = parentDst.instance instanceof GetTypeToUse ? ((GetTypeToUse)parentDst.instance).getTypeToUse() : parentDst.clazz; //instance.getClass(); //search in the class
       Class<?> clazz = clazz1;
       do {
-        child = searchCreateMethod(clazz, parentDst.instance, semantic, parentDst);
+        child = searchCreateMethod(clazz, parentDst.instance, semantic, parentDst, zbnfItem);
         
         if(child == null)
         { //if(!bOnlyMethods)
@@ -813,7 +835,7 @@ public final class ZbnfJavaOutput
     int posSeparator = semantic.lastIndexOf('/');
     if(posSeparator >0)
     { String sematicFirst = semantic.substring(0, posSeparator);
-      child = searchComponentsDestination(sematicFirst, destComponent);
+      child = searchComponentsDestination(sematicFirst, resultItem, destComponent);
       String semanticRest = semantic.substring(posSeparator+1);
       //NOTE: recursively call is necessary only because the destinationClass etc. are final.
       return searchDestinationAndWriteResult(semanticRest, destComponent, resultItem);
@@ -823,7 +845,7 @@ public final class ZbnfJavaOutput
       Class[][] argTypesVariants;
       if(resultItem == null)
       { //search a new_-Method
-        child = searchComponentsDestination(semantic, destComponent);
+        child = searchComponentsDestination(semantic, resultItem, destComponent);
       }
       else 
       { //writing of a simple element result
@@ -857,9 +879,9 @@ public final class ZbnfJavaOutput
           }
           Method method;
           final String sMethodToFind = destComponent.clazz.getCanonicalName()+ ".set_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
-          method = searchMethod(destComponent.clazz, "set_" + semantic, argTypesVariants);      
+          method = searchMethod(null, destComponent.clazz, "set_" + semantic, argTypesVariants);      
           if(method == null)
-          { method = searchMethod(destComponent.clazz, "add_" + semantic, argTypesVariants);      
+          { method = searchMethod(null, destComponent.clazz, "add_" + semantic, argTypesVariants);      
           }
           if(method != null)
           { //invoke the method with the given matching args.

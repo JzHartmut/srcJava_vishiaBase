@@ -271,4 +271,12 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
    */
   Iterator<ZbnfParseResultItem> iteratorChildren();
   
+  
+  /**Returns the syntax item to this element. 
+   * @return It returns never null. If the syntax item is not stored, an empty default syntax item is returned. The semantic etc.
+   * inside this null-item is null. 
+   */
+  ZbnfSyntaxPrescript syntaxItem();
+  
+  
 }

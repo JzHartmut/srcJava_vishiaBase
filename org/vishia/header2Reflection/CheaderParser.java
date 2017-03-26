@@ -612,6 +612,8 @@ public class CheaderParser {
     
     public boolean pointer2;
     
+    public String modifier;
+    
     /**Modifier const* and const**. */
     public boolean constPointer, constPointer2; 
     

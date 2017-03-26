@@ -3,11 +3,11 @@ package org.vishia.jzTc;
 import org.vishia.cmd.JzTcExecuter;
 import org.vishia.cmd.JzTcScript;
 
-/**This class contains the syntax as ZBNF string for a JZcmd script.
+/**This class contains the syntax as ZBNF string for a jzTc script.
  * See {@link JzTc}, {@link JzTcScript}, {@link JzTcExecuter}.
  * The syntax can be shown by command line
  * <pre>
- * java path/to/zbnf.jar org.vishia.zcmd.JZcmd --help
+ * java path/to/zbnf.jar org.vishia.jzTc.JzTc --help
  * </pre>
  * @author Hartmut Schorrig
  *
@@ -17,6 +17,9 @@ public final class JzTcSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-03-25 Hartmut renaming jzTc, attribute ?.indent=-3 for textExpr  
+   * <li>2017-03-11 Hartmut <:indent:3=> for indentation of a generated text.
+   * <li>2017-03-11 Hartmut renaming jzTc instead jzcmd. It is Java z Text command 
    * <li>2017-01-07 Hartmut new In a <code>textExpr::=</code> now <code><{ <statementBlock?> }></code> 
    *   and <code><:<DefVariable?>\\></code> can be written inside. It is documented in JZcmd description.
    * <li>2017-01-07 Hartmut chg: Comment in <code>textExpr::=</code> is now <code><:---> comment <---></comment> 
@@ -115,12 +118,13 @@ public final class JzTcSyntax {
     + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | not | NOT | and | AND | or | OR \n"
     + "   | throw . \n"
     + " \n"
-    + " JZcmd::= \n"
-    + " [<*|==ZGen==?>==ZGen== ]\n"
-    + " [<*|==JZcmd==?>==JZcmd== ]\n"
+    + " jzTc::= \n"
+    + " [<*|==jzTc==?>==jzTc== ]\n"
+    + " [<*|==JZcmd==?>==JZcmd== ]\n"  //deprecated further valid.
     //+ " [<*|//JZcmd?>//JZcmd ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
-    + " [{ ! checkJZcmd = <textValue?checkJZcmdFile> ; \n"
+    + " [{ ! checkjzTc = <textValue?checkJZcmdFile> ; \n"
+    + "  | ! checkJZcmd = <textValue?checkJZcmdFile> ; \n"
     + "  | ! checkXml = <textValue?checkXmlFile> ; \n"
     + " }]\n"
     + " [{ [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
@@ -130,6 +134,7 @@ public final class JzTcSyntax {
     + " { [//] ==endJZcmd==<*\\e?> \n"
     //+ " | //endJZcmd<*\\e?> \n"
     + " | [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
+    + " | //jzTc       ##ignore //jzTc, it may be a comment for another language\n"
     + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*\\n\\r?> ##line comment in C style\n"
     + " | /*<*|*/?>*/ ##block commment in C style\n"
@@ -164,6 +169,7 @@ public final class JzTcSyntax {
     + "   \\{ [<statementBlock>] \\} \n"
     + " | REM <*\\n\\r?> ##Remark like in batch files\n"
     + " | ::{:}                ##Skip over :::\n"
+    + " | //jzTc       ##ignore //jzTc, it may be a comment for another language\n"
     + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*|\\n|\\r|\\<+?>     ##line commment in C style but only till <+\n"
     + " | /*<*|*/?>*/          ##block commment in C style\n"
@@ -196,7 +202,7 @@ public final class JzTcSyntax {
     + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" 
     + " | \\<+:append\\><textExpr?appendTextOut>\\<\\.+\\> \n" 
     + " | \\<+ <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
-    + " | \\<:\\><textExpr>\\<\\.\\> [;] \n"
+    + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  
     + " | <assignExpr> \n"
     + " | ; \n"
@@ -266,7 +272,7 @@ public final class JzTcSyntax {
     + " \n"
     + " DefFileset::= <definePath?defVariable> [ =  ( \n"
     + " [ commonpath = [<\"\"?commonPath>|<*;,)(\\ \\r\\n?commonPath>] , ] \n"
-    + " { [{ //JZcmd | //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
+    + " { [{ //JZcmd | //jzTc | //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
     + " ) ] .\n"
     + " \n"
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
@@ -417,6 +423,7 @@ public final class JzTcSyntax {
     + " | \\#\\#<*\\r\\n?>   ##comment to eol in a text Expression\n"
     + " | \\<:\\{  <statementBlock?>  <!\\\\s*>  \\}\\>  ##one or more statements inside a text expression, do not produce an output text. \n" ////
                                     //<!\\\\s*>  Note: on end of <statementBlock> white spaces should be skipped!
+    + " | \\<:indent:[<#?nIndent>][[?\\>]<!\\.?cIndent>]\\>\n"
     + " | \\<:for:<forInText?forCtrl>\n"
     + " | \\<:if: <ifInText?ifCtrl>\n"
     + " | \\<:hasNext\\> <textExpr?hasNext> \\<\\.hasNext\\>\n"
@@ -434,7 +441,7 @@ public final class JzTcSyntax {
     + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:<DefVariable?>\\>  \n"
-    + " | \\<:\\><textExpr?>\\<\\.\\>\n"               //flat nesting
+    + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"
     + " }.\n"
