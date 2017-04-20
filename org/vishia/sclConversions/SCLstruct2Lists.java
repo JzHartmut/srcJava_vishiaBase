@@ -19,9 +19,9 @@ import org.vishia.mainCmd.Report;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
 import org.vishia.util.ShortenString;
-import org.vishia.cmd.JzTcExecuter;
-import org.vishia.cmd.JzTcScript;
-import org.vishia.jzTc.JzTc;
+import org.vishia.cmd.JZtxtcmdExecuter;
+import org.vishia.cmd.JZtxtcmdScript;
+import org.vishia.jztxtcmd.JZtxtcmd;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
@@ -966,7 +966,7 @@ variablenBlock::=
      */
     protected boolean generateOutFiles(String sPathSrc) throws IOException, IllegalAccessException
     {
-      JzTcExecuter textGen = new JzTcExecuter(console);
+      JZtxtcmdExecuter textGen = new JZtxtcmdExecuter(console);
       textGen.setScriptVariable("scl", 'O', SCLstruct2Lists.this, true);
 
       if(output !=null){
@@ -1011,7 +1011,7 @@ variablenBlock::=
       Writer sclOut;
       //ZGen.Args argsZ = new ZGen.Args();
       //ZGen zbatch = new ZGen(argsZ, console);
-      JzTcScript genScript; // = new JbatchScript(textGen, console);
+      JZtxtcmdScript genScript; // = new JbatchScript(textGen, console);
       if(args.sFileScl != null){
         sclOut = new FileWriter(args.sFileScl);
         try{
@@ -1021,9 +1021,9 @@ variablenBlock::=
           }
           File fileCheck = args.sCheckXml == null ? null : new File(args.sCheckXml + "_checkCtrl.txt");
           if(args.sFileSclCtrl !=null){
-            genScript = JzTc.translateAndSetGenCtrl(fileSclCtrl, fileCheck, console);
+            genScript = JZtxtcmd.translateAndSetGenCtrl(fileSclCtrl, fileCheck, console);
           } else {
-            genScript = JzTc.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
+            genScript = JZtxtcmd.translateAndSetGenCtrl(sGenCtrlSclOamAssigment, console);
           }
           textGen.execute(genScript, true, false, sclOut, null);
         } catch(Throwable exc){ throw new RuntimeException(exc); }
@@ -1049,7 +1049,7 @@ variablenBlock::=
         File fileCheck = args.sCheckXml == null ? null : new File(args.sCheckXml + args.sFileOamVariablesCtrl + "_check.txt");
         sclOut = new FileWriter(args.sFileOamVariables);
         try{
-          genScript = JzTc.translateAndSetGenCtrl(fileSclCtrl, fileCheck, console);
+          genScript = JZtxtcmd.translateAndSetGenCtrl(fileSclCtrl, fileCheck, console);
           textGen.execute(genScript, true, false, sclOut, null);
         } catch(Throwable exc){ throw new RuntimeException(exc); }
         /*

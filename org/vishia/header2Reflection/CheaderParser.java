@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.cmd.JzTcExecuter;
-import org.vishia.jzTc.JzTc;
+import org.vishia.cmd.JZtxtcmdExecuter;
+import org.vishia.jztxtcmd.JZtxtcmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.FileSystem;
 import org.vishia.zbnf.ZbnfJavaOutput;
@@ -63,8 +63,8 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
  * For Zmake see {@linkplain www.vishia.org/ZBNF/sf/docu/Zmake.html}.
  * <br>
  * This class can be downloaded from {@linkplain www.sf.net/projects/zbnf}
- * @see JzTc
- * @see JzTcExecuter
+ * @see JZtxtcmd
+ * @see JZtxtcmdExecuter
  * @author Hartmut Schorrig
  *
  */
@@ -606,6 +606,11 @@ public class CheaderParser {
   {
     public String name;
     
+    /**Will be set if a type is given with a macro <code>MACRO(argument)</code>.
+     * This is usefully for special cases only.
+     */
+    public String macro;
+    
     public String forward;
     
     public boolean pointer;
@@ -614,8 +619,16 @@ public class CheaderParser {
     
     public String modifier;
     
+    public String macroArg;
+    
     /**Modifier const* and const**. */
     public boolean constPointer, constPointer2; 
+    
+    public void set_macro_arg(String arg) {
+      macroArg = arg;
+      macro = name;
+      name = null;
+    }
     
     @Override public String toString(){ return name; }
   }

@@ -135,7 +135,7 @@ public class ZbnfParser
    *   The change from 2015-06-07: {@link PrescriptParser#srcLineOption} is never used now. The idea in 2015 was: supply position for text indentation
    *   though the < subtext> item was written after a <:> (JZcmd, jzTc), the position of the options may be usefully. But that is a non-simple coherence.
    *   Now the position of a syntax item in the parsed text is written immediately in the parse result. The correction of the indentation is defined by an attribute
-   *   in the syntax. See {@link org.vishia.jzTc.JzTcSyntax} element <code>\\<:\\>< textExpr?.indent=-3></code>
+   *   in the syntax. See {@link org.vishia.jztxtcmd.JZtxtcmdSyntax} element <code>\\<:\\>< textExpr?.indent=-3></code>
    * <li>2017-01-07 Hartmut bugfix: missing {@link StringPartScan#scanStart()} in {@link PrescriptParser.SubParser#parseTerminalSymbol(ZbnfSyntaxPrescript, org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement)}.
    *   In follow of that an error in the terminal text shows an faulty position (the position from any scanStart() before). 
    *   An syntax error in the parsed text was not shown with the exact position. 

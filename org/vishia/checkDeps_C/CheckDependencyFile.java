@@ -369,6 +369,9 @@ public class CheckDependencyFile
   InfoFileDependencies processSrcfile(File fileSrc, final ObjectFileDeps objDeps, int recursiveCt, Map<String, String> idxOnce) 
   {
     InfoFileDependencies infoFile;
+    if(recursiveCt >=99){
+      throw new IllegalArgumentException("CheckDeps - recursion to deep;" + fileSrc.getAbsolutePath());
+    }
     try{
       String sFileSrcGenAbs = FileSystem.getCanonicalPath(fileSrc);
       String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
@@ -377,15 +380,13 @@ public class CheckDependencyFile
       //final File fileDeps = getFileDependencies(sLocalPath);
       //
       //create info for this file.
-      if(recursiveCt >=99)
-        stop();
       
       String sPathSrcCanonical = FileSystem.getCanonicalPath(fileSrc);
       infoFile = checkData.indexAllInclFilesAbsPath.get(sPathSrcCanonical);
       if(infoFile != null){
         //it is checked already.
       } else {
-        infoFile = checkDependenciesInputDepFile(sPathSrcCanonical, objDeps, recursiveCt, idxOnce);
+        infoFile = checkDependenciesInputDepFile(sPathSrcCanonical, objDeps, recursiveCt+1, idxOnce);
         if(infoFile == null){
           //dependency file not found. Build it while checking sources.
           infoFile = checkSource(fileSrc, sFileSrcGenAbs, fileSrcMirror

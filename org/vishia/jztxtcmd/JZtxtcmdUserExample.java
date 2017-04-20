@@ -1,4 +1,4 @@
-package org.vishia.jzTc;
+package org.vishia.jztxtcmd;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import org.vishia.util.DataAccess;
  * @author Hartmut Schorrig
  *
  */
-public class JzTcUserExample
+public class JZtxtcmdUserExample
 {
   public final String simpeTestFinalString = "the final simple test string.";
   
@@ -30,7 +30,7 @@ public class JzTcUserExample
   
   private final Appendable out2;
   
-  public JzTcUserExample(Appendable out){
+  public JZtxtcmdUserExample(Appendable out){
     //this.out = new PrintWriter(out);
     this.out2 = out;
     DataAccess.Variable<Object> var;

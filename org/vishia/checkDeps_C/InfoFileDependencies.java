@@ -16,6 +16,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.UnexpectedException;
 
@@ -159,8 +160,14 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
    * because it includes the child.
    * @param child It will be added to this.{@link #includingAllFiles}.
    */
-  void addAllParentDependency(InfoFileDependencies child, ObjectFileDeps objDeps)
+  void addAllParentDependency(InfoFileDependencies child, ObjectFileDeps objDeps, int nRecursion)
   {
+    if(nRecursion > 89){
+      Debugutil.stop();
+    }
+    if(nRecursion > 99){
+          throw new IllegalArgumentException("CheckDeps - recursion to deep for addAllParentDependencies;" + child.toString());
+    }
     child.includingAllFiles.put(sAbsolutePath, this);
     includedAllFiles.put(child.sAbsolutePath, child);      //this file includes the child.
     for(Map.Entry<String,InfoFileDependencies> allEntry: child.includedAllFiles.entrySet()){
@@ -174,7 +181,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
     }
     for(Map.Entry<String,InfoFileDependencies> parentEntry: includingPrimaryFiles.entrySet()){
       InfoFileDependencies parent = parentEntry.getValue();
-      parent.addAllParentDependency(child, objDeps);
+      parent.addAllParentDependency(child, objDeps, nRecursion +1);
     }
   }
   
@@ -187,7 +194,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
     if(child.isNewlyOrIncludedNewly()){
       notifyIncludedNewly(objDeps);
     }
-    addAllParentDependency(child, objDeps);
+    addAllParentDependency(child, objDeps, 0);
   }
 
   /**The fileMirror is copied from fileSrc, because the fileSrc is changed. */

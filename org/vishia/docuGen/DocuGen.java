@@ -16,8 +16,8 @@ import java.util.TreeMap;
 
 import javax.script.ScriptException;
 
-import org.vishia.cmd.JzTcExecuter;
-import org.vishia.jzTc.JzTc;
+import org.vishia.cmd.JZtxtcmdExecuter;
+import org.vishia.jztxtcmd.JZtxtcmd;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmd_ifc;
 import org.vishia.util.DataShow;

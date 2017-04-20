@@ -1,25 +1,25 @@
-package org.vishia.jzTc;
+package org.vishia.jztxtcmd;
 
-import org.vishia.cmd.JzTcExecuter;
-import org.vishia.cmd.JzTcScript;
+import org.vishia.cmd.JZtxtcmdExecuter;
+import org.vishia.cmd.JZtxtcmdScript;
 
-/**This class contains the syntax as ZBNF string for a jzTc script.
- * See {@link JzTc}, {@link JzTcScript}, {@link JzTcExecuter}.
+/**This class contains the syntax as ZBNF string for a JZtxtcmd script.
+ * See {@link JZtxtcmd}, {@link JZtxtcmdScript}, {@link JZtxtcmdExecuter}.
  * The syntax can be shown by command line
  * <pre>
- * java path/to/zbnf.jar org.vishia.jzTc.JzTc --help
+ * java path/to/zbnf.jar org.vishia.jztxtcmd.JZtxtcmd --help
  * </pre>
  * @author Hartmut Schorrig
  *
  */
-public final class JzTcSyntax {
+public final class JZtxtcmdSyntax {
 
   
   /**Version, history and license.
    * <ul>
-   * <li>2017-03-25 Hartmut renaming jzTc, attribute ?.indent=-3 for textExpr  
+   * <li>2017-03-25 Hartmut renaming JZtxtcmd, attribute ?.indent=-3 for textExpr  
    * <li>2017-03-11 Hartmut <:indent:3=> for indentation of a generated text.
-   * <li>2017-03-11 Hartmut renaming jzTc instead jzcmd. It is Java z Text command 
+   * <li>2017-03-11 Hartmut renaming JZtxtcmd instead jzcmd. It is Java z Text command 
    * <li>2017-01-07 Hartmut new In a <code>textExpr::=</code> now <code><{ <statementBlock?> }></code> 
    *   and <code><:<DefVariable?>\\></code> can be written inside. It is documented in JZcmd description.
    * <li>2017-01-07 Hartmut chg: Comment in <code>textExpr::=</code> is now <code><:---> comment <---></comment> 
@@ -118,8 +118,8 @@ public final class JzTcSyntax {
     + "   | break | XXXreturn | exit | onerror | instanceof | for | while | do | if | elsif | else | not | NOT | and | AND | or | OR \n"
     + "   | throw . \n"
     + " \n"
-    + " jzTc::= \n"
-    + " [<*|==jzTc==?>==jzTc== ]\n"
+    + " JZtxtcmd::= \n"
+    + " [<*|==JZtxtcmd==?>==JZtxtcmd== ]\n"
     + " [<*|==JZcmd==?>==JZcmd== ]\n"  //deprecated further valid.
     //+ " [<*|//JZcmd?>//JZcmd ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
@@ -134,7 +134,7 @@ public final class JzTcSyntax {
     + " { [//] ==endJZcmd==<*\\e?> \n"
     //+ " | //endJZcmd<*\\e?> \n"
     + " | [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
-    + " | //jzTc       ##ignore //jzTc, it may be a comment for another language\n"
+    + " | //JZtxtcmd       ##ignore //JZtxtcmd, it may be a comment for another language\n"
     + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*\\n\\r?> ##line comment in C style\n"
     + " | /*<*|*/?>*/ ##block commment in C style\n"
@@ -169,7 +169,8 @@ public final class JzTcSyntax {
     + "   \\{ [<statementBlock>] \\} \n"
     + " | REM <*\\n\\r?> ##Remark like in batch files\n"
     + " | ::{:}                ##Skip over :::\n"
-    + " | //jzTc       ##ignore //jzTc, it may be a comment for another language\n"
+    + " | =={=}                ##Skip over :::\n"
+    + " | //JZtxtcmd       ##ignore //JZtxtcmd, it may be a comment for another language\n"
     + " | //JZcmd      ##ignore //JZcmd, it may be a comment for another language\n"
     + " | //<*|\\n|\\r|\\<+?>     ##line commment in C style but only till <+\n"
     + " | /*<*|*/?>*/          ##block commment in C style\n"
@@ -272,7 +273,7 @@ public final class JzTcSyntax {
     + " \n"
     + " DefFileset::= <definePath?defVariable> [ =  ( \n"
     + " [ commonpath = [<\"\"?commonPath>|<*;,)(\\ \\r\\n?commonPath>] , ] \n"
-    + " { [{ //JZcmd | //jzTc | //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
+    + " { [{ //JZcmd | //JZtxtcmd | //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
     + " ) ] .\n"
     + " \n"
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
