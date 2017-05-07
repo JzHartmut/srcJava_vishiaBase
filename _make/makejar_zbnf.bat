@@ -9,7 +9,7 @@ REM examples of ZBNF are not included.
 REM set additional destination for zbnf.jar
 REM don't use drive letters. The drive is the current one. But start on root.
 set FCMD_DST=\vishia\Fcmd\sf\Fcmd\exe
-set ZBNFJAX_DST=\vishia\ZBNF\sf\ZBNF\zbnfjax
+set ZBNFJAX_DST=\vishia\ZBNF\zbnfjax
 set DST_Download=\vishia\Java\Download\exe
 
 REM The TMP_JAVAC is a directory, which contains only this compiling results. It will be clean in the batch processing.

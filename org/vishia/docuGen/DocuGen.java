@@ -1,8 +1,8 @@
 package org.vishia.docuGen;
 
 //==JZcmd==
-//JZcmd currdir = "D:/vishia/ZBNF/sf/ZBNF/examples_XML/DocuGenerationViaXML/docuSrc";
-//JZcmd java org.vishia.docuGen.DocuGen.main("D:/vishia/ZBNF/sf/ZBNF/examples_XML/DocuGenerationViaXML/docuSrc/_genDocu_docu.bat", "-zbnfjax:D:/vishia/ZBNF/sf/ZBNF/zbnfjax/");
+//JZcmd currdir = "D:/vishia/ZBNF/examples_XML/DocuGenerationViaXML/docuSrc";
+//JZcmd java org.vishia.docuGen.DocuGen.main("D:/vishia/ZBNF/examples_XML/DocuGenerationViaXML/docuSrc/_genDocu_docu.bat", "-zbnfjax:D:/vishia/ZBNF/zbnfjax/");
 //==endJZcmd==
 
 import java.io.File;

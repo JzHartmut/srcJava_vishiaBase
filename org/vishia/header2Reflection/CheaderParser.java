@@ -2,6 +2,7 @@ package org.vishia.header2Reflection;
 
 import java.io.File;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,8 @@ public class CheaderParser {
 
   /**Version, history and license.
    * <ul>
+   * <li>1017-05-06 JzHartmut new: {@link Type#baseName(String, String)} for usage in generation.
+   * <li>2017-05-01 JzHartmut new: adequate to the Cheader.zbnf, it can store a type definition with macro.
    * <li>2016-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
    *   Therefore the same class {@link StructDefinition} is used for {@link HeaderBlock#new_undefDefinition()} instead the older extra class UnionVariante.
    *   the {@link StructDefinition#isUnion} designates that it is a union in semantic. Using scripts should be changed.
@@ -248,8 +251,8 @@ public class CheaderParser {
   
     List<HeaderBlockEntry> entries = new LinkedList<HeaderBlockEntry>();
   
-    
-    
+    /**The last created entry in entries, to set something in. */
+    HeaderBlockEntry currEntry;
     
     
     public Define new_undefDefinition(){ return new Define(); }
@@ -287,6 +290,14 @@ public class CheaderParser {
     public AttributeOrTypedef new_attribute(){ return new AttributeOrTypedef(); }
     public void add_attribute(AttributeOrTypedef val){ entries.add(val); }
   
+    public AttribAsMacro new_macro(String name){ 
+      AttribAsMacro macro = new AttribAsMacro(name);
+      entries.add(macro );
+      return macro;
+    }
+    
+    
+    
     public MethodDef new_methodDef(){ return new MethodDef(); }
     public void add_methodDef(MethodDef val){ entries.add(val); }
   
@@ -597,19 +608,32 @@ public class CheaderParser {
   }
   
   
+  /**An attribute in a struct (variable definition).
+   * Note: the parser creates via syntax more as one instance for <pre>
+   *  Type name1, name2; </pre>
+   * The Type information is duplicated in the parser's result already. 
+   */
+  public static class AttribAsMacro extends AttributeOrTypedef
+  { AttribAsMacro(String macro){ super(); this.macro = macro; }
   
+    public String macro; 
+    
+    
+    public void end_end_macro(){}
+  }  
   
   
   
   
   public static class Type
   {
+    /**If {@link #forward} is not null, it is the struct type name. */
     public String name;
     
     /**Will be set if a type is given with a macro <code>MACRO(argument)</code>.
      * This is usefully for special cases only.
      */
-    public String macro;
+    //public String macro;
     
     public String forward;
     
@@ -619,16 +643,26 @@ public class CheaderParser {
     
     public String modifier;
     
-    public String macroArg;
+    public List<String> macroArg;
     
     /**Modifier const* and const**. */
     public boolean constPointer, constPointer2; 
     
-    public void set_macro_arg(String arg) {
-      macroArg = arg;
-      macro = name;
-      name = null;
+    public String typeString() { 
+      if(forward != null) { return forward + " " + name; }
+      else { return name; } 
     }
+    
+    /**Returns the base name of the type. This is usually the name of the reflection.
+     * @param maybesuffix An expected suffix which is not part of the base name
+     * @param maybeForwardSuffix An expected suffix for forward declaration
+     * @return
+     */
+    public String baseName(String maybesuffix, String maybeForwardSuffix) {
+      if(forward !=null && name.endsWith(maybeForwardSuffix)) { return name.substring(0, name.length()- maybeForwardSuffix.length()); }
+      else if(name.endsWith(maybesuffix)) { return name.substring(0, name.length()-maybesuffix.length()); }
+      else return name;
+    } 
     
     @Override public String toString(){ return name; }
   }

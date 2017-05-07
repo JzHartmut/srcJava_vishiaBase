@@ -179,6 +179,8 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2017-04-22 Hartmut new: If a <code>new_xyz</code> method is found for a non syntaxComponent, the return value
+   *   is a child instance to write into the next result items, till <code><?_end></code>. The last one switches back to the parent again.
    * <li>2017-03-25 Hartmut new It is possible that the user provides a method <code>new_semantic(ZbnfParseResultItem zbnfItem)</code>.
    *   Then the parse result item is supplied. The application can evaluate both the {@link ZbnfParseResultItem} or the {@link ZbnfParseResultItem#syntaxItem()}
    *   for more informations. Especially the {@link ZbnfSyntaxPrescript#getAttribute(String)} can be used.
@@ -448,22 +450,22 @@ public final class ZbnfJavaOutput
    *   is invoked for that child to store the content.
    * </ul> 
    * 
-   * @param dst The class and instance to add children results.
+   * @param dst1 The class and instance to add children results.
    * @param zbnfComponent The ZBNF parsers's result item which is either the top level result or any component.
    * @throws IllegalAccessException if the field is not public.
    * @throws IllegalArgumentException 
    * @throws InstantiationException if a matching class is found but it can't be instantiated. 
    */  
   protected void writeZbnfResult
-  ( DstInstanceAndClass dst  
+  ( DstInstanceAndClass dst1  
   , ZbnfParseResultItem zbnfComponent
   , int recursion
   ) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   {
     //write column, line and file into it if expected from the instance type: 
-    if(dst.instance instanceof SetLineColumn_ifc){
-      SetLineColumn_ifc check = (SetLineColumn_ifc) dst.instance;
+    if(dst1.instance instanceof SetLineColumn_ifc){
+      SetLineColumn_ifc check = (SetLineColumn_ifc) dst1.instance;
       int mode = check.setLineColumnFileMode();
       final int inputLine, inputColumn;
       String inputFile;
@@ -478,6 +480,10 @@ public final class ZbnfJavaOutput
     
     { //skip into the component resultItem:
       Iterator<ZbnfParseResultItem> iterChildren = zbnfComponent.iteratorChildren();
+      DstInstanceAndClass dst = dst1;
+      //
+      //This is the loop over all result items of this component.
+      //
       while(iterChildren.hasNext())
       { ZbnfParseResultItem childItem = iterChildren.next();
         final String semantic1 = childItem.getSemantic();
@@ -508,7 +514,15 @@ public final class ZbnfJavaOutput
           }
           else
           { //write the content of the resultItem into the outputInstance:
-            searchDestinationAndWriteResult(semantic, dst, childItem);
+            if(semantic.equals("_end")){
+              dst = dst.parentResult;
+            } else {
+              DstInstanceAndClass dstChild = searchDestinationAndWriteResult(semantic, dst, childItem);
+              if(dstChild !=null) {
+                dst = dstChild;  //continue with writing to the child instance,
+                //switch to the parent instance with capability of child.
+              }
+            }
           }
         } //semantic given
       } //while
@@ -878,10 +892,15 @@ public final class ZbnfJavaOutput
             argTypesVariants = new Class[1][0];
           }
           Method method;
-          final String sMethodToFind = destComponent.clazz.getCanonicalName()+ ".set_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
+          boolean bNewChild = false;
+          final String sMethodToFind = destComponent.clazz.getCanonicalName()+ ".set_/add_/new_" + semantic + "(" + (argTypesVariants[0].length >0 ? argTypesVariants[0][0].getName() : "void" ) + ")";
           method = searchMethod(null, destComponent.clazz, "set_" + semantic, argTypesVariants);      
           if(method == null)
           { method = searchMethod(null, destComponent.clazz, "add_" + semantic, argTypesVariants);      
+          }
+          if(method == null)
+          { method = searchMethod(null, destComponent.clazz, "new_" + semantic, argTypesVariants);      
+            bNewChild = true;
           }
           if(method != null)
           { //invoke the method with the given matching args.
@@ -913,7 +932,14 @@ public final class ZbnfJavaOutput
             { argMethod = null;  //parameterless
               
             }
-            try{ method.invoke(destComponent.instance, argMethod); }
+            try{ final Object childOutputInstance = method.invoke(destComponent.instance, argMethod); 
+              if(bNewChild) {
+                //A new_ method returns an instance, it is a child destination (similar an syntax component). 
+                //This component is used till end of component.
+                final Class<?> childClass = method.getReturnType();
+                child = new DstInstanceAndClass(destComponent, semantic, childOutputInstance, childClass, true);
+              }
+            }
             catch(InvocationTargetException exc)
             { throw new IllegalAccessException("cannot access: " + sMethodToFind + " / " + exc.getMessage()); 
             }
