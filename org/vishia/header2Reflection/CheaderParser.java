@@ -73,8 +73,8 @@ public class CheaderParser {
 
   /**Version, history and license.
    * <ul>
-   * <li>1017-05-06 JzHartmut new: {@link Type#baseName(String, String)} for usage in generation.
-   * <li>2017-05-01 JzHartmut new: adequate to the Cheader.zbnf, it can store a type definition with macro.
+   * <li>2017-05-29 JzHartmut {@link Type#pointer_} with {@link Pointer} designation  
+   * <li>2017-05-10 JzHartmut adapt to Cheader.zbnf 
    * <li>2016-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
    *   Therefore the same class {@link StructDefinition} is used for {@link HeaderBlock#new_undefDefinition()} instead the older extra class UnionVariante.
    *   the {@link StructDefinition#isUnion} designates that it is a union in semantic. Using scripts should be changed.
@@ -625,6 +625,56 @@ public class CheaderParser {
   
   
   
+  
+  /**Designation whether a type is a pointer type.
+   * Used inside {@link Type}
+   */
+  public static class Pointer
+  {
+    public boolean constPointer;
+    
+    public boolean volatilePointer;
+  
+  
+  }
+  
+  
+  
+  
+  
+  
+  /**This class presents the properties of a type.
+   * ZBNF: <pre>
+type::= [<?@modifier>volatile|const|] 
+  [<?@forward>struct\W|class\W|union\W|] 
+  [ [unsigned<?unsigend>|signed<?signed>]  ##signed and unsigned notification      
+    [ int<!\\s?> <?@name=int32>
+    | short<!\\s?> int <?@name=int16>
+    | short<!\\s?> <?@name=int16>
+    | long long<!\\s?> <?@name=int64>
+    | long int<!\\s?> <?@name=int32>
+    | long<!\\s?>     <?@name=int32>
+    | char<!\\s?>     <?@name=int8>
+    | <?@name=int>                        ##unsigned or signed allone
+    ]
+  | [{ <$?environmentClass> ::}] 
+    [ int<!\\s?> <?@name=int32>           ##notification without first signed or unsigend
+    | short int<?@name=int16>             ##special int types assigned to int16 etc.
+    | short<!\\s?> <?@name=int16> 
+    | long long<!\\s?><?@name=int64> 
+    | long int<!\\s?><?@name=int32> 
+    | long<!\\s?><?@name=int32> 
+    | char<!\\s?>     <?@name=int8>
+    | long double<?@long_double>
+    | <$?@name>                           ##any other type name, also float, double, or a user type 
+    ##  [ ( { <* |,|)?macro_arg> ? , } ) ]         ##MACRO(arg) also admissible.
+    ] 
+    [ \< <type?templateType> \> ]        ##<templatetype> 
+  ]
+  [<typeRefModifier?>]                   ##such as *, const *, volatile *
+  [<?@modifier2>volatile|const|].        ##last one is const or volatile for the variable.
+   * </pre>
+   */
   public static class Type
   {
     /**If {@link #forward} is not null, it is the struct type name. */
@@ -637,20 +687,52 @@ public class CheaderParser {
     
     public String forward;
     
-    public boolean pointer;
+    public boolean constVar, volatileVar;
     
-    public boolean pointer2;
+    @Deprecated public boolean pointer;
     
-    public String modifier;
+    @Deprecated public boolean pointer2;
     
-    public List<String> macroArg;
+    @Deprecated public String modifier;
+    
+    //public List<String> macroArg;
     
     /**Modifier const* and const**. */
-    public boolean constPointer, constPointer2; 
+    @Deprecated public boolean constPointer, constPointer2; 
+    
+    /**It is possible that a deeper pointer level is given. Any pointer type can be volatile or const. */
+    List<Pointer> pointer_;
+    
+    
+    public void set_Pointer()
+    {
+      if(pointer_ == null) { 
+        pointer_ = new LinkedList<Pointer>(); 
+        if(this.constVar) { this.constPointer = true; } else { this.pointer = true; } 
+      } else { 
+        if(this.constVar) { this.constPointer = false; this.constPointer2 = true; } else { this.pointer = false; this.pointer2 = true; } 
+      }
+      Pointer pointerEntry = new Pointer();
+      //a const or volatile designation before a reference designator (*) is valid for the reference!
+      if(constVar) { pointerEntry.constPointer = true; constVar = false; }
+      if(volatileVar) { pointerEntry.volatilePointer = true; volatileVar = false; }
+      pointer_.add(pointerEntry);
+    
+    }
+    
     
     public String typeString() { 
-      if(forward != null) { return forward + " " + name; }
-      else { return name; } 
+      String ret;
+      if(forward != null) { ret = forward + " " + name; }
+      else { ret = name; }
+      if(pointer_!=null) {
+        for(Pointer entry : pointer_) {
+          if(entry.constPointer) { ret += " const"; }
+          if(entry.volatilePointer) { ret += " volatile"; }
+          ret += "*";
+        }
+      }
+      return ret; 
     }
     
     /**Returns the base name of the type. This is usually the name of the reflection.

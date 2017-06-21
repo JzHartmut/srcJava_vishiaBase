@@ -20,6 +20,7 @@ public class ParserConfigFile
 {
   /**Version, history and license.
    * <ul>
+   * <li>2017-05-08 Hartmut new use {@link #currdir} for the config file, given in ctor.  
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
    * <li>2011-05-00 Hartmut created: It was necessary for C-compilation to check real dependencies in a fast way.
@@ -83,7 +84,7 @@ public class ParserConfigFile
    */
   String parseConfigFile(String sFileCfg){
     try{
-      File fileCfg = new File(sFileCfg);
+      File fileCfg = new File(currdir, sFileCfg);
       BufferedReader reader = new BufferedReader(new FileReader(fileCfg));
       String sLine;
       while( (sLine = reader.readLine())!=null){
