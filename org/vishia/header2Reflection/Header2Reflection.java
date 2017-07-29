@@ -1374,7 +1374,7 @@ public class Header2Reflection
     {
       int lineNr = zbnfElement.getInputLine();
       CharSequence sFile = zbnfElement.getInputFile();
-      if(lineNr >= 0 && lineNr < 41 && StringFunctions.equals(sFile, "D:/SFC/SBOX/CCS_UTT2_C/data/XRPDG/simulink/lib/+bus_header/lib_Ctrl_Smlk.h") )
+      if(lineNr >= 0 && lineNr < 41 && StringFunctions.equals(sFile, "D:/xxx/+bus_header/lib_Ctrl_Smlk.h") )
         stop();
       String semantic = zbnfElement.getSemantic();
       if(semantic.equals("implicitStructAttribute")){

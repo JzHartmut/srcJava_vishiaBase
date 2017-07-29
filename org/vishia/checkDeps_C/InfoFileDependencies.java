@@ -392,7 +392,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
       for(Map.Entry<String,InfoFileDependencies> infoEntry: indexAllDeps.entrySet()){
         //for all parents of this:
         String key = infoEntry.getKey();
-        if(key.contains("ccs_param_values.h"))
+        if(key.contains("param_values.h"))
           Assert.stop();
         InfoFileDependencies info = infoEntry.getValue();
         writer.append("\n");

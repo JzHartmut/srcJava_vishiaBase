@@ -75,7 +75,7 @@ public class CfgData
    */
   String checkIsInSourcePool(String sAbsolutePath)
   {
-    if(sAbsolutePath.contains("ccs_param_values.h"))
+    if(sAbsolutePath.contains("header.h"))
       Assert.stop();
     for(InputSrc inputSrc: listSourcePaths){
       if(sAbsolutePath.startsWith(inputSrc.sCanonicalPathSrc)){ 

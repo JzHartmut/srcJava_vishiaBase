@@ -17,6 +17,7 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-07-12 Hartmut new: debugOp
    * <li>2017-03-25 Hartmut renaming JZtxtcmd, attribute ?.indent=-3 for textExpr  
    * <li>2017-03-11 Hartmut <:indent:3=> for indentation of a generated text.
    * <li>2017-03-11 Hartmut renaming JZtxtcmd instead jzcmd. It is Java z Text command 
@@ -104,7 +105,7 @@ public final class JZtxtcmdSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2017-01-07";
+  static final public String version = "2017-07-12";
 
   
   public final static String syntax =
@@ -198,6 +199,7 @@ public final class JZtxtcmdSyntax {
     + " | errortoOutput <?errorToOutput=1> \n"
     + " | if errorlevel <iferrorlevel> \n"
     + " | debug [<textValue?debug>| <?debug>] ; \n"
+    + " | debugOp <textValue?debugOp> ; \n"
     + " | <callSubroutine?call> \n"
     + " | <threadBlock> \n"
     + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" 
@@ -432,7 +434,8 @@ public final class JZtxtcmdSyntax {
     + " | \\<:call : <callSubtext?call>\n"
     + " | \\<:scriptdir<?scriptdir>\\>\n"
     + " | \\<:debug-break\\> <?breakBlock>     ##ends the text, especially for test. \n"
-    + " | \\<:debug[:<textDatapath?debug>| <?debug>]\\>\n"
+    + " | \\<:debug[:<textValue?debug>| <?debug>]\\>\n"
+    + " | \\<:debugOp:<textValue?debugOp>\\>\n"
     + " | \\<&<dataText>\n"
     //+ " | \\<: [<?transliteration> n | r | t | \\< | # | \\\" ] \\>\n"
     + " | \\<: [<?transliteration>n|r|t|b|[\\<|#|\\\"]<*\\>?>] \\>\n"

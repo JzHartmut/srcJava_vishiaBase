@@ -29,6 +29,7 @@ import java.util.regex.PatternSyntaxException;
 import org.vishia.util.DataAccess;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
@@ -143,7 +144,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  *                                       a quution, it is claimed as a valid char, not an endchar.</td></tr>
  * <tr><td><code>*{</code><i>indent</i><code>}|</code><i>endstring</i></td><td>It is a special construct to parse text with indentation.
  *                                       All indentation chars until the column position of the first line are overreaded.
- *                                       See <a href="StringPart.html#lentoAnyStringWithIndent(java.util.List, java.lang.String, int)">StringPart.lentoAnyStringWithIndent()</a></td></tr>
+ *                                       See {@link StringPart#lentoAnyStringWithIndent(CharSequence[], CharSequence, int, StringBuilder)} </td></tr>
  * <tr><td><code>!<i>regex</i></code></td><td>Regular expression using java.util.regex.Matcher.lookingAt().</td></tr>
  * </table>
  * <br/>
