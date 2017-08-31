@@ -50,11 +50,12 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
+import org.vishia.util.TreeNode_ifc;
+import org.vishia.util.TreeNodeBase;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
-import org.vishia.zbnf.ZbnfParser.ForkPoint;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
@@ -130,6 +131,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-08-27 Hartmut new: {@link #getResultNode()}. To evaluate the result with JZtxtcmd immediately without interim store.
    * <li>2017-03-25 Hartmut new: The {@link ZbnfSyntaxPrescript} syntax item is stored in the {@link ZbnfParserStore.ParseResultItemImplement}. 
    * <li>2017-03-25 Hartmut chg: The line and column of a component parse result is stored immediately. See parseSub(...). 
    *   The change from 2015-06-07: {@link PrescriptParser#srcLineOption} is never used now. The idea in 2015 was: supply position for text indentation
@@ -246,7 +248,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2017-03-25";
+  public static final String sVersion = "2017-08-27";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -3011,16 +3013,29 @@ public class ZbnfParser
    * */
   //public XmlNodeSimple<ZbnfParseResultItem> getResultTree(){
   public XmlNode getResultTree(){
-        if(parserStoreTopLevel.items.size()>0)
+    if(parserStoreTopLevel.items.size()>0)
     { //parseResult.idxParserStore = 0;
-      ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
-      //ZbnfParserStore.buildTreeNodeRepresentationXml(null, firstItem, true);
-      return firstItem.treeNodeXml;
+    ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
+    //ZbnfParserStore.buildTreeNodeRepresentationXml(null, firstItem, true);
+    return firstItem.treeNodeXml;
     }
     else return null;
   }
-  
-  
+
+
+  public TreeNode_ifc<XmlNodeSimple<ZbnfParseResultItem>, ZbnfParseResultItem> getResultNode(){
+    if(parserStoreTopLevel.items.size()>0) { 
+      ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
+      assert(firstItem.treeNodeXml instanceof TreeNodeBase);
+      @SuppressWarnings("unchecked")
+      TreeNodeBase<XmlNodeSimple<ZbnfParseResultItem>, ZbnfParseResultItem, XmlNode> treeNode = 
+          (TreeNodeBase<XmlNodeSimple<ZbnfParseResultItem>, ZbnfParseResultItem, XmlNode>)firstItem.treeNodeXml;
+      return treeNode;
+    }
+    else return null;
+  }
+
+
 
   /** Returns a TreeMap of all xmlns keys and strings.
    * This is the result of detecting $xmlns:ns="string". -expressions in the syntax prescript.

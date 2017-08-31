@@ -93,6 +93,8 @@ public class CheckDependencyFile
 
   /**Version, history and license.
    * <ul>
+   * <li>2017-08-30 Hartmut new: {@link #setDirObj(String)} throws an Exception this behavior is set by {@link #bExc}.
+   * <li>2017-08-30 Hartmut new: {@link #processSrcfile(File, String)} only with this 2 arguments should be used in zmake, see new documentation.
    * <li>2014-05-10 Hartmut new: {@link #processSrcfile(File, String, File, String)} with given Object file.
    *   Therefore the routine {@link #setDirObj(String)} is not necessary to call before. Any file can have its object directory.
    * <li>2013-10-13 Hartmut chg: prevent circular including with a Map of already processed files, idxOnce as Thread data (Parameter).
@@ -135,7 +137,7 @@ public class CheckDependencyFile
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20130310;
+  public static final String version = "2017-08-30";
 
   /**Contains all dependencies, read from file and processed. */
   final CheckData checkData;
@@ -205,7 +207,8 @@ public class CheckDependencyFile
   
   
   
-  /**Set one object directory
+  /**Set an object directory. This routine can be invoked more as one time to support more as one 
+   * Object directories.
    * @param sDirObjExt Should have the form "path/*.objExt"
    * @return
    */
@@ -222,6 +225,7 @@ public class CheckDependencyFile
       }
       catch(IOException exc){ sError = "CheckDeps - Problem with obj path; " + exc.getMessage(); }
     }
+    if(sError !=null && bExc) throw new IllegalArgumentException("CheckDependencyFile.setDirObj - error: " + sError);
     return sError;
   }
   
@@ -333,7 +337,7 @@ public class CheckDependencyFile
    * @return An ample information about dependencies. This information is used to produce
    *  the {@link #writeDependencies(String)} line for this file.
    */
-  public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt) 
+  public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName) 
   {
     final ObjectFileDeps objDeps;
     
@@ -356,7 +360,16 @@ public class CheckDependencyFile
     return infoFile;
   }
 
-
+  
+  
+  /**See {@link #processSrcfile(File, String)}
+   * @param sObjExt This attribute is unnecessary
+   * @deprecated: Use {@link #processSrcfile(File, String, String)}
+   */
+  @Deprecated public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt) 
+  {
+    return processSrcfile(fileSrc, sLocalPathName);
+  }
   
   /**Check of one source file for newly against the associated result file of translation (object-file for C-compilation). 
    * @param fileSrc The source file itself
