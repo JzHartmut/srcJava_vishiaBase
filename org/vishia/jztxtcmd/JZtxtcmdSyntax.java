@@ -275,7 +275,11 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " DefFileset::= <definePath?defVariable> [ =  ( \n"
     + " [ commonpath = [<\"\"?commonPath>|<*;,)(\\ \\r\\n?commonPath>] , ] \n"
-    + " { [{ //JZcmd | //JZtxtcmd | //<*\\n\\r?>}] [<\"\"?filePath>|<*;,)(\\ \\r\\n?filePath>] [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
+    + " { [{ //JZcmd | //JZtxtcmd | //<*\\n\\r?>}] \n"
+    + "     [ <\"\"?filePath>             ##filePath in \"\"\n"
+    + "     | <*;,)(\\ \\r\\n?filePath>   ##filePath without \"\"\n"
+    + "     ] "
+    + "   [{ //JZcmd | //<*\\n\\r?>}] ? , } \n"
     + " ) ] .\n"
     + " \n"
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
@@ -424,7 +428,7 @@ public final class JZtxtcmdSyntax {
     + " | \\<:---\\><*|---\\>?>\\<---\\> ##<:---> comment <---> not confused with XML <--- will be produced as output --->\n"
     + " | \\<:-<*\\>?>\\><textExpr?>\\<\\.-<*\\>?>\\> ##<:-comment> comment <.- > \n"
     + " | \\#\\#<*\\r\\n?>   ##comment to eol in a text Expression\n"
-    + " | \\<:\\{  <statementBlock?>  <!\\\\s*>  \\}\\>  ##one or more statements inside a text expression, do not produce an output text. \n" ////
+    + " | \\<:\\{  <statementBlock?>  <!\\\\s*>  \\}\\>  ##one or more statements inside a text expression, do not produce an output text. \n" 
                                     //<!\\\\s*>  Note: on end of <statementBlock> white spaces should be skipped!
     + " | \\<:indent:[<#?nIndent>][[?\\>]<!\\.?cIndent>]\\>\n"
     + " | \\<:for:<forInText?forCtrl>\n"
@@ -444,7 +448,7 @@ public final class JZtxtcmdSyntax {
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
     + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
-    + " | \\<:<DefVariable?>\\>  \n"
+    + " | \\<:<DefVariable?> \\>  \n"
     + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"
@@ -507,10 +511,10 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " \n"
     + " ## An accessPath is a Filepath, see prepFilepath::=, but analyzed on Java level. \n"
-    + " filesetAccess::= [ \n"
-    + "                    <\"\"?accessPath> | \\<:\\><textExpr>\\<\\.\\> \n"
-    + "                  | [<?accessPathOrFilesetVariable> [&]<*\\ \\r\\n,)&;?>] \n"
-    + "                  ] [ & <$?zmakeFilesetVariable>] . \n"
+    + " filesetAccess::= [ <\"\"?accessPath> | \\<:\\><textExpr>\\<\\.\\> \n"
+    + "                  | & <dataAccess>      \n" 
+    + "                  | <*\\ \\r\\n,)&?accessPath> ##will be converted to Filepath maybe with ':'\n"
+    + "                  |] [ & <dataAccess?zmakeFilesetVariable>] .    \n"
     + " \n"
     + " \n"
     + " cmdLineWait::=[{ <dataPath?assign> += }] cmd\\  <cmdLine?>.\n"

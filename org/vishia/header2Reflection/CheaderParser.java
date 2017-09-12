@@ -554,8 +554,10 @@ public class CheaderParser {
     
   }
   
-  public static class EnumElement
+  public static class EnumElement extends HeaderBlockEntry
   {
+    EnumElement() { super("enumElement"); }
+    
     public String name;
     
     public long intnumber, hexnumber;
@@ -757,6 +759,8 @@ type::= [<?@modifier>volatile|const|]
     public int value;
     
     public String symbolValue;
+    
+    public void set_unknown(){ value = -1; }
     
     public Arraysize new_arraysize() { return this; }
     public void add_arraysize(Arraysize val) {}
