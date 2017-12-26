@@ -449,6 +449,7 @@ public final class JZtxtcmdSyntax {
     + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:<DefVariable?> \\>  \n"
+    + " | \\<:=<assignInTextExpr?assignExpr>  \n"
     + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"
@@ -471,6 +472,7 @@ public final class JZtxtcmdSyntax {
     + " setColumn::=<numExpr> [ : <numExpr?minSpaces>] | : <numExpr?minSpaces>.\n"  
     + " \n"
     + " \n"
+    + " assignInTextExpr::= <dataPath?assign>[[ = | += <?append>] <objExpr?> \\> | \\> <textExpr>  \\<\\.=\\> ].\n"
     + " \n"
       //Note: the for-variable is adequate a DefVariable
     + " forCtrl::= ( <$?forVariable> : <dataAccess?forContainer> [ && <condition> ] )  [\\{ [<statementBlock>] \\} | ; ] .\n"
@@ -505,9 +507,9 @@ public final class JZtxtcmdSyntax {
     + " namedArgument::= <$?name> = <objExpr?>.\n"
     + " \n"
     + " \n"
-    + " zmake::= [ : <$-?name> :[?=] ] <textValue?zmakeOutput> := <textValue?callName> ( { <namedArgument?actualArgument> | <filesetAccess> ? ,} ).\n"
-    + " \n"
-    //+ " output::=<*|\\ |\\r|\\n|:=?!prepFilePath>.\n"
+    + " zmake::= [ : <$-?name> :[?=] ]     ##optional : name : of the zmake target, not ends with := \n"
+    + "          <textValue?zmakeOutput> := <textValue?callName> \n"
+    + "          ( { <namedArgument?actualArgument> | <filesetAccess> ? ,} ).\n"
     + " \n"
     + " \n"
     + " ## An accessPath is a Filepath, see prepFilepath::=, but analyzed on Java level. \n"

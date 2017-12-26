@@ -1656,6 +1656,8 @@ public class Header2Reflection
           }
           else if(bForwardStruct && sType.endsWith("_t"))
           { //struct Type_t may be mostly of type Type
+            if(sType.equals("Type_t"))
+              Debugutil.stop();
             sType = sType.substring(0,sType.length()-2);
           }
         }

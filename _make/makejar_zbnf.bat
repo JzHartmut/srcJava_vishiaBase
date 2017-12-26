@@ -64,8 +64,9 @@ call ..\..\srcJava_vishiaBase\_make\+javacjarbase.bat
 @echo on
 REM if this is the ZBNF folder then copy the result to Java-folder:
 if exist %ZBNFJAX_DST% (
-  copy %OUTDIR_JAVAC%\zbnf.jar D:\vishia\Java\exe\*
+  copy %OUTDIR_JAVAC%\zbnf.jar \vishia\Java\exe\*
 )
+if exist \vishia\Smlk\Example_ObjO\zbnfjax\zbnf.jar copy %OUTDIR_JAVAC%\zbnf.jar \vishia\Smlk\Example_ObjO\zbnfjax\zbnf.jar 
 REM support the FCMD:
 if exist %FCMD_DST% copy %OUTDIR_JAVAC%\zbnf.jar %FCMD_DST%\zbnf.jar
 if exist %DST_Download% copy %OUTDIR_JAVAC%\%JAR_JAVAC% %DST_Download%\%JAR_JAVAC% 

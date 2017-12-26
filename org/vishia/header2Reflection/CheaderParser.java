@@ -254,41 +254,57 @@ public class CheaderParser {
     /**The last created entry in entries, to set something in. */
     HeaderBlockEntry currEntry;
     
+    /**That is for C++ classDefinition. The visibility is set for any {@link ClassDefinition#new_classVisibilityBlock()}.
+     * It is used for any entry. */
+    String visibity;
     
     public Define new_undefDefinition(){ return new Define(); }
-    public void add_undefDefinition(Define val){ entries.add(val); }
+    public void add_undefDefinition(Define val){ val.visibility = visibility; entries.add(val); }
     
     public ConditionBlock new_conditionBlock(){ return new ConditionBlock(); }
-    public void add_conditionBlock(ConditionBlock val){ entries.add(val); }
+    public void add_conditionBlock(ConditionBlock val){ val.visibility = visibility; entries.add(val); }
     
     
     public DefineDefinition new_defineDefinition(){ return new DefineDefinition(); }
     public void add_defineDefinition(DefineDefinition val){ entries.add(val); }
   
+    public DefineDefinition new_null_initializer(){ return new DefineDefinition(); }
+    public void add_null_initializer(DefineDefinition val){ val.specialDefine = "NULL"; entries.add(val); }
+  
+    public DefineDefinition new_const_initializer(){ return new DefineDefinition(); }
+    public void add_const_initializer(DefineDefinition val){ val.specialDefine = "CONST"; entries.add(val); }
+  
     
     public StructDecl new_structDecl(){ return new StructDecl(); }
-    public void add_structDecl(StructDecl val){ entries.add(val); }
+    public void add_structDecl(StructDecl val){ val.visibility = visibility; entries.add(val); }
     
     
     public StructDefinition new_structDefinition(){ return new StructDefinition("structDefinition", false); }
-    public void add_structDefinition(StructDefinition val){ entries.add(val); }
+    public void add_structDefinition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
+    
+    public ClassDefinition new_classDef(){ return new ClassDefinition("classDef"); }
+    public void add_classDef(ClassDefinition val){ val.visibility = visibility; entries.add(val); }
     
     public StructDefinition new_structContentInsideCondition(){ return new StructDefinition("structDefinition", false); }
-    public void add_structContentInsideCondition(StructDefinition val){ entries.add(val); }
+    public void add_structContentInsideCondition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
     
     public StructDefinition new_unionDefinition(){ return new StructDefinition("unionDefinition", true); }
-    public void add_unionDefinition(StructDefinition val){ entries.add(val); }
+    public void add_unionDefinition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
     
     public AttributeOrTypedef new_typedef(){ return new AttributeOrTypedef("typedef"); }
-    public void add_typedef(AttributeOrTypedef val){ entries.add(val); }
+    public void add_typedef(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
   
   
     public EnumDefinition new_enumDefinition(){ return new EnumDefinition(); }
-    public void add_enumDefinition(EnumDefinition val){ entries.add(val); }
+    public void add_enumDefinition(EnumDefinition val){ val.visibility = visibility; entries.add(val); }
   
+    
+    public FnPointer new_fnPointer() { return new FnPointer(); }
+    public void add_fnPointer(FnPointer val) { entries.add(val); }
+    
   
     public AttributeOrTypedef new_attribute(){ return new AttributeOrTypedef(); }
-    public void add_attribute(AttributeOrTypedef val){ entries.add(val); }
+    public void add_attribute(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
   
     public AttribAsMacro new_macro(String name){ 
       AttribAsMacro macro = new AttribAsMacro(name);
@@ -299,13 +315,19 @@ public class CheaderParser {
     
     
     public MethodDef new_methodDef(){ return new MethodDef(); }
-    public void add_methodDef(MethodDef val){ entries.add(val); }
+    public void add_methodDef(MethodDef val){ val.visibility = visibility; entries.add(val); }
+
+    public MethodDef new_staticMethod(){ return new MethodDef(); }
+    public void add_staticMethod(MethodDef val){ val.visibility = visibility; val.static_ = true; entries.add(val); }
+
+    public MethodTypedef new_methodTypedef(){ return new MethodTypedef(); }
+    public void add_methodTypedef(MethodTypedef val){ val.visibility = visibility; entries.add(val); }
   
     public MethodDef new_inlineMethod(){ return new MethodDef(); }
-    public void add_inlineMethod(MethodDef val){ val.inline = true; entries.add(val); }
+    public void add_inlineMethod(MethodDef val){ val.inline = true; val.visibility = visibility; entries.add(val); }
   
     public Description new_implementDescription(){ return new Description("implementDescription"); }
-    public void add_implementDescription(Description val){ entries.add(val); }
+    public void add_implementDescription(Description val){ val.visibility = visibility; entries.add(val); }
   
 
     
@@ -320,7 +342,11 @@ public class CheaderParser {
     public String whatisit;
     //public String data;
     
+    public String visibility;
+    
     public Description description;
+    
+    public boolean static_;
     
     public List<Description> implementDescriptions;
   
@@ -344,7 +370,12 @@ public class CheaderParser {
     Description(String whatisit){ super(whatisit); }
     public Description(){ super("description"); }
     public String text = "";
-    public String simulinkTag;
+    public String simulinkTag = "";
+    
+    /** <code>@vtbl <$?vtbl></code> name of the virtual table for reflection generation. */
+    public String vtbl;
+    
+    public boolean noReflection;
     
     public ParamDescription returnDescription;
     
@@ -354,6 +385,12 @@ public class CheaderParser {
     
     
     public void set_text(String text){ this.text += text; }
+    
+    /**Add more as one simulinkTag with ":value:", get with simulinkTag.contains(":value:") */
+    public void set_simulinkTag(String val) {
+      simulinkTag = simulinkTag + ":" + val + ":";
+    }
+    
     
     public final ParamDescription new_paramDescription(){ return new ParamDescription();}
     public final void add_paramDescription(ParamDescription val){ 
@@ -471,6 +508,8 @@ public class CheaderParser {
     DefineDefinition(){ super("#define"); }
     public String name;
     
+    public String specialDefine;
+    
     public Description description;
     
     public String valueDef = "";
@@ -538,6 +577,106 @@ public class CheaderParser {
     @Override public String toString(){ return name; }
 
   
+  }
+
+
+
+  public static class Superclass {
+  
+    public String name;
+    
+    public Superclass new_visibility() { return this; }
+    public void set_visibility(Superclass val) {}
+    
+    public String accessRight;
+    
+    public boolean isVirtual;
+  }
+
+
+
+
+  public static class InitializationInCtor
+  {
+    public String ident;
+    
+    public Value value;
+  
+  }
+
+
+
+  public static class Constructor extends MethodDef
+  {
+    private Constructor(){ super("Constructor"); }
+  
+    public List<InitializationInCtor> init= new LinkedList<InitializationInCtor>();
+  
+    public String initialization;
+    public InitializationInCtor new_initialization() { return new InitializationInCtor(); }
+    public void add_initialization(InitializationInCtor val) { init.add(val); }
+  
+  }
+
+
+  public static class Destructor extends MethodDef
+  {
+    private Destructor(){ super("Destructor"); }
+    
+    public String className;
+    
+    public boolean abstract_, virtual;
+    
+    public void set_abstract() { abstract_ = true; }
+  
+  }
+
+
+  public static class Operator extends MethodDef
+  {
+    private Operator(){ super("Operator"); }
+    
+    public String operator;
+    
+    public Operator new_operator() { return this; }
+    public void add_operator(Operator val) {}
+    
+    public String assignOperator;
+    
+    public boolean parenthesis;
+    
+    public Type typeConversion;
+    
+    public String unaryOperator;
+    public String binaryOperator;
+  
+  }
+
+
+
+  public static class ClassDefinition extends HeaderBlock
+  { 
+    ClassDefinition(String whatisit){ super(whatisit); }
+  
+    public String name;
+    
+    public Superclass superclass;
+    
+    //public List<MethodDef> constructors = new LinkedList<MethodDef>();
+    
+    public ClassDefinition new_classVisibilityBlock() { return this; }
+    public void add_classVisibilityBlock(ClassDefinition value) {} 
+  
+    public Constructor new_Constructor(){ return new Constructor(); }
+    public void add_Constructor(Constructor val){ val.visibility = visibility; entries.add(val); }
+  
+    public Destructor new_Destructor(){ return new Destructor(); }
+    public void add_Destructor(Destructor val){ val.visibility = visibility; entries.add(val); }
+  
+    public Operator new_operator(){ return new Operator(); }
+    public void add_operator(Operator val){ val.visibility = visibility; entries.add(val); }
+  
+
   }
 
   
@@ -636,6 +775,8 @@ public class CheaderParser {
     public boolean constPointer;
     
     public boolean volatilePointer;
+    
+    public boolean cppRef;
   
   
   }
@@ -705,8 +846,11 @@ type::= [<?@modifier>volatile|const|]
     /**It is possible that a deeper pointer level is given. Any pointer type can be volatile or const. */
     List<Pointer> pointer_;
     
+
+    public void set_Pointer() { set_pointer(); }
+
     
-    public void set_Pointer()
+    public void set_pointer()
     {
       if(pointer_ == null) { 
         pointer_ = new LinkedList<Pointer>(); 
@@ -715,6 +859,20 @@ type::= [<?@modifier>volatile|const|]
         if(this.constVar) { this.constPointer = false; this.constPointer2 = true; } else { this.pointer = false; this.pointer2 = true; } 
       }
       Pointer pointerEntry = new Pointer();
+      //a const or volatile designation before a reference designator (*) is valid for the reference!
+      if(constVar) { pointerEntry.constPointer = true; constVar = false; }
+      if(volatileVar) { pointerEntry.volatilePointer = true; volatileVar = false; }
+      pointer_.add(pointerEntry);
+    
+    }
+    
+    public void set_cppRef()
+    {
+      if(pointer_ == null) { 
+        pointer_ = new LinkedList<Pointer>(); 
+      }
+      Pointer pointerEntry = new Pointer();
+      pointerEntry.cppRef = true;
       //a const or volatile designation before a reference designator (*) is valid for the reference!
       if(constVar) { pointerEntry.constPointer = true; constVar = false; }
       if(volatileVar) { pointerEntry.volatilePointer = true; volatileVar = false; }
@@ -748,6 +906,13 @@ type::= [<?@modifier>volatile|const|]
       else return name;
     } 
     
+    
+    /**depth of pointer. 0: no pointer.
+     */
+    public int pointerDepth() { return pointer_ !=null ? pointer_.size() : 0; }
+    
+    public boolean constPointer() { return pointer_ ==null ? false : pointer_.get(0).constPointer; }
+    
     @Override public String toString(){ return name; }
   }
   
@@ -771,6 +936,7 @@ type::= [<?@modifier>volatile|const|]
   
   public static class MethodDef extends HeaderBlockEntry
   { MethodDef(){ super("method"); }
+    MethodDef(String whatisit){ super(whatisit); }
 
     public Type type;
     
@@ -780,10 +946,15 @@ type::= [<?@modifier>volatile|const|]
     
     public List<AttributeOrTypedef> args;
     
+    public boolean variableArgs;
     
+    /**If true then body==null; */
+    public boolean declaration;
+    
+    /**If empty then this is a declaration. */
     StatementBlock body;
     
-    
+    public String modifier;
      
     
     public AttributeOrTypedef new_conditionalArgument(){ return new AttributeOrTypedef(); }
@@ -806,6 +977,20 @@ type::= [<?@modifier>volatile|const|]
     
   }
   
+
+
+  public static class MethodTypedef extends MethodDef
+  { MethodTypedef(){ super("typedef_method"); }
+  }
+  
+  
+  /**A C like funktion pointer definition. 
+   * Written like type (*name)(args);
+   * It contains the same elements like {@link MethodDef}
+   */
+  public static class FnPointer extends MethodDef
+  { FnPointer(){ super("def_fnPointer"); }
+  }
   
   
   /**A StatementBlock contains statements. It contains a <pre> 
@@ -820,6 +1005,8 @@ type::= [<?@modifier>volatile|const|]
     
     
     String conditionDef;
+    
+    public String sTACKTRC_ENTRY;
     
     public StatementBlock(){ super('{'); }
     
@@ -961,6 +1148,8 @@ type::= [<?@modifier>volatile|const|]
     
     /**That is parsed before the next entry, use and remove it on entry. */
     public String unaryOperator;
+    
+    public String simpleStringLiteral;
     
     /**Expressions for true and false in an construct <code>condition ? value_true : value_false</code>
      * the condition is this value itself with its entries.
@@ -1160,7 +1349,7 @@ type::= [<?@modifier>volatile|const|]
       File fileIn = new File(src.path);
       boolean bOk = false;
       try { bOk = parser.parseFile(fileIn); } 
-      catch(Exception exc){ throw new IllegalArgumentException("CheaderParser - file ERROR; " + fileIn.getAbsolutePath()); }
+      catch(Exception exc){ throw new IllegalArgumentException("CheaderParser - file ERROR; " + fileIn.getAbsolutePath() + ":" + exc.getMessage() ); }
       ZbnfParseResultItem resultItem = parser.getFirstParseResult();
       if(!bOk) {
         String sError = parser.getSyntaxErrorReport();
