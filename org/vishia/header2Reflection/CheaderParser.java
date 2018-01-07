@@ -72,7 +72,8 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
 public class CheaderParser {
 
   /**Version, history and license.
-   * <ul>
+   * <ul>2018-01-03 JzHartmut new Some enhancements adequate to syntax in Cheader.zbnf, while testing reflection.
+   * <ul>2017-12-20 JzHartmut new {@link StructDefinition} with attributes and isBasedOnObjectJc. Used for Sfunction not based on ObjectJc.
    * <li>2017-05-29 JzHartmut {@link Type#pointer_} with {@link Pointer} designation  
    * <li>2017-05-10 JzHartmut adapt to Cheader.zbnf 
    * <li>2016-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
@@ -177,11 +178,11 @@ public class CheaderParser {
     }
     
     
-    public void XXset_HeaderEntry(String val) {}
-    public void XXset_HeaderEntryDef(String val) {}
+    public void set_HeaderEntry(String val) {}
+    public void set_HeaderEntryDef(String val) {}
    
-    public IncludeDef XXnew_includeDef(){ return new IncludeDef(); }
-    public void XXadd_includeDef(IncludeDef val){  }
+    public IncludeDef new_includeDef(){ return new IncludeDef(); }
+    public void add_includeDef(IncludeDef val){  }
 
     
     public ClassC new_CLASS_C() {
@@ -190,6 +191,36 @@ public class CheaderParser {
     }
     
     public void add_CLASS_C(ClassC val){ 
+      if(listClassC == null) { listClassC = new LinkedList<ClassC>(); }
+      listClassC.add(val);
+    }
+
+    public ClassC new_CLASS_CPP() {
+      ClassC classC = new ClassC();
+      return classC;
+    }
+    
+    public void add_CLASS_CPP(ClassC val){ 
+      if(listClassC == null) { listClassC = new LinkedList<ClassC>(); }
+      listClassC.add(val);
+    }
+
+    public ClassC new_DEFINE_C() {
+      ClassC classC = new ClassC();
+      return classC;
+    }
+    
+    public void add_DEFINE_C(ClassC val){ 
+      if(listClassC == null) { listClassC = new LinkedList<ClassC>(); }
+      listClassC.add(val);
+    }
+
+    public ClassC new_ARRAY() {
+      ClassC classC = new ClassC();
+      return classC;
+    }
+    
+    public void add_ARRAY(ClassC val){ 
       if(listClassC == null) { listClassC = new LinkedList<ClassC>(); }
       listClassC.add(val);
     }
@@ -209,9 +240,11 @@ public class CheaderParser {
   
   public static class IncludeDef
   {
+    public String includeGuard;
     public String file;
     public String ext;
     public String path;
+    
     public boolean sysInclude;
   }
   
@@ -257,6 +290,12 @@ public class CheaderParser {
     /**That is for C++ classDefinition. The visibility is set for any {@link ClassDefinition#new_classVisibilityBlock()}.
      * It is used for any entry. */
     String visibity;
+    
+    public String compilerError;
+    
+    public IncludeDef new_includeDef(){ return new IncludeDef(); }
+    public void add_includeDef(IncludeDef val){  }
+
     
     public Define new_undefDefinition(){ return new Define(); }
     public void add_undefDefinition(Define val){ val.visibility = visibility; entries.add(val); }
@@ -317,11 +356,20 @@ public class CheaderParser {
     public MethodDef new_methodDef(){ return new MethodDef(); }
     public void add_methodDef(MethodDef val){ val.visibility = visibility; entries.add(val); }
 
+    public MethodDef new_virtualMethod(){ return new MethodDef(); }
+    public void add_virtualMethod(MethodDef val){ val.visibility = visibility; val.virtual_ = true; entries.add(val); }
+
+    public MethodDef new_abstractMethod(){ return new MethodDef(); }
+    public void add_abstractMethod(MethodDef val){ val.visibility = visibility; val.virtual_ = true; entries.add(val); }
+
     public MethodDef new_staticMethod(){ return new MethodDef(); }
     public void add_staticMethod(MethodDef val){ val.visibility = visibility; val.static_ = true; entries.add(val); }
 
     public MethodTypedef new_methodTypedef(){ return new MethodTypedef(); }
     public void add_methodTypedef(MethodTypedef val){ val.visibility = visibility; entries.add(val); }
+  
+    public MethodTypedef new_methodPtrTypedef(){ return new MethodTypedef(); }
+    public void add_methodPtrTypedef(MethodTypedef val){ val.visibility = visibility; val.bPointerType = true; entries.add(val); }
   
     public MethodDef new_inlineMethod(){ return new MethodDef(); }
     public void add_inlineMethod(MethodDef val){ val.inline = true; val.visibility = visibility; entries.add(val); }
@@ -348,9 +396,14 @@ public class CheaderParser {
     
     public boolean static_;
     
+    public boolean virtual_;
+    
     public List<Description> implementDescriptions;
   
     HeaderBlockEntry(String whatisit){ this.whatisit = whatisit; }
+    
+    
+    
     
     public Description new_implementDescription(){ return new Description("implementDescription"); }
     public void add_implementDescription(Description val){ 
@@ -358,10 +411,20 @@ public class CheaderParser {
       implementDescriptions.add(val);
     }
 
-    
+
 
   }
   
+  
+  
+  
+  
+  public static class SizeofDescription 
+  {
+    public int sizeof;
+    
+    public String text;
+  }
   
   
   
@@ -374,6 +437,10 @@ public class CheaderParser {
     
     /** <code>@vtbl <$?vtbl></code> name of the virtual table for reflection generation. */
     public String vtbl;
+    
+    public String refl;
+    
+    public SizeofDescription sizeof;
     
     public boolean noReflection;
     
@@ -436,7 +503,8 @@ public class CheaderParser {
     
     public Value conditionValue;
     
-    
+    public void set_conditionDefNot(String val) { not = true; conditionDef = val; }
+
     public Value new_condition(){ return new Value(); }
     public void add_condition(Value val){ conditionValue = val; }
   }
@@ -550,21 +618,43 @@ public class CheaderParser {
   
   public static class StructDefinition extends HeaderBlock
   { 
+    
+    /**If set the struct is conditionally defined in the header file. */
+    public String conditionDef, conditionDefNot;
+    
     StructDefinition(String whatisit, boolean isUnion){ super(whatisit); this.isUnion = isUnion; }
   
+    List<AttributeOrTypedef> attribs = new LinkedList<AttributeOrTypedef>();
+    
     public final boolean isUnion;
+    
+    public boolean isBasedOnObjectJc;
+    
+    public AttributeOrTypedef superclass;
     
     public String tagname, name;
     
-    public String conditionDef;
-  
     public StructDefinition new_implicitStructAttribute() { return new StructDefinition("unnamedStructAttr", false); }
 
     public void add_implicitStructAttribute(StructDefinition val) { entries.add(val); }
 
     public StructDefinition new_implicitUnionAttribute() { return new StructDefinition("unnamedUnionAttr", true); }
 
-    public void add_implicitUnionAttribute(StructDefinition val) { entries.add(val); }
+    /**Checks whether it is the first member of this struct and one member is ObjectJc, then it is the base class.
+     * @param val
+     */
+    public void add_implicitUnionAttribute(StructDefinition val) { 
+      entries.add(val); 
+      if(attribs.size()==0 ) { //first one
+        for(AttributeOrTypedef mem : val.attribs) {
+          if( mem.type.name.equals("ObjectJc") && mem.type.pointer_==null) {
+            isBasedOnObjectJc = true;
+          } else if(superclass == null) {
+            superclass = mem;   //The first member is the superclass.
+          }
+        }
+      }
+    }
 
     public void set_implicitStruct() { name = "?"; }
     
@@ -573,6 +663,17 @@ public class CheaderParser {
     public StructDefinition new_variante() { return this; }
 
     public void add_variante(StructDefinition  val){} //already added.
+    
+    @Override public void add_attribute(AttributeOrTypedef val){ 
+      super.add_attribute(val);
+      if(attribs.size() == 0) {
+        if(val.type.name.equals("ObjectJc") && val.type.pointer_==null) {
+          isBasedOnObjectJc = true;
+        }
+      }
+      attribs.add(val);
+    }
+    
 
     @Override public String toString(){ return name; }
 
@@ -688,9 +789,21 @@ public class CheaderParser {
     public String tagname, name;
     public Map<String, EnumElement> values = new TreeMap<String, EnumElement>();
     
+    /**Defines inside an enum definition block are defines for the enum.*/
+    public Map<String, DefineDefinition> defines;
+    
     public EnumElement new_enumElement(){ return new EnumElement(); }
     public void add_enumElement(EnumElement val){ values.put(val.name, val); }
     
+    
+    public DefineDefinition new_defineDefinition(){ return new DefineDefinition(); }
+    public void add_defineDefinition(DefineDefinition val){ 
+      if(defines == null) { defines = new TreeMap<String, DefineDefinition>(); }
+      defines.put(val.name, val);
+      
+    } //entries.add(val); }
+  
+
   }
   
   public static class EnumElement extends HeaderBlockEntry
@@ -739,6 +852,7 @@ public class CheaderParser {
     
     public Arraysize arraysize;
   
+    public Value defaultValue; 
   
     public Description new_description() { return description = new Description(); }
     public void add_description(Description val){ /*already added.*/ } 
@@ -980,7 +1094,9 @@ type::= [<?@modifier>volatile|const|]
 
 
   public static class MethodTypedef extends MethodDef
-  { MethodTypedef(){ super("typedef_method"); }
+  { 
+    boolean bPointerType;
+    MethodTypedef(){ super("typedef_method"); }
   }
   
   

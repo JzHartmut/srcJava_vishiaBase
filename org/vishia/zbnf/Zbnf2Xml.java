@@ -50,15 +50,14 @@ import org.vishia.zcmd.Zbnf2Text;
 
 
 
-/** This class contains a public static main routine callable from command line
- * and a execute-routine callable form eclipse-ANT (TODO)
+/** This class contains a public static main routine able to invoke from command line
  * to convert Plain Syntactical Textfiles via ZBNF to xml-output, using the vishia-ZBNF-parser.
  * <br/>
  * To invoke the conversion use the commandline version with parameters see help output
  * getting by invoking without parameters.
  * <br/>
  * short description: invoke:<br>
- * <pre> >java cp $CLASSPATH vishia.strincScan.SBNF2Xml -iINPUT -sSBNF -yXMLOUTPUT</pre>
+ * <pre> >java -cp path/to/zbnf.jar org.vishia.zbnf.Zbnf2Xml -iINPUTPATHFILE -sSYNTAX.zbnf -yXMLOUTPUT</pre>
 */
 
 public class Zbnf2Xml
