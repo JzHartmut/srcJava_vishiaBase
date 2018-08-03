@@ -11,10 +11,12 @@ import java.util.TreeMap;
 import org.vishia.cmd.JZtxtcmdExecuter;
 import org.vishia.jztxtcmd.JZtxtcmd;
 import org.vishia.mainCmd.MainCmd_ifc;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.zbnf.ZbnfJavaOutput;
 import org.vishia.zbnf.ZbnfParseResultItem;
 import org.vishia.zbnf.ZbnfParser;
+
 
 /**This class parses C-files and builds a result tree, which can be proceed especially with a JZcmd script.
  * Therewith output files from headers can be generated with a control script without hard-core Java programming.
@@ -225,6 +227,16 @@ public class CheaderParser {
       listClassC.add(val);
     }
 
+    public ClassC new_INLINE() {
+      ClassC classC = new ClassC();
+      return classC;
+    }
+    
+    public void add_INLINE(ClassC val){ 
+      if(listClassC == null) { listClassC = new LinkedList<ClassC>(); }
+      listClassC.add(val);
+    }
+
     public ClassC new_outside() {
       ClassC classC = new_CLASS_C();
       classC.name = "--outside--";
@@ -287,6 +299,22 @@ public class CheaderParser {
     /**The last created entry in entries, to set something in. */
     HeaderBlockEntry currEntry;
     
+    /**An invalid block is stored here, but overwritten from the next found invalidBlock. It should not be used. */
+    HeaderBlock invalidBlock_;
+    
+    /**From the devision in the header for example /*@DEFINE name... */
+    public String headerBlockName;
+    
+    /**It is the identifier given after:
+     * <pre>
+     * DEFINE_C::=/*@DEFINE[_C] [&lt;$?@name>]<*|* /?>* /
+     * /**&lt;DescriptionDEFINE_C?>* /
+     * ....
+     * DescriptionDEFINE_C::=&lt;$?@headerBlockNameDescr> : &lt;description>.</pre>
+     */
+    public String headerBlockNameDescr;
+    
+    
     /**That is for C++ classDefinition. The visibility is set for any {@link ClassDefinition#new_classVisibilityBlock()}.
      * It is used for any entry. */
     String visibity;
@@ -314,12 +342,22 @@ public class CheaderParser {
     public void add_const_initializer(DefineDefinition val){ val.specialDefine = "CONST"; entries.add(val); }
   
     
-    public StructDecl new_structDecl(){ return new StructDecl(); }
-    public void add_structDecl(StructDecl val){ val.visibility = visibility; entries.add(val); }
+    public StructClassDecl new_structDecl(){ return new StructClassDecl("structDecl"); }
+    public void add_structDecl(StructClassDecl val){ val.visibility = visibility; entries.add(val); }
+    
+    public StructClassDecl new_classDecl(){ return new StructClassDecl("classDecl"); }
+    public void add_classDecl(StructClassDecl val){ val.visibility = visibility; entries.add(val); }
+    
+    public FriendClass new_friendClassDef(){ return new FriendClass(); }
+    public void add_friendClassDef(FriendClass val){ val.visibility = visibility; entries.add(val); }
     
     
     public StructDefinition new_structDefinition(){ return new StructDefinition("structDefinition", false); }
-    public void add_structDefinition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
+    public void add_structDefinition(StructDefinition val){ 
+      if(val.name !=null && val.name.equals("ARRAYJC"))
+        Debugutil.stop();
+      val.visibility = visibility; entries.add(val); 
+    }
     
     public ClassDefinition new_classDef(){ return new ClassDefinition("classDef"); }
     public void add_classDef(ClassDefinition val){ val.visibility = visibility; entries.add(val); }
@@ -377,7 +415,8 @@ public class CheaderParser {
     public Description new_implementDescription(){ return new Description("implementDescription"); }
     public void add_implementDescription(Description val){ val.visibility = visibility; entries.add(val); }
   
-
+    public HeaderBlock new_invalidBlock() { return new HeaderBlock(); }
+    public void add_invalidBlock(HeaderBlock val) { } //don't add, forget it.
     
     public void set_modifier(String val){}
     
@@ -428,13 +467,27 @@ public class CheaderParser {
   
   
   
+  
+//  public static class SimulinkTag
+//  {
+//    
+//  }
+  
+  
   public static class Description extends HeaderBlockEntry
   {
     Description(String whatisit){ super(whatisit); }
     public Description(){ super("description"); }
     public String text = "";
+    
     public String simulinkTag = "";
     
+    /**For Simulink Sfn generation: Variable for function call. */
+    public String fnCallVar, fnCallMask;
+    
+    /**True then add the name of the ClassC to fnVallMask. */
+    public boolean fnCallMaskAddClass;
+
     /** <code>@vtbl <$?vtbl></code> name of the virtual table for reflection generation. */
     public String vtbl;
     
@@ -450,6 +503,16 @@ public class CheaderParser {
     
     public List<ParamDescription> auxDescriptions;
     
+    public String containerType, containerElementType;
+    
+    public boolean referencedContainerElement;
+    
+    public boolean noRefl;
+    
+    /**It is possible to set a type which is used for the reflection presentation.
+     * Especially int32 or void const* for a handle. The type is not used for C, but for the reflection generation.
+     */
+    public Type reflType;
     
     public void set_text(String text){ this.text += text; }
     
@@ -610,8 +673,14 @@ public class CheaderParser {
 
 
   
-  public static class StructDecl extends HeaderBlockEntry
-  { StructDecl(){ super("structDecl"); }
+  public static class StructClassDecl extends HeaderBlockEntry
+  { StructClassDecl(String whatisit){ super(whatisit); } 
+    public String name;
+  }
+  
+  
+  public static class FriendClass extends HeaderBlockEntry
+  { FriendClass(){ super("friend"); } 
     public String name;
   }
   
@@ -777,6 +846,9 @@ public class CheaderParser {
     public Operator new_operator(){ return new Operator(); }
     public void add_operator(Operator val){ val.visibility = visibility; entries.add(val); }
   
+    public Operator new_virtualOperator(){ return new Operator(); }
+    public void add_virtualOperator(Operator val){ val.visibility = visibility; entries.add(val); }
+  
 
   }
 
@@ -813,6 +885,8 @@ public class CheaderParser {
     public String name;
     
     public long intnumber, hexnumber;
+    
+    public String symbol;
   }
   
   
@@ -944,7 +1018,7 @@ type::= [<?@modifier>volatile|const|]
     
     public String forward;
     
-    public boolean constVar, volatileVar;
+    public boolean constVar, volatileVar, signed, unsigned;
     
     @Deprecated public boolean pointer;
     
@@ -1035,10 +1109,17 @@ type::= [<?@modifier>volatile|const|]
   
   public static class Arraysize
   {
+    /**Simple constant integer value, typically for immediate arrays in a struct. 
+     * If -1 is stored here, the array is given with unknown size with [] */
     public int value;
     
+    /**A symbol value, defined per #define, typically for C but difficult to evaluate. */
     public String symbolValue;
     
+    /**A value as expression. Difficult to evaluate. Needs an expression interpreter. Needs knowledge of defines because variables are defines */
+    public Value exprValue;
+    
+    /**Array with [] as pointer or unknown determined by initializer. */
     public void set_unknown(){ value = -1; }
     
     public Arraysize new_arraysize() { return this; }
@@ -1057,6 +1138,8 @@ type::= [<?@modifier>volatile|const|]
     public String name;
     
     public boolean inline;
+    
+    public boolean abstract_;
     
     public List<AttributeOrTypedef> args;
     
@@ -1087,7 +1170,7 @@ type::= [<?@modifier>volatile|const|]
     public StatementBlock new_statementBlock(){ return body = new StatementBlock(); }
     public void add_statementBlock(StatementBlock val){ }
     
-    
+    public void set_abstract() { abstract_=true; }
     
   }
   
@@ -1096,7 +1179,11 @@ type::= [<?@modifier>volatile|const|]
   public static class MethodTypedef extends MethodDef
   { 
     boolean bPointerType;
+    String class_;
     MethodTypedef(){ super("typedef_method"); }
+
+    public void set_class(String name) { class_ = name; }
+  
   }
   
   
@@ -1208,6 +1295,26 @@ type::= [<?@modifier>volatile|const|]
     public Arraysize arraysize;
   
     public Value value;
+    
+    List<VariableDefinition> moreVariable;
+    
+    public VariableDefinition new_name() { 
+      if(name == null) { return this; }
+      else {
+        if(moreVariable == null) { moreVariable = new LinkedList<VariableDefinition>(); }
+        VariableDefinition ret = new VariableDefinition();
+        ret.type = type; //same type
+        moreVariable.add(ret);
+        return ret;
+      }
+    }
+    
+    /**Add modifier to the existing type. */
+    public Type new_typeRefModifier() { return type; }
+    public void add_typeRefModifier(Type val) { }
+    
+    
+    
     @Override public String toString(){ return name + ": " + type; }
   }
   
@@ -1232,6 +1339,9 @@ type::= [<?@modifier>volatile|const|]
   public static class MethodCall extends Statement
   { public MethodCall(){ super('m'); }
   
+    /**The Object which's method is called. */
+    public ExternObject externObject;
+
     public String methodname;
     
     List<Value> args; 
@@ -1409,6 +1519,7 @@ type::= [<?@modifier>volatile|const|]
     public boolean preDecrement, preIncrement, postDecrement, postIncrement;
     public String simpleVariable;
     
+    /**The Object which's variable is accessed. */
     public ExternObject externObject;
     
     public Value index;
