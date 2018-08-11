@@ -74,6 +74,7 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
 public class CheaderParser {
 
   /**Version, history and license.
+   * <ul>2018-08-12 JzHartmut implicite named or unnamed struct handled, named struct are stored as extra type..
    * <ul>2018-01-03 JzHartmut new Some enhancements adequate to syntax in Cheader.zbnf, while testing reflection.
    * <ul>2017-12-20 JzHartmut new {@link StructDefinition} with attributes and isBasedOnObjectJc. Used for Sfunction not based on ObjectJc.
    * <li>2017-05-29 JzHartmut {@link Type#pointer_} with {@link Pointer} designation  
@@ -289,10 +290,12 @@ public class CheaderParser {
   public static class HeaderBlock extends HeaderBlockEntry
   { 
   
-    HeaderBlock(){ super("{}"); }
+    final HeaderBlock parent;
+    
+    HeaderBlock(){ super("{}"); parent = null;}
     
     /**Type of the HeaderBlockEntry as String, checked in JZcmd. */
-    HeaderBlock(String whatisit){ super(whatisit); }
+    HeaderBlock(HeaderBlock parent, String whatisit){ super(whatisit); this.parent = parent; }
   
     List<HeaderBlockEntry> entries = new LinkedList<HeaderBlockEntry>();
   
@@ -328,7 +331,7 @@ public class CheaderParser {
     public Define new_undefDefinition(){ return new Define(); }
     public void add_undefDefinition(Define val){ val.visibility = visibility; entries.add(val); }
     
-    public ConditionBlock new_conditionBlock(){ return new ConditionBlock(); }
+    public ConditionBlock new_conditionBlock(){ return new ConditionBlock(this); }
     public void add_conditionBlock(ConditionBlock val){ val.visibility = visibility; entries.add(val); }
     
     
@@ -352,20 +355,20 @@ public class CheaderParser {
     public void add_friendClassDef(FriendClass val){ val.visibility = visibility; entries.add(val); }
     
     
-    public StructDefinition new_structDefinition(){ return new StructDefinition("structDefinition", false); }
+    public StructDefinition new_structDefinition(){ return new StructDefinition(this, "structDefinition", false); }
     public void add_structDefinition(StructDefinition val){ 
       if(val.name !=null && val.name.equals("ARRAYJC"))
         Debugutil.stop();
       val.visibility = visibility; entries.add(val); 
     }
     
-    public ClassDefinition new_classDef(){ return new ClassDefinition("classDef"); }
+    public ClassDefinition new_classDef(){ return new ClassDefinition(this, "classDef"); }
     public void add_classDef(ClassDefinition val){ val.visibility = visibility; entries.add(val); }
     
-    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition("structDefinition", false); }
+    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition(this, "structDefinition", false); }
     public void add_structContentInsideCondition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
     
-    public StructDefinition new_unionDefinition(){ return new StructDefinition("unionDefinition", true); }
+    public StructDefinition new_unionDefinition(){ return new StructDefinition(this, "unionDefinition", true); }
     public void add_unionDefinition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
     
     public AttributeOrTypedef new_typedef(){ return new AttributeOrTypedef("typedef"); }
@@ -577,7 +580,7 @@ public class CheaderParser {
   
   public static class ConditionBlock extends HeaderBlock
   {
-    ConditionBlock(){ super("#ifdef"); }
+    ConditionBlock(HeaderBlock parent){ super(parent, "#ifdef"); }
     
     public static class OrCondition extends ConditionDef {
       public String conditionDef;
@@ -691,7 +694,7 @@ public class CheaderParser {
     /**If set the struct is conditionally defined in the header file. */
     public String conditionDef, conditionDefNot;
     
-    StructDefinition(String whatisit, boolean isUnion){ super(whatisit); this.isUnion = isUnion; }
+    StructDefinition(HeaderBlock parent, String whatisit, boolean isUnion){ super(parent, whatisit); this.isUnion = isUnion; }
   
     List<AttributeOrTypedef> attribs = new LinkedList<AttributeOrTypedef>();
     
@@ -701,46 +704,132 @@ public class CheaderParser {
     
     public AttributeOrTypedef superclass;
     
-    public String tagname, name;
+    public String tagname, name; 
     
-    public StructDefinition new_implicitStructAttribute() { return new StructDefinition("unnamedStructAttr", false); }
+    /**If this is set, the struct is a implicitly one. The {@link #name} is from the environment struct. 
+     * this element is the name of the element with this struct.
+     */
+    public String implicitName;
+    
+    public String nameTypeOffs;
+    
+    public void set_name(String val) { name = nameTypeOffs = val; }
+    
+    public StructDefinition new_implicitStructAttribute() { return new StructDefinition(parent, "unnamedStructAttr", false); }
 
-    public void add_implicitStructAttribute(StructDefinition val) { entries.add(val); }
+    public void add_implicitStructAttribute(StructDefinition val) { 
+      if(val.name == null) {
+        for(AttributeOrTypedef mem : val.attribs) {  //attributes of the implicit union:
+          attribs.add(mem);
+        }
+      } else {
+        //An explicitely inner struct:
+        //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
+        String structNameTypeOffs = this.tagname.substring(0, this.tagname.length()-2);
+        String structName;
+        if(val.tagname !=null) {
+          structName = structNameTypeOffs + "_" + val.tagname;
+        } else {
+          structName = structNameTypeOffs + "_" + val.name;
+        }
+        
+//        if(val.tagname !=null) { 
+//          structName += val.tagname.endsWith("_t") ? val.tagname.substring(0, val.tagname.length()-2): val.tagname; 
+//        } else {
+//          structName += val.tagname.endsWith("_t") ? val.tagname.substring(0, val.tagname.length()-2): val.tagname; 
+//        }
+//          int z1 = this.name.length();
+//          int z2 = val.name.length();
+//          if(z1 + z2 > 31) { //too long
+//            if(z1 > z2) { z1 = 31 - z2; } //2. name full
+//            else { z1 = 31 - z2; } //TODO
+//          }
+//          structName = this.name.substring(0, z1) + "_" + val.name;
+//        }
+        
+        AttributeOrTypedef attr = new AttributeOrTypedef();
+        attr.name = val.name;
+        attr.type = new Type();
+        attr.type.name = structName;
+        attribs.add(attr);
+        if(parent !=null) {
+          val.implicitName = val.name;
+          //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
+          val.nameTypeOffs = structNameTypeOffs; //this.tagname.substring(0, this.tagname.length()-2);
+          val.name = structName;
+          val.whatisit = "structDefinition";
+          parent.entries.add(val);
+        }
+      }
+      //entries.add(val); 
+    }
 
-    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition("unnamedUnionAttr", true); }
+    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition(parent, "unnamedUnionAttr", true); }
 
-    /**Checks whether it is the first member of this struct and one member is ObjectJc, then it is the base class.
+    /**An implicitUnionAttribute is a fully parsed union with or without a name.
+     * If no attributes are stored before, it may be the definition of a super class in form:
+     * <pre>
+     * typedef struct MyType_t {
+     *   union( MyBaseType super; ObjectJc object; MyInterface ifxy; }; 
+     * </pre> 
+     * The superclass should be the first member of the union because const initalizing with <code>{ ... }</code> does not work elsewhere,
+     * it is from C language. 
+     * Because that the first element of the union can be detected as the super class. 
+     * <br>
+     * Another implicit union is an attribute. Maybe named or unnamed.
+     *  
+     * Checks whether it is the first member of this struct and one member is ObjectJc, then it is the base class.
      * @param val
      */
     public void add_implicitUnionAttribute(StructDefinition val) { 
       entries.add(val); 
-      if(attribs.size()==0 ) { //first one
-        for(AttributeOrTypedef mem : val.attribs) {
+      boolean bIsSuper = false;
+      if(attribs.size()==0 && (val.name == null || val.name.equals("base") || val.name.equals("super"))) { //first one
+        isBasedOnObjectJc = val.isBasedOnObjectJc;
+        if(val.superclass !=null) {
+          superclass = val.superclass;
+          bIsSuper = true;
+        }
+        for(AttributeOrTypedef mem : val.attribs) {  //attributes of the implicit union:
           if( mem.type.name.equals("ObjectJc") && mem.type.pointer_==null) {
             isBasedOnObjectJc = true;
-          } else if(superclass == null) {
+          } 
+          if(superclass == null && mem.type.pointer_==null) {
             superclass = mem;   //The first member is the superclass.
+            bIsSuper = true;
           }
         }
+      } 
+      if(!bIsSuper) {
+        add_implicitStructAttribute(val);
       }
     }
 
-    public void set_implicitStruct() { name = "?"; }
+    public void set_XXXimplicitStruct() { name = "?"; }
     
-    public void set_variante(String val) {} //only formally necessary because [<?variante>...] it stores the text.
+    public void set_XXXvariante(String val) {} //only formally necessary because [<?variante>...] it stores the text.
 
-    public StructDefinition new_variante() { return this; }
+    public StructDefinition new_XXXvariante() { return this; }
 
-    public void add_variante(StructDefinition  val){} //already added.
+    public void add_XXXvariante(StructDefinition  val){} //already added.
     
     @Override public void add_attribute(AttributeOrTypedef val){ 
       super.add_attribute(val);
-      if(attribs.size() == 0) {
+      if(attribs.size() == 0 && superclass == null) {
+        //The first element with type Object is the super class.
         if(val.type.name.equals("ObjectJc") && val.type.pointer_==null) {
           isBasedOnObjectJc = true;
+          superclass = val;
+          //additional, an attribute ObjectJc to view the direct content. Per se it is not correct.
+          attribs.add(val);
+        } else {
+          //the first as  normal attribute, the first one. This struct may not based on ObjectJc or has an implicit union.
+          attribs.add(val);
         }
+      } else {
+        //a second attribute.
+        attribs.add(val);
       }
-      attribs.add(val);
     }
     
 
@@ -826,7 +915,7 @@ public class CheaderParser {
 
   public static class ClassDefinition extends HeaderBlock
   { 
-    ClassDefinition(String whatisit){ super(whatisit); }
+    ClassDefinition(HeaderBlock parent, String whatisit){ super(parent, whatisit); }
   
     public String name;
     
@@ -1553,6 +1642,16 @@ type::= [<?@modifier>volatile|const|]
     return res;
   }
   
+  
+  
+  public static String prepareReflName(String name) {
+    String ret = name.replace('.', '_');
+    int zName = name.length();
+    if(zName > 30) {
+      name = name.substring(0, 15) + "_" + name.substring(zName - 14, zName);
+    }
+    return ret;
+  }
   
   
   
