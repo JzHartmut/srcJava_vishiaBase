@@ -2,7 +2,6 @@ package org.vishia.header2Reflection;
 
 import java.io.File;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +112,7 @@ public class CheaderParser {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2014-10-25";
+  static final public String sVersion = "2018-08-17";
 
   
   
