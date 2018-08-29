@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.byteData.ByteDataAccess;
+import org.vishia.byteData.ByteDataAccessBase;
 import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
 import org.vishia.byteData.ObjectArray_Jc;
@@ -24,8 +25,45 @@ import org.vishia.util.StdHexFormatWriter;
  * @since 2010-01-11
  *
  */
-/*package private*/ class BinOutPrep
+public class BinOutPrep
 {
+  
+  
+  /**Version, history and license.
+   * <ul>
+   * <li>2018-08-29 Hartmut improved, commented, using for Reflection generation binary with JZtxtcmd-script.  
+   * <li>2010-01-11 Hartmut new: for {@link Header2Reflection}, binary output   
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  //@SuppressWarnings("hiding")
+  public static final String version = "2018-08-28";
+
+  
   
   /**If setOutBin is called, this writer is present, else it is null. */
   private OutputStream fileBin;
@@ -55,11 +93,14 @@ import org.vishia.util.StdHexFormatWriter;
   
   private final Field_Jc binField;
   
-  int ixField;
-  
   private int nrofRelocEntries = 0;
   
   private int nrofClasses = 0;
+  
+  /**Counts the number of fields in 1 class. Set to 0 in {@link #addClass(String, String)}.
+   * Used for the index in position.
+   */
+  private int nrofFieldsInClass;
   
   
   private static class TypeBinPosition
@@ -95,7 +136,7 @@ import org.vishia.util.StdHexFormatWriter;
   
   
   
-  BinOutPrep(String sFileBin, boolean fileBinBigEndian, boolean hexOutput, int sign) 
+  public BinOutPrep(String sFileBin, boolean fileBinBigEndian, boolean hexOutput, int sign) 
   throws FileNotFoundException
   {
     File fileBinFile = new File(sFileBin);
@@ -128,14 +169,23 @@ import org.vishia.util.StdHexFormatWriter;
   }
   
   
-  void setRelocEntry(int posReloc) throws IllegalArgumentException
+  
+  /**Sets a position in binFile as relocate position.
+   * The address there is organized from 0 relative to the binfile data.
+   * On loading the binFile the load address should be added to build a correct memory address.
+   * @param posReloc Position in binFile.
+   * @throws IllegalArgumentException
+   */
+  private void setRelocEntry(int posReloc) throws IllegalArgumentException
   { nrofRelocEntries +=1;
     binOutHead.addChildInteger(4, posReloc);  //address to relocate.
   } 
   
+  
+  
   /**Prepare a new ClassJc-entry in the bin Data: 
    * @throws IllegalArgumentException */
-  int addClass(String sCppClassName, String sCppClassNameShow) throws IllegalArgumentException
+  public int addClass(String sCppClassName, String sCppClassNameShow) throws IllegalArgumentException
   { 
     binOutClass.addChild(binClass);
     binClass.clearData();
@@ -146,22 +196,40 @@ import org.vishia.util.StdHexFormatWriter;
     binClass.set_posObjectBase(0);  //posObjectBase always 0 because nested CPU may be simple-C 
     binClass.set_nSize(0xFFFFF000 + nrofClasses); //sizeof(TYPE) is unknown here, instead: index of the class.
     posClassesInBuffer.put(sCppClassName, new TypeBinPosition(ixByteClass));
-    ixField = 1;
+    nrofFieldsInClass = 0;
     return nrofClasses;
   }
 
   
   
   
-  void addFieldHead() throws IllegalArgumentException
+  /**Adds space for the fields to {@link #binOutClass} as child {@link #binFieldArray} and clears the child.
+   * It is separated from {@link #addClass(String, String)} because not any class has fields.
+   * Invoke only if fields are found, before the first field will be written.
+   * @throws IllegalArgumentException
+   */
+  public void addFieldHead() throws IllegalArgumentException
   { binOutClass.addChild(binFieldArray);
     binFieldArray.clearData();
   }
   
   
   
-  void addField(String sAttributeNameShow, int typeAddress, String sType, int mModifier, int nrofArrayElements) throws IllegalArgumentException
+  /**Adds a field to the {@link #binFieldArray} via {@link ByteDataAccessBase}.
+   * The {@link #binFieldArray} is a {@link ObjectArray_Jc} instance for ByteDataAccess.
+   * It presents the Fields in Reflection in binary presentation.
+   * @param sAttributeNameShow
+   * @param typeAddress either -1 for yet unknown or the enum ScalarTypes_ClassJc (see emC/Object_emC.h) 
+   *                    or the known relative address of the type in binary file
+   * @param sType  The identifier of the type. Without _t on forward declaration.
+   * @param mModifier
+   * @param nrofArrayElements
+   * @throws IllegalArgumentException
+   */
+  public void addField(String sAttributeNameShow, int typeAddress, String sType, int mModifier, int nrofArrayElements) throws IllegalArgumentException
   {
+    this.nrofFieldsInClass +=1;
+    int ixField = this.nrofFieldsInClass;   //The index of the field from 1 for the first field.
     binFieldArray.addChildEmpty(binField);
     binField.setName(sAttributeNameShow);
     //binField.set_sizeElements(0xFFFF);
@@ -182,14 +250,13 @@ import org.vishia.util.StdHexFormatWriter;
     //Note: the class should be added first. Otherwise as in the c-file for compiler.
     int posReloc = binField.setOffs_declaringClass(binClass.getPositionInBuffer());
     setRelocEntry(posReloc);
-    ixField +=1;
   }
   
   
   
   /**Sets the reference from the class to its fields.
+   * @param nrofAttributes The number of the fields written.
    * @throws IllegalArgumentException 
-   * 
    */
   void setAttributRef(int nrofAttributes) throws IllegalArgumentException
   { binFieldArray.set_length(nrofAttributes);
@@ -199,7 +266,16 @@ import org.vishia.util.StdHexFormatWriter;
   }
   
   
-  void postProcessBinOut() throws IOException, IllegalArgumentException
+  
+  public void closeAddClass() {
+    setAttributRef(0);
+  }
+  
+  
+  
+  
+  
+  public void postProcessBinOut() throws IOException, IllegalArgumentException
   {
     for(TypeNeedInBinOut need: typeBinNeed){
       int  posTypeInField = need.posRefInFieldBuffer;
@@ -231,7 +307,8 @@ import org.vishia.util.StdHexFormatWriter;
   }
   
   
-  void close() throws IOException
+  
+  public void close() throws IOException
   {
     fileBin.close();
   }

@@ -346,7 +346,7 @@ public final class JZtxtcmdSyntax {
     + " staticJavaAccess::=\n"
     + "   [ & <dataAccess?Class_Var> : [<$\\.$?javapath>]       ## access via Class variable .element\n"
     + "   | [: <dataAccess?Classpath_Var> : ] <$\\.$?javapath>  ## [Classpath] package.path.Class.element\n"
-    + "   ] [( [ { <objExpr?argument> ? , } ])].               ## arguments\n"
+    + "   ] [( <?operation> [ { <objExpr?argument> ? , } ])].   ## arguments\n"
     + " \n"
     //+ " dataPath::= <$-?startVariable>[ [?\\. \\>] \\.{ <datapathElement> ? [?\\. \\>] \\.}].\n"
     + " dataPath::= \n"

@@ -20,17 +20,6 @@
  * @author JcHartmut = hartmut.schorrig@vishia.de
  * @version 2006-06-15  (year-month-day)
  * list of changes:
- * 2010-01-24: Hartmut docu improved, MainCmdLogging_ifc-output before exception on error in called routine to visit the problem.
- * 2009-04-26: Hartmut corr: Now all float or int parse result can set a int, long, float double fields and set_method(value).
- * 2009-04-26: Hartmut corr: better Exception text if access a non public field as components output.
- * 2009-03-23: Hartmut chg: total new structuring. Functional change is: 
- *                          Now inner classes in the output classes are unnecessary,
- *                          a destination class is found as type of a new_semantic()-method
- *                          or as type of field for a component. It should be public, but anywhere in the code.
- *                          All other functions are compatible. 
- * 2009-03-08: Hartmut new: setOutputFields. It is strict, but accept fields, not only methods.
- * 2008-04-02: Hartmut some changes
- * 2006-05-15: Hartmut www.vishia.de creation
  *
  ****************************************************************************/
 package org.vishia.zbnf;
@@ -53,7 +42,6 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.SetLineColumn_ifc;
-import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
@@ -179,6 +167,7 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2018-08-28 Hartmut new: improve change with <?_end>. add_semantic is called, it was missing, only ok in the concretely case. 
    * <li>2017-04-22 Hartmut new: If a <code>new_xyz</code> method is found for a non syntaxComponent, the return value
    *   is a child instance to write into the next result items, till <code><?_end></code>. The last one switches back to the parent again.
    * <li>2017-03-25 Hartmut new It is possible that the user provides a method <code>new_semantic(ZbnfParseResultItem zbnfItem)</code>.
@@ -217,6 +206,18 @@ public final class ZbnfJavaOutput
    * <li>2010-12-03 Hartmut new: parseFileAndFillJavaObject(...String syntax), better user support for simple tasks
    * <li>2010-12-02 Hartmut fnChg: parseFileAndFillJavaObject(): no report output of sError, because it is supplied in the return value.
    * <li>2010-12-02 Hartmut new: Up to now this version variable, its description contains the version history.
+   * <li>2010-01-24: Hartmut docu improved, MainCmdLogging_ifc-output before exception on error in called routine to visit the problem.
+   * <li>2009-04-26: Hartmut corr: Now all float or int parse result can set a int, long, float double fields and set_method(value).
+   * <li>2009-04-26: Hartmut corr: better Exception text if access a non public field as components output.
+   * <li>2009-03-23: Hartmut chg: total new structuring. Functional change is: 
+   * <ul><li> Now inner classes in the output classes are unnecessary,
+   *   <li>a destination class is found as type of a new_semantic()-method
+   *   <li>or as type of field for a component. It should be public, but anywhere in the code.
+   *   <li>All other functions are compatible. 
+   * </ul>  
+   * <li>2009-03-08: Hartmut new: setOutputFields. It is strict, but accept fields, not only methods.
+   * <li>2008-04-02: Hartmut some changes
+   * <li>2006-05-15: Hartmut www.vishia.de creation
    * </ul>
    * <ul>
    * <li>new: new functionality, downward compatibility.
@@ -230,7 +231,7 @@ public final class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public static final String sVersion = "2017-03-25";
+  public static final String sVersion = "2018-08-28";
   
   /**Helper Instance to bundle a class to search methods or fields and the associated instance.
    * It is the destination to search elements via semantic in its {@link #clazz} and store the data in the {@link #instance}.
@@ -450,22 +451,22 @@ public final class ZbnfJavaOutput
    *   is invoked for that child to store the content.
    * </ul> 
    * 
-   * @param dst1 The class and instance to add children results.
+   * @param dstArg The class and instance to add children results.
    * @param zbnfComponent The ZBNF parsers's result item which is either the top level result or any component.
    * @throws IllegalAccessException if the field is not public.
    * @throws IllegalArgumentException 
    * @throws InstantiationException if a matching class is found but it can't be instantiated. 
    */  
   protected void writeZbnfResult
-  ( DstInstanceAndClass dst1  
+  ( DstInstanceAndClass dstArg  
   , ZbnfParseResultItem zbnfComponent
   , int recursion
   ) 
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   {
     //write column, line and file into it if expected from the instance type: 
-    if(dst1.instance instanceof SetLineColumn_ifc){
-      SetLineColumn_ifc check = (SetLineColumn_ifc) dst1.instance;
+    if(dstArg.instance instanceof SetLineColumn_ifc){
+      SetLineColumn_ifc check = (SetLineColumn_ifc) dstArg.instance;
       int mode = check.setLineColumnFileMode();
       final int inputLine, inputColumn;
       String inputFile;
@@ -480,7 +481,7 @@ public final class ZbnfJavaOutput
     
     { //skip into the component resultItem:
       Iterator<ZbnfParseResultItem> iterChildren = zbnfComponent.iteratorChildren();
-      DstInstanceAndClass dst = dst1;
+      DstInstanceAndClass dst = dstArg;
       //
       //This is the loop over all result items of this component.
       //
@@ -515,6 +516,9 @@ public final class ZbnfJavaOutput
           else
           { //write the content of the resultItem into the outputInstance:
             if(semantic.equals("_end")){
+              if(dst.shouldAdd)
+              { searchAddMethodAndInvoke(dst.semantic, dst.parentResult, dst);  //add child in dst.
+              }
               dst = dst.parentResult;
             } else {
               DstInstanceAndClass dstChild = searchDestinationAndWriteResult(semantic, dst, childItem);
@@ -526,6 +530,13 @@ public final class ZbnfJavaOutput
           }
         } //semantic given
       } //while
+      int ctError = 1000;
+      while(dst !=dstArg && dst.parentResult !=null && --ctError >=0) {
+        if(dst.shouldAdd)
+        { searchAddMethodAndInvoke(dst.semantic, dst.parentResult, dst);  //add child in dst.
+        }
+        
+      }
     }
   }
    
@@ -830,6 +841,7 @@ public final class ZbnfJavaOutput
    * <br>
    * @param resultItem The semantic is determining the matching field or method. 
    *        The content is used if childOutputInstance is null.
+   * @return null usual, A child instance if a new_semantic method was found.        
    * @throws IllegalAccessException if the element is not writeable especially not public. 
    * @throws IllegalArgumentException 
    * @throws InstantiationException if the creation of a child instance fails.

@@ -73,6 +73,9 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
 public class CheaderParser {
 
   /**Version, history and license.
+   * <ul>2018-08-28 JzHartmut {@link HeaderBlock#set_const()}, {@link HeaderBlock#new_structContentInsideCondition()} should return a {@link ConditionBlock}.
+   *   {@link HeaderBlock#add_macro(AttribAsMacro)} and {@link StructDefinition#add_macro(AttribAsMacro)}: The OS_HandlePtr should be accepted as attribute.
+   *   Some more container for semantics from CHeader.zbnf
    * <ul>2018-08-12 JzHartmut implicite named or unnamed struct handled, named struct are stored as extra type..
    * <ul>2018-01-03 JzHartmut new Some enhancements adequate to syntax in Cheader.zbnf, while testing reflection.
    * <ul>2017-12-20 JzHartmut new {@link StructDefinition} with attributes and isBasedOnObjectJc. Used for Sfunction not based on ObjectJc.
@@ -320,6 +323,12 @@ public class CheaderParser {
     /**That is for C++ classDefinition. The visibility is set for any {@link ClassDefinition#new_classVisibilityBlock()}.
      * It is used for any entry. */
     String visibity;
+
+    
+    boolean isConst;
+    
+    public void set_const() { isConst = true; }
+    
     
     public String compilerError;
     
@@ -364,8 +373,8 @@ public class CheaderParser {
     public ClassDefinition new_classDef(){ return new ClassDefinition(this, "classDef"); }
     public void add_classDef(ClassDefinition val){ val.visibility = visibility; entries.add(val); }
     
-    public StructDefinition new_structContentInsideCondition(){ return new StructDefinition(this, "structDefinition", false); }
-    public void add_structContentInsideCondition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
+    public ConditionBlock new_structContentInsideCondition(){ return new ConditionBlock(parent); }
+    public void add_structContentInsideCondition(ConditionBlock val){ val.visibility = visibility; entries.add(val); }
     
     public StructDefinition new_unionDefinition(){ return new StructDefinition(this, "unionDefinition", true); }
     public void add_unionDefinition(StructDefinition val){ val.visibility = visibility; entries.add(val); }
@@ -385,11 +394,15 @@ public class CheaderParser {
     public AttributeOrTypedef new_attribute(){ return new AttributeOrTypedef(); }
     public void add_attribute(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
   
+    public AttributeOrTypedef new_constDef(){ return new AttributeOrTypedef(); }
+    public void add_constDef(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
+  
     public AttribAsMacro new_macro(String name){ 
       AttribAsMacro macro = new AttribAsMacro(name);
       entries.add(macro );
       return macro;
     }
+    public void add_macro(AttribAsMacro val){} //empty, all done. See StructDefinition.add_macro
     
     
     
@@ -421,6 +434,10 @@ public class CheaderParser {
     public void add_invalidBlock(HeaderBlock val) { } //don't add, forget it.
     
     public void set_modifier(String val){}
+    
+    
+    public void set_constDef(String val) {}
+    
     
   }
   
@@ -601,9 +618,13 @@ public class CheaderParser {
     
     public List<OrCondition> orConditions;
     
-    public String elseConditionBlock;
+    public void set_elseConditionBlock(String val) {}
 
     public void conditionDef(String val) { not = false; conditionDef = val; }
+    
+    
+    public List<ConditionBlock> elifBlocks;
+    
     
     public HeaderBlock elseBlock;
     
@@ -616,6 +637,13 @@ public class CheaderParser {
       if(orConditions == null) {orConditions = new LinkedList<OrCondition>(); } 
       orConditions.add(val); 
     }
+    
+    public ConditionBlock new_elif(){ return new ConditionBlock(parent); }
+    public void add_elif(ConditionBlock val){ 
+      if(elifBlocks == null) { elifBlocks = new LinkedList<ConditionBlock>(); }
+      elifBlocks.add(val); 
+    }
+    
     
     public HeaderBlock new_elseConditionBlock(){ return new HeaderBlock(); }
     public void add_elseConditionBlock(HeaderBlock val){ elseBlock = val; }
@@ -648,6 +676,8 @@ public class CheaderParser {
     public String valueDef = "";
     
     public int intvalue, hexvalue;
+    
+    public String stringvalue;
     
     public int fractPart;
     
@@ -831,7 +861,25 @@ public class CheaderParser {
       }
     }
     
+    
+    @Override public void add_macro(AttribAsMacro val){
+      super.add_macro(val);
+      if(val.macro.equals("OS_HandlePtr")) {
+        val.type.pointer_ = new LinkedList<Pointer>();
+        val.type.pointer_.add(new Pointer());
+        val.bOS_HandlePointer = true;
+        attribs.add(val);
+      }
+    } 
+    
+    
+    
+    /**Ignore &lt;?elseConditionBlock&gt; as String, add it as component. */
+    //public void set_elseConditionBlock(String val) {} 
 
+    
+    
+        
     @Override public String toString(){ return name; }
 
   
@@ -1009,6 +1057,10 @@ public class CheaderParser {
     
     public int bitField;
     
+    public boolean staticConst;
+    
+    public boolean bOS_HandlePointer;
+    
     /**Used only on conditionArgument. */
     public String conditionDef;
     
@@ -1036,7 +1088,7 @@ public class CheaderParser {
     public String macro; 
     
     
-    public void end_end_macro(){}
+    public void XXXend_end_macro(){}
   }  
   
   
@@ -1382,7 +1434,7 @@ type::= [<?@modifier>volatile|const|]
     
     public Arraysize arraysize;
   
-    public Value value;
+    public Value defaultValue;
     
     List<VariableDefinition> moreVariable;
     
