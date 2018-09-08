@@ -73,12 +73,14 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
 public class CheaderParser {
 
   /**Version, history and license.
-   * <ul>2018-08-28 JzHartmut {@link HeaderBlock#set_const()}, {@link HeaderBlock#new_structContentInsideCondition()} should return a {@link ConditionBlock}.
+   * <ul>2018-09-02 JzHartmut first super element for non-ObjectJc superclass, see {@link StructDefinition#add_attribute(AttributeOrTypedef)}
+   * <li>2018-09-02 JzHartmut <code>structNameTypeOffs</code> removed, see {@link StructDefinition#add_implicitStructAttribute(StructDefinition)}
+   * <li>2018-08-28 JzHartmut {@link HeaderBlock#set_const()}, {@link HeaderBlock#new_structContentInsideCondition()} should return a {@link ConditionBlock}.
    *   {@link HeaderBlock#add_macro(AttribAsMacro)} and {@link StructDefinition#add_macro(AttribAsMacro)}: The OS_HandlePtr should be accepted as attribute.
    *   Some more container for semantics from CHeader.zbnf
-   * <ul>2018-08-12 JzHartmut implicite named or unnamed struct handled, named struct are stored as extra type..
-   * <ul>2018-01-03 JzHartmut new Some enhancements adequate to syntax in Cheader.zbnf, while testing reflection.
-   * <ul>2017-12-20 JzHartmut new {@link StructDefinition} with attributes and isBasedOnObjectJc. Used for Sfunction not based on ObjectJc.
+   * <li>2018-08-12 JzHartmut implicite named or unnamed struct handled, named struct are stored as extra type..
+   * <li>2018-01-03 JzHartmut new Some enhancements adequate to syntax in Cheader.zbnf, while testing reflection.
+   * <li>2017-12-20 JzHartmut new {@link StructDefinition} with attributes and isBasedOnObjectJc. Used for Sfunction not based on ObjectJc.
    * <li>2017-05-29 JzHartmut {@link Type#pointer_} with {@link Pointer} designation  
    * <li>2017-05-10 JzHartmut adapt to Cheader.zbnf 
    * <li>2016-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
@@ -115,7 +117,7 @@ public class CheaderParser {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2018-08-17";
+  static final public String sVersion = "2018-09-08";
 
   
   
@@ -740,12 +742,16 @@ public class CheaderParser {
      */
     public String implicitName;
     
-    public String nameTypeOffs;
+    public void set_name(String val) { name = val; }
     
-    public void set_name(String val) { name = nameTypeOffs = val; }
-    
-    public StructDefinition new_implicitStructAttribute() { return new StructDefinition(parent, "unnamedStructAttr", false); }
+    public StructDefinition new_implicitStructAttribute() { return new StructDefinition(this, "unnamedStructAttr", false); }
 
+    /**Called from ZBNF: <code> structContent:: ... struct\W &lt;structDefinition?+implicitStructAttribute></code>
+     * @param val The parsed implicit struct
+     * @since 2018-09-02: <code>structNameTypeOffs</code> is removed. It is faulty for <code>struct type_t {...} type_s;</code>
+     *   because it can't be deduce from the tag name to the struct name. The last one is need for reflection generation.
+     *   The Reflection generator Cheader2Refl.jztxt.cmd was improved. The element <code>structNameTypeOffs</code> is no more necessary.  
+     */
     public void add_implicitStructAttribute(StructDefinition val) { 
       if(val.name == null) {
         for(AttributeOrTypedef mem : val.attribs) {  //attributes of the implicit union:
@@ -754,28 +760,12 @@ public class CheaderParser {
       } else {
         //An explicitely inner struct:
         //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
-        String structNameTypeOffs = this.tagname.substring(0, this.tagname.length()-2);
-        String structName;
+        String structName = this.tagname.endsWith("_t") ? this.tagname.substring(0, this.tagname.length()-2) : this.tagname;
         if(val.tagname !=null) {
-          structName = structNameTypeOffs + "_" + val.tagname;
+          structName += "_" + val.tagname; //Name of the implicit struct.
         } else {
-          structName = structNameTypeOffs + "_" + val.name;
+          structName += "_" + val.name;
         }
-        
-//        if(val.tagname !=null) { 
-//          structName += val.tagname.endsWith("_t") ? val.tagname.substring(0, val.tagname.length()-2): val.tagname; 
-//        } else {
-//          structName += val.tagname.endsWith("_t") ? val.tagname.substring(0, val.tagname.length()-2): val.tagname; 
-//        }
-//          int z1 = this.name.length();
-//          int z2 = val.name.length();
-//          if(z1 + z2 > 31) { //too long
-//            if(z1 > z2) { z1 = 31 - z2; } //2. name full
-//            else { z1 = 31 - z2; } //TODO
-//          }
-//          structName = this.name.substring(0, z1) + "_" + val.name;
-//        }
-        
         AttributeOrTypedef attr = new AttributeOrTypedef();
         attr.name = val.name;
         attr.type = new Type();
@@ -784,7 +774,6 @@ public class CheaderParser {
         if(parent !=null) {
           val.implicitName = val.name;
           //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
-          val.nameTypeOffs = structNameTypeOffs; //this.tagname.substring(0, this.tagname.length()-2);
           val.name = structName;
           val.whatisit = "structDefinition";
           parent.entries.add(val);
@@ -814,17 +803,18 @@ public class CheaderParser {
       entries.add(val); 
       boolean bIsSuper = false;
       if(attribs.size()==0 && (val.name == null || val.name.equals("base") || val.name.equals("super"))) { //first one
-        isBasedOnObjectJc = val.isBasedOnObjectJc;
-        if(val.superclass !=null) {
+        isBasedOnObjectJc = val.isBasedOnObjectJc;  //first attribute basedOnObject, than this too!
+        if(val.superclass !=null) {  //use the first element in the union. Maybe "ObjectJc" too.
           superclass = val.superclass;
           bIsSuper = true;
         }
+        //check the attributes for the first union element, whether it contains ObjectJc or a superclass
         for(AttributeOrTypedef mem : val.attribs) {  //attributes of the implicit union:
           if( mem.type.name.equals("ObjectJc") && mem.type.pointer_==null) {
             isBasedOnObjectJc = true;
           } 
           if(superclass == null && mem.type.pointer_==null) {
-            superclass = mem;   //The first member is the superclass.
+            superclass = mem;   //The first member is the superclass. It is ObjectJc if it is the first one.
             bIsSuper = true;
           }
         }
@@ -842,15 +832,21 @@ public class CheaderParser {
 
     public void add_XXXvariante(StructDefinition  val){} //already added.
     
+    /**Adds the attribute in the struct additional to {@link HeaderBlock#entries}.
+     * Invokes super.HeaderBlock{@link #add_attribute(AttributeOrTypedef)}.
+     * @since 2018-09: A first attribute named "super" is the superclass. But then the struct does not based on Object. 
+     *   Hint: Use an implicitly <code>union{ Type super; ObjectJc object;};</code> to express it.
+     * @see org.vishia.header2Reflection.CheaderParser.HeaderBlock#add_attribute(org.vishia.header2Reflection.CheaderParser.AttributeOrTypedef)
+     */
     @Override public void add_attribute(AttributeOrTypedef val){ 
       super.add_attribute(val);
       if(attribs.size() == 0 && superclass == null) {
         //The first element with type Object is the super class.
-        if(val.type.name.equals("ObjectJc") && val.type.pointer_==null) {
-          isBasedOnObjectJc = true;
+        if((val.type.name.equals("ObjectJc") || val.name.equals("super")) && val.type.pointer_==null) {
+          isBasedOnObjectJc = val.type.name.equals("ObjectJc");  //hint to designate this based on Object use a union definiton in C.
           superclass = val;
           //additional, an attribute ObjectJc to view the direct content. Per se it is not correct.
-          attribs.add(val);
+          //attribs.add(val);
         } else {
           //the first as  normal attribute, the first one. This struct may not based on ObjectJc or has an implicit union.
           attribs.add(val);

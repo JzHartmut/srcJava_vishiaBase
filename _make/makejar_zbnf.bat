@@ -42,15 +42,18 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/mainCmd/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/msgDispatch/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/util/*.java
 ::set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xml/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xmlReader/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xmlSimple/*.java
 
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/checkDeps_C/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/docuGen/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/stateMGen/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/header2Reflection/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/sclConversions/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zbnf/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zcmd/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/jztxtcmd/*.java
 
 
 REM Sets the CLASSPATH variable for compilation (used jar-libraries). do not left empty also it aren't needed:

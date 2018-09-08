@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.byteData.ByteDataAccess;
 import org.vishia.byteData.ByteDataAccessBase;
 import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
@@ -31,6 +30,7 @@ public class BinOutPrep
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-09-08 Hartmut {@link #missingClasses} for report.  
    * <li>2018-08-29 Hartmut improved, commented, using for Reflection generation binary with JZtxtcmd-script.  
    * <li>2010-01-11 Hartmut new: for {@link Header2Reflection}, binary output   
    * </ul>
@@ -61,7 +61,7 @@ public class BinOutPrep
    * 
    */
   //@SuppressWarnings("hiding")
-  public static final String version = "2018-08-28";
+  public static final String version = "2018-09-08";
 
   
   
@@ -130,6 +130,8 @@ public class BinOutPrep
   
   private final Map<String, TypeBinPosition> posClassesInBuffer = new TreeMap<String, TypeBinPosition>();
   
+  private final Map<String, Integer> missingClasses = new TreeMap<String, Integer>();
+  
   private final List<TypeNeedInBinOut> typeBinNeed = new LinkedList<TypeNeedInBinOut>();
   
   
@@ -187,15 +189,15 @@ public class BinOutPrep
    * @throws IllegalArgumentException */
   public int addClass(String sCppClassName, String sCppClassNameShow) throws IllegalArgumentException
   { 
-    binOutClass.addChild(binClass);
-    binClass.clearData();
+    binOutClass.addChild(binClass);  //binClass is used as reference to the binData.
+    binClass.clearData();            //clear in binData. 
     int ixByteClass = binClass.getPositionInBuffer();
     nrofClasses +=1;
-    binOutClassArray.addChildInteger(4, ixByteClass);  
+    binOutClassArray.addChildInteger(4, ixByteClass);  //Store the reference to the class in the classArray, yet relative to buffer.
     binClass.setName(sCppClassNameShow);
     binClass.set_posObjectBase(0);  //posObjectBase always 0 because nested CPU may be simple-C 
     binClass.set_nSize(0xFFFFF000 + nrofClasses); //sizeof(TYPE) is unknown here, instead: index of the class.
-    posClassesInBuffer.put(sCppClassName, new TypeBinPosition(ixByteClass));
+    posClassesInBuffer.put(sCppClassName, new TypeBinPosition(ixByteClass));  //to search and assign the relative pointer to the class 
     nrofFieldsInClass = 0;
     return nrofClasses;
   }
@@ -209,8 +211,8 @@ public class BinOutPrep
    * @throws IllegalArgumentException
    */
   public void addFieldHead() throws IllegalArgumentException
-  { binOutClass.addChild(binFieldArray);
-    binFieldArray.clearData();
+  { binOutClass.addChild(binFieldArray);  //binClass is used as reference to the binData.
+    binFieldArray.clearData();            //clear in binData. 
   }
   
   
@@ -268,7 +270,7 @@ public class BinOutPrep
   
   
   public void closeAddClass() {
-    setAttributRef(0);
+    setAttributRef(nrofFieldsInClass);
   }
   
   
@@ -287,8 +289,14 @@ public class BinOutPrep
         setRelocEntry(posTypeInField);                                  //it should be relocated.
       } else {
         /**Type is not known: */
+        Integer nr = missingClasses.get(need.sType);
+        if(nr == null) { nr = new Integer(0); missingClasses.put(need.sType, nr); }
+        nr +=1;  //it does not increment, build a new nr Instance?
         binOutClass.setIntVal(posTypeInField, 4, Field_Jc.REFLECTION_void);
       }
+    }
+    for(Map.Entry<String, Integer> e : this.missingClasses.entrySet()) {
+      System.err.println("Missing type " + e.getKey());
     }
     binOutClassArray.set_length(nrofClasses);
     int zHead = binOutHead.getLengthTotal();
