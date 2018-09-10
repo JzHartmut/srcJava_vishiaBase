@@ -1,0 +1,40 @@
+==Jutil==
+@ident=Jutil
+.
+===FileSystem===
+@ident=FileSystem
+.
+====File selection with wildcards====
+@ident=FileSelectWildcard
+
+The selection of files inside a directory path have an enhanced capability in comparison to a simple wildcard usage for file names.
+Traditional a selection mask for file names can have one or more as one wildcards in form of asterisk like the windows command
+
+ >dir org\vishia\util\*.java
+ 
+Additionally some commands of operation systems knows an option like ,,-r,, for recursively or ,,/S.. for subdir like
+
+ >dir /S *.java
+ 
+But the enhanced selection capability supports both requests in one wildcard path and supports wildcard on any 
+directory level too.
+
+Write for the search path for files:
+
+ mypath/**/*.java
+ 
+to select all Java-files in all sub directories. The double-asterisk means: All sub directories with that given mask.
+To curtail your choice you can write for example:
+
+* ,,**/util/*.java,,: Searches in all sub directory a directory named ,,util,, and there all ,,*.java,,
+* ,,my**path/*that*dir/my*file.*,,: Searches all sub directories which names starts with ,,my,, and end with ,, path,,.
+Inside accept all directories which contains ,,that,, and ends with ,,dir,,, and such directories accept all files with 
+the given wildcard pattern.
+
+'''Rules for wildcard paths''':
+
+* Any directory name can use wildcards.
+* A ,,**,, accept that wildcard pattern on any directory level. A ,,**,, should be written only on the first position
+of some ,,*,, in the name pattern. ,,my*dir**,, is not admissible. Write ,,my**dir*,,!
+
+    
