@@ -192,7 +192,7 @@ class ZbnfParserStore
     final ZbnfSyntaxPrescript syntaxElement;
     
     /**Replacement for a non existing syntaxElement instead null-reference. */
-    final static ZbnfSyntaxPrescript null_syntaxElement = new ZbnfSyntaxPrescript(null, 0);
+    final static ZbnfSyntaxPrescript null_syntaxElement = new ZbnfSyntaxPrescript(null, ZbnfSyntaxPrescript.EType.kNotDefined);
     
     /** The text from input at the position*/
     String sInput;

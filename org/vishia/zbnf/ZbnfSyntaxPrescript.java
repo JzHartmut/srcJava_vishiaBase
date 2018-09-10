@@ -225,6 +225,8 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
+   *   but the EType can contain some more information. It are used for generating a Java Output.java from the syntax proper for {@link ZbnfJavaOutput}.
    * <li>2017-03-25 Hartmut new: Possibility to add attributes to the syntax item. See ZBNF-core-Documentation, using <...?.name=value?...>
    *   new: {@link #getAttribute(String)}. 
    *   Another approach, indent for text, is processed in jzTc. It may be possible to do that in the parser already?
@@ -253,10 +255,10 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String version = "2017-03-25";
+  public static final String version = "2018-09-10";
   
   /** Kind of syntay type of the item */
-  int eType;
+  EType eType;
 
   /**To go back for syntax path on error. */
   final ZbnfSyntaxPrescript parent;
@@ -362,105 +364,126 @@ public class ZbnfSyntaxPrescript
   final MainCmdLogging_ifc report;
 
 
-  /** Top level item of a syntaxdefinition.*/
-  static final int kSyntaxDefinition = 1;
-
-  static final int kTerminalSymbol = 2;
-
-  static final char kTerminalSymbolInComment = '/';  //0x2f
-  
-  static final int kSkipSpaces = 3; //' '
+  enum EType {
+    kNotDefined (0)
+    /** Top level item of a syntaxdefinition.*/
+  , kSyntaxDefinition(1)
+    /**constant text in source. */
+  , kTerminalSymbol(2)
+  /**constant text in source in a comment part. */
+  , kTerminalSymbolInComment('/')
+  , kSkipSpaces ( 3 ) //' '
 
   /** One alternative of the syntax prescript must be matched.*/
-  static final int kAlternative   = 4;  //'|'
+  , kAlternative   ( 4 )  //'|'
 
   /** No or one alternative of the syntax prescript must be matched.*/
-  static final int kAlternativeOption   = 5;  //'['
+  , kAlternativeOption   ( 5 )  //'['
 
   /** First it is to be tested wether the followed syntax behind this prescript
    *  does match, only if not, this syntaxprescript is to be tested.
    */
-  static final int kAlternativeOptionCheckEmptyFirst   = 6; //']'
+  , kAlternativeOptionCheckEmptyFirst   ( 6 ) //']'
 
   /** Simple option is to be tested, if it is not matched, it is ok.*/
-  static final int kSimpleOption   = 7;  //'o'
+  , kSimpleOption   ( 7 )  //'o'
 
   /** one or more negative variants. If there are matched, it is false.
    *  The use of this possibility is able especially to break in repetitions.
    */
-  static final int kNegativVariant = 8;  //'?'
+  , kNegativVariant ( 8 )  //'?'
 
   /**Designation of a option written as <code>[>....]</code>
    * If the syntax inside square brackets doesn't match, the whole parsing process is aborted.
    */
-  static final char kUnconditionalVariant = '>';  //60 = 0x3c
+  , kUnconditionalVariant ( '>' )  //60 ( 0x3c
   
   /**Designation of a option written as <code>[!....]</code>
    * The syntax inside is expected, but not converted.
    */
-  static final char kExpectedVariant = '!';  //33 = 0x21
+  , kExpectedVariant ( '!' )  //33 ( 0x21
   
-  static final int kRepetition = 9;  //'{'
+  , kRepetition ( 9, '{' )  //'{'
 
-  static final int kRepetitionRepeat = 10;  //'}'
+  , kRepetitionRepeat ( 10 )  //'}'
 
   /** This enum marks, that this item is nor a syntax item.
    * Only a semantic is defined.
    */
-  static final int kOnlySemantic  = 11;  //'?'
+  , kOnlySemantic  ( 11 )  //'?'
 
   /** This enum marks, that the syntax is defined with another definition.
-   * The identifier of the definition is got with getSyntaxFromComplexItem(Object);
+   * The identifier of the definition is got with getSyntaxFromComplexItem(Object) )
    */
-  static final int kSyntaxComponent   = 12;    //'='
+  , kSyntaxComponent   ( 12, '=' )    //'='
 
   /** This enum marks, that the syntax of the token should be a float number,
    * but it should be converted to an integer.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
    */
-  static final int kFloatWithFactor     =15;    //'F'
+  , kFloatWithFactor ( 15, 'F' )    //'F'
 
   /** This enum marks, that the syntax of the token should be a positive number.
    * It is a string only with characters '0' to '9'.
    */
-  static final int kPositivNumber = 16;    //'d'
+  , kPositivNumber ( 16, 'I' )    //'d'
   /** This enum marks, that the syntax of the token should be a positive or negative number.
    * At first a '-' is optional. The rest is a string only with characters '0' to '9'.
    */
-  static final int kIntegerNumber = 17;  //'i'
+  , kIntegerNumber ( 17, 'I' )  //'i'
   /** This enum marks, that the syntax of the token should be a hexadecimal number.
    * It is a string only with characters '0' to '9', 'A' to 'F' or 'a' to 'f'.
    */
-  static final int kHexNumber     =18;  //'x'
+  , kHexNumber ( 18, 'I' )  //'x'
   /** This enum marks, that the syntax of the token should be a float number.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
    */
-  static final int kFloatNumber     =19;  //'f'
+  , kFloatNumber ( 19, 'F' )  //'f'
 
   /** This enum marks, that the syntax of the token should be an identifiert.
    * The method getSyntaxFromComplexItem(Object) supplies a list of extra characters
-   * there should be also accepted as identifier characters;
+   * there should be also accepted as identifier characters )
    */
-  static final int kIdentifier    = 20;  //0x14  //'$'
+  , kIdentifier    ( 20, 's' )  //0x14  //'$'
 
   /**Some constants used in switch-case to mark the search type.
    */
-  static final int kStringUntilEndString   = 0x15  //'S'
-                 , kStringUntilEndchar     = 0x16  //'c'
-                 , kStringUntilEndcharOutsideQuotion  = 0x17  //'+'
-                 , kStringUntilEndcharWithIndent     = 0x18  //'t'
-                 , kStringUntilEndStringWithIndent = 0x19  //'T'
-                 , kQuotedString = 0x1a  //'\"'
-                 , kStringUntilRightEndchar     = 0x1b  //'E'
-                 , kRegularExpression = 0x1c  //'%'
-                 , kStringUntilEndStringTrim= 0x25  //'R'
-                 , kStringUntilEndStringInclusive   = 0x35  //'I'
-                 , kStringUntilEndcharInclusive     = 0x36  //'C'
-                 , kStringUntilRightEndcharInclusive     =0x3b  //'H' 
-                 ;
+  , kStringUntilEndString   ( 0x15, 's' ) //'S'
+  , kStringUntilEndchar     ( 0x16, 's' ) //'c'
+  , kStringUntilEndcharOutsideQuotion  ( 0x17, 's' ) //'+'
+  , kStringUntilEndcharWithIndent     ( 0x18, '\t' ) //'t'
+  , kStringUntilEndStringWithIndent ( 0x19, '\t' ) //'T'
+  , kQuotedString ( 0x1a, 's' ) //'\"'
+  , kStringUntilRightEndchar     ( 0x1b, 's' ) //'E'
+  , kRegularExpression ( 0x1c, 's' ) //'%'
+  , kStringUntilEndStringTrim ( 0x25, 's' ) //'R'
+  , kStringUntilEndStringInclusive   ( 0x35, 's' ) //'I'
+  , kStringUntilEndcharInclusive     ( 0x36, 's' ) //'C'
+  , kStringUntilRightEndcharInclusive     ( 0x3b, 's' ) //'H' 
+  ;
+    int k;
+    /**The type of the item for storing.
+     * <ul>
+     * <li> 0 only syntax control, no result.
+     * <li>FIs for Float, Integer, String
+     * <li>'{' for repetition start
+     * <li>'=' syntax component
+     * <li>'\t' tab 0x09 for indented String
+     * </ul>
+     */
+    char type;
+    EType(int k, char type){
+      this.k = k;
+      this.type = type;
+    }
 
-
-
+    EType(int k){
+      this.k = k;
+      this.type = '\0';
+    }
+  }
+  
+  
 
   /** The class contains the execution method */
   private static class ComplexSyntax extends ZbnfSyntaxPrescript
@@ -505,7 +528,7 @@ public class ZbnfSyntaxPrescript
     { char cc;
       { //TRICKY: sDefinitionIdent and eType blanketed the class variable, to test assignment from compiler in all branches.
         String sDefinitionIdent;
-        int eType;
+        EType eType;
         if( (cc = spInput.getCurrentChar()) >='0' && cc <='9')
         { nMaxChars = 0;
           do
@@ -519,34 +542,34 @@ public class ZbnfSyntaxPrescript
           if(cc == '#')
           { cc = spInput.seek(1).getCurrentChar();
             switch(cc)
-            { case 'X': eType = kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
-              case 'x': eType = kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
-              case '-': eType = kIntegerNumber; sDefinitionIdent = "i-IntegerNumber"; spInput.seek(1); break;
+            { case 'X': eType = EType.kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
+              case 'x': eType = EType.kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
+              case '-': eType = EType.kIntegerNumber; sDefinitionIdent = "i-IntegerNumber"; spInput.seek(1); break;
               case 'f': 
-              { eType = kFloatNumber;   
+              { eType = EType.kFloatNumber;   
                 sDefinitionIdent = "i-FloatNumber"; 
                 spInput.seek(1);
                 if(spInput.scanStart().scan("*").scanFloatNumber().scanOk())
                 { nFloatFactor = spInput.getLastScannedFloatNumber();
-                  eType = kFloatWithFactor;
+                  eType = EType.kFloatWithFactor;
                   sDefinitionIdent = "i-FloatFactor(" + nFloatFactor + ")"; 
                 }
                 else
-                { eType = kFloatNumber;   
+                { eType = EType.kFloatNumber;   
                   sDefinitionIdent = "i-FloatNumber"; 
                 }  
               } break;
-              default:  eType = kPositivNumber; sDefinitionIdent = "i-PositivNumber"; break;
+              default:  eType = EType.kPositivNumber; sDefinitionIdent = "i-PositivNumber"; break;
             }
           }
           else if(cc == '$')
-          { eType = kIdentifier;
+          { eType = EType.kIdentifier;
             sDefinitionIdent = "i-Identifier";
             spInput.seek(1);
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(cc == '!')
-          { eType = kRegularExpression;
+          { eType = EType.kRegularExpression;
             sDefinitionIdent = "i-RegularExpression";
             spInput.seek(1);
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
@@ -556,7 +579,7 @@ public class ZbnfSyntaxPrescript
             }
           }
           else if(sTest.startsWith("*|"))
-          { eType = kStringUntilEndString;
+          { eType = EType.kStringUntilEndString;
             sDefinitionIdent = "i-StringUntilEndString";
             spInput.seek(2); //read sConstantSyntax from "|"
             listStrings = new LinkedList<String>();
@@ -571,7 +594,7 @@ public class ZbnfSyntaxPrescript
             }
           }
           else if(sTest.startsWith("* |"))
-          { eType = kStringUntilEndStringTrim;
+          { eType = EType.kStringUntilEndStringTrim;
             sDefinitionIdent = "i-StringUntilEndStringTrim";
             spInput.seek(3); //read sConstantSyntax from "|"
             listStrings = new LinkedList<String>();
@@ -592,7 +615,7 @@ public class ZbnfSyntaxPrescript
             }
           }
           else if(sTest.startsWith("+|"))
-          { eType = kStringUntilEndStringInclusive;
+          { eType = EType.kStringUntilEndStringInclusive;
             sDefinitionIdent = "i-StringUntilEndStringInclusive";
             spInput.seek(2); //read sConstantSyntax from "|"
             listStrings = new LinkedList<String>();
@@ -608,19 +631,19 @@ public class ZbnfSyntaxPrescript
           }
           
           else if(sTest.startsWith("*<<"))
-          { eType = kStringUntilRightEndchar;
+          { eType = EType.kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
             spInput.seek(3); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("stringtolastExclChar"))
-          { eType = kStringUntilRightEndchar;
+          { eType = EType.kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
             spInput.seek(20); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("toLastChar:"))
-          { eType = kStringUntilRightEndchar;
+          { eType = EType.kStringUntilRightEndchar;
             sDefinitionIdent = "i-StringUntilRightEndChar";
             spInput.seek(11); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
@@ -628,19 +651,19 @@ public class ZbnfSyntaxPrescript
           }
           
           else if(sTest.startsWith("+<<"))
-          { eType = kStringUntilRightEndcharInclusive;
+          { eType = EType.kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(3); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("stringtolastinclChar"))
-          { eType = kStringUntilRightEndcharInclusive;
+          { eType = EType.kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(20); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("toLastCharIncl:"))
-          { eType = kStringUntilRightEndcharInclusive;
+          { eType = EType.kStringUntilRightEndcharInclusive;
             sDefinitionIdent = "i-StringUntilRightEndCharInclusive";
             spInput.seek(15); //read sConstantSyntax from "|"
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
@@ -654,7 +677,7 @@ public class ZbnfSyntaxPrescript
             spInput.seek(1);
             cc=spInput.getCurrentChar();
             if(cc == '|')
-            { eType = kStringUntilEndStringWithIndent; //##k
+            { eType = EType.kStringUntilEndStringWithIndent; //##k
               sDefinitionIdent = "i-StringUntilEndStringWithIndent";
               spInput.seek(1); //read sConstantSyntax from "|"
               listStrings = new LinkedList<String>();
@@ -669,56 +692,56 @@ public class ZbnfSyntaxPrescript
               }
             }
             else
-            { eType = kStringUntilEndcharWithIndent; //##k
+            { eType = EType.kStringUntilEndcharWithIndent; //##k
               sDefinitionIdent = "i-StringUntilEndcharWithIndent";
               spInput.seek(1);
               sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
             }
           }
           else if(sTest.startsWith("*\"\""))
-          { eType = kStringUntilEndcharOutsideQuotion;
+          { eType = EType.kStringUntilEndcharOutsideQuotion;
             sDefinitionIdent = "i-StringUntilEndcharOutsideQuotion";
             spInput.seek(3);
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(cc == '*')
-          { eType = kStringUntilEndchar;
+          { eType = EType.kStringUntilEndchar;
             sDefinitionIdent = "i-StringUntilEndChar";
             spInput.seek(1);
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(cc == '+')
-          { eType = kStringUntilEndcharInclusive;
+          { eType = EType.kStringUntilEndcharInclusive;
             sDefinitionIdent = "i-StringUntilEndCharInclusive";
             spInput.seek(1);
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
           else if(sTest.startsWith("\"\""))
-          { eType = kQuotedString;
+          { eType = EType.kQuotedString;
             sConstantSyntax = "\"\"";
             sDefinitionIdent = "i-QuotedString";
             spInput.seek(2);
           }
           else if(sTest.startsWith("\'\'"))
-          { eType = kQuotedString;
+          { eType = EType.kQuotedString;
             sDefinitionIdent = "i-QuotedString";
             sConstantSyntax = "\'\'";
             spInput.seek(2);
           }
           else if(cc == '?')
-          { eType = kOnlySemantic;
+          { eType = EType.kOnlySemantic;
             sDefinitionIdent = "i-Semantic";
           }
           else
           { spInput.lentoIdentifier();
             if(spInput.length()>0)
-            { eType = kSyntaxComponent;
+            { eType = EType.kSyntaxComponent;
               sDefinitionIdent = spInput.getCurrentPart().toString();
               spInput.fromEnd();
             }
             else
             { sDefinitionIdent = null;
-              eType = kOnlySemantic;
+              eType = EType.kOnlySemantic;
             }
           }
         }
@@ -780,7 +803,7 @@ public class ZbnfSyntaxPrescript
   }
 
   /** Constructor only fills the data.*/
-  ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, int type)
+  ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, EType type)
   { eType = type;
     this.sCommentStart1 = parent ==null ? null : parent.sCommentStart1;
     this.sCommentStart2 = parent ==null ? null : parent.sCommentStart2;
@@ -956,7 +979,7 @@ public class ZbnfSyntaxPrescript
         if(spInput.length()>0)
         { sDefinitionIdent = spInput.getCurrentPart().toString();
           sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
-          eType = kSyntaxDefinition;
+          eType = EType.kSyntaxDefinition;
           spInput.fromEnd();
         }
         else throwParseException(spInput, "ZbnfSyntaxPrescript - identifier for prescript expected;");
@@ -1043,7 +1066,7 @@ public class ZbnfSyntaxPrescript
         spInput.seekNoWhitespaceOrComments();
         if(spInput.found() && bWhiteSpaces)
         {
-          childsAdd(new ZbnfSyntaxPrescript(this, kSkipSpaces));
+          childsAdd(new ZbnfSyntaxPrescript(this, EType.kSkipSpaces));
         }
         CharSequence sSyntaxOnStartForErrorNothingFoundChild = spInput.getCurrent(20);
         char cc;
@@ -1148,7 +1171,7 @@ public class ZbnfSyntaxPrescript
                 String sTerminateString = sqTerminateChars[0].toString();
                 ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
                 terminateSyntax.eType = sTerminateString.startsWith(sCommentStart1) || sTerminateString.startsWith(sCommentStart2) 
-                    ? kTerminalSymbolInComment : kTerminalSymbol;
+                    ? EType.kTerminalSymbolInComment : EType.kTerminalSymbol;
                 terminateSyntax.sDefinitionIdent = "i-text";
                 terminateSyntax.sConstantSyntax = sTerminateString; //sTerminateChars;
                 childsAdd(terminateSyntax );
@@ -1232,22 +1255,22 @@ public class ZbnfSyntaxPrescript
       if(spInput.startsWith("?"))
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kNegativVariant;
+        optionItem.eType = EType.kNegativVariant;
       }
       else if(spInput.startsWith(">"))
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kUnconditionalVariant;
+        optionItem.eType = EType.kUnconditionalVariant;
       }
       else if(spInput.startsWith("!"))
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kExpectedVariant;
+        optionItem.eType = EType.kExpectedVariant;
       }
       else if(spInput.startsWith("|"))
       { spInput.seek(1);
         optionItem.convertTheStringGivenSyntax(spInput, "]", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
-        optionItem.eType = kAlternativeOptionCheckEmptyFirst;
+        optionItem.eType = EType.kAlternativeOptionCheckEmptyFirst;
       }
       else
       {
@@ -1257,16 +1280,16 @@ public class ZbnfSyntaxPrescript
         if(!optionItem.isAlternative())  //it means, only one alternative.
         { optionItem.alsoEmptyOption = true;
           optionItem.sDefinitionIdent = "i-simpleOption";
-          optionItem.eType = kSimpleOption;
+          optionItem.eType = EType.kSimpleOption;
         }
         else
         { if(optionItem.alsoEmptyOption)
           { optionItem.sDefinitionIdent = "i-alternativeOption";
-            optionItem.eType = kAlternativeOption;
+            optionItem.eType = EType.kAlternativeOption;
           }
           else
           { optionItem.sDefinitionIdent = "i-alternative";
-            optionItem.eType = kAlternative;
+            optionItem.eType = EType.kAlternative;
           }
         }
       }
@@ -1281,11 +1304,11 @@ public class ZbnfSyntaxPrescript
       spInput.seek(1);
       //repetitionItem = repetitionItem.new Syntax();
       repetitionItem.sDefinitionIdent = "i-Repetition";
-      repetitionItem.eType = kRepetition;
+      repetitionItem.eType = EType.kRepetition;
       char cEnd = repetitionItem.convertTheStringGivenSyntax(spInput, "?}", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
       if(cEnd == '?')
       { repetitionItem.backward = new ZbnfSyntaxPrescript(this, report, true);
-        repetitionItem.backward.eType = kRepetitionRepeat;
+        repetitionItem.backward.eType = EType.kRepetitionRepeat;
         //repetitionItem.backward = repetitionItem.backward.new Syntax();
         repetitionItem.backward.sDefinitionIdent = "i-RepetitionRepeat";
         repetitionItem.backward.convertTheStringGivenSyntax(spInput, "}", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
@@ -1365,7 +1388,7 @@ public class ZbnfSyntaxPrescript
 
   /** Returns true if there are more as one alternative.*/
   boolean hasAlternatives()
-  { return (eType == kAlternative || eType == kAlternativeOption || eType == kAlternativeOptionCheckEmptyFirst);
+  { return (eType == EType.kAlternative || eType == EType.kAlternativeOption || eType == EType.kAlternativeOptionCheckEmptyFirst);
   }
   /*
   { return listAlternatives != null
@@ -1516,7 +1539,7 @@ public class ZbnfSyntaxPrescript
   }
 
 
-  int getType()
+  EType getType()
   { return eType;
   }
 
@@ -1579,59 +1602,64 @@ public class ZbnfSyntaxPrescript
   public String toString()
   { StringBuilder u = new StringBuilder(50);
     { String sWhat; // = "Syntax:" + getDefinitionIdent();
-      switch(eType)
-      { case kSyntaxDefinition:
-        { sWhat = "!" + getDefinitionIdent() + "::=";
-        } break;
-        case kTerminalSymbol: sWhat = ":" + sConstantSyntax; break;
-        case kSimpleOption:
-        { sWhat = "[...]";
-        } break;
-        case kAlternativeOption:
-        { sWhat = "[...|...|]";
-        } break;
-        case kAlternativeOptionCheckEmptyFirst:
-        { sWhat = "[|...|...]";
-        } break;
-        case kNegativVariant:
-        { sWhat = "[?...|...]";
-        } break;
-        case kUnconditionalVariant:
-        { sWhat = "[>...|...]";
-        } break;
-        case kExpectedVariant:
-        { sWhat = "[!...|...]";
-        } break;
-        case kAlternative:
-        { sWhat = "...|...";
-        } break;
-        case kRepetition:
-        { sWhat = "{...}";
-        } break;
-        case kOnlySemantic:
-        { sWhat = "<?";
-        } break;
-        case kSyntaxComponent:
-        { sWhat = "<" + getDefinitionIdent();
-        } break;
-        case kIdentifier  :                     sWhat="<$" + getConstantSyntax(); break;
-        case kRegularExpression :               sWhat="<!" + getConstantSyntax();  break;
-        case kStringUntilEndchar:               sWhat="<*C " + getConstantSyntax();  break;
-        case kStringUntilEndcharOutsideQuotion: sWhat = "<*\"\" " + getConstantSyntax(); break;
-        case kStringUntilEndStringInclusive:    sWhat = "<*+| " + getConstantSyntax(); break;
-        case kStringUntilRightEndchar:          sWhat = "<stringtolastExclChar" + getConstantSyntax(); break;
-        case kStringUntilRightEndcharInclusive: sWhat = "<stringtolastinclChar" + getConstantSyntax(); break;
-        case kQuotedString  : sWhat = "<\"\" " + getConstantSyntax(); break;
-        case kStringUntilEndString: sWhat = "<*| " + sConstantSyntax; break;
-        case kStringUntilEndStringWithIndent: sWhat = "<+++* " + sConstantSyntax; break;
-        case kPositivNumber : sWhat = "<#";  break;
-        case kIntegerNumber : sWhat = "<#-"; break;
-        case kHexNumber :     sWhat = "<#x"; break;
-        case kFloatNumber :   sWhat = "<#f"; break;
-        case kFloatWithFactor :   sWhat = "<#f*" +nFloatFactor; break;
-        case kSkipSpaces :    sWhat = "\\n\\t"; break;
-        case 0 :    sWhat = "?-0-?"; break;
-        default: sWhat = "?-?-?";
+      if(eType == null) { 
+        sWhat = "?-0-?"; 
+      } else {
+      
+        switch(eType)
+        { case kSyntaxDefinition:
+          { sWhat = "!" + getDefinitionIdent() + "::=";
+          } break;
+          case kTerminalSymbol: sWhat = ":" + sConstantSyntax; break;
+          case kSimpleOption:
+          { sWhat = "[...]";
+          } break;
+          case kAlternativeOption:
+          { sWhat = "[...|...|]";
+          } break;
+          case kAlternativeOptionCheckEmptyFirst:
+          { sWhat = "[|...|...]";
+          } break;
+          case kNegativVariant:
+          { sWhat = "[?...|...]";
+          } break;
+          case kUnconditionalVariant:
+          { sWhat = "[>...|...]";
+          } break;
+          case kExpectedVariant:
+          { sWhat = "[!...|...]";
+          } break;
+          case kAlternative:
+          { sWhat = "...|...";
+          } break;
+          case kRepetition:
+          { sWhat = "{...}";
+          } break;
+          case kOnlySemantic:
+          { sWhat = "<?";
+          } break;
+          case kSyntaxComponent:
+          { sWhat = "<" + getDefinitionIdent();
+          } break;
+          case kIdentifier  :                     sWhat="<$" + getConstantSyntax(); break;
+          case kRegularExpression :               sWhat="<!" + getConstantSyntax();  break;
+          case kStringUntilEndchar:               sWhat="<*C " + getConstantSyntax();  break;
+          case kStringUntilEndcharOutsideQuotion: sWhat = "<*\"\" " + getConstantSyntax(); break;
+          case kStringUntilEndStringInclusive:    sWhat = "<*+| " + getConstantSyntax(); break;
+          case kStringUntilRightEndchar:          sWhat = "<stringtolastExclChar" + getConstantSyntax(); break;
+          case kStringUntilRightEndcharInclusive: sWhat = "<stringtolastinclChar" + getConstantSyntax(); break;
+          case kQuotedString  : sWhat = "<\"\" " + getConstantSyntax(); break;
+          case kStringUntilEndString: sWhat = "<*| " + sConstantSyntax; break;
+          case kStringUntilEndStringWithIndent: sWhat = "<+++* " + sConstantSyntax; break;
+          case kPositivNumber : sWhat = "<#";  break;
+          case kIntegerNumber : sWhat = "<#-"; break;
+          case kHexNumber :     sWhat = "<#x"; break;
+          case kFloatNumber :   sWhat = "<#f"; break;
+          case kFloatWithFactor :   sWhat = "<#f*" +nFloatFactor; break;
+          case kSkipSpaces :    sWhat = "\\n\\t"; break;
+          case kNotDefined :    sWhat = "?-0-?"; break;
+          default: sWhat = "?-?-?";
+        }
       }
       u.append(sWhat);
     }

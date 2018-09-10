@@ -57,6 +57,7 @@ import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
+import org.vishia.zbnf.ZbnfSyntaxPrescript.EType;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 
@@ -131,6 +132,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
    * <li>2017-08-27 Hartmut new: {@link #getResultNode()}. To evaluate the result with JZtxtcmd immediately without interim store.
    * <li>2017-03-25 Hartmut new: The {@link ZbnfSyntaxPrescript} syntax item is stored in the {@link ZbnfParserStore.ParseResultItemImplement}. 
    * <li>2017-03-25 Hartmut chg: The line and column of a component parse result is stored immediately. See parseSub(...). 
@@ -819,7 +821,7 @@ public class ZbnfParser
           bOk = true;
           while(bOk && idxPrescript < listPrescripts.size()) { //all items of the prescipt
             while(  (idxPrescript < listPrescripts.size())
-                 && listPrescripts.get(idxPrescript).getType() == ZbnfSyntaxPrescript.kSkipSpaces
+                 && listPrescripts.get(idxPrescript).getType() == ZbnfSyntaxPrescript.EType.kSkipSpaces
                  )
             { idxPrescript +=1;
               bSkipSpaceAndComment = true;
@@ -832,8 +834,8 @@ public class ZbnfParser
               if(syntaxItem.bDebugParsing) {
                 Debugutil.stop();
               }
-              int nType = syntaxItem.getType();
-              if(nType == ZbnfSyntaxPrescript.kAlternativeOptionCheckEmptyFirst && !backToFork){
+              ZbnfSyntaxPrescript.EType nType = syntaxItem.getType();
+              if(nType == ZbnfSyntaxPrescript.EType.kAlternativeOptionCheckEmptyFirst && !backToFork){
                 //check whether it matches if this option is ignored.
                 //to restore the fork position, store it.
                 if(forkPoints == null){ forkPoints = new LinkedList<ForkPoint>(); }
@@ -842,7 +844,7 @@ public class ZbnfParser
                 idxPrescript +=1;  //first try skip over this option.
               } else {
                 bOk = parseItem(syntaxItem, parentResultItem, bSkipSpaceAndComment); //, thisParseResult, addParseResult);  //##s
-                if(nType == ZbnfSyntaxPrescript.kAlternativeOptionCheckEmptyFirst){
+                if(nType == ZbnfSyntaxPrescript.EType.kAlternativeOptionCheckEmptyFirst){
                   backToFork = false;  //for following fork points.
                   if(bOk)
                     Debugutil.stop();
@@ -914,7 +916,7 @@ public class ZbnfParser
         int maxNrofChars = syntaxItem.getMaxNrofCharsFromComplexItem();
         if(maxNrofChars < -1)
           stop();
-        int nType = syntaxItem.getType();
+        ZbnfSyntaxPrescript.EType nType = syntaxItem.getType();
         
         { /*Only for debugging:*/
           if(input.getCurrentPosition()==704)
@@ -935,36 +937,36 @@ public class ZbnfParser
            *because it is possible that such text parts are used as terminal symbols
            *inside the syntax constructions. 
            */ 
-          case ZbnfSyntaxPrescript.kSyntaxDefinition:
-          case ZbnfSyntaxPrescript.kAlternative:
-          case ZbnfSyntaxPrescript.kSimpleOption:
-          case ZbnfSyntaxPrescript.kAlternativeOption:
-          case ZbnfSyntaxPrescript.kAlternativeOptionCheckEmptyFirst:
+          case kSyntaxDefinition:
+          case kAlternative:
+          case kSimpleOption:
+          case kAlternativeOption:
+          case kAlternativeOptionCheckEmptyFirst:
           { if(nReportLevel >= nLevelReportBranchParsing){ 
               log.reportParsing("Opti " + input.getCurrentPosition()+ " " + inputCurrent(input), idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, true); 
             }
             bOk = parseOptions(syntaxItem, parentResultItem, bSkipSpaceAndComment);
           } break;
-          case ZbnfSyntaxPrescript.kNegativVariant:
+          case kNegativVariant:
           { bOk = parseNegativVariant(syntaxItem, bSkipSpaceAndComment);
           } break;
-          case ZbnfSyntaxPrescript.kUnconditionalVariant:
+          case kUnconditionalVariant:
           { bOk = parseUnconditionalVariant(syntaxItem, parentResultItem, bSkipSpaceAndComment);
           } break;
-          case ZbnfSyntaxPrescript.kExpectedVariant:
+          case kExpectedVariant:
           { bOk = parseExpectedVariant(syntaxItem, bSkipSpaceAndComment);
           } break;
-          case ZbnfSyntaxPrescript.kRepetition:
+          case kRepetition:
           { bOk = parseRepetition(syntaxItem, syntaxItem.getRepetitionBackwardPrescript(), parentResultItem, bSkipSpaceAndComment);
           } break;
-          case ZbnfSyntaxPrescript.kOnlySemantic:
+          case kOnlySemantic:
           { bOk = true;
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem only Semantic;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
             srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
             String srcFile = input.getInputfile();
             parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
           } break; //do nothing
-          case ZbnfSyntaxPrescript.kSyntaxComponent:
+          case kSyntaxComponent:
           { bOk = parse_Component
                   ( input
                   , posInputbase    
@@ -987,7 +989,7 @@ public class ZbnfParser
             String sReport = null;
             if(bSkipSpaceAndComment)
             { final String sConstantText;
-              if(nType == ZbnfSyntaxPrescript.kTerminalSymbolInComment){
+              if(nType == ZbnfSyntaxPrescript.EType.kTerminalSymbolInComment){
                 sConstantText = syntaxItem.getConstantSyntax();
                 sReport = nReportLevel < nLevelReportBranchParsing ? ""
                   : "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
@@ -1010,27 +1012,27 @@ public class ZbnfParser
               //int posSrc = -1;     //position of the string
               switch(nType)
               {
-              case ZbnfSyntaxPrescript.kTerminalSymbolInComment:  //Note: important if bSkipSpaceAndComment = false. 
-              case ZbnfSyntaxPrescript.kTerminalSymbol: 
+              case kTerminalSymbolInComment:  //Note: important if bSkipSpaceAndComment = false. 
+              case kTerminalSymbol: 
               { bOk = parseTerminalSymbol(syntaxItem, parentResultItem);
               } break;
-              case ZbnfSyntaxPrescript.kIdentifier:
+              case kIdentifier:
               { bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parentResultItem);
               } break;
-              case ZbnfSyntaxPrescript.kPositivNumber:
+              case kPositivNumber:
               { bOk = parsePositiveInteger( sSemanticForStoring, parentResultItem, maxNrofChars);
               } break;
-              case ZbnfSyntaxPrescript.kHexNumber:
+              case kHexNumber:
               { bOk = parseHexNumber( sSemanticForStoring, parentResultItem, maxNrofChars);
               } break;
-              case ZbnfSyntaxPrescript.kIntegerNumber:
+              case kIntegerNumber:
               { bOk = parseInteger( sSemanticForStoring, parentResultItem, maxNrofChars);
               } break;
-              case ZbnfSyntaxPrescript.kFloatNumber:
-              case ZbnfSyntaxPrescript.kFloatWithFactor:
+              case kFloatNumber:
+              case kFloatWithFactor:
               { bOk = parseFloatNumber( sSemanticForStoring, maxNrofChars, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilEndchar:
+              case kStringUntilEndchar:
               { if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
                 stop();
                 if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem StrTilEndchar;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
@@ -1053,22 +1055,22 @@ public class ZbnfParser
                 }
 
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilRightEndchar:
+              case kStringUntilRightEndchar:
               { bOk = parseStringUntilRightEndchar(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilRightEndcharInclusive:
+              case kStringUntilRightEndcharInclusive:
               { bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilEndString: //kk
+              case kStringUntilEndString: //kk
               { bOk = parseStringUntilTerminateString(sConstantSyntax, false, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilEndStringTrim: //kk
+              case kStringUntilEndStringTrim: //kk
               { bOk = parseStringUntilTerminateString(sConstantSyntax, false, true, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilEndStringInclusive: //kk
+              case kStringUntilEndStringInclusive: //kk
               { bOk = parseStringUntilTerminateString(sConstantSyntax, true, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilEndStringWithIndent:
+              case kStringUntilEndStringWithIndent:
               { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
                 StringBuilder buffer = new StringBuilder();
                 input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
@@ -1080,13 +1082,13 @@ public class ZbnfParser
                   saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
                 }
               } break;
-              case ZbnfSyntaxPrescript.kStringUntilEndcharOutsideQuotion:
+              case kStringUntilEndcharOutsideQuotion:
               { bOk = parseNoOrSomeCharsOutsideQuotion(sConstantSyntax, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kQuotedString:
+              case kQuotedString:
               { bOk = parseSimpleStringLiteral(sConstantSyntax, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
               } break;
-              case ZbnfSyntaxPrescript.kRegularExpression:
+              case kRegularExpression:
               { 
                 bOk = parseRegularExpression(syntaxItem, sSemanticForStoring, parentResultItem, bSkipSpaceAndComment);
               } break;
@@ -1398,7 +1400,7 @@ public class ZbnfParser
           bOk = true;
           if(sSemanticForStoring != null)
           { double result = input.getLastScannedFloatNumber();
-            if(syntaxItem.getType() == ZbnfSyntaxPrescript.kFloatWithFactor)
+            if(syntaxItem.getType() == ZbnfSyntaxPrescript.EType.kFloatWithFactor)
             { result *= syntaxItem.getFloatFactor();
             }
             srcLineOption = -1;
@@ -1731,7 +1733,7 @@ public class ZbnfParser
         /*
         int optionType = optionPrescript.getType();
         boolean bParseFirstAfterOption 
-        = (optionType == ZbnfSyntaxPrescript.kAlternativeOptionCheckEmptyFirst)
+        = (optionType == ZbnfSyntaxPrescript.EType.kAlternativeOptionCheckEmptyFirst)
         ;
         
         if(bParseFirstAfterOption)
