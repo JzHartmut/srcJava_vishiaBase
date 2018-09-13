@@ -1,3 +1,3 @@
-export SRC="srcJava_vishiaBase"
-../../srcJava_vishiaBase/_make/+genDownload.sh
+export SRC="srcJava_Zbnf"
+../../srcJava_Zbnf/_make/+genDownload.sh
 

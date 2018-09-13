@@ -1,4 +1,6 @@
 
+export DST="../../docuSrcJava_Zbnf"
+export DST_priv="../../docuSrcJava_Zbnf_priv"
 
 export DSTDIR="../../"
 export DST="docuSrcJava_vishiaBase"
@@ -12,5 +14,4 @@ export LINKPATH=""
 #export LINKPATH="$LINKPATH -link ../docuSrcJava_Zbnf"
 
 
-../../srcJava_vishiaBase/_make/+genjavadocbase.sh
-
+../../srcJava_Zbnf/_make/+genjavadocbase.sh

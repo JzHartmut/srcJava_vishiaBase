@@ -166,7 +166,8 @@ import org.vishia.util.StringPartScan;
 public final class ZbnfJavaOutput
 {
   /**Version, history and license.
-   * <ul>
+   * <ul>2018-09-11 bugfix: On error reading file: The error was ignored and the parser was started, which returns null as parse result. 
+   *     fix: return sError.
    * <li>2018-08-28 Hartmut new: improve change with <?_end>. add_semantic is called, it was missing, only ok in the concretely case. 
    * <li>2017-04-22 Hartmut new: If a <code>new_xyz</code> method is found for a non syntaxComponent, the return value
    *   is a child instance to write into the next result items, till <code><?_end></code>. The last one switches back to the parent again.
@@ -1373,6 +1374,8 @@ public final class ZbnfJavaOutput
    * @param fSyntaxDir directory which is used as base for import statements. It is the directory of the syntax file usually.
    *   It may be null. The imports are not supported in the syntax.
    * @return null if no error, else a short error text. The explicitly error text is written in report.
+   * @since 2018-09-11 bugfix: On error reading file: The error was ignored and the parser was started, which returns null as parse result.
+   *        fix: return sError.
    */
   public String parseFileAndFillJavaObject(Class resultType, Object result, File fInput, StringPartScan spSyntax, File fSyntaxDir) 
   //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
@@ -1393,7 +1396,8 @@ public final class ZbnfJavaOutput
         sError = "ZbnfJavaOutput - Input file charset problems; " + fInput.getAbsolutePath() + " msg = " + exc.getMessage();
       }
     }
-    return parseFileAndFillJavaObject(resultType, result, spInput, fInput.getAbsolutePath(), spSyntax, fSyntaxDir);
+    if(sError !=null) { return sError; }
+    else return parseFileAndFillJavaObject(resultType, result, spInput, fInput.getAbsolutePath(), spSyntax, fSyntaxDir);
   }
 
 

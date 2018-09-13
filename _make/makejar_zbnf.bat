@@ -28,22 +28,22 @@ set MANIFEST_JAVAC=zbnf.manifest
 
 REM Input for javac, only choice of primary sources, relativ path from current (make)-directory:
 set INPUT_JAVAC=
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/bridgeC/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/byteData/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/byteData/reflection_Jc/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/cmd/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/event/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/states/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/math/*.java
-::set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/stateMachine/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/fileLocalAccessor/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/fileRemote/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/mainCmd/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/msgDispatch/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/util/*.java
-::set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xml/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xmlReader/*.java
-set INPUT_JAVAC=%INPUT_JAVAC% ../../srcJava_vishiaBase/org/vishia/xmlSimple/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/bridgeC/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/reflection_Jc/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/cmd/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/event/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/states/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/math/*.java
+::set INPUT_JAVAC=%INPUT_JAVAC% ../vishia/stateMachine/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/fileLocalAccessor/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/fileRemote/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/mainCmd/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/msgDispatch/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/util/*.java
+::set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/xml/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/xmlReader/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/xmlSimple/*.java
 
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/checkDeps_C/*.java
@@ -60,9 +60,9 @@ REM Sets the CLASSPATH variable for compilation (used jar-libraries). do not lef
 set CLASSPATH_JAVAC=nothing
 
 REM Sets the src-path for further necessary sources:
-set SRCPATH_JAVAC=..;../../srcJava_vishiaBase
+set SRCPATH_JAVAC=..;../../srcJava_Zbnf
 
-call ..\..\srcJava_vishiaBase\_make\+javacjarbase.bat
+call ..\..\srcJava_Zbnf\_make\+javacjarbase.bat
 
 @echo on
 REM if this is the ZBNF folder then copy the result to Java-folder:
