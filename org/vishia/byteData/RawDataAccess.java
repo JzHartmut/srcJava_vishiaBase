@@ -31,7 +31,7 @@ import org.vishia.util.Java4C;
 /**This class is use-able to free access to data.
  * @deprecated, use {@link ByteDataAccessSimple} instead.
  */ 
-public class RawDataAccess  extends ByteDataAccessBase
+@Deprecated public class RawDataAccess  extends ByteDataAccessBase
 {
   
   

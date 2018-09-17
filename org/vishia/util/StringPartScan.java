@@ -51,6 +51,8 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2017-09-17 Hartmut new: {@link #seekScanPos(int)} invokes {@link StringPart#seekPos(int)} but returns this as StringPartScan to concatenate.
+   *   It is the first typical routine for concatenation. TODO more. The problem is, the routines from {@link StringPart} can be invoked, but not simple concatenate.
    * <li>2017-12-30 Hartmut new: {@link #getLastScannedPart()}
    * <li>2017-07-02 Hartmut new: {@link #scanStart(boolean)} possible to switch on bSkipWhitepaces. More simple for invocation.
    * <li>2016-09-25 Hartmut chg: {@link #scan()} now invokes {@link #scanStart()} automatically, it is the common use case.
@@ -134,6 +136,18 @@ public class StringPartScan extends StringPart
   { super();
   }
 
+  
+  /**Sets the current begin to pos relativ to the current part.
+   * It calls {@link #seekPos(int)} and returns this.
+   * @param pos
+   * @return
+   */
+  public StringPartScan seekScanPos(int pos) {
+    super.seekPos(pos);
+    return this;
+  }
+  
+  
   
   /**Skips over white spaces. It calls {@link StringPart#seekNoWhitespace()} and return this. */
   public final StringPartScan scanSkipSpace()

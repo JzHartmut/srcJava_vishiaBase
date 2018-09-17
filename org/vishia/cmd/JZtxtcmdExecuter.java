@@ -37,7 +37,7 @@ import org.vishia.fileRemote.FileRemote;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.util.Assert;
+import org.vishia.util9.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.Conversion;
 import org.vishia.util.DataAccess;
@@ -83,7 +83,7 @@ public class JZtxtcmdExecuter {
   
   
   /**Version, history and license.
-   * <ul>
+   * <ul>2018-09-17 new {@link JzTcMain#sleep(int)} 
    * <li>2018-09-10 Hartmut bugfix. The script variable text = path/to/textout cannot be set. 
    *   Now the argument -t=out wins against the script variable, but if -t is not set, the scriptVariable text = ... is used.
    *   bugfix: setting text = ... in the script should be used immediately after that. Changing of {@link ExecuteLevel#exec_OpenTextOut(org.vishia.cmd.JZtxtcmdScript.JZcmditem, StringFormatter, boolean)}.
@@ -407,6 +407,21 @@ public class JZtxtcmdExecuter {
       return ret;
     }
 
+    
+    /**Capability to delay an execution, maybe for polling.
+     * @param millisec
+     * @return false if interrupted, true if full waiting
+     * @since 2018-09 
+     */
+    public boolean sleep(int millisec)
+    { boolean breaked = false;
+      try{ Thread.sleep(millisec);} 
+      catch (InterruptedException e){ breaked = true; }
+      return !breaked;
+    }
+
+    
+    
     public void setScriptVariable(String name, char type, Object content, boolean bConst) 
     throws IllegalAccessException{
       DataAccess.createOrReplaceVariable(scriptLevel.localVariables, name, type, content, bConst);

@@ -26,6 +26,9 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
   
   /**Version, history and license
    * <ul>
+   * <li>2018-09-17 Hartmut The class might to be use only for writing. 
+   *   The ctors with lengthData {@link ByteDataAccessSimple#ByteDataAccessSimple(byte[], boolean, int)} are documented with 'filled Buffer'
+   *   but they had clean it. Now correct adquate documentation. 
    * <li>2012-04-07 Hartmut created. The now deprecated RawDataAccess has the same approach,
    *   but this naming should be better to find out it. Additional constructors are given yet. 
    * </ul>
@@ -61,7 +64,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
   
   /** Constructs a new instance which is assigned to an empty buffer. */
   public ByteDataAccessSimple(byte[] data, boolean bigEndian)
-  { super(0, data.length);
+  { super(0);
     super.bBigEndian = bigEndian; 
     assign(data);
     clearData();
@@ -71,21 +74,19 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
   
   /** Constructs a new instance which is assigned to an filled buffer. */
   public ByteDataAccessSimple(byte[] data, boolean bigEndian, int lengthData)
-  { super(0, lengthData);
+  { super(0);
     assign(data, lengthData);
     super.bBigEndian = bigEndian; 
     assert(lengthData >=0 && lengthData <= data.length);
-    clearData();
   }
   
   
   /** Constructs a new instance which is assigned to an filled buffer. */
   public ByteDataAccessSimple(byte[] data, boolean bigEndian, int lengthData, int index)
-  { super(0, lengthData);
+  { super(0);
     assign(data, lengthData, index);
     super.bBigEndian = bigEndian; 
     assert(lengthData >=0 && lengthData + index <= data.length);
-    clearData();
   }
   
 

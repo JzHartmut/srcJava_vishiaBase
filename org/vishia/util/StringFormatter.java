@@ -60,6 +60,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-09-17: {@link #addHex(long, int)} with upper chars  
    * <li>2015-06-07: Hartmut chg: {@link #append(char)} and {@link #flushLine(String)}, now output of the given line end is supported
    *   if the {@link StringFormatter#StringFormatter(Appendable, boolean, String, int)} argument 'newlineString' is null. 
    * <li>2015-01-31: Hartmut {@link #add(String)} additional to {@link #add(CharSequence)} only for Java2C-translation. In Java it is equal. 
@@ -569,16 +570,21 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   /** Adds a number containing in a long variable in hexa form
   *
   * @param value the value
-  * @param mode Ones of k1BytePerWordBigEndian to k4BytePerWordLittleEndian resp. k1MSD to k8LSD
+  * @param nrofDigits if negativ then writes with upper cases
   * @return this itself
   */
-   public StringFormatter addHex(long value, int nrofDigits)
-   { prepareBufferPos(nrofDigits);
+   public StringFormatter addHex(long value, int nrofDigits) { 
+     char hexBase = 'a';
+     if(nrofDigits < 0) {
+       hexBase = 'A';
+       nrofDigits = -nrofDigits;
+     }
+     prepareBufferPos(nrofDigits);
      { //show last significant byte at right position, like normal variable or register look
        int nrofShift = (nrofDigits * 4) -4;
        for(int ii=0; ii < nrofDigits; ii++)
        { char digit = (char)(((value>>nrofShift)&0x0f) + (byte)('0'));
-         if(digit > '9'){ digit = (char)(digit + (byte)('a') - (byte)('9') -1); }
+         if(digit > '9'){ digit = (char)(digit + (byte)(hexBase) - (byte)('9') -1); }
          buffer.setCharAt(pos++, digit);
          nrofShift -=4;
        }
@@ -1118,6 +1124,13 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   }
 
 
+  
+  
+  public void newline() throws IOException {
+    append('\n');
+  }
+  
+  
 
   /**Appends one character and flushes a line on end-line character. 
    * If the char is a 0x0d or 0x0a (carriage return, line-feed) and the constructor 

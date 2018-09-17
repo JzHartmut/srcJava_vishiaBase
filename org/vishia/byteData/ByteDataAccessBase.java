@@ -152,6 +152,9 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   
   /**The version, history and license. 
    * <ul>
+   * <li>2018-09-16 Hartmut chg: All access routines calls {@link #checkData()}. 
+   *   The reason for checkData(): If a child (at an index) was not assigned with data, it gets the data from its parent now. 
+   *   With them it is possible to call {@link #assign(byte[])} for the parent only and it runs.
    * <li>2016-01-24 Hartmut chg: All {@link #addChild(ByteDataAccessBase)} etc. returns false if {@link #setException(boolean)} is false and the child cannot be added.
    *   If the user invokes setException(false) the user must check the return value of the add...() operations.
    * <li>2015-08-08 Hartmut chg: Change of concept: prevent Exception if the environment does not process it: Tested on {@link #setIdxtoNextCurrentChild(int)}:
@@ -364,7 +367,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace 
   protected final long _getLong(final int idxInChild, final int nrofBytesAndSign)
-  { long val = 0;
+  { if(!checkData()) { return 0; }
+    long val = 0;
     int idxStep;
     int idx;
     final int nrofBytes;
@@ -418,7 +422,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace 
   protected final int _getInt(final int idxInChild, final int nrofBytesAndSign)
-  { int val = 0;
+  { if(!checkData()) { return 0; }
+    int val = 0;
     int idxStep;
     int idx;
     final int nrofBytes;
@@ -469,7 +474,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace 
   protected final void _setLong(int idx, int nrofBytes, long val)
-  { int idx1, nrofBytes1 = nrofBytes; long val1 = val;  //prevent change of parameters, use register internally.
+  { if(!checkData()) { return; }
+    int idx1, nrofBytes1 = nrofBytes; long val1 = val;  //prevent change of parameters, use register internally.
     int idxStep;
     if(bBigEndian)
     { idx1 = ixBegin + idx + nrofBytes -1;
@@ -499,7 +505,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace 
   protected final void _setInt(int idx, int nrofBytes, int val)
-  { int idx1, nrofBytes1 = nrofBytes, val1 = val;  //prevent change of parameters, use register internally.
+  { if(!checkData()) { return; }
+    int idx1, nrofBytes1 = nrofBytes, val1 = val;  //prevent change of parameters, use register internally.
     int idxStep;
     if(bBigEndian)
     { idx1 = ixBegin + idx + nrofBytes -1;
@@ -529,6 +536,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */
   private final void _expand(int ixNextChildNew, int ixEndNew)
   { assert(ixEndNew < 0 || ixEndNew >= ixBegin + sizeHead);
+    if(!checkData()) { return; }
     if(ixEndNew > data.length){
       throw new IllegalArgumentException("child long as data, data.length= " + data.length + ", ixChildEndNew= " + ixEndNew);
     }
@@ -600,7 +608,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     //lengthData is inclusively head. maybe checl lengthData, >=sizeHead or 0.
     this.ixEnd = bExpand ? this.ixBegin + this.sizeHead : this.ixBegin + lengthData;
     { //@Java4C.Exclude
-      if(ixEnd > data.length)
+      if(data !=null && ixEnd > data.length)
       { @Java4C.StringBuilderInThreadCxt(sign="ByteDataAccess-error reset") String msg = "not enough data bytes, requested=" + ixEnd + ", buffer-length=" + data.length;
         throw new IllegalArgumentException(msg);
       }
@@ -670,11 +678,21 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   @Java4C.Inline
   final public void assignAt(int idxChildInParent, int lengthChild, ByteDataAccessBase parent)
   throws IllegalArgumentException
-  { this.bBigEndian = parent.bBigEndian;
-    this.bExpand = parent.bExpand;
-    this.bExc = parent.bExc;
-    assign(parent.data, parent.ixBegin + idxChildInParent + lengthChild, parent.ixBegin + idxChildInParent);
-    setBigEndian(parent.bBigEndian);
+  { if(this == parent) {
+      if(idxChildInParent !=0) throw new IllegalArgumentException("TODO");
+    } else {
+      detach();
+      this.bBigEndian = parent.bBigEndian;
+      this.bExc = parent.bExc;
+      this.parent = parent;
+      this.ixBegin = idxChildInParent;
+      currChild = null;
+      this.bExpand = lengthChild < sizeHead;  //expand if the data have no head.
+      ixNextChild = ixBegin + sizeHead;
+      //lengthData is inclusively head. maybe checl lengthData, >=sizeHead or 0.
+      this.ixEnd = bExpand ? this.ixBegin + this.sizeHead : this.ixBegin + lengthChild;
+      //old: assign(parent.data(), parent.ixBegin + idxChildInParent + lengthChild, parent.ixBegin + idxChildInParent);
+    }
   }
 
 
@@ -710,7 +728,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   @Java4C.Inline
   final protected void assignCasted(ByteDataAccessBase src, int offsetCastToInput, int lengthDst)
   throws IllegalArgumentException
-  { assign(src.data, src.ixEnd, src.ixBegin + offsetCastToInput);
+  { assign(src.data(), src.ixEnd, src.ixBegin + offsetCastToInput);
     bExpand = src.bExpand;
     bBigEndian = src.bBigEndian;
     bExc = src.bExc;
@@ -734,12 +752,40 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   public final int sizeHead() { return sizeHead; }
   
   
-  /** Returns the data buffer itself. The actual total length is getted with getLengthTotal().
+  /** Returns the data buffer itself. The actual total length is got with getLengthTotal().
    * @return The number of bytes of the data in the buffer.
    */
   @Java4C.Retinline @Java4C.PtrVal 
   public final byte[] getData()
-  { return  data;
+  { return getData(99);
+  }
+
+
+
+  /** Returns the data buffer itself. The actual total length is got with getLengthTotal().
+   * @return The number of bytes of the data in the buffer.
+   */
+  @Java4C.Retinline @Java4C.PtrVal 
+  public final byte[] data()
+  { return getData(99);
+  }
+
+
+
+  /**Gets the data from parent if {@link #data} == null 
+   * @param recursion if <0 ends and call {@link #throwexc(String, int)}
+   * @return data, maybe null if all parents have null.
+   * @since 2018-09
+   */
+  private final byte[] getData(int recursion)
+  { if(data == null && parent !=null) {
+      if(--recursion <0) {
+        throwexc("too many recursions in parent relation",0);
+        return null;
+      }
+      data = parent.getData(recursion-1);
+    }
+    return  data;
   }
 
 
@@ -815,7 +861,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */ 
   @Java4C.Retinline
   final public int getMaxNrofBytes()
-  { if(bExpand) return data.length - ixBegin;
+  { if(!checkData()) { return 0; }
+    if(bExpand) return data.length - ixBegin;
     else return ixEnd - ixBegin;
   }
 
@@ -873,6 +920,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */
   @Java4C.Inline
   public final void clearHead(){
+    if(!checkData()) { return; }
     Arrays.fill(data, ixBegin, ixBegin + sizeHead, (byte)0);
   }
 
@@ -885,13 +933,14 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */
   @Java4C.Inline
   public final void clearData(){
+    if(!checkData()) { return; }
     Arrays.fill(data, ixBegin, ixEnd, (byte)0);
   }
 
 
   @Java4C.Retinline
   final public boolean isInUse()
-  { return data !=null;
+  { return data() !=null;
   }
 
   
@@ -923,7 +972,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */ 
   @Java4C.Retinline
   final public int getMaxNrofBytesForNextChild() throws IllegalArgumentException
-  { return (bExpand ? data.length : ixEnd) - ixNextChild;
+  { if(!checkData()) { return 0; }
+    return (bExpand ? data.length : ixEnd) - ixNextChild;
   }
 
 
@@ -976,7 +1026,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */
   final public boolean addChild(ByteDataAccessBase child, int sizeChild) 
   throws IllegalArgumentException
-  { child.detach();  //detatch the child from further usage.
+  { if(!checkData()) { return false; }
+    child.detach();  //detatch the child from further usage.
     assert(sizeChild == 0 || sizeChild >= child.sizeHead);
     assert(child.sizeHead >=0);
     int ixChild1 = setIdxtoNextCurrentChild(sizeChild ==0 ? child.sizeHead: sizeChild);
@@ -1038,6 +1089,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   throws IllegalArgumentException
   { assert(child.sizeHead >=0);
     assert(sizeChild >= child.sizeHead);
+    if(!checkData()) { return; }
     if(child.parent !=null && child.parent.currChild == child){ child.parent.currChild = null; } //detatch
     child.data = data;
     int idxBegin = this.ixBegin + idxChild;
@@ -1168,7 +1220,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    */
   public final boolean addChildString(CharSequence valueCs, String sEncoding) 
   throws IllegalArgumentException, UnsupportedEncodingException
-  { int nrofBytes = valueCs.length();
+  { if(!checkData()) { return false; }
+    int nrofBytes = valueCs.length();
     int ixChild1 = setIdxtoNextCurrentChild(nrofBytes);
     if(ixChild1 < 0) return false;
     //NOTE: there is no instance for this child, but it is the current child anyway.
@@ -1429,17 +1482,21 @@ public class ByteDataAccessBase implements InfoFormattedAppend
 
   /**copies the data from another references data into this data.
    * The src is positioned to any child. That's data are copied in this data at the position of this child.
-   * The length of both children should be equal. TODO to test.
+   * The length of both children should be equal. If it is not so, the routines throws or copies the lesser length
    * Note this method is never used in actual implementations of vishia. Check whether it is necessary.
    * */
   //@Java4C.Inline
   final public void copyDataFrom(ByteDataAccessBase src)
   throws IllegalArgumentException
-  { int len = src.getLength();
-    if(data.length < len){
-      throw new IndexOutOfBoundsException("copy, dst to small" + len);
+  { if(!checkData()) { return; }
+    int len = src.getLength();
+    if(len > (this.ixEnd - this.ixBegin)) {
+      len = this.ixEnd - this.ixBegin;
     }
-    ////TODO System.arraycopy(src.data,src.idxBegin,data,idxBegin,len);
+    if(data.length < this.ixBegin + len){
+      throwexc("copy, dst to small", len);
+    }
+    System.arraycopy(src.data,src.ixBegin,data,ixBegin,len);
   }
 
 
@@ -1475,7 +1532,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * @throws IndexOutOfBoundsException if any index is faulty.  
    */
   protected final String getString(int idx, int nrofBytes)
-  {
+  { if(!checkData()) { return null; }
     int idxData = idx + ixBegin;
     int idxEnd1 = idxData + nrofBytes;
     assert(idxEnd1 <= ixEnd && idxEnd1 <= data.length);
@@ -1498,7 +1555,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * @throws  
    */
   protected final int setString(int idx, int nmax, String ss)
-  { if(ss.length()>nmax){ ss = ss.substring(0, nmax); } //truncate.
+  { if(!checkData()) { return 0; }
+    if(ss.length()>nmax){ ss = ss.substring(0, nmax); } //truncate.
     /**Use a @java2c=ByteStringJc. In C there may not be a difference between the String
      * and the string of byte[].*/
     @Java4C.ByteStringJc byte[] byteRepresentation;
@@ -1531,7 +1589,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   protected final void _setString(final int idx, final int nrofBytes, final String value
     , String sEncoding, boolean preventCtrlChars) 
   throws UnsupportedEncodingException
-  {
+  { if(!checkData()) { return; }
     int idxData = idx + ixBegin;
     int idxEnd = idxData + nrofBytes;
     /**@java2c=ByteStringJc. */
@@ -1598,7 +1656,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace
   protected final int getInt32(int idx)
-  { int val;
+  { if(!checkData()) { return 0; }
+    int val;
     if(bBigEndian)
     { val =  ((  data[ixBegin + idx])<<24)  //NOTE all 24 low-bits are 0
           |  (( (data[ixBegin + idx+1])<<16) & 0x00ff0000 ) //NOTE the high bits may be 0 or 1
@@ -1630,7 +1689,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace
   protected final int getUint16(int idx)
-  { int val;
+  { if(!checkData()) { return 0; }
+    int val;
     if(bBigEndian)
     { val =  (( (data[ixBegin + idx  ])<< 8) & 0x0000ff00 ) //depending on sign of byte. Mask it!
           |  (( (data[ixBegin + idx+1])    ) & 0x000000ff );  //NOTE: the value has only 8 bits for bitwise or.
@@ -1650,7 +1710,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace
   protected final short getInt16(int idx)
-  { int val;
+  { if(!checkData()) { return 0; }
+    int val;
     if(bBigEndian)
     { val =  (( (data[ixBegin + idx  ])<< 8) & 0xff00 ) //depending on sign of byte. Mask it!
           |  (( (data[ixBegin + idx+1])    ) & 0x00ff );  //NOTE: the value has only 8 bits for bitwise or.
@@ -1671,7 +1732,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.NoStackTrace
   protected final char getChar(int idx)
-  { char val;
+  { if(!checkData()) { return 0; }
+    char val;
     val = (char) data[ixBegin + idx];
     return val;
   }
@@ -1686,6 +1748,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   @Java4C.NoStackTrace
   protected final byte getInt8(int idx)
   { byte val;
+    if(!checkData()) { return 0; }
     val = data[ixBegin + idx];
     return val;
   }
@@ -1701,6 +1764,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   @Java4C.NoStackTrace
   protected final short getUint8(int idx)
   { short val;
+    if(!checkData()) { return 0; }
     val = data[ixBegin + idx];
     if(val < 0){ val += 0x100; }
     return val;
@@ -1784,7 +1848,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * @param value The value in range 0..65535. The value is taken modulo 0xffffffff.
    * */
   protected final void setInt32(int idx, int value)
-  { if(bBigEndian)
+  { if(!checkData()) { return; }
+    if(bBigEndian)
     { data[ixBegin + idx]   = (byte)((value>>24) & 0xff);
       data[ixBegin + idx+1] = (byte)((value>>16) & 0xff);
       data[ixBegin + idx+2] = (byte)((value>>8) & 0xff);
@@ -1806,7 +1871,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * */
   @Java4C.Inline
   protected final void setInt8(int idx, int value)
-  { data[ixBegin + idx] = (byte)(value & 0xff);
+  { if(!checkData()) { return; }
+    data[ixBegin + idx] = (byte)(value & 0xff);
   }
 
 
@@ -1829,7 +1895,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   * @param value The value as long. The value is taken modulo 0xffffffff.
   * */
   protected final void setUint32(int idx, long value)
-  { //the same algorithm in source, but other action on machine level,
+  { if(!checkData()) { return; }
+    //the same algorithm in source, but other action on machine level,
     //because value is long!
     if(bBigEndian)
     { data[ixBegin + idx]   = (byte)((value>>24) & 0xff);
@@ -1855,7 +1922,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * @param value The value in range 0..65535. The value is taken modulo 0xffff.
    * */
   protected final void setInt16(int idx, int value)
-  { if(bBigEndian)
+  { if(!checkData()) { return; }
+    if(bBigEndian)
     { data[ixBegin + idx]   = (byte)((value>>8) & 0xff);
       data[ixBegin + idx+1] = (byte)(value & 0xff);
     }
@@ -1957,6 +2025,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   //throws IllegalArgumentException
   { assert(sizeChild >=0);
     assert(ixNextChild >=0);          //==0 os possible on an empty element without head.
+    if(!checkData()) { return 0; }
     int ixMax = bExpand? data.length : ixEnd;
     if(ixNextChild + sizeChild > ixMax) return RetOrException.illegalArgument(bExc, -1, "child on limit of expand");
     int ixChild1 = ixNextChild;
@@ -1972,6 +2041,31 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   
   protected final int ixEnd(){ return ixEnd; }
   
+  
+  
+  /**Checks {@link #data} == null and gets the data from parent if necessary.
+   * With them it is possible to call {@link #assign(byte[])} for the parent only and it runs.
+   * If the data remain null {@link #throwexc(String, int)} is invoked. It may force an exeption if that is activated.
+   * Elsewhere it returns false, to force prevent access to data in the calling routine. 
+   * @return false if data remain == null
+   * @since 2018-09
+   */
+  boolean checkData() {
+    if(data == null && parent !=null) {
+      data = parent.getData(99);
+    }
+    if(data == null) {
+      throwexc("--no data--",0);
+      return false;
+    } else {
+      return true;
+    }
+  }
+  
+  
+  
+  
+  
   /**Appends the information about the indices and the current Children.
    * For C it is excluded because it is only for test.
    * @see org.vishia.util.InfoFormattedAppend#infoFormattedAppend(org.vishia.util.StringFormatter)
@@ -1981,6 +2075,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   public void infoFormattedAppend(StringFormatter u)
   { 
     //show content of head
+    if(!checkData()) { u.add("--no-data--"); return; }
     int bytesHex = getLengthHead();
     if(bytesHex > 16){ bytesHex = 16; }
     if(bytesHex <0){ bytesHex = 0; }
@@ -2010,7 +2105,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     .add("..").addint(ixBegin + sizeHead,"333331")
     .add("..").addint(ixNextChild,"333331")
     .add(bExpand ? '+' : ':').addint(ixEnd,"333331").add(":");
-    u.addHexLine(data, ixBegin, bytesHex, bBigEndian? StringFormatter.k4left: StringFormatter.k4right);
+    if(!checkData()) { u.add("--no-data--"); return; }
+    u.addHexLine(data(), ixBegin, bytesHex, bBigEndian? StringFormatter.k4left: StringFormatter.k4right);
   }
 
  

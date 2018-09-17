@@ -1,4 +1,4 @@
-2018-09-13 08:55:24  x     _filelist.lst                            ::           .  0  0000000000 
+2018-09-17 21:02:10  x     _filelist.lst                            ::           .  0  0000000000 
 
 ============================== _make/ =============================================================
 2012-08-12 22:29:02  x     +genDownload.sh                          ::           .966 -1047256477 
@@ -64,10 +64,10 @@
 
 ============================== org/vishia/byteData/ ================================================
 2016-09-03 22:21:48  x     ByteDataAccess.java                      ::         83.277  0134436295 
-2016-12-21 12:44:36  x     ByteDataAccessBase.java                  ::         88.393 -1017942446 
+2018-09-17 20:56:42  x     ByteDataAccessBase.java                  ::         91.863  0028382122 
 2015-02-18 22:32:02  x     ByteDataAccessDbg.java                   ::          1.468  0435534164 
 2015-02-18 22:33:00  x     ByteDataAccessOld.java                   ::         77.706 -1790232315 
-2014-11-13 20:50:24  x     ByteDataAccessSimple.java                ::          5.120  1799153449 
+2018-09-17 21:01:24  x     ByteDataAccessSimple.java                ::          5.330 -0673531778 
 2016-01-23 22:15:12  x     ByteDataSymbolicAccess.java              ::         24.179 -1050332237 
 2013-11-23 09:03:57  x     ByteDataSymbolicAccessReadConfig.java    ::          3.899 -1849174949 
 2018-09-04 20:53:18  x     Class_Jc.java                            ::          8.264  0163689942 
@@ -76,7 +76,7 @@
 2015-04-12 18:15:20  x     ObjectArray_Jc.java                      ::          3.420  0186309066 
 2015-04-12 18:15:20  x     Object_Jc.java                           ::          8.338 -1010306512 
 2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
-2016-09-03 22:22:47  x     RawDataAccess.java                       ::          3.767 -1123481164 
+2018-09-17 09:57:37  x     RawDataAccess.java                       ::          3.779 -0477929894 
 2013-12-10 09:54:37  x     VariableAccessArray_ifc.java             ::          6.165  0115301257 
 2016-01-23 22:17:31  x     VariableAccessWithBitmask.java           ::          6.370  0738802326 
 2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
@@ -117,12 +117,13 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2017-04-03 21:47:42  x     JZtxtcmdEngine.java                      ::          3.130  1916959976 
-2018-09-10 22:00:09  x     JZtxtcmdExecuter.java                    ::        187.885  2033274912 
+2018-09-17 20:49:38  x     JZtxtcmdExecuter.java                    ::        188.324  0861576689 
 2017-11-06 07:53:12  x     JZtxtcmdFilepath.java                    ::         16.417 -0750038997 
 2017-09-01 23:12:21  x     JZtxtcmdFileset.java                     ::          5.471  1655555857 
 2018-08-29 17:54:27  x     JZtxtcmdScript.java                      ::        107.516 -1134437687 
 2018-01-14 14:52:54  x     JZtxtcmdTester.java                      ::          8.920 -0308210107 
 2017-04-03 21:47:02  x     JZtxtcmdThread.java                      ::          5.453  1205314875 
+2018-09-17 20:36:37  x     JZtxtcmdThreadQueue.java                 ::           .968 -2101037230 
 2017-04-03 21:46:02  x     PrepareCmd.java                          ::         19.252 -1764914125 
 2017-08-30 11:33:53  x     ZmakeTarget.java                         ::          4.658 -1787231697 
 2017-04-03 21:47:03  x     package-info.java                        ::           .603 -1584113308 
@@ -300,7 +301,7 @@
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
-2011-02-26 21:31:28  x     ReadChars3Stream.java                    ::          4.740 -1050317933 
+2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
 2012-01-13 20:41:04  x     Removeable.java                          ::          1.095  0388858606 
 2016-09-04 19:23:22  x     ReplaceAlias_ifc.java                    ::          3.027  2081028153 
 2015-08-09 15:53:12  x     RetOrException.java                      ::           .594 -0114585109 
@@ -315,7 +316,7 @@
 2015-09-04 22:46:04  x     SortedTreeWalkerCallback.java            ::          5.474 -1471683679 
 2016-12-02 16:00:10  x     SpecialCharStrings.java                  ::          5.407 -1661090385 
 2011-02-26 15:36:54  x     StdHexFormatWriter.java                  ::          4.376  0697421476 
-2016-11-27 20:49:44  x     StringFormatter.java                     ::         47.857 -1978745428 
+2018-09-17 20:51:54  x     StringFormatter.java                     ::         48.101 -2096567143 
 2016-12-21 16:26:25  x     StringFunctions.java                     ::         46.983  0877900278 
 2016-10-17 14:03:55  x     StringFunctions_B.java                   ::          7.986  1494278515 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
@@ -323,7 +324,7 @@
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-07-17 15:20:23  x     StringPartFromFileLines.java             ::         19.877 -0340981476 
-2018-01-01 22:39:00  x     StringPartScan.java                      ::         36.775 -1040596723 
+2018-09-17 20:55:15  x     StringPartScan.java                      ::         37.345 -1074033803 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
