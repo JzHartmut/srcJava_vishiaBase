@@ -33,11 +33,12 @@ import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptException;
 import org.vishia.cmd.CmdExecuter;
+import org.vishia.cmd.JZtxtcmdScript.Subroutine;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.util9.Assert;
+import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.Conversion;
 import org.vishia.util.DataAccess;
@@ -364,14 +365,14 @@ public class JZtxtcmdExecuter {
     //Gen_Content genFile;
     
     /**The java prepared generation script. */
-    private JZtxtcmdScript jzcmdScript;
+    JZtxtcmdScript jzcmdScript;
     
     Queue<CmdExecuter> runningCmdExecuter = new ConcurrentLinkedQueue<CmdExecuter>();
     
     
-    public final Queue<JZtxtcmdThread> threads = new ConcurrentLinkedQueue<JZtxtcmdThread>();
+    public final Queue<JZtxtcmdThreadData> threads = new ConcurrentLinkedQueue<JZtxtcmdThreadData>();
     
-    public final JZtxtcmdThread scriptThread;
+    public final JZtxtcmdThreadData scriptThread;
 
     
     public final ExecuteLevel scriptLevel;
@@ -379,7 +380,7 @@ public class JZtxtcmdExecuter {
     JzTcMain(MainCmdLogging_ifc log, JZtxtcmdExecuter jzCmdExecuter){
       this.log = log;
       this.jzCmdExecuter = jzCmdExecuter;
-      scriptThread = new JZtxtcmdThread();
+      scriptThread = new JZtxtcmdThreadData();
       scriptLevel = new ExecuteLevel(this, scriptThread);
     }
 
@@ -430,6 +431,9 @@ public class JZtxtcmdExecuter {
     public DataAccess.Variable<Object> getScriptVariable(String name) throws NoSuchFieldException
     { return DataAccess.getVariable(scriptLevel.localVariables, name, true); }
 
+    
+    
+    public Subroutine sub(CharSequence name){ return jzcmdScript.getSubroutine(name); }
     
     public String nextNr(){
       return Integer.toString(++nextNr_); 
@@ -1292,7 +1296,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
      * 1->0: leaf execution of this level, close {@link #cmdExecuter}    */
     int ctNesting = 0;
     
-    final JZtxtcmdThread threadData;
+    final JZtxtcmdThreadData threadData;
     
     
     final JZtxtcmdScript.JZcmdClass jzClass;
@@ -1340,7 +1344,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
      *   local variables of its calling routine! This argument is only set if nested statement blocks
      *   are to execute. 
      */
-    protected ExecuteLevel(JzTcMain acc, JZtxtcmdScript.JZcmdClass jzClass, JZtxtcmdThread threadData, ExecuteLevel parent
+    protected ExecuteLevel(JzTcMain acc, JZtxtcmdScript.JZcmdClass jzClass, JZtxtcmdThreadData threadData, ExecuteLevel parent
         , Map<String, DataAccess.Variable<Object>> parentVariables)
     { this.jzcmdMain = acc;
       this.parent = parent;
@@ -1358,8 +1362,8 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           DataAccess.Variable<Object> var = e.getValue();
           String key = e.getKey();
           if(key.equals("scriptdir")){
-            String scriptFileClass = jzClass.srcFile;
-            CharSequence scriptdir = FileSystem.normalizePath(FileSystem.getDir(new File(scriptFileClass)));
+            File scriptFileClass = jzClass !=null ? new File(jzClass.srcFile) : acc.jzcmdScript.fileScript;
+            CharSequence scriptdir = FileSystem.normalizePath(FileSystem.getDir(scriptFileClass));
             //int posName = scriptFileClass.lastIndexOf('/')+1;
             //String scriptfile = scriptFileClass.substring(posName);
             //create a new scriptdir and scriptfile variable
@@ -1397,7 +1401,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     
     /**Constructs data for the script execution level.
      */
-    protected ExecuteLevel(JzTcMain acc, JZtxtcmdThread threadData)
+    protected ExecuteLevel(JzTcMain acc, JZtxtcmdThreadData threadData)
     { this(acc, null, threadData, null, null);
     }
     
@@ -3585,7 +3589,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     }
     
     
-    protected void runThread(ExecuteLevel executeLevel, JZtxtcmdScript.ThreadBlock statement, JZtxtcmdThread threadVar){
+    protected void runThread(ExecuteLevel executeLevel, JZtxtcmdScript.ThreadBlock statement, JZtxtcmdThreadData threadVar){
       try{
         executeLevel.execute(statement.statementlist, jzcmdMain.textline, 0, executeLevel.localVariables, -1);
       } 
@@ -3596,7 +3600,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     }
     
 
-    protected void finishThread(JZtxtcmdThread thread){
+    protected void finishThread(JZtxtcmdThreadData thread){
       synchronized(thread){
         thread.notifyAll();   //any other thread may wait for join
       }

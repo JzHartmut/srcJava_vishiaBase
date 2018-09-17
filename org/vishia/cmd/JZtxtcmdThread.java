@@ -10,7 +10,7 @@ import org.vishia.util.StringFormatter;
  * @author Hartmut Schorrig
  *
  */
-public class JZtxtcmdThread implements Runnable
+public class JZtxtcmdThread extends JZtxtcmdThreadData implements Runnable
 {
   
   /**Version, history and license.
@@ -67,20 +67,6 @@ public class JZtxtcmdThread implements Runnable
   
 
 
-  /**Exception text. If not null then an exception is thrown and maybe thrown for the next level.
-   * This text can be gotten by the "error" variable.
-   */
-  DataAccess.Variable<Object> error = new DataAccess.Variable<Object>('S', "error", null);
-  
-  /**The exception with them the thread was finished or null. */
-  Throwable exception;
-  
-  JZtxtcmdScript.JZcmditem excStatement;
-  
-  int excLine, excColumn;
-  
-  String excSrcfile;
-  
   /**State of thread execution. i-init, r-run, y-finished.*/
   char state = 'i';
 
