@@ -230,7 +230,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * 
    * 
    */
-  public final static String version = "2016-01-24";
+  public final static String version = "2018-09-18";
   
   
   
@@ -685,7 +685,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
       this.bBigEndian = parent.bBigEndian;
       this.bExc = parent.bExc;
       this.parent = parent;
-      this.ixBegin = idxChildInParent;
+      this.ixBegin = parent.ixBegin + idxChildInParent;
       currChild = null;
       this.bExpand = lengthChild < sizeHead;  //expand if the data have no head.
       ixNextChild = ixBegin + sizeHead;
@@ -778,14 +778,15 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    * @since 2018-09
    */
   private final byte[] getData(int recursion)
-  { if(data == null && parent !=null) {
+  { if(this.data == null && parent !=null) {
       if(--recursion <0) {
         throwexc("too many recursions in parent relation",0);
         return null;
       }
-      data = parent.getData(recursion-1);
+      this.data = parent.getData(recursion-1);
+      this.bBigEndian = parent.bBigEndian;
     }
-    return  data;
+    return this.data;
   }
 
 
@@ -1776,7 +1777,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
 
   
   protected final int getUint32(int idxBytes, int idxArray, int lengthArray)
-  { if(idxArray >= lengthArray || idxArray < 0) throw new IndexOutOfBoundsException("getUint16:" + idxArray);
+  { if(idxArray >= lengthArray || idxArray < 0) throw new IndexOutOfBoundsException("getUint32:" + idxArray);
     return getUint32(idxBytes + 4*idxArray);
   }
   
@@ -2053,6 +2054,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   boolean checkData() {
     if(data == null && parent !=null) {
       data = parent.getData(99);
+      bBigEndian = parent.bBigEndian;
     }
     if(data == null) {
       throwexc("--no data--",0);
