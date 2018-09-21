@@ -57,7 +57,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120407;
+  public static final String version = "2018-09-19";
 
 
 

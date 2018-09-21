@@ -136,7 +136,7 @@ public class ByteDataVariable
     private final int ixData;
     private final ByteDataAccessBase acc;
     
-    public int get() { return acc.getInt16(ixData); } 
+    public short get() { return acc.getInt16(ixData); } 
     public void set(int val) { acc.setInt16(ixData, val); } 
     
     public Int16(ByteDataAccessBase acc, int ixData){

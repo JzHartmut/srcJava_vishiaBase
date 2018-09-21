@@ -60,7 +60,8 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   
   /**Version, history and license.
    * <ul>
-   * <li>2017-09-17: {@link #addHex(long, int)} with upper chars  
+   * <li>2018-09-20: Hartmut new {@link #addHexBlock(byte[], int, int, short, short))} 
+   * <li>2018-09-17: {@link #addHex(long, int)} with upper chars  
    * <li>2015-06-07: Hartmut chg: {@link #append(char)} and {@link #flushLine(String)}, now output of the given line end is supported
    *   if the {@link StringFormatter#StringFormatter(Appendable, boolean, String, int)} argument 'newlineString' is null. 
    * <li>2015-01-31: Hartmut {@link #add(String)} additional to {@link #add(CharSequence)} only for Java2C-translation. In Java it is equal. 
@@ -125,7 +126,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
  
   /**The constant determine the number of digits representing a (hex) value and the decision, use first byte left or right side.
    * left = first byte of a byte[] array is written left sided (like big endian coding),
-   * right = first byte of a byte[] array is written right sided (like necessary in 
+   * right = first byte of a byte[] array is written right sided (like necessary in little endian coding) 
    */ 
   public static final short k1 = 1,
                             k2right = 2, k2left = 2 + mBytesInWordBigEndian,
@@ -503,6 +504,38 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   }
 
 
+  
+  
+  /**Writes a block in hex. 
+   * @param data
+   * @param from
+   * @param to  exclusive position. 0: till end. negativ: position back from end.
+   * @param bytesInLine
+   * @param mode nr of bytes in word, | {@link #mBytesInWordBigEndian} if necessary.
+   * @throws IOException
+   */
+  public void addHexBlock(byte[] data, int from, int to, short bytesInLine, short mode) throws IOException {
+    int ixData = from;
+    int ixEnd = (to <=0 )? data.length + to : to;
+    if(ixEnd > data.length) { ixEnd = data.length; }
+    while(ixData < ixEnd) {
+      this.addHex(ixData, 6).add(": ");
+      this.addHexLine(data, ixData, bytesInLine, mode);
+      this.newline();
+      ixData += bytesInLine;
+//      while(--nrWord >=0 && (ixData +2)< ixEnd) {
+//        int val = acc.getIntVal(ixData, 2);
+//        fm.addHex(val, 4).add(' ');
+//        ixData +=2;
+//      }
+//      fm.newline();
+    }
+    //fm.close();
+  }
+
+  
+  
+  
   
   /**Adds a hexa line with left address and ascii
   *

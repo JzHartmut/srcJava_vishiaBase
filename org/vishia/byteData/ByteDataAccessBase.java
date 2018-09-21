@@ -152,6 +152,9 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   
   /**The version, history and license. 
    * <ul>
+   * <li>2018-09-18 Hartmut new {@link #ixBeginLocal} stores the position inside the child, whereby ixBegin is global. 
+   *   TODO description of strategy of fix children. It may be proper if assignData(...) will be invoked only for the derived class
+   *   which knows its fix children. The old concept of overridden methods here are not proper for simple C applications. 
    * <li>2018-09-16 Hartmut chg: All access routines calls {@link #checkData()}. 
    *   The reason for checkData(): If a child (at an index) was not assigned with data, it gets the data from its parent now. 
    *   With them it is possible to call {@link #assign(byte[])} for the parent only and it runs.
@@ -247,6 +250,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   /**Index of the beginning of the actual element in data*/
   private int ixBegin;
 
+  /**Index of the beginning of the element inside the parent, relative to the parent. */
+  private int ixBeginLocal;
 
   /**Index of the currents child end respectively the position of a new child.
    * If no current child is known this index is equal ixBegin + sizeHead, it is the position after the head. 
@@ -311,7 +316,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     assert(sizeHead >=0);
     assert(sizeData >0);
     this.sizeHead = sizeHead;
-    ixBegin = 0;
+    ixBeginLocal = ixBegin = 0;
     ixEnd = sizeData;
     bExpand = false;
     ixNextChild = sizeHead;
@@ -601,6 +606,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     detach();
     this.data = dataP;
     ixBegin = index;
+    ixBeginLocal = index;
     parent = null;
     currChild = null;
     bExpand = lengthData < sizeHead;  //expand if the data have no head.
@@ -686,6 +692,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
       this.bExc = parent.bExc;
       this.parent = parent;
       this.ixBegin = parent.ixBegin + idxChildInParent;
+      this.ixBeginLocal = idxChildInParent;
       currChild = null;
       this.bExpand = lengthChild < sizeHead;  //expand if the data have no head.
       ixNextChild = ixBegin + sizeHead;
@@ -1034,6 +1041,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     int ixChild1 = setIdxtoNextCurrentChild(sizeChild ==0 ? child.sizeHead: sizeChild);
     if(ixChild1 < 0) return false;
     child.ixBegin = ixChild1;   
+    child.ixBeginLocal = child.ixBegin - this.ixBegin;
     child.bBigEndian = bBigEndian;
     child.bExc = bExc;
     child.bExpand = bExpand;
@@ -1095,6 +1103,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     child.data = data;
     int idxBegin = this.ixBegin + idxChild;
     child.ixBegin = idxBegin;
+    child.ixBeginLocal = idxChild;
     child.ixEnd = idxBegin + sizeChild;
     child.ixNextChild = idxBegin + child.sizeHead;
     child.bBigEndian = bBigEndian;
@@ -1449,6 +1458,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     data = null;
     parent = null;
     ixBegin = ixEnd = 0;
+    //don't change ixBeginLocal.
     ixNextChild = 0;
     bExpand = false;
   }
