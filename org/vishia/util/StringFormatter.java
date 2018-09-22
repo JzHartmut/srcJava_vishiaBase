@@ -1263,7 +1263,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   {
     if(lineout !=null){
       lineout.append(buffer);
-      if(bShouldLineoutClose){
+      if(bShouldLineoutClose && lineout instanceof Closeable){
         ((Closeable)lineout).close();
         lineout = null;
       }

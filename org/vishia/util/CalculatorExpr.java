@@ -370,6 +370,10 @@ public class CalculatorExpr
     }
     
     
+    /**Converts the content of the variable to a numeric one.
+     * Detects hex with "0x", Integer, Long, Float, Double. The decimal separator should be a '.'.
+     * Spaces are ignored, can be separators between digits. A separator ' or , is possible too.
+     */
     public void toNumValue() {
       if( "JISBFD".indexOf(type) <0) {
         String sValue = stringVal !=null ? stringVal.toString() : oVal !=null ? oVal.toString() : "0";
@@ -389,7 +393,9 @@ public class CalculatorExpr
           }
           //TODO regard kMGTmuµnp
           //TODO let the rest of String in stringVal, it may be the unit.
-        } else {
+        } 
+        //if more character are present, ignore it.
+        if("DF".indexOf(type) <0) { //not a float or double
           if(zValue <=9 ) { intVal = (int)value; type = 'I'; }
           else { longVal = value; type = 'L'; }
         }

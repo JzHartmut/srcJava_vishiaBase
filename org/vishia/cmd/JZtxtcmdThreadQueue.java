@@ -87,7 +87,7 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
       if(sub == null) { 
         try{ Thread.sleep(100);} catch(InterruptedException exc) {}
       } else {
-        executeLevel.exec_Subroutine(sub, null, null, 0);
+        executeLevel.exec_Subroutine(sub, null, executeLevel.jzcmdMain.textline, 0);
       }
     }
     

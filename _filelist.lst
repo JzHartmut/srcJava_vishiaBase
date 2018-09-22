@@ -1,5 +1,4 @@
-2018-09-21 14:53:50  x     #.gitCommit#                             ::           .112 -0044011443 
-2018-09-21 14:57:29  x     _filelist.lst                            ::           .  0  0000000000 
+2018-09-22 19:58:29  x     _filelist.lst                            ::           .  0  0000000000 
 
 ============================== _make/ =============================================================
 2012-08-12 22:29:02  x     +genDownload.sh                          ::           .966 -1047256477 
@@ -119,14 +118,14 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2017-04-03 21:47:42  x     JZtxtcmdEngine.java                      ::          3.130  1916959976 
-2018-09-17 22:34:13  x     JZtxtcmdExecuter.java                    ::        188.546  0477088301 
+2018-09-22 19:57:07  x     JZtxtcmdExecuter.java                    ::        189.369 -1183388038 
 2017-11-06 07:53:12  x     JZtxtcmdFilepath.java                    ::         16.417 -0750038997 
 2017-09-01 23:12:21  x     JZtxtcmdFileset.java                     ::          5.471  1655555857 
 2018-08-29 17:54:27  x     JZtxtcmdScript.java                      ::        107.516 -1134437687 
 2018-01-14 14:52:54  x     JZtxtcmdTester.java                      ::          8.920 -0308210107 
 2018-09-17 21:25:34  x     JZtxtcmdThread.java                      ::          5.026  1223527176 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
-2018-09-17 23:47:20  x     JZtxtcmdThreadQueue.java                 ::          3.580 -0017811380 
+2018-09-22 00:34:58  x     JZtxtcmdThreadQueue.java                 ::          3.607 -1856078465 
 2017-04-03 21:46:02  x     PrepareCmd.java                          ::         19.252 -1764914125 
 2017-08-30 11:33:53  x     ZmakeTarget.java                         ::          4.658 -1787231697 
 2017-04-03 21:47:03  x     package-info.java                        ::           .603 -1584113308 
@@ -189,7 +188,7 @@
 
 ============================== org/vishia/jztxtcmd/ ================================================
 2017-04-03 21:49:12  x     JZtxtcmd.java                            ::         48.615  0287919172 
-2018-08-29 16:48:28  x     JZtxtcmdSyntax.java                      ::         29.600  0064374252 
+2018-09-21 23:46:48  x     JZtxtcmdSyntax.java                      ::         29.669 -2134218883 
 2017-04-03 21:49:22  x     JZtxtcmdUserExample.java                 ::          1.865 -1242753310 
 2017-04-03 21:49:31  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
 
@@ -264,7 +263,7 @@
 
 ============================== org/vishia/util/ ====================================================
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
-2018-08-29 19:40:11  x     CalculatorExpr.java                      ::        108.727  0886759466 
+2018-09-21 22:13:18  x     CalculatorExpr.java                      ::        109.099  1871043104 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
@@ -319,7 +318,7 @@
 2015-09-04 22:46:04  x     SortedTreeWalkerCallback.java            ::          5.474 -1471683679 
 2016-12-02 16:00:10  x     SpecialCharStrings.java                  ::          5.407 -1661090385 
 2011-02-26 15:36:54  x     StdHexFormatWriter.java                  ::          4.376  0697421476 
-2018-09-21 14:52:35  x     StringFormatter.java                     ::         49.173 -1803444476 
+2018-09-21 23:57:19  x     StringFormatter.java                     ::         49.205  0302847186 
 2016-12-21 16:26:25  x     StringFunctions.java                     ::         46.983  0877900278 
 2016-10-17 14:03:55  x     StringFunctions_B.java                   ::          7.986  1494278515 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 

@@ -84,7 +84,10 @@ public class JZtxtcmdExecuter {
   
   
   /**Version, history and license.
-   * <ul>2018-09-17 new {@link JzTcMain#sleep(int)} 
+   * <ul>
+   * <li>2018-09-22 Hartmut new in {@link ExecuteLevel#exec_OpenTextOut(org.vishia.cmd.JZtxtcmdScript.JZcmditem, StringFormatter, boolean)} :
+   *   <code>text = appendableObj</code> can be used yet, it is especially to assign the text output to an GUI output box widget. 
+   * <li>2018-09-17 new {@link JzTcMain#sleep(int)} 
    * <li>2018-09-10 Hartmut bugfix. The script variable text = path/to/textout cannot be set. 
    *   Now the argument -t=out wins against the script variable, but if -t is not set, the scriptVariable text = ... is used.
    *   bugfix: setting text = ... in the script should be used immediately after that. Changing of {@link ExecuteLevel#exec_OpenTextOut(org.vishia.cmd.JZtxtcmdScript.JZcmditem, StringFormatter, boolean)}.
@@ -314,7 +317,7 @@ public class JZtxtcmdExecuter {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2018-08-29";
+  static final public String version = "2018-09-22";
 
   /**This class is the jzcmd main level from a script.
    * @author Hartmut Schorrig
@@ -2782,20 +2785,31 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         System.out.println("Info: exec_OpenTextOut skipped because outFromCmdLine is given.");
         return outTextprev;     //ignore the setting of textout in the script setting phase.
       } else {
-        CharSequence arg = evalString(statement);
-        if(arg == JZtxtcmdExecuter.retException){ return null; }
-        else {
+        //CharSequence arg = evalObject(statement, false);  //evalString(statement);
+        Object oarg = evalObject(statement, false);  //evalString(statement);
+        Appendable out = null;
+        if(oarg == JZtxtcmdExecuter.retException){ return null; }
+        else if(oarg instanceof Appendable) {
+          out = (Appendable) oarg;
+        }
+        else if(oarg instanceof CharSequence){
+          CharSequence arg = (CharSequence)oarg;
           if(!FileSystem.isAbsolutePath(arg)){
             arg = this.currdir() + "/" + arg;
           }
-          Appendable out = new FileWriter(arg.toString(), bAppend);
+          out = new FileWriter(arg.toString(), bAppend);
+        } else {
+          throw new IllegalArgumentException("assignment to text should either an Appendable or a text which is the filename.");  
+        }
+        if(out !=null) {
           if(jzcmdMain.textline !=null) {
             jzcmdMain.textline.close();
           }
           jzcmdMain.textline =  new StringFormatter(out, true, null, 200);
           jzcmdMain.setScriptVariable("text", 'A', jzcmdMain.textline, true); 
-          return jzcmdMain.textline;
+          //return jzcmdMain.textline;
         }
+        return jzcmdMain.textline;
       }
     }
     
