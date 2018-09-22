@@ -812,8 +812,9 @@ INPUT          pathTo JZcmd-File to execute
    * @throws InstantiationException
    * @throws FileNotFoundException
    * @throws IOException
+   * @deprecated this routine is given in {@link JZtxtcmdScript#createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
    */
-  public static JZtxtcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, 
+  @Deprecated public static JZtxtcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, 
       MainCmdLogging_ifc log, File checkXmlOutput, File fileScript) 
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
@@ -847,7 +848,7 @@ INPUT          pathTo JZcmd-File to execute
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private JZtxtcmdScript compile(StringPartScan sourceScript, File checkXmlOutput, File fileScript) 
+  @Deprecated private JZtxtcmdScript compile(StringPartScan sourceScript, File checkXmlOutput, File fileScript) 
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;
@@ -875,7 +876,7 @@ INPUT          pathTo JZcmd-File to execute
    * @throws FileNotFoundException
    * @throws IOException
    */
-  private void translateAndSetGenCtrl(StringPartScan sourceScript, JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript
+  @Deprecated private void translateAndSetGenCtrl(StringPartScan sourceScript, JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript
       , File dirIncludeBase 
       , File checkXmlOutput) 
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
