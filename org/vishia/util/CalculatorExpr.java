@@ -40,6 +40,11 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-09-23 Hartmut bugfix in {@link Value#toNumValue()}: {@link Value#etype} was not set. 
+   *   The problem was obvious on a numeric value which were null because an exception in an JZtxtcmd script. 
+   *   The conversion to Num was done, the value was 0 with type == 'I' but the etype was not change from 'o' to 'I'
+   *   Before using toNumValue it was not obvious that there was an exception.
+   *   On the fly: {@link Value#toString()} was faulty in this situation (only used in debugging view).
    * <li>2018-08-28 Hartmut new {@link Value#toNumValue()}, conversion especially from String, yet some TODO .
    * <li>2017-10-27 Hartmut exception on cmp operation with {@link #variableNotFoundExpr}
    * <li>2016-02-13 Hartmut bugfix: {@link StringPartScan#scanFractionalNumber(long, boolean)} has had a problem with negative numbers. 
@@ -396,8 +401,8 @@ public class CalculatorExpr
         } 
         //if more character are present, ignore it.
         if("DF".indexOf(type) <0) { //not a float or double
-          if(zValue <=9 ) { intVal = (int)value; type = 'I'; }
-          else { longVal = value; type = 'L'; }
+          if(zValue <=9 ) { intVal = (int)value; type = 'I'; etype = intExpr; }
+          else { longVal = value; type = 'L'; etype = longExpr; }
         }
       }
     
@@ -406,18 +411,19 @@ public class CalculatorExpr
     
     
     @Override public String toString(){ 
+      char typeChar = etype ==null ? '?' : etype.typeChar();
       switch(type){
-        case 'I': return "I " + Integer.toString(intVal);
-        case 'J': return "J " + Long.toString(longVal);
-        case 'D': return "D " + Double.toString(doubleVal);
-        case 'F': return "F " + Float.toString(floatVal);
-        case 'C': return "C " + (char)intVal;
-        case 'Z': return "Z " + Boolean.toString(boolVal);
-        case 't': return "t " + stringVal.toString();
-        case 'o': return "o " + oVal ==null ? "null" : oVal.toString();
-        case 'e': return "e " + ((Exception)oVal).getMessage();
-        case '?': return "??";
-        default:  return "?" + type;
+        case 'I': return typeChar + "I " + Integer.toString(intVal);
+        case 'J': return typeChar + "J " + Long.toString(longVal);
+        case 'D': return typeChar + "D " + Double.toString(doubleVal);
+        case 'F': return typeChar + "F " + Float.toString(floatVal);
+        case 'C': return typeChar + "C " + (char)intVal;
+        case 'Z': return typeChar + "Z " + Boolean.toString(boolVal);
+        case 't': return typeChar + "t " + stringVal.toString();
+        case 'o': return typeChar + "o " + (oVal ==null ? "null" : oVal.toString());
+        case 'e': return typeChar + "e " + (oVal instanceof Exception ? ((Exception)oVal).getMessage(): oVal == null ? "null" : oVal.toString());
+        case '?': return typeChar + "??";
+        default:  return typeChar + "?" + type;
       }//switch
     }
   }
@@ -557,7 +563,7 @@ public class CalculatorExpr
         case 'C': case 'I': val2.floatVal = val2.intVal; return this; 
         case 'J': val2.doubleVal = val2.longVal; return doubleExpr; 
         case 'F': return this; 
-        case 'D': accu.doubleVal = accu.floatVal; accu.type = 'D'; return doubleExpr; 
+        case 'D': accu.doubleVal = accu.floatVal; accu.type = 'D'; return accu.etype = doubleExpr; 
         case 'o': 
           if(val2.oVal instanceof Long)          { val2.floatVal = ((Long)val2.oVal).longValue();      return this; }
           else if(val2.oVal instanceof Integer)  { val2.floatVal = ((Integer)val2.oVal).intValue();    return this; }
