@@ -73,7 +73,12 @@ sub ExampleGen(Obj target: org.vishia.cmd.ZmakeTarget)  ##a zmake target
 public class CheaderParser {
 
   /**Version, history and license.
-   * <ul>2018-09-02 JzHartmut first super element for non-ObjectJc superclass, see {@link StructDefinition#add_attribute(AttributeOrTypedef)}
+   * <ul>
+   * <li>2018-10-10 JzHartmut Some adaption to jzTc generation script, especially up to now all Type_s produces reflection_Type without suffix _s.
+   *   It is necessary because it should be given a simple rule to deduce from the TYPE_t tagname to the type. The rule is:
+   *   <pre>struct TYPE_t{....} TYPE_s; class TYPE : TYPE_s{...}; reflection_TYPE </pre>
+   *   The reflection_TYPE is for a struct TYPE_s which is presented by a class TYPE without own reflection. 
+   * <li>2018-09-02 JzHartmut first super element for non-ObjectJc superclass, see {@link StructDefinition#add_attribute(AttributeOrTypedef)}
    * <li>2018-09-02 JzHartmut <code>structNameTypeOffs</code> removed, see {@link StructDefinition#add_implicitStructAttribute(StructDefinition)}
    * <li>2018-08-28 JzHartmut {@link HeaderBlock#set_const()}, {@link HeaderBlock#new_structContentInsideCondition()} should return a {@link ConditionBlock}.
    *   {@link HeaderBlock#add_macro(AttribAsMacro)} and {@link StructDefinition#add_macro(AttribAsMacro)}: The OS_HandlePtr should be accepted as attribute.
@@ -117,7 +122,7 @@ public class CheaderParser {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2018-09-08";
+  static final public String sVersion = "2018-10-11";
 
   
   
@@ -735,12 +740,15 @@ public class CheaderParser {
     
     public AttributeOrTypedef superclass;
     
-    public String tagname, name; 
+    public String tagname, name;
     
     /**If this is set, the struct is a implicitly one. The {@link #name} is from the environment struct. 
      * this element is the name of the element with this struct.
      */
     public String implicitName;
+    
+    /**Used in an implicitStructAttribute. */
+    public Arraysize arraysize;
     
     public void set_name(String val) { name = val; }
     
@@ -860,7 +868,7 @@ public class CheaderParser {
     
     @Override public void add_macro(AttribAsMacro val){
       super.add_macro(val);
-      if(val.macro.equals("OS_HandlePtr")) {
+      if(val.macro.equals("OS_HandlePtr") || val.macro.equals("HandlePtr_emC")) {
         val.type.pointer_ = new LinkedList<Pointer>();
         val.type.pointer_.add(new Pointer());
         val.bOS_HandlePointer = true;
@@ -868,6 +876,14 @@ public class CheaderParser {
       }
     } 
     
+    
+    
+    public String baseName(String maybesuffix) {
+      if(name.endsWith(maybesuffix)) { 
+        return name.substring(0, name.length()-maybesuffix.length()); 
+      }
+      else return name;
+    } 
     
     
     /**Ignore &lt;?elseConditionBlock&gt; as String, add it as component. */
@@ -1691,6 +1707,10 @@ type::= [<?@modifier>volatile|const|]
   
   
   
+  /**Prepares a name for a variable, may be longer than 30 chars or may contain "." for sub structure.
+   * @param name
+   * @return
+   */
   public static String prepareReflName(String name) {
     String ret = name.replace('.', '_');
     int zName = name.length();

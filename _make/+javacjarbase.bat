@@ -92,25 +92,25 @@ if not "%COPYJAR1%" == "" copy %COPYJAR1%
 if not "%COPYJAR2%" == "" copy %COPYJAR2% 
 if not "%COPYJAR3%" == "" copy %COPYJAR3% 
 echo on
-cd /D %TMP_JAVAC%\bin
+::cd /D %TMP_JAVAC%\bin
 echo === SUCCESS compiling, generate jar: %ENTRYDIR%\%OUTDIR_JAVAC%\%JAR_JAVAC%
 echo TMP_JAVAC=%CD%
 
-%JAVA_JDK%\bin\jar -cvfm %ENTRYDIR%\%OUTDIR_JAVAC%\%JAR_JAVAC% %ENTRYDIR%\%MANIFEST_JAVAC% *  1>%ENTRYDIR%\%OUTDIR_JAVAC%\%JAR_JAVAC%.jar.log 2>..\jar_error.txt
+%JAVA_JDK%\bin\jar -cvfm %OUTDIR_JAVAC%\%JAR_JAVAC% %MANIFEST_JAVAC% -C %TMP_JAVAC%\bin . 1>%TMP_JAVAC%\%JAR_JAVAC%.jar.log 2>%TMP_JAVAC%\jar_error.txt
 
 REM join jar_error.txt and compile_error.log to one file to view it after this script.
-type ..\jar_error.txt >%ENTRYDIR%\%OUTDIR_JAVAC%\%JAR_JAVAC%.compile_error.log
+type %TMP_JAVAC%\jar_error.txt >%TMP_JAVAC%.compile_error.log
 
 if errorlevel 1 (
   echo === ERROR jar
-  echo see %OUTDIR_JAVAC%\%JAR_JAVAC%.compile_error.log
-	call edit.bat %OUTDIR_JAVAC%\%JAR_JAVAC%.compile_error.log
+  echo see %TMP_JAVAC%.compile_error.log
+	call edit.bat %TMP_JAVAC%.compile_error.log
   cd /D %ENTRYDIR%
   exit /B 1
 )
 
 REM  Restore current dir: %ENTRYDIR%
-cd /D %ENTRYDIR%
+::cd /D %ENTRYDIR%
 echo === SUCCESS making %JAR_JAVAC% in %OUTDIR_JAVAC%.
 
 if "%NOPAUSE%" == "" pause

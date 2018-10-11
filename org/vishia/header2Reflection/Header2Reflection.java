@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.vishia.byteData.ByteDataAccess;
 import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
@@ -56,7 +55,6 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Iterator;
 
-import org.vishia.util.StringPart;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
