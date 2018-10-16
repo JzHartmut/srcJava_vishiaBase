@@ -297,7 +297,7 @@ public final class JZtxtcmdFilepath {
     return data.localfileReplwildcard(uRet, replWildc.data);
   }
 
-  /**Assembles and returns the designated part from this Filepath as String or StringBuilder: <&path.name()>. 
+  /**Returns the name from this Filepath as String. 
    * @return the name of the file without extension.
    */
   public CharSequence name(){ return data.name(); }

@@ -241,7 +241,7 @@ public class FilePath
    * It does not contain a slash on end. */
   private String localdir = "";
   
-  /**From Zbnf: The filename without extension. */
+  /**From Zbnf: The filename without extension. Note: On a "." as only one first char (".git" or such) it is the name, not the extension. */
   private String name = "";
   
   
@@ -537,6 +537,7 @@ public class FilePath
 
 
   /**Returns the name of the file without extension.
+   * Note: If the file starts with ".name" this is the name, not the extension.
    */
   public CharSequence name(){ return this.name; }
 

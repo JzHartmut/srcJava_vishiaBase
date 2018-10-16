@@ -85,6 +85,7 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-10-16 Hartmut bugfix: The empty statement list in script part <code>onerror{}</code> was syntactically admissible but the execution crashes. fixed. 
    * <li>2018-09-22 Hartmut new in {@link ExecuteLevel#exec_OpenTextOut(org.vishia.cmd.JZtxtcmdScript.JZcmditem, StringFormatter, boolean)} :
    *   <code>text = appendableObj</code> can be used yet, it is especially to assign the text output to an GUI output box widget. 
    * <li>2018-09-17 new {@link JzTcMain#sleep(int)} 
@@ -317,7 +318,7 @@ public class JZtxtcmdExecuter {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2018-09-22";
+  static final public String version = "2018-10-16";
 
   /**This class is the jzcmd main level from a script.
    * @author Hartmut Schorrig
@@ -1486,8 +1487,10 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       int indentOut = indentOutArg;
       int ixStatement = -1;
       short ret = 0;
+      //Note: it is admissible that statementList is null. for empty blocks. @since 2018-10-16 
+      int ixStatementEnd = statementList !=null && statementList.statements !=null ? statementList.statements.size() : 0;
       //Note: don't use an Iterator, use ixStatement because it will be incremented onError.
-      while(ret == 0 && ++ixStatement < statementList.statements.size()) { //iter.hasNext() && sError == null){
+      while(ret == 0 && ++ixStatement < ixStatementEnd) { //iter.hasNext() && sError == null){
         JZtxtcmdScript.JZcmditem statement = statementList.statements.get(ixStatement); //iter.next();
         int nDebug1 = 0; //TODO nDebug>0 || debugNext >=0;
         if(statement.elementType() == 'D'){
