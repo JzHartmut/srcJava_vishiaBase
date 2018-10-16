@@ -1160,6 +1160,10 @@ type::= [<?@modifier>volatile|const|]
    */
   public static class Type
   {
+    
+    public String basename;
+    
+    
     /**If {@link #forward} is not null, it is the struct type name. */
     public String name;
     
@@ -1186,6 +1190,18 @@ type::= [<?@modifier>volatile|const|]
     /**It is possible that a deeper pointer level is given. Any pointer type can be volatile or const. */
     List<Pointer> pointer_;
     
+
+    public void set_name(String val) { 
+      name = val; 
+      int len = val.length();
+      if(forward !=null) {
+        if(val.endsWith("_")) { len -=1;}  //for struct NAME_*
+        else { len -=2; } //for struct NAME_t*
+      } else if(val.endsWith("_s")) {
+        len -=2;
+      }; 
+      basename = val.substring(0,len); 
+    }
 
     public void set_Pointer() { set_pointer(); }
 
