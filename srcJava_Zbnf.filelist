@@ -1,4 +1,6 @@
-2018-10-11 12:21:49  x     _filelist.lst                            ::           .  0  0000000000 
+2018-10-26 09:43:52  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
+2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
 ============================== _make/ =============================================================
 2012-08-12 22:29:02  x     +genDownload.sh                          ::           .966 -1047256477 
@@ -7,8 +9,6 @@
 2018-10-09 19:19:23  x     +javacjarbase.bat                        ::          4.541  1833132505 
 2012-03-26 12:21:00  x     +javacjarbase.sh                         ::          3.255 -1553126320 
 2011-02-26 22:43:58  x     Header2Reflection.manifest               ::           . 63  1543696467 
-2014-06-05 09:19:31  x     _makejar_vishiaBase.bat                  ::          1.520 -2040742808 
-2013-02-05 07:23:18  x     _makejar_vishiaBase.sh                   ::          1.587  1699435763 
 2014-06-15 22:06:55  x     _makejar_zbnf.jz.bat                     ::          1.656  0199409420 
 2011-12-06 17:57:46  x     compileJava.bat                          ::           .997  1588002751 
 2018-09-11 16:31:14  x     genDownload.sh                           ::           . 68  0585822886 
@@ -118,8 +118,8 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2018-09-23 09:19:46  x     JZtxtcmdExecuter.java                    ::        185.329  1312855735 
-2018-09-22 20:52:59  x     JZtxtcmdFilepath.java                    ::         16.086  1789028382 
+2018-10-16 07:14:49  x     JZtxtcmdExecuter.java                    ::        185.693  0121658470 
+2018-10-16 07:09:41  x     JZtxtcmdFilepath.java                    ::         16.028 -1293032415 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
 2018-09-22 20:53:33  x     JZtxtcmdTester.java                      ::          8.687 -0140436673 
@@ -177,7 +177,7 @@
 ============================== org/vishia/header2Reflection/ =======================================
 2018-09-08 13:12:57  x     BinOutPrep.java                          ::         11.847 -1013202359 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2018-10-11 12:20:42  x     CheaderParser.java                       ::         56.561  1708114231 
+2018-10-26 09:43:21  x     CheaderParser.java                       ::         57.289 -0086428394 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
 2014-11-13 22:08:25  x     ExtReflection_Insp_h.java                ::          1.061 -0470130958 
 2018-10-10 14:36:37  x     Header2Reflection.java                   ::         82.589 -0617309861 
@@ -275,7 +275,7 @@
 2013-06-27 19:28:00  x     FileCompare.java                         ::         13.113 -1366728653 
 2018-01-18 18:36:56  x     FileFunction.java                        ::          1.889  0539851708 
 2016-11-23 09:32:49  x     FileList.java                            ::         25.226 -0519890922 
-2017-09-13 21:28:17  x     FilePath.java                            ::         82.525  0828239028 
+2018-10-16 07:08:53  x     FilePath.java                            ::         82.696 -0128293682 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
 2017-09-01 23:33:41  x     FileSet.java                             ::          5.673 -2027065883 
 2017-09-09 13:46:17  x     FileSystem.java                          ::         68.731 -0814328576 

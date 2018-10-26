@@ -74,6 +74,8 @@ public class CheaderParser {
 
   /**Version, history and license.
    * <ul>
+   * <li>2018-10-10 JzHartmut change; handling of macro because comment is necessary.
+   * <li>2018-10-10 JzHartmut {@link StructDefinition#new_attribMacro()}, the HeaderBlock.add_macro is removed. It is more systematic. Cheader.zbnf adequate changed.
    * <li>2018-10-10 JzHartmut Some adaption to jzTc generation script, especially up to now all Type_s produces reflection_Type without suffix _s.
    *   It is necessary because it should be given a simple rule to deduce from the TYPE_t tagname to the type. The rule is:
    *   <pre>struct TYPE_t{....} TYPE_s; class TYPE : TYPE_s{...}; reflection_TYPE </pre>
@@ -404,14 +406,6 @@ public class CheaderParser {
     public AttributeOrTypedef new_constDef(){ return new AttributeOrTypedef(); }
     public void add_constDef(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
   
-    public AttribAsMacro new_macro(String name){ 
-      AttribAsMacro macro = new AttribAsMacro(name);
-      entries.add(macro );
-      return macro;
-    }
-    public void add_macro(AttribAsMacro val){} //empty, all done. See StructDefinition.add_macro
-    
-    
     
     public MethodDef new_methodDef(){ return new MethodDef(); }
     public void add_methodDef(MethodDef val){ val.visibility = visibility; entries.add(val); }
@@ -506,6 +500,9 @@ public class CheaderParser {
     public Description(){ super("description"); }
     public String text = "";
     
+    /**set in #set_acclevel */
+    public int accLevel, chgLevel;
+    
     public String simulinkTag = "";
     
     /**For Simulink Sfn generation: Variable for function call. */
@@ -546,6 +543,11 @@ public class CheaderParser {
     public void set_simulinkTag(String val) {
       simulinkTag = simulinkTag + ":" + val + ":";
     }
+    
+    
+    public void set_acclevel(String val){ accLevel = val.charAt(0) - '0'; }
+    
+    public void set_chglevel(String val){ chgLevel = val.charAt(0) - '0'; }
     
     
     public final ParamDescription new_paramDescription(){ return new ParamDescription();}
@@ -866,17 +868,24 @@ public class CheaderParser {
     }
     
     
-    @Override public void add_macro(AttribAsMacro val){
-      super.add_macro(val);
+    
+    public AttribAsMacro new_attribMacro(){ 
+      AttribAsMacro macro = new AttribAsMacro();
+      entries.add(macro );
+      return macro;
+    }
+
+    public void add_attribMacro(AttribAsMacro val){
       if(val.macro.equals("OS_HandlePtr") || val.macro.equals("HandlePtr_emC")) {
         val.type.pointer_ = new LinkedList<Pointer>();
         val.type.pointer_.add(new Pointer());
         val.bOS_HandlePointer = true;
         attribs.add(val);
       }
+      
     } 
     
-    
+
     
     public String baseName(String maybesuffix) {
       if(name.endsWith(maybesuffix)) { 
@@ -1096,11 +1105,11 @@ public class CheaderParser {
    */
   public static class AttribAsMacro extends AttributeOrTypedef
   { AttribAsMacro(String macro){ super(); this.macro = macro; }
+    AttribAsMacro(){ super();  }
   
     public String macro; 
     
     
-    public void XXXend_end_macro(){}
   }  
   
   
