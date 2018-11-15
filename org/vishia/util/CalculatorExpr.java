@@ -2026,6 +2026,45 @@ public class CalculatorExpr
     return split;
   }
   
+  
+  /**This is the ordinary shift operation
+   * @param val
+   * @param nrofBits >0: shift left, <0: shift rigth.
+   * @return on negative value and shift right: 1 shift in from left: <code>sh( 0x80000000, -1) => 0xc0000000</code> 
+   */
+  public static int sh(int val, int nrofBits) {
+    return nrofBits >=0 ? val << nrofBits : val >> -nrofBits;
+  }
+  
+  /**shift operation, after them mask. This operation is helpfull if bit rangess should be shifted.
+   * @param val
+   * @param nrofBits >0: shift left, <0: shift rigth.
+   * @param mask of result
+   * @return 
+   */
+  public static int shmask(int val, byte nrofBits, int mask) {
+    return nrofBits >=0 ? (val << nrofBits) & mask : (val >> -nrofBits) & mask;
+  }
+  
+  /**shift operation, after them mask. This operation is helpfull if bit rangess should be shifted.
+   * @param val
+   * @param nrofBits >0: shift left, <0: shift rigth.
+   * @param mask of result
+   */
+  public static int masksh(int val, int mask, byte nrofBits) {
+    if(nrofBits >=0) return  (val & mask) << nrofBits;
+    else {
+      int val1 = (val & mask) >> nrofBits;
+      if(val1 < 0) { //the highest bit remain 1, 1 is shifted from left:
+        int maskret = 0x7fffffff >> (-nrofBits -1);
+        val1 &= maskret;
+      }
+      return val1;
+    }
+  }
+  
+  
+  
   /**Converts the given expression in a stack operable form.
    * The parsing of sExpr starts with an adding expression.
    * Its operators are read as multExpression.

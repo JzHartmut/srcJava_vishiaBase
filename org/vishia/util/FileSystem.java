@@ -1531,8 +1531,8 @@ public class FileSystem
   /**Searches a file given with local path in this directory and in all parent directories.
    * @param start any start file or directory. If it is a file (for example a current one), its directory is used.
    * @param path May be more as one local path. Simple it is only one "filename.ext" or "anyDirectory". Possible "path/to/file.ext".
-   *   More as one argument may be given, the first wins.
-   * @return null if nothing found. Elsewhere the found file.
+   *   More as one argument may be given, to search one of more given files.
+   * @return null if nothing found. Elsewhere the found file which matches to one of path in the start or one of the parent directories
    */
   public static File searchInParent(File start, String ... path)
   { File found = null;

@@ -362,6 +362,9 @@ public class CheaderParser {
     public void add_const_initializer(DefineDefinition val){ val.specialDefine = "CONST"; entries.add(val); }
   
     
+    public StructClassDecl new_enumDecl(){ return new StructClassDecl("enumDecl"); }
+    public void add_enumDecl(StructClassDecl val){ val.visibility = visibility; entries.add(val); }
+    
     public StructClassDecl new_structDecl(){ return new StructClassDecl("structDecl"); }
     public void add_structDecl(StructClassDecl val){ val.visibility = visibility; entries.add(val); }
     
@@ -816,6 +819,7 @@ public class CheaderParser {
         isBasedOnObjectJc = val.isBasedOnObjectJc;  //first attribute basedOnObject, than this too!
         if(val.superclass !=null) {  //use the first element in the union. Maybe "ObjectJc" too.
           superclass = val.superclass;
+          superclass.description = val.description;  //may be given or null
           bIsSuper = true;
         }
         //check the attributes for the first union element, whether it contains ObjectJc or a superclass
@@ -825,6 +829,7 @@ public class CheaderParser {
           } 
           if(superclass == null && mem.type.pointer_==null) {
             superclass = mem;   //The first member is the superclass. It is ObjectJc if it is the first one.
+            superclass.description = val.description;  //may be given or null
             bIsSuper = true;
           }
         }
