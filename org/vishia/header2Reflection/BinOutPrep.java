@@ -1,8 +1,10 @@
 package org.vishia.header2Reflection;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.LinkedList;
@@ -15,6 +17,9 @@ import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
 import org.vishia.byteData.ObjectArray_Jc;
 import org.vishia.byteData.RawDataAccess;
+import org.vishia.byteData.SuperclassIfc_idxMtblJc_ByteDataAccess;
+import org.vishia.util.Assert;
+import org.vishia.util.Debugutil;
 import org.vishia.util.StdHexFormatWriter;
 
 
@@ -88,6 +93,8 @@ public class BinOutPrep
   private final ObjectArray_Jc binOutClassArray;
   
   private final Class_Jc binClass;
+  
+  private final SuperclassIfc_idxMtblJc_ByteDataAccess binSuperClass;
   
   private final ObjectArray_Jc binFieldArray;
   
@@ -165,6 +172,7 @@ public class BinOutPrep
     binOutClassArray.set_sizeElement(4);  //pointer
     //instances which are used if need as child.
     binClass = new Class_Jc();
+    binSuperClass = new SuperclassIfc_idxMtblJc_ByteDataAccess();
     binFieldArray = new ObjectArray_Jc();
     binField = new Field_Jc();
     
@@ -185,7 +193,27 @@ public class BinOutPrep
   
   
   
-  /**Prepare a new ClassJc-entry in the bin Data: 
+  public int addSuperclass(String sName) throws IllegalArgumentException
+  { if(sName.equals("Controller_ObjMod"))
+      Debugutil.stop();
+    int posSuperclassAddr = binSuperClass.add_head_toBindata(binOutClass);
+    TypeBinPosition pos = posClassesInBuffer.get(sName);
+    int posClass = 0;
+    if(pos !=null) {
+      posClass = pos.posClassInBuffer;
+    }
+    int posAddrType = binSuperClass.add_Type_idxMtblJc_toBindata(binOutClass, posClass);
+    if(pos == null) {
+      typeBinNeed.add(new TypeNeedInBinOut(sName, posAddrType));
+    }
+    //
+    setRelocEntry(posAddrType);
+    return posSuperclassAddr;
+  }
+
+
+
+  /**Adds a ClassJc-entry in the bin Data. The bin-data of this class can be filled with access to {@link #binClass} with the appropriate operations. 
    * @throws IllegalArgumentException */
   public int addClass(String sCppClassName, String sCppClassNameShow) throws IllegalArgumentException
   { 
@@ -202,6 +230,15 @@ public class BinOutPrep
     return nrofClasses;
   }
 
+  
+  void setClassSuperclass(int pos) {
+    int posReloc = binClass.setOffs_superclasses(pos);
+    setRelocEntry(posReloc);
+  }
+  
+  public void setClassBasedOnObjectJc() {
+    binClass.set_modifiers(Class_Jc.mObjectJc_Modifier);
+  }
   
   
   
@@ -313,6 +350,26 @@ public class BinOutPrep
     
     
   }
+  
+  
+  
+  public void writeAsCfile(File out) {
+    BufferedWriter wr = null;
+    try {
+      wr = new BufferedWriter(new FileWriter(out));
+      
+      
+      wr.close();
+      wr = null;
+    } catch(IOException exc) {
+      Assert.exceptionInfo("", exc, 0, 10);
+      if(wr !=null) {
+        try{ wr.close();} catch(IOException exc2) {} 
+      }
+    }
+  }
+  
+  
   
   
   

@@ -180,4 +180,55 @@ public class StringFunctions_B
   }
   
   
+  
+  /**Build a Java Identifier from a given String, maybe tag name in Xml etc.
+   * @param src Any String. Non-conform characters will be replaced by '_'
+   * @param lowerOrUpper if'a' or 'A' converts the first char to lower or upper. If '-' do not convert.
+   * @return src if src is conform (less effort) else new conform CharSequence in a StringBuilder.
+   */
+  public static CharSequence replaceNonIdentifierChars(CharSequence src, char lowerOrUpper) {
+    
+    int zChars = src.length();
+    if(zChars == 0) return "_Undefined_";
+    char cc = src.charAt(0);
+    boolean isIdentiferOk = true;
+    if(  Character.isLowerCase(lowerOrUpper) && !Character.isLowerCase(cc)
+      || Character.isUpperCase(lowerOrUpper) && !Character.isUpperCase(cc)
+      || !Character.isJavaIdentifierStart(cc)
+        ) {
+      isIdentiferOk = false;
+    } else {
+      for(int ix = 0; ix<zChars; ++ix) {
+        if(!Character.isJavaIdentifierPart(src.charAt(ix))) {
+          isIdentiferOk = false;
+          break;
+        }
+      }
+    }
+    if(isIdentiferOk) return src;  //unchanged, typical case, no effort.
+    else {
+      StringBuilder dst = new StringBuilder(zChars);
+      if( !Character.isJavaIdentifierStart(cc)) {
+        cc = '_';
+      }
+      else if( Character.isLowerCase(lowerOrUpper) && !Character.isLowerCase(cc)) {
+        cc = Character.toLowerCase(cc);
+      } else if(Character.isUpperCase(lowerOrUpper) && !Character.isUpperCase(cc)) {
+        cc = Character.toUpperCase(cc);
+      }
+      dst.append(cc);
+      for(int ix = 1; ix<zChars; ++ix) {
+        cc = src.charAt(ix);
+        if(!Character.isJavaIdentifierPart(cc)) {
+          cc = '_';
+        }
+        dst.append(cc);
+      }
+      return dst;
+    }
+  }
+  
+  
+  
+  
 }

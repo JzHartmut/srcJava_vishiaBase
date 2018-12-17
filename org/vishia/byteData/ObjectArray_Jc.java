@@ -45,6 +45,8 @@ public class ObjectArray_Jc extends Object_Jc {
   //public final static int kIdxAfterLast = sizeof_ObjectArray_Jc + 2; 
   
   
+  public final static int kBitDimension_ObjectArrayJc = 8;
+  
   public ObjectArray_Jc()
   { super(sizeof_ObjectArray_Jc);
   }
@@ -85,9 +87,7 @@ public class ObjectArray_Jc extends Object_Jc {
     
   public void set_sizeElement(int value){ super.setInt16(kPosSizeof_ElObjectArray_Jc, value); }  
   
-  public void set_mode(int value){ super.setInt32(kPosMode_ObjectArray_Jc, value); }  
-  
-
+  public void set_mode(int value){ super.setInt16(kPosMode_ObjectArray_Jc, value); }  
   
     
   protected int specifyLengthCurrentChildElement()

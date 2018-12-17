@@ -22,6 +22,7 @@ import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
+import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
 
 
@@ -49,7 +50,7 @@ xmlReader.readXml(src, data);
  * Application example:
  * <pre>
  * XmlReader xmlReader = new XmlReader(); //instance to work, more as one file one after another
- * xmlReader.setCfg(cfgFile);             //configuration for next xmlRead()
+ * xmlReader.readCfg(cfgFile);             //configuration for next xmlRead()
  * AnyClass data = new AnyClass();        //a proper output instance matching to the cfg
  * xmlReader.readXml(xmlInputFile, data); //reads the xml file and stores read data.
  * </pre>
@@ -207,7 +208,7 @@ public class XmlJzReader
     } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
-    } catch(Exception exc) {
+    } catch(Throwable exc) {
       exc.printStackTrace();
       Debugutil.stop();
     } finally {
@@ -262,7 +263,7 @@ public class XmlJzReader
         Debugutil.stop();
     }
     //scan the <tag
-    if(!inp.scanIdentifier(null, "-:").scanOk()) throw new IllegalArgumentException("tag name expected");
+    if(!inp.scanIdentifier(null, "-:.").scanOk()) throw new IllegalArgumentException("tag name expected");
     //
     //The tag name of the element:
     CharSequence sTag = inp.getLastScannedString();
@@ -278,6 +279,9 @@ public class XmlJzReader
       subOutput = null;     //this element should not be evaluated.
       subCfgNode = null;
     } else {
+      if(output ==null) {
+        Debugutil.stop();
+      }
       Assert.check(output !=null);
       if(sTag.toString().startsWith("Object@"))
         Debugutil.stop();
@@ -361,7 +365,7 @@ public class XmlJzReader
       //
       inp.readnextContentFromFile(sizeBuffer/2);
       //the </ is parsed on end of while already above.
-      if(!inp.scanIdentifier(null, "-:").scanOk())  throw new IllegalArgumentException("</tag expected");
+      if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
       if(content !=null && subOutput !=null) {
@@ -401,6 +405,8 @@ public class XmlJzReader
       if(!inp.scanQuotion("\"", "\"", null).scanOk()) throw new IllegalArgumentException("attr value expected");
       if(cfgNode !=null) {
         String sAttrValue = inp.getLastScannedString().toString();  //"value" in quotation
+        if(sAttrNsNameRaw.equals("xmlinput:class"))
+          Debugutil.stop();
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
         final CharSequence sAttrNsName;
         if(posNs >=0) {
@@ -611,7 +617,7 @@ public class XmlJzReader
       try{ 
         int nrArgs = dstPath.nrArgNames();
         Object[] args;
-        if(nrArgs >0) {
+        if(dstPath.isOperation()) { //   nrArgs >0) {
           args = new Object[nrArgs]; 
           for(int ix = 0; ix < nrArgs; ++ix) {
             String argName = dstPath.argName(ix);
@@ -629,9 +635,14 @@ public class XmlJzReader
     }
   }
 
-  public void readCfg(File file) {
+  public XmlCfg readCfg(File file) {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
     cfg.transferNamespaceAssignment(this.namespaces);
+    for(Map.Entry<String, XmlCfgNode> e : this.cfg.subtrees.entrySet()) {
+      XmlCfgNode subtree = e.getValue();
+      subtree.dstClassName = subtree.tag.toString();
+    }
+    return this.cfg;
   }
 
 

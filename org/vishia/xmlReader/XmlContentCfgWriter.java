@@ -4,9 +4,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.StringFunctions_B;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
 import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
@@ -52,13 +54,23 @@ public class XmlContentCfgWriter
   public static final String version = "2018-08-15";
 
   
+  int debugStopLineXmlInp = -1;
   
-  
+  /**Only for internal debug. See implementation. There is a possibility to set a break point if the parser reaches the line.
+   * @param line
+   */
+  public void setDebugStop(int line) {
+    debugStopLineXmlInp = line;
+  }
+ 
   
   
   
   public void readXmlStruct_writeCfgTemplate(File fXmlIn, File wrCfg) {
     XmlJzReader xmlReader = new XmlJzReader();
+    if(debugStopLineXmlInp >0) {
+      xmlReader.setDebugStop(debugStopLineXmlInp);
+    }
     XmlStructureNodeBuilder data = new XmlStructureNodeBuilder("root");  //the root node for reading config
     xmlReader.readXml(fXmlIn, data, XmlCfg.newCfgReadStruct());
     FileWriter writer = null;
@@ -88,7 +100,8 @@ public class XmlContentCfgWriter
   }
 
   
-  /**Adds the node and recursively all sub nodes from the configuration 
+  /**Adds the node and recursively all sub nodes from {@link XmlStructureNodeBuilder}
+   * It is invoked after a XML file war read with {@link XmlCfg#newCfgReadStruct()} 
    * @param xmlNode The xml node for output to add.
    * @param node The node from the structure of the read XML file, 
    * @param recursion decremented, exception on <=0
@@ -96,19 +109,36 @@ public class XmlContentCfgWriter
    */
   private void addWrNode(XmlNode xmlNode, XmlStructureNodeBuilder node, int recursion) throws XmlException {
     if(recursion <0) throw new IllegalArgumentException();
-    for(String name: node.attribs) {
-      xmlNode.setAttribute(name, "!@"+name);
+    CharSequence sArg;
+    if(node.attribs.size()>0) {
+      StringBuilder uArg= new StringBuilder(100);
+      sArg = uArg;
+      char sep = '(';
+      for(String name: node.attribs.keySet()) {
+        xmlNode.setAttribute(name, "!@"+name);
+        uArg.append(sep).append(name);
+        sep = ',';
+      }
+      uArg.append(')');
+    } else {
+      sArg = "()";
     }
+    xmlNode.setAttribute("data", "xmlinput", "!add_" + node.tag + sArg);
+    xmlNode.setAttribute("class", "xmlinput", StringFunctions_B.replaceNonIdentifierChars(node.tag, 'A').toString()  );
     for(Map.Entry<String, XmlStructureNodeBuilder> e: node.nodes.entrySet()) {
       XmlStructureNodeBuilder subnode = e.getValue();
       String tag = e.getKey();
       XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(tag);
       xmlNode.addContent(xmlNodeSub);
-      xmlNodeSub.setAttribute("data", "xmlinput", "!add_" + tag + "()");
+      if(node.attribs.size() >0)
+        Debugutil.stop();
       //if(subnode.)
       //TODO problem with beautification
       //xmlNodeSub.addContent("!content(text)");
       addWrNode(xmlNodeSub, subnode, recursion-1);
+    }
+    if(node.bText) {
+      xmlNode.addContent("!set_text()");
     }
   }
   

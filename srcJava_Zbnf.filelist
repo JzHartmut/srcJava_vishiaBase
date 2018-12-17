@@ -1,4 +1,4 @@
-2018-11-15 18:22:46  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-12-18 00:14:21  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -71,13 +71,14 @@
 2016-01-23 22:15:12  x     ByteDataSymbolicAccess.java              ::         24.179 -1050332237 
 2013-11-23 09:03:57  x     ByteDataSymbolicAccessReadConfig.java    ::          3.899 -1849174949 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
-2018-09-04 20:53:18  x     Class_Jc.java                            ::          8.264  0163689942 
-2015-04-12 09:40:49  x     Field_Jc.java                            ::         14.706  0412817276 
+2018-12-16 00:08:50  x     Class_Jc.java                            ::          8.668  1380885088 
+2018-12-16 00:26:47  x     Field_Jc.java                            ::         14.971  1581479291 
 2015-04-12 12:02:22  x     ObjectArraySet_Jc.java                   ::          3.613  2047017229 
-2015-04-12 18:15:20  x     ObjectArray_Jc.java                      ::          3.420  0186309066 
+2018-12-15 23:10:18  x     ObjectArray_Jc.java                      ::          3.478  1218719947 
 2015-04-12 18:15:20  x     Object_Jc.java                           ::          8.338 -1010306512 
 2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
 2018-09-17 09:57:37  x     RawDataAccess.java                       ::          3.779 -0477929894 
+2018-12-16 00:27:48  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          2.161 -0742806116 
 2013-12-10 09:54:37  x     VariableAccessArray_ifc.java             ::          6.165  0115301257 
 2016-01-23 22:17:31  x     VariableAccessWithBitmask.java           ::          6.370  0738802326 
 2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
@@ -175,9 +176,9 @@
 2015-05-25 22:50:41  x     TestFileCluster.java                     ::          1.745  1939760260 
 
 ============================== org/vishia/header2Reflection/ =======================================
-2018-09-08 13:12:57  x     BinOutPrep.java                          ::         11.847 -1013202359 
+2018-12-16 09:17:05  x     BinOutPrep.java                          ::         13.491  1508383529 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2018-11-13 23:33:52  x     CheaderParser.java                       ::         57.633  1983240138 
+2018-12-13 10:55:26  x     CheaderParser.java                       ::         58.499 -0713520714 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
 2014-11-13 22:08:25  x     ExtReflection_Insp_h.java                ::          1.061 -0470130958 
 2018-10-10 14:36:37  x     Header2Reflection.java                   ::         82.589 -0617309861 
@@ -267,7 +268,7 @@
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2018-09-09 17:15:44  x     DataAccess.java                          ::        114.475  1772459113 
+2018-12-18 00:12:13  x     DataAccess.java                          ::        115.133  1265198912 
 2017-09-19 11:58:19  x     DataShow.java                            ::         27.595 -1895644313 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2018-02-11 11:39:56  x     Debugutil.java                           ::           .925 -0874472902 
@@ -320,7 +321,7 @@
 2011-02-26 15:36:54  x     StdHexFormatWriter.java                  ::          4.376  0697421476 
 2018-09-21 23:57:19  x     StringFormatter.java                     ::         49.205  0302847186 
 2016-12-21 16:26:25  x     StringFunctions.java                     ::         46.983  0877900278 
-2016-10-17 14:03:55  x     StringFunctions_B.java                   ::          7.986  1494278515 
+2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
 2018-08-14 12:27:34  x     StringPart.java                          ::        112.716  0017046461 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
@@ -360,14 +361,15 @@
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
-2018-09-09 17:15:45  x     XmlCfg.java                              ::         22.025  0386909420 
-2018-09-10 22:02:44  x     XmlContentCfgWriter.java                 ::          4.379 -0581020840 
+2018-12-17 22:24:50  x     XmlCfg.java                              ::         22.602 -2116843934 
+2018-12-17 20:34:45  x     XmlContentCfgWriter.java                 ::          5.414 -0110408072 
 2018-09-09 22:19:13  x     XmlContentJavaStoreGen.java              ::          2.573 -0380038996 
-2018-09-10 19:27:55  x     XmlJzReader.java                         ::         25.652  1563360298 
-2018-09-09 19:49:19  x     XmlStructureNodeBuilder.java             ::          1.308  1335961325 
+2018-12-17 22:29:31  x     XmlJzReader.java                         ::         26.069 -0492172487 
+2018-12-17 19:22:46  x     XmlStructureNodeBuilder.java             ::          2.691  1675274955 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2018-09-09 20:50:37  x     TestReadMsc15Cfg.java                    ::          4.957  1977662903 
+2018-12-07 13:29:24  x     TestReadOdc.java                         ::          2.804 -2119569778 
 2018-04-13 22:56:01  x     package-info.java                        ::           . 83 -0217379269 
 
 ============================== org/vishia/xmlSimple/ ===============================================

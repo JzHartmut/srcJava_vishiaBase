@@ -270,6 +270,12 @@ public class CheaderParser {
     public String path;
     
     public boolean sysInclude;
+    
+    public Description implementDescription;
+    
+    //public Description new_implementDescription(){ return new Description("implementDescription"); }
+    //public void add_implementDescription(Description val){ val.visibility = true; entries.add(val); }
+
   }
   
   
@@ -509,10 +515,10 @@ public class CheaderParser {
     public String simulinkTag = "";
     
     /**For Simulink Sfn generation: Variable for function call. */
-    public String fnCallVar, fnCallMask;
+    //public String fnCallVar, fnCallMask;
     
     /**True then add the name of the ClassC to fnVallMask. */
-    public boolean fnCallMaskAddClass;
+    //public boolean fnCallMaskAddClass;
 
     /** <code>@vtbl <$?vtbl></code> name of the virtual table for reflection generation. */
     public String vtbl;
@@ -732,6 +738,8 @@ public class CheaderParser {
   public static class StructDefinition extends HeaderBlock
   { 
     
+    static int ctUnifiedImplicitelyStructName = 0;
+    
     /**If set the struct is conditionally defined in the header file. */
     public String conditionDef, conditionDefNot;
     
@@ -773,11 +781,16 @@ public class CheaderParser {
       } else {
         //An explicitely inner struct:
         //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
-        String structName = this.tagname.endsWith("_t") ? this.tagname.substring(0, this.tagname.length()-2) : this.tagname;
-        if(val.tagname !=null) {
-          structName += "_" + val.tagname; //Name of the implicit struct.
+        String structName;
+        if(this.tagname !=null) {
+          structName= this.tagname.endsWith("_t") ? this.tagname.substring(0, this.tagname.length()-2) : this.tagname;
         } else {
-          structName += "_" + val.name;
+          structName = "_InnerStruct" + (++ctUnifiedImplicitelyStructName) + "_";
+        }
+        if(val.tagname !=null) {
+          structName += "_" + val.tagname; //Type Name of the implicit struct.
+        } else {
+          structName += "_" + val.name;    //Instance name of the implicit struct.
         }
         AttributeOrTypedef attr = new AttributeOrTypedef();
         attr.name = val.name;
@@ -893,11 +906,18 @@ public class CheaderParser {
 
     
     public String baseName(String maybesuffix) {
-      if(name.endsWith(maybesuffix)) { 
-        return name.substring(0, name.length()-maybesuffix.length()); 
+      if(name !=null) {
+        if(name.endsWith(maybesuffix)) { 
+          return name.substring(0, name.length()-maybesuffix.length()); 
+        }
+        else return name;
+      } else { //a struct tagname {....}; //definition
+        return tagname;  //should be not null. 
       }
-      else return name;
     } 
+    
+    /**Returns a name of the struct. It is the tagname for a type definition <code>struct tagname { ...}; </code>*/
+    public String name() { return name == null ? tagname : name; }
     
     
     /**Ignore &lt;?elseConditionBlock&gt; as String, add it as component. */

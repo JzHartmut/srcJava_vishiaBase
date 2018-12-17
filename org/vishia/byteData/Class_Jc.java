@@ -111,7 +111,7 @@ public class Class_Jc extends Object_Jc
   /** Position after this element*/
   private static final int kPos_Vtbl = kPos_modifiers + 4;
   
-  private static final int kPos_Last = kPos_Vtbl + 4;
+  static final int kPos_Last = kPos_Vtbl + 4;
   
   /** nrofBytes of the C-POD type Class_Jc */
   public static final  int sizeof_Class_Jc = kPos_Vtbl +4;
@@ -131,6 +131,9 @@ public class Class_Jc extends Object_Jc
     , kEmbedded_Modifier_reflectJc =   0x01000000
     , kReference_Modifier =            0x02000000
     , mReference_Modifier =            0x02000000
+    , mObjectJc_Modifier =             0x04000000
+    , mObjectifcBaseJcpp_Modifier =    0x08000000
+    , mObjectJcBased_Modifier =        0x0c000000  //both bits mObjectifcBaseJcpp and mObject
     , kEmbeddedContainer_Modifier =    0x10000000
     , kReferencedContainer_Modifier =  0x20000000
     , kEnhancedRefContainer_Modifier = 0x30000000
@@ -148,22 +151,31 @@ public class Class_Jc extends Object_Jc
    */
   public int setOffs_attributes(int value)
   { int posField = getPositionInBuffer() + kPos_attributes;
-    setInt32(kPos_attributes, value - posField); 
+    setInt32(kPos_attributes, value - posField); //It is a relative offset stored from dst to src.
+    return posField;  //used to store as relocate entry.
+  }
+  
+  public int setOffs_superclasses(int value){ 
+    int posField = getPositionInBuffer() + kPos_superClass;
+    setInt32(kPos_superClass, value - posField);
+    return posField;
+  }
+  
+  public int setOffs_interfaces(int value) { 
+    int posField = getPositionInBuffer() + kPos_interfaces;
+    setInt32(kPos_interfaces, value - posField);
     return posField;
   }
   
   //TODO not used yet, correct like above.
-  public void setOffs_methods(int value){ setInt32(kPos_methods, value - getPositionInBuffer() + kPos_methods); }
-  
-  public void setOffs_superclasses(int value){ setInt32(kPos_superClass, value - getPositionInBuffer() + kPos_superClass); }
-  
-  public void setOffs_interfaces(int value){ setInt32(kPos_interfaces, value - getPositionInBuffer() + kPos_interfaces); }
-  
-  public void set_modifiers(int value){ setInt32(kPos_modifiers, value - getPositionInBuffer() + kPos_modifiers); }
-  
-  public void setOffs_mtbl(int value){ setInt32(kPos_Vtbl, value - getPositionInBuffer() + kPos_Vtbl); }
+  public void xxxsetOffs_methods(int value){ setInt32(kPos_methods, value - getPositionInBuffer() + kPos_methods); }
   
   
+  public void xxxsetOffs_mtbl(int value)
+  { setInt32(kPos_Vtbl, value - getPositionInBuffer() + kPos_Vtbl); }
+  
+  /**Sets the modifier in the ByteData. */
+  public void set_modifiers(int value){ setInt32(kPos_modifiers, value); }
   
   
   //private static Charset charset = Charset.forName("iso-8859-1");

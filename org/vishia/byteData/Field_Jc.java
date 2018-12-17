@@ -49,7 +49,7 @@ public  class Field_Jc extends ByteDataAccessBase
       private static final int kPos_nrofArrayElements = kPosName + kLengthName;
     
       /** Position of the type reference in a Field_Jc-POD*/
-      private static final int kPos_type = kPos_nrofArrayElements + 2;
+      static final int kPos_type = kPos_nrofArrayElements + 2;
     
       /** Position of the modifier in a Field_Jc-POD*/
       private static final int kPos_bitModifiers = kPos_type + 4;
@@ -61,7 +61,7 @@ public  class Field_Jc extends ByteDataAccessBase
       
       private static final int kPos_declaringClass = kPos_offsetToObjectifcBase + 2;
     
-      private static final int sizeOf_Field_Jc = kPos_declaringClass + 4;
+      static final int sizeOf_Field_Jc = kPos_declaringClass + 4;
       
  
   public static final int REFLECTION_void  =              0x01; 
@@ -373,7 +373,15 @@ public  class Field_Jc extends ByteDataAccessBase
       
   public void set_nrofArrayElements(int value){ super.setInt16(kPos_nrofArrayElements, value); }
       
-  public void set_type(int value){ super.setInt32(kPos_type, value); }
+  /**Sets the reference to the type.
+   * @param addrInSameBuffer The address of the type Class_Jc data.
+   * @return The position in the buffer for relocated
+   */
+  public int set_type(int addrInSameBuffer){ 
+    int posField = getPositionInBuffer() + kPos_type;
+    setInt32(kPos_type, addrInSameBuffer - posField);
+    return posField;
+  }
       
   public void set_bitModifiers(int value){ super.setInt32(kPos_bitModifiers, value); }
       

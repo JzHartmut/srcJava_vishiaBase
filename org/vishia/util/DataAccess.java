@@ -1,7 +1,6 @@
 package org.vishia.util;
 
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -11,7 +10,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,6 +87,8 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2018-12-18 Hartmut improve: rename {@link DatapathElement#operation_}, private and setter and getter. The JzTxtCmd invokes the set_operation() without changes.
+   *     It is set now on any operation. Used via {@link DatapathElement#isOperation()} in the {@link org.vishia.xmlReader.XmlZzReader}
    * <li>2018-09-28 Hartmut improve: An dataAccess element now knows {@link DatapathElement#operation}. If that is not set and there are no fnArgs
    *   then a field (static) is accessed. That were missing. Used for JzTxtCmd.
    * <li>2018-09-28 Hartmut improve: {@link #initConversion()} accepts boolean from Boolean, important for JzTxtCmd
@@ -986,7 +986,7 @@ public class DataAccess {
         }
         //else: let data1=null, return null
       } break;
-      case '%': { data1 = element.operation || element.argNames !=null || element.fnArgs !=null ? invokeStaticMethod(element) : getStaticValue(element); } break;
+      case '%': { data1 = element.operation_ || element.argNames !=null || element.fnArgs !=null ? invokeStaticMethod(element) : getStaticValue(element); } break;
       case '$': {
         if((data1 instanceof Map<?,?>)){  //should be Map<String, Variable>
           @SuppressWarnings("unchecked")
@@ -2362,7 +2362,7 @@ public class DataAccess {
     int[] indices;
     
     /**true then an operation call, false: a variable access. @since 2018-08*/
-    public boolean operation;
+    private boolean operation_;
     
     /**Creates an empty element.
      * 
@@ -2372,10 +2372,18 @@ public class DataAccess {
     /**Creates a datapath element.
      * @param name see {@link #set(String)}
      */
-    public DatapathElement(String name){
-      set(name);
+    public DatapathElement(String path){
+      set(path);
     }
     
+    
+    /**Invoked from {@link org.vishia.zbnf.ZbnfJavaOutput} or other via reflection. */
+    public void set_operation(boolean val) { operation_ = val; }
+    
+    /**Invoked from {@link org.vishia.zbnf.ZbnfJavaOutput} or other via reflection. */
+    public void set_operation() { operation_ = true; }
+    
+    public boolean isOperation() { return operation_; }
     
     public int nrArgNames(){ return argNames == null ? 0 : argNames.length; }
     
@@ -2391,10 +2399,10 @@ public class DataAccess {
      * <li>Argument starts with '*': A data path
      * <li>Elsewhere use {@link CalculatorExpr#setExpr(String)}.
      * </ul>
-     * @param name 
+     * @param path 
      */
-    public void set(String name){
-      char cStart = name.charAt(0);
+    public void set(String path){
+      char cStart = path.charAt(0);
       int posNameStart = 1;
       if("$@+%".indexOf(cStart) >=0){
         whatisit = cStart;
@@ -2402,19 +2410,20 @@ public class DataAccess {
         whatisit = '.';
         posNameStart = 0;
       }
-      int posNameEnd = name.indexOf('(');
+      int posNameEnd = path.indexOf('(');
       if(posNameEnd != -1){
         //Function
         whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
+        this.operation_ = true;
         int posSep = posNameEnd;
-        int zName = name.length();
+        int zName = path.length();
         List<String> args = null;
         while(posSep >=0 && posSep < zName) {
-          int posSep2 = name.indexOf(',', posSep+1);
+          int posSep2 = path.indexOf(',', posSep+1);
           if(  posSep2 > posSep 
-            || (posSep2 = name.indexOf(')', posSep+1)) > posSep
+            || (posSep2 = path.indexOf(')', posSep+1)) > posSep
             || (posSep2 = zName) > posSep+1) { 
-            String arg = name.substring(posSep+1, posSep2).trim();
+            String arg = path.substring(posSep+1, posSep2).trim();
             if(arg.length() >0){
               if(args == null) { args = new LinkedList<String>(); }
               args.add(arg);
@@ -2427,9 +2436,9 @@ public class DataAccess {
           args.toArray(argNames);
         }
       } else {
-        posNameEnd = name.length();
+        posNameEnd = path.length();
       }
-      this.ident = name.substring(posNameStart, posNameEnd);
+      this.ident = path.substring(posNameStart, posNameEnd);
     }
 
     
