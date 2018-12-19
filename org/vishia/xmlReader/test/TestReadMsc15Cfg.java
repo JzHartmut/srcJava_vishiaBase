@@ -12,7 +12,7 @@ import java.util.Map;
 import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFormatter;
-import org.vishia.xmlReader.XmlContentCfgWriter;
+import org.vishia.xmlReader.XmlJzCfgAnalyzer;
 import org.vishia.xmlReader.XmlJzReader;
 
 public class TestReadMsc15Cfg
@@ -131,7 +131,7 @@ public class TestReadMsc15Cfg
     
     
     File fCfgOut = new File("T:/cfg.xml");
-    XmlContentCfgWriter wr = new XmlContentCfgWriter();
+    XmlJzCfgAnalyzer wr = new XmlJzCfgAnalyzer();
     wr.readXmlStruct_writeCfgTemplate(fXmlIn, fCfgOut);
     
   }

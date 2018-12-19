@@ -175,25 +175,6 @@ public class XmlCfg
   }
 
   
-  /**Creates the configuration to read any xml file to get its structure.
-   * @return instance
-   */
-  public static XmlCfg newCfgReadStruct()
-  { XmlCfg cfgCommon = new XmlCfg();
-    cfgCommon.rootNode = new XmlCfg.XmlCfgNode(null, cfgCommon, null);  //The rootnode of the cfg is only formalistic.
-    
-    XmlCfg.XmlCfgNode rootNode = new XmlCfg.XmlCfgNode(null, cfgCommon, "?");  //<xmlinput:cfg as node 2. level
-    cfgCommon.rootNode.addSubnode(rootNode.tag.toString(), rootNode);        //The cfg file should start with a <xmlinput:root
-    rootNode.addSubnode(rootNode.tag.toString(), rootNode);        //The cfg file should start with a <xmlinput:root
-    
-    //On any element the 'addElement(tag)' is invoked via Reflection. 
-    rootNode.setNewElementPath("!addElement(tag)");  //executed in the data destination instance.
-    rootNode.addAttribStorePath("?", "!setAttribute(name)"); 
-    rootNode.setContentStorePath("!setTextOccurrence()");
-    return cfgCommon;
-  }
-
-  
   
   public XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
   {

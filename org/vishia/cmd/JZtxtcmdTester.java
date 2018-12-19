@@ -180,6 +180,24 @@ public class JZtxtcmdTester
     DataShow.outHtml(data, out, bNoHash);
     out.close();
   }
+
+  
+  /**Same as {@link #dataHtml(Object, JZtxtcmdFilepath, boolean)} but writes to System.err instead Exception.
+   * @param data Any instance
+   * @param path An usual absolute file path in a File object
+   * @param bNoHash true than a @ hash from toString() will be replaced by the internal id to save compare ability.
+   */
+  public static void dataHtmlNoExc(Object data, File path, boolean bNoHash) 
+  {
+    try {
+      dataHtml(data, path, bNoHash);
+    } catch (IOException e) {
+      System.err.println("error writing "+path.getAbsolutePath());
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+  }
+  
   
   /**Same as {@link #dataHtml(Object, File, boolean)} but with default arg bNoHash = true.
    * standard behavior: replace the hash with a unique id to save compareability. 

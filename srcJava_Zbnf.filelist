@@ -1,4 +1,4 @@
-2018-12-18 00:14:21  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-12-19 09:48:18  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -123,7 +123,7 @@
 2018-10-16 07:09:41  x     JZtxtcmdFilepath.java                    ::         16.028 -1293032415 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
-2018-09-22 20:53:33  x     JZtxtcmdTester.java                      ::          8.687 -0140436673 
+2018-12-18 22:04:58  x     JZtxtcmdTester.java                      ::          9.321  0375360222 
 2018-09-22 20:53:42  x     JZtxtcmdThread.java                      ::          4.865  1535102351 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
 2018-09-22 00:34:58  x     JZtxtcmdThreadQueue.java                 ::          3.607 -1856078465 
@@ -361,15 +361,13 @@
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
-2018-12-17 22:24:50  x     XmlCfg.java                              ::         22.602 -2116843934 
-2018-12-17 20:34:45  x     XmlContentCfgWriter.java                 ::          5.414 -0110408072 
-2018-09-09 22:19:13  x     XmlContentJavaStoreGen.java              ::          2.573 -0380038996 
+2018-12-19 00:02:42  x     XmlCfg.java                              ::         21.617  1407389535 
+2018-12-19 04:28:00  x     XmlJzCfgAnalyzer.java                    ::         13.871  1113806669 
 2018-12-17 22:29:31  x     XmlJzReader.java                         ::         26.069 -0492172487 
-2018-12-17 19:22:46  x     XmlStructureNodeBuilder.java             ::          2.691  1675274955 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
-2018-09-09 20:50:37  x     TestReadMsc15Cfg.java                    ::          4.957  1977662903 
-2018-12-07 13:29:24  x     TestReadOdc.java                         ::          2.804 -2119569778 
+2018-12-19 00:05:38  x     TestReadMsc15Cfg.java                    ::          4.948 -1279698654 
+2018-12-18 23:50:02  x     TestReadOdc.java                         ::          2.206 -0865737480 
 2018-04-13 22:56:01  x     package-info.java                        ::           . 83 -0217379269 
 
 ============================== org/vishia/xmlSimple/ ===============================================
