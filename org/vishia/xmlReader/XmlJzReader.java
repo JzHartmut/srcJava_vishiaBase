@@ -638,7 +638,8 @@ public class XmlJzReader
   public XmlCfg readCfg(File file) {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
     cfg.transferNamespaceAssignment(this.namespaces);
-    for(Map.Entry<String, XmlCfgNode> e : this.cfg.subtrees.entrySet()) {
+    
+    if(this.cfg.subtrees !=null) for(Map.Entry<String, XmlCfgNode> e : this.cfg.subtrees.entrySet()) {
       XmlCfgNode subtree = e.getValue();
       subtree.dstClassName = subtree.tag.toString();
     }

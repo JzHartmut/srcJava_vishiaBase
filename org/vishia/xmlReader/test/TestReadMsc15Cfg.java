@@ -132,7 +132,8 @@ public class TestReadMsc15Cfg
     
     File fCfgOut = new File("T:/cfg.xml");
     XmlJzCfgAnalyzer wr = new XmlJzCfgAnalyzer();
-    wr.readXmlStruct_writeCfgTemplate(fXmlIn, fCfgOut);
+    wr.readXmlStruct(fXmlIn);
+    wr.writeCfgTemplate(fCfgOut);
     
   }
   
