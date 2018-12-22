@@ -96,15 +96,21 @@ public class XmlJzCfgAnalyzer
       //for(Map.Entry<String, XmlStructureData.CfgSubtreeType> e: this.xmlStructData.allElementTypes.entrySet()) {
         //XmlStructureData.CfgSubtreeType e1 = e.getValue();
         //for(XmlStructureNode srcnode: e1.occurrence) {
-        for(XmlStructureNode srcnode: this.xmlStructData.cfgSubtreeList) {
+        for(XmlStructureNode structnode: this.xmlStructData.cfgSubtreeList) {
             //add one subtree node for each tag type in its context:
-          assert(srcnode.sSubtreenode !=null);  //it should be designated.
+          assert(structnode.sSubtreenode !=null);  //it should be designated.
           XmlNode wrCfgsubtreenode = root.addNewNode("subtree", "xmlinput"); //second node "cfg"
-          if(srcnode.sSubtreenode.equals("ObjectList_A"))
+          if(structnode.sSubtreenode.equals("ObjectList_A"))
             Debugutil.stop();
-          wrCfgsubtreenode.setAttribute("name", null, srcnode.sSubtreenode);
-          wrCfgsubtreenode.setAttribute("class", "xmlinput", srcnode.sSubtreenode);
-          if(srcnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: srcnode.nodes.entrySet()) {
+          wrCfgsubtreenode.setAttribute("name", "xmlinput", structnode.sSubtreenode);
+          wrCfgsubtreenode.setAttribute("class", "xmlinput", structnode.sSubtreenode);
+          if(structnode.attribs !=null)for(Map.Entry<String, String> e_attrib: structnode.attribs.entrySet()) {
+            String key = e_attrib.getKey(); String value = e_attrib.getValue();
+            wrCfgsubtreenode.setAttribute(key, value);
+          }
+          wrSetAddContentAttrib(structnode, wrCfgsubtreenode);
+          //
+          if(structnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: structnode.nodes.entrySet()) {
             XmlStructureNode srcSubnode = e_srcSubnode.getValue();
             XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(srcSubnode.tag);
             wrCfgsubtreenode.addContent(xmlNodeSub);
@@ -134,6 +140,35 @@ public class XmlJzCfgAnalyzer
     Debugutil.stop();
   }
 
+
+  
+  
+  
+  
+  private void wrSetAddContentAttrib(XmlStructureNode structNode, XmlNode wrCfgXmlNode) throws XmlException {
+    CharSequence sArg;
+    if(structNode.attribs !=null) {
+      StringBuilder uArg= new StringBuilder(100);
+      sArg = uArg;
+      char sep = '(';
+      for(Map.Entry<String,String> e: structNode.attribs.entrySet()) {
+        String name = e.getKey(); String value = e.getValue();
+        wrCfgXmlNode.setAttribute(name, value);  //transfer to cfg too.
+        if(value.startsWith("!@")) {  //use only attributes which should be used as arguments for the set/add operation
+          uArg.append(sep).append(value.substring(2));
+          sep = ',';
+        }
+      }
+      uArg.append(')');
+    } else {
+      sArg = "()";
+    }
+    if(structNode.onlySingle) {
+      wrCfgXmlNode.setAttribute("data", "xmlinput", "!set_" + structNode.tagIdent + sArg);
+    } else {
+      wrCfgXmlNode.setAttribute("data", "xmlinput", "!add_" + structNode.tagIdent + sArg);
+    }
+  }
   
   
   
@@ -147,27 +182,9 @@ public class XmlJzCfgAnalyzer
    */
   private void addWrNode(XmlNode wrCfgXmlNode, XmlStructureNode structNode, int recursion) throws XmlException {
     if(recursion <0) throw new IllegalArgumentException();
-    CharSequence sArg;
-    
-    if(structNode.attribs !=null) {
-      StringBuilder uArg= new StringBuilder(100);
-      sArg = uArg;
-      char sep = '(';
-      for(String name: structNode.attribs.keySet()) {
-        wrCfgXmlNode.setAttribute(name, "!@"+name);
-        uArg.append(sep).append(name);
-        sep = ',';
-      }
-      uArg.append(')');
-    } else {
-      sArg = "()";
-    }
     if(structNode.nodes !=null || structNode.attribs !=null) {
-      if(structNode.onlySingle) {
-        wrCfgXmlNode.setAttribute("data", "xmlinput", "!set_" + structNode.tagIdent + sArg);
-      } else {
-        wrCfgXmlNode.setAttribute("data", "xmlinput", "!add_" + structNode.tagIdent + sArg);
-      }
+      
+      wrSetAddContentAttrib(structNode, wrCfgXmlNode);
       if(structNode.sSubtreenode !=null) {
         //The tag type occurs more as one time in different situations, but with the same meaning. Use subtree in cfg.
         String sSubtreeName = structNode.sSubtreenode;
@@ -188,13 +205,13 @@ public class XmlJzCfgAnalyzer
         } }
       }
       if(structNode.bText) {
-        wrCfgXmlNode.addContent("!set_text()");
+        wrCfgXmlNode.addContent("!set_text(text)");
       }
     } else { //no attribs, no sub tree
       if(structNode.onlySingle) {
-        wrCfgXmlNode.addContent("!set_" + structNode.tag + "()");
+        wrCfgXmlNode.addContent("!set_" + structNode.tag + "(text)");
       } else {
-        wrCfgXmlNode.addContent("!add_" + structNode.tag + "()");
+        wrCfgXmlNode.addContent("!add_" + structNode.tag + "(text)");
       }
     }
   }
@@ -552,6 +569,8 @@ public class XmlJzCfgAnalyzer
     /**Found sub nodes. The list is supplemented if new sub nodes are found on further occurrences of elements. */
     Map<String, XmlStructureNode> nodes;
     
+    Map<String, String> nodesLocal;
+    
     /**Found attributes. The list is supplemented if new attribute names are found on further occurrences of elements. */
     Map<String, String> attribs;
     
@@ -592,14 +611,22 @@ public class XmlJzCfgAnalyzer
       if(nodes == null) {
         nodes = new IndexMultiTable<String, XmlStructureNode>(IndexMultiTable.providerString);
       }
+      if(nodesLocal == null) {
+        nodesLocal = new TreeMap<String, String>();
+      }
+      if(tag.equals("Culture"))
+        Debugutil.stop();
       XmlStructureNode subNode = nodes.get(tag); //use existent one with same tag to strore further content.
       if(subNode == null) {
         subNode = new XmlStructureNode(this, tag, xmlStructData); 
         nodes.put( tag, subNode);
         xmlStructData.addStructureNodeOccurence(subNode);
-      } else {
+      }
+      if(nodesLocal.get(tag)!=null) { 
         subNode.onlySingle = false; //at least twice in this tree.
       }
+      nodesLocal.put(tag, tag); //to detect whether it occurs a second one
+      subNode.nodesLocal = null;
       return subNode; 
     }
     
@@ -612,11 +639,11 @@ public class XmlJzCfgAnalyzer
       if(attribs == null) { 
         attribs = new TreeMap<String, String>(); 
         bNewAttributes = true;
-        attribs.put(name, name);  //the first attrin
+        attribs.put(name, "!@" + name);  //the first attrin
       }
       else if(attribs.get(name) ==null) {
         bNewAttributes = true;
-        attribs.put(name, name);  //a new attrib
+        attribs.put(name, "!@" + name);  //a new attrib
       }
     }
 

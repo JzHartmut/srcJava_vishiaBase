@@ -36,7 +36,7 @@ import org.vishia.util.StringFunctions;
  *  <pre>
  *  &lt;?xml version="1.0" encoding="utf-8"?>
  *  &lt;xmlinput:root xmlns:xmlinput="www.vishia.org/XmlReader-xmlinput">
- *  &lt;xmlinput:subtree name="NAMESUBTREE">
+ *  &lt;xmlinput:subtree xmlinput:name="NAMESUBTREE">
  *     .....
  *  &lt;xmlinput:cfg>
  *     ......   
@@ -166,9 +166,11 @@ public class XmlCfg
     //nodeSub.attribsForCheck = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); 
     //AttribDstCheck checkName = new AttribDstCheck(true);
     //nodeSub.attribsForCheck.put("name", checkName);
-    nodeSub.addAttribStorePath("name", "!@name");  //This attribute value should be used to store locally in name.
+    nodeSub.addAttribStorePath("xmlinput:name", "!@subtreename");  //This attribute value should be used to store locally in name.
     nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
-    nodeSub.setNewElementPath("!addSubTree(name)");
+    nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+    nodeSub.setNewElementPath("!addSubTree(subtreename)");
+    nodeSub.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
     nodeSub.addSubnode("?", nodes);
 //    nodeSub.subNodeUnspec = nodes;  //recursively, all children are unspec.
     //nodeSub.addAttribStorePath("xmlinput:data", "!addSubTree(name)");  //This attribute should be used to set the datapath for this element.
@@ -435,7 +437,10 @@ public class XmlCfg
      */
     public XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
     {
-      return cfg.addSubTree(name); //, classDst);
+      XmlCfgNode subtreenode = cfg.addSubTree(name); //, classDst);
+      //subtreenode.addAttribStorePath("xmlinput:name", name.toString());
+      subtreenode.cfgSubtreeName = name.toString();
+      return subtreenode;
     }
     
     

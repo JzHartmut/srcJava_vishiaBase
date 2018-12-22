@@ -1,4 +1,4 @@
-2018-12-22 19:19:09  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-12-22 23:03:29  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -361,8 +361,8 @@
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
-2018-12-22 17:38:00  x     XmlCfg.java                              ::         22.526  2087737074 
-2018-12-22 16:09:28  x     XmlJzCfgAnalyzer.java                    ::         24.927  0952961646 
+2018-12-22 21:16:26  x     XmlCfg.java                              ::         22.956  1538764996 
+2018-12-22 22:32:24  x     XmlJzCfgAnalyzer.java                    ::         26.067  1030979974 
 2018-12-22 17:23:12  x     XmlJzReader.java                         ::         26.911  1751848555 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
@@ -371,7 +371,7 @@
 2018-04-13 22:56:01  x     package-info.java                        ::           . 83 -0217379269 
 
 ============================== org/vishia/xmlSimple/ ===============================================
-2017-01-25 22:47:08  x     SimpleXmlOutputter.java                  ::          9.407 -0486975206 
+2018-12-22 20:05:51  x     SimpleXmlOutputter.java                  ::          9.413  1646228870 
 2017-01-25 23:02:51  x     SimpleXmlOutputter_Test.java             ::           .737  0464495945 
 2018-01-07 22:38:28  x     WikistyleTextToSimpleXml.java            ::         60.467 -0091533971 
 2016-11-01 00:06:56  x     WikistyleTextToSimpleXml_old.java        ::         57.152 -0721767767 

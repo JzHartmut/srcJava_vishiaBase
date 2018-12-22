@@ -121,7 +121,7 @@ public class SimpleXmlOutputter
     else
     { sTagName = sElementName;
     }
-    assert(!sTagName.startsWith("@"));
+    Assert.check(!sTagName.startsWith("@"));
     out.write(elementStart(sTagName));      //out: <ns:tag
     if(xmlNode.getAttributes() != null)    //out:          attr="val"
     { Iterator<Map.Entry<String, String>> iterAttrib = xmlNode.getAttributes().entrySet().iterator();
