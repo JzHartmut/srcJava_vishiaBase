@@ -167,7 +167,7 @@ public class ZbnfParser
    * <li>2015-06-04 Hartmut chg: Sets line and column of a component from the first read item insert the component, after whiltespaces. 
    *   That is important for JZcmd to detect the indent position of texts.
    * <li>2014-12-14 Hartmut chg: Now returns the line and column and the name of the input file on error if that information are available.
-   *   There are available for a {@link org.vishia.util.StringPartFromFile} which is used usual as input for the parser.
+   *   There are available for a {@link org.vishia.util.StringPartFromFileLines} which is used usual as input for the parser.
    *   Changed routines: {@link #getSyntaxErrorReport()}, {@link #getFoundedInputOnError()}, new: {@link #buildFoundedInputOnError()}.
    * <li>2014-06-17 Hartmut new: {@link #setXmlSrcline(boolean)} and {@link #setXmlSrctext(boolean)} to control 
    *   whether srcline="xx" and srctext="text" will be written to a XML output  

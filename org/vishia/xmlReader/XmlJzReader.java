@@ -9,6 +9,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
@@ -235,7 +237,7 @@ public class XmlJzReader
     }
     while(inp.seekEnd("<").found()) {
       inp.scanOk();
-      inp.readnextContentFromFile(sizeBuffer/2);
+      inp.readnextContentFromFile(sizeBuffer*2/3);
       if(inp.scan().scan("!--").scanOk()) { //comment line
        inp.seekEnd("-->");
       }
@@ -266,14 +268,17 @@ public class XmlJzReader
     if(!inp.scanIdentifier(null, "-:.").scanOk()) throw new IllegalArgumentException("tag name expected");
     //
     //The tag name of the element:
-    CharSequence sTag = inp.getLastScannedString();
+    String sTag = inp.getLastScannedString().toString();
+    
+    if(sTag.contains("   "))
+      Debugutil.stop();
     if(sTag.equals("Object"))
       Debugutil.stop();
     //TODO replace alias.
     //
     //search the tag name in the cfg:
     //
-    Object subOutput;
+    Object subOutput = null;
     XmlCfg.XmlCfgNode subCfgNode;
     if(cfgNode == null) {   //check whether this element should be regarded:
       subOutput = null;     //this element should not be evaluated.
@@ -283,10 +288,12 @@ public class XmlJzReader
         Debugutil.stop();
       }
       Assert.check(output !=null);
+      if(sTag.toString().contains("   "))
+        Debugutil.stop();
       if(sTag.toString().startsWith("Object@"))
         Debugutil.stop();
       if(cfgNode.subnodes == null) {
-        subCfgNode = null; //don't read innercontent
+        subCfgNode = null; //don't read inner content
       } else {
         subCfgNode = cfgNode.subnodes.get(sTag);  //search the proper cfgNode for this <tag
         if(subCfgNode == null) {
@@ -294,50 +301,40 @@ public class XmlJzReader
 //          subCfgNode = cfgNode.subNodeUnspec; 
         }
       }
+      if(sTag.toString().contains("   "))
+        Debugutil.stop();
       //subCfgNode is null if inner content should not be read.
       //
       //get the subOutput before parsing attributes because attribute values should be stored in the sub output.:
-      if(subCfgNode !=null && subCfgNode.bStoreAttribsInNewContent) { //the tag was found, the xml element is expected.
-        subOutput = getDataForTheElement(output, subCfgNode, sTag, null);
-        if(subOutput == null) {
-          Debugutil.stop();
-        }
-        //
-      } else {
-        subOutput = null; //don't store output. 
-      }
+//      if(subCfgNode !=null && subCfgNode.bStoreAttribsInNewContent) { //the tag was found, the xml element is expected.
+//        subOutput = getDataForTheElement(output, subCfgNode, sTag, null);
+//        if(subOutput == null) {
+//          Debugutil.stop();
+//        }
+//        //
+//      } else {
+//        subOutput = null; //don't store output. 
+//      }
     }
     //
     @SuppressWarnings("unchecked")
-    Map<String, String>[] attribs = new Map[1];
+    Map<String, String>[] attribValues = new Map[1];
+    @SuppressWarnings("unchecked")
+    List<AttribToStore>[] attribsToStore = new List[1];
     //
     //
-    CharSequence keyResearch = parseAttributes(inp, sTag, subOutput, subCfgNode, attribs);
-    //
-    //
-    //get the subOutput after parsing attributes because attribute values may be used to create the sub output:
-    if(subCfgNode !=null && !subCfgNode.bStoreAttribsInNewContent) { //the tag was found, the xml element is expected.
-      subOutput = getDataForTheElement(output, subCfgNode, sTag, attribs);
-      if(subOutput == null) {
-        Debugutil.stop();
-      }
-    }
-    if(subOutput == null) {
-      Debugutil.stop();
-    }
-    //
-    if(keyResearch==null) {
-      subOutput = null;
-    } else if(keyResearch.length() >0) {
-//      if(keyResearch.toString().startsWith("Object@"))
-//        Debugutil.stop();
-//      if(keyResearch.toString().startsWith("Array@"))
-//        Debugutil.stop();
+    CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribValues);
+    if(keyResearch.length() > sTag.length()) {
+      //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
-      subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode, keyResearch, attribs);
     }
-    if(subOutput == null && subCfgNode !=null)
-      Debugutil.stop();
+    //The sub output is correct with keySearch == sTag or a qualified key:
+    subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode, keyResearch, attribValues);
+    //
+    //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
+    if(subOutput !=null && attribsToStore[0] !=null) for(AttribToStore e: attribsToStore[0]) {
+      storeAttrData(subOutput, e.daccess, e.name, e.value);
+    }
     //
     //check content.
     //
@@ -369,7 +366,7 @@ public class XmlJzReader
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
       if(content !=null && subOutput !=null) {
-        storeContent(content, subCfgNode, subOutput, attribs);
+        storeContent(content, subCfgNode, subOutput, attribValues);
       }
     } else {
       throw new IllegalArgumentException("either \">\" or \"/>\" expected");
@@ -395,9 +392,10 @@ public class XmlJzReader
    * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
    * @throws Exception
    */
-  private CharSequence parseAttributes(StringPartFromFileLines inp, CharSequence tag, Object output, XmlCfg.XmlCfgNode cfgNode, Map<String, String>[] attribMap) 
+  private CharSequence parseAttributes(StringPartFromFileLines inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
+      , List<AttribToStore>[] attribsToStore, Map<String, String>[] attribMap) 
   throws Exception
-  { CharSequence keyret = ""; //no special key. use element.
+  { CharSequence keyret = tag; //no special key. use element.
     StringBuilder keyretBuffer = null;
     //read all attributes. NOTE: read formally from text even if bUseElement = false.
     while(inp.scanIdentifier(null, "-:").scan("=").scanOk()) {  //an attribute found:
@@ -453,14 +451,16 @@ public class XmlJzReader
               keyretBuffer.append("@").append(sAttrNsName).append("=\"").append(sAttrValue).append("\"");
             }
             else if(cfgAttrib.daccess !=null) {
-              storeAttrData(output, cfgAttrib.daccess, sAttrNsName, sAttrValue);
+              if(attribsToStore[0]==null) {attribsToStore[0] = new LinkedList<AttribToStore>(); }
+              attribsToStore[0].add(new AttribToStore(cfgAttrib.daccess, sAttrNsName.toString(), sAttrValue));
             } else if(cfgAttrib.storeInMap !=null) {
               if(attribMap[0] == null){ attribMap[0] = new TreeMap<String, String>(); }
               attribMap[0].put(cfgAttrib.storeInMap, sAttrValue);
             }
           } else {
             if(cfgNode.attribsUnspec !=null) { //it is especially to read the config file itself.
-              storeAttrData(output, cfgNode.attribsUnspec, sAttrNsName, sAttrValue);
+              if(attribsToStore[0]==null) {attribsToStore[0] = new LinkedList<AttribToStore>(); }
+              attribsToStore[0].add(new AttribToStore(cfgNode.attribsUnspec, sAttrNsName.toString(), sAttrValue));
             }
           }
         }
@@ -534,6 +534,8 @@ public class XmlJzReader
   @SuppressWarnings("static-method")
   void storeAttrData( Object output, DataAccess.DatapathElement dstPath, CharSequence searchKey, CharSequence sAttrValue) 
   {
+    if(searchKey.equals("xmlinput:class"))
+      Debugutil.stop();
     try{ 
       int nrArgs = dstPath.nrArgNames();
       Object[] args;
@@ -671,7 +673,16 @@ public class XmlJzReader
   }  
     
   
-
+  static class AttribToStore {
+    /**The data access to store the value.*/
+    final DataAccess.DatapathElement daccess;
+    final String name, value;
+    AttribToStore(DataAccess.DatapathElement daccess, String name, String value){
+      this.daccess = daccess;
+      this.name = name;
+      this.value = value;
+    }
+  }
 
 
 }

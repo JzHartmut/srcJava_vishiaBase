@@ -44,6 +44,8 @@ public class StringPartFromFileLines extends StringPartScan
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2018-12-22 Hartmut bugfix in {@link StringPart}, improvement here: {@link #readnextContentFromFile(int)} shifts only {@link StringPart#begin}/2 
+   *   to save the content near to and left from the current working area for access capability of a {@link Part} near the current content.  
    * <li>2018-01-06 Hartmut bugfix, bug: If the file to read was only 201..209 Bytes, the bytes after 200 were not read. 
    *   fix: readnextContentFromFile(0) instead (10) necessary, to read in any case. 2017-12: Renaming package private maxIxLinePosition vs. endIxLinePosition. 
    * <li>2016-09-25 Hartmut now works with lesser buffer.
@@ -133,6 +135,7 @@ public class StringPartFromFileLines extends StringPartScan
   
   //final FileChannel fileChn;
 
+  
   int nrFirstLineInPositions;
 
   IntegerBlockArray linePositions = new IntegerBlockArray(1000);
@@ -380,8 +383,15 @@ public class StringPartFromFileLines extends StringPartScan
   
   
   
-  /**
-   * @param minSizeForAction
+  /**Read next content from the file.
+   * It does nothing if the current working area in the text {@link StringPart#begin} is lesser the argument minSizeForAction.
+   * If does not shift the content if the {@link StringPart#begin} is < 1/8 of the size. That is especially after reading head information.
+   * But it reads from file if especially minSizeForAction is ==0.
+   * If shifts the text in the internal buffer {@link StringPart#content} respectively {@link #cBuffer} (the same) but only the half of current content.
+   * Especially {@link Part} remain accessible if they are near the current content. See remarks there about persistence.
+   * 
+   * @param minSizeForAction returns without action if Current position (it is {@link StringPart#begin}) is lesser. Set =0 after for reading content after head.
+   *   Set to about 2/3 of size for normal operation. 
    * @return true if eof is possible because lesser bytes than expected are read.
    * @throws IOException
    */
@@ -390,20 +400,23 @@ public class StringPartFromFileLines extends StringPartScan
   { boolean bBufferFull = false;
     //check, shift only the buffer if necessary, to save calculation time. Prevent unnecessary shift.
     //if(nRestBytes < size && super.begin >0) {
-    if(super.begin >= minSizeForAction) {
-      int sh = super.begin;
+    if(  super.begin >= minSizeForAction   //do only shift if necessary
+      && super.begin >= (cBuffer.length /8)  //do not shift if only the head was read.
+      ) {
+      int sh = super.begin /2;  //remain the half content in the buffer for StringPart before begin.
       //shift the content from begin to the start of the buffer.
       int zChars = zBuffer - sh;
       for(int ii = 0; ii < zChars; ++ii) {
         cBuffer[ii] = cBuffer[ii + sh];
       }
-      super.begin = 0;
-      super.begiMin = 0;
-      super.beginLast = 0;
-      super.beginScan = 0;
+      super.begin -= sh;
+      super.begiMin -= sh;
+      super.beginLast -= sh;
+      super.beginScan -= sh;
       super.end -=sh;
       super.endLast -=sh;
       super.endMax -=sh;
+      super.absPos0 += sh;
       zBuffer -= sh;
       //shift the linePositions.
       int idst = 0;
@@ -459,7 +472,7 @@ public class StringPartFromFileLines extends StringPartScan
   {
     int pos0, end;
   
-    CharSq(int pos0, int end) { this.pos0 = pos0; this.end = end;}
+    CharSq(int pos0, int end) { this.pos0 = pos0; this.end = end; }
   
     @Override public int length() { return end == -1 ? zBuffer : end - pos0; }
 

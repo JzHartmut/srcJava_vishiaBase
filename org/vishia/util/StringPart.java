@@ -1,5 +1,7 @@
 package org.vishia.util;
 
+import java.io.Closeable;
+
 import org.vishia.bridgeC.IllegalArgumentExceptionJc;
 
 /* This is an alternative to the {@link java.lang.String} which uses a shared reference to the char sequence.
@@ -116,10 +118,19 @@ import org.vishia.bridgeC.IllegalArgumentExceptionJc;
  */
 
 
-public class StringPart implements CharSequence, Comparable<CharSequence>
+public class StringPart implements CharSequence, Comparable<CharSequence>, Closeable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2018-12-22 Hartmut bugfix: Bug: The position in {@link StringPart.Part} were related to the current {@link #content}. 
+   *   If the content was shifted in {@link StringPartFromFileLines#readnextContentFromFile(int)} the text referred with a {@link StringPart.Part} were become faulty,
+   *   it has referred the same position but the text was shifted in content. 
+   *   <br>
+   *   Fix: New element {@link #absPos0} contains the character position in the read file in {@link StringPartFromFileLines}, it is incremented there.
+   *   The {@link StringPart.Part#absPos0} contains a final value on creation. The difference between both absPos0 is the difference to refer the correct characters.
+   *   If the content is shifted out, a IndexOutOfBoundsException is thrown on access of #content, with them the situation is detected. 
+   *   A {@link Part} is only intended for immediate use. Therefore a shifting of {@link #content} should be acceptable, but not a greater shifting.
+   *   Comment added on Part and some usages like {@link #getLastPart()} and {@link StringPartScan#getLastScannedString()}.
    * <li>2017-07-02 Hartmut new: {@link #getCurrentPart(int)} invoked with -1 returns the whole current part.
    * <li>2016-09-04 Hartmut chg: {@link #seekPosBack(int)} instead new method seekBack, better name, there was a name clash in Java2C-translation with constant definition {@link #seekBack}.
    * <li>2016-09-04 Hartmut chg: {@link #checkCharAt(int, String)} should be written with only one return statement for Java2C as define inline.
@@ -218,6 +229,10 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
    */
   protected int endMax;
 
+  /**The absolute position of character in the input file of content[0] It is used for {@link StringPartFromFileLines} or adequate reader.*/
+  protected int absPos0 = 0;
+  
+  
   /** The referenced string. It is a CharSequence for enhanced using.    */
   protected CharSequence content;
 
@@ -2550,15 +2565,19 @@ public final String debugString()
 
   
   /**This class presents a part of the parent CharSequence of this class.
-   * The constructor is protected because instances of this class are only created in this class
-   * or its derived, not by user.
-   * The CharSequence methods get the characters from the parent CharSequence of the environment class
-   * StringPartBase. 
+   * The constructor is protected because instances of this class are only created in this class or its derived, not by user.
+   * The CharSequence methods get the characters from the parent CharSequence of the environment class {@link StringPart#content}.
+   * <br>
+   * Important: An instance is only intended for immediate use. Build a String via calling {@link #toString()} if the text should be persistently stored.
+   * Using of the Part instance immediately helps safe calculation time and storage because it does not need allocated memory. It is a cheap operation only with some indices.
+   * The content of a Part will become non accessible if the {@link StringPart#content} was shifted out especially by invocation of {@link StringPartFromFileLines#readnextContentFromFile(int)}.
+   * It means a Part instance should only be immediately used if the position is near the current {@link StringPart#begin} position. 
+   * The {@link StringPartFromFileLines#readnextContentFromFile(int)} let 1/3 of the {@link StringPart#content} accessible. 
    */
   public final class Part implements CharSequence{ 
     
     /**Absolute positions of part of chars*/
-    int b1, e1;
+    final int b1, e1, absPos0;
     
     
     /**A subsequence
@@ -2569,13 +2588,13 @@ public final String debugString()
       assert(from >= 0 && from <= endMax);
       assert(to >= 0 && to <= endMax);
       assert(from <= to);
-      b1 = from; e1 = to;
+      b1 = from; e1 = to; this.absPos0 = StringPart.this.absPos0;
     }
     
     
     @Override
     public final char charAt(int index)
-    { return absCharAt(b1 + index);
+    { return absCharAt(absPos0 - StringPart.this.absPos0 + b1 + index);
     }
     
     
@@ -2597,12 +2616,13 @@ public final String debugString()
     @Override
     @Java4C.ReturnInThreadCxt
     public final CharSequence subSequence(int from, int end)
-    { @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(b1 + from, b1 + end);
+    { int start = absPos0 - StringPart.this.absPos0 + b1;
+      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(start + from, start + end);
       return ret;
     }
   
     @Override final public String toString(){
-      return absSubString(b1, e1);
+      return absSubString(absPos0 - StringPart.this.absPos0 + b1, absPos0 - StringPart.this.absPos0 + e1);
     }
     
     
@@ -2612,7 +2632,7 @@ public final String debugString()
      */
     @Java4C.ReturnInThreadCxt
     public final Part trim(){
-      int b2 = b1; int e2 = e1;
+      int b2 = absPos0 - StringPart.this.absPos0 + b1; int e2 = absPos0 - StringPart.this.absPos0 + e1;
       while(b2 < e2 && " \r\n\t".indexOf(content.charAt(b2)) >=0){ b2 +=1; }
       while(e2 > b2 && " \r\n".indexOf(content.charAt(e2-1)) >=0){ e2 -=1; }
       @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(b2, e2);

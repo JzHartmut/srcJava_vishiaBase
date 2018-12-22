@@ -1,4 +1,4 @@
-2018-12-21 22:13:08  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-12-22 19:19:09  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -323,11 +323,11 @@
 2016-12-21 16:26:25  x     StringFunctions.java                     ::         46.983  0877900278 
 2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
-2018-08-14 12:27:34  x     StringPart.java                          ::        112.716  0017046461 
+2018-12-22 19:12:15  x     StringPart.java                          ::        115.155  1655338590 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
-2018-07-17 15:20:23  x     StringPartFromFileLines.java             ::         19.877 -0340981476 
-2018-09-17 20:55:15  x     StringPartScan.java                      ::         37.345 -1074033803 
+2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
+2018-12-22 19:13:52  x     StringPartScan.java                      ::         37.345 -1074033803 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -361,9 +361,9 @@
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
-2018-12-19 00:02:42  x     XmlCfg.java                              ::         21.617  1407389535 
-2018-12-21 21:47:19  x     XmlJzCfgAnalyzer.java                    ::         24.343  2127319654 
-2018-12-19 11:52:58  x     XmlJzReader.java                         ::         26.103 -2104699916 
+2018-12-22 17:38:00  x     XmlCfg.java                              ::         22.526  2087737074 
+2018-12-22 16:09:28  x     XmlJzCfgAnalyzer.java                    ::         24.927  0952961646 
+2018-12-22 17:23:12  x     XmlJzReader.java                         ::         26.911  1751848555 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2018-12-21 14:55:31  x     TestReadMsc15Cfg.java                    ::          4.956  0581616068 
@@ -389,7 +389,7 @@
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
 2018-09-13 08:52:44  x     ZbnfJavaOutput.java                      ::         77.826 -1637256888 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
-2018-09-10 23:17:44  x     ZbnfParser.java                          ::        157.726 -0828000970 
+2018-12-22 17:09:39  x     ZbnfParser.java                          ::        157.731  1234207729 
 2018-09-10 09:04:50  x     ZbnfParserStore.java                     ::         49.612  0589982596 
 2018-09-10 22:19:18  x     ZbnfSyntaxPrescript.java                 ::         74.973  0508749077 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 

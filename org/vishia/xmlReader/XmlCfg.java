@@ -156,16 +156,18 @@ public class XmlCfg
     //if the attribute xmlinput:data is read in the input config.xml, then its values hould be used to set the datapath for the element.
     //It is done via invocation of setNewElementPath(...) on the output config.
     nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+    nodes.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
     nodes.setContentStorePath("!setContentStorePath(text)");
     nodes.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
-  
+    
+    //Nodes for the config-subtree
     XmlCfg.XmlCfgNode nodeSub = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:subtree");
     rootNode.addSubnode(nodeSub.tag.toString(), nodeSub);
     //nodeSub.attribsForCheck = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); 
     //AttribDstCheck checkName = new AttribDstCheck(true);
     //nodeSub.attribsForCheck.put("name", checkName);
     nodeSub.addAttribStorePath("name", "!@name");  //This attribute value should be used to store locally in name.
-    //nodeSub.addAttribStorePath("xmlinput:class", "!@xmlinput_class");  //This attribute value should be used to store locally in name.
+    nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
     nodeSub.setNewElementPath("!addSubTree(name)");
     nodeSub.addSubnode("?", nodes);
 //    nodeSub.subNodeUnspec = nodes;  //recursively, all children are unspec.
@@ -176,7 +178,11 @@ public class XmlCfg
 
   
   
-  public XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
+  /**Invoked from {@link XmlCfgNode#addSubTree(CharSequence)} to execute for the whole configuration.
+   * @param name
+   * @return
+   */
+  XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
   {
     XmlCfgNode subtreeRoot = new XmlCfgNode(null, this, name); //The root for a subtree configuration structure.
     if(subtrees == null) { subtrees = new IndexMultiTable<String, XmlCfgNode>(IndexMultiTable.providerString); }
@@ -285,6 +291,7 @@ public class XmlCfg
     
     String dstClassName;
     
+    /**If not null, this element refers its {@link #attribs} and {@link #subnodes} in a config-subtree. */
     String cfgSubtreeName;
   
     XmlCfgNode(XmlCfgNode parent, XmlCfg cfg, CharSequence tag){ this.parent = parent; this.cfg = cfg; this.tag = tag; }
@@ -308,11 +315,14 @@ public class XmlCfg
         //use this subtree instead:
         this.cfgSubtreeName = sAttrValue;
         XmlCfgNode subtree = this.cfg.subtrees.get(sAttrValue);
+        //Use the same subtree information for all subtree references. 
+        //If the data would be copied, some more memory is neccessary, but not too much. But it is not necessary to copy.
         this.subnodes = subtree.subnodes;
         this.attribs = subtree.attribs;
-      }
-      else if(key.equals("xmlinput:class")) { //especially for build JavaDst in cfg.xml
-        this.dstClassName = sAttrValue;
+        this.dstClassName = subtree.dstClassName;
+//      }
+//      else if(key.equals("xmlinput:class")) { //especially for build JavaDst in cfg.xml
+//        this.dstClassName = sAttrValue;
       }  
       else if(  attribsForCheck !=null     //The attribsForCheck was set because a primary config node with bCheckAttributeNode was found before
         && (attribForCheck = attribsForCheck.get(key))!=null
@@ -419,6 +429,10 @@ public class XmlCfg
     }
     
     
+    /**Invoked via reflection from {@link XmlCfg#newCfgCfg()}-given configuration. It is invoked on <code>&lt;xmlinput:subtree name="..." </code> 
+     * @param name Value from attribute name 
+     * @return A new config node for the subtree content.
+     */
     public XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
     {
       return cfg.addSubTree(name); //, classDst);

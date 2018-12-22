@@ -100,6 +100,8 @@ public class XmlJzCfgAnalyzer
             //add one subtree node for each tag type in its context:
           assert(srcnode.sSubtreenode !=null);  //it should be designated.
           XmlNode wrCfgsubtreenode = root.addNewNode("subtree", "xmlinput"); //second node "cfg"
+          if(srcnode.sSubtreenode.equals("ObjectList_A"))
+            Debugutil.stop();
           wrCfgsubtreenode.setAttribute("name", null, srcnode.sSubtreenode);
           wrCfgsubtreenode.setAttribute("class", "xmlinput", srcnode.sSubtreenode);
           if(srcnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: srcnode.nodes.entrySet()) {
@@ -134,10 +136,6 @@ public class XmlJzCfgAnalyzer
 
   
   
-  public void XXXXXXXXXXXXXreadXmlStruct_writeCfgTemplate(File fXmlIn, File wrCfg) {
-    readXmlStruct(fXmlIn);
-    writeCfgTemplate(wrCfg);
-  }
   
   
   /**Adds the node and recursively all sub nodes from {@link XmlStructureNode}
@@ -170,22 +168,24 @@ public class XmlJzCfgAnalyzer
       } else {
         wrCfgXmlNode.setAttribute("data", "xmlinput", "!add_" + structNode.tagIdent + sArg);
       }
-      if(structNode.nodes !=null) { //has subnodes
-        if(structNode.sSubtreenode !=null) {
-          //The tag type occurs more as one time in different situations, but with the same meaning. Use subtree in cfg.
-          String sSubtreeName = structNode.sSubtreenode;
-          wrCfgXmlNode.setAttribute("subtree", "xmlinput", sSubtreeName);
-        } else {
-          //Only one time tag type: tree inside.
+      if(structNode.sSubtreenode !=null) {
+        //The tag type occurs more as one time in different situations, but with the same meaning. Use subtree in cfg.
+        String sSubtreeName = structNode.sSubtreenode;
+        wrCfgXmlNode.setAttribute("subtree", "xmlinput", sSubtreeName);
+      } else {
+        //Only one time tag type: tree inside.
+        if(structNode.nodes !=null || structNode.attribs !=null && (structNode.bText || structNode.attribs.size() >1)) {
+          //sub nodes or more as one (attribute or text content) needs a sub class to store the content for this node. 
           wrCfgXmlNode.setAttribute("class", "xmlinput", structNode.tagIdent  );
-          for(Map.Entry<String, XmlStructureNode> e: structNode.nodes.entrySet()) {
-            XmlStructureNode subnode = e.getValue();
-            String tag = e.getKey();
-            XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(tag);
-            wrCfgXmlNode.addContent(xmlNodeSub);
-            addWrNode(xmlNodeSub, subnode, recursion-1);
-          }
         }
+        if(structNode.nodes !=null) { //has subnodes
+          for(Map.Entry<String, XmlStructureNode> e: structNode.nodes.entrySet()) {
+          XmlStructureNode subnode = e.getValue();
+          String tag = e.getKey();
+          XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(tag);
+          wrCfgXmlNode.addContent(xmlNodeSub);
+          addWrNode(xmlNodeSub, subnode, recursion-1);
+        } }
       }
       if(structNode.bText) {
         wrCfgXmlNode.addContent("!set_text()");
@@ -287,8 +287,6 @@ public class XmlJzCfgAnalyzer
     }
 
     
-    List<XmlStructureNode> XXXXXXXallElements = new ArrayList<XmlStructureNode>();
-    
     
     /**Stores all node types per tagName, more as one possible with the same tag name with its occurence in the structure file. */
     IndexMultiTable<String, CfgSubtreeType> allElementTypes = new IndexMultiTable<String, CfgSubtreeType>(IndexMultiTable.providerString);
@@ -325,6 +323,10 @@ public class XmlJzCfgAnalyzer
     }
     
     
+    /**Adds the occurrence of a sub node in the struct data. This is independent whether a cfg-subtree should be created. It is input for build a cfg-subtree.
+     * It is possible that a config-subtree should be built though this node has no sub nodes.
+     * @param node
+     */
     void addStructureNodeOccurence(XmlStructureNode node) {
       CfgSubtreeType cfgSubtreeWithAllOccurences = allElementTypes.get(node.tag); 
       if(cfgSubtreeWithAllOccurences == null) {
@@ -334,11 +336,7 @@ public class XmlJzCfgAnalyzer
       cfgSubtreeWithAllOccurences.occurrence.add(node);
     }
     
-    void XXXaddStructureNodeOccurence(XmlStructureNode node) {
-      XXXXXXXallElements.add(node);
-    }
     
-
     
     /**Invoked for all element types found in the source XML tree.
      * @param node
@@ -351,12 +349,12 @@ public class XmlJzCfgAnalyzer
       CfgSubtreeType2 cfgSubtreeType;
       char nameModif = 'A'-1;
       boolean found = false;
+      if(node.tag.equals("AttributeList"))
+        Debugutil.stop();
       if(!iterCfgSubtrees.hasNext() || !(cfgSubtreeType = iterCfgSubtrees.next()).tag.equals(node.tag)) {
         createCfgSubtree(node, '\0');
       }
       else {
-        if(node.tag.equals("AttributeList"))
-          Debugutil.stop();
         do {
           nameModif +=1;
           //check whether the found cfgSubtree seems to be the same type, because it has the same children:
@@ -385,6 +383,8 @@ public class XmlJzCfgAnalyzer
           } else {
             found = true;
             cfgSubtreeType.occurrence.add(node);
+            node.sSubtreenode = cfgSubtreeType.representative.sSubtreenode;
+            assert(node.sSubtreenode !=null);
             if(node.attribs !=null) for(Map.Entry<String, String> e: node.attribs.entrySet()) {
               String key = e.getKey();
               if(cfgSubtreeType.attributeNames.get(key) ==null) {
@@ -434,25 +434,28 @@ public class XmlJzCfgAnalyzer
       }
       for(Map.Entry<String, CfgSubtreeType2> e: allElementTypes2.entrySet()) {
         CfgSubtreeType2 cfgSubtree = e.getValue();
-        processDependingCfgSubtree(cfgSubtree);
+        processDependingCfgSubtree(cfgSubtree, 99);
       }
     }
     
     
     
     
-    private void processDependingCfgSubtree(CfgSubtreeType2 cfgSubtree) {
+    private void processDependingCfgSubtree(CfgSubtreeType2 cfgSubtree, int recursionCt) {
+      if(recursionCt < 50)
+        Debugutil.stop();
+      assert(recursionCt >=0);
       if(!cfgSubtree.bSort ) {
         if(cfgSubtree.dependings.size()==0) {
           cfgSubtreeList.add(cfgSubtree.representative);
           cfgSubtree.bSort = true;
         } else {
+          cfgSubtree.bSort = true;  //prevent recursion on own depending 
           for(CfgSubtreeType2 dep: cfgSubtree.dependings) {
-            processDependingCfgSubtree(dep);
+            processDependingCfgSubtree(dep, recursionCt-1);
           }
           //all dependencies processed.
           cfgSubtreeList.add(cfgSubtree.representative);
-          cfgSubtree.bSort = true;
         }
       }
     }
@@ -581,6 +584,8 @@ public class XmlJzCfgAnalyzer
      * @return
      */
     public XmlStructureNode addElement(String tag) { 
+      if(tag.contains("   "))
+        Debugutil.stop();
       if(tag.equals("Document")) {
         Debugutil.stop();
       }
