@@ -72,6 +72,14 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
 
   
   
+  /** Constructs a new instance not assigned, to read several buffers. */
+  public ByteDataAccessSimple(boolean bigEndian)
+  { super(0);
+    super.bBigEndian = bigEndian; 
+  }
+
+  
+  
   /** Constructs a new instance which is assigned to an filled buffer. */
   public ByteDataAccessSimple(byte[] data, boolean bigEndian, int lengthData)
   { super(0);

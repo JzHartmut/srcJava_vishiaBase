@@ -41,6 +41,7 @@ import java.util.TreeMap;
 
 import org.vishia.byteData.Class_Jc;
 import org.vishia.byteData.Field_Jc;
+import org.vishia.jztxtcmd.JZtxtcmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.Report;
 import org.vishia.util.Debugutil;
@@ -65,8 +66,11 @@ import org.vishia.zbnf.ZbnfParser;
 /* Changes
  */
 
-/**Converts Headerfiles to reflection. */
-public class Header2Reflection
+/**Converts Headerfiles to reflection. 
+ * @deprecated: The usage of this class is replaced by the script Cheader2Refl.jzTc with the {@link JZtxtcmd} interpreter. 
+ * See documentation in {@linkplain https://www.vishia.org/Inspc/html/Reflect.html}
+ * */
+@Deprecated public class Header2Reflection
 {
   /**Version, history and license.
    * <ul>
@@ -540,7 +544,7 @@ public class Header2Reflection
           }
           if(sFileBin != null)
           { 
-            binOutPrep = new BinOutPrep(sFileBin, fileBinBigEndian, fileBinHex, secondsAfter1970Now);
+            binOutPrep = new BinOutPrep(sFileBin, null, fileBinBigEndian, fileBinHex, secondsAfter1970Now);
           }
           for(FileIn fileIn: listFileIn)
           { for(File file: fileIn.listFileIn)

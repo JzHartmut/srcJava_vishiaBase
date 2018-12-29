@@ -1,4 +1,4 @@
-2018-12-22 23:03:29  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-12-29 11:40:05  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -64,21 +64,21 @@
 
 ============================== org/vishia/byteData/ ================================================
 2016-09-03 22:21:48  x     ByteDataAccess.java                      ::         83.277  0134436295 
-2018-09-21 14:56:49  x     ByteDataAccessBase.java                  ::         92.687  0326342739 
+2018-12-29 11:25:09  x     ByteDataAccessBase.java                  ::         95.741 -1054342987 
 2015-02-18 22:32:02  x     ByteDataAccessDbg.java                   ::          1.468  0435534164 
 2015-02-18 22:33:00  x     ByteDataAccessOld.java                   ::         77.706 -1790232315 
-2018-09-21 09:48:29  x     ByteDataAccessSimple.java                ::          5.337 -0664989369 
+2018-12-26 17:55:40  x     ByteDataAccessSimple.java                ::          5.528  2068062499 
 2016-01-23 22:15:12  x     ByteDataSymbolicAccess.java              ::         24.179 -1050332237 
 2013-11-23 09:03:57  x     ByteDataSymbolicAccessReadConfig.java    ::          3.899 -1849174949 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
-2018-12-16 00:08:50  x     Class_Jc.java                            ::          8.668  1380885088 
-2018-12-16 00:26:47  x     Field_Jc.java                            ::         14.971  1581479291 
+2018-12-26 22:04:13  x     Class_Jc.java                            ::          9.274 -0808382699 
+2018-12-27 19:09:07  x     Field_Jc.java                            ::         15.680 -1928813301 
 2015-04-12 12:02:22  x     ObjectArraySet_Jc.java                   ::          3.613  2047017229 
-2018-12-15 23:10:18  x     ObjectArray_Jc.java                      ::          3.478  1218719947 
-2015-04-12 18:15:20  x     Object_Jc.java                           ::          8.338 -1010306512 
+2018-12-26 21:00:12  x     ObjectArray_Jc.java                      ::          3.868 -0012452241 
+2018-12-26 19:27:41  x     Object_Jc.java                           ::         10.518 -0391273176 
 2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
 2018-09-17 09:57:37  x     RawDataAccess.java                       ::          3.779 -0477929894 
-2018-12-16 00:27:48  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          2.161 -0742806116 
+2018-12-27 19:09:57  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          1.133 -2100742853 
 2013-12-10 09:54:37  x     VariableAccessArray_ifc.java             ::          6.165  0115301257 
 2016-01-23 22:17:31  x     VariableAccessWithBitmask.java           ::          6.370  0738802326 
 2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
@@ -176,12 +176,13 @@
 2015-05-25 22:50:41  x     TestFileCluster.java                     ::          1.745  1939760260 
 
 ============================== org/vishia/header2Reflection/ =======================================
-2018-12-16 09:17:05  x     BinOutPrep.java                          ::         13.491  1508383529 
+2018-12-29 11:37:36  x     BinOutPrep.java                          ::         15.986 -0578957462 
+2018-12-27 18:22:42  x     BinOutShow.java                          ::          9.770  2018075799 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
 2018-12-13 10:55:26  x     CheaderParser.java                       ::         58.499 -0713520714 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
-2014-11-13 22:08:25  x     ExtReflection_Insp_h.java                ::          1.061 -0470130958 
-2018-10-10 14:36:37  x     Header2Reflection.java                   ::         82.589 -0617309861 
+2018-12-26 17:53:45  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
+2018-12-27 11:49:18  x     Header2Reflection.java                   ::         82.856 -1926959000 
 
 ============================== org/vishia/inspcComm/ ===============================================
 2015-04-12 22:27:30  x     InspcDatagram.java                       ::          4.044 -0654139165 

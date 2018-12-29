@@ -152,6 +152,9 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   
   /**The version, history and license. 
    * <ul>
+   * <li>2018-12-27 Hartmut new {@link #upcast(ByteDataAccessBase, int)} replaces the {@link #assignCasted(ByteDataAccessBase, int, int)}. Problems detect on usage of assignCasted:
+   *   The cast of a child should influence the parent because the next {@link #addChild(ByteDataAccessBase)} should regard the casting operation. The casting is regarded
+   *   to the data in sum. It is not only a isolated view to data. Strategy of upcast is documented there.  
    * <li>2018-09-18 Hartmut new {@link #ixBeginLocal} stores the position inside the child, whereby ixBegin is global. 
    *   TODO description of strategy of fix children. It may be proper if assignData(...) will be invoked only for the derived class
    *   which knows its fix children. The old concept of overridden methods here are not proper for simple C applications. 
@@ -731,11 +734,13 @@ public class ByteDataAccessBase implements InfoFormattedAppend
    *   and this value determines the valid number of data which are able to access via it.
    * @throws IllegalArgumentException if a length of the new type is specified but the byte[]-data are shorter. 
    *                         The length of byte[] is tested. 
+   * @deprecated it is confuse. Use 
    */
   @Java4C.Inline
+  @Deprecated
   final protected void assignCasted(ByteDataAccessBase src, int offsetCastToInput, int lengthDst)
   throws IllegalArgumentException
-  { assign(src.data(), src.ixEnd, src.ixBegin + offsetCastToInput);
+  { assign(src.data(), lengthDst, src.ixBegin + offsetCastToInput);
     bExpand = src.bExpand;
     bBigEndian = src.bBigEndian;
     bExc = src.bExc;
@@ -746,6 +751,55 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     //lengthDst is unsused, not necessary because lengthElementHead is knwon!
   }
 
+  
+  
+  final private void copyStdValues(ByteDataAccessBase src) {
+    this.data = src.data;
+    this.bExpand = src.bExpand;
+    this.bExc = src.bExc;
+    this.bBigEndian = src.bBigEndian;
+    this.charset = src.charset;
+  }
+  
+  
+  
+  
+  /**This method is intend to use to change the view to the data from a firstly simple view (src) to the really type
+   * if the type is detected inside the (head) data of the firstly view. It is important that the change of view
+   * is done for the whole data, represented with the {@link #isCurrentChildInParent()} relation.
+   * <br> 
+   * The operation is protected because it should be only used in an derived class to cast from the src instance to this derived instance
+   * <br>
+   * This instance is filled with the data from src, but with other length.
+   * If src is the current child of src.parent then this becomes the current child of parent 
+   * and the parent.{@link #ixNextChild} is set proper to this: = this.{@link #ixBegin} + length.
+   * That helps to step in parent via {@link #addChild(ByteDataAccessBase)}
+   * @param src The firstly associated access instance to the data typically via {@link #addChild(ByteDataAccessBase)}, 
+   *            it remains unchanged but it is no more the child of the parent. 
+   * @param length if <= this.sizeHead, typically 0, then unused, the this{@link #sizeHead()} is used instead. 
+   *   If > this.sizeHead then it determines the {@link #ixEnd()} of this and the parent {@link #ixNextChild}. 
+   *   In that case it is a longer value because this instance should access head and inner children.
+   */
+  final protected void upcast(ByteDataAccessBase src, int length) {
+    this.detach();
+    copyStdValues(src);
+    this.ixBegin = src.ixBegin;
+    this.ixBeginLocal = src.ixBeginLocal;
+    this.ixNextChild = this.ixBegin + this.sizeHead;
+    if(length > this.sizeHead) { //given deterministic length
+      this.ixEnd = this.ixBegin + length;
+    } else {
+      this.ixEnd = this.ixBegin + this.sizeHead;
+    }
+    this.parent = src.parent;
+    if(src.isCurrentChildInParent()) {
+      this.parent.ixNextChild = this.ixEnd;
+      this.parent.currChild = this;
+      //TODO may be adjust the parent's parent too for ixNextChild!
+    }
+  }
+  
+  
 
   /**Returns true if the instance is set as expandable, see {@link #assign(byte[], int)}
    */
@@ -952,6 +1006,10 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   }
 
   
+  final public boolean isCurrentChildInParent() {
+    return parent !=null && parent.ixNextChild == this.ixNextChild;
+  }
+  
 
   /**returns true if the given number of bytes is sufficing in the data from position of next child. 
    * 
@@ -1108,9 +1166,9 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     child.ixNextChild = idxBegin + child.sizeHead;
     child.bBigEndian = bBigEndian;
     child.bExc = bExc;
-    child.bExpand = bExpand;
+    child.bExpand = false; //never expand on a fix position, no sense.  this.bExpand;
     child.parent = this;
-    _expand(child.ixNextChild, child.ixEnd);  
+    _expand(child.ixNextChild, child.ixEnd);  //expand the parent only if child.ixEnd is > parent.ixEnd
     //return bExpand;
   }
 

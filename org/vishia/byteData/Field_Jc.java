@@ -49,7 +49,7 @@ public  class Field_Jc extends ByteDataAccessBase
       private static final int kPos_nrofArrayElements = kPosName + kLengthName;
     
       /** Position of the type reference in a Field_Jc-POD*/
-      static final int kPos_type = kPos_nrofArrayElements + 2;
+      public static final int kPos_type = kPos_nrofArrayElements + 2;
     
       /** Position of the modifier in a Field_Jc-POD*/
       private static final int kPos_bitModifiers = kPos_type + 4;
@@ -61,10 +61,9 @@ public  class Field_Jc extends ByteDataAccessBase
       
       private static final int kPos_declaringClass = kPos_offsetToObjectifcBase + 2;
     
-      static final int sizeOf_Field_Jc = kPos_declaringClass + 4;
+      public static final int sizeOf_Field_Jc = kPos_declaringClass + 4;
       
- 
-  public static final int REFLECTION_void  =              0x01; 
+      public static final int REFLECTION_void  =              0x01; 
   public static final int REFLECTION_int64  =             0x02; 
   public static final int REFLECTION_uint64 =             0x03;
   public static final int REFLECTION_int32  =             0x04;
@@ -83,6 +82,9 @@ public  class Field_Jc extends ByteDataAccessBase
   public static final int REFLECTION_String =             0x10;
   public static final int REFLECTION_bitfield =           0x17;
  
+  
+  public static final int mOffsIsProxyIx4Target_FieldJc = 0x8000;
+  
   /**Helper class for TreeMap of scalar type properties. */
   public static class TypeSizeIdent
   { public final int size, ident;
@@ -135,12 +137,47 @@ public  class Field_Jc extends ByteDataAccessBase
       
       
   /**Definition of type ident see Reflection_Jc.h. */    
-  public final static int OBJTYPE_Field_Jc =  0x0FF50000; 
+  public final static int XXXOBJTYPE_Field_Jc =  0x0FF50000; 
       
+  public static final int INIZ_ID_FieldJc = 0xFF5;
+
+  
+  
+  
+  /**Definition adequate Headerfile ReflectionJc.h in enum  Modifier_reflectJc_t: */
+  public static enum EModifier { 
+      kBitPrimitiv_Modifier   (16)
+    , mPrimitiv_Modifier             (0x000f0000)
+    , kBitfield_Modifier             (0x00070000)
+    , kHandlePtr_Modifier            (0x00090000)
+    , mStatic_Modifier               (0x00000008) 
+    , kObjectArrayJc_Modifier        (0x00200000)
+    , kStaticArray_Modifier          (0x00800000)
+    , kEmbedded_Modifier_reflectJc   (0x01000000)
+    , kReference_Modifier            (0x02000000)
+    , mReference_Modifier            (0x02000000)
+    , mObjectJc_Modifier             (0x04000000)
+    , mObjectifcBaseJcpp_Modifier    (0x08000000)
+    , mObjectJcBased_Modifier        (0x0c000000)  //both bits mObjectifcBaseJcpp and mObject
+    , kEmbeddedContainer_Modifier    (0x10000000)
+    , kReferencedContainer_Modifier  (0x20000000)
+    , kEnhancedRefContainer_Modifier (0x30000000)
+    ;
+      public int e;
+      EModifier(int val){
+        this.e = val;
+      }
+  };    
+
+  
+  
   public Field_Jc()
   { super(sizeOf_Field_Jc);
   }
 
+  
+  
+  
   
   
   
@@ -366,21 +403,18 @@ public  class Field_Jc extends ByteDataAccessBase
        * 
        * @return position of the data appropriate to this field inside a instance.
        */
-      public int getPosValue() 
-      { return getInt32(kPos_position); 
+      public short getPosValue() 
+      { return getInt16(kPos_position); 
       }
       
       
   public void set_nrofArrayElements(int value){ super.setInt16(kPos_nrofArrayElements, value); }
       
-  /**Sets the reference to the type.
-   * @param addrInSameBuffer The address of the type Class_Jc data.
-   * @return The position in the buffer for relocated
+  /**Sets the type value.
+   * @param value value to store in the type field.
    */
-  public int set_type(int addrInSameBuffer){ 
-    int posField = getPositionInBuffer() + kPos_type;
-    setInt32(kPos_type, addrInSameBuffer - posField);
-    return posField;
+  public void set_type(int value){ 
+    setInt32(kPos_type, value);
   }
       
   public void set_bitModifiers(int value){ super.setInt32(kPos_bitModifiers, value); }
@@ -396,6 +430,7 @@ public  class Field_Jc extends ByteDataAccessBase
   }
       
   
+  /**Returns the position of the type element in the data buffer, used for relocation. */
   public int getPositionInBuffer_type(){ return getPositionInBuffer() + kPos_type; }
       
 }

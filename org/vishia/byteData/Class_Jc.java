@@ -66,7 +66,7 @@ public class Class_Jc extends Object_Jc
      * The byte[] have to be containing valid data.
      */
     public void assignDataUpcast(Object_Jc base)
-    { assignCasted(base, 0, kPos_Vtbl);
+    { upcast(base, kPos_Last);
       //catch(Illegal exc){} //it's never thrown.
     }
     
@@ -94,13 +94,13 @@ public class Class_Jc extends Object_Jc
   private static final int kPos_nsize = kPos_posObjectBase + 4;
   
   /** Position of the pointer to attributes in a Class_Jc-POD*/
-  protected static final int kPos_attributes = kPos_nsize + 4;
+  public static final int kPos_attributes = kPos_nsize + 4;
   
   /** Position of the pointer to methods in a Class_Jc-POD*/
   private static final int kPos_methods = kPos_attributes + 4;
   
   /** Position of the pointer to the superclass reflection in a Class_Jc-POD*/
-  private static final int kPos_superClass = kPos_methods + 4;
+  public static final int kPos_superClass = kPos_methods + 4;
   
   /** Position of the pointer to the interfaces in a Class_Jc-POD*/
   private static final int kPos_interfaces = kPos_superClass + 4;
@@ -118,6 +118,9 @@ public class Class_Jc extends Object_Jc
  
   /**The object type defined in Reflect_Jc.h for Class_Jc-objects. */
   public final static int OBJTYPE_CLASS_Jc =  0x0ff80000; 
+
+  /**The object type defined in Reflect_Jc.h for Class_Jc-objects. */
+  public final static int INIZ_ID_ClassJc =  0xff8; 
 
   /**Definition adequate Headerfile ReflectionJc.h in enum  Modifier_reflectJc_t: */
   public static final int 
@@ -139,12 +142,23 @@ public class Class_Jc extends Object_Jc
     , kEnhancedRefContainer_Modifier = 0x30000000
     ;    
 
-  
-  
-  public int getFieldsAddr()
-  {
-      return getInt32(kPos_attributes);
+  public void setIdentSize() {
+    super.setIdentSize(true, false, INIZ_ID_ClassJc, sizeof_Class_Jc);
   }
+  
+  /**Returns the value which is stored on the pointer position for attributes.
+   * It is a relative pointer for Bin-Reflection-Date 
+   * but an absolute pointer of the physical address, may be different from the load address, for a data image access.
+   */
+  public int getFieldsAddr(){ return getInt32(kPos_attributes); }
+  
+  /**Returns the value which is stored on the pointer position for the super class. Relative or physical on target. */
+  public int getSuperAddr(){ return getInt32(kPos_superClass); }
+  
+  /**Returns the value which is stored on the pointer position for the interfaces. Relative or physical on target. */
+  public int getIfcAddr(){ return getInt32(kPos_interfaces); }
+  
+  
   
   /**Sets the value in element attributes so, that it is the offset to the given data.
    * @param value position in the same buffer where the attribute field (ObjectArray_Jc with children Field_Jc) is located.

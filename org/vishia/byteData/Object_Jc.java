@@ -35,15 +35,17 @@ package org.vishia.byteData;
  */
 public class Object_Jc  extends ByteDataAccessBase
 {
-  public final static int kPos_objIdentSize = 0;
-  private final static int kPos_ownAdress = 4;
-  private final static int kPos_reflectionClassAdress = 12;
+  public final static int kPos_objIdentSize = 0x10;
+  private final static int kPos_ownAdress = 0;
+  private final static int kPos_reflectionClassAdress = 8;
   
   
   /** nrofBytes of the C-POD type Object_Jc */
   public final static int sizeof_Object_Jc = 0x18;// 0x0c;
 
-  public final static int mArray_objectIdentSize = 0xc0000000;
+  public final static int mArray_objectIdentSize = 0x40000000;
+  
+  public final static int mInitialized_objectIdentSize = 0x80000000;
   
   public final static int mSizeBits_typeSizeIdent =    0x30000000; 
   
@@ -56,14 +58,17 @@ public class Object_Jc  extends ByteDataAccessBase
                         , mIsLargeSize_typeSizeIdent = 0x20000000; 
   
   private final static int mSizeSmall_typeSizeIdent =   0x0000ffff; 
-  public final static int mTypeSmall_typeSizeIdent =   0x0fff0000; 
+  public final static int mIdentSmall_typeSizeIdent =   0x0fff0000; 
+  public final static int kBitIdentSmall_objectIdentSize = 16;
   
   private final static int mSizeMedium_typeSizeIdent =   0x000fffff; 
-  public final static int mTypeMedium_typeSizeIdent =   0x0ff00000;
+  public final static int mIdentMedium_typeSizeIdent =   0x0ff00000;
+  public final static int kBitIdentMedium_objectIdentSize = 20;
 
   private final static int mSizeLarge_typeSizeIdent =   0x00ffffff; 
-  public final static int mTypeLarge_typeSizeIdent =   0x1f000000;
-  
+  public final static int mIdentLarge_typeSizeIdent =   0x1f000000;
+  public final static int kBitIdentLarge_objectIdentSize = 24;
+
   public final static int OBJTYPE_Class_Jc =           Object_Jc.kIsSmallSize_typeSizeIdent + 0x0ff80000; 
  // public final static int OBJTYPE_ReflectionImage_Jc = Object_Jc.mIsLargeSize_typeSizeIdent + 0x3e000000; 
   public final static int OBJTYPE_ReflectionImageBaseAddress_Jc = Object_Jc.kIsSmallSize_typeSizeIdent + 0x0ff70000; 
@@ -144,53 +149,81 @@ public class Object_Jc  extends ByteDataAccessBase
   {
       return getInt32(kPos_reflectionClassAdress);
   }
-  /*  
-  public int getType(int idxChild)
-  {
-      int nResult = 0;
-      int typeSizeIdent = getInt32(Object_Jc.kPos_objIdentSize + idxChild);
-      int nSizeInfo = typeSizeIdent & mSizeBits_typeSizeIdent;
-      
-      int nTypeMask = 0;
-      
-      if (nSizeInfo == 0x30000000)
-  //        if (nSizeInfo == kIsSmallSize_typeSizeIdent)
-          nTypeMask = ~Object_Jc.mSizeSmall_typeSizeIdent;
-      else
-          nTypeMask = ~Object_Jc.mSizeLarge_typeSizeIdent;
-      
-      nResult = typeSizeIdent & nTypeMask;
-      return nResult;
-  }
-  */
-  protected int getType(int idxChild) 
+  
+  
+  /**Returns the ident information from an instance. */
+  protected int getIdent(int idxChild) 
   {
     int nResult = 0;
     int typeSizeIdent = getInt32(Object_Jc.kPos_objIdentSize + idxChild);
-    int nTypeMask = 0;
+    int nTypeMask;
+    int nShift;
      
     if( (typeSizeIdent & mIsLargeSize_typeSizeIdent) != 0)
-    {
-      nTypeMask = Object_Jc.mTypeLarge_typeSizeIdent;
+    { nShift = kBitIdentLarge_objectIdentSize;
+      nTypeMask = Object_Jc.mIdentLarge_typeSizeIdent;
     }
     else if( (typeSizeIdent & mIsMediumSize_typeSizeIdent) != 0)
-    {
-      nTypeMask = Object_Jc.mTypeMedium_typeSizeIdent ;
+    { nShift = kBitIdentMedium_objectIdentSize;
+      nTypeMask = Object_Jc.mIdentMedium_typeSizeIdent ;
     }
     else //small
-    {
-      nTypeMask = Object_Jc.mTypeSmall_typeSizeIdent;
+    { nShift = kBitIdentSmall_objectIdentSize;
+      nTypeMask = Object_Jc.mIdentSmall_typeSizeIdent;
     }
     
-    nResult = typeSizeIdent & nTypeMask;
+    nResult = (typeSizeIdent & nTypeMask) >> nShift;
     return nResult; 
   }
-  //*/
-  public int getType() 
+  
+  
+  
+  /**Returns the identification information from an instance. */
+  public int getIdent() 
   {
-      return getType(0);
+      return getIdent(0);
   }
 
+  
+  
+  public void setIdentSize(boolean isInitialized, boolean isArray, int ident, int size) {
+    int val = 0;
+    if((size & ~mSizeLarge_typeSizeIdent) !=0) {
+      throw new IllegalArgumentException("size is too much: " + size);
+    }
+    if( (size & ~mSizeSmall_typeSizeIdent) !=0) {
+      if((size & ~mSizeMedium_typeSizeIdent) !=0) {
+        int ident2 = ident << kBitIdentLarge_objectIdentSize;
+        if( (ident2 & ~mIdentLarge_typeSizeIdent) !=0) {
+          throw new IllegalArgumentException("large size, indent too great, max is 31: " + ident);
+        }
+        val = mIsLargeSize_typeSizeIdent + size + ident2;
+      } else { //mSizeMedium
+        int ident2 = ident << kBitIdentMedium_objectIdentSize;
+        if( (ident2 & ~mIdentMedium_typeSizeIdent) !=0) {
+          throw new IllegalArgumentException("medium size, indent too great, max is 255: " + ident);
+        }
+        val = mIsLargeSize_typeSizeIdent + size + ident2;
+      }
+    } else { //mSizeSmall 
+      int ident2 = ident << kBitIdentSmall_objectIdentSize;
+      if( (ident2 & ~mIdentSmall_typeSizeIdent) !=0) {
+        throw new IllegalArgumentException("small size, indent too great, max is 4095: " + ident);
+      }
+      val = size + ident2;
+    }
+    if(isArray) {
+      val |= mArray_objectIdentSize;
+    }
+    if(isInitialized) {
+      val |= mInitialized_objectIdentSize;
+    }
+    setInt32(kPos_objIdentSize, val);
+  }
+  
+  
+  public boolean isObjectJcArray() { return ((getInt32(Object_Jc.kPos_objIdentSize) & 0x40000000) !=0); }
+  
   
   /**Gets a integer value from any offset started from Object_Jc
    * 
@@ -231,6 +264,34 @@ public class Object_Jc  extends ByteDataAccessBase
   public void castToRawDataAccess(RawDataAccess dst) 
   { assignCasted(dst, 0, -1);  
     //catch(AccessException exc){throw new RuntimeException("unexpected AccessException");}; //it should be never thrown
+  }
+  
+  
+  public String showContent(Appendable u) {
+    try {
+      u.append("@0x").append(Integer.toHexString(super.getPositionInBuffer()));
+      u.append(": ObjectJc own=0x").append(Integer.toHexString(getOwnAdress()));
+      u.append(" id=0x").append(Integer.toHexString(getIdent()));
+      u.append("=").append(Integer.toString(getIdent()));
+      u.append(" size");
+      if(isObjectJcArray()) {u.append("[]"); }
+      u.append("=0x").append(Integer.toHexString(getSizeObject()));
+      u.append("=").append(Integer.toString(getSizeObject()));
+      u.append(" refl @0x").append(Integer.toHexString(getReflectionClass()));
+      return u.toString();
+    } catch(Exception exc) {
+      return "Exception on Appendable: " + exc.getMessage();
+    }
+  }
+  
+  
+  
+  //@Override 
+  public String toString() {
+    StringBuilder u = new StringBuilder(200);
+    
+    return showContent(u);
+  
   }
   
   

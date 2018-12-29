@@ -56,7 +56,8 @@ public class ObjectArray_Jc extends Object_Jc {
    * The byte[] have to be containing valid data.
    */
   public void assignDataUpcast(Object_Jc base)
-  { assignCasted(base, 0, sizeof_ObjectArray_Jc);  //kIdxAfterLast); 
+  { int size = base.getSizeObject();
+    upcast(base, size);  //kIdxAfterLast); 
     //catch(AccessException exc){} //it's never thrown.
   }
     
@@ -97,7 +98,24 @@ public class ObjectArray_Jc extends Object_Jc {
   }
 
 
-   
+  public String showContent(Appendable u) {
+    try {
+      super.showContent(u);
+      u.append(" [").append(Integer.toString(getLength_ArrayJc()));;
+      u.append("] sizeElem=").append(Integer.toString(getSizeofElement()));;
+      return u.toString();
+    } catch(Exception exc) {
+      return "Exception on Appendable: " + exc.getMessage();
+    }
+  }
+
+  
+  
+  //@Override 
+  public String XXXtoString() {
+    StringBuilder u = new StringBuilder(200);
+    return showContent(u);
+  }
       
     
 }

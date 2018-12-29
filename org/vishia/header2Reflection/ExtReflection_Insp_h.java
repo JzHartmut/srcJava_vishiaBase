@@ -24,6 +24,11 @@ public class ExtReflection_Insp_h
     }
     
     
+    
+    public ExtReflection_Insp(){
+      super(kIdxAfterLast);
+    }
+    
     void set_sign(int value)
     {  setInt32(kIdx_sign, value);
     }
@@ -32,12 +37,34 @@ public class ExtReflection_Insp_h
     {  setInt32(kIdx_nrofRelocEntries, value);
     }
     
+    int get_nrofRelocEntries()
+    {  return getInt32(kIdx_nrofRelocEntries);
+    }
+    
     void set_arrayClasses(int value)
     {  setInt32(kIdx_arrayClasses, value);
     }
     
+    int get_arrayClasses()
+    {  return getInt32(kIdx_arrayClasses);
+    }
+    
     void set_classDataBlock(int value)
     {  setInt32(kIdx_classDataBlock, value);
+    }
+    
+    int get_classDataBlock()
+    {  return getInt32(kIdx_classDataBlock);
+    }
+    
+    
+    void add_relocateAddr(int posReloc) {
+      super.addChildInteger(4, posReloc);
+    }
+    
+    
+    int get_relocateAddr(int ix) {
+      return super.getInt32(4*ix + kIdxAfterLast);
     }
     
   
