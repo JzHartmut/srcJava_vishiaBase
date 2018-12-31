@@ -1,4 +1,4 @@
-2018-12-31 21:12:15  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-01-01 00:21:55  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -78,7 +78,7 @@
 2018-12-26 19:27:41  x     Object_Jc.java                           ::         10.518 -0391273176 
 2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
 2018-09-17 09:57:37  x     RawDataAccess.java                       ::          3.779 -0477929894 
-2018-12-27 19:09:57  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          1.133 -2100742853 
+2019-01-01 00:21:17  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.105 -1968001503 
 2013-12-10 09:54:37  x     VariableAccessArray_ifc.java             ::          6.165  0115301257 
 2016-01-23 22:17:31  x     VariableAccessWithBitmask.java           ::          6.370  0738802326 
 2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
@@ -176,7 +176,7 @@
 2015-05-25 22:50:41  x     TestFileCluster.java                     ::          1.745  1939760260 
 
 ============================== org/vishia/header2Reflection/ =======================================
-2018-12-29 11:37:36  x     BinOutPrep.java                          ::         15.986 -0578957462 
+2019-01-01 00:18:39  x     BinOutPrep.java                          ::         16.411  1099743724 
 2018-12-27 18:22:42  x     BinOutShow.java                          ::          9.770  2018075799 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
 2018-12-31 10:38:41  x     CheaderParser.java                       ::         59.064 -1677438393 

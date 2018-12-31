@@ -40,6 +40,8 @@ public class BinOutPrep
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-12-31 Hartmut set {@link Field_Jc.EModifier#kEmbedded_Modifier_reflectJc} to the {@link #addSuperclass(String)} 
+   *   using {@link SuperclassIfc_idxMtblJc_ByteDataAccess#set_Field(String)} 
    * <li>2018-12-28 Hartmut Now writes more Information of ObjectJc base data to help detection of instance types in the binary data.
    *     It is used for {@link BinOutShow}.
    * <li>2018-12-18 Hartmut new: Support for inheritance (derivation) for target-proxy-concept: usage of {@link SuperclassIfc_idxMtblJc_ByteDataAccess}. 
@@ -215,6 +217,11 @@ public class BinOutPrep
   
   
   
+  /**Adds the bin data for a ObjectArrayJc of SuperclassIfc_idxMtblJc_ByteDataAccess with the given super field. 
+   * @param sName Type name of the super class
+   * @return
+   * @throws IllegalArgumentException
+   */
   public int addSuperclass(String sName) throws IllegalArgumentException
   { if(sName.equals("Controller_ObjMod"))
       Debugutil.stop();
@@ -237,7 +244,7 @@ public class BinOutPrep
     } else {
       setRelocEntry(posAddrType); //Hint: don't relocate, remain 0 if the class is not found. 
     }
-    binSuperClass.set_name("super");
+    binSuperClass.set_Field("super");
     //binSuperClass.add_Type_idxMtblJc_toBindata(binOutRefl, posClass);
     //
     binOutSuperArray.setIdentSize(true, true, SuperclassIfc_idxMtblJc_ByteDataAccess.INIZ_ID, binOutSuperArray.getLength());
