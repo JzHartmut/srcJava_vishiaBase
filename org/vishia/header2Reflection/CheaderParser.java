@@ -1113,6 +1113,10 @@ public class CheaderParser {
     public Arraysize arraysize;
   
     public Value defaultValue; 
+    
+    /**Any index value maybe used in an evaluating routine via JZtxtcmd. It is not used by the parser, remain 0. 
+     * For Simulink Sfunction -wrapper-generator: It is used for the ixParam to access <code>ssGetSFcnParam(simstruct, ixArg)</code>*/
+    public int ixArg;
   
     public Description new_description() { return description = new Description(); }
     public void add_description(Description val){ /*already added.*/ } 
@@ -1345,6 +1349,8 @@ type::= [<?@modifier>volatile|const|]
     
     public List<AttributeOrTypedef> args;
     
+    public Map<String, AttributeOrTypedef> name_args;
+    
     public boolean variableArgs;
     
     /**If true then body==null; */
@@ -1358,14 +1364,16 @@ type::= [<?@modifier>volatile|const|]
     
     public AttributeOrTypedef new_conditionalArgument(){ return new AttributeOrTypedef(); }
     public void add_conditionalArgument(AttributeOrTypedef val){ 
-      if(args == null) { args = new LinkedList<AttributeOrTypedef>(); }
+      if(args == null) { args = new LinkedList<AttributeOrTypedef>(); name_args = new TreeMap<String, AttributeOrTypedef>(); }
       args.add(val);
+      if(val.name !=null) { name_args.put(val.name, val); }
     }
 
     public AttributeOrTypedef new_typedParameter(){ return new AttributeOrTypedef(); }
     public void add_typedParameter(AttributeOrTypedef val){ 
-      if(args == null) { args = new LinkedList<AttributeOrTypedef>(); }
+      if(args == null) { args = new LinkedList<AttributeOrTypedef>(); name_args = new TreeMap<String, AttributeOrTypedef>(); }
       args.add(val);
+      if(val.name !=null) { name_args.put(val.name, val); }
     }
 
     

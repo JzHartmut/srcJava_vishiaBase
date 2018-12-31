@@ -1,4 +1,4 @@
-2018-12-29 11:40:05  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2018-12-31 21:12:15  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -179,7 +179,7 @@
 2018-12-29 11:37:36  x     BinOutPrep.java                          ::         15.986 -0578957462 
 2018-12-27 18:22:42  x     BinOutShow.java                          ::          9.770  2018075799 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2018-12-13 10:55:26  x     CheaderParser.java                       ::         58.499 -0713520714 
+2018-12-31 10:38:41  x     CheaderParser.java                       ::         59.064 -1677438393 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
 2018-12-26 17:53:45  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
 2018-12-27 11:49:18  x     Header2Reflection.java                   ::         82.856 -1926959000 
