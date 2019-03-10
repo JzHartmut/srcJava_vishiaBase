@@ -954,7 +954,7 @@ public final class ZbnfJavaOutput
               }
             }
             catch(InvocationTargetException exc)
-            { throw new IllegalAccessException("cannot access: " + sMethodToFind + " / " + exc.getMessage()); 
+            { throw new IllegalAccessException("error in accessing: " + sMethodToFind + " : " + exc.getMessage() + exc.getTargetException().getMessage()); 
             }
             catch(Exception exc)
             { throw new IllegalAccessException("error calling: " + sMethodToFind + " / " + exc.getMessage()); 

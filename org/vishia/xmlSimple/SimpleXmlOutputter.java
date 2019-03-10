@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.vishia.util.Assert;
@@ -70,7 +71,10 @@ public class SimpleXmlOutputter
 
   enum ModeBits {
     writeNl(0x1)
-  , writeNlAftertext(0x2);  
+  , writeNlAftertext(0x2)
+  
+  , writeAttribsInAlphabeticOrder(0x10)
+  ;  
     
     final int maskbit;
     ModeBits(int value){ maskbit = value; }
@@ -101,8 +105,12 @@ public class SimpleXmlOutputter
     out.write("<?xml version=\"1.0\" encoding=\"" + sEncoding + "\"?>" + newline);
     out.write("<!-- written with org.vishia.xmlSimple.SimpleXmlOutputter -->");
     writeNode(bout, xmlNode, 0);
+    bout.write(newline); //finsih with a new line.
     bout.close();
   }
+  
+  
+  
   
   protected void writeNode(Writer out, XmlNode xmlNode, int nIndent) 
   throws IOException
@@ -123,27 +131,38 @@ public class SimpleXmlOutputter
     }
     Assert.check(!sTagName.startsWith("@"));
     out.write(elementStart(sTagName));      //out: <ns:tag
-    if(xmlNode.getAttributes() != null)    //out:          attr="val"
-    { Iterator<Map.Entry<String, String>> iterAttrib = xmlNode.getAttributes().entrySet().iterator();
-      while(iterAttrib.hasNext())
-      { Map.Entry<String, String> entry = iterAttrib.next();
-        String name = entry.getKey();
-        String value = entry.getValue();
-        out.write(attribute(name, value));
+    if((mode & ModeBits.writeAttribsInAlphabeticOrder.maskbit) !=0) {
+      Map<String, String> attribs = xmlNode.getAttributes();
+      if(attribs !=null) {
+        Iterator<Map.Entry<String, String>> iterAttrib = attribs.entrySet().iterator();
+        while(iterAttrib.hasNext())
+        { Map.Entry<String, String> entry = iterAttrib.next();
+          String name = entry.getKey();
+          String value = entry.getValue();
+          out.write(attribute(name, value));
+        }
       }
-    }
-    /*
-    List<XmlNode> children = xmlNode.listChildren();
-    if(children !=null){
-      for(XmlNode xmlAttr: children){
-        String sName = xmlAttr.getName();
-        if(sName.startsWith("@")){
-          String value = xmlAttr.getText();
-          out.write(attribute(sName.substring(1), value));
+    } else {
+      /*
+      List<XmlNode> children = xmlNode.listChildren();
+      if(children !=null){
+        for(XmlNode xmlAttr: children){
+          String sName = xmlAttr.getName();
+          if(sName.startsWith("@")){
+            String value = xmlAttr.getText();
+            out.write(attribute(sName.substring(1), value));
+          }
+        }
+      }
+      */
+      List<String[]> listAttribs = xmlNode.getAttributeList();
+      if(listAttribs != null) {
+        for(String[] elem: listAttribs) {
+          out.write(attribute(elem[0], elem[1]));
         }
       }
     }
-    */
+      
     if(xmlNode.getNamespaces() != null)
     { Iterator<Map.Entry<String, String>> iterNameSpaces = xmlNode.getNamespaces().entrySet().iterator();
       while(iterNameSpaces.hasNext())
@@ -155,16 +174,19 @@ public class SimpleXmlOutputter
     }  
     Iterator<XmlNode> iterContent = xmlNode.iterChildren();
     boolean bContent= false;  //set to true if </endTag> is necessary
+    boolean bSubNode = false;
     if(iterContent != null)    //at least one child node is present: 
-    { while(iterContent.hasNext())
-      { XmlNode content = iterContent.next();
+    { while(iterContent.hasNext()) {
+        XmlNode content = iterContent.next();
         //String sName = content.getName();
-        if(content.isTextNode()){ 
+        String textContent;
+        if(content.isTextNode()) { // && (textContent = content.text()).length() >0){ 
+          textContent = content.text();
           if(!bContent){
             out.write(elementTagEnd());
             bContent = true;
           }
-          out.write(convertString(content.text()).toString() );
+          out.write(convertString(textContent).toString());
           nIndent = -1;  //no indentation, write the rest and all subnodes in one line.
         } else if(!content.getName().startsWith("@")){ 
           if(!bContent){
@@ -173,18 +195,22 @@ public class SimpleXmlOutputter
           }
           //if nIndent<0, write no indent in next node level.
           writeNode(out, content, nIndent >=0 ? nIndent+1 : -1);
+          bSubNode = true;
         }
       }
     } else {
       //NOTE: get the text() only if there is no children. Otherwise the summary of text nodes are gotten, that were wrong.
       String text = xmlNode.text(); //the node has not children, but may have text
-      if(text !=null){
+      if(text !=null && text.length() >0){
         out.write(elementTagEnd());
         bContent = true;
         out.write(convertString(text).toString());
       }
     }
     if(bContent) {
+      if(bSubNode && nIndent >=0 && nIndent < sIdent.length()/2)
+      { out.write(sIdent.substring(0, 2+nIndent*2));
+      }
       out.write(elementEnd(sTagName));
     }
     else { 
@@ -194,7 +220,7 @@ public class SimpleXmlOutputter
   
   
   public static String elementStart(String name)
-  { return "<" + name + " ";
+  { return "<" + name;
   }
 
   public static String elementTagEnd()
@@ -210,7 +236,7 @@ public class SimpleXmlOutputter
   }
 
   public static String attribute(String name, String value)
-  { return name + "=\"" + convertString(value) + "\" ";
+  { return " " + name + "=\"" + convertString(value) + "\" ";
   }
   
 

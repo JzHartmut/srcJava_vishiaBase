@@ -1,4 +1,4 @@
-2019-01-01 00:21:55  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-03-10 12:15:25  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -22,7 +22,8 @@
 2011-03-22 14:26:06  x     makejar_zmakeAnt.bat                     ::          1.361  0245857391 
 2011-07-08 19:57:50  x     makejar_zmakeAnt.sh                      ::           .945 -0828541394 
 2014-06-11 22:03:56  x     readme_javac.txt                         ::          2.335 -0109610946 
-2014-12-14 19:18:32  x     setJAVA_JDK_template.bat                 ::           .307  1124999818 
+2019-03-10 11:50:33  x     setJAVA_JDK.bat                          ::           . 90  1303764892 
+2019-03-10 11:50:33  x     setJAVA_JDK_template.bat                 ::           .358  0598044623 
 2016-01-23 19:38:07  x     stylesheet_javadoc.css                   ::         11.170 -1795800443 
 2012-03-03 11:16:26  x     vishiaBase.manifest                      ::           . 33  0938013105 
 2011-02-26 22:43:58  x     zbnf.manifest                            ::           . 40  0205809603 
@@ -54,7 +55,7 @@
 2012-03-03 11:16:26  x     FixArray.java                            ::          2.156 -0220076474 
 2012-03-03 11:16:26  x     IllegalArgumentExceptionJc.java          ::           .258 -0401932868 
 2014-09-06 09:12:18  x     MemC.java                                ::          2.064 -0772417856 
-2012-03-03 11:16:26  x     MemSegmJc.java                           ::          2.427 -0286575285 
+2019-02-20 18:34:45  x     MemSegmJc.java                           ::          2.858  2144699344 
 2014-11-13 20:22:48  x     MemUnit.java                             ::          1.720  0205734236 
 2012-04-09 10:39:34  x     OS_TimeStamp.java                        ::          4.164 -0693122329 
 2012-03-03 11:16:26  x     ThreadContextFW.java                     ::          1.949 -0240030573 
@@ -119,7 +120,7 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2018-10-16 07:14:49  x     JZtxtcmdExecuter.java                    ::        185.693  0121658470 
+2019-02-11 23:00:11  x     JZtxtcmdExecuter.java                    ::        185.729 -1660709000 
 2018-10-16 07:09:41  x     JZtxtcmdFilepath.java                    ::         16.028 -1293032415 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
@@ -176,10 +177,10 @@
 2015-05-25 22:50:41  x     TestFileCluster.java                     ::          1.745  1939760260 
 
 ============================== org/vishia/header2Reflection/ =======================================
-2019-01-01 00:18:39  x     BinOutPrep.java                          ::         16.411  1099743724 
+2019-01-03 14:23:29  x     BinOutPrep.java                          ::         16.411  1999847849 
 2018-12-27 18:22:42  x     BinOutShow.java                          ::          9.770  2018075799 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2018-12-31 10:38:41  x     CheaderParser.java                       ::         59.064 -1677438393 
+2019-01-10 22:23:34  x     CheaderParser.java                       ::         59.845 -0939031354 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
 2018-12-26 17:53:45  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
 2018-12-27 11:49:18  x     Header2Reflection.java                   ::         82.856 -1926959000 
@@ -189,7 +190,7 @@
 2015-04-14 08:43:36  x     Inspcitem.java                           ::          9.817 -0455186767 
 
 ============================== org/vishia/jztxtcmd/ ================================================
-2018-09-22 21:18:51  x     JZtxtcmd.java                            ::         47.668 -1906721296 
+2019-03-10 11:55:15  x     JZtxtcmd.java                            ::         49.274 -1439002090 
 2018-09-21 23:46:48  x     JZtxtcmdSyntax.java                      ::         29.669 -2134218883 
 2018-09-22 20:55:43  x     JZtxtcmdUserExample.java                 ::          1.787 -0446379803 
 2017-04-03 21:49:31  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
@@ -272,7 +273,7 @@
 2018-12-18 00:12:13  x     DataAccess.java                          ::        115.133  1265198912 
 2017-09-19 11:58:19  x     DataShow.java                            ::         27.595 -1895644313 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
-2018-02-11 11:39:56  x     Debugutil.java                           ::           .925 -0874472902 
+2019-01-24 16:42:48  x     Debugutil.java                           ::          1.185 -1596902083 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2013-06-27 19:28:00  x     FileCompare.java                         ::         13.113 -1366728653 
 2018-01-18 18:36:56  x     FileFunction.java                        ::          1.889  0539851708 
@@ -324,11 +325,11 @@
 2016-12-21 16:26:25  x     StringFunctions.java                     ::         46.983  0877900278 
 2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
-2018-12-22 19:12:15  x     StringPart.java                          ::        115.155  1655338590 
+2019-03-10 12:07:15  x     StringPart.java                          ::        117.211 -0793326583 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
-2018-12-22 19:13:52  x     StringPartScan.java                      ::         37.345 -1074033803 
+2019-03-10 12:13:16  x     StringPartScan.java                      ::         38.358  1996947498 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -363,8 +364,8 @@
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
 2018-12-22 21:16:26  x     XmlCfg.java                              ::         22.956  1538764996 
-2018-12-22 22:32:24  x     XmlJzCfgAnalyzer.java                    ::         26.067  1030979974 
-2018-12-22 17:23:12  x     XmlJzReader.java                         ::         26.911  1751848555 
+2019-01-23 13:07:06  x     XmlJzCfgAnalyzer.java                    ::         25.981 -1347782661 
+2019-02-12 13:06:46  x     XmlJzReader.java                         ::         28.382 -0081769184 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2018-12-21 14:55:31  x     TestReadMsc15Cfg.java                    ::          4.956  0581616068 
@@ -372,13 +373,13 @@
 2018-04-13 22:56:01  x     package-info.java                        ::           . 83 -0217379269 
 
 ============================== org/vishia/xmlSimple/ ===============================================
-2018-12-22 20:05:51  x     SimpleXmlOutputter.java                  ::          9.413  1646228870 
+2019-02-05 12:50:00  x     SimpleXmlOutputter.java                  ::         10.206 -0969142989 
 2017-01-25 23:02:51  x     SimpleXmlOutputter_Test.java             ::           .737  0464495945 
 2018-01-07 22:38:28  x     WikistyleTextToSimpleXml.java            ::         60.467 -0091533971 
 2016-11-01 00:06:56  x     WikistyleTextToSimpleXml_old.java        ::         57.152 -0721767767 
 2012-12-26 20:03:22  x     XmlException.java                        ::          1.656 -0761622632 
-2018-09-10 22:04:31  x     XmlNode.java                             ::          6.674  0766037892 
-2018-09-10 22:06:00  x     XmlNodeSimple.java                       ::         13.504 -0074695039 
+2019-01-26 15:48:06  x     XmlNode.java                             ::          7.158 -1065056153 
+2019-01-26 15:48:16  x     XmlNodeSimple.java                       ::         15.043 -0849949223 
 2013-10-27 21:01:40  x     Xsltpre.java                             ::         24.164 -0613607921 
 2012-03-17 08:57:20  x     package-info.java                        ::           .170  2015116723 
 
@@ -388,7 +389,7 @@
 
 ============================== org/vishia/zbnf/ ====================================================
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
-2018-09-13 08:52:44  x     ZbnfJavaOutput.java                      ::         77.826 -1637256888 
+2019-02-05 11:47:25  x     ZbnfJavaOutput.java                      ::         77.871  2012076703 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
 2018-12-22 17:09:39  x     ZbnfParser.java                          ::        157.731  1234207729 
 2018-09-10 09:04:50  x     ZbnfParserStore.java                     ::         49.612  0589982596 

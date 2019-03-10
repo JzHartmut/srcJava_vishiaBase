@@ -10,6 +10,16 @@ public class Debugutil
     return 0;
   }
   
+  /**Stop here while program writing. */
+  public static int todo(){
+    return 0;
+  }
+  
+  /**Adequate assert(false) but possible to set a central breakpoint. Use only while program development. */
+  public static void unexpected(){
+    assert(false);
+  }
+  
   public static int stop(Object toView) {
     return 0;
   }

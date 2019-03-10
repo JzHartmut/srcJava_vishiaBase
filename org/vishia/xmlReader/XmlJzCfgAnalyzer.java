@@ -7,10 +7,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
-import org.vishia.cmd.JZtxtcmdTester;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
@@ -20,7 +18,6 @@ import org.vishia.xmlSimple.XmlException;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 
-import javafx.scene.Node;
 
 /**This class reads any XML file and writes its structure to a XmlCfg format. 
  * With it the xmlCfg to read that file to data can be prepared.

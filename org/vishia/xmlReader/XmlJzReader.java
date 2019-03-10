@@ -261,7 +261,7 @@ public class XmlJzReader
   { 
     if(debugStopLine >=0){
       int line = inp.getLineAndColumn(null);
-      if(line >= debugStopLine)
+      if(line == debugStopLine)
         Debugutil.stop();
     }
     //scan the <tag
@@ -322,19 +322,23 @@ public class XmlJzReader
     @SuppressWarnings("unchecked")
     List<AttribToStore>[] attribsToStore = new List[1];
     //
-    //
+    //For attribute evaluation, use the subCfgNode gotten from sTag. It may be necessary to change the subCfgNode after them. 
     CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribValues);
     if(keyResearch.length() > sTag.length()) {
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
     }
-    //The sub output is correct with keySearch == sTag or a qualified key:
+    //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
     subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode, keyResearch, attribValues);
     //
     //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
-    if(subOutput !=null && attribsToStore[0] !=null) for(AttribToStore e: attribsToStore[0]) {
-      storeAttrData(subOutput, e.daccess, e.name, e.value);
-    }
+    if(attribsToStore[0] !=null) { 
+      if(subOutput ==null) {
+        System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+      } else {
+        for(AttribToStore e: attribsToStore[0]) {
+          storeAttrData(subOutput, e.daccess, e.name, e.value);
+    } } }
     //
     //check content.
     //
@@ -388,7 +392,9 @@ public class XmlJzReader
    * @param tag
    * @param output
    * @param cfgNode
-   * @param attribMap
+   * @param attribMap Reference to a map with key,name for attribute values. 
+   *        The key is given in the config file, cfgNode.({@link XmlCfg.XmlCfgNode#attribs}) contains the association 
+   *        it is not the attribute name anyway, but often the attribute name if the config file determines that. 
    * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
    * @throws Exception
    */
@@ -475,10 +481,10 @@ public class XmlJzReader
 
 
   /**Invokes the associated method to get/create the appropriate data instance for the element.
-   * @param output
-   * @param subCfgNode
-   * @param sTag
-   * @return
+   * @param output The current output in the parent context
+   * @param subCfgNode The cfgNode for the found element
+   * @param sTag it is the keyResearch maybe assembled with attribute values, not only the tag name.
+   * @return output if subCfgNode. elementStorePath is null, either result of an invoked method via {@link DataAccess}
    * @throws Exception
    */
   @SuppressWarnings("static-method")
@@ -488,7 +494,7 @@ public class XmlJzReader
     if(subCfgNode.elementStorePath == null) { //no attribute xmlinput.data="pathNewElement" is given:
       subOutput = output; //use the same output. No new element in data.
     }
-    else {
+    else {  //invoke an routine which gets the new output. The routine may use arguments from attributes.
       try{ 
         int nrArgs = subCfgNode.elementStorePath.nrArgNames();
         Object[] args;
@@ -496,17 +502,19 @@ public class XmlJzReader
           args = new Object[nrArgs]; 
           for(int ix = 0; ix < nrArgs; ++ix) {
             String argName = subCfgNode.elementStorePath.argName(ix);
-            if(attribs !=null && attribs[0]!=null && (args[ix] = attribs[0].get(argName))!=null){} //content of attribute filled in args[ix]
+            if(attribs !=null && attribs[0]!=null) { 
+              args[ix] = attribs[0].get(argName);       //content of attribute filled in args[ix], null if attribute is not found.
+              if(args[ix] == null) {
+                Debugutil.stop();  //admissible.
+              }
+            }
             else if(argName.equals("tag")) { args[ix] = sTag; }
-            else throw new IllegalArgumentException("faulty argnument: " + argName + " in elementStorePath for: " + sTag);
+            else; //not given argument is null. It is fault: throw new IllegalArgumentException("missing argnument in : \'" + subCfgNode.elementStorePath + "(" + argName + ") in elementStorePath for: <" + sTag + " ...>" );
           }
           subOutput = DataAccess.invokeMethod(subCfgNode.elementStorePath, null, output, true, false, args);
         } else {
           //it may be a method too but without textual parameter.
           subOutput = DataAccess.access(subCfgNode.elementStorePath, output, true, false, false, null);
-        }
-        if(subOutput == null) {
-          System.err.println("getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
         }
       } catch(Exception exc) {
         subOutput = null;
@@ -639,6 +647,32 @@ public class XmlJzReader
 
   public XmlCfg readCfg(File file) {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
+    return finishReadCfg();
+  }
+
+
+
+  /**Read from a resource (file inside jar archive).
+   * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
+   *   Usually the clazz should be the output data clazz. 
+   * @param pathInJar relative Path from clazz. 
+   *   Usually the cfg should be in the same directory as the output data class. Then this is only the file name.
+   * @throws IOException
+   */
+  public XmlCfg readCfgFromJar(Class<?> clazz, String pathInJarFromClazz) throws IOException {
+    String pathMsg = "jar:" + pathInJarFromClazz;
+    //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    //classLoader.getResource("slx.cfg.xml");
+    InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
+    if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
+    readXml(xmlCfgStream, pathMsg, this.cfg.rootNode, this.cfgCfg);
+    xmlCfgStream.close();
+    return finishReadCfg();
+  }
+
+
+  
+  private XmlCfg finishReadCfg() {
     cfg.transferNamespaceAssignment(this.namespaces);
     
     if(this.cfg.subtrees !=null) for(Map.Entry<String, XmlCfgNode> e : this.cfg.subtrees.entrySet()) {
@@ -647,29 +681,11 @@ public class XmlJzReader
     }
     return this.cfg;
   }
+  
+  
 
-
-
-  /**Read from a resource (file inside jar archive).
-   * TODO not tested, any error. 
-   * @param pathInJar
-   * @throws IOException
-   */
-  public void readCfgFromJar(String pathInJar) throws IOException {
-    String pathMsg = "jar:" + pathInJar;
-    ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-    //classLoader.getResource("slx.cfg.xml");
-    InputStream xmlCfgStream = classLoader.getResourceAsStream(pathInJar);
-    if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
-    readXml(xmlCfgStream, pathMsg, this.cfg.rootNode, this.cfgCfg);
-    xmlCfgStream.close();
-    cfg.transferNamespaceAssignment(this.namespaces);
-  }
-
-
-
-  public void readXml(File file, Object dst) {
-    this.readXml(file, dst, this.cfg);
+  public String readXml(File file, Object dst) {
+    return this.readXml(file, dst, this.cfg);
   }  
     
   

@@ -76,7 +76,7 @@ public class BinOutPrep
    * 
    */
   //@SuppressWarnings("hiding")
-  public static final String version = "2018-09-08";
+  public static final String version = "2018-12-31";
 
   
   

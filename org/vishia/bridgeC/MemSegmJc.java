@@ -42,12 +42,28 @@ public class MemSegmJc
   }
   
   public MemSegmJc(Object ptr, int segm){
-  	setAddrSegm(ptr, segm);
+    setAddrSegm(ptr, segm);
+  }
+  
+  /**The copy constructor.
+   * @param src given instance, content will be copied to the this new one.
+   */
+  public MemSegmJc(MemSegmJc src){
+    this.ptr = src.ptr;
+    this.segment = src.segment;
   }
   
   public void setAddrSegm(Object ptr, int segm){
-  	this.ptr = ptr;
-  	this.segment = segm;
+    this.ptr = ptr;
+    this.segment = segm;
+  }
+  
+  /**The copy assignment.
+   * @param src given instance, content will be copied to the this.
+   */
+  public void setAddrSegm(MemSegmJc src){
+    this.ptr = src.ptr;
+    this.segment = src.segment;
   }
   
   /**Assignment from another given instance.

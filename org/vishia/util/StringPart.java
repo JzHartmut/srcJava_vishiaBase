@@ -122,6 +122,9 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-01-22 Hartmut There were some mistakes with the position with longer files and smaller buffer in StringPartFromFileLines.
+   * <li>2019-02-10 Hartmut Change of {@link StringPart.Part}: possibility of set, because there is a persistent instance possible for {@link #setCurrentPart(Part)}.
+   *   It is because C-usage. This routines are used in the C-version for the Simulink Sfunction DataStruct...Inspc. 
    * <li>2018-12-22 Hartmut bugfix: Bug: The position in {@link StringPart.Part} were related to the current {@link #content}. 
    *   If the content was shifted in {@link StringPartFromFileLines#readnextContentFromFile(int)} the text referred with a {@link StringPart.Part} were become faulty,
    *   it has referred the same position but the text was shifted in content. 
@@ -231,6 +234,15 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
 
   /**The absolute position of character in the input file of content[0] It is used for {@link StringPartFromFileLines} or adequate reader.*/
   protected int absPos0 = 0;
+  
+  
+  /**Strategy for buffer shifting: {@link #begiMin} should be existing always.
+   * Any of this rewind positions should be existing.
+   * But the user must not forgot to remove the rewind positions.
+   * TODO
+   */
+  private int[] posRewind = new int[20];  //some positions to rewind.
+  
   
   
   /** The referenced string. It is a CharSequence for enhanced using.    */
@@ -650,6 +662,11 @@ public final char charAt(int index){
 }
 
 
+/**Checks whether the char at pos in the current part is one of chars.
+ * @param pos
+ * @param chars
+ * @return
+ */
 @Java4C.Retinline 
 public final boolean checkCharAt(int pos, String chars){
   return (begin + pos >=end) ? false
@@ -2255,9 +2272,10 @@ else return pos - begin;
 
    /** Gets the current position, useable for rewind. This method is overwritten
     * if derived classes uses partial content.
+    * It is the absolute position of the processed String. 
     */ 
    public final long getCurrentPosition()
-   { return begin;
+   { return begin + absPos0;
    }
    
    
@@ -2274,7 +2292,10 @@ else return pos - begin;
     * @param pos the absolute position
     */ 
    public final void setCurrentPosition(long pos)
-   { begin = (int)pos;
+   { if(pos < absPos0) {
+       throw new IllegalArgumentException("Position to rewind is not possible, pos=" + pos + " abspos0=" + absPos0);
+     }
+     begin = (int)(pos - absPos0);
    }
    
 
@@ -2364,6 +2385,15 @@ else return pos - begin;
     if(end > begin) ret_1 = new Part(begin, end);
     else            ret_1 = new Part(begin, begin);
     return ret_1 ;
+  }
+  
+
+  /**Sets the actual part of the string.
+   * 
+   */
+  protected final void setCurrentPart(Part dst)
+  { if(end > begin) dst.setPart(begin, end);
+    else            dst.setPart(begin, begin);
   }
   
 
@@ -2577,7 +2607,7 @@ public final String debugString()
   public final class Part implements CharSequence{ 
     
     /**Absolute positions of part of chars*/
-    final int b1, e1, absPos0;
+    private int b1, e1, absPos0;
     
     
     /**A subsequence
@@ -2585,11 +2615,18 @@ public final String debugString()
      * @param to
      */
     protected Part(int from, int to){
+      setPart(from, to);
+    }
+    
+    
+    
+    protected void setPart(int from, int to) {
       assert(from >= 0 && from <= endMax);
       assert(to >= 0 && to <= endMax);
       assert(from <= to);
       b1 = from; e1 = to; this.absPos0 = StringPart.this.absPos0;
     }
+    
     
     
     @Override
@@ -2624,6 +2661,23 @@ public final String debugString()
     @Override final public String toString(){
       return absSubString(absPos0 - StringPart.this.absPos0 + b1, absPos0 - StringPart.this.absPos0 + e1);
     }
+    
+    
+    
+    /**Copy to any other buffer to build persistent data. 
+     * @param dst should be allocated with enough space, use this.{@link #length()} to detect how much is necessary.
+     * @param from usual 0
+     * @return the number of copied character
+     */
+    int copyToBuffer(char[] dst, int from, int to) {
+      int max = Math.min(to - from, dst.length - from);
+      if (max > e1 - b1) { max = e1 - b1; }
+      for(int ix = absPos0 - StringPart.this.absPos0 + b1; ix < absPos0 - StringPart.this.absPos0 + b1 + max ; ++ix ) {
+        dst[from++] = StringPart.this.content.charAt(ix);
+      }
+      return max;
+    }
+    
     
     
     /**Builds a new Part without leading and trailing white spaces.

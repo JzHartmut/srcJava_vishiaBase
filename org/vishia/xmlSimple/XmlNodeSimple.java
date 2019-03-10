@@ -1,5 +1,6 @@
 package org.vishia.xmlSimple;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -170,14 +171,14 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   }
 
   
-  public XmlNode createNode(String name, String namespaceKey)
+  @Override public XmlNode createNode(String name, String namespaceKey)
   { return new XmlNodeSimple<UserData>(name,namespaceKey);
   }
 
   
   
   @SuppressWarnings("unchecked")
-  @Override public void setAttribute(String name, String value)
+  @Override public XmlNode setAttribute(String name, String value)
   { String aname = "@" + name;
     XmlNodeSimple<UserData> attribute = (XmlNodeSimple<UserData>)getChild(aname);
     if(attribute ==null){
@@ -185,10 +186,11 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
       addNode(attribute);
     }
     attribute.text = value;
+    return this;
   }
   
   @SuppressWarnings("unchecked")
-  public void setAttribute(String name, String namespaceKey, String value)
+  @Override public void setAttribute(String name, String namespaceKey, String value)
   { String aname = namespaceKey + ":@" + name;
     XmlNodeSimple<UserData> attribute = (XmlNodeSimple<UserData>)getChild(aname);
     if(attribute ==null){
@@ -206,7 +208,7 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   /* (non-Javadoc)
    * @see org.vishia.xmlSimple.XmlNode#addContent(java.lang.String)
    */
-  public XmlNode addContent(String text)
+  @Override public XmlNode addContent(String text)
   { if(!hasChildren()){ 
       if(this.text == null){ //the first text
         this.text = text;
@@ -229,8 +231,19 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   /* (non-Javadoc)
    * @see org.vishia.xmlSimple.XmlNode#addNewNode(java.lang.String, java.lang.String)
    */
-  public XmlNode addNewNode(String name, String namespaceKey) throws XmlException
+  @Override public XmlNode addNewNode(String name, String namespaceKey) throws XmlException
   { XmlNode node = new XmlNodeSimple<UserData>(name, namespaceKey);
+    addContent(node);
+    return node;
+  }
+  
+  
+  
+  /* (non-Javadoc)
+   * @see org.vishia.xmlSimple.XmlNode#addNewNode(java.lang.String, java.lang.String)
+   */
+  @Override public XmlNode addNewNode(String name) throws XmlException
+  { XmlNode node = new XmlNodeSimple<UserData>(name);
     addContent(node);
     return node;
   }
@@ -241,7 +254,7 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
    * @see org.vishia.xmlSimple.XmlNode#addContent(org.vishia.xmlSimple.XmlNode)
    */
   @SuppressWarnings("unchecked")
-  public XmlNode addContent(XmlNode child) 
+  @Override public XmlNode addContent(XmlNode child) 
   throws XmlException 
   { if(!hasChildren() && text !=null){
       //add a text as child because the node has more as one child.
@@ -249,7 +262,7 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
       addNode(textchild);
     
     }
-    String nameChild = child.getName();
+    //String nameChild = child.getName();
     if(child instanceof XmlNodeSimple<?>){
       XmlNodeSimple<UserData> child1 = (XmlNodeSimple<UserData>) child;
       addNode(child1);
@@ -270,10 +283,10 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   
   
   
-  public boolean isTextNode(){ return namespaceKey != null && namespaceKey.equals("$"); } // || !name.startsWith("@") && text !=null; }
+  @Override public boolean isTextNode(){ return namespaceKey != null && namespaceKey.equals("$"); } // || !name.startsWith("@") && text !=null; }
   
   /**Returns the text of the node. If it isn't a text node, the tagName is returned. */
-  public String text()
+  @Override public String text()
   { if(text !=null) 
     { //it is a text node.
       return text;
@@ -291,11 +304,11 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   }
   
   /**Returns the text if it is a text node. If it isn't a text node, the tagName is returned. */
-  public String getName(){ return name; }
+  @Override public String getName(){ return name; }
   
-  public String getNamespaceKey(){ return namespaceKey; }
+  @Override public String getNamespaceKey(){ return namespaceKey; }
   
-  public String getAttribute(String name)
+  @Override public String getAttribute(String name)
   { XmlNodeSimple<UserData> attribute = getNode("@" + name, "/");
     if(attribute !=null){
       assert(attribute.text !=null);
@@ -309,7 +322,7 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
    * @see org.vishia.xmlSimple.XmlNode#getAttributes()
    * @since 2018-09: regard nameSpace for attributes
    */
-  public Map<String, String> getAttributes()
+  @Override public Map<String, String> getAttributes()
   {
     Map<String, String> mapAttributes = new TreeMap<String, String>();
     List<XmlNode> attributes = listChildren();
@@ -331,12 +344,44 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
     return mapAttributes;
   }
 
-  public Map<String, String> getNamespaces()
+  
+  
+  /**Prepares a List for attributes from given children. 
+   * Invokes {@link #listChildren()} and checks whether the name starts with "@".
+   * @see org.vishia.xmlSimple.XmlNode#getAttributes()
+   * @since 2019-01: because attributes should be sorted in given order, not in alphabetic one.
+   */
+  @Override public List<String[]> getAttributeList()
+  {
+    List<String[]> listAttributes = new LinkedList<String[]>();
+    List<XmlNode> attributes = listChildren();
+    if(attributes !=null){
+      for(XmlNode attrib: attributes){
+        String name = attrib.getName();
+        if(name.startsWith("@")){
+          String nameAttr;
+          String namespace = attrib.getNamespaceKey();
+          if( namespace !=null) {
+            nameAttr = namespace + ":" + name.substring(1);
+          } else {
+            nameAttr = name.substring(1);
+          }
+          String[] sAttrib = new String[2];
+          sAttrib[0] = nameAttr;
+          sAttrib[1] = attrib.text();
+          listAttributes.add(sAttrib);
+        }
+      }
+    }
+    return listAttributes;
+  }
+
+  @Override public Map<String, String> getNamespaces()
   {
     return namespaces;
   }
 
-  public String removeAttribute(String name)
+  @Override public String removeAttribute(String name)
   {
     XmlNodeSimple<UserData> attribute = getNode("@" + name, "/");
     if(attribute !=null){

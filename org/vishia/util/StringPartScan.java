@@ -51,6 +51,11 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-02-10 Hartmut For the C deployment a more simple access to the parse result was necessary. It is adapted here too: 
+   * <ul><li> {@link #sLastString} is now a final instance, not a reference, set in {@link #setCurrentPart(Part)}.
+   *     <li> It is set with the scan result in some routines, for example in {@link #scanQuotion(CharSequence, String, String[], int)},
+   *          {@link #scanIdentifier(String, String)}
+   * </ul>         
    * <li>2017-09-17 Hartmut new: {@link #seekScanPos(int)} invokes {@link StringPart#seekPos(int)} but returns this as StringPartScan to concatenate.
    *   It is the first typical routine for concatenation. TODO more. The problem is, the routines from {@link StringPart} can be invoked, but not simple concatenate.
    * <li>2017-12-30 Hartmut new: {@link #getLastScannedPart()}
@@ -93,7 +98,7 @@ public class StringPartScan extends StringPart
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static int version = 20131027; 
+  public final static String sVersion = "2019-03-10"; 
 
   
   /**Position of scanStart() or after scanOk() as begin of next scan operations. */
@@ -118,8 +123,10 @@ public class StringPartScan extends StringPart
   /**current index of the last scanned float number. -1=nothing scanned. 0..4=valid*/
   private int idxLastFloatNumber = -1;
   
-  /** Last scanned string. */
-  protected CharSequence sLastString;
+  /** Last scanned string. 
+   * It is able to use as CharSequence. see {@link #getLastScannedString()} 
+   * It is more C-friendly with a nested instance. No heap effort. */
+  protected final Part sLastString = new Part(0,0);
   
 
   
@@ -320,7 +327,7 @@ public class StringPartScan extends StringPart
       if(bCurrentOk)
       { //TODO ...ToEndString, now use only 1 char in sQuotionMarkEnd
         if(sResult != null) sResult[0] = getCurrentPart().toString();
-        else this.sLastString = getCurrentPart();
+        else this.setCurrentPart(sLastString);
         fromEnd().seekPos(sQuotionMarkEnd.length());
       }
       else bCurrentOk = false; 
@@ -668,7 +675,7 @@ public class StringPartScan extends StringPart
   { if(scanEntry())
     { lentoIdentifier(additionalStartChars, additionalChars);
       if(bFound)
-      { sLastString = getCurrentPart();
+      { setCurrentPart(sLastString);
         begin = end;  //after identifier.
       }
       else
@@ -731,10 +738,21 @@ public class StringPartScan extends StringPart
   
   
   /**Returns the part of the last scanning yet only from {@link #scanIdentifier()}
+   * @return A persistent String of the last scanned String.
+   */
+  public final String getLastScannedString()
+  { return sLastString.toString();
+  }
+  
+
+  
+  /**Returns the part of the last scanning non persistently.
+   * If the scanning continues with String scanning the returned instance will be resued.
    * @return The CharSequence which refers in the parent sequence. Use toString() if you need
    *   an persistent String.
+   * @since 2019-02. It is optimized for C usage. No new operator is used.  
    */
-  public final CharSequence getLastScannedString()
+  public final StringPart.Part getLastScannedPart( int nr)
   { return sLastString;
   }
   
@@ -909,7 +927,7 @@ public class StringPartScan extends StringPart
   public void close()
   {
     super.close();
-    sLastString = null;
+    //sLastString = null;
     beginScan = 0;
     bCurrentOk = bFound = false;
 

@@ -33,6 +33,7 @@ import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
 import org.vishia.util.FileSystem;
+import org.vishia.util.StringFormatter;
 import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -130,6 +131,8 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-02-20 Hartmut chg {@link #execSub(File, String, Map, org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel, Appendable)} with Appendable as argument.
+   *   The old form without this argument is available too.  
    * <li>2017-01-01 Hartmut chg adaption to {@link JZtxtcmdExecuter}- 
    *   Now {@link #execute(JZtxtcmdExecuter, File, Appendable, List, String, boolean, File, MainCmdLogging_ifc)}
    *   with List-given additional variables are available. Note that {@link JZtxtcmdExecuter#setScriptVariable(String, char, Object, boolean)}
@@ -180,7 +183,7 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2017-01-13";
+  static final public String version = "2019-02-20";
 
   
   private static class Args{
@@ -431,28 +434,63 @@ INPUT          pathTo JZcmd-File to execute
    */
   public static CharSequence execSub(File fileScript, String subroutine
       , Map<String, DataAccess.Variable<Object>> args
-      , JZtxtcmdExecuter.ExecuteLevel execLevel)
+      , JZtxtcmdExecuter.ExecuteLevel execLevel
+      , Appendable output)
   {
+    StringFormatter fout = output == null ? null: new StringFormatter(output, false, "\n", 300);
     
     MainCmdLogging_ifc log = execLevel.log();
     //boolean bWaitForThreads = false;
     //Copy all local variables of the calling level as script variables.
+    short success = 0;
+    String error = "";
     try { 
       JZtxtcmdScript jzscript = translateAndSetGenCtrl(fileScript, null, log);
       JZtxtcmdScript.Subroutine substatement = jzscript.getSubroutine(subroutine);
       //the script variables are build from the local ones of the calling script:
-      execLevel.exec_Subroutine(substatement, args, null, -1);
-      //executer.execute(genScript, true, bWaitForThreads, null, null);
-      //zgenExecuteLevel.execute(genScript.getMain().subContent, u, false);
+      success = execLevel.exec_Subroutine(substatement, args, fout, -1);
+      if(success == JZtxtcmdExecuter.kException) {
+        DataAccess.Variable<Object> verror = execLevel.localVariables.get("error");
+        if(verror !=null) {
+          error = verror.value().toString();
+        }
+      }
     } catch (Exception exc) {
-      String sError = exc.getMessage();
-      System.err.println(sError);
+      error = exc.getMessage();
+      System.err.println(error);
     }
     
-    return "";    
+    return error;    
     
   }
+
   
+  
+  
+  
+  /**Executes a sub routine in a special script, but uses a given execution environment.
+   * The script level of the special script is not used. The script variables are taken from the existing level.
+   * It means the script should only contain some subroutine codes.
+   * This routine can be called inside another script with invocation:
+   * <pre>
+   * { ## any JZcmd script
+   *     Map args;
+   *     String args.name  = value;
+   *     java org.vishia.zcmd.JZcmd.execSub(File:"path/JZcmdscript.jzcmd", "class.subroutine-Name", args, jzcmdsub);
+   * }
+   * </pre>
+   * @param fileScript The file which contains the script
+   * @param subroutine name of the subroutine in the script.
+   * @param args Arguments for this subroutine.
+   * @param execLevel Execution level where this routine from where it is called.
+   * @return
+   */
+  public static CharSequence execSub(File fileScript, String subroutine
+      , Map<String, DataAccess.Variable<Object>> args
+      , JZtxtcmdExecuter.ExecuteLevel execLevel)
+  {
+    return execSub(fileScript, subroutine, args, execLevel, null);
+  }
   
   
   /**Executes a sub routine in a special script, but uses a given execution environment.

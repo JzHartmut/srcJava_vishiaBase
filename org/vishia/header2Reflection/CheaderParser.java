@@ -546,6 +546,9 @@ public class CheaderParser {
      */
     public Type reflType;
     
+    /**Type of the variable arguments given in Description. */
+    public AttributeOrTypedef varg;
+    
     public void set_text(String text){ this.text += text; }
     
     /**Add more as one simulinkTag with ":value:", get with simulinkTag.contains(":value:") */
@@ -557,6 +560,12 @@ public class CheaderParser {
     public void set_acclevel(String val){ accLevel = val.charAt(0) - '0'; }
     
     public void set_chglevel(String val){ chgLevel = val.charAt(0) - '0'; }
+    
+    
+    
+    public AttributeOrTypedef new_varg() { return varg = new AttributeOrTypedef(); }
+    
+    public void add_varg(AttributeOrTypedef val) {}
     
     
     public final ParamDescription new_paramDescription(){ return new ParamDescription();}
@@ -1121,6 +1130,15 @@ public class CheaderParser {
     public Description new_description() { return description = new Description(); }
     public void add_description(Description val){ /*already added.*/ } 
   
+    /**This routine is used especially for {@link Description#varg} to store a single attribute where this class is used in syntax.
+     * Inside the syntax <code>{&lt;?+attribute&gt; ...  }</code> is contained. That forces the storing of the attribute inside its container.
+     * If this class is used as container for an single attribute, this operation is used. 
+     * @return
+     */
+    public AttributeOrTypedef new_attribute() { return this; }
+    public void set_attribute(AttributeOrTypedef val) {}
+    
+    
     @Override public String toString(){ return name + ": " + type; }
   
   

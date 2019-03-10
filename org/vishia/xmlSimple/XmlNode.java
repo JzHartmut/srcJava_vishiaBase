@@ -1,5 +1,6 @@
 package org.vishia.xmlSimple;
 
+import java.util.List;
 import java.util.Map;
 
 import org.vishia.util.SortedTree;
@@ -72,8 +73,9 @@ public interface XmlNode extends SortedTree<XmlNode>
    * 
    * @param name
    * @param value
+   * @return this
    */
-  public void setAttribute(String name, String value);
+  public XmlNode setAttribute(String name, String value);
   
   /**Sets an attribute by name.
    * 
@@ -115,6 +117,15 @@ public interface XmlNode extends SortedTree<XmlNode>
    */
   public XmlNode addNewNode(String name, String namespaceKey) throws XmlException;
   
+  /**adds and returns a new child node.
+   * 
+   * @param name
+   * @param namespaceKey
+   * @return the new created node.
+   * @throws XmlException
+   */
+  public XmlNode addNewNode(String name) throws XmlException;
+  
   /**removes all children, also textual content, but not attributes. */
   public void removeChildren();  
   
@@ -145,8 +156,13 @@ public interface XmlNode extends SortedTree<XmlNode>
   /**returns the requested attribute or null if it is not existing. */
   public String getAttribute(String name);
 
-  /**returns all attributes. */
+  /**returns all attributes Sorted by "namespace:name" or "name". */
   public Map<String, String> getAttributes();
+  
+  /**Returns a list of attributes in its given order. 
+   * @return List of : element[0] is the namespace:name, element[1] is the value.
+   */
+  List<String[]> getAttributeList();
 
   /**removes the requested attribute. If the attribute is not existing, this method does nothing. */
   public String removeAttribute(String name);

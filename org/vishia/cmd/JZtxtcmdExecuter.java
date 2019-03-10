@@ -476,7 +476,7 @@ public class JZtxtcmdExecuter {
   private static final short kFalse = -3;
   
   /**Has thrown an not catch exception. onerror statement not found. */
-  private static final short kException = -5;
+  public static final short kException = -5;
   
   /**Should continue. */
   public static final short kSuccess = 0;
@@ -3338,7 +3338,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           return new File(currdir, dataAccess.filepath);
         }
       } else */{
-        calculateArguments(dataAccess);
+        calculateArguments(dataAccess);  //resolves an indirectDatapath too.
         return DataAccess.access(dataAccess.datapath(), dataPool, accessPrivate, bContainer, bVariable, dst);
       }
     }
