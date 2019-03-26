@@ -144,16 +144,18 @@ public class StringFunctions {
   
   
   /**Returns the position after the end of an identifier.
+   * Note: An identifier usual never starts with 0..9. But this routine assumes that it is an identifier. 
+   * It means starting with 0..9 should be detected and processed outside. If this src starts with 0..9 it is accepted here.
    * @param src The input string
    * @param start at this position the identifier starts.
-   * @param endq max number of chars to check
-   * @param additionalStartChars maybe null, some chars as additional start chars of an identifier.
-   * @param additionalChars maybe null, some chars as additional chars of an identifier.
+   * @param endMax max number of chars to check. 0 for no limitation. If endMax is > src.length() it is set to src.length().
+   * @param additionalChars maybe null, some chars as additional chars of an identifier, inside and as start.
    * @return 0 if src[start] doesn't match to an identifier character, number of found identifier chars after src until end.
    */
   public static int indexAfterIdentifier(CharSequence src, int start, int endMax, String additionalChars){
     int pos = start;
     int end = src.length();
+    if(endMax < 0) { end = end + endMax; }  //-1 means: not the last character.
     if(endMax > 0 && endMax < end){ end = endMax; }
     char cc;
     while(  pos < end 

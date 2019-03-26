@@ -259,9 +259,10 @@ public class XmlJzReader
   private void parseElement(StringPartFromFileLines inp, Object output, XmlCfg.XmlCfgNode cfgNode) 
   throws Exception
   { 
+    int dbgline = -7777;
     if(debugStopLine >=0){
-      int line = inp.getLineAndColumn(null);
-      if(line == debugStopLine)
+      dbgline = inp.getLineAndColumn(null);
+      if(dbgline == debugStopLine)
         Debugutil.stop();
     }
     //scan the <tag
@@ -323,7 +324,11 @@ public class XmlJzReader
     List<AttribToStore>[] attribsToStore = new List[1];
     //
     //For attribute evaluation, use the subCfgNode gotten from sTag. It may be necessary to change the subCfgNode after them. 
+    //
+    if(dbgline == debugStopLine)
+      Debugutil.stop();
     CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribValues);
+    //
     if(keyResearch.length() > sTag.length()) {
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
@@ -442,6 +447,7 @@ public class XmlJzReader
         }
         else {
           sAttrNsName = sAttrNsNameRaw;
+          
         }
         if(sAttrNsName !=null) {
           XmlCfg.AttribDstCheck cfgAttrib = null;
@@ -456,7 +462,7 @@ public class XmlJzReader
               if(keyretBuffer == null) { keyretBuffer = new StringBuilder(64); keyretBuffer.append(tag); keyret = keyretBuffer; }
               keyretBuffer.append("@").append(sAttrNsName).append("=\"").append(sAttrValue).append("\"");
             }
-            else if(cfgAttrib.daccess !=null) {
+            else if(cfgAttrib.daccess !=null) { //store the dataaccess to eval if the element is created.
               if(attribsToStore[0]==null) {attribsToStore[0] = new LinkedList<AttribToStore>(); }
               attribsToStore[0].add(new AttribToStore(cfgAttrib.daccess, sAttrNsName.toString(), sAttrValue));
             } else if(cfgAttrib.storeInMap !=null) {
@@ -647,7 +653,8 @@ public class XmlJzReader
 
   public XmlCfg readCfg(File file) {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
-    return finishReadCfg();
+    cfg.finishReadCfg(this.namespaces);
+    return this.cfg;
   }
 
 
@@ -667,20 +674,12 @@ public class XmlJzReader
     if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
     readXml(xmlCfgStream, pathMsg, this.cfg.rootNode, this.cfgCfg);
     xmlCfgStream.close();
-    return finishReadCfg();
-  }
-
-
-  
-  private XmlCfg finishReadCfg() {
-    cfg.transferNamespaceAssignment(this.namespaces);
-    
-    if(this.cfg.subtrees !=null) for(Map.Entry<String, XmlCfgNode> e : this.cfg.subtrees.entrySet()) {
-      XmlCfgNode subtree = e.getValue();
-      subtree.dstClassName = subtree.tag.toString();
-    }
+    cfg.finishReadCfg(this.namespaces);
     return this.cfg;
+
   }
+
+
   
   
 

@@ -225,6 +225,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2018-09-09 Hartmut new {@link #lineFile} element in all Prescripts, using for {@link ZbnfParser#setDebugPosition(int, int, int)}.
    * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
    *   but the EType can contain some more information. It are used for generating a Java Output.java from the syntax proper for {@link ZbnfJavaOutput}.
    * <li>2017-03-25 Hartmut new: Possibility to add attributes to the syntax item. See ZBNF-core-Documentation, using <...?.name=value?...>
@@ -273,6 +274,9 @@ public class ZbnfSyntaxPrescript
    */
   protected String sSemantic;
 
+  /**For debugging and error report: The line in the syntax file. */
+  final int lineFile;
+  
   /** if it is set, the semantic of this component should be assigned into the next component
    * of the outer prescript.
    */
@@ -494,8 +498,8 @@ public class ZbnfSyntaxPrescript
     /**If it is a Regular Expression, the compiled regex is available here. */
     Pattern regex = null;
 
-    ComplexSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
-    { super(parent, report, bWithSyntaxList);
+    ComplexSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
+    { super(parent, report, bWithSyntaxList, linefile);
     }
 
 
@@ -777,14 +781,15 @@ public class ZbnfSyntaxPrescript
     /** Syntax of the repetition path */
     ZbnfSyntaxPrescript backward;
 
-    RepetitionSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
-    { super(parent, report, bWithSyntaxList);
+    RepetitionSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
+    { super(parent, report, bWithSyntaxList, linefile);
     }
   }
 
   /** Constructor only fills the data.*/
-  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList)
+  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
   { this.report = report;
+    this.lineFile = linefile;
     this.sCommentStart1 = parent.sCommentStart1;
     this.sCommentStart2 = parent.sCommentStart2;
     
@@ -793,8 +798,9 @@ public class ZbnfSyntaxPrescript
   }
 
   /** Constructor only fills the data.*/
-  private ZbnfSyntaxPrescript(MainCmdLogging_ifc report, boolean bWithSyntaxList, String sCommentStart1, String sCommentStart2)
+  private ZbnfSyntaxPrescript(MainCmdLogging_ifc report, boolean bWithSyntaxList, String sCommentStart1, String sCommentStart2, int linefile)
   { this.report = report;
+    this.lineFile = linefile;
     this.sCommentStart1 = sCommentStart1;
     this.sCommentStart2 = sCommentStart2;
     
@@ -803,8 +809,9 @@ public class ZbnfSyntaxPrescript
   }
 
   /** Constructor only fills the data.*/
-  ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, EType type)
+  ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, EType type, int linefile)
   { eType = type;
+    this.lineFile = linefile;
     this.sCommentStart1 = parent ==null ? null : parent.sCommentStart1;
     this.sCommentStart2 = parent ==null ? null : parent.sCommentStart2;
     this.parent =parent;
@@ -836,7 +843,7 @@ public class ZbnfSyntaxPrescript
   static ZbnfSyntaxPrescript createWithSyntax(StringPartScan spInput, String sCommentStart1, String sCommentStart2, MainCmdLogging_ifc report)
   throws ParseException
   {
-    ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(report, true, sCommentStart1, sCommentStart2);
+    ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(report, true, sCommentStart1, sCommentStart2,0);
     ret.convertSyntaxDefinition(spInput);
     return ret;
   }
@@ -1066,7 +1073,7 @@ public class ZbnfSyntaxPrescript
         spInput.seekNoWhitespaceOrComments();
         if(spInput.found() && bWhiteSpaces)
         {
-          childsAdd(new ZbnfSyntaxPrescript(this, EType.kSkipSpaces));
+          childsAdd(new ZbnfSyntaxPrescript(this, EType.kSkipSpaces, spInput.getLineAndColumn(null)));
         }
         CharSequence sSyntaxOnStartForErrorNothingFoundChild = spInput.getCurrent(20);
         char cc;
@@ -1110,14 +1117,14 @@ public class ZbnfSyntaxPrescript
                     cEnd = ']';
                   }
                   else  
-                  { ZbnfSyntaxPrescript alternative = new ZbnfSyntaxPrescript(this, report, true);
+                  { ZbnfSyntaxPrescript alternative = new ZbnfSyntaxPrescript(this, report, true, spInput.getLineAndColumn(null));
                     cEnd = alternative.convertTheStringGivenSyntax(spInput, charsEnd + "|", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
                     //add the founded syntax as alternative.
                     if(!bChildSyntaxAreAlternatives)
                     { //it is the second alternative,the first one 
                       //founded syntax before, that is the first alternative.
                       //transfer it to a new ZbnfsyntaxPrescript:
-                      ZbnfSyntaxPrescript firstAlternative = new ZbnfSyntaxPrescript(this, report, true);
+                      ZbnfSyntaxPrescript firstAlternative = new ZbnfSyntaxPrescript(this, report, true, spInput.getLineAndColumn(null));
                       firstAlternative.childSyntaxPrescripts = childSyntaxPrescripts; 
                       childSyntaxPrescripts = new ArrayList<ZbnfSyntaxPrescript>();
                       bChildSyntaxAreAlternatives = true;
@@ -1169,7 +1176,7 @@ public class ZbnfSyntaxPrescript
               */
               if(sqTerminateChars[0].length() >0){
                 String sTerminateString = sqTerminateChars[0].toString();
-                ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false);
+                ZbnfSyntaxPrescript terminateSyntax = new ZbnfSyntaxPrescript(this, report, false, spInput.getLineAndColumn(null));
                 terminateSyntax.eType = sTerminateString.startsWith(sCommentStart1) || sTerminateString.startsWith(sCommentStart2) 
                     ? EType.kTerminalSymbolInComment : EType.kTerminalSymbol;
                 terminateSyntax.sDefinitionIdent = "i-text";
@@ -1238,7 +1245,7 @@ public class ZbnfSyntaxPrescript
     private ComplexSyntax convertSyntaxComponent(StringPartScan spInput)
     throws ParseException
     {
-      ComplexSyntax actionItem = new ComplexSyntax(this, report, false);
+      ComplexSyntax actionItem = new ComplexSyntax(this, report, false, spInput.getLineAndColumn(null));
       spInput.seek(1);
       actionItem.convertSyntaxComponent(spInput);
       return actionItem;
@@ -1248,7 +1255,7 @@ public class ZbnfSyntaxPrescript
     private ZbnfSyntaxPrescript convertOptionSyntax(StringPartScan spInput, boolean bWhiteSpaces, CharSequence sSyntaxOnStartForErrorNothingFoundChild)
     throws ParseException
     {
-      ZbnfSyntaxPrescript optionItem = new ZbnfSyntaxPrescript(this, report, true);
+      ZbnfSyntaxPrescript optionItem = new ZbnfSyntaxPrescript(this, report, true, spInput.getLineAndColumn(null));
       //optionItem = optionItem.new Syntax();
       spInput.seek(1);
       optionItem.convertAssociatedSemantic(spInput);
@@ -1300,14 +1307,14 @@ public class ZbnfSyntaxPrescript
     private RepetitionSyntax convertRepetitionSyntax(StringPartScan spInput, boolean bWhiteSpaces, CharSequence sSyntaxOnStartForErrorNothingFoundChild)
     throws ParseException
     {
-      RepetitionSyntax repetitionItem = new RepetitionSyntax(this, report, true);
+      RepetitionSyntax repetitionItem = new RepetitionSyntax(this, report, true, spInput.getLineAndColumn(null));
       spInput.seek(1);
       //repetitionItem = repetitionItem.new Syntax();
       repetitionItem.sDefinitionIdent = "i-Repetition";
       repetitionItem.eType = EType.kRepetition;
       char cEnd = repetitionItem.convertTheStringGivenSyntax(spInput, "?}", bWhiteSpaces, sSyntaxOnStartForErrorNothingFoundChild);
       if(cEnd == '?')
-      { repetitionItem.backward = new ZbnfSyntaxPrescript(this, report, true);
+      { repetitionItem.backward = new ZbnfSyntaxPrescript(this, report, true, spInput.getLineAndColumn(null));
         repetitionItem.backward.eType = EType.kRepetitionRepeat;
         //repetitionItem.backward = repetitionItem.backward.new Syntax();
         repetitionItem.backward.sDefinitionIdent = "i-RepetitionRepeat";

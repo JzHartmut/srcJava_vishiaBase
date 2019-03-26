@@ -27,7 +27,6 @@ package org.vishia.zbnf;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
@@ -132,6 +131,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-03-20 Hartmut new: #dbgPosFrom etc {@link #setDebugPosition(int, int, int)} for low level source debugging (Eclipse) on special problems. 
    * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
    * <li>2017-08-27 Hartmut new: {@link #getResultNode()}. To evaluate the result with JZtxtcmd immediately without interim store.
    * <li>2017-03-25 Hartmut new: The {@link ZbnfSyntaxPrescript} syntax item is stored in the {@link ZbnfParserStore.ParseResultItemImplement}. 
@@ -258,7 +258,7 @@ public class ZbnfParser
 
   /*package private*/ final static int mXmlSrcline_xmlWrmode = 0x1, mXmlSrctext_xmlWrmode = 0x2;
 
-
+  int dbgPosFrom, dbgPosTo, dbgLineSyntax;
   
   
   /** Class to organize parsing of a component with a own prescript.
@@ -929,6 +929,13 @@ public class ZbnfParser
             )
             stop();
         }  
+        int inputPos;
+        if(dbgPosFrom > 0 && (inputPos = (int)input.getCurrentPosition()) >= dbgPosFrom && inputPos < dbgPosTo
+          && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
+            ) {
+          Debugutil.stop();
+        }
+        
         /** white space and comments are not skipped to provide it to terminal symbols.
          * All sub-syntaxtests are called here in the same kind.
          */
@@ -2520,6 +2527,17 @@ public class ZbnfParser
     setSyntax(fileImport);
   }
   
+  
+  
+  /**Sets info for debug break, see using of {@link #dbgPosFrom} etc.
+   * @param from The absolute char positon, not the line, it is outputted on error reports
+   * @param to if the current position is between from and to, the break condition met.
+   * @param lineSyntax Additional condition: Only if the semantic item on this line is used. It is the definition::= line in the zbnf script.
+   *   Use 0 if it should be inactive.
+   */
+  public void setDebugPosition(int from, int to, int lineSyntax) {
+    this.dbgPosFrom = from; this.dbgPosTo = to; this.dbgLineSyntax = lineSyntax;
+  }
   
   
   

@@ -1,5 +1,7 @@
 package org.vishia.xmlReader;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -8,6 +10,7 @@ import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
+import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
 /**This class contains the configuration data to assign xml elements to Java data.
  * It is filled with the {@link XmlJzReader#readCfg(java.io.File)} from a given xml file.
@@ -81,6 +84,10 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2019-03-13 new {@link XmlCfgNode#addFromSubtree(XmlCfgNode)} copies only not defined attributes from the subtree block definition.
+   *   hence the definition of an attribute in the call subtree line is prior to the attribute defined in the subtree. 
+   * <li>2019-03-13 new {@link #subtreeForward}. It is possible that a definition in a subtree uses another subtree which is declared below. 
+   *   The information from the subtree will be copied on end of reading config. {@link #finishReadCfg(Map)} (moved from XmlJzReader) does it. 
    * <li>2018-08-15 element subNodeUnspec removed, instead store key="?" in {@link XmlCfgNode#subnodes}. 
    * <li>2018-08-15 {@link #newCfgCfg()} more simple. Don't use the root node as config for root node.
    * <li>2018-08-15 {@link #newCfgReadStruct()} accepts all XML structures, stores the structure of the nodes and attributes.
@@ -123,6 +130,9 @@ public class XmlCfg
   /**Configuration for subtrees which can occur anywhere in the XML file. A subtree have to be determined by a tag name of its root element.
    * With them it can be found here. */
   Map<String, XmlCfgNode> subtrees;
+  
+  /**entries of usage of subtree instances which are defined later in the text. */
+  Map<String, List<XmlCfgNode>> subtreeForward;
   
   XmlCfgNode rootNode = new XmlCfgNode(null, this, "root");
 
@@ -186,9 +196,10 @@ public class XmlCfg
    */
   XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
   {
+    String sname = name.toString();
     XmlCfgNode subtreeRoot = new XmlCfgNode(null, this, name); //The root for a subtree configuration structure.
     if(subtrees == null) { subtrees = new IndexMultiTable<String, XmlCfgNode>(IndexMultiTable.providerString); }
-    subtrees.put(name.toString(), subtreeRoot);  //config-global types of subtrees
+    subtrees.put(sname, subtreeRoot);  //config-global types of subtrees
     return subtreeRoot;
   }
   
@@ -207,6 +218,28 @@ public class XmlCfg
 
   
   
+  
+  
+  void finishReadCfg(Map<String, String> namespaces) {
+    this.transferNamespaceAssignment(namespaces);
+    
+    if(this.subtrees !=null) for(Map.Entry<String, XmlCfgNode> e : this.subtrees.entrySet()) {
+      XmlCfgNode subtree = e.getValue();
+      subtree.dstClassName = subtree.tag.toString();
+      //
+      //check whether other subtrees has using this subtree as forward:
+      List<XmlCfgNode> subtreeUsage = this.subtreeForward ==null ? null: this.subtreeForward.get(subtree.tag.toString());
+      if(subtreeUsage !=null) {
+        for(XmlCfgNode e1: subtreeUsage) {
+          e1.addFromSubtree(subtree);
+        }
+      }
+      //
+    }
+    this.subtreeForward = null; //processed, no more necessary.
+    
+  }
+
   
   /**An instance of this class describes for any attribute how to proceed-
    */
@@ -317,14 +350,21 @@ public class XmlCfg
         //use this subtree instead:
         this.cfgSubtreeName = sAttrValue;
         XmlCfgNode subtree = this.cfg.subtrees.get(sAttrValue);
-        //Use the same subtree information for all subtree references. 
-        //If the data would be copied, some more memory is neccessary, but not too much. But it is not necessary to copy.
-        this.subnodes = subtree.subnodes;
-        this.attribs = subtree.attribs;
-        this.dstClassName = subtree.dstClassName;
-//      }
-//      else if(key.equals("xmlinput:class")) { //especially for build JavaDst in cfg.xml
-//        this.dstClassName = sAttrValue;
+        if(subtree == null) {
+          //not found or later in file. 
+          if(cfg.subtreeForward == null) { cfg.subtreeForward = new TreeMap<String, List<XmlCfgNode>>(); }
+          List<XmlCfgNode> subtreeForwardList = this.cfg.subtreeForward.get(sAttrValue);
+          if(subtreeForwardList == null) {
+            subtreeForwardList = new LinkedList<XmlCfgNode>();
+            this.cfg.subtreeForward.put(sAttrValue, subtreeForwardList);
+          }
+          subtreeForwardList.add(this); //add subnodes, attribs, dstClassName later if found.
+        } else {
+          addFromSubtree(subtree);
+        }
+//    }
+//    else if(key.equals("xmlinput:class")) { //especially for build JavaDst in cfg.xml
+//      this.dstClassName = sAttrValue;
       }  
       else if(  attribsForCheck !=null     //The attribsForCheck was set because a primary config node with bCheckAttributeNode was found before
         && (attribForCheck = attribsForCheck.get(key))!=null
@@ -363,12 +403,32 @@ public class XmlCfg
             dPathAccess.storeInMap = dstPath.substring(1);
           } else {
             dPathAccess.daccess = new DataAccess.DatapathElement(dstPath);
-            bStoreAttribsInNewContent = true;  ////
+            bStoreAttribsInNewContent = true;  
           }
         }
       }
     }
 
+    
+    
+    
+    void addFromSubtree(XmlCfgNode subtree) {
+      //Use the same subtree information for all subtree references. 
+      //If the data would be copied, some more memory is neccessary, but not too much. But it is not necessary to copy.
+      this.subnodes = subtree.subnodes;
+      if(subtree.attribs !=null) for(Map.Entry<String, AttribDstCheck> e : subtree.attribs.entrySet()) {
+        String attrName = e.getKey();
+        if(this.attribs == null) { this.attribs = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
+        AttribDstCheck attr = this.attribs.get(attrName);
+        if(attr == null) {
+          this.attribs.put(attrName, e.getValue());  //store the attrib from the subtree instance.
+        } //else: The attrib in the subtree call wins. (new since 2019-03, before: both are equal)
+      }
+      if(this.dstClassName == null) { this.dstClassName = subtree.dstClassName; }
+    }
+    
+    
+    
     void addSubnode(String key, XmlCfgNode node) {
       if(subnodes == null) { subnodes = new IndexMultiTable<String, XmlCfgNode>(IndexMultiTable.providerString); }
       if(key.startsWith("Object@"))
