@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.cmd.JZtxtcmdExecuter;
 import org.vishia.cmd.JZtxtcmdFileset;
 import org.vishia.util.FilePath.FilePathEnvAccess;
 
@@ -94,11 +95,24 @@ public final class FileSet
 
   
   
+  /**Builds a list of {@link FilePath} from the given fileSet. The new FilePath in files are absolute without a {@link FilePath#scriptVariable}
+   * and without {@link FilePath#varChars} and {@link FilePath#varFileset}. This relations are dissolved.
+   * if a file set is detect inside this fileset, it is expanded too. Only 100 nested filesets are possible (typically 1 or 2) 
+   * @param files The new {@link FilePath} are added here.
+   * @param accesspath The access path is an additional part of a base path.
+   * @param env Access to variables and currDir of a {@link JZtxtcmdExecuter} or other environment
+   * @param expandFiles expands wildcards, if false, the wildcard remain in the path paprts.
+   * @throws NoSuchFieldException
+   */
   public void listFiles(List<FilePath> files, FilePath accesspath, FilePath.FilePathEnvAccess env, boolean expandFiles) throws NoSuchFieldException {
     listFiles(files, accesspath, env, expandFiles, 0);
   }
   
-  public void listFiles(List<FilePath> files, FilePath accesspath, FilePath.FilePathEnvAccess env, boolean expandFiles, int recursionCount) throws NoSuchFieldException {
+  /**Called fro {@link #listFiles(List, FilePath, FilePathEnvAccess, boolean)}
+   * @param recursionCount max. 100 recursions.
+   * @throws NoSuchFieldException
+   */
+  private void listFiles(List<FilePath> files, FilePath accesspath, FilePath.FilePathEnvAccess env, boolean expandFiles, int recursionCount) throws NoSuchFieldException {
     for(FilePath filepath: filesOfFileset){
       if(expandFiles && (filepath.someFiles() || filepath.allTree())){
         List<FilePath> files1 = new LinkedList<FilePath>();

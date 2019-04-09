@@ -2338,6 +2338,16 @@ else return pos - begin;
     else return( new Part(begin, begin + nChars1));
   }
 
+  
+  
+  /**Gets the chars from current Position. */
+  @Java4C.ReturnInThreadCxt
+  public final CharSequence getCurrent()
+  { return( new Part(begin, end));
+  }
+
+  
+  
   /** Gets the next char at current Position.
   */
   public final char getCurrentChar()

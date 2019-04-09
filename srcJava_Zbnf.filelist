@@ -1,4 +1,4 @@
-2019-03-26 10:15:43  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-04-09 23:15:24  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -23,7 +23,7 @@
 2011-07-08 19:57:50  x     makejar_zmakeAnt.sh                      ::           .945 -0828541394 
 2014-06-11 22:03:56  x     readme_javac.txt                         ::          2.335 -0109610946 
 2019-03-10 11:50:33  x     setJAVA_JDK.bat                          ::           . 90  1303764892 
-2019-03-10 11:50:33  x     setJAVA_JDK_template.bat                 ::           .358  0598044623 
+2019-03-31 17:54:03  x     setJAVA_JDK_template.bat                 ::           .404  1135619406 
 2016-01-23 19:38:07  x     stylesheet_javadoc.css                   ::         11.170 -1795800443 
 2012-03-03 11:16:26  x     vishiaBase.manifest                      ::           . 33  0938013105 
 2011-02-26 22:43:58  x     zbnf.manifest                            ::           . 40  0205809603 
@@ -102,7 +102,7 @@
 2017-07-29 11:17:07  x     CfgData.java                             ::          3.560 -0509839928 
 2012-12-25 19:29:36  x     CheckAllDepFile.java                     ::          6.113  1270977477 
 2012-12-25 17:01:12  x     CheckData.java                           ::          4.951  0627506369 
-2017-08-31 09:31:03  x     CheckDependencyFile.java                 ::         47.394  1130657934 
+2019-03-31 16:16:48  x     CheckDependencyFile.java                 ::         47.748 -1404111554 
 2014-05-04 22:57:06  x     CheckDeps.java                           ::         12.379  0976591412 
 2012-12-25 15:33:10  x     DateTime.java                            ::          1.823  2018610045 
 2017-07-29 11:17:35  x     InfoFileDependencies.java                ::         19.000 -0848432233 
@@ -254,7 +254,7 @@
 
 ============================== org/vishia/test/ ====================================================
 2018-09-13 08:41:15  x     FilewalkStream.java                      ::           .873 -0451405320 
-2019-03-11 19:52:08  x     LambdaTest1.java                         ::          1.519  0054005730 
+2019-04-09 23:09:44  x     LambdaTest1.java                         ::          1.647 -1187076921 
 2016-11-27 20:51:06  x     TestAddJar.java                          ::          1.729 -1295448115 
 2018-09-13 08:32:02  x     TestArithmetik.java                      ::           .758 -0761414338 
 2014-05-27 22:36:04  x     TestCalctime_sin.java                    ::          1.455  1439599302 
@@ -277,11 +277,11 @@
 2019-01-24 16:42:48  x     Debugutil.java                           ::          1.185 -1596902083 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2013-06-27 19:28:00  x     FileCompare.java                         ::         13.113 -1366728653 
-2018-01-18 18:36:56  x     FileFunction.java                        ::          1.889  0539851708 
+2019-04-09 23:06:11  x     FileFunction.java                        ::          5.914 -1625440232 
 2016-11-23 09:32:49  x     FileList.java                            ::         25.226 -0519890922 
-2018-10-16 07:08:53  x     FilePath.java                            ::         82.696 -0128293682 
+2019-04-01 22:28:58  x     FilePath.java                            ::         84.913 -0807903502 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
-2017-09-01 23:33:41  x     FileSet.java                             ::          5.673 -2027065883 
+2019-03-31 20:57:08  x     FileSet.java                             ::          6.641  2130969058 
 2018-10-27 14:16:26  x     FileSystem.java                          ::         68.824 -1818565687 
 2011-02-26 21:31:28  x     FileWriter.java                          ::          4.163 -1377006717 
 2018-04-13 20:31:23  x     FilepathFilter.java                      ::         14.774  1927842495 
@@ -322,12 +322,12 @@
 2015-09-04 22:46:04  x     SortedTreeWalkerCallback.java            ::          5.474 -1471683679 
 2016-12-02 16:00:10  x     SpecialCharStrings.java                  ::          5.407 -1661090385 
 2011-02-26 15:36:54  x     StdHexFormatWriter.java                  ::          4.376  0697421476 
-2019-03-18 14:38:01  x     StringAdd.java                           ::          1.095 -1310334091 
+2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
 2018-09-21 23:57:19  x     StringFormatter.java                     ::         49.205  0302847186 
 2019-03-19 11:37:34  x     StringFunctions.java                     ::         47.295 -0775716490 
 2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
-2019-03-10 12:07:15  x     StringPart.java                          ::        117.211 -0793326583 
+2019-04-01 17:09:32  x     StringPart.java                          ::        117.388 -2145268856 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 

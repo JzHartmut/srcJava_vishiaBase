@@ -20,7 +20,7 @@ import org.vishia.cmd.JZtxtcmdFileset;
  * If you write <code>any/Path:local/path/file.ext</code> then <code>any/Path</code> is the so named base path 
  * and <code>local/path</code> is the local directory. The <code>':'</code> separates the path in that 2 parts.
  * Regarding the drive designation of windows, the <code>':'</code>-separator for base and local path
- * is expected from the 3. position of a String given path. 
+ * is expected right from the 3. position of a String given path. 
  * On 2. position it is the separator after the drive letter:
  * <pre>
  *   D:base/path:local/path/name.ext
@@ -367,7 +367,8 @@ public class FilePath
   
   
   
-  /**Creates a new FilePath from a given FilePath with possible given common and access path.
+  /**Creates a new FilePath from a given FilePath with possible given common and access path or a environment variable.
+   * It builds a absolute path in any kind using the env {@link FilePathEnvAccess#getCurrentDir()}.
    * This method is used especially to build a new set of FilePath from a given set
    * with common and access paths and maybe variables. The variables are resolved all
    * and the relation between base and local parts in all components are resolved too,
@@ -377,47 +378,63 @@ public class FilePath
    * @param src Any given FilePath, usual member of a Fileset
    * @param commonPath A common path of this FilePath enhances the local or given base part of FilePath
    * @param accessPath An access path enhances the given local or base part
-   * @param env To resolve variables
+   * @param env To resolve variables and access to the currDir.
    * @throws NoSuchFieldException if a variable is not found.
+   * @since 2019-03-31: Uses env.getCurrentDir to build an absolute path. 
+   *   Reason: Problematic use case detected: If the current dir is changed during exection with a non absolute FilePath, the access will be faulty.
    */
   public FilePath(FilePath src, FilePath commonPath, FilePath accessPath, FilePathEnvAccess env) 
   throws NoSuchFieldException {
+    FilePath commonFilePath = commonPath !=null ? commonPath : null;
+    FilePath accessFilePath = accessPath !=null ? accessPath : null;
+    Object oValue = null;
+    this.scriptVariable = null; this.varFilePath = null; this.varChars = null; 
     if(src.scriptVariable !=null){
-      Object oValue = env.getValue(src.scriptVariable);
+      oValue = env.getValue(src.scriptVariable);
       if(oValue == null) throw new NoSuchFieldException("FilePath.basepath - scriptVariable not found; "+ src.scriptVariable);
-      if(oValue instanceof FilePath){
-        this.varFilePath = (FilePath)oValue;
-        this.varChars = null; varFileset = null;
-      } else if(oValue instanceof CharSequence){
-        this.varChars = (CharSequence)oValue;
-        this.varFilePath = null; varFileset = null;
-      } else if(oValue instanceof FileSet){
+      if(oValue instanceof FileSet){
         this.varFileset = (FileSet)oValue;
-        this.varFilePath = null; varChars = null; 
-      } else if(oValue instanceof JZtxtcmdFileset) {
-        this.varFileset = ((JZtxtcmdFileset)oValue).data.fileset;
-        this.varFilePath = null; varChars = null; 
+        oValue = null; //processed
       } else {
-        throw new  NoSuchFieldException("FilePath.basepath - scriptVariable faulty type; "+ src.scriptVariable + ";" + oValue.getClass().getSimpleName());
+        this.varFileset = null;
       }
-      this.scriptVariable = null; //access is done already.
+      
     } else { 
       //src.scriptVariable not set:
-      this.scriptVariable = null; this.varFilePath = null; this.varChars = null; this.varFileset = null;
+      this.varFileset = null;
     }
-    if(varFileset !=null) {
+    if(this.varFileset !=null) {
       drive = null; absPath = false; basepath = null; localdir = null; name = null; ext = null; allTree = false; someFiles = false;
-    }
-    else {
+    } else {
     
-      FilePath commonFilePath = commonPath !=null ? commonPath : null;
-      FilePath accessFilePath = accessPath !=null ? accessPath : null;
-      CharSequence basePath = src.basepath(null, commonFilePath, accessFilePath, env);
-      CharSequence localDir = src.localdir(null, commonFilePath, accessFilePath, env);
+      CharSequence basePath = src.basepath(null, commonFilePath, accessFilePath, oValue, env);
+      CharSequence localDir = src.localdir(null, commonFilePath, accessFilePath, oValue, env);
       int posbase = FilePath.isRootpath(basePath);
       this.drive = posbase >=2 ? Character.toString(basePath.charAt(0)) : null;
       this.absPath = posbase == 1 || posbase == 3;
       this.basepath = basePath.subSequence(posbase, basePath.length()).toString();
+//      CharSequence currDir = null;
+//      if(posbase !=3) {
+//        currDir = env.getCurrentDir();
+//        switch(posbase) {
+//        case 0: 
+//          this.drive = "" + currDir.charAt(0);
+//          this.basepath = currDir.subSequence(2, currDir.length()) + "/" + basePath;
+//          break;
+//        case 1:
+//          this.drive = "" + currDir.charAt(0);
+//          this.basepath = basePath.toString();
+//          break;
+//        case 2:
+//          this.drive = "" + basePath.charAt(0);
+//          this.basepath = currDir.subSequence(2, currDir.length()) + "/" + basePath.subSequence(posbase, basePath.length());
+//        } 
+//        
+//      } else {
+//        this.drive = Character.toString(basePath.charAt(0));
+//        this.basepath = basePath.subSequence(2, basePath.length()).toString();
+//      }
+//      this.absPath = true;
       this.localdir = localDir.toString();
       if(!localdir.endsWith("/"))
         Assert.stop();
@@ -461,7 +478,7 @@ public class FilePath
    */
   @Override public String toString() {
     StringBuilder u = new StringBuilder();
-    if(scriptVariable !=null){ u.append('&').append(scriptVariable); }
+    if(scriptVariable !=null){ u.append('&').append(scriptVariable).append(" "); }
     if(drive!=null) { u.append(drive).append(':'); }
     if(absPath) { u.append("/"); }
     if(basepath!=null) { u.append(basepath).append(":"); }
@@ -943,6 +960,10 @@ public class FilePath
     return start;
   }
   
+
+  
+  
+  
   
   
   /**Gets the base path part of this. This method regards the existence of a common and an access path.
@@ -1040,15 +1061,37 @@ public class FilePath
   public CharSequence basepath(StringBuilder uRetP, FilePath commonPath, FilePath accessPath, FilePathEnvAccess env)
       throws NoSuchFieldException 
   { 
+    return basepath(uRetP, commonPath, accessPath, null, env);
+  }
+
+  
+  /**Same as {@link #basepath(StringBuilder, FilePath, FilePath, FilePathEnvAccess)} but the scriptvariable may be given immediately.
+   * Then this must not contain a script variable too. Both is too much.
+   * @param uRetP
+   * @param commonPath
+   * @param accessPath
+   * @param scriptVariable either a CharSequence or FilePath. If given the this.scriptVariable is not used. It is processed with this parameter already.
+   * @param env
+   * @return
+   * @throws NoSuchFieldException
+   */
+  public CharSequence basepath(StringBuilder uRetP, FilePath commonPath, FilePath accessPath, Object scriptVariable, FilePathEnvAccess env)
+      throws NoSuchFieldException 
+  { 
     //if(generalPath == null){ generalPath = emptyParent; }
     //first check singularly conditions
     ///
     int pos;
     final FilePath varfile;
     final CharSequence varpath;
-    if(this.scriptVariable !=null){
-      Object oValue = env.getValue(this.scriptVariable);
+    Object oValue = scriptVariable;
+    if(oValue == null && this.scriptVariable !=null) { //
+      assert(scriptVariable == null); //Parameter
+      oValue = env.getValue(this.scriptVariable);
       if(oValue == null) throw new NoSuchFieldException("FilePath.basepath - scriptVariable not found; "+ this.scriptVariable);
+      ;
+    }
+    if(oValue !=null){
       if(oValue instanceof FilePath){
         varfile = (FilePath)oValue;
         varpath = null;
@@ -1056,7 +1099,7 @@ public class FilePath
         varpath = (CharSequence)oValue;
         varfile = null;
       } else {
-        throw new  NoSuchFieldException("FilePath.basepath - scriptVariable faulty type; "+ this.scriptVariable + ";" + oValue.getClass().getSimpleName());
+        throw new IllegalArgumentException("FilePath.basepath - scriptVariable faulty type; " + oValue.getClass().getSimpleName());
       }
     } else {
       varfile = this.varFilePath; varpath = this.varChars;  //may be given already expanded..
@@ -1092,7 +1135,7 @@ public class FilePath
         return "/";
       }
     }
-    else if(this.basepath !=null){
+    else if(this.basepath !=null){  //maybe path after the script variable
       //
       //  common    variable    this         basepath build with         : localdir build with   
       //  | base    | base abs  base abs
@@ -1182,7 +1225,7 @@ public class FilePath
         //        0         0            1    0      thisBase                    : thisLocal
         return this.basepath;
       }
-    } else { 
+    } else { //this.basepath == null 
       //  common    variable    this         basepath build with         : localdir build with   
       //  | base    | base abs  base abs
       //  x  x      1  1   1     0    0      /variableBase               : varLocalFile + thisLocal
@@ -1285,12 +1328,28 @@ public class FilePath
    * @since 2014-06-20 doc improved
    *  
    */
+
   public CharSequence localdir(StringBuilder uRetP, FilePath commonPath, FilePath accessPath
       , FilePathEnvAccess env) 
   throws NoSuchFieldException {
+    return localdir(uRetP, commonPath, accessPath, null, env);
+  }
+  
+  
+  
+  
+  public CharSequence localdir(StringBuilder uRetP, FilePath commonPath, FilePath accessPath
+      , Object scriptVarValue, FilePathEnvAccess env) 
+  throws NoSuchFieldException {
     ///
+    Object oValue = scriptVarValue;
+    if(oValue == null && this.scriptVariable !=null) { //
+      oValue = env.getValue(this.scriptVariable);
+      if(oValue == null) throw new NoSuchFieldException("FilePath.basepath - scriptVariable not found; "+ this.scriptVariable);
+      ;
+    }
     if(  this.basepath !=null     //if a basepath is given, then only this localpath is valid.
-      || scriptVariable == null && commonPath == null && accessPath == null //nothing else is given: The given path is local.  
+      || oValue == null && commonPath == null && accessPath == null //nothing else is given: The given path is local.  
       ){  //Then only the local dir of this is used.
       if(uRetP == null){
         return localdir;
@@ -1311,9 +1370,7 @@ public class FilePath
       //If one of that has a basePath, return its localDir/file.ext.
       final FilePath varfile;
       final CharSequence varpath;
-      if(this.scriptVariable !=null){
-        Object oValue = env.getValue(this.scriptVariable);
-        if(oValue == null) throw new NoSuchFieldException("FilePath.basepath - scriptVariable not found; "+ this.scriptVariable);
+      if(oValue !=null){
         if(oValue instanceof FilePath){
           varfile = (FilePath)oValue;
           varpath = null;
@@ -1335,11 +1392,16 @@ public class FilePath
           //insert localfile from varfile firstly, assume it is a directory.
           varfile.localfile(uRet, commonPath, accessPath, env); //append localDir of variable 
         }
+        
+      } else if(varpath !=null) {
+        assert(this.varChars == null); //should not be used.
+        //insert the content of the scriptvariable given as argument firstly.
+        uRet.append(varpath); 
       } else if(varChars !=null) {
         //insert the content of the scriptvariable firstly.
         uRet.append(varChars);
       }
-      else if(commonPath !=null){
+      else if(commonPath !=null){  //TODO missing append? Test!
         commonPath.localfile(uRet, null, accessPath, env);
       } 
       else if(accessPath !=null){

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 
 
@@ -177,6 +178,8 @@ public class CheckDependencyFile
   List<String> dirObjRoots = new LinkedList<String>();
 
   
+  String sDbgLocalFile;
+  
   
   /**Constructor. The instance can be used for all files, which are located in the same source pool
    * and in the same object pool.
@@ -227,6 +230,12 @@ public class CheckDependencyFile
     }
     if(sError !=null && bExc) throw new IllegalArgumentException("CheckDependencyFile.setDirObj - error: " + sError);
     return sError;
+  }
+  
+  
+  
+  public void setDebugLocalFileContains(String part) {
+    sDbgLocalFile = part;
   }
   
   
@@ -307,6 +316,9 @@ public class CheckDependencyFile
   {
     final ObjectFileDeps objDeps;
     
+    if(sDbgLocalFile !=null && sLocalPathName.contains(sDbgLocalFile)) {
+      stop();
+    }
     int posExt = sLocalPathName.lastIndexOf('.');
     String sExt = sLocalPathName.substring(posExt+1);
     //
@@ -341,6 +353,9 @@ public class CheckDependencyFile
   {
     final ObjectFileDeps objDeps;
     
+    if(sDbgLocalFile !=null && sLocalPathName.contains(sDbgLocalFile)) {
+      Debugutil.stop();
+    }
     int posExt = sLocalPathName.lastIndexOf('.');
     String sExt = sLocalPathName.substring(posExt+1);
     //
@@ -955,7 +970,8 @@ public class CheckDependencyFile
   }
   
   
-  void stop(){}
+  void stop(){
+  }
   
   
   
