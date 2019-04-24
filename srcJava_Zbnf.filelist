@@ -1,4 +1,4 @@
-2019-04-09 23:15:24  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-04-24 22:00:53  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -327,16 +327,16 @@
 2019-03-19 11:37:34  x     StringFunctions.java                     ::         47.295 -0775716490 
 2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
-2019-04-01 17:09:32  x     StringPart.java                          ::        117.388 -2145268856 
+2019-04-24 21:57:43  x     StringPart.java                          ::        118.596 -1094076175 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
-2019-03-10 12:13:16  x     StringPartScan.java                      ::         38.358  1996947498 
+2019-04-24 18:55:14  x     StringPartScan.java                      ::         38.370 -1332151600 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
 2016-03-13 09:36:36  x     Timeshort.java                           ::          4.646 -0882576216 
-2017-08-31 08:57:53  x     TreeNodeBase.java                        ::         41.424 -1379159204 
+2019-04-24 21:59:38  x     TreeNodeBase.java                        ::         41.589  1642086573 
 2013-11-05 18:59:10  x     TreeNodeCallback.java                    ::          2.367  1953077598 
 2017-08-26 21:46:22  x     TreeNodeHtmlOutput.java                  ::          5.501  1476653835 
 2015-05-26 22:42:15  x     TreeNodeNamed_ifc.java                   ::           . 91 -1285758015 
@@ -358,7 +358,7 @@
 2017-05-05 21:23:49  x     TestIndexMultiTable.java                 ::          8.186  1941999328 
 2013-10-20 00:56:38  x     TestString67.java                        ::           .750  1482509348 
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
-2016-11-27 21:17:26  x     TestStringPart.java                      ::           .537 -0650465602 
+2019-04-24 21:21:31  x     TestStringPart.java                      ::          1.838 -0665867174 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 

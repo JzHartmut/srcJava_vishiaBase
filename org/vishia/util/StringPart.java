@@ -122,6 +122,9 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-04-24 Hartmut Some gardening because this sources are copied and adapted to C-sharp too:
+   *   {@link Part} is a static class now, with outer reference. It is more clearly. Csharp does not know the concept of non static inner classes
+   * <li>2019-04-24 Hartmut new {@link #setCurrentMaxPart()}, obvious necessary while test (independent of Csharp!).
    * <li>2019-01-22 Hartmut There were some mistakes with the position with longer files and smaller buffer in StringPartFromFileLines.
    * <li>2019-02-10 Hartmut Change of {@link StringPart.Part}: possibility of set, because there is a persistent instance possible for {@link #setCurrentPart(Part)}.
    *   It is because C-usage. This routines are used in the C-version for the Simulink Sfunction DataStruct...Inspc. 
@@ -244,6 +247,7 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   private int[] posRewind = new int[20];  //some positions to rewind.
   
   
+
   
   /** The referenced string. It is a CharSequence for enhanced using.    */
   protected CharSequence content;
@@ -592,22 +596,44 @@ abcdefghijklmnopqrstuvwxyz  The associated String
 
 
   /** Sets the start of the maximal part to the actual start of the valid part.
-    See also seekBegin(), that is the opposite operation.
-    <hr/><u>example:</u><pre>
-  abcdefghijklmnopqrstuvwxyz  The associated String
-  ================        The maximal part before operation
-       ------             The actual part
-       ===========        The maximal part after operation
-    </pre>
-    @java2c=return-this.
-    @param src The given StringPart.
-    @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   * See also seekBegin(), that is the opposite operation.
+   * <hr/><u>example:</u><pre>
+abcdefghijklmnopqrstuvwxyz  The associated string
+================        The maximal part before operation
+     ------             The actual part
+     ===========        The maximal part after operation
+  </pre>
+   * @java2c=return-this.
+   * @param src The given StringPart.
+   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
   */
   @Java4C.Retinline
   @Java4C.ReturnThis 
   @Java4C.NoStackTrace
   public final StringPart setBeginMaxPart()
   { begiMin = begin;
+  return this;
+  }
+
+
+
+  /** Sets the range of the maximal part to the currentvalid part.
+   * <hr/><u>example:</u><pre>
+abcdefghijklmnopqrstuvwxyz  The associated string
+      ================      The maximal part before operation
+         ------             The actual part
+         ======             The maximal part after operation
+</pre>
+   * @java2c=return-this.
+   * @param src The given StringPart.
+   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   */
+  @Java4C.Retinline
+  @Java4C.ReturnThis 
+  @Java4C.NoStackTrace
+  public final StringPart setCurrentMaxPart()
+  { begiMin = begin;
+    endMax = end;
     return this;
   }
 
@@ -619,8 +645,8 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    */
   @Java4C.Retinline
   @Java4C.ReturnThis 
-  public final StringPart setParttoMax(){
-    begiMin = beginLast = begin = 0;
+  public final StringPart setParttoMax()
+  { begiMin = beginLast = begin = 0;
     endMax = end = endLast = content.length();
     bStartScan = bCurrentOk = true;
     return this;
@@ -693,7 +719,7 @@ public final boolean checkCharAt(int pos, String chars){
     throwSubSeqFaulty(from, to);
     return null;  //It is used for Java2C without throw mechanism.
   }
-  @Java4C.InThCxtRet(sign="StringPart.subSequence") Part ret = new Part(begin+from, begin+to);
+  @Java4C.InThCxtRet(sign="StringPart.subSequence") Part ret = new Part(this, begin+from, begin+to);
   return ret;
 } 
 
@@ -709,7 +735,8 @@ private final void throwSubSeqFaulty(int from, int to)
   /* (non-Javadoc)
    * @see java.lang.CharSequence#length()
    */
-  @Override public final int length(){ return end - begin; }
+  @Override public final int 
+  length(){ return end - begin; }
 
   /**Returns the lenght of the maximal part from current position. Returns also 0 if no string is valid.
      @return number of chars from current position to end of maximal part.
@@ -798,7 +825,8 @@ private final void throwSubSeqFaulty(int from, int to)
     */
   @Java4C.Retinline
   @Java4C.ReturnThis 
-  public final StringPart lento(CharSequence ss)
+  public final StringPart 
+  lento(CharSequence ss)
   { return lento(ss, seekNormal);
   }
 
@@ -1218,12 +1246,12 @@ return this;
 
 
 
-  /** Searchs the given String inside the valid part, posits the begin of the part to the begin of the searched string.
-    The end of the part is not affected.
-    If the string is not found, the begin is posit on the actual end. The length()-method supplies 0.
-    Methods such fromEnd() are not interacted from the result of the searching.
-    The rule is: seek()-methods only shifts the begin position.
-  
+  /**Searchs the given String inside the valid part, posits the begin of the part to the begin of the searched string.
+   * The end of the part is not affected.
+   * If the string is not found, the begin is posit on the actual end. The length()-method supplies 0.
+   * Methods such fromEnd() are not interacted from the result of the searching.
+   * The rule is: seek()-methods only shifts the begin position.
+   *
     <hr/><u>example:</u><pre>
 that is a liststring and his part The associated String
 =============================   The maximal part
@@ -1239,11 +1267,11 @@ that is a liststring and his part The associated String
                               or seek("xx",StringPartBase.back).
 
   </pre>
-  *  @java2c=return-this.
-    @param sSeek The string to search for.
-    @param mode Mode of seeking, use ones of {@link #seekBack}, {@link #seekToLeft}, {@link #seekNormal}, added with {@link #seekEnd}.
-    @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-  */
+   * @java2c=return-this.
+   * @param sSeek The string to search for.
+   * @param mode Mode of seeking, use ones of {@link #seekBack}, {@link #seekToLeft}, {@link #seekNormal}, added with {@link #seekEnd}.
+   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   */
   public final StringPart seek(CharSequence sSeek, int mode){ 
     beginLast = begin;
     //if(StringFunctions.startsWith(sSeek, "timestamp:"))
@@ -1280,7 +1308,8 @@ that is a liststring and his part The associated String
     } else { 
       bFound = true;
       begin = pos;
-      if( (mode & seekEnd) == seekEnd ) { begin += sSeek.length();
+      if( (mode & seekEnd) == seekEnd ) { 
+        begin += sSeek.length();
       }
     }
     
@@ -2318,7 +2347,7 @@ else return pos - begin;
     { posend = posendP;
     }
     @Java4C.InThCxtRet(sign="StringPart.subString")
-    Part ret = new Part(pos+begiMin, posend); //content.substring(pos+begiMin, posend); 
+    Part ret = new Part(this, pos+begiMin, posend); //content.substring(pos+begiMin, posend); 
     return ret;
   }
   
@@ -2335,7 +2364,7 @@ else return pos - begin;
   public final CharSequence getCurrent(int nChars)
   { final int nChars1 =  (endMax - begin) < nChars ? endMax - begin : nChars;  //maybe reduced nr of chars
     if(nChars1 ==0) return "";
-    else return( new Part(begin, begin + nChars1));
+    else return( new Part(this, begin, begin + nChars1));
   }
 
   
@@ -2343,7 +2372,7 @@ else return pos - begin;
   /**Gets the chars from current Position. */
   @Java4C.ReturnInThreadCxt
   public final CharSequence getCurrent()
-  { return( new Part(begin, end));
+  { return( new Part(this, begin, end));
   }
 
   
@@ -2392,8 +2421,8 @@ else return pos - begin;
   @Java4C.ReturnInThreadCxt
   public final Part getCurrentPart()
   { @Java4C.InThCxtRet(sign="StringPart.getCurrentPart") final Part ret_1;
-    if(end > begin) ret_1 = new Part(begin, end);
-    else            ret_1 = new Part(begin, begin);
+    if(end > begin) ret_1 = new Part(this, begin, end);
+    else            ret_1 = new Part(this, begin, begin);
     return ret_1 ;
   }
   
@@ -2413,7 +2442,7 @@ else return pos - begin;
   @Java4C.ReturnInThreadCxt
   public final CharSequence getLastPart()
   { if(begin > beginLast) { 
-      @Java4C.InThCxtRet(sign="StringPart.getLastPart") Part ret = new Part(beginLast, begin); return ret; 
+      @Java4C.InThCxtRet(sign="StringPart.getLastPart") Part ret = new Part(this, beginLast, begin); return ret; 
     } 
     else return "";
   }
@@ -2429,7 +2458,7 @@ else return pos - begin;
   { int end1 = maxLength <0 ? end : (end - begin) <  maxLength ? end : begin + maxLength ;
     if(end > begin) {  
       @Java4C.InThCxtRet(sign="StringPart.getCurrentPart")
-      final Part ret = new Part(begin, end1);
+      final Part ret = new Part(this, begin, end1);
       return ret;
     }
     else return ""; 
@@ -2454,7 +2483,7 @@ else return pos - begin;
   @Java4C.ReturnInThreadCxt
   public final StringPart.Part getPart(int fromPos, int nrofChars){
     final int nChars1 =  (endMax - fromPos) < nrofChars ? endMax - fromPos : nrofChars;  //maybe reduced nr of chars
-    @Java4C.InThCxtRet(sign="StringPart.Part.getPart") Part ret = new Part(fromPos, fromPos + nChars1);
+    @Java4C.InThCxtRet(sign="StringPart.Part.getPart") Part ret = new Part(this, fromPos, fromPos + nChars1);
     return ret;
   }
 
@@ -2464,7 +2493,7 @@ else return pos - begin;
   protected final char absCharAt(int index){
     int pos = index;
     if(pos >=0 && pos < endMax) return content.charAt(pos);
-    else { throwIllegalArgumentException("StringPartBase.charAt - faulty; ",index); return 0; }
+    else { throwIllegalArgumentException("StringPartBase.charAt - faulty; ",index); return '\0'; }
   }
 
   /**Returns a String from absolute range.
@@ -2614,34 +2643,37 @@ public final String debugString()
    * It means a Part instance should only be immediately used if the position is near the current {@link StringPart#begin} position. 
    * The {@link StringPartFromFileLines#readnextContentFromFile(int)} let 1/3 of the {@link StringPart#content} accessible. 
    */
-  public final class Part implements CharSequence{ 
+  public final static class Part implements CharSequence{ 
     
     /**Absolute positions of part of chars*/
     private int b1, e1, absPos0;
     
     
+    private final StringPart outer;
+    
     /**A subsequence
      * @param from absolute positions
      * @param to
      */
-    protected Part(int from, int to){
+    protected Part(StringPart outer, int from, int to){
+      this.outer = outer;
       setPart(from, to);
     }
     
     
     
     protected void setPart(int from, int to) {
-      assert(from >= 0 && from <= endMax);
-      assert(to >= 0 && to <= endMax);
+      assert(from >= 0 && from <= outer.endMax);
+      assert(to >= 0 && to <= outer.endMax);
       assert(from <= to);
-      b1 = from; e1 = to; this.absPos0 = StringPart.this.absPos0;
+      b1 = from; e1 = to; this.absPos0 = outer.absPos0;
     }
     
     
     
     @Override
     public final char charAt(int index)
-    { return absCharAt(absPos0 - StringPart.this.absPos0 + b1 + index);
+    { return outer.absCharAt(absPos0 - outer.absPos0 + b1 + index);
     }
     
     
@@ -2663,13 +2695,13 @@ public final String debugString()
     @Override
     @Java4C.ReturnInThreadCxt
     public final CharSequence subSequence(int from, int end)
-    { int start = absPos0 - StringPart.this.absPos0 + b1;
-      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(start + from, start + end);
+    { int start = absPos0 - outer.absPos0 + b1;
+      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(outer, start + from, start + end);
       return ret;
     }
   
     @Override final public String toString(){
-      return absSubString(absPos0 - StringPart.this.absPos0 + b1, absPos0 - StringPart.this.absPos0 + e1);
+      return outer.absSubString(this.absPos0 - outer.absPos0 + b1, absPos0 - outer.absPos0 + e1);
     }
     
     
@@ -2682,8 +2714,8 @@ public final String debugString()
     int copyToBuffer(char[] dst, int from, int to) {
       int max = Math.min(to - from, dst.length - from);
       if (max > e1 - b1) { max = e1 - b1; }
-      for(int ix = absPos0 - StringPart.this.absPos0 + b1; ix < absPos0 - StringPart.this.absPos0 + b1 + max ; ++ix ) {
-        dst[from++] = StringPart.this.content.charAt(ix);
+      for(int ix = absPos0 - outer.absPos0 + b1; ix < absPos0 - outer.absPos0 + b1 + max ; ++ix ) {
+        dst[from++] = outer.content.charAt(ix);
       }
       return max;
     }
@@ -2696,10 +2728,10 @@ public final String debugString()
      */
     @Java4C.ReturnInThreadCxt
     public final Part trim(){
-      int b2 = absPos0 - StringPart.this.absPos0 + b1; int e2 = absPos0 - StringPart.this.absPos0 + e1;
-      while(b2 < e2 && " \r\n\t".indexOf(content.charAt(b2)) >=0){ b2 +=1; }
-      while(e2 > b2 && " \r\n".indexOf(content.charAt(e2-1)) >=0){ e2 -=1; }
-      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(b2, e2);
+      int b2 = absPos0 - outer.absPos0 + b1; int e2 = absPos0 - outer.absPos0 + e1;
+      while(b2 < e2 && " \r\n\t".indexOf(outer.content.charAt(b2)) >=0){ b2 +=1; }
+      while(e2 > b2 && " \r\n".indexOf(outer.content.charAt(e2-1)) >=0){ e2 -=1; }
+      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(outer, b2, e2);
       return ret;
     }
     

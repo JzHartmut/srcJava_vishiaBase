@@ -579,11 +579,17 @@ implements TreeNode_ifc<DerivedNode, Data>, SortedTree<IfcType>, Iterable<Derive
   
   /**Returns any selected node in the tree.
    * @param path The path may have more as one key to traverse into the boughs of the tree.
-   * @param separator Separator between key elements in path.
+   * @param separator Separator between key elements in path. If null then only one level, since 2019-04.
    * @return
    */
   public DerivedNode getNode(String path, String separator){
-    String[] elements = path.split(separator);
+    String[] elements; 
+    if(separator !=null) {
+      elements = path.split(separator);
+    } else {
+      elements = new String[1];
+      elements[0] = path;
+    }
     TreeNodeBase<DerivedNode,Data,IfcType> child = this;
     for(String name: elements){
       if(child.idxChildren == null){

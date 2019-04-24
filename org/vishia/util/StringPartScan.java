@@ -126,7 +126,7 @@ public class StringPartScan extends StringPart
   /** Last scanned string. 
    * It is able to use as CharSequence. see {@link #getLastScannedString()} 
    * It is more C-friendly with a nested instance. No heap effort. */
-  protected final Part sLastString = new Part(0,0);
+  protected final Part sLastString = new Part(this, 0,0);
   
 
   
@@ -766,7 +766,7 @@ public class StringPartScan extends StringPart
   public final CharSequence getLastScannedPart()
   { final int nChars1 =  beginScan - beginScanLast;  
     if(nChars1 <=0) return "";
-    else return( new Part(beginScanLast, beginScan));
+    else return( new Part(this, beginScanLast, beginScan));
   }
   
   
