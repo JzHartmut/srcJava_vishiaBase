@@ -646,13 +646,15 @@ public class StringFunctions {
   /**Checks whether the given CharSequence contains the other given CharSequence.
    * It is the adequate functionality like {@link java.lang.String#indexOf(String, int)}. 
    * @param sq A CharSequence
-   * @param str CharSequence which is searched.
    * @param fromIndex first checked position in sq
+   * @param to use -1 or large number: then till end, else end position of range to search the str inclusively.
+   *   <=-2: from end -1 is the end. 
+   * @param str  which is searched.
    * @return -1 if not found, else first occurrence of str in sq which is >= fromIndex. 
    */
   public static int indexOf(CharSequence sq, int fromIndex, int to, String str){
     int zsq = sq.length();
-    int max = (to >= zsq ? zsq : to) - str.length()+1 ;
+    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
     int ii = fromIndex-1;  //pre-increment
     if (fromIndex < 0) {
         ii = -1;

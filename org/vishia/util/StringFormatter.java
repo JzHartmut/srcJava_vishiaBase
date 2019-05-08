@@ -50,7 +50,7 @@ import java.util.Date;
  * In the default overwrite mode the add methods do not insert in buffer with shifting the rest to right 
  * (like StringBuffer.insert()), but they overwrite the content at the currrent position. 
  * The wording 'add' means, the current position is increment, so the next add()-operation adds 
- * something behind the previous add()-operation. In the insert mode the content at pos is shifted to right.
+ * something behind the previous add()-operation. In the insert mode the content at pos_ is shifted to right.
  * <br>
  * Every {@link pos(int)}-operation is successfully. If the buffer in shorter as the required position, spaces will be filled
  * onto the required position. So a buffer content can also be filled first right, than left.
@@ -105,7 +105,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
    * 
    * 
    */
-  public static final String version = "2014-08-10";
+  public static final String version = "2019-04-29";
   
   private static final byte mNrofBytesInWord = 0x1F;
 
@@ -135,7 +135,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
                             k8right = 8, k8left = 8 + mBytesInWordBigEndian
                             ;
   
-  private static final String spaces = "                                                          ";
+  private static final String spaces = "                                                                                                                                                ";
   
   protected final StringBuilder buffer;
   
@@ -155,7 +155,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   /**The position of actual writing.
    * 
    */
-  protected int pos = 0;
+  protected int pos_ = 0;
 
   /**True than add inserts, false than it overwrites. */
   private boolean bInsert = false;
@@ -282,15 +282,15 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
    *
    */
   public StringFormatter reset()
-  { pos = 0;
-    buffer.setLength(pos);
+  { pos_ = 0;
+    buffer.setLength(pos_);
     return this;
   }
   
 
   /**Sets the current position to the end of the string. */
   public StringFormatter end()
-  { pos = buffer.length();
+  { pos_ = buffer.length();
     return this;
   }
   
@@ -302,23 +302,60 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   /**Sets the current write position to the given position. 
    * If minChars <0 then the position may be set to left. Existing text will be overridden.
    * If minChars >=0 then the new position is at least the number of minChars right side to the current pos.
-   * If the pos is less the buffer.length, all characters right of pos in the buffer will be overridden
+   * If the pos_ is less the buffer.length, all characters right of pos_ in the buffer will be overridden
    * on the next add- or append- operation. This condition is valid independent of this method.
-   * If the pos is more right than the length of the buffer, spaces will be included.
+   * If the pos_ is more right than the length of the buffer, spaces will be included.
    * */
   public StringFormatter pos(int newPos, int minChars)
   { if(newPos < 0) throw new IndexOutOfBoundsException("negative position not supported");
-    if(minChars >= 0 && pos+minChars > newPos){
-      pos += minChars;
+    if(minChars >= 0 && pos_ + minChars > newPos){
+      pos_ += minChars;
     } else {
-      pos = newPos;
+      pos_ = newPos;
     }
     int pos1 = buffer.length();
-    while(pos1 < pos )
+    while(pos1 < pos_ )
     { buffer.append(' '); pos1 +=1;
     }
     return this;
   }
+  
+  
+  
+  /**Replaces a String "<&name>" with the given value. It is similar JZtxtcmd-Placeholder-Syntax.
+   * @param name
+   * @param value
+   * @return -1 if not found, else the position of the replacing.
+   */
+  public int replaceHolder(String name, String value) {
+    return replace("<&" + name + ">", 0, value);
+  }
+  
+  
+  /**Replaces the given String in the buffer with a new CharSequence.
+   * @param search the String to replace
+   * @param from search from this position
+   * @param src the replaces string
+   * @return -1 no replacing, not found, else the position of the replacing.
+   */
+  public int replace(String search, int from, CharSequence src) {
+    int pos1 = buffer.indexOf(search, from);
+    if(pos1 >=0) {
+      int zsrc = src.length();
+      int diff = zsrc - search.length();
+      if(diff >0) { buffer.insert(pos1, spaces.substring(0, diff)); }
+      else if(diff < 0) { buffer.delete(pos1, pos1-diff); } //from to
+      for(int i=0; i < zsrc; ++i) {
+        buffer.setCharAt(pos1+i, src.charAt(i));
+      }
+      if(this.pos_ > (pos1 + zsrc)) { this.pos_ += diff; }  //adjust the current write position (end pos)
+    }
+    return pos1; 
+  }
+  
+  
+  
+  
   
   
   /**returns the current length of string. */
@@ -327,7 +364,50 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   
   /**returns the current position for add in buffer.
    */
-  public int getPos(){ return pos; }
+  public int getPos(){ return pos_; }
+
+
+   
+   
+  /**ensures, that the space in buffer started on pos is writeable with setCharAt.
+  * If the buffer content is less than pos, spaces were padded.
+  * @param nrofChars after pos to write somewhat.
+  */
+  private void prepareBufferPos(int nrofChars)
+  { //if(true || bInsert)
+    if(bInsert && pos_ < buffer.length())
+    {
+      while(nrofChars >0)
+      { if(nrofChars >= spaces.length()){ buffer.insert(pos_, spaces); nrofChars -=spaces.length();}
+        else { buffer.insert(pos_, spaces, 0, nrofChars); nrofChars = 0; }
+      }      
+      //buffer.insert(pos, spaces, 0, nrofChars);
+    }
+    else
+    { int nrofCharsToEnd = buffer.length() -pos_;
+      assert(nrofCharsToEnd >=0);
+      nrofChars -= nrofCharsToEnd;
+      //nrofChars may be < 0 if the range of overwrite is inside the exiting string.
+      while(nrofChars >0)
+      { //appends necessary space on end. the format methods overwrites this space.
+        if(nrofChars >= spaces.length()){ buffer.append(spaces); nrofChars -=spaces.length();}
+        else { buffer.append(spaces, 0, nrofChars); nrofChars = 0; }
+      }  
+    }
+    /*
+    else
+    { int posEnd = pos + nrofChars;
+      int length = buffer.length();
+      while(length < posEnd )
+      { buffer.append(' '); length++;
+      }
+    } 
+    */ 
+  }
+   
+   
+   
+
 
   /** Adds at the current position a string.
   *
@@ -337,9 +417,9 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   public StringFormatter add(CharSequence str)
   { int nrofChars = str.length();
     prepareBufferPos(nrofChars);
-    buffer.delete(pos, pos + nrofChars);
-    buffer.insert(pos, str, 0, nrofChars);
-    pos += nrofChars;
+    buffer.delete(pos_, pos_ + nrofChars);
+    buffer.insert(pos_, str, 0, nrofChars);
+    pos_ += nrofChars;
     return this;
   }
   
@@ -351,10 +431,10 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   public StringFormatter add(String str)
   { int nrofChars = str.length();
     prepareBufferPos(nrofChars);
-    buffer.delete(pos, pos + nrofChars);
-    buffer.insert(pos, str, 0, nrofChars);
-    //buffer.replace(this.pos, pos + nrofChars, str);
-    pos += nrofChars;
+    buffer.delete(pos_, pos_ + nrofChars);
+    buffer.insert(pos_, str, 0, nrofChars);
+    //buffer.replace(this.pos_, pos_ + nrofChars, str);
+    pos_ += nrofChars;
     return this;
   }
 
@@ -380,17 +460,17 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
     if(cc <=0x20){ 
       cc = replaceLinefeed.charAt(3);
     }
-    buffer.setCharAt(pos++, cc);
+    buffer.setCharAt(pos_++, cc);
   }
-  //buffer.replace(this.pos, pos + nrofChars, str);
-  //pos += nrofChars;
+  //buffer.replace(this.pos_, pos_ + nrofChars, str);
+  //pos_ += nrofChars;
   return this;
 }
 
 
   public StringFormatter add(char ch){     
   prepareBufferPos(1);
-  buffer.setCharAt(this.pos++, ch);
+  buffer.setCharAt(this.pos_++, ch);
   return this;
 }
 
@@ -406,8 +486,8 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
     while(nrofChars >1 && str[nrofChars-1] == 0){ nrofChars -=1; }
     prepareBufferPos(nrofChars);
     for(int ii = 0; ii < nrofChars; ii++)
-    { buffer.setCharAt(this.pos, str[ii]);
-      this.pos += 1;
+    { buffer.setCharAt(this.pos_, str[ii]);
+      this.pos_ += 1;
     }  
     return this;
   }
@@ -419,15 +499,15 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
    * @return
    */
   public StringFormatter insert(String str)
-  { buffer.insert(pos,str);
-    pos += str.length();
+  { buffer.insert(pos_,str);
+    pos_ += str.length();
     return this;
   }
   
   /**sets the overwrite mode. It is the default. In this mode add will overwrite the current content. */
   public StringFormatter overwrite(){ bInsert = false; return this; }
   
-  /**sets the insert mode. In this mode add will shift the content at pos to right. */
+  /**sets the insert mode. In this mode add will shift the content at pos_ to right. */
   public StringFormatter insert(){ bInsert = true; return this; }
   
   /**sets the insert or overwrite mode, returns the current mode before change.
@@ -464,8 +544,8 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
     //not replace in buffer:
     int strLength = str.length(); //it should be equal nrofBytes, but not in all charsets.
     prepareBufferPos(strLength);
-    buffer.replace(pos, pos + strLength, str);
-    pos += strLength;
+    buffer.replace(pos_, pos_ + strLength, str);  //replaces exact strLength chars, prepareBufferPos() has regarded insert/overwrite
+    pos_ += strLength;
     return this;
   }
   
@@ -495,7 +575,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
       else
       { //normal operation
         addHexWord_(data, idx1, mode); 
-        buffer.setCharAt(pos++,' ');
+        buffer.setCharAt(pos_++,' ');
         nrofBytes1 -= nrofBytesInWord;
         idx1 += nrofBytesInWord;
       }  
@@ -549,11 +629,11 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
    public StringFormatter addHexLineWithAddrAndAscii(int addr, byte[] data, int idx, int bytes, short mode)
    { int nrofBytesInWord = mode & mNrofBytesInWord;
      addHex(addr, mode);
-     buffer.insert(pos++, ": ");
+     buffer.insert(pos_++, ": ");
      while(bytes > 0)
      { if( bytes < nrofBytesInWord){ nrofBytesInWord = bytes;}
        addHex(data, idx, mode);
-       buffer.insert(pos++,' ');
+       buffer.insert(pos_++,' ');
        bytes -= nrofBytesInWord;
        idx += nrofBytesInWord;
      }
@@ -592,7 +672,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
       for(int i=0; i<2; i++)
       { char digit = (char)(((value & 0xf0)>>4) + (byte)('0'));
         if(digit > '9'){ digit = (char)(digit + (byte)('a') - (byte)('9') -1); }
-        buffer.setCharAt(pos++, digit);
+        buffer.setCharAt(pos_++, digit);
         value <<=4;
       }
     }
@@ -618,7 +698,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
        for(int ii=0; ii < nrofDigits; ii++)
        { char digit = (char)(((value>>nrofShift)&0x0f) + (byte)('0'));
          if(digit > '9'){ digit = (char)(digit + (byte)(hexBase) - (byte)('9') -1); }
-         buffer.setCharAt(pos++, digit);
+         buffer.setCharAt(pos_++, digit);
          nrofShift -=4;
        }
        
@@ -648,53 +728,17 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
        if(cBitPos =='1')
        { int bit = value & mask;        
          char cc = bit != 0 ? sBitCharHi.charAt(ii) : sBitCharLo.charAt(ii);  
-         buffer.setCharAt(pos++, cc);
+         buffer.setCharAt(pos_++, cc);
          mask = (mask >> 1) & 0x7FFFFFFF; 
        }
        else 
-       { buffer.setCharAt(pos++, cBitPos ); 
+       { buffer.setCharAt(pos_++, cBitPos ); 
        }
      }
      return this;
    }
   
    
-   
-  /**ensures, that the space in buffer started on pos is writeable with setCharAt.
-  * If the buffer content is less than pos, spaces were padded.
-  * @param nrofDigits after pos to write somewhat.
-  */
-  private void prepareBufferPos(int nrofChars)
-  { //if(true || bInsert)
-    if(bInsert && pos < buffer.length())
-    {
-      while(nrofChars >0)
-      { if(nrofChars >= spaces.length()){ buffer.insert(pos, spaces); nrofChars -=spaces.length();}
-        else { buffer.insert(pos, spaces, 0, nrofChars); nrofChars = 0; }
-      }      
-      //buffer.insert(pos, spaces, 0, nrofChars);
-    }
-    else
-    { int nrofCharsToEnd = buffer.length() -pos;
-      assert(nrofCharsToEnd >=0);
-      nrofChars -= nrofCharsToEnd;
-      //nrofChars may be < 0 if the range of overwrite is inside the exiting string.
-      while(nrofChars >0)
-      { //appends necessary space on end. the format methods overwrites this space.
-        if(nrofChars >= spaces.length()){ buffer.append(spaces); nrofChars -=spaces.length();}
-        else { buffer.append(spaces, 0, nrofChars); nrofChars = 0; }
-      }  
-    }
-    /*
-    else
-    { int posEnd = pos + nrofChars;
-      int length = buffer.length();
-      while(length < posEnd )
-      { buffer.append(' '); length++;
-      }
-    } 
-    */ 
-  }
    
    
    
@@ -705,7 +749,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
     */
    public StringFormatter addHex44(long value)
    { addHex((value >> 16) & 0xffff, 4);
-     buffer.insert(pos++, '\'');
+     buffer.insert(pos_++, '\'');
      addHex((value) & 0xffff, 4);
      return this;
    }
@@ -726,18 +770,18 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   { int nrofCharsInPicture = digitsBeforePoint + digitsAfterPoint + 2;  //sign and dot
     prepareBufferPos(nrofCharsInPicture);
     if(value < 0)
-    { buffer.setCharAt(pos++, '-');
+    { buffer.setCharAt(pos_++, '-');
       value = -value;
     }
     else
-    { buffer.setCharAt(pos++, ' ');
+    { buffer.setCharAt(pos_++, ' ');
     }
     String sValue = Double.toString(value);
     int posPointInValue = sValue.indexOf('.');
     if(cDecimalSeparator != '.')
     { sValue = sValue.replace('.', cDecimalSeparator);
     }
-    //int posPoint = pos + digitsBeforePoint;
+    //int posPoint = pos_ + digitsBeforePoint;
     int nrofSpacesBefore = digitsBeforePoint - posPointInValue;
     int nrofZeroAfter = digitsAfterPoint - (sValue.length() - posPointInValue -1);
     if(nrofZeroAfter < 0)
@@ -745,7 +789,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
     }
     int nrofValueChars = digitsBeforePoint - nrofSpacesBefore + 1 + digitsAfterPoint - nrofZeroAfter ; 
     while(nrofSpacesBefore >0)
-    { buffer.setCharAt(pos++, ' ');
+    { buffer.setCharAt(pos_++, ' ');
       nrofSpacesBefore -=1;
     }
     //int digitsAfterPointInValue =sValue.length() - posPointInValue -1;
@@ -754,14 +798,14 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
     { //the number of digits is to large,
       nrofValueChars = nrofValueChars - (-nrofSpacesBefore)-2;
       //crash situation: write only the beginn of the digit
-      buffer.replace(pos, pos+2, "##");
-      pos +=2;
+      buffer.replace(pos_, pos_ + 2, "##");
+      pos_ +=2;
     }
-    buffer.replace(pos, pos+ nrofValueChars, sValue.substring(0, nrofValueChars));
-    pos += nrofValueChars; 
+    buffer.replace(pos_, pos_ + nrofValueChars, sValue.substring(0, nrofValueChars));
+    pos_ += nrofValueChars; 
 
     while(--nrofZeroAfter >=0)
-    { buffer.setCharAt(pos++, '0');
+    { buffer.setCharAt(pos_++, '0');
     }
 
     return this;    
@@ -829,8 +873,8 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   
   
   
-  public StringFormatter setAt(int pos, char ch)
-  { buffer.setCharAt(pos, ch);
+  public StringFormatter setAt(int pos_, char ch)
+  { buffer.setCharAt(pos_, ch);
     return this;
   }
   
@@ -997,10 +1041,9 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
       if(nDigits > n2Digit) n2Digit=nDigits;  //Anzahl auszugeb. Digits oder Leerstellen
     }
     prepareBufferPos(nrofChars - (n3Digit - n2Digit) - nrofCharsForSignUnused);
-    char cp;
     ii = 0;
     for(ii=0; ii < nrofChars; ii++)
-    { cp = pict.charAt(ii);
+    { char cp = pict.charAt(ii);
       char cc;
       int ixPosNegPointExp;
       if( cp>='0' && cp<='9')
@@ -1058,7 +1101,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
       }
       if(cc!=0)
       { //cc=0 means, the char shouls not be written.
-        buffer.setCharAt(pos++, cc);
+        buffer.setCharAt(pos_++, cc);
       }
     }//for
     return(!bOvf);
@@ -1160,7 +1203,7 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   
   
   public void newline() throws IOException {
-    append('\n');
+    append('\n');  //outputs to lineout if given and clears
   }
   
   
@@ -1183,13 +1226,13 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   public StringFormatter append(char c) throws IOException { 
     @Java4C.DynamicCall Appendable lineoutMtbl = lineout;
     if(lineout !=null && (c == '\n' || c=='\r')) {  //on one of the line end characters
-      if(c != secondNewline || pos >0) { //if a content is given or c is the first newline character.          // != '\r' ){   //bug: 0d0a0d0a creates only one line:  || c=='\r' && lastNewline != '\n'){
+      if(c != secondNewline || pos_ >0) { //if a content is given or c is the first newline character.          // != '\r' ){   //bug: 0d0a0d0a creates only one line:  || c=='\r' && lastNewline != '\n'){
         flushLine(sNewline);
         if(sNewline ==null) { 
           /*J2Cxxtest*/lineoutMtbl.append(c);  //append the found newline character either 0d or 0a like given.
         }
         secondNewline = c == '\r' ? '\n' : '\r';  //the other one.
-      } else if(sNewline == null) { //c is the secondNewline character, pos is 0
+      } else if(sNewline == null) { //c is the secondNewline character, pos_ is 0
         lineoutMtbl.append(c);          //append it if a special newline is not given.   
       }
     } else {
@@ -1243,13 +1286,13 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   public int flushLine(String sNewline) throws IOException
   {
     @Java4C.DynamicCall Appendable lineoutMtbl = lineout;
-    int chars = pos;
-    if(pos >0) { //some content is given
-      lineoutMtbl.append(buffer, 0, pos);
-      //it would be copy characters after pos to 0. But that's wrong here:
+    int chars = pos_;
+    if(pos_ >0) { //some content is given
+      lineoutMtbl.append(buffer, 0, pos_);
+      //it would be copy characters after pos_ to 0. But that's wrong here:
       //:: buffer.delete(0, pos);
       buffer.setLength(0);  //clean
-      pos = 0;
+      pos_ = 0;
     }
     if(sNewline !=null) { 
       lineoutMtbl.append(sNewline);

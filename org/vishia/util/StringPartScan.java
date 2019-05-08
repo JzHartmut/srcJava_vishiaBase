@@ -805,14 +805,15 @@ public class StringPartScan extends StringPart
   public final CharSequence getCircumScriptionToAnyCharOutsideQuotion(String sCharsEnd)
   { return getCircumScriptionToAnyChar_p(sCharsEnd, true);
   }
+
   
   @Java4C.Exclude //see StringFunctions.convertTransliteration(...)
   private final CharSequence getCircumScriptionToAnyChar_p(String sCharsEnd, boolean bOutsideQuotion)
   { 
-    char quotationChar = bOutsideQuotion ? '\"' : 0;
+    char quotationChar = bOutsideQuotion ? '\"' : '\0';
     int posEnd = indexOfAnyChar(sCharsEnd, 0, end-begin, '\\', quotationChar, quotationChar);
     if(posEnd >=0){
-      lento(posEnd);
+      lentoPos(posEnd);
       CharSequence ret = StringFunctions.convertTransliteration(getCurrentPart(), '\\');
       fromEnd();
       return ret;
@@ -820,43 +821,6 @@ public class StringPartScan extends StringPart
       return "";
     }
     
-    /*
-    CharSequence sResult;
-    if(begin == 4910)
-      Assert.stop();
-    final char cEscape = '\\';
-    int posEnd    = (sCharsEnd == null) ? end 
-                  : bOutsideQuotion ? indexOfAnyCharOutsideQuotion(sCharsEnd, 0, end-begin)
-                                    : indexOfAnyChar(sCharsEnd, 0, end-begin);
-    if(posEnd < 0) posEnd = end - begin;
-    //int posEscape = indexOf(cEscape);
-    //search the first escape char inside the string.
-    int posEscape = StringFunctions.indexOf(content, begin, begin + posEnd, cEscape) - begin;  
-    if(posEscape < 0)
-    { //there is no escape char in the current part to sCharsEnd,
-      //no extra conversion is necessary.
-      sResult = lento(posEnd).getCurrentPart();
-    }
-    else
-    { //escape character is found before end
-      if(content.charAt(begin + posEnd-1)== cEscape)
-      { //the escape char is the char immediately before the end char. 
-        //It means, the end char isn't such one and posEnd is faulty. 
-        //Search the really end char:
-        do
-        { //search the end char after part of string without escape char
-          posEnd    = (sCharsEnd == null) ? end : indexOfAnyChar(sCharsEnd, posEscape +2, Integer.MAX_VALUE);
-          if(posEnd < 0) posEnd = end;
-          posEscape = indexOf(cEscape, posEscape +2);
-        }while((posEscape +1) == posEnd);
-      }
-      lento(posEnd);
-      
-      sResult = SpecialCharStrings.resolveCircumScription(getCurrentPart());
-    }
-    fromEnd();
-    return sResult;
-    */
   }
 
 
@@ -900,7 +864,7 @@ public class StringPartScan extends StringPart
   { if(scanEntry()){
       int posEnd = indexOfAnyChar(sCharsEnd, 0, end-begin, transcriptChar, quotationStartChar, quotationEndChar);
       if(posEnd >=0){
-        lento(posEnd);
+        lentoPos(posEnd);
         if(dst !=null){
           dst[0] = StringFunctions.convertTransliteration(getCurrentPart(), transcriptChar);
         }
