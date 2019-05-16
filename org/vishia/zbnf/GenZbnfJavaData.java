@@ -80,6 +80,9 @@ public class GenZbnfJavaData
    */
   private Writer wr, wrz;
 
+  /**StandardTypes. */
+  protected final TreeMap<String, String> idxStdTypes = new TreeMap<String, String>();
+  
   /**All parsed components from {@link ZbnfParser#listSubPrescript}. */
   protected TreeMap<String,ZbnfSyntaxPrescript> idxSubSyntax;
   
@@ -144,14 +147,21 @@ public class GenZbnfJavaData
     + "\n";
   
   private static final StringPreparer sJavaSimpleVar = new StringPreparer( 
-      "    protected <&type> <&name>;\n"
+      "    \n"
+    + "    protected <&type> <&name>;\n"
+    + "    \n"
+    + "    \n");
+  
+  private static final StringPreparer sJavaSimpleVarOper = new StringPreparer( 
+      "    \n    \n"
+    + "    /**Access to parse result.*/\n"
     + "    <&type> <&name>() { return <&name>; }\n"
-    + "\n"
-    + "\n");
+    + "    \n"
+    + "    \n");
   
   
   private static final StringPreparer sJavaSimpleVarZbnf = new StringPreparer( 
-      "    void set_<&name>(<&dClass>.<&type> val) { super.<&name> = val; }\n"
+      "    void set_<&name>(<&type> val) { super.<&name> = val; }\n"
     + "    \n"
     + "    \n");
   
@@ -160,6 +170,11 @@ public class GenZbnfJavaData
   public GenZbnfJavaData(Args args, MainCmdLogging_ifc log)
   { this.args = args;
     this.log = log;
+    idxStdTypes.put("float","");
+    idxStdTypes.put("int","");
+    idxStdTypes.put("String","");
+    idxStdTypes.put("double","");
+    idxStdTypes.put("long","");
   }
 
 
@@ -202,6 +217,7 @@ public class GenZbnfJavaData
       WrClass wrClass = new WrClass();  //the main class to write
       ZbnfSyntaxPrescript startScript = this.idxSubSyntax.get(mainScript.sDefinitionIdent);
       wrClass.evaluateChildSyntax(startScript.childSyntaxPrescripts, false, 1);
+      wrClass.writeOperations();
       //
       //
       //
@@ -214,6 +230,7 @@ public class GenZbnfJavaData
         }
         wrClass = new WrClass();
         wrClass.wrClassCmpn(cmpn);
+        
       }
       wr.append(sJavaEnd);
       wrz.append(sJavaEnd);
@@ -285,6 +302,24 @@ public class GenZbnfJavaData
   
   private class WrClass {
     Map<String, String> variables = new TreeMap<String, String>();
+
+    StringBuilder wrOp = new StringBuilder(1000);
+    
+    
+    
+    private void wrClassCmpn(ZbnfSyntaxPrescript cmpn) throws IOException {
+      sJavaCmpnClass.exec(wr, firstUppercase(cmpn.sDefinitionIdent));
+      sJavaCmpnClassZbnf.exec(wrz, firstUppercase(cmpn.sDefinitionIdent), args.sJavaClass);
+      //
+      //
+      //
+      evaluateChildSyntax(cmpn.childSyntaxPrescripts, false, 0);
+      //
+      writeOperations();
+      //
+      wr.append(sJavaCmpnEnd);
+      wrz.append(sJavaCmpnEnd);
+    }
 
     void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws IOException {
       for(ZbnfSyntaxPrescript item: childScript) {
@@ -367,8 +402,7 @@ public class GenZbnfJavaData
       }
     }
 
-    private void wrSimpleVariable(String syntaxIdent, String semantic, boolean bList) throws IOException {
-      String type = firstUppercase(syntaxIdent);
+    private void wrSimpleVariable(String type, String semantic, boolean bList) throws IOException {
       if(semantic !=null) { //else: do not write, parsed without data
         String sTypeExist = variables.get(semantic);
         if(sTypeExist !=null) {
@@ -376,9 +410,16 @@ public class GenZbnfJavaData
             throw new IllegalArgumentException("Semantic " + semantic + " with different types");
           }
         } else {
+          variables.put(semantic, type);
           String name = firstLowercase(semantic);
           GenZbnfJavaData.sJavaSimpleVar.exec(wr, type, name);
-          GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, name, args.sJavaClass, type);
+          GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, type, name);
+          String sTypeZbnf = type;
+          if(idxStdTypes.get(type) == null) {
+            sTypeZbnf = args.sJavaClass + "." + type;
+          }
+          
+          GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, name, type);
         }
       }
     }
@@ -388,7 +429,7 @@ public class GenZbnfJavaData
     private void wrSubCmpn(ZbnfSyntaxPrescript item, boolean bList) throws IOException {
       if(item.sSemantic !=null) {
         String semantic = item.sSemantic.equals("@") ? item.sDefinitionIdent : item.sSemantic; 
-        wrSimpleVariable(item.sDefinitionIdent, semantic, bList);
+        wrSimpleVariable(firstUppercase(item.sDefinitionIdent), semantic, bList);
         registerCmpn(item.sDefinitionIdent);
       }
       else {
@@ -399,13 +440,6 @@ public class GenZbnfJavaData
     }
     
     
-    private void wrClassCmpn(ZbnfSyntaxPrescript cmpn) throws IOException {
-      sJavaCmpnClass.exec(wr, firstUppercase(cmpn.sDefinitionIdent));
-      sJavaCmpnClassZbnf.exec(wrz, firstUppercase(cmpn.sDefinitionIdent), args.sJavaClass);
-      wr.append(sJavaCmpnEnd);
-      wrz.append(sJavaCmpnEnd);
-    }
-
     private void registerCmpn(String name) {
       if(GenZbnfJavaData.this.idxRegisteredCmpn.get(name) == null) {
         GenZbnfJavaData.this.idxRegisteredCmpn.put(name, name);
@@ -425,6 +459,12 @@ public class GenZbnfJavaData
       char cc = src.charAt(0);
       if(Character.isLowerCase(cc)) return src;
       else return Character.toLowerCase(cc) + src.substring(1);
+    }
+    
+    
+    void writeOperations() throws IOException {
+      wr.append(wrOp);
+      wrOp.setLength(0);
     }
     
   }
