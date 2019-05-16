@@ -240,6 +240,11 @@ public class JZtxtcmdTester
   
   
   
+  public void debugData(Object data) {
+    stop();
+  }
+  
+  
   /**This method is only intend to set a breakpoint into it.
    * @return
    */

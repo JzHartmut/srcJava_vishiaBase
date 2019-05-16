@@ -1,4 +1,4 @@
-2019-05-08 10:52:16  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-05-16 11:00:54  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -124,7 +124,7 @@
 2018-10-16 07:09:41  x     JZtxtcmdFilepath.java                    ::         16.028 -1293032415 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
-2018-12-18 22:04:58  x     JZtxtcmdTester.java                      ::          9.321  0375360222 
+2019-05-11 23:07:08  x     JZtxtcmdTester.java                      ::          9.382  0958147867 
 2018-09-22 20:53:42  x     JZtxtcmdThread.java                      ::          4.865  1535102351 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
 2018-09-22 00:34:58  x     JZtxtcmdThreadQueue.java                 ::          3.607 -1856078465 
@@ -327,11 +327,12 @@
 2019-04-29 17:05:38  x     StringFunctions.java                     ::         47.506 -0711293992 
 2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
 2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
-2019-04-24 21:57:43  x     StringPart.java                          ::        118.596 -1094076175 
+2019-05-15 10:58:10  x     StringPart.java                          ::        118.587  0132600814 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
 2019-04-29 12:36:34  x     StringPartScan.java                      ::         36.862 -1767099193 
+2019-05-15 16:56:50  x     StringPreparer.java                      ::          6.465 -1408880783 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -362,6 +363,7 @@
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
+2019-05-12 13:12:14  x     Test_StringPreparer.java                 ::           .457  1228679569 
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
@@ -390,14 +392,20 @@
 2015-09-30 08:49:02  x     Xml2Jdata.java                           ::          1.596  0291993359 
 
 ============================== org/vishia/zbnf/ ====================================================
+2019-05-16 11:00:13  x     GenZbnfJavaData.java                     ::         16.703 -0350257492 
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
 2019-02-05 11:47:25  x     ZbnfJavaOutput.java                      ::         77.871  2012076703 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
-2019-03-26 10:11:26  x     ZbnfParser.java                          ::        158.762  1250726626 
+2019-05-16 10:57:47  x     ZbnfParser.java                          ::        158.971 -2050446743 
 2019-03-19 15:15:28  x     ZbnfParserStore.java                     ::         49.615 -0967790731 
-2019-03-26 10:13:30  x     ZbnfSyntaxPrescript.java                 ::         75.644 -0065024774 
+2019-05-15 11:31:38  x     ZbnfSyntaxPrescript.java                 ::         76.020  0737263420 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
 2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
+
+============================== org/vishia/zbnf/enbfConvert/ ========================================
+2019-05-16 10:52:35  x     EBNFconvert.java                         ::          5.132 -0417227285 
+2019-05-16 10:53:12  x     EBNFread.java                            ::          6.282  1031166234 
+2019-05-16 10:29:01  x     package-info.java                        ::           . 88  1156823148 
 
 ============================== org/vishia/zcmd/ ====================================================
 2017-02-16 21:54:11  x     Bin2Data.java                            ::         12.767  0457986322 

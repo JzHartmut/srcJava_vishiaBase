@@ -541,8 +541,10 @@ public class ZbnfSyntaxPrescript
             cc = spInput.getCurrentChar();
           } while( cc >='0' && cc <='9');
         }
-        { String sTest = spInput.getCurrentPart().toString();
-          cc = sTest.charAt(0);
+        { spInput.lentoAnyChar("?>");  //For syntax detection only the String till ? or till > is relevant. (change 2019-05-15, save memory and calc time).  
+          String sTest = spInput.getCurrentPart().toString();
+          spInput.setLengthMax();
+          cc = spInput.getCurrentChar();
           if(cc == '#')
           { cc = spInput.seek(1).getCurrentChar();
             switch(cc)
@@ -720,17 +722,17 @@ public class ZbnfSyntaxPrescript
             spInput.seek(1);
             sConstantSyntax = spInput.getCircumScriptionToAnyChar("?>").toString();
           }
-          else if(sTest.startsWith("\"\""))
+          else if(sTest.startsWith("\"\"")) ////
           { eType = EType.kQuotedString;
-            sConstantSyntax = "\"\"";
+            sConstantSyntax = sTest;  //till excl. ? or > with transcript char, @since 2019-05-15  "\"\"";
             sDefinitionIdent = "i-QuotedString";
-            spInput.seek(2);
+            spInput.seekPos(sTest.length());
           }
           else if(sTest.startsWith("\'\'"))
           { eType = EType.kQuotedString;
             sDefinitionIdent = "i-QuotedString";
-            sConstantSyntax = "\'\'";
-            spInput.seek(2);
+            sConstantSyntax = sTest;  //till excl. ? or > with transcript char, @since 2019-05-15  "\'\'";
+            spInput.seekPos(sTest.length());
           }
           else if(cc == '?')
           { eType = EType.kOnlySemantic;

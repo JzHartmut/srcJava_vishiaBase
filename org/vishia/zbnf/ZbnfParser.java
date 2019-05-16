@@ -1694,13 +1694,14 @@ public class ZbnfParser
        */
       private boolean parseSimpleStringLiteral(String sQuotionMarks, int maxNrofChars, String sSemanticForStoring, ZbnfParserStore.ParseResultItemImplement parentResultItem, ZbnfSyntaxPrescript syntaxItem) throws ParseException
       { boolean bOk;
+        char transcriptChar = sQuotionMarks.length() >=3 ? sQuotionMarks.charAt(2) : '\\';
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseSimpleStringLit;   " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <\"\"\"?" + sSemanticForError + ">");
         if(input.getCurrentChar() == sQuotionMarks.charAt(0))
-        { int len = input.indexEndOfQuotion(sQuotionMarks.charAt(1), 0, maxNrofChars);
+        { int len = input.indexEndOfQuotation(sQuotionMarks.charAt(1), transcriptChar, 0, maxNrofChars);
           if(len >=2)
           { bOk = true;
-            input.seek(1);       //without start quotion mark
-            input.lento(len-2);  //without end quotion mark
+            input.seekPos(1);       //without start quotion mark
+            input.lentoPos(len-2);  //without end quotion mark
             CharSequence sResult = input.getCurrentPart();
             long posResult = input.getCurrentPosition();
             int srcLine = input.getLineAndColumn(srcColumn);  //, srcLine, srcColumn[0], input.getInputfile()
@@ -1709,7 +1710,7 @@ public class ZbnfParser
             //{ parseResult.addString(input, sSemanticForStoring);
             //}
             if(bOk){
-              input.fromEnd().seek(1);  //behind right quotion mark
+              input.fromEnd().seekPos(1);  //behind right quotion mark
             }
           }
           else
@@ -2101,7 +2102,7 @@ public class ZbnfParser
   protected int idReportError = MainCmdLogging_ifc.error;
   
   
-  /** The list of some sub syntax definitons.*/
+  /** The list of some all syntax definitons (syntax components).*/
   protected final TreeMap<String,ZbnfSyntaxPrescript> listSubPrescript;
 
   /** Keywords*/
@@ -2517,6 +2518,9 @@ public class ZbnfParser
   }
 
 
+  
+  public ZbnfSyntaxPrescript mainScript() { return mainScript; }
+  
   
   private void importScript(String sFile, String sDirParent) 
   throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException, ParseException

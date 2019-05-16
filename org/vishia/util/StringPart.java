@@ -1720,44 +1720,36 @@ public final int indexOfAnyCharOutsideQuotion(CharSequence sChars, final int fro
 
 
 
+
+
+
 /**Searches the end of a quoted string. In Generally, a backslash skips over the next char
-* and does not test it as end of the quotion.  
-* @param fromWhere Offset after begin to begin search. 
-*                  It may be 0 if the quotion starts at begin, it is the position of the left
-*                  quotion mark.
-* @param maxToTest Limit for searching, offset from begin. It may be Integer.MAX_INT
-* @return -1 if no end of quotion is found, else the position of the char after the quotion, 
-*          at least 2 because a quotion has up to 2 chars, the quotion marks itself.
-*/
-public final int indexEndOfQuotion(char cEndQuotion, final int fromWhere, final int maxToTest)
-{ int pos = begin + fromWhere +1;
- int max = (end - pos) < maxToTest ? end : pos + maxToTest;
- boolean bNotFound = true;
- while(pos < max && bNotFound)
- { char cc = content.charAt(pos++);
-   if(cc == '\\' && (pos+1) < max)
-   { pos += 1; //on \ overread the next char, test char after them!
-   }
-   else if(cc == cEndQuotion)
-   { bNotFound = false;
-   }
- }
- return (bNotFound ? -1 : (pos - begin));
+ * and does not test it as end of the quotion.  
+ * @param cEndQuotion The character which is the end of the quoted text, the end-quote-character.
+ * @param fromWhere Offset after begin to begin search. 
+ *                  It may be 0 if the quotion starts at begin, it is the position of the left
+ *                  quotion mark.
+ * @param maxToTest Limit for searching, offset from begin. It may be Integer.MAX_INT
+ * @return -1 if no end of quotion is found, else the position of the char after the quotion, 
+ *          at least 2 because a quotion has up to 2 chars, the quotion marks itself.
+ */
+public final int indexEndOfQuotion(char cEndQuotion, final int fromWhere, final int maxToTest) {
+  return indexEndOfQuotation(cEndQuotion, '\\', fromWhere, maxToTest);
 }
 
 
 
-
-
 /**Searches the end of a quoted string. In Generally, a backslash skips over the next char
-* and does not test it as end of the quotion.  
-* @param fromWhere Offset after begin to begin search. 
-*                  It may be 0 if the quotion starts at begin, it is the position of the left
-*                  quotion mark.
-* @param maxToTest Limit for searching, offset from begin. It may be Integer.MAX_INT
-* @return -1 if no end of quotion is found, else the position of the char after the quotion, 
-*          at least 2 because a quotion has up to 2 chars, the quotion marks itself.
-*/
+ * and does not test it as end of the quotion.  
+ * @param cEndQuotion The character which is the end of the quoted text, the end-quote-character.
+ * @param transcriptChar The character which prevents end-of-quote detection if the quote-end-character follows.
+ * @param fromWhere Offset after begin to begin search. 
+ *                  It may be 0 if the quotion starts at begin, it is the position of the left
+ *                  quotion mark.
+ * @param maxToTest Limit for searching, offset from begin. It may be Integer.MAX_INT
+ * @return -1 if no end of quotion is found, else the position of the char after the quotion, 
+ *          at least 2 because a quotion has up to 2 chars, the quotion marks itself.
+ */
 public final int indexEndOfQuotation(char cEndQuotion, char transcriptChar, final int fromWhere, final int maxToTest)
 { int pos = begin + fromWhere +1;
  int max = (end - pos) < maxToTest ? end : pos + maxToTest;
