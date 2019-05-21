@@ -6,6 +6,7 @@ import java.util.TreeMap;
 
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringPreparer;
+import org.vishia.zbnf.ebnfConvert.EBNFread.EBNFdef;
 
 
 /**This class writes zbnf syntax from read EBNF.
@@ -53,12 +54,16 @@ public class EBNFconvert
    */
   Map<String, String> identifiers = new TreeMap<String, String>(); 
   
+  Map<String, EBNFdef> idx_cmpnDef;
+
   
   /**Invoked from a JZtxtcmd script.
    * @param ebnf parsed data
    * @param wr FileWriter
    */
   public void convert(EBNFread ebnf, Appendable wr) {
+    
+    idx_cmpnDef = ebnf.idx_cmpnDef;
     
     checkForIdentifier(ebnf);
     
@@ -75,7 +80,7 @@ public class EBNFconvert
           } else {
             wr.append(ebnfCmpn.cmpnName).append("::=");
             if(ebnfCmpn.bOnlyText) {
-              wr.append("<?text>");  //component without own data because only one component in its syntax def
+              wr.append("<?>");  //component without own data because only one component in its syntax def
             }
 //          if(ebnfCmpn.nrCmpn <=1) {
 //          wr.append("<?>");  //component without own data because only one component in its syntax def
@@ -105,27 +110,42 @@ public class EBNFconvert
    */
   private void checkForIdentifier(EBNFread ebnf) {
     for(EBNFread.EBNFdef ebnfCmpn: ebnf.list_cmpnDef) {
-      ebnfCmpn.bOnlyText = true;  //set to false if other than a text is detected.
       if(ebnfCmpn.cmpnName.equals("algorithm_name"))
         Debugutil.stop();
-
-      EBNFread.EBNFitem item;
-      if(  ebnfCmpn.items !=null) {
-        if( ebnfCmpn.items.size() ==1
-            && (item = ebnfCmpn.items.get(0)).what == '<'
-            && item.cmpn.equals("identifier")
-            ) {
-          identifiers.put(ebnfCmpn.cmpnName, ebnfCmpn.cmpnName);
-        }
-        else {
-          if(ebnfCmpn.cmpnName.equals("signed_integer_type_name"))
-            Debugutil.stop();
-          checkAlternative(ebnfCmpn, ebnfCmpn, 0);
-        }
+      if(!ebnfCmpn.bChecked) {
+        checkCmpn(ebnfCmpn);
       }
     }
     
   }
+  
+  
+  
+  private void checkCmpn(EBNFread.EBNFdef ebnfCmpn) {
+    if(ebnfCmpn.cmpnName.equals("subscript")) {
+      Debugutil.stop();
+    }
+    EBNFread.EBNFitem item;
+    ebnfCmpn.bChecked = true;  //prevent check again.
+    ebnfCmpn.bChecking = true;
+    ebnfCmpn.bOnlyText = true;  //set to false if other than a text is detected.
+    if(  ebnfCmpn.items !=null) {
+      if( ebnfCmpn.items.size() ==1
+          && (item = ebnfCmpn.items.get(0)).what == '<'
+          && item.cmpn.equals("identifier")
+          ) {
+        identifiers.put(ebnfCmpn.cmpnName, ebnfCmpn.cmpnName);
+        ebnfCmpn.bOnlyText = false;
+      }
+      else {
+        if(ebnfCmpn.cmpnName.equals("signed_integer_type_name"))
+          Debugutil.stop();
+        checkAlternative(ebnfCmpn, ebnfCmpn, 0);
+      }
+    }
+    ebnfCmpn.bChecking = false;
+  }
+  
   
   
   
@@ -136,12 +156,7 @@ public class EBNFconvert
         //The first alternative is finished now.
         checkAlternative((EBNFread.EBNFexpr)item, cmpn, recursive +1);
       } else {
-        if(item.what != '\"') {
-          cmpn.bOnlyText = false;
-        }
-        if(item instanceof EBNFread.EBNFexpr) {
-          checkExpr((EBNFread.EBNFexpr)item, cmpn, recursive+1);
-        }
+        checkitem(item, cmpn, recursive);
       }
     }
     
@@ -153,25 +168,48 @@ public class EBNFconvert
     if(recursive > 100) throw new IllegalArgumentException("too many recursions");
     
     for(EBNFread.EBNFitem item: expr.items) {
-      if(item.what == '|') { //another alternative
-        //if an alternative follows after the items of an expr, only some more alternative expr are following.
-        //The first alternative is finished now.
-        //checkAlternative((EBNFread.EBNFexpr)item, cmpn);
-      } else {
-        if(item.what != '\"') {
-          cmpn.bOnlyText = false;
-        }
-      }
-      if(item instanceof EBNFread.EBNFexpr) {
-        checkExpr((EBNFread.EBNFexpr)item, cmpn, recursive+1);
-      }
+      checkitem(item, cmpn, recursive);
     }
     
   }
   
   
   
-  
+  void checkitem(EBNFread.EBNFitem item, EBNFread.EBNFdef cmpn, int recursive) {
+    if(item.what == '|') { //another alternative
+      //if an alternative follows after the items of an expr, only some more alternative expr are following.
+      //The first alternative is finished now.
+      //checkAlternative((EBNFread.EBNFexpr)item, cmpn);
+    } else {
+      boolean bOnlyTextCmpn = false;
+      if(item.what == '<') {
+        if(item.cmpn.equals("resource_type_name"))
+          Debugutil.stop();
+        if(identifiers.get(item.cmpn) ==null) {
+          EBNFread.EBNFdef cmpnCall = idx_cmpnDef.get(item.cmpn);
+          if(cmpnCall !=null && !cmpnCall.bChecked) {
+            checkCmpn(cmpnCall);
+          }
+          if(cmpnCall !=null && cmpnCall.bChecking && cmpnCall.bOnlyText) {
+            Debugutil.stop();
+            bOnlyTextCmpn = false;  //The component is in checking, not ready, it invokes this cmpn. No text!
+          } else 
+            bOnlyTextCmpn = cmpnCall !=null && cmpnCall.bOnlyText;
+        }
+      }
+      if(item.what == '<' && !bOnlyTextCmpn ) {
+        cmpn.bOnlyText = false;
+      }
+      if( "#".indexOf(item.what) >=0) {  //not a component or literal 
+        cmpn.bOnlyText = false;
+      }
+    }
+    //Handle all sub expr, | too:
+    if(item instanceof EBNFread.EBNFexpr) {
+      checkExpr((EBNFread.EBNFexpr)item, cmpn, recursive+1);
+    }
+    
+  }
   
   private void convertExpr(Appendable wr, EBNFread.EBNFexpr expr, int level) throws IOException {
     if(level >=2 && expr.hasAlternatives) {
@@ -180,9 +218,9 @@ public class EBNFconvert
     String sCmpnBeforeRepeat = null;
     boolean bOnlyOneCmpn = expr.cmpnDef.nrCmpn <=1;
     for(EBNFread.EBNFitem item: expr.items) {
-      sCmpnBeforeRepeat = convertItem(wr, sCmpnBeforeRepeat, item, bOnlyOneCmpn, level);
+      sCmpnBeforeRepeat = convertItem(wr, sCmpnBeforeRepeat, item, expr.cmpnDef, bOnlyOneCmpn, level);
     }
-    wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+    wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, expr.cmpnDef);
     if(level >=2 && expr.hasAlternatives) {
       wr.append("]");
     }
@@ -216,15 +254,22 @@ EBNFitem::=
    * @return null or a component name if a component call is detected.<code>
    * @throws IOException
    */
-  private String convertItem(Appendable wr, String sCmpnBeforeRepeat, EBNFread.EBNFitem item, boolean bOnlyOneCmpn, int level) throws IOException {
+  private String convertItem(Appendable wr, String sCmpnBeforeRepeat
+      , EBNFread.EBNFitem item, EBNFread.EBNFdef inCmpn, boolean bOnlyOneCmpn, int level) throws IOException {
     String sCmpnBeforeRepeatRet = null;
     switch(item.what) {
       case '[': 
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
-        wr.append(" ["); convertExpr(wr, (EBNFread.EBNFexpr) item, level+1); wr.append(" ]"); 
+        EBNFread.EBNFexpr itemExpr = (EBNFread.EBNFexpr) item;
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
+        wr.append(" [");
+        if(itemExpr.bOnlyTextInExpr) {
+          wr.append("<?").append("text").append('>');
+        }
+        convertExpr(wr, itemExpr, level+1); 
+        wr.append(" ]"); 
         break;
       case '|':
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
         if(level <2) {
           wr.append("\n |");
         } else {
@@ -236,11 +281,11 @@ EBNFitem::=
         checkRepetition(wr, sCmpnBeforeRepeat, (EBNFread.EBNFexpr) item, bOnlyOneCmpn, level+1);
         break;
       case '<': 
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
         sCmpnBeforeRepeatRet = item.cmpn;
         break;
       case '"': 
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
         int ix = 0;
         wr.append(' ');
         while(ix <  item.literal.length()) {
@@ -252,11 +297,11 @@ EBNFitem::=
         }
         break;
       case '#': 
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
         wr.append("    ##").append(item.comment).append("\n    "); 
         break;
       case '(': 
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
         convertExpr(wr, (EBNFread.EBNFexpr) item, level+1); 
         break;
       default: throw new IllegalArgumentException("unexpected type of EBNFitem: " + item.what);
@@ -270,13 +315,35 @@ EBNFitem::=
    * @param sCmpn
    * @throws IOException
    */
-  private void wrCmpnCall(Appendable wr, String sCmpn, boolean bOnlyOneCmpn) throws IOException {
-    if(sCmpn !=null) {
+  private void wrCmpnCall(Appendable wr, String sCmpn, boolean bOnlyOneCmpn, EBNFread.EBNFdef inCmpn) throws IOException {
+    if(sCmpn ==null) return;  //no sCmpn given, typical
+    boolean bIdentifer = identifiers.get(sCmpn)!=null;  
+    boolean bCmpnText;
+    if(bIdentifer) { 
+      bCmpnText = false; 
+    } else {
+      EBNFread.EBNFdef cmpn = idx_cmpnDef.get(sCmpn);
+      if(cmpn == null) {
+        bCmpnText = false;
+      } else if(inCmpn.bOnlyText && cmpn.bOnlyText) {
+        bCmpnText = false;
+      } else {
+        bCmpnText = cmpn.bOnlyText;
+      }
+    }
+    if(bCmpnText) {
+      wr.append("[<?");
+    } else {
       wr.append(" <");
-      if(identifiers.get(sCmpn)!=null) {
+      if(bIdentifer) {
         wr.append("$?");
       }
-      wr.append(sCmpn);
+      
+    }
+    wr.append(sCmpn);
+    if(bCmpnText) {
+      wr.append("> <").append(sCmpn).append("?>]");
+    } else {
       wr.append('>');
     }
   }
@@ -306,20 +373,20 @@ EBNFitem::=
       && itemRepeat.cmpn.equals(sCmpnBeforeRepeat) 
       ) {
       wr.append(" {"); 
-      wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+      wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, expr.cmpnDef);
       if(zItems >1) {
         wr.append(" ? "); 
         String sCmpnInRepeat = null;
         for(int ix=0; ix < zItems-1; ++ix) {
           EBNFread.EBNFitem item = expr.items.get(ix);
-          sCmpnInRepeat = convertItem(wr, sCmpnInRepeat, item, bOnlyOneCmpn, level);
+          sCmpnInRepeat = convertItem(wr, sCmpnInRepeat, item, expr.cmpnDef, bOnlyOneCmpn, level);
         }
-        if(sCmpnInRepeat !=null) { wrCmpnCall(wr, sCmpnInRepeat, bOnlyOneCmpn); }
+        if(sCmpnInRepeat !=null) { wrCmpnCall(wr, sCmpnInRepeat, bOnlyOneCmpn, expr.cmpnDef); }
       }
       wr.append(" }"); 
     
     } else {
-      wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn);
+      wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, expr.cmpnDef);
       wr.append(" [{"); convertExpr(wr, expr, level+1); wr.append(" }]"); 
     }
   

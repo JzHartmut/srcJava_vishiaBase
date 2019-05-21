@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.util.Debugutil;
+
 /**This class is the destination to storing parse results with ebnf.zbnf, the interpretation of EBNF sources. 
  * The used syntax is:<pre>
 <?ZBNF-www.vishia.de version="0.7" encoding="UTF-8" ?>
@@ -79,7 +81,7 @@ public class EBNFread {
   public static final String sVersion = "2019-05-16";
 
 
-  public String cmpnName; //<$?cmpnName> 
+  //public String cmpnName; //<$?cmpnName> 
 
 
   public List<EBNFdef> list_cmpnDef = new ArrayList<EBNFdef>();
@@ -93,7 +95,7 @@ public class EBNFread {
 
   public String pdftext; //<*| ?pdftext> 
 
-  public static class EBNFblock extends EBNFdef {
+  public static class XXXEBNFblock extends EBNFdef {
 
 
     public String pdftext; //<*| ?pdftext> 
@@ -109,6 +111,7 @@ public class EBNFread {
 
     public boolean bOnlyText;
     
+    public boolean bChecked, bChecking;
     
     public String cmpnName; //<$?cmpnName> 
 
@@ -136,7 +139,7 @@ public class EBNFread {
   public static class EBNFalt extends EBNFexpr {
     
     //EBNFalt(char what){ expr = new EBNFexpr(this, what); }
-    EBNFalt(EBNFdef cmpnDef, char what){ super(cmpnDef, what);  }
+    EBNFalt(EBNFdef cmpnDef, char what){ super(cmpnDef, null, what);  }
     
     /**From ZBNF syntax: &lt;...?alternative> */
     public EBNFexpr new_alternative() { 
@@ -163,7 +166,15 @@ public class EBNFread {
 
   public static class EBNFexpr extends EBNFitem {
 
+    /**The parent component definition for component global settings. */
     final EBNFdef cmpnDef;
+    
+    final EBNFexpr _parent;
+    
+    /**Set false on evaluation if other than literal are stored here.
+     * 
+     */
+    boolean bOnlyTextInExpr = true;
     
     public boolean hasAlternatives = false;
 
@@ -171,8 +182,9 @@ public class EBNFread {
     public List<EBNFitem> items;
     
 
-    public EBNFexpr(EBNFdef cmpnDef, char what) { 
+    public EBNFexpr(EBNFdef cmpnDef, EBNFexpr parent, char what) { 
       super(what); 
+      this._parent = parent;
       if(cmpnDef == null) {           //null is given on the constructor of EBNFdef itself, 
         this.cmpnDef = (EBNFdef)this; //the use this itself. 
       } else {
@@ -182,7 +194,7 @@ public class EBNFread {
 
 
     /**From ZBNF syntax: &lt;...?option> */
-    public EBNFexpr new_option() { return new EBNFexpr(cmpnDef, '['); }
+    public EBNFexpr new_option() { return new EBNFexpr(cmpnDef, this, '['); }
     
     public void add_option(EBNFexpr val) { 
       if(items == null) { items = new ArrayList<EBNFitem>(); } 
@@ -194,7 +206,7 @@ public class EBNFread {
 
 
     /**From ZBNF syntax: &lt;...?repetition> */
-    public EBNFexpr new_repetition() { return new EBNFexpr(cmpnDef, '{'); }
+    public EBNFexpr new_repetition() { return new EBNFexpr(cmpnDef, this, '{'); }
     
     public void add_repetition(EBNFexpr val) {
       if(items == null) { items = new ArrayList<EBNFitem>(); } 
@@ -207,7 +219,7 @@ public class EBNFread {
     /**From ZBNF syntax: &lt;...?alternative> */
     public EBNFexpr new_alternative() { 
       this.hasAlternatives = true; 
-      return (new EBNFexpr(cmpnDef, '|')); 
+      return (new EBNFexpr(cmpnDef, this, '|')); 
     }
 
     public void add_alternative(EBNFexpr val) {
@@ -218,7 +230,7 @@ public class EBNFread {
 
 
     /**From ZBNF syntax: &lt;...?parenthesis> */
-    public EBNFexpr new_parenthesis() { return new EBNFexpr(cmpnDef, '('); }
+    public EBNFexpr new_parenthesis() { return new EBNFexpr(cmpnDef, this, '('); }
     
     public void add_parenthesis(EBNFexpr val) { 
       if(items == null) { items = new ArrayList<EBNFitem>(); } 
@@ -236,6 +248,9 @@ public class EBNFread {
 
     public void set_cmpn(String ident){ 
       //EBNFalt cmpnAlt = this.cmpnAlt == null ? (EBNFalt)this : this.cmpnAlt;
+      if(ident.equals("plug_name") && cmpnDef.cmpnName.equals("ec_expression_operand"))
+        Debugutil.stop();
+      resetOnlyTextItem();
       cmpnDef.nrCmpn +=1;
       EBNFitem item = new EBNFitem('<'); 
       item.cmpn = ident; 
@@ -244,12 +259,28 @@ public class EBNFread {
     }
 
     public void set_comment(String comment){ 
+      resetOnlyTextItem();
       EBNFitem item = new EBNFitem('#'); 
       item.comment = comment; 
       if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(item); 
     }
 
+    
+    
+    void resetOnlyTextItem() {
+      EBNFexpr parent = this;
+      int recursive = 0;
+      do {
+        parent.bOnlyTextInExpr = false;
+        parent = parent._parent;
+      } while(parent !=null && recursive < 20);
+      if(parent !=null) {
+        throw new RuntimeException("test me");
+      }
+    }
+    
+    
     @Override public String toString() {
       return what + "";
     }
