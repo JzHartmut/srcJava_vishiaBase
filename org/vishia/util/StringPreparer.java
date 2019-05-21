@@ -149,10 +149,11 @@ public class StringPreparer
     StringPartScan sp = new StringPartScan(src);
     sp.setIgnoreWhitespaces(true);
     while(sp.length() >0) {
-      sp.lento('<');
+      sp.seekCheck("<&");
       if(sp.found()) {
-        pos1 = pos0 + (int)sp.length();
-        sp.fromEnd().scan().scanStart();
+        pos1 = (int)sp.getCurrentPosition(); //pos0 + (int)sp.length();
+        //sp.fromEnd().seek("<").scan().scanStart();
+        sp.scan().scanStart();
         if(sp.scan("<&").scanIdentifier().scan(">").scanOk()){
           String sName = sp.getLastScannedString();
           Integer ixVar = vars.get(sName);

@@ -1461,7 +1461,8 @@ public final class ZbnfJavaOutput
     }  
     if(sError == null && spInput !=null)
     { 
-      zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.fineDebug, MainCmdLogging_ifc.fineDebug);
+      //zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.fineDebug, MainCmdLogging_ifc.fineDebug);
+      zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.error, MainCmdLogging_ifc.error);
       //parse the file:
       boolean bOk = zbnfParser.parse(spInput);
       if(!bOk)
@@ -1473,7 +1474,7 @@ public final class ZbnfJavaOutput
       //The content of the setting file is stored inside the parser as 'parse result'.
       //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.
       //The class settings contains the necessary elements appropriate to the semantic keywords in the syntax prescript.
-      zbnfParser.reportStore(report, MainCmdLogging_ifc.debug);
+      //zbnfParser.reportStore(report, MainCmdLogging_ifc.debug);
     }
     if(sError == null)
     { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 

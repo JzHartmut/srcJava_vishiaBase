@@ -122,6 +122,10 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-15 Hartmut {@link #seekCheck(CharSequence)}: A seek("xyz") shifts the actual position to the end if the seek String is not found. 
+   *   This is the programmed behavior since 20 years, but it seems to be inconsequent. It may be better to remain the position, 
+   *   because found() can be checked. This routine is not changed. But the new routine {@link #seekCheck(CharSequence)}
+   *   and a flag {@link #mSeekCheck} is introduced instead.
    * <li>2019-04-24 Hartmut Some gardening because this sources are copied and adapted to C-sharp too:
    *   {@link Part} is a static class now, with outer reference. It is more clearly. Csharp does not know the concept of non static inner classes
    * <li>2019-04-24 Hartmut new {@link #setCurrentMaxPart()}, obvious necessary while test (independent of Csharp!).
@@ -205,7 +209,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2016-09-04";
+  public final static String sVersion = "2019-05-21";
   
    
   /** The actual start position of the valid part.*/
@@ -276,9 +280,12 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   /** Flag to force setting the start position after the seeking string. See description on seek(CharSequence, int).
    */
    public static final int seekEnd = 1;
+   
+   /**If this bit is set on seek, the position remains if the seek is not successfully (if {@link #found()} returns false). */
+   public static final int mSeekCheck = 2;
 
-   /** Flag bit to force seeking backward. This value is contens impilicit in the mSeekBackFromStart or ~End,
-       using to detect internal the backward mode.
+   /**Flag bit to force seeking backward. This value is contens impilicit in the mSeekBackFromStart or ~End,
+    * using to detect internal the backward mode.
    */
    private static final int mSeekBackward_ = 0x10;
 
@@ -1246,30 +1253,10 @@ return this;
 
 
 
-  /**Searchs the given String inside the valid part, posits the begin of the part to the begin of the searched string.
-   * The end of the part is not affected.
-   * If the string is not found, the begin is posit on the actual end. The length()-method supplies 0.
-   * Methods such fromEnd() are not interacted from the result of the searching.
-   * The rule is: seek()-methods only shifts the begin position.
-   *
-    <hr/><u>example:</u><pre>
-that is a liststring and his part The associated String
-=============================   The maximal part
-  ----------------------      The valid part before
-       +++++++++++++++++      The valid part after seek("is",StringPartBase.seekNormal).
-         +++++++++++++++      The valid part after seek("is",StringPartBase.seekEnd).
-                      ++      The valid part after seek("is",StringPartBase.back).
-                       .      The valid part after seek("is",StringPartBase.back + StringPartBase.seekEnd).
- +++++++++++++++++++++++      The valid part after seek("is",StringPartBase.seekToLeft).
-   +++++++++++++++++++++      The valid part after seek("is",StringPartBase.seekToLeft + StringPartBase.seekEnd).
-++++++++++++++++++++++++++      The valid part after seek("xx",StringPartBase.seekToLeft).
-                       .      The valid part after seek("xx",StringPartBase.seekNormal)
-                              or seek("xx",StringPartBase.back).
-
-  </pre>
+  /**Common seek operation with several modes in flags.   
    * @java2c=return-this.
    * @param sSeek The string to search for.
-   * @param mode Mode of seeking, use ones of {@link #seekBack}, {@link #seekToLeft}, {@link #seekNormal}, added with {@link #seekEnd}.
+   * @param mode Mode of seeking, use ones of {@link #mSeekCheck}, {@link #seekBack}, {@link #seekToLeft}, {@link #seekNormal}, added with {@link #seekEnd}.
    * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
    */
   public final StringPart seek(CharSequence sSeek, int mode){ 
@@ -1285,13 +1272,13 @@ that is a liststring and his part The associated String
       seekArea1 = begiMin;
       seekArea9 = posAreaEnd;
       //sSeekArea = content.substring(startMin, posAreaEnd );
-      posNotFound = begin; //if not found, the rightest position of area
+      posNotFound = (mode & mSeekCheck) !=0 ? end : begin; //if not found, the rightest position of area
     }
     else { 
       seekArea1 = begin;
       seekArea9 = end;
       //sSeekArea = content.substring(begin, end );
-      posNotFound = end; //if not found, the rightest position of area
+      posNotFound = (mode & mSeekCheck) !=0 ? begin : end; //if not found, the rightest position of area
     }
     
     int pos;
@@ -1375,12 +1362,44 @@ that is a liststring and his part The associated String
   
   
   
-  /**Seeks to the given CharSequence, result is left side of the string.
+  /**Searchs the given String inside the valid part, posits the begin of the part to the begin of the searched string.
+   * The end of the part is not affected.
+   * If the string is not found, the begin is posit on the actual end. The length()-method supplies 0.
+   * Methods such fromEnd() are not interacted from the result of the searching.
+   * The rule is: seek()-methods only shifts the begin position.
+   *
+    <hr/><u>example:</u><pre>
+that is a liststring and his part The associated String
+=============================   The maximal part
+  ----------------------      The valid part before
+       +++++++++++++++++      The valid part after seek("is",StringPartBase.seekNormal).
+         +++++++++++++++      The valid part after seek("is",StringPartBase.seekEnd).
+                      ++      The valid part after seek("is",StringPartBase.back).
+                       .      The valid part after seek("is",StringPartBase.back + StringPartBase.seekEnd).
+ +++++++++++++++++++++++      The valid part after seek("is",StringPartBase.seekToLeft).
+   +++++++++++++++++++++      The valid part after seek("is",StringPartBase.seekToLeft + StringPartBase.seekEnd).
+++++++++++++++++++++++++++      The valid part after seek("xx",StringPartBase.seekToLeft).
+                       .      The valid part after seek("xx",StringPartBase.seekNormal)
+                              or seek("xx",StringPartBase.back).
+
+  </pre>
+   * This operation calls {@link #seek(CharSequence, int)} with flag {@link #seekNormal}.
+   * Use {@link #seekCheck(CharSequence)} or {@link #seek(CharSequence, int)} with {@link #mSeekCheck}.
    * @param sSeek
    * @return
    */
   @Java4C.Inline
   public final StringPart seek(CharSequence sSeek){ return seek(sSeek, seekNormal); }
+  
+  
+  /**Seeks to the given CharSequence, result is left side of the string.
+   * If the string is not found, the current part remains (in opposite to {@link #seek(CharSequence)}
+   * which sets the current position to the end)
+   * @param sSeek
+   * @return
+   */
+  @Java4C.Inline
+  public final StringPart seekCheck(CharSequence sSeek){ return seek(sSeek, seekNormal + mSeekCheck); }
   
   
   /**Seeks to the given CharSequence, start position is after the string.
@@ -1390,6 +1409,15 @@ that is a liststring and his part The associated String
    */
   @Java4C.Exclude  //name class with const seekEnd
   public final StringPart seekEnd(CharSequence sSeek){ return seek(sSeek, seekEnd); }
+  
+  
+  /**Seeks to the given CharSequence, start position is after the string.
+   * Use {@link #found()} to check whether it is found.
+   * @param sSeek
+   * @return this
+   */
+  @Java4C.Exclude  //name class with const seekEnd
+  public final StringPart seekCheckEnd(CharSequence sSeek){ return seek(sSeek, seekEnd + mSeekCheck); }
   
   
 
@@ -1832,7 +1860,7 @@ public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest)
 * @param sChars Some chars searched as terminate char for the actual part.
 * @param maxToTest Maximum of chars to test. If the endchar isn't find inside this number of chars,
 *        the actual length is set to 0.
-* @param mode Possible values are StringPartBase.seekBack or StringPartBase.seekNormal = 0.       
+* @param mode Possible values are {@link #seekBack} or {@link #seekNormal} = 0.       
 * @return This itself.
 */
 public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest, int mode)

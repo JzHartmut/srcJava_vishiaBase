@@ -5,4 +5,4 @@
  * @author hartmut Schorrig
  *
  */
-package org.vishia.zbnf.enbfConvert;
+package org.vishia.zbnf.ebnfConvert;

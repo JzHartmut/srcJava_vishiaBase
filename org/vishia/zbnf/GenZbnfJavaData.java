@@ -11,6 +11,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StringPreparer;
 
@@ -152,16 +153,61 @@ public class GenZbnfJavaData
     + "    \n"
     + "    \n");
   
+  private static final StringPreparer sJavaListVar = new StringPreparer( 
+      "    \n"
+    + "    protected List<<&type>> <&name>;\n"
+    + "    \n"
+    + "    \n");
+  
   private static final StringPreparer sJavaSimpleVarOper = new StringPreparer( 
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
-    + "    <&type> <&name>() { return <&name>; }\n"
+    + "    public <&type> <&name>() { return <&name>; }\n"
+    + "    \n"
+    + "    \n");
+  
+  private static final StringPreparer sJavaListVarOper = new StringPreparer( 
+      "    \n    \n"
+    + "    /**Access to parse result.*/\n"
+    + "    public Iterable<<&type>> <&name>() { return <&name>; }\n"
     + "    \n"
     + "    \n");
   
   
   private static final StringPreparer sJavaSimpleVarZbnf = new StringPreparer( 
-      "    void set_<&name>(<&type> val) { super.<&name> = val; }\n"
+      "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
+    + "    public void set_<&name>(<&type> val) { super.<&name> = val; }\n"
+    + "    \n"
+    + "    \n");
+  
+  private static final StringPreparer sJavaListVarZbnf = new StringPreparer( 
+      "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
+    + "    public void set_<&name>(<&type> val) { \n"
+    + "      if(super.<&name>==null) { super.<&name> = new ArrayList<<&typeGeneric>>(); }\n"
+    + "      super.<&name>.add(val); \n"
+    + "    }\n"
+    + "    \n"
+    + "    \n");
+  
+  
+  private static final StringPreparer sJavaCmpnZbnf = new StringPreparer( 
+      "    /**Creates an instance for the result. &lt;<&type>?<&name>&gt;*/\n"
+    + "    public <&type>_Zbnf new_<&name>() { return new <&type>_Zbnf(); }\n"
+    + "    \n"
+    + "    /**Set the result. &lt;<&type>?<&name>&gt;*/\n"
+    + "    public void set_<&name>(<&type>_Zbnf val) { super.<&name> = val; }\n"
+    + "    \n"
+    + "    \n");
+  
+  private static final StringPreparer sJavaListCmpnZbnf = new StringPreparer( 
+      "    /**create and add routine for the list component <<&type>?<&name>>. */\n"
+    + "    public <&type>_Zbnf new_<&name>() { return new <&type>_Zbnf(); }\n"
+    + "    \n"
+    + "    /**Add the result to the list. &lt;<&type>?<&name>&gt;*/\n"
+    + "    public void add_<&name>(<&type>_Zbnf val) {\n"
+    + "      if(super.<&name>==null) { super.<&name> = new ArrayList<<&type>>(); }\n"
+    + "      super.<&name>.add(val); \n"
+    + "    }\n"
     + "    \n"
     + "    \n");
   
@@ -170,11 +216,11 @@ public class GenZbnfJavaData
   public GenZbnfJavaData(Args args, MainCmdLogging_ifc log)
   { this.args = args;
     this.log = log;
-    idxStdTypes.put("float","");
-    idxStdTypes.put("int","");
-    idxStdTypes.put("String","");
-    idxStdTypes.put("double","");
-    idxStdTypes.put("long","");
+    idxStdTypes.put("float","Float");
+    idxStdTypes.put("int","Integer");
+    idxStdTypes.put("String","String");
+    idxStdTypes.put("double","Double");
+    idxStdTypes.put("long","Long");
   }
 
 
@@ -192,8 +238,14 @@ public class GenZbnfJavaData
     }
     idxSubSyntax = parser.listSubPrescript;
     ZbnfSyntaxPrescript mainScript = parser.mainScript();
+    
     evaluateSyntax(mainScript);
   }
+  
+  
+  
+  
+  
   
   
   
@@ -307,6 +359,10 @@ public class GenZbnfJavaData
     
     
     
+    /**Writes a Class for a syntax Component.
+     * @param cmpn
+     * @throws IOException
+     */
     private void wrClassCmpn(ZbnfSyntaxPrescript cmpn) throws IOException {
       sJavaCmpnClass.exec(wr, firstUppercase(cmpn.sDefinitionIdent));
       sJavaCmpnClassZbnf.exec(wrz, firstUppercase(cmpn.sDefinitionIdent), args.sJavaClass);
@@ -321,33 +377,60 @@ public class GenZbnfJavaData
       wrz.append(sJavaCmpnEnd);
     }
 
+    /**An syntax item can have an inner syntax tree. It is not a component. 
+     * The result of the inner tree is stored in the same level.
+     * If a called component is found, it is checked whether it has an own semantic
+     * and the component's syntax is not contained in #idxCmpnWithoutSemantic ( name::=&lt;?> )
+     * Then it is added to build a new class.
+     * If it has not a semantic, the called component is expand here. 
+     * @param childScript
+     * @param bList
+     * @param level
+     * @throws IOException
+     */
     void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws IOException {
       for(ZbnfSyntaxPrescript item: childScript) {
         String semantic = item.sSemantic == null ? "" : item.sSemantic;
         if(semantic.startsWith("@")) { semantic = semantic.substring(1); }
         if(semantic.length() >0) {
         }
+        boolean bRepetition = bList;
         if(item.eType !=null) {
           switch(item.eType) {
+            
             case kAlternative: 
-              break;
-            case kAlternativeOption:
-              break;
             case kAlternativeOptionCheckEmptyFirst:
+            case kSimpleOption:
+            case kAlternativeOption:
+              if(item.sSemantic !=null) {
+                //It is [<?semantic>...]: The parsed content in [...] should be stored as String
+                wrVariable("String", semantic, bList, false); 
+              }
               break;
+            
             case kExpectedVariant:
               break;
             
             case kFloatWithFactor:
-            case kFloatNumber: wrSimpleVariable("float", semantic, bList); break;
+            case kFloatNumber: wrVariable("float", semantic, bList, false); break;
             
             case kPositivNumber:
             case kIntegerNumber:
-            case kHexNumber: wrSimpleVariable("int", semantic, bList); break;
+            case kHexNumber: wrVariable("int", semantic, bList, false); break;
             
+            case kStringUntilEndString:
+            case kStringUntilEndStringInclusive:
+            case kStringUntilEndStringTrim:
+            case kStringUntilEndStringWithIndent:
+            case kStringUntilEndchar:
+            case kStringUntilEndcharInclusive:
+            case kStringUntilEndcharOutsideQuotion:
+            case kStringUntilEndcharWithIndent:
+            case kStringUntilRightEndchar:
+            case kStringUntilRightEndcharInclusive:
             case kQuotedString:
             case kRegularExpression:
-            case kIdentifier:  wrSimpleVariable("String", semantic, bList); break;
+            case kIdentifier:  wrVariable("String", semantic, bList, false); break;
             
             case kNegativVariant:
             case kNotDefined:
@@ -355,35 +438,13 @@ public class GenZbnfJavaData
               
             case kOnlySemantic:
               break;
-            case kRepetition:
+            case kRepetition: bRepetition = true; //store immediately result in list
               break;
-            case kRepetitionRepeat:
-              break;
-            case kSimpleOption:
+            case kRepetitionRepeat:  bRepetition = true;
               break;
             case kSkipSpaces:
               break;
-            case kStringUntilEndString:
-              break;
-            case kStringUntilEndStringInclusive:
-              break;
-            case kStringUntilEndStringTrim:
-              break;
-            case kStringUntilEndStringWithIndent:
-              break;
-            case kStringUntilEndchar:
-              break;
-            case kStringUntilEndcharInclusive:
-              break;
-            case kStringUntilEndcharOutsideQuotion:
-              break;
-            case kStringUntilEndcharWithIndent:
-              break;
-            case kStringUntilRightEndchar:
-              break;
-            case kStringUntilRightEndcharInclusive:
-              break;
-            case kSyntaxComponent: wrSubCmpn(item, bList);
+            case kSyntaxComponent: evaluateSubCmpn(item, bList, level);
               break;
             case kSyntaxDefinition:
               break;
@@ -396,13 +457,17 @@ public class GenZbnfJavaData
             default:
           }
         }
+        //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
+        //in a repetition bList = true;
         if(item.childSyntaxPrescripts !=null) {
-          evaluateChildSyntax(item.childSyntaxPrescripts, false, level+1);
+          evaluateChildSyntax(item.childSyntaxPrescripts, bRepetition, level+1);
         }
       }
     }
 
-    private void wrSimpleVariable(String type, String semantic, boolean bList) throws IOException {
+    private void wrVariable(String type, String semantic, boolean bList
+      , boolean bCmpn
+      ) throws IOException {
       if(semantic !=null) { //else: do not write, parsed without data
         String sTypeExist = variables.get(semantic);
         if(sTypeExist !=null) {
@@ -412,29 +477,80 @@ public class GenZbnfJavaData
         } else {
           variables.put(semantic, type);
           String name = firstLowercase(semantic);
-          GenZbnfJavaData.sJavaSimpleVar.exec(wr, type, name);
-          GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, type, name);
           String sTypeZbnf = type;
-          if(idxStdTypes.get(type) == null) {
-            sTypeZbnf = args.sJavaClass + "." + type;
+          String sTypeGeneric = idxStdTypes.get(type);
+          if(sTypeGeneric == null) { 
+//            sTypeZbnf = args.sJavaClass + "." + type;
+//            sTypeGeneric = args.sJavaClass + "." + type; 
+            sTypeZbnf = type;
+            sTypeGeneric = type; 
           }
-          
-          GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, name, type);
+          if(bList) {
+            GenZbnfJavaData.sJavaListVar.exec(wr, sTypeGeneric, name);
+            GenZbnfJavaData.sJavaListVarOper.exec(wrOp, sTypeGeneric, name);
+            if(bCmpn) {
+              GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, sTypeZbnf, name);
+            } else {
+              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, type, name, sTypeGeneric);
+            }
+          } else {
+            GenZbnfJavaData.sJavaSimpleVar.exec(wr, type, name);
+            GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, type, name);
+            if(bCmpn) {
+              GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, sTypeZbnf, name);
+            } else {
+              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, type, name);
+            }
+            
+          }
         }
       }
     }
   
     
     
-    private void wrSubCmpn(ZbnfSyntaxPrescript item, boolean bList) throws IOException {
-      if(item.sSemantic !=null) {
-        String semantic = item.sSemantic.equals("@") ? item.sDefinitionIdent : item.sSemantic; 
-        wrSimpleVariable(firstUppercase(item.sDefinitionIdent), semantic, bList);
-        registerCmpn(item.sDefinitionIdent);
+    /**This routine is called for <code>&lt;cmpnSyntax...></code>.
+     * <ul>
+     * <li>The component is searched in {@link #idxSubSyntax}. It should be found, elsewhere it is an IllegalArgumentException
+     * <li>The semantic is taken either from the component's definition if it is not given on the item.
+     *   In this case it is written in source like <code>&lt;component></code> and item[@link #sSemantic} contains "@"-
+     * <li>In that case the semantic is usual the syntax identifier.
+     * <li>In that case it can be abbreviating because <code>component::=&lt;?semantic></code> is given.
+     * <li>In that case the semantic can be null if <code>component::=&lt;?></code> is given. See next List.
+     * <li>The semantic is taken from the item if <code>&lt;component?semantic></code> is given.
+     * <li>The semantic is null if <code>&lt;component?></code> is given.
+     * </ul>
+     * Depending on semantic == null:
+     * <ul>
+     * <li>If the semantic is null, then the component's syntax definition is used
+     * and the component's data are created in this class.  
+     * <li>If the semantic is given then a container for the component's data is created in this class 
+     *   via {@link #wrVariable(String, String, boolean, boolean)}
+     *   and the component's name is {@link #registerCmpn(String)} to create a class for it later if not created already. 
+     * </ul>  
+     * @param item The calling item of the component
+     * @param bList true if the syntax is part of a repetition
+     * @param level
+     * @throws IOException
+     */
+    private void evaluateSubCmpn(ZbnfSyntaxPrescript item, boolean bList, int level) throws IOException {
+      
+      if(item.sDefinitionIdent.equals("input_variable_list"))
+        Debugutil.stop();
+      ZbnfSyntaxPrescript prescript = idxSubSyntax.get(item.sDefinitionIdent); 
+      if(prescript == null) throw new IllegalArgumentException("error in syntax, component not found: " + item.sDefinitionIdent);
+      //on semantic "@" in the item the semantic of the prescript should be used.
+      //That is usually the same like item.sDefinitionIdent, but can be defined other via cpmpn::=<?semantic> 
+      String semantic = item.sSemantic == null ? null : item.sSemantic.equals("@") ? prescript.sSemantic : item.sSemantic; 
+      if(semantic == null) { //either the item is written with <...?> or the prescript with ::=<?> 
+      //if(item.sSemantic == null || prescript.sSemantic == null) {
+        //expand here
+        evaluateChildSyntax(prescript.childSyntaxPrescripts, bList, level);
       }
       else {
-        // <sDefinitionIdent?>: evaluate.
-        
+        //create an own class for the component, write a container here.
+        wrVariable(firstUppercase(item.sDefinitionIdent), semantic, bList, true);
+        registerCmpn(item.sDefinitionIdent);
       }
       
     }

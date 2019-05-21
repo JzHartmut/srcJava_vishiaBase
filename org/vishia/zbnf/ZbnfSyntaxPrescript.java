@@ -264,13 +264,24 @@ public class ZbnfSyntaxPrescript
   /**To go back for syntax path on error. */
   final ZbnfSyntaxPrescript parent;
   
-  /** The semantic of this part of syntax prescript or null.
-   * If the prescript is the part inside an option <code>[ .... ]?<b>Semantic</b>></code>
-   * or inside a repetition <code>{ ... }?<b>Semantic</b>></code>
-   * the semantic of this part is given in the showed wise.
-   * If a component is requested <code>&lt;syntax?<b>Semantic></b></code>, the semantic
-   * isn't set here, but it is set in the ComplexSyntax item, because the assignment between
-   * the syntax identifier and the syntax prescript is linked later.
+  /**The semantic of this syntax item or null. It is usually the String after: <code>&lt;...?semantic></code>.
+   * <ul>
+   * <li>If the item has not a special semantic but the name of the syntax should be used
+   * (written <code>&lt;cmpn></code>), this field contains "@".
+   * <li>If the item has a special semantic <code>&lt;cmpn?semantic></code> it is contained here.
+   * <li>If the item is written <code>&lt;cmpn?></code> this field contains null. 
+   *   In this case an own data container for this component should not be produced, 
+   *   the data of the component is written in the calling component's data. .
+   * <li>for an option or repetition it may be the semantic of the parsed string of this whole item (with children):
+   * <code>[&lt;?semantic> ... ]</code> or {&lt;?semantic> ... }
+   * <li>If this is an syntax definition for a component <code>cmpn::=...</code> either the semantic
+   *   is equal the components name
+   * <li>or it is a given semantic with <code>cmpn::=&lt;?semantic>...</code> 
+   *   Then this semantic should be used instead the semantic in the calling item if it contains only "@"
+   * <li>or it is null if <code>cmpn::=&lt;?>...</code> is given for the component. 
+   *   In this case an own data container for this component should not be produced, 
+   *   the data of the component is written in the calling component's data.
+   * </ul>    
    */
   protected String sSemantic;
 
@@ -412,9 +423,11 @@ public class ZbnfSyntaxPrescript
   , kRepetitionRepeat ( 10 )  //'}'
 
   /** This enum marks, that this item is nor a syntax item.
-   * Only a semantic is defined.
+   * Only a semantic is defined. Written with <code>&lt;?semantic&gt;</code> but not on start of option
+   * (not for <code>[&lt;?semantic&gt; ... ]</code>) 
+   * The last one is stored as semantic on {@value #kAlternativeOption} or {@link #kSimpleOption}
    */
-  , kOnlySemantic  ( 11 )  //'?'
+  , kOnlySemantic  ( 11 )  //'?'  <?semantic> not for [<?semenatic>...]
 
   /** This enum marks, that the syntax is defined with another definition.
    * The identifier of the definition is got with getSyntaxFromComplexItem(Object) )

@@ -52,6 +52,7 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/stateMGen/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/header2Reflection/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/sclConversions/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zbnf/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zbnf/ebnfConvert/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/zcmd/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/jztxtcmd/*.java
 

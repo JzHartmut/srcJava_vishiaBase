@@ -1,5 +1,5 @@
 
-package org.vishia.zbnf.enbfConvert;
+package org.vishia.zbnf.ebnfConvert;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +43,8 @@ EBNFitem::=
  * */
 
 public class EBNFread {
-  
-  
+
+
   /**Version, history and license.
    * <ul>
    * <li>2019-05-14 Hartmut creation: 
@@ -89,16 +89,7 @@ public class EBNFread {
 
   public String pdftext; //<*| ?pdftext> 
 
-  public static class EBNFblock {
-
-    public String cmpnName; //<$?cmpnName> 
-
-
-    List<EBNFexpr> list_cmpnDef = new ArrayList<EBNFexpr>();
-
-    /**From ZBNF syntax: &lt;...?cmpnDef> */
-    public EBNFexpr new_cmpnDef() { return new EBNFexpr(':'); }
-    public void add_cmpnDef(EBNFexpr val) { list_cmpnDef.add(val); }
+  public static class EBNFblock extends EBNFdef {
 
 
     public String pdftext; //<*| ?pdftext> 
@@ -110,38 +101,74 @@ public class EBNFread {
     public String cmpnName; //<$?cmpnName> 
 
 
-    public EBNFexpr cmpnDef;
+    public EBNFalt cmpnDef;
+
+    /**Number of called Components in this expression.
+     * If it is only 1, the ZBNF call is writteh with <code>&lt;cmpn?></code>
+     */
+    public int nrCmpn;
 
     /**From ZBNF syntax: &lt;...?cmpnDef> */
-    public EBNFexpr new_cmpnDef() { return new EBNFexpr(':'); }
-    public void set_cmpnDef(EBNFexpr val) { cmpnDef = val; }
+    public EBNFalt new_cmpnDef() { return new EBNFalt(this, ':'); }
+    public void set_cmpnDef(EBNFalt val) { cmpnDef = val; }
 
   }
 
-  public static class EBNFexpr {
 
-    public int page;  
+  
+  /**It is either the whole syntax of a component without toplevel alternatives or one alternative on toplevel.
+   *
+   */
+  public static class EBNFalt extends EBNFexpr {
+    
+    //EBNFalt(char what){ expr = new EBNFexpr(this, what); }
+    EBNFalt(EBNFdef cmpnDef, char what){ super(cmpnDef, what);  }
+    
+    /**From ZBNF syntax: &lt;...?alternative> */
+    public EBNFexpr new_alternative() { 
+      this.hasAlternatives = true;
+      if(cmpnDef.nrCmpn <=1) {
+        cmpnDef.nrCmpn = 0;    //if the last alternative has less then 1 component, count newly.
+      } //else, it is >1, count forward, not meaningfull.
+      
+      return (new EBNFalt( super.cmpnDef, '|')); 
+    }
 
-    public String literal; //<"" ""?literal> 
+    public void add_alternative(EBNFexpr val) {
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
+      items.add(val); 
+    }
 
-    public String comment; //<*C >?comment> 
 
-    public String cmpn; //<$?cmpn> 
+    
+ 
+  }
 
+  public static class EBNFexpr extends EBNFitem {
+
+    final EBNFdef cmpnDef;
+    
     public boolean hasAlternatives = false;
 
     /**Contains more as one member of items. Else null. */
-    public List<EBNFexpr> items;
+    public List<EBNFitem> items;
+    
 
-    public final char what;  
-
-    public EBNFexpr(char what){ this.what = what; }  
+    public EBNFexpr(EBNFdef cmpnAlt, char what) { 
+      super(what); 
+//      if(cmpnAlt == null) {
+//        this.cmpndef = (EBNFalt)this; 
+//      } else {
+        this.cmpnDef = cmpnAlt;
+//      }
+    }  
 
 
     /**From ZBNF syntax: &lt;...?option> */
-    public EBNFexpr new_option() { return new EBNFexpr('['); }
+    public EBNFexpr new_option() { return new EBNFexpr(cmpnDef, '['); }
+    
     public void add_option(EBNFexpr val) { 
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(val); 
     }
 
@@ -150,9 +177,10 @@ public class EBNFread {
 
 
     /**From ZBNF syntax: &lt;...?repetition> */
-    public EBNFexpr new_repetition() { return new EBNFexpr('{'); }
+    public EBNFexpr new_repetition() { return new EBNFexpr(cmpnDef, '{'); }
+    
     public void add_repetition(EBNFexpr val) {
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(val); 
     }
 
@@ -162,49 +190,84 @@ public class EBNFread {
     /**From ZBNF syntax: &lt;...?alternative> */
     public EBNFexpr new_alternative() { 
       this.hasAlternatives = true; 
-      return new EBNFexpr('|'); 
+      return (new EBNFexpr(cmpnDef, '|')); 
     }
 
     public void add_alternative(EBNFexpr val) {
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(val); 
     }
 
 
 
     /**From ZBNF syntax: &lt;...?parenthesis> */
-    public EBNFexpr new_parenthesis() { return new EBNFexpr('('); }
+    public EBNFexpr new_parenthesis() { return new EBNFexpr(cmpnDef, '('); }
+    
     public void add_parenthesis(EBNFexpr val) { 
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(val); 
     }
 
 
 
     public void set_literal(String literal) { 
-      EBNFexpr item = new EBNFexpr('\"'); 
+      EBNFitem item = new EBNFitem('\"'); 
       item.literal = literal; 
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(item); 
     }
 
     public void set_cmpn(String ident){ 
-      EBNFexpr item = new EBNFexpr('<'); 
+      //EBNFalt cmpnAlt = this.cmpnAlt == null ? (EBNFalt)this : this.cmpnAlt;
+      cmpnDef.nrCmpn +=1;
+      EBNFitem item = new EBNFitem('<'); 
       item.cmpn = ident; 
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(item); 
     }
 
     public void set_comment(String comment){ 
-      EBNFexpr item = new EBNFexpr('#'); 
+      EBNFitem item = new EBNFitem('#'); 
       item.comment = comment; 
-      if(items == null) { items = new ArrayList<EBNFexpr>(); } 
+      if(items == null) { items = new ArrayList<EBNFitem>(); } 
       items.add(item); 
     }
 
 
   }
 
+  
+  /**A non derived item has no sub items. It is a end-item: String or component. 
+   * A derived item is a EBNFexpr.
+   *
+   */
+  public static class EBNFitem {
+
+    public EBNFitem(char what){ this.what = what; }  
+
+    /**Short designation for
+     * <ul>
+     * <li>: for a component (sub syntax) definition (ENMFexpr)
+     * <li>{ [ ( for repetition, option, paranthesis (EBNFexpr)
+     * <li>| for alternative (EBNFexpr)
+     * <li>" # < for string, comment, component-call (sub syntax) in a simple EBNFitem
+     * </ul>
+     * 
+     */
+    public final char what;
+
+    public int page;  
+
+    public String literal; //<"" ""?literal> 
+
+    public String comment; //<*C >?comment> 
+
+    public String cmpn; //<$?cmpn> 
+
+  }
+  
+  
+  
   public static class EBNFmain {
 
     public String cmpnName; //<$?cmpnName> 
@@ -213,8 +276,8 @@ public class EBNFread {
     List<EBNFexpr> list_cmpnDef = new ArrayList<EBNFexpr>();
 
     /**From ZBNF syntax: &lt;...?cmpnDef> */
-    public EBNFexpr new_cmpnDef() { return new EBNFexpr(':'); }
-    public void add_cmpnDef(EBNFexpr val) { list_cmpnDef.add(val); }
+//    public EBNFexpr new_cmpnDef() { return new EBNFexpr(':'); }
+//    public void add_cmpnDef(EBNFexpr val) { list_cmpnDef.add(val); }
 
 
     public String pdftext; //<*| ?pdftext> 
