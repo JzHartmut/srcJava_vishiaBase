@@ -69,17 +69,20 @@ public class EBNFconvert
           if(identifiers.get(ebnfCmpn.cmpnName)!=null) {
             //it is an identifier.
           }
-          else if(ebnfCmpn.cmpnDef.items ==null) {
+          else if(ebnfCmpn.items ==null) {
             wr.append("## ").append(ebnfCmpn.cmpnName).append("::= ... ")
-              .append(ebnfCmpn.cmpnDef.comment).append("\n\n");
+              .append(ebnfCmpn.comment).append("\n\n");
           } else {
             wr.append(ebnfCmpn.cmpnName).append("::=");
-            if(ebnfCmpn.nrCmpn <=1) {
-              wr.append("<?>");  //component without own data because only one component in its syntax def
+            if(ebnfCmpn.bOnlyText) {
+              wr.append("<?text>");  //component without own data because only one component in its syntax def
             }
+//          if(ebnfCmpn.nrCmpn <=1) {
+//          wr.append("<?>");  //component without own data because only one component in its syntax def
+//        }
             if(ebnfCmpn.cmpnName.equals("event_conn_source"))
               Debugutil.stop();
-            convertExpr(wr, ebnfCmpn.cmpnDef, 1);
+            convertExpr(wr, ebnfCmpn, 1);
             wr.append(".\n\n");
           }
         }
@@ -102,26 +105,71 @@ public class EBNFconvert
    */
   private void checkForIdentifier(EBNFread ebnf) {
     for(EBNFread.EBNFdef ebnfCmpn: ebnf.list_cmpnDef) {
+      ebnfCmpn.bOnlyText = true;  //set to false if other than a text is detected.
       if(ebnfCmpn.cmpnName.equals("algorithm_name"))
         Debugutil.stop();
 
       EBNFread.EBNFitem item;
-      if(  ebnfCmpn.cmpnDef.items !=null) {
-        if( ebnfCmpn.cmpnDef.items.size() ==1
-            && (item = ebnfCmpn.cmpnDef.items.get(0)).what == '<'
+      if(  ebnfCmpn.items !=null) {
+        if( ebnfCmpn.items.size() ==1
+            && (item = ebnfCmpn.items.get(0)).what == '<'
             && item.cmpn.equals("identifier")
             ) {
           identifiers.put(ebnfCmpn.cmpnName, ebnfCmpn.cmpnName);
         }
         else {
-          for(EBNFread.EBNFitem itemcheck: ebnfCmpn.cmpnDef.items) {
-            //if()
-          }
+          if(ebnfCmpn.cmpnName.equals("signed_integer_type_name"))
+            Debugutil.stop();
+          checkAlternative(ebnfCmpn, ebnfCmpn, 0);
         }
       }
     }
     
   }
+  
+  
+  
+  void checkAlternative(EBNFread.EBNFexpr expr, EBNFread.EBNFdef cmpn, int recursive) {
+    for(EBNFread.EBNFitem item: expr.items) {
+      if(item.what == '|') { //another alternative
+        //if an alternative follows after the items of an expr, only some more alternative expr are following.
+        //The first alternative is finished now.
+        checkAlternative((EBNFread.EBNFexpr)item, cmpn, recursive +1);
+      } else {
+        if(item.what != '\"') {
+          cmpn.bOnlyText = false;
+        }
+        if(item instanceof EBNFread.EBNFexpr) {
+          checkExpr((EBNFread.EBNFexpr)item, cmpn, recursive+1);
+        }
+      }
+    }
+    
+  }
+  
+  
+  
+  void checkExpr(EBNFread.EBNFexpr expr, EBNFread.EBNFdef cmpn, int recursive) {
+    if(recursive > 100) throw new IllegalArgumentException("too many recursions");
+    
+    for(EBNFread.EBNFitem item: expr.items) {
+      if(item.what == '|') { //another alternative
+        //if an alternative follows after the items of an expr, only some more alternative expr are following.
+        //The first alternative is finished now.
+        //checkAlternative((EBNFread.EBNFexpr)item, cmpn);
+      } else {
+        if(item.what != '\"') {
+          cmpn.bOnlyText = false;
+        }
+      }
+      if(item instanceof EBNFread.EBNFexpr) {
+        checkExpr((EBNFread.EBNFexpr)item, cmpn, recursive+1);
+      }
+    }
+    
+  }
+  
+  
   
   
   

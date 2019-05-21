@@ -3,6 +3,8 @@ package org.vishia.zbnf.ebnfConvert;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**This class is the destination to storing parse results with ebnf.zbnf, the interpretation of EBNF sources. 
  * The used syntax is:<pre>
@@ -82,9 +84,11 @@ public class EBNFread {
 
   public List<EBNFdef> list_cmpnDef = new ArrayList<EBNFdef>();
 
+  public Map<String, EBNFdef> idx_cmpnDef = new TreeMap<String, EBNFdef>();
+
   /**From ZBNF syntax: &lt;...?cmpnDef> */
   public EBNFdef new_EBNFdef() { return new EBNFdef(); }
-  public void add_EBNFdef(EBNFdef val) { list_cmpnDef.add(val); }
+  public void add_EBNFdef(EBNFdef val) { list_cmpnDef.add(val); idx_cmpnDef.put(val.cmpnName, val); }
 
 
   public String pdftext; //<*| ?pdftext> 
@@ -96,12 +100,22 @@ public class EBNFread {
 
   }
 
-  public static class EBNFdef {
+  /**An instance of this contains a EBNF component definition like name::=SYNTAX.
+   * It based on {@link EBNFalt} because the SYNTAX is stored in the base immediately.
+   * This class adds only the {@link #cmpnName} to complete the data.
+   *
+   */
+  public static class EBNFdef extends EBNFalt {
 
+    public boolean bOnlyText;
+    
+    
     public String cmpnName; //<$?cmpnName> 
 
 
-    public EBNFalt cmpnDef;
+    //public EBNFalt cmpnDef;
+    
+    public EBNFdef() { super(null, ':'); }
 
     /**Number of called Components in this expression.
      * If it is only 1, the ZBNF call is writteh with <code>&lt;cmpn?></code>
@@ -109,8 +123,8 @@ public class EBNFread {
     public int nrCmpn;
 
     /**From ZBNF syntax: &lt;...?cmpnDef> */
-    public EBNFalt new_cmpnDef() { return new EBNFalt(this, ':'); }
-    public void set_cmpnDef(EBNFalt val) { cmpnDef = val; }
+//    public EBNFalt new_cmpnDef() { return new EBNFalt(this, ':'); }
+//    public void set_cmpnDef(EBNFalt val) { cmpnDef = val; }
 
   }
 
@@ -139,6 +153,9 @@ public class EBNFread {
       items.add(val); 
     }
 
+    @Override public String toString() {
+      return " |" + what + " " ;
+    }
 
     
  
@@ -154,13 +171,13 @@ public class EBNFread {
     public List<EBNFitem> items;
     
 
-    public EBNFexpr(EBNFdef cmpnAlt, char what) { 
+    public EBNFexpr(EBNFdef cmpnDef, char what) { 
       super(what); 
-//      if(cmpnAlt == null) {
-//        this.cmpndef = (EBNFalt)this; 
-//      } else {
-        this.cmpnDef = cmpnAlt;
-//      }
+      if(cmpnDef == null) {           //null is given on the constructor of EBNFdef itself, 
+        this.cmpnDef = (EBNFdef)this; //the use this itself. 
+      } else {
+        this.cmpnDef = cmpnDef;
+      }
     }  
 
 
@@ -233,6 +250,10 @@ public class EBNFread {
       items.add(item); 
     }
 
+    @Override public String toString() {
+      return what + "";
+    }
+
 
   }
 
@@ -263,6 +284,11 @@ public class EBNFread {
     public String comment; //<*C >?comment> 
 
     public String cmpn; //<$?cmpn> 
+    
+    @Override public String toString() {
+      if(what == '<') return '<' + cmpn + '>';
+      else return what + literal;
+    }
 
   }
   
