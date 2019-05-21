@@ -116,14 +116,23 @@ public class EBNFread {
     public String cmpnName; //<$?cmpnName> 
 
 
+    public String zbnfBasic;
+    
     //public EBNFalt cmpnDef;
     
-    public EBNFdef() { super(null, ':'); }
-
     /**Number of called Components in this expression.
      * If it is only 1, the ZBNF call is writteh with <code>&lt;cmpn?></code>
      */
     public int nrCmpn;
+    
+    
+    /**If set this component definition contains only one item as component call.
+     * 
+     */
+    public EBNFdef cmpnRepl;
+
+
+    public EBNFdef() { super(null, ':'); }
 
     /**From ZBNF syntax: &lt;...?cmpnDef> */
 //    public EBNFalt new_cmpnDef() { return new EBNFalt(this, ':'); }
@@ -144,9 +153,9 @@ public class EBNFread {
     /**From ZBNF syntax: &lt;...?alternative> */
     public EBNFexpr new_alternative() { 
       this.hasAlternatives = true;
-      if(cmpnDef.nrCmpn <=1) {
-        cmpnDef.nrCmpn = 0;    //if the last alternative has less then 1 component, count newly.
-      } //else, it is >1, count forward, not meaningfull.
+//      if(cmpnDef.nrCmpn <=1) {
+//        cmpnDef.nrCmpn = 0;    //if the last alternative has less then 1 component, count newly.
+//      } //else, it is >1, count forward, not meaningfull.
       
       return (new EBNFalt( super.cmpnDef, '|')); 
     }
@@ -251,7 +260,7 @@ public class EBNFread {
       if(ident.equals("plug_name") && cmpnDef.cmpnName.equals("ec_expression_operand"))
         Debugutil.stop();
       resetOnlyTextItem();
-      cmpnDef.nrCmpn +=1;
+//      cmpnDef.nrCmpn +=1;
       EBNFitem item = new EBNFitem('<'); 
       item.cmpn = ident; 
       if(items == null) { items = new ArrayList<EBNFitem>(); } 

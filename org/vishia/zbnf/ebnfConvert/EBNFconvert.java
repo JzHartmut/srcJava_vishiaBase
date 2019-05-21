@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.util.Debugutil;
-import org.vishia.util.StringPreparer;
 import org.vishia.zbnf.ebnfConvert.EBNFread.EBNFdef;
 
 
@@ -52,7 +51,7 @@ public class EBNFconvert
   /**Some syntax components which are defined as name::= &lt;identifier&gt;.
    * They are written as &lt;$?name&gt; on usage.
    */
-  Map<String, String> identifiers = new TreeMap<String, String>(); 
+  Map<String, EBNFread.EBNFdef> identifiers = new TreeMap<String, EBNFread.EBNFdef>(); 
   
   Map<String, EBNFdef> idx_cmpnDef;
 
@@ -71,9 +70,14 @@ public class EBNFconvert
     if(wr !=null) {
       try {
         for(EBNFread.EBNFdef ebnfCmpn: ebnf.list_cmpnDef) {
-          if(identifiers.get(ebnfCmpn.cmpnName)!=null) {
+          if(ebnfCmpn.cmpnRepl !=null || ebnfCmpn.zbnfBasic !=null){
+            //do nothing.
+            Debugutil.stop();
+          }
+          else if(identifiers.get(ebnfCmpn.cmpnName)!=null) {
             //it is an identifier.
           }
+          
           else if(ebnfCmpn.items ==null) {
             wr.append("## ").append(ebnfCmpn.cmpnName).append("::= ... ")
               .append(ebnfCmpn.comment).append("\n\n");
@@ -127,20 +131,26 @@ public class EBNFconvert
     }
     EBNFread.EBNFitem item;
     ebnfCmpn.bChecked = true;  //prevent check again.
-    ebnfCmpn.bChecking = true;
-    ebnfCmpn.bOnlyText = true;  //set to false if other than a text is detected.
-    if(  ebnfCmpn.items !=null) {
-      if( ebnfCmpn.items.size() ==1
-          && (item = ebnfCmpn.items.get(0)).what == '<'
-          && item.cmpn.equals("identifier")
-          ) {
-        identifiers.put(ebnfCmpn.cmpnName, ebnfCmpn.cmpnName);
-        ebnfCmpn.bOnlyText = false;
-      }
-      else {
-        if(ebnfCmpn.cmpnName.equals("signed_integer_type_name"))
-          Debugutil.stop();
-        checkAlternative(ebnfCmpn, ebnfCmpn, 0);
+    if(ebnfCmpn.zbnfBasic ==null) { //do nothing for basics.
+      
+      ebnfCmpn.bChecking = true;
+      ebnfCmpn.bOnlyText = true;  //set to false if other than a text is detected.
+      ebnfCmpn.nrCmpn = 0;
+      if(  ebnfCmpn.items !=null) {
+        if( ebnfCmpn.items.size() ==1
+            && (item = ebnfCmpn.items.get(0)).what == '<'
+            //&& item.cmpn.equals("identifier")
+            ) {
+          EBNFread.EBNFdef cmpnRepl = idx_cmpnDef.get(item.cmpn);
+          ebnfCmpn.cmpnRepl = cmpnRepl;
+          identifiers.put(ebnfCmpn.cmpnName, cmpnRepl);
+          ebnfCmpn.bOnlyText = false;
+        }
+        else {
+          if(ebnfCmpn.cmpnName.equals("signed_integer_type_name"))
+            Debugutil.stop();
+          checkAlternative(ebnfCmpn, ebnfCmpn, 0);  //check the first expression, then alternatives
+        }
       }
     }
     ebnfCmpn.bChecking = false;
@@ -154,6 +164,9 @@ public class EBNFconvert
       if(item.what == '|') { //another alternative
         //if an alternative follows after the items of an expr, only some more alternative expr are following.
         //The first alternative is finished now.
+        if(recursive == 0 && cmpn.nrCmpn <=1) {  //only on first level:
+          cmpn.nrCmpn = 0;  //count for the next alternativ
+        }
         checkAlternative((EBNFread.EBNFexpr)item, cmpn, recursive +1);
       } else {
         checkitem(item, cmpn, recursive);
@@ -183,6 +196,7 @@ public class EBNFconvert
     } else {
       boolean bOnlyTextCmpn = false;
       if(item.what == '<') {
+        cmpn.nrCmpn +=1;  //count called components to detect only one.
         if(item.cmpn.equals("resource_type_name"))
           Debugutil.stop();
         if(identifiers.get(item.cmpn) ==null) {
@@ -317,15 +331,17 @@ EBNFitem::=
    */
   private void wrCmpnCall(Appendable wr, String sCmpn, boolean bOnlyOneCmpn, EBNFread.EBNFdef inCmpn) throws IOException {
     if(sCmpn ==null) return;  //no sCmpn given, typical
-    boolean bIdentifer = identifiers.get(sCmpn)!=null;  
+    //String sCmpnRepl = identifiers.get(sCmpn);  
     boolean bCmpnText;
-    if(bIdentifer) { 
+    EBNFread.EBNFdef cmpn = idx_cmpnDef.get(sCmpn);
+    EBNFread.EBNFdef cmpnRepl = cmpn;
+    while(cmpnRepl !=null && cmpnRepl.cmpnRepl !=null) {
+      cmpnRepl = cmpnRepl.cmpnRepl;
+    }
+    if(cmpn == null || cmpn.cmpnRepl !=null) { 
       bCmpnText = false; 
     } else {
-      EBNFread.EBNFdef cmpn = idx_cmpnDef.get(sCmpn);
-      if(cmpn == null) {
-        bCmpnText = false;
-      } else if(inCmpn.bOnlyText && cmpn.bOnlyText) {
+      if(inCmpn.bOnlyText && cmpn.bOnlyText) {
         bCmpnText = false;
       } else {
         bCmpnText = cmpn.bOnlyText;
@@ -335,12 +351,23 @@ EBNFitem::=
       wr.append("[<?");
     } else {
       wr.append(" <");
-      if(bIdentifer) {
-        wr.append("$?");
+      if(cmpnRepl !=null && cmpnRepl.zbnfBasic !=null) {
+        wr.append(cmpnRepl.zbnfBasic).append("?");
+      }
+      else if(cmpnRepl != cmpn) {
+        String sCmpnRepl = cmpnRepl.cmpnName;
+       
+        if(sCmpnRepl.equals("identifier")) {
+          sCmpnRepl = "$";
+        }
+        wr.append(sCmpnRepl).append("?");
       }
       
     }
     wr.append(sCmpn);
+    if(cmpn !=null && cmpn.cmpnRepl ==null && cmpn.nrCmpn <=1 && !cmpn.bOnlyText) {
+      wr.append("?");
+    }
     if(bCmpnText) {
       wr.append("> <").append(sCmpn).append("?>]");
     } else {
