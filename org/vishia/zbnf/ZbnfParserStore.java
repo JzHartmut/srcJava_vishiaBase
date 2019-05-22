@@ -69,6 +69,9 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-22 Hartmut chg: {@link ParseResultItemImplement#getText()} improved while testing ZBNF/testAllConecpts (from 2009).<br>
+   *   {@link BuilderTreeNodeXml#createXmlNode(XmlNode, ParseResultItemImplement)}: On repetition item an XmlNode for <code>{&lt;?semantic>...</code>
+   *   should be created anywhere, because elsewhere only one node exists. 
    * <li>2017-03-25 Hartmut chg: The syntax item for a parse result is stored in the {@link ParseResultItemImplement#syntaxItem()}.
    * <li>2014-06-17 Hartmut chg: new {@link BuilderTreeNodeXml} with attributes {@link BuilderTreeNodeXml#bXmlSrcline}
    *   and bXmlSrctext controls whether srcline="xx" and srctext="text" will be written to a XML output. 
@@ -264,6 +267,8 @@ class ZbnfParserStore
       this.parent = (ParseResultItemImplement)parent;
       this.syntaxIdent = syntax;
       this.syntaxElement = syntaxElement;
+      if(this.sSemantic.equals("alternateText"))
+        Debugutil.stop();
     }
 
 
@@ -417,18 +422,35 @@ class ZbnfParserStore
      */
     String getText(){
       String ret = null;
-      if(isComponent()){ ret = null; }
-      else{
+      if(sSemantic.equals("line"))
+        Debugutil.stop();
+      if(isComponent()){ 
+        ret = parsedString;  //it is null if only the component's item is stored.
+        //it is not null if [<?semantic> ....] was written.
+      }  
+      else{  //an item
         switch(kind){
           case kTerminalSymbol: ret = parsedString; break;
           case kIntegerNumber: ret = Long.toString(parsedIntegerNumber); break;
           case kFloatNumber: ret = Double.toString(parsedFloatNumber); break;
           case kIdentifier: ret = parsedString; break;
-          case kOption: ret = parsedString!=null ? parsedString : ""; break;
+          case kOption: ret = parsedString!=null ? parsedString : /*sInput !=null ? sInput :*/ ""; break;
           case kString: ret = parsedString; break;
           case kOnlySemantic: ret = null; break;
-          default: ret = "??unknown kind of node = " + Integer.toHexString(kind) + "=" + Integer.toHexString(-kind) + ".?"; break;
-        }
+          default:
+            //ret = "??unknown kind of node = " + Integer.toHexString(kind) + "=" + Integer.toHexString(-kind) + ".?"; 
+            //it is especially on options or repetitions
+            ret = parsedString;
+//            if(parsedString !=null) {
+//              ret = parsedString;
+//            //} else if(sInput !=null) {
+//            //  ret = sInput; 
+//            } else if(kind >=0) {
+//              ret = "?repeat=" + kind;
+//            } else {
+//              ret= "?repeat=" + (-kind);
+//            }
+        }    
       }
       return ret;
     }
@@ -820,6 +842,10 @@ class ZbnfParserStore
     //  stop();
     //if(srcLine == 726 ) //&& srcColumn == 7)
     //  stop();
+    if(sSemantic.equals("@specification"))
+      Debugutil.stop();
+    if(sSemantic.equals("alternateText"))
+      Debugutil.stop();
     item = new ParseResultItemImplement(this, sSemantic, parent, "?", syntaxElement);
     item.sInput = sInput == null ? null : sInput.toString();
     if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
@@ -1238,13 +1264,17 @@ class ZbnfParserStore
       return xmlNode;
     }
   
+    
+    
     //static XmlNodeSimple<ZbnfParseResultItem> createXmlNode
-    XmlNode createXmlNode
+    private XmlNode createXmlNode
     ( XmlNode xmlParentP
     , ParseResultItemImplement parseResult
     ){
       XmlNode xmlNode = xmlParentP;
       String semantic = parseResult.getSemantic();
+//      if(semantic.startsWith("line")) 
+//        Debugutil.stop();
       int sep;
       do { //loop for semantic/child/... : builds the node and children.
         sep = semantic.indexOf('/');
@@ -1252,7 +1282,9 @@ class ZbnfParserStore
           String sLeftSemantic = semantic.substring(0, sep);
           XmlNode xmlMeta = xmlNode == null ? null : xmlNode.getChild(sLeftSemantic);
           //XmlNodeSimple<ZbnfParseResultItem> xmlMeta = xmlNode == null ? null : (XmlNodeSimple<ZbnfParseResultItem>)xmlNode.getChild(sLeftSemantic);
-          if(xmlMeta ==null){
+          if(parseResult.isRepetition() >0   //If this item is for repetition, any repeat need one extra node.
+              //if it is not a repetition, it may be [<?semantic> or <syntax?semantic>, an existing node can be used.
+            || xmlMeta ==null){ //create if not exists.
             xmlNode = createXmlNodeIntern(sLeftSemantic, xmlNode, parseResult);  //create new node as child of xmlNode
           } else { //child already existent.
             assert(xmlMeta instanceof XmlNodeSimple<?>);
@@ -1292,9 +1324,10 @@ class ZbnfParserStore
             { sTagName = semantic;
             }
             xmlNode = createXmlNodeIntern(sTagName, xmlNode, parseResult);  //create new node as child of xmlNode
-            if(!parseResult.isComponent()){
+            if(parseResult.kind != kComponent) { //add a text to {<?semantic>. Write {<?semantic=> if you do not whish the text.  //if(!parseResult.isComponent()){
+              //NOTE: on a kComponent there is not a parsedString. But there may be a parsed input. Do not write here.
               //add the textual parse result to a leaf node.
-              String sText = parseResult.getText();
+              String sText = parseResult.getText();   //get number too!
               if(sText != null && sText.length() >0)
               { 
                 if(bExpandWikistyle)

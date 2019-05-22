@@ -26,7 +26,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.vishia.util.DataAccess;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
@@ -225,6 +224,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2019-05-22 Hartmut new {@link #bStoreAsString} and {@link #bDonotStoreData} written with <code>&lt;...?"!"semantic></code>
    * <li>2018-09-09 Hartmut new {@link #lineFile} element in all Prescripts, using for {@link ZbnfParser#setDebugPosition(int, int, int)}.
    * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
    *   but the EType can contain some more information. It are used for generating a Java Output.java from the syntax proper for {@link ZbnfJavaOutput}.
@@ -284,6 +284,13 @@ public class ZbnfSyntaxPrescript
    * </ul>    
    */
   protected String sSemantic;
+  
+  /**If set the parse result and all sub results are not stored as data. 
+   * They may be usually stored as {@link #bStoreAsString}*/
+  boolean bDonotStoreData;
+  
+  /**If set the parse result for this item is stored as String from the source immediately. */
+  boolean bStoreAsString;
 
   /**For debugging and error report: The line in the syntax file. */
   final int lineFile;
@@ -878,24 +885,29 @@ public class ZbnfSyntaxPrescript
 
     if( cc == '%')
     { bDebugParsing = true;
-      cc = spInput.seek(1).getCurrentChar();
+      cc = spInput.seekPos(1).getCurrentChar();
     }
-    
-    if( cc == '-')
-    { bAssignIntoNextComponent = true;
-      cc = spInput.seek(1).getCurrentChar();
-    }
-    else if(cc == '+')
-    { bAddOuterResults = true;
+    //
+    if( cc == '-') { 
+      bAssignIntoNextComponent = true;
+      cc = spInput.seekPos(1).getCurrentChar();
+    } else if(cc == '+') { 
+      bAddOuterResults = true;
       //bTransportOuterResults = true;
-      cc = spInput.seek(1).getCurrentChar();
+      cc = spInput.seekPos(1).getCurrentChar();
+    } else if(cc == '"') {                          
+      //<Syntax?"!"semantic>: store the input which is parsed.
+      bStoreAsString = true;
+      cc = spInput.seekPos(1).getCurrentChar();
+      if(cc == '!') { 
+        bDonotStoreData = true;
+        cc = spInput.seekPos(1).getCurrentChar();
+      }
+      if(cc == '\"') { //skip over a second ", it is only used formally.
+        cc = spInput.seekPos(1).getCurrentChar();
+      }
     }
-    /*
-    else if(cc == '*')
-    { bTransportOuterResults = true;
-      cc = spInput.seek(1).getCurrentChar();
-    }
-    */
+    //
     if( cc  == '!')
     { //call of an inner parsing
       spInput.seek(1).lentoIdentifier();

@@ -56,6 +56,7 @@ import org.vishia.util.StringFormatter;
 import org.vishia.xmlSimple.XmlNode;
 import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
+import org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement;
 import org.vishia.zbnf.ZbnfSyntaxPrescript.EType;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
@@ -131,6 +132,14 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-22 Hartmut new syntaxItem.bStoreAsString first test success, not ready.
+   * <li>2019-05-22 Hartmut improved: Storing parse result with <code>[&lt;?result>...</code> It was faulty in some cases in comparison with ZBNF/testAllConcepts - test.
+   *   The result should be stored as {@link ZbnfParserStore.ParseResultItemImplement#parsedString} and not as sInput. 
+   *   See changes in {@link ZbnfParserStore.ParseResultItemImplement#getText()}. It should not be stored if a result string is set already 
+   *   with <code>{&lt;?semantic=> ...</code> for an empty element per repetition, for example.<br> 
+   *   Storing parsed Input on Component: It was done in any case but selten used. It needs memory space. Now the parsed input is only stored 
+   *   if new instance {@link #args} {@link Args#bStoreInputForComponent} is true. it can be set either immediately in a JZtxtcmd Script or with public access,
+   *   or {@link Args} should be used in a command line environment and set via ctor (TODO) 
    * <li>2019-03-20 Hartmut new: #dbgPosFrom etc {@link #setDebugPosition(int, int, int)} for low level source debugging (Eclipse) on special problems. 
    * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
    * <li>2017-08-27 Hartmut new: {@link #getResultNode()}. To evaluate the result with JZtxtcmd immediately without interim store.
@@ -255,6 +264,12 @@ public class ZbnfParser
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
 
+  
+  public static class Args {
+    boolean bStoreInputForComponent;
+  }
+  
+  public final Args args;
 
   /*package private*/ final static int mXmlSrcline_xmlWrmode = 0x1, mXmlSrctext_xmlWrmode = 0x2;
 
@@ -318,8 +333,8 @@ public class ZbnfParser
         , ZbnfSyntaxPrescript syntax
         , String sSemantic, StringPartScan input, int posInputbase /*, cc080318 ZbnfParserStore parseResult*//*, List<ZbnfParserStore> parseResultsFromOuterLevel*/)
     { 
-      if(syntax.sDefinitionIdent.equals("test_description"))
-        Debugutil.stop();
+//      if(syntax.sDefinitionIdent.equals("test_description"))
+//        Debugutil.stop();
       resultlet = new ParseResultlet(syntax, input.getCurrentPosition());
       //System.out.println("ZbnfParser - PrescriptPaser; " + input.debugString() + syntax.sSemantic);
       parentPrescriptParser = parent;
@@ -601,8 +616,8 @@ public class ZbnfParser
         sSemanticForError = sSemanticForErrorDefault;
         @SuppressWarnings("unused")
         String sSemanticIdent1 = sSemanticIdent; //only debug
-        if(resultType == ZbnfParserStore.kOption)
-          stop();
+//        if(resultType == ZbnfParserStore.kOption)
+//          stop();
         final String sSemanticForStoring1;
         if(sSemanticForStoring!= null && sSemanticForStoring.equals("@"))
         { //on calling its written like <name> without semantic, than:
@@ -617,8 +632,8 @@ public class ZbnfParser
         { sSemanticForError = syntaxPrescript.getSemantic();
         }
 
-        if(sSemanticForStoring1 != null && sSemanticForStoring1.equals("CLASS_C"))
-          Assert.stop();
+//        if(sSemanticForStoring1 != null && sSemanticForStoring1.equals("CLASS_C"))
+//          Assert.stop();
 
         //int nLineInput = input.getLineCt();
         long posInputForStore;
@@ -640,7 +655,7 @@ public class ZbnfParser
         
         /** Index in parseResult of the item of the alternative like [<?semantic>...*/
         int idxStoreAlternativeAndOffsetToEnd;
-        final ZbnfParserStore.ParseResultItemImplement resultItem;
+        final ZbnfParserStore.ParseResultItemImplement resultItem;  //for the item's result.
         if(parentSyntaxItem !=null && parentSyntaxItem.bDebugParsing) {
           Debugutil.stop();
         }
@@ -652,21 +667,8 @@ public class ZbnfParser
           //Add the component result item to the parser store. It is not tested yet whether the component is valid.
           //But the elements of the component are stored as child of the component.
           //If the component is not valid, this parse result will be deleted then.
+          //The content is stored via parentResultItem later after parsing ok of this component.
           resultItem = parserStoreInPrescript.add(sSemanticForStoring1, parentSyntaxItem, null, resultType, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
-          if(false){ //old complex (obscure) solution for src position from 2015
-            if(parentPrescriptParser !=null && parentPrescriptParser.srcLineOption >=0){
-              //Set the source position from a option start with constant syntax from the parent level if given.
-              resultItem.srcLine = parentPrescriptParser.srcLineOption;
-              resultItem.srcColumn = parentPrescriptParser.srcColumnOption[0];
-              resultItem.srcPos = parentPrescriptParser.srcPosOption;
-              resultItem.sFile = input.getInputfile();
-              if(resultItem.srcLine == 726) {
-                Debugutil.stop();
-              }
-            } else {
-              Debugutil.stop();
-            }
-          }
           idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = parserStoreInPrescript.items.size() -1; 
           parentResultItem = resultItem; //parserStoreInPrescript.getItem(idxCurrentStore);
         }
@@ -695,8 +697,6 @@ public class ZbnfParser
         // or List of all alternatives if this is an alternative syntax node.
         boolean bOk = false;
         if(syntaxPrescript.isAlternative()) { //not for [x|y], only for component::= x | y.
-          if(posInput >= 2537)
-            Debugutil.stop();
           List<ZbnfSyntaxPrescript> listPrescripts = syntaxPrescript.getListPrescripts();
           Iterator<ZbnfSyntaxPrescript> iter = listPrescripts.iterator();
           while(!bOk && iter.hasNext())
@@ -742,13 +742,29 @@ public class ZbnfParser
           parsedInput = null;
         } else {
           long posInput1 = input.getCurrentPosition();
-          if(posInputForStore <= posInput1){
+          if(  resultItem !=null   //resultitem is existing on any tree node for result, on <syntax> or [<?semantic> 
+            && posInputForStore <= posInput1    //any text parsed:
+            ) { 
+            /* If it is a construct [<?semantic> ...], the parsed input is stored. 
+             * An option result item has no more essential informations. 
+             * This information helps to evaluate such constructs as [<?semantic>green|red|yellow].
+             */
             parsedInput = input.getPart((int)posInputForStore, (int)(input.getCurrentPosition()-posInputForStore));
-            if(resultItem !=null){
+            if(resultItem.sSemantic.startsWith("line"))
+              Debugutil.stop();
+            if(  resultItem.kind != ZbnfParserStore.kComponent
+              && resultItem.parsedString == null  //it is not a constant String stored. 
+              ) {
+              //it is [<?semantic>....
+              resultItem.parsedString = parsedInput.toString();
+            } 
+            //
+            //store parsed String for a component only if wished.
+            if(  args.bStoreInputForComponent ) {
               resultItem.sInput = parsedInput.toString();
             }
           } else {
-              parsedInput = null;
+            parsedInput = null;
           }
         }
 
@@ -772,7 +788,9 @@ public class ZbnfParser
             //parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
             //parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
             assert(resultItem !=null);  //elsewhere the syntax does not match
-            resultItem.parsedString = parsedInput.trim().toString();
+            if(resultItem.sSemantic.equals("line"))
+              Debugutil.stop();
+            //resultItem.parsedString = parsedInput.trim().toString();
           }
         }
         
@@ -931,11 +949,13 @@ public class ZbnfParser
             )
             stop();
         }  
-        int inputPos;
-        if(dbgPosFrom > 0 && (inputPos = (int)input.getCurrentPosition()) >= dbgPosFrom && inputPos < dbgPosTo
-          && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
-            ) {
-          Debugutil.stop();
+        long posInput  = input.getCurrentPosition();
+        { int inputPos;
+          if(dbgPosFrom > 0 && (inputPos = (int)posInput) >= dbgPosFrom && inputPos < dbgPosTo
+            && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
+              ) {
+            Debugutil.stop();
+          }
         }
         if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
           String sLog = "" + input.getLineAndColumn(null) + ":"+ input.getCurrent(20) + "-?-" + syntaxItem.lineFile;
@@ -1001,7 +1021,6 @@ public class ZbnfParser
           {
             //simple Symbols, parse spaces before.
             int posParseResult = parserStoreInPrescript.getNextPosition();
-            long posInput  = input.getCurrentPosition();
             final boolean bTerminalFoundInComment;
             
             String sReport = null;
@@ -1139,16 +1158,29 @@ public class ZbnfParser
               input.setCurrentPosition(posInput);
               parserStoreInPrescript.setCurrentPosition(posParseResult);
             }
-            if(nReportLevel >= nLevelReportBranchParsing)  ////  
+            if(nReportLevel >= nLevelReportBranchParsing)    
             { log.reportParsing(sReport, idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)posInput, nRecursion, bOk);
             }
           }//default
         }//switch
+        if(bOk) {
+          if(syntaxItem.bStoreAsString) {
+            srcLine = input.getLineAndColumn(srcColumn);
+            String srcFile = input.getInputfile();
+            int zChars = (int)(input.getCurrentPosition() - posInput);
+            CharSequence sParsedString = input.getPart((int)posInput, zChars);
+            //Add the component result item to the parser store. It is not tested yet whether the component is valid.
+            //But the elements of the component are stored as child of the component.
+            //If the component is not valid, this parse result will be deleted then.
+            parserStoreInPrescript.add(syntaxItem.sSemantic, syntaxItem, sParsedString, ZbnfParserStore.kString, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
+           ////
+          }
+        }
         if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
           String sLog = bOk ? " ok " : " ERROR";
           report.report(3, sLog);
         }
-        if(dbgPosFrom > 0 && (inputPos = (int)input.getCurrentPosition()) >= dbgPosFrom && inputPos < dbgPosTo
+        if(dbgPosFrom > 0 && posInput >= dbgPosFrom && posInput < dbgPosTo
             && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
               ) {
             Debugutil.stop();
@@ -1605,8 +1637,8 @@ public class ZbnfParser
         { /**Create the SubParser-instace: */
           final PrescriptParser componentsPrescriptParser;
           
-          if(sDefinitionIdent.equals("variableDefinition"))
-            stop();
+//          if(sDefinitionIdent.equals("variableDefinition"))
+//            stop();
           //create an own store for results, or use the given store.
           { final ZbnfParserStore store1;
             ZbnfParserStore.ParseResultItemImplement parentResultItem1;
@@ -1639,13 +1671,13 @@ public class ZbnfParser
           }
           if(bOk)
           { //parseResult.setOffsetToEnd(posResult); 
-            if(complexItem.sDefinitionIdent.equals("test_description"))
-              Debugutil.stop();
-      
-            if(bResultToAssignIntoNextComponent)
-              Debugutil.stop();
-            if(sSemanticForStoring !=null && sSemanticForStoring.equals("description"))
-              Debugutil.stop();
+//            if(complexItem.sDefinitionIdent.equals("test_description"))
+//              Debugutil.stop();
+//      
+//            if(bResultToAssignIntoNextComponent)
+//              Debugutil.stop();
+//            if(sSemanticForStoring !=null && sSemanticForStoring.equals("description"))
+//              Debugutil.stop();
             if(nReportLevel >= nLevelReportParsing)
             { report.reportln(idReportParsing, "parseCompOk;            " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent-ok(" + nRecursion + ") <?" + sSemanticForError + ">");
             }
@@ -1802,8 +1834,6 @@ public class ZbnfParser
         */
         { //now try the option.
           //if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptionFirstAfter;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " try options:");
-          if(input.getCurrentPosition() == 5354)
-            Debugutil.stop();
           srcLineOption = -1;  //clear          
           SubParser optionParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
           bOk = optionParser.parseSub(optionPrescript, "[...]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment,  null);
@@ -1834,7 +1864,7 @@ public class ZbnfParser
         /**always set the current position back to the originator at begin of this parse test. */
         input.setCurrentPosition(posInput);
         parserStoreInPrescript.setCurrentPosition(posParseResult);
-        if(nReportLevel >= nLevelReportBranchParsing)  ////  
+        if(nReportLevel >= nLevelReportBranchParsing)    
         { log.reportParsing("parseNegV ", idReportBranchParsing, syntaxNegativ, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, bOk);
         }  
         return !bOk;  //negation, it is not ok if the result matches.
@@ -1895,8 +1925,6 @@ public class ZbnfParser
           
           long nStart = input.getCurrentPosition();
 
-          if(nStart == 594)
-            stop();
           boolean bOkForward;
           
           /*every loop will start with empty parseResultToOtherComponent,
@@ -1920,8 +1948,6 @@ public class ZbnfParser
             saveError("repetition required because backward-continue is matched."); // + " <?" + sSemanticForError + ">");
           }
   
-          if(input.getCurrentPosition() == 1688)
-            stop();
           
           if(bOkForward)
           { 
@@ -1938,7 +1964,7 @@ public class ZbnfParser
           }
           else bRepeatContinue = false;
   
-          switch(nRecursion)
+          switch(nRecursion) //helper for break points in several level 
           { case 0:
              stop(); break;
             case 1:
@@ -2022,8 +2048,8 @@ public class ZbnfParser
         }
         
         SubParser subParser = null; //this;
-        if(sSemanticForError.startsWith("stringvalue"))
-          stop();
+//        if(sSemanticForError.startsWith("stringvalue"))
+//          stop();
         
         while(subParser != null)
         { if(  subParser.sSemanticForError != null
@@ -2225,6 +2251,7 @@ public class ZbnfParser
    */
   public ZbnfParser( MainCmdLogging_ifc report, int maxParseResultEntriesOnError)
   { this.report = report;
+    this.args = new Args();   //Default values.
     //parserStore = new ParserStore();
     listSubPrescript = new TreeMap<String,ZbnfSyntaxPrescript>(); //ListPrescripts();
     //cc080318 create it at start of parse(): parserStore = new ZbnfParserStore();
