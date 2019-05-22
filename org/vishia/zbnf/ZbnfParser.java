@@ -415,6 +415,7 @@ public class ZbnfParser
     , ZbnfParserStore parserStoreInPrescriptP  //either main store, or a temporary if <..?->
     , ZbnfParserStore parseResultsFromOtherComponents          //null in main, or if <..?+..>
     , boolean bSkipSpaceAndComment
+    , boolean bDoNotStoreData
     , int nRecursion
     ) throws ParseException
     { //this.input = input;
@@ -426,7 +427,7 @@ public class ZbnfParser
         parserStoreInPrescript.insert(parseResultsFromOtherComponents, idxRewind, null);
       }
        
-      SubParser subParser = new SubParser(null, parentResultItem, nRecursion); //bOwnParserStore);
+      SubParser subParser = new SubParser(null, parentResultItem, bDoNotStoreData, nRecursion); //bOwnParserStore);
       boolean bOk = subParser.parseSub
             ( resultlet.syntaxPrescript
             , "::=" //sSemanticForError
@@ -506,6 +507,8 @@ public class ZbnfParser
        */
       String sSemanticForError;
       
+      final boolean bDoNotStoreData;
+      
       /** Pointer to parent, used for build expected syntax on error:*/
       final SubParser parentParser;
       
@@ -529,9 +532,10 @@ public class ZbnfParser
        *        It may be null, than create a new temporary parser result buffer.
        * */
       protected SubParser(/*ZbnfSyntaxPrescript syntax, */SubParser parent
-                         , ZbnfParserStore.ParseResultItemImplement parentResultItem, int nRecursion )
+                         , ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bDoNotStoreData, int nRecursion )
       { //syntaxPrescript = syntax;
-        parentParser = parent;
+        this.parentParser = parent;
+        this.bDoNotStoreData = bDoNotStoreData;
         this.parentOfParentResultItem = parentResultItem;
         this.nRecursion = nRecursion; //parent == null ? 0 : parent.nRecursion +1;
       }
@@ -659,7 +663,7 @@ public class ZbnfParser
         if(parentSyntaxItem !=null && parentSyntaxItem.bDebugParsing) {
           Debugutil.stop();
         }
-        if(sSemanticForStoring1 != null && sSemanticForStoring1.length()>0)
+        if(sSemanticForStoring1 != null && sSemanticForStoring1.length()>0 && ! bDoNotStoreData)
         { 
           srcLine = input.getLineAndColumn(srcColumn);
           String srcFile = input.getInputfile();
@@ -678,7 +682,7 @@ public class ZbnfParser
           parentResultItem = parentOfParentResultItem;
         }
         
-        if(parseResultsFromOtherComponents != null)
+        if(parseResultsFromOtherComponents != null  && ! bDoNotStoreData)
         { int idx1 = parserStoreInPrescript.getNextPosition(); 
           parserStoreInPrescript.insert(parseResultsFromOtherComponents, idx1, parentResultItem);
           if(idxCurrentStore == -1){ idxCurrentStore = idx1; }
@@ -704,11 +708,11 @@ public class ZbnfParser
             ZbnfSyntaxPrescript alternativePrescript = iter.next();
             String semanticOfAlternative = alternativePrescript.getSemantic();
             if(semanticOfAlternative !=null) {
-              SubParser alternativParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
+              SubParser alternativParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || syntaxPrescript.bDonotStoreData,  nRecursion+1); //false);
               bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null);
             } else {
               //the alternative has not a special semantic. Parse it without extra level.
-              bOk = parsePrescript(alternativePrescript, parentResultItem, bSkipSpaceAndComment);
+              bOk = parsePrescript(alternativePrescript, parentResultItem, bSkipSpaceAndComment, bDoNotStoreData);
               //SubParser alternativParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
               //bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
             }
@@ -725,7 +729,7 @@ public class ZbnfParser
         { /* parse the current sub-prescript: 
           */
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse subPrescript;     " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion +") alternative=" + idxAlternative);
-          bOk = parsePrescript(syntaxPrescript, parentResultItem, bSkipSpaceAndComment);
+          bOk = parsePrescript(syntaxPrescript, parentResultItem, bSkipSpaceAndComment, bDoNotStoreData);
         }  
         if(bOk)
         { bFound = true;
@@ -779,18 +783,21 @@ public class ZbnfParser
           else
           { idxAlternative +=1;  //to store 1..n instead 0..n-1, -1 => 0 on empty option.
           }
-          parserStoreInPrescript.setAlternativeAndOffsetToEnd(idxStoreAlternativeAndOffsetToEnd, idxAlternative);
-          if(resultType == ZbnfParserStore.kOption && parsedInput !=null)
-          { /* If it is a construct [<?semantic> ...], the parsed input is stored. 
-             * An option result item has no more essential informations. 
-             * This information helps to evaluate such constructs as [<?semantic>green|red|yellow].
-             */
-            //parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
-            //parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
-            assert(resultItem !=null);  //elsewhere the syntax does not match
-            if(resultItem.sSemantic.equals("line"))
-              Debugutil.stop();
-            //resultItem.parsedString = parsedInput.trim().toString();
+          if( ! bDoNotStoreData) {
+            parserStoreInPrescript.setAlternativeAndOffsetToEnd(idxStoreAlternativeAndOffsetToEnd, idxAlternative);
+            
+            if(resultType == ZbnfParserStore.kOption && parsedInput !=null)
+            { /* If it is a construct [<?semantic> ...], the parsed input is stored. 
+               * An option result item has no more essential informations. 
+               * This information helps to evaluate such constructs as [<?semantic>green|red|yellow].
+               */
+              //parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
+              //parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
+              assert(resultItem !=null);  //elsewhere the syntax does not match
+              if(resultItem.sSemantic.equals("line"))
+                Debugutil.stop();
+              //resultItem.parsedString = parsedInput.trim().toString();
+            }
           }
         }
         
@@ -822,7 +829,8 @@ public class ZbnfParser
        * @return true on success.
        * @throws ParseException
        */
-      boolean parsePrescript(ZbnfSyntaxPrescript prescriptItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndCommentForward) 
+      boolean parsePrescript(ZbnfSyntaxPrescript prescriptItem, ZbnfParserStore.ParseResultItemImplement parentResultItem
+          , boolean bSkipSpaceAndCommentForward, boolean bDoNotStoreData) 
       throws ParseException 
       { List<ZbnfSyntaxPrescript> listPrescripts = prescriptItem.getListPrescripts();
         boolean bSkipSpaceAndComment = bSkipSpaceAndCommentForward;
@@ -1000,9 +1008,11 @@ public class ZbnfParser
           case kOnlySemantic:
           { bOk = true;
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem only Semantic;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
-            srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
-            String srcFile = input.getInputfile();
-            parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+            if( ! bDoNotStoreData ) {
+              srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
+              String srcFile = input.getInputfile();
+              parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+            }
           } break; //do nothing
           case kSyntaxComponent:
           { bOk = parse_Component
@@ -1012,6 +1022,7 @@ public class ZbnfParser
                   , sSemanticForStoring
                   , parentResultItem
                   , bSkipSpaceAndComment
+                  , this.bDoNotStoreData || syntaxItem.bDonotStoreData
                   , syntaxItem       //which invokes the component
                   , syntaxItem.isResultToAssignIntoNextComponent()
                   , syntaxItem.isToAddOuterResults()
@@ -1034,7 +1045,6 @@ public class ZbnfParser
                 sConstantText = null;
               }
               bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol(sConstantText, parentResultItem);
-              //parseWhiteSpaceAndComment(parserStoreInPrescript);
             } else { 
               bOk = bTerminalFoundInComment = false; 
             }
@@ -1164,7 +1174,7 @@ public class ZbnfParser
           }//default
         }//switch
         if(bOk) {
-          if(syntaxItem.bStoreAsString) {
+          if(syntaxItem.bStoreAsString && ! bDoNotStoreData) {
             srcLine = input.getLineAndColumn(srcColumn);
             String srcFile = input.getInputfile();
             int zChars = (int)(input.getCurrentPosition() - posInput);
@@ -1234,7 +1244,7 @@ public class ZbnfParser
             srcLine = input.getLineAndColumn(srcColumn);
             String sFileInput = input.getInputfile();
             input.seek(sConstantSyntax.length());
-            if(bConstantSyntaxAsParseResult) {
+            if(bConstantSyntaxAsParseResult && ! bDoNotStoreData) {
               srcLineOption = -1;
               parserStoreInPrescript.addConstantSyntax(null, sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFileInput, parentResultItem);
             }
@@ -1305,7 +1315,7 @@ public class ZbnfParser
         if(input.scanStart().scan(sConstantSyntax).scanOk())
         { bOk = true;
           //input.seek(sConstantSyntax.length());
-          if(bConstantSyntaxAsParseResult) {
+          if(bConstantSyntaxAsParseResult && ! bDoNotStoreData) {
             srcLineOption = -1;
             parserStoreInPrescript.addConstantSyntax(syntaxItem, sConstantSyntax, nStart, input.getCurrentPosition(), srcLine, srcColumn[0], sFile, parentResultItem);
           } else {
@@ -1383,7 +1393,7 @@ public class ZbnfParser
           }
           else
           { bOk = true;
-            if(sSemanticForStoring != null)
+            if(sSemanticForStoring != null && ! bDoNotStoreData)
             { parserStoreInPrescript.addIdentifier(sSemanticForStoring, null, sIdentifier, parentResultItem, srcLine = input.getLineAndColumn(srcColumn), srcColumn[0], input.getInputfile());
             }
             input.fromEnd();
@@ -1403,7 +1413,7 @@ public class ZbnfParser
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parsePositivIntg;       " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parsePosNumber(" + nRecursion + ") <#?" + sSemanticForError + ">");
         if(input.scanPositivInteger().scanOk())
         { bOk = true;
-          if(sSemanticForStoring != null)
+          if(sSemanticForStoring != null && ! bDoNotStoreData)
           { parserStoreInPrescript.addIntegerNumber(sSemanticForStoring, null, input.getLastScannedIntegerNumber(), parentResultItem);
           }
         }
@@ -1420,7 +1430,7 @@ public class ZbnfParser
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseHexNumber;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseHex(" + nRecursion + ") <#x?" + sSemanticForError + ">");
         if(input.scanHex(maxNrofChars).scanOk())
         { bOk = true;
-          if(sSemanticForStoring != null)
+          if(sSemanticForStoring != null && ! bDoNotStoreData)
           { parserStoreInPrescript.addIntegerNumber(sSemanticForStoring, null, input.getLastScannedIntegerNumber(), parentResultItem);
           }
         }
@@ -1438,7 +1448,7 @@ public class ZbnfParser
         if(input.scanInteger().scanOk())
         {
           bOk = true;
-          if(sSemanticForStoring != null)
+          if(sSemanticForStoring != null && ! bDoNotStoreData)
           { parserStoreInPrescript.addIntegerNumber(sSemanticForStoring, null, input.getLastScannedIntegerNumber(), parentResultItem);
           }
         }
@@ -1457,7 +1467,7 @@ public class ZbnfParser
         if(input.scanFloatNumber(true).scanOk())
         {
           bOk = true;
-          if(sSemanticForStoring != null)
+          if(sSemanticForStoring != null && ! bDoNotStoreData)
           { double result = input.getLastScannedFloatNumber();
             if(syntaxItem.getType() == ZbnfSyntaxPrescript.EType.kFloatWithFactor)
             { result *= syntaxItem.getFloatFactor();
@@ -1616,6 +1626,7 @@ public class ZbnfParser
       , String sSemanticForStoring
       , ZbnfParserStore.ParseResultItemImplement parentResultItem
       , boolean bSkipSpaceAndComment
+      , boolean bDoNotStoreData
       , ZbnfSyntaxPrescript parentSyntaxItem  //which invokes the component.
       , boolean bResultToAssignIntoNextComponent
       , boolean bAddParseResultFromPrevious
@@ -1665,6 +1676,7 @@ public class ZbnfParser
                   ( sSemanticForStoring, parentSyntaxItem, parentResultItem1, store1
                   , bAddParseResultFromPrevious ? parseResultToOtherComponent : null
                   , bSkipSpaceAndComment
+                  , bDoNotStoreData
                   , nRecursion +2
                   );
             stop();
@@ -1716,9 +1728,9 @@ public class ZbnfParser
             assert(false);  //it is excluded by the syntax definition.
           }
           StringPartScan partOfInput = new StringPartScan(sResult);
-          bOk = parse_Component(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, parentResultItem, false, null, false, false);
+          bOk = parse_Component(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, parentResultItem, false, false, null, false, false);
         }
-        else if( sSemanticForStoring != null)
+        else if( sSemanticForStoring != null && ! bDoNotStoreData)
         { srcLineOption = -1;
           parserStoreInPrescript.addString(sResult, sSemanticForStoring, null, null, parentResultItem, srcLine, srcColumn, srcFile);
           bOk = true;
@@ -1835,7 +1847,7 @@ public class ZbnfParser
         { //now try the option.
           //if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptionFirstAfter;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " try options:");
           srcLineOption = -1;  //clear          
-          SubParser optionParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
+          SubParser optionParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || optionPrescript.bDonotStoreData, nRecursion+1); //false);
           bOk = optionParser.parseSub(optionPrescript, "[...]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment,  null);
           if(!bOk)
           { /* The isPossibleEmptyOption will be checked in parseSub
@@ -1857,7 +1869,7 @@ public class ZbnfParser
         
         //TODO: use a own buffer and trash it. //true/*use own buffer*/);
         //or be careful that the negativParser don't save any parse results.
-        SubParser negativParser = new SubParser(this, null, nRecursion+1); 
+        SubParser negativParser = new SubParser(this, null, false, nRecursion+1); 
         int posParseResult = parserStoreInPrescript.getNextPosition();
         long posInput  = input.getCurrentPosition();
         bOk = negativParser.parseSub(syntaxNegativ, "[?..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null);
@@ -1871,15 +1883,15 @@ public class ZbnfParser
       }
   
   
-      private boolean parseExpectedVariant(ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment) 
+      private boolean parseExpectedVariant(ZbnfSyntaxPrescript syntaxPrescript, boolean bSkipSpaceAndComment) 
       throws ParseException
       { final boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseExpectVariante;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " [!" + sSemanticForError);
         
-        SubParser expectedParser = new SubParser(this, null, nRecursion+1); 
+        SubParser expectedParser = new SubParser(this, null, this.bDoNotStoreData || syntaxPrescript.bDonotStoreData, nRecursion+1); 
         int posParseResult = parserStoreInPrescript.getNextPosition();
         long posInput  = input.getCurrentPosition();
-        bOk = expectedParser.parseSub(options, "[!..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null);
+        bOk = expectedParser.parseSub(syntaxPrescript, "[!..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null);
         if(bOk)
         { /**it is okay, but ignore the result there. */
           input.setCurrentPosition(posInput);
@@ -1888,14 +1900,14 @@ public class ZbnfParser
         return bOk;  //negation, it is not ok if the result matches.
       }
 
-      private boolean parseUnconditionalVariant(ZbnfSyntaxPrescript options, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment) 
+      private boolean parseUnconditionalVariant(ZbnfSyntaxPrescript syntaxPrescript, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment) 
       throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseUncondVariante;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " [>" + sSemanticForError);
         
-        SubParser positiveParser = new SubParser(this, parentResultItem, nRecursion+1); 
-        bOk = positiveParser.parseSub(options, "[>..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null);
+        SubParser positiveParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || syntaxPrescript.bDonotStoreData, nRecursion+1); 
+        bOk = positiveParser.parseSub(syntaxPrescript, "[>..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null);
         if(!bOk) 
           throw new ParseException("unconditional Syntax failes", 0);
         return bOk;  //negation, it is not ok if the result matches.
@@ -1915,8 +1927,8 @@ public class ZbnfParser
         //if(backwardSyntax != null) { sBackwardSemantic = backwardSyntax.getSemantic(); }
         if(sForwardSemantic != null) sSemanticForError = sForwardSemantic;
   
-        SubParser repeatForwardParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
-        SubParser repeatBackwardParser = new SubParser(this, parentResultItem, nRecursion+1); //, false);
+        SubParser repeatForwardParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || forwardSyntax.bDonotStoreData, nRecursion+1); //false);
+        SubParser repeatBackwardParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || (backwardSyntax !=null && backwardSyntax.bDonotStoreData), nRecursion+1); //, false);
   
         long nStartLast = -1;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRepetition;        " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse repetition:");
@@ -2767,7 +2779,7 @@ public class ZbnfParser
     String sSemantic = mainScript.getDefinitionIdent();
     try
     { boolean bOk = prescriptParserTopLevel.parsePrescript1
-                  (sSemantic, null, null, parserStoreTopLevel, addParseResult, false, 0);
+                  (sSemantic, null, null, parserStoreTopLevel, addParseResult, false, false, 0);
       return bOk;
     }
     catch(ParseException exc)
