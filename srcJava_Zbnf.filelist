@@ -1,4 +1,4 @@
-2019-05-22 21:53:50  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-05-22 22:39:36  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -398,7 +398,7 @@
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
 2019-05-22 21:50:01  x     ZbnfParser.java                          ::        163.460 -1119898506 
 2019-05-22 21:08:41  x     ZbnfParserStore.java                     ::         51.439  0833046098 
-2019-05-22 21:12:35  x     ZbnfSyntaxPrescript.java                 ::         77.861  2089193228 
+2019-05-22 22:26:11  x     ZbnfSyntaxPrescript.java                 ::         78.208 -0549893572 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
 2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
 

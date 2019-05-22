@@ -26,6 +26,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
@@ -883,6 +884,10 @@ public class ZbnfSyntaxPrescript
     boolean bSemantic = true;
     char cc = spInput.getCurrentChar();
 
+//    if(sDefinitionIdent !=null && sDefinitionIdent.equals("identifierWithPrefix"))
+//      Debugutil.stop();
+    
+    
     if( cc == '%')
     { bDebugParsing = true;
       cc = spInput.seekPos(1).getCurrentChar();
@@ -921,7 +926,7 @@ public class ZbnfSyntaxPrescript
       } else { bSemantic = false; }  //no second ?, cc should be '>'
     }
     if(bSemantic){
-      if( cc == '?')
+      if( cc == '?')   //this is a second ?, written as <syntax??>. Then is is equal <syntax?@> 
       { spInput.seek(1);
         sSemantic = "@";  // use the semantic of the component if no special setting behind ? (<...?Semantic>)
       }
@@ -930,6 +935,9 @@ public class ZbnfSyntaxPrescript
         spInput.lentoAnyChar("?>");
         if(spInput.length()>0)
         { sSemantic = spInput.getCurrentPart().toString();
+          if(sSemantic.equals("@")) {
+            sSemantic = this.sDefinitionIdent;  //same as syntax.
+          }
         }
         else
         { sSemantic = null;  //<..?>: without semantic
