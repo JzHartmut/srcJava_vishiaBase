@@ -685,8 +685,10 @@ public class ZbnfParser
         if(input.getCurrentPosition() >=5015)
             Debugutil.stop();
           
-        report.reportln(nLevelReportParsing, "parseSub                " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " semantic=" + sSemanticForStoring1 + " errormsg=" + sSemanticForError );
-        
+        if( (log.mLogParse & LogParsing.mLogParseCmpn) !=0  ) { //nLevelReportParsing <= report.getReportLevel()) { 
+          String sLog = "parseSub                " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " semantic=" + sSemanticForStoring1 + " errormsg=" + sSemanticForError;
+          report.reportln(nLevelReportParsing, sLog );
+        }
         int idxAlternative = -1;
         
         //Either the List of all syntax items one after another of this node
@@ -935,6 +937,15 @@ public class ZbnfParser
             ) {
           Debugutil.stop();
         }
+        if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
+          String sLog = "" + input.getLineAndColumn(null) + ":"+ input.getCurrent(20) + "-?-" + syntaxItem.lineFile;
+          ZbnfSyntaxPrescript syntaxParent = syntaxItem;
+          do {
+            sLog +=  " - " + syntaxParent.sDefinitionIdent;
+            syntaxParent = syntaxParent.parent;
+          } while(syntaxParent !=null && sLog.length() < 120);
+          report.reportln(3, sLog);
+        }
         
         /** white space and comments are not skipped to provide it to terminal symbols.
          * All sub-syntaxtests are called here in the same kind.
@@ -1133,6 +1144,15 @@ public class ZbnfParser
             }
           }//default
         }//switch
+        if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
+          String sLog = bOk ? " ok " : " ERROR";
+          report.report(3, sLog);
+        }
+        if(dbgPosFrom > 0 && (inputPos = (int)input.getCurrentPosition()) >= dbgPosFrom && inputPos < dbgPosTo
+            && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
+              ) {
+            Debugutil.stop();
+        }
         return bOk;
       }
   
@@ -2039,45 +2059,6 @@ public class ZbnfParser
   
   
   
-  /**This class contains some information to create a log output which logs the parsing process.
-   * @since 2013-01-19, improvement possible.
-   *
-   */
-  static class LogParsing
-  { ///
-    final StringFormatter line = new StringFormatter(250);
- 
-    final MainCmdLogging_ifc logOut;
-  
-    LogParsing(MainCmdLogging_ifc logOut){ this.logOut = logOut;}
-    
-    void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, String sReportParentComponents
-        , StringPartScan input, int posInput, int nRecursion, boolean bOk){
-      
-      int nrofCharsParsed = (int)(input.getCurrentPosition() - posInput);
-      line.reset().add(sWhat).pos(10)
-      .addint(nRecursion, "221")
-      .addint(posInput,"22221").add('+').addint(nrofCharsParsed, "221").add(": ")
-      .addReplaceLinefeed(input.getPart(posInput, 30), "|-||", 30)
-      .pos(50)
-      .add(bOk ?  "  ok    " : "  error ")
-      .add(syntax.toString()).pos(70)
-      .add( " in ").add(sReportParentComponents);
-      ;
-      
-      
-      logOut.reportln(nReport, line.getContent());
-      
-    }
-
-
-  }
-  
-  
-  
-  
-  
-
   /**To MainCmdLogging_ifc something.*/
   protected final MainCmdLogging_ifc report;
 
@@ -2088,12 +2069,9 @@ public class ZbnfParser
    */
   protected int nReportLevel;
   
-  /**The used reportlevel for output the progress of parsing. 
-   * It is set on starting of parse().
-   * */
   protected int nLevelReportParsing, nLevelReportComponentParsing, nLevelReportInfo, nLevelReportError;
 
-  protected int nLevelReportBranchParsing = MainCmdLogging_ifc.debug;
+  protected int nLevelReportBranchParsing = MainCmdLogging_ifc.error; //debug;
   /**The ident to report the progress of parsing. */
   protected int idReportParsing = MainCmdLogging_ifc.fineDebug;
   protected int idReportComponentParsing = MainCmdLogging_ifc.debug;
@@ -3102,6 +3080,52 @@ public class ZbnfParser
   }
   
   
+  /**This class contains some information to create a log output which logs the parsing process.
+   * @since 2013-01-19, improvement possible.
+   *
+   */
+  static class LogParsing
+  { ///
+    
+    /**Mask of logging activities, @since 2019-05 */
+    public int mLogParse;
+    /**It logs on any component per one line.*/
+    public static int mLogParseCmpn = 0x4;
+    /**It logs on any item per one line.*/
+    public static int mLogParseItem = 0x8;
+    
+  
+    final StringFormatter line = new StringFormatter(250);
+  
+    final MainCmdLogging_ifc logOut;
+  
+    LogParsing(MainCmdLogging_ifc logOut){ this.logOut = logOut;}
+    
+    void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, String sReportParentComponents
+        , StringPartScan input, int posInput, int nRecursion, boolean bOk){
+      
+      int nrofCharsParsed = (int)(input.getCurrentPosition() - posInput);
+      line.reset().add(sWhat).pos(10)
+      .addint(nRecursion, "221")
+      .addint(posInput,"22221").add('+').addint(nrofCharsParsed, "221").add(": ")
+      .addReplaceLinefeed(input.getPart(posInput, 30), "|-||", 30)
+      .pos(50)
+      .add(bOk ?  "  ok    " : "  error ")
+      .add(syntax.toString()).pos(70)
+      .add( " in ").add(sReportParentComponents);
+      ;
+      
+      
+      logOut.reportln(nReport, line.getContent());
+      
+    }
+  
+  
+  }
+
+
+
+
   /**Element of a Parse result for a part of the syntax.
    * It is possible to reuse an instance of a ParseResultlet though the result was 
    * dedicated as false before in a given content. 

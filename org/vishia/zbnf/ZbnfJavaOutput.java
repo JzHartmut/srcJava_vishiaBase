@@ -166,7 +166,8 @@ import org.vishia.util.StringPartScan;
 public final class ZbnfJavaOutput
 {
   /**Version, history and license.
-   * <ul>2018-09-11 bugfix: On error reading file: The error was ignored and the parser was started, which returns null as parse result. 
+   * <ul>2019-05-21 chg: {@link #parser} is now a class variable and final public. Advantage: Accessible from outer to set some log things.
+   * <li>2018-09-11 bugfix: On error reading file: The error was ignored and the parser was started, which returns null as parse result. 
    *     fix: return sError.
    * <li>2018-08-28 Hartmut new: improve change with <?_end>. add_semantic is called, it was missing, only ok in the concretely case. 
    * <li>2017-04-22 Hartmut new: If a <code>new_xyz</code> method is found for a non syntaxComponent, the return value
@@ -287,6 +288,9 @@ public final class ZbnfJavaOutput
    */
   private boolean bExceptionIfnotFound;
   
+  
+  public final ZbnfParser parser;
+  
   /**Buffer to note errors during working. 
    * Its content will be returned as String-return value of {@link #setContent(Class, Object, ZbnfParseResultItem)}.
    */
@@ -298,6 +302,7 @@ public final class ZbnfJavaOutput
    */
   public ZbnfJavaOutput()
   { report = MainCmd.getLogging_ifc();
+    parser = new ZbnfParser(report);
     init();
   }
   
@@ -306,11 +311,13 @@ public final class ZbnfJavaOutput
    */
   public ZbnfJavaOutput(MainCmdLogging_ifc report)
   { this.report = report;
+    parser = new ZbnfParser(report);
     init();
   }
 
   private ZbnfJavaOutput(MainCmdLogging_ifc report, boolean strict, boolean methods)
   { this.report = report;
+    parser = new ZbnfParser(report);
     init();
     this.bOnlyMethods = methods; 
   }
@@ -1300,7 +1307,7 @@ public final class ZbnfJavaOutput
     File dirSyntax = null;
     try{
       dirSyntax = FileSystem.getDirectory(fSyntax);
-      spSyntax = new StringPartScan(new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null)); 
+      spSyntax = new StringPartFromFileLines(fSyntax, lenFileSyntax, null, null); 
     }
     catch(FileNotFoundException exc)
     { sError = "ZbnfJavaOutput - Syntax file not found; " + fSyntax.getAbsolutePath();
@@ -1445,10 +1452,10 @@ public final class ZbnfJavaOutput
   //throws FileNotFoundException, IOException, ParseException, IllegalArgumentException, InstantiationException
   { String sError = null;
   
-    ZbnfParser zbnfParser = null;
+    //ZbnfParser zbnfParser = null;
     if(sError == null)
-    { zbnfParser = new ZbnfParser(report);
-      try{ zbnfParser.setSyntax(spSyntax, fSyntaxDir == null ? null: fSyntaxDir.getAbsolutePath()); }
+    { //zbnfParser = new ZbnfParser(report);
+      try{ parser.setSyntax(spSyntax, fSyntaxDir == null ? null: fSyntaxDir.getAbsolutePath()); }
       catch(ParseException exc)    
       { sError = "ZbnfJavaOutput - ERROR in syntax prescript; " + exc.getMessage();
       }
@@ -1461,12 +1468,12 @@ public final class ZbnfJavaOutput
     }  
     if(sError == null && spInput !=null)
     { 
-      //zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.fineDebug, MainCmdLogging_ifc.fineDebug);
-      zbnfParser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.error, MainCmdLogging_ifc.error);
+      parser.setReportIdents(7,7,7,7); //MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.error, MainCmdLogging_ifc.debug);
+      //parser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.error, MainCmdLogging_ifc.error);
       //parse the file:
-      boolean bOk = zbnfParser.parse(spInput);
+      boolean bOk = parser.parse(spInput);
       if(!bOk)
-      { final String sParserError = zbnfParser.getSyntaxErrorReport();
+      { final String sParserError = parser.getSyntaxErrorReport();
         sError = "ZbnfJavaOutput - ERROR syntax in input file; " + sFileInput + "\n" + sParserError;
         //report.writeError(sError);
       }
@@ -1479,7 +1486,7 @@ public final class ZbnfJavaOutput
     if(sError == null)
     { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 
       System.out.println("ZbnfJavaOutput - fillin;" + resultType.getCanonicalName());
-      try{ setContent(resultType, result, zbnfParser.getFirstParseResult()); } 
+      try{ setContent(resultType, result, parser.getFirstParseResult()); } 
       catch (IllegalAccessException exc)
       { sError = "ZbnfJavaOutput - ERROR access to elements;. Hint: The elements should be public!: " + exc.getMessage();
       } 
