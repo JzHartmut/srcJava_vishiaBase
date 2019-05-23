@@ -2743,11 +2743,11 @@ public class ZbnfParser
    *        whereas the elements [1], [3] etc. contains the information content.
    * @return true if the input is matched to the syntax, otherwise false.
    */
-  public boolean parse(StringPartScan input, List<String> additionalInfo)
-  { nLevelReportParsing = report.getReportLevelFromIdent(idReportParsing);  
-    nLevelReportComponentParsing = report.getReportLevelFromIdent(idReportComponentParsing);  
-    nLevelReportInfo = report.getReportLevelFromIdent(idReportInfo);  
-    nLevelReportError = report.getReportLevelFromIdent(idReportError);  
+  public boolean parse(StringPartScan input, List<String> additionalInfo) {
+//    nLevelReportParsing = report.getReportLevelFromIdent(idReportParsing);  
+//    nLevelReportComponentParsing = report.getReportLevelFromIdent(idReportComponentParsing);  
+//    nLevelReportInfo = report.getReportLevelFromIdent(idReportInfo);  
+//    nLevelReportError = report.getReportLevelFromIdent(idReportError);  
     nReportLevel = report.getReportLevel(); //the current reportlevel from the users conditions.
     
     //the old parserStore may be referenced from the evaluation, use anyway a new one!

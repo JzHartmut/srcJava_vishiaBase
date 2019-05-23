@@ -347,32 +347,27 @@ EBNFitem::=
         bCmpnText = cmpn.bOnlyText;
       }
     }
-    if(bCmpnText) {
-      wr.append("[<?");
-    } else {
-      wr.append(" <");
-      if(cmpnRepl !=null && cmpnRepl.zbnfBasic !=null) {
-        wr.append(cmpnRepl.zbnfBasic).append("?");
-      }
-      else if(cmpnRepl != cmpn) {
-        String sCmpnRepl = cmpnRepl.cmpnName;
-       
-        if(sCmpnRepl.equals("identifier")) {
-          sCmpnRepl = "$";
-        }
-        wr.append(sCmpnRepl).append("?");
-      }
-      
+    wr.append(" <");
+    if(cmpnRepl !=null && cmpnRepl.zbnfBasic !=null) {
+      wr.append(cmpnRepl.zbnfBasic).append("?");
     }
-    wr.append(sCmpn);
+    else if(cmpnRepl != cmpn) {
+      String sCmpnRepl = cmpnRepl.cmpnName;
+      wr.append(sCmpnRepl).append("?");
+      if(bCmpnText) {
+        wr.append("\"!\"");
+        bCmpnText = false;
+      }
+    }
+    
+    wr.append(sCmpn);  //it is the semantic after replacement or it is the syntax.
+    if(bCmpnText) {
+      wr.append("?\"!\"@");
+    }
     if(cmpn !=null && cmpn.cmpnRepl ==null && cmpn.nrCmpn <=1 && !cmpn.bOnlyText) {
       wr.append("?");
     }
-    if(bCmpnText) {
-      wr.append("> <").append(sCmpn).append("?>]");
-    } else {
-      wr.append('>');
-    }
+    wr.append('>');
   }
   
   

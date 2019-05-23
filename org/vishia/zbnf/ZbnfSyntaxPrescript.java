@@ -935,9 +935,9 @@ public class ZbnfSyntaxPrescript
         spInput.lentoAnyChar("?>");
         if(spInput.length()>0)
         { sSemantic = spInput.getCurrentPart().toString();
-          if(sSemantic.equals("@")) {
-            sSemantic = this.sDefinitionIdent;  //same as syntax.
-          }
+//          if(sSemantic.equals("@")) {   TODO yet a problem with XML output see ZBNF/testAllFeatures
+//            sSemantic = this.sDefinitionIdent;  //same as syntax.
+//          }
         }
         else
         { sSemantic = null;  //<..?>: without semantic

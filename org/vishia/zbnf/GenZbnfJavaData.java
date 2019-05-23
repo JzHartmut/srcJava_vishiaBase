@@ -216,11 +216,18 @@ public class GenZbnfJavaData
   public GenZbnfJavaData(Args args, MainCmdLogging_ifc log)
   { this.args = args;
     this.log = log;
+    idxStdTypes.put("boolean","Boolean");
     idxStdTypes.put("float","Float");
     idxStdTypes.put("int","Integer");
     idxStdTypes.put("String","String");
     idxStdTypes.put("double","Double");
     idxStdTypes.put("long","Long");
+    idxStdTypes.put("Boolean","Boolean");
+    idxStdTypes.put("Float","Float");
+    idxStdTypes.put("Integer","Integer");
+    idxStdTypes.put("String","String");
+    idxStdTypes.put("Double","Double");
+    idxStdTypes.put("Long","Long");
   }
 
 
@@ -444,8 +451,11 @@ public class GenZbnfJavaData
               break;
             case kSkipSpaces:
               break;
-            case kSyntaxComponent: evaluateSubCmpn(item, bList, level);
+              
+            case kSyntaxComponent: 
+              evaluateSubCmpn(item, bList, level);
               break;
+              
             case kSyntaxDefinition:
               break;
             case kTerminalSymbol:
@@ -454,7 +464,7 @@ public class GenZbnfJavaData
               break;
             case kUnconditionalVariant:
               break;
-            default:
+            //default:
           }
         }
         //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
@@ -468,37 +478,52 @@ public class GenZbnfJavaData
     private void wrVariable(String type, String semantic, boolean bList
       , boolean bCmpn
       ) throws IOException {
-      if(semantic !=null) { //else: do not write, parsed without data
+      if(semantic !=null && semantic.length() >0) { //else: do not write, parsed without data
         String sTypeExist = variables.get(semantic);
         if(sTypeExist !=null) {
           if(! sTypeExist.equals(type)) {
             throw new IllegalArgumentException("Semantic " + semantic + " with different types");
           }
         } else {
+          if(type.equals("Integer")) { 
+            type = "int"; 
+          }
           variables.put(semantic, type);
           String name = firstLowercase(semantic);
           String sTypeZbnf = type;
           String sTypeGeneric = idxStdTypes.get(type);
+          final boolean bStdType;
           if(sTypeGeneric == null) { 
 //            sTypeZbnf = args.sJavaClass + "." + type;
 //            sTypeGeneric = args.sJavaClass + "." + type; 
             sTypeZbnf = type;
-            sTypeGeneric = type; 
+            sTypeGeneric = type;
+            bStdType = false;
+          } else {
+            bStdType = true;
           }
           if(bList) {
             GenZbnfJavaData.sJavaListVar.exec(wr, sTypeGeneric, name);
             GenZbnfJavaData.sJavaListVarOper.exec(wrOp, sTypeGeneric, name);
-            if(bCmpn) {
+            if(bStdType) {
+              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, type, name, sTypeGeneric);
+            }
+            else if(bCmpn) {
               GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, sTypeZbnf, name);
-            } else {
+            } 
+            else {
               GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, type, name, sTypeGeneric);
             }
           } else {
             GenZbnfJavaData.sJavaSimpleVar.exec(wr, type, name);
             GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, type, name);
-            if(bCmpn) {
+            if(bStdType) {
+              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, type, name);
+            }
+            else if(bCmpn) {
               GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, sTypeZbnf, name);
-            } else {
+            } 
+            else {
               GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, type, name);
             }
             
@@ -549,8 +574,18 @@ public class GenZbnfJavaData
       }
       else {
         //create an own class for the component, write a container here.
-        wrVariable(firstUppercase(item.sDefinitionIdent), semantic, bList, true);
-        registerCmpn(item.sDefinitionIdent);
+        if(item.bStoreAsString) {
+          wrVariable("String", semantic, bList, true);
+        }
+        if(!item.bDonotStoreData) {
+          String sType = firstUppercase(item.sDefinitionIdent);
+          if(sType.equals("Integer")) {
+            Debugutil.stop();
+          } else {
+            registerCmpn(item.sDefinitionIdent);
+          }
+          wrVariable(sType, semantic, bList, true);
+        }
       }
       
     }
