@@ -10,6 +10,8 @@ public class StringFunctions_C
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-23 Hartmut new: {@link #parseUlong(CharSequence, int, int, int, int[], String)} and adaption of the adequate using routines.
+   *   Note: It is a base routine now used in {@link StringPartScan#scanDigits(int, int, String)}. It is done because gardening, adequate code unified.
    * <li>2016-10-14 Hartmut bugfix: {@link #parseFloat(CharSequence, int, int, char, int[])} has had a problem with 1 digit after decimal point. 
    *   This bug was not present in older versions. maybe forced with the last change on 2016-02-07.
    * <li>2016-02-07 Hartmut bugfix: {@link #parseFloat(String, int, int, char, int[])} has had a problem with negative numbers. 
@@ -47,7 +49,7 @@ public class StringFunctions_C
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2015-11-07"; 
+  public final static String version = "2019-05-22"; 
 
   
   
@@ -105,10 +107,6 @@ public class StringFunctions_C
 
   
   /**
-   * @param srcP
-   * @param pos
-   * @param sizeP
-   * @param radix
    * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
    * @return
    */
@@ -118,44 +116,71 @@ public class StringFunctions_C
   }
 
   
+
+  
   /**Adequate method for long values, see {@link #parseIntRadix(String, int, int, int, int[], String)}.
-   * @param srcP
-   * @param pos
-   * @param sizeP
-   * @param radix
    * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
-   * @param spaceChars maybe null, some characters which are skipped by reading the digits. It is especially ". '" to skip over a dot, or spaces or '
-   * @return
+   * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
+   *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    */
   public static long parseLong(final CharSequence srcP, final int pos, final int sizeP, final int radix
-      , final int[] parsedChars, final String spaceChars)
-  { long val = 0;
-    //exact same lines as parseInt
+      , final int[] parsedChars, final String separatorChars) {
+    int size = srcP.length() - pos;
+    if(size > sizeP){ size = sizeP; }
     boolean bNegativ;
+    int pos1 = pos;
+    if(size > 0 && srcP.charAt(pos1) == '-') { 
+      pos1+=1; size -=1; bNegativ = true; 
+    }
+    else { bNegativ = false; }
+    long val = parseUlong(srcP, pos1, sizeP, radix, parsedChars, separatorChars);
+    if(bNegativ){ val = -val; }
+    return val;
+  }
+
+  
+  
+  
+  
+  /**Adequate method for long values, see {@link #parseIntRadix(String, int, int, int, int[], String)}.
+   * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
+   * @param spaceChars maybe null, some characters which are skipped by reading the digits. It is especially ". '" to skip over a dot, or spaces or '
+   */
+  /**
+   * @param src Any CharSequence which should start on pos with a digit representation.
+   * @param pos start position in src.
+   * @param size max number of chars from src. The given size should not exceed the  size of src. Note: other than in {@link #parseLong(CharSequence, int, int, int, int[], String)}.
+   * @param radix of the number, it can be any value 0..36- If >10 then characters A..Z or a..z are used for digits.
+   *   Usually 16 for hex numbers. 
+   * @param parsedChars maybe null, if not null it should be intialized with int[1]. The position [0] returns the number of the digits.
+   * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
+   *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
+   * @return The parsed number, 0 if no character is detected.
+   */
+  public static long parseUlong(final CharSequence src, final int pos, final int size, final int radix
+      , final int[] parsedChars, final String separatorChars)
+  { long val = 0;  //exact same lines as parseInt, difference is: using long instead int. 
+    int size1 = size;
     int digit;
     char cc;
     int ixSrc = pos;
-    int size = srcP.length() - pos;
-    if(size > sizeP){ size = sizeP; }
     int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
-    if(srcP.charAt(ixSrc) == '-') { ixSrc+=1; size -=1; bNegativ = true; }
-    else { bNegativ = false; }
-    while(--size >= 0){
-      cc = srcP.charAt(ixSrc);
-      if(spaceChars !=null && spaceChars.indexOf(cc)>=0){
+    while(--size1 >= 0){
+      cc = src.charAt(ixSrc);
+      if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
         ixSrc +=1;
-      } else if((digit = cc - '0') >=0 
-          && (  cc <= maxDigit 
-              || (radix >10 && (  cc >= 'A' && (digit = (cc - 'A'+ 10)) <=radix
+      } 
+      else if((digit = cc - '0') >=0 
+          && (  cc <= maxDigit   // max '9'
+              || (radix >10 && (  cc >= 'A' && (digit = (cc - 'A'+ 10)) <=radix  //digit is only used if cc >= 'A'
                                || cc >= 'a' && (digit = (cc - 'a'+ 10)) <=radix)
-           )  )                )
-      { val = radix * val + digit;
+           )  )                ) {
+        val = radix * val + digit;
         ixSrc+=1;
       } else {
-        break;
+        break;  //other char
       }
     }
-    if(bNegativ){ val = -val; }
     if(parsedChars !=null){
       parsedChars[0] = ixSrc - pos;
     }

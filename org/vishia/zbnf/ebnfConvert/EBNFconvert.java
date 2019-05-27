@@ -48,11 +48,7 @@ public class EBNFconvert
 
   
   
-  /**Some syntax components which are defined as name::= &lt;identifier&gt;.
-   * They are written as &lt;$?name&gt; on usage.
-   */
-  Map<String, EBNFread.EBNFdef> identifiers = new TreeMap<String, EBNFread.EBNFdef>(); 
-  
+  /**All syntax components sorted with syntax symbol name. */
   Map<String, EBNFdef> idx_cmpnDef;
 
   
@@ -64,7 +60,7 @@ public class EBNFconvert
     
     idx_cmpnDef = ebnf.idx_cmpnDef;
     
-    checkForIdentifier(ebnf);
+    checkAllCmpn(ebnf);
     
     
     if(wr !=null) {
@@ -74,10 +70,6 @@ public class EBNFconvert
             //do nothing.
             Debugutil.stop();
           }
-          else if(identifiers.get(ebnfCmpn.cmpnName)!=null) {
-            //it is an identifier.
-          }
-          
           else if(ebnfCmpn.items ==null) {
             wr.append("## ").append(ebnfCmpn.cmpnName).append("::= ... ")
               .append(ebnfCmpn.comment).append("\n\n");
@@ -86,9 +78,6 @@ public class EBNFconvert
             if(ebnfCmpn.bOnlyText) {
               wr.append("<?>");  //component without own data because only one component in its syntax def
             }
-//          if(ebnfCmpn.nrCmpn <=1) {
-//          wr.append("<?>");  //component without own data because only one component in its syntax def
-//        }
             if(ebnfCmpn.cmpnName.equals("event_conn_source"))
               Debugutil.stop();
             convertExpr(wr, ebnfCmpn, 1);
@@ -112,7 +101,7 @@ public class EBNFconvert
    * 
    * @param ebnf
    */
-  private void checkForIdentifier(EBNFread ebnf) {
+  private void checkAllCmpn(EBNFread ebnf) {
     for(EBNFread.EBNFdef ebnfCmpn: ebnf.list_cmpnDef) {
       if(ebnfCmpn.cmpnName.equals("algorithm_name"))
         Debugutil.stop();
@@ -139,17 +128,16 @@ public class EBNFconvert
       if(  ebnfCmpn.items !=null) {
         if( ebnfCmpn.items.size() ==1
             && (item = ebnfCmpn.items.get(0)).what == '<'
-            //&& item.cmpn.equals("identifier")
             ) {
+          //A primitive replacement in EBNF: symbol ::= othersymbol
           EBNFread.EBNFdef cmpnRepl = idx_cmpnDef.get(item.cmpn);
           ebnfCmpn.cmpnRepl = cmpnRepl;
-          identifiers.put(ebnfCmpn.cmpnName, cmpnRepl);
           ebnfCmpn.bOnlyText = false;
         }
         else {
           if(ebnfCmpn.cmpnName.equals("signed_integer_type_name"))
             Debugutil.stop();
-          checkAlternative(ebnfCmpn, ebnfCmpn, 0);  //check the first expression, then alternatives
+          checkExpr(ebnfCmpn, ebnfCmpn, 0);  //check the first expression, then alternatives
         }
       }
     }
@@ -157,23 +145,6 @@ public class EBNFconvert
   }
   
   
-  
-  
-  void checkAlternative(EBNFread.EBNFexpr expr, EBNFread.EBNFdef cmpn, int recursive) {
-    for(EBNFread.EBNFitem item: expr.items) {
-      if(item.what == '|') { //another alternative
-        //if an alternative follows after the items of an expr, only some more alternative expr are following.
-        //The first alternative is finished now.
-        if(recursive == 0 && cmpn.nrCmpn <=1) {  //only on first level:
-          cmpn.nrCmpn = 0;  //count for the next alternativ
-        }
-        checkAlternative((EBNFread.EBNFexpr)item, cmpn, recursive +1);
-      } else {
-        checkitem(item, cmpn, recursive);
-      }
-    }
-    
-  }
   
   
   
@@ -192,23 +163,24 @@ public class EBNFconvert
     if(item.what == '|') { //another alternative
       //if an alternative follows after the items of an expr, only some more alternative expr are following.
       //The first alternative is finished now.
-      //checkAlternative((EBNFread.EBNFexpr)item, cmpn);
+      if(recursive == 0 && cmpn.nrCmpn <=1) {  //only on first level:
+        cmpn.nrCmpn = 0;  //count for the next alternativ
+      }
     } else {
       boolean bOnlyTextCmpn = false;
       if(item.what == '<') {
         cmpn.nrCmpn +=1;  //count called components to detect only one.
         if(item.cmpn.equals("resource_type_name"))
           Debugutil.stop();
-        if(identifiers.get(item.cmpn) ==null) {
-          EBNFread.EBNFdef cmpnCall = idx_cmpnDef.get(item.cmpn);
-          if(cmpnCall !=null && !cmpnCall.bChecked) {
-            checkCmpn(cmpnCall);
-          }
-          if(cmpnCall !=null && cmpnCall.bChecking && cmpnCall.bOnlyText) {
-            Debugutil.stop();
-            bOnlyTextCmpn = false;  //The component is in checking, not ready, it invokes this cmpn. No text!
-          } else 
-            bOnlyTextCmpn = cmpnCall !=null && cmpnCall.bOnlyText;
+        EBNFread.EBNFdef cmpnCall = idx_cmpnDef.get(item.cmpn);
+        if(cmpnCall !=null && !cmpnCall.bChecked) {
+          checkCmpn(cmpnCall);
+        }
+        if(cmpnCall !=null && cmpnCall.bChecking && cmpnCall.bOnlyText) {
+          Debugutil.stop();
+          bOnlyTextCmpn = false;  //The component is in checking, not ready, it invokes this cmpn. No text!
+        } else { 
+          bOnlyTextCmpn = cmpnCall !=null && cmpnCall.bOnlyText;
         }
       }
       if(item.what == '<' && !bOnlyTextCmpn ) {
@@ -225,9 +197,13 @@ public class EBNFconvert
     
   }
   
+
+  
+  
+  
   private void convertExpr(Appendable wr, EBNFread.EBNFexpr expr, int level) throws IOException {
     if(level >=2 && expr.hasAlternatives) {
-      wr.append("[");
+      wr.append("[");  //in ZBNF alternatives are written with [  |  |  ]
     }
     String sCmpnBeforeRepeat = null;
     boolean bOnlyOneCmpn = expr.cmpnDef.nrCmpn <=1;
@@ -295,8 +271,8 @@ EBNFitem::=
         checkRepetition(wr, sCmpnBeforeRepeat, (EBNFread.EBNFexpr) item, bOnlyOneCmpn, level+1);
         break;
       case '<': 
-        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
-        sCmpnBeforeRepeatRet = item.cmpn;
+        wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);  //for a component before
+        sCmpnBeforeRepeatRet = item.cmpn;  //the found current component.
         break;
       case '"': 
         wrCmpnCall(wr, sCmpnBeforeRepeat, bOnlyOneCmpn, inCmpn);
@@ -333,8 +309,12 @@ EBNFitem::=
     if(sCmpn ==null) return;  //no sCmpn given, typical
     //String sCmpnRepl = identifiers.get(sCmpn);  
     boolean bCmpnText;
+    if(sCmpn.equals("integer"))
+      Debugutil.stop();
     EBNFread.EBNFdef cmpn = idx_cmpnDef.get(sCmpn);
     EBNFread.EBNFdef cmpnRepl = cmpn;
+    if(cmpn !=null && cmpn.cmpn!=null && cmpn.cmpn.equals("integer"))
+      Debugutil.stop();
     while(cmpnRepl !=null && cmpnRepl.cmpnRepl !=null) {
       cmpnRepl = cmpnRepl.cmpnRepl;
     }
@@ -350,6 +330,10 @@ EBNFitem::=
     wr.append(" <");
     if(cmpnRepl !=null && cmpnRepl.zbnfBasic !=null) {
       wr.append(cmpnRepl.zbnfBasic).append("?");
+      if(cmpnRepl.zbnfBasic.equals("#"))
+        Debugutil.stop();
+      if(cmpnRepl.zbnfBasic.equals("$"))
+        Debugutil.stop();
     }
     else if(cmpnRepl != cmpn) {
       String sCmpnRepl = cmpnRepl.cmpnName;
@@ -364,7 +348,12 @@ EBNFitem::=
     if(bCmpnText) {
       wr.append("?\"!\"@");
     }
-    if(cmpn !=null && cmpn.cmpnRepl ==null && cmpn.nrCmpn <=1 && !cmpn.bOnlyText) {
+    if(cmpn !=null && cmpn.nrCmpn <=1   //If the syntax definition contains only one called component, it does not need an own store in data. 
+      && cmpn.cmpnRepl ==null 
+      && (cmpnRepl.zbnfBasic == null)   //in orginal or replaces cmpn
+      && !cmpn.bOnlyText
+      ) {
+      //?> prevents an own store in data. It is an optimization for data storing. Prevent unnecessary data levels. 
       wr.append("?");
     }
     wr.append('>');

@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -97,7 +98,7 @@ public class GenZbnfJavaData
   
   
   /**Text for Java header. */
-  private final StringPreparer sJavaHead = new StringPreparer( 
+  private final StringPreparer sJavaHead = new StringPreparer("sJavaHead",  
       "package <&pkgpath>;\n"
     + "\n"
     + "import java.util.ArrayList;\n"
@@ -108,7 +109,7 @@ public class GenZbnfJavaData
     + "\n");
   
   /**Text for Java header for Zbnf writer class. */
-  private final StringPreparer sJavaHeadZbnf = new StringPreparer( 
+  private final StringPreparer sJavaHeadZbnf = new StringPreparer("sJavaHeadZbnf", 
       "package <&pkgpath>;\n"
     + "\n"
     + "import java.util.ArrayList;\n"
@@ -120,7 +121,7 @@ public class GenZbnfJavaData
     + "\n");
   
   /**Text for class header for syntax component data storing. */
-  private final StringPreparer sJavaCmpnClass = new StringPreparer( 
+  private final StringPreparer sJavaCmpnClass = new StringPreparer( "sJavaCmpnClass",
       "\n"
     + "\n"
     + "\n"
@@ -129,7 +130,7 @@ public class GenZbnfJavaData
     + "  \n");
   
   /**Text for class header for syntax component to write from zbnf. */
-  private final StringPreparer sJavaCmpnClassZbnf = new StringPreparer( 
+  private final StringPreparer sJavaCmpnClassZbnf = new StringPreparer( "sJavaCmpnClassZbnf", 
       "\n"
     + "\n"
     + "\n"
@@ -147,66 +148,86 @@ public class GenZbnfJavaData
     + "}\n"
     + "\n";
   
-  private static final StringPreparer sJavaSimpleVar = new StringPreparer( 
+  private static final StringPreparer sJavaSimpleVar = new StringPreparer(  "sJavaSimpleVar",
       "    \n"
-    + "    protected <&type> <&name>;\n"
+    + "    protected <&type> <&varName>;\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListVar = new StringPreparer( 
+  private static final StringPreparer sJavaListVar = new StringPreparer(  "sJavaListVar",
       "    \n"
-    + "    protected List<<&type>> <&name>;\n"
+    + "    protected List<<&typeGeneric>> <&varName>;\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaSimpleVarOper = new StringPreparer( 
+  private static final StringPreparer sJavaSimpleVarOper = new StringPreparer( "sJavaSimpleVarOper", 
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
-    + "    public <&type> <&name>() { return <&name>; }\n"
+    + "    public <&type> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListVarOper = new StringPreparer( 
+  private static final StringPreparer sJavaListVarOper = new StringPreparer( "sJavaListVarOper",
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
-    + "    public Iterable<<&type>> <&name>() { return <&name>; }\n"
+    + "    public Iterable<<&typeGeneric>> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    \n");
   
   
-  private static final StringPreparer sJavaSimpleVarZbnf = new StringPreparer( 
+  private static final StringPreparer sJavaSimpleVarZbnf = new StringPreparer( "sJavaSimpleVarZbnf",
       "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
-    + "    public void set_<&name>(<&type> val) { super.<&name> = val; }\n"
+    + "    public void set_<&name>(<&type> val) { super.<&varName> = val; }\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListVarZbnf = new StringPreparer( 
+  private static final StringPreparer sJavaListVarZbnf = new StringPreparer( "sJavaListVarZbnf",
       "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
     + "    public void set_<&name>(<&type> val) { \n"
-    + "      if(super.<&name>==null) { super.<&name> = new ArrayList<<&typeGeneric>>(); }\n"
-    + "      super.<&name>.add(val); \n"
+    + "      if(super.<&varName>==null) { super.<&varName> = new ArrayList<<&typeGeneric>>(); }\n"
+    + "      super.<&varName>.add(val); \n"
     + "    }\n"
     + "    \n"
     + "    \n");
   
   
-  private static final StringPreparer sJavaCmpnZbnf = new StringPreparer( 
-      "    /**Creates an instance for the result. &lt;<&type>?<&name>&gt;*/\n"
-    + "    public <&type>_Zbnf new_<&name>() { return new <&type>_Zbnf(); }\n"
+  private static final StringPreparer sJavaCmpnZbnf = new StringPreparer( "sJavaCmpnZbnf",
+      "    /**Creates an instance for the result. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
+    + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
+    + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
+    + "      super.<&varName> = val;\n"
+    + "      return val; //Note: needs the derived Zbnf-Type.\n"
+    + "    }\n"
+    + "    \n<:debug:name:FBType>"
+    + "<:if:args>"
+    + "    /**Creates an instance for the result. &lt;<&typeZbnf>?<&name>&gt;  */\n"
+    + "    public <&typeZbnf>_Zbnf new_<&name>(/*<&args>*/) { \n"
+    + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
+    + "      <:for:arg:args>val.super.<&arg> = <&arg>;\n<.for>"
+    + "      super.<&varName> = val;\n"
+    + "      return val; //Note: needs the derived Zbnf-Type.\n"
+    + "    }\n"
     + "    \n"
-    + "    /**Set the result. &lt;<&type>?<&name>&gt;*/\n"
-    + "    public void set_<&name>(<&type>_Zbnf val) { super.<&name> = val; }\n"
+    + "<.if>"
+    + "    /**Set the result. &lt;<&typeZbnf>?<&name>&gt;*/\n"
+    + "    public void set_<&name>(<&typeZbnf>_Zbnf val) { /*already done: super.<&varName> = val; */ }\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListCmpnZbnf = new StringPreparer( 
-      "    /**create and add routine for the list component <<&type>?<&name>>. */\n"
-    + "    public <&type>_Zbnf new_<&name>() { return new <&type>_Zbnf(); }\n"
+  private static final StringPreparer sJavaListCmpnZbnf = new StringPreparer( "sJavaListCmpnZbnf",
+      "    /**create and add routine for the list component <<&typeZbnf>?<&name>>. */\n"
+    + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
+    + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf(); \n"
+    + "      if(super.<&varName>==null) { super.<&varName> = new ArrayList<<&typeZbnf>>(); }\n"
+    + "      super.<&varName>.add(val); \n"
+    + "      return val; \n"
+    + "    }\n"
     + "    \n"
-    + "    /**Add the result to the list. &lt;<&type>?<&name>&gt;*/\n"
-    + "    public void add_<&name>(<&type>_Zbnf val) {\n"
-    + "      if(super.<&name>==null) { super.<&name> = new ArrayList<<&type>>(); }\n"
-    + "      super.<&name>.add(val); \n"
+    + "    /**Add the result to the list. &lt;<&typeZbnf>?<&name>&gt;*/\n"
+    + "    public void add_<&name>(<&typeZbnf>_Zbnf val) {\n"
+    + "      //already done: \n"
+    + "      //if(super.<&varName>==null) { super.<&varName> = new ArrayList<<&typeZbnf>>(); }\n"
+    + "      //super.<&varName>.add(val); \n"
     + "    }\n"
     + "    \n"
     + "    \n");
@@ -268,8 +289,11 @@ public class GenZbnfJavaData
       System.err.println("cannot create: " + sJavaOutputFile.getAbsolutePath());
     }
     try {
-      sJavaHead.exec(wr, args.sJavaPkg, args.sJavaClass);
-      sJavaHeadZbnf.exec(wrz, args.sJavaPkg, args.sJavaClass);
+      Map<String, Object> argstxt = new TreeMap<String, Object>();
+      argstxt.put("pkgpath", args.sJavaPkg);
+      argstxt.put("javaclass", args.sJavaClass);
+      sJavaHead.exec(wr, argstxt);
+      sJavaHeadZbnf.exec(wrz, argstxt);
       //
       //
       //
@@ -371,8 +395,13 @@ public class GenZbnfJavaData
      * @throws IOException
      */
     private void wrClassCmpn(ZbnfSyntaxPrescript cmpn) throws IOException {
-      sJavaCmpnClass.exec(wr, firstUppercase(cmpn.sDefinitionIdent));
-      sJavaCmpnClassZbnf.exec(wrz, firstUppercase(cmpn.sDefinitionIdent), args.sJavaClass);
+      if(cmpn.sDefinitionIdent.equals("event_input_declaration"))
+        Debugutil.stop();
+      Map<String, Object> argstxt = new TreeMap<String, Object>();
+      argstxt.put("cmpnclass", firstUppercase(cmpn.sDefinitionIdent));
+      argstxt.put("dataclass", args.sJavaClass);
+      sJavaCmpnClass.exec(wr, argstxt);
+      sJavaCmpnClassZbnf.exec(wrz, argstxt);
       //
       //
       //
@@ -398,20 +427,29 @@ public class GenZbnfJavaData
     void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws IOException {
       for(ZbnfSyntaxPrescript item: childScript) {
         String semantic = item.sSemantic == null ? "" : item.sSemantic;
-        if(semantic.startsWith("@")) { semantic = semantic.substring(1); }
+        //if(semantic.startsWith("@")) { semantic = semantic.substring(1); }
         if(semantic.length() >0) {
         }
         boolean bRepetition = bList;
         if(item.eType !=null) {
           switch(item.eType) {
             
+            case kRepetition: 
+            case kRepetitionRepeat:  
+              bRepetition = true; //store immediately result in list
+              if(item.sSemantic !=null) {
+                //It is [<?semantic>...]: The parsed content in [...] should be stored as String
+                wrVariable("String", semantic, bList, false, null); 
+              }
+              break;
+            case kOnlySemantic:
             case kAlternative: 
             case kAlternativeOptionCheckEmptyFirst:
             case kSimpleOption:
             case kAlternativeOption:
               if(item.sSemantic !=null) {
                 //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                wrVariable("String", semantic, bList, false); 
+                wrVariable("String", semantic, bList, false, null); 
               }
               break;
             
@@ -419,11 +457,11 @@ public class GenZbnfJavaData
               break;
             
             case kFloatWithFactor:
-            case kFloatNumber: wrVariable("float", semantic, bList, false); break;
+            case kFloatNumber: wrVariable("float", semantic, bList, false, null); break;
             
             case kPositivNumber:
             case kIntegerNumber:
-            case kHexNumber: wrVariable("int", semantic, bList, false); break;
+            case kHexNumber: wrVariable("int", semantic, bList, false, null); break;
             
             case kStringUntilEndString:
             case kStringUntilEndStringInclusive:
@@ -437,18 +475,12 @@ public class GenZbnfJavaData
             case kStringUntilRightEndcharInclusive:
             case kQuotedString:
             case kRegularExpression:
-            case kIdentifier:  wrVariable("String", semantic, bList, false); break;
+            case kIdentifier:  wrVariable("String", semantic, bList, false, null); break;
             
             case kNegativVariant:
             case kNotDefined:
               break;
               
-            case kOnlySemantic:
-              break;
-            case kRepetition: bRepetition = true; //store immediately result in list
-              break;
-            case kRepetitionRepeat:  bRepetition = true;
-              break;
             case kSkipSpaces:
               break;
               
@@ -476,7 +508,7 @@ public class GenZbnfJavaData
     }
 
     private void wrVariable(String type, String semantic, boolean bList
-      , boolean bCmpn
+      , boolean bCmpn, List<String> obligateAttribs
       ) throws IOException {
       if(semantic !=null && semantic.length() >0) { //else: do not write, parsed without data
         String sTypeExist = variables.get(semantic);
@@ -488,8 +520,24 @@ public class GenZbnfJavaData
           if(type.equals("Integer")) { 
             type = "int"; 
           }
+          if(semantic.equals("FBType")) {  //a required Attribute in XML
+            Debugutil.stop();
+          }
+          if(semantic.indexOf("@")>=0) {  //a required Attribute in XML
+            Debugutil.stop();
+          }
+          String attribs = "";
+          String attribsAssign = "";
+          if(obligateAttribs !=null) for(String attrib: obligateAttribs) {
+            if(attribs.length() ==0) {attribs = "String "+ attrib; }
+            else { attribs += ", String " + attrib; }
+            attribsAssign += "      super." + attrib + " = " + attrib + ";\n";
+          }
+          //semantic = semantic.replace("@!", "");
+          semantic = semantic.replace("@", "");
+          semantic = semantic.replace("/", "_");
           variables.put(semantic, type);
-          String name = firstLowercase(semantic);
+          String varName = firstLowercase(semantic);
           String sTypeZbnf = type;
           String sTypeGeneric = idxStdTypes.get(type);
           final boolean bStdType;
@@ -502,29 +550,36 @@ public class GenZbnfJavaData
           } else {
             bStdType = true;
           }
+          Map<String, Object> argstxt = new TreeMap<String, Object>();
+          argstxt.put("typeGeneric", sTypeGeneric);
+          argstxt.put("varName", varName);
+          argstxt.put("name", semantic);
+          argstxt.put("type", type);
+          argstxt.put("typeZbnf", type);
+
           if(bList) {
-            GenZbnfJavaData.sJavaListVar.exec(wr, sTypeGeneric, name);
-            GenZbnfJavaData.sJavaListVarOper.exec(wrOp, sTypeGeneric, name);
+            GenZbnfJavaData.sJavaListVar.exec(wr, argstxt);
+            GenZbnfJavaData.sJavaListVarOper.exec(wrOp, argstxt);
             if(bStdType) {
-              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, type, name, sTypeGeneric);
+              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
             }
             else if(bCmpn) {
-              GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, sTypeZbnf, name);
+              GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, argstxt);
             } 
             else {
-              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, type, name, sTypeGeneric);
+              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
             }
           } else {
-            GenZbnfJavaData.sJavaSimpleVar.exec(wr, type, name);
-            GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, type, name);
+            GenZbnfJavaData.sJavaSimpleVar.exec(wr, argstxt);
+            GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, argstxt);
             if(bStdType) {
-              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, type, name);
+              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
             }
             else if(bCmpn) {
-              GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, sTypeZbnf, name);
+              GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, argstxt);
             } 
             else {
-              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, type, name);
+              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
             }
             
           }
@@ -574,8 +629,16 @@ public class GenZbnfJavaData
       }
       else {
         //create an own class for the component, write a container here.
+        List<String> obligateAttribs = null;
+        if(prescript.childSyntaxPrescripts !=null) for( ZbnfSyntaxPrescript subitem: prescript.childSyntaxPrescripts) {
+          if(subitem.sSemantic !=null && subitem.sSemantic.length()>1 && subitem.sSemantic.charAt(0) == '@') {
+            //an syntaxSymbol which is requested (because not in an option etc) and it is an attribute:
+            if(obligateAttribs==null) { obligateAttribs = new LinkedList<String>(); }
+            obligateAttribs.add(subitem.sSemantic.substring(1));
+          }
+        }
         if(item.bStoreAsString) {
-          wrVariable("String", semantic, bList, true);
+          wrVariable("String", semantic, bList, true, null);
         }
         if(!item.bDonotStoreData) {
           String sType = firstUppercase(item.sDefinitionIdent);
@@ -584,7 +647,7 @@ public class GenZbnfJavaData
           } else {
             registerCmpn(item.sDefinitionIdent);
           }
-          wrVariable(sType, semantic, bList, true);
+          wrVariable(sType, semantic, bList, true, obligateAttribs);
         }
       }
       

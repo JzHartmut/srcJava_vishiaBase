@@ -51,8 +51,15 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-26 Hartmut 
+   * <ul><li>new {@link #scanToAnyChar(String, char, char, char)} which stores the parse result in this class.
+   *     <li>enhanced {@link #getLastScannedString()} with up to five storage places, should run in C too (TODO test).
+   *     <li>gardening {@link #scanDigits(int, int, String)} invokes adequate (and new) {@link StringFunctions_C#parseUlong(CharSequence, int, int, int, int[], String)}
+   *     <li>new {@link #scanInteger(String)} with possible separator chars (used in ZBNFParser with new feature)
+   *     <li>improved {@link #scanFractionalNumber(long, boolean)}, {@link #scanFloatNumber(char, boolean, String)} with test, see {@link org.vishia.util.test.Test_StringPartScan}.
+   * </ul>     
    * <li>2019-02-10 Hartmut For the C deployment a more simple access to the parse result was necessary. It is adapted here too: 
-   * <ul><li> {@link #sLastString} is now a final instance, not a reference, set in {@link #setCurrentPart(Part)}.
+   * <ul><li> {@link #sLastString} is now a final instance, not a reference, set in {@link #setCurrentPartTo(Part)}.
    *     <li> It is set with the scan result in some routines, for example in {@link #scanQuotion(CharSequence, String, String[], int)},
    *          {@link #scanIdentifier(String, String)}
    * </ul>         
@@ -115,32 +122,36 @@ public class StringPartScan extends StringPart
   protected final boolean[] nLastIntegerSign = new boolean[5];
   
   /**current index of the last scanned integer number. -1=nothing scanned. 0..4=valid*/
-  private int idxLastIntegerNumber = -1;
+  private int ixLastIntegerNumber = -1;
   
   /**Last scanned float number*/
   protected final double[] nLastFloatNumber = new double[5];
   
   /**current index of the last scanned float number. -1=nothing scanned. 0..4=valid*/
-  private int idxLastFloatNumber = -1;
+  private int ixLastFloatNumber = -1;
   
   /** Last scanned string. 
    * It is able to use as CharSequence. see {@link #getLastScannedString()} 
    * It is more C-friendly with a nested instance. No heap effort. */
-  protected final Part sLastString = new Part(this, 0,0);
+  @Java4C.SimpleArray
+  protected final Part[] sLastString = new Part[5]; //(this, 0,0);
   
-
+  private int ixLastString = -1;
   
   public StringPartScan(CharSequence src, int begin, int end)
   { super(src, begin, end);
+    for(int ix=0; ix<sLastString.length; ++ix) { sLastString[ix] = new Part(this, 0,0); }
   }
 
   public StringPartScan(CharSequence src)
   { super(src);
+    for(int ix=0; ix<sLastString.length; ++ix) { sLastString[ix] = new Part(this, 0,0); }
   }
 
   
   public StringPartScan()
   { super();
+    for(int ix=0; ix<sLastString.length; ++ix) { sLastString[ix] = new Part(this, 0,0); }
   }
 
   
@@ -200,15 +211,18 @@ public class StringPartScan extends StringPart
   
   
   
+  /**Internal check on any scan routine. The first call after {@link #scanOk()} or {@link #scanStart()}
+   * clears the buffer for numbers, so that 5 numbers can be stored in any scanning concatenation. 
+   * @return
+   */
   private final boolean scanEntry()
   { if(bCurrentOk)
     { seekNoWhitespaceOrComments();
-      if(bStartScan)
-      { idxLastIntegerNumber = -1;
-        //idxLastFloatNumber = -1;
-        //idxLastFloatNumber = 0;
-        //idxLastString = 0;
-        bStartScan = false; 
+      if(bStartScan) {  //true after scanOk(), after scanStart() 
+        ixLastIntegerNumber = -1;
+        ixLastFloatNumber = -1;
+        ixLastString = -1;
+        bStartScan = false;     //only for first invocation of this routine in a concatenation till scanOk()
       }
       if(begin == end)
       { bCurrentOk = false; //error, because nothing to scan.
@@ -327,7 +341,7 @@ public class StringPartScan extends StringPart
       if(bCurrentOk)
       { //TODO ...ToEndString, now use only 1 char in sQuotionMarkEnd
         if(sResult != null) sResult[0] = getCurrentPart().toString();
-        else this.setCurrentPart(sLastString);
+        else this.setCurrentPartTo(sLastString[++ixLastString]);
         fromEnd().seekPos(sQuotionMarkEnd.length());
       }
       else bCurrentOk = false; 
@@ -338,39 +352,36 @@ public class StringPartScan extends StringPart
   
   
 
-  /**Scans if it is a integer number, contains exclusively of digits 0..9
-      @param bHex true: scan hex Digits and realize base 16, otherwise realize base 10.
-      @return long number represent the digits.
-  */
-  private final long scanDigits(boolean bHex, int maxNrofChars)
-  { if(bCurrentOk)
-    { long nn = 0;
-      boolean bCont = true;
-      int pos = begin;
-      int max = (end - pos) < maxNrofChars ? end : pos + maxNrofChars;
-      do
-      {
-        if(pos < max)
-        { char cc = content.charAt(pos);
-          if(cc >= '0' &&  cc <='9') nn = nn * (bHex? 16:10) + (cc - '0');
-          else if(bHex && cc >= 'a' &&  cc <='f') nn = nn * 16 + (cc - 'a' + 10);
-          else if(bHex && cc >= 'A' &&  cc <='F') nn = nn * 16 + (cc - 'A' + 10);
-          else bCont = false;
-          if(bCont){ pos +=1; }
+  /**Scans a positive number consisting of digits 0..9, A..Z or a..z 
+   * whereby only digits necessary for the given radix are accepted, and sepChars.
+   * Does nothing if !#bOk(), sets #bCurrentOk to check bOk() like all scan routines.
+   * @param radix
+   * @param maxNrofChars Maybe -1, {@link Integer#MAX_VALUE} or a lesser number as the actual part to limit the range. 
+   * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
+   *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
+   * @return long number represent the digits. -1 is returned if no digit is detected (as error value). 
+   * @throws ParseException 
+   */
+  public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars) throws ParseException {
+    if(bCurrentOk) {
+      int max = (end - begin);
+      if(maxNrofChars >=0 && maxNrofChars < max) { max = maxNrofChars; }
+      int[] parsedChars = new int[1];
+      long number = StringFunctions_C.parseUlong(content, begin, max, radix, parsedChars, separatorChars);
+      if(parsedChars[0] >0) { //anything parsed
+        begin += parsedChars[0];
+        if(ixLastIntegerNumber < nLastIntegerNumber.length -2)
+        { nLastIntegerNumber[++ixLastIntegerNumber] = number;
+          nLastIntegerSign[ixLastIntegerNumber] = false;
         }
-        else bCont = false;
-      } while(bCont);
-      if(pos > begin)
-      { begin = pos;
-        return nn;
-        //nLastIntegerNumber = nn;
-      }
-      else { 
-        bCurrentOk = false;  //scanning failed.
+        else throw new ParseException("to much scanned integers",0);
+      } else {
+        bCurrentOk = false;  //canning failed
       }
     }
-    return -1; //on error
+    return this;
   }
+  
 
 
   
@@ -385,17 +396,7 @@ public class StringPartScan extends StringPart
    * @return
    */
   public final StringPartScan scanPositivInteger() throws ParseException  //::TODO:: scanLong(String sPicture)
-  { if(scanEntry())
-    { long value = scanDigits(false, Integer.MAX_VALUE);
-      if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
-        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
-          nLastIntegerSign[idxLastIntegerNumber] = false;
-        }
-        else throw new ParseException("to much scanned integers",0);
-      }  
-    } 
-    return this;
+  { return scanDigits(10, Integer.MAX_VALUE, null);
   }
 
   /**Scans an integer expression with possible sign char '-' at first.
@@ -407,25 +408,51 @@ public class StringPartScan extends StringPart
    * @java2c=return-this.
    * @return this
    */
-  public final StringPartScan scanInteger() throws ParseException  //::TODO:: scanLong(String sPicture)
-  { if(scanEntry())
-    { boolean bNegativValue = false;
-      if( content.charAt(begin) == '-')
-      { bNegativValue = true;
-        seek(1);
+  public final StringPartScan scanInteger() throws ParseException {
+    return scanInteger(null);
+  }
+  
+  
+  /**Scans an integer expression with possible sign char '-' or '+' as first char and possible separator chararcter.
+   * The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * <br><br>
+   * If you want to get the scanned String, use {@link #getLastScannedPart()} with scanning only this routine: <pre>
+   * if(sp.scanStart().scanInteger("\"',").scanOk()) {
+   *   String scannedNumberString = sp.getLastScannedPart().toString();
+   *   long scannedNumberInt = sp.getLastScannedIntegerNumber();
+   *   .... </pre>
+   * @param separatorChars Some character which are accepted inside the nuumber as simple separator character
+   *   without semantic. For example a number with thousand separation written with 1"000'000 are convert as 1000000
+   *   if separatorChars are given with "\"'". But 1'000'000 delivers the same result for this example.
+   *   Usual only one separatorChar may be given.
+   * @return this
+   * @throws ParseException
+   * @java2c=return-this.
+   * @return this
+   */
+  public final StringPartScan scanInteger(String separatorChars) throws ParseException {
+    if(scanEntry()) { 
+      boolean bNegativeValue = false;
+      int begin0 = this.begin;
+      char cc = content.charAt(begin);
+      if( cc == '-') { 
+        bNegativeValue = true;
+        begin +=1;
+      } else if(cc=='+') {
+        begin +=1;           //other chars than + - or not handled, they may cause !bCurrentOk on scanDigits.
       }
-      long value = scanDigits(false, Integer.MAX_VALUE);
-      if(bNegativValue)
-      { value = - value; 
-      }
-      if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
-        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
-          nLastIntegerSign[idxLastIntegerNumber] = bNegativValue;
+      if(scanDigits(10, Integer.MAX_VALUE, separatorChars).bCurrentOk) {
+        nLastIntegerSign[ixLastIntegerNumber] = bNegativeValue;
+        if(bNegativeValue)
+        { nLastIntegerNumber[ixLastIntegerNumber] = - nLastIntegerNumber[ixLastIntegerNumber]; 
         }
-        else throw new ParseException("to much scanned integers",0);
+      } else if(bNegativeValue) {
+        this.begin = begin0;  //revert the scan of '-'
       }
-    }  
+    }
     return this;
   }
 
@@ -442,7 +469,7 @@ public class StringPartScan extends StringPart
   public final StringPartScan scanFloatNumber(boolean cleanBuffer)  throws ParseException
   {
     if(cleanBuffer){
-      idxLastFloatNumber = -1; 
+      ixLastFloatNumber = -1; 
     }
     scanFloatNumber();
     return this;
@@ -454,37 +481,68 @@ public class StringPartScan extends StringPart
    * and have to be got calling {@link #getLastScannedFloatNumber()}.
    * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
    * an exception is thrown. 
+   * <br><br>Note: If the number is an integer, the result is still {@link #scanOk()}, the integer is accepted as float.
+   * Use {@link #scanFloatNumber(char, boolean, String)} with strict=true to distinguish from an integer. 
    * @java2c=return-this.
    * @return this
    * @throws ParseException if the buffer is not free to hold the float number.
    */
   public final StringPartScan scanFloatNumber() throws ParseException  //::TODO:: scanLong(String sPicture)
+  { return scanFloatNumber('.', false, null);
+  }
+  
+  
+  /**Scans a float / double number. The result is stored internally
+   * and have to be got calling {@link #getLastScannedFloatNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * @param fractionalSeparator usual '.', maybe ',' or other for language specifica
+   * @param bStrict if true than expects a fractional separator  or an exponent or both (to distinguish from integer)
+   * @param separatorChars See {@link #scanInteger(String)}
+   * @return this
+   * @java2c=return-this.
+   * @throws ParseException if the buffer is not free to hold the float number.
+   */
+  public final StringPartScan scanFloatNumber(char fractionalSeparator, boolean bStrict, String separatorChars) throws ParseException  //::TODO:: scanLong(String sPicture)
   {
     if(scanEntry()) { 
-      boolean bNegativValue = false;
-      char cc;
-      if( (cc = content.charAt(begin)) == '-')
-      { bNegativValue = true;
-        seek(1);
-      }
-      long nInteger = scanDigits(false, Integer.MAX_VALUE);
-      //if(scanOk()) {  //if only an integer is scanned, it is a float too! set scanOk().
-      if(bCurrentOk) {
-        if(bNegativValue)
-        { nInteger = - nInteger; 
-        }
-        scanFractionalNumber(nInteger, bNegativValue);
-        //if(!scanFractionalNumber(nInteger).scanOk()){
+      int begini = this.begin;
+      if(scanInteger(separatorChars).bCurrentOk) {
+        long number = this.nLastIntegerNumber[ this.ixLastIntegerNumber];
+        boolean bNegativeValue = this.nLastIntegerSign[ this.ixLastIntegerNumber];
+        this.ixLastIntegerNumber -=1;
+        scanFractionalExponent(fractionalSeparator, bStrict, separatorChars, number, bNegativeValue); //negative should be known for -0.123 to handle fractional part correctly.
         if(!bCurrentOk) {
-          //only integer number found, store as float number. It is ok.
-          bCurrentOk = true;
-          if(idxLastFloatNumber < nLastFloatNumber.length -2){
-            nLastFloatNumber[++idxLastFloatNumber] = (double)nInteger;
-          } else throw new ParseException("to much scanned floats",0);
+          if(bStrict) {
+            begin = begini;  //on start of scanInteger
+          } else {
+            //only integer number found, store as float number. It is ok.
+            bCurrentOk = true;
+            if(ixLastFloatNumber < nLastFloatNumber.length -2){
+              nLastFloatNumber[++ixLastFloatNumber] = (double)number;
+            } else throw new ParseException("to much scanned floats",0);
+          }
         }
+      } else  {
+        begin = begini;
       }
     }
     return this;
+  }
+
+  
+  
+  /**Scans the fractionalPart and the exponent of a float number with '.' as first expected separator 
+   * and without additional separator characters.
+   * It is ok too if only a exponent is scanned, for example "E+03"
+   * @param nInteger The maybe parsed integer part before this fractional part.
+   * @param bNegative true if the integer part has a sign. It is essential if "-0" are scanned as integer.
+   * @return this
+   * @throws ParseException
+   * @see {@link #scanFractionalNumber(char, String, long, boolean)}
+   */
+  public final StringPartScan scanFractionalNumber(long nInteger, boolean bNegative) throws ParseException  {
+    return scanFractionalExponent('.', false, null, nInteger, bNegative);
   }
   
   
@@ -514,12 +572,22 @@ public class StringPartScan extends StringPart
         }
       }
    * </pre>
-   * @java2c=return-this.
+   * @param fractionalSeparator usual '.', maybe ',' or other for language specifica
+   * @param separatorChars See {@link #scanInteger(String)}
+   * @param nInteger The maybe parsed integer part before this fractional part.
+   * @param bNegative true if the integer part has a sign. It is essential if "-0" are scanned as integer.
    * @return this
+   * @java2c=return-this.
    * @throws ParseException if the buffer is not free to hold the float number.
    */
-  public final StringPartScan scanFractionalNumber(long nInteger, boolean bNegative) throws ParseException  //::TODO:: scanLong(String sPicture)
-  { if(scanEntry()) { 
+  public final StringPartScan scanFractionalExponent(char fractionalSeparator, boolean bStrict
+      , String separatorChars, long nInteger, boolean bNegative) throws ParseException { //::TODO:: scanLong(String sPicture)
+    if(bCurrentOk) {            //Note: donot call scanEntry(), do not skip over white spaces.  
+      //
+      //switch of skip over white spaces and comment, inside the number. 
+      int bitModeSave = this.bitMode;
+      this.bitMode &= ~(mSkipOverCommentInsideText_mode | mSkipOverCommentToEol_mode | mSkipOverWhitespace_mode);
+      //
       long nFractional = 0;
       int nDivisorFract = 1, nExponent = 0;
       //int nDigitsFrac;
@@ -527,36 +595,27 @@ public class StringPartScan extends StringPart
       boolean bNegativExponent = false;
       double result;
       int begin0 = this.begin;
-      if(begin < endMax && content.charAt(begin) == '.') {
-        seek(1); //over .
-        while(begin < endMax && getCurrentChar() == '0')
-        { seek(1); nDivisorFract *=10;
+      //Note: a fractional part is optional, they can be an exponent only too.
+      if(begin < endMax && content.charAt(begin) == fractionalSeparator) {
+        seekPos(1); //over .
+        while(begin < endMax && ((cc = getCurrentChar()) == '0' || separatorChars.indexOf(cc)>=0)) { //leading 0 of fractional
+          seekPos(1); 
+          if(cc == '0') { nDivisorFract *=10; }
         }
-        //int posFrac = begin;
-        nFractional = scanDigits(false, Integer.MAX_VALUE);  //set bCurrentOk = false if there are no digits.
-        if(bCurrentOk)
-        { //the it has set begin to end of scan position.
-          //nDigitsFrac = begin - posFrac;
-        }
-        else if(nDivisorFract >=10)
-        { bCurrentOk = true; //it is okay, at ex."9.0" is found. There are no more digits after "0".
-          nFractional = 0;
+        if(scanDigits(10, Integer.MAX_VALUE, separatorChars).bCurrentOk) {
+          nFractional = this.nLastIntegerNumber[ this.ixLastIntegerNumber];
+          this.ixLastIntegerNumber -=1;
+        } else { //if(nDivisorFract >=10 ) {
+          nFractional = 0;   //if no fractional digits found, it is still ok 
+          bCurrentOk = true; //it is okay, at ex."9.0" is found. There are no more digits after "0".
         }
       }
       int nPosExponent = begin;
-      if( bCurrentOk && nPosExponent < endMax && ((cc = content.charAt(begin)) == 'e' || cc == 'E'))
-      { seek(1);
-        if( (cc = content.charAt(begin)) == '-')
-        { bNegativExponent = true;
-          seek(1);
-          cc = content.charAt(begin);
-        }
-        if(cc >='0' && cc <= '9' )
-        { nExponent = (int)scanDigits(false, Integer.MAX_VALUE);  //set bCurrentOk if there are no digits
-          if(!bCurrentOk)
-          { nExponent = 0;
-            assert(false);  //0..9 was tested!
-          }
+      if( nPosExponent < endMax && ((cc = content.charAt(begin)) == 'e' || cc == 'E'))
+      { seekPos(1);
+        if(scanInteger().bCurrentOk) {
+          nExponent = (int)this.nLastIntegerNumber[ this.ixLastIntegerNumber];
+          this.ixLastIntegerNumber -=1;
         }
         else
         { // it isn't an exponent, but a String beginning with 'E' or 'e'.
@@ -565,7 +624,7 @@ public class StringPartScan extends StringPart
           nExponent = 0;
         }
       }
-      if(begin > begin0) {
+      if(bCurrentOk && begin > begin0) {
         //either fractional or exponent found
         result = nInteger;
         if(nFractional > 0)
@@ -583,13 +642,15 @@ public class StringPartScan extends StringPart
         { if(bNegativExponent){ nExponent = -nExponent;}
           result *= Math.pow(10, nExponent);
         }
-        if(idxLastFloatNumber < nLastFloatNumber.length -2){
-          nLastFloatNumber[++idxLastFloatNumber] = result;
+        if(ixLastFloatNumber < nLastFloatNumber.length -2){
+          nLastFloatNumber[++ixLastFloatNumber] = result;
         } else throw new ParseException("to much scanned floats",0);
       }
       else {  //whetter '.' nor 'E' found:
-        bCurrentOk = false;
+        bCurrentOk = false;   //only E is not admissible.
+        this.begin = begin0;
       }
+      this.bitMode = bitModeSave;
     }
     return this;
   }
@@ -605,17 +666,7 @@ public class StringPartScan extends StringPart
    * @java2c=return-this.
    */
   public final StringPartScan scanHex(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
-  { if(scanEntry())
-    { long value = scanDigits(true, maxNrofChars);
-      if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
-        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
-          nLastIntegerSign[idxLastIntegerNumber] = false;
-        }
-        else throw new ParseException("to much scanned integers",0);
-      }
-    }
-    return this;
+  { return scanDigits(16, maxNrofChars, null);
   }
 
   /**Scans a integer number possible as hex, or decimal number.
@@ -632,19 +683,15 @@ public class StringPartScan extends StringPart
    */
   public final StringPartScan scanHexOrDecimal(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
-    { long value;
+    { int begin0 = begin;
       if( StringFunctions.equals(content, begin, begin+2, "0x"))
-      { seek(2); value = scanDigits(true, maxNrofChars);
+      { seek(2); scanDigits(16, maxNrofChars, null);
       }
       else
-      { value = scanDigits(false, maxNrofChars);
+      { scanDigits(10, maxNrofChars, null);
       }
-      if(bCurrentOk)
-      { if(idxLastIntegerNumber < nLastIntegerNumber.length -2)
-        { nLastIntegerNumber[++idxLastIntegerNumber] = value;
-          nLastIntegerSign[idxLastIntegerNumber] = false;
-        }
-        else throw new ParseException("to much scanned integers",0);
+      if(!bCurrentOk) { 
+        begin = begin0;  //revert read "0x"
       }
     }
     return this;
@@ -675,7 +722,7 @@ public class StringPartScan extends StringPart
   { if(scanEntry())
     { lentoIdentifier(additionalStartChars, additionalChars);
       if(bFound)
-      { setCurrentPart(sLastString);
+      { this.setCurrentPartTo(sLastString[++ixLastString]);
         begin = end;  //after identifier.
       }
       else
@@ -699,8 +746,8 @@ public class StringPartScan extends StringPart
    * @throws ParseException if called though no scan routine was called. 
    */
   public final boolean getLastScannedIntegerSign() throws ParseException
-  { if(idxLastIntegerNumber >= 0)
-    { return nLastIntegerSign [idxLastIntegerNumber];
+  { if(ixLastIntegerNumber >= 0)
+    { return nLastIntegerSign [ixLastIntegerNumber];
     }
     else throw new ParseException("no integer number scanned.", 0);
   }
@@ -716,8 +763,8 @@ public class StringPartScan extends StringPart
    * @throws ParseException if called though no scan routine was called. 
    */
   public final long getLastScannedIntegerNumber() throws ParseException
-  { if(idxLastIntegerNumber >= 0)
-    { return nLastIntegerNumber [idxLastIntegerNumber--];
+  { if(ixLastIntegerNumber >= 0)
+    { return nLastIntegerNumber [ixLastIntegerNumber--];
     }
     else throw new ParseException("no integer number scanned.", 0);
   }
@@ -729,8 +776,8 @@ public class StringPartScan extends StringPart
    * @throws ParseException if called though no scan routine was called. 
    */
   public final double getLastScannedFloatNumber() throws ParseException
-  { if(idxLastFloatNumber >= 0)
-    { return nLastFloatNumber[idxLastFloatNumber--];
+  { if(ixLastFloatNumber >= 0)
+    { return nLastFloatNumber[ixLastFloatNumber--];
     }
     else throw new ParseException("no float number scanned.", 0);
   }
@@ -741,7 +788,7 @@ public class StringPartScan extends StringPart
    * @return A persistent String of the last scanned String.
    */
   public final String getLastScannedString()
-  { return sLastString.toString();
+  { return sLastString[ixLastString--].toString();
   }
   
 
@@ -753,7 +800,7 @@ public class StringPartScan extends StringPart
    * @since 2019-02. It is optimized for C usage. No new operator is used.  
    */
   public final StringPart.Part getLastScannedPart( int nr)
-  { return sLastString;
+  { return sLastString[ixLastString--];
   }
   
 
@@ -868,6 +915,57 @@ public class StringPartScan extends StringPart
         if(dst !=null){
           dst[0] = StringFunctions.convertTransliteration(getCurrentPart(), transcriptChar);
         }
+        fromEnd();
+      } else {
+        bCurrentOk = false;
+      }
+    }
+    return this;
+  }
+
+
+  /**Scans a String with maybe transcription characters till one of end characters, 
+   * maybe outside any quotation. A transcription character is a pair of characters 
+   * with the special transcription char, usual '\' followed by any special char. 
+   * This pair of characters is not regarded while search the end of the text part, 
+   * <br>
+   * The end of the string is determined by any of the given chars.
+   * But a char directly after the transcription char is not detected as an end char.
+   * Example: <pre>scanToAnyChar(">?", '\\', '\"', '\"')</pre> 
+   * does not end at a char > after an \ and does not end inside the quotation.
+   * If the following string is given: 
+   * <pre>a text -\>arrow, "quotation>" till > ...following</pre> 
+   * then the last '>' is detected as the end character. The first one is a transcription,
+   * the second one is inside a quotation.
+   * <br><br>
+   * The meaning of the transcription characters is defined in the routine
+   * {@link StringFunctions#convertTranscription(CharSequence, char)}: 
+   * Every char after the transcriptChar is accepted. But the known transcription chars
+   * \n, \r, \t, \f, \b are converted to their control-char- equivalence.
+   * The \s and \e mean begin and end of text, coded with ASCII-STX and ETX = 0x2 and 0x3.</br></br>
+   * The actual part is tested for this, after this operation the actual part begins
+   * after the gotten chars!
+   * <br>
+   * If the scan is successfully, #scanOk() provides true and the String between the scan start position
+   * and exclusively the found end character is stored in {@link #sLastString}, 
+   * can be gotten with {@link #getLastScannedPart()}.
+   *
+   * @param sCharsEnd End characters
+   * @param transcriptChar typically '\\', 0 if not used
+   * @param quotationStartChar typically '\"', may be "<" or such, 0 if not used
+   * @param quotationEndChar The end char, typically '\"', may be ">" or such, 0 if not used
+   * @return
+   * @since 2013-09-07
+   * @see {@link StringPart#indexOfAnyChar(String, int, int, char, char, char)}, used here.
+   * @see {@link StringFunctions#convertTransliteration(CharSequence, char)}, used here.
+   */
+  public final StringPartScan scanToAnyChar(String sCharsEnd
+      , char transcriptChar, char quotationStartChar, char quotationEndChar)
+  { if(scanEntry()){
+      int posEnd = indexOfAnyChar(sCharsEnd, 0, end-begin, transcriptChar, quotationStartChar, quotationEndChar);
+      if(posEnd >=0){
+        lentoPos(posEnd);
+        this.setCurrentPartTo(sLastString[++ixLastString]);
         fromEnd();
       } else {
         bCurrentOk = false;

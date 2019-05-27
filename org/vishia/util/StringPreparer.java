@@ -58,6 +58,10 @@ public class StringPreparer
   enum ECmd{
     addString('s', "str"),
     addVar('v', "var"),
+    ifCtrl('I', "if"),
+    forCtrl('F', "for"),
+    endLoop('B', "endloop"),
+    debug('D', "debug"),
     pos('p', "pos")
     ;
     ECmd(char cmd, String sCmd){
@@ -72,21 +76,16 @@ public class StringPreparer
     ECmd cmd;
     final String str;
     int ixVar = -1;
-    final int pos0, pos1;
+    
+    /**If necessary it is the offset skipped over the ctrl sequence. */
+    int offsEndCtrl;
     //abstract void exec();
     
     public Cmd(ECmd what, String str)
     { this.cmd = what;
       this.str = str;
-      this.pos0 = this.pos1 = 0;
     }
     
-    public Cmd(ECmd what, String str, int pos0, int pos1)
-    { this.cmd = what;
-      this.str = str;
-      this.pos0 = pos0;
-      this.pos1 = pos1;
-    }
     
     
     @Override public String toString() {
@@ -94,6 +93,28 @@ public class StringPreparer
     }
     
   }
+  
+  
+  
+  class ForCmd extends Cmd {
+    String entryVar;
+    public ForCmd(String container, String entryVar) {
+      super(ECmd.forCtrl, container);
+      this.entryVar = entryVar;
+    }
+  }
+  
+  
+  
+  class DebugCmd extends Cmd {
+    String cmpString;
+    public DebugCmd(String variable, String cmpString) {
+      super(ECmd.debug, variable);
+      this.cmpString = cmpString;
+    }
+  }
+  
+  
   
 //  class CmdString extends Cmd {
 //    public CmdString(String str, int pos0, int pos1)
@@ -129,12 +150,13 @@ public class StringPreparer
   private List<Cmd> cmds = new ArrayList<Cmd>();
   
   
-  
+  public final String sIdent;
   
   /**Instantiates for a given prescript. 
    * @param prescript 
    */
-  public StringPreparer(String prescript) {
+  public StringPreparer(String ident, String prescript) {
+    this.sIdent = ident;
     this.parse(prescript);
   }
   
@@ -144,17 +166,20 @@ public class StringPreparer
   private int ctVar = 0;
   
   public void parse(String src) {
-    int pos0 = 0;
-    int pos1 = 0;
+    int pos0 = 0; //start of current position after special cmd
+    int pos1 = 0; //end before the next special command
+    int[] ixCmd = new int[10];  //max. 10 levels for nested things.
+    int ixixCmd = -1;
     StringPartScan sp = new StringPartScan(src);
     sp.setIgnoreWhitespaces(true);
     while(sp.length() >0) {
-      sp.seekCheck("<&");
+      sp.seek("<", StringPart.mSeekCheck + StringPart.seekEnd);
       if(sp.found()) {
-        pos1 = (int)sp.getCurrentPosition(); //pos0 + (int)sp.length();
+        
+        pos1 = (int)sp.getCurrentPosition() -1; //before <
         //sp.fromEnd().seek("<").scan().scanStart();
         sp.scan().scanStart();
-        if(sp.scan("<&").scanIdentifier().scan(">").scanOk()){
+        if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
           String sName = sp.getLastScannedString();
           Integer ixVar = vars.get(sName);
           if(ixVar == null) {
@@ -163,6 +188,51 @@ public class StringPreparer
           }
           storeCmd(src, pos0, pos1, 0, new Cmd(ECmd.addVar, sName));
           pos0 = (int)sp.getCurrentPosition();  //after '>'
+        }
+        else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          String cond = sp.getLastScannedString().toString();
+          storeCmd(src, pos0, pos1, 0, new Cmd(ECmd.ifCtrl, cond));
+          ixCmd[++ixixCmd] = cmds.size()-1;
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+          
+        }
+        else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          String container = sp.getLastScannedString().toString();
+          String entryVar = sp.getLastScannedString().toString();
+          storeCmd(src, pos0, pos1, 0, new ForCmd(container, entryVar));
+          ixCmd[++ixixCmd] = cmds.size()-1;
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+          
+        }
+        else if(sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          String cmpString = sp.getLastScannedString().toString();
+          String debugVar = sp.getLastScannedString().toString();
+          storeCmd(src, pos0, pos1, 0, new DebugCmd(debugVar, cmpString));
+          ixCmd[++ixixCmd] = cmds.size()-1;
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+          
+        }
+        else if(sp.scan(".if>").scanOk()) { //The end of an if
+          Cmd ifCmd;
+          if(ixixCmd >=0 && (ifCmd = cmds.get(ixCmd[ixixCmd])).cmd == ECmd.ifCtrl) {
+            storeCmd(src, pos0, pos1, 0, null);  //last text before <.if>
+            pos0 = (int)sp.getCurrentPosition();  //after '>'
+            ifCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
+            ixixCmd -=1;
+          } 
+          else throw new IllegalArgumentException("faulty <:if>...<.if> ");
+        }
+        else if(sp.scan(".for>").scanOk()) { //The end of an if
+          Cmd forCmd;
+          if(ixixCmd >=0 && (forCmd = cmds.get(ixCmd[ixixCmd])).cmd == ECmd.forCtrl) {
+            Cmd endLoop = new Cmd(ECmd.endLoop, null);
+            endLoop.offsEndCtrl = -cmds.size() - ixCmd[ixixCmd] -1;
+            storeCmd(src, pos0, pos1, 0, endLoop);  //last text before <.if>
+            pos0 = (int)sp.getCurrentPosition();  //after '>'
+            forCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
+            ixixCmd -=1;
+          } 
+          else throw new IllegalArgumentException("faulty <:if>...<.if> ");
         }
         else { //No proper cmd found:
           
@@ -188,7 +258,7 @@ public class StringPreparer
 
 
 
-  public void exec( StringFormatter fm, Map<String, Object> values) {
+  public void XXXexec( StringFormatter fm, Map<String, Object> values) {
     for(Cmd cmd : cmds) {
       switch(cmd.cmd) {
         case addString: fm.add(cmd.str); break;
@@ -208,7 +278,7 @@ public class StringPreparer
    * @param fm
    * @param values
    */
-  public void exec( StringFormatter fm, Object ... values ) {
+  public void XXXexec( StringFormatter fm, Object ... values ) {
     int ixVal = 0;
     for(Cmd cmd : cmds) {
       switch(cmd.cmd) {
@@ -227,15 +297,31 @@ public class StringPreparer
    * @param values in order of first occurrence in the prescript
    * @throws IOException 
    */
-  public void exec( Appendable sb, Object ... values ) throws IOException {
+  public void exec( Appendable sb, Map<String, Object> values ) throws IOException {
     //int ixVal = 0;
-    for(Cmd cmd : cmds) {
+    int ixCmd = -1;
+    while(++ixCmd < cmds.size()) {
+      Cmd cmd = cmds.get(ixCmd);
       switch(cmd.cmd) {
         case addString: sb.append(cmd.str); break;
         case addVar: {
-          Integer ixVar = vars.get(cmd.str);
-          Object val = values[ixVar];
+          //Integer ixVar = vars.get(cmd.str);
+          Object val = values.get(cmd.str);
+          if(val == null) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.str );
           sb.append(val.toString());
+        } break;
+        case ifCtrl: {
+          ixCmd += cmd.offsEndCtrl -1;
+        } break;
+        case forCtrl: {
+          ixCmd += cmd.offsEndCtrl -1;
+        } break;
+        case debug: {
+          Object val = values.get(cmd.str);
+          if(val == null) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.str );
+          if(val.toString().equals(((DebugCmd)cmd).cmpString)){
+            Debugutil.stop();
+          }
         } break;
       }
     }
@@ -255,5 +341,10 @@ public class StringPreparer
       cmds.add(what);
     }
   }
+ 
+  
+  
+  
+  @Override public String toString() { return sIdent; }
   
 }

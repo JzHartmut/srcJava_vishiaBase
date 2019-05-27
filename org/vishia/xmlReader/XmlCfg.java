@@ -335,7 +335,7 @@ public class XmlCfg
      * @param dstPath either a method or an access to a field.
      */
     public void setNewElementPath(String dstPath) {
-      if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"!datapath\" in config.xml should start with ! because it is a store path.");
+      if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
       elementStorePath = new DataAccess.DatapathElement(dstPath.substring(1));
     }
   

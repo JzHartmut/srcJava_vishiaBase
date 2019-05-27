@@ -132,6 +132,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-25 Hartmut new possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
    * <li>2019-05-22 Hartmut new syntaxItem.bStoreAsString first test success, not ready.
    * <li>2019-05-22 Hartmut improved: Storing parse result with <code>[&lt;?result>...</code> It was faulty in some cases in comparison with ZBNF/testAllConcepts - test.
    *   The result should be stored as {@link ZbnfParserStore.ParseResultItemImplement#parsedString} and not as sInput. 
@@ -1067,17 +1068,20 @@ public class ZbnfParser
               { bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parentResultItem);
               } break;
               case kPositivNumber:
-              { bOk = parsePositiveInteger( sSemanticForStoring, parentResultItem, maxNrofChars);
+              { bOk = parsePositiveInteger( syntaxItem, parentResultItem, maxNrofChars);
               } break;
               case kHexNumber:
-              { bOk = parseHexNumber( sSemanticForStoring, parentResultItem, maxNrofChars);
+              { bOk = parseHexNumber( syntaxItem, parentResultItem, maxNrofChars);
+              } break;
+              case kNumberRadix:
+              { bOk = parseNumberRadix( syntaxItem, parentResultItem, maxNrofChars);
               } break;
               case kIntegerNumber:
-              { bOk = parseInteger( sSemanticForStoring, parentResultItem, maxNrofChars);
+              { bOk = parseInteger( syntaxItem, parentResultItem, maxNrofChars);
               } break;
               case kFloatNumber:
               case kFloatWithFactor:
-              { bOk = parseFloatNumber( sSemanticForStoring, maxNrofChars, parentResultItem, syntaxItem);
+              { bOk = parseFloatNumber( syntaxItem, maxNrofChars, parentResultItem);
               } break;
               case kStringUntilEndchar:
               { if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
@@ -1408,13 +1412,13 @@ public class ZbnfParser
       }
   
   
-      private boolean parsePositiveInteger(String sSemanticForStoring, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
+      private boolean parsePositiveInteger(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parsePositivIntg;       " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parsePosNumber(" + nRecursion + ") <#?" + sSemanticForError + ">");
-        if(input.scanPositivInteger().scanOk())
+        if(input.scanDigits(10, Integer.MAX_VALUE, syntaxItem.getConstantSyntax()).scanOk())  //Note: constantSyntax is separator chars.
         { bOk = true;
-          if(sSemanticForStoring != null && ! bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(sSemanticForStoring, null, input.getLastScannedIntegerNumber(), parentResultItem);
+          if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
           }
         }
         else
@@ -1425,13 +1429,13 @@ public class ZbnfParser
       }
   
   
-      private boolean parseHexNumber(String sSemanticForStoring, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
+      private boolean parseHexNumber(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseHexNumber;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseHex(" + nRecursion + ") <#x?" + sSemanticForError + ">");
-        if(input.scanHex(maxNrofChars).scanOk())
+        if(input.scanDigits(16, maxNrofChars, syntaxItem.getConstantSyntax()).scanOk())
         { bOk = true;
-          if(sSemanticForStoring != null && ! bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(sSemanticForStoring, null, input.getLastScannedIntegerNumber(), parentResultItem);
+          if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
           }
         }
         else
@@ -1442,14 +1446,38 @@ public class ZbnfParser
       }
   
   
-      private boolean parseInteger(String sSemanticForStoring, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
+      /**Any desired radix, 2, 8, 16, 24 etc.
+       * @param syntaxItem
+       * @param parentResultItem
+       * @param maxNrofChars
+       * @return
+       * @throws ParseException
+       */
+      private boolean parseNumberRadix(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
+      { boolean bOk;
+        if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseHexNumber;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseHex(" + nRecursion + ") <#x?" + sSemanticForError + ">");
+        if(input.scanDigits((int)syntaxItem.nFloatFactor, maxNrofChars, syntaxItem.getConstantSyntax()).scanOk())
+        { bOk = true;
+          if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
+          }
+        }
+        else
+        { bOk = false;
+          saveError("hex number" + " <?" + sSemanticForError + ">");
+        }
+        return bOk;
+      }
+  
+  
+      private boolean parseInteger(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseInteger;           " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseInt(" + nRecursion + ") <#-?" + sSemanticForError + ">");
-        if(input.scanInteger().scanOk())
+        if(input.scanInteger(syntaxItem.getConstantSyntax()).scanOk())  //constantSyntax may contain additional separator chars or null. 
         {
           bOk = true;
-          if(sSemanticForStoring != null && ! bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(sSemanticForStoring, null, input.getLastScannedIntegerNumber(), parentResultItem);
+          if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
           }
         }
         else
@@ -1460,20 +1488,20 @@ public class ZbnfParser
       }
   
   
-      private boolean parseFloatNumber(String sSemanticForStoring, int maxNrofChars, ZbnfParserStore.ParseResultItemImplement parentResultItem, ZbnfSyntaxPrescript syntaxItem) 
+      private boolean parseFloatNumber(ZbnfSyntaxPrescript syntaxItem, int maxNrofChars, ZbnfParserStore.ParseResultItemImplement parentResultItem) 
       throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseFloat;             " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseFloat(" + nRecursion + ") <#f?" + sSemanticForError + ">");
         if(input.scanFloatNumber(true).scanOk())
         {
           bOk = true;
-          if(sSemanticForStoring != null && ! bDoNotStoreData)
+          if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
           { double result = input.getLastScannedFloatNumber();
             if(syntaxItem.getType() == ZbnfSyntaxPrescript.EType.kFloatWithFactor)
             { result *= syntaxItem.getFloatFactor();
             }
             srcLineOption = -1;
-            parserStoreInPrescript.addFloatNumber(sSemanticForStoring, null, result, parentResultItem);
+            parserStoreInPrescript.addFloatNumber(syntaxItem.getSemantic(), null, result, parentResultItem);
           }
         }
         else

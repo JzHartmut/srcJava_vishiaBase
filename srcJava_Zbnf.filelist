@@ -1,4 +1,4 @@
-2019-05-23 14:33:52  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-05-27 10:57:45  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -326,13 +326,13 @@
 2019-04-30 14:05:06  x     StringFormatter.java                     ::         49.407 -1031233532 
 2019-04-29 17:05:38  x     StringFunctions.java                     ::         47.506 -0711293992 
 2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
-2018-08-29 17:54:32  x     StringFunctions_C.java                   ::         12.530 -0234202136 
-2019-05-21 09:21:44  x     StringPart.java                          ::        120.223  1739301042 
+2019-05-27 08:11:59  x     StringFunctions_C.java                   ::         14.549  0524182854 
+2019-05-26 20:04:15  x     StringPart.java                          ::        120.437  0271804314 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
-2019-04-29 12:36:34  x     StringPartScan.java                      ::         36.862 -1767099193 
-2019-05-16 13:03:57  x     StringPreparer.java                      ::          6.545  1040503215 
+2019-05-27 10:47:44  x     StringPartScan.java                      ::         44.621  0514289562 
+2019-05-27 07:01:47  x     StringPreparer.java                      ::         10.329  0736653090 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -359,17 +359,18 @@
 2017-05-05 21:23:49  x     TestIndexMultiTable.java                 ::          8.186  1941999328 
 2013-10-20 00:56:38  x     TestString67.java                        ::           .750  1482509348 
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
-2019-04-24 21:21:31  x     TestStringPart.java                      ::          1.838 -0665867174 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
-2019-05-12 13:12:14  x     Test_StringPreparer.java                 ::           .457  1228679569 
+2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
+2019-05-27 10:42:35  x     Test_StringPartScan.java                 ::          1.965  1211010395 
+2019-05-27 06:56:40  x     Test_StringPreparer.java                 ::           .754 -0174148457 
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
-2019-03-13 12:01:37  x     XmlCfg.java                              ::         25.724 -0162808478 
+2019-05-26 01:33:06  x     XmlCfg.java                              ::         25.730 -0344839200 
 2019-01-23 13:07:06  x     XmlJzCfgAnalyzer.java                    ::         25.981 -1347782661 
-2019-03-13 11:08:31  x     XmlJzReader.java                         ::         28.291  0774966534 
+2019-05-26 10:07:54  x     XmlJzReader.java                         ::         28.297  1973630025 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2018-12-21 14:55:31  x     TestReadMsc15Cfg.java                    ::          4.956  0581616068 
@@ -392,19 +393,19 @@
 2015-09-30 08:49:02  x     Xml2Jdata.java                           ::          1.596  0291993359 
 
 ============================== org/vishia/zbnf/ ====================================================
-2019-05-23 00:14:08  x     GenZbnfJavaData.java                     ::         24.810 -0242876613 
+2019-05-27 06:46:11  x     GenZbnfJavaData.java                     ::         28.138 -0705264403 
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
 2019-05-22 08:59:32  x     ZbnfJavaOutput.java                      ::         78.267 -0338718995 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
-2019-05-22 22:52:19  x     ZbnfParser.java                          ::        163.470  0937316742 
+2019-05-27 10:56:13  x     ZbnfParser.java                          ::        165.117  0648407821 
 2019-05-22 21:08:41  x     ZbnfParserStore.java                     ::         51.439  0833046098 
-2019-05-22 23:51:33  x     ZbnfSyntaxPrescript.java                 ::         78.276  1827767267 
+2019-05-27 10:55:43  x     ZbnfSyntaxPrescript.java                 ::         79.472 -1670761646 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
 2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
 
 ============================== org/vishia/zbnf/ebnfConvert/ ========================================
-2019-05-22 22:48:51  x     EBNFconvert.java                         ::         14.764  0841261637 
-2019-05-21 17:49:40  x     EBNFread.java                            ::          9.892  1642021945 
+2019-05-25 10:40:56  x     EBNFconvert.java                         ::         14.358  1433369927 
+2019-05-24 23:13:21  x     EBNFread.java                            ::          9.792 -0573932290 
 2019-05-19 23:01:37  x     package-info.java                        ::           . 88  1273194282 
 
 ============================== org/vishia/zcmd/ ====================================================

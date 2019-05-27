@@ -548,7 +548,7 @@ public class XmlJzReader
   @SuppressWarnings("static-method")
   void storeAttrData( Object output, DataAccess.DatapathElement dstPath, CharSequence searchKey, CharSequence sAttrValue) 
   {
-    if(searchKey.equals("xmlinput:class"))
+    if(searchKey.equals("Comment"))  //sAttrName
       Debugutil.stop();
     try{ 
       int nrArgs = dstPath.nrArgNames();

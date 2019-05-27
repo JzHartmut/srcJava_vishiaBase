@@ -130,7 +130,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
    *   {@link Part} is a static class now, with outer reference. It is more clearly. Csharp does not know the concept of non static inner classes
    * <li>2019-04-24 Hartmut new {@link #setCurrentMaxPart()}, obvious necessary while test (independent of Csharp!).
    * <li>2019-01-22 Hartmut There were some mistakes with the position with longer files and smaller buffer in StringPartFromFileLines.
-   * <li>2019-02-10 Hartmut Change of {@link StringPart.Part}: possibility of set, because there is a persistent instance possible for {@link #setCurrentPart(Part)}.
+   * <li>2019-02-10 Hartmut Change of {@link StringPart.Part}: possibility of set, because there is a persistent instance possible for {@link #setCurrentPartTo(Part)}.
    *   It is because C-usage. This routines are used in the C-version for the Simulink Sfunction DataStruct...Inspc. 
    * <li>2018-12-22 Hartmut bugfix: Bug: The position in {@link StringPart.Part} were related to the current {@link #content}. 
    *   If the content was shifted in {@link StringPartFromFileLines#readnextContentFromFile(int)} the text referred with a {@link StringPart.Part} were become faulty,
@@ -2447,10 +2447,11 @@ else return pos - begin;
   }
   
 
-  /**Sets the actual part of the string.
-   * 
+  /**Sets the actual part of the given Part as destination. The Part references the substring inside {@link #content}.
+   * The content can be gotten as String from dst with {@link Part#toString()}
+   * Note: renaming 1019-05-26 from setCurrentPart(...). 
    */
-  protected final void setCurrentPart(Part dst)
+  protected final void setCurrentPartTo(Part dst)
   { if(end > begin) dst.setPart(begin, end);
     else            dst.setPart(begin, begin);
   }

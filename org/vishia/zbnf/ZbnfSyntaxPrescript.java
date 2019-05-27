@@ -225,6 +225,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2019-05-25 Hartmut new possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
    * <li>2019-05-22 Hartmut new {@link #bStoreAsString} and {@link #bDonotStoreData} written with <code>&lt;...?"!"semantic></code>
    * <li>2018-09-09 Hartmut new {@link #lineFile} element in all Prescripts, using for {@link ZbnfParser#setDebugPosition(int, int, int)}.
    * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
@@ -257,7 +258,7 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String version = "2018-09-10";
+  public static final String version = "2019-05-26";
   
   /** Kind of syntay type of the item */
   EType eType;
@@ -440,8 +441,14 @@ public class ZbnfSyntaxPrescript
   /** This enum marks, that the syntax is defined with another definition.
    * The identifier of the definition is got with getSyntaxFromComplexItem(Object) )
    */
-  , kSyntaxComponent   ( 12, '=' )    //'='
+  , kSyntaxComponent   ( 12, '=' ),    //'='
 
+  
+   /**Number with any radix
+   * 
+   */
+   kNumberRadix  (14, 'I')
+  
   /** This enum marks, that the syntax of the token should be a float number,
    * but it should be converted to an integer.
    * The syntax of this is [-]<#?integer>[\.<#?fractional>][[E|e][+|-|]<#?exponent>].
@@ -551,10 +558,18 @@ public class ZbnfSyntaxPrescript
     void convertSyntaxComponent(StringPartScan spInput)
     throws ParseException
     { char cc;
+      if(spInput.getCurrentPosition() == 2957 )
+        Debugutil.stop();
       { //TRICKY: sDefinitionIdent and eType blanketed the class variable, to test assignment from compiler in all branches.
         String sDefinitionIdent;
         EType eType;
-        if( (cc = spInput.getCurrentChar()) >='0' && cc <='9')
+        cc = spInput.getCurrentChar();
+        if(cc == '+') {
+          //this.bRequired = true;
+          //It is a possible special designation, yet without function.
+          cc = spInput.seekPos(1).getCurrentChar();
+        }
+        if( cc >='0' && cc <='9')
         { nMaxChars = 0;
           do
           { nMaxChars = 10* nMaxChars + (cc-'0');
@@ -566,16 +581,23 @@ public class ZbnfSyntaxPrescript
           String sTest = spInput.getCurrentPart().toString();
           spInput.setLengthMax();
           cc = spInput.getCurrentChar();
-          if(cc == '#')
-          { cc = spInput.seek(1).getCurrentChar();
+          if(cc == '#') { 
+            cc = spInput.seekPos(1).getCurrentChar();  //may read the following ?
+            if(cc >='0' && cc <='9') {
+              if(spInput.scanStart().scanPositivInteger().scanOk()) {
+                eType = EType.kNumberRadix; sDefinitionIdent = "i-NumberRadix"; 
+                //spInput.(1); 
+                this.nFloatFactor = spInput.getLastScannedIntegerNumber();
+              }
+            }
             switch(cc)
-            { case 'X': eType = EType.kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
-              case 'x': eType = EType.kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seek(1); break;
-              case '-': eType = EType.kIntegerNumber; sDefinitionIdent = "i-IntegerNumber"; spInput.seek(1); break;
+            { case 'X': eType = EType.kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seekPos(1); break;
+              case 'x': eType = EType.kHexNumber;     sDefinitionIdent = "i-HexNumber"; spInput.seekPos(1); break;
+              case '-': eType = EType.kIntegerNumber; sDefinitionIdent = "i-IntegerNumber"; spInput.seekPos(1); break;
               case 'f': 
               { eType = EType.kFloatNumber;   
                 sDefinitionIdent = "i-FloatNumber"; 
-                spInput.seek(1);
+                spInput.seekPos(1);
                 if(spInput.scanStart().scan("*").scanFloatNumber().scanOk())
                 { nFloatFactor = spInput.getLastScannedFloatNumber();
                   eType = EType.kFloatWithFactor;
@@ -588,6 +610,12 @@ public class ZbnfSyntaxPrescript
               } break;
               default:  eType = EType.kPositivNumber; sDefinitionIdent = "i-PositivNumber"; break;
             }
+            spInput.lentoAnyChar("?>");  //after the num syntax
+            if(spInput.length() >0) { //any additional characters as separator in num
+              this.sConstantSyntax = spInput.getCurrent().toString();
+              spInput.fromEnd();
+            }
+            spInput.setLengthMax();  //necessary for following scan!
           }
           else if(cc == '$')
           { eType = EType.kIdentifier;
@@ -777,7 +805,7 @@ public class ZbnfSyntaxPrescript
       }
 
       sSemantic = "@";  //default: use the semantic of the component if no special setting behind ? (<...?Semantic>)
-      while( (cc = spInput.getCurrentChar()) == '?')
+      while( (cc = spInput.getCurrentChar()) == '?')  //following semantic
       { spInput.seekPos(1);
         if(spInput.getCurrentChar() == '.') {
           getAttribute(spInput);

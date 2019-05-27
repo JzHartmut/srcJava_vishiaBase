@@ -95,12 +95,6 @@ public class EBNFread {
 
   public String pdftext; //<*| ?pdftext> 
 
-  public static class XXXEBNFblock extends EBNFdef {
-
-
-    public String pdftext; //<*| ?pdftext> 
-
-  }
 
   /**An instance of this contains a EBNF component definition like name::=SYNTAX.
    * It based on {@link EBNFalt} because the SYNTAX is stored in the base immediately.
@@ -334,7 +328,7 @@ public class EBNFread {
   
   
   
-  public static class EBNFmain {
+  public static class XXXXXEBNFmain {
 
     public String cmpnName; //<$?cmpnName> 
 

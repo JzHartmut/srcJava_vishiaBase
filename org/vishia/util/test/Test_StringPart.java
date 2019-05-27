@@ -3,7 +3,7 @@ package org.vishia.util.test;
 import org.vishia.util.Assert;
 import org.vishia.util.StringPart;
 
-public class TestStringPart
+public class Test_StringPart
 {
   public static void main(String[] args){
     test_seek_len_basics();
