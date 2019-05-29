@@ -117,7 +117,7 @@ public class TreeNodeHtmlOutput extends ObjectId
     //for the same data. Older and newer files are not comparable.
     //faulty: String hash = Integer.toHexString(data.hashCode()); 
     String hash = instanceId(data, newInstances);
-    String contentShort = toStringNoHash(data);
+    String contentShort = toStringNoHash(data).replace("<", "&lt;");    //< won't be displayed in html.
     out.append(" <a href=\"#node-").append(hash).append("\">")
        .append(" id=").append(data.getKey())
        .append(" = ").append(contentShort)

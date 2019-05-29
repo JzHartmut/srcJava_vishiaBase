@@ -225,9 +225,10 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
-   * <li>2019-05-25 Hartmut new possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
-   * <li>2019-05-22 Hartmut new {@link #bStoreAsString} and {@link #bDonotStoreData} written with <code>&lt;...?"!"semantic></code>
-   * <li>2018-09-09 Hartmut new {@link #lineFile} element in all Prescripts, using for {@link ZbnfParser#setDebugPosition(int, int, int)}.
+   * <li>2019-05-29 Hartmut new: prepared for &lt;...?*...> for {@link #bEntryComponentContainer}
+   * <li>2019-05-25 Hartmut new: possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
+   * <li>2019-05-22 Hartmut new: {@link #bStoreAsString} and {@link #bDonotStoreData} written with <code>&lt;...?"!"semantic></code>
+   * <li>2018-09-09 Hartmut new: {@link #lineFile} element in all Prescripts, using for {@link ZbnfParser#setDebugPosition(int, int, int)}.
    * <li>2018-09-09 Hartmut only formalistic: instead int kSyntaxDefinition etc. now {@link EType} as enum. It is not a functional change
    *   but the EType can contain some more information. It are used for generating a Java Output.java from the syntax proper for {@link ZbnfJavaOutput}.
    * <li>2017-03-25 Hartmut new: Possibility to add attributes to the syntax item. See ZBNF-core-Documentation, using <...?.name=value?...>
@@ -258,14 +259,30 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String version = "2019-05-26";
+  public static final String version = "2019-05-10";
   
+  /**For debugging and error report: The line in the syntax file. */
+  final int lineFile;
+
   /** Kind of syntay type of the item */
   EType eType;
 
   /**To go back for syntax path on error. */
   final ZbnfSyntaxPrescript parent;
   
+  /**Identificator of the sub-syntax. It is the part before ::=
+   * <ul>
+   * <li>If this is a top-level syntax item,
+   * it is the identification disposed at <code><i>sDefinitionIdent</i>:==...</code>.</li>
+   * <li>If this is a superclass of ComplexSyntax, and the eType == kComplexItem,
+   * it is the name of the required syntax definition,
+   * disposed at <code>&lt;<i>syntax</i>?...&gt;</code>.</li>
+   * <li>If this is a special ComplexSyntax, it is set to a reportable string,
+   * not used for process.</li>
+   * </ul>
+   */
+  protected String sDefinitionIdent;
+
   /**The semantic of this syntax item or null. It is usually the String after: <code>&lt;...?semantic></code>.
    * <ul>
    * <li>If the item has not a special semantic but the name of the syntax should be used
@@ -294,14 +311,17 @@ public class ZbnfSyntaxPrescript
   /**If set the parse result for this item is stored as String from the source immediately. */
   boolean bStoreAsString;
 
-  /**For debugging and error report: The line in the syntax file. */
-  final int lineFile;
-  
   /** if it is set, the semantic of this component should be assigned into the next component
    * of the outer prescript.
    */
   protected boolean bAssignIntoNextComponent = false;
 
+  
+  /**If it is set this result is stored in a container (List). 
+   * If the component is successfully parsed the component is stored multiple for each result in this container.  */
+  protected boolean bEntryComponentContainer = false;
+  
+  
   /** see quest method.*/
   protected boolean bAddOuterResults = false;
 
@@ -350,19 +370,6 @@ public class ZbnfSyntaxPrescript
   
   /**If not null, than attributes of this item. */
   Map<String, String> attributes = null;
-
-  /**Identificator of the sub-syntax. It is the part before ::=
-   * <ul>
-   * <li>If this is a top-level syntax item,
-   * it is the identification disposed at <code><i>sDefinitionIdent</i>:==...</code>.</li>
-   * <li>If this is a superclass of ComplexSyntax, and the eType == kComplexItem,
-   * it is the name of the required syntax definition,
-   * disposed at <code>&lt;<i>syntax</i>?...&gt;</code>.</li>
-   * <li>If this is a special ComplexSyntax, it is set to a reportable string,
-   * not used for process.</li>
-   * </ul>
-   */
-  protected String sDefinitionIdent;
 
   /**
    * Required sub-syntax of a syntax component with string result.
@@ -921,7 +928,10 @@ public class ZbnfSyntaxPrescript
       cc = spInput.seekPos(1).getCurrentChar();
     }
     //
-    if( cc == '-') { 
+    if( cc == '*') { 
+      bEntryComponentContainer = true;
+      cc = spInput.seekPos(1).getCurrentChar();
+    } else if( cc == '-') { 
       bAssignIntoNextComponent = true;
       cc = spInput.seekPos(1).getCurrentChar();
     } else if(cc == '+') { 

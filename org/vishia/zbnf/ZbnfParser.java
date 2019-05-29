@@ -132,6 +132,9 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-29 Hartmut changes for correctly processing &lt;...?"!"@>, The semantic=="@" should be used to get 
+   *   the semantic from the syntaxComponent. To do it it is explicitly programmed before calling of {@link PrescriptParser.SubParser#parseSub(ZbnfSyntaxPrescript, String, int, ZbnfSyntaxPrescript, String, ParseResultItemImplement, boolean, ZbnfParserStore)}
+   *   Some gardening in arguments.  
    * <li>2019-05-25 Hartmut new possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
    * <li>2019-05-22 Hartmut new syntaxItem.bStoreAsString first test success, not ready.
    * <li>2019-05-22 Hartmut improved: Storing parse result with <code>[&lt;?result>...</code> It was faulty in some cases in comparison with ZBNF/testAllConcepts - test.
@@ -623,6 +626,12 @@ public class ZbnfParser
         String sSemanticIdent1 = sSemanticIdent; //only debug
 //        if(resultType == ZbnfParserStore.kOption)
 //          stop();
+        if(syntaxPrescript !=null && syntaxPrescript.sDefinitionIdent !=null) {
+          if(syntaxPrescript.sDefinitionIdent.equals("real_literal"))
+            Debugutil.stop();
+          if(syntaxPrescript.sDefinitionIdent.equals("real_type_name"))
+          Debugutil.stop();
+        }
         final String sSemanticForStoring1;
         if(sSemanticForStoring!= null && sSemanticForStoring.equals("@"))
         { //on calling its written like <name> without semantic, than:
@@ -1016,18 +1025,35 @@ public class ZbnfParser
             }
           } break; //do nothing
           case kSyntaxComponent:
-          { bOk = parse_Component
-                  ( input
-                  , posInputbase    
-                  , sDefinitionIdent
-                  , sSemanticForStoring
-                  , parentResultItem
-                  , bSkipSpaceAndComment
-                  , this.bDoNotStoreData || syntaxItem.bDonotStoreData
-                  , syntaxItem       //which invokes the component
-                  , syntaxItem.isResultToAssignIntoNextComponent()
-                  , syntaxItem.isToAddOuterResults()
-                  );
+          { 
+            ZbnfSyntaxPrescript syntaxCmpn = searchSyntaxPrescript(sDefinitionIdent);
+            if(syntaxCmpn == null) {
+              bOk = false;
+              report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
+              String sError = "prescript for : <" + sDefinitionIdent 
+              + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
+              + "> not found.";
+              saveError(sError);
+            } else {
+              if(sSemanticForStoring !=null && sSemanticForStoring.equals("@")) {
+                //replace single @ with semantic of component. 
+                sSemanticForStoring = syntaxCmpn.getSemantic();
+              }
+              
+              
+              bOk = parse_Component
+                    ( input
+                    , posInputbase    
+                    , syntaxCmpn
+                    , sSemanticForStoring
+                    , parentResultItem
+                    , bSkipSpaceAndComment
+                    , this.bDoNotStoreData || syntaxItem.bDonotStoreData
+                    , syntaxItem       //which invokes the component
+                    , syntaxItem.isResultToAssignIntoNextComponent()
+                    , syntaxItem.isToAddOuterResults()
+                    );
+            }
           } break;
           default:
           {
@@ -1186,7 +1212,7 @@ public class ZbnfParser
             //Add the component result item to the parser store. It is not tested yet whether the component is valid.
             //But the elements of the component are stored as child of the component.
             //If the component is not valid, this parse result will be deleted then.
-            parserStoreInPrescript.add(syntaxItem.sSemantic, syntaxItem, sParsedString, ZbnfParserStore.kString, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
+            parserStoreInPrescript.add(sSemanticForStoring, syntaxItem, sParsedString, ZbnfParserStore.kString, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
            ////
           }
         }
@@ -1650,7 +1676,7 @@ public class ZbnfParser
       private boolean parse_Component
       ( StringPartScan sInputP
       , int posInputbase
-      , String sDefinitionIdent
+      , ZbnfSyntaxPrescript syntaxCmpn
       , String sSemanticForStoring
       , ZbnfParserStore.ParseResultItemImplement parentResultItem
       , boolean bSkipSpaceAndComment
@@ -1660,20 +1686,18 @@ public class ZbnfParser
       , boolean bAddParseResultFromPrevious
       ) throws ParseException
       { boolean bOk;
-        String sKeySearchAlreadyParsed = String.format("%9d", input.getCurrentPosition()) + sDefinitionIdent;
+        String sKeySearchAlreadyParsed = String.format("%9d", input.getCurrentPosition()) + syntaxCmpn.sDefinitionIdent;
         ParseResultlet resultlet = alreadyParsedCmpn.get(sKeySearchAlreadyParsed);
         if(resultlet !=null){
           Assert.stop();
         }
           
-        if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + sDefinitionIdent + "?" + sSemanticForError + ">");
-        if(sDefinitionIdent.equals("headerBlock") && parentResultItem.sSemantic.equals("CLASS_C"))
+        if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + syntaxCmpn.sDefinitionIdent + "?" + sSemanticForError + ">");
+        if(syntaxCmpn.sDefinitionIdent.equals("headerBlock") && parentResultItem.sSemantic.equals("CLASS_C"))
         { stop();
         
         }
-        ZbnfSyntaxPrescript complexItem = searchSyntaxPrescript(sDefinitionIdent);
-        if(complexItem != null)
-        { /**Create the SubParser-instace: */
+        /**Create the SubParser-instace: */
           final PrescriptParser componentsPrescriptParser;
           
 //          if(sDefinitionIdent.equals("variableDefinition"))
@@ -1695,8 +1719,8 @@ public class ZbnfParser
             }
             componentsPrescriptParser = new PrescriptParser
             ( PrescriptParser.this
-            , complexItem 
-            , sDefinitionIdent
+            , syntaxCmpn 
+            , syntaxCmpn.sDefinitionIdent
             , sInputP, posInputbase
             );
             
@@ -1727,15 +1751,6 @@ public class ZbnfParser
             { report.reportln(idReportParsing, "parseCompError;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent-error(" + nRecursion + ") <?" + sSemanticForError + ">");
             }
           }
-        }
-        else
-        { bOk = false;
-          report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
-          String sError = "prescript for : <" + sDefinitionIdent 
-          + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
-          + "> not found.";
-          saveError(sError);
-        }
         return bOk;
       }
   
@@ -1755,8 +1770,18 @@ public class ZbnfParser
           if(sSemanticForStoring !=null){
             assert(false);  //it is excluded by the syntax definition.
           }
-          StringPartScan partOfInput = new StringPartScan(sResult);
-          bOk = parse_Component(partOfInput, (int)srcBegin, subSyntax, sSemanticForStoring, parentResultItem, false, false, null, false, false);
+          ZbnfSyntaxPrescript syntaxCmpn = searchSyntaxPrescript(subSyntax);
+          if(syntaxCmpn == null) {
+            bOk = false;
+            report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + subSyntax);
+            String sError = "prescript for : <" + subSyntax 
+            + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
+            + "> not found.";
+            saveError(sError);
+          } else {
+            StringPartScan partOfInput = new StringPartScan(sResult);
+            bOk = parse_Component(partOfInput, (int)srcBegin, syntaxCmpn, sSemanticForStoring, parentResultItem, false, false, null, false, false);
+          }
         }
         else if( sSemanticForStoring != null && ! bDoNotStoreData)
         { srcLineOption = -1;
@@ -2565,6 +2590,11 @@ public class ZbnfParser
 
   
   public ZbnfSyntaxPrescript mainScript() { return mainScript; }
+  
+  
+  /**Returns the index of all sub prescripts for checking. */
+  public TreeMap<String,ZbnfSyntaxPrescript> subPrescripts() { return listSubPrescript; }
+  
   
   
   private void importScript(String sFile, String sDirParent) 

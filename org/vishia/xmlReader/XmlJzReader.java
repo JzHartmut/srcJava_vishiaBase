@@ -67,6 +67,7 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2019-05-29 Now skips over &lt;!DOCTYPE....>
    * <li>2018-09-09 Renamed from XmlReader to XmlJzReader, because: It is a special reader. 
    * It stores Data to Java (J) and works with a configfile which has a semantic (z as reverse 's').
    * <li>2017-12-25 first version which can be used.
@@ -230,19 +231,23 @@ public class XmlJzReader
   private void readXml(StringPartFromFileLines inp, Object output, XmlCfg cfg1) 
   throws Exception
   { inp.setIgnoreWhitespaces(true);
-    inp.seekEnd("<"); //search the first start "<". Skip over all other characters. Only spaces are expected.
-    if(inp.scan("?").scanOk()) { //skip over the first "<?xml declaration line ?>
-      inp.seekEnd("?>");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
-      inp.scanOk();    //sets the scan start to this position.
-    }
-    while(inp.seekEnd("<").found()) {
-      inp.scanOk();
-      inp.readnextContentFromFile(sizeBuffer*2/3);
-      if(inp.scan().scan("!--").scanOk()) { //comment line
-       inp.seekEnd("-->");
-      }
-      else {
-        parseElement(inp, output, cfg1.rootNode);  //the only one root element.
+    while(inp.seekEnd("<").found()) { //after the beginning < of a element
+      inp.scanStart();
+      if(inp.scan("?").scanOk()) { //skip over the first "<?xml declaration line ?>
+        inp.seekEnd("?>");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
+        inp.scanOk();    //sets the scan start to this position.
+      } else if(inp.scan("!").scanOk()) { //skip over the first "<?xml declaration line ?>
+        inp.seekEnd(">");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
+        inp.scanOk();    //sets the scan start to this position.
+      } else if(inp.scan().scan("!--").scanOk()) { //comment line
+        inp.seekEnd("-->");
+       }
+       else {
+        inp.scanOk();
+        inp.readnextContentFromFile(sizeBuffer*2/3);
+        {
+          parseElement(inp, output, cfg1.rootNode);  //the only one root element.
+        }
       }
     }
     Debugutil.stop();
@@ -502,6 +507,8 @@ public class XmlJzReader
     }
     else {  //invoke an routine which gets the new output. The routine may use arguments from attributes.
       try{ 
+        if(subCfgNode.elementStorePath.ident().equals("new_EventInput"))
+          Debugutil.stop();
         int nrArgs = subCfgNode.elementStorePath.nrArgNames();
         Object[] args;
         if(nrArgs >0) {

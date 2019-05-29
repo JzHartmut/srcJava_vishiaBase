@@ -74,22 +74,22 @@ public class StringPreparer
   
   class Cmd {
     ECmd cmd;
-    final String str;
+    final String varName;
     int ixVar = -1;
     
     /**If necessary it is the offset skipped over the ctrl sequence. */
     int offsEndCtrl;
     //abstract void exec();
     
-    public Cmd(ECmd what, String str)
+    public Cmd(ECmd what, String varName)
     { this.cmd = what;
-      this.str = str;
+      this.varName = varName;
     }
     
     
     
     @Override public String toString() {
-      return cmd + ":" + str;
+      return cmd + ":" + varName;
     }
     
   }
@@ -247,7 +247,7 @@ public class StringPreparer
     sp.close();
     for(Cmd cmd: cmds) {
       if(cmd.cmd == ECmd.addVar) {
-        Integer ixVar = vars.get(cmd.str);
+        Integer ixVar = vars.get(cmd.varName);
         cmd.ixVar = ixVar;  //store the order of occurrence.
         
       }
@@ -261,9 +261,9 @@ public class StringPreparer
   public void XXXexec( StringFormatter fm, Map<String, Object> values) {
     for(Cmd cmd : cmds) {
       switch(cmd.cmd) {
-        case addString: fm.add(cmd.str); break;
+        case addString: fm.add(cmd.varName); break;
         case addVar: {
-          Object val = values.get(cmd.str);
+          Object val = values.get(cmd.varName);
           fm.add(val.toString());
         } break;
       }
@@ -282,7 +282,7 @@ public class StringPreparer
     int ixVal = 0;
     for(Cmd cmd : cmds) {
       switch(cmd.cmd) {
-        case addString: fm.add(cmd.str); break;
+        case addString: fm.add(cmd.varName); break;
         case addVar: {
           Object val = values[ixVal];
           fm.add(val.toString());
@@ -292,33 +292,66 @@ public class StringPreparer
   }
   
   
+
   /**Executes preparation
    * @param fm
    * @param values in order of first occurrence in the prescript
    * @throws IOException 
    */
-  public void exec( Appendable sb, Map<String, Object> values ) throws IOException {
+  public void exec( Appendable sb, Map<String, Object> values) throws IOException {
+    execSub(sb, values, 0, cmds.size());
+  }
+  
+  
+  /**Executes preparation
+   * @param fm
+   * @param values in order of first occurrence in the prescript
+   * @throws IOException 
+   */
+  private void execSub( Appendable sb, Map<String, Object> values, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
-    int ixCmd = -1;
-    while(++ixCmd < cmds.size()) {
-      Cmd cmd = cmds.get(ixCmd);
+    int ixCmd = ixStart;
+    while(ixCmd < ixEndExcl) {
+      Cmd cmd = cmds.get(ixCmd++);
+      Object val;
+      if(cmd.varName !=null && cmd.cmd != ECmd.addString) {
+        val = values.get(cmd.varName);
+        if(val == null && !values.containsKey(cmd.varName)) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.varName );
+      } else { val = null; }
       switch(cmd.cmd) {
-        case addString: sb.append(cmd.str); break;
+        case addString: sb.append(cmd.varName); break;
         case addVar: {
           //Integer ixVar = vars.get(cmd.str);
-          Object val = values.get(cmd.str);
-          if(val == null) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.str );
           sb.append(val.toString());
         } break;
         case ifCtrl: {
-          ixCmd += cmd.offsEndCtrl -1;
+          if(  val ==null 
+            || (val instanceof Boolean && ! ((Boolean)val).booleanValue()) 
+            || (val instanceof Number  && ((Number)val).intValue() == 0)) {
+            ixCmd += cmd.offsEndCtrl -1;  //if is false, go to the end.
+          } else {
+            //forward inside if
+            Debugutil.stop();
+          }
         } break;
         case forCtrl: {
+          if(val instanceof Iterable) {
+            for(Object item: (Iterable)val) {
+              values.put(((ForCmd)cmd).entryVar, item);
+              execSub(sb, values, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+            }
+          }
+          else if(val instanceof Map) {
+            @SuppressWarnings("unchecked") Map<Object, Object>map = ((Map<Object,Object>)val);
+            for(Map.Entry<Object,Object> item: map.entrySet()) {
+              values.put(((ForCmd)cmd).entryVar, item.getValue());
+              execSub(sb, values, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+            }
+          }
+          else throw new IllegalArgumentException("StringPreparer script " + sIdent + ": for variable is not an container: " + cmd.varName );
           ixCmd += cmd.offsEndCtrl -1;
         } break;
         case debug: {
-          Object val = values.get(cmd.str);
-          if(val == null) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.str );
           if(val.toString().equals(((DebugCmd)cmd).cmpString)){
             Debugutil.stop();
           }

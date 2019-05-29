@@ -493,8 +493,21 @@ public final class ZbnfJavaOutput
       //
       //This is the loop over all result items of this component.
       //
-      while(iterChildren.hasNext())
-      { ZbnfParseResultItem childItem = iterChildren.next();
+      while(iterChildren.hasNext()) { 
+        ZbnfParseResultItem childItem = iterChildren.next();
+        ZbnfSyntaxPrescript childSyntax = childItem.syntaxItem();
+        if(  childSyntax.sDefinitionIdent !=null 
+            && childSyntax.eType == ZbnfSyntaxPrescript.EType.kSyntaxComponent
+            && childSyntax.sDefinitionIdent.contains("real_type_name")
+            ) {
+          Debugutil.stop();
+        }
+        if(  childSyntax.sDefinitionIdent !=null 
+            && childSyntax.eType == ZbnfSyntaxPrescript.EType.kSyntaxComponent
+            && childSyntax.sDefinitionIdent.contains("real_literal")
+            ) {
+          Debugutil.stop();
+        }
         final String semantic1 = childItem.getSemantic();
         /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
         final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;

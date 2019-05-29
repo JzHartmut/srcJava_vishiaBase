@@ -16,6 +16,8 @@ public class JZtxtcmdTester
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-29 Hartmut new: {@link #dataHtml(Object, JZtxtcmdFilepath, boolean)} now writes a Map as container, not in its original storage form. 
+   *   and writes a <code>&lt;</code> in html with &amp;lt; 
    * <li>2017-07-29 Hartmut new: {@link #dataHtml(Object, JZtxtcmdFilepath, boolean)} can decide whether the true hash code is shown 
    *   (for search the instance proper to a Object.toString()-output with @hash or a unique hash is shown for compare ability of 2 html files.j 
    * <li>2014-06-29 Hartmut chg now all methods are static and part of {@link JZtxtcmdTester}.

@@ -253,8 +253,13 @@ class ZbnfParserStore
     XmlNode treeNodeXml = null;
     
     
-    ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent, String syntax, ZbnfSyntaxPrescript syntaxElement)
-    { this.store = store;
+    ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent
+        , String syntax, ZbnfSyntaxPrescript syntaxElement) { 
+      this.store = store;
+      if(syntaxElement !=null && syntaxElement.sDefinitionIdent !=null && syntaxElement.sDefinitionIdent.equals("real_literal"))
+        Debugutil.stop();
+      if(syntaxElement !=null && syntaxElement.sDefinitionIdent !=null && syntaxElement.sDefinitionIdent.equals("real_type_name"))
+        Debugutil.stop();
       int posValue = sSemantic.indexOf('='); 
       if(posValue>0){  //set a value with the given semantic in form "semantic=value"
         String value = sSemantic.substring(posValue+1);

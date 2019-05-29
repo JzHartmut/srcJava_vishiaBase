@@ -192,18 +192,18 @@ public class GenZbnfJavaData
   
   
   private static final StringPreparer sJavaCmpnZbnf = new StringPreparer( "sJavaCmpnZbnf",
-      "    /**Creates an instance for the result. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
+      "    /**Creates an instance for the result Zbnf <:if:args> (not Xml) <.if>. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
     + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
     + "      super.<&varName> = val;\n"
     + "      return val; //Note: needs the derived Zbnf-Type.\n"
     + "    }\n"
-    + "    \n<:debug:name:FBType>"
+    + "    \n"  //<:debug:name:FBType>"
     + "<:if:args>"
-    + "    /**Creates an instance for the result. &lt;<&typeZbnf>?<&name>&gt;  */\n"
-    + "    public <&typeZbnf>_Zbnf new_<&name>(/*<&args>*/) { \n"
+    + "    /**Creates an instance for the Xml data storage with default attibutes. &lt;<&typeZbnf>?<&name>&gt;  */\n"
+    + "    public <&typeZbnf>_Zbnf new_<&name>(<:for:arg:args>String <&arg> <.for>) { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
-    + "      <:for:arg:args>val.super.<&arg> = <&arg>;\n<.for>"
+    + "      <:for:arg:args>val.<&arg> = <&arg>;\n<.for>"
     + "      super.<&varName> = val;\n"
     + "      return val; //Note: needs the derived Zbnf-Type.\n"
     + "    }\n"
@@ -223,6 +223,17 @@ public class GenZbnfJavaData
     + "      return val; \n"
     + "    }\n"
     + "    \n"
+    + "<:if:args>"
+    + "    /**Creates an instance for the Xml data storage with default attibutes. &lt;<&typeZbnf>?<&name>&gt;  */\n"
+    + "    public <&typeZbnf>_Zbnf new_<&name>(<:for:arg:args>String <&arg> <.for>) { \n"
+    + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
+    + "      <:for:arg:args>val.<&arg> = <&arg>;\n<.for>"
+    + "      if(super.<&varName>==null) { super.<&varName> = new ArrayList<<&typeZbnf>>(); }\n"
+    + "      super.<&varName>.add(val);\n"
+    + "      return val; //Note: needs the derived Zbnf-Type.\n"
+    + "    }\n"
+    + "    \n"
+    + "<.if>"
     + "    /**Add the result to the list. &lt;<&typeZbnf>?<&name>&gt;*/\n"
     + "    public void add_<&name>(<&typeZbnf>_Zbnf val) {\n"
     + "      //already done: \n"
@@ -526,12 +537,12 @@ public class GenZbnfJavaData
           if(semantic.indexOf("@")>=0) {  //a required Attribute in XML
             Debugutil.stop();
           }
-          String attribs = "";
-          String attribsAssign = "";
+          List<String> args = null;
+          //String attribs = "";
+          //String attribsAssign = "";
           if(obligateAttribs !=null) for(String attrib: obligateAttribs) {
-            if(attribs.length() ==0) {attribs = "String "+ attrib; }
-            else { attribs += ", String " + attrib; }
-            attribsAssign += "      super." + attrib + " = " + attrib + ";\n";
+            if(args == null) {args = new LinkedList<String>(); }
+            args.add(firstLowercase(attrib));
           }
           //semantic = semantic.replace("@!", "");
           semantic = semantic.replace("@", "");
@@ -556,6 +567,7 @@ public class GenZbnfJavaData
           argstxt.put("name", semantic);
           argstxt.put("type", type);
           argstxt.put("typeZbnf", type);
+          argstxt.put("args", args);
 
           if(bList) {
             GenZbnfJavaData.sJavaListVar.exec(wr, argstxt);
@@ -615,7 +627,7 @@ public class GenZbnfJavaData
      */
     private void evaluateSubCmpn(ZbnfSyntaxPrescript item, boolean bList, int level) throws IOException {
       
-      if(item.sDefinitionIdent.equals("input_variable_list"))
+      if(item.sDefinitionIdent.equals("event_input_declaration"))
         Debugutil.stop();
       ZbnfSyntaxPrescript prescript = idxSubSyntax.get(item.sDefinitionIdent); 
       if(prescript == null) throw new IllegalArgumentException("error in syntax, component not found: " + item.sDefinitionIdent);
@@ -628,19 +640,19 @@ public class GenZbnfJavaData
         evaluateChildSyntax(prescript.childSyntaxPrescripts, bList, level);
       }
       else {
-        //create an own class for the component, write a container here.
-        List<String> obligateAttribs = null;
-        if(prescript.childSyntaxPrescripts !=null) for( ZbnfSyntaxPrescript subitem: prescript.childSyntaxPrescripts) {
-          if(subitem.sSemantic !=null && subitem.sSemantic.length()>1 && subitem.sSemantic.charAt(0) == '@') {
-            //an syntaxSymbol which is requested (because not in an option etc) and it is an attribute:
-            if(obligateAttribs==null) { obligateAttribs = new LinkedList<String>(); }
-            obligateAttribs.add(subitem.sSemantic.substring(1));
-          }
-        }
         if(item.bStoreAsString) {
           wrVariable("String", semantic, bList, true, null);
         }
         if(!item.bDonotStoreData) {
+        //create an own class for the component, write a container here.
+          List<String> obligateAttribs = null;
+          if(prescript.childSyntaxPrescripts !=null) for( ZbnfSyntaxPrescript subitem: prescript.childSyntaxPrescripts) {
+            if(subitem.sSemantic !=null && subitem.sSemantic.length()>1 && subitem.sSemantic.charAt(0) == '@') {
+              //an syntaxSymbol which is requested (because not in an option etc) and it is an attribute:
+              if(obligateAttribs==null) { obligateAttribs = new LinkedList<String>(); }
+              obligateAttribs.add(subitem.sSemantic.substring(1));
+            }
+          }
           String sType = firstUppercase(item.sDefinitionIdent);
           if(sType.equals("Integer")) {
             Debugutil.stop();

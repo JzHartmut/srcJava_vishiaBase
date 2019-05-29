@@ -376,7 +376,7 @@ public class DataShow extends ObjectId
     //for the same data. Older and newer files are not comparable.
     //faulty: String hash = Integer.toHexString(data.hashCode()); 
     String hash = instanceId(data, newInstances);
-    String contentShort = toStringNoHash(data);
+    String contentShort = toStringNoHash(data).replace("<", "&lt;");    //< won't be displayed in html.
     out.append(" <a href=\"#obj-").append(hash).append("\">")
        .append(" id=").append(hash)
        .append(" = ").append(contentShort)
@@ -401,41 +401,67 @@ public class DataShow extends ObjectId
     //faulty: String hash = Integer.toHexString(data.hashCode());
     String hash = instanceId(data, newInstances);
     Class<?> clazz = data.getClass();
-    String content = bNoHash ? toStringNoHash(data) : data.toString();
     out.append("\n<a name=\"obj-").append(hash).append("\"/>");
     //anchor for hyperlink from outside for documentation. Use the toString().output.
-    if(content !=null && content.indexOf('\"')<0){
-      //often a " is not contained in the toString-output. It can be presumed that it is never true,
-      //if the toString() should be used as anchor. But prevent trouble if " is contained.
-      out.append("\n<a name=\"").append(content).append("\"/>");
-    }
+    String content = (bNoHash ? toStringNoHash(data) : data.toString()).replace("<", "&lt;");    //< won't be displayed in html.
+//    if(content !=null && content.indexOf('\"')<0){
+//      //often a " is not contained in the toString-output. It can be presumed that it is never true,
+//      //if the toString() should be used as anchor. But prevent trouble if " is contained.
+//      out.append("\n<a name=\"").append(content).append("\"/>");
+//    }
     out.append("\n<hr>\n<h2>");
     out.append(clazz.getName()).append(" id=").append(hash).append("</h2>");
-    out.append("<p>").append(" = ").append(content).append("</p>");
-    out.append("\n  <h3>this</h3>");      
-    while(clazz !=null) {  //for all superclasses too.
-      out.append("\n    <ul>");
-      Field[] fields = clazz.getDeclaredFields();
-      for(Field field: fields) {
-        ExcludeShowContent doNotShowContent = field.getAnnotation(ExcludeShowContent.class);
-        Class<?> type = field.getType();
-        int modi = field.getModifiers();
-        if((modi & Modifier.STATIC)==0) {
-          field.setAccessible(true);
-          String sName = field.getName();
-          String sType = type.getName();
-          String sInfo = sName + ": " + sType;
-          if(doNotShowContent != null) {
-            out.append("\n    <li>").append(sInfo).append(" = ?not shown? </li> ");
+    if(data instanceof Map) {
+      ////
+      Map<?,?> map = (Map<?,?>)data;
+      out.append(" Map length = ").append(Integer.toString(map.size()));
+      if(map.size() >0) {
+        out.append("\n      <ol start=\"0\">");
+        for(Map.Entry<?,?> entry: map.entrySet()) {
+          Object item = entry.getValue();
+          Object key = entry.getKey();
+          String sKey = toStringNoHash(key);
+          outField(sKey, item, item.getClass(), null, out, 0);
+          /*  
+          out.append("\n        <li>");
+          if(item ==null) {
+            out.append(" = null");
           } else {
-            outField(sName, data, type, field, out, 0);
+            addRef(item);
+            outDataShort(item, item.getClass(), item.toString(), out);   
+          }
+          out.append("</li>");
+          */
+        }
+        out.append("\n      </ol>");
+      }
+    } else {
+      out.append("<p>").append(" = ").append(content).append("</p>");
+      out.append("\n  <h3>this</h3>");      
+      while(clazz !=null) {  //for all superclasses too.
+        out.append("\n    <ul>");
+        Field[] fields = clazz.getDeclaredFields();
+        for(Field field: fields) {
+          ExcludeShowContent doNotShowContent = field.getAnnotation(ExcludeShowContent.class);
+          Class<?> type = field.getType();
+          int modi = field.getModifiers();
+          if((modi & Modifier.STATIC)==0) {
+            field.setAccessible(true);
+            String sName = field.getName();
+            String sType = type.getName();
+            String sInfo = sName + ": " + sType;
+            if(doNotShowContent != null) {
+              out.append("\n    <li>").append(sInfo).append(" = ?not shown? </li> ");
+            } else {
+              outField(sName, data, type, field, out, 0);
+            }
           }
         }
-      }
-      out.append("\n    </ul>");
-      clazz = clazz.getSuperclass();
-      if(clazz !=null) {
-        out.append("\n  <h3>super ").append(clazz.getName()).append("</h3>");
+        out.append("\n    </ul>");
+        clazz = clazz.getSuperclass();
+        if(clazz !=null) {
+          out.append("\n  <h3>super ").append(clazz.getName()).append("</h3>");
+        }
       }
     }
   }
@@ -493,7 +519,7 @@ public class DataShow extends ObjectId
         } 
         else if(elementData instanceof CharSequence){
           out.append(instanceType.getSimpleName()).append(": ");
-          out.append(SimpleXmlOutputter.convertString(toStringNoHash(elementData)));
+          out.append(SimpleXmlOutputter.convertString(toStringNoHash(elementData).replace("<", "&lt;")));    //< won't be displayed in html.
         }
         else if(type.isArray()) {  ////
           Class<?> componentType = type.getComponentType();
