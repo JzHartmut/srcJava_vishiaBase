@@ -225,6 +225,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2019-05-30 Hartmut new: {@link #childsHasSemantic()} for evaluation in {@link GenZbnfJavaData}
    * <li>2019-05-29 Hartmut new: prepared for &lt;...?*...> for {@link #bEntryComponentContainer}
    * <li>2019-05-25 Hartmut new: possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
    * <li>2019-05-22 Hartmut new: {@link #bStoreAsString} and {@link #bDonotStoreData} written with <code>&lt;...?"!"semantic></code>
@@ -833,7 +834,7 @@ public class ZbnfSyntaxPrescript
   }
 
 
-  private static class RepetitionSyntax extends ZbnfSyntaxPrescript
+  public static class RepetitionSyntax extends ZbnfSyntaxPrescript
   { /** Syntax of the forward path*/
     //SyntaxPrescript forward;
     /** Syntax of the repetition path */
@@ -1435,46 +1436,31 @@ public class ZbnfSyntaxPrescript
    * @return null if no prescript exists for the alternative, otherwise
    *         the list of syntax elements in the prescript.
    */
-  List<ZbnfSyntaxPrescript> getListPrescripts()
+  public List<ZbnfSyntaxPrescript> getListPrescripts()
   { return childSyntaxPrescripts;
-    /*
-    if(eType == kAlternative)
-    { if(childSyntaxPrescripts.size() > idx)
-      { ZbnfSyntaxPrescript alternative = childSyntaxPrescripts.get(idx); 
-        return alternative.childSyntaxPrescripts;
-      }
-      else return null;
-      
-    }
-    else return childSyntaxPrescripts;
-    */     
   }
-  /*
-  { if(syntaxLists == null)
-    { return null;
-    }
-    else if(listAlternatives == null)
-    { if(idx == 0) return childs;
-      else         return null;
-    }
-    else
-    { if(listAlternatives.size() > idx)
-      {            return (listAlternatives.get(idx).childs);
-      }
-      else         return null;
-    }
-  }
-  */
 
+  
+  
+  /**Checks whether any child produces data.  
+   * @return false if no child has a {@link #getSemantic()}
+   */
+  public boolean childsHasSemantic() {
+    if(childSyntaxPrescripts == null) return false;
+    else {
+      for(ZbnfSyntaxPrescript child: childSyntaxPrescripts) {
+        if(child.sSemantic !=null) return true;
+        if(child.childsHasSemantic()) return true;
+      }
+    }
+    return false; //all checked, nowhere semantic
+  }
+  
+  
   /** Returns true if there are more as one alternative.*/
   boolean hasAlternatives()
   { return (eType == EType.kAlternative || eType == EType.kAlternativeOption || eType == EType.kAlternativeOptionCheckEmptyFirst);
   }
-  /*
-  { return listAlternatives != null
-           && listAlternatives.size()>1;
-  }
-  */
 
 
 

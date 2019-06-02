@@ -645,6 +645,8 @@ public class CheaderParser {
     
     public List<OrCondition> orConditions;
     
+    /**Ignore &lt;?elseConditionBlock&gt; as String, add it only as component, see {@link #new_elseConditionBlock()}. 
+     * The set-Routine should be existing, elsewhere it is an error. But the routine does nothing. */
     public void set_elseConditionBlock(String val) {}
 
     public void conditionDef(String val) { not = false; conditionDef = val; }
@@ -929,8 +931,6 @@ public class CheaderParser {
     public String name() { return name == null ? tagname : name; }
     
     
-    /**Ignore &lt;?elseConditionBlock&gt; as String, add it as component. */
-    //public void set_elseConditionBlock(String val) {} 
 
     
     
@@ -1633,6 +1633,15 @@ type::= [<?@modifier>volatile|const|]
     public void add_refCastingValue(RefCastingValue val){ entries.add(val); }
  
     //public void set_floatNumber(String val){ entry1 = new Number('f'); entry1.data = val; entries.add(entry1);  }
+    
+    /**Adds a string representing the parsed char.
+     * @param chars
+     */
+    public void set_simpleCharLiteral(String chars) {
+      entry1 = new ValueEntry('c', chars);
+      entries.add(entry1);
+    }
+    
     
     public Number set_number(int val){ 
       Number number = new Number('f'); 

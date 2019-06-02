@@ -847,7 +847,7 @@ class ZbnfParserStore
     //  stop();
     //if(srcLine == 726 ) //&& srcColumn == 7)
     //  stop();
-    if(sSemantic.equals("@specification"))
+    if(sSemantic.equals("ST/@Text"))
       Debugutil.stop();
     if(sSemantic.equals("alternateText"))
       Debugutil.stop();

@@ -166,7 +166,9 @@ import org.vishia.util.StringPartScan;
 public final class ZbnfJavaOutput
 {
   /**Version, history and license.
-   * <ul>2019-05-21 chg: {@link #parser} is now a class variable and final public. Advantage: Accessible from outer to set some log things.
+   * <ul>
+   * <li>2019-05-30 Hartmut: some improvements to store <code>[<&lt;cmpnSemantic/@text></code> see documentation. 
+   * <li>2019-05-21 chg: {@link #parser} is now a class variable and final public. Advantage: Accessible from outer to set some log things.
    * <li>2018-09-11 bugfix: On error reading file: The error was ignored and the parser was started, which returns null as parse result. 
    *     fix: return sError.
    * <li>2018-08-28 Hartmut new: improve change with <?_end>. add_semantic is called, it was missing, only ok in the concretely case. 
@@ -512,25 +514,44 @@ public final class ZbnfJavaOutput
         /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
         final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
         if(semantic.length() >0){ ///
-          if(semantic.equals("operator"))
+          if(semantic.equals("ST/@Text"))
             stop();
           report.reportln(MainCmdLogging_ifc.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
-          if(childItem.isComponent())
-          { //Try to save the content also if it is an component:
-            if(childItem.isOption() && childItem.getParsedString() != null)
-            { searchDestinationAndWriteResult(semantic, dst, childItem);
+          if(childItem.isComponent() 
+            ) { //Try to save the content also if it is an component:
+            int posSep = semantic.lastIndexOf('/');  //check whether 2-stage semantic for text storage
+            String semanticCmpn = semantic;
+            if(posSep >0) {
+              semanticCmpn = semantic.substring(0,posSep);
             }
-            
             //Search an instance (field or method result) which represents the semantic of the component. 
             // That instance will be used to fill the parse result of the component.
             DstInstanceAndClass dstChild = searchComponentsDestination
-              ( semantic, childItem                //the semantic of the component.
+              ( semanticCmpn, childItem                //the semantic of the component.
               , dst    //instance where the field or method for the component should be found.
               );
+            if(childItem.isOption() && childItem.getParsedString() != null)
+            { if(posSep >=0) {
+                //It is [<?obj/@attr>... then store in the found dstChild without @attr in the attr as String.
+                //This is new since 2019, this form is not used in the past. 
+                String semanticForText = semantic.substring(posSep+1);
+                if(semanticForText.length() >0) { //[<?semantic/> forces only create cmpn, no text storage.
+                  //Note: may start with "@...", not important here. The "@" will be removed for the name (important only for XML)
+                  searchDestinationAndWriteResult(semanticForText, dstChild, childItem);
+                }
+              } else {
+                //It is usual [<?obj>... then store the text in set_obj(String val) in the current dst.
+                //It is the compatible behavior since 2008
+                searchDestinationAndWriteResult(semantic, dst, childItem);
+              }
+            
+            }
+            
             if(dstChild != null) {
+              //writes the sub result to the found dstChild.
               writeZbnfResult(dstChild, childItem, recursion+1);
               if(dstChild.shouldAdd)
-              { searchAddMethodAndInvoke(semantic, dst, dstChild);  //add child in dst.
+              { searchAddMethodAndInvoke(semanticCmpn, dst, dstChild);  //add child in dst.
               }
             }
           }
@@ -743,12 +764,18 @@ public final class ZbnfJavaOutput
     DstInstanceAndClass child = null;
     int posSeparator = semantic.indexOf('/');
     String semanticLowerCase = null;
-    if(posSeparator >0)
-    { String sematicFirst = semantic.substring(0, posSeparator);
+    if(posSeparator >0) { 
+      assert(false);  //checked outside yet.
+      String sematicFirst = semantic.substring(0, posSeparator);
       child = searchComponentsDestination(sematicFirst, zbnfItem, parentDst);
       String semanticRest = semantic.substring(posSeparator+1);
-      //Class outputClassRest = outputInstanceRest.getClass();
-      return searchComponentsDestination(semanticRest, zbnfItem, new DstInstanceAndClass(parentDst, semantic, child.instance, child.clazz, false));
+      if(semanticRest.startsWith("@")) {
+        //If the second (resp. last) part of the semantic is an attribute for XML, it is not an Object to store.
+        return child;
+      } else {
+        //Note: it is an recursively call till end of obj1/obj2/obj3
+        return searchComponentsDestination(semanticRest, zbnfItem, new DstInstanceAndClass(parentDst, semantic, child.instance, child.clazz, false));
+      }
     }
     else
     { final Class<?> clazz1 = parentDst.instance instanceof GetTypeToUse ? ((GetTypeToUse)parentDst.instance).getTypeToUse() : parentDst.clazz; //instance.getClass(); //search in the class
@@ -779,8 +806,8 @@ public final class ZbnfJavaOutput
       { String sProblem = "cannot found method new_" + semantic + "() or field " + semanticLowerCase; 
         problem(parentDst, sProblem);
       }
+      return child;
     }    
-    return child;
   }
   
 
@@ -885,7 +912,7 @@ public final class ZbnfJavaOutput
       child = searchComponentsDestination(sematicFirst, resultItem, destComponent);
       String semanticRest = semantic.substring(posSeparator+1);
       //NOTE: recursively call is necessary only because the destinationClass etc. are final.
-      return searchDestinationAndWriteResult(semanticRest, destComponent, resultItem);
+      return searchDestinationAndWriteResult(semanticRest, child, resultItem);
     }
     else
     {

@@ -682,7 +682,8 @@ public class ZbnfParser
           //But the elements of the component are stored as child of the component.
           //If the component is not valid, this parse result will be deleted then.
           //The content is stored via parentResultItem later after parsing ok of this component.
-          resultItem = parserStoreInPrescript.add(sSemanticForStoring1, parentSyntaxItem, null, resultType, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
+          //since 2019-05-30: The associated syntaxPrescript is necessary to evaluate the parsers result, not the parent.
+          resultItem = parserStoreInPrescript.add(sSemanticForStoring1, syntaxPrescript, null, resultType, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
           idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = parserStoreInPrescript.items.size() -1; 
           parentResultItem = resultItem; //parserStoreInPrescript.getItem(idxCurrentStore);
         }
@@ -1763,6 +1764,8 @@ public class ZbnfParser
       private boolean addResultOrSubsyntax(CharSequence sResult, long srcBegin, int srcLine, int srcColumn, String srcFile, String sSemanticForStoring, ZbnfParserStore.ParseResultItemImplement parentResultItem, String subSyntax) throws ParseException
       { //##ss
         boolean bOk;
+        if(sSemanticForStoring !=null && sSemanticForStoring.equals("ST/@Text"))
+          Debugutil.stop();
         //String sSrc = input.getCurrentPart();
         //int posSrc = (int)input.getCurrentPosition();
         if(subSyntax!= null)

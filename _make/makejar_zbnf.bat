@@ -8,8 +8,9 @@ REM examples of ZBNF are not included.
 
 REM set additional destination for zbnf.jar
 REM don't use drive letters. The drive is the current one. But start on root.
-set FCMD_DST=\vishia\Fcmd\sf\Fcmd\exe
-set ZBNFJAX_DST=\vishia\ZBNF\zbnfjax
+REM copy only if this is the vishia/ZBNF directory or a parallel directory
+set COPYJAR_CHECK=..\..\..\..\vishia\Java\Download
+set JAVA_DST=\vishia\Java\vishiajar
 set DST_Download=\vishia\Java\Download\exe
 
 REM The TMP_JAVAC is a directory, which contains only this compiling results. It will be clean in the batch processing.
@@ -66,14 +67,11 @@ set SRCPATH_JAVAC=..;../../srcJava_Zbnf
 call ..\..\srcJava_Zbnf\_make\+javacjarbase.bat
 
 @echo on
-REM if this is the ZBNF folder then copy the result to Java-folder:
-if exist %ZBNFJAX_DST% (
-  copy %OUTDIR_JAVAC%\zbnf.jar \vishia\Java\vishiajar\*
+echo if this is the ZBNF folder then copy the result to some dst folder
+if exist %COPYJAR_CHECK% (
+  if exist %JAVA_DST% copy %OUTDIR_JAVAC%\zbnf.jar %JAVA_DST%\*
+  if exist %DST_Download% copy %OUTDIR_JAVAC%\%JAR_JAVAC% %DST_Download%\%JAR_JAVAC% 
 )
-if exist \vishia\Smlk\Example_ObjO\zbnfjax\zbnf.jar copy %OUTDIR_JAVAC%\zbnf.jar \vishia\Smlk\Example_ObjO\zbnfjax\zbnf.jar 
-REM support the FCMD:
-if exist %FCMD_DST% copy %OUTDIR_JAVAC%\zbnf.jar %FCMD_DST%\zbnf.jar
-if exist %DST_Download% copy %OUTDIR_JAVAC%\%JAR_JAVAC% %DST_Download%\%JAR_JAVAC% 
 
 pause
 

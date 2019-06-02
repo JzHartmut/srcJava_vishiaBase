@@ -23,6 +23,7 @@ public class DataShow extends ObjectId
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-28 Hartmut fix: Some correction to present <code>&lt;</code> in the html. It should be presented with <code>&amp;lt;</code>. 
    * <li>2017-07-29 Hartmut new: {@link #outData(Object, Appendable, boolean)} can decide whether the true hash code is shown 
    *   (for search the instance proper to a Object.toString()-output with @hash or a unique hash is shown for compare ability of 2 html files.j 
    * <li>2015-11-03 Hartmut new: possibility of hyperlink to any instance via toString-anchor. 
@@ -376,7 +377,7 @@ public class DataShow extends ObjectId
     //for the same data. Older and newer files are not comparable.
     //faulty: String hash = Integer.toHexString(data.hashCode()); 
     String hash = instanceId(data, newInstances);
-    String contentShort = toStringNoHash(data).replace("<", "&lt;");    //< won't be displayed in html.
+    String contentShort = strData(data, true);  
     out.append(" <a href=\"#obj-").append(hash).append("\">")
        .append(" id=").append(hash)
        .append(" = ").append(contentShort)
@@ -403,7 +404,7 @@ public class DataShow extends ObjectId
     Class<?> clazz = data.getClass();
     out.append("\n<a name=\"obj-").append(hash).append("\"/>");
     //anchor for hyperlink from outside for documentation. Use the toString().output.
-    String content = (bNoHash ? toStringNoHash(data) : data.toString()).replace("<", "&lt;");    //< won't be displayed in html.
+    String content = strData(data,bNoHash);    //< won't be displayed in html.
 //    if(content !=null && content.indexOf('\"')<0){
 //      //often a " is not contained in the toString-output. It can be presumed that it is never true,
 //      //if the toString() should be used as anchor. But prevent trouble if " is contained.
@@ -468,6 +469,17 @@ public class DataShow extends ObjectId
   
 
 
+  
+  private String strData(Object data, boolean bNoHash) {
+    if(data == null) return null;
+    else {
+      String dataStr = data.toString();  //toString my supply a null-Pointer. It is possible.
+      if(dataStr == null) return null;
+      else return (bNoHash ? toStringNoHash(dataStr) : data.toString()).replace("<", "&lt;");  
+    }
+  }
+  
+  
 
   /**
    * @param sName
@@ -519,7 +531,7 @@ public class DataShow extends ObjectId
         } 
         else if(elementData instanceof CharSequence){
           out.append(instanceType.getSimpleName()).append(": ");
-          out.append(SimpleXmlOutputter.convertString(toStringNoHash(elementData).replace("<", "&lt;")));    //< won't be displayed in html.
+          out.append(SimpleXmlOutputter.convertString(strData(elementData, true)));    //< won't be displayed in html.
         }
         else if(type.isArray()) {  ////
           Class<?> componentType = type.getComponentType();

@@ -1,4 +1,4 @@
-2019-05-29 21:32:36  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-06-02 09:52:19  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -6,7 +6,7 @@
 2012-08-12 22:29:02  x     +genDownload.sh                          ::           .966 -1047256477 
 2018-04-14 08:33:42  x     +genjavadocbase.bat                      ::          2.569 -0779561611 
 2016-08-29 18:23:07  x     +genjavadocbase.sh                       ::          1.252 -1326024890 
-2018-10-09 19:19:23  x     +javacjarbase.bat                        ::          4.541  1833132505 
+2019-05-30 20:25:06  x     +javacjarbase.bat                        ::          4.549  0972749438 
 2012-03-26 12:21:00  x     +javacjarbase.sh                         ::          3.255 -1553126320 
 2011-02-26 22:43:58  x     Header2Reflection.manifest               ::           . 63  1543696467 
 2014-06-15 22:06:55  x     _makejar_zbnf.jz.bat                     ::          1.656  0199409420 
@@ -16,7 +16,7 @@
 2018-09-11 16:34:04  x     genjavadoc.bat                           ::           .388 -0466275332 
 2018-09-11 16:35:18  x     genjavadoc.sh                            ::           .386  0409646470 
 2019-03-10 13:33:35  x     javadoc.help                             ::          9.297 -0429460067 
-2019-05-19 23:05:20  x     makejar_zbnf.bat                         ::          3.865 -0543321624 
+2019-05-30 20:33:27  x     makejar_zbnf.bat                         ::          3.750 -0790901411 
 2013-01-02 09:31:22  x     makejar_zbnf.sh                          ::          1.797 -0347914445 
 2011-07-08 19:57:50  x     makejar_zbnfCore.sh                      ::           .974 -1460588110 
 2011-03-22 14:26:06  x     makejar_zmakeAnt.bat                     ::          1.361  0245857391 
@@ -26,7 +26,7 @@
 2019-05-19 22:42:27  x     setJAVA_JDK_template.bat                 ::           .404 -2015431817 
 2016-01-23 19:38:07  x     stylesheet_javadoc.css                   ::         11.170 -1795800443 
 2012-03-03 11:16:26  x     vishiaBase.manifest                      ::           . 33  0938013105 
-2011-02-26 22:43:58  x     zbnf.manifest                            ::           . 40  0205809603 
+2019-05-30 13:05:29  x     zbnf.manifest                            ::           . 42  0401880521 
 2011-02-26 22:43:58  x     zmake.manifest                           ::           . 35  0859504513 
 2011-03-22 14:26:06  x     zmakeAnt.manifest                        ::           . 35  0859504513 
 
@@ -180,7 +180,7 @@
 2019-01-03 14:23:29  x     BinOutPrep.java                          ::         16.411  1999847849 
 2018-12-27 18:22:42  x     BinOutShow.java                          ::          9.770  2018075799 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2019-01-10 22:23:34  x     CheaderParser.java                       ::         59.845 -0939031354 
+2019-05-31 11:28:01  x     CheaderParser.java                       ::         60.151 -0421256521 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
 2018-12-26 17:53:45  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
 2018-12-27 11:49:18  x     Header2Reflection.java                   ::         82.856 -1926959000 
@@ -271,8 +271,8 @@
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2018-12-18 00:12:13  x     DataAccess.java                          ::        115.133  1265198912 
-2019-05-29 11:27:07  x     DataShow.java                            ::         28.688  0106653792 
+2019-06-02 09:33:45  x     DataAccess.java                          ::        116.739  0992933708 
+2019-06-02 09:37:17  x     DataShow.java                            ::         29.066 -0525900571 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-01-24 16:42:48  x     Debugutil.java                           ::          1.185 -1596902083 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
@@ -301,7 +301,7 @@
 2014-04-27 15:00:37  x     MessageQueue.java                        ::          1.713 -1200044568 
 2011-02-26 21:31:28  x     MinMaxTime.java                          ::          3.145  0527527620 
 2018-08-29 20:51:59  x     Num.java                                 ::          3.547 -0720113062 
-2019-05-29 11:17:16  x     ObjectId.java                            ::          7.555 -2132877866 
+2019-05-31 09:56:28  x     ObjectId.java                            ::          7.637  1926343198 
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
@@ -332,7 +332,7 @@
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
 2019-05-27 10:47:44  x     StringPartScan.java                      ::         44.621  0514289562 
-2019-05-27 20:25:36  x     StringPreparer.java                      ::         11.686 -0932644750 
+2019-06-01 22:33:32  x     StringPreparer.java                      ::         12.638 -1841575021 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -393,13 +393,13 @@
 2015-09-30 08:49:02  x     Xml2Jdata.java                           ::          1.596  0291993359 
 
 ============================== org/vishia/zbnf/ ====================================================
-2019-05-29 20:50:08  x     GenZbnfJavaData.java                     ::         28.829  0244937046 
+2019-06-02 00:33:40  x     GenZbnfJavaData.java                     ::         36.362 -1521429257 
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
-2019-05-29 12:17:48  x     ZbnfJavaOutput.java                      ::         78.842  0211637849 
+2019-06-02 09:43:26  x     ZbnfJavaOutput.java                      ::         80.391 -0082648521 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
-2019-05-29 21:30:49  x     ZbnfParser.java                          ::        166.865 -0863734738 
-2019-05-29 12:26:04  x     ZbnfParserStore.java                     ::         51.763  0944694341 
-2019-05-29 21:26:28  x     ZbnfSyntaxPrescript.java                 ::         79.931 -1746685670 
+2019-06-02 09:48:26  x     ZbnfParser.java                          ::        167.095  1282475959 
+2019-05-31 00:04:03  x     ZbnfParserStore.java                     ::         51.757  1505803605 
+2019-06-02 09:50:42  x     ZbnfSyntaxPrescript.java                 ::         79.769  1251717437 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
 2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
 

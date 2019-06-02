@@ -163,8 +163,8 @@ public class ObjectId
    * @return
    */
   public String toStringNoHash(Object data) {
-    String content = data.toString();
-    if(content !=null){
+    String content = data == null ? null : data.toString();
+    if(content !=null){ //NOTE: toString may supply a null pointer, it is possible.
       int posHash = content.lastIndexOf('@');  
       if(posHash >0){
         String sHash = content.substring(posHash+1);

@@ -87,6 +87,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2019-05-30 Hartmut gardening for C#-translation: The {@link Conversion#key()} may be a better documentation for the conversion classes. It is experience, not used yet.
    * <li>2018-12-18 Hartmut improve: rename {@link DatapathElement#operation_}, private and setter and getter. The JzTxtCmd invokes the set_operation() without changes.
    *     It is set now on any operation. Used via {@link DatapathElement#isOperation()} in the {@link org.vishia.xmlReader.XmlZzReader}
    * <li>2018-09-28 Hartmut improve: An dataAccess element now knows {@link DatapathElement#operation}. If that is not set and there are no fnArgs
@@ -221,11 +222,9 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2018-08-28";
+  static final public String sVersion = "2019-05-30";
 
 
-  private static final Class<?> ifcMainCmdLogging_ifc = getClass("org.vishia.mainCmd.MainCmdLogging_ifc");
-  
   
   
   /**Interface to convert between data.
@@ -243,6 +242,12 @@ public class DataAccess {
      * @return true if allowed
      */
     boolean canConvert(Object src); 
+    
+    /**This key is used as key in the Index to search the possible conversion.
+     * It should be build in form: "GIVENTYPE:DSTTYPE" whereby GIVENTYPE is the result of TODO
+     * @return
+     */
+    String key();
   }
   
 
@@ -264,6 +269,7 @@ public class DataAccess {
         return new Integer(((CalculatorExpr.Value)src).intValue());
       }
       @Override public boolean canConvert(Object src){ return true; }
+      @Override public String key() { return "org.vishia.util.CalculatorExpr$Value:int"; }
       @Override public String toString(){ return "calcValue:int"; }
     };
     
@@ -276,6 +282,7 @@ public class DataAccess {
         long val = ((Long)src).longValue();
         return  val <= 0x7fffffffL && val >= 0xFFFFFFFF80000000L;
       }
+      @Override public String key() { return "java.lang.Long:int"; }
       @Override public String toString(){ return "long:int"; }
     };
     
@@ -287,6 +294,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){ 
         return true;
       }
+      @Override public String key() { return "java.lang.Integer:char"; }
       @Override public String toString(){ return "int:double"; }
     };
     
@@ -296,6 +304,7 @@ public class DataAccess {
         return new Boolean(((Integer)src).intValue()!=0);
       }
       @Override public boolean canConvert(Object src){ return true;}
+      @Override public String key() { return "java.lang.Integer:boolean"; }
       @Override public String toString(){ return "int:long"; }
     };
     
@@ -308,6 +317,7 @@ public class DataAccess {
         int val = ((Integer)src).intValue();
         return  val <= 0x7f && val >= 0xFFFFFF80;
       }
+      @Override public String key() { return "java.lang.Integer:byte"; }
       @Override public String toString(){ return "int:long"; }
     };
     
@@ -320,6 +330,7 @@ public class DataAccess {
         int val = ((Integer)src).intValue();
         return  val <= 0x7fff && val >= 0xFFFF8000;
       }
+      @Override public String key() { return "java.lang.Integer:short"; }
       @Override public String toString(){ return "int:long"; }
     };
     
@@ -329,6 +340,7 @@ public class DataAccess {
         return new Long(((Integer)src).intValue());
       }
       @Override public boolean canConvert(Object src){ return true;}
+      @Override public String key() { return "java.lang.Integer:long"; }
       @Override public String toString(){ return "int:long"; }
     };
     
@@ -338,6 +350,7 @@ public class DataAccess {
         return new Float(((Integer)src).intValue());
       }
       @Override public boolean canConvert(Object src){ return true;}
+      @Override public String key() { return "java.lang.Integer:float"; }
       @Override public String toString(){ return "int:float"; }
     };
     
@@ -347,6 +360,7 @@ public class DataAccess {
         return new Double(((Integer)src).intValue());
       }
       @Override public boolean canConvert(Object src){ return true;}
+      @Override public String key() { return "java.lang.Integer:double"; }
       @Override public String toString(){ return "int:double"; }
     };
     
@@ -358,6 +372,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){ 
         return true;
       }
+      @Override public String key() { return "java.lang.Number:char"; }
       @Override public String toString(){ return "int:double"; }
     };
     
@@ -367,6 +382,7 @@ public class DataAccess {
         return new Float(((Double)src).floatValue());
       }
       @Override public boolean canConvert(Object src){ return true;}
+      @Override public String key() { return "java.lang.Double:float"; }
       @Override public String toString(){ return "double:float"; }
     };
     
@@ -376,6 +392,7 @@ public class DataAccess {
         return new Double(((Float)src).floatValue());
       }
       @Override public boolean canConvert(Object src){ return true;}
+      @Override public String key() { return "java.lang.Float:double"; }
       @Override public String toString(){ return "float:double"; }
     };
     
@@ -387,6 +404,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){
         return true;
       }
+      @Override public String key() { return "java.lang.Number:bool"; }
       @Override public String toString(){ return "number:bool"; }
     };
     
@@ -398,6 +416,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){
         return true;
       }
+      @Override public String key() { return "java.lang.Object:bool"; }
       @Override public String toString(){ return "obj:bool"; }
     };
     
@@ -410,6 +429,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){
         return true;
       }
+      @Override public String key() { return "java.lang.CharSequence:java.lang.String"; }
       @Override public String toString(){ return "CharSequence:String"; }
     };
     
@@ -422,6 +442,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){
         return ((CharSequence)src).length() ==1;
       }
+      @Override public String key() { return "java.lang.CharSequence:char"; }
       @Override public String toString(){ return "CharSequence:char"; }
     };
     
@@ -444,6 +465,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){
         return true;
       }
+      @Override public String key() { return null; }
       @Override public String toString(){ return "obj:obj"; }
     };
 
@@ -456,6 +478,7 @@ public class DataAccess {
       @Override public boolean canConvert(Object src){
         return true;
       }
+      @Override public String key() { return null; }
       @Override public String toString(){ return "obj:obj"; }
     };
   }
@@ -1460,7 +1483,7 @@ public class DataAccess {
           Object[] dstArgs = actArgs;
           iParam = 0;  //now convert instances:
           ix = -1;
-          for(Object arg: providedArgs){
+          for(Object arg: providedArgs){ ////
             ix +=1;
             if(dstArgs == actArgs){
               if(iParam >= argTypes.length-1 && lastArrayArg !=null){

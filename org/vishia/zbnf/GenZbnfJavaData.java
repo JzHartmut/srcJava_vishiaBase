@@ -89,11 +89,52 @@ public class GenZbnfJavaData
   protected TreeMap<String,ZbnfSyntaxPrescript> idxSubSyntax;
   
   
+  static class SubClassField {
+    final String type;
+    final String varName;
+    
+    final String semantic;
+    
+    public SubClassField(String type, String name, String semantic)
+    { this.type = type;
+      this.varName = name;
+      this.semantic = semantic;
+    }
+    
+  }
+  
+  
+  
+  /**Instances of this class describe a sub class in generated code.
+   */
+  static class SubClassData {
+    final String className;
+    
+    /**This Map is filled if any [&lt;?semantic> or [&lt;?semantic/@attr] are found.  
+     * It produces a String field with the semantic respecitvely the attr name. 
+     */
+    TreeMap<String, SubClassField> fieldsFromSemanticAttr;
+    ZbnfSyntaxPrescript subSyntax;
+    
+    public SubClassData(String className)
+    { this.className = className;
+    }
+    
+    
+  }
+  
+  
+  
+  /**All parsed components from {@link ZbnfParser#listSubPrescript}. */
+  //protected TreeMap<String,SubClassData> idxMetaClass = new TreeMap<String,SubClassData>();
+  
+  
+  
   /**The syntax components which are to process yet (are used for parse result storing).  */
-  protected List<String> listCmpn = new ArrayList<String>();
+  protected List<SubClassData> listCmpn = new ArrayList<SubClassData>();
   
   /**Index of already registered components to add in {@link #listCmpn} only one time. */
-  protected Map<String, String> idxRegisteredCmpn = new TreeMap<String, String>();
+  protected Map<String, SubClassData> idxRegisteredCmpn = new TreeMap<String, SubClassData>();
   
   
   
@@ -243,6 +284,44 @@ public class GenZbnfJavaData
     + "    \n"
     + "    \n");
   
+  private static final StringPreparer sJavaMetaClass = new StringPreparer( "sJavaMetaClass",
+      "    <&attrfield.type> <&attrfield.varName>;  \n"
+    + "  \n");
+//      "  /**Class stores elements such as Data/@elem. */\n"
+//    + "  public static class <&nameClass> { \n"
+//    + "<:for:elem:elems>"
+//    + "    <&elem.type> <&elem.varName>;  \n"
+//    + "    \n"
+//    + "<.for>"
+//    + "    \n"
+//    + "<:for:elem:elems>"
+//    + "    <&elem.type> get_<&elem.semantic>() { return <&elem.varName>; }  \n"
+//    + "    \n"
+//    + "<.for>"
+//    + "  }\n"
+//    + "  \n"
+//    + "  \n");
+  
+
+  private static final StringPreparer sJavaMetaClassOper = new StringPreparer( "sJavaMetaClass",
+      "    <&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
+    + "  \n");
+
+  
+  
+  private static final StringPreparer sJavaMetaClassZbnf = new StringPreparer( "sJavaMetaClassZbnf",
+      "    public void set_<&attrfield.semantic>(<&attrfield.type> <&attrfield.varName>) { super.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
+  
+//      "  /**Class stores elements such as Data/@elem. */\n"
+//    + "  public static class <&nameClass>_Zbnf extends <&dataclass>.<&nameClass> { \n"
+//    + "<:for:elem:elems>"
+//    + "    public void set_<&elem.semantic>(<&elem.type> <&elem.varName>) { super.<&elem.varName> = <&elem.varName>; }  \n"
+//    + "    \n"
+//    + "<.for>"
+//    + "  }\n"
+//    + "  \n"
+//    + "  \n");
+  
   
   
   public GenZbnfJavaData(Args args, MainCmdLogging_ifc log)
@@ -267,7 +346,7 @@ public class GenZbnfJavaData
   
   
   
-  public void parseAndGenerate(File fSyntax) {
+  public void parseAndGenerate(File fSyntax) throws IOException {
     ZbnfParser parser = new ZbnfParser(log);
     try {
       parser.setSyntax(args.fileSyntax);
@@ -279,6 +358,7 @@ public class GenZbnfJavaData
     ZbnfSyntaxPrescript mainScript = parser.mainScript();
     
     evaluateSyntax(mainScript);
+    
   }
   
   
@@ -317,15 +397,22 @@ public class GenZbnfJavaData
       //
       int ixCmpn = 0;
       while(listCmpn.size() > ixCmpn) { //possible to add on end in loop
-        String sCmpn = this.listCmpn.get(ixCmpn++);
-        ZbnfSyntaxPrescript cmpn = idxSubSyntax.get(sCmpn);
-        if(cmpn == null) {
-          throw new IllegalArgumentException("syntax component not found: " + sCmpn);
-        }
+        SubClassData classData = this.listCmpn.get(ixCmpn++);
         wrClass = new WrClass();
-        wrClass.wrClassCmpn(cmpn);
+        wrClass.wrClassCmpn(classData);
         
       }
+      //
+//      //Write all classes which are necessary because syntax writing [<?semantic>.
+//      //
+//      for(Map.Entry<String, SubClassData> e: idxMetaClass.entrySet()) {
+//        SubClassData classData = e.getValue();
+//        
+//        wrClass = new WrClass();
+//        wrClass.wrClassCmpn(classData);
+//        
+//      }
+      //
       wr.append(sJavaEnd);
       wrz.append(sJavaEnd);
       //
@@ -340,6 +427,23 @@ public class GenZbnfJavaData
       System.err.println("internal error cannot close: " + sJavaOutputFile.getAbsolutePath());
     }
   }
+
+  
+  
+  
+  static String firstUppercase(String src) {
+    char cc = src.charAt(0);
+    if(Character.isUpperCase(cc)) return src;
+    else return Character.toUpperCase(cc) + src.substring(1);
+  }
+  
+  static String firstLowercase(String src) {
+    char cc = src.charAt(0);
+    if(Character.isLowerCase(cc)) return src;
+    else return Character.toLowerCase(cc) + src.substring(1);
+  }
+  
+  
 
   
   
@@ -405,7 +509,47 @@ public class GenZbnfJavaData
      * @param cmpn
      * @throws IOException
      */
-    private void wrClassCmpn(ZbnfSyntaxPrescript cmpn) throws IOException {
+    void wrClassCmpn(SubClassData classData) throws IOException {
+      ZbnfSyntaxPrescript cmpn = classData.subSyntax;
+      if(cmpn.sDefinitionIdent.equals("add_expression"))
+        Debugutil.stop();
+      Map<String, Object> argstxt = new TreeMap<String, Object>();
+      argstxt.put("cmpnclass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
+      argstxt.put("dataclass", args.sJavaClass);
+      sJavaCmpnClass.exec(wr, argstxt);
+      sJavaCmpnClassZbnf.exec(wrz, argstxt);
+      //
+      TreeMap<String, SubClassField> elems = classData.fieldsFromSemanticAttr;
+      if(elems !=null) {
+        for(Map.Entry<String, SubClassField> e : elems.entrySet()) {
+          SubClassField attrfield = e.getValue();
+          TreeMap<String, Object> argstxt2 = new TreeMap<String, Object>();
+          argstxt2.put("attrfield", attrfield);
+          sJavaMetaClass.exec(wr, argstxt2);
+          sJavaMetaClassOper.exec(wrOp, argstxt2);
+          sJavaMetaClassZbnf.exec(wrz, argstxt2);
+          
+        }
+      }
+//      
+//      sJavaMetaClass.exec(wr, argstxt2);
+//      sJavaMetaClassZbnf.exec(wrz, argstxt2);
+
+      //
+      //
+      evaluateChildSyntax(cmpn.childSyntaxPrescripts, false, 0);
+      //
+      writeOperations();
+      //
+      wr.append(sJavaCmpnEnd);
+      wrz.append(sJavaCmpnEnd);
+    }
+
+    /**Writes a Class for a syntax Component.
+     * @param cmpn
+     * @throws IOException
+     */
+    void wrMetaClass(ZbnfSyntaxPrescript cmpn) throws IOException {
       if(cmpn.sDefinitionIdent.equals("event_input_declaration"))
         Debugutil.stop();
       Map<String, Object> argstxt = new TreeMap<String, Object>();
@@ -437,9 +581,18 @@ public class GenZbnfJavaData
      */
     void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws IOException {
       for(ZbnfSyntaxPrescript item: childScript) {
+        ZbnfSyntaxPrescript item2 = null;  //any addtional item to convert
         String semantic = item.sSemantic == null ? "" : item.sSemantic;
         //if(semantic.startsWith("@")) { semantic = semantic.substring(1); }
-        if(semantic.length() >0) {
+        if(semantic.length() >0 && semantic.charAt(0) != '@' && item.childsHasSemantic() ) {
+          //It is an option etc with [<?semantic>...
+          int posSep = semantic.indexOf('/');
+          String subSemantic = posSep >0 ? semantic.substring(0, posSep) : semantic;
+          getRegisterSubclass(subSemantic, item);
+//          SubClassData metaclass = idxMetaClass.get(subSemantic);
+//          if(metaclass == null) { metaclass = new SubClassData(subSemantic); idxMetaClass.put(subSemantic, metaclass); }
+//          metaclass.subSyntax = item;  //evaluate it in an extra class destination.
+          ////
         }
         boolean bRepetition = bList;
         if(item.eType !=null) {
@@ -448,9 +601,11 @@ public class GenZbnfJavaData
             case kRepetition: 
             case kRepetitionRepeat:  
               bRepetition = true; //store immediately result in list
+              ZbnfSyntaxPrescript.RepetitionSyntax repeatItem = (ZbnfSyntaxPrescript.RepetitionSyntax)item;
+              item2 = repeatItem.backward;
               if(item.sSemantic !=null) {
                 //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                wrVariable("String", semantic, bList, false, null); 
+                wrVariable("String", semantic, item, bList, false, null); 
               }
               break;
             case kOnlySemantic:
@@ -460,7 +615,7 @@ public class GenZbnfJavaData
             case kAlternativeOption:
               if(item.sSemantic !=null) {
                 //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                wrVariable("String", semantic, bList, false, null); 
+                wrVariable("String", semantic, item, bList, false, null); 
               }
               break;
             
@@ -468,11 +623,11 @@ public class GenZbnfJavaData
               break;
             
             case kFloatWithFactor:
-            case kFloatNumber: wrVariable("float", semantic, bList, false, null); break;
+            case kFloatNumber: wrVariable("float", semantic, null, bList, false, null); break;
             
             case kPositivNumber:
             case kIntegerNumber:
-            case kHexNumber: wrVariable("int", semantic, bList, false, null); break;
+            case kHexNumber: wrVariable("int", semantic, null, bList, false, null); break;
             
             case kStringUntilEndString:
             case kStringUntilEndStringInclusive:
@@ -486,7 +641,7 @@ public class GenZbnfJavaData
             case kStringUntilRightEndcharInclusive:
             case kQuotedString:
             case kRegularExpression:
-            case kIdentifier:  wrVariable("String", semantic, bList, false, null); break;
+            case kIdentifier:  wrVariable("String", semantic, null, bList, false, null); break;
             
             case kNegativVariant:
             case kNotDefined:
@@ -515,85 +670,117 @@ public class GenZbnfJavaData
         if(item.childSyntaxPrescripts !=null) {
           evaluateChildSyntax(item.childSyntaxPrescripts, bRepetition, level+1);
         }
+        if(item2 !=null && item2.childSyntaxPrescripts !=null) {
+          evaluateChildSyntax(item2.childSyntaxPrescripts, bRepetition, level+1);
+        }
       }
     }
 
-    private void wrVariable(String type, String semantic, boolean bList
+    private void wrVariable(String type, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bList
       , boolean bCmpn, List<String> obligateAttribs
       ) throws IOException {
       if(semantic !=null && semantic.length() >0) { //else: do not write, parsed without data
-        String sTypeExist = variables.get(semantic);
-        if(sTypeExist !=null) {
-          if(! sTypeExist.equals(type)) {
-            throw new IllegalArgumentException("Semantic " + semantic + " with different types");
+        if(semantic.startsWith("ST"))
+          Debugutil.stop();
+        int posSep = semantic.indexOf('/');
+        if(posSep>0) {
+          String semantic1 = semantic.substring(0,  posSep);
+          semantic = semantic.substring(posSep+1);
+          List<String> obligateAttribs1 = null;
+          if(semantic.startsWith("@")) {
+            semantic = semantic.substring(1);
+            //The second part is an Attribute, it is a default one. 
+            obligateAttribs1 = new LinkedList<String>();
+            obligateAttribs1.add(semantic);
           }
-        } else {
-          if(type.equals("Integer")) { 
-            type = "int"; 
-          }
-          if(semantic.equals("FBType")) {  //a required Attribute in XML
-            Debugutil.stop();
-          }
-          if(semantic.indexOf("@")>=0) {  //a required Attribute in XML
-            Debugutil.stop();
-          }
-          List<String> args = null;
-          //String attribs = "";
-          //String attribsAssign = "";
-          if(obligateAttribs !=null) for(String attrib: obligateAttribs) {
-            if(args == null) {args = new LinkedList<String>(); }
-            args.add(firstLowercase(attrib));
-          }
-          //semantic = semantic.replace("@!", "");
-          semantic = semantic.replace("@", "");
-          semantic = semantic.replace("/", "_");
-          variables.put(semantic, type);
-          String varName = firstLowercase(semantic);
-          String sTypeZbnf = type;
-          String sTypeGeneric = idxStdTypes.get(type);
-          final boolean bStdType;
-          if(sTypeGeneric == null) { 
-//            sTypeZbnf = args.sJavaClass + "." + type;
-//            sTypeGeneric = args.sJavaClass + "." + type; 
-            sTypeZbnf = type;
-            sTypeGeneric = type;
-            bStdType = false;
-          } else {
-            bStdType = true;
-          }
-          Map<String, Object> argstxt = new TreeMap<String, Object>();
-          argstxt.put("typeGeneric", sTypeGeneric);
-          argstxt.put("varName", varName);
-          argstxt.put("name", semantic);
-          argstxt.put("type", type);
-          argstxt.put("typeZbnf", type);
-          argstxt.put("args", args);
-
-          if(bList) {
-            GenZbnfJavaData.sJavaListVar.exec(wr, argstxt);
-            GenZbnfJavaData.sJavaListVarOper.exec(wrOp, argstxt);
-            if(bStdType) {
-              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
-            }
-            else if(bCmpn) {
-              GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, argstxt);
-            } 
-            else {
-              GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
+          SubClassData metaClass = getRegisterSubclass(semantic1, syntaxitem); //idxMetaClass.get(semantic1);
+//          if(metaClass == null) { 
+//            metaClass = new SubClassData(semantic1);
+//            idxMetaClass.put(semantic1, metaClass);
+//          }
+          //Writes a new MetaClass, it is like a Component.
+          wrVariable(semantic1, semantic1, syntaxitem, bList, true, obligateAttribs1);  //create the parent
+          SubClassField elems = new SubClassField(type, firstLowercase(semantic), semantic);
+          //elems.put("varName", firstLowercase(semantic));
+          //elems.put("semantic", semantic);
+          //elems.put("type", type);
+          if(metaClass.fieldsFromSemanticAttr == null) { metaClass.fieldsFromSemanticAttr = new TreeMap<String, SubClassField>(); }
+          metaClass.fieldsFromSemanticAttr.put(semantic, elems);
+        }
+        else {
+          String sTypeExist = variables.get(semantic);
+          if(sTypeExist !=null) {
+            if(! sTypeExist.equals(type)) {
+              throw new IllegalArgumentException("Semantic " + semantic + " with different types");
             }
           } else {
-            GenZbnfJavaData.sJavaSimpleVar.exec(wr, argstxt);
-            GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, argstxt);
-            if(bStdType) {
-              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
+            if(type.equals("Integer")) { 
+              type = "int"; 
             }
-            else if(bCmpn) {
-              GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, argstxt);
-            } 
-            else {
-              GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
+            if(semantic.equals("FBType")) {  //a required Attribute in XML
+              Debugutil.stop();
             }
-            
+            if(semantic.indexOf("@")>=0) {  //a required Attribute in XML
+              Debugutil.stop();
+            }
+            List<String> args = null;
+            //String attribs = "";
+            //String attribsAssign = "";
+            if(obligateAttribs !=null) for(String attrib: obligateAttribs) {
+              if(args == null) {args = new LinkedList<String>(); }
+              args.add(firstLowercase(attrib));
+            }
+            //semantic = semantic.replace("@!", "");
+            semantic = semantic.replace("@", "");
+            semantic = semantic.replace("/", "_");
+            variables.put(semantic, type);
+            String varName = firstLowercase(semantic);
+            String sTypeZbnf = type;
+            String sTypeGeneric = idxStdTypes.get(type);
+            final boolean bStdType;
+            if(sTypeGeneric == null) { 
+  //            sTypeZbnf = args.sJavaClass + "." + type;
+  //            sTypeGeneric = args.sJavaClass + "." + type; 
+              sTypeZbnf = type;
+              sTypeGeneric = type;
+              bStdType = false;
+            } else {
+              bStdType = true;
+            }
+            Map<String, Object> argstxt = new TreeMap<String, Object>();
+            argstxt.put("typeGeneric", sTypeGeneric);
+            argstxt.put("varName", varName);
+            argstxt.put("name", semantic);
+            argstxt.put("type", type);
+            argstxt.put("typeZbnf", type);
+            argstxt.put("args", args);
+  
+            if(bList) {
+              GenZbnfJavaData.sJavaListVar.exec(wr, argstxt);
+              GenZbnfJavaData.sJavaListVarOper.exec(wrOp, argstxt);
+              if(bStdType) {
+                GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
+              }
+              else if(bCmpn) {
+                GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, argstxt);
+              } 
+              else {
+                GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
+              }
+            } else {
+              GenZbnfJavaData.sJavaSimpleVar.exec(wr, argstxt);
+              GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, argstxt);
+              if(bStdType) {
+                GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
+              }
+              else if(bCmpn) {
+                GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, argstxt);
+              } 
+              else {
+                GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
+              }
+              
+            }
           }
         }
       }
@@ -627,7 +814,7 @@ public class GenZbnfJavaData
      */
     private void evaluateSubCmpn(ZbnfSyntaxPrescript item, boolean bList, int level) throws IOException {
       
-      if(item.sDefinitionIdent.equals("event_input_declaration"))
+      if(item.sDefinitionIdent.startsWith("ST"))
         Debugutil.stop();
       ZbnfSyntaxPrescript prescript = idxSubSyntax.get(item.sDefinitionIdent); 
       if(prescript == null) throw new IllegalArgumentException("error in syntax, component not found: " + item.sDefinitionIdent);
@@ -641,7 +828,7 @@ public class GenZbnfJavaData
       }
       else {
         if(item.bStoreAsString) {
-          wrVariable("String", semantic, bList, true, null);
+          wrVariable("String", semantic, null, bList, true, null);
         }
         if(!item.bDonotStoreData) {
         //create an own class for the component, write a container here.
@@ -659,7 +846,7 @@ public class GenZbnfJavaData
           } else {
             registerCmpn(item.sDefinitionIdent);
           }
-          wrVariable(sType, semantic, bList, true, obligateAttribs);
+          wrVariable(sType, semantic, item, bList, true, obligateAttribs);
         }
       }
       
@@ -668,24 +855,32 @@ public class GenZbnfJavaData
     
     private void registerCmpn(String name) {
       if(GenZbnfJavaData.this.idxRegisteredCmpn.get(name) == null) {
-        GenZbnfJavaData.this.idxRegisteredCmpn.put(name, name);
-        GenZbnfJavaData.this.listCmpn.add(name);
+        ZbnfSyntaxPrescript cmpn = idxSubSyntax.get(name);
+        if(cmpn == null) {
+          throw new IllegalArgumentException("syntax component not found: " + name);
+        }
+        SubClassData classData = new SubClassData(firstUppercase(cmpn.sDefinitionIdent));
+        classData.subSyntax = cmpn;
+        GenZbnfJavaData.this.idxRegisteredCmpn.put(name, classData);
+        GenZbnfJavaData.this.listCmpn.add(classData);
+        ////
       }
     }
   
     
     
-    private String firstUppercase(String src) {
-      char cc = src.charAt(0);
-      if(Character.isUpperCase(cc)) return src;
-      else return Character.toUpperCase(cc) + src.substring(1);
+    private SubClassData getRegisterSubclass(String name, ZbnfSyntaxPrescript syntaxItem) {
+      SubClassData classData = GenZbnfJavaData.this.idxRegisteredCmpn.get(name);
+      if(classData == null) {
+        classData = new SubClassData(firstUppercase(name));
+        classData.subSyntax = syntaxItem;
+        GenZbnfJavaData.this.idxRegisteredCmpn.put(name, classData);
+        GenZbnfJavaData.this.listCmpn.add(classData);
+        ////
+      }
+      return classData;
     }
-    
-    private String firstLowercase(String src) {
-      char cc = src.charAt(0);
-      if(Character.isLowerCase(cc)) return src;
-      else return Character.toLowerCase(cc) + src.substring(1);
-    }
+  
     
     
     void writeOperations() throws IOException {

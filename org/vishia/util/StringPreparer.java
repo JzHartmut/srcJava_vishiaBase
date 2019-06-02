@@ -179,7 +179,8 @@ public class StringPreparer
         pos1 = (int)sp.getCurrentPosition() -1; //before <
         //sp.fromEnd().seek("<").scan().scanStart();
         sp.scan().scanStart();
-        if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
+        //if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
+        if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
           String sName = sp.getLastScannedString();
           Integer ixVar = vars.get(sName);
           if(ixVar == null) {
@@ -232,7 +233,7 @@ public class StringPreparer
             forCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
             ixixCmd -=1;
           } 
-          else throw new IllegalArgumentException("faulty <:if>...<.if> ");
+          else throw new IllegalArgumentException("faulty <:for>...<.for> ");
         }
         else { //No proper cmd found:
           
@@ -313,10 +314,29 @@ public class StringPreparer
     int ixCmd = ixStart;
     while(ixCmd < ixEndExcl) {
       Cmd cmd = cmds.get(ixCmd++);
-      Object val;
+      Object val = null;
       if(cmd.varName !=null && cmd.cmd != ECmd.addString) {
-        val = values.get(cmd.varName);
-        if(val == null && !values.containsKey(cmd.varName)) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.varName );
+        String varName = cmd.varName;
+        int posSep;
+        if((posSep = varName.indexOf('.')) >0) {
+          try {
+            //Access any data via reflection. The first level, the Map is regarded too.
+            val = DataAccess.access(varName, values, true, false, false, null);
+            varName = null; //all gotten.
+          } catch (Exception e) {
+            // TODO Auto-generated catch block
+            throw new IllegalArgumentException("StringPreparer script " + sIdent + ": " + cmd.varName + " access error: " + e.getMessage());
+          }
+          
+        } else {
+          //Simple variant, values is a Map which contains the values via key:
+          val = values.get(varName);
+          if(val == null && !values.containsKey(cmd.varName)) throw new IllegalArgumentException("StringPreparer script " + sIdent + ": variable is missing: " + cmd.varName );
+          
+        }
+        if(varName !=null) {
+          //get from the last or only one map.
+        }
       } else { val = null; }
       switch(cmd.cmd) {
         case addString: sb.append(cmd.varName); break;
@@ -335,7 +355,10 @@ public class StringPreparer
           }
         } break;
         case forCtrl: {
-          if(val instanceof Iterable) {
+          if(val == null) {
+            //do nothing, no for
+          }
+          else if(val instanceof Iterable) {
             for(Object item: (Iterable)val) {
               values.put(((ForCmd)cmd).entryVar, item);
               execSub(sb, values, ixCmd, ixCmd + cmd.offsEndCtrl -1);

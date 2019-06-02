@@ -91,13 +91,13 @@ if not "%COPYJAR%" == "" copy %COPYJAR%
 if not "%COPYJAR1%" == "" copy %COPYJAR1% 
 if not "%COPYJAR2%" == "" copy %COPYJAR2% 
 if not "%COPYJAR3%" == "" copy %COPYJAR3% 
-echo on
 ::cd /D %TMP_JAVAC%\bin
 echo === SUCCESS compiling, generate jar: %ENTRYDIR%\%OUTDIR_JAVAC%\%JAR_JAVAC%
 echo TMP_JAVAC=%CD%
 
+echo on
 %JAVA_JDK%\bin\jar -cvfm %OUTDIR_JAVAC%\%JAR_JAVAC% %MANIFEST_JAVAC% -C %TMP_JAVAC%\bin . 1>%TMP_JAVAC%\%JAR_JAVAC%.jar.log 2>%TMP_JAVAC%\jar_error.txt
-
+echo off
 REM join jar_error.txt and compile_error.log to one file to view it after this script.
 type %TMP_JAVAC%\jar_error.txt >%TMP_JAVAC%.compile_error.log
 
