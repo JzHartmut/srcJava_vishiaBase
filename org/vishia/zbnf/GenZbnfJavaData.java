@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Debugutil;
@@ -71,6 +72,8 @@ public class GenZbnfJavaData
   }
 
 
+  
+  
   /**Command line args */
   private final Args args;
 
@@ -123,10 +126,6 @@ public class GenZbnfJavaData
     
   }
   
-  
-  
-  /**All parsed components from {@link ZbnfParser#listSubPrescript}. */
-  //protected TreeMap<String,SubClassData> idxMetaClass = new TreeMap<String,SubClassData>();
   
   
   
@@ -287,20 +286,6 @@ public class GenZbnfJavaData
   private static final StringPreparer sJavaMetaClass = new StringPreparer( "sJavaMetaClass",
       "    <&attrfield.type> <&attrfield.varName>;  \n"
     + "  \n");
-//      "  /**Class stores elements such as Data/@elem. */\n"
-//    + "  public static class <&nameClass> { \n"
-//    + "<:for:elem:elems>"
-//    + "    <&elem.type> <&elem.varName>;  \n"
-//    + "    \n"
-//    + "<.for>"
-//    + "    \n"
-//    + "<:for:elem:elems>"
-//    + "    <&elem.type> get_<&elem.semantic>() { return <&elem.varName>; }  \n"
-//    + "    \n"
-//    + "<.for>"
-//    + "  }\n"
-//    + "  \n"
-//    + "  \n");
   
 
   private static final StringPreparer sJavaMetaClassOper = new StringPreparer( "sJavaMetaClass",
@@ -312,15 +297,6 @@ public class GenZbnfJavaData
   private static final StringPreparer sJavaMetaClassZbnf = new StringPreparer( "sJavaMetaClassZbnf",
       "    public void set_<&attrfield.semantic>(<&attrfield.type> <&attrfield.varName>) { super.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
   
-//      "  /**Class stores elements such as Data/@elem. */\n"
-//    + "  public static class <&nameClass>_Zbnf extends <&dataclass>.<&nameClass> { \n"
-//    + "<:for:elem:elems>"
-//    + "    public void set_<&elem.semantic>(<&elem.type> <&elem.varName>) { super.<&elem.varName> = <&elem.varName>; }  \n"
-//    + "    \n"
-//    + "<.for>"
-//    + "  }\n"
-//    + "  \n"
-//    + "  \n");
   
   
   
@@ -402,16 +378,6 @@ public class GenZbnfJavaData
         wrClass.wrClassCmpn(classData);
         
       }
-      //
-//      //Write all classes which are necessary because syntax writing [<?semantic>.
-//      //
-//      for(Map.Entry<String, SubClassData> e: idxMetaClass.entrySet()) {
-//        SubClassData classData = e.getValue();
-//        
-//        wrClass = new WrClass();
-//        wrClass.wrClassCmpn(classData);
-//        
-//      }
       //
       wr.append(sJavaEnd);
       wrz.append(sJavaEnd);
