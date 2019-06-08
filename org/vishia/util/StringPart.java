@@ -122,6 +122,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-07 Hartmut some formally changes: {@link #mSeekToLeft} etc: all bits are named with leading 'm' for mask. 
    * <li>2019-05-15 Hartmut {@link #seekCheck(CharSequence)}: A seek("xyz") shifts the actual position to the end if the seek String is not found. 
    *   This is the programmed behavior since 20 years, but it seems to be inconsequent. It may be better to remain the position, 
    *   because found() can be checked. This routine is not changed. But the new routine {@link #seekCheck(CharSequence)}
@@ -209,7 +210,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2019-05-21";
+  public final static String sVersion = "2019-06-07";
   
    
   /** The actual start position of the valid part.*/
@@ -274,75 +275,78 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
 
 
   /** True if the last operation of lento__(), seek etc. has found anything. See {@link #found()}. */
-  boolean bFound = true;
+  protected boolean bFound = true;
 
   
   /** Flag to force setting the start position after the seeking string. See description on seek(CharSequence, int).
    */
-   public static final int seekEnd = 1;
+  public static final int mSeekEnd = 1;
+  public static final int seekEnd = mSeekEnd;
    
    /**If this bit is set on seek, the position remains if the seek is not successfully (if {@link #found()} returns false). */
-   public static final int mSeekCheck = 2;
+  public static final int mSeekCheck = 2;
 
-   /**Flag bit to force seeking backward. This value is contens impilicit in the mSeekBackFromStart or ~End,
-    * using to detect internal the backward mode.
+  /**Flag bit to force seeking backward. This value is contens impilicit in the mSeekBackFromStart or ~End,
+   * using to detect internal the backward mode.
    */
-   private static final int mSeekBackward_ = 0x10;
+  private static final int mSeekBackward_ = 0x10;
 
-   /** Flag bit to force seeking left from start (Backward). This value is contens impilicit in the seekBackFromStart
-       using to detect internal the seekBackFromStart-mode.
+  /** Flag bit to force seeking left from start (Backward). This value is contens impilicit in the seekBackFromStart
+      using to detect internal the seekBackFromStart-mode.
+  */
+  private static final int mSeekToLeft_ = 0x40;
+
+  /** Flag to force seeking backward from the start position. See description on seek(CharSequence).
+  */
+  public static final int mSeekToLeft = mSeekToLeft_ + mSeekBackward_;
+  public static final int seekToLeft = mSeekToLeft;
+
+
+  /** Flag to force seeking backward from the end position. See description on seek(CharSequence).
    */
-   private static final int mSeekToLeft_ = 0x40;
+  public static final int mSeekBack = 0x20 + mSeekBackward_;
+  public static final int seekBack = mSeekBack;
 
-   /** Flag to force seeking backward from the start position. See description on seek(CharSequence).
+  /** Flag to force seeking forward. See description on seek(CharSequence).
    */
-   public static final int seekToLeft = mSeekToLeft_ + mSeekBackward_;
-
-
-   /** Flag to force seeking backward from the end position. See description on seek(CharSequence).
-   */
-   public static final int seekBack = 0x20 + mSeekBackward_;
-
-   /** Flag to force seeking forward. See description on seek(CharSequence).
-   */
-   public static final int seekNormal = 0;
+  public static final int seekNormal = 0;
 
 
   /** Some mode bits. See all static final int xxx_mode. */
   protected int bitMode = 0;
   
-   /** Bit in mode. If this bit ist set, all whitespace are overreaded
-    * before calling any scan method.
-    */
-   protected static final int mSkipOverWhitespace_mode = 0x1;
+  /** Bit in mode. If this bit ist set, all whitespace are overreaded
+   * before calling any scan method.
+   */
+  protected static final int mSkipOverWhitespace_mode = 0x1;
 
-   /** Bit in mode. If this bit ist set, all comments are overreaded
-    * before calling any scan method.
-    */
-   protected static final int mSkipOverCommentInsideText_mode = 0x2;
+  /** Bit in mode. If this bit ist set, all comments are overreaded
+   * before calling any scan method.
+   */
+  protected static final int mSkipOverCommentInsideText_mode = 0x2;
 
-   /** Bit in mode. If this bit ist set, all comments are overreaded
-    * before calling any scan method.
-    */
-   protected static final int mSkipOverCommentToEol_mode = 0x4;
+  /** Bit in mode. If this bit ist set, all comments are overreaded
+   * before calling any scan method.
+   */
+  protected static final int mSkipOverCommentToEol_mode = 0x4;
 
-   /**Bit in mode. Only if this bit is set, the method {@link #getCurrentColumn()} calculates the column.
-    * If the bit is not set, that method returns -1 if it is called. For save calculation time.
-    */
-   //protected static final int mGetColumn_mode = 0x8;
+  /**Bit in mode. Only if this bit is set, the method {@link #getCurrentColumn()} calculates the column.
+   * If the bit is not set, that method returns -1 if it is called. For save calculation time.
+   */
+  //protected static final int mGetColumn_mode = 0x8;
    
    
-   /**The file from which the StringPart was build. See {@link #getInputfile()} and setInputFile. */
-   String sFile;
+  /**The file from which the StringPart was build. See {@link #getInputfile()} and setInputFile. */
+  String sFile;
+  
+  /** The string defined the start of comment inside a text.*/
+  String sCommentStart = "/*";
    
-   /** The string defined the start of comment inside a text.*/
-   String sCommentStart = "/*";
+  /** The string defined the end of comment inside a text.*/
+  String sCommentEnd = "*/";
    
-   /** The string defined the end of comment inside a text.*/
-   String sCommentEnd = "*/";
-   
-   /** The string defined the start of comment to end of line*/
-   String sCommentToEol = "//";
+  /** The string defined the start of comment to end of line*/
+  String sCommentToEol = "//";
    
   /** Creates a new empty StringPart without an associated String. See method set() to assign a String.*/
   public StringPart()
@@ -351,8 +355,8 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
 
 
 
-  /** Creates a new StringPart, with the given content from a String. Initialy the whole string is valid
-      and determines the maximal part.
+  /**Creates a new StringPart, with the given content from a String. Initialy the whole string is valid
+   *  and determines the maximal part.
    * Constructs with a given CharSequence, especially with a given String.
    * @param src Any CharSequence or String
    */
@@ -363,9 +367,9 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
   
   
   /**Builds a StringPart which uses the designated part of the given src.
-      Creates a new StringPart with the same String as the given StringPart. The maximal part of the new StringPart
-      are determined from the actual valid part of the src. The actual valid part is equal to the maximal one.
-      <hr/><u>example:</u><pre>
+   * Creates a new StringPart with the same String as the given StringPart. The maximal part of the new StringPart
+   * are determined from the actual valid part of the src. The actual valid part is equal to the maximal one.
+   * <hr/><u>example:</u><pre>
 abcdefghijklmnopqrstuvwxyz  The associated String
     ----------------        The valid part of src
     ================        The maximal part and initial the valid part of this
@@ -381,14 +385,14 @@ abcdefghijklmnopqrstuvwxyz  The associated String
     this.begiMin = this.begin = start;
     this.endMax = this.end = end;
     content = src;
-    assert(end <= content.length());
+    assert( end <= content.length());
   }
   
   
   /**Sets the input file for information {@link #getInputfile()}
    * @param file
    */
-  public final void setInputfile(String file){ this.sFile = file; }
+  public void setInputfile(String file) { this.sFile = file; }
 
   
   /** Sets the content to the given string, forgets the old content. Initialy the whole string is valid.
@@ -398,9 +402,8 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   */
   @Java4C.Retinline
   @Java4C.ReturnThis 
-  public final StringPart assign(CharSequence ref)
-  { 
-    content = ref;
+  public final StringPart assign(CharSequence src) { 
+    content = src;
     setParttoMax();
     return this;
   }
@@ -619,7 +622,7 @@ abcdefghijklmnopqrstuvwxyz  The associated string
   @Java4C.NoStackTrace
   public final StringPart setBeginMaxPart()
   { begiMin = begin;
-  return this;
+    return this;
   }
 
 
@@ -720,13 +723,13 @@ public final boolean checkCharAt(int pos, String chars){
  * @see java.lang.CharSequence#subSequence(int, int)
  */
 @Java4C.ReturnInThreadCxt
-@Override public final CharSequence subSequence(int from, int to)
-{ 
+@Override public final CharSequence subSequence(int from, int to) { 
   if(from < 0 || to > (end - begin)) {
     throwSubSeqFaulty(from, to);
     return null;  //It is used for Java2C without throw mechanism.
   }
-  @Java4C.InThCxtRet(sign="StringPart.subSequence") Part ret = new Part(this, begin+from, begin+to);
+  @Java4C.InThCxtRet(sign="StringPart.subSequence") 
+  Part ret = new Part(this, begin+from, begin+to);
   return ret;
 } 
 
@@ -750,8 +753,8 @@ private final void throwSubSeqFaulty(int from, int to)
    */
   @Java4C.Retinline
   @Java4C.NoStackTrace
-  public final int lengthMaxPart()
-  { if(endMax > begin) return endMax - begin;
+  public final int lengthMaxPart() { 
+    if(endMax > begin) return endMax - begin;
     else return 0;
   }
 
@@ -832,9 +835,9 @@ private final void throwSubSeqFaulty(int from, int to)
     */
   @Java4C.Retinline
   @Java4C.ReturnThis 
-  public final StringPart 
-  lento(CharSequence ss)
-  { return lento(ss, seekNormal);
+  public final 
+  StringPart lento(CharSequence ss) { 
+    return lento(ss, seekNormal);
   }
 
 
@@ -853,10 +856,11 @@ private final void throwSubSeqFaulty(int from, int to)
   { endLast = end;
     int pos = StringFunctions.indexOf(content, begin, end, ss);
     bFound = (pos >=0);
-    if(pos >= 0) { end = pos; 
-                   if((mode & seekEnd) != 0){ end += ss.length();}
-                 }
-    else         { end = begin; }
+    if(pos >= 0) { 
+      end = pos; 
+      if((mode & mSeekEnd) != 0){ end += ss.length();}
+    }
+    else { end = begin; }
     return this;
   }
 
@@ -1253,7 +1257,28 @@ return this;
 
 
 
-  /**Common seek operation with several modes in flags.   
+  /**Common seek operation with several modes in flags.  
+   * The end of the part is not affected.
+   * If the string is not found, depending on mSeekCheck the begin is unchanged 
+   * or it is positioned on the actual end (mSeekCheck not set). Then the length()-method supplies 0.
+   * Methods such fromEnd() are not interacted from the result of the searching.
+   * The rule is: seek()-methods only shifts the begin position.
+   *
+    <hr/><u>example:</u><pre>
+that is a liststring and his part The associated String
+=============================   The maximal part
+  ----------------------      The valid part before
+       +++++++++++++++++      The valid part after seek("is",StringPartBase.seekNormal).
+         +++++++++++++++      The valid part after seek("is",StringPartBase.seekEnd).
+                      ++      The valid part after seek("is",StringPartBase.back).
+                       .      The valid part after seek("is",StringPartBase.back + StringPartBase.seekEnd).
+ +++++++++++++++++++++++      The valid part after seek("is",StringPartBase.seekToLeft).
+   +++++++++++++++++++++      The valid part after seek("is",StringPartBase.seekToLeft + StringPartBase.seekEnd).
+++++++++++++++++++++++++++      The valid part after seek("xx",StringPartBase.seekToLeft).
+                       .      The valid part after seek("xx",StringPartBase.seekNormal)
+                              or seek("xx",StringPartBase.back).
+
+  </pre>
    * @java2c=return-this.
    * @param sSeek The string to search for.
    * @param mode Mode of seeking, use ones of {@link #mSeekCheck}, {@link #seekBack}, {@link #seekToLeft}, {@link #seekNormal}, added with {@link #seekEnd}.
@@ -1292,10 +1317,11 @@ return this;
     if(pos < 0) { 
       begin = posNotFound;
       bFound = false;   
-    } else { 
+    } 
+    else { 
       bFound = true;
       begin = pos;
-      if( (mode & seekEnd) == seekEnd ) { 
+      if( (mode & mSeekEnd) == mSeekEnd ) { 
         begin += sSeek.length();
       }
     }
@@ -1403,15 +1429,17 @@ that is a liststring and his part The associated String
   
   
   /**Seeks to the given CharSequence, start position is after the string.
+   * If not found, seek to end.
    * Use {@link #found()} to check whether it is found.
    * @param sSeek
    * @return this
    */
   @Java4C.Exclude  //name class with const seekEnd
-  public final StringPart seekEnd(CharSequence sSeek){ return seek(sSeek, seekEnd); }
+  public final StringPart seekEnd(CharSequence sSeek){ return seek(sSeek, mSeekEnd); }
   
   
   /**Seeks to the given CharSequence, start position is after the string.
+   * If not found, remain the begin position..
    * Use {@link #found()} to check whether it is found.
    * @param sSeek
    * @return this
@@ -1505,7 +1533,7 @@ return this;
     else
     { bFound = true;
       begin = pos;
-      if( (mode & seekEnd) == seekEnd )
+      if( (mode & mSeekEnd) == mSeekEnd )
       { begin += 1;
       }
     }
@@ -1918,7 +1946,7 @@ public final StringPart lentoAnyString(CharSequence[] strings, int maxToTest, in
   int pos = indexOfAnyString(strings, 0, maxToTest, null, foundString);
   if(pos < 0){ end = begin; bFound = false; }
   else       
-  { if( (mode & seekEnd) != 0)
+  { if( (mode & mSeekEnd) != 0)
     { pos += foundString[0].length();
     }
     end = begin + pos; bFound = true; 
@@ -2179,11 +2207,12 @@ public final StringPart len0end()
 
 
 
-  /* (non-Javadoc)
+  /**Compares the current part with the given str2
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
   @Override public final int compareTo(CharSequence str2)
-  { return StringFunctions.compare(this, 0, str2, 0, Integer.MAX_VALUE);
+  { CharSequence currentpart = this;  //this is a CharSequence for the current part.
+    return StringFunctions.compare(currentpart, 0, str2, 0, Integer.MAX_VALUE);
   }
   
 

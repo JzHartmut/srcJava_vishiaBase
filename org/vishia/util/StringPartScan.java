@@ -51,6 +51,7 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-07 Hartmut new {@link #scanLiteral(String, int)} 
    * <li>2019-05-26 Hartmut 
    * <ul><li>new {@link #scanToAnyChar(String, char, char, char)} which stores the parse result in this class.
    *     <li>enhanced {@link #getLastScannedString()} with up to five storage places, should run in C too (TODO test).
@@ -349,7 +350,43 @@ public class StringPartScan extends StringPart
     return this;
   }
   
-  
+  /**Scans a literal given in quotation mark characters.
+   * <br>
+   * On positive test this.begin is set after the quotation of the literal and scanOk() returns true. 
+   * The range between the quotation mark character is stored in this.sLastString[...], can be gotten with getLastScannedString();
+   * On negative test scanOk() resets the scan position (as for all scan operations).
+   * <br>
+   * Note: This operation replaces the deprecated {@link #scanQuotion(CharSequence, String, String[], int)}
+   * @param startEndTrans: for example "\"\"\\" or "<>'". 
+   *   The first character is the start quotation character, second is end quotation mark.
+   *   If the third character is given (Length >2) then the character after that character is not recognized as end quotation.
+   *   Usual the third character is the transliteration character known from standard languages for \n, \" etc.
+   * @param maxToTest if >=0, the maximal number of characters inclusively the quotation marks for that part.
+   *   if &lt; 0, no limitation, thest till end. 
+   * @return this for scan concatenation.   
+   */
+  public StringPartScan scanLiteral(String startEndTrans, int maxToTest) {
+    char startChar = startEndTrans.charAt(0);
+    char endChar = startEndTrans.charAt(1);
+    char transChar = startEndTrans.length() >2 ? startEndTrans.charAt(2) : '\0';
+    int zTest = end - begin;
+    if(maxToTest >=0 && zTest > maxToTest) { zTest = maxToTest; }
+    if(scanEntry() && getCurrentChar() == startChar) {
+      int end1 = indexEndOfQuotation(endChar, transChar, 0, zTest);
+      if(end1 >=0) {
+        sLastString[++ixLastString].setPart(this.begin+1, this.begin + end1-1);
+        this.begin += end1;  //After quotation end      
+      } else {
+        //non successfully:
+        bCurrentOk = false;
+      }
+    } else {
+      //non successfully:
+      bCurrentOk = false;
+    }
+    return this;
+  }
+
   
 
   /**Scans a positive number consisting of digits 0..9, A..Z or a..z 

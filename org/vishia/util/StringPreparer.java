@@ -61,6 +61,7 @@ public class StringPreparer
     ifCtrl('I', "if"),
     forCtrl('F', "for"),
     endLoop('B', "endloop"),
+    call('C', "call"),
     debug('D', "debug"),
     pos('p', "pos")
     ;
@@ -72,10 +73,33 @@ public class StringPreparer
     @Override public String toString() { return sCmd; }
   }
   
+  
+  
+  class Argument {
+    public final String name;
+    public final DataAccess datapath;
+    public final String text;
+
+    public Argument(String name, DataAccess datapath) {
+      this.name = name;
+      this.datapath = datapath;
+      this.text = null;
+    }
+
+    public Argument(String name, String text) {
+      this.name = name;
+      this.datapath = null;
+      this.text = text;
+    }
+  }
+
+
+
+  
+  
   class Cmd {
     ECmd cmd;
     final String varName;
-    int ixVar = -1;
     
     /**If necessary it is the offset skipped over the ctrl sequence. */
     int offsEndCtrl;
@@ -92,7 +116,7 @@ public class StringPreparer
       return cmd + ":" + varName;
     }
     
-  }
+  }//sub class Cmd
   
   
   
@@ -105,7 +129,15 @@ public class StringPreparer
   }
   
   
+  class CallCmd extends Cmd {
+    public List<Argument> args;
+    public CallCmd(String callVar) 
+    { super(ECmd.call, callVar); 
+    }
+  }
   
+  
+
   class DebugCmd extends Cmd {
     String cmpString;
     public DebugCmd(String variable, String cmpString) {
@@ -161,10 +193,6 @@ public class StringPreparer
   }
   
   
-  private Map<String, Integer> vars = new TreeMap<String, Integer>();
-  
-  private int ctVar = 0;
-  
   public void parse(String src) {
     int pos0 = 0; //start of current position after special cmd
     int pos1 = 0; //end before the next special command
@@ -173,7 +201,7 @@ public class StringPreparer
     StringPartScan sp = new StringPartScan(src);
     sp.setIgnoreWhitespaces(true);
     while(sp.length() >0) {
-      sp.seek("<", StringPart.mSeekCheck + StringPart.seekEnd);
+      sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);
       if(sp.found()) {
         
         pos1 = (int)sp.getCurrentPosition() -1; //before <
@@ -182,11 +210,6 @@ public class StringPreparer
         //if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
         if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
           String sName = sp.getLastScannedString();
-          Integer ixVar = vars.get(sName);
-          if(ixVar == null) {
-            vars.put(sName, ctVar);  //store the variable in order of occurence
-            ctVar +=1; 
-          }
           storeCmd(src, pos0, pos1, 0, new Cmd(ECmd.addVar, sName));
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -204,6 +227,38 @@ public class StringPreparer
           ixCmd[++ixixCmd] = cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
           
+        }
+        else if(sp.scan(":call:").scanIdentifier().scanOk()) {
+          String sCallVar = sp.getLastScannedString();
+          CallCmd cmd = new CallCmd(sCallVar);
+          storeCmd(src, pos0, pos1, 0, cmd);
+          if(sp.scan(":").scanOk()) {
+            do {
+              if(sp.scanIdentifier().scan("=").scanOk()) {
+                if(cmd.args == null) { cmd.args = new ArrayList<Argument>(); }
+                String sNameArg = sp.getLastScannedString();
+                Argument arg;
+                if(sp.scanLiteral("''\\", -1).scanOk()) {
+                  String sText = sp.getLastScannedString().trim();
+                  arg = new Argument(sNameArg, sText);
+                }
+                else if(sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
+                  String sDataPath = sp.getLastScannedString().trim();
+                  DataAccess dataAccess = new DataAccess(sDataPath);  //splits the arguments from text
+                  arg = new Argument(sNameArg, dataAccess);
+                }
+                else { 
+                  throw new IllegalArgumentException("StringPreparer "+ sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
+                }
+                cmd.args.add(arg);
+              } else {
+                throw new IllegalArgumentException("StringPreparer "+ sIdent + ": syntax error for arguments in <:call: " + sCallVar + ":arguments>");
+              }
+            } while(sp.scan(",").scanOk());
+          }
+          if(!sp.scan(">").scanOk()) {
+            throw new IllegalArgumentException("StringPreparer "+ sIdent + ": syntax error \">\" expected in <:call: " + sCallVar + "...>");
+          }
         }
         else if(sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String cmpString = sp.getLastScannedString().toString();
@@ -246,13 +301,6 @@ public class StringPreparer
       }
     } //while
     sp.close();
-    for(Cmd cmd: cmds) {
-      if(cmd.cmd == ECmd.addVar) {
-        Integer ixVar = vars.get(cmd.varName);
-        cmd.ixVar = ixVar;  //store the order of occurrence.
-        
-      }
-    }
   }
 
 
@@ -299,7 +347,7 @@ public class StringPreparer
    * @param values in order of first occurrence in the prescript
    * @throws IOException 
    */
-  public void exec( Appendable sb, Map<String, Object> values) throws IOException {
+  public void exec( Appendable sb, Map<String, Object> values) throws Exception {
     execSub(sb, values, 0, cmds.size());
   }
   
@@ -309,7 +357,7 @@ public class StringPreparer
    * @param values in order of first occurrence in the prescript
    * @throws IOException 
    */
-  private void execSub( Appendable sb, Map<String, Object> values, int ixStart, int ixEndExcl ) throws IOException {
+  private void execSub( Appendable sb, Map<String, Object> values, int ixStart, int ixEndExcl ) throws Exception {
     //int ixVal = 0;
     int ixCmd = ixStart;
     while(ixCmd < ixEndExcl) {
@@ -318,14 +366,14 @@ public class StringPreparer
       if(cmd.varName !=null && cmd.cmd != ECmd.addString) {
         String varName = cmd.varName;
         int posSep;
-        if((posSep = varName.indexOf('.')) >0) {
+        if(true || (posSep = varName.indexOf('.')) >0) {
           try {
             //Access any data via reflection. The first level, the Map is regarded too.
             val = DataAccess.access(varName, values, true, false, false, null);
             varName = null; //all gotten.
           } catch (Exception e) {
             // TODO Auto-generated catch block
-            throw new IllegalArgumentException("StringPreparer script " + sIdent + ": " + cmd.varName + " access error: " + e.getMessage());
+            throw new IllegalArgumentException("StringPreparer script " + sIdent + ": " + cmd.varName + " not found or access error: " + e.getMessage());
           }
           
         } else {
@@ -374,6 +422,7 @@ public class StringPreparer
           else throw new IllegalArgumentException("StringPreparer script " + sIdent + ": for variable is not an container: " + cmd.varName );
           ixCmd += cmd.offsEndCtrl -1;
         } break;
+        case call: execCall(sb, (CallCmd)cmd, values, val); break;
         case debug: {
           if(val.toString().equals(((DebugCmd)cmd).cmpString)){
             Debugutil.stop();
@@ -384,7 +433,22 @@ public class StringPreparer
   }
   
   
-  
+  private void execCall(Appendable sb, CallCmd cmd, Map<String, Object> values, Object callVar) throws Exception {
+    if(!(callVar instanceof StringPreparer)) throw new IllegalArgumentException("<call: variable should be a StringPreparer>");
+    if(cmd.args !=null) {
+      for(Argument arg : cmd.args) {
+        Object value;
+        if(arg.text !=null) {
+          value = arg.text;
+        } else {
+          value = arg.datapath.access(values, true, false);
+        }
+        values.put(arg.name, value); //add a local variable to the container, it should be not disturbing.
+      }
+    }
+    StringPreparer callVar1 = (StringPreparer)callVar;
+    callVar1.exec(sb, values);
+  }
   
   
   

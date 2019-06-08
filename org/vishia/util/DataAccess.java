@@ -486,6 +486,7 @@ public class DataAccess {
   
   private static Map<String, Conversion> idxConversions = initConversion();
   
+  /**Can be set immediately for debug approach. Set debug break on usage! */
   private static String debugIdent;
   
   private static String debugMethod;
@@ -1729,7 +1730,7 @@ public class DataAccess {
       try{
         data1 = getDataFromField(name, instance, accessPrivate, dst);
       }catch(NoSuchFieldException exc){
-        //NOTE: if it is a TreeNodeBase, first search a field with the name, then search in data
+        //NOTE: if it is a TreeNodeBase, first search a field with the name in the TreeNode reflection, then search in the TreeNode data
         if(instance instanceof TreeNodeBase<?,?,?>){
           TreeNodeBase<?,?,?> treeNode = (TreeNodeBase<?,?,?>)instance;
           if(bContainer){ data1 = treeNode.listChildren(name); }

@@ -382,7 +382,7 @@ public class GenZbnfJavaData
       wr.append(sJavaEnd);
       wrz.append(sJavaEnd);
       //
-    } catch (IOException e1) {
+    } catch (Exception e1) {
       // TODO Auto-generated catch block
       System.err.println(e1.getMessage());
     }
@@ -475,7 +475,7 @@ public class GenZbnfJavaData
      * @param cmpn
      * @throws IOException
      */
-    void wrClassCmpn(SubClassData classData) throws IOException {
+    void wrClassCmpn(SubClassData classData) throws Exception {
       ZbnfSyntaxPrescript cmpn = classData.subSyntax;
       if(cmpn.sDefinitionIdent.equals("add_expression"))
         Debugutil.stop();
@@ -515,7 +515,7 @@ public class GenZbnfJavaData
      * @param cmpn
      * @throws IOException
      */
-    void wrMetaClass(ZbnfSyntaxPrescript cmpn) throws IOException {
+    void wrMetaClass(ZbnfSyntaxPrescript cmpn) throws Exception {
       if(cmpn.sDefinitionIdent.equals("event_input_declaration"))
         Debugutil.stop();
       Map<String, Object> argstxt = new TreeMap<String, Object>();
@@ -545,7 +545,7 @@ public class GenZbnfJavaData
      * @param level
      * @throws IOException
      */
-    void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws IOException {
+    void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws Exception {
       for(ZbnfSyntaxPrescript item: childScript) {
         ZbnfSyntaxPrescript item2 = null;  //any addtional item to convert
         String semantic = item.sSemantic == null ? "" : item.sSemantic;
@@ -644,7 +644,7 @@ public class GenZbnfJavaData
 
     private void wrVariable(String type, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bList
       , boolean bCmpn, List<String> obligateAttribs
-      ) throws IOException {
+      ) throws Exception {
       if(semantic !=null && semantic.length() >0) { //else: do not write, parsed without data
         if(semantic.startsWith("ST"))
           Debugutil.stop();
@@ -778,7 +778,7 @@ public class GenZbnfJavaData
      * @param level
      * @throws IOException
      */
-    private void evaluateSubCmpn(ZbnfSyntaxPrescript item, boolean bList, int level) throws IOException {
+    private void evaluateSubCmpn(ZbnfSyntaxPrescript item, boolean bList, int level) throws Exception {
       
       if(item.sDefinitionIdent.startsWith("ST"))
         Debugutil.stop();

@@ -13,6 +13,7 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-07 Hartmut new: {@value #compareChars(CharSequence, int, int, CharSequence)} as helper to find where is the difference, versus {@link #equals(CharSequence, int, int, CharSequence)} 
    * <li>2016-12-02 Hartmut new: {@value #cNoCidentifier} 
    * <li>2016-09-25 Hartmut new: {@link #nrofBytesUTF8(byte)} used in {@link StringPartFromFileLines} 
    * <li>2016-05-22 Hartmut chg: {@link #indexOfAnyString(CharSequence, int, int, CharSequence[], int[], String[])}: Algorithm from StringPart
@@ -433,6 +434,24 @@ public class StringFunctions {
   }
   
 
+  /**Compare two character Strings. It returns the position of non equal character.
+   * Therefore it has some more calculation time then equals.
+   * @return >=0 number of chars which are equal, -1: all are equal and the length are equal.
+   */
+  public static int compareChars(CharSequence s1, int from, int to, CharSequence s2){
+    int z1 = s1.length();
+    int z2 = s2.length();
+    if(s1 == null || s2 == null){ return 0; }  //equals is both null, else not equal
+    int zz = to < 0 || to > z1 ? z1 - from : to - from;
+    if(zz > z2) { zz = z2; }
+    for(int ii = 0; ii<zz; ++ii){
+      if(s1.charAt(from + ii) != s2.charAt(ii)) return ii;
+    }
+    return zz == z2 ? -1 : zz;
+  }
+
+  
+
   /**Compares two Strings or StringBuilder-content or any other CharSequence.
    * It is the adequate functionality like {@link java.lang.String#equals(Object)}.
    * But the  {@link java.lang.String#equals(Object)} does only compare instances of Strings,
@@ -579,7 +598,7 @@ public class StringFunctions {
    */
   public static int indexOfAnyChar(CharSequence sq, int begin, int end, CharSequence sChars)
   { int pos = begin-1;  //pre-increment
-    if(end == Integer.MAX_VALUE){ end = sq.length(); }
+    if(end <0 || end == Integer.MAX_VALUE){ end = sq.length(); }
     while(++pos < end && indexOf(sChars, sq.charAt(pos)) < 0){ }  //while any of char in sChars not found:
     if(pos < end 
       || (pos == end && indexOf(sChars, cEndOfText) >= 0)
@@ -647,8 +666,8 @@ public class StringFunctions {
    * It is the adequate functionality like {@link java.lang.String#indexOf(String, int)}. 
    * @param sq A CharSequence
    * @param fromIndex first checked position in sq
-   * @param to use -1 or large number: then till end, else end position of range to search the str inclusively.
-   *   <=-2: from end -1 is the end. 
+   * @param to >=0 then end position of checked range. 
+   *        to <0 then relative position from end. to = -1 exact till end
    * @param str  which is searched.
    * @return -1 if not found, else first occurrence of str in sq which is >= fromIndex. 
    */
@@ -785,7 +804,7 @@ public class StringFunctions {
     while(--max >= fromIndex){
       if(sq.charAt(max) == ch) {
         int s1 = 0;
-        for(int jj = max+1; jj < max + str.length(); ++jj){
+        for(int jj = max+1; jj < max + str.length(); ++jj) {
           if(sq.charAt(jj) != str.charAt(++s1)){
             s1 = -1; //designate: not found
             break;
