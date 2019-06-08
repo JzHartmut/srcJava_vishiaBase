@@ -1,4 +1,4 @@
-2019-06-08 09:40:44  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-06-09 01:17:30  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -266,6 +266,7 @@
 2014-01-27 22:07:40  x     DataAccess.java                          ::           . 38 -0690148019 
 
 ============================== org/vishia/util/ ====================================================
+2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
 2018-11-02 09:44:46  x     CalculatorExpr.java                      ::        111.207  0026831390 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
@@ -305,7 +306,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-06-08 09:07:32  x     OutTextPreparer.java                     ::         15.179  1005093835 
+2019-06-09 00:33:50  x     OutTextPreparer.java                     ::         21.800  0352260751 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -333,7 +334,6 @@
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
 2019-06-08 09:40:23  x     StringPartScan.java                      ::         46.584  1990661167 
-2019-06-08 09:04:49  x     StringPreparer.java                      ::         15.199 -0815600109 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -362,11 +362,10 @@
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
-2019-06-08 09:18:30  x     Test_OutTextPreparer_CallFor.java        ::          3.154 -1882365892 
+2019-06-08 23:56:45  x     Test_OutTextPreparer_CallFor.java        ::          3.086  1722440388 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
 2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
 2019-05-27 10:42:35  x     Test_StringPartScan.java                 ::          1.965  1211010395 
-2019-06-08 09:09:46  x     Test_StringPreparer.java                 ::          2.625  1340073654 
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
@@ -395,7 +394,7 @@
 2015-09-30 08:49:02  x     Xml2Jdata.java                           ::          1.596  0291993359 
 
 ============================== org/vishia/zbnf/ ====================================================
-2019-06-08 09:09:16  x     GenZbnfJavaData.java                     ::         35.030  1443229883 
+2019-06-09 01:14:18  x     GenZbnfJavaData.java                     ::         37.621  0337758739 
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
 2019-06-02 09:43:26  x     ZbnfJavaOutput.java                      ::         80.391 -0082648521 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 

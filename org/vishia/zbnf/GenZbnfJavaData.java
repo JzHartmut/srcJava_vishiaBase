@@ -15,7 +15,7 @@ import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
-import org.vishia.util.StringPreparer;
+import org.vishia.util.OutTextPreparer;
 
 /**This class is used to generate two Java source files as container for parsed data derived from the zbnf syntax script.
  * @author hartmut
@@ -138,7 +138,7 @@ public class GenZbnfJavaData
   
   
   /**Text for Java header. */
-  private final StringPreparer sJavaHead = new StringPreparer("sJavaHead",  
+  private final OutTextPreparer sJavaHead = new OutTextPreparer("sJavaHead", this, "pkgpath, javaclass", 
       "package <&pkgpath>;\n"
     + "\n"
     + "import java.util.ArrayList;\n"
@@ -149,7 +149,7 @@ public class GenZbnfJavaData
     + "\n");
   
   /**Text for Java header for Zbnf writer class. */
-  private final StringPreparer sJavaHeadZbnf = new StringPreparer("sJavaHeadZbnf", 
+  private final OutTextPreparer sJavaHeadZbnf = new OutTextPreparer("sJavaHeadZbnf", this, "pkgpath, javaclass", 
       "package <&pkgpath>;\n"
     + "\n"
     + "import java.util.ArrayList;\n"
@@ -161,7 +161,7 @@ public class GenZbnfJavaData
     + "\n");
   
   /**Text for class header for syntax component data storing. */
-  private final StringPreparer sJavaCmpnClass = new StringPreparer( "sJavaCmpnClass",
+  private final OutTextPreparer sJavaCmpnClass = new OutTextPreparer( "sJavaCmpnClass", this, "cmpnclass, dataclass",
       "\n"
     + "\n"
     + "\n"
@@ -170,7 +170,7 @@ public class GenZbnfJavaData
     + "  \n");
   
   /**Text for class header for syntax component to write from zbnf. */
-  private final StringPreparer sJavaCmpnClassZbnf = new StringPreparer( "sJavaCmpnClassZbnf", 
+  private final OutTextPreparer sJavaCmpnClassZbnf = new OutTextPreparer( "sJavaCmpnClassZbnf", this, "cmpnclass, dataclass",
       "\n"
     + "\n"
     + "\n"
@@ -188,26 +188,26 @@ public class GenZbnfJavaData
     + "}\n"
     + "\n";
   
-  private static final StringPreparer sJavaSimpleVar = new StringPreparer(  "sJavaSimpleVar",
+  private final OutTextPreparer sJavaSimpleVar = new OutTextPreparer(  "sJavaSimpleVar", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n"
     + "    protected <&type> <&varName>;\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListVar = new StringPreparer(  "sJavaListVar",
+  private final OutTextPreparer sJavaListVar = new OutTextPreparer(  "sJavaListVar", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n"
     + "    protected List<<&typeGeneric>> <&varName>;\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaSimpleVarOper = new StringPreparer( "sJavaSimpleVarOper", 
+  private final OutTextPreparer sJavaSimpleVarOper = new OutTextPreparer( "sJavaSimpleVarOper", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
     + "    public <&type> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListVarOper = new StringPreparer( "sJavaListVarOper",
+  private final OutTextPreparer sJavaListVarOper = new OutTextPreparer( "sJavaListVarOper", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
     + "    public Iterable<<&typeGeneric>> get_<&name>() { return <&varName>; }\n"
@@ -215,13 +215,13 @@ public class GenZbnfJavaData
     + "    \n");
   
   
-  private static final StringPreparer sJavaSimpleVarZbnf = new StringPreparer( "sJavaSimpleVarZbnf",
+  private final OutTextPreparer sJavaSimpleVarZbnf = new OutTextPreparer( "sJavaSimpleVarZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
     + "    public void set_<&name>(<&type> val) { super.<&varName> = val; }\n"
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListVarZbnf = new StringPreparer( "sJavaListVarZbnf",
+  private final OutTextPreparer sJavaListVarZbnf = new OutTextPreparer( "sJavaListVarZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
     + "    public void set_<&name>(<&type> val) { \n"
     + "      if(super.<&varName>==null) { super.<&varName> = new ArrayList<<&typeGeneric>>(); }\n"
@@ -231,7 +231,7 @@ public class GenZbnfJavaData
     + "    \n");
   
   
-  private static final StringPreparer sJavaCmpnZbnf = new StringPreparer( "sJavaCmpnZbnf",
+  private final OutTextPreparer sJavaCmpnZbnf = new OutTextPreparer( "sJavaCmpnZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**Creates an instance for the result Zbnf <:if:args> (not Xml) <.if>. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
     + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
@@ -254,7 +254,7 @@ public class GenZbnfJavaData
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaListCmpnZbnf = new StringPreparer( "sJavaListCmpnZbnf",
+  private final OutTextPreparer sJavaListCmpnZbnf = new OutTextPreparer( "sJavaListCmpnZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**create and add routine for the list component <<&typeZbnf>?<&name>>. */\n"
     + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf(); \n"
@@ -283,18 +283,18 @@ public class GenZbnfJavaData
     + "    \n"
     + "    \n");
   
-  private static final StringPreparer sJavaMetaClass = new StringPreparer( "sJavaMetaClass",
+  private final OutTextPreparer sJavaMetaClass = new OutTextPreparer( "sJavaMetaClass", this, "attrfield",
       "    <&attrfield.type> <&attrfield.varName>;  \n"
     + "  \n");
   
 
-  private static final StringPreparer sJavaMetaClassOper = new StringPreparer( "sJavaMetaClass",
+  private final OutTextPreparer sJavaMetaClassOper = new OutTextPreparer( "sJavaMetaClass", this, "attrfield",
       "    <&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
     + "  \n");
 
   
   
-  private static final StringPreparer sJavaMetaClassZbnf = new StringPreparer( "sJavaMetaClassZbnf",
+  private final OutTextPreparer sJavaMetaClassZbnf = new OutTextPreparer( "sJavaMetaClassZbnf", this, "attrfield",
       "    public void set_<&attrfield.semantic>(<&attrfield.type> <&attrfield.varName>) { super.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
   
   
@@ -356,11 +356,15 @@ public class GenZbnfJavaData
       System.err.println("cannot create: " + sJavaOutputFile.getAbsolutePath());
     }
     try {
-      Map<String, Object> argstxt = new TreeMap<String, Object>();
-      argstxt.put("pkgpath", args.sJavaPkg);
-      argstxt.put("javaclass", args.sJavaClass);
-      sJavaHead.exec(wr, argstxt);
-      sJavaHeadZbnf.exec(wrz, argstxt);
+      //Map<String, Object> argstxt = new TreeMap<String, Object>();
+      OutTextPreparer.DataTextPreparer argsJavaHead = sJavaHead.getArgumentData();
+      OutTextPreparer.DataTextPreparer argsJavaHeadZbnf = sJavaHeadZbnf.getArgumentData();
+      argsJavaHead.setArgument("pkgpath", args.sJavaPkg);
+      argsJavaHeadZbnf.setArgument("pkgpath", args.sJavaPkg);
+      argsJavaHead.setArgument("javaclass", args.sJavaClass);
+      argsJavaHeadZbnf.setArgument("javaclass", args.sJavaClass);
+      sJavaHead.exec(wr, argsJavaHead);
+      sJavaHeadZbnf.exec(wrz, argsJavaHeadZbnf);
       //
       //
       //
@@ -479,21 +483,31 @@ public class GenZbnfJavaData
       ZbnfSyntaxPrescript cmpn = classData.subSyntax;
       if(cmpn.sDefinitionIdent.equals("add_expression"))
         Debugutil.stop();
-      Map<String, Object> argstxt = new TreeMap<String, Object>();
-      argstxt.put("cmpnclass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
-      argstxt.put("dataclass", args.sJavaClass);
-      sJavaCmpnClass.exec(wr, argstxt);
-      sJavaCmpnClassZbnf.exec(wrz, argstxt);
+      //Map<String, Object> argstxt = new TreeMap<String, Object>();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClass = sJavaCmpnClass.getArgumentData();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClassZbnf = sJavaCmpnClassZbnf.getArgumentData();
+      argsJavaCmpnClass.setArgument("cmpnclass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
+      argsJavaCmpnClass.setArgument("dataclass", args.sJavaClass);
+      argsJavaCmpnClassZbnf.setArgument("cmpnclass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
+      argsJavaCmpnClassZbnf.setArgument("dataclass", args.sJavaClass);
+      sJavaCmpnClass.exec(wr, argsJavaCmpnClass);
+      sJavaCmpnClassZbnf.exec(wrz, argsJavaCmpnClassZbnf);
       //
       TreeMap<String, SubClassField> elems = classData.fieldsFromSemanticAttr;
       if(elems !=null) {
+        OutTextPreparer.DataTextPreparer argsJavaMetaClass = sJavaMetaClass.getArgumentData();
+        OutTextPreparer.DataTextPreparer argsJavaMetaClassOper = sJavaMetaClassOper.getArgumentData();
+        OutTextPreparer.DataTextPreparer argsJavaMetaClassZbnf = sJavaMetaClassZbnf.getArgumentData();
+        
         for(Map.Entry<String, SubClassField> e : elems.entrySet()) {
           SubClassField attrfield = e.getValue();
-          TreeMap<String, Object> argstxt2 = new TreeMap<String, Object>();
-          argstxt2.put("attrfield", attrfield);
-          sJavaMetaClass.exec(wr, argstxt2);
-          sJavaMetaClassOper.exec(wrOp, argstxt2);
-          sJavaMetaClassZbnf.exec(wrz, argstxt2);
+          //TreeMap<String, Object> argstxt2 = new TreeMap<String, Object>();
+          argsJavaMetaClass.setArgument("attrfield", attrfield);
+          argsJavaMetaClassOper.setArgument("attrfield", attrfield);
+          argsJavaMetaClassZbnf.setArgument("attrfield", attrfield);
+          sJavaMetaClass.exec(wr, argsJavaMetaClass);
+          sJavaMetaClassOper.exec(wrOp, argsJavaMetaClassOper);
+          sJavaMetaClassZbnf.exec(wrz, argsJavaMetaClassZbnf);
           
         }
       }
@@ -518,11 +532,15 @@ public class GenZbnfJavaData
     void wrMetaClass(ZbnfSyntaxPrescript cmpn) throws Exception {
       if(cmpn.sDefinitionIdent.equals("event_input_declaration"))
         Debugutil.stop();
-      Map<String, Object> argstxt = new TreeMap<String, Object>();
-      argstxt.put("cmpnclass", firstUppercase(cmpn.sDefinitionIdent));
-      argstxt.put("dataclass", args.sJavaClass);
-      sJavaCmpnClass.exec(wr, argstxt);
-      sJavaCmpnClassZbnf.exec(wrz, argstxt);
+      //Map<String, Object> argstxt = new TreeMap<String, Object>();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClass = sJavaCmpnClass.getArgumentData();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClassZbnf = sJavaCmpnClassZbnf.getArgumentData();
+      argsJavaCmpnClass.setArgument("cmpnclass", firstUppercase(cmpn.sDefinitionIdent)); //firstUppercase(cmpn.sDefinitionIdent));
+      argsJavaCmpnClass.setArgument("dataclass", args.sJavaClass);
+      argsJavaCmpnClassZbnf.setArgument("cmpnclass", firstUppercase(cmpn.sDefinitionIdent)); //firstUppercase(cmpn.sDefinitionIdent));
+      argsJavaCmpnClassZbnf.setArgument("dataclass", args.sJavaClass);
+      sJavaCmpnClass.exec(wr, argsJavaCmpnClass);
+      sJavaCmpnClassZbnf.exec(wrz, argsJavaCmpnClassZbnf);
       //
       //
       //
@@ -714,36 +732,39 @@ public class GenZbnfJavaData
               bStdType = true;
             }
             Map<String, Object> argstxt = new TreeMap<String, Object>();
-            argstxt.put("typeGeneric", sTypeGeneric);
-            argstxt.put("varName", varName);
-            argstxt.put("name", semantic);
-            argstxt.put("type", type);
-            argstxt.put("typeZbnf", type);
-            argstxt.put("args", args);
+            OutTextPreparer.DataTextPreparer argsJavaListVarOper = sJavaListVarOper.getArgumentData();
+            argsJavaListVarOper.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaListVarOper.setArgument("varName", varName);
+            argsJavaListVarOper.setArgument("name", semantic);
+            argsJavaListVarOper.setArgument("type", type);
+            argsJavaListVarOper.setArgument("typeZbnf", type);
+            argsJavaListVarOper.setArgument("args", args);
+            
+            
   
             if(bList) {
-              GenZbnfJavaData.sJavaListVar.exec(wr, argstxt);
-              GenZbnfJavaData.sJavaListVarOper.exec(wrOp, argstxt);
+              sJavaListVar.exec(wr, argsJavaListVarOper);
+              sJavaListVarOper.exec(wrOp, argsJavaListVarOper);
               if(bStdType) {
-                GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
+                sJavaListVarZbnf.exec(wrz, argsJavaListVarOper);
               }
               else if(bCmpn) {
-                GenZbnfJavaData.sJavaListCmpnZbnf.exec(wrz, argstxt);
+                sJavaListCmpnZbnf.exec(wrz, argsJavaListVarOper);
               } 
               else {
-                GenZbnfJavaData.sJavaListVarZbnf.exec(wrz, argstxt);
+                sJavaListVarZbnf.exec(wrz, argsJavaListVarOper);
               }
             } else {
-              GenZbnfJavaData.sJavaSimpleVar.exec(wr, argstxt);
-              GenZbnfJavaData.sJavaSimpleVarOper.exec(wrOp, argstxt);
+              sJavaSimpleVar.exec(wr, argsJavaListVarOper);
+              sJavaSimpleVarOper.exec(wrOp, argsJavaListVarOper);
               if(bStdType) {
-                GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
+                sJavaSimpleVarZbnf.exec(wrz, argsJavaListVarOper);
               }
               else if(bCmpn) {
-                GenZbnfJavaData.sJavaCmpnZbnf.exec(wrz, argstxt);
+                sJavaCmpnZbnf.exec(wrz, argsJavaListVarOper);
               } 
               else {
-                GenZbnfJavaData.sJavaSimpleVarZbnf.exec(wrz, argstxt);
+                sJavaSimpleVarZbnf.exec(wrz, argsJavaListVarOper);
               }
               
             }
