@@ -977,8 +977,11 @@ public class DataAccess {
       , Dst dst
   ) throws Exception {
     boolean bStatic;
-    if(data1 instanceof Variable<?>){
-      @SuppressWarnings("unchecked") Variable<Object> var = (Variable<Object>)data1;
+    
+    if(data1 instanceof Class){
+      bStatic = true;              //If a class type is given as argument, static accesses are supported.
+    } else if(data1 instanceof Variable<?>){
+          @SuppressWarnings("unchecked") Variable<Object> var = (Variable<Object>)data1;
       if(var.type == 'C'){
         bStatic = true;
       } else {
@@ -1771,6 +1774,17 @@ public class DataAccess {
   }
   
   
+  /**Core method to get data from a field, static or non static
+   * @param name of the field
+   * @param obj null if static fields should be accessed.
+   * @param accessPrivate also search private fields
+   * @param clazz Should be match to obj if obj !=null
+   * @param dst
+   * @param recursiveCt 0 on user call, max. 100 recursions for sub classes and outer classes
+   * @return The data which are referred with the field in the given obj or with the static field.
+   * @throws NoSuchFieldException If the field was not found in clazz
+   * @throws IllegalAccessException If the field cannot be accessed in obj
+   */
   private static Object getDataFromField(String name, Object obj, boolean accessPrivate
       , Class<?> clazz, Dst dst, int recursiveCt)
   throws NoSuchFieldException, IllegalAccessException {

@@ -55,9 +55,64 @@ public class OutTextPreparer
   public static final String version = "2019-05-12";
   
   
-  //StringFormatter fm;
+  /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
+   * An instance can be gotten from {@link OutTextPreparer#getArgumentData()} proper and associated to the out text.
+   * The constructor of this class is not public, it should be only gotten with this routine.
+   * <br><br>
+   * Invoke {@link #setArgument(String, Object)} to set any named argument. 
+   *
+   */
+  public static class DataTextPreparer {
+    
+    /**The associated const data for OutText preparation. */
+    final OutTextPreparer prep;
+    
+    /**Array of all arguments. */
+    Object[] args;
+    
+    /**Any &lt;call in the pattern get the data for the called OutTextPreparer, but only ones, reused. */
+    DataTextPreparer[] argSub;
+    
+    /**Package private constructor invoked only in {@link OutTextPreparer#getArgumentData()}*/
+    DataTextPreparer(OutTextPreparer prep){
+      this.prep = prep;
+      if(prep.ctVar >0) {
+        args = new Object[prep.ctVar];
+      }
+      if(prep.ctCall >0) {
+        argSub = new DataTextPreparer[prep.ctCall];
+      }
+      
+    }
+    
+    
+    
+    /**User routine to set a named argument with a value.
+     * If a faulty name is used, an Exception is thrown 
+     * @param name argument name of the {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
+     * @param value any value for this argument.
+     * */
+    public void setArgument(String name, Object value) {
+      IntegerIx ix0 = prep.vars.get(name);
+      if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + prep.sIdent + ", argument: " + name + " not existing: ");
+      int ix = ix0.ix;
+      args[ix] = value;
+    }
+    
   
+    /**User routine to set a argument in order with a value.
+     * @param name argument name of the {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
+     * @param value any value for this argument.
+     * */
+    public void setArgument(int ixArg, Object value) {
+      args[ixArg] = value;
+    }
+    
+  
+  }
+
   enum ECmd{
+    nothing('-', "nothing"), 
     addString('s', "str"),
     addVar('v', "var"),
     ifCtrl('I', "if"),
@@ -77,36 +132,49 @@ public class OutTextPreparer
   
   
   
-  class ValueAccess {
+  static class ValueAccess {
     
     /**Index of the value in the parents {@link OutTextPreparer.DataTextPreparer#args} or -1 if not used.*/
     public int ixValue;
     /**Set if the value uses reflection. */
     public final DataAccess dataAccess;
     
+    /**Set on construction of {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}
+     * if the value reference is constant, non modified by user data). 
+     * It is especially for call otxXYZ. */
     public final Object dataConst;
     
     /**The String literal or the given sDatapath. */
     public final String text;
-
     
-    public ValueAccess(String sTextOrDatapath, Object data) {
-      assert(!(data instanceof Boolean));
+    
+    /**A ValueAccess without value, only a constant text literal, especially for Text Cmd.
+     * @param text
+     */
+    public ValueAccess(String text) {
+      this.ixValue = -1;
+      this.dataAccess = null;
+      this.dataConst = null;
+      this.text = text;
+    }
+    
+    
+    /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
+     * @param outer
+     * @param sTextOrDatapath
+     * @param data
+     */
+    public ValueAccess(OutTextPreparer outer, String sTextOrDatapath, Object data) {
       this.text = sTextOrDatapath;
       final String sVariable;
-      if(data == null) {
-        this.ixValue = -1;
-        this.dataAccess = null;
-        this.dataConst = null;
-      } 
-      else if(sTextOrDatapath !=null){
+      if(sTextOrDatapath !=null){
         int posep = sTextOrDatapath.indexOf('.');
         if(posep <0) {
           sVariable = sTextOrDatapath;
         } else {
           sVariable = sTextOrDatapath.substring(0, posep);
         }
-        Integer ixO = vars.get(sVariable);
+        IntegerIx ixO = outer.vars.get(sVariable);
         if(ixO == null) {
           //The variable is not part of the argument names, it should be able to access via reflection in data:
           try{ 
@@ -114,11 +182,11 @@ public class OutTextPreparer
             this.ixValue = -1;
             this.dataAccess = null;
           } catch(Exception exc) {
-            throw new IllegalArgumentException("OutTextPreparer script " + sIdent + ", argument: " + sVariable + " not existing: ");
+            throw new IllegalArgumentException("OutTextPreparer script " + outer.sIdent + ", argument: " + sVariable + " not existing: ");
           }
         } else {
           this.dataConst = null;
-          this.ixValue = ixO.intValue();
+          this.ixValue = ixO.ix;
           if(posep <0) {
             this.dataAccess = null;
           } else {
@@ -132,26 +200,28 @@ public class OutTextPreparer
         this.dataConst = null;
       }
     }
-  
+
   }
 
 
 
   
   
-  class Cmd extends ValueAccess{
-    final ECmd cmd;
+  static class Cmd extends ValueAccess{
+    public final ECmd cmd;
     
     /**If necessary it is the offset skipped over the ctrl sequence. */
-    int offsEndCtrl;
-    //abstract void exec();
+    public int offsEndCtrl;
     
-    public Cmd(ECmd what, String textOrDatapath, Object data)
-    { super(textOrDatapath, what == ECmd.addString ? null: data);
+    public Cmd(ECmd what, String textOrDatapath)
+    { super( textOrDatapath);
       this.cmd = what;
     }
     
-    
+    public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Object data)
+    { super( outer, textOrDatapath, what == ECmd.addString ? null: data);
+      this.cmd = what;
+    }
     
     @Override public String toString() {
       return cmd + ":" + text;
@@ -161,15 +231,19 @@ public class OutTextPreparer
   
   
   
-  class ForCmd extends Cmd {
-    int ixEntryVar;
-    public ForCmd(String sDatapath, Object data) {
-      super(ECmd.forCtrl, sDatapath, data);
+  static class ForCmd extends Cmd {
+    
+    /**The index where the entry value is stored while executing. 
+     * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
+    public int ixEntryVar;
+
+    public ForCmd(OutTextPreparer outer, String sDatapath, Object data) {
+      super(outer, ECmd.forCtrl, sDatapath, data);
     }
   }
   
   
-  class CallCmd extends Cmd {
+  static class CallCmd extends Cmd {
     
     /**Index for {@link DataTextPreparer#argSub} to get already existing data container. */
     public int ixDataArg;
@@ -177,35 +251,33 @@ public class OutTextPreparer
     /**The data to get actual arguments for this call. */
     public List<Argument> args;
     
-    public CallCmd(String sDatapath, Object data) 
-    { super(ECmd.call, sDatapath, data); 
+    public CallCmd(OutTextPreparer outer, String sDatapath, Object data) 
+    { super(outer, ECmd.call, sDatapath, data); 
     }
   }
   
   
 
-  class DebugCmd extends Cmd {
-    String cmpString;
-    public DebugCmd(String sDatapath, Object data) {
-      super(ECmd.debug, sDatapath, data);
+  static class DebugCmd extends Cmd {
+    public String cmpString;
+
+    public DebugCmd(OutTextPreparer outer, String sDatapath, Object data) {
+      super(outer, ECmd.debug, sDatapath, data);
     }
   }
   
   
   
-//  class CmdString extends Cmd {
-//    public CmdString(String str, int pos0, int pos1)
-//    { super(str, pos0, pos1);
-//    }
-//
-//    public void exec() {
-//      fm.add(str.substring(pos0, pos1));
-//    }
-//  };
+  static class CmdString extends Cmd {
+    public CmdString(String str)
+    { super(ECmd.addString, str);
+    }
+
+  };
 //  
 //  
 //  
-//  class CmdVar extends Cmd {
+//  static class CmdVar extends Cmd {
 //    String sVar;
 //    public CmdVar(String str)
 //    { super(str, 0,0);
@@ -219,7 +291,7 @@ public class OutTextPreparer
 //  };
   
   
-  class Argument extends ValueAccess {
+  static class Argument extends ValueAccess {
 
     /**Name of the argument, null for usage in {@link Cmd} */
     public final String name;
@@ -227,17 +299,25 @@ public class OutTextPreparer
     /**The Index to store the value in {@link DataTextPreparer#args} of the called level or -1 if not known. */
     public int ixDst;
     
-    public Argument(String name, int ixCalledArg, String sTextOrDatapath, Object data)
-    {
-      super(sTextOrDatapath, data);
+    public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Object data) {
+      super(outer, sTextOrDatapath, data);
       this.name = name;
       this.ixDst = ixCalledArg;
     }
     
   }
   
+  
+  /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#vars}. 
+   * Necessary to detect a null reference. In Java Integer can be used too, but that is more explicitly. 
+   */
+  static class IntegerIx {
+    public int ix;
+    IntegerIx(int value){ ix = value; }
+  }
+  
   /**All argument variables sorted. */
-  private Map<String, Integer> vars = new TreeMap<String, Integer>();
+  private Map<String, IntegerIx> vars = new TreeMap<String, IntegerIx>();
   
   private int ctVar = 0;
   
@@ -265,7 +345,7 @@ public class OutTextPreparer
     sp.setIgnoreWhitespaces(true);
     while(sp.scanStart().scanIdentifier().scanOk()) {
       String sVariable = sp.getLastScannedString();
-      vars.put(sVariable, new Integer(ctVar));
+      vars.put(sVariable, new IntegerIx(ctVar));
       ctVar +=1;
       if(!sp.scan(",").scanOk()) {
         break; //, as separator
@@ -305,13 +385,13 @@ public class OutTextPreparer
         else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
-          Integer ixOentry = vars.get(entryVar); //Check whether the same entry variable exists already from another for, only ones.
+          IntegerIx ixOentry = vars.get(entryVar); //Check whether the same entry variable exists already from another for, only ones.
           if(ixOentry == null) { 
-            ixOentry = ctVar; ctVar +=1;         //create the entry variable newly.
+            ixOentry = new IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
             vars.put(entryVar, ixOentry);
           }
           ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, data);
-          cmd.ixEntryVar = ixOentry;
+          cmd.ixEntryVar = ixOentry.ix;
           ixCmd[++ixixCmd] = cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -340,7 +420,7 @@ public class OutTextPreparer
         else if(sp.scan(".for>").scanOk()) { //The end of an if
           Cmd forCmd;
           if(ixixCmd >=0 && (forCmd = cmds.get(ixCmd[ixixCmd])).cmd == ECmd.forCtrl) {
-            Cmd endLoop = addCmd(pattern, pos0, pos1, ECmd.endLoop, null, data);
+            Cmd endLoop = addCmd(pattern, pos0, pos1, ECmd.endLoop, null, null);
             endLoop.offsEndCtrl = -cmds.size() - ixCmd[ixixCmd] -1;
             pos0 = (int)sp.getCurrentPosition();  //after '>'
             forCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
@@ -354,7 +434,7 @@ public class OutTextPreparer
       }
       else { //no more '<' found:
         sp.len0end();
-        addCmd(pattern, pos0, pos0 + sp.length(), null, null, data);
+        addCmd(pattern, pos0, pos0 + sp.length(), ECmd.nothing, null, data);
         sp.fromEnd();  //length is null then.
       }
     } //while
@@ -385,20 +465,20 @@ public class OutTextPreparer
           if(call == null) {
             ixCalledArg = -1;
           } else {
-            Integer ixOcalledArg = call.vars.get(sNameArg);
+            IntegerIx ixOcalledArg = call.vars.get(sNameArg);
             if(ixOcalledArg == null) {
               throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
             }
-            ixCalledArg = ixOcalledArg;
+            ixCalledArg = ixOcalledArg.ix;
           }
           Argument arg;
           if(sp.scanLiteral("''\\", -1).scanOk()) {
             String sText = sp.getLastScannedString().trim();
-            arg = new Argument(sNameArg, ixCalledArg, sText, null);
+            arg = new Argument(this, sNameArg, ixCalledArg, sText, null);
           }
           else if(sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
             String sDataPath = sp.getLastScannedString().trim();
-            arg = new Argument(sNameArg, ixCalledArg, sDataPath, data);
+            arg = new Argument(this, sNameArg, ixCalledArg, sDataPath, data);
           }
           else { 
             throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
@@ -431,15 +511,15 @@ public class OutTextPreparer
    */
   private Cmd addCmd(String src, int from, int to, ECmd ecmd, String sDatapath, Object data) {
     if(to > from) {
-      cmds.add(new Cmd(ECmd.addString, src.substring(from, to), null));
+      cmds.add(new CmdString(src.substring(from, to)));
     }
     final Cmd cmd;
-    if(ecmd !=null) {
+    if(ecmd !=ECmd.nothing) {
       switch(ecmd) {
-        case call: cmd = new CallCmd(sDatapath, data); break;
-        case forCtrl: cmd = new ForCmd(sDatapath, data); break;
-        case debug: cmd = new DebugCmd(sDatapath, data); break;
-        default: cmd = new Cmd(ecmd, sDatapath, data);
+        case call: cmd = new CallCmd(this, sDatapath, data); break;
+        case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
+        case debug: cmd = new DebugCmd(this, sDatapath, data); break;
+        default: cmd = new Cmd(this, ecmd, sDatapath, data); break;
       }
       cmds.add(cmd);
     } else {
@@ -534,7 +614,7 @@ public class OutTextPreparer
           execCall(sb, (CallCmd)cmd, values, (OutTextPreparer)data); break;
         case debug: {
           if(data.toString().equals(((DebugCmd)cmd).cmpString)){
-            Debugutil.stop();
+            debug();
           }
         } break;
       }
@@ -560,26 +640,23 @@ public class OutTextPreparer
         values.argSub[cmd.ixDataArg] = valSub = callVar1.getArgumentData();  //create a data instance for arguments.
       }
       for(Argument arg : cmd.args) {
-        Integer ixO = callVar1.vars.get(arg.name);
-        if(ixO == null) { sb.append("<??ERROR: faulty arg name:" + arg.name + "??>"); }
-        else {
-          Object value;
-          if(arg.ixValue <0) {
-            value = arg.text;   //String literal
-          } else {
-            value = values.args[arg.ixValue];
-            if(arg.dataAccess !=null) {
-              value = arg.dataAccess.access(value, true, false);
-            }
+        Object value;
+        if(arg.ixValue <0) {
+          value = arg.text;   //String literal
+        } else {
+          value = values.args[arg.ixValue];
+          if(arg.dataAccess !=null) {
+            value = arg.dataAccess.access(value, true, false);
           }
-          if(arg.ixDst >=0) {
-            valSub.setArgument(arg.ixDst, value);
-          } else {
-            valSub.setArgument(arg.name, value);
-          }
+        }
+        if(arg.ixDst >=0) {
+          valSub.setArgument(arg.ixDst, value);
+        } else {
+          valSub.setArgument(arg.name, value);
         }
       }
     } else {
+      //<:call:name> without arguments: Use the same as calling level.
       valSub = values;
     }
     callVar1.exec(sb, valSub);
@@ -588,71 +665,9 @@ public class OutTextPreparer
   
   
   
- 
-  
-  
-  
   @Override public String toString() { return sIdent; }
   
   
+  void debug() {}
   
-  
-  
-  /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
-   * An instance can be gotten from {@link OutTextPreparer#getArgumentData()} proper and associated to the out text.
-   * The constructor of this class is not public, it should be only gotten with this routine.
-   * <br><br>
-   * Invoke {@link #setArgument(String, Object)} to set any named argument. 
-   *
-   */
-  public static class DataTextPreparer {
-    
-    /**The associated const data for OutText preparation. */
-    final OutTextPreparer prep;
-    
-    /**Array of all arguments. */
-    Object[] args;
-    
-    /**Any &lt;call in the pattern get the data for the called OutTextPreparer, but only ones, reused. */
-    DataTextPreparer[] argSub;
-    
-    /**Package private constructor invoked only in {@link OutTextPreparer#getArgumentData()}*/
-    DataTextPreparer(OutTextPreparer prep){
-      this.prep = prep;
-      if(prep.ctVar >0) {
-        args = new Object[prep.ctVar];
-      }
-      if(prep.ctCall >0) {
-        argSub = new DataTextPreparer[prep.ctCall];
-      }
-      
-    }
-    
-    
-    
-    /**User routine to set a named argument with a value.
-     * If a faulty name is used, an Exception is thrown 
-     * @param name argument name of the {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
-     * @param value any value for this argument.
-     * */
-    public void setArgument(String name, Object value) {
-      Integer ix0 = prep.vars.get(name);
-      if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + prep.sIdent + ", argument: " + name + " not existing: ");
-      int ix = ix0.intValue();
-      args[ix] = value;
-    }
-    
-
-    /**User routine to set a argument in order with a value.
-     * @param name argument name of the {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
-     * @param value any value for this argument.
-     * */
-    public void setArgument(int ixArg, Object value) {
-      args[ixArg] = value;
-    }
-    
-
-  }
-  
-  
-}
+} //class OutTextPreparer

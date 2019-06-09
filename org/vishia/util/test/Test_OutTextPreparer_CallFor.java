@@ -9,7 +9,7 @@ import org.vishia.util.StringFunctions;
 public class Test_OutTextPreparer_CallFor
 {
   /**Example for a user class, here with two lists of some colors. */
-  public class DataColor {
+  public static class DataColor {
 
     /**Some colors for example for the for control. */
     public List<String> colors1 = new ArrayList<String>();
@@ -36,21 +36,21 @@ public class Test_OutTextPreparer_CallFor
   /**It is an output String pattern which is called. See otxCall. 
    * It uses a variable 'colors' which may be supplied as argument. 
    */
-  OutTextPreparer otxListColors = new OutTextPreparer("otxListColors" , this, "colors, text"    
+  static OutTextPreparer otxListColors = new OutTextPreparer("otxListColors" , null, "colors, text"    
   , "Colors: <:for:color:colors><&color>, <.for>");
 
 
   /**It is the used output String pattern containing two calls of otxListColors. 
    * With different arguments for both calls the results are different.
    * It is an example for a complex output text. */
-  OutTextPreparer otxCall = new OutTextPreparer("sCall", this, "text1, dataColor"
+  static OutTextPreparer otxCall = new OutTextPreparer("otxCall", Test_OutTextPreparer_CallFor.class, "text1, dataColor"
   , "Text: <&text1> \n"
   + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'>END\n"
   + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 >END\n"
   );
 
   /**To compare the test result. */
-  String resultExpected = 
+  static String resultExpected = 
     "Text: any test text \n" + 
     "Test Call colors1: Colors: white, yellow, red, blue, green, END\n" + 
     "Test Call colors2: Colors: cyan, magenta, gray, black, END\n";
