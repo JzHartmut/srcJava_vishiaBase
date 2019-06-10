@@ -219,7 +219,7 @@ public class OutTextPreparer
     }
     
     public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Object data)
-    { super( outer, textOrDatapath, what == ECmd.addString ? null: data);
+    { super( outer, textOrDatapath, data);
       this.cmd = what;
     }
     
@@ -297,7 +297,7 @@ public class OutTextPreparer
     public final String name;
     
     /**The Index to store the value in {@link DataTextPreparer#args} of the called level or -1 if not known. */
-    public int ixDst;
+    public final int ixDst;
     
     public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Object data) {
       super(outer, sTextOrDatapath, data);
@@ -334,13 +334,13 @@ public class OutTextPreparer
    */
   public OutTextPreparer(String ident, Object data, String variables, String pattern) {
     this.sIdent = ident;
-    this.getVariables(variables);
+    this.parseVariables(variables);
     this.parse(pattern, data);
   }
   
   
   
-  private void getVariables(String variables) {
+  private void parseVariables(String variables) {
     StringPartScan sp = new StringPartScan(variables);
     sp.setIgnoreWhitespaces(true);
     while(sp.scanStart().scanIdentifier().scanOk()) {
@@ -385,8 +385,8 @@ public class OutTextPreparer
         else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
-          IntegerIx ixOentry = vars.get(entryVar); //Check whether the same entry variable exists already from another for, only ones.
-          if(ixOentry == null) { 
+          IntegerIx ixOentry = vars.get(entryVar); 
+          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
             vars.put(entryVar, ixOentry);
           }
@@ -529,6 +529,14 @@ public class OutTextPreparer
   }
 
 
+  /**Returns an proper instance for argument data for a {@link #exec(Appendable, DataTextPreparer)} run.
+   * The arguments should be filled using {@link DataTextPreparer#setArgument(String, Object)} by name 
+   * or {@link DataTextPreparer#setArgument(int, Object)} by index if the order of arguments are known.
+   * The argument instance can be reused in the same thread by filling arguments newly for subsequently usage.
+   * If the {@link #exec(Appendable, DataTextPreparer)} is concurrently executed (multiple threads, 
+   * multicore processing), then any thread should have its own data.
+   * @return the argument instance.
+   */
   public DataTextPreparer getArgumentData() { return new DataTextPreparer(this); }
   
   
@@ -538,29 +546,35 @@ public class OutTextPreparer
   
   
 
-  /**Executes preparation
-   * @param fm
-   * @param values in order of first occurrence in the prescript
-   * @throws IOException 
+  /**Executes preparation of a pattern with given data.
+   * Note: The instance data of this are not changed. The instance can be used 
+   * in several threads or multicore processing.
+   * @param wr The output channel
+   * @param args for preparation. 
+   *   The value instance should be gotten with {@link OutTextPreparer#getArgumentData()}
+   *   proper to the instance of this, because the order of arguments should be match. 
+   *   It is internally tested. 
+   * @throws Exception 
    */
-  public void exec( Appendable sb, DataTextPreparer values) throws Exception {
-    execSub(sb, values, 0, cmds.size());
+  public void exec( Appendable wr, DataTextPreparer args) throws Exception {
+    execSub(wr, args, 0, cmds.size());
   }
   
   
-  /**Executes preparation
-   * @param fm
-   * @param values in order of first occurrence in the prescript
+  /**Executes preparation for a range of cmd for internal control structures
+   * @param wr The output channel
+   * @param args for preparation.
+   * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
    */
-  private void execSub( Appendable sb, DataTextPreparer values, int ixStart, int ixEndExcl ) throws Exception {
+  private void execSub( Appendable wr, DataTextPreparer args, int ixStart, int ixEndExcl ) throws Exception {
     //int ixVal = 0;
     int ixCmd = ixStart;
     while(ixCmd < ixEndExcl) {
       Cmd cmd = cmds.get(ixCmd++);
       Object data;
       if(cmd.ixValue >=0) {
-        data = values.args[cmd.ixValue];
+        data = args.args[cmd.ixValue];
         if(cmd.dataAccess !=null) {
           try {
             data = cmd.dataAccess.access(data, true, false);
@@ -573,10 +587,10 @@ public class OutTextPreparer
         data = cmd.dataConst;  //may be given or null 
       }
       switch(cmd.cmd) {
-        case addString: sb.append(cmd.text); break;
+        case addString: wr.append(cmd.text); break;
         case addVar: {
           //Integer ixVar = vars.get(cmd.str);
-          sb.append(data.toString());
+          wr.append(data.toString());
         } break;
         case ifCtrl: {
           if(  data ==null 
@@ -595,15 +609,15 @@ public class OutTextPreparer
           }
           else if(data instanceof Iterable) {
             for(Object item: (Iterable)data) {
-              values.args[cmd1.ixEntryVar] = item;
-              execSub(sb, values, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+              args.args[cmd1.ixEntryVar] = item;
+              execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
             }
           }
           else if(data instanceof Map) {
             @SuppressWarnings("unchecked") Map<Object, Object>map = ((Map<Object,Object>)data);
             for(Map.Entry<Object,Object> item: map.entrySet()) {
-              values.args[cmd1.ixEntryVar] = item.getValue();
-              execSub(sb, values, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+              args.args[cmd1.ixEntryVar] = item.getValue();
+              execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
             }
           }
           else throw new IllegalArgumentException("OutTextPreparer script " + sIdent + ": for variable is not an container: " + cmd.text );
@@ -611,7 +625,7 @@ public class OutTextPreparer
         } break;
         case call: 
           if(!(data instanceof OutTextPreparer)) throw new IllegalArgumentException("<call: variable should be a OutTextPreparer>");
-          execCall(sb, (CallCmd)cmd, values, (OutTextPreparer)data); break;
+          execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data); break;
         case debug: {
           if(data.toString().equals(((DebugCmd)cmd).cmpString)){
             debug();
@@ -625,26 +639,26 @@ public class OutTextPreparer
   
   
   /**Executes a call
-   * @param sb the output channel
+   * @param wr the output channel
    * @param cmd The CallCmd
-   * @param values actual values of the calling level
+   * @param args actual args of the calling level
    * @param callVar The OutTextPreparer which is called here.
    * @throws Exception
    */
-  private void execCall(Appendable sb, CallCmd cmd, DataTextPreparer values, OutTextPreparer callVar) throws Exception {
+  private void execCall(Appendable wr, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws Exception {
     OutTextPreparer callVar1 = (OutTextPreparer)callVar;
     DataTextPreparer valSub;
     if(cmd.args !=null) {
-      valSub = values.argSub[cmd.ixDataArg];
+      valSub = args.argSub[cmd.ixDataArg];
       if(valSub == null) { //only first time for this call
-        values.argSub[cmd.ixDataArg] = valSub = callVar1.getArgumentData();  //create a data instance for arguments.
+        args.argSub[cmd.ixDataArg] = valSub = callVar1.getArgumentData();  //create a data instance for arguments.
       }
       for(Argument arg : cmd.args) {
         Object value;
         if(arg.ixValue <0) {
           value = arg.text;   //String literal
         } else {
-          value = values.args[arg.ixValue];
+          value = args.args[arg.ixValue];
           if(arg.dataAccess !=null) {
             value = arg.dataAccess.access(value, true, false);
           }
@@ -657,9 +671,9 @@ public class OutTextPreparer
       }
     } else {
       //<:call:name> without arguments: Use the same as calling level.
-      valSub = values;
+      valSub = args;
     }
-    callVar1.exec(sb, valSub);
+    callVar1.exec(wr, valSub);
   }
   
   

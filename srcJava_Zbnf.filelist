@@ -1,4 +1,4 @@
-2019-06-09 22:51:35  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-06-10 17:39:43  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -306,7 +306,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-06-09 22:37:40  x     OutTextPreparer.java                     ::         22.980  0390380824 
+2019-06-10 17:28:46  x     OutTextPreparer.java                     ::         24.012  2139285431 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -362,7 +362,7 @@
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
-2019-06-09 22:20:08  x     Test_OutTextPreparer_CallFor.java        ::          3.146 -0439266305 
+2019-06-10 17:37:37  x     Test_OutTextPreparer_CallFor.java        ::          3.395  0788786267 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
 2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
 2019-05-27 10:42:35  x     Test_StringPartScan.java                 ::          1.965  1211010395 

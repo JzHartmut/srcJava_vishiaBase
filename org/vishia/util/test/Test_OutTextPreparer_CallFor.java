@@ -36,15 +36,19 @@ public class Test_OutTextPreparer_CallFor
   /**It is an output String pattern which is called. See otxCall. 
    * It uses a variable 'colors' which may be supplied as argument. 
    */
-  static OutTextPreparer otxListColors = new OutTextPreparer("otxListColors" , null, "colors, text"    
-  , "Colors: <:for:color:colors><&color>, <.for>");
+  static final OutTextPreparer otxListColors = new OutTextPreparer("otxListColors" 
+  , null            //no static data on construction
+  , "colors, text"  //arguments need and used
+  , "Colors: <:for:color:colors><&color>, <.for>");  //The pattern.
 
 
   /**It is the used output String pattern containing two calls of otxListColors. 
    * With different arguments for both calls the results are different.
    * It is an example for a complex output text. */
-  static OutTextPreparer otxCall = new OutTextPreparer("otxCall", Test_OutTextPreparer_CallFor.class, "text1, dataColor"
-  , "Text: <&text1> \n"
+  static OutTextPreparer otxCall = new OutTextPreparer("otxCall"
+  , Test_OutTextPreparer_CallFor.class
+  , "dataColor, text1"    //arguments need and used.
+  , "Text: <&text1> \n"   //The pattern.
   + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'>END\n"
   + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 >END\n"
   );
@@ -77,13 +81,13 @@ public class Test_OutTextPreparer_CallFor
 
   void testCall() throws Exception {
     StringBuilder sb = new StringBuilder(1000);
-    OutTextPreparer.DataTextPreparer args = otxCall.getArgumentData();
-    //args.setArgument("otxListColors", otxListColors);
-    args.setArgument("dataColor", dataColor);
-    args.setArgument("text1", "any test text");
-    otxCall.exec(sb, args);
+    OutTextPreparer.DataTextPreparer vars = otxCall.getArgumentData();
+    //vars.setArgument("otxListColors", otxListColors);  //The sub OutTextPreparer have to be registered ad data too.
+    vars.setArgument("dataColor", dataColor);        //The data class for access.
+    vars.setArgument("text1", "any test text");
+    otxCall.exec(sb, vars);
     int posOk = StringFunctions.compareChars(sb, 0, -1, resultExpected);
-    check(sb.toString().equals(resultExpected), "Test_StringPreparer_CallFor:testCall()");
+    check(sb.toString().equals(resultExpected), "Test_OutTextPreparer_CallFor:testCall()");
   }
 
 
@@ -93,8 +97,8 @@ public class Test_OutTextPreparer_CallFor
 
   public static void test(String[] args) {
     //DataAccess.debugIdent = "dataColor";  //possibility to set a data depending debug break
-    Test_OutTextPreparer_CallFor test = new Test_OutTextPreparer_CallFor();
     try {
+      Test_OutTextPreparer_CallFor test = new Test_OutTextPreparer_CallFor();
       test.testCall();
     } catch (Exception e) {
       System.out.println("Exception: " + e.getMessage());
