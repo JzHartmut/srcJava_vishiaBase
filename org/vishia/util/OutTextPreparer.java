@@ -2,6 +2,7 @@ package org.vishia.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -235,7 +236,7 @@ public class OutTextPreparer
     
     /**The index where the entry value is stored while executing. 
      * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
-    public int ixEntryVar;
+    public int ixEntryVar, ixEntryVarNext;
 
     public ForCmd(OutTextPreparer outer, String sDatapath, Object data) {
       super(outer, ECmd.forCtrl, sDatapath, data);
@@ -385,13 +386,20 @@ public class OutTextPreparer
         else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
+          ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, data);
           IntegerIx ixOentry = vars.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
             vars.put(entryVar, ixOentry);
           }
-          ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, data);
           cmd.ixEntryVar = ixOentry.ix;
+          entryVar += "_next";
+          ixOentry = vars.get(entryVar); 
+          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+            ixOentry = new IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
+            vars.put(entryVar, ixOentry);
+          }
+          cmd.ixEntryVarNext = ixOentry.ix;
           ixCmd[++ixixCmd] = cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -410,7 +418,7 @@ public class OutTextPreparer
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd ifCmd;
           if(ixixCmd >=0 && (ifCmd = cmds.get(ixCmd[ixixCmd])).cmd == ECmd.ifCtrl) {
-            addCmd(pattern, pos0, pos1, null, null, data);
+            addCmd(pattern, pos0, pos1, ECmd.nothing, null, data);
             pos0 = (int)sp.getCurrentPosition();  //after '>'
             ifCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
             ixixCmd -=1;
@@ -556,7 +564,7 @@ public class OutTextPreparer
    *   It is internally tested. 
    * @throws Exception 
    */
-  public void exec( Appendable wr, DataTextPreparer args) throws Exception {
+  public void exec( Appendable wr, DataTextPreparer args) throws IOException {
     execSub(wr, args, 0, cmds.size());
   }
   
@@ -567,7 +575,7 @@ public class OutTextPreparer
    * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
    */
-  private void execSub( Appendable wr, DataTextPreparer args, int ixStart, int ixEndExcl ) throws Exception {
+  private void execSub( Appendable wr, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
     int ixCmd = ixStart;
     while(ixCmd < ixEndExcl) {
@@ -579,8 +587,7 @@ public class OutTextPreparer
           try {
             data = cmd.dataAccess.access(data, true, false);
           } catch (Exception e) {
-            // TODO Auto-generated catch block
-            throw new IllegalArgumentException("OutTextPreparer script " + sIdent + ": " + cmd.text + " not found or access error: " + e.getMessage());
+            wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.text + " not found or access error: " + e.getMessage() + "??>");
           }
         }
       } else { 
@@ -603,29 +610,16 @@ public class OutTextPreparer
           }
         } break;
         case forCtrl: {
-          ForCmd cmd1 = (ForCmd)cmd;
-          if(data == null) {
-            //do nothing, no for
-          }
-          else if(data instanceof Iterable) {
-            for(Object item: (Iterable)data) {
-              args.args[cmd1.ixEntryVar] = item;
-              execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
-            }
-          }
-          else if(data instanceof Map) {
-            @SuppressWarnings("unchecked") Map<Object, Object>map = ((Map<Object,Object>)data);
-            for(Map.Entry<Object,Object> item: map.entrySet()) {
-              args.args[cmd1.ixEntryVar] = item.getValue();
-              execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
-            }
-          }
-          else throw new IllegalArgumentException("OutTextPreparer script " + sIdent + ": for variable is not an container: " + cmd.text );
+          execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
           ixCmd += cmd.offsEndCtrl -1;
         } break;
         case call: 
-          if(!(data instanceof OutTextPreparer)) throw new IllegalArgumentException("<call: variable should be a OutTextPreparer>");
-          execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data); break;
+          if(!(data instanceof OutTextPreparer)) {
+            wr.append("<?? OutTextPreparer script " + sIdent + "<call: variable is not an OutTextPreparer ??>");
+          } else {
+            execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data);
+          } 
+          break;
         case debug: {
           if(data.toString().equals(((DebugCmd)cmd).cmpString)){
             debug();
@@ -638,14 +632,69 @@ public class OutTextPreparer
   
   
   
-  /**Executes a call
+  /**Executes a for loop
+   * @param wr the output channel
+   * @param cmd The ForCmd
+   * @param ixCmd the index of the cmd in {@link #cmds}
+   * @param container The container argument
+   * @param args actual args of the calling level
+   * @throws Exception
+   */
+  private void execFor(Appendable wr, ForCmd cmd, int ixCmd, Object container, DataTextPreparer args) throws IOException {
+    if(container == null) {
+      //do nothing, no for
+    }
+    else if(container instanceof Iterable) {
+      boolean bFirst = true;
+      for(Object item: (Iterable<?>)container) {
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = item;
+        if(bFirst) {
+          bFirst = false;
+        } else { //start on 2. item
+          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        }
+      }
+      if(!bFirst) {  //true only if the container is empty.
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = null;
+        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+      }
+    }
+    else if(container instanceof Map) {
+      @SuppressWarnings("unchecked") Map<Object, Object>map = ((Map<Object,Object>)container);
+      boolean bFirst = true;
+      for(Map.Entry<Object,Object> item: map.entrySet()) {
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = item.getValue();
+        if(bFirst) {
+          bFirst = false;
+        } else { //start on 2. item
+          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        }
+      }
+      if(!bFirst) {  //true only if the container is empty.
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = null;
+        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+      }
+    }
+    else {
+      wr.append("<?? OutTextPreparer script " + sIdent + ": for variable is not an container: " + cmd.text + "??>");
+    }
+  }
+    
+    
+    
+    
+    /**Executes a call
    * @param wr the output channel
    * @param cmd The CallCmd
    * @param args actual args of the calling level
    * @param callVar The OutTextPreparer which is called here.
    * @throws Exception
    */
-  private void execCall(Appendable wr, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws Exception {
+  private void execCall(Appendable wr, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws IOException {
     OutTextPreparer callVar1 = (OutTextPreparer)callVar;
     DataTextPreparer valSub;
     if(cmd.args !=null) {
@@ -660,7 +709,8 @@ public class OutTextPreparer
         } else {
           value = args.args[arg.ixValue];
           if(arg.dataAccess !=null) {
-            value = arg.dataAccess.access(value, true, false);
+            try{ value = arg.dataAccess.access(value, true, false); }
+            catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.text + " not found or access error: " + exc.getMessage() + "??>"); }
           }
         }
         if(arg.ixDst >=0) {

@@ -1,5 +1,6 @@
 package org.vishia.util.test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class Test_OutTextPreparer_CallFor
   static final OutTextPreparer otxListColors = new OutTextPreparer("otxListColors" 
   , null            //no static data on construction
   , "colors, text"  //arguments need and used
-  , "Colors: <:for:color:colors><&color>, <.for>");  //The pattern.
+  , "Colors: <:for:color:colors><&color><:if:color_next>, <.if><.for>");  //The pattern.
 
 
   /**It is the used output String pattern containing two calls of otxListColors. 
@@ -49,15 +50,15 @@ public class Test_OutTextPreparer_CallFor
   , Test_OutTextPreparer_CallFor.class
   , "dataColor, text1"    //arguments need and used.
   , "Text: <&text1> \n"   //The pattern.
-  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'>END\n"
-  + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 >END\n"
+  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'> END\n"
+  + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 > END\n"
   );
 
   /**To compare the test result. */
   static String resultExpected = 
     "Text: any test text \n" + 
-    "Test Call colors1: Colors: white, yellow, red, blue, green, END\n" + 
-    "Test Call colors2: Colors: cyan, magenta, gray, black, END\n";
+    "Test Call colors1: Colors: white, yellow, red, blue, green END\n" + 
+    "Test Call colors2: Colors: cyan, magenta, gray, black END\n";
 
   
   
@@ -79,7 +80,7 @@ public class Test_OutTextPreparer_CallFor
 
 
 
-  void testCall() throws Exception {
+  void testCall() throws IOException {
     StringBuilder sb = new StringBuilder(1000);
     OutTextPreparer.DataTextPreparer vars = otxCall.getArgumentData();
     //vars.setArgument("otxListColors", otxListColors);  //The sub OutTextPreparer have to be registered ad data too.
