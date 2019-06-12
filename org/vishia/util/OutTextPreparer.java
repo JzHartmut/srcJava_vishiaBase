@@ -117,6 +117,8 @@ public class OutTextPreparer
     addString('s', "str"),
     addVar('v', "var"),
     ifCtrl('I', "if"),
+    elsifCtrl('J', "elsif"),
+    elseCtrl('E', "else"),
     forCtrl('F', "for"),
     endLoop('B', "endloop"),
     call('C', "call"),
@@ -162,24 +164,24 @@ public class OutTextPreparer
     
     /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
      * @param outer
-     * @param sTextOrDatapath
+     * @param sDatapath
      * @param data
      */
-    public ValueAccess(OutTextPreparer outer, String sTextOrDatapath, Object data) {
-      this.text = sTextOrDatapath;
+    public ValueAccess(OutTextPreparer outer, String sDatapath, Object data) {
+      this.text = sDatapath;
       final String sVariable;
-      if(sTextOrDatapath !=null){
-        int posep = sTextOrDatapath.indexOf('.');
+      if(sDatapath !=null){
+        int posep = sDatapath.indexOf('.');
         if(posep <0) {
-          sVariable = sTextOrDatapath;
+          sVariable = sDatapath;
         } else {
-          sVariable = sTextOrDatapath.substring(0, posep);
+          sVariable = sDatapath.substring(0, posep);
         }
         IntegerIx ixO = outer.vars.get(sVariable);
         if(ixO == null) {
           //The variable is not part of the argument names, it should be able to access via reflection in data:
           try{ 
-            this.dataConst = DataAccess.access(sTextOrDatapath, data, true, false, false, null);
+            this.dataConst = DataAccess.access(sDatapath, data, true, false, false, null);
             this.ixValue = -1;
             this.dataAccess = null;
           } catch(Exception exc) {
@@ -191,7 +193,7 @@ public class OutTextPreparer
           if(posep <0) {
             this.dataAccess = null;
           } else {
-            this.dataAccess = new DataAccess(sTextOrDatapath.substring(posep+1));
+            this.dataAccess = new DataAccess(sDatapath.substring(posep+1));
           }
         }
       }
@@ -240,6 +242,22 @@ public class OutTextPreparer
 
     public ForCmd(OutTextPreparer outer, String sDatapath, Object data) {
       super(outer, ECmd.forCtrl, sDatapath, data);
+    }
+  }
+  
+  
+  static class IfCmd extends Cmd {
+    
+    int offsElsif;
+    
+    /**One of character = ! s e c for equal, non equal, starts, ends, contains or '\0' for non compare. */
+    char cmp;
+    
+    /**The value to compare with. */
+    ValueAccess valCmp;
+    
+    public IfCmd(OutTextPreparer outer, ECmd cmd, String sDatapath, Object data) {
+      super(outer, cmd, sDatapath, data);
     }
   }
   
@@ -359,7 +377,7 @@ public class OutTextPreparer
   private void parse(String pattern, Object data) {
     int pos0 = 0; //start of current position after special cmd
     int pos1 = 0; //end before the next special command
-    int[] ixCmd = new int[10];  //max. 10 levels for nested things.
+    int[] ixCtrlCmd = new int[10];  //max. 10 levels for nested things.
     int ixixCmd = -1;
     StringPartScan sp = new StringPartScan(pattern);
     sp.setIgnoreWhitespaces(true);
@@ -377,11 +395,46 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          String cond = sp.getLastScannedString().toString();
-          addCmd(pattern, pos0, pos1, ECmd.ifCtrl, cond, data);
-          ixCmd[++ixixCmd] = cmds.size()-1;
+          parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, data);
+          ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current if
           pos0 = (int)sp.getCurrentPosition();  //after '>'
           
+        }
+        else if(sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          String cond = sp.getLastScannedString().toString();
+          
+          IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ECmd.elsifCtrl, cond, data);
+          ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
+          Cmd ifCmdLast;
+          int ixixIfCmd = ixixCmd; 
+          if(  ixixIfCmd >=0 
+            && ( (ifCmdLast = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
+               || ifCmdLast.cmd == ECmd.elsifCtrl
+            )  ) {
+            ((IfCmd)ifCmdLast).offsElsif = cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+          }else { 
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
+          }
+          ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current <:elsif>
+          
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+        }
+        else if(sp.scan(":else>").scanOk()) {
+          IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ECmd.elseCtrl, null, null);
+          ifcmd.offsElsif = -1;  //always, set = offsEndCtrl on <.if>.
+          Cmd ifCmd;
+          int ixixIfCmd = ixixCmd; 
+          if(  ixixIfCmd >=0 
+              && ( (ifCmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
+                 || ifCmd.cmd == ECmd.elsifCtrl
+                  )  ) {
+            ((IfCmd)ifCmd).offsElsif = cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+          }else { 
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
+          }
+          ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current <:elsif>
+
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String container = sp.getLastScannedString().toString();
@@ -400,7 +453,7 @@ public class OutTextPreparer
             vars.put(entryVar, ixOentry);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
-          ixCmd[++ixixCmd] = cmds.size()-1;
+          ixCtrlCmd[++ixixCmd] = cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":call:").scanIdentifier().scanOk()) {
@@ -416,25 +469,39 @@ public class OutTextPreparer
           
         }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
-          Cmd ifCmd;
-          if(ixixCmd >=0 && (ifCmd = cmds.get(ixCmd[ixixCmd])).cmd == ECmd.ifCtrl) {
-            addCmd(pattern, pos0, pos1, ECmd.nothing, null, data);
-            pos0 = (int)sp.getCurrentPosition();  //after '>'
-            ifCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
+          Cmd cmd = null;
+          IfCmd ifcmd = null;
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, data);  //The last text before <.if>
+          while(  ixixCmd >=0 
+            && ( (cmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
+              || cmd.cmd == ECmd.elsifCtrl
+              || cmd.cmd == ECmd.elseCtrl
+            )  ) {
+            ifcmd = (IfCmd)cmd;
+            ifcmd.offsEndCtrl = cmds.size() - ixCtrlCmd[ixixCmd];
+            if(ifcmd.offsElsif <0) {
+              ifcmd.offsElsif = ifcmd.offsEndCtrl; //without <:else>, go after <.if>
+            }
+            if(ifcmd.cmd != ECmd.ifCtrl) {
+              ifcmd = null; //at least <:if> necessary.
+            }
             ixixCmd -=1;
           } 
-          else throw new IllegalArgumentException("faulty <:if>...<.if> ");
+          if(ifcmd == null) {  //nothing found or <:if not found: 
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.if> without <:if> or  <:elsif> ");
+          }
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(".for>").scanOk()) { //The end of an if
           Cmd forCmd;
-          if(ixixCmd >=0 && (forCmd = cmds.get(ixCmd[ixixCmd])).cmd == ECmd.forCtrl) {
+          if(ixixCmd >=0 && (forCmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
             Cmd endLoop = addCmd(pattern, pos0, pos1, ECmd.endLoop, null, null);
-            endLoop.offsEndCtrl = -cmds.size() - ixCmd[ixixCmd] -1;
+            endLoop.offsEndCtrl = -cmds.size() - ixCtrlCmd[ixixCmd] -1;
             pos0 = (int)sp.getCurrentPosition();  //after '>'
-            forCmd.offsEndCtrl = cmds.size() - ixCmd[ixixCmd];
+            forCmd.offsEndCtrl = cmds.size() - ixCtrlCmd[ixixCmd];
             ixixCmd -=1;
           } 
-          else throw new IllegalArgumentException("faulty <:for>...<.for> ");
+          else throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <:for>...<.for> ");
         }
         else { //No proper cmd found:
           
@@ -449,6 +516,45 @@ public class OutTextPreparer
     sp.close();
   }
 
+  
+  
+  
+  private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp, Object data) {
+    String cond = sp.getLastScannedString().toString();
+    String sDataLeft = cond;
+    String sDataRight = null;
+    int posCmp = StringFunctions.indexOfAnyChar(cond, 1, -1, "=!?");
+    char cmp = '\0';
+    if(posCmp >=0) { //any compare operation
+      sDataLeft = cond.substring(0, posCmp).trim();
+      String sCmp = cond.substring(posCmp);
+      if(sCmp.startsWith("==")) {
+        cmp = '='; sDataRight = cond.substring(posCmp+2).trim();
+      } else if(sCmp.startsWith("!=")) {
+        cmp = '!'; sDataRight = cond.substring(posCmp+2).trim();
+      } else if(sCmp.startsWith("?starts")) {
+        cmp = 's'; sDataRight = cond.substring(posCmp+7).trim();
+      } else if(sCmp.startsWith("?ends")) {
+        cmp = 'e'; sDataRight = cond.substring(posCmp+5).trim();
+      } else if(sCmp.startsWith("?contains")) {
+        cmp = 'c'; sDataRight = cond.substring(posCmp+9).trim();
+      } else {
+        throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": <:if: faulty condition. == != ?starts ?ends ?contains are allowed. Found: " + cond);
+      }
+    }
+    IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, sDataLeft, data);
+    ifcmd.cmp = cmp;
+    if(sDataRight !=null) {
+      if(sDataRight.length() >=2 && sDataRight.charAt(0) == '\'') {
+        ifcmd.valCmp = new ValueAccess(sDataRight.substring(1, sDataRight.length()-1));  //constant text
+      } else {
+        ifcmd.valCmp = new ValueAccess(this, sDataRight, data);
+      }
+    }
+    ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
+    
+  }
+  
   
   
   private void parseCall(final String src, final int pos0, final int pos1, final StringPartScan sp, Object data) {
@@ -524,6 +630,7 @@ public class OutTextPreparer
     final Cmd cmd;
     if(ecmd !=ECmd.nothing) {
       switch(ecmd) {
+        case ifCtrl: case elseCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
         case call: cmd = new CallCmd(this, sDatapath, data); break;
         case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
         case debug: cmd = new DebugCmd(this, sDatapath, data); break;
@@ -599,19 +706,24 @@ public class OutTextPreparer
           //Integer ixVar = vars.get(cmd.str);
           wr.append(data.toString());
         } break;
+        case elsifCtrl:
         case ifCtrl: {
+          IfCmd ifcmd = (IfCmd)cmd;
           if(  data ==null 
             || (data instanceof Boolean && ! ((Boolean)data).booleanValue()) 
             || (data instanceof Number  && ((Number)data).intValue() == 0)) {
-            ixCmd += cmd.offsEndCtrl -1;  //if is false, go to the end.
+            ixCmd += ifcmd.offsElsif -1;  //if is false, go to <:elsif, <:else or <.if.
           } else {
             //forward inside if
+            execSub(wr, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
+            ixCmd += ifcmd.offsEndCtrl -1;  //continue after <.if>
             Debugutil.stop();
           }
         } break;
+        case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
         case forCtrl: {
           execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
-          ixCmd += cmd.offsEndCtrl -1;
+          ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
         } break;
         case call: 
           if(!(data instanceof OutTextPreparer)) {

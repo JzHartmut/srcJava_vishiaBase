@@ -635,7 +635,7 @@ public class StringPartScan extends StringPart
       //Note: a fractional part is optional, they can be an exponent only too.
       if(begin < endMax && content.charAt(begin) == fractionalSeparator) {
         seekPos(1); //over .
-        while(begin < endMax && ((cc = getCurrentChar()) == '0' || separatorChars.indexOf(cc)>=0)) { //leading 0 of fractional
+        while(begin < endMax && ((cc = getCurrentChar()) == '0' || (separatorChars !=null && separatorChars.indexOf(cc)>=0))) { //leading 0 of fractional
           seekPos(1); 
           if(cc == '0') { nDivisorFract *=10; }
         }

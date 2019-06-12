@@ -4,8 +4,18 @@ package org.vishia.util;
 import java.nio.charset.Charset;
 
 
-/**This class contains static String functions without any other dependency. 
- * In C the functions are contained in the Fwc/fw_String.c.
+/**This class contains static String functions without any other dependency able to use with CharSequence (instead java.lang.String).
+ * <br>
+ * All routines with a range selection have the following rule:
+ * <ul>
+ * <li>The start position (from) counts from 0 till end as absolute position.
+ * <li>The end position (to) counts positive from 0 till end as absolute position
+ * <li>The end position (to) counts negative from -1 till start as relative position from end.
+ * <li>The end position -1 means, the whole String.
+ * <li>If the end position is greater end (positive), it is till end. It means, {@link Integer#MAX_VALUE} can be used instead -1 too.
+ * <li>If the end position is less than the start, the range is 0. An exception is not thrown. Due to end position an exception is never thrown.
+ * <li>If the start position is outside the range of source, an Exception is thrown.  
+ * In C the functions are contained in the emC/String_emC.c.
  * @author Hartmut Schorrig
  *
  */
@@ -13,7 +23,8 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
-   * <li>2019-06-07 Hartmut new: {@value #compareChars(CharSequence, int, int, CharSequence)} as helper to find where is the difference, versus {@link #equals(CharSequence, int, int, CharSequence)} 
+   * <li>2019-06-08 Hartmut new: All StringFunctions with negative to argument, count from end, -1 is till end.
+   * <li>   * <li>2019-06-07 Hartmut new: {@value #compareChars(CharSequence, int, int, CharSequence)} as helper to find where is the difference, versus {@link #equals(CharSequence, int, int, CharSequence)} 
    * <li>2016-12-02 Hartmut new: {@value #cNoCidentifier} 
    * <li>2016-09-25 Hartmut new: {@link #nrofBytesUTF8(byte)} used in {@link StringPartFromFileLines} 
    * <li>2016-05-22 Hartmut chg: {@link #indexOfAnyString(CharSequence, int, int, CharSequence[], int[], String[])}: Algorithm from StringPart
@@ -95,10 +106,17 @@ public class StringFunctions {
 
 
 
+  /**Searches the first whitespace in src from start till at maximal endMax.
+   * A whitespace is one of " \r\n\t\f"
+   * @param src
+   * @param start
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @return >=0: position in src of the first space from start, -1 if not found in range. 
+   */
   public static int indexWhitespace(CharSequence src, int start, int endMax){
     int pos = start;
-    int end = src.length();
-    if(endMax > 0 && endMax < end){ end = endMax; }
+    int zsq = src.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //end is <pos if endMax is left from start
     char cc;
     while(  pos < end && (cc = src.charAt(pos)) != ' ' && cc != '\r' && cc != '\n' && cc != '\t' && cc != '\f' )
     { pos +=1;
@@ -107,10 +125,17 @@ public class StringFunctions {
   }
   
   
+  /**Searches the first non-whitespace in src from start till at maximal endMax.
+   * A whitespace is one of " \r\n\t\f"
+   * @param src
+   * @param start
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @return >=0: position in src of the first non space from start, -1 if not found in range. 
+   */
   public static int indexNoWhitespace(CharSequence src, int start, int endMax){
     int pos = start;
-    int end = src.length();
-    if(endMax > 0 && endMax < end){ end = endMax; }
+    int zsq = src.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //end is <pos if endMax is left from start
     char cc;
     while(  pos < end &&  ((cc = src.charAt(pos)) == ' ' || cc == '\r' || cc == '\n' || cc == '\t' || cc == '\f' ))
     { pos +=1;
@@ -123,14 +148,14 @@ public class StringFunctions {
    * If the given position is on an identifier start character, it will be returned without change.
    * @param src
    * @param start
-   * @param endMax 0 or <0: do not use
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param additionalStartChars null: do not use, 
    * @return -1 if an identifier is not found. Elsewhere it is the position of the following identifier character.
    */
   public static int indexIdentifier(CharSequence src, int start, int endMax, String additionalStartChars){
     int pos = start;
-    int end = src.length();
-    if(endMax > 0 && endMax < end){ end = endMax; }
+    int zsq = src.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //end is <pos if endMax is left from start
     char cc;
     while( pos < end 
       && (cc = src.charAt(pos)) != '_' 
@@ -149,15 +174,14 @@ public class StringFunctions {
    * It means starting with 0..9 should be detected and processed outside. If this src starts with 0..9 it is accepted here.
    * @param src The input string
    * @param start at this position the identifier starts.
-   * @param endMax max number of chars to check. 0 for no limitation. If endMax is > src.length() it is set to src.length().
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param additionalChars maybe null, some chars as additional chars of an identifier, inside and as start.
    * @return 0 if src[start] doesn't match to an identifier character, number of found identifier chars after src until end.
    */
   public static int indexAfterIdentifier(CharSequence src, int start, int endMax, String additionalChars){
     int pos = start;
-    int end = src.length();
-    if(endMax < 0) { end = end + endMax; }  //-1 means: not the last character.
-    if(endMax > 0 && endMax < end){ end = endMax; }
+    int zsq = src.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //end is <pos if endMax is left from start
     char cc;
     while(  pos < end 
            && (  (cc = src.charAt(pos)) == '_' 
@@ -209,7 +233,9 @@ public class StringFunctions {
    * @param start at this position the indentier starts.
    * @param endq max number of chars to check
    * @return 0 if src[start] doesn't match to an identifier character, number of found identifier chars after src until end.
+   * @deprecated use {@link #indexAfterIdentifier(CharSequence, int, int, String)}
    */
+  @Deprecated
   public static int posAfterIdentifier(CharSequence src, int start, int endMax){ return posAfterIdentifier(src, start, endMax, null, null); }
 
 
@@ -423,7 +449,7 @@ public class StringFunctions {
     //  Debugutil.stop();
     int z1 = s1.length();
     if(s1 == null || s2 == null){ return s1 == null && s2 == null; }  //equals is both null, else not equal
-    int zz = to < 0 || to > z1 ? z1 - from : to - from;
+    int zz = (to < 0 ? z1 + to +1 : (to >= z1 ? z1 : to)) - from;  //max is negative if to is left from fromIndex
     if( zz != s2.length()) return false;
     else {
       for(int ii = 0; ii<zz; ++ii){
@@ -439,10 +465,10 @@ public class StringFunctions {
    * @return >=0 number of chars which are equal, -1: all are equal and the length are equal.
    */
   public static int compareChars(CharSequence s1, int from, int to, CharSequence s2){
-    int z1 = s1.length();
+    int zsq = s1.length();
     int z2 = s2.length();
     if(s1 == null || s2 == null){ return 0; }  //equals is both null, else not equal
-    int zz = to < 0 || to > z1 ? z1 - from : to - from;
+    int zz = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - from;  //max is negative if to is left from fromIndex
     if(zz > z2) { zz = z2; }
     for(int ii = 0; ii<zz; ++ii){
       if(s1.charAt(from + ii) != s2.charAt(ii)) return ii;
@@ -493,10 +519,13 @@ public class StringFunctions {
   /**Checks whether the given CharSequence starts with a CharSequence.
    * It is the adequate functionality like {@link java.lang.String#startsWith(String)}
    * but it works proper with {@link java.lang.CharSequence}. See example on {@link #equals(Object)}.
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    */
-  public static boolean startsWith(CharSequence sq, int from, int to, CharSequence start){
+  public static boolean startsWith(CharSequence sq, int from, int endMax, CharSequence start){
     int zstart = start.length();
-    if((to - from) < zstart) return false;
+    int zsq = sq.length();
+    int max = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) - zstart ;  //max is negative if to is left from fromIndex
+    if((max - from) < zstart) return false;
     return compare(sq, from, start, 0, zstart) == 0;
   }
   
@@ -535,14 +564,13 @@ public class StringFunctions {
    * It is the adequate functionality like {@link java.lang.String#indexOf(char, int)}. 
    * @param sq search into
    * @param fromIndex start search
-   * @param to end search, exclusive. If end > sq.length() then search till end. 
-   *   Especially Integer.MAX_VALUE can be used. Alternatively use {@link #indexOf(CharSequence, char, int)}.
+   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param ch The character which is searched.
    * @return -1 if not found, else first occurrence where sq.charAt(return) == ch. 
    */
   public static int indexOf(CharSequence sq, int fromIndex, int to, char ch){
     int zsq = sq.length();
-    int max = to > zsq ? zsq : to;
+    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) ;  //max is negative if to is left from fromIndex
     int ii = fromIndex-1;  //pre-increment
     if (fromIndex < 0) {
         ii = -1;
@@ -587,7 +615,7 @@ public class StringFunctions {
   
   /**Searches any char inside sChars in the given Charsequence
    * @param begin start position to search in sq
-   * @param end length of sq or end position to test. If {@link Integer#MAX_VALUE} then till end of sq
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param sChars Some chars to search in sq
    *   If sChars contains a EOT character (code 03, {@link #cEndOfText}) then the search stops at this character 
    *   or it is continued to the end of the range in sq. Then the length of the text range is returned
@@ -596,9 +624,10 @@ public class StringFunctions {
    *   but it is an ASCII control character.  
    * @return The first position in sq of one of the character in sChars or -1 if not found in the given range.
    */
-  public static int indexOfAnyChar(CharSequence sq, int begin, int end, CharSequence sChars)
-  { int pos = begin-1;  //pre-increment
-    if(end <0 || end == Integer.MAX_VALUE){ end = sq.length(); }
+  public static int indexOfAnyChar(CharSequence sq, int begin, int endMax, CharSequence sChars)
+  { int zsq = sq.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax > zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
+    int pos = begin-1;  //pre-increment
     while(++pos < end && indexOf(sChars, sq.charAt(pos)) < 0){ }  //while any of char in sChars not found:
     if(pos < end 
       || (pos == end && indexOf(sChars, cEndOfText) >= 0)
@@ -615,13 +644,13 @@ public class StringFunctions {
    * It is the adequate functionality like {@link java.lang.String#lastIndexOf(char, fromEnd)}. 
    * @param sq Any sequence
    * @param from range, it ends searching on from
-   * @param to if > sq.length() uses sq.length(), it starts searching on to-1
+   * @param end >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param ch to search
    * @return -1 if not found, elsewhere the position inside sq, >=fromIndex and < to 
    */
-  public static int lastIndexOf(CharSequence sq, int from, int to, char ch){
+  public static int lastIndexOf(CharSequence sq, int from, int end, char ch){
     int zsq = sq.length();
-    int ii = to > zsq ? zsq : to;
+    int ii = (end < 0 ? zsq + end +1 : (end > zsq ? zsq : end)) ;  //max is negative if to is left from fromIndex
     while(--ii >= from){
       if(sq.charAt(ii) == ch) {
         return ii;
@@ -655,7 +684,7 @@ public class StringFunctions {
    */
   public static int lastIndexOfAnyChar(CharSequence sq, int from, int to, CharSequence chars){
     int zsq = sq.length();
-    int ii = to > zsq ? zsq : to;
+    int ii = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) ;  //ii is negative if to is left from fromIndex
     if(from <0) throw new IndexOutOfBoundsException("StringFunctions.lastIndexOfAnyChar - form <0; " + from);
     while(--ii >= from && indexOf(chars, sq.charAt(ii))<0) {} //pre-decrement.
     return ii >= from? ii+1 : -1;  //not found;
@@ -702,11 +731,12 @@ public class StringFunctions {
    * @param sq A CharSequence
    * @param str CharSequence which is searched.
    * @param fromIndex first checked position in sq
+   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @return -1 if not found, else first occurrence of str in sq which is >= fromIndex. 
    */
   public static int indexOf(CharSequence sq, int fromIndex, int to, CharSequence str){
     int zsq = sq.length();
-    int max = (to >= zsq ? zsq : to) - str.length()+1 ;
+    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
     int ii = fromIndex-1;  //pre-increment
     if (fromIndex < 0) {
         ii = -1;
@@ -757,13 +787,13 @@ public class StringFunctions {
    * It is the adequate functionality like {@link java.lang.String#lastIndexOf(String, int)}. 
    * @param sq Any sequence where to search in
    * @param from range, it ends searching on from
-   * @param to if > sq.length() uses sq.length(), it starts searching on to-str.lsength()
+   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param str comparison String, check whether contained fully.
    * @return -1 if not found, elsewhere the position inside sq >=fromIndex and <= to - str.length()
    */
   public static int lastIndexOf(CharSequence sq, int fromIndex, int to, String str){
     int zsq = sq.length();
-    int max = (to >= zsq ? zsq : to) - str.length()+1 ;
+    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
     if (fromIndex >= max) {
       return -1;
     }
@@ -790,13 +820,13 @@ public class StringFunctions {
    * The difference is by translating to C source.
    * @param sq Any sequence where to search in
    * @param from range, it ends searching on from
-   * @param to if > sq.length() uses sq.length(), it starts searching on to-str.lsength()
+   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param str comparison sequence, check whether contained fully.
    * @return -1 if not found, elsewhere the position inside sq >=fromIndex and <= to - str.length()
    */
   public static int lastIndexOf(CharSequence sq, int fromIndex, int to, CharSequence str){
     int zsq = sq.length();
-    int max = (to >= zsq ? zsq : to) - str.length()+1 ;
+    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
     if (fromIndex >= max) {
       return -1;
     }
@@ -823,7 +853,7 @@ public class StringFunctions {
   /**Returns the position of one of the strings in listStrings within the given sq, maybe started inside the sq with from,
    *  returns -1 if the char is not found in the part started from 'fromIndex'.
    * @param from begin of search within the part.
-   * @param to exclusively end to test. 
+   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param listStrings contains some Strings to find.
    * @param nrofFoundString If given, [0] is set with the number of the found String in listStrings, 
    *                        count from 0. This array reference may be null, then unused.
@@ -838,8 +868,8 @@ public class StringFunctions {
   , @Java4C.SimpleVariableRef String[] foundString
   )
   { int pos = from; // + fromWhere;
-    //int endLast = end;
-    //StringBuffer sFirstCharBuffer = new StringBuffer(listStrings.size());
+    int zsq = sq.length();
+    int end = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to));  //max is negative if to is left from fromIndex
     assert(listStrings.length < 100);  //static size is need
     /** @xxxjava2c=stackInstance.*/
     @Java4C.StackInstance StringBuffer sFirstCharBuffer = new StringBuffer(100);
@@ -859,13 +889,13 @@ public class StringFunctions {
     /**@java2c=toStringNonPersist.*/
     String sFirstChars = sFirstCharBuffer.toString();
     boolean found = false;
-    while(!found && pos < to)
+    while(!found && pos < end)
     { 
       int nrofFoundString1 = -1;
       /**increment over not matching chars, test all first chars: */
-      while(pos < to && (nrofFoundString1 = sFirstChars.indexOf(sq.charAt(pos))) < 0) pos +=1;
+      while(pos < end && (nrofFoundString1 = sFirstChars.indexOf(sq.charAt(pos))) < 0) pos +=1;
       
-      if(pos < to)
+      if(pos < end)
       { /**a fist matching char is found! test wether or not the whole string is matched.
          * Test all Strings, the first test is the test of begin char. */
         int ii = -1;
@@ -873,7 +903,7 @@ public class StringFunctions {
         { //String sString = (String)(iter.next());
           CharSequence sString = listStrings[ii];
           int testLen = sString.length();
-          if((to - pos) >= testLen 
+          if((end - pos) >= testLen 
               && StringFunctions.equals(sq, pos, pos+testLen, sString)
           ) 
           { found = true;
@@ -890,8 +920,8 @@ public class StringFunctions {
         
       }
     }
-    if(pos > to 
-        || (pos == to && !acceptToEndOfText)
+    if(pos > end 
+        || (pos == end && !acceptToEndOfText)
     ) { //nothing found 
       pos = -1; 
       if(foundString != null)

@@ -43,6 +43,14 @@ public class Test_OutTextPreparer_CallFor
   , "Colors: <:for:color:colors><&color><:if:color_next>, <.if><.for>");  //The pattern.
 
 
+  static final OutTextPreparer otxIfColors = new OutTextPreparer("otxIfColors" 
+  , null            //no static data on construction
+  , "colors, text"  //arguments need and used
+  , "Colors: <:for:color:colors>"
+  + "<:if:color == 'white'>It's White<:else>Unknown<.if>"
+  + "<:if:color_next>, <.if><.for>");  //The pattern.
+
+
   /**It is the used output String pattern containing two calls of otxListColors. 
    * With different arguments for both calls the results are different.
    * It is an example for a complex output text. */
@@ -50,8 +58,8 @@ public class Test_OutTextPreparer_CallFor
   , Test_OutTextPreparer_CallFor.class
   , "dataColor, text1"    //arguments need and used.
   , "Text: <&text1> \n"   //The pattern.
-  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'> END\n"
-  + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 > END\n"
+  + "Test Call colors1: <:call:otxIfColors: colors = dataColor.colors1, text='testtext'> END\n"
+  //+ "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 > END\n"
   );
 
   /**To compare the test result. */
