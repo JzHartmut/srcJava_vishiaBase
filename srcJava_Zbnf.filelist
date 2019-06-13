@@ -1,4 +1,4 @@
-2019-06-13 09:25:03  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-06-14 00:19:36  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -268,7 +268,7 @@
 ============================== org/vishia/util/ ====================================================
 2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
-2019-06-13 09:23:32  x     CalculatorExpr.java                      ::        123.059 -0632370137 
+2019-06-13 23:14:12  x     CalculatorExpr.java                      ::        122.875 -1948436900 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
@@ -306,7 +306,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-06-13 09:00:25  x     OutTextPreparer.java                     ::         28.744 -1115829273 
+2019-06-14 00:15:40  x     OutTextPreparer.java                     ::         29.040  0537925922 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -333,7 +333,7 @@
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
-2019-06-12 00:27:20  x     StringPartScan.java                      ::         46.611 -1617592403 
+2019-06-14 00:18:31  x     StringPartScan.java                      ::         48.361 -1379039302 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 
@@ -362,10 +362,10 @@
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
-2019-06-13 08:49:22  x     Test_OutTextPreparer_CallFor.java        ::          3.871  0339371892 
+2019-06-14 00:14:03  x     Test_OutTextPreparer_CallFor.java        ::          4.244 -1420308251 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
 2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
-2019-05-27 10:42:35  x     Test_StringPartScan.java                 ::          1.965  1211010395 
+2019-06-13 23:12:08  x     Test_StringPartScan.java                 ::          4.726 -0095091858 
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 

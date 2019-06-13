@@ -51,6 +51,8 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-14 Hartmut chg: all scan operations start with {@link #scanEntry()}. 
+   *   new: {@link #scan(CharSequence)} works with \W and \Z (no identifier char, end of text) 
    * <li>2019-06-07 Hartmut new {@link #scanLiteral(String, int)} 
    * <li>2019-05-26 Hartmut 
    * <ul><li>new {@link #scanToAnyChar(String, char, char, char)} which stores the parse result in this class.
@@ -106,7 +108,7 @@ public class StringPartScan extends StringPart
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2019-03-10"; 
+  public final static String sVersion = "2019-06-13"; 
 
   
   /**Position of scanStart() or after scanOk() as begin of next scan operations. */
@@ -170,13 +172,13 @@ public class StringPartScan extends StringPart
   
   /**Skips over white spaces. It calls {@link StringPart#seekNoWhitespace()} and return this. */
   public final StringPartScan scanSkipSpace()
-  { seekNoWhitespace();
+  { if(scanEntry()) { seekNoWhitespace(); }
     return this;
   }
   
   /**Skips over white spaces and comments. It calls {@link StringPart#seekNoWhitespaceOrComments()} and return this. */
   public final StringPartScan scanSkipComment()
-  { seekNoWhitespaceOrComments();
+  { if(scanEntry()) { seekNoWhitespaceOrComments(); }
     return this;
   }
   
@@ -220,12 +222,14 @@ public class StringPartScan extends StringPart
   { if(bCurrentOk)
     { seekNoWhitespaceOrComments();
       if(bStartScan) {  //true after scanOk(), after scanStart() 
+        //reset this indices on start of the next scan(...) not already after scanOk() 
+        //because the results should be still read 
         ixLastIntegerNumber = -1;
         ixLastFloatNumber = -1;
         ixLastString = -1;
         bStartScan = false;     //only for first invocation of this routine in a concatenation till scanOk()
       }
-      if(begin == end)
+      if(begin >= end)
       { bCurrentOk = false; //error, because nothing to scan.
       }
     }
@@ -271,6 +275,11 @@ public class StringPartScan extends StringPart
   /*=================================================================================================================*/
   /** scan next content, test the requested String.
    *  new since 2008-09: if sTest contains cEndOfText, test whether this is the end.
+   *  If the text ends with {@link StringFunctions#cNoCidentifier} it is tested that no identifier chars follows.
+   *  This is important for example to distinguish between "if..." and "ifVariable".
+   *  <br>
+   *  Since 2019-06: recognizes \W, \Z \z for non-Identifier or end of text check on end. 
+   *  <br> 
    *  skips over whitespaces and comments automatically, depends on the settings forced with
    *  calling of {@link #seekNoWhitespaceOrComments()} .<br/>
    *  See global description of scanning methods.
@@ -278,11 +287,18 @@ public class StringPartScan extends StringPart
    *  @param sTest String to test
       @return this
   */
-  public final StringPartScan scan(final CharSequence sTestP)
-  { if(bCurrentOk)   //NOTE: do not call scanEntry() because it returns false if end of text is reached,
-    {                //      but the sTestP may contain only cEndOfText. end of text will be okay than.
-      seekNoWhitespaceOrComments();
+  public final StringPartScan scan(final CharSequence sTestP) { 
+    char cend;
+    if( (  sTestP.charAt(0)== StringFunctions.cEndOfText 
+        || sTestP.length() ==2 && sTestP.charAt(0) == '\\' && ((cend = sTestP.charAt(1))=='Z' || cend == 'z')  
+        && begin == end) ) {
+      return this;  //it is the end, remain bCurrentOk. 
+      //Note: do not call scanEntry() for this case because it sets bCurrentOk = false if end of text is reached,
+      //but exact this is the true condition.
+    }
+    else if(scanEntry()) {  //sTestP does not end with cEndOfText, some what should be scanned. 
       CharSequence sTest;
+      //Check whether the text contains the special character, not representable by a string literal:
       int len = StringFunctions.indexOf(sTestP,StringFunctions.cEndOfText,0);
       int len2 = StringFunctions.indexOf(sTestP,StringFunctions.cNoCidentifier,0);
       boolean bTestToNoCidentifier = (len2 >=0);
@@ -294,7 +310,24 @@ public class StringPartScan extends StringPart
       else if(bTestToEndOfText){ 
         sTest = sTestP.subSequence(0, len); 
       }  //only one of the end symbols.
-      else { len = sTestP.length(); sTest = sTestP; }
+      else { 
+        len = sTestP.length(); 
+        sTest = sTestP; 
+        //
+        //Additional check whether the text contains the regex-compatible \Z \z or \W
+        //It can be represented in a ordinary String literal by "\\Z \\W".
+        if(len >=2 && sTestP.charAt(len-2) == '\\') {
+          cend = sTestP.charAt(len);
+          if("WZz".indexOf(cend)>=0) {  //"...\Z", "...\W" found:
+            len -=2; sTest = sTest.subSequence(0, len);
+            bTestToNoCidentifier = cend == 'W';
+            bTestToEndOfText = !bTestToNoCidentifier;  //one of both is it.
+            
+          }
+        }
+      }
+      //
+      //now the check can be start:
       char cc;
       if(  (begin + len) <= endMax //content.length()
         && StringFunctions.equals(content, begin, begin+len, sTest)
@@ -366,23 +399,25 @@ public class StringPartScan extends StringPart
    * @return this for scan concatenation.   
    */
   public StringPartScan scanLiteral(String startEndTrans, int maxToTest) {
-    char startChar = startEndTrans.charAt(0);
-    char endChar = startEndTrans.charAt(1);
-    char transChar = startEndTrans.length() >2 ? startEndTrans.charAt(2) : '\0';
-    int zTest = end - begin;
-    if(maxToTest >=0 && zTest > maxToTest) { zTest = maxToTest; }
-    if(scanEntry() && getCurrentChar() == startChar) {
-      int end1 = indexEndOfQuotation(endChar, transChar, 0, zTest);
-      if(end1 >=0) {
-        sLastString[++ixLastString].setPart(this.begin+1, this.begin + end1-1);
-        this.begin += end1;  //After quotation end      
+    if(scanEntry()) {
+      char startChar = startEndTrans.charAt(0);
+      char endChar = startEndTrans.charAt(1);
+      char transChar = startEndTrans.length() >2 ? startEndTrans.charAt(2) : '\0';
+      int zTest = end - begin;
+      if(maxToTest >=0 && zTest > maxToTest) { zTest = maxToTest; }
+      if(scanEntry() && getCurrentChar() == startChar) {
+        int end1 = indexEndOfQuotation(endChar, transChar, 0, zTest);
+        if(end1 >=0) {
+          sLastString[++ixLastString].setPart(this.begin+1, this.begin + end1-1);
+          this.begin += end1;  //After quotation end      
+        } else {
+          //non successfully:
+          bCurrentOk = false;
+        }
       } else {
         //non successfully:
         bCurrentOk = false;
       }
-    } else {
-      //non successfully:
-      bCurrentOk = false;
     }
     return this;
   }
@@ -400,7 +435,7 @@ public class StringPartScan extends StringPart
    * @throws ParseException 
    */
   public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars) throws ParseException {
-    if(bCurrentOk) {
+    if(scanEntry()) {
       int max = (end - begin);
       if(maxNrofChars >=0 && maxNrofChars < max) { max = maxNrofChars; }
       int[] parsedChars = new int[1];
@@ -619,7 +654,7 @@ public class StringPartScan extends StringPart
    */
   public final StringPartScan scanFractionalExponent(char fractionalSeparator, boolean bStrict
       , String separatorChars, long nInteger, boolean bNegative) throws ParseException { //::TODO:: scanLong(String sPicture)
-    if(bCurrentOk) {            //Note: donot call scanEntry(), do not skip over white spaces.  
+    if(scanEntry()) {            //Note: donot call scanEntry(), do not skip over white spaces.  
       //
       //switch of skip over white spaces and comment, inside the number. 
       int bitModeSave = this.bitMode;

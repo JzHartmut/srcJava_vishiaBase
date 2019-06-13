@@ -74,6 +74,11 @@ public class OutTextPreparer
     /**Any &lt;call in the pattern get the data for the called OutTextPreparer, but only ones, reused. */
     DataTextPreparer[] argSub;
     
+    public String debugOtx;
+    
+    public int debugIxCmd;
+    
+    
     /**Package private constructor invoked only in {@link OutTextPreparer#getArgumentData()}*/
     DataTextPreparer(OutTextPreparer prep){
       this.prep = prep;
@@ -328,10 +333,7 @@ public class OutTextPreparer
           
         }
         else if(sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          String cond = sp.getLastScannedString().toString();
-          
-          IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ECmd.elsifCtrl, cond, data);
-          ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
+          parseIf( pattern, pos0, pos1, ECmd.elsifCtrl, sp, data);
           Cmd ifCmdLast;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
@@ -347,8 +349,7 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":else>").scanOk()) {
-          IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ECmd.elseCtrl, null, null);
-          ifcmd.offsElsif = -1;  //always, set = offsEndCtrl on <.if>.
+          addCmd(pattern, pos0, pos1, ECmd.elseCtrl, null, null);
           Cmd ifCmd;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
@@ -397,24 +398,23 @@ public class OutTextPreparer
         }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd cmd = null;
-          IfCmd ifcmd = null;
           addCmd(pattern, pos0, pos1, ECmd.nothing, null, data);  //The last text before <.if>
           while(  ixixCmd >=0 
             && ( (cmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
               || cmd.cmd == ECmd.elsifCtrl
               || cmd.cmd == ECmd.elseCtrl
             )  ) {
-            ifcmd = (IfCmd)cmd;
-            ifcmd.offsEndCtrl = cmds.size() - ixCtrlCmd[ixixCmd];
-            if(ifcmd.offsElsif <0) {
+            IfCmd ifcmd;
+            cmd.offsEndCtrl = cmds.size() - ixCtrlCmd[ixixCmd];
+            if(cmd.cmd != ECmd.elseCtrl && (ifcmd = (IfCmd)cmd).offsElsif <0) {
               ifcmd.offsElsif = ifcmd.offsEndCtrl; //without <:else>, go after <.if>
             }
-            if(ifcmd.cmd != ECmd.ifCtrl) {
-              ifcmd = null; //at least <:if> necessary.
+            if(cmd.cmd != ECmd.ifCtrl) {
+              cmd = null; //at least <:if> necessary.
             }
             ixixCmd -=1;
           } 
-          if(ifcmd == null) {  //nothing found or <:if not found: 
+          if(cmd == null) {  //nothing found or <:if not found: 
             throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.if> without <:if> or  <:elsif> ");
           }
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -543,7 +543,7 @@ public class OutTextPreparer
     if(ecmd !=ECmd.nothing) {
       try {
         switch(ecmd) {
-          case ifCtrl: case elseCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
+          case ifCtrl: case elsifCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
           case call: cmd = new CallCmd(this, sDatapath, data); break;
           case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
           case debug: cmd = new DebugCmd(this, sDatapath, data); break;
@@ -602,6 +602,8 @@ public class OutTextPreparer
     //int ixVal = 0;
     int ixCmd = ixStart;
     while(ixCmd < ixEndExcl) {
+      if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
+        debug();
       Cmd cmd = cmds.get(ixCmd++);
       Object data;
       if(cmd.ixValue >=0) {
@@ -624,30 +626,7 @@ public class OutTextPreparer
         } break;
         case elsifCtrl:
         case ifCtrl: {
-          IfCmd ifcmd = (IfCmd)cmd;
-          boolean bIf;
-          if(ifcmd.expr !=null) {
-            try { 
-              CalculatorExpr.Value value = ifcmd.expr.calcDataAccess(null, args.args);
-              bIf = value.booleanValue();
-            } catch(Exception exc) {
-              bIf = false;
-            }
-          } else if (data !=null) { 
-            if( data instanceof Boolean ) { bIf = ((Boolean)data).booleanValue(); }
-            else if( data instanceof Number ) { bIf =  ((Number)data).intValue() != 0; }
-            else { bIf = true; } //other data, !=null is true already. 
-          } else {
-            bIf = false;
-          }
-          if( bIf) { //execute if branch
-            execSub(wr, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
-            ixCmd += ifcmd.offsEndCtrl -1;  //continue after <.if>
-            Debugutil.stop();
-          } else {
-            //forward inside if
-            ixCmd += ifcmd.offsElsif -1;  //if is false, go to <:elsif, <:else or <.if.
-          }
+          ixCmd = execIf(wr, (IfCmd)cmd, ixCmd, data, args);
         } break;
         case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
         case forCtrl: {
@@ -670,6 +649,41 @@ public class OutTextPreparer
     }
   }
   
+  
+  
+  
+  /**Executes a if branch
+   * @param wr the output channel
+   * @param cmd The ForCmd
+   * @param ixCmd the index of the cmd in {@link #cmds}
+   * @param container The container argument
+   * @param args actual args of the calling level
+   * @throws Exception
+   */
+  private int execIf(Appendable wr, IfCmd ifcmd, int ixCmd, Object data, DataTextPreparer args) throws IOException {
+    boolean bIf;
+    if(ifcmd.expr !=null) {
+      try { 
+        CalculatorExpr.Value value = ifcmd.expr.calcDataAccess(null, args.args);
+        bIf = value.booleanValue();
+      } catch(Exception exc) {
+        bIf = false;
+      }
+    } else if (data !=null) { 
+      if( data instanceof Boolean ) { bIf = ((Boolean)data).booleanValue(); }
+      else if( data instanceof Number ) { bIf =  ((Number)data).intValue() != 0; }
+      else { bIf = true; } //other data, !=null is true already. 
+    } else {
+      bIf = false;
+    }
+    if( bIf) { //execute if branch
+      execSub(wr, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
+      return ixCmd + ifcmd.offsEndCtrl -1;  //continue after <.if>
+    } else {
+      //forward inside if to the next <:elsif or <:else
+      return ixCmd + ifcmd.offsElsif -1;  //if is false, go to <:elsif, <:else or <.if.
+    }
+  }
   
   
   
@@ -742,6 +756,8 @@ public class OutTextPreparer
       valSub = args.argSub[cmd.ixDataArg];
       if(valSub == null) { //only first time for this call
         args.argSub[cmd.ixDataArg] = valSub = callVar1.getArgumentData();  //create a data instance for arguments.
+        valSub.debugIxCmd = args.debugIxCmd;
+        valSub.debugOtx = args.debugOtx;
       }
       for(Argument arg : cmd.args) {
         Object value;

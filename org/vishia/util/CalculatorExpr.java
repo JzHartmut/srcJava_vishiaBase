@@ -2342,18 +2342,20 @@ public class CalculatorExpr
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
     parseCmpExpr(spExpr, op, recursion +1);
-    while(spExpr.scanSkipSpace().length()>0) {
-      char cc = spExpr.getCurrentChar();
-      op = null;
+    
+    while(op !=null) {
       if(spExpr.scan("&&").scanOk()) {
         op = "&&";
       } else if(spExpr.scan("||").scanOk()) {
         op = "||";
       }
+      else { 
+        op = null;  
+      }
+      //
       if(op !=null) {
         parseCmpExpr(spExpr, op, recursion +1);
       }
-      else { op = null; } //end of addExpr, maybe on a ")"
     }//while boolean operation
   }
   
@@ -2370,7 +2372,7 @@ public class CalculatorExpr
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
     parseAddExpr(spExpr, op, recursion +1);
-    if(spExpr.scanSkipSpace().length()>0){
+    if(spExpr.scanSkipSpace().scanOk()){
       char cc = spExpr.getCurrentChar();
       if("=!><?".indexOf(cc)>=0){
         op = null;
@@ -2423,7 +2425,6 @@ public class CalculatorExpr
         if("+-".indexOf(cc)>=0){
           spExpr.seek(1).scan().scanOk();
           op = "" + cc;
-          //addExpr(spExpr, ""+cc, recursion+1);
         }
         else { op = null; } //end of addExpr, maybe on a ")"
       }
@@ -2451,7 +2452,6 @@ public class CalculatorExpr
         if("*/".indexOf(cc)>=0){
           spExpr.seek(1).scan().scanOk();
           operation = "" + cc;
-          //addExpr(spExpr, ""+cc, recursion+1);
         }
         else { operation = null; } //end of addExpr, maybe on a ")"
       }

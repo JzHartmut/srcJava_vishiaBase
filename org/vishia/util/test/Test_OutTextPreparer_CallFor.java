@@ -47,7 +47,12 @@ public class Test_OutTextPreparer_CallFor
   , null            //no static data on construction
   , "colors, text"  //arguments need and used
   , "Colors: <:for:color:colors>"
-  + "<:if:color == 'white'>It's White<:else>Unknown<.if>"
+  + "<:if:color == 'white'>wh"
+  + "<:elsif:color == 'yellow'>ye"
+  + "<:elsif:color ?starts 'gr'>green or gray"
+  + "<:elsif:color ?ends 'ck'>black"
+  + "<:elsif:color ?contains 'a'>a-type-<&color>"
+  + "<:else>unknown<.if>"
   + "<:if:color_next>, <.if><.for>");  //The pattern.
 
 
@@ -58,17 +63,20 @@ public class Test_OutTextPreparer_CallFor
   , Test_OutTextPreparer_CallFor.class
   , "dataColor, text1"    //arguments need and used.
   , "Text: <&text1> \n"   //The pattern.
-  //+ "Test Call colors1: <:call:otxIfColors: colors = dataColor.colors1, text='testtext'> END\n"
   + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'> END\n"
   + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 > END\n"
+  + "Test Call colors1: <:call:otxIfColors: colors = dataColor.colors1, text='testtext'> END\n"
+  + "Test Call colors1: <:call:otxIfColors: colors = dataColor.colors2, text='testtext'> END\n"
   );
 
   /**To compare the test result. */
   static String resultExpected = 
-    "Text: any test text \n" + 
-    "Test Call colors1: Colors: white, yellow, red, blue, green END\n" + 
-    "Test Call colors2: Colors: cyan, magenta, gray, black END\n";
-
+    "Text: any test text \n" 
+  + "Test Call colors1: Colors: white, yellow, red, blue, green END\n"
+  + "Test Call colors2: Colors: cyan, magenta, gray, black END\n"
+  + "Test Call colors1: Colors: wh, ye, unknown, unknown, green or gray END\n"
+  + "Test Call colors1: Colors: a-type-cyan, a-type-magenta, green or gray, black END\n";
+  
   
   
   
@@ -92,7 +100,8 @@ public class Test_OutTextPreparer_CallFor
   void testCall() throws IOException {
     StringBuilder sb = new StringBuilder(1000);
     OutTextPreparer.DataTextPreparer vars = otxCall.getArgumentData();
-    //vars.setArgument("otxListColors", otxListColors);  //The sub OutTextPreparer have to be registered ad data too.
+    //vars.debugIxCmd = 6;
+    //vars.debugOtx = "otxIfColors";
     vars.setArgument("dataColor", dataColor);        //The data class for access.
     vars.setArgument("text1", "any test text");
     otxCall.exec(sb, vars);
