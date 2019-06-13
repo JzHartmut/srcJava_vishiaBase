@@ -2,10 +2,10 @@ package org.vishia.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
 
 
 
@@ -94,7 +94,7 @@ public class OutTextPreparer
      * @param value any value for this argument.
      * */
     public void setArgument(String name, Object value) {
-      IntegerIx ix0 = prep.vars.get(name);
+      DataAccess.IntegerIx ix0 = prep.vars.get(name);
       if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + prep.sIdent + ", argument: " + name + " not existing: ");
       int ix = ix0.ix;
       args[ix] = value;
@@ -135,82 +135,11 @@ public class OutTextPreparer
   
   
   
-  static class ValueAccess {
-    
-    /**Index of the value in the parents {@link OutTextPreparer.DataTextPreparer#args} or -1 if not used.*/
-    public int ixValue;
-    /**Set if the value uses reflection. */
-    public final DataAccess dataAccess;
-    
-    /**Set on construction of {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}
-     * if the value reference is constant, non modified by user data). 
-     * It is especially for call otxXYZ. */
-    public final Object dataConst;
-    
-    /**The String literal or the given sDatapath. */
-    public final String text;
-    
-    
-    /**A ValueAccess without value, only a constant text literal, especially for Text Cmd.
-     * @param text
-     */
-    public ValueAccess(String text) {
-      this.ixValue = -1;
-      this.dataAccess = null;
-      this.dataConst = null;
-      this.text = text;
-    }
-    
-    
-    /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
-     * @param outer
-     * @param sDatapath
-     * @param data
-     */
-    public ValueAccess(OutTextPreparer outer, String sDatapath, Object data) {
-      this.text = sDatapath;
-      final String sVariable;
-      if(sDatapath !=null){
-        int posep = sDatapath.indexOf('.');
-        if(posep <0) {
-          sVariable = sDatapath;
-        } else {
-          sVariable = sDatapath.substring(0, posep);
-        }
-        IntegerIx ixO = outer.vars.get(sVariable);
-        if(ixO == null) {
-          //The variable is not part of the argument names, it should be able to access via reflection in data:
-          try{ 
-            this.dataConst = DataAccess.access(sDatapath, data, true, false, false, null);
-            this.ixValue = -1;
-            this.dataAccess = null;
-          } catch(Exception exc) {
-            throw new IllegalArgumentException("OutTextPreparer script " + outer.sIdent + ", argument: " + sVariable + " not existing: ");
-          }
-        } else {
-          this.dataConst = null;
-          this.ixValue = ixO.ix;
-          if(posep <0) {
-            this.dataAccess = null;
-          } else {
-            this.dataAccess = new DataAccess(sDatapath.substring(posep+1));
-          }
-        }
-      }
-      else { //empty without text and without datapath
-        this.ixValue = -1;
-        this.dataAccess = null;
-        this.dataConst = null;
-      }
-    }
-
-  }
-
 
 
   
   
-  static class Cmd extends ValueAccess{
+  static class Cmd extends CalculatorExpr.Operand{
     public final ECmd cmd;
     
     /**If necessary it is the offset skipped over the ctrl sequence. */
@@ -221,8 +150,8 @@ public class OutTextPreparer
       this.cmd = what;
     }
     
-    public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Object data)
-    { super( outer, textOrDatapath, data);
+    public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Object data) throws Exception
+    { super( outer.vars, textOrDatapath, data);
       this.cmd = what;
     }
     
@@ -240,7 +169,7 @@ public class OutTextPreparer
      * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
     public int ixEntryVar, ixEntryVarNext;
 
-    public ForCmd(OutTextPreparer outer, String sDatapath, Object data) {
+    public ForCmd(OutTextPreparer outer, String sDatapath, Object data) throws Exception {
       super(outer, ECmd.forCtrl, sDatapath, data);
     }
   }
@@ -248,15 +177,21 @@ public class OutTextPreparer
   
   static class IfCmd extends Cmd {
     
+    /**The offset to the next &lt;:elsif or the following &lt;:else or the following &lt;.if*/
     int offsElsif;
     
-    /**One of character = ! s e c for equal, non equal, starts, ends, contains or '\0' for non compare. */
-    char cmp;
+    /**The expression for a comparison. It is null if only a null check of the first argument should be done.
+     * For comparison with a constant text, the constant text is contained in expr */
+    CalculatorExpr expr;
     
-    /**The value to compare with. */
-    ValueAccess valCmp;
+    /**One of character from "=!enc" for equal, non equal, starts, ends, contains or '\0' for non compare. */
+    //char cmp;
     
-    public IfCmd(OutTextPreparer outer, ECmd cmd, String sDatapath, Object data) {
+    /**The value to compare with. 
+     * @throws Exception */
+    //CalculatorExpr.Operand valCmp;
+    
+    public IfCmd(OutTextPreparer outer, ECmd cmd, String sDatapath, Object data) throws Exception {
       super(outer, cmd, sDatapath, data);
     }
   }
@@ -270,7 +205,7 @@ public class OutTextPreparer
     /**The data to get actual arguments for this call. */
     public List<Argument> args;
     
-    public CallCmd(OutTextPreparer outer, String sDatapath, Object data) 
+    public CallCmd(OutTextPreparer outer, String sDatapath, Object data) throws Exception 
     { super(outer, ECmd.call, sDatapath, data); 
     }
   }
@@ -280,7 +215,7 @@ public class OutTextPreparer
   static class DebugCmd extends Cmd {
     public String cmpString;
 
-    public DebugCmd(OutTextPreparer outer, String sDatapath, Object data) {
+    public DebugCmd(OutTextPreparer outer, String sDatapath, Object data) throws Exception {
       super(outer, ECmd.debug, sDatapath, data);
     }
   }
@@ -310,7 +245,7 @@ public class OutTextPreparer
 //  };
   
   
-  static class Argument extends ValueAccess {
+  static class Argument extends CalculatorExpr.Operand {
 
     /**Name of the argument, null for usage in {@link Cmd} */
     public final String name;
@@ -318,8 +253,8 @@ public class OutTextPreparer
     /**The Index to store the value in {@link DataTextPreparer#args} of the called level or -1 if not known. */
     public final int ixDst;
     
-    public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Object data) {
-      super(outer, sTextOrDatapath, data);
+    public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Object data) throws Exception {
+      super(outer.vars, sTextOrDatapath, data);
       this.name = name;
       this.ixDst = ixCalledArg;
     }
@@ -327,16 +262,8 @@ public class OutTextPreparer
   }
   
   
-  /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#vars}. 
-   * Necessary to detect a null reference. In Java Integer can be used too, but that is more explicitly. 
-   */
-  static class IntegerIx {
-    public int ix;
-    IntegerIx(int value){ ix = value; }
-  }
-  
   /**All argument variables sorted. */
-  private Map<String, IntegerIx> vars = new TreeMap<String, IntegerIx>();
+  private Map<String, DataAccess.IntegerIx> vars = new TreeMap<String, DataAccess.IntegerIx>();
   
   private int ctVar = 0;
   
@@ -364,7 +291,7 @@ public class OutTextPreparer
     sp.setIgnoreWhitespaces(true);
     while(sp.scanStart().scanIdentifier().scanOk()) {
       String sVariable = sp.getLastScannedString();
-      vars.put(sVariable, new IntegerIx(ctVar));
+      vars.put(sVariable, new DataAccess.IntegerIx(ctVar));
       ctVar +=1;
       if(!sp.scan(",").scanOk()) {
         break; //, as separator
@@ -440,16 +367,16 @@ public class OutTextPreparer
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
           ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, data);
-          IntegerIx ixOentry = vars.get(entryVar); 
+          DataAccess.IntegerIx ixOentry = vars.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-            ixOentry = new IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
+            ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
             vars.put(entryVar, ixOentry);
           }
           cmd.ixEntryVar = ixOentry.ix;
           entryVar += "_next";
           ixOentry = vars.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-            ixOentry = new IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
+            ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
             vars.put(entryVar, ixOentry);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
@@ -521,35 +448,16 @@ public class OutTextPreparer
   
   private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp, Object data) {
     String cond = sp.getLastScannedString().toString();
-    String sDataLeft = cond;
-    String sDataRight = null;
-    int posCmp = StringFunctions.indexOfAnyChar(cond, 1, -1, "=!?");
-    char cmp = '\0';
-    if(posCmp >=0) { //any compare operation
-      sDataLeft = cond.substring(0, posCmp).trim();
-      String sCmp = cond.substring(posCmp);
-      if(sCmp.startsWith("==")) {
-        cmp = '='; sDataRight = cond.substring(posCmp+2).trim();
-      } else if(sCmp.startsWith("!=")) {
-        cmp = '!'; sDataRight = cond.substring(posCmp+2).trim();
-      } else if(sCmp.startsWith("?starts")) {
-        cmp = 's'; sDataRight = cond.substring(posCmp+7).trim();
-      } else if(sCmp.startsWith("?ends")) {
-        cmp = 'e'; sDataRight = cond.substring(posCmp+5).trim();
-      } else if(sCmp.startsWith("?contains")) {
-        cmp = 'c'; sDataRight = cond.substring(posCmp+9).trim();
-      } else {
-        throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": <:if: faulty condition. == != ?starts ?ends ?contains are allowed. Found: " + cond);
-      }
-    }
-    IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, sDataLeft, data);
-    ifcmd.cmp = cmp;
-    if(sDataRight !=null) {
-      if(sDataRight.length() >=2 && sDataRight.charAt(0) == '\'') {
-        ifcmd.valCmp = new ValueAccess(sDataRight.substring(1, sDataRight.length()-1));  //constant text
-      } else {
-        ifcmd.valCmp = new ValueAccess(this, sDataRight, data);
-      }
+    CalculatorExpr expr = new CalculatorExpr(cond, vars);
+    
+    List<CalculatorExpr.Operation> exprOper = expr.listOperations();
+    CalculatorExpr.Operand exprOperand;
+    IfCmd ifcmd;
+    if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
+      ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, cond, data);
+    } else {
+      ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, null, null);
+      ifcmd.expr = expr;
     }
     ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
     
@@ -579,23 +487,27 @@ public class OutTextPreparer
           if(call == null) {
             ixCalledArg = -1;
           } else {
-            IntegerIx ixOcalledArg = call.vars.get(sNameArg);
+            DataAccess.IntegerIx ixOcalledArg = call.vars.get(sNameArg);
             if(ixOcalledArg == null) {
               throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
             }
             ixCalledArg = ixOcalledArg.ix;
           }
           Argument arg;
-          if(sp.scanLiteral("''\\", -1).scanOk()) {
-            String sText = sp.getLastScannedString().trim();
-            arg = new Argument(this, sNameArg, ixCalledArg, sText, null);
-          }
-          else if(sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
-            String sDataPath = sp.getLastScannedString().trim();
-            arg = new Argument(this, sNameArg, ixCalledArg, sDataPath, data);
-          }
-          else { 
-            throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
+          try {
+            if(sp.scanLiteral("''\\", -1).scanOk()) {
+              String sText = sp.getLastScannedString().trim();
+              arg = new Argument(this, sNameArg, ixCalledArg, sText, null);
+            }
+            else if(sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
+              String sDataPath = sp.getLastScannedString().trim();
+              arg = new Argument(this, sNameArg, ixCalledArg, sDataPath, data);
+            }
+            else { 
+              throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
+            }
+          } catch(Exception exc) {
+            throw new IllegalArgumentException("OutTextPreparer " + sIdent + ", argument: " + sNameArg + " not existing: ");
           }
           cmd.args.add(arg);
         } else {
@@ -629,12 +541,16 @@ public class OutTextPreparer
     }
     final Cmd cmd;
     if(ecmd !=ECmd.nothing) {
-      switch(ecmd) {
-        case ifCtrl: case elseCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
-        case call: cmd = new CallCmd(this, sDatapath, data); break;
-        case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
-        case debug: cmd = new DebugCmd(this, sDatapath, data); break;
-        default: cmd = new Cmd(this, ecmd, sDatapath, data); break;
+      try {
+        switch(ecmd) {
+          case ifCtrl: case elseCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
+          case call: cmd = new CallCmd(this, sDatapath, data); break;
+          case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
+          case debug: cmd = new DebugCmd(this, sDatapath, data); break;
+          default: cmd = new Cmd(this, ecmd, sDatapath, data); break;
+        }
+      } catch(Exception exc) {
+        throw new IllegalArgumentException("OutTextPreparer " + sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
       }
       cmds.add(cmd);
     } else {
@@ -709,15 +625,28 @@ public class OutTextPreparer
         case elsifCtrl:
         case ifCtrl: {
           IfCmd ifcmd = (IfCmd)cmd;
-          if(  data ==null 
-            || (data instanceof Boolean && ! ((Boolean)data).booleanValue()) 
-            || (data instanceof Number  && ((Number)data).intValue() == 0)) {
-            ixCmd += ifcmd.offsElsif -1;  //if is false, go to <:elsif, <:else or <.if.
+          boolean bIf;
+          if(ifcmd.expr !=null) {
+            try { 
+              CalculatorExpr.Value value = ifcmd.expr.calcDataAccess(null, args.args);
+              bIf = value.booleanValue();
+            } catch(Exception exc) {
+              bIf = false;
+            }
+          } else if (data !=null) { 
+            if( data instanceof Boolean ) { bIf = ((Boolean)data).booleanValue(); }
+            else if( data instanceof Number ) { bIf =  ((Number)data).intValue() != 0; }
+            else { bIf = true; } //other data, !=null is true already. 
           } else {
-            //forward inside if
+            bIf = false;
+          }
+          if( bIf) { //execute if branch
             execSub(wr, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
             ixCmd += ifcmd.offsEndCtrl -1;  //continue after <.if>
             Debugutil.stop();
+          } else {
+            //forward inside if
+            ixCmd += ifcmd.offsElsif -1;  //if is false, go to <:elsif, <:else or <.if.
           }
         } break;
         case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.

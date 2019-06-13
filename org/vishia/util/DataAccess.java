@@ -225,7 +225,15 @@ public class DataAccess {
   static final public String sVersion = "2019-05-30";
 
 
+  /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#vars}. 
+   * Necessary to detect a null reference. In Java Integer can be used too, but that is more explicitly. 
+   */
+  public static class IntegerIx {
+    public int ix;
+    IntegerIx(int value){ ix = value; }
+  }
   
+
   
   /**Interface to convert between data.
    */

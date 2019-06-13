@@ -1,4 +1,4 @@
-2019-06-12 09:36:28  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-06-13 09:25:03  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -268,11 +268,11 @@
 ============================== org/vishia/util/ ====================================================
 2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
-2019-06-12 00:20:01  x     CalculatorExpr.java                      ::        111.861  0123371599 
+2019-06-13 09:23:32  x     CalculatorExpr.java                      ::        123.059 -0632370137 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2019-06-09 21:44:15  x     DataAccess.java                          ::        117.630 -1260299149 
+2019-06-12 13:11:59  x     DataAccess.java                          ::        117.938  0223117483 
 2019-06-02 09:37:17  x     DataShow.java                            ::         29.066 -0525900571 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-01-24 16:42:48  x     Debugutil.java                           ::          1.185 -1596902083 
@@ -306,7 +306,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-06-10 23:51:20  x     OutTextPreparer.java                     ::         30.965 -0621671905 
+2019-06-13 09:00:25  x     OutTextPreparer.java                     ::         28.744 -1115829273 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -362,7 +362,7 @@
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
-2019-06-10 23:53:42  x     Test_OutTextPreparer_CallFor.java        ::          3.773  0419828180 
+2019-06-13 08:49:22  x     Test_OutTextPreparer_CallFor.java        ::          3.871  0339371892 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
 2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
 2019-05-27 10:42:35  x     Test_StringPartScan.java                 ::          1.965  1211010395 

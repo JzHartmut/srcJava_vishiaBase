@@ -10,6 +10,7 @@ import java.util.TreeMap;
 
 
 
+
 /**This class provides a calculator for expressions. The expression is given either as a simple string format
  * or from a {@link org.vishia.zbnf.ZbnfJavaOutput} output from a Zbnf parsing process. 
  * It is converted to the internal format for a stack oriented running model. 
@@ -41,6 +42,14 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-12 Hartmut 
+   *   <ul>
+   *   <li>Refactoring {@link Operand} is used in {@link OutTextPreparer} too, content was part of {@link Operation} before.
+   *   <li>new {@link CalculatorExpr#CalculatorExpr(String, Map)}: Set the expression on construction as line of action.
+   *   <li>new {@link #parseExpr(StringPartScan, String, int)} and {@link #parseCmpExpr(StringPartScan, String, int)}
+   *     to translate full expression possibilities without ZBNF (before it was only used in JZtxtcmd with parsing with ZBNF).
+   *   <li>new {@link Operators#cmpContainsOperation} etc. Syntax operand ?contains 'text'
+   *   </ul>
    * <li>2019-06-11 Hartmut new {@link Data} and {@link #calcDataAccess(Data, Map, Object...)}.
    *   All routines now can run in parallel threads, because the Data are separated.
    * <li>2018-09-23 Hartmut bugfix in {@link Value#toNumValue()}: {@link Value#etype} was not set. 
@@ -132,7 +141,7 @@ public class CalculatorExpr
    * 
    */
   //@SuppressWarnings("hiding")
-  public final static int version = 0x20141214;
+  public final static String version = "2019-06-12";
   
    
   /**It is the data instance for the caluclation.
@@ -187,13 +196,13 @@ public class CalculatorExpr
      */
     ExpressionType etype = startExpr;
     
-    protected long longVal;
-    protected int intVal;
-    protected double doubleVal;
-    protected float floatVal;
-    protected boolean boolVal;
-    protected CharSequence stringVal;
-    protected Object oVal;
+    private long longVal;
+    private int intVal;
+    private double doubleVal;
+    private float floatVal;
+    private boolean boolVal;
+    private CharSequence stringVal;
+    private Object oVal;
     
     public Value(long val){ type_ = 'J'; etype = longExpr; longVal = val; }
     
@@ -1149,6 +1158,69 @@ public class CalculatorExpr
   };
   
    
+  /**Check whether the String in accu contains the String in arg. 
+   * Set the accu to true if the String in the second argument is containing in the String in accu. 
+   * Returns a {@link CalculatorExpr#booleanExpr}.
+   * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
+   */
+  protected static final Operator cmpContainsOperation = new Operator("?contains"){
+    @SuppressWarnings("unchecked")
+    @Override public void operate(Value accu, Value arg) throws Exception {
+      switch(accu.etype.typeChar()){
+        case 't': accu.boolVal = StringFunctions.contains(accu.stringVal, arg.stringVal); break;
+        case 'e': throw (Exception)accu.oVal;
+        default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
+      }
+      accu.type_ = 'Z';
+      accu.etype = booleanExpr;
+    }
+    @Override public boolean isUnary(){ return false; }
+    @Override public boolean isBoolCheck(){ return false; }
+  };
+  
+   
+  /**Check whether the String in accu starts with the String in arg. 
+   * Set the accu to true if the String in the accu starts with the the String in arg. 
+   * Returns a {@link CalculatorExpr#booleanExpr}.
+   * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
+   */
+  protected static final Operator cmpStartsOperation = new Operator("?starts"){
+    @SuppressWarnings("unchecked")
+    @Override public void operate(Value accu, Value arg) throws Exception {
+      switch(accu.etype.typeChar()){
+        case 't': accu.boolVal = StringFunctions.startsWith(accu.stringVal, arg.stringVal); break;
+        case 'e': throw (Exception)accu.oVal;
+        default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
+      }
+      accu.type_ = 'Z';
+      accu.etype = booleanExpr;
+    }
+    @Override public boolean isUnary(){ return false; }
+    @Override public boolean isBoolCheck(){ return false; }
+  };
+  
+   
+  /**Check whether the String in accu ends with the String in arg. 
+   * Set the accu to true if the String in the accu ends with the the String in arg. 
+   * Returns a {@link CalculatorExpr#booleanExpr}.
+   * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
+   */
+  protected static final Operator cmpEndsOperation = new Operator("?ends"){
+    @SuppressWarnings("unchecked")
+    @Override public void operate(Value accu, Value arg) throws Exception {
+      switch(accu.etype.typeChar()){
+        case 't': accu.boolVal = StringFunctions.endsWith(accu.stringVal, arg.stringVal); break;
+        case 'e': throw (Exception)accu.oVal;
+        default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
+      }
+      accu.type_ = 'Z';
+      accu.etype = booleanExpr;
+    }
+    @Override public boolean isUnary(){ return false; }
+    @Override public boolean isBoolCheck(){ return false; }
+  };
+  
+   
   /**Ands the arg with the accu. Converts the argument to boolean if they are not boolean using {@link Value#booleanValue()}. 
    * Returns a {@link CalculatorExpr#booleanExpr}.
    */
@@ -1271,6 +1343,91 @@ public class CalculatorExpr
   } //class Operators
 
 
+
+  
+  public static class Operand {
+    
+    /**Index of the value in the parents {@link OutTextPreparer.DataTextPreparer#args} or -1 if not used.*/
+    public int ixValue;
+    /**Set if the value uses reflection. */
+    public final DataAccess dataAccess;
+    
+    /**Set on construction of {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}
+     * if the value reference is constant, non modified by user data). 
+     * It is especially for call otxXYZ. */
+    public final Object dataConst;
+    
+    /**The String literal or the given sDatapath. */
+    public final String text;
+    
+    
+    /**A ValueAccess without value, only a constant text literal, especially for Text Cmd.
+     * @param text
+     */
+    public Operand(String text) {
+      this.ixValue = -1;
+      this.dataAccess = null;
+      this.dataConst = null;
+      this.text = text;
+    }
+    
+    
+    public Operand(int ixValue, DataAccess dataAccess) {
+      this.ixValue = ixValue;
+      this.dataAccess = dataAccess;
+      this.dataConst = null;
+      this.text = null;
+    }
+    
+    
+    
+    /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
+     * @param outer
+     * @param sDatapath
+     * @param data
+     * @throws Exception 
+     */
+    public Operand(Map<String, DataAccess.IntegerIx> variables, String sDatapath, Object data) throws Exception {
+      this.text = sDatapath;
+      final String sVariable;
+      if(sDatapath !=null){
+        int posep = sDatapath.indexOf('.');
+        if(posep <0) {
+          sVariable = sDatapath;
+        } else {
+          sVariable = sDatapath.substring(0, posep);
+        }
+        DataAccess.IntegerIx ixO = variables.get(sVariable);
+        if(ixO == null) {
+          //The variable is not part of the argument names, it should be able to access via reflection in data:
+          this.dataConst = DataAccess.access(sDatapath, data, true, false, false, null);
+          this.ixValue = -1;
+          this.dataAccess = null;
+        } else {
+          this.dataConst = null;
+          this.ixValue = ixO.ix;
+          if(posep <0) {
+            this.dataAccess = null;
+          } else {
+            this.dataAccess = new DataAccess(sDatapath.substring(posep+1));
+          }
+        }
+      }
+      else { //empty without text and without datapath
+        this.ixValue = -1;
+        this.dataAccess = null;
+        this.dataConst = null;
+      }
+    }
+
+  }
+
+
+  
+  
+  
+  
+  
   /**An Operation in the list of operations. It contains the operator and maybe an operand.
    * <ul>
    * <li>The {@link Operation#operator_} operates with the {@link CalculatorExpr#accu}, the {@link Operation#value}
@@ -1279,25 +1436,25 @@ public class CalculatorExpr
    * <li>The operand may be given as constant value, then it is stored with its type in {@link #value}.
    * <li>The operand may be given as index to the given input variables for expression calculation.
    *   Then {@link #ixVariable} is set >=0
-   * <li>The operand may be referenced in top of stack, then {@link #ixVariable} = {@value #kStackOperand}
+   * <li>The operand may be referenced in top of stack, then {@link #kindOperand} = {@value #kStackOperand}
    * <li>The operand may be gotten from any java object, then {@link #datapath} is set.  
    * </ul>
    */
   public static class Operation
   {
-    /**Designation of {@link Operation#ixVariable} that the operand should be located in the top of stack. */
+    /**Designation of {@link Operation#kindOperand} that the operand should be located in the top of stack. */
     protected static final int kArgumentUndefined = -4; 
      
-    /**Designation of {@link Operation#ixVariable} that the operand should be located in the top of stack. */
+    /**Designation of {@link Operation#kindOperand} that the operand should be located in the top of stack. */
     public static final int kConstant = -1; 
      
-    /**Designation of {@link Operation#ixVariable} that the operand should be located in the top of stack. */
+    /**Designation of {@link Operation#kindOperand} that the operand should be located in the top of stack. */
     public static final int kDatapath = -5; 
      
-    /**Designation of {@link Operation#ixVariable} that the operand should be located in the top of stack. */
+    /**Designation of {@link Operation#kindOperand} that the operand should be located in the top of stack. */
     public static final int kStackOperand = -2; 
      
-    /**Designation of {@link Operation#ixVariable} that the operand is the accumulator for unary operation. */
+    /**Designation of {@link Operation#kindOperand} that the operand is the accumulator for unary operation. */
     public static final int kUnaryOperation = -3; 
     
     private static final int kCheckBoolExpr = -6;
@@ -1324,9 +1481,11 @@ public class CalculatorExpr
     /**Either it is null or the operation has some unary operators (more as one). */
     List<Operator> unaryOperators;
     
+    Operand operand_;
+    
     /**Number of input variable from array or special designation.
      * See {@link #kStackOperand} */
-    protected int ixVariable;
+    protected int kindOperand;
     
     /**A constant value. @deprecated, use value*/
     @Deprecated
@@ -1340,63 +1499,91 @@ public class CalculatorExpr
     protected Value value;
     
     /**Set if the value of the operation should be gotten by data access on calculation time. */
-    protected DataAccess.DataAccessSet datapath;
+    //protected DataAccess.DataAccessSet datapath;
     
     public Operation(){
-      this.ixVariable = kArgumentUndefined;
+      this.kindOperand = kArgumentUndefined;
     }
     
+    /**Create an Operation with a String literal (comparison, starts, concat etc.)
+     * @param op String given operand
+     * @param value String value
+     */
+    public Operation(String op, String value){
+      setOperator(op);
+      this.operand_ = new Operand(value);
+      //this.operator = op;
+      //this.operatorChar = op.name.charAt(0);  //not only for all, therefore deprecated.
+      this.kindOperand = kConstant; 
+      this.value = null;
+    }
+    
+    /**Create an Operation with a given constant value
+     * @param op String given operand
+     * @param value usual numerical
+     */
     public Operation(String op, Value value){
       setOperator(op);
       //this.operator = op;
       //this.operatorChar = op.name.charAt(0);  //not only for all, therefore deprecated.
-      this.ixVariable = this.operator_.isUnary() ? kUnaryOperation : kArgumentUndefined; 
+      this.kindOperand = this.operator_.isUnary() ? kUnaryOperation : kConstant; 
       this.value = value;
     }
     
     public Operation(Operator op, Value value){
       this.operator_ = op;
       this.operatorChar = op.name.charAt(0);  //not only for all, therefore deprecated.
-      this.ixVariable = this.operator_.isUnary() ? kUnaryOperation : kArgumentUndefined; 
+      this.kindOperand = this.operator_.isUnary() ? kUnaryOperation : kArgumentUndefined; 
       this.value = value;
     }
     
-    public Operation(Operator op, int ixVariable){
+    public Operation(Operator op, int kindOperand){
       this.operator_ = op;
       this.operatorChar = op.name.charAt(0);  //not only for all, therefore deprecated.
-      this.ixVariable = ixVariable; 
+      this.kindOperand = kindOperand; 
       if(op.isUnary()){
-        assert(ixVariable == kUnaryOperation);
+        assert(kindOperand == kUnaryOperation);
       }
     }
     
+    /**
+     * @param op
+     * @param ixVariable negative, then it is a kindOperand. Positiv, then index of variable
+     */
     public Operation(String op, int ixVariable){
       setOperator(op);
-      this.ixVariable = ixVariable;
+      if(ixVariable >=0) {
+        operand_ = new Operand(ixVariable, null);
+        this.kindOperand = kDatapath;
+      } else {
+        this.kindOperand = ixVariable;
+      }
     }
     
     Operation(String operation, double value){ 
       this.value_d = value; this.value = new Value(value); 
       this.operator_ = getOperator(operation);
       this.operatorChar = this.operator_.name.charAt(0);
-      this.ixVariable = kConstant; 
+      this.kindOperand = kConstant; 
       this.oValue = null; 
     }
-    //Operation(char operation, int ixVariable){ this.value_d = 0; this.operation = operation; this.ixVariable = ixVariable; this.oValue = null; }
-    //Operation(char operation, Object oValue){ this.value = 0; this.operation = operation; this.ixVariable = -1; this.oValue = oValue; }
+    //Operation(char operation, int kindOperand){ this.value_d = 0; this.operation = operation; this.kindOperand = kindOperand; this.oValue = null; }
+    //Operation(char operation, Object oValue){ this.value = 0; this.operation = operation; this.kindOperand = -1; this.oValue = oValue; }
     Operation(Operator operator, Object oValue){ 
-      this.value_d = 0; this.operator_ = operator; this.operatorChar = operator.name.charAt(0); this.ixVariable = kConstant; this.oValue = oValue; 
+      this.value_d = 0; this.operator_ = operator; this.operatorChar = operator.name.charAt(0); this.kindOperand = kConstant; this.oValue = oValue; 
     }
   
-    
+    public Operand operand() {
+      return operand_; 
+    }
     
     public boolean hasOperator(){ return operator_ !=null; }
     
     public boolean hasUnaryOperator(){ return unaryOperator !=null || unaryOperators !=null; }
     
     public void add_datapathElement(DataAccess.DatapathElement item){ 
-      if(datapath == null){ datapath = new DataAccess.DataAccessSet();}
-      datapath.add_datapathElement(item); 
+      if(operand_ == null) { operand_ = new Operand(-1, new DataAccess.DataAccessSet()); }
+      operand_.dataAccess.add_datapathElement(item); 
     }
     
     public void set_intValue(int val){
@@ -1431,7 +1618,7 @@ public class CalculatorExpr
     }
 
     /**Designates that the operand should be located in the top of stack. */
-    public void setStackOperand(){ ixVariable = kStackOperand; }
+    public void setStackOperand(){ kindOperand = kStackOperand; }
     
     
     
@@ -1472,7 +1659,7 @@ public class CalculatorExpr
       this.operator_ = op;
       this.operatorChar = op.name.charAt(0);
       if(op.isUnary()){
-        ixVariable = kUnaryOperation;
+        kindOperand = kUnaryOperation;
       }
     }
     
@@ -1491,7 +1678,7 @@ public class CalculatorExpr
     
     /**Returns the datapath of this operation or null if the operator is not a datapath.
      */
-    public DataAccess datapath(){ return datapath; }
+    public DataAccess datapath(){ return operand_ == null ? null : operand_.dataAccess; }
     
     @Override public String toString(){ 
       StringBuilder u = new StringBuilder();
@@ -1499,16 +1686,15 @@ public class CalculatorExpr
       if(unaryOperator !=null){ u.append(" ").append(unaryOperator); }
       if(unaryOperators !=null){ u.append(" ").append(unaryOperators); }
       u.append(' ');
-      if(ixVariable >=0) u.append(" arg[").append(ixVariable).append("]");
-      else if(ixVariable == kConstant) u.append(" const ");
-      else if(ixVariable == kStackOperand) u.append(" stack ");
-      else if(ixVariable == kUnaryOperation) u.append(" unary:accu ");
-      else if(ixVariable == kArgumentUndefined) u.append(" arg undef ");
-      else if(ixVariable == kDatapath) u.append(" datapath: ");
-      else if(ixVariable == 0);
-      else u.append(" ?unknown ixVariable=").append(ixVariable);
+      if(operand_ !=null && operand_.ixValue >=0) u.append(" arg[").append(operand_.ixValue).append("]");
+      else if(kindOperand == kConstant) u.append(" const ");
+      else if(kindOperand == kStackOperand) u.append(" stack ");
+      else if(kindOperand == kUnaryOperation) u.append(" unary:accu ");
+      else if(kindOperand == kArgumentUndefined) u.append(" arg undef ");
+      else if(operand_ !=null) u.append(" datapath: ");
+      else u.append(" ?unknown kindOperand=").append(kindOperand);
       
-      if(datapath !=null) u.append(datapath.toString());
+      if(operand_ !=null && operand_.dataAccess !=null) u.append(operand_.dataAccess.toString());
       if (oValue !=null) u.append(" oValue:").append(oValue.toString());
       if (value !=null) u.append(" ").append(value.toString());
       //else u.append(" double:").append(value_d);
@@ -1597,7 +1783,7 @@ public class CalculatorExpr
       
       public SetExpr() { parent = null; ixList = 0; }
       
-      private SetExpr(SetExpr parent) { this.parent = parent; ixList = expr.listOperations.size(); }
+      private SetExpr(SetExpr parent) { this.parent = parent; ixList = expr.listOperations_.size(); }
       
       public CalculatorExpr expr() { return SetExprBase.this.expr; }
       
@@ -1650,7 +1836,7 @@ public class CalculatorExpr
         if(actOperation !=null){ addToOperations(); }
         actOperation = new CalculatorExpr.Operation();
         actOperation.setOperator("!&&");
-        actOperation.ixVariable = Operation.kCheckBoolExpr;
+        actOperation.kindOperand = Operation.kCheckBoolExpr;
         return this;
       }
       
@@ -1660,7 +1846,7 @@ public class CalculatorExpr
         if(actOperation !=null){ addToOperations(); }
         actOperation = new CalculatorExpr.Operation();
         actOperation.setOperator("!||");
-        actOperation.ixVariable = Operation.kCheckBoolExpr;
+        actOperation.kindOperand = Operation.kCheckBoolExpr;
         return this;
       }
       
@@ -1834,8 +2020,8 @@ public class CalculatorExpr
           Debugutil.stop();
         //assert(actOperation ==null);
         if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
-        if(actOperation.datapath == null){ actOperation.datapath = newDataAccessSet();}
-        return actOperation.datapath;
+        if(actOperation.operand_ == null || actOperation.operand_.dataAccess == null){ actOperation.operand_ = new Operand(-1, newDataAccessSet());}
+        return (DataAccess.DataAccessSet)actOperation.operand_.dataAccess;
       } 
       
       public void add_dataAccess(DataAccess.DataAccessSet val){ }
@@ -1845,15 +2031,15 @@ public class CalculatorExpr
        * @return null if the expression is more complex.
        */
       public DataAccess onlyDataAccess(){
-        if((expr.listOperations == null || expr.listOperations.size() ==0)
+        if((expr.listOperations_ == null || expr.listOperations_.size() ==0)
           && actOperation !=null
           && unaryOperators.size() ==0
           && actOperation.unaryOperator == null && actOperation.unaryOperators == null
           && actOperation.value == null
-          && actOperation.datapath !=null
-          //&& actOperation.ixVariable == Operation.kDatapath
+          && actOperation.operand_ !=null && actOperation.operand_.dataAccess !=null
+          //&& actOperation.kindOperand == Operation.kDatapath
         ){ 
-          return actOperation.datapath;
+          return actOperation.operand_.dataAccess;
         } else {
           return null;
         }
@@ -1867,13 +2053,13 @@ public class CalculatorExpr
         if(actOperation !=null){
           addToOperations();
         }
-        int ixEnd = expr.listOperations.size();
+        int ixEnd = expr.listOperations_.size();
         //Mark all checkBool-operations with the end index of this parenthesis block.
         //start on start of parenthesis block, end till current end.
         for(int ix = ixList; ix < ixEnd; ++ix) {
-          Operation op = expr.listOperations.get(ix);
-          if(op.ixVariable == Operation.kCheckBoolExpr) {
-            op.ixVariable = ixEnd;
+          Operation op = expr.listOperations_.get(ix);
+          if(op.kindOperand == Operation.kCheckBoolExpr) {
+            op.kindOperand = ixEnd;
           }
         }
       }
@@ -1924,17 +2110,18 @@ public class CalculatorExpr
    * They will be executed one after another. All calculation rules of prior should be regarded
    * in this order of operations already. It will not be checked here.
    */
-  protected final List<Operation> listOperations = new ArrayList<Operation>();
+  private final List<Operation> listOperations_ = new ArrayList<Operation>();
   
   
-  protected String[] variables;
+  /**All argument variables sorted. */
+  private Map<String, DataAccess.IntegerIx> variables = new TreeMap<String, DataAccess.IntegerIx>();
   
   
   
   
   
   /**Map of all available operators associated with its String expression.
-   * It will be initialized with:
+   * It will be initialized see {@link CalculatorExpr#CalculatorExpr()}
    * <ul>
    * <li>"!set" Set the value to accu, set the accu to the stack.
    * <li>"+" "-" "*" "/" known arithmetic operators
@@ -1943,6 +2130,7 @@ public class CalculatorExpr
    * <li>"ge" "le" "gt" "lt" "eq" "ne" other form of comparators
    * <li>"||" "&&" known logical opeators
    * <li>"instanceof"
+   * <li>"=." ".=." ".=" for Strings
    * </ul>
    * Unary operators:
    * <ul> 
@@ -1986,6 +2174,9 @@ public class CalculatorExpr
       operators.put("eq", Operators.cmpEqOperation);
       operators.put("ne", Operators.cmpNeOperation);
       operators.put("instanceof", Operators.cmpInstanceofOperation);
+      operators.put("=.", Operators.cmpStartsOperation);
+      operators.put(".=", Operators.cmpEndsOperation);
+      operators.put(".=.", Operators.cmpContainsOperation);
       operators.put("!||", Operators.boolCheckOrOperation);
       operators.put("||", Operators.boolOrOperation);
       operators.put("!&&", Operators.boolCheckAndOperation);
@@ -1998,6 +2189,16 @@ public class CalculatorExpr
     }
   }
   
+  
+  
+  /**Constructs an String given expression with some variables.
+   * @param sExpr
+   * @param idxIdentifier
+   */
+  public CalculatorExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier) {
+    this();
+    setExpr(sExpr, idxIdentifier);
+  }
   
   /**Separates a name and the parameter list from a given String.
    * @param expr An expression in form " name (params)"
@@ -2078,6 +2279,24 @@ public class CalculatorExpr
   }
   
   
+  /**Converts the given expression in a stack operable form.
+   * The parsing of sExpr starts with an adding expression.
+   * Its operators are read as multExpression.
+   * @param sExpr String given expression such as "X*(Y-1)+Z"
+   * @param sIdentifier Array of identifiers for variables.
+   * @return null if ok or an error description.
+   */
+  public String setExpr(String sExpr, String[] sIdentifier){
+    Map<String, DataAccess.IntegerIx> idxIdentifier = new TreeMap<String, DataAccess.IntegerIx>();
+    
+    for(int ix = 0; ix < sIdentifier.length; ++ix) {
+      idxIdentifier.put(sIdentifier[ix], new DataAccess.IntegerIx(ix));
+    }
+    return setExpr(sExpr, idxIdentifier);
+  }
+
+
+
   
   /**Converts the given expression in a stack operable form.
    * The parsing of sExpr starts with an adding expression.
@@ -2086,11 +2305,11 @@ public class CalculatorExpr
    * @param sIdentifier List of identifiers for variables.
    * @return null if ok or an error description.
    */
-  public String setExpr(String sExpr, String[] sIdentifier)
+  public String setExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier)
   { listOperations().clear();
-    this.variables = sIdentifier;
+    this.variables = idxIdentifier;
     StringPartScan spExpr = new StringPartScan(sExpr);
-    try{ parseAddExpr(spExpr, "!", 1);  
+    try{ parseExpr(spExpr, "!", 1);  
     } catch(ParseException exc){ return exc.getMessage(); }
     return null;
   }
@@ -2102,14 +2321,90 @@ public class CalculatorExpr
    */
   public String setExpr(String sExpr)
   { listOperations().clear();
-    this.variables = new String[]{"X"};
+    this.variables = new TreeMap<String, DataAccess.IntegerIx>(); 
+    this.variables.put("X", new DataAccess.IntegerIx(0));
     StringPartScan spExpr = new StringPartScan(sExpr);
-    try{ parseAddExpr(spExpr, "!", 1); 
+    try{ parseExpr(spExpr, "!", 1); 
     } catch(ParseException exc){ return exc.getMessage(); }
     return null;
   }
   
 
+  /**The expression is an full (boolean, cmp, numeric) expression.
+   * call recursively for any number of operands.
+   * call {@link #multExpr(StringPartScan, char)} to get the argument values.
+   * @param spExpr
+   * @param operation The first operation. On start operand it is "!" for set.
+   * @return this
+   */
+  protected void parseExpr(StringPartScan spExpr, String startOperation, int recursion)
+  throws ParseException
+  { if(recursion > 1000) throw new RuntimeException("recursion");
+    String op = startOperation;
+    parseCmpExpr(spExpr, op, recursion +1);
+    while(spExpr.scanSkipSpace().length()>0) {
+      char cc = spExpr.getCurrentChar();
+      op = null;
+      if(spExpr.scan("&&").scanOk()) {
+        op = "&&";
+      } else if(spExpr.scan("||").scanOk()) {
+        op = "||";
+      }
+      if(op !=null) {
+        parseCmpExpr(spExpr, op, recursion +1);
+      }
+      else { op = null; } //end of addExpr, maybe on a ")"
+    }//while boolean operation
+  }
+  
+  
+  /**The expression is an compare expression.
+   * call recursively for any number of operands.
+   * call {@link #multExpr(StringPartScan, char)} to get the argument values.
+   * @param spExpr
+   * @param operation The first operation. On start operand it is "!" for set.
+   * @return this
+   */
+  protected void parseCmpExpr(StringPartScan spExpr, String startOperation, int recursion)
+  throws ParseException
+  { if(recursion > 1000) throw new RuntimeException("recursion");
+    String op = startOperation;
+    parseAddExpr(spExpr, op, recursion +1);
+    if(spExpr.scanSkipSpace().length()>0){
+      char cc = spExpr.getCurrentChar();
+      if("=!><?".indexOf(cc)>=0){
+        op = null;
+        if(spExpr.scan("==").scanOk()) {
+          op = "==";
+        } else if(spExpr.scan("!=").scanOk()) {
+          op = "!=";
+        } else if(spExpr.scan(">=").scanOk()) {
+          op = ">=";
+        } else if(spExpr.scan(">").scanOk()) {
+          op = ">";
+        } else if(spExpr.scan("<=").scanOk()) {
+          op = "<=";
+        } else if(spExpr.scan("<").scanOk()) {
+          op = "<";
+        } else if(spExpr.scan("?instanceof").scanOk()) {
+          op = "instanceof";
+        } else if(spExpr.scan("?contains").scanOk()) {
+          op = ".=.";
+        } else if(spExpr.scan("?starts").scanOk()) {
+          op = "=.";
+        } else if(spExpr.scan("?ends").scanOk()) {
+          op = ".=";
+        }
+        if(op !=null) {
+          parseAddExpr(spExpr, op, recursion +1);
+        }
+        //addExpr(spExpr, ""+cc, recursion+1);
+      }
+      else { op = null; } //end of addExpr, maybe on a ")"
+    }//if cmp operation
+  }
+  
+  
   /**The expression is an add or subtract expression.
    * call recursively for any number of operands.
    * call {@link #multExpr(StringPartScan, char)} to get the argument values.
@@ -2189,19 +2484,18 @@ public class CalculatorExpr
     if(spExpr.scanSkipSpace().scan("(").scanOk()){
       parseAddExpr(spExpr, "!", recursion+1);
       if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
-      listOperations.add(new Operation(operation, Operation.kStackOperand));
+      listOperations_.add(new Operation(operation, Operation.kStackOperand));
     } else if(spExpr.scanSkipSpace().scanIdentifier().scanOk()){
-          CharSequence sIdent = spExpr.getLastScannedString();
-      int ix;
-      for(ix = 0; ix< variables.length; ++ix){
-        if(StringFunctions.equals(variables[ix],sIdent)){
-          listOperations.add(new Operation(operation, ix));
-          ix = Integer.MAX_VALUE-1; //break;
-        }
-      }
-      if(ix != Integer.MAX_VALUE){ //variable not found
+      String sIdent = spExpr.getLastScannedString();
+      DataAccess.IntegerIx ixOvar = this.variables.get(sIdent);
+      if(ixOvar == null){ //variable not found
         throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
+      } else  {
+        listOperations_.add(new Operation(operation, ixOvar.ix));
       }
+    } else if(spExpr.scanSkipSpace().scanLiteral("''\\", -1).scanOk()){
+      CharSequence sLiteral = spExpr.getLastScannedString();
+      listOperations_.add(new Operation(operation, StringFunctions.convertTransliteration(sLiteral, '\\').toString()));
     } else if(spExpr.scanSkipSpace().scanInteger().scanOk()) {
       Value value = new Value();
       boolean bNegative = spExpr.getLastScannedIntegerSign();
@@ -2225,7 +2519,7 @@ public class CalculatorExpr
           value.longVal = longvalue; value.type_ = 'J'; value.etype = longExpr;
         }
       }
-      listOperations.add(new Operation(operation, value));
+      listOperations_.add(new Operation(operation, value));
     }
   }
   
@@ -2240,7 +2534,7 @@ public class CalculatorExpr
    * @param operation
    */
   public void addOperation(Operation operation){
-    listOperations.add(operation);
+    listOperations_.add(operation);
   }
   
   
@@ -2248,7 +2542,7 @@ public class CalculatorExpr
   /**Gets the list of operations in return polish notation.
    * Especially a datapath may completed with actual arguments of its called methods.
    */
-  public List<Operation> listOperations(){ return listOperations; }
+  public List<Operation> listOperations(){ return listOperations_; }
   
   
   /**Gets a operator to prepare operations.
@@ -2284,9 +2578,9 @@ public class CalculatorExpr
   @SuppressWarnings("synthetic-access") 
   public float Oldcalc(float input)
   { float val = 0;
-    for(Operation oper: listOperations){
+    for(Operation oper: listOperations_){
       final float val2;
-      if(oper.ixVariable >=0){ val2 = input; }
+      if(oper.operand_ !=null && oper.operand_.ixValue >=0){ val2 = input; }
       else { val2 = (float)oper.value_d; }
       switch(oper.operatorChar){
         case '!': val = val2; break;
@@ -2349,9 +2643,9 @@ public class CalculatorExpr
   @SuppressWarnings("synthetic-access") 
   public float Oldcalc(int input)
   { float val = 0;
-    for(Operation oper: listOperations){
+    for(Operation oper: listOperations_){
       final float val2;
-      if(oper.ixVariable >=0){ val2 = input; }
+      if(oper.operand_ !=null && oper.operand_.ixValue >=0){ val2 = input; }
       else { val2 = (float)oper.value_d; }
       switch(oper.operatorChar){
         case '!': val = val2; break;
@@ -2403,46 +2697,41 @@ public class CalculatorExpr
     Value val2; //Reference to the right side operand
     //ExpressionType type = startExpr;
     int ix = 0;
-    int ixEnd = listOperations.size();
+    int ixEnd = listOperations_.size();
     while(ix < ixEnd){
-      Operation oper = listOperations.get(ix);
+      Operation oper = listOperations_.get(ix);
       ix +=1;
-      /*
-       * Note: this block is not necessary, instead boolCheckAndOperation and boolCheckOrOperation is necessary
-       * because only that works correct if an paranthesisexpression follows.
-       * 
-      if(accu.type == 'Z' && //special for boolean operation: don't evaluate an operand if it is not necessary.
-          ( !accu.boolVal && (  oper.operator == Operators.boolAndOperation  //false remain false on and operation
-                             //|| oper.operator == Operators.boolCheckAndOperation
-                             )
-          || accu.boolVal && oper.operator == Operators.boolOrOperation   //true remain true on or operation
-        ) ){
-        //don't get arguments, no side effect (like in Java, C etc.
-      } else */ 
       {
         //Get the operand either from args or from Operation
-        if(!oper.operator_.isBoolCheck() && oper.ixVariable >=0){ 
-          Object oval2 = args[oper.ixVariable];   //may throw ArrayOutOfBoundsException if less arguments
-          //assert(oval2 !=null);
-          convertObj(val2jar, oval2);
-          val2 = val2jar;
-        }  //an input value
-        else if(oper.ixVariable == Operation.kStackOperand){
-          val2 = data.accu;
-          data.accu = data.stack.pop();              //may throw Exception if the stack is emtpy.
-          //oval2 = null;
+        if(oper.operator_.isBoolCheck()) {
+          Debugutil.stop(); //TODO test
         }
-        else if(oper.datapath !=null){
+        if(oper.operand_ !=null) {
+          Object oval2 = javaVariables;  //maybe start for dataAccess
           try{
-            Object oval2 = oper.datapath.access(javaVariables, true, false);
-            convertObj(val2jar, oval2);
-            val2 = val2jar;
+            if(oper.operand_.ixValue >=0) {
+              oval2 = args[oper.operand_.ixValue];   //may throw ArrayOutOfBoundsException if less arguments
+            } else if(oper.operand_.dataConst !=null) {
+              oval2 = oper.operand_.dataConst;
+            } else if(oper.operand_.text !=null) {
+              oval2 = oper.operand_.text;
+            } 
+            if(oper.operand_.dataAccess !=null) {
+              oval2 = oper.operand_.dataAccess.access(oval2, true, false);
+            }
           } catch(Exception exc){
             //get data does not found data or returns null:
             val2jar.type_ = 'e'; val2jar.oVal = exc;  //throw the exception if the oVal is need not for boolean or instanceof
             val2jar.etype = variableNotFoundExpr;
             val2 = val2jar;
           }
+          convertObj(val2jar, oval2);
+          val2 = val2jar;
+        }  //an input value
+        else if(oper.kindOperand == Operation.kStackOperand){
+          val2 = data.accu;
+          data.accu = data.stack.pop();              //may throw Exception if the stack is emtpy.
+          //oval2 = null;
         }
         else {
           val2 = oper.value;
@@ -2483,7 +2772,7 @@ public class CalculatorExpr
         oper.operator_.operate(data.accu, val2);  //operate, may change the type if the operator forces it.
         //
         if(data.accu.etype == finishBooleanExpr){
-          ix = oper.ixVariable;
+          ix = oper.kindOperand;
           //break;  //break the operation calculation, the result is given for AND or OR expression.
         }
       }
@@ -2507,6 +2796,7 @@ public class CalculatorExpr
     else if(oval2 instanceof Double)      { val2jar.doubleVal = ((Double)oval2).doubleValue(); val2jar.type_ = 'D'; val2jar.etype = doubleExpr; }
     else if(oval2 instanceof Float)       { val2jar.floatVal = ((Float)oval2).floatValue();    val2jar.type_ = 'F'; val2jar.etype = floatExpr; }
     else if(oval2 instanceof StringSeq)   { val2jar.stringVal = (StringSeq)oval2;              val2jar.type_ = 't'; val2jar.etype = stringExpr; }
+    else if(oval2 instanceof CharSequence){ val2jar.stringVal = (CharSequence)oval2;           val2jar.type_ = 't'; val2jar.etype = stringExpr; }
     else                                  {                                                    val2jar.type_ = 'o'; val2jar.etype = objExpr; }
     
   }
