@@ -257,7 +257,7 @@ public class StringPartScan extends StringPart
   { if(bCurrentOk) 
     { beginScanLast = beginScan;
       beginScan =  beginLast = begin;    //the scanOk-position is the begin of maximal part.
-      bStartScan = true;   //set all idxLast... to 0
+      bStartScan = true;   //set all ixLast... to 0
     }
     else           
     { begin = beginLast= beginScan;   //return to the begin

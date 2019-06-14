@@ -89,7 +89,7 @@ public class StringFunctions {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2016-12-02"; 
+  public final static String version = "2019-06-11"; 
   
   
   /** The char used to code end of text. It is defined in ASCII as EOT. 
@@ -282,7 +282,7 @@ public class StringFunctions {
       char cc = src.charAt(ix);
       buffer[ix] = src.charAt(ix);  
     }
-    buffer[ix] = 0;
+    buffer[ix] = '\0';
     return nChars;
   }
   
@@ -872,15 +872,14 @@ public class StringFunctions {
     int end = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to));  //max is negative if to is left from fromIndex
     assert(listStrings.length < 100);  //static size is need
     /** @xxxjava2c=stackInstance.*/
-    @Java4C.StackInstance StringBuffer sFirstCharBuffer = new StringBuffer(100);
-    //Iterator<String> iter = listStrings.iterator();
+    @Java4C.StackInstance 
+    StringBuilder sFirstCharBuffer = new StringBuilder(100);
     boolean acceptToEndOfText = false;
     //while(iter.hasNext())
     /**Compose a String with all first chars, to test whether a current char of src is equal. */
     { int ii = -1;
     while(++ii < listStrings.length)
-    { //String sString = (String)(iter.next());
-      CharSequence sString = listStrings[ii];
+    { CharSequence sString = listStrings[ii];
       if(sString.charAt(0) == cEndOfText)
       { acceptToEndOfText = true;}
       else 
@@ -900,8 +899,7 @@ public class StringFunctions {
          * Test all Strings, the first test is the test of begin char. */
         int ii = -1;
         while(!found && ++ii < listStrings.length)  //NOTE: don't use for(...) because found is a criterium of break.
-        { //String sString = (String)(iter.next());
-          CharSequence sString = listStrings[ii];
+        { CharSequence sString = listStrings[ii];
           int testLen = sString.length();
           if((end - pos) >= testLen 
               && StringFunctions.equals(sq, pos, pos+testLen, sString)

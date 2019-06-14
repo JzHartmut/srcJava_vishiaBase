@@ -116,8 +116,6 @@ import org.vishia.bridgeC.IllegalArgumentExceptionJc;
  * <li>See {@link StringFunctions} for basic operations.  
  * </ul>            
  */
-
-
 public class StringPart implements CharSequence, Comparable<CharSequence>, Closeable
 {
   /**Version, history and license.
@@ -1208,12 +1206,12 @@ do
   }
   if( (bitMode & mSkipOverCommentInsideText_mode) != 0)   
   { if(StringFunctions.compare(content, begin, sCommentStart, 0, sCommentStart.length())==0) 
-    { seek(sCommentEnd, seekEnd);  
+    { seek(sCommentEnd, mSeekEnd);  
     }
   }
   if( (bitMode & mSkipOverCommentToEol_mode) != 0)   
   { if(StringFunctions.compare(content, begin, sCommentToEol, 0, sCommentToEol.length())==0)
-    { seek('\n', seekEnd);  
+    { seek('\n', mSeekEnd);  
     }
   }
 }while(begin != start0);  //:TRICKY: if something is done, repeat all conditions.
@@ -1445,7 +1443,7 @@ that is a liststring and his part The associated String
    * @return this
    */
   @Java4C.Exclude  //name class with const seekEnd
-  public final StringPart seekCheckEnd(CharSequence sSeek){ return seek(sSeek, seekEnd + mSeekCheck); }
+  public final StringPart seekCheckEnd(CharSequence sSeek){ return seek(sSeek, mSeekEnd + mSeekCheck); }
   
   
 
@@ -1888,7 +1886,7 @@ public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest)
 * @param sChars Some chars searched as terminate char for the actual part.
 * @param maxToTest Maximum of chars to test. If the endchar isn't find inside this number of chars,
 *        the actual length is set to 0.
-* @param mode Possible values are {@link #seekBack} or {@link #seekNormal} = 0.       
+* @param mode Possible values are {@link #mSeekBack} or {@link #,seekNormal} = 0.       
 * @return This itself.
 */
 public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest, int mode)
@@ -2655,7 +2653,7 @@ public final String debugString()
    */
   public static CharSequence replace(CharSequence src, CharSequence[] placeholder, CharSequence[] value, StringBuilder dst)
   { final int len = src.length();
-    int ixPos = 0;
+    //int ixPos = 0;
     int nrofToken = placeholder.length;
     if(nrofToken != value.length) {
       throwIllegalArgumentException("token and value should have same size, lesser 20", nrofToken); return src; }

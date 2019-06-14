@@ -863,7 +863,7 @@ public class CalculatorExpr
   {
   
   /**Converts the accu (val) to a boolean. Does not use val2. */
-  protected static final Operator boolOperation = new Operator("bool "){
+  protected static final Operator boolOperation = new Operator("bool"){
     @Override public void operate(Value val, Value val2) {
       val.boolVal = val.booleanValue();
       val.type_ = 'Z';
@@ -875,7 +875,7 @@ public class CalculatorExpr
   
    
   /**Converts the accu (val) to a boolean and negates it. Does not use val2. */
-  protected static final Operator boolNotOperation = new Operator("b!"){
+  protected static final Operator boolNotOperation = new Operator("not"){
     @Override public void operate(Value val, Value value2) {
       val.boolVal = !val.booleanValue();
       val.type_ = 'Z';
@@ -889,7 +889,7 @@ public class CalculatorExpr
   /**Negates all bits from a given integer type value or negates a boolean in the accu. 
    * throws an {@link IllegalArgumentException} "unknown type" if it is a float type vale, String or Object value.
    * Unary operation, does not use value2. */
-  protected static final Operator bitNotOperation = new Operator("~u") 
+  protected static final Operator bitNotOperation = new Operator("bitneg") 
   {
     @Override public void operate(Value accu, Value value2) throws Exception {
       switch(accu.etype.typeChar()){
@@ -912,7 +912,7 @@ public class CalculatorExpr
   /**Negates the accu, unary operation.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator negOperation = new Operator("-u"){
+  protected static final Operator negOperation = new Operator("neg"){
     @Override public void operate(Value accu, Value val2) throws Exception{
       switch(accu.etype.typeChar()){
         case 'B': case 'S': 
@@ -1014,7 +1014,7 @@ public class CalculatorExpr
   /**Compares the arg with the accu. Set the accu to true if accu == arg2 before the operation. Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpEqOperation = new Operator(".cmp."){
+  protected static final Operator cmpEqOperation = new Operator("eq"){
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
         case 'I': accu.boolVal = accu.intVal == arg.intVal; break;
@@ -1038,7 +1038,7 @@ public class CalculatorExpr
   /**Compares the arg with the accu. Set the accu to true if accu != arg2 before the operation. Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpNeOperation = new Operator("!="){
+  protected static final Operator cmpNeOperation = new Operator("ne"){
     @Override public void operate(Value accu, Value arg) throws Exception{
       switch(accu.etype.typeChar()){
         case 'I': accu.boolVal = accu.intVal != arg.intVal; break;
@@ -1062,7 +1062,7 @@ public class CalculatorExpr
   /**Compares the arg with the accu. Set the accu to true if accu < arg2 before the operation. Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpLessThanOperation = new Operator("<"){
+  protected static final Operator cmpLessThanOperation = new Operator("lt"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1087,7 +1087,7 @@ public class CalculatorExpr
   /**Compares the arg with the accu. Set the accu to true if accu >= arg2 before the operation. Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpGreaterEqualOperation = new Operator(">="){
+  protected static final Operator cmpGreaterEqualOperation = new Operator("ge"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1112,7 +1112,7 @@ public class CalculatorExpr
   /**Compares the arg with the accu. Set the accu to true if accu > arg2 before the operation. Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpGreaterThanOperation = new Operator(">"){
+  protected static final Operator cmpGreaterThanOperation = new Operator("gt"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1136,7 +1136,7 @@ public class CalculatorExpr
   /**Compares the arg with the accu. Set the accu to true if accu <= arg2 before the operation. Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpLessEqualOperation = new Operator("<="){
+  protected static final Operator cmpLessEqualOperation = new Operator("le"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1163,7 +1163,7 @@ public class CalculatorExpr
    * Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpContainsOperation = new Operator("?contains"){
+  protected static final Operator cmpContainsOperation = new Operator("contains"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1184,7 +1184,7 @@ public class CalculatorExpr
    * Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpStartsOperation = new Operator("?starts"){
+  protected static final Operator cmpStartsOperation = new Operator("starts"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1205,7 +1205,7 @@ public class CalculatorExpr
    * Returns a {@link CalculatorExpr#booleanExpr}.
    * throws an {@link IllegalArgumentException} "unknown Type" on String or Object types.
    */
-  protected static final Operator cmpEndsOperation = new Operator("?ends"){
+  protected static final Operator cmpEndsOperation = new Operator("ends"){
     @SuppressWarnings("unchecked")
     @Override public void operate(Value accu, Value arg) throws Exception {
       switch(accu.etype.typeChar()){
@@ -1255,7 +1255,7 @@ public class CalculatorExpr
    * respectively a {@link CalculatorExpr#finishBooleanExpr} if the accu is false. In the last case all other And operations
    * cannot change the result, therefore they are not executed.
    */
-  protected static final Operator boolCheckAndOperation = new Operator("!&&"){
+  protected static final Operator boolCheckAndOperation = new Operator("check &&"){
     @Override public void operate(Value accu, Value arg) {
       accu.boolVal = accu.booleanValue();
       accu.type_ = 'Z';
@@ -1271,7 +1271,7 @@ public class CalculatorExpr
    * respectively a {@link CalculatorExpr#finishBooleanExpr} if the accu is true. In the last case all other Or operations
    * cannot change the result, therefore they are not executed.
    */
-  protected static final Operator boolCheckOrOperation = new Operator("!||"){
+  protected static final Operator boolCheckOrOperation = new Operator("check ||"){
     @Override public void operate(Value accu, Value arg) {
       accu.boolVal = accu.booleanValue();
       accu.type_ = 'Z';
@@ -1289,7 +1289,7 @@ public class CalculatorExpr
    * If the arg is one of the Boxing types for the primitives the operate method returns true if the type in the accu
    * matches to that given boxing type though it is given as simple value, not as boxed, too.
    */
-  protected static final Operator cmpInstanceofOperation = new Operator("?instanceof"){
+  protected static final Operator cmpInstanceofOperation = new Operator("instanceof"){
     @Override public void operate(Value accu, Value arg) {
       Object oArg = arg.oVal;
       if(oArg == null || !(oArg instanceof Class<?>)) throw new IllegalArgumentException("\"instanceof\" should compare with a class type instance");
@@ -1317,7 +1317,7 @@ public class CalculatorExpr
   
   
   /**Sets the given value to the accu.*/
-  protected static final Operator setOperation = new Operator("!set"){
+  protected static final Operator setOperation = new Operator("set"){
     @Override public void operate(Value accu, Value arg) {
       accu.type_ = arg.type_;
       accu.etype = arg.etype;
@@ -1418,6 +1418,16 @@ public class CalculatorExpr
         this.dataAccess = null;
         this.dataConst = null;
       }
+    }
+
+    
+    @Override public String toString()
+    { String text1 = text !=null ? "\"" + text + "\" " : "";
+      if(ixValue >=0) return text1 + "[" + ixValue + "]";
+      else if(dataConst !=null) return text1 + dataConst.toString();
+      else if(dataAccess !=null) return text1 + dataAccess.toString();
+      else if(text !=null) return text1;
+      else return "--null--";
     }
 
   }
@@ -1686,12 +1696,13 @@ public class CalculatorExpr
       if(unaryOperator !=null){ u.append(" ").append(unaryOperator); }
       if(unaryOperators !=null){ u.append(" ").append(unaryOperators); }
       u.append(' ');
-      if(operand_ !=null && operand_.ixValue >=0) u.append(" arg[").append(operand_.ixValue).append("]");
+      //if(operand_ !=null && operand_.ixValue >=0) u.append(" arg[").append(operand_.ixValue).append("]");
+      if(operand_ !=null) u.append(operand_.toString());
       else if(kindOperand == kConstant) u.append(" const ");
       else if(kindOperand == kStackOperand) u.append(" stack ");
       else if(kindOperand == kUnaryOperation) u.append(" unary:accu ");
       else if(kindOperand == kArgumentUndefined) u.append(" arg undef ");
-      else if(operand_ !=null) u.append(" datapath: ");
+      //else if(operand_ !=null) u.append(" datapath: ");
       else u.append(" ?unknown kindOperand=").append(kindOperand);
       
       if(operand_ !=null && operand_.dataAccess !=null) u.append(operand_.dataAccess.toString());
@@ -2306,7 +2317,7 @@ public class CalculatorExpr
    * @return null if ok or an error description.
    */
   public String setExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier)
-  { listOperations().clear();
+  { listOperations_.clear();
     this.variables = idxIdentifier;
     StringPartScan spExpr = new StringPartScan(sExpr);
     try{ parseExpr(spExpr, "!", 1);  
@@ -2320,7 +2331,7 @@ public class CalculatorExpr
    * @see #setExpr(String, String[])
    */
   public String setExpr(String sExpr)
-  { listOperations().clear();
+  { listOperations_.clear();
     this.variables = new TreeMap<String, DataAccess.IntegerIx>(); 
     this.variables.put("X", new DataAccess.IntegerIx(0));
     StringPartScan spExpr = new StringPartScan(sExpr);
@@ -2704,7 +2715,7 @@ public class CalculatorExpr
       {
         //Get the operand either from args or from Operation
         if(oper.operator_.isBoolCheck()) {
-          Debugutil.stop(); //TODO test
+          debug(); //TODO test
         }
         if(oper.operand_ !=null) {
           Object oval2 = javaVariables;  //maybe start for dataAccess
@@ -2782,6 +2793,10 @@ public class CalculatorExpr
   
   
   
+  
+  @Override public String toString() { return listOperations_.toString(); }
+  
+  
   static void convertObj(Value val2jar, Object oval2)
   {
     //Convert a Object-wrapped value into its real representation.
@@ -2802,7 +2817,12 @@ public class CalculatorExpr
   }
   
   
-  
+
+  int debug() {
+    return 0;  //to set a debug break here.
+  }
+
+
   
   
 }

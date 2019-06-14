@@ -68,11 +68,17 @@ public class OutTextPreparer
     /**The associated const data for OutText preparation. */
     final OutTextPreparer prep;
     
-    /**Array of all arguments. */
+    /**Array of all arguments. It is sorted to the {@link OutTextPreparer#vars} with its value {@link DataAccess.IntegerIx}. 
+     * Its size is {@link OutTextPreparer#ctVar}, the size of vars. 
+     */
     Object[] args;
     
     /**Any &lt;call in the pattern get the data for the called OutTextPreparer, but only ones, reused. */
     DataTextPreparer[] argSub;
+    
+    /**Set on first usage. */
+    CalculatorExpr.Data calcExprData;
+    
     
     public String debugOtx;
     
@@ -663,8 +669,9 @@ public class OutTextPreparer
   private int execIf(Appendable wr, IfCmd ifcmd, int ixCmd, Object data, DataTextPreparer args) throws IOException {
     boolean bIf;
     if(ifcmd.expr !=null) {
+      if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
       try { 
-        CalculatorExpr.Value value = ifcmd.expr.calcDataAccess(null, args.args);
+        CalculatorExpr.Value value = ifcmd.expr.calcDataAccess(args.calcExprData, null, args.args);
         bIf = value.booleanValue();
       } catch(Exception exc) {
         bIf = false;
