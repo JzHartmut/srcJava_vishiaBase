@@ -312,10 +312,15 @@ public class OutTextPreparer
   }
   
   
+  /**Parse the pattern. This routine will be called only from the constructor.
+   * @param ident data instance to get data in the construction phase via reflection. 
+   *   It is used for identifier in the pattern which is not found in the variables (parameter 'variables' of ctor).
+   *   It can be null.
+   */ 
   private void parse(String pattern, Object data) {
     int pos0 = 0; //start of current position after special cmd
     int pos1 = 0; //end before the next special command
-    int[] ixCtrlCmd = new int[10];  //max. 10 levels for nested things.
+    int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
     int ixixCmd = -1;
     StringPartScan sp = new StringPartScan(pattern);
     sp.setIgnoreWhitespaces(true);
@@ -324,8 +329,7 @@ public class OutTextPreparer
       if(sp.found()) {
         
         pos1 = (int)sp.getCurrentPosition() -1; //before <
-        //sp.fromEnd().seek("<").scan().scanStart();
-        sp.scan().scanStart();
+        sp.scanStart();
         //if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
         if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
           final String sDatapath = sp.getLastScannedString();
@@ -473,15 +477,26 @@ public class OutTextPreparer
   
   private void parseCall(final String src, final int pos0, final int pos1, final StringPartScan sp, Object data) {
     String sCallVar = sp.getLastScannedString();
+    if(sCallVar.equals("otxIfColors"))
+      debug();
     CallCmd cmd = (CallCmd)addCmd(src, pos0, pos1, ECmd.call, sCallVar, data);
     OutTextPreparer call = null;
-    if(cmd.dataConst !=null) {
-      if(!(cmd.dataConst instanceof OutTextPreparer)) {
+    if(cmd.dataConst !=null) { //given as const static:
+      if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
         throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + " is const but not a OutTextPreparer");
+      } else { //call variable should be given dynamically:
+        if(!this.vars.containsKey(sCallVar)) {
+          String sError = "OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ": not given as argument";
+          if(data != null) {
+            sError += " and not found staticly in " + data.toString();
+          } else {
+            sError += "Hint: no staticly data given in first argument of ctor.";
+          } 
+          throw new IllegalArgumentException(sError);
+        }
       }
       call = (OutTextPreparer)cmd.dataConst;
     }
-    
     if(sp.scan(":").scanOk()) {
       do {
         cmd.ixDataArg = this.ctCall;
@@ -640,8 +655,11 @@ public class OutTextPreparer
           ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
         } break;
         case call: 
+          if(data == null) {
+            wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ": variable not found, not given??>");
+          }
           if(!(data instanceof OutTextPreparer)) {
-            wr.append("<?? OutTextPreparer script " + sIdent + "<call: variable is not an OutTextPreparer ??>");
+            wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ":  variable is not an OutTextPreparer ??>");
           } else {
             execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data);
           } 

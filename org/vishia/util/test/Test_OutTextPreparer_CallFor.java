@@ -31,29 +31,41 @@ public class Test_OutTextPreparer_CallFor
 
   } //class DataColor
 
-  /**Composition class. */
+  /**The user class, as example here. */
   DataColor dataColor = new DataColor();
 
-  /**It is an output String pattern which is called. See otxCall. 
-   * It uses a variable 'colors' which may be supplied as argument. 
+  /**Output text patten to show the color list.  
+   * It uses a variable 'colors'.
+   * The value for 'colors' should be an container, the content of the items are shown.
+   * This out text pattern is called inside another pattern in this example, see otxCall. 
    */
-  static final OutTextPreparer otxListColors = new OutTextPreparer("otxListColors" 
+  static final OutTextPreparer otxListColors = new OutTextPreparer("otxListColors"
   , null            //no static data on construction
   , "colors, text"  //arguments need and used
-  , "Colors: <:for:color:colors><&color><:if:color_next>, <.if><.for>");  //The pattern.
+  , "<&text>: <:for:color:colors><&color><:if:color_next>, <.if><.for>");  //The pattern.
 
 
+  /**Output text patten to show special texts for each colors with an if-chain.  
+   * It uses a variable 'color' which should be supplied as String value 
+   * This out text pattern is called inside another pattern in this example, see otxListIfColors. 
+   */
   static final OutTextPreparer otxIfColors = new OutTextPreparer("otxIfColors" 
   , null            //no static data on construction
-  , "colors, text"  //arguments need and used
-  , "Colors: <:for:color:colors>"
-  + "<:if:color == 'white'>wh"
+  , "color"         //arguments need and used
+  , "<:if:color == 'white'>wh"  //The pattern: example for a if-chain
   + "<:elsif:color == 'yellow'>ye"
   + "<:elsif:color ?starts 'gr'>green or gray"
   + "<:elsif:color ?ends 'ck'>black"
   + "<:elsif:color ?contains 'a'>a-type-<&color>"
-  + "<:else>unknown<.if>"
-  + "<:if:color_next>, <.if><.for>");  //The pattern.
+  + "<:else>unknown<.if>");
+
+  /**Output text pattern to organize the color output with the otxIfColors-sub-pattern.
+   */
+  static final OutTextPreparer otxListIfColors = new OutTextPreparer("otxListIfColors" 
+  , Test_OutTextPreparer_CallFor.class            //no static data on construction
+  , "colors, text"  //arguments need and used
+  , "<&text>: <:for:color:colors><:call:otxIfColors:color=color><:if:color_next>, <.if><.for>");  //The pattern.
+
 
 
   /**It is the used output String pattern containing two calls of otxListColors. 
@@ -63,24 +75,24 @@ public class Test_OutTextPreparer_CallFor
   , Test_OutTextPreparer_CallFor.class
   , "dataColor, text1"    //arguments need and used.
   , "Text: <&text1> \n"   //The pattern.
-  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='testtext'> END\n"
-  + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2 > END\n"
-  + "Test Call colors1: <:call:otxIfColors: colors = dataColor.colors1, text='testtext'> END\n"
-  + "Test Call colors1: <:call:otxIfColors: colors = dataColor.colors2, text='testtext'> END\n"
+  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1 ,text='Colors-1'> END\n"
+  + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2, text='Colors-2' > END\n"
+  + "Test Call colors1: <:call:otxListIfColors: colors = dataColor.colors1, text='Colors-1a'> END\n"
+  + "Test Call colors1: <:call:otxListIfColors: colors = dataColor.colors2, text='Colors-2a'> END\n"
   );
 
-  /**To compare the test result. */
+  /**To compare the test result. This text will be produced. */
   static String resultExpected = 
     "Text: any test text \n" 
-  + "Test Call colors1: Colors: white, yellow, red, blue, green END\n"
-  + "Test Call colors2: Colors: cyan, magenta, gray, black END\n"
-  + "Test Call colors1: Colors: wh, ye, unknown, unknown, green or gray END\n"
-  + "Test Call colors1: Colors: a-type-cyan, a-type-magenta, green or gray, black END\n";
+  + "Test Call colors1: Colors-1: white, yellow, red, blue, green END\n"
+  + "Test Call colors2: Colors-2: cyan, magenta, gray, black END\n"
+  + "Test Call colors1: Colors-1a: wh, ye, unknown, unknown, green or gray END\n"
+  + "Test Call colors1: Colors-2a: a-type-cyan, a-type-magenta, green or gray, black END\n";
   
   
   
   
-  /**Ctor sets all data in this example. */
+  /**Ctor empty. */
   Test_OutTextPreparer_CallFor() {
   }
 
@@ -100,8 +112,8 @@ public class Test_OutTextPreparer_CallFor
   void testCall() throws IOException {
     StringBuilder sb = new StringBuilder(1000);
     OutTextPreparer.DataTextPreparer vars = otxCall.getArgumentData();
-    //vars.debugIxCmd = 6;
-    //vars.debugOtx = "otxIfColors";
+    //vars.debugOtx = "otxIfColors";   //possibility to set a break point on a special command in the given script.
+    //vars.debugIxCmd = 6;             //see usage for this variables. set debugIxCmd = 0 to stop in first cmd to view the this.cmd
     vars.setArgument("dataColor", dataColor);        //The data class for access.
     vars.setArgument("text1", "any test text");
     otxCall.exec(sb, vars);
@@ -117,6 +129,9 @@ public class Test_OutTextPreparer_CallFor
   public static void test(String[] args) {
     //DataAccess.debugIdent = "dataColor";  //possibility to set a data depending debug break
     try {
+      //The creation of the test instance may cause errors if the OutTextPreparer construction
+      //fails because errors in the pattern. It is reported in C# in the calling level of this routine already 
+      //because the calling of this static routine has load and created the type already.
       Test_OutTextPreparer_CallFor test = new Test_OutTextPreparer_CallFor();
       test.testCall();
     } catch (Exception e) {
