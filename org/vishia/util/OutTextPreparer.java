@@ -193,7 +193,7 @@ public class OutTextPreparer
     
     /**The expression for a comparison. It is null if only a null check of the first argument should be done.
      * For comparison with a constant text, the constant text is contained in expr */
-    CalculatorExpr expr;
+    //CalculatorExpr expr;
     
     /**One of character from "=!enc" for equal, non equal, starts, ends, contains or '\0' for non compare. */
     //char cmp;
@@ -333,16 +333,19 @@ public class OutTextPreparer
         //if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
         if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
           final String sDatapath = sp.getLastScannedString();
+          //====>
           addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, data);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          //====>
           parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, data);
           ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current if
           pos0 = (int)sp.getCurrentPosition();  //after '>'
           
         }
         else if(sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          //====>
           parseIf( pattern, pos0, pos1, ECmd.elsifCtrl, sp, data);
           Cmd ifCmdLast;
           int ixixIfCmd = ixixCmd; 
@@ -359,6 +362,7 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":else>").scanOk()) {
+          //====>
           addCmd(pattern, pos0, pos1, ECmd.elseCtrl, null, null);
           Cmd ifCmd;
           int ixixIfCmd = ixixCmd; 
@@ -377,6 +381,7 @@ public class OutTextPreparer
         else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
+          //====>
           ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, data);
           DataAccess.IntegerIx ixOentry = vars.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
@@ -395,12 +400,14 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":call:").scanIdentifier().scanOk()) {
+          //====>
           parseCall(pattern, pos0, pos1, sp, data);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String cmpString = sp.getLastScannedString().toString();
           String debugVar = sp.getLastScannedString().toString();
+          //====>
           DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, debugVar, data);
           cmd.cmpString = cmpString;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -450,6 +457,9 @@ public class OutTextPreparer
         sp.fromEnd();  //length is null then.
       }
     } //while
+    if(ixixCmd != -1) {
+      throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": closing <.if> or <.for> is missing ");
+    }
     sp.close();
   }
 
@@ -458,17 +468,19 @@ public class OutTextPreparer
   
   private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp, Object data) {
     String cond = sp.getLastScannedString().toString();
-    CalculatorExpr expr = new CalculatorExpr(cond, vars);
-    
-    List<CalculatorExpr.Operation> exprOper = expr.listOperations();
-    CalculatorExpr.Operand exprOperand;
+    //====>
+//    CalculatorExpr expr = new CalculatorExpr(cond, vars);
+//    
+//    List<CalculatorExpr.Operation> exprOper = expr.listOperations();
+//    CalculatorExpr.Operand exprOperand;
     IfCmd ifcmd;
-    if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
+    //if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
       ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, cond, data);
-    } else {
-      ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, null, null);
-      ifcmd.expr = expr;
-    }
+//    } else {
+//      ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, null, null);
+//      ifcmd.expr = expr;
+//      ifcmd.text = cond; //only to view in debug
+//    }
     ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
     
   }
@@ -626,49 +638,69 @@ public class OutTextPreparer
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
         debug();
       Cmd cmd = cmds.get(ixCmd++);
+      boolean bDataOk = true;
       Object data;
-      if(cmd.ixValue >=0) {
+      if(cmd.expr !=null) {
+        try { 
+          //====>
+          if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
+          data = cmd.expr.calcDataAccess(args.calcExprData, null, args.args); 
+        } catch (Exception e) {
+          bDataOk = false;
+          data = null;
+          wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.text + " execution error: " + e.getMessage() + "??>");
+        }
+      }
+      else if(cmd.ixValue >=0) {
         data = args.args[cmd.ixValue];
         if(cmd.dataAccess !=null) {
           try {
+            //====>
             data = cmd.dataAccess.access(data, true, false);
           } catch (Exception e) {
+            bDataOk = false;
             wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.text + " not found or access error: " + e.getMessage() + "??>");
           }
         }
       } else { 
         data = cmd.dataConst;  //may be given or null 
       }
-      switch(cmd.cmd) {
-        case addString: wr.append(cmd.text); break;
-        case addVar: {
-          //Integer ixVar = vars.get(cmd.str);
-          wr.append(data.toString());
-        } break;
-        case elsifCtrl:
-        case ifCtrl: {
-          ixCmd = execIf(wr, (IfCmd)cmd, ixCmd, data, args);
-        } break;
-        case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
-        case forCtrl: {
-          execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
-          ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
-        } break;
-        case call: 
-          if(data == null) {
-            wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ": variable not found, not given??>");
-          }
-          if(!(data instanceof OutTextPreparer)) {
-            wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ":  variable is not an OutTextPreparer ??>");
-          } else {
-            execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data);
-          } 
-          break;
-        case debug: {
-          if(data.toString().equals(((DebugCmd)cmd).cmpString)){
-            debug();
-          }
-        } break;
+      if(bDataOk) {
+        switch(cmd.cmd) {
+          case addString: wr.append(cmd.text); break;
+          case addVar: {
+            //Integer ixVar = vars.get(cmd.str);
+            wr.append(data.toString());
+          } break;
+          case elsifCtrl:
+          case ifCtrl: {
+            ixCmd = execIf(wr, (IfCmd)cmd, ixCmd, data, args);
+          } break;
+          case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
+          case forCtrl: {
+            execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
+            ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
+          } break;
+          case call: 
+            if(data == null) {
+              wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ": variable not found, not given??>");
+            }
+            if(!(data instanceof OutTextPreparer)) {
+              wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ":  variable is not an OutTextPreparer ??>");
+            } else {
+              execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data);
+            } 
+            break;
+          case debug: {
+            if(data.toString().equals(((DebugCmd)cmd).cmpString)){
+              debug();
+            }
+          } break;
+        }
+      } else { //data error
+        if(cmd.offsEndCtrl >0) {
+          ixCmd += cmd.offsEndCtrl +1;
+        }
       }
     }
   }
@@ -686,16 +718,9 @@ public class OutTextPreparer
    */
   private int execIf(Appendable wr, IfCmd ifcmd, int ixCmd, Object data, DataTextPreparer args) throws IOException {
     boolean bIf;
-    if(ifcmd.expr !=null) {
-      if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
-      try { 
-        CalculatorExpr.Value value = ifcmd.expr.calcDataAccess(args.calcExprData, null, args.args);
-        bIf = value.booleanValue();
-      } catch(Exception exc) {
-        bIf = false;
-      }
-    } else if (data !=null) { 
-      if( data instanceof Boolean ) { bIf = ((Boolean)data).booleanValue(); }
+    if (data !=null) { 
+      if( data instanceof CalculatorExpr.Value) { bIf = ((CalculatorExpr.Value)data).booleanValue(); }
+      else if( data instanceof Boolean ) { bIf = ((Boolean)data).booleanValue(); }
       else if( data instanceof Number ) { bIf =  ((Number)data).intValue() != 0; }
       else { bIf = true; } //other data, !=null is true already. 
     } else {

@@ -1171,7 +1171,8 @@ public final StringPart seekNoWhitespace()
 /** skip over comment and whitespaces
 */
 
-/**@deprecated see {@link seekNoWhitespaceOrComments()}
+/**See {@link #setIgnoreWhitespaces(boolean)}, {@link #setIgnoreComment(boolean)}
+ * @deprecated see {@link seekNoWhitespaceOrComments()}
 *  @java2c=return-this.
 * 
 */ 

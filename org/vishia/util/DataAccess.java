@@ -22,7 +22,6 @@ import org.vishia.util.TreeNodeBase;
 
 
 
-
 /**This class contains methods to access and set data and invoke methods with symbolic access using reflection mechanism.
  * The class is helpful to deal with reflection. Some methods are offered to make it simply. This class is independent
  * of other classes else {@link Assert} and {@link TreeNodeBase}. The last one is checked whether it is used as container.
@@ -87,6 +86,8 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-18 Hartmut new ctor: {@link #DataAccess(StringPartScan, char)} and {@link DatapathElement#set(StringPartScan)} used in parsing pattern in {@link CalculatorExpr}.
+   * <li>2019-06-18 Hartmut new ctor: {@link DatapathElement#argExpr} to calculate more complex arguments with given expression outside JZtxtcmd
    * <li>2019-05-30 Hartmut gardening for C#-translation: The {@link Conversion#key()} may be a better documentation for the conversion classes. It is experience, not used yet.
    * <li>2018-12-18 Hartmut improve: rename {@link DatapathElement#operation_}, private and setter and getter. The JzTxtCmd invokes the set_operation() without changes.
    *     It is set now on any operation. Used via {@link DatapathElement#isOperation()} in the {@link org.vishia.xmlReader.XmlZzReader}
@@ -222,7 +223,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2019-05-30";
+  static final public String sVersion = "2019-06-18";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#vars}. 
@@ -562,6 +563,34 @@ public class DataAccess {
     if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
       element.whatisit = cTypeNewVariable;  //from the last element.
     }
+  }
+  
+  
+  
+  
+  /**Creates a Datapath with given StringPartScan.
+   * The first character of an element determines the type, see {@link DatapathElement#set(String)}.
+   * <ul>
+   * <li>If the path does not start with $+%! then it is separated in path elements, the separator is the dot.
+   * <li>If the path starts with $ it is an access to an environment variable.
+   * <li>+ new
+   * <li>% ! static method.
+   * <li>
+   * </ul> 
+   * For example for a simple local variable in the datapool write "@name".
+   * @param path
+   * @param cTypeNewVariable if A...Z then the last element will be designated with it.
+   *   Then a new variable should be created in the parent's container with the access.
+   */
+  public DataAccess(StringPartScan sp, char cTypeNewVariable){
+    this.datapath = new ArrayList<DatapathElement>();
+    do {
+      DatapathElement element = new DatapathElement(sp);
+      if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
+        element.whatisit = cTypeNewVariable;  //from the last element.
+      }
+      datapath.add(element);
+    } while(sp.scan(".").scanOk());
   }
   
   
@@ -947,10 +976,10 @@ public class DataAccess {
     Object data1 = dataRoot;  //the currently instance of each element.
     while(element !=null){
       //has a next element
-      //
       if(debugIdent !=null && element.ident !=null && element.ident.equals(debugIdent)){
         debug();
       }
+      //====>
       data1 = access(element, data1, accessPrivate, bContainer, bVariable, dst);
       element = iter.hasNext() ? iter.next() : null;
     }//while
@@ -1066,11 +1095,11 @@ public class DataAccess {
           }
         }
       }//default
-      if(element.indices !=null) {
-        data1 = getArrayElement(data1, element.indices);
-      }
 
     }//switch
+    if(element.indices !=null) { //since 2019-06: check indices on any access, not only default
+      data1 = getArrayElement(data1, element.indices);
+    }
     return data1;
   } 
   
@@ -2362,6 +2391,20 @@ public class DataAccess {
   /**Class holds one element for access to data.
    * Instances of this class can be created using {@link org.vishia.zbnf.ZbnfJavaOutput} to fill from a parse result.
    * Therefore some methods have a special naming which matches to the semantic of the used parser script.
+   * <br><br>
+   * <b>Meaning and using of the {@link #fnArgs} and {@link #indices}:</b><br>
+   * Both should be set before {@link DataAccess#access(Object, boolean, boolean)} 
+   * or {@link DataAccess#access(DatapathElement, Object, boolean, boolean, boolean, Dst)} is called. 
+   * The calculation of the arguments and indices should be done outside of the class before usage with adequate operations.
+   * To set the results {@link #setActualArgumentArray(Object[])} or {@link #setActualArguments(Object...)} should be used.
+   * <br><br>
+   * {@link #set(String)}: Textual parsing of the path. Its capability was enhanced in 2019-06: Before, the usage of DataAccess 
+   * was usually related to the ZBNF parser and the {@link org.vishia.jztxtcmd.JZtxtcmd}, which uses 
+   * the derived class {@link SetDatapathElement} and the {@link #set_ident(String)} etc. from the parse result.
+   * The other possibility, set the path immediately only from a given text, was necessary with the {@link OutTextPreparer}
+   * and it may be proper from user level. That possibility supports only simple argument names stored in {@link #argNames}, 
+   * String literal arguments stored immediately in {@link #fnArgs} and numeric literal indices stored in {@link #indices}    
+   * 
    */
   public static class DatapathElement
   {
@@ -2405,6 +2448,9 @@ public class DataAccess {
      */
     private String[] argNames;
     
+    /**If !=null and the elements are !=null, the expression should be used to calculate the argument. @since 2019-06-18*/
+    private CalculatorExpr[] argExpr;
+    
     int[] indices;
     
     /**true then an operation call, false: a variable access. @since 2018-08*/
@@ -2419,6 +2465,14 @@ public class DataAccess {
      * @param name see {@link #set(String)}
      */
     public DatapathElement(String path){
+      set(path);
+    }
+    
+    
+    /**Creates a datapath element.
+     * @param name see {@link #set(String)}
+     */
+    public DatapathElement(StringPartScan path){
       set(path);
     }
     
@@ -2456,9 +2510,8 @@ public class DataAccess {
         whatisit = '.';
         posNameStart = 0;
       }
-      int posNameEnd = path.indexOf('(');
-      if(posNameEnd != -1){
-        //Function
+      int posNameEnd;
+      if((posNameEnd = path.indexOf('(')) != -1) { //Function
         whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
         this.operation_ = true;
         int posSep = posNameEnd;
@@ -2481,10 +2534,118 @@ public class DataAccess {
           argNames = new String[args.size()];
           args.toArray(argNames);
         }
+      } else if((posNameEnd = path.indexOf('[')) != -1) { //Index for element
+        List<Object> lIndices = new LinkedList<Object>();
+        CalculatorExpr exprIndex = new CalculatorExpr();
+        StringPartScan sp = new StringPartScan(path);
+        sp.seekPos(posNameEnd +1);
+        sp.setIgnoreWhitespaces(true);
+        sp.scanStart();
+        boolean bArgExpr = false;
+        do {
+          exprIndex.setExpr(sp);
+          CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
+          if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
+            lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
+          } else {
+            bArgExpr = true;
+            lIndices.add(exprIndex);
+            exprIndex = new CalculatorExpr();
+          }
+        } while(sp.scan(",").scanOk());
+        this.indices = new int[lIndices.size()];
+        if(bArgExpr) {
+          this.argExpr = new CalculatorExpr[lIndices.size()];
+        }
+        int ixix = 0;
+        for(Object ix: lIndices) { 
+          if(ix instanceof Integer) { this.indices[+ixix] = (Integer)ix; }
+          else {
+            this.indices[ixix] = -1;
+            this.argExpr[ixix] = (CalculatorExpr)ix;
+          }
+          ixix +=1;
+        } //for
+        Debugutil.stop();
       } else {
         posNameEnd = path.length();
       }
       this.ident = path.substring(posNameStart, posNameEnd);
+    }
+
+    
+    /**Creates a datapath element, for general purpose.
+     * <ul>
+     * <li>If the sp starts with the following special chars "$@%+", it is an element with that {@link #whatisit}.
+     * <li>if the sp contains a <code>operation(arg, ...)</code> then it is marked as Operation call. The args are yet only names,
+     * TODO it should be expression (including constants etc.).
+     * <li>If the sp contains <code>array[indices]</code> the index values are parsed with {@link CalculatorExpr#setExpr(StringPartScan)}.
+     *   Usual they are only integer literal constants, then the value is stored immediately.  
+     * </ul>
+     * @param path 
+     */
+    public void set(StringPartScan sp){
+      char cStart = sp.getCurrentChar();
+      if("$@+%".indexOf(cStart) >=0){
+        whatisit = cStart;
+        sp.seekPos(1);
+      } else {
+        whatisit = '.';
+      }
+      if(!sp.scanStart().scanIdentifier().scanOk()) {
+        throw new IllegalArgumentException("idenfifier expected instead: " + sp.getCurrent(32));
+      }
+      this.ident = sp.getLastScannedString();
+      if(sp.scan("(").scanOk()) { //Function
+        whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
+        this.operation_ = true;
+        List<String> args = null;
+        char cc;
+        do {
+          sp.lentoAnyChar(",)");
+          if(sp.length() > 0) {
+            String arg = sp.getCurrent().toString().trim();
+            if(args == null) { args = new LinkedList<String>(); }
+            args.add(arg);
+          }
+          cc = sp.fromEnd().getCurrentChar();
+          sp.seekPos(1);
+        } while(cc == ',');
+        if(args !=null) {
+          argNames = new String[args.size()];
+          args.toArray(argNames);
+        }
+      } else if(sp.scan("[").scanOk()) { //Index for element
+        List<Object> lIndices = new LinkedList<Object>();
+        CalculatorExpr exprIndex = new CalculatorExpr();
+        sp.scanStart();
+        boolean bArgExpr = false;
+        do {
+          exprIndex.setExpr(sp);
+          CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
+          if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
+            lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
+          } else {
+            bArgExpr = true;
+            lIndices.add(exprIndex);
+            exprIndex = new CalculatorExpr();
+          }
+        } while(sp.scan(",").scanOk());
+        this.indices = new int[lIndices.size()];
+        if(bArgExpr) {
+          this.argExpr = new CalculatorExpr[lIndices.size()];
+        }
+        int ixix = 0;
+        for(Object ix: lIndices) { 
+          if(ix instanceof Integer) { this.indices[+ixix] = (Integer)ix; }
+          else {
+            this.indices[ixix] = -1;
+            this.argExpr[ixix] = (CalculatorExpr)ix;
+          }
+          ixix +=1;
+        } //for
+        Debugutil.stop();
+      }
     }
 
     
