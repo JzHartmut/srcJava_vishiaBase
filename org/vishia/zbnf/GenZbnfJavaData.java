@@ -138,7 +138,7 @@ public class GenZbnfJavaData
   
   
   /**Text for Java header. */
-  private final OutTextPreparer sJavaHead = new OutTextPreparer("sJavaHead", this, "pkgpath, javaclass", 
+  private final OutTextPreparer sJavaHead = new OutTextPreparer("sJavaHead", null, "pkgpath, javaclass", 
       "package <&pkgpath>;\n"
     + "\n"
     + "import java.util.ArrayList;\n"
@@ -149,7 +149,7 @@ public class GenZbnfJavaData
     + "\n");
   
   /**Text for Java header for Zbnf writer class. */
-  private final OutTextPreparer sJavaHeadZbnf = new OutTextPreparer("sJavaHeadZbnf", this, "pkgpath, javaclass", 
+  private final OutTextPreparer sJavaHeadZbnf = new OutTextPreparer("sJavaHeadZbnf", null, "pkgpath, javaclass", 
       "package <&pkgpath>;\n"
     + "\n"
     + "import java.util.ArrayList;\n"
@@ -161,7 +161,7 @@ public class GenZbnfJavaData
     + "\n");
   
   /**Text for class header for syntax component data storing. */
-  private final OutTextPreparer sJavaCmpnClass = new OutTextPreparer( "sJavaCmpnClass", this, "cmpnclass, dataclass",
+  private final OutTextPreparer sJavaCmpnClass = new OutTextPreparer( "sJavaCmpnClass", null, "cmpnclass, dataclass",
       "\n"
     + "\n"
     + "\n"
@@ -170,7 +170,7 @@ public class GenZbnfJavaData
     + "  \n");
   
   /**Text for class header for syntax component to write from zbnf. */
-  private final OutTextPreparer sJavaCmpnClassZbnf = new OutTextPreparer( "sJavaCmpnClassZbnf", this, "cmpnclass, dataclass",
+  private final OutTextPreparer sJavaCmpnClassZbnf = new OutTextPreparer( "sJavaCmpnClassZbnf", null, "cmpnclass, dataclass",
       "\n"
     + "\n"
     + "\n"
@@ -188,26 +188,26 @@ public class GenZbnfJavaData
     + "}\n"
     + "\n";
   
-  private final OutTextPreparer sJavaSimpleVar = new OutTextPreparer(  "sJavaSimpleVar", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaSimpleVar = new OutTextPreparer(  "sJavaSimpleVar", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n"
     + "    protected <&type> <&varName>;\n"
     + "    \n"
     + "    \n");
   
-  private final OutTextPreparer sJavaListVar = new OutTextPreparer(  "sJavaListVar", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaListVar = new OutTextPreparer(  "sJavaListVar", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n"
     + "    protected List<<&typeGeneric>> <&varName>;\n"
     + "    \n"
     + "    \n");
   
-  private final OutTextPreparer sJavaSimpleVarOper = new OutTextPreparer( "sJavaSimpleVarOper", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaSimpleVarOper = new OutTextPreparer( "sJavaSimpleVarOper", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
     + "    public <&type> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    \n");
   
-  private final OutTextPreparer sJavaListVarOper = new OutTextPreparer( "sJavaListVarOper", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaListVarOper = new OutTextPreparer( "sJavaListVarOper", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
     + "    public Iterable<<&typeGeneric>> get_<&name>() { return <&varName>; }\n"
@@ -215,13 +215,13 @@ public class GenZbnfJavaData
     + "    \n");
   
   
-  private final OutTextPreparer sJavaSimpleVarZbnf = new OutTextPreparer( "sJavaSimpleVarZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaSimpleVarZbnf = new OutTextPreparer( "sJavaSimpleVarZbnf", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
     + "    public void set_<&name>(<&type> val) { super.<&varName> = val; }\n"
     + "    \n"
     + "    \n");
   
-  private final OutTextPreparer sJavaListVarZbnf = new OutTextPreparer( "sJavaListVarZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaListVarZbnf = new OutTextPreparer( "sJavaListVarZbnf", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**Set routine for the singular component <<&type>?<&name>>. */\n"
     + "    public void set_<&name>(<&type> val) { \n"
     + "      if(super.<&varName>==null) { super.<&varName> = new ArrayList<<&typeGeneric>>(); }\n"
@@ -231,7 +231,7 @@ public class GenZbnfJavaData
     + "    \n");
   
   
-  private final OutTextPreparer sJavaCmpnZbnf = new OutTextPreparer( "sJavaCmpnZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaCmpnZbnf = new OutTextPreparer( "sJavaCmpnZbnf", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**Creates an instance for the result Zbnf <:if:args> (not Xml) <.if>. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
     + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
@@ -254,7 +254,7 @@ public class GenZbnfJavaData
     + "    \n"
     + "    \n");
   
-  private final OutTextPreparer sJavaListCmpnZbnf = new OutTextPreparer( "sJavaListCmpnZbnf", this, "typeGeneric, varName, name, type, typeZbnf, args",
+  private final OutTextPreparer sJavaListCmpnZbnf = new OutTextPreparer( "sJavaListCmpnZbnf", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    /**create and add routine for the list component <<&typeZbnf>?<&name>>. */\n"
     + "    public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf(); \n"
@@ -283,18 +283,18 @@ public class GenZbnfJavaData
     + "    \n"
     + "    \n");
   
-  private final OutTextPreparer sJavaMetaClass = new OutTextPreparer( "sJavaMetaClass", this, "attrfield",
+  private final OutTextPreparer sJavaMetaClass = new OutTextPreparer( "sJavaMetaClass", null, "attrfield",
       "    <&attrfield.type> <&attrfield.varName>;  \n"
     + "  \n");
   
 
-  private final OutTextPreparer sJavaMetaClassOper = new OutTextPreparer( "sJavaMetaClass", this, "attrfield",
+  private final OutTextPreparer sJavaMetaClassOper = new OutTextPreparer( "sJavaMetaClass", null, "attrfield",
       "    <&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
     + "  \n");
 
   
   
-  private final OutTextPreparer sJavaMetaClassZbnf = new OutTextPreparer( "sJavaMetaClassZbnf", this, "attrfield",
+  private final OutTextPreparer sJavaMetaClassZbnf = new OutTextPreparer( "sJavaMetaClassZbnf", null, "attrfield",
       "    public void set_<&attrfield.semantic>(<&attrfield.type> <&attrfield.varName>) { super.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
   
   

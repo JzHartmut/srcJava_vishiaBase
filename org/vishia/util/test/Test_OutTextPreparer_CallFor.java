@@ -75,7 +75,7 @@ public class Test_OutTextPreparer_CallFor
   , Test_OutTextPreparer_CallFor.class
   , "dataColor, text1"    //arguments need and used.
   , "Text: <&text1> \n"   //The pattern.
-  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1 ,text='Colors-1'> END\n"
+  + "Test Call colors1: <:call:otxListColors: colors = dataColor.colors1, text='Colors-1'> END\n"
   + "Test Call colors2: <:call:otxListColors: colors = dataColor.colors2, text='Colors-2' > END\n"
   + "Test Call colors1: <:call:otxListIfColors: colors = dataColor.colors1, text='Colors-1a'> END\n"
   + "Test Call colors1: <:call:otxListIfColors: colors = dataColor.colors2, text='Colors-2a'> END\n"

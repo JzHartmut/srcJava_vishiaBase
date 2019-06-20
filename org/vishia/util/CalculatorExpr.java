@@ -42,6 +42,9 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-20 Hartmut; chg {@link #setExpr(String, Map, Class)} etc. with reflectionData. 
+   *   It is used in {@link #parseArgument(StringPartScan, Class, String, int)}: If a given DataPath is not found in the variables,
+   *   it is searched as constant input in the reflection class.  
    * <li>2019-06-18 Hartmut; new {@link Operand#expr}, an Operand can contain a nested expression. It is used as argument value etc.
    *   But for {@link OutTextPreparer} too. {@link Operand#Operand(Map, String, Object)} checks whether the given path presents an expression.
    * <li>2019-06-18 Hartmut: instean {@link Operation}.value the value is stored in {@link Operand#dataConst}. More systematic. Operand contains all what is an operand.
@@ -1380,13 +1383,33 @@ public class CalculatorExpr
     }
     
     
-    public Operand(int ixValue, DataAccess dataAccess) {
+//    public Operand(Object dataConst, DataAccess dataAccess) {
+//      this.ixValue = -1;
+//      this.dataAccess = dataAccess;
+//      this.dataConst = dataConst;
+//      this.text = null;
+//      this.expr = null;
+//    }
+    
+//    public Operand(int ixValue, DataAccess dataAccess) {
+//      this.ixValue = ixValue;
+//      this.dataAccess = dataAccess;
+//      this.dataConst = null;
+//      this.text = null;
+//      this.expr = null;
+//    }
+    
+    
+    
+    public Operand(int ixValue, DataAccess dataAccess, Object dataConst, String text) {
       this.ixValue = ixValue;
       this.dataAccess = dataAccess;
-      this.dataConst = null;
-      this.text = null;
+      this.dataConst = dataConst;
+      this.text = text;
       this.expr = null;
     }
+    
+
     
     public Operand(Value value) {
       this.ixValue = -1;
@@ -1397,17 +1420,16 @@ public class CalculatorExpr
     }
     
     /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
-     * @param outer
-     * @param sDatapath
-     * @param data
+     * @param sDatapath textual given value. It is either a literal, a simple variable ...TODO docu
+     * @param variables Container with some variable names associated to indices in a value array.
+     * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
      * @throws Exception 
      */
-    public Operand(Map<String, DataAccess.IntegerIx> variables, String sDatapath, Object data) throws Exception {
-      this.text = sDatapath;
+    public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws Exception {
       final String sVariable;
       if(sDatapath !=null){
         //====>
-        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables);
+        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
         CalculatorExpr.Operand exprOperand;
         if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
@@ -1416,45 +1438,22 @@ public class CalculatorExpr
           this.dataConst = exprOperand.dataConst;
           this.ixValue = exprOperand.ixValue;
           this.expr = null;
+          this.text = exprOperand.text == null ? sDatapath : exprOperand.text;
         } else {
           //the sDatapath is a more complex expression
           this.dataAccess = null;
           this.dataConst = null;
           this.ixValue = -1;
           this.expr = expr;
+          this.text = sDatapath;
         }
-//        
-//        
-//        
-//        
-//        
-//        int posep = sDatapath.indexOf('.');
-//        if(posep <0) {
-//          sVariable = sDatapath;
-//        } else {
-//          sVariable = sDatapath.substring(0, posep);
-//        }
-//        DataAccess.IntegerIx ixO = variables.get(sVariable);
-//        if(ixO == null) {
-//          //The variable is not part of the argument names, it should be able to access via reflection in data:
-//          this.dataConst = DataAccess.access(sDatapath, data, true, false, false, null);
-//          this.ixValue = -1;
-//          this.dataAccess = null;
-//        } else {
-//          this.dataConst = null;
-//          this.ixValue = ixO.ix;
-//          if(posep <0) {
-//            this.dataAccess = null;
-//          } else {
-//            this.dataAccess = new DataAccess(sDatapath.substring(posep+1));
-//          }
-//        }
       }
       else { //empty without text and without datapath
         this.ixValue = -1;
         this.dataAccess = null;
         this.dataConst = null;
         this.expr = null;
+        this.text = sDatapath;
       }
     }
 
@@ -1612,7 +1611,7 @@ public class CalculatorExpr
     public Operation(String op, int ixVariable){
       setOperator(op);
       if(ixVariable >=0) {
-        operand_ = new Operand(ixVariable, null);
+        operand_ = new Operand(ixVariable, null, null, null);
         this.kindOperand = kDatapath;
       } else {
         this.kindOperand = ixVariable;
@@ -1645,7 +1644,7 @@ public class CalculatorExpr
     public boolean hasUnaryOperator(){ return unaryOperator !=null || unaryOperators !=null; }
     
     public void add_datapathElement(DataAccess.DatapathElement item){ 
-      if(operand_ == null) { operand_ = new Operand(-1, new DataAccess.DataAccessSet()); }
+      if(operand_ == null) { operand_ = new Operand(-1, new DataAccess.DataAccessSet(), null, null); }
       operand_.dataAccess.add_datapathElement(item); 
     }
     
@@ -2103,7 +2102,7 @@ public class CalculatorExpr
           Debugutil.stop();
         //assert(actOperation ==null);
         if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
-        if(actOperation.operand_ == null || actOperation.operand_.dataAccess == null){ actOperation.operand_ = new Operand(-1, newDataAccessSet());}
+        if(actOperation.operand_ == null || actOperation.operand_.dataAccess == null){ actOperation.operand_ = new Operand(-1, newDataAccessSet(), null, null);}
         return (DataAccess.DataAccessSet)actOperation.operand_.dataAccess;
       } 
       
@@ -2277,9 +2276,9 @@ public class CalculatorExpr
    * @param sExpr
    * @param idxIdentifier
    */
-  public CalculatorExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier) {
+  public CalculatorExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData) {
     this();
-    String sError = setExpr(sExpr, idxIdentifier);
+    String sError = setExpr(sExpr, idxIdentifier, reflData);
     if(sError !=null) throw new IllegalArgumentException(sError);
   }
   
@@ -2375,7 +2374,7 @@ public class CalculatorExpr
     for(int ix = 0; ix < sIdentifier.length; ++ix) {
       idxIdentifier.put(sIdentifier[ix], new DataAccess.IntegerIx(ix));
     }
-    return setExpr(sExpr, idxIdentifier);
+    return setExpr(sExpr, idxIdentifier, null);
   }
 
 
@@ -2388,10 +2387,10 @@ public class CalculatorExpr
    * @param sIdentifier List of identifiers for variables.
    * @return null if ok or an error description.
    */
-  public String setExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier)
+  public String setExpr(String sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData)
   { StringPartScan spExpr = new StringPartScan(sExpr);
     spExpr.setIgnoreWhitespaces(true);
-    return setExpr(spExpr, idxIdentifier);
+    return setExpr(spExpr, idxIdentifier, reflData);
   }
   
   /**Converts the given expression in a stack operable form.
@@ -2401,10 +2400,10 @@ public class CalculatorExpr
    * @param sIdentifier List of identifiers for variables.
    * @return null if ok or an error description.
    */
-  public String setExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> idxIdentifier)
+  public String setExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData)
   { listOperations_.clear();
     this.variables = idxIdentifier;
-    try{ parseExpr(spExpr, "!", 1);  
+    try{ parseExpr(spExpr, reflData, "!", 1);  
     } catch(ParseException exc){ return exc.getMessage(); }
     return null;
   }
@@ -2416,7 +2415,18 @@ public class CalculatorExpr
    */
   public String setExpr(String sExpr) { 
     StringPartScan spExpr = new StringPartScan(sExpr);
-    return setExpr(spExpr);
+    return setExpr(spExpr, null);
+  }
+  
+
+  /**Converts the given expression in a stack operable form. One variable with name "X" will be created.
+   * It means the expression can use "X" as variable.
+   * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
+   * @see #setExpr(String, String[])
+   */
+  public String setExpr(String sExpr, Class<?> reflData) { 
+    StringPartScan spExpr = new StringPartScan(sExpr);
+    return setExpr(spExpr, reflData);
   }
   
 
@@ -2426,11 +2436,11 @@ public class CalculatorExpr
    * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
    * @see #setExpr(String, String[])
    */
-  public String setExpr(StringPartScan spExpr) {
+  public String setExpr(StringPartScan spExpr, Class<?> reflData) {
     listOperations_.clear();
     this.variables = new TreeMap<String, DataAccess.IntegerIx>(); 
     this.variables.put("X", new DataAccess.IntegerIx(0));
-    try{ parseExpr(spExpr, "!", 1); 
+    try{ parseExpr(spExpr, reflData, "!", 1); 
     } catch(ParseException exc){ return exc.getMessage(); }
     return null;
   }
@@ -2445,11 +2455,11 @@ public class CalculatorExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return this
    */
-  protected void parseExpr(StringPartScan spExpr, String startOperation, int recursion)
+  protected void parseExpr(StringPartScan spExpr, Class<?> reflData, String startOperation, int recursion)
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
-    parseCmpExpr(spExpr, op, recursion +1);
+    parseCmpExpr(spExpr, reflData, op, recursion +1);
     
     while(op !=null) {
       if(spExpr.scan("&&").scanOk()) {
@@ -2462,7 +2472,7 @@ public class CalculatorExpr
       }
       //
       if(op !=null) {
-        parseCmpExpr(spExpr, op, recursion +1);
+        parseCmpExpr(spExpr, reflData, op, recursion +1);
       }
     }//while boolean operation
   }
@@ -2475,11 +2485,11 @@ public class CalculatorExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return this
    */
-  protected void parseCmpExpr(StringPartScan spExpr, String startOperation, int recursion)
+  protected void parseCmpExpr(StringPartScan spExpr, Class<?> reflData, String startOperation, int recursion)
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
-    parseAddExpr(spExpr, op, recursion +1);
+    parseAddExpr(spExpr, reflData, op, recursion +1);
     if(spExpr.scanSkipSpace().scanOk()){
       char cc = spExpr.getCurrentChar();
       if("=!><?".indexOf(cc)>=0){
@@ -2506,7 +2516,7 @@ public class CalculatorExpr
           op = ".=";
         }
         if(op !=null) {
-          parseAddExpr(spExpr, op, recursion +1);
+          parseAddExpr(spExpr, reflData, op, recursion +1);
         }
         //addExpr(spExpr, ""+cc, recursion+1);
       }
@@ -2522,12 +2532,12 @@ public class CalculatorExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return this
    */
-  protected void parseAddExpr(StringPartScan spExpr, String startOperation, int recursion)
+  protected void parseAddExpr(StringPartScan spExpr, Class<?> reflData, String startOperation, int recursion)
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
     while(op != null) {
-      parseMultExpr(spExpr, op, recursion +1);
+      parseMultExpr(spExpr, reflData, op, recursion +1);
       if(spExpr.scanSkipSpace().length()>0){
         char cc = spExpr.getCurrentChar();
         if("+-".indexOf(cc)>=0){
@@ -2548,13 +2558,13 @@ public class CalculatorExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return
    */
-  protected String parseMultExpr(StringPartScan spExpr, String startOperation, int recursion) 
+  protected String parseMultExpr(StringPartScan spExpr, Class<?> reflData, String startOperation, int recursion) 
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String sError = null;
     String operation = startOperation;
     while(operation != null) {
-      parseArgument(spExpr, operation, recursion);
+      parseArgument(spExpr, reflData, operation, recursion);
       if(spExpr.scanSkipSpace().length()>0){
         char cc = spExpr.getCurrentChar();
         if("*/".indexOf(cc)>=0){
@@ -2587,24 +2597,33 @@ public class CalculatorExpr
    * @param recursion
    * @throws ParseException
    */
-  protected void parseArgument(StringPartScan spExpr, String operation, int recursion ) throws ParseException
+  protected void parseArgument(StringPartScan spExpr, Class<?> reflData, String operation, int recursion ) throws ParseException
   { spExpr.scanStart();
     if(spExpr.scanSkipSpace().scan("(").scanOk()){ //(expression)
-      parseAddExpr(spExpr, "!", recursion+1);
+      parseAddExpr(spExpr, reflData, "!", recursion+1);
       if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
       listOperations_.add(new Operation(operation, Operation.kStackOperand));
     } else if(spExpr.scanSkipSpace().scanIdentifier().scanOk()){
       String sIdent = spExpr.getLastScannedString();
       DataAccess.IntegerIx ixOvar = this.variables.get(sIdent);
-      Operation oper;
-      if(ixOvar == null){ //variable not found
-        throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
-      } 
+      int ixVar;
       DataAccess dataAccess = null;
+      Object dataConst = null;
+      if(ixOvar == null){ //variable not found
+        ixVar = -1;
+        if(reflData == null) {
+          throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
+        }
+        try{ dataConst = DataAccess.access(sIdent, reflData,true, false, false, null);}
+        catch(Exception exc) { throw new ParseException(exc.getMessage(), 0);}
+      } else {
+        ixVar = ixOvar.ix;
+      }
       if(spExpr.scan(".").scanOk()) { //variable.datapath
         dataAccess = new DataAccess(spExpr, '\0');
       }
-      Operand operand = new Operand(ixOvar.ix, dataAccess);
+      Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
+      Operation oper;
       listOperations_.add(oper = new Operation(operation, operand));
     } else if(spExpr.scanSkipSpace().scanLiteral("''\\", -1).scanOk()){ //'Stringliteral'
       CharSequence sLiteral = spExpr.getLastScannedString();

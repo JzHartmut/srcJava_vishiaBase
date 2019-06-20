@@ -1644,6 +1644,12 @@ public class DataAccess {
   
   
   
+  /**Checks whether the given obj is type of the given type.
+   * It gets the type with <code>Class.forName(sType)</code> and invokes {@link #istypeof(Object, Class)}
+   * @param obj any instance
+   * @param type String given type
+   * @return true if type matches
+   */
   public static final boolean istypeof(Object obj, String sType) 
   throws ClassNotFoundException {
     Class<?> type = Class.forName(sType);
@@ -1652,6 +1658,11 @@ public class DataAccess {
   
   
   
+  /**Checks whether the given obj is type of the given type.
+   * @param obj any instance
+   * @param type can be a base type or an interface type
+   * @return true if type matches
+   */
   public static final boolean istypeof(Object obj, Class type){
     if(obj == null) return false;
     else {
@@ -2543,7 +2554,7 @@ public class DataAccess {
         sp.scanStart();
         boolean bArgExpr = false;
         do {
-          exprIndex.setExpr(sp);
+          exprIndex.setExpr(sp, null);
           CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
           if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
             lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
@@ -2621,7 +2632,7 @@ public class DataAccess {
         sp.scanStart();
         boolean bArgExpr = false;
         do {
-          exprIndex.setExpr(sp);
+          exprIndex.setExpr(sp, null);
           CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
           if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
             lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
@@ -2644,6 +2655,9 @@ public class DataAccess {
           }
           ixix +=1;
         } //for
+        if(!sp.scan("]").scanOk()) {
+          throw new IllegalArgumentException("indices, missing ]");
+        }
         Debugutil.stop();
       }
     }
