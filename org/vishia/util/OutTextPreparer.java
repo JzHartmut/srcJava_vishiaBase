@@ -491,6 +491,7 @@ public class OutTextPreparer
         }
         else if(sp.scan(":--").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
           //it is commented
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
@@ -725,6 +726,9 @@ public class OutTextPreparer
    * @throws Exception 
    */
   public void exec( Appendable wr, DataTextPreparer args) throws IOException {
+    if(args.prep != this) {
+      throw new IllegalArgumentException("The argument type does not match to the OutTextPreparer.");
+    }
     execSub(wr, args, 0, cmds.size());
   }
   

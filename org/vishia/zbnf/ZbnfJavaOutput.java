@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.*;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -324,6 +326,7 @@ public final class ZbnfJavaOutput
     this.bOnlyMethods = methods; 
   }
 
+  
   
   /**Sets the association mode: 
    * @param value true, than fields aren't searched, only methods.
@@ -1510,19 +1513,30 @@ public final class ZbnfJavaOutput
     { 
       parser.setReportIdents(7,7,7,7); //MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.error, MainCmdLogging_ifc.debug);
       //parser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.error, MainCmdLogging_ifc.error);
-      //parse the file:
-      boolean bOk = parser.parse(spInput);
-      if(!bOk)
-      { final String sParserError = parser.getSyntaxErrorReport();
-        sError = "ZbnfJavaOutput - ERROR syntax in input file; " + sFileInput + "\n" + sParserError;
-        //report.writeError(sError);
-      }
+      
+      
+      sError = parseFileAndFillJavaObject(resultType, result, spInput, sFileInput);
       spInput.close();
-      //The content of the setting file is stored inside the parser as 'parse result'.
-      //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.
-      //The class settings contains the necessary elements appropriate to the semantic keywords in the syntax prescript.
-      //zbnfParser.reportStore(report, MainCmdLogging_ifc.debug);
+    }  
+    return sError;
+  }
+  
+
+  
+  
+  private String parseFileAndFillJavaObject(Class resultType, Object result, StringPartScan spInput, String sFileInput) {
+    String sError = null;
+    //parse the file:
+    boolean bOk = parser.parse(spInput);
+    if(!bOk)
+    { final String sParserError = parser.getSyntaxErrorReport();
+      sError = "ZbnfJavaOutput - ERROR syntax in input file; " + sFileInput + "\n" + sParserError;
+      //report.writeError(sError);
     }
+    //The content of the setting file is stored inside the parser as 'parse result'.
+    //The ZbnfJavaOutput.setOutput moves the content to the class 'settings'.
+    //The class settings contains the necessary elements appropriate to the semantic keywords in the syntax prescript.
+    //zbnfParser.reportStore(report, MainCmdLogging_ifc.debug);
     if(sError == null)
     { /*store the whole parse result in the instance 'result', using the 'resultType'. */ 
       System.out.println("ZbnfJavaOutput - fillin;" + resultType.getCanonicalName());
@@ -1538,11 +1552,39 @@ public final class ZbnfJavaOutput
       } 
       
     }  
-  
     return sError;
   }
   
-
+  
+  /**Parses and fills to the result with given Syntax.
+   * <br><br>
+   * The Syntax of the parser should be set maybe for more as one file after Construction of this with <pre>
+   *    parserJava = new org.vishia.zbnf.ZbnfJavaOutput(logParser);
+   *    parserJava.parser.setSyntax(sSyntax);
+   * </pre> 
+   * @param result Instance proper to syntax file for the result. 
+   *   Hint: Use {@link GenZbnfJavaData} to create the Java source proper to the syntax.
+   * @param fInput The input file
+   * @return null if no error, elsewhere an elaborately error message.
+   */
+  public String parseFileAndFillJavaObject(Object result, File fInput) {
+    String sError = null;
+    StringPartScan spInput = null;
+    String sFile = fInput.getAbsolutePath();
+    try {
+      spInput = new StringPartFromFileLines(fInput);
+    } catch (Exception e) {
+      sError = "File read error: " + sFile;
+    } 
+    if(sError == null) {
+      sError = parseFileAndFillJavaObject(result.getClass(), result, spInput, sFile);
+      spInput.close();
+    }
+    return sError;
+  }
+  
+  
+  
   /**Adds an error. This method is called if {@link #bExceptionIfnotFound} = false.
    * @param problem The text.
    */

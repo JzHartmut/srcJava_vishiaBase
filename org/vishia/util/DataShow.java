@@ -545,8 +545,12 @@ public class DataShow extends ObjectId
               out.append("\n      <ol start=\"0\">");
               for(int ixItem = 0; ixItem < array.length; ++ixItem) {
                 Object arrayElement = array[ixItem];
-                outField("", arrayElement, arrayElement.getClass(), null, out, recursiveCount+1);
-                /*
+                if(arrayElement == null) {
+                  out.append("null-element");
+                } else {
+                  outField("", arrayElement, arrayElement.getClass(), null, out, recursiveCount+1);
+                }
+                  /*
                 out.append("\n        <li>");
                 if(arrayElement ==null) {
                   out.append(" = null");

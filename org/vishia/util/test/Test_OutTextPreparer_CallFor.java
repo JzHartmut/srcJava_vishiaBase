@@ -1,7 +1,9 @@
 package org.vishia.util.test;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.List;
 
 import org.vishia.util.OutTextPreparer;
@@ -122,7 +124,14 @@ public class Test_OutTextPreparer_CallFor
   }
 
 
-  
+  void testClassic() {
+    Formatter fm = new Formatter(); 
+    fm.format("", this); 
+    fm.close();
+    PrintStream myprinter = System.out;
+    myprinter.printf(resultExpected, this);
+    
+  }
   
 
 

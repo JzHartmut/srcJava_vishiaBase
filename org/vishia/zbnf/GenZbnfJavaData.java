@@ -209,8 +209,11 @@ public class GenZbnfJavaData
   
   private final OutTextPreparer sJavaListVarOper = new OutTextPreparer( "sJavaListVarOper", null, "typeGeneric, varName, name, type, typeZbnf, args",
       "    \n    \n"
-    + "    /**Access to parse result.*/\n"
+    + "    /**Access to parse result, get the elements of the container <&name>*/\n"
     + "    public Iterable<<&typeGeneric>> get_<&name>() { return <&varName>; }\n"
+    + "    \n"
+    + "    /**Access to parse result, get the size of the container <&name>.*/\n"
+    + "    public int getSize_<&name>() { return <&varName>.size(); }\n"
     + "    \n"
     + "    \n");
   
@@ -740,31 +743,85 @@ public class GenZbnfJavaData
             argsJavaListVarOper.setArgument("typeZbnf", type);
             argsJavaListVarOper.setArgument("args", args);
             
+            OutTextPreparer.DataTextPreparer argsJavaListVar = sJavaListVar.getArgumentData();
+            argsJavaListVar.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaListVar.setArgument("varName", varName);
+            argsJavaListVar.setArgument("name", semantic);
+            argsJavaListVar.setArgument("type", type);
+            argsJavaListVar.setArgument("typeZbnf", type);
+            argsJavaListVar.setArgument("args", args);
             
-  
+            OutTextPreparer.DataTextPreparer argsJavaListVarZbnf = sJavaListVarZbnf.getArgumentData();
+            argsJavaListVarZbnf.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaListVarZbnf.setArgument("varName", varName);
+            argsJavaListVarZbnf.setArgument("name", semantic);
+            argsJavaListVarZbnf.setArgument("type", type);
+            argsJavaListVarZbnf.setArgument("typeZbnf", type);
+            argsJavaListVarZbnf.setArgument("args", args);
+            
+            OutTextPreparer.DataTextPreparer argsJavaListCmpnZbnf = sJavaListCmpnZbnf.getArgumentData();
+            argsJavaListCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaListCmpnZbnf.setArgument("varName", varName);
+            argsJavaListCmpnZbnf.setArgument("name", semantic);
+            argsJavaListCmpnZbnf.setArgument("type", type);
+            argsJavaListCmpnZbnf.setArgument("typeZbnf", type);
+            argsJavaListCmpnZbnf.setArgument("args", args);
+            
+            OutTextPreparer.DataTextPreparer argsJavaSimpleVarOper = sJavaSimpleVarOper.getArgumentData();
+            argsJavaSimpleVarOper.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaSimpleVarOper.setArgument("varName", varName);
+            argsJavaSimpleVarOper.setArgument("name", semantic);
+            argsJavaSimpleVarOper.setArgument("type", type);
+            argsJavaSimpleVarOper.setArgument("typeZbnf", type);
+            argsJavaSimpleVarOper.setArgument("args", args);
+            
+            OutTextPreparer.DataTextPreparer argsJavaSimpleVarZbnf = sJavaSimpleVarZbnf.getArgumentData();
+            argsJavaSimpleVarZbnf.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaSimpleVarZbnf.setArgument("varName", varName);
+            argsJavaSimpleVarZbnf.setArgument("name", semantic);
+            argsJavaSimpleVarZbnf.setArgument("type", type);
+            argsJavaSimpleVarZbnf.setArgument("typeZbnf", type);
+            argsJavaSimpleVarZbnf.setArgument("args", args);
+            
+            OutTextPreparer.DataTextPreparer argsJavaCmpnZbnf = sJavaCmpnZbnf.getArgumentData();
+            argsJavaCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaCmpnZbnf.setArgument("varName", varName);
+            argsJavaCmpnZbnf.setArgument("name", semantic);
+            argsJavaCmpnZbnf.setArgument("type", type);
+            argsJavaCmpnZbnf.setArgument("typeZbnf", type);
+            argsJavaCmpnZbnf.setArgument("args", args);
+            
+            OutTextPreparer.DataTextPreparer argsJavaSimpleVar = sJavaSimpleVar.getArgumentData();
+            argsJavaSimpleVar.setArgument("typeGeneric", sTypeGeneric);
+            argsJavaSimpleVar.setArgument("varName", varName);
+            argsJavaSimpleVar.setArgument("name", semantic);
+            argsJavaSimpleVar.setArgument("type", type);
+            argsJavaSimpleVar.setArgument("typeZbnf", type);
+            argsJavaSimpleVar.setArgument("args", args);
+            
             if(bList) {
-              sJavaListVar.exec(wr, argsJavaListVarOper);
+              sJavaListVar.exec(wr, argsJavaListVar);
               sJavaListVarOper.exec(wrOp, argsJavaListVarOper);
               if(bStdType) {
-                sJavaListVarZbnf.exec(wrz, argsJavaListVarOper);
+                sJavaListVarZbnf.exec(wrz, argsJavaListVarZbnf);
               }
               else if(bCmpn) {
-                sJavaListCmpnZbnf.exec(wrz, argsJavaListVarOper);
+                sJavaListCmpnZbnf.exec(wrz, argsJavaListCmpnZbnf);
               } 
               else {
-                sJavaListVarZbnf.exec(wrz, argsJavaListVarOper);
+                sJavaListVarZbnf.exec(wrz, argsJavaListVarZbnf);
               }
             } else {
-              sJavaSimpleVar.exec(wr, argsJavaListVarOper);
-              sJavaSimpleVarOper.exec(wrOp, argsJavaListVarOper);
+              sJavaSimpleVar.exec(wr, argsJavaSimpleVar);
+              sJavaSimpleVarOper.exec(wrOp, argsJavaSimpleVarOper);
               if(bStdType) {
-                sJavaSimpleVarZbnf.exec(wrz, argsJavaListVarOper);
+                sJavaSimpleVarZbnf.exec(wrz, argsJavaSimpleVarZbnf);
               }
               else if(bCmpn) {
-                sJavaCmpnZbnf.exec(wrz, argsJavaListVarOper);
+                sJavaCmpnZbnf.exec(wrz, argsJavaCmpnZbnf);
               } 
               else {
-                sJavaSimpleVarZbnf.exec(wrz, argsJavaListVarOper);
+                sJavaSimpleVarZbnf.exec(wrz, argsJavaSimpleVarZbnf);
               }
               
             }
