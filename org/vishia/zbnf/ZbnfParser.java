@@ -132,6 +132,10 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-06-29 Hartmut bugfix: If &lt;syntax?"!"textSemantic> is used, the stored text has contained skipped comment and spaces. 
+   *   Often only spaces were contained in the parse result, so trim() was a workarround. But comments are contained too, that is not proper.
+   *   Yet the order of checking white spaces inclusively parse {@link ZbnfSyntaxPrescript.EType#kTerminalSymbolInComment} is moved before checking
+   *   some nested syntax to set the posInput (local variable).    
    * <li>2019-05-29 Hartmut changes for correctly processing &lt;...?"!"@>, The semantic=="@" should be used to get 
    *   the semantic from the syntaxComponent. To do it it is explicitly programmed before calling of {@link PrescriptParser.SubParser#parseSub(ZbnfSyntaxPrescript, String, int, ZbnfSyntaxPrescript, String, ParseResultItemImplement, boolean, ZbnfParserStore)}
    *   Some gardening in arguments.  
@@ -957,253 +961,279 @@ public class ZbnfParser
           stop();
         ZbnfSyntaxPrescript.EType nType = syntaxItem.getType();
         
-        { /*Only for debugging:*/
-          if(input.getCurrentPosition()==704)
-            stop();
-          
-          //if(input.startsWith("\n\r\n/** Konstantedefinitionen"))
-          //if(input.startsWith("\r\n#include \"CRuntimeJavalike.h")
-          if(input.startsWith("\r\n#include")
-            //&& sConstantSyntax != null && sConstantSyntax.equals("#define")
-            )
-            stop();
-        }  
-        long posInput  = input.getCurrentPosition();
-        { int inputPos;
-          if(dbgPosFrom > 0 && (inputPos = (int)posInput) >= dbgPosFrom && inputPos < dbgPosTo
-            && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
-              ) {
-            Debugutil.stop();
-          }
-        }
-        if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
-          String sLog = "" + input.getLineAndColumn(null) + ":"+ input.getCurrent(20) + "-?-" + syntaxItem.lineFile;
-          ZbnfSyntaxPrescript syntaxParent = syntaxItem;
-          do {
-            sLog +=  " - " + syntaxParent.sDefinitionIdent;
-            syntaxParent = syntaxParent.parent;
-          } while(syntaxParent !=null && sLog.length() < 120);
-          report.reportln(3, sLog);
-        }
+        final boolean bTerminalFoundInComment;
         
-        /** white space and comments are not skipped to provide it to terminal symbols.
-         * All sub-syntaxtests are called here in the same kind.
-         */
-        switch(nType)
-        { /*complex syntax constructions: do not parse spaces or comments before,
-           *because it is possible that such text parts are used as terminal symbols
-           *inside the syntax constructions. 
-           */ 
-          case kSyntaxDefinition:
-          case kAlternative:
-          case kSimpleOption:
-          case kAlternativeOption:
-          case kAlternativeOptionCheckEmptyFirst:
-          { if(nReportLevel >= nLevelReportBranchParsing){ 
-              log.reportParsing("Opti " + input.getCurrentPosition()+ " " + inputCurrent(input), idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, true); 
-            }
-            bOk = parseOptions(syntaxItem, parentResultItem, bSkipSpaceAndComment);
-          } break;
-          case kNegativVariant:
-          { bOk = parseNegativVariant(syntaxItem, bSkipSpaceAndComment);
-          } break;
-          case kUnconditionalVariant:
-          { bOk = parseUnconditionalVariant(syntaxItem, parentResultItem, bSkipSpaceAndComment);
-          } break;
-          case kExpectedVariant:
-          { bOk = parseExpectedVariant(syntaxItem, bSkipSpaceAndComment);
-          } break;
-          case kRepetition:
-          { bOk = parseRepetition(syntaxItem, syntaxItem.getRepetitionBackwardPrescript(), parentResultItem, bSkipSpaceAndComment);
-          } break;
-          case kOnlySemantic:
-          { bOk = true;
-            if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem only Semantic;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
-            if( ! bDoNotStoreData ) {
-              srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
-              String srcFile = input.getInputfile();
-              parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
-            }
-          } break; //do nothing
-          case kSyntaxComponent:
-          { 
-            ZbnfSyntaxPrescript syntaxCmpn = searchSyntaxPrescript(sDefinitionIdent);
-            if(syntaxCmpn == null) {
-              bOk = false;
-              report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
-              String sError = "prescript for : <" + sDefinitionIdent 
-              + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
-              + "> not found.";
-              saveError(sError);
-            } else {
-              if(sSemanticForStoring !=null && sSemanticForStoring.equals("@")) {
-                //replace single @ with semantic of component. 
-                sSemanticForStoring = syntaxCmpn.getSemantic();
-              }
-              
-              
-              bOk = parse_Component
-                    ( input
-                    , posInputbase    
-                    , syntaxCmpn
-                    , sSemanticForStoring
-                    , parentResultItem
-                    , bSkipSpaceAndComment
-                    , this.bDoNotStoreData || syntaxItem.bDonotStoreData
-                    , syntaxItem       //which invokes the component
-                    , syntaxItem.isResultToAssignIntoNextComponent()
-                    , syntaxItem.isToAddOuterResults()
-                    );
-            }
-          } break;
-          default:
-          {
-            //simple Symbols, parse spaces before.
-            int posParseResult = parserStoreInPrescript.getNextPosition();
-            final boolean bTerminalFoundInComment;
-            
-            String sReport = null;
-            if(bSkipSpaceAndComment)
-            { final String sConstantText;
-              if(nType == ZbnfSyntaxPrescript.EType.kTerminalSymbolInComment){
-                sConstantText = syntaxItem.getConstantSyntax();
-                sReport = nReportLevel < nLevelReportBranchParsing ? ""
-                  : "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
-              } else {
-                sConstantText = null;
-              }
-              bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol(sConstantText, parentResultItem);
-            } else { 
-              bOk = bTerminalFoundInComment = false; 
-            }
-            if(!bTerminalFoundInComment){
-              assert(!bOk);  //it is set to false in branch above.
-              CharSequence sSrc = null;  //parsed string
-              //either set bOk to true or sSrc to !=null if successfully parsed.
-              //
-              sReport = nReportLevel < nLevelReportBranchParsing ? ""
-                : "item " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
-
-              //int posSrc = -1;     //position of the string
-              switch(nType)
-              {
-              case kTerminalSymbolInComment:  //Note: important if bSkipSpaceAndComment = false. 
-              case kTerminalSymbol: 
-              { bOk = parseTerminalSymbol(syntaxItem, parentResultItem);
-              } break;
-              case kIdentifier:
-              { bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parentResultItem);
-              } break;
-              case kPositivNumber:
-              { bOk = parsePositiveInteger( syntaxItem, parentResultItem, maxNrofChars);
-              } break;
-              case kHexNumber:
-              { bOk = parseHexNumber( syntaxItem, parentResultItem, maxNrofChars);
-              } break;
-              case kNumberRadix:
-              { bOk = parseNumberRadix( syntaxItem, parentResultItem, maxNrofChars);
-              } break;
-              case kIntegerNumber:
-              { bOk = parseInteger( syntaxItem, parentResultItem, maxNrofChars);
-              } break;
-              case kFloatNumber:
-              case kFloatWithFactor:
-              { bOk = parseFloatNumber( syntaxItem, maxNrofChars, parentResultItem);
-              } break;
-              case kStringUntilEndchar:
-              { if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
-                stop();
-                if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem StrTilEndchar;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-                if(sConstantSyntax.length() >0)
-                { bOk = input.lentoAnyChar(sConstantSyntax, maxNrofChars).found();
-                }
-                else
-                { int maxLen = input.length();
-                if(maxNrofChars < maxLen)
-                { input.lento(maxNrofChars);  //NOTE: if maxNrofChars > length(), an exception will be thrown in StringPart.
-                }
-                bOk = true;  //whole length
-                }
-                if(bOk)
-                { sSrc = input.getCurrentPart();
-                }
-                else
-                { input.setLengthMax();
-                  saveError("ones of terminate chars \"" + sConstantSyntax + "\" not found <?" + sSemanticForError + ">");
-                }
-
-              } break;
-              case kStringUntilRightEndchar:
-              { bOk = parseStringUntilRightEndchar(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kStringUntilRightEndcharInclusive:
-              { bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kStringUntilEndString: //kk
-              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kStringUntilEndStringTrim: //kk
-              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, true, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kStringUntilEndStringInclusive: //kk
-              { bOk = parseStringUntilTerminateString(sConstantSyntax, true, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kStringUntilEndStringWithIndent:
-              { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
-                StringBuilder buffer = new StringBuilder();
-                input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
-                if(input.found()) {
-                  sSrc = buffer;
-                }
-                else
-                { input.setLengthMax();  //not found: length() was setted to 0
-                  saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
-                }
-              } break;
-              case kStringUntilEndcharOutsideQuotion:
-              { bOk = parseNoOrSomeCharsOutsideQuotion(sConstantSyntax, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kQuotedString:
-              { bOk = parseSimpleStringLiteral(sConstantSyntax, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
-              } break;
-              case kRegularExpression:
-              { 
-                bOk = parseRegularExpression(syntaxItem, sSemanticForStoring, parentResultItem, bSkipSpaceAndComment);
-              } break;
-              default:
-              {
-                if(nReportLevel >= nLevelReportParsing) {
-                  report.reportln(idReportParsing, "parseItem-default;      " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
-                }
-                //parseResult.addSemantic(sSyntax);
-                bOk = false;
-              }
-              }//switch
-              //
-              //check whether anything was parsed stored in sSrc:
-              //then input refers to the start position of the parsed one with its current part.
-              //
-            	if(sSrc != null)
-              { //something parsed as string, may be also an empty string:
-                if(StringFunctions.startsWith(sSrc,"First line"))
-                  stop();
-                long posResult = input.getCurrentPosition();
-                int srcLine = input.getLineAndColumn(srcColumn);  //, srcLine, srcColumn[0], input.getInputfile()
-                bOk = addResultOrSubsyntax(sSrc, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, parentResultItem, syntaxItem.getSubSyntax());
-                //posSrc = (int)input.getCurrentPosition();
-                input.fromEnd();
-              }                
-            }//if bTerminalFound
-            if(!bOk)
-            { //position before parseWhiteSpaceAndComment().
-              input.setCurrentPosition(posInput);
-              parserStoreInPrescript.setCurrentPosition(posParseResult);
-            }
-            if(nReportLevel >= nLevelReportBranchParsing)    
-            { log.reportParsing(sReport, idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)posInput, nRecursion, bOk);
-            }
-          }//default
-        }//switch
+        long posInput  = input.getCurrentPosition();
+        String sReport = null;
+        if(bSkipSpaceAndComment)
+        { final String sConstantText;
+          if(nType == ZbnfSyntaxPrescript.EType.kTerminalSymbolInComment){
+            sConstantText = syntaxItem.getConstantSyntax();
+            sReport = nReportLevel < nLevelReportBranchParsing ? ""
+              : "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
+          } else {
+            sConstantText = null;
+          }
+          bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol(sConstantText, parentResultItem);
+        } else { 
+          bOk = bTerminalFoundInComment = false; 
+        }
+        if(!bTerminalFoundInComment) {
+	        {  /*Only for debugging:*/
+	          if(input.getCurrentPosition()==704)
+	            stop();
+	          
+	          //if(input.startsWith("\n\r\n/** Konstantedefinitionen"))
+	          //if(input.startsWith("\r\n#include \"CRuntimeJavalike.h")
+	          if(input.startsWith("\r\n#include")
+	            //&& sConstantSyntax != null && sConstantSyntax.equals("#define")
+	            )
+	            stop();
+	        }  
+	        long posInput2  = input.getCurrentPosition();  //after space and comment
+	        //Set the current position before the skipped comment, because the following sub syntax may expect kTerminalSymbolInComment.
+	        //It should be able to found. 
+	        input.setCurrentPosition(posInput);
+	        posInput = posInput2; 
+	        { int inputPos;
+	          if(dbgPosFrom > 0 && (inputPos = (int)posInput) >= dbgPosFrom && inputPos < dbgPosTo
+	            && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
+	              ) {
+	            Debugutil.stop();
+	          }
+	        }
+	        if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
+	          String sLog = "" + input.getLineAndColumn(null) + ":"+ input.getCurrent(20) + "-?-" + syntaxItem.lineFile;
+	          ZbnfSyntaxPrescript syntaxParent = syntaxItem;
+	          do {
+	            sLog +=  " - " + syntaxParent.sDefinitionIdent;
+	            syntaxParent = syntaxParent.parent;
+	          } while(syntaxParent !=null && sLog.length() < 120);
+	          report.reportln(3, sLog);
+	        }
+	        
+	        /** white space and comments are not skipped to provide it to terminal symbols.
+	         * All sub-syntaxtests are called here in the same kind.
+	         */
+	        switch(nType)
+	        { /*complex syntax constructions: do not parse spaces or comments before,
+	           *because it is possible that such text parts are used as terminal symbols
+	           *inside the syntax constructions. 
+	           */ 
+	          case kSyntaxDefinition:
+	          case kAlternative:
+	          case kSimpleOption:
+	          case kAlternativeOption:
+	          case kAlternativeOptionCheckEmptyFirst:
+	          { if(nReportLevel >= nLevelReportBranchParsing){ 
+	              log.reportParsing("Opti " + input.getCurrentPosition()+ " " + inputCurrent(input), idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, true); 
+	            }
+	            bOk = parseOptions(syntaxItem, parentResultItem, bSkipSpaceAndComment);
+	          } break;
+	          case kNegativVariant:
+	          { bOk = parseNegativVariant(syntaxItem, bSkipSpaceAndComment);
+	          } break;
+	          case kUnconditionalVariant:
+	          { bOk = parseUnconditionalVariant(syntaxItem, parentResultItem, bSkipSpaceAndComment);
+	          } break;
+	          case kExpectedVariant:
+	          { bOk = parseExpectedVariant(syntaxItem, bSkipSpaceAndComment);
+	          } break;
+	          case kRepetition:
+	          { bOk = parseRepetition(syntaxItem, syntaxItem.getRepetitionBackwardPrescript(), parentResultItem, bSkipSpaceAndComment);
+	          } break;
+	          case kOnlySemantic:
+	          { bOk = true;
+	            if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem only Semantic;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
+	            if( ! bDoNotStoreData ) {
+	              srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
+	              String srcFile = input.getInputfile();
+	              parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+	            }
+	          } break; //do nothing
+	          case kSyntaxComponent:
+	          { 
+	            ZbnfSyntaxPrescript syntaxCmpn = searchSyntaxPrescript(sDefinitionIdent);
+	            if(syntaxCmpn == null) {
+	              bOk = false;
+	              report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
+	              String sError = "prescript for : <" + sDefinitionIdent 
+	              + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
+	              + "> not found.";
+	              saveError(sError);
+	            } else {
+	              if(sSemanticForStoring !=null && sSemanticForStoring.equals("@")) {
+	                //replace single @ with semantic of component. 
+	                sSemanticForStoring = syntaxCmpn.getSemantic();
+	              }
+	              
+	              
+	              bOk = parse_Component
+	                    ( input
+	                    , posInputbase    
+	                    , syntaxCmpn
+	                    , sSemanticForStoring
+	                    , parentResultItem
+	                    , bSkipSpaceAndComment
+	                    , this.bDoNotStoreData || syntaxItem.bDonotStoreData
+	                    , syntaxItem       //which invokes the component
+	                    , syntaxItem.isResultToAssignIntoNextComponent()
+	                    , syntaxItem.isToAddOuterResults()
+	                    );
+	            }
+	          } break;
+	          default:
+	          {
+	            //simple Symbols
+	            //Because kTerminalSymbolInComment is already tested, the skipped spaces and comment should be skipped really:
+	            input.setCurrentPosition(posInput);  //Use the stored input position after space and comment.
+	            int posParseResult = parserStoreInPrescript.getNextPosition();
+	//Old code shifted, todo remove here:            
+	//            final boolean bTerminalFoundInComment;
+	//            
+	//            String sReport = null;
+	//            if(bSkipSpaceAndComment)
+	//            { final String sConstantText;
+	//              if(nType == ZbnfSyntaxPrescript.EType.kTerminalSymbolInComment){
+	//                sConstantText = syntaxItem.getConstantSyntax();
+	//                sReport = nReportLevel < nLevelReportBranchParsing ? ""
+	//                  : "parsSpace " + input.getCurrentPosition()+ " " + inputCurrent(input); 
+	//              } else {
+	//                sConstantText = null;
+	//              }
+	//              bOk = bTerminalFoundInComment = parseWhiteSpaceAndCommentOrTerminalSymbol(sConstantText, parentResultItem);
+	//            } else { 
+	//              bOk = bTerminalFoundInComment = false; 
+	//            }
+	//            if(!bTerminalFoundInComment){
+	              assert(!bOk);  //it is set to false in branch above.
+	              CharSequence sSrc = null;  //parsed string
+	              //either set bOk to true or sSrc to !=null if successfully parsed.
+	              //
+	              sReport = nReportLevel < nLevelReportBranchParsing ? ""
+	                : "item " + input.getCurrentPosition()+ " " + inputCurrent(input); // + sEmpty.substring(0, nRecursion); 
+	
+	              //int posSrc = -1;     //position of the string
+	              switch(nType)
+	              {
+	              case kTerminalSymbolInComment:  //Note: important if bSkipSpaceAndComment = false. 
+	              case kTerminalSymbol: 
+	              { bOk = parseTerminalSymbol(syntaxItem, parentResultItem);
+	              } break;
+	              case kIdentifier:
+	              { bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parentResultItem);
+	              } break;
+	              case kPositivNumber:
+	              { bOk = parsePositiveInteger( syntaxItem, parentResultItem, maxNrofChars);
+	              } break;
+	              case kHexNumber:
+	              { bOk = parseHexNumber( syntaxItem, parentResultItem, maxNrofChars);
+	              } break;
+	              case kNumberRadix:
+	              { bOk = parseNumberRadix( syntaxItem, parentResultItem, maxNrofChars);
+	              } break;
+	              case kIntegerNumber:
+	              { bOk = parseInteger( syntaxItem, parentResultItem, maxNrofChars);
+	              } break;
+	              case kFloatNumber:
+	              case kFloatWithFactor:
+	              { bOk = parseFloatNumber( syntaxItem, maxNrofChars, parentResultItem);
+	              } break;
+	              case kStringUntilEndchar:
+	              { if(sSemanticForStoring!=null && sSemanticForStoring.equals("TESTrest"))
+	                stop();
+	                if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem StrTilEndchar;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
+	                if(sConstantSyntax.length() >0)
+	                { bOk = input.lentoAnyChar(sConstantSyntax, maxNrofChars).found();
+	                }
+	                else
+	                { int maxLen = input.length();
+	                if(maxNrofChars < maxLen)
+	                { input.lento(maxNrofChars);  //NOTE: if maxNrofChars > length(), an exception will be thrown in StringPart.
+	                }
+	                bOk = true;  //whole length
+	                }
+	                if(bOk)
+	                { sSrc = input.getCurrentPart();
+	                }
+	                else
+	                { input.setLengthMax();
+	                  saveError("ones of terminate chars \"" + sConstantSyntax + "\" not found <?" + sSemanticForError + ">");
+	                }
+	
+	              } break;
+	              case kStringUntilRightEndchar:
+	              { bOk = parseStringUntilRightEndchar(sConstantSyntax, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kStringUntilRightEndcharInclusive:
+	              { bOk = parseStringUntilRightEndchar(sConstantSyntax, true, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kStringUntilEndString: //kk
+	              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kStringUntilEndStringTrim: //kk
+	              { bOk = parseStringUntilTerminateString(sConstantSyntax, false, true, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kStringUntilEndStringInclusive: //kk
+	              { bOk = parseStringUntilTerminateString(sConstantSyntax, true, false, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kStringUntilEndStringWithIndent:
+	              { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseItem-StrTilEndInde;" + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion + ") <*" + sConstantSyntax + "?" + sSemanticForError + ">");
+	                StringBuilder buffer = new StringBuilder();
+	                input.setLengthMax().lentoAnyStringWithIndent(syntaxItem.getListStrings().toArray(new String[1]), syntaxItem.getIndentChars() , maxNrofChars, buffer);
+	                if(input.found()) {
+	                  sSrc = buffer;
+	                }
+	                else
+	                { input.setLengthMax();  //not found: length() was setted to 0
+	                  saveError("ones of terminate strings not found" + " <?" + sSemanticForError + ">");
+	                }
+	              } break;
+	              case kStringUntilEndcharOutsideQuotion:
+	              { bOk = parseNoOrSomeCharsOutsideQuotion(sConstantSyntax, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kQuotedString:
+	              { bOk = parseSimpleStringLiteral(sConstantSyntax, maxNrofChars, sSemanticForStoring, parentResultItem, syntaxItem);
+	              } break;
+	              case kRegularExpression:
+	              { 
+	                bOk = parseRegularExpression(syntaxItem, sSemanticForStoring, parentResultItem, bSkipSpaceAndComment);
+	              } break;
+	              default:
+	              {
+	                if(nReportLevel >= nLevelReportParsing) {
+	                  report.reportln(idReportParsing, "parseItem-default;      " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseSemantic(" + nRecursion + ") <?" + sSemanticForError + ">");
+	                }
+	                //parseResult.addSemantic(sSyntax);
+	                bOk = false;
+	              }
+	              }//switch
+	              //
+	              //check whether anything was parsed stored in sSrc:
+	              //then input refers to the start position of the parsed one with its current part.
+	              //
+	            	if(sSrc != null)
+	              { //something parsed as string, may be also an empty string:
+	                if(StringFunctions.startsWith(sSrc,"First line"))
+	                  stop();
+	                long posResult = input.getCurrentPosition();
+	                int srcLine = input.getLineAndColumn(srcColumn);  //, srcLine, srcColumn[0], input.getInputfile()
+	                bOk = addResultOrSubsyntax(sSrc, posResult, srcLine, srcColumn[0], input.getInputfile(), sSemanticForStoring, parentResultItem, syntaxItem.getSubSyntax());
+	                //posSrc = (int)input.getCurrentPosition();
+	                input.fromEnd();
+	              }                
+	//            }//if bTerminalFound
+	            if(!bOk)
+	            { //position before parseWhiteSpaceAndComment().
+	              input.setCurrentPosition(posInput);
+	              parserStoreInPrescript.setCurrentPosition(posParseResult);
+	            }
+	            if(nReportLevel >= nLevelReportBranchParsing)    
+	            { log.reportParsing(sReport, idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)posInput, nRecursion, bOk);
+	            }
+	          }//default
+	        }//switch
+        } //bTerminalFoundInComment, bOk is true
         if(bOk) {
           if(syntaxItem.bStoreAsString && ! bDoNotStoreData) {
             srcLine = input.getLineAndColumn(srcColumn);
@@ -1217,6 +1247,7 @@ public class ZbnfParser
            ////
           }
         }
+        
         if((log.mLogParse & LogParsing.mLogParseItem)!=0) {
           String sLog = bOk ? " ok " : " ERROR";
           report.report(3, sLog);

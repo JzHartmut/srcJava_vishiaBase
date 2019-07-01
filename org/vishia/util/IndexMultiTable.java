@@ -710,6 +710,7 @@ implements Map<Key,Type>, Iterable<Type>  //TODO: , NavigableMap<Key, Type>
   @SuppressWarnings({ "unchecked" })
   @Override public synchronized Type get(Object keyArg){
     //assert(keyArg instanceof Comparable<?>);
+    if(keyArg == null) return null; //prevent NullPointerException in deeper levels. Object with key==null is not found. That is ok.
     IndexBox ixRet = new IndexBox();
     IndexMultiTable_Table<Key, Type> table = super.searchInTables(keyArg, true, ixRet);
     if(table !=null){

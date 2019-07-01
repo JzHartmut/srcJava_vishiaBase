@@ -1838,7 +1838,7 @@ public class DataAccess {
   throws NoSuchFieldException, IllegalAccessException {
     if(recursiveCt > 100) throw new IllegalArgumentException("recursion error");
     Object ret = null;
-    boolean bSearchSuperOuter = false;
+    boolean bNotfound = false;
     try{ 
       Field field = clazz.getDeclaredField(name); 
       field.setAccessible(accessPrivate);
@@ -1849,33 +1849,33 @@ public class DataAccess {
       ret = field.get(obj);
       
     }
-    catch(NoSuchFieldException exc){ bSearchSuperOuter = true; }
-    if(bSearchSuperOuter){
+    catch(NoSuchFieldException exc){ bNotfound = true; }
+    if(bNotfound){
       Class<?> superClazz = clazz.getSuperclass();
       if(superClazz !=null){
         try{
           ret = getDataFromField(name, obj, accessPrivate, superClazz, dst, recursiveCt+1);  //searchs in thats enclosing and super classes.  
-          bSearchSuperOuter = false;
+          bNotfound = false;
         }catch(NoSuchFieldException exc){
           //not found in the super hierarchies:
-          bSearchSuperOuter = true;
+          bNotfound = true;
         }
       }
     }
-    if(bSearchSuperOuter){
+    if(bNotfound){
       Class<?> outerClazz = clazz.getEnclosingClass();
       if(outerClazz !=null){
         Object outer = getEnclosingInstance(obj);
         try{
           ret = getDataFromField(name, outer, accessPrivate, outerClazz, dst, recursiveCt+1);  //searchs in thats enclosing and super classes.  
-          bSearchSuperOuter = false;
+          bNotfound = false;
         }catch(NoSuchFieldException exc){
           //not found in the super hierarchie:
-          bSearchSuperOuter = true;
+          bNotfound = true;
         }
       }
     }
-    if(bSearchSuperOuter){
+    if(bNotfound){
       //Note: this exception occurs often in JZcmd if a variable will be used which is not existing in a condition. The condition is false after catch!
       throw new NoSuchFieldException(name + " ;in class ;" + clazz.getCanonicalName()  + ", data," + (obj==null ? "" : obj.toString()));
     }

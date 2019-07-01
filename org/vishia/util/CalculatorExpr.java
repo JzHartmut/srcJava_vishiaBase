@@ -670,7 +670,8 @@ public class CalculatorExpr
 
     @Override public char typeChar() { return 'Z'; }
     
-    /**Converts the value of val2 to boolean because a booleanExpr is required. 
+    /**Converts the value of val2 to boolean because a booleanExpr is required.
+     * If val2 is an Exception value, then the boolean value is set to false but the type remains exception. 
      * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
      */
     @Override public ExpressionType checkArgument(Value accu, Value val2) {
@@ -2862,14 +2863,14 @@ public class CalculatorExpr
             if(oper.operand_.dataAccess !=null) {
               oval2 = oper.operand_.dataAccess.access(oval2, true, false);
             }
+            convertObj(val2jar, oval2);
+            val2 = val2jar;
           } catch(Exception exc){
             //get data does not found data or returns null:
             val2jar.type_ = 'e'; val2jar.oVal = exc;  //throw the exception if the oVal is need not for boolean or instanceof
             val2jar.etype = variableNotFoundExpr;
             val2 = val2jar;
           }
-          convertObj(val2jar, oval2);
-          val2 = val2jar;
         }  //an input value
         else if(oper.kindOperand == Operation.kStackOperand){
           val2 = data.accu;
@@ -2877,8 +2878,8 @@ public class CalculatorExpr
           //oval2 = null;
         }
         else {
-          Assert.checkMsg(false, "unexpected");;
-          val2 = null;
+          //Assert.checkMsg(false, "unexpected");;
+          val2 = null;  //proper for statements which val2 are not necessary
           //oval2 = null;
         }
         if(oper.operator_ == Operators.setOperation && data.accu.type_ != '?'){

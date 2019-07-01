@@ -19,6 +19,9 @@ if "%INPUT_JAVAC%" =="" (
   exit 1
 )
 
+
+if "%SRCvishiaBase%"=="" set SRCvishiaBase=..
+
 REM --------------------------------------------------------------------------------------------
 REM  Environment variables set from zbnfjax:
 
@@ -32,7 +35,7 @@ REM  The setJAVA_JDK.bat may be existing in the user's path.
 if not "%JAVA_JDK%" == "" goto :JavaOK
 REM call a batch which sets the environment variable JAVA_JDK and expands the path to a proper JAVA-JDK
 echo on
-call setJAVA_JDK.bat
+call %SRCvishiaBase%\_make\setJAVA_JDK.bat
 echo off
 if exist %JAVA_JDK% goto :JavaOK
 
