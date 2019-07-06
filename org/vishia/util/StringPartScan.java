@@ -289,9 +289,12 @@ public class StringPartScan extends StringPart
   */
   public final StringPartScan scan(final CharSequence sTestP) { 
     char cend;
+//    if( (  sTestP.charAt(0)== StringFunctions.cEndOfText)) { 
+//        Debugutil.stop();
+//    }
     if( (  sTestP.charAt(0)== StringFunctions.cEndOfText 
         || sTestP.length() ==2 && sTestP.charAt(0) == '\\' && ((cend = sTestP.charAt(1))=='Z' || cend == 'z')  
-        && begin == end) ) {
+      ) && begin == end) {
       return this;  //it is the end, remain bCurrentOk. 
       //Note: do not call scanEntry() for this case because it sets bCurrentOk = false if end of text is reached,
       //but exact this is the true condition.

@@ -445,6 +445,7 @@ public class ZbnfParser
             , parentResultItem
             , bSkipSpaceAndComment
             , parseResultsFromOtherComponents
+            , nRecursion
             );  
       if(!bOk)
       { //report.reportln(idReportComponentParsing, "                                          --");
@@ -623,6 +624,7 @@ public class ZbnfParser
       , ZbnfParserStore.ParseResultItemImplement parentResultItem
       , boolean bSkipSpaceAndComment
       , ZbnfParserStore parseResultsFromOtherComponents          //if <..?+..>
+      , int recursion
       ) throws ParseException
       { boolean bFound = false;
         sSemanticForError = sSemanticForErrorDefault;
@@ -724,10 +726,10 @@ public class ZbnfParser
             String semanticOfAlternative = alternativePrescript.getSemantic();
             if(semanticOfAlternative !=null) {
               SubParser alternativParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || syntaxPrescript.bDonotStoreData,  nRecursion+1); //false);
-              bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null);
+              bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null, recursion+1);
             } else {
               //the alternative has not a special semantic. Parse it without extra level.
-              bOk = parsePrescript(alternativePrescript, parentResultItem, bSkipSpaceAndComment, bDoNotStoreData);
+              bOk = parsePrescript(alternativePrescript, parentResultItem, bSkipSpaceAndComment, bDoNotStoreData, recursion);
               //SubParser alternativParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
               //bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
             }
@@ -739,12 +741,19 @@ public class ZbnfParser
                 );
             }
           }
+          int inputPos = (int)input.getCurrentPosition();
+          if(dbgPosFrom > 0 && (inputPos = (int)posInput) >= dbgPosFrom && inputPos < dbgPosTo
+            //&& (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
+              ) {
+            Debugutil.stop();
+          }
+
         }//isAlternative()
         else
         { /* parse the current sub-prescript: 
           */
           if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parse subPrescript;     " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse(" + nRecursion +") alternative=" + idxAlternative);
-          bOk = parsePrescript(syntaxPrescript, parentResultItem, bSkipSpaceAndComment, bDoNotStoreData);
+          bOk = parsePrescript(syntaxPrescript, parentResultItem, bSkipSpaceAndComment, bDoNotStoreData, recursion);
         }  
         if(bOk)
         { bFound = true;
@@ -845,7 +854,7 @@ public class ZbnfParser
        * @throws ParseException
        */
       boolean parsePrescript(ZbnfSyntaxPrescript prescriptItem, ZbnfParserStore.ParseResultItemImplement parentResultItem
-          , boolean bSkipSpaceAndCommentForward, boolean bDoNotStoreData) 
+          , boolean bSkipSpaceAndCommentForward, boolean bDoNotStoreData, int recursion) 
       throws ParseException 
       { List<ZbnfSyntaxPrescript> listPrescripts = prescriptItem.getListPrescripts();
         boolean bSkipSpaceAndComment = bSkipSpaceAndCommentForward;
@@ -886,7 +895,7 @@ public class ZbnfParser
                 forkPoints.add(forkPoint);
                 idxPrescript +=1;  //first try skip over this option.
               } else {
-                bOk = parseItem(syntaxItem, parentResultItem, bSkipSpaceAndComment); //, thisParseResult, addParseResult);  //##s
+                bOk = parseItem(syntaxItem, parentResultItem, bSkipSpaceAndComment, recursion); //, thisParseResult, addParseResult);  //##s
                 if(nType == ZbnfSyntaxPrescript.EType.kAlternativeOptionCheckEmptyFirst){
                   backToFork = false;  //for following fork points.
                   if(bOk)
@@ -937,7 +946,8 @@ public class ZbnfParser
        * @return
        * @throws ParseException
        */
-      private boolean parseItem(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment) throws ParseException //, ParserStore parseResult, ParserStore addParseResult)
+      private boolean parseItem(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem
+          , boolean bSkipSpaceAndComment, int recursion) throws ParseException //, ParserStore parseResult, ParserStore addParseResult)
       { boolean bOk;
         String sConstantSyntax = syntaxItem.getConstantSyntax();
         String sDefinitionIdent = syntaxItem.getDefinitionIdent();
@@ -1028,19 +1038,19 @@ public class ZbnfParser
 	          { if(nReportLevel >= nLevelReportBranchParsing){ 
 	              log.reportParsing("Opti " + input.getCurrentPosition()+ " " + inputCurrent(input), idReportBranchParsing, syntaxItem, sReportParentComponents, input, (int)input.getCurrentPosition(), nRecursion, true); 
 	            }
-	            bOk = parseOptions(syntaxItem, parentResultItem, bSkipSpaceAndComment);
+	            bOk = parseOptions(syntaxItem, parentResultItem, bSkipSpaceAndComment, recursion);
 	          } break;
 	          case kNegativVariant:
-	          { bOk = parseNegativVariant(syntaxItem, bSkipSpaceAndComment);
+	          { bOk = parseNegativVariant(syntaxItem, bSkipSpaceAndComment, recursion);
 	          } break;
 	          case kUnconditionalVariant:
-	          { bOk = parseUnconditionalVariant(syntaxItem, parentResultItem, bSkipSpaceAndComment);
+	          { bOk = parseUnconditionalVariant(syntaxItem, parentResultItem, bSkipSpaceAndComment, recursion);
 	          } break;
 	          case kExpectedVariant:
-	          { bOk = parseExpectedVariant(syntaxItem, bSkipSpaceAndComment);
+	          { bOk = parseExpectedVariant(syntaxItem, bSkipSpaceAndComment, recursion);
 	          } break;
 	          case kRepetition:
-	          { bOk = parseRepetition(syntaxItem, syntaxItem.getRepetitionBackwardPrescript(), parentResultItem, bSkipSpaceAndComment);
+	          { bOk = parseRepetition(syntaxItem, syntaxItem.getRepetitionBackwardPrescript(), parentResultItem, bSkipSpaceAndComment, recursion);
 	          } break;
 	          case kOnlySemantic:
 	          { bOk = true;
@@ -1884,7 +1894,7 @@ public class ZbnfParser
        * @throws ParseException 
        */
       //private boolean parseOptions(Iterator<ZbnfSyntaxPrescript> iterItems, ZbnfSyntaxPrescript options, boolean bSkipSpaceAndComment, ParserStore parseResult)
-      private boolean parseOptions(ZbnfSyntaxPrescript optionPrescript, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment) throws ParseException
+      private boolean parseOptions(ZbnfSyntaxPrescript optionPrescript, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment, int recursion) throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptions;           " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse option:" + sSemanticForError);
@@ -1935,7 +1945,7 @@ public class ZbnfParser
           //if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseOptionFirstAfter;  " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " try options:");
           srcLineOption = -1;  //clear          
           SubParser optionParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || optionPrescript.bDonotStoreData, nRecursion+1); //false);
-          bOk = optionParser.parseSub(optionPrescript, "[...]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment,  null);
+          bOk = optionParser.parseSub(optionPrescript, "[...]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment,  null, recursion+1);
           if(!bOk)
           { /* The isPossibleEmptyOption will be checked in parseSub
             if(optionPrescript.alsoEmptyOption) {
@@ -1949,7 +1959,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parseNegativVariant(ZbnfSyntaxPrescript syntaxNegativ, boolean bSkipSpaceAndComment) throws ParseException
+      private boolean parseNegativVariant(ZbnfSyntaxPrescript syntaxNegativ, boolean bSkipSpaceAndComment, int recursion) throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseNegativVariante;   " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " [?" + sSemanticForError);
@@ -1959,7 +1969,7 @@ public class ZbnfParser
         SubParser negativParser = new SubParser(this, null, false, nRecursion+1); 
         int posParseResult = parserStoreInPrescript.getNextPosition();
         long posInput  = input.getCurrentPosition();
-        bOk = negativParser.parseSub(syntaxNegativ, "[?..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null);
+        bOk = negativParser.parseSub(syntaxNegativ, "[?..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null, recursion+1);
         /**always set the current position back to the originator at begin of this parse test. */
         input.setCurrentPosition(posInput);
         parserStoreInPrescript.setCurrentPosition(posParseResult);
@@ -1970,7 +1980,7 @@ public class ZbnfParser
       }
   
   
-      private boolean parseExpectedVariant(ZbnfSyntaxPrescript syntaxPrescript, boolean bSkipSpaceAndComment) 
+      private boolean parseExpectedVariant(ZbnfSyntaxPrescript syntaxPrescript, boolean bSkipSpaceAndComment, int recursion) 
       throws ParseException
       { final boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseExpectVariante;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " [!" + sSemanticForError);
@@ -1978,7 +1988,7 @@ public class ZbnfParser
         SubParser expectedParser = new SubParser(this, null, this.bDoNotStoreData || syntaxPrescript.bDonotStoreData, nRecursion+1); 
         int posParseResult = parserStoreInPrescript.getNextPosition();
         long posInput  = input.getCurrentPosition();
-        bOk = expectedParser.parseSub(syntaxPrescript, "[!..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null);
+        bOk = expectedParser.parseSub(syntaxPrescript, "[!..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", null, bSkipSpaceAndComment, null, recursion+1);
         if(bOk)
         { /**it is okay, but ignore the result there. */
           input.setCurrentPosition(posInput);
@@ -1987,21 +1997,23 @@ public class ZbnfParser
         return bOk;  //negation, it is not ok if the result matches.
       }
 
-      private boolean parseUnconditionalVariant(ZbnfSyntaxPrescript syntaxPrescript, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment) 
+      private boolean parseUnconditionalVariant(ZbnfSyntaxPrescript syntaxPrescript, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment, int recursion) 
       throws ParseException
       { boolean bOk = true;
         //boolean bNotFound = true;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseUncondVariante;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " [>" + sSemanticForError);
         
         SubParser positiveParser = new SubParser(this, parentResultItem, this.bDoNotStoreData || syntaxPrescript.bDonotStoreData, nRecursion+1); 
-        bOk = positiveParser.parseSub(syntaxPrescript, "[>..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null);
+        bOk = positiveParser.parseSub(syntaxPrescript, "[>..]"/*sSemanticForError*/, ZbnfParserStore.kOption, null, "@", parentResultItem, bSkipSpaceAndComment, null, recursion+1);
         if(!bOk) 
           throw new ParseException("unconditional Syntax failes", 0);
         return bOk;  //negation, it is not ok if the result matches.
       }
   
   
-      private boolean parseRepetition(ZbnfSyntaxPrescript forwardSyntax, ZbnfSyntaxPrescript backwardSyntax, ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment) throws ParseException
+      private boolean parseRepetition(ZbnfSyntaxPrescript forwardSyntax, ZbnfSyntaxPrescript backwardSyntax
+      , ZbnfParserStore.ParseResultItemImplement parentResultItem, boolean bSkipSpaceAndComment, int recursion
+      ) throws ParseException
       { boolean bOk = true;
         boolean bShouldRepeat = true;
         boolean bRepeatContinue;
@@ -2039,31 +2051,10 @@ public class ZbnfParser
           { nStartLast = nStart;
             if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRep-repeat;        " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " { parse repetition nr:" + countRepetition);
             if(false) repeatForwardParser.init();  //because re-using
-            bOkForward = repeatForwardParser.parseSub(forwardSyntax, "{...}"/*sSemanticForError*/, countRepetition, null, sForwardSemantic, parentResultItem, bSkipSpaceAndComment, null);
+            bOkForward = repeatForwardParser.parseSub(forwardSyntax, "{...}"/*sSemanticForError*/, countRepetition, null, sForwardSemantic, parentResultItem, bSkipSpaceAndComment, null, recursion+1);
           }
   
-          if(!bOkForward && bShouldRepeat)
-          { bOk = false;
-            saveError("repetition required because backward-continue is matched."); // + " <?" + sSemanticForError + ">");
-          }
-  
-          
-          if(bOkForward)
-          { 
-            if(backwardSyntax != null)
-            { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRep-backCheck;     " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse test repetition back:");
-              if(false) repeatBackwardParser.init();  //because re-using
-              bShouldRepeat = bRepeatContinue = repeatBackwardParser.parseSub(backwardSyntax, "{?...}"/*sSemanticForError*/, -countRepetition, null, "@", parentResultItem, bSkipSpaceAndComment, null);
-            }
-            else
-            { bShouldRepeat = false;  //may be or not repeated
-              bRepeatContinue = true;       //test the repeat possibility.
-              if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRep-backUncond;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse repetition test repeat:");
-            }
-          }
-          else bRepeatContinue = false;
-  
-          switch(nRecursion) //helper for break points in several level 
+          switch(recursion) //helper for break points in several level 
           { case 0:
              stop(); break;
             case 1:
@@ -2079,6 +2070,27 @@ public class ZbnfParser
             default:
              stop(); break;
           }
+          if(!bOkForward && bShouldRepeat)
+          { bOk = false;
+            saveError("repetition required because backward-continue is matched."); // + " <?" + sSemanticForError + ">");
+          }
+  
+          
+          if(bOkForward)
+          { 
+            if(backwardSyntax != null)
+            { if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRep-backCheck;     " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse test repetition back:");
+              if(false) repeatBackwardParser.init();  //because re-using
+              bShouldRepeat = bRepeatContinue = repeatBackwardParser.parseSub(backwardSyntax, "{?...}"/*sSemanticForError*/, -countRepetition, null, "@", parentResultItem, bSkipSpaceAndComment, null, recursion);
+            }
+            else
+            { bShouldRepeat = false;  //may be or not repeated
+              bRepeatContinue = true;       //test the repeat possibility.
+              if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRep-backUncond;    " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parse repetition test repeat:");
+            }
+          }
+          else bRepeatContinue = false;
+  
         } while(bRepeatContinue);
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseRep-finish;        " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " } parse repetition finished, nr:" + countRepetition);
         return bOk;

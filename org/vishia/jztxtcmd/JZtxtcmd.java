@@ -921,6 +921,7 @@ INPUT          pathTo JZcmd-File to execute
   throws ScriptException
   { boolean bOk;
     parserGenCtrl.setXmlSrcline(checkXmlOutput !=null);
+    //parserGenCtrl.setDebugPosition(472, 476, 0);
     bOk = parserGenCtrl.parse(sourceScript);
     if(!bOk){
       String sError = parserGenCtrl.getSyntaxErrorReport();
