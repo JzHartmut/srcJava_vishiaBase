@@ -132,6 +132,13 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-07-07: Some debug possibilities moved or commented.  
+   * <li>2019-07-06 Hartmut bugfix: conspicuously on JTtxtcmd-Script some indents where missing (Reflection Generation). The cause was the missing <code>.indent=-3</code>-attribute.
+   *   The primary error was using the faulty {@link ZbnfSyntaxPrescript} instance to store the parse result in <code>parseSub(...)</code>.
+   *   Because of change in 2019-05 accidentally or experimentally the current used prescript are used for the parse result instead the calling prescript item.
+   *   It is now tested with {@link GenZbnfJavaData} and FBCL, that it is not comprehensible for necessity. 
+   *   The <code>parentSyntaxItem</code> (calling level) contains the correct semantic (often same as current syntax prescript but not in any case)
+   *   and especially for JZtxtcmd indent on texts the attribute for indent, or some more information.   
    * <li>2019-06-29 Hartmut bugfix: If &lt;syntax?"!"textSemantic> is used, the stored text has contained skipped comment and spaces. 
    *   Often only spaces were contained in the parse result, so trim() was a workarround. But comments are contained too, that is not proper.
    *   Yet the order of checking white spaces inclusively parse {@link ZbnfSyntaxPrescript.EType#kTerminalSymbolInComment} is moved before checking
@@ -267,7 +274,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2018-09-10";
+  public static final String sVersion = "2019-07-07";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -632,12 +639,6 @@ public class ZbnfParser
         String sSemanticIdent1 = sSemanticIdent; //only debug
 //        if(resultType == ZbnfParserStore.kOption)
 //          stop();
-        if(syntaxPrescript !=null && syntaxPrescript.sDefinitionIdent !=null) {
-          if(syntaxPrescript.sDefinitionIdent.equals("real_literal"))
-            Debugutil.stop();
-          if(syntaxPrescript.sDefinitionIdent.equals("real_type_name"))
-          Debugutil.stop();
-        }
         final String sSemanticForStoring1;
         if(sSemanticForStoring!= null && sSemanticForStoring.equals("@"))
         { //on calling its written like <name> without semantic, than:
@@ -658,6 +659,12 @@ public class ZbnfParser
         //int nLineInput = input.getLineCt();
         long posInputForStore;
         long posInput  = input.getCurrentPosition();
+//        if(syntaxPrescript !=null && syntaxPrescript.sDefinitionIdent !=null) {
+//          if(syntaxPrescript.sDefinitionIdent.equals("textExpr") && posInput == 5933)
+//            Debugutil.stop();
+//          if(syntaxPrescript.sDefinitionIdent.equals("real_type_name"))
+//          Debugutil.stop();
+//        }
         if(  bSkipSpaceAndComment 
           && resultType == ZbnfParserStore.kOption  //if another one, it is possible to parse a comment inside the component.
           && sSemanticForStoring1 != null
@@ -688,8 +695,11 @@ public class ZbnfParser
           //But the elements of the component are stored as child of the component.
           //If the component is not valid, this parse result will be deleted then.
           //The content is stored via parentResultItem later after parsing ok of this component.
-          //since 2019-05-30: The associated syntaxPrescript is necessary to evaluate the parsers result, not the parent.
-          resultItem = parserStoreInPrescript.add(sSemanticForStoring1, syntaxPrescript, null, resultType, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
+          //on 2019-05-30 was written:: The associated syntaxPrescript is necessary to evaluate the parsers result, not the parent.
+          //but that is faulty, because the calling item should determine the semantic for storing, not the prescript itself.
+          //faulty: resultItem = parserStoreInPrescript.add(sSemanticForStoring1, syntaxPrescript, null, resultType, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
+          //Use parentSyntaxItem, it contains the necessary semantic for storing, maybe also especially attributes for indent or other.
+          resultItem = parserStoreInPrescript.add(sSemanticForStoring1, parentSyntaxItem, null, resultType, 0,0, srcLine, srcColumn[0], srcFile, parentOfParentResultItem);
           idxCurrentStore = idxStoreAlternativeAndOffsetToEnd = parserStoreInPrescript.items.size() -1; 
           parentResultItem = resultItem; //parserStoreInPrescript.getItem(idxCurrentStore);
         }
@@ -705,9 +715,6 @@ public class ZbnfParser
           if(idxCurrentStore == -1){ idxCurrentStore = idx1; }
         }
         
-        if(input.getCurrentPosition() >=5015)
-            Debugutil.stop();
-          
         if( (log.mLogParse & LogParsing.mLogParseCmpn) !=0  ) { //nLevelReportParsing <= report.getReportLevel()) { 
           String sLog = "parseSub                " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " semantic=" + sSemanticForStoring1 + " errormsg=" + sSemanticForError;
           report.reportln(nLevelReportParsing, sLog );
@@ -778,8 +785,8 @@ public class ZbnfParser
              * This information helps to evaluate such constructs as [<?semantic>green|red|yellow].
              */
             parsedInput = input.getPart((int)posInputForStore, (int)(input.getCurrentPosition()-posInputForStore));
-            if(resultItem.sSemantic.startsWith("line"))
-              Debugutil.stop();
+//            if(resultItem.sSemantic.startsWith("line"))
+//              Debugutil.stop();
             if(  resultItem.kind != ZbnfParserStore.kComponent
               && resultItem.parsedString == null  //it is not a constant String stored. 
               ) {
@@ -818,9 +825,8 @@ public class ZbnfParser
               //parserStoreInPrescript.setParsedText(idxStoreAlternativeAndOffsetToEnd, parsedInput);
               //parserStoreInPrescript.setParsedString(idxStoreAlternativeAndOffsetToEnd, parsedInput.trim());
               assert(resultItem !=null);  //elsewhere the syntax does not match
-              if(resultItem.sSemantic.equals("line"))
-                Debugutil.stop();
-              //resultItem.parsedString = parsedInput.trim().toString();
+//              if(resultItem.sSemantic.equals("line"))
+//                Debugutil.stop();
             }
           }
         }
@@ -866,8 +872,8 @@ public class ZbnfParser
         //list for fork points only used for right aligned parsing.
         List<ForkPoint> forkPoints = null;  //for option
         boolean backToFork = false;
-        if(parentOfParentResultItem !=null && parentOfParentResultItem.sSemantic.equals("CLASS_C") && sSemanticIdent.equals("headerBlock"))
-          Debugutil.stop();
+//        if(parentOfParentResultItem !=null && parentOfParentResultItem.sSemantic.equals("CLASS_C") && sSemanticIdent.equals("headerBlock"))
+//          Debugutil.stop();
         int idxPrescript = 0;  //start from first element. Regard that a SubParser instance is used more as one if it is a repetition.
         do { //loop for forkpoint 
           bOk = true;
@@ -879,9 +885,9 @@ public class ZbnfParser
               bSkipSpaceAndComment = true;
             }
             if(idxPrescript < listPrescripts.size()) { //consider spaces on end of prescript.
-              if(input.getCurrentPosition()>=6834) 
-                if(StringFunctions.equals(prescriptItem.sDefinitionIdent, "binaryOperator"))
-                  Debugutil.stop();
+//              if(input.getCurrentPosition()>=6834) 
+//                if(StringFunctions.equals(prescriptItem.sDefinitionIdent, "binaryOperator"))
+//                  Debugutil.stop();
               ZbnfSyntaxPrescript syntaxItem = listPrescripts.get(idxPrescript); 
               if(syntaxItem.bDebugParsing) {
                 Debugutil.stop();
@@ -1006,7 +1012,7 @@ public class ZbnfParser
 	        input.setCurrentPosition(posInput);
 	        posInput = posInput2; 
 	        { int inputPos;
-	          if(dbgPosFrom > 0 && (inputPos = (int)posInput) >= dbgPosFrom && inputPos < dbgPosTo
+	          if(dbgPosFrom > 0 && (inputPos = (int)posInput) >= dbgPosFrom && inputPos <= dbgPosTo
 	            && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
 	              ) {
 	            Debugutil.stop();
@@ -1262,7 +1268,7 @@ public class ZbnfParser
           String sLog = bOk ? " ok " : " ERROR";
           report.report(3, sLog);
         }
-        if(dbgPosFrom > 0 && posInput >= dbgPosFrom && posInput < dbgPosTo
+        if(dbgPosFrom > 0 && posInput >= dbgPosFrom && posInput <= dbgPosTo
             && (dbgLineSyntax == 0 || dbgLineSyntax == syntaxItem.lineFile)
               ) {
             Debugutil.stop();
@@ -1291,9 +1297,9 @@ public class ZbnfParser
         
         long posCurrent = input.getCurrentPosition();
         CharSequence test = input.getCurrent(40);
-        if(StringFunctions.startsWith(test, "  //NOTE all 24 low-bits are 0")){
-          Debugutil.stop();
-        }
+//        if(StringFunctions.startsWith(test, "  //NOTE all 24 low-bits are 0")){
+//          Debugutil.stop();
+//        }
         boolean bFoundConstantSyntax;  
         boolean bFoundAnySpaceOrComment;
         do  //if once of whitespace, comment or endlinecomment is found, try again.
@@ -1379,8 +1385,8 @@ public class ZbnfParser
       private boolean parseTerminalSymbol(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem)
       { boolean bOk;
         long nStart = input.getCurrentPosition();
-        if(nStart == 6532)
-          { Debugutil.stop();}
+//        if(nStart == 6532)
+//          { Debugutil.stop();}
         srcLine = input.getLineAndColumn(srcColumn);
         String sFile = input.getInputfile();
         String sConstantSyntax = syntaxItem.getConstantSyntax();
@@ -1803,12 +1809,9 @@ public class ZbnfParser
       
       
       private boolean addResultOrSubsyntax(CharSequence sResult, long srcBegin, int srcLine, int srcColumn, String srcFile, String sSemanticForStoring, ZbnfParserStore.ParseResultItemImplement parentResultItem, String subSyntax) throws ParseException
-      { //##ss
-        boolean bOk;
-        if(sSemanticForStoring !=null && sSemanticForStoring.equals("ST/@Text"))
-          Debugutil.stop();
-        //String sSrc = input.getCurrentPart();
-        //int posSrc = (int)input.getCurrentPosition();
+      { boolean bOk;
+//        if(sSemanticForStoring !=null && sSemanticForStoring.equals("ST/@Text"))
+//          Debugutil.stop();
         if(subSyntax!= null)
         { //The source string of the parsed component is used for further parsing of them by a sub syntax:
           if(sSemanticForStoring !=null){

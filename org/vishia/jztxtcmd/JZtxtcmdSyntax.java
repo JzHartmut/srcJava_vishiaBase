@@ -17,6 +17,11 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2017-07-12 Hartmut chg: <code>&lt;textExpr?.indent=-3></code> attribute ident to any textExpr, 
+   *   hence it is possible to use it in any textDatapath too, for example<pre>
+   *   String myString = <:>StartContent
+   *   ==================further Content in new line.<.></pre> 
+   * It was done because searching of bug found in ZbnfParser, but it is yet usefully.   
    * <li>2017-07-12 Hartmut new: debugOp
    * <li>2017-03-25 Hartmut renaming JZtxtcmd, attribute ?.indent=-3 for textExpr  
    * <li>2017-03-11 Hartmut <:indent:3=> for indentation of a generated text.
@@ -105,7 +110,7 @@ public final class JZtxtcmdSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2017-07-12";
+  static final public String version = "2019-07-06";
 
   
   public final static String syntax =
@@ -310,13 +315,13 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " \n"
     + " \n"
-    + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | [& [?(] ] <dataAccess> .\n"
+    + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr?.indent=-3>\\<\\.\\> | [& [?(] ] <dataAccess> .\n"
     + " \n"
     //NOTE: a textvalue cannot end on a ':' because command line arguments cannont be parsed with then.
-    + " textValue::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
+    + " textValue::=  <\"\"?text> | \\<:\\><textExpr?.indent=-3>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     //NOTEtextvalue for a text expression in <subtext:name:...> can end on a ':' .
-    + " textValueTextExpr::=  <\"\"?text> | \\<:\\><textExpr>\\<\\.\\> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
+    + " textValueTextExpr::=  <\"\"?text> | \\<:\\><textExpr?.indent=-3>\\<\\.\\> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     + " \n"
     + " objExpr::= \n"
@@ -325,7 +330,7 @@ public final class JZtxtcmdSyntax {
     + " | Fileset : <filesetAccess>  \n"
     + " | \\{ <dataStruct> \\}              ## It is a Map of Variables. \n"
     + " | <\"\"?text>                       ## It is a constant text. \n"
-    + " | \\<:\\><textExpr>\\<\\.\\>           ## It is a text assembled in runtime. \n"
+    + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>           ## It is a text assembled in runtime. \n"
     + " | <numExpr>.                      ## special detection of a simple dataAccess.\n"
     + " \n"
     + " dataStruct::= { <DefVariable?> ; } | { <DefStringVar?textVariable> ? , }.\n"  

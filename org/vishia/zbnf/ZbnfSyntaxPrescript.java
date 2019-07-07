@@ -225,6 +225,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2019-07-06 Hartmut new: {@link #objid} for debugging only. No functional changes.  
    * <li>2019-05-30 Hartmut new: {@link #childsHasSemantic()} for evaluation in {@link GenZbnfJavaData}
    * <li>2019-05-29 Hartmut new: prepared for &lt;...?*...> for {@link #bEntryComponentContainer}
    * <li>2019-05-25 Hartmut new: possibilities of parsing number: &lt;#8 for any radix, separatorChars in number. 
@@ -261,6 +262,10 @@ public class ZbnfSyntaxPrescript
    * </ul>
    */
   public static final String version = "2019-05-10";
+  
+  static int objId_ = 1000;
+  
+  final int objid;
   
   /**For debugging and error report: The line in the syntax file. */
   final int lineFile;
@@ -847,7 +852,10 @@ public class ZbnfSyntaxPrescript
 
   /** Constructor only fills the data.*/
   private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
-  { this.report = report;
+  { this.objid = ++objId_;
+//    if(objid == 2813)
+//      Debugutil.stop();
+    this.report = report;
     this.lineFile = linefile;
     this.sCommentStart1 = parent.sCommentStart1;
     this.sCommentStart2 = parent.sCommentStart2;
@@ -858,7 +866,10 @@ public class ZbnfSyntaxPrescript
 
   /** Constructor only fills the data.*/
   private ZbnfSyntaxPrescript(MainCmdLogging_ifc report, boolean bWithSyntaxList, String sCommentStart1, String sCommentStart2, int linefile)
-  { this.report = report;
+  { this.objid = ++objId_;
+//    if(objid == 2813)
+//      Debugutil.stop();
+    this.report = report;
     this.lineFile = linefile;
     this.sCommentStart1 = sCommentStart1;
     this.sCommentStart2 = sCommentStart2;
@@ -869,7 +880,10 @@ public class ZbnfSyntaxPrescript
 
   /** Constructor only fills the data.*/
   ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, EType type, int linefile)
-  { eType = type;
+  { this.objid = ++objId_;
+//    if(objid == 2813)
+//      Debugutil.stop();
+    eType = type;
     this.lineFile = linefile;
     this.sCommentStart1 = parent ==null ? null : parent.sCommentStart1;
     this.sCommentStart2 = parent ==null ? null : parent.sCommentStart2;
