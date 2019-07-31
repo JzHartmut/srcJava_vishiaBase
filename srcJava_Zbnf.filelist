@@ -6,7 +6,7 @@
 2019-06-30 22:18:19  x     srcJava_Zbnf-19-06-14.zip                ::       1250.297 -2120489151 
 2019-06-30 22:23:51  x     srcJava_Zbnf-19-06-17.zip                ::       1250.983  0379879766 
 2019-06-30 22:21:33  x     srcJava_Zbnf-19-06-18.zip                ::       1253.275 -1111616732 
-2019-07-07 10:29:36  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-07-31 22:15:28  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -263,9 +263,10 @@
 ============================== org/vishia/test/ ====================================================
 2018-09-13 08:41:15  x     FilewalkStream.java                      ::           .873 -0451405320 
 2019-04-09 23:09:44  x     LambdaTest1.java                         ::          1.647 -1187076921 
+2019-07-17 12:04:43  x     T1_Ctrl_Functional.java                  ::           .678  0806594809 
 2016-11-27 20:51:06  x     TestAddJar.java                          ::          1.729 -1295448115 
 2018-09-13 08:32:02  x     TestArithmetik.java                      ::           .758 -0761414338 
-2014-05-27 22:36:04  x     TestCalctime_sin.java                    ::          1.455  1439599302 
+2019-07-17 11:42:31  x     TestCalctime_sin.java                    ::          1.761  0518727698 
 2016-11-27 21:17:03  x     TestConsoleInput.java                    ::           .966 -0685490407 
 2014-01-09 20:49:01  x     TestGeneric.java                         ::          1.260 -1543927629 
 2017-12-31 16:30:41  x     TestStream.java                          ::           .234  0964263483 
@@ -284,7 +285,7 @@
 2019-07-01 09:22:55  x     DataAccess.java                          ::        125.836 -0681009615 
 2019-06-21 09:28:58  x     DataShow.java                            ::         29.206  0163463218 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
-2019-01-24 16:42:48  x     Debugutil.java                           ::          1.185 -1596902083 
+2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2013-06-27 19:28:00  x     FileCompare.java                         ::         13.113 -1366728653 
 2019-04-09 23:06:11  x     FileFunction.java                        ::          5.914 -1625440232 
@@ -315,7 +316,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-06-21 22:18:05  x     OutTextPreparer.java                     ::         38.133  1791083260 
+2019-07-31 20:17:30  x     OutTextPreparer.java                     ::         41.465 -1227665469 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -342,7 +343,7 @@
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
-2019-07-06 21:39:29  x     StringPartScan.java                      ::         48.458 -0983900510 
+2019-07-31 16:36:54  x     StringPartScan.java                      ::         48.494  0450666391 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
 2016-01-24 19:42:52  x     ThreadRun.java                           ::          9.693  1605710614 

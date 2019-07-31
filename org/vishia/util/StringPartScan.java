@@ -201,7 +201,7 @@ public class StringPartScan extends StringPart
    */
   public final StringPartScan scanStart()
   { bCurrentOk = true;
-    scanOk();  //turn all indicees to ok
+    scanOk();  //reset all indices to ok on next scanEntry
     return this;
   }
 
@@ -257,12 +257,12 @@ public class StringPartScan extends StringPart
   { if(bCurrentOk) 
     { beginScanLast = beginScan;
       beginScan =  beginLast = begin;    //the scanOk-position is the begin of maximal part.
-      bStartScan = true;   //set all ixLast... to 0
     }
     else           
     { begin = beginLast= beginScan;   //return to the begin
     }
     //if(report != null){ report.report(6," scanOk:" + beginMin + ".." + begin + ":" + (bCurrentOk ? "ok" : "error")); }
+    bStartScan = true;   //set all ixLast... to 0 on next scanEntry()
     boolean bOk = bCurrentOk;
     bCurrentOk = true;        //prepare to next try scanning
     return(bOk);

@@ -10,6 +10,12 @@ public class Debugutil
     return 0;
   }
   
+  /**This method can be used to force re compilation and re-test for a routine with changing the value. 
+   */
+  public static int retest(int x){
+    return 0;
+  }
+  
   /**Stop here while program writing. */
   public static int todo(){
     return 0;

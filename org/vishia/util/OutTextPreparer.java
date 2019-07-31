@@ -1,5 +1,7 @@
 package org.vishia.util;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -8,19 +10,60 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.fbcl.wr.WriterDataFBcl;
 
 
 
-/**This class helps to prepare a text with data. It is the small solution for {@link org.vishia.jztxtcmd.JZtxtcmd}
+
+/**This class helps to prepare an output text with data. It may be seen as small solution in comparison to {@link org.vishia.jztxtcmd.JZtxtcmd}
  * only for text preparation of one or a few lines.
- * <br>
- * The prescript to build the text is parsed from a given String: {@link #parse(String)}.
- * It is stored in an instance of this as a list of items. Any item is marked with a value of {@link ECmd}.
- * On one of the {@link #exec(StringFormatter, Object...)} routines a text output is produced with this prescript and given data.
- * <br>
- * <b>Basic example: </b>
- * ...
- * <br>
+ * <br><br>
+ * An instance of this class is used as formatter for an output text. On construction a prescript is given:<pre>
+ * static OutTextPreparer otxMyText = new OutTextPreparer("otxMyText", UserClass.class, "arg1, arg2",
+ *    "A simple text with newline: \n"
+ *  + "<&arg1>: a variable value"
+ *  + "<&arg1.operation(arg2)>: Invocation of any operation in arguments resulting in an text"  
+ *  + "<:call:otxSubText:arg1>: call of any sub text maybe with args"
+ *  + "<:exec:operation:arg1> : call of any operation in the given reflection class maybe with args"
+ *  + "");
+ * </pre>
+ * Arguments of ctor: see also {@link OutTextPreparer#OutTextPreparer(String, Class, String, String)}:
+ * <ul><li>First arg: only a text for error reports
+ * <li>Second: The reflection class where <code>&lt:exec:operation></code> is searched
+ * <li>3.: All argument names
+ * <li>last: The prescript to format the output.
+ * </ul>
+ * <b>Data for execution:</b>
+ * A proper instance to store the argument data should be gotten via {@link #getArgumentData()}. It is possible 
+ * to build this instance on construction in the ctor of the users organization class. Then this instance is reused 
+ * (save calculation time for allocation and garbage), possible in single thread usage. <pre>
+ *   public MyWriterClass() { 
+ *     dataMyText =   otxMyText.getArgumentData(this);
+</pre>
+ * If multithreading should be used (speed up generation time) to built output texts with the same instance of this, 
+ * it is possible. This class is readonly and can be used without any restriction in multithreading, after it is contsructed.
+ * Any thread need its own instance of the {@link DataTextPreparer} instance to work independent. 
+ * <br><br>
+ * <b>Call of preparation for output of a text:</b><br><pre>
+ *    try {
+ *      wr = new BufferedWriter(new FileWriter(toFile));
+ *      dataMyText.setArgument("arg1", arg1Value);
+ *      dataMyText.setArgument("arg2", arg2Value);
+ *      otxMyText.exec(wr, dataMyText);
+ *    } 
+ *    catch(IOException exc) {....
+ * </pre>The argument value are set. It is possible to use {@link DataTextPreparer#setArgument(int, Object)} too
+ *   if the order of arguments is known and definitely. It is faster because the position of the argument 
+ *   should not be searched (uses binary search, fast too). The it is executed. The output text is written 
+ *   in the given {@link Appendable}, it may be a {@link java.lang.StringBuilder} too.
+ * <br><br>
+ * <b><code>&lt;:exec:operation:arg></code></b>:<br>
+ * The <code>:arg</code> is optional. The <code>operation</code> will be searched in the given reflection class (ctor argument).
+ * The operation is stored as {@link Method} for usage, so this operation is fast. 
+ * The optional argument is used from given arguments of call, it should be match to the operations argument type.
+ * If the operation is not found, an exception with a detailed error message is thrown on ctor. 
+ * If the operations argument is not proper, an exception is thrown on {@link #exec(Appendable, DataTextPreparer)}.
+ * <br><br>
  * @author Hartmut Schorrig
  *
  */
@@ -372,7 +415,7 @@ public class OutTextPreparer
    *   It is used for identifier in the pattern which is not found in the variables (parameter 'variables' of ctor).
    *   It can be null.
    */ 
-  public void parse(Class<?> reflData, String pattern) {
+  private void parse(Class<?> reflData, String pattern) {
     int pos0 = 0; //start of current position after special cmd
     int pos1 = 0; //end before the next special command
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
@@ -454,7 +497,7 @@ public class OutTextPreparer
           ixCtrlCmd[++ixixCmd] = cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
-        else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+        else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
           SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, reflData);
@@ -538,8 +581,8 @@ public class OutTextPreparer
         sp.fromEnd();  //length is null then.
       }
     } //while
-    if(ixixCmd != -1) {
-      throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": closing <.if> or <.for> is missing ");
+    if(ixixCmd >=0) {
+      throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": closing <.> for <" + this.cmds.get(ixCtrlCmd[ixixCmd]) +"> is missing ");
     }
     sp.close();
   }
@@ -560,6 +603,8 @@ public class OutTextPreparer
 
   private void parseExec(final String src, final int pos0, final int pos1, StringPartScan sp, Class<?> reflData) {
     String name = sp.getLastScannedString();
+//    if(name.equals("writeFBlocks"))
+//      Debugutil.stop();
     String sArg;
     Class argType;
     if(sp.scan(":").scanToAnyChar(">", '\\', '\'', '\'').scanOk()) {
@@ -707,6 +752,19 @@ public class OutTextPreparer
    * @return the argument instance.
    */
   public DataTextPreparer getArgumentData() { return new DataTextPreparer(this); }
+  
+  
+  /**Creates the argument data and presets the given execInstance to {@link DataTextPreparer#setExecObj(Object)}
+   * @param execInstance It should be an instance of the given reflection class on ctor. 
+   * @return Data
+   */
+  public DataTextPreparer getArgumentData(Object execInstance) { 
+    DataTextPreparer data = new DataTextPreparer(this);
+    data.setExecObj(execInstance);
+    return data;
+  }
+  
+  
   
   
   

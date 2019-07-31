@@ -1,5 +1,7 @@
 package org.vishia.test;
 
+import org.vishia.util.Debugutil;
+
 public class TestCalctime_sin
 {
   public static class Double_ab { double a; double b;}
@@ -38,12 +40,28 @@ public class TestCalctime_sin
     fourier(nHarmon, y[nHarmon]);
   }
   
+
+  
+  public static int testatan2() {
+    double a = -2, b=-0.00001;
+    double angle1 = Math.atan2(b,a);
+    double angle2 = Math.atan2(b,a)/Math.PI;
+    int angle = (int)(Math.atan2(b,a)/Math.PI * 0x40000000 * 2);
+    String hex = Integer.toHexString(angle);
+    Debugutil.stop();
+    return angle;
+  }
+  
+  
+  
   
   
 
   public static void main(String[] args)
   {
 
+    testatan2();
+    
     float clock = 0.001f;
     
     Double_ab[] y = new Double_ab[5000];
