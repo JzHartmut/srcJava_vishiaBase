@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -87,7 +88,7 @@ public class DataAccess {
   /**Version, history and license.
    * <ul>
    * <li>2019-06-18 Hartmut new ctor: {@link #DataAccess(StringPartScan, char)} and {@link DatapathElement#set(StringPartScan)} used in parsing pattern in {@link CalculatorExpr}.
-   * <li>2019-06-18 Hartmut new ctor: {@link DatapathElement#argExpr} to calculate more complex arguments with given expression outside JZtxtcmd
+   * <li>2019-06-18 Hartmut new ctor: {@link DatapathElement#XXXargExpr} to calculate more complex arguments with given expression outside JZtxtcmd
    * <li>2019-05-30 Hartmut gardening for C#-translation: The {@link Conversion#key()} may be a better documentation for the conversion classes. It is experience, not used yet.
    * <li>2018-12-18 Hartmut improve: rename {@link DatapathElement#operation_}, private and setter and getter. The JzTxtCmd invokes the set_operation() without changes.
    *     It is set now on any operation. Used via {@link DatapathElement#isOperation()} in the {@link org.vishia.xmlReader.XmlZzReader}
@@ -230,8 +231,8 @@ public class DataAccess {
    * Necessary to detect a null reference. In Java Integer can be used too, but that is more explicitly. 
    */
   public static class IntegerIx {
-    public int ix;
-    IntegerIx(int value){ ix = value; }
+    public final int ix;
+    public IntegerIx(int value){ ix = value; }
   }
   
 
@@ -519,8 +520,9 @@ public class DataAccess {
    * </ul> 
    * For example for a simple local variable in the datapool write "@name".
    * @param path
+   * @throws ParseException 
    */
-  public DataAccess(String path){
+  public DataAccess(String path) throws ParseException{
     datapath = new ArrayList<DataAccess.DatapathElement>();
     if("$+%!".indexOf(path.charAt(0))>=0){
       //only one element, environment variable, new Instance, static method.
@@ -550,8 +552,9 @@ public class DataAccess {
    * @param path
    * @param cTypeNewVariable if A...Z then the last element will be designated with it.
    *   Then a new variable should be created in the parent's container with the access.
+   * @throws ParseException 
    */
-  public DataAccess(String path, char cTypeNewVariable){
+  public DataAccess(String path, char cTypeNewVariable) throws ParseException{
     datapath = new ArrayList<DataAccess.DatapathElement>();
     String[] pathElements = path.split("\\.");
     DatapathElement element = null;
@@ -581,11 +584,12 @@ public class DataAccess {
    * @param path
    * @param cTypeNewVariable if A...Z then the last element will be designated with it.
    *   Then a new variable should be created in the parent's container with the access.
+   * @throws ParseException on errors on sp, on not found variables too. 
    */
-  public DataAccess(StringPartScan sp, char cTypeNewVariable){
+  public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData, char cTypeNewVariable) throws ParseException {
     this.datapath = new ArrayList<DatapathElement>();
     do {
-      DatapathElement element = new DatapathElement(sp);
+      DatapathElement element = new DatapathElement(sp, idxIdentifier, reflData);
       if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
         element.whatisit = cTypeNewVariable;  //from the last element.
       }
@@ -625,12 +629,14 @@ public class DataAccess {
    * @param dataRoot Either a Map<String, ?> or any other Object which is the root for access.
    *  it is the object where the path starts from. A Map<?,?> which's key is not a String is not admissible. 
    * @param bContainer true then returns a found container or build one.
+   * @param vars maybe null or array of some variables which are sorted by parameter idxVariables 
+   *   in {@link #DataAccess(StringPartScan, Map, Class, char)}
    * @return Maybe null only if the last reference refers null. 
    * @throws Exception on any not found or etc.
    */
-  public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer) 
+  public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer, Object[] vars) 
   throws Exception{
-    return access(datapath, dataRoot, accessPrivate, bContainer, false, null);
+    return access(datapath, dataRoot, accessPrivate, bContainer, vars, false, null);
   }
 
   
@@ -678,7 +684,7 @@ public class DataAccess {
     //accesses the data object with given path. 
     //If it is a Variable, return the Variable, not its content.
     //If it is not a Variable, the dst contains the Field.
-    Object o = access(path, dataRoot, bAccessPrivate, false, true, dst);
+    Object o = access(path, dataRoot, bAccessPrivate, false, null, true, dst);
     if(o instanceof Variable<?>){
       @SuppressWarnings("unchecked")
       Variable<Object> var = (Variable<Object>)(o); 
@@ -708,7 +714,7 @@ public class DataAccess {
     //accesses the data object with given path. 
     //If it is a Variable, return the Variable, not its content.
     //If it is not a Variable, the dst contains the Field.
-    Object o = access(path, data, bAccessPrivate, false, true, dst);
+    Object o = access(path, data, bAccessPrivate, false, null, true, dst);
     if(o instanceof Variable<?>){
       @SuppressWarnings("unchecked")
       Variable<Object> var = (Variable<Object>)(o); 
@@ -789,8 +795,9 @@ public class DataAccess {
    * @param path If starts with "&@$" it is the type. 
    * @param whatisit only used if path does not start with type.
    * @return list.
+   * @throws ParseException 
    */
-  public static List<DatapathElement> expandElements(CharSequence path, char whatisit){
+  public static List<DatapathElement> expandElements(CharSequence path, char whatisit) throws ParseException{
     List<DatapathElement> list = new LinkedList<DatapathElement>();
     int pos;
     char type = path.charAt(0);
@@ -849,7 +856,7 @@ public class DataAccess {
   throws Exception 
   {
     List<DatapathElement> list = expandElements(datapathArg, '.');
-    return access(list, dataRoot, accessPrivate, bContainer, bVariable, dst);
+    return access(list, dataRoot, accessPrivate, bContainer, null, bVariable, dst);
   }
 
   
@@ -932,6 +939,8 @@ public class DataAccess {
    * @param bContainer If the element is a container, returns it. Elsewhere build a List
    *    to return a container for iteration with only the found element.
    *    A container is any object implementing java.util.Map or java.util.Iterable or an Array.
+   * @param vars maybe null or array of some variables which are sorted by parameter idxVariables 
+   *   in {@link #DataAccess(StringPartScan, Map, Class, char)}
    * @param dst If not null then fill the last {@link Field} and the associated Object in the dst.
    *   It can be used to set the field with a new value.    
    * @return Any data object addressed by the path. Returns null if the last datapath element refers null.
@@ -957,6 +966,7 @@ public class DataAccess {
       //, Map<String, DataAccess.Variable<Object>> dataPool
       , boolean accessPrivate
       , boolean bContainer
+      , Object[] vars
       , boolean bVariable
       , Dst dst
   ) 
@@ -980,7 +990,7 @@ public class DataAccess {
         debug();
       }
       //====>
-      data1 = access(element, data1, accessPrivate, bContainer, bVariable, dst);
+      data1 = access(element, data1, accessPrivate, bContainer, vars, bVariable, dst);
       element = iter.hasNext() ? iter.next() : null;
     }//while
     //return
@@ -1010,6 +1020,7 @@ public class DataAccess {
       //, Map<String, DataAccess.Variable<Object>> dataPool
       , boolean accessPrivate
       , boolean bContainer
+      , Object[] vars
       , boolean bVariable
       , Dst dst
   ) throws Exception {
@@ -1046,7 +1057,7 @@ public class DataAccess {
       case '(': {
         if(data1 !=null){
           Class<?> clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
-          data1 = invokeMethod(element, clazz, data1, accessPrivate, false); 
+          data1 = invokeMethod(element, clazz, data1, accessPrivate, vars, false); 
         }
         //else: let data1=null, return null
       } break;
@@ -1180,6 +1191,8 @@ public class DataAccess {
    * @param obj The instance which is the instance of the method. The obj
    *   is used as first argument of {@link Method#invoke(Object, Object...)}.
    *   For static methods obj is not used. It may be null. 
+   * @param vars maybe null or array of some variables which are sorted by parameter idxVariables 
+   *   in {@link #DataAccess(StringPartScan, Map, Class, char)}
    * @param bNoExceptionifNotFound if the then does not a NochSuchMethodException if the method was not found.
    *   This is a special flag if the method is optional.
    * @return the return value of the method
@@ -1191,17 +1204,37 @@ public class DataAccess {
     , Class<?> clazz  
     , Object obj
     , boolean accessPrivate
+    , Object[] vars
     , boolean bNoExceptionifNotFound
   ) throws InvocationTargetException, NoSuchMethodException, Exception {
-    return invokeMethod(element, clazz, obj, accessPrivate, bNoExceptionifNotFound, null);
+    Object[] args = null;
+    if(element.fnArgs == null) { //only if fnArgs not given from call, 
+      //then evaluate here.
+      if(element.args !=null) {
+        args = new Object[element.args.length];
+        int ix = -1;
+        for(CalculatorExpr.Operand expr: element.args) {
+          args[++ix] = expr.calc(vars);
+        }
+      }
+    }
+     return invokeMethod(element, clazz, obj, accessPrivate, bNoExceptionifNotFound, args);
   }  
   
   
   /**Invokes the method which is described with the element.
    * Same as {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean)}
    * but with given arguments instead arguments in element
+   * @param element
+   * @param clazz
+   * @param obj The instance which is used
+   * @param accessPrivate
+   * @param bNoExceptionifNotFound
    * @param args if not null then this arguments are used prior to element {@link DatapathElement#fnArgs}.
    * @return see {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean)}
+   * @throws InvocationTargetException
+   * @throws NoSuchMethodException
+   * @throws Exception
    */
   public static Object invokeMethod(      
     DatapathElement element
@@ -2450,18 +2483,34 @@ public class DataAccess {
      */
     protected char whatisit = '.';
 
-    /**List of actual arguments of a method. If null, it is not a method or the method has not arguments. */
+    /**List of actual arguments of a method. If null, it is not a method or the method has not arguments
+     * or the arguments should be prepared in {@link DataAccess#invokeMethod(DatapathElement, Class, Object, boolean, boolean)}. */
     protected Object[] fnArgs;
 
     
     /**Names for arguments given in the set-String.
      * With this information actual data from an application can be assigned.
+     * It is used for special cases for argument delivering: {@link #argName(int)} gets the name, the value is gotten from any data,
+     * setting as argument value on the last argument of {@link DataAccess#invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])}
      */
     private String[] argNames;
     
-    /**If !=null and the elements are !=null, the expression should be used to calculate the argument. @since 2019-06-18*/
-    private CalculatorExpr[] argExpr;
     
+    /**It is is a method call, the argument calculation algorithm. */
+    private CalculatorExpr.Operand[] args;
+    
+    
+    
+    /**If data are given as argument of TODO, 
+     * and idxIdentifier is given on {@link DatapathElement#DatapathElement(StringPartScan, Map, Class)}
+     * it is the index of the arguments data. The name of the argument variable is stored in {@link #argNames} but not used then.
+     */
+    private int[] XXXvarIxInData;
+    
+    /**If !=null and the elements are !=null, the expression should be used to calculate the argument. @since 2019-06-18*/
+    private CalculatorExpr[] XXXargExpr;
+    
+    /**Numerical values to access elements of the given variable. More as one for multi-dimensional element. */
     int[] indices;
     
     /**true then an operation call, false: a variable access. @since 2018-08*/
@@ -2474,17 +2523,19 @@ public class DataAccess {
 
     /**Creates a datapath element.
      * @param name see {@link #set(String)}
+     * @throws ParseException 
      */
-    public DatapathElement(String path){
+    public DatapathElement(String path) throws ParseException {
       set(path);
     }
     
     
     /**Creates a datapath element.
      * @param name see {@link #set(String)}
+     * @throws ParseException 
      */
-    public DatapathElement(StringPartScan path){
-      set(path);
+    public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData) throws ParseException{
+      set(path, idxIdentifier, reflData);
     }
     
     
@@ -2498,6 +2549,11 @@ public class DataAccess {
     
     public int nrArgNames(){ return argNames == null ? 0 : argNames.length; }
     
+    /**Returns the name for the argument. This operation is only usefully in an system where the arguments of an operation
+     * are only names which refer data in the users context. The value is gotten from any data,
+     * setting as argument value on the last argument of 
+     * {@link DataAccess#invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])}
+     */
     public String argName(int ix){ return argNames[ix]; }
     
     /**Creates a datapath element, for general purpose.
@@ -2511,8 +2567,9 @@ public class DataAccess {
      * <li>Elsewhere use {@link CalculatorExpr#setExpr(String)}.
      * </ul>
      * @param path 
+     * @throws ParseException 
      */
-    public void set(String path){
+    public void set(String path) throws ParseException{
       char cStart = path.charAt(0);
       int posNameStart = 1;
       if("$@+%".indexOf(cStart) >=0){
@@ -2525,6 +2582,29 @@ public class DataAccess {
       if((posNameEnd = path.indexOf('(')) != -1) { //Function
         whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
         this.operation_ = true;
+        
+        
+        int posEnd = posNameEnd +1; //path.lastIndexOf(')', posNameEnd);
+        int zPath = path.length();
+        char cc = ' ';
+        while(posEnd < zPath && cc == ' ') {
+          cc = path.charAt(posEnd++);
+        }
+        if(cc != ' ' && cc != ')') {
+          //
+          //parse the arguments
+          //
+          StringPartScan sp = new StringPartScan(path.substring(posNameEnd+1));
+          sp.setIgnoreWhitespaces(true);
+          this.args = parseArgumentExpr(sp, null, null);
+        }
+        
+        
+        
+        //TODO remove:
+        
+        
+        
         int posSep = posNameEnd;
         int zName = path.length();
         List<String> args = null;
@@ -2566,14 +2646,14 @@ public class DataAccess {
         } while(sp.scan(",").scanOk());
         this.indices = new int[lIndices.size()];
         if(bArgExpr) {
-          this.argExpr = new CalculatorExpr[lIndices.size()];
+          this.XXXargExpr = new CalculatorExpr[lIndices.size()];
         }
         int ixix = 0;
         for(Object ix: lIndices) { 
           if(ix instanceof Integer) { this.indices[+ixix] = (Integer)ix; }
           else {
             this.indices[ixix] = -1;
-            this.argExpr[ixix] = (CalculatorExpr)ix;
+            this.XXXargExpr[ixix] = (CalculatorExpr)ix;
           }
           ixix +=1;
         } //for
@@ -2594,8 +2674,9 @@ public class DataAccess {
      *   Usual they are only integer literal constants, then the value is stored immediately.  
      * </ul>
      * @param path 
+     * @throws ParseException 
      */
-    public void set(StringPartScan sp){
+    public void set(StringPartScan sp, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData) throws ParseException{
       char cStart = sp.getCurrentChar();
       if("$@+%".indexOf(cStart) >=0){
         whatisit = cStart;
@@ -2604,28 +2685,54 @@ public class DataAccess {
         whatisit = '.';
       }
       if(!sp.scanStart().scanIdentifier().scanOk()) {
-        throw new IllegalArgumentException("idenfifier expected instead: " + sp.getCurrent(32));
+        throw new ParseException("idenfifier expected instead: " + sp.getCurrent(32), 0);
       }
       this.ident = sp.getLastScannedString();
       if(sp.scan("(").scanOk()) { //Function
         whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
         this.operation_ = true;
-        List<String> args = null;
-        char cc;
-        do {
-          sp.lentoAnyChar(",)");
-          if(sp.length() > 0) {
-            String arg = sp.getCurrent().toString().trim();
-            if(args == null) { args = new LinkedList<String>(); }
-            args.add(arg);
-          }
-          cc = sp.fromEnd().getCurrentChar();
-          sp.seekPos(1);
-        } while(cc == ',');
-        if(args !=null) {
-          argNames = new String[args.size()];
-          args.toArray(argNames);
+        if(!sp.scan(")").scanOk()) { 
+          // ========>        
+          this.args = parseArgumentExpr(sp, idxIdentifier, reflData);
         }
+        
+        //TODO remove:
+        
+//        List<String> args = null;
+//        char cc;
+//        do {
+//          sp.lentoAnyChar(",)");
+//          if(sp.length() > 0) {
+//            String arg = sp.getCurrent().toString().trim();
+//            if(args == null) { args = new LinkedList<String>(); }
+//            args.add(arg);
+//          }
+//          cc = sp.fromEnd().getCurrentChar();
+//          sp.seekPos(1);
+//        } while(cc == ',');
+//        if(args !=null) {
+//          this.argNames = new String[args.size()];
+//          int ixArg = 0;
+//          for(String arg: args) {
+//            CalculatorExpr argExpr = new CalculatorExpr(arg, idxIdentifier, reflData);
+//            String argName = arg;
+//            int sep = arg.indexOf('.');
+//            if(sep >=0) {
+//              argName = arg.substring(0, sep);
+//              if(idxIdentifier !=null) {
+//                if(this.XXXvarIxInData == null) { this.XXXvarIxInData = new int[args.size()]; }
+//                DataAccess.IntegerIx ixArgO = idxIdentifier.get(argName);
+//                if(ixArgO == null) throw new ParseException("Variable not found in idxIdentifier: " + argName , 0);
+//                this.XXXvarIxInData[ixArg] = ixArgO.ix;
+//              }
+//              if(this.XXXargExpr == null) { this.XXXargExpr = new CalculatorExpr[args.size()]; }
+//              //The rest of the arg is an reflection access.
+//              this.XXXargExpr[ixArg] = new CalculatorExpr(arg.substring(sep+1), null, null); //idxIdentifier, reflData);
+//            }
+//            this.argNames[ixArg] = argName; 
+//            ixArg +=1;
+//          }
+//        }
       } else if(sp.scan("[").scanOk()) { //Index for element
         List<Object> lIndices = new LinkedList<Object>();
         CalculatorExpr exprIndex = new CalculatorExpr();
@@ -2644,14 +2751,14 @@ public class DataAccess {
         } while(sp.scan(",").scanOk());
         this.indices = new int[lIndices.size()];
         if(bArgExpr) {
-          this.argExpr = new CalculatorExpr[lIndices.size()];
+          this.XXXargExpr = new CalculatorExpr[lIndices.size()];
         }
         int ixix = 0;
         for(Object ix: lIndices) { 
           if(ix instanceof Integer) { this.indices[+ixix] = (Integer)ix; }
           else {
             this.indices[ixix] = -1;
-            this.argExpr[ixix] = (CalculatorExpr)ix;
+            this.XXXargExpr[ixix] = (CalculatorExpr)ix;
           }
           ixix +=1;
         } //for
@@ -2662,6 +2769,35 @@ public class DataAccess {
       }
     }
 
+    
+    
+    
+    /**Parses an argument String with expressions
+     * @param sArgs The starting "(" is parsed already, by previous check. A following ")" is not read. 
+     *   It means the sArgs can contain the argument String without ().
+     *   After parsing the sArgs is set before ")" if exist, after the args.
+     *   The Syntax of any arg is determined by functionality of {@link CalculatorExpr#CalculatorExpr(StringPartScan, Map, Class)}.  
+     * @param idxIdentifier Map of variables
+     * @param reflData 
+     * @return
+     * @throws ParseException
+     */
+    CalculatorExpr.Operand[] parseArgumentExpr(StringPartScan sArgs, Map<String,DataAccess.IntegerIx> idxIdentifier, Class<?> reflData) 
+    throws ParseException {
+      List<CalculatorExpr.Operand> listArgs = new LinkedList<CalculatorExpr.Operand>();
+      do {
+        CalculatorExpr.Operand arg = new CalculatorExpr.Operand(sArgs, idxIdentifier, reflData);
+        listArgs.add(arg);
+      } while(sArgs.scan(",").scanOk()); 
+      if(listArgs.size() >=0) {
+        CalculatorExpr.Operand[] ret = new CalculatorExpr.Operand[listArgs.size()];
+        listArgs.toArray(ret);
+        return ret;
+      } else {
+        return null;  //empty arguments.
+      }
+    }
+    
     
     public void set_ident(String text){ this.ident = text; }
     

@@ -1,5 +1,6 @@
 package org.vishia.xmlReader;
 
+import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringPartScan;
 import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
 /**This class contains the configuration data to assign xml elements to Java data.
@@ -161,30 +163,33 @@ public class XmlCfg
 //    cfgNode.subNodeUnspec = nodes; //it is set to use for all nodes with 
 //    nodes.subNodeUnspec = nodes;  //recursively, all children are unspec.
     
-    
-    nodes.setNewElementPath("!newElement(tag)");
-    //if the attribute xmlinput:data is read in the input config.xml, then its values hould be used to set the datapath for the element.
-    //It is done via invocation of setNewElementPath(...) on the output config.
-    nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
-    nodes.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
-    nodes.setContentStorePath("!setContentStorePath(text)");
-    nodes.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
-    
-    //Nodes for the config-subtree
-    XmlCfg.XmlCfgNode nodeSub = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:subtree");
-    rootNode.addSubnode(nodeSub.tag.toString(), nodeSub);
-    //nodeSub.attribsForCheck = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); 
-    //AttribDstCheck checkName = new AttribDstCheck(true);
-    //nodeSub.attribsForCheck.put("name", checkName);
-    nodeSub.addAttribStorePath("xmlinput:name", "!@subtreename");  //This attribute value should be used to store locally in name.
-    nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
-    nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
-    nodeSub.setNewElementPath("!addSubTree(subtreename)");
-    nodeSub.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
-    nodeSub.addSubnode("?", nodes);
-//    nodeSub.subNodeUnspec = nodes;  //recursively, all children are unspec.
-    //nodeSub.addAttribStorePath("xmlinput:data", "!addSubTree(name)");  //This attribute should be used to set the datapath for this element.
-    
+    try {
+      nodes.setNewElementPath("!newElement(tag)");
+      //if the attribute xmlinput:data is read in the input config.xml, then its values hould be used to set the datapath for the element.
+      //It is done via invocation of setNewElementPath(...) on the output config.
+      nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+      nodes.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
+      nodes.setContentStorePath("!setContentStorePath(text)");
+      nodes.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
+      
+      //Nodes for the config-subtree
+      XmlCfg.XmlCfgNode nodeSub = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:subtree");
+      rootNode.addSubnode(nodeSub.tag.toString(), nodeSub);
+      //nodeSub.attribsForCheck = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); 
+      //AttribDstCheck checkName = new AttribDstCheck(true);
+      //nodeSub.attribsForCheck.put("name", checkName);
+      nodeSub.addAttribStorePath("xmlinput:name", "!@subtreename");  //This attribute value should be used to store locally in name.
+      nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
+      nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+      nodeSub.setNewElementPath("!addSubTree(subtreename)");
+      nodeSub.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
+      nodeSub.addSubnode("?", nodes);
+  //    nodeSub.subNodeUnspec = nodes;  //recursively, all children are unspec.
+      //nodeSub.addAttribStorePath("xmlinput:data", "!addSubTree(name)");  //This attribute should be used to set the datapath for this element.
+    }
+    catch(ParseException exc) {
+      throw new RuntimeException(exc); //it is unexpected
+    }
     return cfgCfg;
   }
 
@@ -288,6 +293,8 @@ public class XmlCfg
      * 
      */
     DataAccess.DatapathElement elementStorePath;
+    
+    Map<String, DataAccess.IntegerIx> attribNames;
   
     /**The first node in some equal nodes in cfg, which determines the attributes used for check. */
     boolean bCheckAttributeNode;
@@ -333,17 +340,25 @@ public class XmlCfg
   
     /**Sets the path for the "new element" invocation.
      * @param dstPath either a method or an access to a field.
+     * @throws ParseException 
      */
-    public void setNewElementPath(String dstPath) {
+    public void setNewElementPath(String dstPath) throws ParseException {
       if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
-      elementStorePath = new DataAccess.DatapathElement(dstPath.substring(1));
+      this.attribNames = new TreeMap<String, DataAccess.IntegerIx>();
+      StringPartScan spPath = new StringPartScan(dstPath.substring(1));
+      spPath.setIgnoreWhitespaces(true);
+      this.elementStorePath = new DataAccess.DatapathElement(spPath, attribNames, null);  //gathered necessary names.
+      if(this.attribNames.size() ==0) {
+        this.attribNames = null; //not necessary.
+      }
     }
   
     /**This method is invoked from the xml configuration reader to create a new attribute entry for the found attribute.
      * @param key ns:name of the found attribute in the config.xml 
      * @param dstPath datapath which is found as value in the config.xml. The datapath is used for the user.xml to store the attribute value.
+     * @throws ParseException 
      */
-    public void addAttribStorePath(String key, String sAttrValue) {
+    public void addAttribStorePath(String key, String sAttrValue) throws ParseException {
       AttribDstCheck attribForCheck;
       //Check whether the attribute is used to build the key for search the correct config node.
       if(key.equals("xmlinput:subtree")) {
@@ -477,8 +492,9 @@ public class XmlCfg
     
     /**This method is invoked from the xml configuration reader to create a DataAccess element for the content of the node..
      * @param text should start with ! the dataPath to store the content
+     * @throws ParseException 
      */
-    void setContentStorePath(String text) {
+    void setContentStorePath(String text) throws ParseException {
       if(tag instanceof StringBuilder) { //it is a second node with same tag, but with attributes for check.
         if(tag.toString().startsWith("Object@"))
           Debugutil.stop();

@@ -360,8 +360,8 @@ public class GenZbnfJavaData
     }
     try {
       //Map<String, Object> argstxt = new TreeMap<String, Object>();
-      OutTextPreparer.DataTextPreparer argsJavaHead = sJavaHead.getArgumentData();
-      OutTextPreparer.DataTextPreparer argsJavaHeadZbnf = sJavaHeadZbnf.getArgumentData();
+      OutTextPreparer.DataTextPreparer argsJavaHead = sJavaHead.createArgumentDataObj();
+      OutTextPreparer.DataTextPreparer argsJavaHeadZbnf = sJavaHeadZbnf.createArgumentDataObj();
       argsJavaHead.setArgument("pkgpath", args.sJavaPkg);
       argsJavaHeadZbnf.setArgument("pkgpath", args.sJavaPkg);
       argsJavaHead.setArgument("javaclass", args.sJavaClass);
@@ -487,8 +487,8 @@ public class GenZbnfJavaData
       if(cmpn.sDefinitionIdent.equals("add_expression"))
         Debugutil.stop();
       //Map<String, Object> argstxt = new TreeMap<String, Object>();
-      OutTextPreparer.DataTextPreparer argsJavaCmpnClass = sJavaCmpnClass.getArgumentData();
-      OutTextPreparer.DataTextPreparer argsJavaCmpnClassZbnf = sJavaCmpnClassZbnf.getArgumentData();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClass = sJavaCmpnClass.createArgumentDataObj();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClassZbnf = sJavaCmpnClassZbnf.createArgumentDataObj();
       argsJavaCmpnClass.setArgument("cmpnclass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
       argsJavaCmpnClass.setArgument("dataclass", args.sJavaClass);
       argsJavaCmpnClassZbnf.setArgument("cmpnclass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
@@ -498,9 +498,9 @@ public class GenZbnfJavaData
       //
       TreeMap<String, SubClassField> elems = classData.fieldsFromSemanticAttr;
       if(elems !=null) {
-        OutTextPreparer.DataTextPreparer argsJavaMetaClass = sJavaMetaClass.getArgumentData();
-        OutTextPreparer.DataTextPreparer argsJavaMetaClassOper = sJavaMetaClassOper.getArgumentData();
-        OutTextPreparer.DataTextPreparer argsJavaMetaClassZbnf = sJavaMetaClassZbnf.getArgumentData();
+        OutTextPreparer.DataTextPreparer argsJavaMetaClass = sJavaMetaClass.createArgumentDataObj();
+        OutTextPreparer.DataTextPreparer argsJavaMetaClassOper = sJavaMetaClassOper.createArgumentDataObj();
+        OutTextPreparer.DataTextPreparer argsJavaMetaClassZbnf = sJavaMetaClassZbnf.createArgumentDataObj();
         
         for(Map.Entry<String, SubClassField> e : elems.entrySet()) {
           SubClassField attrfield = e.getValue();
@@ -536,8 +536,8 @@ public class GenZbnfJavaData
       if(cmpn.sDefinitionIdent.equals("event_input_declaration"))
         Debugutil.stop();
       //Map<String, Object> argstxt = new TreeMap<String, Object>();
-      OutTextPreparer.DataTextPreparer argsJavaCmpnClass = sJavaCmpnClass.getArgumentData();
-      OutTextPreparer.DataTextPreparer argsJavaCmpnClassZbnf = sJavaCmpnClassZbnf.getArgumentData();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClass = sJavaCmpnClass.createArgumentDataObj();
+      OutTextPreparer.DataTextPreparer argsJavaCmpnClassZbnf = sJavaCmpnClassZbnf.createArgumentDataObj();
       argsJavaCmpnClass.setArgument("cmpnclass", firstUppercase(cmpn.sDefinitionIdent)); //firstUppercase(cmpn.sDefinitionIdent));
       argsJavaCmpnClass.setArgument("dataclass", args.sJavaClass);
       argsJavaCmpnClassZbnf.setArgument("cmpnclass", firstUppercase(cmpn.sDefinitionIdent)); //firstUppercase(cmpn.sDefinitionIdent));
@@ -735,7 +735,7 @@ public class GenZbnfJavaData
               bStdType = true;
             }
             Map<String, Object> argstxt = new TreeMap<String, Object>();
-            OutTextPreparer.DataTextPreparer argsJavaListVarOper = sJavaListVarOper.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaListVarOper = sJavaListVarOper.createArgumentDataObj();
             argsJavaListVarOper.setArgument("typeGeneric", sTypeGeneric);
             argsJavaListVarOper.setArgument("varName", varName);
             argsJavaListVarOper.setArgument("name", semantic);
@@ -743,7 +743,7 @@ public class GenZbnfJavaData
             argsJavaListVarOper.setArgument("typeZbnf", type);
             argsJavaListVarOper.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaListVar = sJavaListVar.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaListVar = sJavaListVar.createArgumentDataObj();
             argsJavaListVar.setArgument("typeGeneric", sTypeGeneric);
             argsJavaListVar.setArgument("varName", varName);
             argsJavaListVar.setArgument("name", semantic);
@@ -751,7 +751,7 @@ public class GenZbnfJavaData
             argsJavaListVar.setArgument("typeZbnf", type);
             argsJavaListVar.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaListVarZbnf = sJavaListVarZbnf.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaListVarZbnf = sJavaListVarZbnf.createArgumentDataObj();
             argsJavaListVarZbnf.setArgument("typeGeneric", sTypeGeneric);
             argsJavaListVarZbnf.setArgument("varName", varName);
             argsJavaListVarZbnf.setArgument("name", semantic);
@@ -759,7 +759,7 @@ public class GenZbnfJavaData
             argsJavaListVarZbnf.setArgument("typeZbnf", type);
             argsJavaListVarZbnf.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaListCmpnZbnf = sJavaListCmpnZbnf.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaListCmpnZbnf = sJavaListCmpnZbnf.createArgumentDataObj();
             argsJavaListCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
             argsJavaListCmpnZbnf.setArgument("varName", varName);
             argsJavaListCmpnZbnf.setArgument("name", semantic);
@@ -767,7 +767,7 @@ public class GenZbnfJavaData
             argsJavaListCmpnZbnf.setArgument("typeZbnf", type);
             argsJavaListCmpnZbnf.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaSimpleVarOper = sJavaSimpleVarOper.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaSimpleVarOper = sJavaSimpleVarOper.createArgumentDataObj();
             argsJavaSimpleVarOper.setArgument("typeGeneric", sTypeGeneric);
             argsJavaSimpleVarOper.setArgument("varName", varName);
             argsJavaSimpleVarOper.setArgument("name", semantic);
@@ -775,7 +775,7 @@ public class GenZbnfJavaData
             argsJavaSimpleVarOper.setArgument("typeZbnf", type);
             argsJavaSimpleVarOper.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaSimpleVarZbnf = sJavaSimpleVarZbnf.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaSimpleVarZbnf = sJavaSimpleVarZbnf.createArgumentDataObj();
             argsJavaSimpleVarZbnf.setArgument("typeGeneric", sTypeGeneric);
             argsJavaSimpleVarZbnf.setArgument("varName", varName);
             argsJavaSimpleVarZbnf.setArgument("name", semantic);
@@ -783,7 +783,7 @@ public class GenZbnfJavaData
             argsJavaSimpleVarZbnf.setArgument("typeZbnf", type);
             argsJavaSimpleVarZbnf.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaCmpnZbnf = sJavaCmpnZbnf.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaCmpnZbnf = sJavaCmpnZbnf.createArgumentDataObj();
             argsJavaCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
             argsJavaCmpnZbnf.setArgument("varName", varName);
             argsJavaCmpnZbnf.setArgument("name", semantic);
@@ -791,7 +791,7 @@ public class GenZbnfJavaData
             argsJavaCmpnZbnf.setArgument("typeZbnf", type);
             argsJavaCmpnZbnf.setArgument("args", args);
             
-            OutTextPreparer.DataTextPreparer argsJavaSimpleVar = sJavaSimpleVar.getArgumentData();
+            OutTextPreparer.DataTextPreparer argsJavaSimpleVar = sJavaSimpleVar.createArgumentDataObj();
             argsJavaSimpleVar.setArgument("typeGeneric", sTypeGeneric);
             argsJavaSimpleVar.setArgument("varName", varName);
             argsJavaSimpleVar.setArgument("name", semantic);

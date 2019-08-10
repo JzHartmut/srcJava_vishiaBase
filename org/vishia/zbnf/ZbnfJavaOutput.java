@@ -1156,9 +1156,10 @@ public final class ZbnfJavaOutput
    *               that no valid column is given to set.
    * @return true if the method "set_InputInfo(int, int, String)" was found.              
    * @throws IllegalAccessException If any problem with the set-method exists.
+   * @throws ParseException 
    */
   private boolean trySetInputInfo(DstInstanceAndClass destComponent, int line, int column, String sFile) 
-  throws IllegalAccessException
+  throws IllegalAccessException, ParseException
   { boolean bok = false;
     if(line >=0)
     { DataAccess.DatapathElement datapath = new DataAccess.DatapathElement("inputLine_");
@@ -1176,7 +1177,7 @@ public final class ZbnfJavaOutput
         { //NOTE: use DataAccess to find in super classes, manually it is complex.
           datapath.set("set_inputInfo_()");
           datapath.setActualArguments(new Integer(line),  new Integer(column),  sFile);
-          Object ok = DataAccess.invokeMethod(datapath, destComponent.clazz, destComponent.instance, false, true);
+          Object ok = DataAccess.invokeMethod(datapath, destComponent.clazz, destComponent.instance, false, null, true);
           bok = ok !=null;   
           //method = destComponent.clazz.getDeclaredMethod("set_inputLine_", argTypes1);
           //Object[] argMethod1 = new Object[1];

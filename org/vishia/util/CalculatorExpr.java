@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.TreeMap;
 
+import org.vishia.util.DataAccess.IntegerIx;
+
 
 
 
@@ -1427,7 +1429,6 @@ public class CalculatorExpr
      * @throws Exception 
      */
     public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws Exception {
-      final String sVariable;
       if(sDatapath !=null){
         //====>
         CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
@@ -1458,6 +1459,58 @@ public class CalculatorExpr
       }
     }
 
+    
+    /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
+     * @param sDatapath textual given value. It is either a literal, a simple variable ...TODO docu
+     * @param variables Container with some variable names associated to indices in a value array.
+     * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
+     * @throws Exception 
+     */
+    public Operand(StringPartScan sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws ParseException {
+      if(sDatapath !=null){
+        //====>
+        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
+        List<CalculatorExpr.Operation> exprOper = expr.listOperations();
+        CalculatorExpr.Operand exprOperand;
+        if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
+          //The expr has exact 1 Operand, copy its content to this.
+          this.dataAccess = exprOperand.dataAccess;
+          this.dataConst = exprOperand.dataConst;
+          this.ixValue = exprOperand.ixValue;
+          this.expr = null;
+          this.text = exprOperand.text; // == null ? sDatapath.setCurrentMaxPart().getCurrentPart().toString() : exprOperand.text;
+        } else {
+          //the sDatapath is a more complex expression
+          this.dataAccess = null;
+          this.dataConst = null;
+          this.ixValue = -1;
+          this.expr = expr;
+          this.text = null; //sDatapath;
+        }
+      }
+      else { //empty without text and without datapath
+        this.ixValue = -1;
+        this.dataAccess = null;
+        this.dataConst = null;
+        this.expr = null;
+        this.text = null;
+      }
+    }
+
+    
+    public Object calc(Object[] vars) throws Exception {
+      Object value;
+      if(this.ixValue <0) {
+        value = this.text;   //String literal
+      } else {
+        value = vars[this.ixValue];
+        if(this.dataAccess !=null) {
+          value = this.dataAccess.access(value, true, false, vars);
+        }
+      }
+      return value;
+    }
+    
     
     @Override public String toString()
     { String text1 = text !=null ? "\"" + text + "\" " : "";
@@ -2283,6 +2336,16 @@ public class CalculatorExpr
     if(sError !=null) throw new IllegalArgumentException(sError);
   }
   
+  /**Constructs an String given expression with some variables.
+   * @param sExpr
+   * @param idxIdentifier
+   */
+  public CalculatorExpr(StringPartScan sExpr, Map<String, DataAccess.IntegerIx> idxIdentifier, Class<?> reflData) {
+    this();
+    String sError = setExpr(sExpr, idxIdentifier, reflData);
+    if(sError !=null) throw new IllegalArgumentException(sError);
+  }
+  
   /**Separates a name and the parameter list from a given String.
    * @param expr An expression in form " name (params)"
    * @return A String[2].
@@ -2604,28 +2667,33 @@ public class CalculatorExpr
       parseAddExpr(spExpr, reflData, "!", recursion+1);
       if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
       listOperations_.add(new Operation(operation, Operation.kStackOperand));
-    } else if(spExpr.scanSkipSpace().scanIdentifier().scanOk()){
+    } else if(this.variables !=null && spExpr.scanSkipSpace().scanIdentifier().scanOk()){
       String sIdent = spExpr.getLastScannedString();
       DataAccess.IntegerIx ixOvar = this.variables.get(sIdent);
       int ixVar;
       DataAccess dataAccess = null;
       Object dataConst = null;
       if(ixOvar == null){ //variable not found
-        ixVar = -1;
         if(reflData == null) {
-          throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
+          //In this mode all need variables are created. 
+          ixVar = this.variables.size();
+          ixOvar = new DataAccess.IntegerIx(ixVar);
+          this.variables.put(sIdent, ixOvar);
+          //throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
+        } else {
+          ixVar = -1;
+          try{ dataConst = DataAccess.access(sIdent, reflData,true, false, false, null);}
+          catch(Exception exc) { throw new ParseException(exc.getMessage(), 0);}
         }
-        try{ dataConst = DataAccess.access(sIdent, reflData,true, false, false, null);}
-        catch(Exception exc) { throw new ParseException(exc.getMessage(), 0);}
       } else {
         ixVar = ixOvar.ix;
       }
       if(spExpr.scan(".").scanOk()) { //variable.datapath
-        dataAccess = new DataAccess(spExpr, '\0');
+        dataAccess = new DataAccess(spExpr, this.variables, reflData, '\0');
       }
       Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
-      Operation oper;
-      listOperations_.add(oper = new Operation(operation, operand));
+      Operation oper = new Operation(operation, operand);
+      listOperations_.add(oper);
     } else if(spExpr.scanSkipSpace().scanLiteral("''\\", -1).scanOk()){ //'Stringliteral'
       CharSequence sLiteral = spExpr.getLastScannedString();
       listOperations_.add(new Operation(operation, StringFunctions.convertTransliteration(sLiteral, '\\').toString()));
@@ -2653,6 +2721,13 @@ public class CalculatorExpr
         }
       }
       listOperations_.add(new Operation(operation, value));
+    } else {
+      DataAccess dataAccess = new DataAccess(spExpr, this.variables, reflData, '\0');
+      //Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
+      Operand operand = new Operand(-1, dataAccess, null, null);
+      Operation oper = new Operation(operation, operand);
+      listOperations_.add(oper);
+    
     }
   }
   
@@ -2861,7 +2936,7 @@ public class CalculatorExpr
               oval2 = oper.operand_.text;
             } 
             if(oper.operand_.dataAccess !=null) {
-              oval2 = oper.operand_.dataAccess.access(oval2, true, false);
+              oval2 = oper.operand_.dataAccess.access(oval2, true, false, args);
             }
             convertObj(val2jar, oval2);
             val2 = val2jar;

@@ -3,6 +3,7 @@ package org.vishia.xmlReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -241,10 +242,15 @@ public class XmlJzCfgAnalyzer
     cfgCommon.rootNode.addSubnode(rootNode.tag.toString(), rootNode);        //The cfg file should start with a <xmlinput:root
     rootNode.addSubnode(rootNode.tag.toString(), rootNode);        //The cfg file should start with a <xmlinput:root
     
-    //On any element the 'addElement(tag)' is invoked via Reflection. 
-    rootNode.setNewElementPath("!addElement(tag)");  //executed in the data destination instance.
-    rootNode.addAttribStorePath("?", "!setAttribute(name)"); 
-    rootNode.setContentStorePath("!setTextOccurrence()");
+    try {
+      //On any element the 'addElement(tag)' is invoked via Reflection. 
+      rootNode.setNewElementPath("!addElement(tag)");  //executed in the data destination instance.
+      rootNode.addAttribStorePath("?", "!setAttribute(name)"); 
+      rootNode.setContentStorePath("!setTextOccurrence()");
+    }
+    catch(ParseException exc) {
+      throw new RuntimeException(exc); //it is unexpected
+    }
     return cfgCommon;
   }
 

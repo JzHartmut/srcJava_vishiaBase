@@ -113,12 +113,13 @@ public class Test_OutTextPreparer_CallFor
 
   void testCall() throws IOException {
     StringBuilder sb = new StringBuilder(1000);
-    OutTextPreparer.DataTextPreparer vars = otxCall.getArgumentData();
+    OutTextPreparer.DataTextPreparer vars = otxCall.createArgumentDataObj();
     //vars.debugOtx = "otxIfColors";   //possibility to set a break point on a special command in the given script.
     //vars.debugIxCmd = 6;             //see usage for this variables. set debugIxCmd = 0 to stop in first cmd to view the this.cmd
     vars.setArgument("dataColor", dataColor);        //The data class for access.
     vars.setArgument("text1", "any test text");
     otxCall.exec(sb, vars);
+    System.out.println(sb);
     int posOk = StringFunctions.compareChars(sb, 0, -1, resultExpected);
     check(sb.toString().equals(resultExpected), "Test_OutTextPreparer_CallFor:testCall()");
   }
@@ -142,7 +143,9 @@ public class Test_OutTextPreparer_CallFor
       //fails because errors in the pattern. It is reported in C# in the calling level of this routine already 
       //because the calling of this static routine has load and created the type already.
       Test_OutTextPreparer_CallFor test = new Test_OutTextPreparer_CallFor();
+      //nonsense: test.testClassic();
       test.testCall();
+      
     } catch (Exception e) {
       System.out.println("Exception: " + e.getMessage());
     }

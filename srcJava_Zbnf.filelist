@@ -1,12 +1,4 @@
-2019-06-30 17:22:35  x     srcJava_Zbnf-19-04-09.zip                ::       1210.311 -1010065574 
-2019-06-30 21:56:11  x     srcJava_Zbnf-19-05-16.zip                ::       1223.666 -1617044262 
-2019-06-30 22:03:28  x     srcJava_Zbnf-19-05-22.zip                ::       1231.299  1774481173 
-2019-06-30 22:08:38  x     srcJava_Zbnf-19-05-27.zip                ::       1237.017  1089897674 
-2019-06-30 22:12:19  x     srcJava_Zbnf-19-06-02.zip                ::       1241.089 -1327916421 
-2019-06-30 22:18:19  x     srcJava_Zbnf-19-06-14.zip                ::       1250.297 -2120489151 
-2019-06-30 22:23:51  x     srcJava_Zbnf-19-06-17.zip                ::       1250.983  0379879766 
-2019-06-30 22:21:33  x     srcJava_Zbnf-19-06-18.zip                ::       1253.275 -1111616732 
-2019-07-31 22:15:28  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-08-10 22:28:49  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -128,7 +120,7 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2019-02-11 23:00:11  x     JZtxtcmdExecuter.java                    ::        185.729 -1660709000 
+2019-08-09 10:08:55  x     JZtxtcmdExecuter.java                    ::        185.735  0344642140 
 2018-10-16 07:09:41  x     JZtxtcmdFilepath.java                    ::         16.028 -1293032415 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
@@ -216,6 +208,7 @@
 2012-03-17 08:57:20  x     package-info.java                        ::           .158  1302313651 
 
 ============================== org/vishia/math/ ====================================================
+2019-08-02 21:25:17  x     ComplexDouble.java                       ::           .233  1642242587 
 2015-10-04 16:28:43  x     CurveInterpolation.java                  ::         13.951 -1692451483 
 
 ============================== org/vishia/msgDispatch/ =============================================
@@ -262,11 +255,11 @@
 
 ============================== org/vishia/test/ ====================================================
 2018-09-13 08:41:15  x     FilewalkStream.java                      ::           .873 -0451405320 
-2019-04-09 23:09:44  x     LambdaTest1.java                         ::          1.647 -1187076921 
+2019-08-03 21:43:02  x     LambdaTest1.java                         ::          2.332 -1448274252 
 2019-07-17 12:04:43  x     T1_Ctrl_Functional.java                  ::           .678  0806594809 
 2016-11-27 20:51:06  x     TestAddJar.java                          ::          1.729 -1295448115 
 2018-09-13 08:32:02  x     TestArithmetik.java                      ::           .758 -0761414338 
-2019-07-17 11:42:31  x     TestCalctime_sin.java                    ::          1.761  0518727698 
+2019-08-01 23:43:39  x     TestCalctime_sin.java                    ::          2.533 -1931775305 
 2016-11-27 21:17:03  x     TestConsoleInput.java                    ::           .966 -0685490407 
 2014-01-09 20:49:01  x     TestGeneric.java                         ::          1.260 -1543927629 
 2017-12-31 16:30:41  x     TestStream.java                          ::           .234  0964263483 
@@ -278,11 +271,11 @@
 2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
 2019-06-29 00:40:33  x     Annotation_ReadOnly.java                 ::           .188 -0040851729 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
-2019-07-01 09:35:50  x     CalculatorExpr.java                      ::        129.719  0230952113 
+2019-08-09 17:33:46  x     CalculatorExpr.java                      ::        132.890 -0675249750 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2019-07-01 09:22:55  x     DataAccess.java                          ::        125.836 -0681009615 
+2019-08-09 18:21:39  x     DataAccess.java                          ::        132.315 -1015502598 
 2019-06-21 09:28:58  x     DataShow.java                            ::         29.206  0163463218 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
@@ -316,7 +309,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-07-31 20:17:30  x     OutTextPreparer.java                     ::         41.465 -1227665469 
+2019-08-09 10:23:00  x     OutTextPreparer.java                     ::         42.035  1119531557 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -364,7 +357,7 @@
 2019-06-12 00:32:04  x     TestCalculatorExpr.java                  ::          1.911  1166074260 
 2013-09-05 09:25:42  x     TestCharBuffer.java                      ::          1.483 -2103892260 
 2013-09-05 09:25:42  x     TestComparable.java                      ::          2.442 -1669836808 
-2014-06-16 11:50:51  x     TestDataAccess.java                      ::          6.554  1799479502 
+2019-08-09 15:56:18  x     TestDataAccess.java                      ::          9.251  0046284583 
 2013-09-05 09:25:42  x     TestEnclosingSuper.java                  ::           .714  0258531046 
 2013-09-05 09:25:42  x     TestFileSystem.java                      ::           .705  0968432270 
 2017-05-05 21:23:49  x     TestIndexMultiTable.java                 ::          8.186  1941999328 
@@ -372,16 +365,16 @@
 2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
 2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
 2014-06-22 22:53:23  x     Test_FilePath.java                       ::          3.129  0691674984 
-2019-06-20 20:56:10  x     Test_OutTextPreparer_CallFor.java        ::          5.795 -0255501759 
+2019-08-09 10:46:05  x     Test_OutTextPreparer_CallFor.java        ::          5.874  1392001381 
 2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
 2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
 2019-06-13 23:12:08  x     Test_StringPartScan.java                 ::          4.726 -0095091858 
 
 ============================== org/vishia/xmlReader/ ===============================================
 2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
-2019-05-26 01:33:06  x     XmlCfg.java                              ::         25.730 -0344839200 
-2019-01-23 13:07:06  x     XmlJzCfgAnalyzer.java                    ::         25.981 -1347782661 
-2019-05-29 21:22:35  x     XmlJzReader.java                         ::         28.715 -1284859154 
+2019-08-09 17:44:39  x     XmlCfg.java                              ::         26.483  2026010963 
+2019-08-09 08:30:47  x     XmlJzCfgAnalyzer.java                    ::         26.134 -0277027300 
+2019-08-09 21:51:58  x     XmlJzReader.java                         ::         29.863  1241233509 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2018-12-21 14:55:31  x     TestReadMsc15Cfg.java                    ::          4.956  0581616068 
@@ -404,9 +397,9 @@
 2015-09-30 08:49:02  x     Xml2Jdata.java                           ::          1.596  0291993359 
 
 ============================== org/vishia/zbnf/ ====================================================
-2019-06-22 22:18:37  x     GenZbnfJavaData.java                     ::         41.276 -1386311408 
+2019-08-08 13:13:00  x     GenZbnfJavaData.java                     ::         41.378  0247171325 
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
-2019-06-22 20:49:40  x     ZbnfJavaOutput.java                      ::         81.823 -0894572072 
+2019-08-09 10:16:00  x     ZbnfJavaOutput.java                      ::         81.874 -2088148800 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
 2019-07-07 10:26:18  x     ZbnfParser.java                          ::        171.063  0566834630 
 2019-05-31 00:04:03  x     ZbnfParserStore.java                     ::         51.757  1505803605 

@@ -324,22 +324,32 @@ public class XmlJzReader
     }
     //
     @SuppressWarnings("unchecked")
-    Map<String, String>[] attribValues = new Map[1];
+    Map<String, DataAccess.IntegerIx>[] attribNames = new Map[1];
+    if(subCfgNode !=null) {
+      attribNames[0] = subCfgNode.attribNames;  //maybe null if no attribs or text and tag are used.
+    }
+    @SuppressWarnings("unchecked")
+    String[] attribValues = null;
     @SuppressWarnings("unchecked")
     List<AttribToStore>[] attribsToStore = new List[1];
     //
     //For attribute evaluation, use the subCfgNode gotten from sTag. It may be necessary to change the subCfgNode after them. 
     //
+    if(attribNames[0] !=null) {
+      attribValues = new String[subCfgNode.attribNames.size()];
+      DataAccess.IntegerIx ixO = attribNames[0].get("tag");
+      if(ixO !=null) { attribValues[ixO.ix] = sTag; } 
+    }
     if(dbgline == debugStopLine)
       Debugutil.stop();
-    CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribValues);
+    CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribNames, attribValues);
     //
     if(keyResearch.length() > sTag.length()) {
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
     }
     //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
-    subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode, keyResearch, attribValues);
+    subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode, keyResearch, attribNames, attribValues);
     //
     //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
     if(attribsToStore[0] !=null) { 
@@ -380,7 +390,11 @@ public class XmlJzReader
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
       if(content !=null && subOutput !=null) {
-        storeContent(content, subCfgNode, subOutput, attribValues);
+        if(attribNames[0] !=null) {
+          DataAccess.IntegerIx ixO = attribNames[0].get("text");
+          if(ixO !=null) { attribValues[ixO.ix] = content.toString(); } 
+        }
+        storeContent(content, subCfgNode, subOutput, attribNames, attribValues);
       }
     } else {
       throw new IllegalArgumentException("either \">\" or \"/>\" expected");
@@ -402,14 +416,14 @@ public class XmlJzReader
    * @param tag
    * @param output
    * @param cfgNode
-   * @param attribMap Reference to a map with key,name for attribute values. 
+   * @param attribNames Reference to a map with key,name for attribute values. 
    *        The key is given in the config file, cfgNode.({@link XmlCfg.XmlCfgNode#attribs}) contains the association 
    *        it is not the attribute name anyway, but often the attribute name if the config file determines that. 
    * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
    * @throws Exception
    */
   private CharSequence parseAttributes(StringPartFromFileLines inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
-      , List<AttribToStore>[] attribsToStore, Map<String, String>[] attribMap) 
+      , List<AttribToStore>[] attribsToStore, Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
   throws Exception
   { CharSequence keyret = tag; //no special key. use element.
     StringBuilder keyretBuffer = null;
@@ -471,8 +485,17 @@ public class XmlJzReader
               if(attribsToStore[0]==null) {attribsToStore[0] = new LinkedList<AttribToStore>(); }
               attribsToStore[0].add(new AttribToStore(cfgAttrib.daccess, sAttrNsName.toString(), sAttrValue));
             } else if(cfgAttrib.storeInMap !=null) {
-              if(attribMap[0] == null){ attribMap[0] = new TreeMap<String, String>(); }
-              attribMap[0].put(cfgAttrib.storeInMap, sAttrValue);
+//              if(attribNames[0] == null){ 
+//                attribNames[0] = new TreeMap<String, DataAccess.IntegerIx>(); 
+//                attribValues[0] = new LinkedList<String>();
+//              }
+              ////
+              DataAccess.IntegerIx ixO = attribNames[0].get(cfgAttrib.storeInMap);
+              if(ixO !=null) {
+                attribValues[ixO.ix] = sAttrValue;
+              } else {
+                Debugutil.stop(); //not used attribute
+              }
             }
           } else {
             if(cfgNode.attribsUnspec !=null) { //it is especially to read the config file itself.
@@ -499,7 +522,7 @@ public class XmlJzReader
    * @throws Exception
    */
   @SuppressWarnings("static-method")
-  Object getDataForTheElement( Object output, XmlCfg.XmlCfgNode subCfgNode, CharSequence sTag, Map<String, String>[] attribs) 
+  Object getDataForTheElement( Object output, XmlCfg.XmlCfgNode subCfgNode, CharSequence sTag, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) 
   {
     Object subOutput;
     if(subCfgNode.elementStorePath == null) { //no attribute xmlinput.data="pathNewElement" is given:
@@ -512,22 +535,22 @@ public class XmlJzReader
         int nrArgs = subCfgNode.elementStorePath.nrArgNames();
         Object[] args;
         if(nrArgs >0) {
-          args = new Object[nrArgs]; 
-          for(int ix = 0; ix < nrArgs; ++ix) {
-            String argName = subCfgNode.elementStorePath.argName(ix);
-            if(attribs !=null && attribs[0]!=null) { 
-              args[ix] = attribs[0].get(argName);       //content of attribute filled in args[ix], null if attribute is not found.
-              if(args[ix] == null) {
-                Debugutil.stop();  //admissible.
-              }
-            }
-            else if(argName.equals("tag")) { args[ix] = sTag; }
-            else; //not given argument is null. It is fault: throw new IllegalArgumentException("missing argnument in : \'" + subCfgNode.elementStorePath + "(" + argName + ") in elementStorePath for: <" + sTag + " ...>" );
-          }
-          subOutput = DataAccess.invokeMethod(subCfgNode.elementStorePath, null, output, true, false, args);
+//          args = new Object[nrArgs]; 
+//          for(int ix = 0; ix < nrArgs; ++ix) {
+//            String argName = subCfgNode.elementStorePath.argName(ix);
+//            if(attribs !=null && attribs[0]!=null) { 
+//              args[ix] = attribs[0].get(argName);       //content of attribute filled in args[ix], null if attribute is not found.
+//              if(args[ix] == null) {
+//                Debugutil.stop();  //admissible.
+//              }
+//            }
+//            else if(argName.equals("tag")) { args[ix] = sTag; }
+//            else; //not given argument is null. It is fault: throw new IllegalArgumentException("missing argnument in : \'" + subCfgNode.elementStorePath + "(" + argName + ") in elementStorePath for: <" + sTag + " ...>" );
+//          }
+          subOutput = DataAccess.invokeMethod(subCfgNode.elementStorePath, null, output, true, attribValues, false);
         } else {
           //it may be a method too but without textual parameter.
-          subOutput = DataAccess.access(subCfgNode.elementStorePath, output, true, false, false, null);
+          subOutput = DataAccess.access(subCfgNode.elementStorePath, output, true, false, attribValues, false, null);
         }
       } catch(Exception exc) {
         subOutput = null;
@@ -634,7 +657,7 @@ public class XmlJzReader
   
   
   
-  private void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, String>[] attribs) {
+  private void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) {
     DataAccess.DatapathElement dstPath = cfgNode.contentStorePath;
     if(dstPath !=null) {
       try{ 

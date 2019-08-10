@@ -1,36 +1,84 @@
 package org.vishia.util.test;
 
 import java.lang.reflect.Field;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
+import org.vishia.util.StringPartScan;
 
 public class TestDataAccess
 {
 
-  int testint;
   
-  float testfloat;
+    static class Example {
+    
+    
+    /**A class which shows the possibility to simple access to members of a enclosing class.
+       * The super class is the TestDataAccess.
+       */
+      public class TestInner
+      {
+        String test = "TestInner";
+        double testdouble = Math.PI;
+      }
+
+    int testint;
+    
+    float testfloat;
+    
+    String name;
+    
+    String[] str = {"s1", "s2", "s3"};
+    
+    StringBuilder testBuffer = new StringBuilder(20);
+    
+    Map<String, TestDataAccess> testContainer = new TreeMap<String, TestDataAccess>();
+    
+    Map<String, DataAccess.Variable> testDatapool = new TreeMap<String, DataAccess.Variable>();
+    
+    Example refer;
   
-  String name;
+    Example(String name, int ident){
+      testint = ident;
+      testfloat = ident/100.0f;
+      this.name = name;
+    }
+    
+    
+    String operationExmpl(String s1, String s2) {
+      return s1 + s2;
+    }
+    
+    
+    
+  }
   
-  StringBuilder testBuffer = new StringBuilder(20);
-  
-  Map<String, TestDataAccess> testContainer = new TreeMap<String, TestDataAccess>();
-  
-  Map<String, DataAccess.Variable> testDatapool = new TreeMap<String, DataAccess.Variable>();
-  
-  TestDataAccess refer;
-  
+  /**A class which shows the possibility to simple access to members of a super class.
+     * The super class is the TestDataAccess.
+     */
+    public static class TestDerived extends Example
+    {
+      TestDerived(String name, int ident){
+        super(name, ident);
+      }
+      
+      double testshort = -2789;
+      
+    }
+
   public static void main(String[] args){
-    TestDataAccess dataRoot = new TestDataAccess("dataroot", 345);
-    dataRoot.refer = new TestDataAccess("refer", 7890);
+    Example dataRoot = new Example("dataroot", 345);
+    dataRoot.refer = new Example("refer", 7890);
     TestDerived dataRootDerived = new TestDerived("derived", 678);  //another instance
     Map<String, DataAccess.Variable<Object>> dataPool = test_createDatapool(dataRoot, dataRootDerived);
     try{
+      test_dataOperationStringArgs(dataRoot);
+      test_dataArrayDataAccess(dataRoot);
       test_getDataFromField(dataRoot, dataRootDerived);
       test_accessEnclosing(dataRoot, dataRootDerived);  
       test_secondStateField(dataRoot);
@@ -41,20 +89,14 @@ public class TestDataAccess
   }
   
   
-  TestDataAccess(String name, int ident){
-    testint = ident;
-    testfloat = ident/100.0f;
-    this.name = name;
-  }
-  
   
   /**Creates a datapool which contains 2 intances to test the pool access.
    * @param elements members of pool
    * @return the pool
    */
-  static Map<String, DataAccess.Variable<Object>> test_createDatapool(TestDataAccess ... elements){
+  static Map<String, DataAccess.Variable<Object>> test_createDatapool(Example ... elements){
     Map<String, DataAccess.Variable<Object>> pool = new TreeMap<String, DataAccess.Variable<Object>>();
-    for(TestDataAccess element: elements){
+    for(Example element: elements){
       DataAccess.Variable<Object> var = new DataAccess.Variable<Object>('O', element.name, element);
       pool.put(element.name, var);
     }
@@ -67,7 +109,7 @@ public class TestDataAccess
    * @param dataRootDerived
    * @throws Exception
    */
-  static void test_getDataFromField(TestDataAccess dataRoot, TestDataAccess dataRootDerived)
+  static void test_getDataFromField(Example dataRoot, Example dataRootDerived)
   throws Exception
   {
     Object ovalue;
@@ -98,11 +140,11 @@ public class TestDataAccess
    * @param dataRootDerived
    * @throws Exception
    */
-  static void test_accessEnclosing(TestDataAccess dataRoot, TestDataAccess dataRootDerived)
+  static void test_accessEnclosing(Example dataRoot, Example dataRootDerived)
   throws Exception
   {
-    TestInner dataInner = dataRoot.new TestInner();
-    TestInner dataInnerDerived = dataRootDerived.new TestInner();
+    Example.TestInner dataInner = dataRoot.new TestInner();
+    Example.TestInner dataInnerDerived = dataRootDerived.new TestInner();
     
     Object ovalue;
     int ivalue;
@@ -129,7 +171,7 @@ public class TestDataAccess
   
   
   
-  static void test_secondStateField(TestDataAccess dataRoot) throws Exception{
+  static void test_secondStateField(Example dataRoot) throws Exception{
     Object ovalue;
     int ivalue;
     //Build an access path: first field refer from the dataRoot, than in the refer instance field testint
@@ -138,7 +180,7 @@ public class TestDataAccess
     path.add(new DataAccess.DatapathElement("testint"));
     //
     DataAccess.Dst field = new DataAccess.Dst();
-    ovalue = DataAccess.access(path, dataRoot, true, false, false, field);
+    ovalue = DataAccess.access(path, dataRoot, true, false, null, false, field);
     ivalue = DataAccess.getInt(ovalue);
     assert(ivalue == 7890);
   }
@@ -159,41 +201,76 @@ public class TestDataAccess
     path.add(new DataAccess.DatapathElement("testint"));
     //
     DataAccess.Dst field = new DataAccess.Dst();
-    ovalue = DataAccess.access(path, datapool, true, false, false, field);
+    ovalue = DataAccess.access(path, datapool, true, false, null, false, field);
     ivalue = DataAccess.getInt(ovalue);
     assert(ivalue == 7890);
   }
   
   
   
-  
-  
-  /**A class which shows the possibility to simple access to members of a super class.
-   * The super class is the TestDataAccess.
-   */
-  public static class TestDerived extends TestDataAccess
-  {
-    TestDerived(String name, int ident){
-      super(name, ident);
+  static void test_dataArrayAccessOperand() {
+    String strAccess = "v2[1]";
+    StringPartScan sp = new StringPartScan(strAccess);
+    sp.setIgnoreWhitespaces(true);
+    Map<String, DataAccess.IntegerIx> idxIdentifier = new TreeMap<String, DataAccess.IntegerIx>();
+    idxIdentifier.put("v1", new DataAccess.IntegerIx(0));
+    idxIdentifier.put("v2", new DataAccess.IntegerIx(1));
+    Object[] vars = { "a1", new String[] {"a21" ,"a22,"}};
+    Object value = null;
+    try {
+      CalculatorExpr.Operand acc = new CalculatorExpr.Operand(sp, idxIdentifier, null);
+      value = acc.calc(vars);
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
     }
-    
-    double testshort = -2789;
-    
+    check("a22".equals(value), "Test_DataAccess.test_dataArrayAccess");
   }
 
   
   
-  /**A class which shows the possibility to simple access to members of a enclosing class.
-   * The super class is the TestDataAccess.
-   */
-  public class TestInner
-  {
-    String test = "TestInner";
-    double testdouble = Math.PI;
+  static void test_dataOperationStringArgs(Example dataRoot) {
+    String strAccess = "operationExample(v1, v1)";
+    StringPartScan sp = new StringPartScan(strAccess);
+    sp.setIgnoreWhitespaces(true);
+    Map<String, DataAccess.IntegerIx> idxIdentifier = new TreeMap<String, DataAccess.IntegerIx>();
+    idxIdentifier.put("v1", new DataAccess.IntegerIx(0));
+    idxIdentifier.put("v2", new DataAccess.IntegerIx(1));
+    Object[] vars = { "a1", new String[] {"a21" ,"a22,"}};
+    Object value = null;
+    try {
+      DataAccess acc = new DataAccess(sp, null, null, '\0');
+      value = DataAccess.invokeMethod(acc.datapath().get(0), null, dataRoot, true, vars, false);
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    check("a22".equals(value), "Test_DataAccess.test_dataArrayAccess");
   }
 
   
   
+  static void test_dataArrayDataAccess(Example dataRoot) {
+    String strAccess = "str[1]";
+    Object value = null;
+    try {
+      DataAccess acc = new DataAccess(strAccess);
+      value = acc.access(dataRoot, true, false, null);
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    check("s2".equals(value), "Test_DataAccess.test_dataArrayAccess");
+  }
+  
+  static void check(boolean cond, String text) {
+    if(!cond) {
+      System.out.println("failed: " + text);
+    } else {
+      System.out.println("ok: " + text);
+    }
+  }
+
   
   
   

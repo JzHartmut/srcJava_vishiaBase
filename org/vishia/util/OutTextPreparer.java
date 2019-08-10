@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,7 +35,7 @@ import org.vishia.fbcl.wr.WriterDataFBcl;
  * <li>last: The prescript to format the output.
  * </ul>
  * <b>Data for execution:</b>
- * A proper instance to store the argument data should be gotten via {@link #getArgumentData()}. It is possible 
+ * A proper instance to store the argument data should be gotten via {@link #createArgumentDataObj()}. It is possible 
  * to build this instance on construction in the ctor of the users organization class. Then this instance is reused 
  * (save calculation time for allocation and garbage), possible in single thread usage. <pre>
  *   public MyWriterClass() { 
@@ -102,7 +103,7 @@ public class OutTextPreparer
   
   
   /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
-   * An instance can be gotten from {@link OutTextPreparer#getArgumentData()} proper and associated to the out text.
+   * An instance can be gotten from {@link OutTextPreparer#createArgumentDataObj()} proper and associated to the out text.
    * The constructor of this class is not public, it should be only gotten with this routine.
    * <br><br>
    * Invoke {@link #setArgument(String, Object)} to set any named argument. 
@@ -133,7 +134,7 @@ public class OutTextPreparer
     public int debugIxCmd;
     
     
-    /**Package private constructor invoked only in {@link OutTextPreparer#getArgumentData()}*/
+    /**Package private constructor invoked only in {@link OutTextPreparer#createArgumentDataObj()}*/
     DataTextPreparer(OutTextPreparer prep){
       this.prep = prep;
       if(prep.ctVar >0) {
@@ -366,6 +367,9 @@ public class OutTextPreparer
   /**All argument variables sorted. */
   private Map<String, DataAccess.IntegerIx> vars = new TreeMap<String, DataAccess.IntegerIx>();
   
+  
+  private String[] varString;
+  
   private int ctVar = 0;
   
 
@@ -388,6 +392,15 @@ public class OutTextPreparer
   /**Instantiates for a given prescript. 
    * @param prescript 
    */
+  public OutTextPreparer(String ident, Class<?> reflData, List<String> variables, String pattern) {
+    this.sIdent = ident;
+    this.setVariables(variables);
+    this.parse(reflData, pattern);
+  }
+  
+  /**Instantiates for a given prescript. 
+   * @param prescript 
+   */
   public OutTextPreparer(String ident, String variables) {
     this.sIdent = ident;
     this.parseVariables(variables);
@@ -396,18 +409,33 @@ public class OutTextPreparer
   
   
   private void parseVariables(String variables) {
+    List<String> listvars = new LinkedList<String>();
     StringPartScan sp = new StringPartScan(variables);
     sp.setIgnoreWhitespaces(true);
     while(sp.scanStart().scanIdentifier().scanOk()) {
       String sVariable = sp.getLastScannedString();
-      vars.put(sVariable, new DataAccess.IntegerIx(ctVar));
-      ctVar +=1;
+      listvars.add(sVariable);
       if(!sp.scan(",").scanOk()) {
         break; //, as separator
       }
     }
     sp.close();
+    setVariables(listvars);
   }
+  
+  
+  
+  private void setVariables(List<String> listvars) {
+    this.varString = new String[listvars.size()]; 
+    int ixVar = 0;
+    for(String var: listvars) {
+      this.vars.put(var, new DataAccess.IntegerIx(ctVar));
+      assert(ixVar == this.ctVar);  //because ctVar is used firstly here
+      this.varString[ixVar++] = var;
+      this.ctVar +=1;
+    }
+  }
+  
   
   
   /**Parse the pattern. This routine will be called only from the constructor.
@@ -751,7 +779,7 @@ public class OutTextPreparer
    * multicore processing), then any thread should have its own data.
    * @return the argument instance.
    */
-  public DataTextPreparer getArgumentData() { return new DataTextPreparer(this); }
+  public DataTextPreparer createArgumentDataObj() { return new DataTextPreparer(this); }
   
   
   /**Creates the argument data and presets the given execInstance to {@link DataTextPreparer#setExecObj(Object)}
@@ -778,7 +806,7 @@ public class OutTextPreparer
    * in several threads or multicore processing.
    * @param wr The output channel
    * @param args for preparation. 
-   *   The value instance should be gotten with {@link OutTextPreparer#getArgumentData()}
+   *   The value instance should be gotten with {@link OutTextPreparer#createArgumentDataObj()}
    *   proper to the instance of this, because the order of arguments should be match. 
    *   It is internally tested. 
    * @throws Exception 
@@ -822,7 +850,7 @@ public class OutTextPreparer
         if(cmd.dataAccess !=null) {
           try {
             //====>
-            data = cmd.dataAccess.access(data, true, false);
+            data = cmd.dataAccess.access(data, true, false, args.args);
           } catch (Exception e) {
             bDataOk = false;
             wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.text + " not found or access error: " + e.getMessage() + "??>");
@@ -1017,21 +1045,14 @@ public class OutTextPreparer
     if(cmd.args !=null) {
       valSub = args.argSub[cmd.ixDataArg];
       if(valSub == null) { //only first time for this call
-        args.argSub[cmd.ixDataArg] = valSub = callVar1.getArgumentData();  //create a data instance for arguments.
+        args.argSub[cmd.ixDataArg] = valSub = callVar1.createArgumentDataObj();  //create a data instance for arguments.
         valSub.debugIxCmd = args.debugIxCmd;
         valSub.debugOtx = args.debugOtx;
       }
       for(Argument arg : cmd.args) {
-        Object value;
-        if(arg.ixValue <0) {
-          value = arg.text;   //String literal
-        } else {
-          value = args.args[arg.ixValue];
-          if(arg.dataAccess !=null) {
-            try{ value = arg.dataAccess.access(value, true, false); }
-            catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.text + " not found or access error: " + exc.getMessage() + "??>"); }
-          }
-        }
+        Object value = null;
+        try{ value = arg.calc(args.args); }
+        catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.text + " not found or access error: " + exc.getMessage() + "??>"); }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
         } else {
