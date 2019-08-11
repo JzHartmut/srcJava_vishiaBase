@@ -117,8 +117,8 @@ public class OutTextPreparer
     /**The instance where the &lt;:exec:operation...> are located. null if not necessary. */
     Object execObj;
     
-    /**Array of all arguments. It is sorted to the {@link OutTextPreparer#vars} with its value {@link DataAccess.IntegerIx}. 
-     * Its size is {@link OutTextPreparer#ctVar}, the size of vars. 
+    /**Array of all arguments. It is sorted to the {@link OutTextPreparer#varValues} with its value {@link DataAccess.IntegerIx}. 
+     * Its size is {@link OutTextPreparer#ctVar}, the size of varValues. 
      */
     Object[] args;
     
@@ -154,7 +154,7 @@ public class OutTextPreparer
      * @param value any value for this argument.
      * */
     public void setArgument(String name, Object value) {
-      DataAccess.IntegerIx ix0 = prep.vars.get(name);
+      DataAccess.IntegerIx ix0 = prep.varValues.get(name);
       if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + prep.sIdent + ", argument: " + name + " not existing: ");
       int ix = ix0.ix;
       args[ix] = value;
@@ -223,12 +223,12 @@ public class OutTextPreparer
     }
     
     public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData) throws Exception
-    { super( textOrDatapath, outer.vars, reflData);
+    { super( textOrDatapath, outer.varValues, reflData);
       this.cmd = what;
     }
     
     @Override public String toString() {
-      return cmd + ":" + text;
+      return cmd + ":" + textOrVar;
     }
     
   }//sub class Cmd
@@ -350,7 +350,7 @@ public class OutTextPreparer
     public final int ixDst;
     
     public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Class<?> reflData) throws Exception {
-      super(sTextOrDatapath, outer.vars, reflData);
+      super(sTextOrDatapath, outer.varValues, reflData);
       this.name = name;
       this.ixDst = ixCalledArg;
     }
@@ -365,7 +365,7 @@ public class OutTextPreparer
   
   
   /**All argument variables sorted. */
-  private Map<String, DataAccess.IntegerIx> vars = new TreeMap<String, DataAccess.IntegerIx>();
+  private Map<String, DataAccess.IntegerIx> varValues = new TreeMap<String, DataAccess.IntegerIx>();
   
   
   private String[] varString;
@@ -409,27 +409,27 @@ public class OutTextPreparer
   
   
   private void parseVariables(String variables) {
-    List<String> listvars = new LinkedList<String>();
+    List<String> listvarValues = new LinkedList<String>();
     StringPartScan sp = new StringPartScan(variables);
     sp.setIgnoreWhitespaces(true);
     while(sp.scanStart().scanIdentifier().scanOk()) {
       String sVariable = sp.getLastScannedString();
-      listvars.add(sVariable);
+      listvarValues.add(sVariable);
       if(!sp.scan(",").scanOk()) {
         break; //, as separator
       }
     }
     sp.close();
-    setVariables(listvars);
+    setVariables(listvarValues);
   }
   
   
   
-  private void setVariables(List<String> listvars) {
-    this.varString = new String[listvars.size()]; 
+  private void setVariables(List<String> listvarValues) {
+    this.varString = new String[listvarValues.size()]; 
     int ixVar = 0;
-    for(String var: listvars) {
-      this.vars.put(var, new DataAccess.IntegerIx(ctVar));
+    for(String var: listvarValues) {
+      this.varValues.put(var, new DataAccess.IntegerIx(ctVar));
       assert(ixVar == this.ctVar);  //because ctVar is used firstly here
       this.varString[ixVar++] = var;
       this.ctVar +=1;
@@ -509,17 +509,17 @@ public class OutTextPreparer
           String entryVar = sp.getLastScannedString().toString();
           //====>
           ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, reflData);
-          DataAccess.IntegerIx ixOentry = vars.get(entryVar); 
+          DataAccess.IntegerIx ixOentry = varValues.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
-            vars.put(entryVar, ixOentry);
+            varValues.put(entryVar, ixOentry);
           }
           cmd.ixEntryVar = ixOentry.ix;
           entryVar += "_next";
-          ixOentry = vars.get(entryVar); 
+          ixOentry = varValues.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
-            vars.put(entryVar, ixOentry);
+            varValues.put(entryVar, ixOentry);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
           ixCtrlCmd[++ixixCmd] = cmds.size()-1;
@@ -529,10 +529,10 @@ public class OutTextPreparer
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
           SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, reflData);
-          DataAccess.IntegerIx ixOentry = vars.get(variable); 
+          DataAccess.IntegerIx ixOentry = varValues.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
-            vars.put(variable, ixOentry);
+            varValues.put(variable, ixOentry);
           }
           cmd.ixVariable = ixOentry.ix;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -671,7 +671,7 @@ public class OutTextPreparer
       if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
         throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + " is const but not a OutTextPreparer");
 //      } else { //call variable should be given dynamically:
-//        if(!this.vars.containsKey(sCallVar)) {
+//        if(!this.varValues.containsKey(sCallVar)) {
 //          String sError = "OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ": not given as argument";
 //          if(reflData != null) {
 //            sError += " and not found staticly in " + reflData.toString();
@@ -696,7 +696,7 @@ public class OutTextPreparer
           if(call == null) {
             ixCalledArg = -1;
           } else {
-            DataAccess.IntegerIx ixOcalledArg = call.vars.get(sNameArg);
+            DataAccess.IntegerIx ixOcalledArg = call.varValues.get(sNameArg);
             if(ixOcalledArg == null) {
               throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
             }
@@ -842,7 +842,7 @@ public class OutTextPreparer
         } catch (Exception e) {
           bDataOk = false;
           data = null;
-          wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.text + " execution error: " + e.getMessage() + "??>");
+          wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " execution error: " + e.getMessage() + "??>");
         }
       }
       else if(cmd.ixValue >=0) {
@@ -853,7 +853,7 @@ public class OutTextPreparer
             data = cmd.dataAccess.access(data, true, false, args.args);
           } catch (Exception e) {
             bDataOk = false;
-            wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.text + " not found or access error: " + e.getMessage() + "??>");
+            wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " not found or access error: " + e.getMessage() + "??>");
           }
         }
       } 
@@ -861,13 +861,13 @@ public class OutTextPreparer
         data = cmd.dataConst;  //may be given or null 
       } 
       else {
-        data = cmd.text; //maybe null
+        data = cmd.textOrVar; //maybe null
       }
       if(bDataOk) {
         switch(cmd.cmd) {
-          case addString: wr.append(cmd.text); break;
+          case addString: wr.append(cmd.textOrVar); break;
           case addVar: {
-            //Integer ixVar = vars.get(cmd.str);
+            //Integer ixVar = varValues.get(cmd.str);
             if(data == null) { wr.append("<??null??>"); }
             else { wr.append(data.toString()); }
           } break;
@@ -895,20 +895,20 @@ public class OutTextPreparer
                 if(DataAccess.istypeof(data, argTypes[0])) {
                   ((ExecCmd)cmd).execOperation.invoke(args.execObj, data);
                 } else {
-                  wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.text + ": argument type error " + data.getClass() + "??>");
+                  wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": argument type error " + data.getClass() + "??>");
                 }
               }
             } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException exc) {
               // TODO Auto-generated catch block
-              wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.text + ": execution exception " + exc.getMessage() + "??>");
+              wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
             } 
           } break;
           case call: 
             if(data == null) {
-              wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ": variable not found, not given??>");
+              wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
             }
             if(!(data instanceof OutTextPreparer)) {
-              wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.text + ":  variable is not an OutTextPreparer ??>");
+              wr.append("<?? OutTextPreparer script " + sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
             } else {
               execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data);
             } 
@@ -1025,7 +1025,7 @@ public class OutTextPreparer
       }
     }
     else {
-      wr.append("<?? OutTextPreparer script " + sIdent + ": for variable is not an container: " + cmd.text + "??>");
+      wr.append("<?? OutTextPreparer script " + sIdent + ": for variable is not an container: " + cmd.textOrVar + "??>");
     }
   }
     
@@ -1052,7 +1052,7 @@ public class OutTextPreparer
       for(Argument arg : cmd.args) {
         Object value = null;
         try{ value = arg.calc(args.args); }
-        catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.text + " not found or access error: " + exc.getMessage() + "??>"); }
+        catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.textOrVar + " not found or access error: " + exc.getMessage() + "??>"); }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
         } else {

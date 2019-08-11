@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.util.DataAccess;
+import org.vishia.util.DataAccess.IntegerIx;
 import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
@@ -139,6 +140,9 @@ public class XmlCfg
   XmlCfgNode rootNode = new XmlCfgNode(null, this, "root");
 
   
+  Map<String, DataAccess.IntegerIx> attribNameVale;
+  
+  
   /**Creates the configuration to read a config.xml file.
    * @return instance
    */
@@ -170,7 +174,8 @@ public class XmlCfg
       nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
       nodes.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
       nodes.setContentStorePath("!setContentStorePath(text)");
-      nodes.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
+      StringPartScan spAttribStorePath = new StringPartScan("addAttribStorePath(name, value)");
+      nodes.attribsUnspec = new DataAccess.DatapathElement(spAttribStorePath, nodes.allArgNames, null);  //use addAttributeStorePath in the dst node to add.
       
       //Nodes for the config-subtree
       XmlCfg.XmlCfgNode nodeSub = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:subtree");
@@ -182,7 +187,8 @@ public class XmlCfg
       nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
       nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
       nodeSub.setNewElementPath("!addSubTree(subtreename)");
-      nodeSub.attribsUnspec = new DataAccess.DatapathElement("addAttribStorePath(name, value)");  //use addAttributeStorePath in the dst node to add.
+      spAttribStorePath.assign("addAttribStorePath(name, value)");
+      nodeSub.attribsUnspec = new DataAccess.DatapathElement(spAttribStorePath, nodes.allArgNames, null);  //use addAttributeStorePath in the dst node to add.
       nodeSub.addSubnode("?", nodes);
   //    nodeSub.subNodeUnspec = nodes;  //recursively, all children are unspec.
       //nodeSub.addAttribStorePath("xmlinput:data", "!addSubTree(name)");  //This attribute should be used to set the datapath for this element.
@@ -294,7 +300,7 @@ public class XmlCfg
      */
     DataAccess.DatapathElement elementStorePath;
     
-    Map<String, DataAccess.IntegerIx> attribNames;
+    Map<String, DataAccess.IntegerIx> allArgNames;
   
     /**The first node in some equal nodes in cfg, which determines the attributes used for check. */
     boolean bCheckAttributeNode;
@@ -336,7 +342,12 @@ public class XmlCfg
     /**If not null, this element refers its {@link #attribs} and {@link #subnodes} in a config-subtree. */
     String cfgSubtreeName;
   
-    XmlCfgNode(XmlCfgNode parent, XmlCfg cfg, CharSequence tag){ this.parent = parent; this.cfg = cfg; this.tag = tag; }
+    XmlCfgNode(XmlCfgNode parent, XmlCfg cfg, CharSequence tag){ 
+      this.parent = parent; this.cfg = cfg; this.tag = tag;
+      this.allArgNames = new TreeMap<String, DataAccess.IntegerIx>();
+      this.allArgNames.put("tag", new DataAccess.IntegerIx(0));
+      this.allArgNames.put("text", new DataAccess.IntegerIx(1));
+    }
   
     /**Sets the path for the "new element" invocation.
      * @param dstPath either a method or an access to a field.
@@ -344,12 +355,12 @@ public class XmlCfg
      */
     public void setNewElementPath(String dstPath) throws ParseException {
       if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
-      this.attribNames = new TreeMap<String, DataAccess.IntegerIx>();
+      //this.allArgNames = new TreeMap<String, DataAccess.IntegerIx>();
       StringPartScan spPath = new StringPartScan(dstPath.substring(1));
       spPath.setIgnoreWhitespaces(true);
-      this.elementStorePath = new DataAccess.DatapathElement(spPath, attribNames, null);  //gathered necessary names.
-      if(this.attribNames.size() ==0) {
-        this.attribNames = null; //not necessary.
+      this.elementStorePath = new DataAccess.DatapathElement(spPath, allArgNames, null);  //gathered necessary names.
+      if(this.allArgNames.size() ==0) {
+        this.allArgNames = null; //not necessary.
       }
     }
   
@@ -417,7 +428,8 @@ public class XmlCfg
           if(dstPath.startsWith("@")) {       //store the attribute value in the attribute map to use later to store in user area.
             dPathAccess.storeInMap = dstPath.substring(1);
           } else {
-            dPathAccess.daccess = new DataAccess.DatapathElement(dstPath);
+            StringPartScan sp = new StringPartScan(dstPath);
+            dPathAccess.daccess = new DataAccess.DatapathElement(sp, this.allArgNames, null);
             bStoreAttribsInNewContent = true;  
           }
         }
@@ -503,7 +515,9 @@ public class XmlCfg
         parent.subnodes.put(tag.toString(), this); //put this node in its parent, it is not done yet. 
       }
       if(!text.startsWith("!")) throw new IllegalArgumentException("Any content of a config.xml should start with ! because it is a store path.");
-      contentStorePath = new DataAccess.DatapathElement(text.substring(1));
+      StringPartScan sp = new StringPartScan(text.substring(1));
+      
+      contentStorePath = new DataAccess.DatapathElement(sp, allArgNames, null);
     }
     
     

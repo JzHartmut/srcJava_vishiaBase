@@ -67,6 +67,8 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2019-08-10 Hartmut refactoring of {@link DataAccess}, handling of arguments on access routines changed. 
+   *   TODO carefully  test and document 
    * <li>2019-05-29 Now skips over &lt;!DOCTYPE....>
    * <li>2018-09-09 Renamed from XmlReader to XmlJzReader, because: It is a special reader. 
    * It stores Data to Java (J) and works with a configfile which has a semantic (z as reverse 's').
@@ -326,7 +328,7 @@ public class XmlJzReader
     @SuppressWarnings("unchecked")
     Map<String, DataAccess.IntegerIx>[] attribNames = new Map[1];
     if(subCfgNode !=null) {
-      attribNames[0] = subCfgNode.attribNames;  //maybe null if no attribs or text and tag are used.
+      attribNames[0] = subCfgNode.allArgNames;  //maybe null if no attribs or text and tag are used.
     }
     @SuppressWarnings("unchecked")
     String[] attribValues = null;
@@ -336,7 +338,7 @@ public class XmlJzReader
     //For attribute evaluation, use the subCfgNode gotten from sTag. It may be necessary to change the subCfgNode after them. 
     //
     if(attribNames[0] !=null) {
-      attribValues = new String[subCfgNode.attribNames.size()];
+      attribValues = new String[subCfgNode.allArgNames.size()];
       DataAccess.IntegerIx ixO = attribNames[0].get("tag");
       if(ixO !=null) { attribValues[ixO.ix] = sTag; } 
     }
@@ -349,7 +351,7 @@ public class XmlJzReader
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
     }
     //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
-    subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode, keyResearch, attribNames, attribValues);
+    subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode.elementStorePath, attribValues);
     //
     //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
     if(attribsToStore[0] !=null) { 
@@ -357,7 +359,7 @@ public class XmlJzReader
         System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
       } else {
         for(AttribToStore e: attribsToStore[0]) {
-          storeAttrData(subOutput, e.daccess, e.name, e.value);
+          storeAttrData(subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
     } } }
     //
     //check content.
@@ -516,46 +518,34 @@ public class XmlJzReader
 
   /**Invokes the associated method to get/create the appropriate data instance for the element.
    * @param output The current output in the parent context
+   * @param elementStorePath if null, returns output. Else: The storePath in the {@link XmlCfg.XmlCfgNode}
+   * @param attribValues
    * @param subCfgNode The cfgNode for the found element
    * @param sTag it is the keyResearch maybe assembled with attribute values, not only the tag name.
-   * @return output if subCfgNode. elementStorePath is null, either result of an invoked method via {@link DataAccess}
+   * @return output if elementStorePath is null, either result of an invoked method via {@link DataAccess} or accessed data
    * @throws Exception
    */
   @SuppressWarnings("static-method")
-  Object getDataForTheElement( Object output, XmlCfg.XmlCfgNode subCfgNode, CharSequence sTag, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) 
+  Object getDataForTheElement( Object output, DataAccess.DatapathElement elementStorePath, String[] attribValues) 
   {
     Object subOutput;
-    if(subCfgNode.elementStorePath == null) { //no attribute xmlinput.data="pathNewElement" is given:
+    if(elementStorePath == null) { //no attribute xmlinput.data="pathNewElement" is given:
       subOutput = output; //use the same output. No new element in data.
     }
     else {  //invoke an routine which gets the new output. The routine may use arguments from attributes.
       try{ 
-        if(subCfgNode.elementStorePath.ident().equals("new_EventInput"))
-          Debugutil.stop();
-        int nrArgs = subCfgNode.elementStorePath.nrArgNames();
-        Object[] args;
-        if(nrArgs >0) {
-//          args = new Object[nrArgs]; 
-//          for(int ix = 0; ix < nrArgs; ++ix) {
-//            String argName = subCfgNode.elementStorePath.argName(ix);
-//            if(attribs !=null && attribs[0]!=null) { 
-//              args[ix] = attribs[0].get(argName);       //content of attribute filled in args[ix], null if attribute is not found.
-//              if(args[ix] == null) {
-//                Debugutil.stop();  //admissible.
-//              }
-//            }
-//            else if(argName.equals("tag")) { args[ix] = sTag; }
-//            else; //not given argument is null. It is fault: throw new IllegalArgumentException("missing argnument in : \'" + subCfgNode.elementStorePath + "(" + argName + ") in elementStorePath for: <" + sTag + " ...>" );
-//          }
-          subOutput = DataAccess.invokeMethod(subCfgNode.elementStorePath, null, output, true, attribValues, false);
+//        if(subCfgNode.elementStorePath.ident().equals("new_EventInput"))
+//          Debugutil.stop();
+        if(elementStorePath.isOperation()) {
+          subOutput = DataAccess.invokeMethod(elementStorePath, null, output, true, attribValues, false);
         } else {
           //it may be a method too but without textual parameter.
-          subOutput = DataAccess.access(subCfgNode.elementStorePath, output, true, false, attribValues, false, null);
+          subOutput = DataAccess.access(elementStorePath, output, true, false, attribValues, false, null);
         }
       } catch(Exception exc) {
         subOutput = null;
         CharSequence sError = Assert.exceptionInfo("", exc, 1, 30);
-        System.err.println("error getDataForTheElement: " + subCfgNode.elementStorePath);
+        System.err.println("error getDataForTheElement: " + elementStorePath);
         System.err.println("help: ");
         System.err.println(sError);
       }
@@ -576,22 +566,22 @@ public class XmlJzReader
    * @param sAttrValue
    */
   @SuppressWarnings("static-method")
-  void storeAttrData( Object output, DataAccess.DatapathElement dstPath, CharSequence searchKey, CharSequence sAttrValue) 
+  void storeAttrData( Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue) 
   {
-    if(searchKey.equals("Comment"))  //sAttrName
-      Debugutil.stop();
     try{ 
-      int nrArgs = dstPath.nrArgNames();
-      Object[] args;
-      if(nrArgs >0) {
-        args = new Object[nrArgs]; 
-        for(int ix = 0; ix < nrArgs; ++ix) {
-          String argName = dstPath.argName(ix);
-          if(argName.equals("name")) { args[ix] = searchKey; }
-          else if(argName.equals("value")) { args[ix] = sAttrValue; }
-          else throw new IllegalArgumentException("argname");
+      if(dstPath.isOperation()) {
+        String[] vars = null; 
+        if(attribNames !=null) {
+          vars = new String[attribNames.size()];
+          for(Map.Entry<String, DataAccess.IntegerIx> earg: attribNames.entrySet()) {
+            String argName = earg.getKey();
+            int ix = earg.getValue().ix;       //supply the three expected arguments, other are not possible.
+            if(argName.equals("name")) { vars[ix] = sAttrName.toString(); }
+            else if(argName.equals("value")) { vars[ix] = sAttrValue.toString(); }
+          }
         }
-        DataAccess.invokeMethod(dstPath, null, output, true, false, args);
+        DataAccess.invokeMethod(dstPath, null, output, true, vars, true);
+        //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
       } else {
         DataAccess.storeValue(dstPath, output, sAttrValue, true);
       }
@@ -661,17 +651,22 @@ public class XmlJzReader
     DataAccess.DatapathElement dstPath = cfgNode.contentStorePath;
     if(dstPath !=null) {
       try{ 
-        int nrArgs = dstPath.nrArgNames();
-        Object[] args;
-        if(dstPath.isOperation()) { //   nrArgs >0) {
-          args = new Object[nrArgs]; 
-          for(int ix = 0; ix < nrArgs; ++ix) {
-            String argName = dstPath.argName(ix);
-            if(attribs[0]!=null && (args[ix] = attribs[0].get(argName))!=null){} //content of attribute filled in args[ix]
-            else if(argName.equals("text")) { args[ix] = buffer; }
-            else throw new IllegalArgumentException("argname");
+        if(dstPath.isOperation()) {
+          String[] vars = null; 
+          if(cfgNode.allArgNames !=null) {
+            vars = new String[cfgNode.allArgNames.size()];
+            for(Map.Entry<String, DataAccess.IntegerIx> earg: cfgNode.allArgNames.entrySet()) {
+              String argName = earg.getKey();
+              int ix = earg.getValue().ix;       //supply the three expected arguments, other are not possible.
+              if(attribs[0]!=null) { // && (vars[ix] = attribs[0].get(argName))!=null){} //content of attribute filled in args[ix]
+                Debugutil.stop();
+              } else if(argName.equals("text")) { 
+                attribValues[ix] = buffer.toString(); 
+              }
+            }
           }
-          DataAccess.invokeMethod(dstPath, null, output, true, false, args);
+          DataAccess.invokeMethod(dstPath, null, output, true, attribValues, true);
+          //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
         } else {
           DataAccess.storeValue(dstPath, output, buffer, true);
         }
