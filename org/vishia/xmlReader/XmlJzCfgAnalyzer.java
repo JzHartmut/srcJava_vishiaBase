@@ -162,9 +162,10 @@ public class XmlJzCfgAnalyzer
       sArg = "()";
     }
     if(structNode.onlySingle) {
-      wrCfgXmlNode.setAttribute("data", "xmlinput", "!set_" + structNode.tagIdent + sArg);
+      wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
     } else {
-      wrCfgXmlNode.setAttribute("data", "xmlinput", "!add_" + structNode.tagIdent + sArg);
+      wrCfgXmlNode.setAttribute("list", "xmlinput", "");
+      wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
     }
   }
   
@@ -591,7 +592,7 @@ public class XmlJzCfgAnalyzer
     XmlStructureNode(XmlStructureNode parent, String tag, XmlStructureData xmlStructData){ 
       this.parent = parent; 
       this.tag = tag;
-      this.tagIdent = StringFunctions_B.replaceNonIdentifierChars(tag, 'A').toString();
+      this.tagIdent = StringFunctions_B.replaceNonIdentifierChars(tag, '-').toString();
       
       this.xmlStructData = xmlStructData; 
     }

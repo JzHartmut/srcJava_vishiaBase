@@ -87,6 +87,8 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2019-08-16 {@link XmlCfgNode#allArgNames} gets initial name, value, tag and text as unified for ReadCfgCfg and the used cfg 
+   * <li>2019-08-15 Changes in respect of {@link DataAccess} usage of variables.
    * <li>2019-03-13 new {@link XmlCfgNode#addFromSubtree(XmlCfgNode)} copies only not defined attributes from the subtree block definition.
    *   hence the definition of an attribute in the call subtree line is prior to the attribute defined in the subtree. 
    * <li>2019-03-13 new {@link #subtreeForward}. It is possible that a definition in a subtree uses another subtree which is declared below. 
@@ -256,6 +258,7 @@ public class XmlCfg
    */
   public static class AttribDstCheck {
     
+    final String name;
     
     /**If given, the data access to store the value. null if not to store in the users instance immediately*/
     DataAccess.DatapathElement daccess;
@@ -272,7 +275,8 @@ public class XmlCfg
      */
     public final boolean bUseForCheck;
     
-    public AttribDstCheck(boolean bUseForCheck) {
+    public AttribDstCheck(String name, boolean bUseForCheck) {
+      this.name = name;
       this.bUseForCheck = bUseForCheck;
     }
     
@@ -345,8 +349,11 @@ public class XmlCfg
     XmlCfgNode(XmlCfgNode parent, XmlCfg cfg, CharSequence tag){ 
       this.parent = parent; this.cfg = cfg; this.tag = tag;
       this.allArgNames = new TreeMap<String, DataAccess.IntegerIx>();
-      this.allArgNames.put("tag", new DataAccess.IntegerIx(0));
-      this.allArgNames.put("text", new DataAccess.IntegerIx(1));
+      //register this 4 standard argument names, hence it are the same in XmlCfgCfg and a read XmlCfg
+      this.allArgNames.put("name", new DataAccess.IntegerIx(0));
+      this.allArgNames.put("value", new DataAccess.IntegerIx(1));
+      this.allArgNames.put("tag", new DataAccess.IntegerIx(2));
+      this.allArgNames.put("text", new DataAccess.IntegerIx(3));
     }
   
     /**Sets the path for the "new element" invocation.
@@ -411,12 +418,12 @@ public class XmlCfg
         if(StringFunctions.equals(sAttrValue, "!CHECK")) {
           //use the attribute value as key for select the config and output, it is the primary config node
           dstPath = null;
-          dPathAccess = new AttribDstCheck(true);
+          dPathAccess = new AttribDstCheck(key, true);
           attribs.put(key,  dPathAccess); //create if not exists
           bCheckAttributeNode = true;       
         }
         else  {
-          dPathAccess = new AttribDstCheck(false);
+          dPathAccess = new AttribDstCheck(key, false);
           attribs.put(key,  dPathAccess);
           dstPath = sAttrValue.substring(1);
         }
