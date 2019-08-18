@@ -527,32 +527,37 @@ public class GenJavaOutClass {
       argsJavaSimpleVar.setArgument("typeZbnf", varType);
       argsJavaSimpleVar.setArgument("args", args);
       
+      //because of debugging write firstly to a StringBuilder:
+      StringBuilder wrb = new StringBuilder();
+      StringBuilder wrzb = new StringBuilder();
+      
       if(bList) {
-        sJavaListVar.exec(wr, argsJavaListVar);
+        sJavaListVar.exec(wrb, argsJavaListVar);
         sJavaListVarOper.exec(wrOp, argsJavaListVarOper);
         if(bStdType) {
-          sJavaListVarZbnf.exec(wrz, argsJavaListVarZbnf);
+          sJavaListVarZbnf.exec(wrzb, argsJavaListVarZbnf);
         }
         else if(bCmpn) {
-          sJavaListCmpnZbnf.exec(wrz, argsJavaListCmpnZbnf);
+          sJavaListCmpnZbnf.exec(wrzb, argsJavaListCmpnZbnf);
         } 
         else {
-          sJavaListVarZbnf.exec(wrz, argsJavaListVarZbnf);
+          sJavaListVarZbnf.exec(wrzb, argsJavaListVarZbnf);
         }
       } else {
-        sJavaSimpleVar.exec(wr, argsJavaSimpleVar);
+        sJavaSimpleVar.exec(wrb, argsJavaSimpleVar);
         sJavaSimpleVarOper.exec(wrOp, argsJavaSimpleVarOper);
         if(bStdType) {
-          sJavaSimpleVarZbnf.exec(wrz, argsJavaSimpleVarZbnf);
+          sJavaSimpleVarZbnf.exec(wrzb, argsJavaSimpleVarZbnf);
         }
         else if(bCmpn) {
-          sJavaCmpnZbnf.exec(wrz, argsJavaCmpnZbnf);
+          sJavaCmpnZbnf.exec(wrzb, argsJavaCmpnZbnf);
         } 
         else {
-          sJavaSimpleVarZbnf.exec(wrz, argsJavaSimpleVarZbnf);
+          sJavaSimpleVarZbnf.exec(wrzb, argsJavaSimpleVarZbnf);
         }
-        
       }
+      wr.append(wrb); //now append to output, remove wrb as stack local ref 
+      wrz.append(wrzb);
     }
     
     

@@ -171,10 +171,11 @@ public class XmlCfg
     
     try {
       nodes.setNewElementPath("!newElement(tag)");
-      //if the attribute xmlinput:data is read in the input config.xml, then its values hould be used to set the datapath for the element.
+      //if the attribute xmlinput:data is read in the input config.xml, then its values should be used to set the datapath for the element.
       //It is done via invocation of setNewElementPath(...) on the output config.
       nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
       nodes.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
+      nodes.addAttribStorePath("xmlinput:list", "!setList()");  
       nodes.setContentStorePath("!setContentStorePath(text)");
       StringPartScan spAttribStorePath = new StringPartScan("addAttribStorePath(name, value)");
       nodes.attribsUnspec = new DataAccess.DatapathElement(spAttribStorePath, nodes.allArgNames, null);  //use addAttributeStorePath in the dst node to add.
@@ -187,6 +188,7 @@ public class XmlCfg
       //nodeSub.attribsForCheck.put("name", checkName);
       nodeSub.addAttribStorePath("xmlinput:name", "!@subtreename");  //This attribute value should be used to store locally in name.
       nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
+      nodeSub.addAttribStorePath("xmlinput:list", "!setList()");  
       nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
       nodeSub.setNewElementPath("!addSubTree(subtreename)");
       spAttribStorePath.assign("addAttribStorePath(name, value)");
@@ -304,6 +306,11 @@ public class XmlCfg
      */
     DataAccess.DatapathElement elementStorePath;
     
+    /**true then this element is stored with more as one instance. 
+     * 
+     */
+    boolean bList;
+    
     Map<String, DataAccess.IntegerIx> allArgNames;
   
     /**The first node in some equal nodes in cfg, which determines the attributes used for check. */
@@ -371,6 +378,12 @@ public class XmlCfg
       }
     }
   
+    
+    public void setList() {
+      bList = true;
+    }
+    
+    
     /**This method is invoked from the xml configuration reader to create a new attribute entry for the found attribute.
      * @param key ns:name of the found attribute in the config.xml 
      * @param dstPath datapath which is found as value in the config.xml. The datapath is used for the user.xml to store the attribute value.

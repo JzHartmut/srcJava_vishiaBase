@@ -387,7 +387,7 @@ public class GenZbnfJavaData
       }
       else {
         if(item.bStoreAsString) {
-          wrVariable("String", semantic, null, bList, true, null);
+          wrVariable("String", semantic, null, bList, false, null); ////xx
         }
         if(!item.bDonotStoreData) {
         //create an own class for the component, write a container here.

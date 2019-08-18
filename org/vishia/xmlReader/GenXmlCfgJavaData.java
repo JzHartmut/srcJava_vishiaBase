@@ -208,7 +208,7 @@ public class GenXmlCfgJavaData {
     
     void evaluateChildren(XmlCfgNode cfgNode, boolean bList, int level) throws Exception {
       System.out.println(cfgNode.tag);
-      if(cfgNode.tag.equals("string_table"))
+      if(cfgNode.tag.equals("section"))
         Debugutil.stop();
       if(cfgNode.attribs !=null) for(Map.Entry<String, AttribDstCheck> eattrib: cfgNode.attribs.entrySet()) {
         AttribDstCheck attrib = eattrib.getValue();
@@ -219,14 +219,15 @@ public class GenXmlCfgJavaData {
       }
       if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
         XmlCfgNode childNode = eNode.getValue();
-        
+        if(childNode.tag.equals("section"))
+          Debugutil.stop();
         if(childNode.dstClassName !=null) {
           String sType = GenJavaOutClass.firstUppercase(childNode.dstClassName);
           if(GenXmlCfgJavaData.this.genClass.idxStdTypes.get(sType) !=null) {
             sType += "__";  //It must not be a Standard type.
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
-          wrVariable(sType, childNode.tag.toString(), childNode.elementStorePath, false, true, true);  //write the create routine and access
+          wrVariable(sType, childNode.tag.toString(), childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
         
         } else {
           wrVariable("String", childNode.tag.toString(), childNode.elementStorePath, true, false, false);
