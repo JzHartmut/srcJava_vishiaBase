@@ -29,6 +29,7 @@ public class XmlJzCfgAnalyzer
 {
   /**Version, License and History:
    * <ul>
+   * <li>2019-08-18 improvements with namespace and usage for {@link GenXmlCfgJavaData}.
    * <li>2018-09-10 writes cfg attributes.
    * <li>2018-08-15 created.
    * </ul>
@@ -60,12 +61,23 @@ public class XmlJzCfgAnalyzer
   public static final String version = "2018-08-15";
 
   
+  static class AttribRead {
+    String namespace;
+    String name;
+    /**storage type or access routine */
+    String value;
+  }
+
+
+
+
   int debugStopLineXmlInp = -1;
   
   /**The common structure data of the read XML file. */
   final XmlStructureData xmlStructData = new XmlStructureData();
   
-  /**The tree of the structure of the read XML file. */
+  /**The tree of the structure of the read XML file. It contains the same tag element only one time.
+   * It is tested in {@link XmlStructureNode#addElement(String)}. */
   XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", xmlStructData);  //the root node for reading config
 
   
@@ -90,32 +102,31 @@ public class XmlJzCfgAnalyzer
       //Output it as cfg.xml
       XmlNodeSimple<?> root = new XmlNodeSimple<>("xmlinput:root");
       root.addNamespaceDeclaration("xmlinput", "www.vishia.org/XmlReader-xmlinput");
-      
-      //for(Map.Entry<String, XmlStructureData.CfgSubtreeType> e: this.xmlStructData.allElementTypes.entrySet()) {
-        //XmlStructureData.CfgSubtreeType e1 = e.getValue();
-        //for(XmlStructureNode srcnode: e1.occurrence) {
-        for(XmlStructureNode structnode: this.xmlStructData.cfgSubtreeList) {
-            //add one subtree node for each tag type in its context:
-          assert(structnode.sSubtreenode !=null);  //it should be designated.
-          XmlNode wrCfgsubtreenode = root.addNewNode("subtree", "xmlinput"); //second node "cfg"
-          if(structnode.sSubtreenode.equals("ObjectList_A"))
-            Debugutil.stop();
-          wrCfgsubtreenode.setAttribute("name", "xmlinput", structnode.sSubtreenode);
-          wrCfgsubtreenode.setAttribute("class", "xmlinput", structnode.sSubtreenode);
-          if(structnode.attribs !=null)for(Map.Entry<String, String> e_attrib: structnode.attribs.entrySet()) {
-            String key = e_attrib.getKey(); String value = e_attrib.getValue();
-            wrCfgsubtreenode.setAttribute(key, value);
-          }
-          wrSetAddContentAttrib(structnode, wrCfgsubtreenode);
-          //
-          if(structnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: structnode.nodes.entrySet()) {
-            XmlStructureNode srcSubnode = e_srcSubnode.getValue();
-            XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(srcSubnode.tag);
-            wrCfgsubtreenode.addContent(xmlNodeSub);
-            addWrNode(xmlNodeSub, srcSubnode, 999);
-          }
+
+      for(XmlStructureNode structnode: this.xmlStructData.cfgSubtreeList) {
+        //add one subtree node for each tag type in its context:
+        assert(structnode.sSubtreenode !=null);  //it should be designated.
+        XmlNode wrCfgsubtreenode = root.addNewNode("subtree", "xmlinput"); //second node "cfg"
+        if(structnode.sSubtreenode.equals("ObjectList_A"))
+          Debugutil.stop();
+        wrCfgsubtreenode.setAttribute("name", "xmlinput", structnode.sSubtreenode);
+        String sClass = StringFunctions_B.replaceNonIdentifierChars(structnode.sSubtreenode, '-').toString();
+        wrCfgsubtreenode.setAttribute("class", "xmlinput", sClass);
+        if(structnode.attribs !=null)for(Map.Entry<String, AttribRead> e_attrib: structnode.attribs.entrySet()) {
+          AttribRead attrib = e_attrib.getValue();
+//          if(attrib.name.equals("idref"))
+//            Debugutil.stop();
+          wrCfgsubtreenode.setAttribute(attrib.name, attrib.namespace, attrib.value);
         }
-      //}
+        wrSetAddContentAttrib(structnode, wrCfgsubtreenode);
+        //
+        if(structnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: structnode.nodes.entrySet()) {
+          XmlStructureNode srcSubnode = e_srcSubnode.getValue();
+          XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(srcSubnode.tag);
+          wrCfgsubtreenode.addContent(xmlNodeSub);
+          addWrNode(xmlNodeSub, srcSubnode, 999);
+        }
+      }
       //add the root cfg node with all its subnodes:
       XmlNode cfgnode = root.addNewNode("cfg", "xmlinput"); //second node "cfg"
       //
@@ -149,11 +160,11 @@ public class XmlJzCfgAnalyzer
       StringBuilder uArg= new StringBuilder(100);
       sArg = uArg;
       char sep = '(';
-      for(Map.Entry<String,String> e: structNode.attribs.entrySet()) {
-        String name = e.getKey(); String value = e.getValue();
-        wrCfgXmlNode.setAttribute(name, value);  //transfer to cfg too.
-        if(value.startsWith("!@")) {  //use only attributes which should be used as arguments for the set/add operation
-          uArg.append(sep).append(value.substring(2));
+      for(Map.Entry<String,AttribRead> e: structNode.attribs.entrySet()) {
+        AttribRead attrib = e.getValue();
+        wrCfgXmlNode.setAttribute(attrib.name, attrib.namespace, attrib.value);  //transfer to cfg too.
+        if(attrib.value.startsWith("!@")) {  //use only attributes which should be used as arguments for the set/add operation
+          uArg.append(sep).append(attrib.value.substring(2));
           sep = ',';
         }
       }
@@ -192,7 +203,8 @@ public class XmlJzCfgAnalyzer
         //Only one time tag type: tree inside.
         if(structNode.nodes !=null || structNode.attribs !=null && (structNode.bText || structNode.attribs.size() >1)) {
           //sub nodes or more as one (attribute or text content) needs a sub class to store the content for this node. 
-          wrCfgXmlNode.setAttribute("class", "xmlinput", structNode.tagIdent  );
+          String sClass = StringFunctions_B.replaceNonIdentifierChars(structNode.tagIdent, '-').toString();
+          wrCfgXmlNode.setAttribute("class", "xmlinput", sClass  );
         }
         if(structNode.nodes !=null) { //has subnodes
           for(Map.Entry<String, XmlStructureNode> e: structNode.nodes.entrySet()) {
@@ -273,6 +285,9 @@ public class XmlJzCfgAnalyzer
   
   static class XmlStructureData {
     
+    /**Contains all elements with its {@link #occurrence}.
+     *
+     */
     static class CfgSubtreeType {
       
       List<XmlStructureNode> occurrence = new ArrayList<XmlStructureNode>();
@@ -282,12 +297,17 @@ public class XmlJzCfgAnalyzer
       @Override public String toString() { return "" + occurrence.size() + " * " + occurrence.get(0).toString(); }
     }
     
+    /**Contains info about equals element types.
+     */
     static class CfgSubtreeType2 {
       
       final String tag;
       //XmlStructureNodeBuilder node;
+      
+      /**Contains all nodes in all levels which are detect as same type.*/
       List<XmlStructureNode> occurrence = new ArrayList<XmlStructureNode>();
       
+      /**The representative attributes and sub nodes of all associated nodes. */
       XmlStructureNode representative;
       
       List<CfgSubtreeType2> dependings = new ArrayList<CfgSubtreeType2>();
@@ -309,8 +329,9 @@ public class XmlJzCfgAnalyzer
 
     
     
-    /**Stores all node types per tagName, more as one possible with the same tag name with its occurence in the structure file. */
-    IndexMultiTable<String, CfgSubtreeType> allElementTypes = new IndexMultiTable<String, CfgSubtreeType>(IndexMultiTable.providerString);
+    /**Stores all node types per tagName, with its occurence in the structure file. 
+     * */
+    TreeMap<String, CfgSubtreeType> allElementTypes = new TreeMap<String, CfgSubtreeType>();
    
     /**Stores all node types with occurrence more as one time, with tag name but with extra entry for any different content (really different type with same tag). */
     IndexMultiTable<String, CfgSubtreeType2> allElementTypes2 = new IndexMultiTable<String, CfgSubtreeType2>(IndexMultiTable.providerString);
@@ -318,7 +339,7 @@ public class XmlJzCfgAnalyzer
     
     
     /**Stores all node types for cfg subtree with the subtree name as key. */
-    Map<String, XmlStructureNode> cfgSubtreeByName = new IndexMultiTable<String, XmlStructureNode>(IndexMultiTable.providerString);
+    Map<String, XmlStructureNode> cfgSubtreeByName = new TreeMap<String, XmlStructureNode>();
     
     /**Stores the cfg subtree in the usage order. */
     List<XmlStructureNode> cfgSubtreeList = new ArrayList<XmlStructureNode>();
@@ -332,7 +353,7 @@ public class XmlJzCfgAnalyzer
       } else {
         node.sSubtreenode = node.tag + '_' + nameModif;
       }
-      if(node.attribs !=null) for(Map.Entry<String, String> e: node.attribs.entrySet()) {
+      if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
         cfgSubtreeType.attributeNames.put(e.getKey(), e.getKey());
       }
       if(node.nodes !=null) for(Map.Entry<String, XmlStructureNode> e: node.nodes.entrySet()) {
@@ -359,7 +380,13 @@ public class XmlJzCfgAnalyzer
     
     
     
-    /**Invoked for all element types found in the source XML tree.
+    /**Checks whether a element type is already existing with a score. 
+     * 3/4 of all found attributes and sub elements are identically with another existing element
+     * with the same tag name. 
+     * Invoked for all element types found in the source XML tree.
+     * If another node is found, the appropriated {@link CfgSubtreeType2} in {@link #allElementTypes2}
+     * is supplemented ({@link CfgSubtreeType2#representative}.
+     * If the node is a new one, {@link #createCfgSubtree(XmlStructureNode, char)} is called.
      * @param node
      */
     private void checkStructureNodeOccurence(XmlStructureNode node) {
@@ -373,14 +400,14 @@ public class XmlJzCfgAnalyzer
       if(node.tag.equals("AttributeList"))
         Debugutil.stop();
       if(!iterCfgSubtrees.hasNext() || !(cfgSubtreeType = iterCfgSubtrees.next()).tag.equals(node.tag)) {
-        createCfgSubtree(node, '\0');
+        createCfgSubtree(node, '\0'); //same tag only one time.
       }
-      else {
+      else { //Same tag more as one.
         do {
           nameModif +=1;
           //check whether the found cfgSubtree seems to be the same type, because it has the same children:
           int nrfound=0, nrcount=0;
-          if(node.attribs !=null) for(Map.Entry<String, String> e: node.attribs.entrySet()) {
+          if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
             String key = e.getKey();
             if(cfgSubtreeType.attributeNames.get(key) !=null) {
               nrfound +=1;
@@ -402,11 +429,11 @@ public class XmlJzCfgAnalyzer
           }
           if(nrfound < (nrcount+3) /4) { //most (3/4) nodes or attributes are non-identical: It is another cfgSubtree type.
           } else {
-            found = true;
+            found = true; //>= 3/4 all attrib and nodes are identically:
             cfgSubtreeType.occurrence.add(node);
             node.sSubtreenode = cfgSubtreeType.representative.sSubtreenode;
             assert(node.sSubtreenode !=null);
-            if(node.attribs !=null) for(Map.Entry<String, String> e: node.attribs.entrySet()) {
+            if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
               String key = e.getKey();
               if(cfgSubtreeType.attributeNames.get(key) ==null) {
                 cfgSubtreeType.attributeNames.put(key, key);     //an attribute non detected as yet, add it in representative.;
@@ -545,6 +572,7 @@ public class XmlJzCfgAnalyzer
    */
   static class XmlStructureNode
   {
+    
     /**Tag name of the element. */
     final String tag;
     
@@ -570,13 +598,15 @@ public class XmlJzCfgAnalyzer
     
     final XmlStructureNode parent;
     
-    /**Found sub nodes. The list is supplemented if new sub nodes are found on further occurrences of elements. */
+    /**Found sub nodes. The list is supplemented if new sub nodes are found on further occurrences of elements. 
+     * It contains the same tag element only one time. that is tested in {@link #addElement(String)}.
+     */
     Map<String, XmlStructureNode> nodes;
     
     Map<String, String> nodesLocal;
     
     /**Found attributes. The list is supplemented if new attribute names are found on further occurrences of elements. */
-    Map<String, String> attribs;
+    Map<String, AttribRead> attribs;
     
     
     int nrofAttributes = 0;
@@ -613,7 +643,7 @@ public class XmlJzCfgAnalyzer
         Debugutil.stop();
       }
       if(nodes == null) {
-        nodes = new IndexMultiTable<String, XmlStructureNode>(IndexMultiTable.providerString);
+        nodes = new TreeMap<String, XmlStructureNode>();
       }
       if(nodesLocal == null) {
         nodesLocal = new TreeMap<String, String>();
@@ -639,15 +669,25 @@ public class XmlJzCfgAnalyzer
      * @param tag
      * @return
      */
-    public void setAttribute(String name) { 
-      if(attribs == null) { 
-        attribs = new TreeMap<String, String>(); 
-        bNewAttributes = true;
-        attribs.put(name, "!@" + name);  //the first attrin
+    public void setAttribute(String namespacename) { 
+      AttribRead attrib = new AttribRead();
+      //replaces the ':' between namespace:name with _
+      attrib.value = "!@" + StringFunctions_B.replaceNonIdentifierChars(namespacename, '-').toString();
+      int posNamespace = namespacename.indexOf(':');
+      if(posNamespace >=0) {
+        attrib.namespace = namespacename.substring(0, posNamespace);
+        attrib.name = namespacename.substring(posNamespace+1);
+      } else {
+        attrib.name = namespacename;
       }
-      else if(attribs.get(name) ==null) {
+      if(attribs == null) { 
+        attribs = new TreeMap<String, AttribRead>(); 
         bNewAttributes = true;
-        attribs.put(name, "!@" + name);  //a new attrib
+        attribs.put(namespacename, attrib);  //the first attrin
+      }
+      else if(attribs.get(namespacename) ==null) {
+        bNewAttributes = true;
+        attribs.put(namespacename, attrib);  //a new attrib
       }
     }
 

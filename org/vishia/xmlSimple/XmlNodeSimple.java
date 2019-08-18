@@ -191,10 +191,10 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   
   @SuppressWarnings("unchecked")
   @Override public void setAttribute(String name, String namespaceKey, String value)
-  { String aname = namespaceKey + ":@" + name;
+  { String aname = (namespaceKey !=null? namespaceKey + ":" : "") + "@" + name;
     XmlNodeSimple<UserData> attribute = (XmlNodeSimple<UserData>)getChild(aname);
     if(attribute ==null){
-      attribute = new XmlNodeSimple<UserData>("@"+name, namespaceKey);
+      attribute = new XmlNodeSimple<UserData>(aname, namespaceKey);
       addNode(attribute);
     }
     attribute.text = value;

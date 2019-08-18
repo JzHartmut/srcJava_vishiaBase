@@ -4,16 +4,13 @@ import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.util.DataAccess;
-import org.vishia.util.DataAccess.IntegerIx;
 import org.vishia.util.Debugutil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartScan;
-import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
 /**This class contains the configuration data to assign xml elements to Java data.
  * It is filled with the {@link XmlJzReader#readCfg(java.io.File)} from a given xml file.
