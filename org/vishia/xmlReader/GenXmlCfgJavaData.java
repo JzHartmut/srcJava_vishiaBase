@@ -5,17 +5,15 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.vishia.genJavaOutClass.GenJavaOutClass;
-import org.vishia.genJavaOutClass.GenJavaOutClass.WrClassJava;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
+import org.vishia.util.StringFunctions_B;
 import org.vishia.xmlReader.XmlCfg.AttribDstCheck;
 import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
-import org.vishia.zbnf.ZbnfSyntaxPrescript;
 
 
 
@@ -208,29 +206,30 @@ public class GenXmlCfgJavaData {
     
     void evaluateChildren(XmlCfgNode cfgNode, boolean bList, int level) throws Exception {
       System.out.println(cfgNode.tag);
-      if(cfgNode.tag.equals("section"))
-        Debugutil.stop();
+//      if(cfgNode.tag.equals("section"))
+//        Debugutil.stop();
       if(cfgNode.attribs !=null) for(Map.Entry<String, AttribDstCheck> eattrib: cfgNode.attribs.entrySet()) {
         AttribDstCheck attrib = eattrib.getValue();
         //if(attrib.daccess !=null) {
-          wrVariable("String", attrib.name, attrib.daccess, true, false, false);
-          
-        //}
+        String sName = StringFunctions_B.replaceNonIdentifierChars(attrib.name, '-').toString();
+        wrVariable("String", sName, attrib.daccess, true, false, false);
       }
       if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
         XmlCfgNode childNode = eNode.getValue();
-        if(childNode.tag.equals("section"))
-          Debugutil.stop();
+//        if(childNode.tag.equals("section"))
+//          Debugutil.stop();
         if(childNode.dstClassName !=null) {
           String sType = GenJavaOutClass.firstUppercase(childNode.dstClassName);
           if(GenXmlCfgJavaData.this.genClass.idxStdTypes.get(sType) !=null) {
             sType += "__";  //It must not be a Standard type.
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
-          wrVariable(sType, childNode.tag.toString(), childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
+          String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
+          wrVariable(sType, sName, childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
         
         } else {
-          wrVariable("String", childNode.tag.toString(), childNode.elementStorePath, true, false, false);
+          String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
+          wrVariable("String", sName, childNode.elementStorePath, true, false, false);
             
         }
       }
