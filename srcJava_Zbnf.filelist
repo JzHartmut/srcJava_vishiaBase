@@ -1,4 +1,4 @@
-2019-08-19 12:03:11  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-08-19 13:19:14  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -15,7 +15,7 @@
 2017-07-29 11:11:34  x     genXMI_Zbnf.bat                          ::          1.203  1755905359 
 2018-09-11 16:34:04  x     genjavadoc.bat                           ::           .388 -0466275332 
 2018-09-11 16:35:18  x     genjavadoc.sh                            ::           .386  0409646470 
-2019-03-10 13:33:35  x     javadoc.help                             ::          9.297 -0429460067 
+2019-08-19 12:22:48  x     javadoc.help                             ::          9.297 -0429460067 
 2019-08-18 13:19:14  x     makejar_XmlJzReader.bat                  ::          2.169  1431016675 
 2019-05-30 20:33:27  x     makejar_zbnf.bat                         ::          3.750 -0790901411 
 2013-01-02 09:31:22  x     makejar_zbnf.sh                          ::          1.797 -0347914445 
@@ -313,7 +313,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-08-11 15:52:43  x     OutTextPreparer.java                     ::         42.200 -1641914128 
+2019-08-19 13:12:24  x     OutTextPreparer.java                     ::         42.100  1753617861 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
