@@ -87,6 +87,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2019-08-19 Hartmut chg: error msg on throw improved on non found operation etc, line feed for better read ability. 
    * <li>2019-08-10 Hartmut new / chg: Usage of variable-values in a Object[] array: 
    *   <ul>
    *   <li>{@link #DataAccess(StringPartScan, Map, Class, char)} has a new 2. and 3. argument nameVariables and , as well as 
@@ -1101,7 +1102,7 @@ public class DataAccess {
         if(data1 == null) {
           data1 = System.getProperty(element.ident);  //read from Java system property
         }
-        if(data1 == null) throw new NoSuchElementException("DataAccess - environment variable not found; " + element.ident);
+        if(data1 == null) throw new NoSuchElementException("DataAccess - environment variable not found: >>" + element.ident + "<<");
       } break;
       default: {
         final boolean bConstNewVariable;
@@ -1179,10 +1180,12 @@ public class DataAccess {
             data1 = method.newInstance(actArgs);
           } catch(IllegalAccessException exc){
             CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
-            throw new NoSuchMethodException("DataAccess - method access problem: " + clazz.getName() + "." + element.ident + "(...)" + stackInfo);
+            throw new NoSuchMethodException("DataAccess - method access problem: >>" 
+              + clazz.getName() + "." + element.ident + "(...)<<\n ..." + stackInfo);
           } catch(InstantiationException exc){
             CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
-            throw new NoSuchMethodException("DataAccess - new invocation problem: " + clazz.getName() + "." + element.ident + "(...)" + stackInfo);
+            throw new NoSuchMethodException("DataAccess - new invocation problem: >>" 
+              + clazz.getName() + "." + element.ident + "(...)<<\n ..." + stackInfo);
           }
           break;  //method found.
         }
@@ -1190,14 +1193,19 @@ public class DataAccess {
     }
     if(!bOk) {
       StringBuilder msg = new StringBuilder(1000);
-      msg.append("DataAccess - constructor not found in class, ")
+      msg.append("DataAccess - constructor not found in class: >>")
          .append(clazz.getName()).append(", ") .append(element.ident) .append("(");
       if(element.fnArgs !=null) {
         for(Object arg: element.fnArgs) {
           msg.append(arg.getClass()).append(", ");
         }
+      } else if(element.args !=null) {
+        for(CalculatorExpr.Operand arg: element.args) {
+          msg.append(arg.textOrVar).append(", ");
+        }
       }
-      msg.append(");, stackInfo: ");
+      
+      msg.append(")<<\n ... stackInfo: ");
       CharSequence stackInfo = Assert.stackInfo(msg, 3, 8);
       throw new NoSuchMethodException(stackInfo.toString());
     }
@@ -1312,7 +1320,8 @@ public class DataAccess {
                 data1 = method.invoke(obj, actArgs);
               } catch(IllegalAccessException exc){
                 CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
-                throw new NoSuchMethodException("DataAccess - method access problem: " + clazzcheck.getName() + "." + element.ident + "(...)" + stackInfo);
+                throw new NoSuchMethodException("DataAccess - method access problem: " 
+                  + clazzcheck.getName() + "." + element.ident + "(...)" + stackInfo);
               } catch(InvocationTargetException exc){
                 Assert.stop();
                 throw exc;
@@ -1329,17 +1338,22 @@ public class DataAccess {
     if(!bOk && !bNoExceptionifNotFound) {
       StringBuilder msg = new StringBuilder(1000);
       if(methodFound){
-        msg.append("DataAccess - method parameters don't match in class, ");
+        msg.append("DataAccess - method parameters don't match\n ...in class: >>");
       } else {
-        msg.append("DataAccess - method not found in class, ");
+        msg.append("DataAccess - method not found\n ...in class >>");
       }
-      msg.append(clazz1.getName()).append(", ") .append(element.ident) .append("(");
-      if(element.fnArgs !=null) {
-        for(Object arg: element.fnArgs) {
+      msg.append(clazz1.getName()).append("<<\n ...operation: >>") .append(element.ident) .append("(");
+      if(args !=null) {
+        for(Object arg: args) {
           msg.append(arg.getClass()).append(", ");
         }
       }
-      msg.append(");, stackInfo: ");
+      else if(element.args !=null) {
+        for(CalculatorExpr.Operand arg: element.args) {
+          msg.append(arg.textOrVar).append(", ");
+        }
+      }
+      msg.append(")<<;\n ... stackInfo: ");
       CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
       if(debugMethod !=null && debugMethod.equals("")){
         debug();
@@ -1402,7 +1416,8 @@ public class DataAccess {
             data1 = method.invoke(null, actArgs);
           } catch(IllegalAccessException exc){
             CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
-            throw new NoSuchMethodException("DataAccess - method access problem: " + clazz.getName() + "." + element.ident + "(...)" + stackInfo);
+            throw new NoSuchMethodException("DataAccess - method access problem:\n in class: >>" 
+              + clazz.getName() + "." + element.ident + "(...)<<\n ... stackInfo:" + stackInfo);
           }
           break;  //method found.
         }
@@ -1418,6 +1433,17 @@ public class DataAccess {
           if(args == null) msg.append("null, ");
           else msg.append(args.getClass()).append(", ");
       } }
+//      else if(args !=null) {
+//        for(Object arg: args) {
+//          msg.append(arg.getClass()).append(", ");
+//        }
+//      }
+      else if(element.args !=null) {
+        for(CalculatorExpr.Operand arg: element.args) {
+          msg.append(arg.textOrVar).append(", ");
+        }
+      }
+      
       msg.append(")|, ");
       CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
       if(debugMethod !=null && debugMethod.equals("")){
@@ -2867,7 +2893,7 @@ public class DataAccess {
         Object val2 = conversion.convert(val);
         field.set(obj, val2);
       }
-      else throw new IllegalArgumentException("DataAccess - cannot assign; " + field + " = " + val);
+      else throw new IllegalArgumentException("DataAccess - cannot assign >>" + field + "<< = >>" + val + "<<");
     }
     
   }

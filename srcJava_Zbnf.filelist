@@ -1,4 +1,4 @@
-2019-08-18 23:49:59  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-08-19 12:03:11  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2018-09-13 08:24:12  x     srcJava_Zbnf.gitRepository               ::           . 50  0609241962 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -279,7 +279,7 @@
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2019-08-11 16:46:54  x     DataAccess.java                          ::        133.097 -1366040949 
+2019-08-19 11:57:51  x     DataAccess.java                          ::        134.018 -0348324454 
 2019-06-21 09:28:58  x     DataShow.java                            ::         29.206  0163463218 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
@@ -379,7 +379,7 @@
 2019-08-18 23:38:20  x     GenXmlCfgJavaData.java                   ::         12.861  1623100568 
 2019-08-18 13:28:03  x     XmlCfg.java                              ::         27.849 -1326807559 
 2019-08-18 22:39:03  x     XmlJzCfgAnalyzer.java                    ::         27.870  2020880238 
-2019-08-18 18:00:06  x     XmlJzReader.java                         ::         29.642 -0560527531 
+2019-08-19 11:59:14  x     XmlJzReader.java                         ::         33.153 -0052110498 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2019-08-18 23:35:16  x     Office_odtData.java                      ::         27.620  0393408920 

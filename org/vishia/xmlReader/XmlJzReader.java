@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
+import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -63,8 +65,8 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2019-08-19 Hartmut full support of text special sequences. 
    * <li>2019-08-10 Hartmut refactoring of {@link DataAccess}, handling of arguments on access routines changed. 
-   *   TODO carefully  test and document 
    * <li>2019-05-29 Now skips over &lt;!DOCTYPE....>
    * <li>2018-09-09 Renamed from XmlReader to XmlJzReader, because: It is a special reader. 
    * It stores Data to Java (J) and works with a configfile which has a semantic (z as reverse 's').
@@ -114,11 +116,32 @@ public class XmlJzReader
   int debugStopLine = -1;
   
   /**Assignment between nameSpace-alias and nameSpace-value gotten from the xmlns:ns="value" declaration in the read XML file. */
-   Map<String, String> namespaces = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
+  Map<String, String> namespaces = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
    
+   
+  private final Map<String, String> replaceChars = new TreeMap<String, String>();
+
    
   public XmlJzReader() {
     cfgCfg = XmlCfg.newCfgCfg();
+    replaceChars.put("&amp;", "&");
+    replaceChars.put("&lt;", "<");
+    replaceChars.put("&gt;", ">");
+    replaceChars.put("&quot;", "\"");
+    replaceChars.put("&apos;", "\'");
+    replaceChars.put("&nl;", "\n");
+    replaceChars.put("&cr;", "\r");
+    replaceChars.put("&#9;", "\t");
+    replaceChars.put("&#A;", "\n");
+    replaceChars.put("&#D;", "\r");
+    replaceChars.put("&#20;", " ");
+    //not xml conform, old style html
+    replaceChars.put("&auml;", "ä");
+    replaceChars.put("&ouml;", "ö");
+    replaceChars.put("&uuml;", "ü");
+    replaceChars.put("&Auml;", "Ä");
+    replaceChars.put("&Ouml;", "Ö");
+    replaceChars.put("&Uuml;", "Ü");
   }   
    
   
@@ -365,7 +388,7 @@ public class XmlJzReader
     }
     else if(inp.scan(">").scanOk()) {
       //textual content
-      StringBuilder content = null;
+      StringBuilder contentBuffer = null;
       //
       //loop to parse <tag ...> THE CONTENT </tag>
       while( ! inp.scan().scan("<").scan("/").scanOk()) { //check </ as end of node
@@ -377,8 +400,8 @@ public class XmlJzReader
             parseElement(inp, subOutput, subCfgNode);  //nested element.
           }
         } else {
-          if(content == null && subOutput !=null) { content = new StringBuilder(500); }
-          parseContent(inp, content);  //add the content between some tags to the content Buffer.
+          if(contentBuffer == null && subOutput !=null) { contentBuffer = new StringBuilder(500); }
+          parseContent(inp, contentBuffer);  //add the content between some tags to the content Buffer.
         }
       }
       //
@@ -387,12 +410,13 @@ public class XmlJzReader
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
-      if(content !=null && subOutput !=null) {
-        if(attribNames[0] !=null) {
+      if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
+        if(contentBuffer !=null) {
+          assert(attribNames[0] !=null);
           DataAccess.IntegerIx ixO = attribNames[0].get("text");
-          if(ixO !=null) { attribValues[ixO.ix] = content.toString(); } 
+          if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
         }
-        storeContent(content, subCfgNode, subOutput, attribNames, attribValues);
+        storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
       }
     } else {
       throw new IllegalArgumentException("either \">\" or \"/>\" expected");
@@ -430,7 +454,7 @@ public class XmlJzReader
       final CharSequence sAttrNsNameRaw = inp.getLastScannedString();
       if(!inp.scanQuotion("\"", "\"", null).scanOk()) throw new IllegalArgumentException("attr value expected");
       if(cfgNode !=null) {
-        String sAttrValue = inp.getLastScannedString().toString();  //"value" in quotation
+        String sAttrValue = replaceSpecialCharsInText(inp.getLastScannedString()).toString();  //"value" in quotation
         if(sAttrNsNameRaw.equals("xmlinput:class"))
           Debugutil.stop();
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
@@ -604,13 +628,15 @@ public class XmlJzReader
   /**
    * @param inp
    * @param buffer maybe null then ignore content.
+   * @throws ParseException 
    */
-  private void parseContent(StringPartFromFileLines inp, StringBuilder buffer)
-  throws IOException
+  private CharSequence parseContent(StringPartFromFileLines inp, StringBuilder buffer)
+  throws IOException, ParseException
   { boolean bContReadContent;
     int posAmp = buffer == null ? 0 : buffer.length()-1; //NOTE: possible text between elements, append, start from current length.
     inp.seekNoWhitespace();
     boolean bEofSupposed = false;
+    CharSequence content = null;
     do { //maybe read a long content in more as one portions.
       inp.lento('<');  //The next "<" is either the end with </tag) or a nested element.
       bContReadContent = !inp.found();
@@ -622,23 +648,36 @@ public class XmlJzReader
       } else {
         inp.lenBacktoNoWhiteSpaces();
       }
-      CharSequence content1 = inp.getCurrentPart();
+      CharSequence content2 = replaceSpecialCharsInText(inp.getCurrentPart());
       inp.fromEnd();
       if(buffer !=null && buffer.length() > 0) { 
         //any content already stored, insert a space between the content parts.
         buffer.append(' ');
       }
-      if(buffer !=null) { buffer.append(content1); }
+      if(buffer !=null) { 
+        buffer.append(content2); //old version, with buffer from out
+        content = buffer;
+      } else {
+        if(content ==null) { 
+          content = content2; //the read content immediately
+        } else { //already read something before
+          if(!(content instanceof StringBuilder)) {
+            content = new StringBuilder(content);
+          }
+          ((StringBuilder)content).append(content2);
+        } 
+      }
       bEofSupposed = inp.readnextContentFromFile(sizeBuffer/2);
     } while(bContReadContent);
-    if(buffer !=null) {
-      while( (posAmp  = buffer.indexOf("&", posAmp+1)) >=0) {  //replace the subscription of &lt; etc.
-        if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "lt;")) { buffer.replace(posAmp, posAmp+4, "<");  }
-        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "gt;")) { buffer.replace(posAmp, posAmp+4, ">");  }
-        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "amp;")) { buffer.replace(posAmp, posAmp+4, "&");  }
-        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "auml;")) { buffer.replace(posAmp, posAmp+4, "ä");  }
-      }
-    }
+    return content;
+//    if(buffer !=null) {
+//      while( (posAmp  = buffer.indexOf("&", posAmp+1)) >=0) {  //replace the subscription of &lt; etc.
+//        if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "lt;")) { buffer.replace(posAmp, posAmp+4, "<");  }
+//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "gt;")) { buffer.replace(posAmp, posAmp+4, ">");  }
+//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "amp;")) { buffer.replace(posAmp, posAmp+4, "&");  }
+//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "auml;")) { buffer.replace(posAmp, posAmp+4, "ä");  }
+//      }
+//    }
   }
   
   
@@ -654,16 +693,14 @@ public class XmlJzReader
             for(Map.Entry<String, DataAccess.IntegerIx> earg: cfgNode.allArgNames.entrySet()) {
               String argName = earg.getKey();
               int ix = earg.getValue().ix;       //supply the three expected arguments, other are not possible.
-              if(attribs[0]!=null) { // && (vars[ix] = attribs[0].get(argName))!=null){} //content of attribute filled in args[ix]
-                Debugutil.stop();
-              } else if(argName.equals("text")) { 
+              if(argName.equals("text") && buffer !=null) { 
                 attribValues[ix] = buffer.toString(); 
               }
             }
           }
           DataAccess.invokeMethod(dstPath, null, output, true, attribValues, true);
           //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
-        } else {
+        } else if(buffer !=null) {
           DataAccess.storeValue(dstPath, output, buffer, true);
         }
       } catch(Exception exc) {
@@ -672,6 +709,64 @@ public class XmlJzReader
     }
   }
 
+  
+  
+  
+  
+  /**Replaces the basic sequences &amp;lt; etc. and the UTF 16 &lt;#xaaaa;
+   * and replaces line feed with indent with one space. 
+   * @param src
+   * @return src if no such sequences found
+   * @throws ParseException
+   */
+  private CharSequence replaceSpecialCharsInText(CharSequence src) throws ParseException {
+    if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; } //unchange, no effort
+    else {
+      StringBuilder b = new StringBuilder(src);
+      int pos = 0;
+      while( ( pos  = StringFunctions.indexOf(b, '&', pos)) >=0) {
+        int posEnd = StringFunctions.indexOf(b, ';', pos);
+        if(posEnd >0 && (posEnd-pos) < 11) {
+          String search = b.subSequence(pos, posEnd+1).toString();
+          String replChar = replaceChars.get(search);
+          if(replChar == null && search.charAt(1) == '#') {
+            int radix =10, posInt = 2;
+            if(search.charAt(posInt) == 'x') {
+              radix = 16; posInt +=1;
+            }
+            int nUTF;
+            try{ nUTF = Integer.parseUnsignedInt(search.substring(posInt, posEnd-pos), radix); }
+            catch(NumberFormatException exc) {
+              nUTF = 0x3f;
+              assert(false);
+            }
+            char[] replChars = Character.toChars(nUTF);
+            b.delete(pos, posEnd+1);
+            b.insert(pos, replChars);
+            pos += replChars.length;
+          }
+          else if(replChar !=null) {
+            if(replChar.equals("&"))
+              Debugutil.stop();
+            b.replace(pos, posEnd+1, replChar);
+            pos +=1;
+          }
+        } else {
+          throw new ParseException("faulty Characters on ", pos);
+        }
+      }
+      pos = 0;
+      while( ( pos  = StringFunctions.indexOfAnyChar(b, pos, -1, "\n\r")) >=0) {
+        int posEnd = pos +1;
+        while( " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
+        b.replace(pos, posEnd, " ");  //remove all indent white spaces after line break. Replace line break with indent by 1 space. 
+      }
+      return b;
+    }
+  }
+  
+  
+  
   public XmlCfg readCfg(File file) {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
     cfg.finishReadCfg(this.namespaces);
