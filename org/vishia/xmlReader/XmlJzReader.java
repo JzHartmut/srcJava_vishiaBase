@@ -560,7 +560,7 @@ public class XmlJzReader
           subOutput = DataAccess.invokeMethod(elementStorePath, null, output, true, attribValues, false);
         } else {
           //it may be a method too but without textual parameter.
-          subOutput = DataAccess.access(elementStorePath, output, true, false, attribValues, false, null);
+          subOutput = DataAccess.access(elementStorePath, output, true, false, null, attribValues, false, null);
         }
       } catch(Exception exc) {
         subOutput = null;

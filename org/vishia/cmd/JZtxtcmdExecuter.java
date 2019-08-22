@@ -3339,7 +3339,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         }
       } else */{
         calculateArguments(dataAccess);  //resolves an indirectDatapath too.
-        return DataAccess.access(dataAccess.datapath(), dataPool, accessPrivate, bContainer, null, bVariable, dst);
+        return DataAccess.access(dataAccess.datapath(), dataPool, accessPrivate, bContainer, null, null, bVariable, dst);
       }
     }
       

@@ -1446,6 +1446,8 @@ public class CalculatorExpr
      */
     public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws Exception {
       if(sDatapath !=null){
+//        if(sDatapath.startsWith("&("))
+//          Debugutil.stop();
         //====>
         CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
@@ -1515,14 +1517,14 @@ public class CalculatorExpr
     }
 
     
-    public Object calc(Object[] vars) throws Exception {
+    public Object calc(Map<String, IntegerIx> nameVariables, Object[] varValues) throws Exception {
       Object value;
       if(this.ixValue <0) {
         value = this.textOrVar;   //String literal
       } else {
-        value = vars[this.ixValue];
+        value = varValues[this.ixValue];
         if(this.dataAccess !=null) {
-          value = this.dataAccess.access(value, true, false, vars);
+          value = this.dataAccess.access(value, true, false, nameVariables, varValues);
         }
       }
       return value;
@@ -2956,7 +2958,7 @@ public class CalculatorExpr
               oval2 = oper.operand_.textOrVar;
             } 
             if(oper.operand_.dataAccess !=null) {
-              oval2 = oper.operand_.dataAccess.access(oval2, true, false, args);
+              oval2 = oper.operand_.dataAccess.access(oval2, true, false, null, args);
             }
             convertObj(val2jar, oval2);
             val2 = val2jar;

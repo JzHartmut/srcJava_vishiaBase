@@ -114,7 +114,7 @@ public class OutTextPreparer
     /**The instance where the &lt;:exec:operation...> are located. null if not necessary. */
     Object execObj;
     
-    /**Array of all arguments. It is sorted to the {@link OutTextPreparer#varValues} with its value {@link DataAccess.IntegerIx}. 
+    /**Array of all arguments. It is sorted to the {@link OutTextPreparer#nameVariables} with its value {@link DataAccess.IntegerIx}. 
      * Its size is {@link OutTextPreparer#ctVar}, the size of varValues. 
      */
     Object[] args;
@@ -151,7 +151,7 @@ public class OutTextPreparer
      * @param value any value for this argument.
      * */
     public void setArgument(String name, Object value) {
-      DataAccess.IntegerIx ix0 = prep.varValues.get(name);
+      DataAccess.IntegerIx ix0 = prep.nameVariables.get(name);
       if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + prep.sIdent + ", argument: " + name + " not existing: ");
       int ix = ix0.ix;
       args[ix] = value;
@@ -220,7 +220,7 @@ public class OutTextPreparer
     }
     
     public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData) throws Exception
-    { super( textOrDatapath, outer.varValues, reflData);
+    { super( textOrDatapath, outer.nameVariables, reflData);
       this.cmd = what;
     }
     
@@ -347,7 +347,7 @@ public class OutTextPreparer
     public final int ixDst;
     
     public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Class<?> reflData) throws Exception {
-      super(sTextOrDatapath, outer.varValues, reflData);
+      super(sTextOrDatapath, outer.nameVariables, reflData);
       this.name = name;
       this.ixDst = ixCalledArg;
     }
@@ -362,7 +362,7 @@ public class OutTextPreparer
   
   
   /**All argument variables sorted. */
-  private Map<String, DataAccess.IntegerIx> varValues = new TreeMap<String, DataAccess.IntegerIx>();
+  private Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>();
   
   
   private String[] varString;
@@ -376,6 +376,14 @@ public class OutTextPreparer
   
   
   public final String sIdent;
+  
+  /**Instantiates for a given prescript. 
+   * @param prescript 
+   */
+  public OutTextPreparer(String ident, Class<?> reflData, String pattern) {
+    this.sIdent = ident;
+    this.parse(reflData, pattern);
+  }
   
   /**Instantiates for a given prescript. 
    * @param prescript 
@@ -426,7 +434,7 @@ public class OutTextPreparer
     this.varString = new String[listvarValues.size()]; 
     int ixVar = 0;
     for(String var: listvarValues) {
-      this.varValues.put(var, new DataAccess.IntegerIx(ctVar));
+      this.nameVariables.put(var, new DataAccess.IntegerIx(ctVar));
       assert(ixVar == this.ctVar);  //because ctVar is used firstly here
       this.varString[ixVar++] = var;
       this.ctVar +=1;
@@ -456,6 +464,8 @@ public class OutTextPreparer
         //if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
         if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
           final String sDatapath = sp.getLastScannedString();
+//          if(sDatapath.startsWith("&("))
+//            Debugutil.stop();
           //====>
           addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, reflData);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -506,17 +516,17 @@ public class OutTextPreparer
           String entryVar = sp.getLastScannedString().toString();
           //====>
           ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, reflData);
-          DataAccess.IntegerIx ixOentry = varValues.get(entryVar); 
+          DataAccess.IntegerIx ixOentry = nameVariables.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
-            varValues.put(entryVar, ixOentry);
+            nameVariables.put(entryVar, ixOentry);
           }
           cmd.ixEntryVar = ixOentry.ix;
           entryVar += "_next";
-          ixOentry = varValues.get(entryVar); 
+          ixOentry = nameVariables.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
-            varValues.put(entryVar, ixOentry);
+            nameVariables.put(entryVar, ixOentry);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
           ixCtrlCmd[++ixixCmd] = cmds.size()-1;
@@ -526,10 +536,10 @@ public class OutTextPreparer
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
           SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, reflData);
-          DataAccess.IntegerIx ixOentry = varValues.get(variable); 
+          DataAccess.IntegerIx ixOentry = nameVariables.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(ctVar); ctVar +=1;         //create the entry variable newly.
-            varValues.put(variable, ixOentry);
+            nameVariables.put(variable, ixOentry);
           }
           cmd.ixVariable = ixOentry.ix;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -693,7 +703,7 @@ public class OutTextPreparer
           if(call == null) {
             ixCalledArg = -1;
           } else {
-            DataAccess.IntegerIx ixOcalledArg = call.varValues.get(sNameArg);
+            DataAccess.IntegerIx ixOcalledArg = call.nameVariables.get(sNameArg);
             if(ixOcalledArg == null) {
               throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
             }
@@ -847,13 +857,24 @@ public class OutTextPreparer
         if(cmd.dataAccess !=null) {
           try {
             //====>
-            data = cmd.dataAccess.access(data, true, false, args.args);
+            data = cmd.dataAccess.access(data, true, false, nameVariables, args.args);
           } catch (Exception e) {
             bDataOk = false;
             wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " not found or access error: " + e.getMessage() + "??>");
           }
         }
       } 
+      else if(cmd.dataAccess !=null) {
+        try {
+          //====>
+          data = cmd.dataAccess.access(null, true, false, nameVariables, args.args);
+        } catch (Exception e) {
+          bDataOk = false;
+          data = "<??>";
+          wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " not found or access error: " + e.getMessage() + "??>");
+        }
+        
+      }
       else if(cmd.dataConst !=null){ 
         data = cmd.dataConst;  //may be given or null 
       } 
@@ -1048,7 +1069,7 @@ public class OutTextPreparer
       }
       for(Argument arg : cmd.args) {
         Object value = null;
-        try{ value = arg.calc(args.args); }
+        try{ value = arg.calc(null, args.args); }
         catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.textOrVar + " not found or access error: " + exc.getMessage() + "??>"); }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);

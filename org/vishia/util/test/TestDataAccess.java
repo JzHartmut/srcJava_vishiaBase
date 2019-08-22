@@ -180,7 +180,7 @@ public class TestDataAccess
     path.add(new DataAccess.DatapathElement("testint"));
     //
     DataAccess.Dst field = new DataAccess.Dst();
-    ovalue = DataAccess.access(path, dataRoot, true, false, null, false, field);
+    ovalue = DataAccess.access(path, dataRoot, true, false, null, null, false, field);
     ivalue = DataAccess.getInt(ovalue);
     assert(ivalue == 7890);
   }
@@ -201,7 +201,7 @@ public class TestDataAccess
     path.add(new DataAccess.DatapathElement("testint"));
     //
     DataAccess.Dst field = new DataAccess.Dst();
-    ovalue = DataAccess.access(path, datapool, true, false, null, false, field);
+    ovalue = DataAccess.access(path, datapool, true, false, null, null, false, field);
     ivalue = DataAccess.getInt(ovalue);
     assert(ivalue == 7890);
   }
@@ -219,7 +219,7 @@ public class TestDataAccess
     Object value = null;
     try {
       CalculatorExpr.Operand acc = new CalculatorExpr.Operand(sp, idxIdentifier, null);
-      value = acc.calc(vars);
+      value = acc.calc(null, vars);
     } catch (Exception e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -255,7 +255,7 @@ public class TestDataAccess
     Object value = null;
     try {
       DataAccess acc = new DataAccess(strAccess);
-      value = acc.access(dataRoot, true, false, null);
+      value = acc.access(dataRoot, true, false, null, null);
     } catch (Exception e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
