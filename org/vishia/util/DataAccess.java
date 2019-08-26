@@ -87,6 +87,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2019-08-20: some operations throws {@link ParseException} on syntax errors.
    * <li>2019-08-23 Hartmut new: Supports now &(path) as indirect access, access to variable with gotten name in path.
    *   Therefore the operations {@link #access(Object, boolean, boolean, Map, Object[])} etc. needs the variableNames.  
    * <li>2019-08-19 Hartmut chg: error msg on throw improved on non found operation etc, line feed for better read ability. 
@@ -616,7 +617,8 @@ public class DataAccess {
    *   Then a new variable should be created in the parent's container with the access.
    * @throws ParseException on errors on sp, on not found variables too. 
    */
-  public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, char cTypeNewVariable) throws ParseException {
+  public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, char cTypeNewVariable) throws ParseException {
     this.datapath = new ArrayList<DatapathElement>();
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData);
@@ -2606,7 +2608,8 @@ public class DataAccess {
      * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
      * @throws ParseException
      */
-    public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) throws ParseException{
+    public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
+    , Class<?> reflData) throws ParseException{
       set(path, nameVariables, reflData);
     }
     
@@ -2678,7 +2681,7 @@ public class DataAccess {
         sp.scanStart();
         boolean bArgExpr = false;
         do {
-          exprIndex.setExpr(sp, null);
+          exprIndex.setExpr(sp, null, false);
           CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
           if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
             lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
@@ -2722,7 +2725,8 @@ public class DataAccess {
      * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
      * @throws ParseException 
      */
-    public void set(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) throws ParseException{
+    public void set(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
+    , Class<?> reflData) throws ParseException{
       char cStart = path.getCurrentChar();
       if("$@+%".indexOf(cStart) >=0){
         whatisit = cStart;
@@ -2734,7 +2738,7 @@ public class DataAccess {
         whatisit = '&';
         if(path.scan("&(").scanOk()) {
           args = new CalculatorExpr.Operand[1];
-          args[0] = new CalculatorExpr.Operand(path, nameVariables, reflData);
+          args[0] = new CalculatorExpr.Operand(path, nameVariables, reflData, false);
           if(!path.scan(")").scanOk()) {
             throw new ParseException("&(<expression>) expected: , \")\" missing" + path.getCurrent(32), 0);
           }
@@ -2762,7 +2766,7 @@ public class DataAccess {
         path.scanStart();
         boolean bArgExpr = false;
         do {
-          exprIndex.setExpr(path, null);
+          exprIndex.setExpr(path, null, false);
           CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
           if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
             lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
@@ -2809,7 +2813,7 @@ public class DataAccess {
     throws ParseException {
       List<CalculatorExpr.Operand> listArgs = new LinkedList<CalculatorExpr.Operand>();
       do {
-        CalculatorExpr.Operand arg = new CalculatorExpr.Operand(sArgs, nameVariables, reflData);
+        CalculatorExpr.Operand arg = new CalculatorExpr.Operand(sArgs, nameVariables, reflData, false);
         listArgs.add(arg);
       } while(sArgs.scan(",").scanOk()); 
       if(listArgs.size() >=0) {

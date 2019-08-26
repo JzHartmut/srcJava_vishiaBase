@@ -218,7 +218,7 @@ public class TestDataAccess
     Object[] vars = { "a1", new String[] {"a21" ,"a22,"}};
     Object value = null;
     try {
-      CalculatorExpr.Operand acc = new CalculatorExpr.Operand(sp, idxIdentifier, null);
+      CalculatorExpr.Operand acc = new CalculatorExpr.Operand(sp, idxIdentifier, null, false);
       value = acc.calc(null, vars);
     } catch (Exception e) {
       // TODO Auto-generated catch block
