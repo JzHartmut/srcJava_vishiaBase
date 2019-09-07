@@ -14,8 +14,14 @@ public class Annotation_ReadOnly
    */
   public @interface ReadOnly{}
   
+  /**Annotation for an argument or field which is definite changed 
+   * especially it is an reference as argument of an operation.  
+   *
+   */
+  public @interface ChangeAccess{}
+  
   /**Annotation for an operation which do not modify its instance
-   * and which's returned reference is @ReadOnly itself, can only be assignd to a @ReadOnly reference.
+   * and which's returned reference is @ReadOnly itself, can only be assigned to a @ReadOnly reference.
    */
   public @interface ReadOnlyRet{}
 }

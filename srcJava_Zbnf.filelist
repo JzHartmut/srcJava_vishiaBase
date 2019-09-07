@@ -1,4 +1,4 @@
-2019-08-26 14:15:12  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-09-07 08:58:53  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-08-19 15:07:41  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -273,7 +273,7 @@
 
 ============================== org/vishia/util/ ====================================================
 2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
-2019-08-21 23:31:03  x     Annotation_ReadOnly.java                 ::           .542  0524913007 
+2019-08-27 14:05:12  x     Annotation_ReadOnly.java                 ::           .726  2129849707 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
 2019-08-26 14:09:09  x     CalculatorExpr.java                      ::        135.716 -1731620843 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
@@ -313,7 +313,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-08-26 14:00:44  x     OutTextPreparer.java                     ::         47.562  0838103242 
+2019-09-06 18:40:49  x     OutTextPreparer.java                     ::         47.635  0088620048 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 

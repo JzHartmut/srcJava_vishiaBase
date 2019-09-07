@@ -506,6 +506,7 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(": >").scanOk()){ 
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);
           sp.scanSkipSpace();
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -921,7 +922,7 @@ public class OutTextPreparer
    */
   public void exec( Appendable wr, DataTextPreparer args) throws IOException {
     if(args.prep != this) {
-      throw new IllegalArgumentException("The argument type does not match to the OutTextPreparer.");
+      throw new IllegalArgumentException("OutTextPreparer mismatch: The data does not match to the script.");
     }
     execSub(wr, args, 0, cmds.size());
   }
