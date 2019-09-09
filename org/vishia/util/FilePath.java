@@ -109,6 +109,15 @@ public class FilePath
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-09-09 Hartmut The JZtxtcmdFileset is important for execution of some JZtxtcmd scripts. 
+   *   It was removed in a cleanup action in 2019-04. The cleanup was ok, but this line was too much cleaned.
+   *   TODO see 2019-04-09: Should a scriptvariable present a String or other Filepath?
+   * <li>2019-04-09: In {@link #FilePath(FilePath, FilePath, FilePath, FilePathEnvAccess)}:
+   *   Uses env.getCurrentDir to build an absolute path. 
+   *   Reason: Problematic use case detected: If the current dir is changed during exection with a non absolute FilePath, the access will be faulty.
+   * <li>2019-04-09: cleanup in {@link #FilePath(FilePath, FilePath, FilePath, FilePathEnvAccess)}:
+   *   The scriptvariable cannot be a String or Filepath, it is not supported. Only a FileSet is supported.
+   *   It would be a poorly manageable variety (?) TODO Verify this intension on JZtxtcmd script designs. 
    * <li>2017-09-01 Hartmut chg: {@link #expandFiles(List, FilePath, FilePath, FilePathEnvAccess)} now builds a relative path 
    *   if a relative path is given in this. Before: An absolute path was build if wildcards are present. Note: The absolute path
    *   can be gotten by {@link #absfile(FilePathEnvAccess)} etc. on the result Filepaths.
@@ -185,7 +194,7 @@ public class FilePath
     * 
     * 
     */
-   static final public String sVersion = "2017-09-01";
+   static final public String sVersion = "2019-09-09";
 
   /**An implementation of this interface should be provided by the user if absolute paths and script variables should be used. 
    * It may be a short simple implementation if that features are unused. See the {@link org.vishia.util.test.Test_FilePath}. 
@@ -367,15 +376,24 @@ public class FilePath
   
   
   
-  /**Creates a new FilePath from a given FilePath with possible given common and access path or a environment variable.
-   * It builds a absolute path in any kind using the env {@link FilePathEnvAccess#getCurrentDir()}.
+  /**Creates a new FilePath from a given FilePath with possible given common and access path or an environment variable.
+   * It builds an absolute path in any kind using the env {@link FilePathEnvAccess#getCurrentDir()}.
    * This method is used especially to build a new set of FilePath from a given set
    * with common and access paths and maybe variables. The variables are resolved all
    * and the relation between base and local parts in all components are resolved too,
    * so the new FilePath is simple to access.
    * This method is used in {@link org.vishia.cmd.JZtxtcmdFileset#listFiles(org.vishia.cmd.JZtxtcmdFilepath, boolean)}.
+   * <br>
+   * <b>Scriptvariable in src: </b><br>
+   * If src contains a {@link FilePath#scriptVariable} it can refer another {@link FileSet} resp. {@link JZtxtcmdFileset} 
+   * which is stored in {@link #varFileset} to evaluate in {@link FileSet#listFiles(List, FilePath, FilePathEnvAccess, boolean)}
+   * with this given FilePath with recursive call of {@link FileSet#listFiles(List, FilePath, FilePathEnvAccess, boolean)}
+   * to evaluate it too.
+   * @since 2019-04: The scriptvariable cannot be a String or Filepath, it is not supported. Only a FileSet is supported.
+   *   It would be a poorly manageable variety (?)  
    * 
-   * @param src Any given FilePath, usual member of a Fileset
+   * @param src Any given FilePath, usual member of a {@link FileSet}.
+   *   This src is used but completed with the maybe here given common and access path. 
    * @param commonPath A common path of this FilePath enhances the local or given base part of FilePath
    * @param accessPath An access path enhances the given local or base part
    * @param env To resolve variables and access to the currDir.
@@ -395,6 +413,8 @@ public class FilePath
       if(oValue instanceof FileSet){
         this.varFileset = (FileSet)oValue;
         oValue = null; //processed
+      } else if(oValue instanceof JZtxtcmdFileset) { //Note: has an aggregation to a FileSet
+        this.varFileset = ((JZtxtcmdFileset)oValue).data.fileset;
       } else {
         this.varFileset = null;
       }
