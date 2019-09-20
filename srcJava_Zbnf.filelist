@@ -1,5 +1,5 @@
 2019-09-08 22:56:05  x     srcJava_Zbnf-19-03-26.zip                ::       1206.017 -0778357189 
-2019-09-09 09:35:43  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-09-20 21:26:06  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-08-19 15:07:41  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -123,7 +123,7 @@
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
 2019-08-22 23:28:59  x     JZtxtcmdExecuter.java                    ::        185.741  1712430075 
-2018-10-16 07:09:41  x     JZtxtcmdFilepath.java                    ::         16.028 -1293032415 
+2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
@@ -288,7 +288,7 @@
 2013-06-27 19:28:00  x     FileCompare.java                         ::         13.113 -1366728653 
 2019-04-09 23:06:11  x     FileFunction.java                        ::          5.914 -1625440232 
 2016-11-23 09:32:49  x     FileList.java                            ::         25.226 -0519890922 
-2019-09-09 09:35:04  x     FilePath.java                            ::         86.731 -1633770492 
+2019-09-20 21:24:22  x     FilePath.java                            ::         87.563  1583642849 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
 2019-03-31 20:57:08  x     FileSet.java                             ::          6.641  2130969058 
 2018-10-27 14:16:26  x     FileSystem.java                          ::         68.824 -1818565687 
@@ -340,7 +340,7 @@
 2019-06-18 10:46:16  x     StringPart.java                          ::        122.368  0370589518 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
-2018-12-22 19:16:13  x     StringPartFromFileLines.java             ::         21.246 -0542166248 
+2019-09-20 11:26:44  x     StringPartFromFileLines.java             ::         21.385 -1168405555 
 2019-07-31 16:36:54  x     StringPartScan.java                      ::         48.494  0450666391 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 

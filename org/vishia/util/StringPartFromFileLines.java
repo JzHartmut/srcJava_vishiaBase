@@ -240,6 +240,9 @@ public class StringPartFromFileLines extends StringPartScan
     linePositions.set(++endIxLinePosition, 0);  //start entry: After position 0 is line 1  
     boolean bom = false;;
     int nrofFirstBytes = input.read(inBuffer, 0, inBuffer.length-7);  //enough space for missing bytes for UTF-8
+    if(nrofFirstBytes < 0) {
+      nrofFirstBytes = 0;  //special case: empty file returns -1 as "end of file" but 0 bytes are read.
+    }
     //TODO check BOM
     int startPos = 0;
     if(inBuffer[0] == -1 && inBuffer[1] == -2) {  //0xfffe

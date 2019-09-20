@@ -283,6 +283,12 @@ public final class JZtxtcmdFilepath {
 
   public CharSequence localfileW() throws NoSuchFieldException{ return data.localfileW(zgenlevel); }
 
+  
+  /**Returns true if the local path contains (ends with) "/**"
+   * @return
+   */
+  public boolean allTree() { return this.data.allTree(); }
+  
   /**Returns the local file with replaced wildcard in the local dir. See {@link #addLocalNameReplwildcard(StringBuilder, FilePath).
    * @param replWildc With them localdir and name a wildcard in this.localdir and this.name is replaced.
    * @return the whole path inclusive a given general path .

@@ -109,6 +109,8 @@ public class FilePath
 {
   /**Version, history and license.
    * <ul>
+   * <li>2019-09-20 Hartmut in {@link #FilePath(String)}: If the dir ends with / ** then the local dir is without "/ **" and {@link #allTree()} is set. 
+   *   It is from practice, distinguish between path/to/ ** /*. file and path/to/ *.file. Used for Reflection generation. It is commonly able to use.
    * <li>2019-09-09 Hartmut The JZtxtcmdFileset is important for execution of some JZtxtcmd scripts. 
    *   It was removed in a cleanup action in 2019-04. The cleanup was ok, but this line was too much cleaned.
    *   TODO see 2019-04-09: Should a scriptvariable present a String or other Filepath?
@@ -194,7 +196,7 @@ public class FilePath
     * 
     * 
     */
-   static final public String sVersion = "2019-09-09";
+   static final public String sVersion = "2019-09-20";
 
   /**An implementation of this interface should be provided by the user if absolute paths and script variables should be used. 
    * It may be a short simple implementation if that features are unused. See the {@link org.vishia.util.test.Test_FilePath}. 
@@ -306,6 +308,8 @@ public class FilePath
    */
   public FilePath(String pathP){
     String path = pathP.replace('\\', '/');
+    if(path.contains("**"))
+      Debugutil.stop();
     int zpath = path.length();
     int posColon = path.indexOf(':');
     int pos1slash = path.indexOf('/');
@@ -352,9 +356,15 @@ public class FilePath
     if(posname < poslocal){ posname = poslocal; }
     //
     if(posname > poslocal){
-      localdir = path.substring(poslocal, posname-1);
-      allTree = localdir.indexOf("/**/")>=0;
-      someFiles = localdir.indexOf('*') >=0;
+      this.localdir = path.substring(poslocal, posname-1);
+      int posAlltree = localdir.indexOf("/**");
+      this.allTree = posAlltree >=0;
+      if(posAlltree == this.localdir.length()-3) { //ends with /**, the expectable case:
+        this.localdir = this.localdir.substring(0, posAlltree);  //then the local dir is without the /**
+      } else {
+        //unclarified, a path /path/**/path/name.ext, then what's happen
+      }
+      someFiles = localdir.indexOf('*') >=0;  //it is nonsense too, someFiles only with name with *
     } else {
       localdir = "";
     }
@@ -503,6 +513,7 @@ public class FilePath
     if(absPath) { u.append("/"); }
     if(basepath!=null) { u.append(basepath).append(":"); }
     if(localdir.length()>0) { u.append(localdir).append("/"); }
+    if(this.allTree && !this.localdir.contains("/**")) { u.append("**/"); }
     u.append(name).append(ext);
     return u.toString();
   }
