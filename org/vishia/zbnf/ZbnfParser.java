@@ -132,6 +132,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-10-10: new {@link #setMainSyntax(String)} not only the first entry can be the the main rule. Used to parse inner Syntax in XML (for IEC 61499).
    * <li>2019-07-07: Some debug possibilities moved or commented.  
    * <li>2019-07-06 Hartmut bugfix: conspicuously on JTtxtcmd-Script some indents where missing (Reflection Generation). The cause was the missing <code>.indent=-3</code>-attribute.
    *   The primary error was using the faulty {@link ZbnfSyntaxPrescript} instance to store the parse result in <code>parseSub(...)</code>.
@@ -2637,6 +2638,19 @@ public class ZbnfParser
   }
 
 
+  
+  /**Sets another syntax rule as the first entry in the given syntax.
+   * This routine should be invoked only with a given syntax, one of the {@link #setSyntax(File)} routines should be called before.
+   * @param ident syntax rule, <identifier>::=
+   * @throws ParseException
+   */
+  public void setMainSyntax(String ident) throws ParseException {
+    ZbnfSyntaxPrescript rule = this.listSubPrescript.get(ident);
+    if(rule == null) throw new ParseException("syntax rule not found: " + ident, 0);
+    this.mainScript = rule;
+  }
+  
+  
   
   public ZbnfSyntaxPrescript mainScript() { return mainScript; }
   

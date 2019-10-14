@@ -1525,7 +1525,7 @@ public final class ZbnfJavaOutput
 
   
   
-  private String parseFileAndFillJavaObject(Class resultType, Object result, StringPartScan spInput, String sFileInput) {
+  public String parseFileAndFillJavaObject(Class resultType, Object result, StringPartScan spInput, String sFileInput) {
     String sError = null;
     //parse the file:
     boolean bOk = parser.parse(spInput);

@@ -1,5 +1,5 @@
 2019-09-08 22:56:05  x     srcJava_Zbnf-19-03-26.zip                ::       1206.017 -0778357189 
-2019-09-20 21:26:06  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-10-14 20:36:07  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-08-19 15:07:41  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -18,7 +18,7 @@
 2018-09-11 16:35:18  x     genjavadoc.sh                            ::           .386  0409646470 
 2019-08-19 12:22:48  x     javadoc.help                             ::          9.297 -0429460067 
 2019-08-18 13:19:14  x     makejar_XmlJzReader.bat                  ::          2.169  1431016675 
-2019-05-30 20:33:27  x     makejar_zbnf.bat                         ::          3.750 -0790901411 
+2019-09-29 19:29:40  x     makejar_zbnf.bat                         ::          3.756 -0138771897 
 2013-01-02 09:31:22  x     makejar_zbnf.sh                          ::          1.797 -0347914445 
 2011-07-08 19:57:50  x     makejar_zbnfCore.sh                      ::           .974 -1460588110 
 2011-03-22 14:26:06  x     makejar_zmakeAnt.bat                     ::          1.361  0245857391 
@@ -380,7 +380,7 @@
 2019-08-18 23:38:20  x     GenXmlCfgJavaData.java                   ::         12.861  1623100568 
 2019-08-18 13:28:03  x     XmlCfg.java                              ::         27.849 -1326807559 
 2019-08-18 22:39:03  x     XmlJzCfgAnalyzer.java                    ::         27.870  2020880238 
-2019-08-22 23:28:50  x     XmlJzReader.java                         ::         33.159  0064649388 
+2019-10-08 20:25:41  x     XmlJzReader.java                         ::         33.182  1691974908 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2019-08-18 23:35:16  x     Office_odtData.java                      ::         27.620  0393408920 
@@ -409,9 +409,9 @@
 2019-08-18 00:11:28  x     GenZbnfJavaData.java                     ::         22.760  1518336734 
 2019-08-16 20:40:12  x     GenZbnfJavaData.java.a                   ::         42.886 -0160622802 
 2018-01-07 13:29:02  x     Zbnf2Xml.java                            ::         20.774 -0132563615 
-2019-08-09 10:16:00  x     ZbnfJavaOutput.java                      ::         81.874 -2088148800 
+2019-10-08 22:01:36  x     ZbnfJavaOutput.java                      ::         81.873  1395895928 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
-2019-07-07 10:26:18  x     ZbnfParser.java                          ::        171.063  0566834630 
+2019-10-14 20:35:37  x     ZbnfParser.java                          ::        171.761  1817171575 
 2019-05-31 00:04:03  x     ZbnfParserStore.java                     ::         51.757  1505803605 
 2019-07-07 09:34:50  x     ZbnfSyntaxPrescript.java                 ::         80.146  0762708172 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 

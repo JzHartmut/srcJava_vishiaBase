@@ -758,7 +758,7 @@ public class XmlJzReader
       pos = 0;
       while( ( pos  = StringFunctions.indexOfAnyChar(b, pos, -1, "\n\r")) >=0) {
         int posEnd = pos +1;
-        while( " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
+        while(posEnd < b.length() &&  " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
         b.replace(pos, posEnd, " ");  //remove all indent white spaces after line break. Replace line break with indent by 1 space. 
       }
       return b;
