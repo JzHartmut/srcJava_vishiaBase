@@ -1,5 +1,5 @@
 2019-09-08 22:56:05  x     srcJava_Zbnf-19-03-26.zip                ::       1206.017 -0778357189 
-2019-10-14 20:36:07  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-10-27 17:36:56  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-08-19 15:07:41  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -274,7 +274,7 @@
 
 ============================== org/vishia/util/ ====================================================
 2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
-2019-08-27 14:05:12  x     Annotation_ReadOnly.java                 ::           .726  2129849707 
+2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
 2019-08-26 14:09:09  x     CalculatorExpr.java                      ::        135.716 -1731620843 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
@@ -314,7 +314,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-09-06 18:40:49  x     OutTextPreparer.java                     ::         47.635  0088620048 
+2019-10-27 17:36:26  x     OutTextPreparer.java                     ::         50.023  0907440546 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -335,7 +335,7 @@
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
 2019-04-30 14:05:06  x     StringFormatter.java                     ::         49.407 -1031233532 
 2019-06-14 09:45:54  x     StringFunctions.java                     ::         51.559 -0454236819 
-2018-12-17 20:33:52  x     StringFunctions_B.java                   ::          9.543 -1972333293 
+2019-10-19 22:49:54  x     StringFunctions_B.java                   ::         10.723 -1605753743 
 2019-06-12 08:33:43  x     StringFunctions_C.java                   ::         14.549  0524182854 
 2019-06-18 10:46:16  x     StringPart.java                          ::        122.368  0370589518 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 

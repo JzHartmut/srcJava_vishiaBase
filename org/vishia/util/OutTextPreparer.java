@@ -14,9 +14,13 @@ import java.util.TreeMap;
 
 
 
-/**This class helps to prepare an output text with data. It may be seen as small solution in comparison to {@link org.vishia.jztxtcmd.JZtxtcmd}
- * only for text preparation of one or a few lines.
- * <br><br>
+/**This class helps to prepare an output text with data.
+ * <ul> 
+ * <li>It may be seen as small solution in comparison to {@link org.vishia.jztxtcmd.JZtxtcmd} only for text preparation of one or a few lines. 
+ * <li>In opposite to {@linkplain https://www.eclipse.org/xtend/} resolution for ''' TEXTs ''':
+ *  The rule to build the text is given outside the programming language, for example in a text file able to control by a user.
+ *  It is resolved on runtime, not on compile time. Hence it is able to use to control several texts by user.
+ * </ul>
  * An instance of this class is used as formatter for an output text. On construction a pattern is given:<pre>
  * static OutTextPreparer otxMyText = new OutTextPreparer("otxMyText", UserClass.class, "arg1, arg2",
  *    "A simple text with newline: \n"
@@ -26,7 +30,18 @@ import java.util.TreeMap;
  *  + "<:exec:operation:arg1> : call of any operation in the given reflection class maybe with args"
  *  + "");
  * </pre>
- * Arguments of ctor: see also {@link OutTextPreparer#OutTextPreparer(String, Class, String, String)}:
+ * Instead a given pattern in Java code it is possible to read the pattern from a file. More specials
+ * <pre>
+ * <:args:var, var2><: >
+ * <: >anyText <&var>
+ *   text continues line but with 1 spaces 
+ *   <tag attrib="<&var>" /> <:<&var>>
+ * </pre>
+ * It is proper for XML output generation. 
+ * The last constructs a text containing "<&var>", it is to produce a OutTextPreparer pattern with OutTextPreparer itself.
+ * A "<: >" or "<:+>" skips over whiteSpaces, especially line feed, but immediately following "<: >" inserts one space. 
+ * <br>
+ * <b>Arguments of ctor </b>: see also {@link OutTextPreparer#OutTextPreparer(String, Class, String, String)}:
  * <ul><li>First arg: only a text for error reports
  * <li>Second: The reflection class where <code>&lt:exec:operation></code> is searched
  * <li>3.: All argument names
@@ -100,7 +115,7 @@ public class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2019-05-12";
+  public static final String version = "2019-10-27";
   
   
   /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
@@ -491,7 +506,9 @@ public class OutTextPreparer
     int ixixCmd = -1;
     StringPartScan sp = new StringPartScan(pattern);
     sp.setIgnoreWhitespaces(true);
+    int nLastWasSkipOverWhitespace = 0;
     while(sp.length() >0) {
+      nLastWasSkipOverWhitespace +=1;
       sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);
       if(sp.found()) {
         
@@ -505,10 +522,12 @@ public class OutTextPreparer
           }
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
-        else if(sp.scan(": >").scanOk()){ 
-          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);
+        else if(  nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
+               && (sp.scan(": >").scanOk() || sp.scan(":+>").scanOk())){ 
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);  //adds the text before <:+>
           sp.scanSkipSpace();
           pos0 = (int)sp.getCurrentPosition();  //after '>'
+          nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
         }
         else if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
           final String sDatapath = sp.getLastScannedString();
@@ -521,7 +540,7 @@ public class OutTextPreparer
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           //====>
           parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, reflData);
-          ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current if
+          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current if
           pos0 = (int)sp.getCurrentPosition();  //after '>'
           
         }
@@ -531,14 +550,15 @@ public class OutTextPreparer
           Cmd ifCmdLast;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
-            && ( (ifCmdLast = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
+            && ( (ifCmdLast = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
                || ifCmdLast.cmd == ECmd.elsifCtrl
             )  ) {
-            ((IfCmd)ifCmdLast).offsElsif = cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+            ((IfCmd)ifCmdLast).offsElsif = this.cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
           }else { 
+            sp.close();
             throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
           }
-          ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current <:elsif>
+          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current <:elsif>
           
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -548,14 +568,15 @@ public class OutTextPreparer
           Cmd ifCmd;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
-              && ( (ifCmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
+              && ( (ifCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
                  || ifCmd.cmd == ECmd.elsifCtrl
                   )  ) {
-            ((IfCmd)ifCmd).offsElsif = cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+            ((IfCmd)ifCmd).offsElsif = this.cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
           }else { 
+            sp.close();
             throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
           }
-          ixCtrlCmd[++ixixCmd] = cmds.size()-1;  //The position of the current <:elsif>
+          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current <:elsif>
 
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -577,7 +598,7 @@ public class OutTextPreparer
             this.nameVariables.put(entryVar, ixOentry);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
-          ixCtrlCmd[++ixixCmd] = cmds.size()-1;
+          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
@@ -612,7 +633,7 @@ public class OutTextPreparer
         }  
         else if(sp.scan(":debug>").scanOk()) {
           //====>
-          DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, null, reflData);
+          //DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, null, reflData);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":--").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
@@ -620,11 +641,29 @@ public class OutTextPreparer
           addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
+        else if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
+          final int posend = (int)sp.getCurrentPosition();
+          final String sText = pattern.substring(pos1+2, posend-1);
+          //Note: do not use sp.getLastScannedString().toString(); because scanToAnyChar skips over whitespaces
+          final int what;
+          if(sText.length() == 1) {
+            what = "nrt".indexOf(sText.charAt(0));
+          } else {
+            what = -1; 
+          }
+          if(what >=0) {
+            String[] specials = { "\n", "\r", "\t"};
+            addCmd(pattern, pos0, pos1, ECmd.addString, specials[what], null);
+          } else {
+            addCmd(pattern, pos0, pos1, ECmd.addString, sText, null); //add the <:sText>
+          }
+          pos0 = posend;  //after '>'
+        }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd cmd = null;
           addCmd(pattern, pos0, pos1, ECmd.nothing, null, reflData);  //The last text before <.if>
           while(  ixixCmd >=0 
-            && ( (cmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
+            && ( (cmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
               || cmd.cmd == ECmd.elsifCtrl
               || cmd.cmd == ECmd.elseCtrl
             )  ) {
@@ -639,20 +678,25 @@ public class OutTextPreparer
             ixixCmd -=1;
           } 
           if(cmd == null) {  //nothing found or <:if not found: 
+            sp.close();
             throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.if> without <:if> or  <:elsif> ");
           }
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(".for>").scanOk()) { //The end of an if
           Cmd forCmd;
-          if(ixixCmd >=0 && (forCmd = cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
+          if(ixixCmd >=0 && (forCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
             Cmd endLoop = addCmd(pattern, pos0, pos1, ECmd.endLoop, null, null);
-            endLoop.offsEndCtrl = -cmds.size() - ixCtrlCmd[ixixCmd] -1;
+            endLoop.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;
             pos0 = (int)sp.getCurrentPosition();  //after '>'
-            forCmd.offsEndCtrl = cmds.size() - ixCtrlCmd[ixixCmd];
+            forCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
             ixixCmd -=1;
           } 
-          else throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <:for>...<.for> ");
+          
+          else {
+            sp.close();
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <:for>...<.for> ");
+          }
         }
         else { //No proper cmd found:
           
@@ -665,6 +709,7 @@ public class OutTextPreparer
       }
     } //while
     if(ixixCmd >=0) {
+      sp.close();
       throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": closing <.> for <" + this.cmds.get(ixCtrlCmd[ixixCmd]) +"> is missing ");
     }
     sp.close();
@@ -832,6 +877,7 @@ public class OutTextPreparer
           case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
           case setVar: cmd = new SetCmd(this, sDatapath, data); break;
           case debug: cmd = new DebugCmd(this, sDatapath, data); break;
+          case addString: cmd = new CmdString(sDatapath); break;
           default: cmd = new Cmd(this, ecmd, sDatapath, data); break;
         }
       } catch(Exception exc) {
@@ -951,7 +997,7 @@ public class OutTextPreparer
         } catch (Exception e) {
           bDataOk = false;
           data = null;
-          wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " execution error: " + e.getMessage() + "??>");
+          wr.append("<??OutTextPreparer script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< execution error: " + e.getMessage() + "??>");
         }
       }
       else if(cmd.ixValue >=0) {
@@ -962,7 +1008,7 @@ public class OutTextPreparer
             data = cmd.dataAccess.access(data, true, false, nameVariables, args.args);
           } catch (Exception e) {
             bDataOk = false;
-            wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " not found or access error: " + e.getMessage() + "??>");
+            wr.append("<??OutTextPreparer script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< not found or access error: " + e.getMessage() + "??>");
           }
         }
       } 
@@ -973,7 +1019,7 @@ public class OutTextPreparer
         } catch (Exception e) {
           bDataOk = false;
           data = "<??>";
-          wr.append("<??OutTextPreparer script " + sIdent + ": " + cmd.textOrVar + " not found or access error: " + e.getMessage() + "??>");
+          wr.append("<??OutTextPreparer script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< not found or access error: " + e.getMessage() + "??>");
         }
         
       }

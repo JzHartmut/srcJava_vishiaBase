@@ -229,6 +229,33 @@ public class StringFunctions_B
   }
   
   
+  /**Converts the first character to lower case if it {@link Character#isUpperCase(char)} ('A'..'Z').
+   * If the src starts with '_' or it is not an identifier, src will be returned.
+   * The rest of the src is left unchanged.
+   * Use {@link #replaceNonIdentifierChars(CharSequence, char)} to convert maybe non identifier words to identifier words.
+   * @param src
+   * @return
+   */
+  public static String toFirstLowercase(String src) {
+    char c0 = src.charAt(0);
+    if(Character.isUpperCase(c0)) { return Character.toLowerCase(c0) + src.substring(1); }
+    else return src;
+  }
+  
+  
+  /**Converts the first character to upper case if it {@link Character#isLowerCase(char)} ('a'..'z').
+   * If the src starts with '_' or it is not an identifier, src will be returned.
+   * The rest of the src is left unchanged. 
+   * Use {@link #replaceNonIdentifierChars(CharSequence, char)} to convert maybe non identifier words to identifier words.
+   * @param src
+   * @return
+   */
+  public static String toFirstUppercase(String src) {
+    char c0 = src.charAt(0);
+    if(Character.isLowerCase(c0)) { return Character.toUpperCase(c0) + src.substring(1); }
+    else return src;
+  }
+  
   
   
 }
