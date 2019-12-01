@@ -1,11 +1,10 @@
-2019-09-08 22:56:05  x     srcJava_Zbnf-19-03-26.zip                ::       1206.017 -0778357189 
-2019-10-27 17:36:56  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
-2019-08-19 15:07:41  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
+2019-12-01 16:27:54  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-12-01 16:07:06  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
 ============================== _make/ =============================================================
 2012-08-12 22:29:02  x     +genDownload.sh                          ::           .966 -1047256477 
-2018-04-14 08:33:42  x     +genjavadocbase.bat                      ::          2.569 -0779561611 
+2019-11-19 10:26:22  x     +genjavadocbase.bat                      ::          3.109  1064062242 
 2016-08-29 18:23:07  x     +genjavadocbase.sh                       ::          1.252 -1326024890 
 2019-06-30 17:17:45  x     +javacjarbase.bat                        ::          4.619  1268636759 
 2012-03-26 12:21:00  x     +javacjarbase.sh                         ::          3.255 -1553126320 
@@ -273,14 +272,13 @@
 2014-01-27 22:07:40  x     DataAccess.java                          ::           . 38 -0690148019 
 
 ============================== org/vishia/util/ ====================================================
-2019-06-08 09:04:49  x     #StringPreparer.#java                    ::         15.199 -0815600109 
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
 2015-01-07 22:59:44  x     Assert.java                              ::         15.572 -1893791801 
-2019-08-26 14:09:09  x     CalculatorExpr.java                      ::        135.716 -1731620843 
+2019-12-01 16:26:49  x     CalculatorExpr.java                      ::        136.742 -0233247244 
 2012-04-01 21:53:02  x     CompleteConstructionAndStart.java        ::          1.453  1877574397 
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2019-08-26 14:10:25  x     DataAccess.java                          ::        135.860 -0980529247 
+2019-11-06 23:43:38  x     DataAccess.java                          ::        135.938  0294201038 
 2019-06-21 09:28:58  x     DataShow.java                            ::         29.206  0163463218 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
@@ -303,6 +301,8 @@
 2015-03-08 12:13:05  x     InfoFormattedAppend.java                 ::          2.330 -2122956066 
 2014-05-23 11:32:14  x     IntegerBlockArray.java                   ::          6.115 -1633935975 
 2013-12-01 14:57:42  x     IterableIterator.java                    ::           .445  0451977562 
+2019-10-31 16:56:40  x     IterableMapValue.java                    ::           .942 -1973877381 
+2019-11-02 19:34:47  x     IteratorArrayMask.java                   ::          1.305  0093974109 
 2016-10-16 21:54:24  x     Java4C.java                              ::         16.527 -2096577833 
 2015-10-30 19:10:55  x     KeyCode.java                             ::         12.692  0729595176 
 2011-02-26 21:31:28  x     LeapSeconds.java                         ::          9.557 -0052069336 
@@ -314,7 +314,7 @@
 2012-11-17 19:54:54  x     ObjectValue.java                         ::          1.162 -2009175008 
 2015-02-07 13:01:18  x     OrderForList.java                        ::           .647 -1330679365 
 2015-02-07 12:41:42  x     OrderListExecuter.java                   ::           .350  1985661212 
-2019-10-27 17:36:26  x     OutTextPreparer.java                     ::         50.023  0907440546 
+2019-12-01 16:14:08  x     OutTextPreparer.java                     ::         52.228  0341305881 
 2015-05-30 21:25:56  x     PathCheck.java                           ::          5.745  1219055304 
 2014-01-05 11:55:23  x     PipeRingBuffer.java                      ::          6.868 -1766035494 
 2018-09-16 21:00:10  x     ReadChars3Stream.java                    ::          8.255 -0792746987 
@@ -355,6 +355,7 @@
 2015-09-04 22:54:53  x     TreeWalkerPathCheck.java                 ::          6.088 -1665237707 
 2013-01-06 16:24:48  x     UnexpectedException.java                 ::           .984 -0050084027 
 2015-07-19 11:30:12  x     Writer_Appendable.java                   ::          1.643  0371808871 
+2019-12-01 16:10:18  x     XXXXXIterable_Iterator.java              ::           .380 -0442148404 
 2014-12-18 22:16:22  x     Zip.java                                 ::         13.299 -1788227846 
 2013-05-25 22:37:51  x     package-info.java                        ::           .474 -0681213086 
 

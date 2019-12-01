@@ -20,6 +20,7 @@ import java.util.TreeMap;
  * <li>In opposite to {@linkplain https://www.eclipse.org/xtend/} resolution for ''' TEXTs ''':
  *  The rule to build the text is given outside the programming language, for example in a text file able to control by a user.
  *  It is resolved on runtime, not on compile time. Hence it is able to use to control several texts by user.
+ * <li>It may be seen as a better 'printf'. 'printf' is a text interpreter, in C too, but with lesser capability.
  * </ul>
  * An instance of this class is used as formatter for an output text. On construction a pattern is given:<pre>
  * static OutTextPreparer otxMyText = new OutTextPreparer("otxMyText", UserClass.class, "arg1, arg2",
@@ -30,12 +31,29 @@ import java.util.TreeMap;
  *  + "<:exec:operation:arg1> : call of any operation in the given reflection class maybe with args"
  *  + "");
  * </pre>
- * Instead a given pattern in Java code it is possible to read the pattern from a file. More specials
+ * Instead a given pattern in Java code it is possible to read the pattern from a file. 
+ * <br><br>
+ * More specials
+ * <ul>
+ * <li><code>&lt;:args:var, var2></code> written on start of the script defines variable for the script.
+ * <li><code>&lt;:CHARS>: CHARS</code> may be special chars, they will be outputted like given, for example
+ * <li><code> &lt;:&lt;&var>></code> produces the text <code>&lt;&var></code> for generate a OutTextPreparer-Script itself.
+ * <li><code> &lt;:&lt;&>&lt;&var>></code> produces the text <code>&lt;&CONTENT></code> 
+ *   whereby <code>CONTENT</code> is the content of <code>var</code>.
+ * <li>Note that <code>&lt:if</code> etc. cannot be used for common texts, it is used as control statement:
+ * <li><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;else>else-Text&lt;.if></code>
+ * <li><code>&lt;for:variable:container>text for any element &lt;&variable> in loop &lt;.for></code>
+ * <li><code>&lt: ></code> skips over whitespaces till next text, does not output the whitespaces, 
+ *   able to use for example to write a simple sequence in more as one line for better readability of the script.
+ * <li><code>&lt: >   &lt: ></code> A second <code>&lt: ></code> after skipped whitespaces produces one space 
+ *   because it is not recognized as 'skip again' but as special character, here a space.   
+ * <li><code>## Comment till end of line</code> it is important for texts from a textual file.
+ * </ul>
  * <pre>
  * <:args:var, var2><: >
- * <: >anyText <&var>
- *   text continues line but with 1 spaces 
- *   <tag attrib="<&var>" /> <:<&var>>
+ * <: >anyText after one space as indention
+ *   &lt;tag attrib="&lt;&var>" >any xml output&lt;/tag> 
+ *    <:<&var>>
  * </pre>
  * It is proper for XML output generation. 
  * The last constructs a text containing "<&var>", it is to produce a OutTextPreparer pattern with OutTextPreparer itself.
@@ -86,6 +104,8 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-11-13: ## Comment in a line
+   * <li>2019-10-20: &lt;: > capability 
    * <li>2019-08-26: StringPartScan instead String for {@link CalculatorExpr.Operand#Operand(StringPartScan, Map, Class, boolean)}
    *   yet not complete.
    * <li>2019-08-26: &lt;:args:....>  
@@ -422,6 +442,12 @@ public class OutTextPreparer
   private Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>();
   
   
+  /**The source of the generation script, argument of {@link #parse(Class, String)} only for debug. */
+  public final String pattern;
+  
+  public final Class<?> clazzPattern;
+  
+  
   /**Via script given arguments for the outText. It does not contain the internal created variables. */
   private List<String> listArgs;
   
@@ -431,6 +457,7 @@ public class OutTextPreparer
   private List<Cmd> cmds = new ArrayList<Cmd>();
   
   
+  /**Name of the generation script used for debug and comparison with data. */
   public final String sIdent;
   
   /**Instantiates for a given pattern. 
@@ -440,6 +467,8 @@ public class OutTextPreparer
    */
   public OutTextPreparer(String ident, Class<?> reflData, String pattern) {
     this.sIdent = ident;
+    this.pattern = pattern;
+    this.clazzPattern = reflData;
     this.parse(reflData, pattern);
   }
   
@@ -450,6 +479,8 @@ public class OutTextPreparer
    */
   public OutTextPreparer(String ident, Class<?> reflData, String variables, String pattern) {
     this.sIdent = ident;
+    this.pattern = pattern;
+    this.clazzPattern = reflData;
     this.parseVariables(variables);
     this.parse(reflData, pattern);
   }
@@ -461,6 +492,8 @@ public class OutTextPreparer
    */
   public OutTextPreparer(String ident, Class<?> reflData, List<String> variables, String pattern) {
     this.sIdent = ident;
+    this.pattern = pattern;
+    this.clazzPattern = reflData;
     this.setVariables(variables);
     this.parse(reflData, pattern);
   }
@@ -509,6 +542,10 @@ public class OutTextPreparer
     int nLastWasSkipOverWhitespace = 0;
     while(sp.length() >0) {
       nLastWasSkipOverWhitespace +=1;
+      if(sp.scanStart().scan("##").scanOk()) {
+        sp.seek("\n").seekPos(1);  //skip all till newline
+        pos0 = (int)sp.getCurrentPosition();
+      }
       sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);
       if(sp.found()) {
         
@@ -1008,7 +1045,7 @@ public class OutTextPreparer
             data = cmd.dataAccess.access(data, true, false, nameVariables, args.args);
           } catch (Exception e) {
             bDataOk = false;
-            wr.append("<??OutTextPreparer script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< not found or access error: " + e.getMessage() + "??>");
+            wr.append("<??OutTextPreparer in script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< not found or access error: " + e.getMessage() + "??>");
           }
         }
       } 
@@ -1235,7 +1272,7 @@ public class OutTextPreparer
   
   
   
-  @Override public String toString() { return sIdent; }
+  @Override public String toString() { return this.sIdent + ":" + this.pattern; }
   
   
   void debug() {}

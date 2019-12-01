@@ -1271,6 +1271,8 @@ public class DataAccess {
     , boolean bNoExceptionifNotFound
   ) throws InvocationTargetException, NoSuchMethodException, Exception {
     Object[] args = null;
+    if(element.ident.equals("toStringDependingNext"))
+      Debugutil.stop();
     if(element.fnArgs == null) { //only if fnArgs not given from call, 
       //then evaluate here.
       if(element.args !=null) {

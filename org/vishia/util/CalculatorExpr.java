@@ -1449,8 +1449,10 @@ public class CalculatorExpr
      */
     public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws Exception {
       if(sDatapath !=null){
-//        if(sDatapath.startsWith("&("))
-//          Debugutil.stop();
+//      if(sDatapath.startsWith("&("))
+//      Debugutil.stop();
+        if(sDatapath.contains("("))
+          Debugutil.stop();
         //====>
         CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
@@ -1521,10 +1523,30 @@ public class CalculatorExpr
     }
 
     
+    
+    /**Accesses and returns the value of this operand. The start object is given 
+     * in varValues with {@link #ixValue}. If {@link #ixValue} is <0 then either the given {@link #dataConst}
+     *   or the {@link #textOrVar} is returned. 
+     * @param nameVariables see {@link DataAccess#access(List, Object, boolean, boolean, Map, Object[], boolean, org.vishia.util.DataAccess.Dst)}
+     *                      necessary on indirect access to variable via String, construct  such as &lt;&&(path)>
+     * @param varValues Array of possible values proper to the given {@link #ixValue}
+     * @return if {@link #dataAccess} is given, it accesses with the given start Object 
+     * @throws Exception
+     */
     public Object calc(Map<String, IntegerIx> nameVariables, Object[] varValues) throws Exception {
       Object value;
       if(this.ixValue <0) {
-        value = this.textOrVar;   //String literal
+        if(dataConst !=null) {
+          if(dataConst instanceof Value) {
+            value = ((Value)this.dataConst).objValue();
+          } else {
+            assert(false);
+            value = null;
+          }
+          
+        } else {
+          value = this.textOrVar;   //String literal
+        }
       } else {
         value = varValues[this.ixValue];
         if(this.dataAccess !=null) {
