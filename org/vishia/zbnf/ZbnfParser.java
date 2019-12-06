@@ -132,6 +132,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-10-10: new {@link #setSyntax(CharSequence)} formally with CharSequence instead String, more common useable, especially from new {@link org.vishia.util.FileSystem#readInJar(Class, String, String)}
    * <li>2019-10-10: new {@link #setMainSyntax(String)} not only the first entry can be the the main rule. Used to parse inner Syntax in XML (for IEC 61499).
    * <li>2019-07-07: Some debug possibilities moved or commented.  
    * <li>2019-07-06 Hartmut bugfix: conspicuously on JTtxtcmd-Script some indents where missing (Reflection Generation). The cause was the missing <code>.indent=-3</code>-attribute.
@@ -2383,7 +2384,7 @@ public class ZbnfParser
   /** Sets the syntax from given string.
    * @param syntax The ZBNF-Syntax.
    */
-  public void setSyntax(String syntax)
+  public void setSyntax(CharSequence syntax)
   throws ParseException
   { setSyntax(new StringPartScan(syntax));
   }
@@ -2394,7 +2395,7 @@ public class ZbnfParser
    * between {@link #setSyntax(File)} and {@link #setSyntax(String)}.
    * @param syntax The ZBNF-Syntax.
    */
-  public void setSyntaxString(String syntax)
+  public void setSyntaxString(CharSequence syntax)
   throws ParseException
   { setSyntax(new StringPartScan(syntax));
   }

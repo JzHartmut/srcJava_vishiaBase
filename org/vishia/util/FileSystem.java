@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.FileFilter;
@@ -49,12 +50,17 @@ Obj found = java org.vishia.util.FileSystem.searchInParent(File: ".", "_make/xge
  * can do a null-check easily.
  * 
  */
+/**
+ * @author hartmut
+ *
+ */
 public class FileSystem
 {
 
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2019-12-06 Hartmut new: {@link #readInJar(Class, String, String)} as simple read possibility of a text file. 
    * <li>2017-09-09 Hartmut new: {@link #cleandirForced(File)}, {@link #copyDir(File, File)} 
    * <li>2016-01-17 Hartmut new: {@link #getFirstFileWildcard(File)}   
    * <li>2015-09-06 JcHartmut chg: instead inner class WildcardFilter the new {@link FilepathFilter} used.    
@@ -296,6 +302,46 @@ public class FileSystem
     return sContent;
   }
 
+  
+  
+  
+  /**Read a file ('Resource') located in a jar file or inside the compiled class files. 
+   * @param clazz The path starts in the package where this class is located and uses the ClassLoader of this class.
+   * @param pathInJar relative to the class.
+   *   Use "filename.ext" if the file is in the same package as the clazz.
+   *   Use "../package/filename.ext" if the file is in another parallel package.
+   *   Note: The file is searched in the bin tree of class files on using in Eclipse IDE
+   * @param encoding use usually "UTF-8" or "US-ASCII" or "ISO-8859-1" for byte-coded content
+   *   or "UTF-16BE"
+   * @return null on error, throws never. Usual an error is a programmatically error not a user's failure.
+   *   Else the return value is a StringBuilder which may be able to change, but it should be used readonly only.
+   *   Use toString() to keep it persistent. 
+   */
+  public static CharSequence readInJar(Class clazz, String pathInJar, String encoding) {
+    //String pathMsg = "jar:" + clazz.getPackage().getName() + "/" + pathInJar;
+    //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    //classLoader.getResource("slx.cfg.xml");
+    try {
+      InputStream jarStream = clazz.getResourceAsStream(pathInJar);  //pathInJar with slash: from root.
+      if(jarStream == null) return null;
+      int zBytes = jarStream.available();  //nr of bytes of this file in jar.
+      StringBuilder buf = new StringBuilder(zBytes);  //maybe some less characters on encoding.
+      InputStreamReader reader = new InputStreamReader(jarStream, encoding);
+      int cc;
+      while( (cc = reader.read()) !=-1) {
+        buf.append((char)cc);
+      }
+      reader.close();
+      //cfgStream.close();
+      return buf;
+    } catch(IOException exc) {
+      return null; //usual faulty pathInJar 
+      //throw new IllegalArgumentException("predefBlocks read from jar fails: " + pathMsg + " error: " + exc);
+    }
+    
+  }
+  
+  
 
   /**Writes the given String as content to a file without exception throwing.
    * This method doesn't throws an exception but returns true of false. It may more simple in application.

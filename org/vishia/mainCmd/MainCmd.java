@@ -210,6 +210,7 @@ public abstract class MainCmd implements MainCmd_ifc
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2019-12-05 Hartmut new: $$ENV$: replacement of environment variables able to use both in cmd line and in --@file 
    * <li>2015-11-21 Hartmut bugfix: close() was missing after reading an --@args.file 
    * <li>2014-05-31 Hartmut new: option --help:outfile 
    * <li>2014-05-31 Hartmut chg: default value for nReportLevel = 0, only output if --rlevel= is given. 
@@ -677,7 +678,7 @@ public abstract class MainCmd implements MainCmd_ifc
                 listArgs.clear(); //from this line args starts.
               }
               else if(sParam.length()>0 && sParam.charAt(0) != '#'){
-                listArgs.add(sParam);
+                listArgs.add(replaceEnv(sParam));
               }  
             }
             inp.close();
@@ -888,6 +889,7 @@ public abstract class MainCmd implements MainCmd_ifc
                         //|| argLen == 0      //argument without prefix (no option)
                         ? argc              //then use the whole argument as value.
                         : argc.substring(argLenFound);  //use the argument after the separator as value.
+        argval = replaceEnv(argval);
         boolean bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
         //if(!bOk) throw new ParseException("Argument value error: " + argc, nArg);
         return bOk;
@@ -907,6 +909,22 @@ public abstract class MainCmd implements MainCmd_ifc
   }
 
 
+  
+  
+  public String replaceEnv(String argval) {
+    int posEnv;
+    while( (posEnv=argval.indexOf("$$")) >=0) {
+      int posEnvEnd = argval.indexOf('$', posEnv+2);
+      String nameEnv = argval.substring(posEnv+2, posEnvEnd);
+      String env = System.getenv(nameEnv);
+      if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
+      argval = argval.substring(0, posEnv) + env + argval.substring(posEnvEnd+1);
+    }
+    return argval;
+  }
+  
+  
+  
 
   /**Returns that current directory which is given by argument "--currdir=value" or which was {@link #setcurrdir(String)}. 
    * Note that the currdir is not checked whether it is valid and existing.
