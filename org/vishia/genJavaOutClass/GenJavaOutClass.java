@@ -451,115 +451,125 @@ public class GenJavaOutClass {
     
     
     public void wrVariable(String varName, String varType, boolean bStdType, boolean bList, boolean bCmpn, List<String> args) throws IOException {
-      variables.put(varName, varType);
-      String varNameJava = firstLowercase(varName);
-      String varNameReplReserved = reservedNames.get(varNameJava);
-      if(varNameReplReserved !=null) { varNameJava = varNameReplReserved; }
-      String sTypeGeneric = idxStdTypes.get(varType);
-      if(sTypeGeneric == null) { 
-        sTypeGeneric = varType;
-        assert(bStdType == false);
-      } else {
-        if(!bStdType) { //stdType found, 
-          varType += "__";  //it should not be a standard Java type.
+      if(varName.equals("operator"))
+        Debugutil.stop();
+      String varTypeStored = this.variables.get(varName);
+      if(varTypeStored !=null) {
+        if(!varTypeStored.equals(varType)){
+          throw new IllegalArgumentException("same variable twice with different types");
         }
+      } 
+      else { //varName not found
+        this.variables.put(varName, varType);
+        String varNameJava = firstLowercase(varName);
+        String varNameReplReserved = reservedNames.get(varNameJava);
+        if(varNameReplReserved !=null) { varNameJava = varNameReplReserved; }
+        String sTypeGeneric = idxStdTypes.get(varType);
+        if(sTypeGeneric == null) { 
+          sTypeGeneric = varType;
+          assert(bStdType == false);
+        } else {
+          if(!bStdType) { //stdType found, 
+            varType += "__";  //it should not be a standard Java type.
+          }
+        }
+        Map<String, Object> argstxt = new TreeMap<String, Object>();
+        OutTextPreparer.DataTextPreparer argsJavaListVarOper = sJavaListVarOper.createArgumentDataObj();
+        argsJavaListVarOper.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaListVarOper.setArgument("varName", varNameJava);
+        argsJavaListVarOper.setArgument("name", varName);
+        argsJavaListVarOper.setArgument("type", varType);
+        argsJavaListVarOper.setArgument("typeZbnf", varType);
+        argsJavaListVarOper.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaListVar = sJavaListVar.createArgumentDataObj();
+        argsJavaListVar.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaListVar.setArgument("varName", varNameJava);
+        argsJavaListVar.setArgument("name", varName);
+        argsJavaListVar.setArgument("type", varType);
+        argsJavaListVar.setArgument("typeZbnf", varType);
+        argsJavaListVar.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaListVarZbnf = sJavaListVarZbnf.createArgumentDataObj();
+        argsJavaListVarZbnf.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaListVarZbnf.setArgument("varName", varNameJava);
+        argsJavaListVarZbnf.setArgument("name", varName);
+        argsJavaListVarZbnf.setArgument("type", varType);
+        argsJavaListVarZbnf.setArgument("typeZbnf", varType);
+        argsJavaListVarZbnf.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaListCmpnZbnf = sJavaListCmpnZbnf.createArgumentDataObj();
+        argsJavaListCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaListCmpnZbnf.setArgument("varName", varNameJava);
+        argsJavaListCmpnZbnf.setArgument("name", varName);
+        argsJavaListCmpnZbnf.setArgument("type", varType);
+        argsJavaListCmpnZbnf.setArgument("typeZbnf", varType);
+        argsJavaListCmpnZbnf.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaSimpleVarOper = sJavaSimpleVarOper.createArgumentDataObj();
+        argsJavaSimpleVarOper.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaSimpleVarOper.setArgument("varName", varNameJava);
+        argsJavaSimpleVarOper.setArgument("name", varName);
+        argsJavaSimpleVarOper.setArgument("type", varType);
+        argsJavaSimpleVarOper.setArgument("typeZbnf", varType);
+        argsJavaSimpleVarOper.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaSimpleVarZbnf = sJavaSimpleVarZbnf.createArgumentDataObj();
+        argsJavaSimpleVarZbnf.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaSimpleVarZbnf.setArgument("varName", varNameJava);
+        argsJavaSimpleVarZbnf.setArgument("name", varName);
+        argsJavaSimpleVarZbnf.setArgument("type", varType);
+        argsJavaSimpleVarZbnf.setArgument("typeZbnf", varType);
+        argsJavaSimpleVarZbnf.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaCmpnZbnf = sJavaCmpnZbnf.createArgumentDataObj();
+        argsJavaCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaCmpnZbnf.setArgument("varName", varNameJava);
+        argsJavaCmpnZbnf.setArgument("name", varName);
+        argsJavaCmpnZbnf.setArgument("type", varType);
+        argsJavaCmpnZbnf.setArgument("typeZbnf", varType);
+        argsJavaCmpnZbnf.setArgument("args", args);
+        
+        OutTextPreparer.DataTextPreparer argsJavaSimpleVar = sJavaSimpleVar.createArgumentDataObj();
+        argsJavaSimpleVar.setArgument("typeGeneric", sTypeGeneric);
+        argsJavaSimpleVar.setArgument("varName", varNameJava);
+        argsJavaSimpleVar.setArgument("name", varName);
+        argsJavaSimpleVar.setArgument("type", varType);
+        argsJavaSimpleVar.setArgument("typeZbnf", varType);
+        argsJavaSimpleVar.setArgument("args", args);
+        
+        //because of debugging write firstly to a StringBuilder:
+        StringBuilder wrb = new StringBuilder();
+        StringBuilder wrzb = new StringBuilder();
+        
+        if(bList) {
+          sJavaListVar.exec(wrb, argsJavaListVar);
+          sJavaListVarOper.exec(wrOp, argsJavaListVarOper);
+          if(bStdType) {
+            sJavaListVarZbnf.exec(wrzb, argsJavaListVarZbnf);
+          }
+          else if(bCmpn) {
+            sJavaListCmpnZbnf.exec(wrzb, argsJavaListCmpnZbnf);
+          } 
+          else {
+            sJavaListVarZbnf.exec(wrzb, argsJavaListVarZbnf);
+          }
+        } else {
+          sJavaSimpleVar.exec(wrb, argsJavaSimpleVar);
+          sJavaSimpleVarOper.exec(wrOp, argsJavaSimpleVarOper);
+          if(bStdType) {
+            sJavaSimpleVarZbnf.exec(wrzb, argsJavaSimpleVarZbnf);
+          }
+          else if(bCmpn) {
+            sJavaCmpnZbnf.exec(wrzb, argsJavaCmpnZbnf);
+          } 
+          else {
+            sJavaSimpleVarZbnf.exec(wrzb, argsJavaSimpleVarZbnf);
+          }
+        }
+        wr.append(wrb); //now append to output, remove wrb as stack local ref 
+        wrz.append(wrzb);
       }
-      Map<String, Object> argstxt = new TreeMap<String, Object>();
-      OutTextPreparer.DataTextPreparer argsJavaListVarOper = sJavaListVarOper.createArgumentDataObj();
-      argsJavaListVarOper.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaListVarOper.setArgument("varName", varNameJava);
-      argsJavaListVarOper.setArgument("name", varName);
-      argsJavaListVarOper.setArgument("type", varType);
-      argsJavaListVarOper.setArgument("typeZbnf", varType);
-      argsJavaListVarOper.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaListVar = sJavaListVar.createArgumentDataObj();
-      argsJavaListVar.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaListVar.setArgument("varName", varNameJava);
-      argsJavaListVar.setArgument("name", varName);
-      argsJavaListVar.setArgument("type", varType);
-      argsJavaListVar.setArgument("typeZbnf", varType);
-      argsJavaListVar.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaListVarZbnf = sJavaListVarZbnf.createArgumentDataObj();
-      argsJavaListVarZbnf.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaListVarZbnf.setArgument("varName", varNameJava);
-      argsJavaListVarZbnf.setArgument("name", varName);
-      argsJavaListVarZbnf.setArgument("type", varType);
-      argsJavaListVarZbnf.setArgument("typeZbnf", varType);
-      argsJavaListVarZbnf.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaListCmpnZbnf = sJavaListCmpnZbnf.createArgumentDataObj();
-      argsJavaListCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaListCmpnZbnf.setArgument("varName", varNameJava);
-      argsJavaListCmpnZbnf.setArgument("name", varName);
-      argsJavaListCmpnZbnf.setArgument("type", varType);
-      argsJavaListCmpnZbnf.setArgument("typeZbnf", varType);
-      argsJavaListCmpnZbnf.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaSimpleVarOper = sJavaSimpleVarOper.createArgumentDataObj();
-      argsJavaSimpleVarOper.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaSimpleVarOper.setArgument("varName", varNameJava);
-      argsJavaSimpleVarOper.setArgument("name", varName);
-      argsJavaSimpleVarOper.setArgument("type", varType);
-      argsJavaSimpleVarOper.setArgument("typeZbnf", varType);
-      argsJavaSimpleVarOper.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaSimpleVarZbnf = sJavaSimpleVarZbnf.createArgumentDataObj();
-      argsJavaSimpleVarZbnf.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaSimpleVarZbnf.setArgument("varName", varNameJava);
-      argsJavaSimpleVarZbnf.setArgument("name", varName);
-      argsJavaSimpleVarZbnf.setArgument("type", varType);
-      argsJavaSimpleVarZbnf.setArgument("typeZbnf", varType);
-      argsJavaSimpleVarZbnf.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaCmpnZbnf = sJavaCmpnZbnf.createArgumentDataObj();
-      argsJavaCmpnZbnf.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaCmpnZbnf.setArgument("varName", varNameJava);
-      argsJavaCmpnZbnf.setArgument("name", varName);
-      argsJavaCmpnZbnf.setArgument("type", varType);
-      argsJavaCmpnZbnf.setArgument("typeZbnf", varType);
-      argsJavaCmpnZbnf.setArgument("args", args);
-      
-      OutTextPreparer.DataTextPreparer argsJavaSimpleVar = sJavaSimpleVar.createArgumentDataObj();
-      argsJavaSimpleVar.setArgument("typeGeneric", sTypeGeneric);
-      argsJavaSimpleVar.setArgument("varName", varNameJava);
-      argsJavaSimpleVar.setArgument("name", varName);
-      argsJavaSimpleVar.setArgument("type", varType);
-      argsJavaSimpleVar.setArgument("typeZbnf", varType);
-      argsJavaSimpleVar.setArgument("args", args);
-      
-      //because of debugging write firstly to a StringBuilder:
-      StringBuilder wrb = new StringBuilder();
-      StringBuilder wrzb = new StringBuilder();
-      
-      if(bList) {
-        sJavaListVar.exec(wrb, argsJavaListVar);
-        sJavaListVarOper.exec(wrOp, argsJavaListVarOper);
-        if(bStdType) {
-          sJavaListVarZbnf.exec(wrzb, argsJavaListVarZbnf);
-        }
-        else if(bCmpn) {
-          sJavaListCmpnZbnf.exec(wrzb, argsJavaListCmpnZbnf);
-        } 
-        else {
-          sJavaListVarZbnf.exec(wrzb, argsJavaListVarZbnf);
-        }
-      } else {
-        sJavaSimpleVar.exec(wrb, argsJavaSimpleVar);
-        sJavaSimpleVarOper.exec(wrOp, argsJavaSimpleVarOper);
-        if(bStdType) {
-          sJavaSimpleVarZbnf.exec(wrzb, argsJavaSimpleVarZbnf);
-        }
-        else if(bCmpn) {
-          sJavaCmpnZbnf.exec(wrzb, argsJavaCmpnZbnf);
-        } 
-        else {
-          sJavaSimpleVarZbnf.exec(wrzb, argsJavaSimpleVarZbnf);
-        }
-      }
-      wr.append(wrb); //now append to output, remove wrb as stack local ref 
-      wrz.append(wrzb);
     }
     
     

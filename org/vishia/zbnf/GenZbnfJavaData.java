@@ -20,7 +20,8 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
-   * <li>2019-08-17 Hartmut only formally gardening (prevent warnings)
+   * <li>2019-12-08 new control of class name with component::=&lt;name>
+   * <li>2019-12-08 Hartmut only formally gardening (prevent warnings)
    * <li>2019-08-17 Hartmut divided in 2 classes, the {@link GenJavaOutClass} has gotten most content from here,
    *   but that class is used from {@link org.vishia.xmlReader.GenXmlCfgJavaData} too with common approaches.  
    * <li>2019-05-14 Hartmut creation
@@ -50,7 +51,7 @@ public class GenZbnfJavaData
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2019-08-17";
+  public static final String sVersion = "2019-12-08";
 
   
   
@@ -395,11 +396,15 @@ public class GenZbnfJavaData
               obligateAttribs.add(subitem.sSemantic.substring(1));
             }
           }
-          String sType = GenJavaOutClass.firstUppercase(item.sDefinitionIdent);
+          String sType = prescript.sSemantic;
+          if(sType == null || sType.equals("@")) {
+            sType = item.sDefinitionIdent;
+          }
+          sType = GenJavaOutClass.firstUppercase(sType);
           if(sType.equals("Integer")) {
             Debugutil.stop();
           } else {
-            registerCmpn(item.sDefinitionIdent);
+            registerCmpn(item);
           }
           wrVariable(sType, semantic, item, bList, true, obligateAttribs);
         }
@@ -439,6 +444,8 @@ public class GenZbnfJavaData
               metaClass.fieldsFromSemanticAttr.put(semantic2, elems);
             }
             else {
+              if(semantic.equals("secondOperand"))
+                Debugutil.stop();
               String sTypeExist = this.wrClassJava.variables.get(semantic);
               if(sTypeExist !=null) {
                 if(! sTypeExist.equals(type)) {
@@ -475,13 +482,21 @@ public class GenZbnfJavaData
           }
         }
 
-    private void registerCmpn(String name) {
+    /**Registers a need Component. It is invoked on usage of a component, not for existing component definitions.
+     * It means unused components do not create classes.
+     * @param item The item which uses the component
+     */
+    private void registerCmpn(ZbnfSyntaxPrescript item) {
+      ZbnfSyntaxPrescript cmpn = GenZbnfJavaData.this.idxSubSyntax.get(item.sDefinitionIdent);
+      if(cmpn == null) {
+        throw new IllegalArgumentException("syntax component not found: " + item.sDefinitionIdent);
+      }
+      String name = cmpn.sSemantic;
+      if(name ==null || name.equals("@")) {
+        name = cmpn.sDefinitionIdent;
+      }
       if(GenZbnfJavaData.this.genClass.idxRegisteredCmpn.get(name) == null) {
-        ZbnfSyntaxPrescript cmpn = GenZbnfJavaData.this.idxSubSyntax.get(name);
-        if(cmpn == null) {
-          throw new IllegalArgumentException("syntax component not found: " + name);
-        }
-        SubClassZbnf classData = new SubClassZbnf(name, GenJavaOutClass.firstUppercase(cmpn.sDefinitionIdent));
+        SubClassZbnf classData = new SubClassZbnf(name, GenJavaOutClass.firstUppercase(name));
         classData.sDbgIdent = cmpn.sDefinitionIdent;
         classData.subSyntax = cmpn;
         GenZbnfJavaData.this.genClass.idxRegisteredCmpn.put(name, classData);

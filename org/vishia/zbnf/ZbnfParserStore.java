@@ -184,10 +184,10 @@ class ZbnfParserStore
      *  is a failure, in this case the implicit reference to the outer class
      *  can't be changed. 
      * */
-    private ZbnfParserStore store;
+    ZbnfParserStore store;
     
     /**The item which is the parent (contains a offsetAfterEnd with includes this position). */
-    private ParseResultItemImplement parent;
+    ParseResultItemImplement parent;
     
     /** The action to invoke.*/
     final String sSemantic;
@@ -881,6 +881,12 @@ class ZbnfParserStore
     //return items.size() -1;  //position of the entry
   }
 
+  
+  
+  void XXXadd(ParseResultItemImplement item) {
+    
+  }
+  
 
   /** Sets the number of the alternative into a existing item.
    * The item is to be added on begin of parsing the part, and the
