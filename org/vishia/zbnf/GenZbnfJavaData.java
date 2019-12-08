@@ -1,13 +1,9 @@
 package org.vishia.zbnf;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.genJavaOutClass.GenJavaOutClass;
@@ -15,8 +11,6 @@ import org.vishia.genJavaOutClass.GenJavaOutClass.CmdArgs;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Debugutil;
-import org.vishia.util.FileSystem;
-import org.vishia.util.OutTextPreparer;
 
 /**This class is used to generate two Java source files as container for parsed data derived from the zbnf syntax script.
  *
@@ -26,6 +20,7 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-08-17 Hartmut only formally gardening (prevent warnings)
    * <li>2019-08-17 Hartmut divided in 2 classes, the {@link GenJavaOutClass} has gotten most content from here,
    *   but that class is used from {@link org.vishia.xmlReader.GenXmlCfgJavaData} too with common approaches.  
    * <li>2019-05-14 Hartmut creation
@@ -102,15 +97,15 @@ public class GenZbnfJavaData
   
   
   
-  public void parseAndGenerate(File fSyntax) throws IOException {
-    ZbnfParser parser = new ZbnfParser(log);
+  public void setAndEvaluateSyntax() {
+    ZbnfParser parser = new ZbnfParser(this.log);
     try {
-      parser.setSyntax(cmdArgs.fileInput);
+      parser.setSyntax(this.cmdArgs.fileInput);
     } catch (Exception e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    idxSubSyntax = parser.listSubPrescript;
+    this.idxSubSyntax = parser.listSubPrescript;
     ZbnfSyntaxPrescript mainScript = parser.mainScript();
     
     evaluateSyntax(mainScript);
@@ -123,7 +118,7 @@ public class GenZbnfJavaData
   
   
   private void evaluateSyntax(ZbnfSyntaxPrescript mainScript) {
-    genClass.setupWriter();
+    this.genClass.setupWriter();
     WrClassZbnf wrClass = this.new WrClassZbnf();  //the main class to write
 
 
@@ -135,8 +130,8 @@ public class GenZbnfJavaData
       //
       //
       int ixCmpn = 0;
-      while(genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
-        SubClassZbnf classData = (SubClassZbnf)genClass.listCmpn.get(ixCmpn++);
+      while(this.genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
+        SubClassZbnf classData = (SubClassZbnf)this.genClass.listCmpn.get(ixCmpn++);
         wrClass = new WrClassZbnf();
         wrClass.wrClassJava.wrClassCmpn(classData);
         //
@@ -145,17 +140,17 @@ public class GenZbnfJavaData
         //
         wrClass.wrClassJava.writeOperations();
         //
-        genClass.finishCmpnWrite();
+        this.genClass.finishCmpnWrite();
 
       }
       //
-      genClass.finishClassWrite();
+      this.genClass.finishClassWrite();
       //
     } catch (Exception e1) {
       // TODO Auto-generated catch block
       System.err.println(e1.getMessage());
     }
-    genClass.closeWrite();    
+    this.genClass.closeWrite();    
   }
 
   
@@ -199,7 +194,7 @@ public class GenZbnfJavaData
         /* The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
            to hold the contact to the command line execution.
         */
-        try{ main.parseAndGenerate(args.fileInput);; }
+        try{ main.setAndEvaluateSyntax(); }
         catch(Exception exc)
         { //catch the last level of error. No error is reported direct on command line!
           System.err.println(exc.getMessage());
@@ -222,7 +217,7 @@ public class GenZbnfJavaData
     
     
     WrClassZbnf() {
-      wrClassJava = genClass.new WrClassJava();
+      this.wrClassJava = GenZbnfJavaData.this.genClass.new WrClassJava();
     }
     
     
@@ -320,7 +315,8 @@ public class GenZbnfJavaData
                   break;
                 case kUnconditionalVariant:
                   break;
-                //default:
+                default:
+                  Debugutil.todo();
               }
             }
             //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
@@ -335,13 +331,13 @@ public class GenZbnfJavaData
         }
 
     private SubClassZbnf getRegisterSubclass(String name, ZbnfSyntaxPrescript syntaxItem) {
-      SubClassZbnf classData = (SubClassZbnf)genClass.idxRegisteredCmpn.get(name);
+      SubClassZbnf classData = (SubClassZbnf)GenZbnfJavaData.this.genClass.idxRegisteredCmpn.get(name);
       if(classData == null) {
         classData = new SubClassZbnf(name, GenJavaOutClass.firstUppercase(name));
         classData.sDbgIdent = syntaxItem.sDefinitionIdent;
         classData.subSyntax = syntaxItem;
-        genClass.idxRegisteredCmpn.put(name, classData);
-        genClass.listCmpn.add(classData);
+        GenZbnfJavaData.this.genClass.idxRegisteredCmpn.put(name, classData);
+        GenZbnfJavaData.this.genClass.listCmpn.add(classData);
         ////
       }
       return classData;
@@ -375,7 +371,7 @@ public class GenZbnfJavaData
       
       if(item.sDefinitionIdent.startsWith("ST"))
         Debugutil.stop();
-      ZbnfSyntaxPrescript prescript = idxSubSyntax.get(item.sDefinitionIdent); 
+      ZbnfSyntaxPrescript prescript = GenZbnfJavaData.this.idxSubSyntax.get(item.sDefinitionIdent); 
       if(prescript == null) throw new IllegalArgumentException("error in syntax, component not found: " + item.sDefinitionIdent);
       //on semantic "@" in the item the semantic of the prescript should be used.
       //That is usually the same like item.sDefinitionIdent, but can be defined other via cpmpn::=<?semantic> 
@@ -420,13 +416,13 @@ public class GenZbnfJavaData
             int posSep = semantic.indexOf('/');
             if(posSep>0) {
               String semantic1 = semantic.substring(0,  posSep);
-              semantic = semantic.substring(posSep+1);
+              String semantic2 = semantic.substring(posSep+1);
               List<String> obligateAttribs1 = null;
-              if(semantic.startsWith("@")) {
-                semantic = semantic.substring(1);
+              if(semantic2.startsWith("@")) {
+                semantic2 = semantic2.substring(1);
                 //The second part is an Attribute, it is a default one. 
                 obligateAttribs1 = new LinkedList<String>();
-                obligateAttribs1.add(semantic);
+                obligateAttribs1.add(semantic2);
               }
               SubClassZbnf metaClass = getRegisterSubclass(semantic1, syntaxitem); //idxMetaClass.get(semantic1);
     //          if(metaClass == null) { 
@@ -435,22 +431,25 @@ public class GenZbnfJavaData
     //          }
               //Writes a new MetaClass, it is like a Component.
               wrVariable(semantic1, semantic1, syntaxitem, bList, true, obligateAttribs1);  //create the parent
-              GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(type, GenJavaOutClass.firstLowercase(semantic), semantic);
-              //elems.put("varName", firstLowercase(semantic));
-              //elems.put("semantic", semantic);
+              GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(type, GenJavaOutClass.firstLowercase(semantic2), semantic2);
+              //elems.put("varName", firstLowercase(semantic2));
+              //elems.put("semantic", semantic2);
               //elems.put("type", type);
               if(metaClass.fieldsFromSemanticAttr == null) { metaClass.fieldsFromSemanticAttr = new TreeMap<String, GenJavaOutClass.SubClassField>(); }
-              metaClass.fieldsFromSemanticAttr.put(semantic, elems);
+              metaClass.fieldsFromSemanticAttr.put(semantic2, elems);
             }
             else {
-              String sTypeExist = wrClassJava.variables.get(semantic);
+              String sTypeExist = this.wrClassJava.variables.get(semantic);
               if(sTypeExist !=null) {
                 if(! sTypeExist.equals(type)) {
                   throw new IllegalArgumentException("Semantic " + semantic + " with different types");
                 }
               } else {
+                final String type2;
                 if(type.equals("Integer")) { 
-                  type = "int"; 
+                  type2 = "int"; 
+                } else {
+                  type2 = type;
                 }
                 if(semantic.equals("FBType")) {  //a required Attribute in XML
                   Debugutil.stop();
@@ -466,10 +465,10 @@ public class GenZbnfJavaData
                   args.add(GenJavaOutClass.firstLowercase(attrib));
                 }
                 //semantic = semantic.replace("@!", "");
-                semantic = semantic.replace("@", "");
-                semantic = semantic.replace("/", "_");
+                String semantic2 = semantic.replace("@", "");
+                semantic2 = semantic2.replace("/", "_");
                 
-                wrClassJava.wrVariable(semantic, type, !bCmpn, bList, bCmpn, args); 
+                this.wrClassJava.wrVariable(semantic2, type2, !bCmpn, bList, bCmpn, args); 
                 
               }  
             }
@@ -477,16 +476,16 @@ public class GenZbnfJavaData
         }
 
     private void registerCmpn(String name) {
-      if(genClass.idxRegisteredCmpn.get(name) == null) {
-        ZbnfSyntaxPrescript cmpn = idxSubSyntax.get(name);
+      if(GenZbnfJavaData.this.genClass.idxRegisteredCmpn.get(name) == null) {
+        ZbnfSyntaxPrescript cmpn = GenZbnfJavaData.this.idxSubSyntax.get(name);
         if(cmpn == null) {
           throw new IllegalArgumentException("syntax component not found: " + name);
         }
         SubClassZbnf classData = new SubClassZbnf(name, GenJavaOutClass.firstUppercase(cmpn.sDefinitionIdent));
         classData.sDbgIdent = cmpn.sDefinitionIdent;
         classData.subSyntax = cmpn;
-        genClass.idxRegisteredCmpn.put(name, classData);
-        genClass.listCmpn.add(classData);
+        GenZbnfJavaData.this.genClass.idxRegisteredCmpn.put(name, classData);
+        GenZbnfJavaData.this.genClass.listCmpn.add(classData);
         ////
       }
     }
@@ -512,19 +511,19 @@ public class GenZbnfJavaData
       public final MainCmd.Argument[] defArguments =
       { new MainCmd.Argument("-s", "<SYNTAX>    syntax prescript in ZBNF format for parsing", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
-              argData.fileInput = new File(val);  return true;
+              CmdLine.this.argData.fileInput = new File(val);  return true;
             }})
           , new MainCmd.Argument("-dirJava", ":<dirJava>    directory for Java output", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
-              argData.dirJava = new File(val);  return true;
+              CmdLine.this.argData.dirJava = new File(val);  return true;
             }})    
           , new MainCmd.Argument("-pkg", ":<pkg.path>    directory for Java output", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
-              argData.sJavaPkg = val;  return true;
+              CmdLine.this.argData.sJavaPkg = val;  return true;
             }})    
           , new MainCmd.Argument("-class", ":<class>.java    directory for Java output", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
-              argData.sJavaClass = val;  return true;
+              CmdLine.this.argData.sJavaClass = val;  return true;
           }})    
       };
   
@@ -543,7 +542,7 @@ public class GenZbnfJavaData
       void addCmdLineProperties(){
         super.addAboutInfo("Generate Java source code as destination class from ZBNF syntax script");
         super.addAboutInfo("made by HSchorrig, 2019-05-10..2019-08-29");
-        super.addArgument(defArguments);
+        super.addArgument(this.defArguments);
         super.addHelpInfo("==Standard arguments of MainCmd==");
         super.addStandardHelpInfo();
       }
@@ -560,8 +559,8 @@ public class GenZbnfJavaData
       protected boolean checkArguments()
       { boolean bOk = true;
     
-        if(argData.fileInput == null)            { bOk = false; writeError("ERROR argument Syntaxfile is obligat."); }
-        else if(argData.fileInput.length()==0)   { bOk = false; writeError("ERROR argument Syntaxfile without content.");}
+        if(this.argData.fileInput == null)            { bOk = false; writeError("ERROR argument Syntaxfile is obligat."); }
+        else if(this.argData.fileInput.length()==0)   { bOk = false; writeError("ERROR argument Syntaxfile without content.");}
     
         return bOk;
     
