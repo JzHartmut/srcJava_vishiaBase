@@ -1,4 +1,4 @@
-2019-12-09 00:28:23  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2019-12-11 23:43:02  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-12-01 16:07:06  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -146,6 +146,9 @@
 2015-02-07 13:01:18  x     ExecThread.java                          ::           .979  0289064260 
 2015-02-08 11:37:19  x     TestEventCmdWithEventBack.java           ::          2.735  1009275495 
 2015-02-07 13:01:18  x     TestTimeOrder.java                       ::          2.472  0718797643 
+
+============================== org/vishia/execode/ =================================================
+2019-12-11 22:55:53  x     Execode.java                             ::          7.078  1794953396 
 
 ============================== org/vishia/fileLocalAccessor/ =======================================
 2016-11-27 21:25:43  x     FileAccessorLocalJava6.java              ::         29.969  1176131337 
