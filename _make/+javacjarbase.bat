@@ -35,7 +35,10 @@ REM  The setJAVA_JDK.bat may be existing in the user's path.
 if not "%JAVA_JDK%" == "" goto :JavaOK
 REM call a batch which sets the environment variable JAVA_JDK and expands the path to a proper JAVA-JDK
 echo on
-call %SRCvishiaBase%\_make\setJAVA_JDK.bat
+
+::The bat for JDK environment setting should be found in the path (C:\batch etc.) 
+call setJAVA_JDK.bat
+::faulty: call %SRCvishiaBase%\_make\setJAVA_JDK.bat
 echo off
 if exist %JAVA_JDK% goto :JavaOK
 

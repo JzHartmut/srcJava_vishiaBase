@@ -23,6 +23,7 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-12-28 Hartmut new {@link #indexOfAnyChar(CharSequence, int, int, CharSequence, int[])} returns the number of the found character too
    * <li>2019-06-08 Hartmut new: All StringFunctions with negative to argument, count from end, -1 is till end.
    * <li>   * <li>2019-06-07 Hartmut new: {@value #compareChars(CharSequence, int, int, CharSequence)} as helper to find where is the difference, versus {@link #equals(CharSequence, int, int, CharSequence)} 
    * <li>2016-12-02 Hartmut new: {@value #cNoCidentifier} 
@@ -613,6 +614,36 @@ public class StringFunctions {
   
 
   
+  /**Searches any char inside sChars in the given CharSequence. 
+   * @param sq The String to search in
+   * @param begin start position to search in sq
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param sChars Some chars to search in sq
+   *   If sChars contains a EOT character (code 03, {@link #cEndOfText}) then the search stops at this character 
+   *   or it is continued to the end of the range in sq. Then the length of the text range is returned
+   *   if another character in sChars is not found. 
+   *   It means: The end of the text range is adequate to an EOT-character. Note that EOT is not unicode,
+   *   but it is an ASCII control character.  
+   * @param nr null or initialized with new int[1], then returns the number of the found character in sChars from 0 
+   * @return The first position in sq of one of the character in sChars or -1 if not found in the given range.
+   */
+  public static int indexOfAnyChar(CharSequence sq, int begin, int endMax, CharSequence sChars, int[] nr)
+  { int zsq = sq.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax > zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
+    int pos = begin-1;  //pre-increment
+    int nr1 = -1;
+    while(++pos < end && (nr1 = indexOf(sChars, sq.charAt(pos))) < 0){ }  //while any of char in sChars not found:
+    if(pos < end 
+      || (pos == end && indexOf(sChars, cEndOfText) >= 0)
+      ) { 
+      if(nr !=null) { nr[0] = nr1; }
+      return pos;
+    }
+    else  return -1;
+  }
+
+  
+
   /**Searches any char inside sChars in the given Charsequence
    * @param begin start position to search in sq
    * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
@@ -624,21 +655,9 @@ public class StringFunctions {
    *   but it is an ASCII control character.  
    * @return The first position in sq of one of the character in sChars or -1 if not found in the given range.
    */
-  public static int indexOfAnyChar(CharSequence sq, int begin, int endMax, CharSequence sChars)
-  { int zsq = sq.length();
-    int end = (endMax < 0 ? zsq + endMax +1 : (endMax > zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
-    int pos = begin-1;  //pre-increment
-    while(++pos < end && indexOf(sChars, sq.charAt(pos)) < 0){ }  //while any of char in sChars not found:
-    if(pos < end 
-      || (pos == end && indexOf(sChars, cEndOfText) >= 0)
-      )
-    { return pos;
-    }
-    else  return -1;
+  public static int indexOfAnyChar(CharSequence sq, int begin, int endMax, CharSequence sChars) {
+    return indexOfAnyChar(sq, begin, endMax, sChars, null);
   }
-
-  
-
   
   /**Searches the last occurrence of the given char in a CharSequence.
    * It is the adequate functionality like {@link java.lang.String#lastIndexOf(char, fromEnd)}. 
