@@ -31,9 +31,9 @@ if exist %DSTDIR%%DST_priv% rmdir /Q /S %DSTDIR%%DST_priv% >NUL
 if not exist %DSTDIR%%DST% mkdir %DSTDIR%%DST%
 if not exist %DSTDIR%%DST_priv% mkdir %DSTDIR%%DST_priv%
 
-echo javadoc -d %DSTDIR%%DST% -linksource -notimestamp -nodeprecated %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH%
+echo javadoc -Xdoclint:none -d %DSTDIR%%DST% -private -notimestamp -nodeprecated %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC%
 echo on
-%JAVA_JDK%\bin\javadoc -Xdoclint:none -d %DSTDIR%%DST% -protected -notimestamp -nodeprecated %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC% 1>%DSTDIR%%DST%\javadoc.rpt 2>%DSTDIR%%DST%\javadoc.err
+%JAVA_JDK%\bin\javadoc -Xdoclint:none -d %DSTDIR%%DST% -private -notimestamp -nodeprecated %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC% 1>%DSTDIR%%DST%\javadoc.rpt 2>%DSTDIR%%DST%\javadoc.err
 if errorlevel 1 (
   type %DSTDIR%%DST%\javadoc.err
   notepad.exe %DSTDIR%%DST%\javadoc.err
@@ -42,7 +42,7 @@ if errorlevel 1 (
 echo off
 copy ..\..\srcJava_vishiaBase\_make\stylesheet_javadoc.css %DSTDIR%%DST%\stylesheet.css >NUL
 
-echo javadoc -Xdoclint:none -d %DSTDIR%%DST_priv% -private -linksource -notimestamp %LINKPATH% %CLASSPATH% -sourcepath %SRCPATH%
+echo javadoc -Xdoclint:none -d %DSTDIR%%DST_priv% -private -notimestamp %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC%
 ::::%JAVA_JDK%\bin\javadoc -d %DSTDIR%%DST_priv% -private -linksource -notimestamp %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC% 1>%DSTDIR%%DST_priv%\javadoc.rpt 2>%DSTDIR%%DST_priv%\javadoc.err
 %JAVA_JDK%\bin\javadoc -d %DSTDIR%%DST_priv% -private -notimestamp %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC% 1>%DSTDIR%%DST_priv%\javadoc.rpt 2>%DSTDIR%%DST_priv%\javadoc.err
 if errorlevel 1 (

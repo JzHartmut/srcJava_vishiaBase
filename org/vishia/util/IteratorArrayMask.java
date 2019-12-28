@@ -6,7 +6,7 @@ import java.util.NoSuchElementException;
 /**An instance of this class iterates over an array and returns elements which are marked with the mask.
  * The mask is a 1-of-64 selection of array elements.
  * 
- * @author hartmut
+ * @author Hartmut Schorrig
  *
  * @param <T> Any type of elements in the array.
  */
@@ -19,7 +19,8 @@ public class IteratorArrayMask<T> implements Iterator<T>, Iterable<T> {
   final long mask;
   
   boolean bExecHasNext = false;
-  /**
+
+  /**Initializes with given mask.
    * @param array Any array with proper type
    * @param mask selection which elements should be returned 1-of-64
    */

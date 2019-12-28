@@ -102,13 +102,13 @@ public class Execode {
   
   
   public static class Instruction {
-    final EInstruction instr;
-    final int id;
-    final Constant constant;
-    final EOperand operand;
+    public final EInstruction instr;
+    public final int id;
+    public final Constant constant;
+    public final EOperand operand;
     
     /**It is especially for debugging. */
-    final String text;
+    public final String text;
     
     public Instruction(EInstruction instr, String constant ) {
       this.instr = instr;
@@ -176,8 +176,10 @@ public class Execode {
   
   public void addInstrVariable(EInstruction instr, int idVar, String name) { this.code.add(new Instruction(instr, idVar, name)); }
   
+  public Iterable<Instruction> code() { return this.code;  }
   
-  public CharSequence convertToOtx() {
+  
+  public CharSequence convertToNormalExpression() {
     StringBuilder u = null;
     Stack<StringBuilder> uStack = new Stack<StringBuilder>(); 
     for(Instruction instr: this.code) {
@@ -237,7 +239,7 @@ public class Execode {
     thiz.addInstr(EInstruction.set, "7");
     thiz.addInstr(EInstruction.add, "2");
     thiz.addInstr(EInstruction.mult);
-    CharSequence expr = thiz.convertToOtx();
+    CharSequence expr = thiz.convertToNormalExpression();
     System.out.println(expr);
   }
 }
