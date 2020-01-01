@@ -13,6 +13,7 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.util.Stack;
 
 import org.vishia.charset.CodeCharset;
+import org.vishia.util.DataAccess;
 import org.vishia.util.StringFunctions;
 
 
@@ -21,35 +22,69 @@ import org.vishia.util.StringFunctions;
  * <pre>
     open(file, "US-ASCII", out);
     writeElement("root");
-      writeText("contentRoot");
+      writeText("contentRoot", true);
     writeElement("child1");
-      writeAttribute("attr", "valueü");
-      writeText("contentChild");
+      writeAttribute("attr", "value");
+      writeText("contentChild &lt;ï¿½ï¿½ï¿½> special chars", false);
       writeElementEnd();
     writeElement("child2");
-      writeAttribute("attr2", "text § special chars");
+      writeAttribute("attr2", "text ï¿½ special chars");
     close();
  * </pre>
  * The output for that is: <pre>
 &lt;?xml version="1.0" encoding="US-ASCII"?>
 &lt;root>
   contentRoot
-  &lt;child1 attr="value&amp;#xfc;">
-    contentChild
-  &lt;/child1>
-  &lt;child2 attr2="text &amp;#xa7; special chars"/>
+  &lt;child1 attr="value">contentChild &amp;lt;&amp;#xc4;&amp;#xdc;&amp;#xd6;&amp;gt; special chars&lt;/child1>
+  &lt;child2 attr2="text &amp;#x20ac; special chars"/>
 &lt;/root>
  * </pre>
+ * Note: The source contains the transcription for Javadoc. See the original. Javadoc presents correctly.<br>
+ * Features:
  * <ul>
  * <li>Supported encodings are all UTF-, US-ASCII and ISO-8859-1 yet. Other ISO-8859-x can be enhanced 
  *   (needs a special solution, see {@link CodeCharset}
  * <li>Parallel to the file an Appendable can be written, for debug or Java-internal String usage of XML output.
- * <li>Namespaces should be written manually as attributes and as "ns:tag"  
+ * <li>Namespaces should be written manually as attributes and as "ns:tag"
+ * <li>Beatification on output: default 2 spaces for indent on any element, 
+ *   indent on text content is able to parametrize  
  * </ul>  
  * @author Hartmut Schorrig
  *
  */
 public class XmlSequWriter {
+
+  
+  /**Version, License and History:
+   * <ul>
+   * <li>2019-12-24 created.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String version = "2020-01-01";
 
   
   private class ElementInfo{
@@ -119,6 +154,8 @@ public class XmlSequWriter {
   
   int indent = 1;
   
+  public boolean bTreeComment = true;
+  
   private static String sIndent = "\n                                                                                ";
   
 
@@ -131,7 +168,7 @@ public class XmlSequWriter {
     } else {
       this.encoding = null;
       this.encoding2 = CodeCharset.forName(sEncoding);
-      if(this.encoding2 == null) throw new IllegalCharsetNameException(sEncoding);
+      if(this.encoding2 == null) throw new IllegalCharsetNameException("Illegal encoding id: " + sEncoding);
       
     }
     this.sEncoding = sEncoding; //not reached because exception on faulty identifier.
@@ -249,7 +286,8 @@ public class XmlSequWriter {
     if(this.info == null) {
       writeHead();
     }
-    else if(this.info.bIndented) { //null on root
+    else { //if(this.info.bIndented) { //null on root
+      this.info.bIndented = true;
       wrNewline(1);
     }
     wrTxtAscii("<"); wrTxt(sTag);
@@ -302,6 +340,13 @@ public class XmlSequWriter {
         wrNewline(-1);
       }
       wrTxtAscii("</"); wrTxt(this.info.sTag); wrTxtAscii(">");
+      if(this.bTreeComment) {
+        wrTxtAscii("<!--");
+        for(ElementInfo elem: this.tags) {
+          wrTxtAscii(elem.sTag); wrTxtAscii(" = ");
+        }
+        wrTxtAscii("-->");
+      }
     }
     if(this.tags.size() >0 ) { this.info = this.tags.pop(); }
     else { this.info = null; } //after the root.
@@ -314,10 +359,11 @@ public class XmlSequWriter {
   }
   
 
-  public void writeText(String txt) throws IOException {
+  public void writeText(CharSequence txt, boolean bNewline) throws IOException {
     if(this.bElementStart) { //finish the parent element start
       writeElementHeadEnd(true);
     }
+    this.info.bIndented = bNewline;
     if(this.info.bIndented) {
       wrNewline(0);
     }
@@ -335,21 +381,22 @@ public class XmlSequWriter {
    * @param txt
    * @throws IOException
    */
-  private void wrTxt(String txt) throws IOException {
-    CharSequence cs = txt;
+  private void wrTxt(CharSequence txt) throws IOException {
+    CharSequence txt1 = txt == null? "?null?" : txt;
+    
     int begin = 0;
-    int endMax = txt.length();
+    int endMax = txt1.length();
     int posCorr;
     int[] nr = new int[1];
-    while( ( posCorr= StringFunctions.indexOfAnyChar(cs, begin, endMax, "&\"'<>\n\r\t", nr)) >=0) {
+    while( ( posCorr= StringFunctions.indexOfAnyChar(txt1, begin, endMax, "&\"'<>\n\r\t", nr)) >=0) {
       if(begin < posCorr) { 
-        wrTxtEncoded(txt.substring(begin, posCorr));
+        wrTxtEncoded(txt1.subSequence(begin, posCorr));
       }
       wrTxtAscii(stdReplacement[nr[0]]);
       begin = posCorr +1;
     }
     if(begin < endMax) {
-      wrTxtEncoded(txt.substring(begin, endMax));
+      wrTxtEncoded(txt1.subSequence(begin, endMax));
     }
   }
   
@@ -361,11 +408,11 @@ public class XmlSequWriter {
    * @param txt
    * @throws IOException
    */
-  private void wrTxtEncoded(String txt) throws IOException {
+  private void wrTxtEncoded(CharSequence txt) throws IOException {
     //this.encoding.
     
     if(this.wr !=null) {
-      this.wr.write(txt);  //writes with encoding to fwr.
+      this.wr.write(txt.toString());  //writes with encoding to fwr.
       if(this.twr !=null) {
         this.twr.append(txt);
       }
@@ -489,15 +536,14 @@ public class XmlSequWriter {
   private void testWritetree2(File file, StringBuilder out) throws IOException {
     String sCmp = 
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
-        "<root>\n" + 
-        "  contentRoot\n" + 
+        "<root>contentRoot\n" + 
         "  <child1/>\n" + 
         "</root>\n" + 
         "";
     out.setLength(0);
     open(file, null, out);
     writeElement("root");
-    writeText("contentRoot");
+    writeText("contentRoot", false);
     writeElement("child1");  //without content
     close();
     if(!sCmp.equals(out.toString())) {
@@ -511,17 +557,15 @@ public class XmlSequWriter {
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
         "<root>\n" + 
         "  contentRoot\n" + 
-        "  <child1>\n" + 
-        "    contentChild\n" + 
-        "  </child1>\n" + 
+        "  <child1>contentChild</child1>\n" + 
         "</root>\n" + 
         "";
     out.setLength(0);
     open(file, null, out);
     writeElement("root");
-    writeText("contentRoot");
+    writeText("contentRoot", true);
     writeElement("child1");
-    writeText("contentChild");
+    writeText("contentChild", false);
     close();
     if(!sCmp.equals(out.toString())) {
       throw new IllegalArgumentException("faulty= testWriteTree");
@@ -542,10 +586,10 @@ public class XmlSequWriter {
     out.setLength(0);
     open(file, "US-ASCII", out);
     writeElement("root");
-    writeText("contentRoot");
+    writeText("contentRoot", true);
     writeElement("child1");
     writeAttribute("attr", "value");
-    writeText("contentChild");
+    writeText("contentChild", true);
     close();
     if(!sCmp.equals(out.toString())) {
       throw new IllegalArgumentException("faulty= testWriteTree");
@@ -559,23 +603,21 @@ public class XmlSequWriter {
         "<?xml version=\"1.0\" encoding=\"US-ASCII\"?>\n" + 
         "<root>\n" + 
         "  contentRoot\n" + 
-        "  <child1 attr=\"value&#xfc;\">\n" + 
-        "    contentChild\n" + 
-        "  </child1>\n" + 
-        "  <child2 attr2=\"text &#xa7; special chars\"/>\n" + 
+        "  <child1 attr=\"value\">contentChild &lt;&#xc4;&#xdc;&#xd6;&gt; special chars</child1>\n" + 
+        "  <child2 attr2=\"text &#x20ac; special chars\"/>\n" + 
         "</root>\n" + 
         "";
     out.setLength(0);
     setEncoding("US-ASCII");
     open(file, "US-ASCII", out);
     writeElement("root");
-      writeText("contentRoot");
+      writeText("contentRoot", true);
     writeElement("child1");
-      writeAttribute("attr", "valueü");
-      writeText("contentChild");
+      writeAttribute("attr", "value");
+      writeText("contentChild <ï¿½ï¿½ï¿½> special chars", false);
       writeElementEnd();
     writeElement("child2");
-      writeAttribute("attr2", "text § special chars");
+      writeAttribute("attr2", "text ï¿½ special chars");
     close();
     if(!sCmp.equals(out.toString())) {
       throw new IllegalArgumentException("faulty= testWriteTree");

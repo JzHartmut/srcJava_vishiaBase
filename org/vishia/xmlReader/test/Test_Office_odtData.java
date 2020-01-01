@@ -1,6 +1,7 @@
 package org.vishia.xmlReader.test;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.vishia.util.Debugutil;
 import org.vishia.xmlReader.XmlCfg;
@@ -12,7 +13,12 @@ public class Test_Office_odtData {
   
   public static void main(String[] args) {
     Test_Office_odtData main = new Test_Office_odtData();
-    main.readXmlMap();
+    try {
+      main.readXmlMap();
+    } catch (Exception e) {
+      System.err.println("Unexpected: " + e.getMessage());
+      e.printStackTrace(System.err);
+    }
   }
   
   
@@ -20,7 +26,7 @@ public class Test_Office_odtData {
   
   
   
-  private void readXmlMap() {
+  private void readXmlMap() throws IOException {
     XmlCfg cfg = xmlReader.readCfg(new File("Office_odt.cfg.xml"));
     if(cfg !=null) {
       Office_odtData dst = new Office_odtData_Zbnf();

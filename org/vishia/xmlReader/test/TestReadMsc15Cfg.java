@@ -127,7 +127,7 @@ public class TestReadMsc15Cfg
   
   
   
-  static void analyzeStruct(File fXmlIn) {
+  static void analyzeStruct(File fXmlIn) throws IOException {
     
     
     File fCfgOut = new File("T:/cfg.xml");
@@ -138,7 +138,7 @@ public class TestReadMsc15Cfg
   }
   
   
-  static void readKeys(File fXmlIn) {
+  static void readKeys(File fXmlIn) throws IOException {
     XmlJzReader xmlReader = new XmlJzReader();
     xmlReader.readCfg(new File("c:/Programs/MSC15_adaptSmlk/settings.cfg.xml"));
     KeyboardShortCuts data = new KeyboardShortCuts();
@@ -182,7 +182,12 @@ public class TestReadMsc15Cfg
     
     //File fXmlIn = new File("c:/Users/hartmut/Documents/Visual Studio 2015/Settings/CurrentSettings.vssettings");
     File fXmlIn = new File("D:/ML/SULtrcCurve/SULtrc.xml");
-    analyzeStruct(fXmlIn);    
+    try {
+      analyzeStruct(fXmlIn);
+    } catch (Exception e) {
+      System.err.println("Unexpected: " + e.getMessage());
+      e.printStackTrace(System.err);
+    }
 
     //readKeys(fXmlIn);
     

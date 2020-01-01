@@ -1,6 +1,7 @@
 package org.vishia.blockConnect;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,9 +63,14 @@ public class FromOfficeDraw
 
   public static void main(String[] args)
   { XmlJzReader main = new XmlJzReader();
-    main.readCfg(new File("D:\\vishia\\graphDesign\\draw.tplxml"));
-    Data data = new Data();    
-    main.readXml(new File("D:\\vishia\\graphDesign\\test1.fodg"), data);
+    try {
+      main.readCfg(new File("D:\\vishia\\graphDesign\\draw.tplxml"));
+      Data data = new Data();    
+      main.readXml(new File("D:\\vishia\\graphDesign\\test1.fodg"), data);
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
     Debugutil.stop();
   }
 

@@ -56,7 +56,7 @@ public class GenXmlCfgJavaData {
   }
   
   
-  public void exec(File fileXmlCfg) {
+  public void exec(File fileXmlCfg) throws IOException {
     xmlReader.readCfg(fileXmlCfg);
     XmlCfg xmlCfg = xmlReader.cfg;
     subtrees = xmlCfg.subtrees;
@@ -318,7 +318,7 @@ public class GenXmlCfgJavaData {
           @Override public boolean setArgument(String val){ 
             argData.sJavaPkg = val;  return true;
           }})    
-        , new MainCmd.Argument("-class", ":<class>.java    directory for Java output", new MainCmd.SetArgument(){ 
+        , new MainCmd.Argument("-class", ":<class>     name and file <class>.java for Java output", new MainCmd.SetArgument(){ 
           @Override public boolean setArgument(String val){ 
             argData.sJavaClass = val;  return true;
         }})    

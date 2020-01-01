@@ -23,6 +23,7 @@ import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
+import org.vishia.xmlSimple.XmlSequWriter;
 
 
 
@@ -65,6 +66,9 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2020-01-01 Hartmut Exception on file errors. 
+   * <li>2019-12-30 Hartmut Using XmlSequWriter for Test output the read content, 
+   *   if {@link #openXmlTestOut(File)} is invoked. . 
    * <li>2019-08-19 Hartmut full support of text special sequences. 
    * <li>2019-08-10 Hartmut refactoring of {@link DataAccess}, handling of arguments on access routines changed. 
    * <li>2019-05-29 Now skips over &lt;!DOCTYPE....>
@@ -98,7 +102,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2018-08-15";
+  public static final String version = "2020-01-01";
   
   
   /**To store the read configuration. */
@@ -122,6 +126,11 @@ public class XmlJzReader
   private final Map<String, String> replaceChars = new TreeMap<String, String>();
 
    
+  
+  XmlSequWriter xmlTestWriter;
+  
+  
+  
   public XmlJzReader() {
     cfgCfg = XmlCfg.newCfgCfg();
     replaceChars.put("&amp;", "&");
@@ -158,6 +167,12 @@ public class XmlJzReader
   }
   
 
+  public void openXmlTestOut(File fout) throws IOException {
+    if(this.xmlTestWriter == null) { this.xmlTestWriter = new XmlSequWriter(); }
+    this.xmlTestWriter.open(fout, "UTF-8", null);
+  }
+  
+  
 
   /**Reads an xml file with a given config. 
    * It does not change the stored config which is gotten by {@link #readCfg(File)} or {@link #readCfgFromJar(String)}.
@@ -167,7 +182,7 @@ public class XmlJzReader
    * @param xmlCfg
    * @return
    */
-  public String readXml(File input, Object output, XmlCfg xmlCfg) {
+  public String readXml(File input, Object output, XmlCfg xmlCfg) throws IOException {
     String error = null;
     InputStream sInput = null; 
     try{ 
@@ -175,8 +190,10 @@ public class XmlJzReader
       String sPathInput = FileSystem.normalizePath(input.getAbsoluteFile()).toString();
       error = readXml(sInput, sPathInput, output, xmlCfg);
       sInput.close();
+    } catch(FileNotFoundException exc) {
+      throw new FileNotFoundException( "XmlReader.readXml(...) file not found: " + input.getAbsolutePath());
     } catch(IOException exc) {
-      error = "XmlReader.readXml(...) file not found: " + input.getAbsolutePath();
+      throw new IOException( "XmlReader.readXml(...) any IO exception: " + input.getAbsolutePath());
     }
     return error;
   }
@@ -271,6 +288,11 @@ public class XmlJzReader
         }
       }
     }
+    if(this.xmlTestWriter !=null) {
+      this.xmlTestWriter.close();
+      this.xmlTestWriter = null;
+    }
+
     Debugutil.stop();
   }
 
@@ -296,6 +318,10 @@ public class XmlJzReader
     //
     //The tag name of the element:
     String sTag = inp.getLastScannedString().toString();
+    
+    if(this.xmlTestWriter !=null) {
+      this.xmlTestWriter.writeElement(sTag);
+    }
     
     if(sTag.contains("   "))
       Debugutil.stop();
@@ -387,7 +413,10 @@ public class XmlJzReader
       //end of element
     }
     else if(inp.scan(">").scanOk()) {
-      //textual content
+      //textual content or sub nodes
+      if(this.xmlTestWriter !=null) {
+        this.xmlTestWriter.writeElementHeadEnd(false);
+      }
       StringBuilder contentBuffer = null;
       //
       //loop to parse <tag ...> THE CONTENT </tag>
@@ -422,6 +451,9 @@ public class XmlJzReader
       throw new IllegalArgumentException("either \">\" or \"/>\" expected");
     }
     inp.setLengthMax();  //for next parsing
+    if(this.xmlTestWriter !=null) {
+      this.xmlTestWriter.writeElementEnd();
+    }
   }
 
 
@@ -455,6 +487,9 @@ public class XmlJzReader
       if(!inp.scanQuotion("\"", "\"", null).scanOk()) throw new IllegalArgumentException("attr value expected");
       if(cfgNode !=null) {
         String sAttrValue = replaceSpecialCharsInText(inp.getLastScannedString()).toString();  //"value" in quotation
+        if(this.xmlTestWriter !=null) {
+          this.xmlTestWriter.writeAttribute(sAttrNsNameRaw.toString(), sAttrValue);
+        }
         if(sAttrNsNameRaw.equals("xmlinput:class"))
           Debugutil.stop();
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
@@ -649,6 +684,9 @@ public class XmlJzReader
         inp.lenBacktoNoWhiteSpaces();
       }
       CharSequence content2 = replaceSpecialCharsInText(inp.getCurrentPart());
+      if(this.xmlTestWriter !=null) {
+        this.xmlTestWriter.writeText(content2, false);
+      }
       inp.fromEnd();
       if(buffer !=null && buffer.length() > 0) { 
         //any content already stored, insert a space between the content parts.
@@ -675,7 +713,7 @@ public class XmlJzReader
 //        if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "lt;")) { buffer.replace(posAmp, posAmp+4, "<");  }
 //        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "gt;")) { buffer.replace(posAmp, posAmp+4, ">");  }
 //        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "amp;")) { buffer.replace(posAmp, posAmp+4, "&");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "auml;")) { buffer.replace(posAmp, posAmp+4, "ä");  }
+//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "auml;")) { buffer.replace(posAmp, posAmp+4, "ï¿½");  }
 //      }
 //    }
   }
@@ -767,7 +805,7 @@ public class XmlJzReader
   
   
   
-  public XmlCfg readCfg(File file) {
+  public XmlCfg readCfg(File file) throws IOException {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
     cfg.finishReadCfg(this.namespaces);
     return this.cfg;
@@ -799,7 +837,7 @@ public class XmlJzReader
   
   
 
-  public String readXml(File file, Object dst) {
+  public String readXml(File file, Object dst) throws IOException {
     return this.readXml(file, dst, this.cfg);
   }  
     
