@@ -50,10 +50,6 @@ Obj found = java org.vishia.util.FileSystem.searchInParent(File: ".", "_make/xge
  * can do a null-check easily.
  * 
  */
-/**
- * @author hartmut
- *
- */
 public class FileSystem
 {
 
@@ -176,6 +172,8 @@ public class FileSystem
     final public String localPath;
     FileAndBasePath(File file, String sBasePath, String localPath)
     { this.file = file; 
+      assert(sBasePath.indexOf('\\')<0);
+      assert(localPath.indexOf('\\')<0);
       this.basePath = sBasePath;
       this.localPath = localPath;
     }
@@ -232,7 +230,7 @@ public class FileSystem
    * with the local name part starting with <code>localdir/...</code> 
    * in all elements localPath.
    * @param baseDir A base directoy which is the base of sPath. It can be null, then sPath should describe a valid 
-   *   file path.
+   *   file path which contains a ':' to separate the base path.
    * @param sPath may contain a <code>:</code>, this is instead <code>/</code> 
    *        and separates the base path from a local path.
    *        The sPath may contain backslashes for windows using, it will be converted to slash. 
@@ -247,9 +245,14 @@ public class FileSystem
     final File dir;
     final int posLocalPath;
     int posBase = sPath.indexOf(':',2);
+    if(posBase <2) {
+      int posAsterisk = sPath.indexOf('*');
+      posBase = sPath.lastIndexOf('/', posAsterisk);
+      if(posBase <0) { posBase = sPath.lastIndexOf('\\', posAsterisk); }
+    }
     final String sPathLocal;
     final CharSequence sAbsDir;
-    if(posBase >=2)
+    if(posBase >=0)
     { sPathBase = (sPath.substring(0, posBase) + "/").replace('\\', '/');
       sPathLocal = sPath.substring(posBase +1).replace('\\', '/');
       String sAbsDirNonNormalized = baseDir !=null ? baseDir.getAbsolutePath() + "/" + sPathBase : sPathBase;

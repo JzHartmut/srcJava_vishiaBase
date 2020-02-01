@@ -1,5 +1,6 @@
 package org.vishia.util;
 
+import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -109,6 +110,9 @@ public class FilePath
 {
   /**Version, history and license.
    * <ul>
+   * <li>2020-01-28 Hartmut new in {@link #absbasepath(CharSequence, FilePathEnvAccess)} with null as env possible.
+   * <li>2020-01-28 Hartmut bugfix in {@link #expandFiles(List, FilePath, FilePath, FilePathEnvAccess)}
+   * <li>2020-01-28 Hartmut {@link #getFile()}
    * <li>2019-09-20 Hartmut in {@link #FilePath(String)}: If the dir ends with / ** then the local dir is without "/ **" and {@link #allTree()} is set. 
    *   It is from practice, distinguish between path/to/ ** /*. file and path/to/ *.file. Used for Reflection generation. It is commonly able to use.
    * <li>2019-09-09 Hartmut The JZtxtcmdFileset is important for execution of some JZtxtcmd scripts. 
@@ -196,7 +200,7 @@ public class FilePath
     * 
     * 
     */
-   static final public String sVersion = "2019-09-20";
+   static final public String sVersion = "2020-01-28";
 
   /**An implementation of this interface should be provided by the user if absolute paths and script variables should be used. 
    * It may be a short simple implementation if that features are unused. See the {@link org.vishia.util.test.Test_FilePath}. 
@@ -359,11 +363,12 @@ public class FilePath
       this.localdir = path.substring(poslocal, posname-1);
       int posAlltree = localdir.indexOf("/**");
       this.allTree = posAlltree >=0;
-      if(posAlltree == this.localdir.length()-3) { //ends with /**, the expectable case:
-        this.localdir = this.localdir.substring(0, posAlltree);  //then the local dir is without the /**
-      } else {
-        //unclarified, a path /path/**/path/name.ext, then what's happen
-      }
+      //@since 2020-01-04 let ** in this.localdir, need for correct search in expandFiles(...) 
+//      if(posAlltree == this.localdir.length()-3) { //ends with /**, the expectable case:
+//        this.localdir = this.localdir.substring(0, posAlltree);  //then the local dir is without the /**
+//      } else {
+//        //unclarified, a path /path/**/path/name.ext, then what's happen
+//      }
       someFiles = localdir.indexOf('*') >=0;  //it is nonsense too, someFiles only with name with *
     } else {
       localdir = "";
@@ -791,6 +796,20 @@ public class FilePath
     return uRet.append(this.ext);
   }
   
+  
+  
+  
+  /**Returns the adequate File without a given environment, for standard handling. 
+   * 
+   * @return
+   */
+  public File getFile() {
+    CharSequence sFile = null;
+    try{ sFile = file(null); } 
+    catch(NoSuchFieldException exc) { assert(false);} //should never occure
+    return new File(sFile.toString());
+  }
+  
   /**Returns the file path like given for Windows environment with backslash as separator.
    * It wraps {@link #file(FilePathEnvAccess)}, see there.
    */
@@ -894,22 +913,22 @@ public class FilePath
     final boolean absPathChildren;
     final String sBasePathChildren;  
     final String sPathSearch;
-    int posLocalPath = isRootpath(localfilePath);
-    if(posLocalPath ==1 || posLocalPath ==3) {  //absolute Path given in localPath
-      driveChildren = posLocalPath == 1 ? "" : String.valueOf(localfilePath.charAt(0));
+    int posRoot = isRootpath(localfilePath);
+    if(posRoot ==1 || posRoot ==3) {  //absolute Path given in localPath
+      driveChildren = posRoot == 1 ? "" : String.valueOf(localfilePath.charAt(0));
       absPathChildren = true;
       sBasePathChildren = "";  //it is not relevant, maybe given.
       sPathSearch = absbasepath(localfilePath, env).toString();
     } else {
       basePathChildren = basepath(new StringBuilder(), commonPath, accessPath, env);
-      int posBasePath = isRootpath(basePathChildren);
-      absPathChildren = (posBasePath ==1 || posBasePath ==3);  //absolute Path given in basePath
-      if(posLocalPath >= 2) {
-        driveChildren = String.valueOf(localfilePath.charAt(0));  //drive in localpath determines.
+      posRoot = isRootpath(basePathChildren);
+      absPathChildren = (posRoot ==1 || posRoot ==3);  //absolute Path given in basePath
+      if(posRoot >= 2) {
+        driveChildren = String.valueOf(basePathChildren.charAt(0));  //drive in localpath determines.
       } else {
         driveChildren = "";
       }
-      sBasePathChildren = basePathChildren.subSequence(posBasePath, basePathChildren.length()).toString();
+      sBasePathChildren = basePathChildren.subSequence(posRoot, basePathChildren.length()).toString();
       sPathSearch = absbasepath(basePathChildren, env) + ":" + localfilePath;
     }
     //
@@ -1593,6 +1612,21 @@ public class FilePath
     } else{
       uRet.append(this.name);
     }
+    posW = this.ext.indexOf('*');
+    posW2 = this.ext.indexOf('*', posW+1);
+    if(posW >=0){
+      uRet.append(this.ext.substring(0,posW));     //may be empty
+      uRet.append(replWildc.ext);
+      if(posW2 >=0){
+        uRet.append(this.ext.substring(posW+1, posW2));
+        if(replWildc.ext.length() >1){ uRet.append(replWildc.ext.substring(1)); }  //without leading dot
+        uRet.append(this.ext.substring(posW2+1));  //may be empty
+      } else {
+        uRet.append(this.ext.substring(posW+1));   //may be empty
+      }
+    } else{
+      uRet.append(this.ext);
+    }
     return uRet;
   }
   
@@ -1601,6 +1635,8 @@ public class FilePath
   
   
   /**Builds the absolute path with given basepath maybe absolute or not, maybe with drive letter or not. 
+   * @param sBasepath
+   * @param env maybe null, then the current dir gotten via new File(".") is used on relative paths.
    * @return the whole path inclusive a given general path in a {@link UserFileSet} as absolute path.
    */
   private CharSequence absbasepath(CharSequence sBasepath, FilePathEnvAccess env){ 
@@ -1613,7 +1649,14 @@ public class FilePath
         } else {
           ret = uRet = new StringBuilder(ret);
         }
-        CharSequence sCurrDir = env.getCurrentDir();
+        CharSequence sCurrDir;
+        if(env==null) {
+          String ssCurrDir = new File(".").getAbsolutePath();
+          ssCurrDir = ssCurrDir.substring(0, ssCurrDir.length()-2);  //without "\\."
+          sCurrDir = ssCurrDir.replace('\\', '/');
+        } else {
+          sCurrDir = env.getCurrentDir();
+        }
         if(uRet.length() >=2 && uRet.charAt(1) == ':'){
           //a drive is present but it is not a root path
           if(sCurrDir.length()>=2 && sCurrDir.charAt(1)==':' && uRet.charAt(0) == sCurrDir.charAt(0)){

@@ -66,8 +66,9 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2020-01-15 Hartmut Improve handling of &#code characters. 
    * <li>2020-01-01 Hartmut Exception on file errors. 
-   * <li>2019-12-30 Hartmut Using XmlSequWriter for Test output the read content, 
+   * <li>2019-12-30 Hartmut Using {@link XmlSequWriter} for Test output the read content, 
    *   if {@link #openXmlTestOut(File)} is invoked. . 
    * <li>2019-08-19 Hartmut full support of text special sequences. 
    * <li>2019-08-10 Hartmut refactoring of {@link DataAccess}, handling of arguments on access routines changed. 
@@ -102,7 +103,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2020-01-01";
+  public static final String version = "2020-01-15";
   
   
   /**To store the read configuration. */
@@ -660,7 +661,10 @@ public class XmlJzReader
 
 
 
-  /**
+  /**Reads the textual content of an element.
+   * leading and trailing whitespaces are not part of the content.
+   * If the content contains a hard coded line feed with &amp;#xa; etc. all textual line feeds and following indents are removed from the text.
+   * See {@link #replaceSpecialCharsInText(CharSequence)} 
    * @param inp
    * @param buffer maybe null then ignore content.
    * @throws ParseException 
@@ -708,14 +712,6 @@ public class XmlJzReader
       bEofSupposed = inp.readnextContentFromFile(sizeBuffer/2);
     } while(bContReadContent);
     return content;
-//    if(buffer !=null) {
-//      while( (posAmp  = buffer.indexOf("&", posAmp+1)) >=0) {  //replace the subscription of &lt; etc.
-//        if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "lt;")) { buffer.replace(posAmp, posAmp+4, "<");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "gt;")) { buffer.replace(posAmp, posAmp+4, ">");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "amp;")) { buffer.replace(posAmp, posAmp+4, "&");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "auml;")) { buffer.replace(posAmp, posAmp+4, "�");  }
-//      }
-//    }
   }
   
   
@@ -752,36 +748,57 @@ public class XmlJzReader
   
   
   /**Replaces the basic sequences &amp;lt; etc. and the UTF 16 &lt;#xaaaa;
-   * and replaces line feed with indent with one space. 
+   * and replaces line feed with indent with one space.
+   * Before call of this routine the leading and trailing white spaces are removed alread. 
    * @param src
    * @return src if no such sequences found
    * @throws ParseException
    */
   private CharSequence replaceSpecialCharsInText(CharSequence src) throws ParseException {
-    if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; } //unchange, no effort
+    //Note: older form, since 2020-01: do not convert \n if no &#xa is contained:
+    if(StringFunctions.contains(src, "Comment of Network1"))
+      Debugutil.stop();
+    //commented: if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; }
+    if(StringFunctions.indexOf(src, '&') < 0) { return src; } //unchange, no effort
     else {
-      StringBuilder b = new StringBuilder(src);
+      StringBuilder b = new StringBuilder(src); //need, at least one & is to be replaced.
+//      boolean bLinefeedfound = false;
       int pos = 0;
       while( ( pos  = StringFunctions.indexOf(b, '&', pos)) >=0) {
         int posEnd = StringFunctions.indexOf(b, ';', pos);
-        if(posEnd >0 && (posEnd-pos) < 11) {
+        if(posEnd >0 && (posEnd - pos) < 11) {
           String search = b.subSequence(pos, posEnd+1).toString();
           String replChar = replaceChars.get(search);
-          if(replChar == null && search.charAt(1) == '#') {
-            int radix =10, posInt = 2;
-            if(search.charAt(posInt) == 'x') {
-              radix = 16; posInt +=1;
+          if(replChar == null) {
+            if( search.charAt(1) == '#') {
+              int radix =10, posInt = 2;
+              if(search.charAt(posInt) == 'x') {
+                radix = 16; posInt +=1;
+              }
+              int nUTF;
+              try{ nUTF = Integer.parseUnsignedInt(search.substring(posInt, posEnd-pos), radix); }
+              catch(NumberFormatException exc) {
+                nUTF = 0x3f;
+                assert(false);
+              }
+              posEnd +=1; //now after ';'
+              if(nUTF == 0x0a) { 
+                //other variant used: bLinefeedfound = true;
+                //because of a hard coded line feed is detected, skip over an textual linefeed and maybe indents:
+                //Note: All real requested indentation chars should be hard coded true, with &#x20; etc. 
+                while( "\n\r \t".indexOf(b.charAt(posEnd)) >=0) {
+                  posEnd +=1; //skip over any whitespace after &#xa; and following &#x20;
+                }
+              }
+              char[] replChars = Character.toChars(nUTF);
+              b.delete(pos, posEnd);
+              b.insert(pos, replChars);
+              pos += replChars.length;
             }
-            int nUTF;
-            try{ nUTF = Integer.parseUnsignedInt(search.substring(posInt, posEnd-pos), radix); }
-            catch(NumberFormatException exc) {
-              nUTF = 0x3f;
-              assert(false);
+            else {
+              //Problem: unrecognized replacing:
+              //do nothing yet.
             }
-            char[] replChars = Character.toChars(nUTF);
-            b.delete(pos, posEnd+1);
-            b.insert(pos, replChars);
-            pos += replChars.length;
           }
           else if(replChar !=null) {
             if(replChar.equals("&"))
@@ -794,11 +811,19 @@ public class XmlJzReader
         }
       }
       pos = 0;
-      while( ( pos  = StringFunctions.indexOfAnyChar(b, pos, -1, "\n\r")) >=0) {
-        int posEnd = pos +1;
-        while(posEnd < b.length() &&  " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
-        b.replace(pos, posEnd, " ");  //remove all indent white spaces after line break. Replace line break with indent by 1 space. 
-      }
+//      if(bLinefeedfound) {
+        //replace line feed and following indent with one space only if the text contains any line feed with &#xa; or &#10;
+        //It means if the XML-source uses a hard coded line feed a textual linefeed is used as whiteSpace.
+        //If the text contains hard coded &#xa; it should contain hard coded indents too (&#x20; or #x32;).
+        //If the text does not contain hard coded line feed the original content for line feed and spaces should be preserved.
+        //What does the w3c says: It is not clearly.
+//Other variant used, skip over \r\n indent after hard coded line feed.        
+//        while( ( pos  = StringFunctions.indexOfAnyChar(b, pos, -1, "\n\r")) >=0) {
+//          int posEnd = pos +1;
+//          while(posEnd < b.length() &&  " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
+//          b.replace(pos, posEnd, " ");  //remove all indent white spaces after line break. Replace line break with indent by 1 space. 
+//        }
+//      }
       return b;
     }
   }

@@ -185,6 +185,7 @@ public class FileList
    * @throws IOException */
   protected void list(File dir, int posLocalPath, CharSequence localDir, Writer out, int recurs) throws IOException
   { if(recurs > 100) throw new IllegalArgumentException("to deep recursion");
+    System.out.println("Filelist.list dir=" + dir.getAbsolutePath());
     if(dir.exists()) {
       File[] files = dir.listFiles();
       Map<String, File> sort = new TreeMap<String, File>();

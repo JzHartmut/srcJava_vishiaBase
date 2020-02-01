@@ -58,6 +58,7 @@ import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
 import org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement;
 import org.vishia.zbnf.ZbnfSyntaxPrescript.EType;
+import org.vishia.cmd.JZtxtcmdScript.Onerror;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 
@@ -132,6 +133,8 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-01-16: &lt;?%> is possible as marker in syntax to force debug stop on {@link ZbnfSyntaxPrescript#bDebugParsing},
+   *   hence it is more simple to test a Zbnf script.
    * <li>2019-12-09: new: The Usage of already parsed content was prepared in about 2013 but not used till now. 
    *                 Now it is completed, tested and used. But the test overall is owing. 
    *                 Therefore this feature is activted only if  {@link Args#bUseResultlet} is set, default is false.
@@ -1094,7 +1097,11 @@ public class ZbnfParser
 	            if( ! bDoNotStoreData ) {
 	              srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
 	              String srcFile = input.getInputfile();
-	              parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+	              if(sSemanticForStoring !=null) {
+	                parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+	              } else {
+	                Debugutil.stop();  //only temporary
+	              }
 	            }
 	          } break; //do nothing
 	          case kSyntaxComponent:
