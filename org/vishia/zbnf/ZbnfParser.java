@@ -133,6 +133,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-02-02: new {@link #setSyntaxFromJar(Class, String)} and {@link #parseFileFromJar(Class, String, int)}
    * <li>2020-01-16: &lt;?%> is possible as marker in syntax to force debug stop on {@link ZbnfSyntaxPrescript#bDebugParsing},
    *   hence it is more simple to test a Zbnf script.
    * <li>2019-12-09: new: The Usage of already parsed content was prepared in about 2013 but not used till now. 
@@ -285,7 +286,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2019-12-08";
+  public static final String sVersion = "2020-02-02";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -2496,6 +2497,28 @@ public class ZbnfParser
   }
   
   
+  
+  /**Read syntax from a resource (file inside jar archive).
+   * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
+   *   Usually the clazz should be the output data clazz. But it is a user decision. 
+   * @param pathInJar relative Path from clazz. 
+   *   Usually the syntax should be in the same directory as the output data class. Then this is only the file name.
+   *   If the file is stored in a p 
+   * @throws IOException
+   * @throws ParseException 
+   * @throws UnsupportedCharsetException 
+   * @throws IllegalCharsetNameException 
+   */
+  public void setSyntaxFromJar(Class<?> clazz, String pathInJarFromClazz) throws IOException, IllegalCharsetNameException, UnsupportedCharsetException, ParseException {
+    StringPartScan spSyntax = new StringPartFromFileLines(clazz, pathInJarFromClazz, 0, "encoding", null);
+    String sDirImport = null;   //yet not supported: import sub syntax.
+    setSyntax(spSyntax, sDirImport);
+    spSyntax.close();   //closes ssyntax too.
+  }
+
+
+  
+  
   /** Sets the syntax from given String.
    * The String should contain the syntax in ZBNF-Format. The string is parsed
    * and converted into a tree of objects of class <code>SyntaxPrescript</code>.
@@ -2889,9 +2912,36 @@ public class ZbnfParser
   {
     int maxBuffer = 0;  //auto detect, use file size.
     StringPartScan spInput = new StringPartFromFileLines(fInput, maxBuffer, null, null); 
-    return parse(spInput);
+    boolean bOk = false; 
+    try{ bOk = parse(spInput); }
+    finally { spInput.close(); }
+    return bOk;
   }
 
+
+
+  
+  /**Parsed a content which is stored as resource in a jar file.
+   * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
+   *   Usually the clazz should be the output data clazz. But it is a user decision. 
+   * @param pathInJar relative Path from clazz. 
+   *   Usually the syntax should be in the same directory as the output data class. Then this is only the file name.
+   *   If the file is stored in a p 
+   * @throws IOException
+   * @return false, then see {@link #getExpectedSyntaxOnError()} etc.
+   */
+  public boolean parseFileFromJar(Class<?> clazz, String pathInJarFromClazz, int maxSize) throws IOException {
+    boolean bOk = false; 
+    StringPartScan spInput = null;
+    try {  //anyway close 
+      spInput = new StringPartFromFileLines(clazz, pathInJarFromClazz, maxSize, "encoding", null);
+      bOk = parse(spInput); 
+    }
+    finally { 
+      if(spInput !=null) { spInput.close(); }
+    }
+    return bOk;
+  }
 
 
   /**Parses a given Input and produces a parse result.

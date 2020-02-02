@@ -44,6 +44,8 @@ public class StringPartFromFileLines extends StringPartScan
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2020-02-02 Hartmut new {@link #StringPartFromFileLines(Class, String, int, String, Charset)}
+   *   <br>{@link #StringPartFromFileLines(InputStream, String, int, String, Charset)} with negativ argument sizeBuffer
    * <li>2018-12-22 Hartmut bugfix in {@link StringPart}, improvement here: {@link #readnextContentFromFile(int)} shifts only {@link StringPart#begin}/2 
    *   to save the content near to and left from the current working area for access capability of a {@link Part} near the current content.  
    * <li>2018-01-06 Hartmut bugfix, bug: If the file to read was only 201..209 Bytes, the bytes after 200 were not read. 
@@ -85,7 +87,7 @@ public class StringPartFromFileLines extends StringPartScan
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
 
    */
-  public static final String version = "2016-09-25";
+  public static final String version = "2020-02-02";
   
   //final StringBuilder buffer;
   //char[] fileBuffer = new char[1024];
@@ -204,6 +206,44 @@ public class StringPartFromFileLines extends StringPartScan
   }
   
   
+  
+  
+  
+  
+  
+  /**Loads a resource from jar file into this StringBuffer. Note: This have to be {@link #close()} to close the resource.  
+   * @param clazz  This class is the start point of the:
+   * @param pathInJarFromClazz relative from clazz, use "../../package/path/to/resource.ext" if it is not in the same package.
+   * @param maxSizeBuffer The size for the StringPart is gotten from the resource: {@link InputStream#available()},
+   *   at least 1000 chars if available() returns not the length, but at least this size. 
+   * @param sEncodingDetect If not null, this string is searched in the first 2 lines,
+   *        read in US-ASCII or UTF-16-Format. If this string is found, the followed
+   *        string in quotion marks or as identifier with addition '-' char is read
+   *        and used as charset name. If the charset name is failed, a CharsetException is thrown.
+   *        It means, a failed content of file may cause a charset exception.<br>
+   *        
+   * @param charset If not null, this charset is used as default, if no other charset is found in the files first line,
+   *        see param sEncodingDetect. If null and not charset is found in file, the systems default charset is used.<br>
+   *        
+   * @throws IllegalCharsetNameException
+   * @throws UnsupportedCharsetException
+   * @throws IOException
+   */
+  public StringPartFromFileLines(Class<?> clazz, String pathInJarFromClazz, int maxSizeBuffer
+    , String sEncodingDetect, Charset charsetDefault) 
+    throws IllegalCharsetNameException, UnsupportedCharsetException, IOException {
+    this( clazz.getResourceAsStream(pathInJarFromClazz)
+        , "jar:" + pathInJarFromClazz
+        , -maxSizeBuffer         //determine from stream, use this as maximal value.
+        , sEncodingDetect
+        , charsetDefault);
+    
+  }
+  
+  
+  
+  
+  
   /**Fills a StringPart from a opened Stream. It can be used for example with 
    * <code>ClassLoader.getSystemClassLoader().getResourceAsStream("path"); </code>.
    * It is the core method called in the other constructors using a File input.
@@ -213,7 +253,8 @@ public class StringPartFromFileLines extends StringPartScan
    * 
    * @param sInputPath Hint for error messages from which input is it.
    * 
-   * @param maxBuffer The maximum of length of the associated StringBuffer.<br>
+   * @param sizeBuffer The length of the associated StringBuffer. 
+   *        If negative, then determine form input.available, but use the given negate number as maximum if >= (-1000). <br>
    * 
    * @param sEncodingDetect If not null, this string is searched in the first 2 lines,
    *        read in US-ASCII or UTF-16-Format. If this string is found, the followed
@@ -229,11 +270,22 @@ public class StringPartFromFileLines extends StringPartScan
   public StringPartFromFileLines(InputStream input, String sInputPath, int sizeBuffer, String sEncodingDetect, Charset charsetDefault)
   throws IOException, IllegalCharsetNameException, UnsupportedCharsetException
   { super();
+    if(input == null) throw new FileNotFoundException(sInputPath);
     setInputfile(sInputPath);
     //this.inp = input;
     bEof = false;
+    int sizeBufferUsed = sizeBuffer;
+    if(sizeBuffer <=0) {
+      sizeBufferUsed = input.available();  //It should be the length of the ressource, but it is not sure
+      if(sizeBufferUsed < 1000) { 
+        sizeBufferUsed = 1000;  //assures that some enough lines are stored as once if sizeBufferUsed is to less. 
+      }
+      else if(sizeBuffer < -1000 && sizeBufferUsed >= -sizeBuffer) {
+        sizeBufferUsed = -sizeBuffer;  //limit space. 
+      }
+    }
     //buffer = new StringBuilder(sizeBuffer);  //to large file
-    cBuffer = new char[sizeBuffer];
+    cBuffer = new char[sizeBufferUsed];
     //byteBuffer = ByteBuffer.allocate(sizeBuffer/10*4);
     //inBuffer = byteBuffer.array();
     final byte[] inBuffer = new byte[200+7];

@@ -131,6 +131,7 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-02-02 Hartmut new {@link #translateScriptFromJar(Class, String, File, MainCmdLogging_ifc)}
    * <li>2019-02-20 Hartmut chg {@link #execSub(File, String, Map, org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel, Appendable)} with Appendable as argument.
    *   The old form without this argument is available too.  
    * <li>2017-01-01 Hartmut chg adaption to {@link JZtxtcmdExecuter}- 
@@ -183,7 +184,7 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2019-02-20";
+  static final public String version = "2020-02-02";
 
   
   private static class Args{
@@ -740,6 +741,40 @@ INPUT          pathTo JZcmd-File to execute
     return scr;
   }
   
+  
+
+  public static JZtxtcmdScript translateScriptFromJar(Class<?> clazz, String pathInJarFromClazz, File checkXmlOut, MainCmdLogging_ifc log) 
+  throws ScriptException
+  //throws FileNotFoundException, IllegalArgumentException, IllegalAccessException, InstantiationException, IOException, ParseException, XmlException 
+  {
+    StringPartScan sourceScript = null;
+    try {
+      sourceScript = new StringPartFromFileLines(clazz, pathInJarFromClazz, 0, "encoding", null);
+    } catch (IllegalCharsetNameException e) {
+      if(sourceScript !=null) { sourceScript.close(); }
+      throw new ScriptException("JZcmd.translate - illegal CharSet in file; ", "jar: " + pathInJarFromClazz, -1);
+    } catch (UnsupportedCharsetException e) {
+      if(sourceScript !=null) { sourceScript.close(); }
+      throw new ScriptException("JZcmd.translate - illegal CharSet in file; ", "jar: " + pathInJarFromClazz, -1);
+    } catch (FileNotFoundException e) {
+      throw new ScriptException("JZcmd.translate - file not found; ", "jar: " + pathInJarFromClazz, -1);
+    } catch (IOException e) {
+      if(sourceScript !=null) { sourceScript.close(); }
+      throw new ScriptException("JZcmd.translate - any file error; ", "jar: " + pathInJarFromClazz, -1);
+    }
+    JZtxtcmdScript scr = null;
+    try{ 
+      File fileScript = null;  //not possible to include sub script.
+      scr = JZtxtcmdScript.createScriptFromString(sourceScript, log, checkXmlOut, fileScript);  
+    }
+    finally {
+      sourceScript.close();
+    }
+    return scr;
+  }
+  
+  
+
   
   public JZtxtcmdScript compile(File fileGenCtrl, File checkXmlOut) 
   throws ScriptException

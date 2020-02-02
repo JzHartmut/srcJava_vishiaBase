@@ -1,4 +1,4 @@
-2020-02-01 23:39:14  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2020-02-02 12:42:22  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-12-01 16:07:06  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -16,7 +16,7 @@
 2018-09-11 16:35:18  x     genjavadoc.sh                            ::           .386  0409646470 
 2019-08-19 12:22:48  x     javadoc.help                             ::          9.297 -0429460067 
 2019-08-18 13:19:14  x     makejar_XmlJzReader.bat                  ::          2.169  1431016675 
-2019-09-29 19:29:40  x     makejar_zbnf.bat                         ::          3.756 -0138771897 
+2020-02-02 12:04:47  x     makejar_zbnf.bat                         ::          3.760  1130647426 
 2013-01-02 09:31:22  x     makejar_zbnf.sh                          ::          1.797 -0347914445 
 2014-06-11 22:03:56  x     readme_javac.txt                         ::          2.335 -0109610946 
 2019-12-27 00:05:01  x     setJAVA_JDK_template.bat                 ::           .435  1912455863 
@@ -116,7 +116,7 @@
 2019-08-22 23:28:59  x     JZtxtcmdExecuter.java                    ::        185.741  1712430075 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2018-09-22 22:49:48  x     JZtxtcmdScript.java                      ::        113.282  0281085699 
+2020-02-02 12:34:06  x     JZtxtcmdScript.java                      ::        113.481 -1919376674 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2018-09-22 20:53:42  x     JZtxtcmdThread.java                      ::          4.865  1535102351 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -189,7 +189,7 @@
 2015-04-14 08:43:36  x     Inspcitem.java                           ::          9.817 -0455186767 
 
 ============================== org/vishia/jztxtcmd/ ================================================
-2019-07-07 09:30:58  x     JZtxtcmd.java                            ::         49.398 -0606196234 
+2020-02-02 12:35:59  x     JZtxtcmd.java                            ::         51.037  1288021776 
 2019-07-07 09:30:05  x     JZtxtcmdSyntax.java                      ::         30.093 -0841907707 
 2018-09-22 20:55:43  x     JZtxtcmdUserExample.java                 ::          1.787 -0446379803 
 2017-04-03 21:49:31  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
@@ -312,7 +312,7 @@
 2019-06-18 10:46:16  x     StringPart.java                          ::        122.368  0370589518 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
-2019-09-20 11:26:44  x     StringPartFromFileLines.java             ::         21.385 -1168405555 
+2020-02-02 12:39:14  x     StringPartFromFileLines.java             ::         24.090  2112593308 
 2019-07-31 16:36:54  x     StringPartScan.java                      ::         48.494  0450666391 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
@@ -381,7 +381,7 @@
 2019-12-09 00:23:35  x     Zbnf2Xml.java                            ::         21.296  0058479735 
 2019-10-08 22:01:36  x     ZbnfJavaOutput.java                      ::         81.873  1395895928 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
-2020-01-16 11:11:07  x     ZbnfParser.java                          ::        175.643  1048052144 
+2020-02-02 12:41:07  x     ZbnfParser.java                          ::        177.847 -0764283259 
 2019-12-08 15:29:58  x     ZbnfParserStore.java                     ::         51.806 -0677274131 
 2019-07-07 09:34:50  x     ZbnfSyntaxPrescript.java                 ::         80.146  0762708172 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 

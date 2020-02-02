@@ -55,6 +55,8 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2020-01-28 Hartmut bugfix {@link #createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
+   *   with null as fileScript arg now runs as described.
    * <li>2018-09-22 Hartmut new: important change: Now the compilation of the script is part of this class.
    *   {@link #createScriptFromFile(File, MainCmdLogging_ifc, File)} and {@link #createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
    *   added. The adequate routines in {@link org.vishia.jztxtcmd.JZtxtcmd#translateAndSetGenCtrl(StringPartScan, MainCmdLogging_ifc, File, File)}
@@ -172,7 +174,7 @@ public class JZtxtcmdScript extends CompiledScript
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2018-09-22";
+  static final public String version = "2020-01-28";
 
   final MainCmdLogging_ifc console;
 
@@ -276,7 +278,7 @@ public class JZtxtcmdScript extends CompiledScript
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;
     JZtxtcmdScript thiz = new JZtxtcmdScript(log, fileScript, null);
-    File dirIncludeBase = FileSystem.getDir(fileScript);
+    File dirIncludeBase = fileScript==null ? null : FileSystem.getDir(fileScript);
     JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(thiz);
     thiz.setScriptFromString(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
     return thiz;
