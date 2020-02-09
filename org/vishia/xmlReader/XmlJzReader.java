@@ -786,7 +786,8 @@ public class XmlJzReader
                 //other variant used: bLinefeedfound = true;
                 //because of a hard coded line feed is detected, skip over an textual linefeed and maybe indents:
                 //Note: All real requested indentation chars should be hard coded true, with &#x20; etc. 
-                while( "\n\r \t".indexOf(b.charAt(posEnd)) >=0) {
+                int zb = b.length();
+                while( posEnd < zb && "\n\r \t".indexOf(b.charAt(posEnd)) >=0) {
                   posEnd +=1; //skip over any whitespace after &#xa; and following &#x20;
                 }
               }

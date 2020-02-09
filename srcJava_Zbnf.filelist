@@ -1,4 +1,4 @@
-2020-02-02 12:42:22  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
+2020-02-09 11:24:20  x     srcJava_Zbnf.filelist                    ::           .  0  0000000000 
 2019-12-01 16:07:06  x     srcJava_Zbnf.gitRepository               ::           . 50 -0988731082 
 2018-08-29 21:01:55  x     srcJava_Zbnf.gitignore                   ::           . 38 -1714965387 
 
@@ -353,7 +353,7 @@
 2020-01-01 23:38:32  x     GenXmlCfgJavaData.java                   ::         12.893 -0914802619 
 2019-08-18 13:28:03  x     XmlCfg.java                              ::         27.849 -1326807559 
 2020-01-01 23:44:30  x     XmlJzCfgAnalyzer.java                    ::         28.062 -1073799987 
-2020-02-01 23:27:34  x     XmlJzReader.java                         ::         36.056 -0719401245 
+2020-02-09 11:12:24  x     XmlJzReader.java                         ::         36.108  0216765854 
 
 ============================== org/vishia/xmlReader/test/ ==========================================
 2019-08-18 23:35:16  x     Office_odtData.java                      ::         27.620  0393408920 
