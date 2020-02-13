@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.vishia.util.Assert;
+import org.vishia.util.Debugutil;
 
 
 
@@ -24,6 +25,8 @@ public class SimpleXmlOutputter
 
   /**Version, history and license.
    * <ul>
+   * <li>2020-02-12 new {@link #write(Writer, CharSequence, XmlNode)} especially for test outputs 
+   *   which should stored only locally without a File using.
    * <li>2013-07-28: Hartmut chg: Uses a {@link BufferedWriter} internally. The {@link BufferedWriter#newLine()}
    *   is not invoked therefore the platform depending line separator is not used. The line separator is still 
    *   a simple '\n'. But the output may be faster, or not because the Writer outside may have a buffer too.
@@ -90,7 +93,7 @@ public class SimpleXmlOutputter
   String sIdent="\r\n                                                                                            ";
   
   
-  /**Writes the XML tree into a byte stream. Uses the encoding from the given OutputStreamWriter
+  /**Writes the XML tree into a byte stream and closes after them. Uses the encoding from the given OutputStreamWriter
    * to show the encoding in the file.
    * @param out A Writer to convert in a Byte stream.
    * @param xmlNode The top level node
@@ -101,12 +104,35 @@ public class SimpleXmlOutputter
   { String sEncodingCanonicalName = out.getEncoding();
     Charset charset = Charset.forName(sEncodingCanonicalName);
     String sEncoding = charset.displayName();
-    BufferedWriter bout = new BufferedWriter(out);
-    out.write("<?xml version=\"1.0\" encoding=\"" + sEncoding + "\"?>" + newline);
-    out.write("<!-- written with org.vishia.xmlSimple.SimpleXmlOutputter -->");
-    writeNode(bout, xmlNode, 0);
-    bout.write(newline); //finsih with a new line.
-    bout.close();
+    try{
+      write(out, sEncoding, xmlNode);
+    }
+    finally {
+      out.close();
+    }
+  }
+  
+  
+  
+  /**Writes the XML tree into a character stream and closes after them. Uses the given encoding
+   * to show the encoding in the file.
+   * @param out A Writer better for String output in comparison to the Stream (byte, encoded) output.
+   * @param sEncoding the encoding String stored in the XML file. Note: It should be matching to the Writer.
+   * @param xmlNode The top level node
+   * @throws IOException
+   */
+  public void write(Writer out, CharSequence sEncoding, XmlNode xmlNode) 
+  throws IOException
+  { BufferedWriter bout = new BufferedWriter(out);
+    try {
+      out.write("<?xml version=\"1.0\" encoding=\"" + sEncoding + "\"?>" + newline);
+      out.write("<!-- written with org.vishia.xmlSimple.SimpleXmlOutputter -->");
+      writeNode(bout, xmlNode, 0);
+      bout.write(newline); //finsih with a new line.
+    }
+    finally {
+      bout.close();
+    }
   }
   
   

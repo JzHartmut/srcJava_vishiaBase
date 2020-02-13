@@ -44,6 +44,8 @@ public class StringPartFromFileLines extends StringPartScan
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2020-02-10 Hartmut new {@link #StringPartFromFileLines(Reader, String, int)}
+   *   <br>{@link #StringPartFromFileLines(InputStream, String, int, String, Charset)} with negativ argument sizeBuffer
    * <li>2020-02-02 Hartmut new {@link #StringPartFromFileLines(Class, String, int, String, Charset)}
    *   <br>{@link #StringPartFromFileLines(InputStream, String, int, String, Charset)} with negativ argument sizeBuffer
    * <li>2018-12-22 Hartmut bugfix in {@link StringPart}, improvement here: {@link #readnextContentFromFile(int)} shifts only {@link StringPart#begin}/2 
@@ -87,7 +89,7 @@ public class StringPartFromFileLines extends StringPartScan
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
 
    */
-  public static final String version = "2020-02-02";
+  public static final String version = "2020-02-13";
   
   //final StringBuilder buffer;
   //char[] fileBuffer = new char[1024];
@@ -242,6 +244,33 @@ public class StringPartFromFileLines extends StringPartScan
   
   
   
+  
+  
+  
+  /**Fills a StringPart from a opened Stream. It can be used for example with 
+   * <code>ClassLoader.getSystemClassLoader().getResourceAsStream("path"); </code>.
+   * It is the core method called in the other constructors using a File input.
+   * This is the core routine called from all other constructors. All capabilities described on the other constructors are here.
+   * 
+   * @param input Any input stream, maybe a ClassLoader getRessourceAsStream<br>
+   * 
+   * @param sInputPath Hint for error messages from which input is it.
+   * 
+   * @param sizeBuffer The length of the associated StringBuffer. 
+   * 
+   */
+  public StringPartFromFileLines(Reader input, String sInputPath, int sizeBuffer)
+  throws IOException, IllegalCharsetNameException, UnsupportedCharsetException {
+    this.inpr = input;
+    if(input == null) throw new FileNotFoundException(sInputPath);
+    setInputfile(sInputPath);
+    this.cBuffer = new char[sizeBuffer];
+    this.charset = null;
+    evalLineIndices(0, zBuffer);
+    readnextContentFromFile(0);   //read the start content. Read anytime. Minsize is 0
+    assign(new CharSq(0, -1));
+  }
+
   
   
   /**Fills a StringPart from a opened Stream. It can be used for example with 
@@ -435,9 +464,6 @@ public class StringPartFromFileLines extends StringPartScan
   
   
   
-  
-  
-  
   /**Read next content from the file.
    * It does nothing if the current working area in the text {@link StringPart#begin} is lesser the argument minSizeForAction.
    * If does not shift the content if the {@link StringPart#begin} is < 1/8 of the size. That is especially after reading head information.
@@ -445,17 +471,17 @@ public class StringPartFromFileLines extends StringPartScan
    * If shifts the text in the internal buffer {@link StringPart#content} respectively {@link #cBuffer} (the same) but only the half of current content.
    * Especially {@link Part} remain accessible if they are near the current content. See remarks there about persistence.
    * 
-   * @param minSizeForAction returns without action if Current position (it is {@link StringPart#begin}) is lesser. Set =0 after for reading content after head.
+   * @param minPosToRead returns without action if Current position (it is {@link StringPart#begin}) is lesser. 
+   *   Set =0 for reading the first content.
    *   Set to about 2/3 of size for normal operation. 
    * @return true if eof is possible because lesser bytes than expected are read.
    * @throws IOException
    */
-  public boolean readnextContentFromFile(int minSizeForAction)
-  throws IOException
-  { boolean bBufferFull = false;
+  @Override public boolean readNextContent(int minPosToRead) throws IOException {
+    boolean bBufferFull = false;
     //check, shift only the buffer if necessary, to save calculation time. Prevent unnecessary shift.
     //if(nRestBytes < size && super.begin >0) {
-    if(  super.begin >= minSizeForAction   //do only shift if necessary
+    if(  super.begin >= minPosToRead   //do only shift if necessary
       && super.begin >= (cBuffer.length /8)  //do not shift if only the head was read.
       ) {
       int sh = super.begin /2;  //remain the half content in the buffer for StringPart before begin.
@@ -490,7 +516,7 @@ public class StringPartFromFileLines extends StringPartScan
     int nRestBytes;  //rest length from filled position till end.
     if(bEof) {
       return true;
-    } else if( (nRestBytes = cBuffer.length - zBuffer) >= minSizeForAction) {
+    } else if( (nRestBytes = cBuffer.length - zBuffer) >= minPosToRead) {
       int nrofChars = inpr.read(cBuffer, zBuffer, nRestBytes);
       if(nrofChars >0) {
         evalLineIndices(zBuffer,  zBuffer + nrofChars);
@@ -508,6 +534,27 @@ public class StringPartFromFileLines extends StringPartScan
     } else {
       return false; //not eof, because nothing was read.
     }
+  }
+
+  
+  
+  /**Read next content from the file.
+   * It does nothing if the current working area in the text {@link StringPart#begin} is lesser the argument minSizeForAction.
+   * If does not shift the content if the {@link StringPart#begin} is < 1/8 of the size. That is especially after reading head information.
+   * But it reads from file if especially minSizeForAction is ==0.
+   * If shifts the text in the internal buffer {@link StringPart#content} respectively {@link #cBuffer} (the same) but only the half of current content.
+   * Especially {@link Part} remain accessible if they are near the current content. See remarks there about persistence.
+   * 
+   * @param minSizeForAction returns without action if Current position (it is {@link StringPart#begin}) is lesser. 
+   *   Set =0 for reading the first content.
+   *   Set to about 2/3 of size for normal operation. 
+   * @return true if eof is possible because lesser bytes than expected are read.
+   * @throws IOException
+   * @deprecated use {@link #readNextContent(int)} as the overridden form of base routine.
+   */
+  @Deprecated public boolean readnextContentFromFile(int minSizeForAction) throws IOException
+  {
+    return readNextContent(minSizeForAction);
   }
 
 

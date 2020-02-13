@@ -1370,7 +1370,9 @@ public class DataAccess {
       msg.append(clazz1.getName()).append("<<\n ...operation: >>") .append(element.ident) .append("(");
       if(args !=null) {
         for(Object arg: args) {
-          msg.append(arg.getClass()).append(", ");
+          if(arg !=null) {
+            msg.append(arg.getClass()).append(", ");
+          }
         }
       }
       else if(element.args !=null) {

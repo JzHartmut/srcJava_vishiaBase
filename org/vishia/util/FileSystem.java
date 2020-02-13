@@ -56,6 +56,8 @@ public class FileSystem
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2020-02-11 Hartmut new: {@link #searchFileInParent(File, String...))} used for git GUI 
+   *   to search the .git or *.gitRepository from an inner file in the working area.
    * <li>2019-12-06 Hartmut new: {@link #readInJar(Class, String, String)} as simple read possibility of a text file. 
    * <li>2017-09-09 Hartmut new: {@link #cleandirForced(File)}, {@link #copyDir(File, File)} 
    * <li>2016-01-17 Hartmut new: {@link #getFirstFileWildcard(File)}   
@@ -1582,8 +1584,9 @@ public class FileSystem
    * @param path May be more as one local path. Simple it is only one "filename.ext" or "anyDirectory". Possible "path/to/file.ext".
    *   More as one argument may be given, to search one of more given files.
    * @return null if nothing found. Elsewhere the found file which matches to one of path in the start or one of the parent directories
+   * @deprecated not currently tested, use {@link #searchFileInParent(File, String...)} for simple files with wildcard-mask.
    */
-  public static File searchInParent(File start, String ... path)
+  @Deprecated public static File searchInParent(File start, String ... path)
   { File found = null;
     
     File parent = start.isDirectory() ? start : start.getParentFile();
@@ -1628,7 +1631,33 @@ public class FileSystem
     return found;
   }
   
+
   
+  
+  
+  
+  /**Searches a file given with local path in this directory and in all parent directories.
+   * @param start any start file or directory. If it is a file (for example a current one), its directory is used.
+   * @param path May be more as one local path. Simple it is only one "filename.ext" or "anyDirectory". Possible "path/to/file.ext".
+   *   More as one argument may be given, to search one of more given files.
+   * @return null if nothing found. Elsewhere the found file which matches to one of path in the start or one of the parent directories
+   */
+  public static File searchFileInParent(File start, String ... pattern)
+  { File found = null;
+    
+    File parent = start.isDirectory() ? start : start.getParentFile();
+    do {
+      for(String path1 : pattern){             //check all files with the search paths.
+        File[] result = getFiles(parent, path1);
+        if(result.length >0) {
+          found = result[0];  //use the first matching one.
+        } else {
+          parent = parent.getParentFile();
+        }
+      }
+    } while(found == null && parent !=null);
+    return found;
+  }
 
 
   private static void stop()

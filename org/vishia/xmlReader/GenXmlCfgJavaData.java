@@ -116,33 +116,43 @@ public class GenXmlCfgJavaData {
 
   private static String smain(String[] sArgs, boolean shouldExitVM){
     String sRet;
-    GenJavaOutClass.CmdArgs args = new GenJavaOutClass.CmdArgs();
-    CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
-    try{
-      mainCmdLine.addCmdLineProperties();
-      boolean bOk;
-      try{ bOk = mainCmdLine.parseArguments(); }
-      catch(Exception exception)
-      { mainCmdLine.report("Argument error:", exception);
-        mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
-        bOk = false;
-      }
-      if(bOk)
-      { GenXmlCfgJavaData main = new GenXmlCfgJavaData(args, mainCmdLine);     //the main instance
-        /* The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
-           to hold the contact to the command line execution.
-        */
-        try{ main.exec(args.fileInput); }
-        catch(Exception exc)
-        { //catch the last level of error. No error is reported direct on command line!
-          System.err.println(exc.getMessage());
-        }
-      }
+    if(sArgs.length == 0) {
+      System.out.println("java -cp .... org.vishia.xmlReader.GenXmlCfgJavaData -cfg:INFILE -dirJava:PATH -pkg:PKG -class:CLASS\n"
+          + "  -cfg:INFILE: The config.xml file as config file for XmlJzReader\n"
+          + "  -dirJava:path/to/javaSrcRoot to create\n"
+          + "  -pkg:my.pkg.path The package path\n"
+          + "  -class:MyClass without .java, class to create");
       sRet = "";
-    } catch(Exception exc){
-      sRet = exc.getMessage();
+    } else {
+
+      GenJavaOutClass.CmdArgs args = new GenJavaOutClass.CmdArgs();
+      CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
+      try{
+        mainCmdLine.addCmdLineProperties();
+        boolean bOk;
+        try{ bOk = mainCmdLine.parseArguments(); }
+        catch(Exception exception)
+        { mainCmdLine.report("Argument error:", exception);
+          mainCmdLine.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
+          bOk = false;
+        }
+        if(bOk)
+        { GenXmlCfgJavaData main = new GenXmlCfgJavaData(args, mainCmdLine);     //the main instance
+          /* The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
+             to hold the contact to the command line execution.
+          */
+          try{ main.exec(args.fileInput); }
+          catch(Exception exc)
+          { //catch the last level of error. No error is reported direct on command line!
+            System.err.println(exc.getMessage());
+          }
+        }
+        sRet = "";
+      } catch(Exception exc){
+        sRet = exc.getMessage();
+      }
+      if(shouldExitVM) { mainCmdLine.exit(); }
     }
-    if(shouldExitVM) { mainCmdLine.exit(); }
     return sRet;
   }
 

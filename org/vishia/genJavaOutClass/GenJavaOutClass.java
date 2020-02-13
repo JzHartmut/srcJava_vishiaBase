@@ -217,7 +217,7 @@ public class GenJavaOutClass {
     + "    public Iterable<<&typeGeneric>> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    /**Access to parse result, get the size of the container <&name>.*/\n"
-    + "    public int getSize_<&name>() { return <&varName>.size(); }\n"
+    + "    public int getSize_<&name>() { return <&varName> ==null ? 0 : <&varName>.size(); }\n"
     + "    \n"
     + "    \n");
   

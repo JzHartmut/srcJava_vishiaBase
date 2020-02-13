@@ -277,15 +277,20 @@ public class XmlJzCfgAnalyzer
    */
   public static void main(String[] args) {
     XmlJzCfgAnalyzer main = new XmlJzCfgAnalyzer();
-    try {
-      main.readXmlStruct(new File(args[0]));
-      //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
-      main.writeCfgTemplate(new File(args[1]));
-    } catch (Exception e) {
-      System.err.println("Unexpected: " + e.getMessage());
-      e.printStackTrace(System.err);
+    if(args.length == 0) {
+      System.out.println("java -cp .... org.vishia.xmlReader.XmlJzCfgAnalyzer INFILE OUTFILE\n"
+          + "  INFILE: Any user xml file\n"
+          + "  OUTFILE: A config.xml file as template to create the config file for XmlJzReader\n");
+    } else {
+      try {
+        main.readXmlStruct(new File(args[0]));
+        //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
+        main.writeCfgTemplate(new File(args[1]));
+      } catch (Exception e) {
+        System.err.println("Unexpected: " + e.getMessage());
+        e.printStackTrace(System.err);
+      }
     }
-
   }
   
   

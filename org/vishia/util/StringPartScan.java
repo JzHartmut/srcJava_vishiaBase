@@ -1,6 +1,9 @@
 package org.vishia.util;
 
+import java.io.IOException;
 import java.text.ParseException;
+
+import org.vishia.util.StringPart.Part;
 
 
 
@@ -51,6 +54,10 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2020-02-10 Hartmut new: {@link #readNextContent(int)}. 
+   *   It is the old routine {@link StringPartFromFileLines#readnextContentFromFile(int)} here offered make it possible
+   *   to use a longer input but use this base class too. The default implementation in this class is empty
+   *   because this class presents the whole content in {@link StringPart#content}. 
    * <li>2019-06-14 Hartmut chg: all scan operations start with {@link #scanEntry()}. 
    *   new: {@link #scan(CharSequence)} works with \W and \Z (no identifier char, end of text) 
    * <li>2019-06-07 Hartmut new {@link #scanLiteral(String, int)} 
@@ -1049,6 +1056,27 @@ public class StringPartScan extends StringPart
     return this;
   }
 
+  
+  
+  /**Read next content from any source (usual a input stream) in an overridden form of this class.
+   * It does nothing if the current working area in the text {@link StringPart#begin} is lesser than 
+   * the argument minPosToRead.<br>
+   * It does not shift the content if the {@link StringPart#begin} is < 1/8 of the size. 
+   * That is especially after reading head information.<br>
+   * But it reads from file if especially minSizeForAction is ==0.
+   * If shifts the text in the internal buffer {@link StringPart#content} but only the half of current content.
+   * Especially {@link Part} remain accessible if they are near the current content. 
+   * See remarks there about persistence.
+   * 
+   * @param minPosToRead returns without action if Current position (it is {@link StringPart#begin}) is lesser. 
+   *   Set =0 for reading the first content.
+   *   Set to about 2/3 of size for normal operation. 
+   * @return true if eof is possible because lesser bytes than expected are read.
+   * @throws IOException
+   */
+  public boolean readNextContent(int minPosToRead) throws IOException {
+    return true;
+  }
 
   /**Closes the work. This routine should be called if the StringPart is never used, 
    * but it may be kept because it is part of class data or part of a statement block which runs.

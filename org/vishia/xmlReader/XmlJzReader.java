@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
@@ -50,8 +53,8 @@ xmlReader.readXml(src, data);
  * <br>
  * Application example:
  * <pre>
- * XmlReader xmlReader = new XmlReader(); //instance to work, more as one file one after another
- * xmlReader.readCfg(cfgFile);             //configuration for next xmlRead()
+ * XmlJzReader xmlReader = new XmlJzReader(); //instance to work, more as one file one after another
+ * xmlJzReader.readCfg(cfgFile);             //configuration for next xmlRead()
  * AnyClass data = new AnyClass();        //a proper output instance matching to the cfg
  * xmlReader.readXml(xmlInputFile, data); //reads the xml file and stores read data.
  * </pre>
@@ -66,6 +69,7 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2020-02-12 Hartmut new {@link #readXml(Reader, String, Object)} and {@link #readXml(StringPartScan, Object)} 
    * <li>2020-01-15 Hartmut Improve handling of &#code characters. 
    * <li>2020-01-01 Hartmut Exception on file errors. 
    * <li>2019-12-30 Hartmut Using {@link XmlSequWriter} for Test output the read content, 
@@ -103,7 +107,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2020-01-15";
+  public static final String version = "2020-02-12";
   
   
   /**To store the read configuration. */
@@ -230,7 +234,7 @@ public class XmlJzReader
   
   /**Reads the xml content from an opened stream.
    * The stream is firstly tested whether the first line contains a encoding hint. This is obligate in XML.
-   * Then the input is read into a character buffer using the {@link StringPartFromFileLines} class. 
+   * Then the input is read into a character buffer using the {@link StringPartScan} class. 
    * The {@link StringPartScan} scans the XML syntax. 
    * <br>
    * The xmlCfg determines which elements, attributes and textual content is transferred to the output data.
@@ -243,9 +247,60 @@ public class XmlJzReader
    */
   public String readXml(InputStream input, String sInputPath, Object output, XmlCfg xmlCfg) {
     String error = null;
-    StringPartFromFileLines inp = null;
+    StringPartScan inp = null;
     try {
       inp = new StringPartFromFileLines(input, sInputPath, sizeBuffer, "encoding", null);
+      readXml(inp, output, xmlCfg);
+    } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch(Throwable exc) {
+      exc.printStackTrace();
+      Debugutil.stop();
+    } finally {
+      if(inp !=null) { inp.close(); }
+    }
+    return error;
+  }
+  
+  
+  /**Reads the xml content from an StringPart.
+   * The stream is firstly tested whether the first line contains a encoding hint. This is obligate in XML.
+   * Then the input is read into a character buffer using the {@link StringPartScan} class. 
+   * The {@link StringPartScan} scans the XML syntax. 
+   * <br>
+   * The xmlCfg determines which elements, attributes and textual content is transferred to the output data.
+   * See Description of {@link XmlJzReader}.
+   * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
+   * @param sInputPath The path to the input stream, used for error hints while parsing.
+   * @param output Any output data. The structure should match to the xmlCfg.
+   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
+   * @return null if no error. Elsewhere an error message, instead of throwing.
+   * @throws Exception 
+   */
+  public void readXml(StringPartScan input, Object output) throws Exception {
+    readXml(input, output, this.cfg);
+  }
+  
+  
+  /**Reads the xml content from an opened stream.
+   * The stream is firstly tested whether the first line contains a encoding hint. This is obligate in XML.
+   * Then the input is read into a character buffer using the {@link StringPartScan} class. 
+   * The {@link StringPartScan} scans the XML syntax. 
+   * <br>
+   * The xmlCfg determines which elements, attributes and textual content is transferred to the output data.
+   * See Description of {@link XmlJzReader}.
+   * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
+   * @param sInputPath The path to the input stream, used for error hints while parsing.
+   * @param output Any output data. The structure should match to the xmlCfg.
+   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
+   * @return null if no error. Elsewhere an error message, instead of throwing.
+   */
+  public String readXml(Reader input, String sInputPath, Object output, XmlCfg xmlCfg) {
+    String error = null;
+    StringPartScan inp = null;
+    try {
+      inp = new StringPartFromFileLines(input, sInputPath, sizeBuffer);
       readXml(inp, output, xmlCfg);
     } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
       // TODO Auto-generated catch block
@@ -267,23 +322,23 @@ public class XmlJzReader
    * @param cfg1
    * @throws Exception
    */
-  private void readXml(StringPartFromFileLines inp, Object output, XmlCfg cfg1) 
+  private void readXml(StringPartScan inp, Object output, XmlCfg cfg1) 
   throws Exception
   { inp.setIgnoreWhitespaces(true);
     while(inp.seekEnd("<").found()) { //after the beginning < of a element
       inp.scanStart();
       if(inp.scan("?").scanOk()) { //skip over the first "<?xml declaration line ?>
-        inp.seekEnd("?>");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
+        inp.seekEnd("?>");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartScan
         inp.scanOk();    //sets the scan start to this position.
       } else if(inp.scan("!").scanOk()) { //skip over the first "<?xml declaration line ?>
-        inp.seekEnd(">");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
+        inp.seekEnd(">");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartScan
         inp.scanOk();    //sets the scan start to this position.
       } else if(inp.scan().scan("!--").scanOk()) { //comment line
         inp.seekEnd("-->");
        }
        else {
         inp.scanOk();
-        inp.readnextContentFromFile(sizeBuffer*2/3);
+        inp.readNextContent(sizeBuffer*2/3);
         {
           parseElement(inp, output, cfg1.rootNode);  //the only one root element.
         }
@@ -305,7 +360,7 @@ public class XmlJzReader
    * @param cfg1
    * @throws Exception 
    */
-  private void parseElement(StringPartFromFileLines inp, Object output, XmlCfg.XmlCfgNode cfgNode) 
+  private void parseElement(StringPartScan inp, Object output, XmlCfg.XmlCfgNode cfgNode) 
   throws Exception
   { 
     int dbgline = -7777;
@@ -422,7 +477,7 @@ public class XmlJzReader
       //
       //loop to parse <tag ...> THE CONTENT </tag>
       while( ! inp.scan().scan("<").scan("/").scanOk()) { //check </ as end of node
-        inp.readnextContentFromFile(sizeBuffer/2);
+        inp.readNextContent(sizeBuffer/2);
         if(inp.scan("<").scanOk()) {
           if(inp.scan("!--").scanOk()) {
             inp.seekEnd("-->");
@@ -435,7 +490,7 @@ public class XmlJzReader
         }
       }
       //
-      inp.readnextContentFromFile(sizeBuffer/2);
+      inp.readNextContent(sizeBuffer/2);
       //the </ is parsed on end of while already above.
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
@@ -477,7 +532,7 @@ public class XmlJzReader
    * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
    * @throws Exception
    */
-  private CharSequence parseAttributes(StringPartFromFileLines inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
+  private CharSequence parseAttributes(StringPartScan inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
       , List<AttribToStore>[] attribsToStore, Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
   throws Exception
   { CharSequence keyret = tag; //no special key. use element.
@@ -563,7 +618,7 @@ public class XmlJzReader
           }
         }
       }
-      inp.readnextContentFromFile(sizeBuffer/2);
+      inp.readNextContent(sizeBuffer/2);
     } //while
     return keyret;
   }
@@ -669,7 +724,7 @@ public class XmlJzReader
    * @param buffer maybe null then ignore content.
    * @throws ParseException 
    */
-  private CharSequence parseContent(StringPartFromFileLines inp, StringBuilder buffer)
+  private CharSequence parseContent(StringPartScan inp, StringBuilder buffer)
   throws IOException, ParseException
   { boolean bContReadContent;
     int posAmp = buffer == null ? 0 : buffer.length()-1; //NOTE: possible text between elements, append, start from current length.
@@ -709,7 +764,7 @@ public class XmlJzReader
           ((StringBuilder)content).append(content2);
         } 
       }
-      bEofSupposed = inp.readnextContentFromFile(sizeBuffer/2);
+      bEofSupposed = inp.readNextContent(sizeBuffer/2);
     } while(bContReadContent);
     return content;
   }
@@ -867,6 +922,16 @@ public class XmlJzReader
     return this.readXml(file, dst, this.cfg);
   }  
     
+  
+  
+  public String readXml(InputStream stream, String sInputPath, Object dst) {
+    return readXml(stream, sInputPath, dst, this.cfg);
+  }
+  
+  public String readXml(Reader stream, String sInputPath, Object dst) {
+    return readXml(stream, sInputPath, dst, this.cfg);
+  }
+  
   
   static class AttribToStore {
     /**The data access to store the value.*/
