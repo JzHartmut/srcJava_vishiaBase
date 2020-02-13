@@ -1645,7 +1645,8 @@ public class FileSystem
   public static File searchFileInParent(File start, String ... pattern)
   { File found = null;
     
-    File parent = start.isDirectory() ? start : start.getParentFile();
+    File parent = start.isDirectory() ? (start.isAbsolute() ? start : start.getAbsoluteFile()) 
+                : (start.isAbsolute() ? start.getParentFile() : start.getAbsoluteFile().getParentFile());
     do {
       for(String path1 : pattern){             //check all files with the search paths.
         File[] result = getFiles(parent, path1);
