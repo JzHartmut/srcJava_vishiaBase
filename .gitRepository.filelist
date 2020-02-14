@@ -1,4 +1,3 @@
-2020-02-09 11:24:22  x     srcJava_Zbnf.filelist                    ::         36.144 -1009835716 
 
 ============================== org/ ===============================================================
 
@@ -232,7 +231,7 @@
 2020-02-01 23:37:29  x     FilePath.java                            ::         89.258  1225608906 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
 2019-03-31 20:57:08  x     FileSet.java                             ::          6.641  2130969058 
-2020-02-13 19:49:48  x     FileSystem.java                          ::         72.695  1884686369 
+2020-02-13 21:47:04  x     FileSystem.java                          ::         72.826 -1003813185 
 2011-02-26 21:31:28  x     FileWriter.java                          ::          4.163 -1377006717 
 2018-04-13 20:31:23  x     FilepathFilter.java                      ::         14.774  1927842495 
 2018-01-25 11:24:23  x     FilesToList.java                         ::          4.861  1950624767 
@@ -302,44 +301,16 @@
 2014-12-18 22:16:22  x     Zip.java                                 ::         13.299 -1788227846 
 2013-05-25 22:37:51  x     package-info.java                        ::           .474 -0681213086 
 
-============================== org/vishia/util/test/ ===============================================
-2019-06-12 00:32:04  x     TestCalculatorExpr.java                  ::          1.911  1166074260 
-2013-09-05 09:25:42  x     TestCharBuffer.java                      ::          1.483 -2103892260 
-2013-09-05 09:25:42  x     TestComparable.java                      ::          2.442 -1669836808 
-2019-08-26 10:16:29  x     TestDataAccess.java                      ::          9.282 -0846663368 
-2013-09-05 09:25:42  x     TestEnclosingSuper.java                  ::           .714  0258531046 
-2013-09-05 09:25:42  x     TestFileSystem.java                      ::           .705  0968432270 
-2017-05-05 21:23:49  x     TestIndexMultiTable.java                 ::          8.186  1941999328 
-2013-10-20 00:56:38  x     TestString67.java                        ::           .750  1482509348 
-2015-01-07 09:25:55  x     TestStringFunctions.java                 ::          1.753 -1194654040 
-2013-11-09 22:54:20  x     TestTreeNodeBase.java                    ::          6.416 -0912081890 
-2020-01-04 23:30:06  x     Test_FilePath.java                       ::          5.063 -0519571887 
-2019-08-09 10:46:05  x     Test_OutTextPreparer_CallFor.java        ::          5.874  1392001381 
-2018-09-21 09:50:18  x     Test_StringFormatter.java                ::           .876 -1789819587 
-2019-05-24 15:31:48  x     Test_StringPart.java                     ::          1.839 -1195116036 
-2019-06-13 23:12:08  x     Test_StringPartScan.java                 ::          4.726 -0095091858 
-2020-01-04 23:35:30  x     Test_all_util.java                       ::           .201  0261102109 
-
 ============================== org/vishia/xmlReader/ ===============================================
-2018-04-14 07:44:17  x     ExcelData.java                           ::           .541  2010736637 
 2020-02-09 14:05:17  x     GenXmlCfgJavaData.java                   ::         13.397 -2145113072 
 2019-08-18 13:28:03  x     XmlCfg.java                              ::         27.849 -1326807559 
 2020-02-09 13:48:44  x     XmlJzCfgAnalyzer.java                    ::         28.364  0086518356 
 2020-02-13 20:22:39  x     XmlJzReader.java                         ::         39.070  0586701087 
 
-============================== org/vishia/xmlReader/test/ ==========================================
-2019-08-18 23:35:16  x     Office_odtData.java                      ::         27.620  0393408920 
-2019-08-18 23:35:16  x     Office_odtData_Zbnf.java                 ::         57.403  1209474478 
-2020-01-01 23:43:33  x     TestReadMsc15Cfg.java                    ::          5.132  1893516757 
-2020-01-01 23:43:57  x     TestReadOdc.java                         ::          2.395 -0317369375 
-2020-01-01 23:42:36  x     Test_Office_odtData.java                 ::           .981 -1620120669 
-2018-04-13 22:56:01  x     package-info.java                        ::           . 83 -0217379269 
-
 ============================== org/vishia/xmlSimple/ ===============================================
 2020-02-13 20:26:38  x     SimpleXmlOutputter.java                  ::         11.085 -1306988227 
 2017-01-25 23:02:51  x     SimpleXmlOutputter_Test.java             ::           .737  0464495945 
 2018-01-07 22:38:28  x     WikistyleTextToSimpleXml.java            ::         60.467 -0091533971 
-2016-11-01 00:06:56  x     WikistyleTextToSimpleXml_old.java        ::         57.152 -0721767767 
 2012-12-26 20:03:22  x     XmlException.java                        ::          1.656 -0761622632 
 2019-01-26 15:48:06  x     XmlNode.java                             ::          7.158 -1065056153 
 2019-08-18 22:25:41  x     XmlNodeSimple.java                       ::         15.073  1164275711 
@@ -349,7 +320,6 @@
 
 ============================== org/vishia/zbnf/ ====================================================
 2019-12-09 00:26:11  x     GenZbnfJavaData.java                     ::         23.741 -0237785721 
-2019-08-16 20:40:12  x     GenZbnfJavaData.java.a                   ::         42.886 -0160622802 
 2019-12-09 00:23:35  x     Zbnf2Xml.java                            ::         21.296  0058479735 
 2019-10-08 22:01:36  x     ZbnfJavaOutput.java                      ::         81.873  1395895928 
 2017-03-26 15:42:34  x     ZbnfParseResultItem.java                 ::         12.178 -2019699139 
