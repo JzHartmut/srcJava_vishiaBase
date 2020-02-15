@@ -87,6 +87,9 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2019-08-20: some operations throws {@link ParseException} on syntax errors.
+   * <li>2019-08-23 Hartmut new: Supports now &(path) as indirect access, access to variable with gotten name in path.
+   *   Therefore the operations {@link #access(Object, boolean, boolean, Map, Object[])} etc. needs the variableNames.  
    * <li>2019-08-19 Hartmut chg: error msg on throw improved on non found operation etc, line feed for better read ability. 
    * <li>2019-08-10 Hartmut new / chg: Usage of variable-values in a Object[] array: 
    *   <ul>
@@ -242,7 +245,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2019-06-18";
+  static final public String sVersion = "2019-08-23";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#varValues}. 
@@ -614,7 +617,8 @@ public class DataAccess {
    *   Then a new variable should be created in the parent's container with the access.
    * @throws ParseException on errors on sp, on not found variables too. 
    */
-  public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, char cTypeNewVariable) throws ParseException {
+  public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, char cTypeNewVariable) throws ParseException {
     this.datapath = new ArrayList<DatapathElement>();
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData);
@@ -662,9 +666,10 @@ public class DataAccess {
    * @return Maybe null only if the last reference refers null. 
    * @throws Exception on any not found or etc.
    */
-  public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer, Object[] varValues) 
+  public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer
+  , Map<String, IntegerIx> nameVariables, Object[] varValues) 
   throws Exception{
-    return access(datapath, dataRoot, accessPrivate, bContainer, varValues, false, null);
+    return access(datapath, dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
   }
 
   
@@ -712,7 +717,7 @@ public class DataAccess {
     //accesses the data object with given path. 
     //If it is a Variable, return the Variable, not its content.
     //If it is not a Variable, the dst contains the Field.
-    Object o = access(path, dataRoot, bAccessPrivate, false, null, true, dst);
+    Object o = access(path, dataRoot, bAccessPrivate, false, null, null, true, dst);
     if(o instanceof Variable<?>){
       @SuppressWarnings("unchecked")
       Variable<Object> var = (Variable<Object>)(o); 
@@ -742,7 +747,7 @@ public class DataAccess {
     //accesses the data object with given path. 
     //If it is a Variable, return the Variable, not its content.
     //If it is not a Variable, the dst contains the Field.
-    Object o = access(path, data, bAccessPrivate, false, null, true, dst);
+    Object o = access(path, data, bAccessPrivate, false, null, null, true, dst);
     if(o instanceof Variable<?>){
       @SuppressWarnings("unchecked")
       Variable<Object> var = (Variable<Object>)(o); 
@@ -884,7 +889,7 @@ public class DataAccess {
   throws Exception 
   {
     List<DatapathElement> list = expandElements(datapathArg, '.');
-    return access(list, dataRoot, accessPrivate, bContainer, null, bVariable, dst);
+    return access(list, dataRoot, accessPrivate, bContainer, null, null, bVariable, dst);
   }
 
   
@@ -967,6 +972,8 @@ public class DataAccess {
    * @param bContainer If the element is a container, returns it. Elsewhere build a List
    *    to return a container for iteration with only the found element.
    *    A container is any object implementing java.util.Map or java.util.Iterable or an Array.
+   * @param nameVariables necessary on indirect access to variable via String, construct  such as &lt;&&(path)>
+   *   can be null if not used, should be null especially if varValues == null
    * @param varValues maybe null or array of some variables which are sorted by parameter idxVariables 
    *   in {@link #DataAccess(StringPartScan, Map, Class, char)}
    * @param dst If not null then fill the last {@link Field} and the associated Object in the dst.
@@ -994,6 +1001,7 @@ public class DataAccess {
       //, Map<String, DataAccess.Variable<Object>> dataPool
       , boolean accessPrivate
       , boolean bContainer
+      , Map<String, IntegerIx> nameVariables
       , Object[] varValues
       , boolean bVariable
       , Dst dst
@@ -1018,7 +1026,7 @@ public class DataAccess {
         debug();
       }
       //====>
-      data1 = access(element, data1, accessPrivate, bContainer, varValues, bVariable, dst);
+      data1 = access(element, data1, accessPrivate, bContainer, nameVariables, varValues, bVariable, dst);
       element = iter.hasNext() ? iter.next() : null;
     }//while
     //return
@@ -1048,6 +1056,7 @@ public class DataAccess {
       //, Map<String, DataAccess.Variable<Object>> dataPool
       , boolean accessPrivate
       , boolean bContainer
+      , Map<String, IntegerIx> nameVariables
       , Object[] varValues
       , boolean bVariable
       , Dst dst
@@ -1069,6 +1078,20 @@ public class DataAccess {
     }
     //
     switch(element.whatisit) {
+      case '&': {
+        Object arg = element.args[0].calc(nameVariables, varValues);
+        assert(arg instanceof String);
+        if(nameVariables !=null) {
+          IntegerIx ixvar = nameVariables.get((String)arg); 
+          if(ixvar !=null) {
+            data1 = varValues[ixvar.ix];
+          } else {
+            throw new IllegalArgumentException(" variable with name in &(>>" + arg + "<<) not found");
+          }
+        } else if(data1 instanceof Map) {
+          Debugutil.todo();
+        }
+      } break;
       case '@': case '.': {
         if(bStatic){
           data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
@@ -1248,13 +1271,15 @@ public class DataAccess {
     , boolean bNoExceptionifNotFound
   ) throws InvocationTargetException, NoSuchMethodException, Exception {
     Object[] args = null;
+    if(element.ident.equals("toStringDependingNext"))
+      Debugutil.stop();
     if(element.fnArgs == null) { //only if fnArgs not given from call, 
       //then evaluate here.
       if(element.args !=null) {
         args = new Object[element.args.length];
         int ix = -1;
         for(CalculatorExpr.Operand expr: element.args) {
-          args[++ix] = expr.calc(varValues);
+          args[++ix] = expr.calc(null, varValues);
         }
       }
     }
@@ -1345,7 +1370,9 @@ public class DataAccess {
       msg.append(clazz1.getName()).append("<<\n ...operation: >>") .append(element.ident) .append("(");
       if(args !=null) {
         for(Object arg: args) {
-          msg.append(arg.getClass()).append(", ");
+          if(arg !=null) {
+            msg.append(arg.getClass()).append(", ");
+          }
         }
       }
       else if(element.args !=null) {
@@ -2585,7 +2612,8 @@ public class DataAccess {
      * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
      * @throws ParseException
      */
-    public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) throws ParseException{
+    public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
+    , Class<?> reflData) throws ParseException{
       set(path, nameVariables, reflData);
     }
     
@@ -2657,7 +2685,7 @@ public class DataAccess {
         sp.scanStart();
         boolean bArgExpr = false;
         do {
-          exprIndex.setExpr(sp, null);
+          exprIndex.setExpr(sp, null, false);
           CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
           if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
             lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
@@ -2701,7 +2729,8 @@ public class DataAccess {
      * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
      * @throws ParseException 
      */
-    public void set(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) throws ParseException{
+    public void set(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
+    , Class<?> reflData) throws ParseException{
       char cStart = path.getCurrentChar();
       if("$@+%".indexOf(cStart) >=0){
         whatisit = cStart;
@@ -2709,25 +2738,39 @@ public class DataAccess {
       } else {
         whatisit = '.';
       }
-      if(!path.scanStart().scanIdentifier().scanOk()) {
-        throw new ParseException("idenfifier expected instead: " + path.getCurrent(32), 0);
-      }
-      this.ident = path.getLastScannedString();
-      if(path.scan("(").scanOk()) { //Function
-        whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
-        this.operation_ = true;
-        if(!path.scan(")").scanOk()) { 
-          // ========>        
-          this.args = parseArgumentExpr(path, nameVariables, reflData);
+      if(cStart == '&' ) { //an indirect path
+        whatisit = '&';
+        if(path.scan("&(").scanOk()) {
+          args = new CalculatorExpr.Operand[1];
+          args[0] = new CalculatorExpr.Operand(path, nameVariables, reflData, false);
+          if(!path.scan(")").scanOk()) {
+            throw new ParseException("&(<expression>) expected: , \")\" missing" + path.getCurrent(32), 0);
+          }
+        } else {
+          throw new ParseException("&(<expression>) expected, \"(\" missing " + path.getCurrent(32), 0);
         }
-        
-      } else if(path.scan("[").scanOk()) { //Index for element
+      } else {
+        if(!path.scanStart().scanIdentifier().scanOk()) {
+          throw new ParseException("idenfifier expected instead: " + path.getCurrent(32), 0);
+        }
+        this.ident = path.getLastScannedString();
+        if(path.scan("(").scanOk()) { //Function
+          whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
+          this.operation_ = true;
+          if(!path.scan(")").scanOk()) { 
+            // ========>        
+            this.args = parseArgumentExpr(path, nameVariables, reflData);
+          }
+          
+        }
+      }
+      if(path.scan("[").scanOk()) { //Index for element
         List<Object> lIndices = new LinkedList<Object>();
         CalculatorExpr exprIndex = new CalculatorExpr();
         path.scanStart();
         boolean bArgExpr = false;
         do {
-          exprIndex.setExpr(path, null);
+          exprIndex.setExpr(path, null, false);
           CalculatorExpr.Operand value = exprIndex.isSimpleSetExpr();
           if(value !=null && value.dataConst instanceof CalculatorExpr.Value) {
             lIndices.add(((CalculatorExpr.Value)value.dataConst).intValue());  //should be an int if given as const.
@@ -2774,7 +2817,7 @@ public class DataAccess {
     throws ParseException {
       List<CalculatorExpr.Operand> listArgs = new LinkedList<CalculatorExpr.Operand>();
       do {
-        CalculatorExpr.Operand arg = new CalculatorExpr.Operand(sArgs, nameVariables, reflData);
+        CalculatorExpr.Operand arg = new CalculatorExpr.Operand(sArgs, nameVariables, reflData, false);
         listArgs.add(arg);
       } while(sArgs.scan(",").scanOk()); 
       if(listArgs.size() >=0) {

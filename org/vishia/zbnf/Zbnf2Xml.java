@@ -65,6 +65,7 @@ public class Zbnf2Xml
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-12-08: new option -opt:1 to use the optimizing of using already parsed results.
    * <li>2014-06-17 Hartmut new: options -xmsSrcline[:[on|off]] -xmsSrctext[:[on|off]] and controls 
    *   whether srcline="xx" and srctext="text" will be written to a XML output  
    * <li>2012-03-23 Hartmut new {@link #smain(String[], boolean)} as alternative to {@link #main(String[])}
@@ -104,7 +105,7 @@ public class Zbnf2Xml
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2014-06-17";
+  public static final String sVersion = "2019-12-08";
 
   
   public interface PrepareXmlNode
@@ -113,7 +114,9 @@ public class Zbnf2Xml
     void prepareXmlNode(XmlNode xmlDst, String text) throws XmlException;
   }
   
-  protected static class Args{
+  protected static class Args {
+    
+    ZbnfParser.Args parserArgs = new ZbnfParser.Args();
     
     /**Cmdline-argument, set on -i option.*/
     public String sFileIn = null;
@@ -239,6 +242,11 @@ public class Zbnf2Xml
     }};
 
     
+    MainCmd.SetArgument setOptimized = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+      CmdLine.this.argData.parserArgs.bUseResultlet = val.equals("1"); return true;
+    }};
+
+    
     MainCmd.SetArgument setOutUtf8 = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
       argData.sFileXmlOut = val; argData.encoding = Charset.forName("UTF-8"); return true;
     }};
@@ -296,6 +304,7 @@ public class Zbnf2Xml
     public final MainCmd.Argument[] argumentsZbnf2Xml =
     { new MainCmd.Argument("-i", ":<INPUT>     input file-path, file to parse", setInput)
     , new MainCmd.Argument("-s", ":<SYNTAX>    syntax prescript in ZBNF format for parsing", setSyntax)
+    , new MainCmd.Argument("-opt", ":[1|0]     optimizing, uses already parsed result (since 2019-12)", setOptimized)
     , new MainCmd.Argument("-x", ":<OUTPUT>    output xml file-path written in UTF8-encoding", setOutUtf8)
     , new MainCmd.Argument("-y", ":<OUTPUT>    output xml file-path written in the standard encoding of system\n" 
                          + "                   or the given -charset:encoding", setOut)
@@ -393,7 +402,7 @@ public class Zbnf2Xml
         return true;
       }
     }
-    { parser = new ZbnfParser(logmaincmd);
+    { this.parser = new ZbnfParser(this.logmaincmd, this.argsx.parserArgs);
       parser.setReportIdents(MainCmdLogging_ifc.error, MainCmdLogging_ifc.info, MainCmdLogging_ifc.debug, MainCmdLogging_ifc.fineDebug);
       try
       { parser.setSkippingComment("/*", "*/", true);

@@ -2,6 +2,8 @@ package org.vishia.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -24,13 +26,14 @@ public class FileCompare
   
   /**Version and history
    * <ul>
+   * <li>2019-12-04 Hartmut main now able to use with some more arguments.
    * <li>2013-06-27 Hartmut bugfix: close() after new BufferedReader()
    * <li>2012-02-04 Hartmut new: {@link Result#parent}, {@link Result#setToEqual()}
    *   used if after comparison the files are copied (The.file.Commander)
    * </ul>
    * 
    */
-  public final static int version = 0x20120204;
+  public final static String version = "2019-12-06";
   
   final static int onlyTimestamp = 1;
   final static int content = 2;
@@ -272,10 +275,12 @@ public class FileCompare
    */
   void compareFile(Result file)
   {
+    if(file.file1.getName().contentEquals("Submdl_exmpl.log"))
+      Debugutil.stop();
     long date1 = file.file1.lastModified();
     long date2 = file.file2.lastModified();
     long len1 = file.file1.length();
-    long len2 = file.file1.length();
+    long len2 = file.file2.length();
     if(Math.abs(date1 - date2) > minDiffTimestamp && mode == onlyTimestamp){
       file.equal = file.equalDaylightSaved = file.contentEqual = file.contentEqualWithoutEndline = false;
       file.lenEqual = len1 == len2;
@@ -287,12 +292,12 @@ public class FileCompare
       //timestamp is not tested.
       if(len1 != len2){
         //different length
-        file.equal = file.contentEqual = file.contentEqualWithoutEndline = file.lenEqual = false;
+        file.lenEqual = false;
       }
       //Files are different in timestamp or timestamp is insufficient for comparison:
-      if(file.file1.getName().equals("MainCmd.java"))
-        file.alone = false;
-      file.equal = compareFileContent(file);
+//      if(file.file1.getName().equals("MainCmd.java"))
+//        file.alone = false;
+      file.contentEqualWithoutEndline = file.equal = file.contentEqual = compareFileContent(file);
     }
   }
   /**Compare two files.
@@ -308,11 +313,14 @@ public class FileCompare
       String s1, s2;
       while( bEqu && (s1 = r1.readLine()) !=null){
         s2 = r2.readLine();
+        if(s1.startsWith("xz1 :"))
+          Debugutil.stop();
         if(s2 ==null || !s1.equals(s2)){
           //check trimmed etc.
           bEqu = false;
         }
       }
+      bEqu = r2.readLine() == null; //THe second file should be ended too!
       r1.close();
       r2.close();
       r1 = r2 = null;
@@ -326,27 +334,38 @@ public class FileCompare
   }  
   
   
-  void reportResult(PrintStream out, List<Result> list)
+  void reportResult(PrintStream out, List<Result> list, String supress)
   {
     boolean bWriteDir = false;
     for(Result entry: list){
-      if(entry.equal){
-        out.append("    ====     ; ").append(entry.name).append("\n");
-        
-      } else if(entry.contentEqual){
-        out.append("     ==      ; ").append(entry.name).append("\n");
-        
-      } else if(entry.lenEqual){
-        out.append("    =?=      ; ").append(entry.name).append("\n");
-           
+      if(entry.equal) {
+        if(supress.indexOf(':')<0){
+          out.append("    ====     ; ").append(entry.name).append("\n");
+        }
+      } 
+      else if(entry.contentEqual) {
+        if(supress.indexOf('=')<0){
+          out.append("     ==      ; ").append(entry.name).append("\n");
+        }
+      } 
+      else if(entry.lenEqual) {
+        if( supress.indexOf('z')<0){
+          out.append("    =?=      ; ").append(entry.name).append("\n");
+        }
       }
-        else if(entry.alone && entry.file1 !=null){
-        out.append("left         ; ").append(entry.name).append("\n");
-      } else if(entry.alone && entry.file2 !=null){
-        out.append("       right ; ").append(entry.name).append("\n");
-      } else { 
+      else if(entry.alone && entry.file1 !=null) {
+        if(supress.indexOf('l')<0){
+          out.append("left         ; ").append(entry.name).append("\n");
+        }
+      } 
+      else if(entry.alone && entry.file2 !=null) {
+        if(supress.indexOf('r')<0){
+          out.append("       right ; ").append(entry.name).append("\n");
+        }
+      } 
+      else { 
         if(!entry.alone && entry.subFiles !=null){
-          reportResult(out, entry.subFiles);
+          reportResult(out, entry.subFiles, supress);
         } else {
           if(!bWriteDir){ bWriteDir = writeDir(out, entry); }
           out.append("     ??      ; ").append(entry.name).append("\n");
@@ -366,15 +385,35 @@ public class FileCompare
   }
   
   
+  /**Compares directory trees
+   * @param args [0] and [1]: left and right directory path
+   * [2] optional ignore on report can contain ":=zlr" prevents content equal, equal, length equal, only left, only right
+   * [3] optional output result file, else: uses stdio.
+   */
+  @SuppressWarnings("resource") //out is closed!
   public static void main(String[] args)
   {
     File dir1 = new File(args[0]);
     File dir2 = new File(args[1]);
     String[] ignores = new String[]{".bzr"};
-    FileCompare main = new FileCompare(FileCompare.onlyTimestamp, ignores, 2000);
+    FileCompare main = new FileCompare(FileCompare.content, ignores, 2000);
     Result result = new Result(null, dir1, dir2);
     main.compare(result, null, 0);
-    main.reportResult(System.out, result.subFiles);
+    PrintStream out;
+    if(args.length >=4) {
+      try{ out = new PrintStream(new FileOutputStream(args[3]));
+      } catch(FileNotFoundException exc) {
+        out = System.out;
+        out.println("Error output file: " + args[3]);
+      }
+    } else {
+      out = System.out;
+    }
+    String supress = args.length >=3 ? args[2] : "";
+    main.reportResult(out, result.subFiles, supress);
+    if(out != System.out) {
+      out.close();
+    }
   }
   
 }

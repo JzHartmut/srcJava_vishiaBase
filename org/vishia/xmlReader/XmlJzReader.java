@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
@@ -23,15 +26,16 @@ import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
+import org.vishia.xmlSimple.XmlSequWriter;
 
 
 
 /*Test with jztxtcmd: call jztxtcmd with this java file with its full path:
-D:/vishia/ZBNF/srcJava_vishiaBase/org/vishia/xmlReader/XmlReader.java
+D:/vishia/ZBNF/srcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.java
 ==JZtxtcmd==
 currdir = "D:/vishia/ZBNF/examples_XML/XMLi2reader";
 Obj cfg = File:"readExcel.cfg.xml"; 
-Obj xmlReader = new org.vishia.xmlReader.XmlReader();
+Obj xmlReader = new org.vishia.xmlReader.XmlJzReader();
 xmlReader.setDebugStop(-1);
 xmlReader.readCfg(cfg);    
 Obj src = File:"testExcel_a.xml";
@@ -49,8 +53,8 @@ xmlReader.readXml(src, data);
  * <br>
  * Application example:
  * <pre>
- * XmlReader xmlReader = new XmlReader(); //instance to work, more as one file one after another
- * xmlReader.readCfg(cfgFile);             //configuration for next xmlRead()
+ * XmlJzReader xmlReader = new XmlJzReader(); //instance to work, more as one file one after another
+ * xmlJzReader.readCfg(cfgFile);             //configuration for next xmlRead()
  * AnyClass data = new AnyClass();        //a proper output instance matching to the cfg
  * xmlReader.readXml(xmlInputFile, data); //reads the xml file and stores read data.
  * </pre>
@@ -65,6 +69,11 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2020-02-12 Hartmut new {@link #readXml(Reader, String, Object)} and {@link #readXml(StringPartScan, Object)} 
+   * <li>2020-01-15 Hartmut Improve handling of &#code characters. 
+   * <li>2020-01-01 Hartmut Exception on file errors. 
+   * <li>2019-12-30 Hartmut Using {@link XmlSequWriter} for Test output the read content, 
+   *   if {@link #openXmlTestOut(File)} is invoked. . 
    * <li>2019-08-19 Hartmut full support of text special sequences. 
    * <li>2019-08-10 Hartmut refactoring of {@link DataAccess}, handling of arguments on access routines changed. 
    * <li>2019-05-29 Now skips over &lt;!DOCTYPE....>
@@ -98,7 +107,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2018-08-15";
+  public static final String version = "2020-02-12";
   
   
   /**To store the read configuration. */
@@ -122,6 +131,11 @@ public class XmlJzReader
   private final Map<String, String> replaceChars = new TreeMap<String, String>();
 
    
+  
+  XmlSequWriter xmlTestWriter;
+  
+  
+  
   public XmlJzReader() {
     cfgCfg = XmlCfg.newCfgCfg();
     replaceChars.put("&amp;", "&");
@@ -158,6 +172,12 @@ public class XmlJzReader
   }
   
 
+  public void openXmlTestOut(File fout) throws IOException {
+    if(this.xmlTestWriter == null) { this.xmlTestWriter = new XmlSequWriter(); }
+    this.xmlTestWriter.open(fout, "UTF-8", null);
+  }
+  
+  
 
   /**Reads an xml file with a given config. 
    * It does not change the stored config which is gotten by {@link #readCfg(File)} or {@link #readCfgFromJar(String)}.
@@ -167,7 +187,7 @@ public class XmlJzReader
    * @param xmlCfg
    * @return
    */
-  public String readXml(File input, Object output, XmlCfg xmlCfg) {
+  public String readXml(File input, Object output, XmlCfg xmlCfg) throws IOException {
     String error = null;
     InputStream sInput = null; 
     try{ 
@@ -175,8 +195,10 @@ public class XmlJzReader
       String sPathInput = FileSystem.normalizePath(input.getAbsoluteFile()).toString();
       error = readXml(sInput, sPathInput, output, xmlCfg);
       sInput.close();
+    } catch(FileNotFoundException exc) {
+      throw new FileNotFoundException( "XmlJzReader.readXml(...) file not found: " + input.getAbsolutePath());
     } catch(IOException exc) {
-      error = "XmlReader.readXml(...) file not found: " + input.getAbsolutePath();
+      throw new IOException( "XmlJzReader.readXml(...) any IO exception: " + input.getAbsolutePath());
     }
     return error;
   }
@@ -212,7 +234,7 @@ public class XmlJzReader
   
   /**Reads the xml content from an opened stream.
    * The stream is firstly tested whether the first line contains a encoding hint. This is obligate in XML.
-   * Then the input is read into a character buffer using the {@link StringPartFromFileLines} class. 
+   * Then the input is read into a character buffer using the {@link StringPartScan} class. 
    * The {@link StringPartScan} scans the XML syntax. 
    * <br>
    * The xmlCfg determines which elements, attributes and textual content is transferred to the output data.
@@ -225,9 +247,60 @@ public class XmlJzReader
    */
   public String readXml(InputStream input, String sInputPath, Object output, XmlCfg xmlCfg) {
     String error = null;
-    StringPartFromFileLines inp = null;
+    StringPartScan inp = null;
     try {
       inp = new StringPartFromFileLines(input, sInputPath, sizeBuffer, "encoding", null);
+      readXml(inp, output, xmlCfg);
+    } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch(Throwable exc) {
+      exc.printStackTrace();
+      Debugutil.stop();
+    } finally {
+      if(inp !=null) { inp.close(); }
+    }
+    return error;
+  }
+  
+  
+  /**Reads the xml content from an StringPart.
+   * The stream is firstly tested whether the first line contains a encoding hint. This is obligate in XML.
+   * Then the input is read into a character buffer using the {@link StringPartScan} class. 
+   * The {@link StringPartScan} scans the XML syntax. 
+   * <br>
+   * The xmlCfg determines which elements, attributes and textual content is transferred to the output data.
+   * See Description of {@link XmlJzReader}.
+   * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
+   * @param sInputPath The path to the input stream, used for error hints while parsing.
+   * @param output Any output data. The structure should match to the xmlCfg.
+   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
+   * @return null if no error. Elsewhere an error message, instead of throwing.
+   * @throws Exception 
+   */
+  public void readXml(StringPartScan input, Object output) throws Exception {
+    readXml(input, output, this.cfg);
+  }
+  
+  
+  /**Reads the xml content from an opened stream.
+   * The stream is firstly tested whether the first line contains a encoding hint. This is obligate in XML.
+   * Then the input is read into a character buffer using the {@link StringPartScan} class. 
+   * The {@link StringPartScan} scans the XML syntax. 
+   * <br>
+   * The xmlCfg determines which elements, attributes and textual content is transferred to the output data.
+   * See Description of {@link XmlJzReader}.
+   * @param input any opened InputStream. Typically it is an FileInputStream or InputStream from a {@link ZipEntry}.
+   * @param sInputPath The path to the input stream, used for error hints while parsing.
+   * @param output Any output data. The structure should match to the xmlCfg.
+   * @param xmlCfg A configuration. It can be gotten via {@link #readCfg(File)}.
+   * @return null if no error. Elsewhere an error message, instead of throwing.
+   */
+  public String readXml(Reader input, String sInputPath, Object output, XmlCfg xmlCfg) {
+    String error = null;
+    StringPartScan inp = null;
+    try {
+      inp = new StringPartFromFileLines(input, sInputPath, sizeBuffer);
       readXml(inp, output, xmlCfg);
     } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
       // TODO Auto-generated catch block
@@ -249,28 +322,33 @@ public class XmlJzReader
    * @param cfg1
    * @throws Exception
    */
-  private void readXml(StringPartFromFileLines inp, Object output, XmlCfg cfg1) 
+  private void readXml(StringPartScan inp, Object output, XmlCfg cfg1) 
   throws Exception
   { inp.setIgnoreWhitespaces(true);
     while(inp.seekEnd("<").found()) { //after the beginning < of a element
       inp.scanStart();
       if(inp.scan("?").scanOk()) { //skip over the first "<?xml declaration line ?>
-        inp.seekEnd("?>");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
+        inp.seekEnd("?>");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartScan
         inp.scanOk();    //sets the scan start to this position.
       } else if(inp.scan("!").scanOk()) { //skip over the first "<?xml declaration line ?>
-        inp.seekEnd(">");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartFromFileLines
+        inp.seekEnd(">");    //skip over the <? head info ?>. Note: The encoding is regarded from StringPartScan
         inp.scanOk();    //sets the scan start to this position.
       } else if(inp.scan().scan("!--").scanOk()) { //comment line
         inp.seekEnd("-->");
        }
        else {
         inp.scanOk();
-        inp.readnextContentFromFile(sizeBuffer*2/3);
+        inp.readNextContent(sizeBuffer*2/3);
         {
           parseElement(inp, output, cfg1.rootNode);  //the only one root element.
         }
       }
     }
+    if(this.xmlTestWriter !=null) {
+      this.xmlTestWriter.close();
+      this.xmlTestWriter = null;
+    }
+
     Debugutil.stop();
   }
 
@@ -282,7 +360,7 @@ public class XmlJzReader
    * @param cfg1
    * @throws Exception 
    */
-  private void parseElement(StringPartFromFileLines inp, Object output, XmlCfg.XmlCfgNode cfgNode) 
+  private void parseElement(StringPartScan inp, Object output, XmlCfg.XmlCfgNode cfgNode) 
   throws Exception
   { 
     int dbgline = -7777;
@@ -296,6 +374,10 @@ public class XmlJzReader
     //
     //The tag name of the element:
     String sTag = inp.getLastScannedString().toString();
+    
+    if(this.xmlTestWriter !=null) {
+      this.xmlTestWriter.writeElement(sTag);
+    }
     
     if(sTag.contains("   "))
       Debugutil.stop();
@@ -387,12 +469,15 @@ public class XmlJzReader
       //end of element
     }
     else if(inp.scan(">").scanOk()) {
-      //textual content
+      //textual content or sub nodes
+      if(this.xmlTestWriter !=null) {
+        this.xmlTestWriter.writeElementHeadEnd(false);
+      }
       StringBuilder contentBuffer = null;
       //
       //loop to parse <tag ...> THE CONTENT </tag>
       while( ! inp.scan().scan("<").scan("/").scanOk()) { //check </ as end of node
-        inp.readnextContentFromFile(sizeBuffer/2);
+        inp.readNextContent(sizeBuffer/2);
         if(inp.scan("<").scanOk()) {
           if(inp.scan("!--").scanOk()) {
             inp.seekEnd("-->");
@@ -405,7 +490,7 @@ public class XmlJzReader
         }
       }
       //
-      inp.readnextContentFromFile(sizeBuffer/2);
+      inp.readNextContent(sizeBuffer/2);
       //the </ is parsed on end of while already above.
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
@@ -422,6 +507,9 @@ public class XmlJzReader
       throw new IllegalArgumentException("either \">\" or \"/>\" expected");
     }
     inp.setLengthMax();  //for next parsing
+    if(this.xmlTestWriter !=null) {
+      this.xmlTestWriter.writeElementEnd();
+    }
   }
 
 
@@ -444,7 +532,7 @@ public class XmlJzReader
    * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
    * @throws Exception
    */
-  private CharSequence parseAttributes(StringPartFromFileLines inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
+  private CharSequence parseAttributes(StringPartScan inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
       , List<AttribToStore>[] attribsToStore, Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
   throws Exception
   { CharSequence keyret = tag; //no special key. use element.
@@ -455,6 +543,9 @@ public class XmlJzReader
       if(!inp.scanQuotion("\"", "\"", null).scanOk()) throw new IllegalArgumentException("attr value expected");
       if(cfgNode !=null) {
         String sAttrValue = replaceSpecialCharsInText(inp.getLastScannedString()).toString();  //"value" in quotation
+        if(this.xmlTestWriter !=null) {
+          this.xmlTestWriter.writeAttribute(sAttrNsNameRaw.toString(), sAttrValue);
+        }
         if(sAttrNsNameRaw.equals("xmlinput:class"))
           Debugutil.stop();
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
@@ -527,7 +618,7 @@ public class XmlJzReader
           }
         }
       }
-      inp.readnextContentFromFile(sizeBuffer/2);
+      inp.readNextContent(sizeBuffer/2);
     } //while
     return keyret;
   }
@@ -560,7 +651,7 @@ public class XmlJzReader
           subOutput = DataAccess.invokeMethod(elementStorePath, null, output, true, attribValues, false);
         } else {
           //it may be a method too but without textual parameter.
-          subOutput = DataAccess.access(elementStorePath, output, true, false, attribValues, false, null);
+          subOutput = DataAccess.access(elementStorePath, output, true, false, null, attribValues, false, null);
         }
       } catch(Exception exc) {
         subOutput = null;
@@ -625,12 +716,15 @@ public class XmlJzReader
 
 
 
-  /**
+  /**Reads the textual content of an element.
+   * leading and trailing whitespaces are not part of the content.
+   * If the content contains a hard coded line feed with &amp;#xa; etc. all textual line feeds and following indents are removed from the text.
+   * See {@link #replaceSpecialCharsInText(CharSequence)} 
    * @param inp
    * @param buffer maybe null then ignore content.
    * @throws ParseException 
    */
-  private CharSequence parseContent(StringPartFromFileLines inp, StringBuilder buffer)
+  private CharSequence parseContent(StringPartScan inp, StringBuilder buffer)
   throws IOException, ParseException
   { boolean bContReadContent;
     int posAmp = buffer == null ? 0 : buffer.length()-1; //NOTE: possible text between elements, append, start from current length.
@@ -649,6 +743,9 @@ public class XmlJzReader
         inp.lenBacktoNoWhiteSpaces();
       }
       CharSequence content2 = replaceSpecialCharsInText(inp.getCurrentPart());
+      if(this.xmlTestWriter !=null) {
+        this.xmlTestWriter.writeText(content2, false);
+      }
       inp.fromEnd();
       if(buffer !=null && buffer.length() > 0) { 
         //any content already stored, insert a space between the content parts.
@@ -667,17 +764,9 @@ public class XmlJzReader
           ((StringBuilder)content).append(content2);
         } 
       }
-      bEofSupposed = inp.readnextContentFromFile(sizeBuffer/2);
+      bEofSupposed = inp.readNextContent(sizeBuffer/2);
     } while(bContReadContent);
     return content;
-//    if(buffer !=null) {
-//      while( (posAmp  = buffer.indexOf("&", posAmp+1)) >=0) {  //replace the subscription of &lt; etc.
-//        if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "lt;")) { buffer.replace(posAmp, posAmp+4, "<");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "gt;")) { buffer.replace(posAmp, posAmp+4, ">");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "amp;")) { buffer.replace(posAmp, posAmp+4, "&");  }
-//        else if(StringFunctions.startsWith(buffer, posAmp+1, posAmp+4, "auml;")) { buffer.replace(posAmp, posAmp+4, "ä");  }
-//      }
-//    }
   }
   
   
@@ -714,36 +803,58 @@ public class XmlJzReader
   
   
   /**Replaces the basic sequences &amp;lt; etc. and the UTF 16 &lt;#xaaaa;
-   * and replaces line feed with indent with one space. 
+   * and replaces line feed with indent with one space.
+   * Before call of this routine the leading and trailing white spaces are removed alread. 
    * @param src
    * @return src if no such sequences found
    * @throws ParseException
    */
   private CharSequence replaceSpecialCharsInText(CharSequence src) throws ParseException {
-    if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; } //unchange, no effort
+    //Note: older form, since 2020-01: do not convert \n if no &#xa is contained:
+    if(StringFunctions.contains(src, "Comment of Network1"))
+      Debugutil.stop();
+    //commented: if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; }
+    if(StringFunctions.indexOf(src, '&') < 0) { return src; } //unchange, no effort
     else {
-      StringBuilder b = new StringBuilder(src);
+      StringBuilder b = new StringBuilder(src); //need, at least one & is to be replaced.
+//      boolean bLinefeedfound = false;
       int pos = 0;
       while( ( pos  = StringFunctions.indexOf(b, '&', pos)) >=0) {
         int posEnd = StringFunctions.indexOf(b, ';', pos);
-        if(posEnd >0 && (posEnd-pos) < 11) {
+        if(posEnd >0 && (posEnd - pos) < 11) {
           String search = b.subSequence(pos, posEnd+1).toString();
           String replChar = replaceChars.get(search);
-          if(replChar == null && search.charAt(1) == '#') {
-            int radix =10, posInt = 2;
-            if(search.charAt(posInt) == 'x') {
-              radix = 16; posInt +=1;
+          if(replChar == null) {
+            if( search.charAt(1) == '#') {
+              int radix =10, posInt = 2;
+              if(search.charAt(posInt) == 'x') {
+                radix = 16; posInt +=1;
+              }
+              int nUTF;
+              try{ nUTF = Integer.parseUnsignedInt(search.substring(posInt, posEnd-pos), radix); }
+              catch(NumberFormatException exc) {
+                nUTF = 0x3f;
+                assert(false);
+              }
+              posEnd +=1; //now after ';'
+              if(nUTF == 0x0a) { 
+                //other variant used: bLinefeedfound = true;
+                //because of a hard coded line feed is detected, skip over an textual linefeed and maybe indents:
+                //Note: All real requested indentation chars should be hard coded true, with &#x20; etc. 
+                int zb = b.length();
+                while( posEnd < zb && "\n\r \t".indexOf(b.charAt(posEnd)) >=0) {
+                  posEnd +=1; //skip over any whitespace after &#xa; and following &#x20;
+                }
+              }
+              char[] replChars = Character.toChars(nUTF);
+              b.delete(pos, posEnd);
+              b.insert(pos, replChars);
+              pos += replChars.length;
             }
-            int nUTF;
-            try{ nUTF = Integer.parseUnsignedInt(search.substring(posInt, posEnd-pos), radix); }
-            catch(NumberFormatException exc) {
-              nUTF = 0x3f;
-              assert(false);
+            else {
+              //Problem: unrecognized replacing:
+              //do nothing yet.
             }
-            char[] replChars = Character.toChars(nUTF);
-            b.delete(pos, posEnd+1);
-            b.insert(pos, replChars);
-            pos += replChars.length;
           }
           else if(replChar !=null) {
             if(replChar.equals("&"))
@@ -756,18 +867,26 @@ public class XmlJzReader
         }
       }
       pos = 0;
-      while( ( pos  = StringFunctions.indexOfAnyChar(b, pos, -1, "\n\r")) >=0) {
-        int posEnd = pos +1;
-        while( " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
-        b.replace(pos, posEnd, " ");  //remove all indent white spaces after line break. Replace line break with indent by 1 space. 
-      }
+//      if(bLinefeedfound) {
+        //replace line feed and following indent with one space only if the text contains any line feed with &#xa; or &#10;
+        //It means if the XML-source uses a hard coded line feed a textual linefeed is used as whiteSpace.
+        //If the text contains hard coded &#xa; it should contain hard coded indents too (&#x20; or #x32;).
+        //If the text does not contain hard coded line feed the original content for line feed and spaces should be preserved.
+        //What does the w3c says: It is not clearly.
+//Other variant used, skip over \r\n indent after hard coded line feed.        
+//        while( ( pos  = StringFunctions.indexOfAnyChar(b, pos, -1, "\n\r")) >=0) {
+//          int posEnd = pos +1;
+//          while(posEnd < b.length() &&  " \t\n\r".indexOf(b.charAt(posEnd)) >=0) { posEnd +=1; } //skip over all chars till next line content
+//          b.replace(pos, posEnd, " ");  //remove all indent white spaces after line break. Replace line break with indent by 1 space. 
+//        }
+//      }
       return b;
     }
   }
   
   
   
-  public XmlCfg readCfg(File file) {
+  public XmlCfg readCfg(File file) throws IOException {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
     cfg.finishReadCfg(this.namespaces);
     return this.cfg;
@@ -799,10 +918,20 @@ public class XmlJzReader
   
   
 
-  public String readXml(File file, Object dst) {
+  public String readXml(File file, Object dst) throws IOException {
     return this.readXml(file, dst, this.cfg);
   }  
     
+  
+  
+  public String readXml(InputStream stream, String sInputPath, Object dst) {
+    return readXml(stream, sInputPath, dst, this.cfg);
+  }
+  
+  public String readXml(Reader stream, String sInputPath, Object dst) {
+    return readXml(stream, sInputPath, dst, this.cfg);
+  }
+  
   
   static class AttribToStore {
     /**The data access to store the value.*/

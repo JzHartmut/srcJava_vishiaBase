@@ -58,6 +58,7 @@ import org.vishia.xmlSimple.XmlNodeSimple;
 import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
 import org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement;
 import org.vishia.zbnf.ZbnfSyntaxPrescript.EType;
+import org.vishia.cmd.JZtxtcmdScript.Onerror;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 
@@ -132,6 +133,17 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-02-02: new {@link #setSyntaxFromJar(Class, String)} and {@link #parseFileFromJar(Class, String, int)}
+   * <li>2020-01-16: &lt;?%> is possible as marker in syntax to force debug stop on {@link ZbnfSyntaxPrescript#bDebugParsing},
+   *   hence it is more simple to test a Zbnf script.
+   * <li>2019-12-09: new: The Usage of already parsed content was prepared in about 2013 but not used till now. 
+   *                 Now it is completed, tested and used. But the test overall is owing. 
+   *                 Therefore this feature is activted only if  {@link Args#bUseResultlet} is set, default is false.
+   * <li>2019-12-09: new possible {@link #ZbnfParser(MainCmdLogging_ifc, Args)} new {@link Args#bUseResultlet} 
+   * <li>2019-12-09: chg: The XML tree is only built if {@link #getResultNode()} is called, not unnecessarily in any case. 
+   *                 The algorithm for reusing already parsed results does not use the XML tree. 
+   * <li>2019-10-10: new {@link #setSyntax(CharSequence)} formally with CharSequence instead String, more common useable, especially from new {@link org.vishia.util.FileSystem#readInJar(Class, String, String)}
+   * <li>2019-10-10: new {@link #setMainSyntax(String)} not only the first entry can be the the main rule. Used to parse inner Syntax in XML (for IEC 61499).
    * <li>2019-07-07: Some debug possibilities moved or commented.  
    * <li>2019-07-06 Hartmut bugfix: conspicuously on JTtxtcmd-Script some indents where missing (Reflection Generation). The cause was the missing <code>.indent=-3</code>-attribute.
    *   The primary error was using the faulty {@link ZbnfSyntaxPrescript} instance to store the parse result in <code>parseSub(...)</code>.
@@ -274,7 +286,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2019-07-07";
+  public static final String sVersion = "2020-02-02";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -282,6 +294,23 @@ public class ZbnfParser
   
   public static class Args {
     boolean bStoreInputForComponent;
+    int maxParseResultEntriesOnError;
+    
+    /**True than a repeated usage of the same syntax component on the same source position
+     * uses the older parsed result. It is default false because this new feature
+     * since 2019-12 is not exceeding tested yet.
+     */
+    boolean bUseResultlet;
+    
+    public Args(int maxParseResultEntriesOnError) {
+      this.maxParseResultEntriesOnError = maxParseResultEntriesOnError;
+    }
+    
+    public Args() {
+      this.maxParseResultEntriesOnError = 20;
+    }
+    
+    
   }
   
   public final Args args;
@@ -468,11 +497,16 @@ public class ZbnfParser
         if(ixStoreStart < parserStoreInPrescript.items.size()){
           ZbnfParserStore.ParseResultItemImplement parseResultStart = parserStoreInPrescript.items.get(ixStoreStart);
           //Build a part of the XML tree from the start parse result without parent.
-          resultlet.xmlResult = builderTreeNodeXml.buildTreeNodeRepresentationXml(null, parseResultStart, true);
+          int size = parserStoreInPrescript.items.size() - ixStoreStart;
+          resultlet.parseResult = new ParseResultItemImplement[size];
+          for(int ix = 0; ix < size; ++ix) {
+            this.resultlet.parseResult[ix] = this.parserStoreInPrescript.items.get(ixStoreStart + ix);
+          }
+          //resultlet.xmlResult = builderTreeNodeXml.buildTreeNodeRepresentationXml(null, parseResultStart, true);
         } else {
           //it is possible that the parsing is ok but a parse result is not produced because it is a check only
           //or it has empty options.
-          resultlet.xmlResult = null;
+          this.resultlet.parseResult = null; //xmlResult = null;
         }
         resultlet.endPosText = input.getCurrentPosition();
         String key = String.format("%9d", resultlet.startPosText) + resultlet.syntaxPrescript.sDefinitionIdent;
@@ -1064,7 +1098,11 @@ public class ZbnfParser
 	            if( ! bDoNotStoreData ) {
 	              srcLine = input.getLineAndColumn(srcColumn);  //TODO optimize input position, usual from component start.
 	              String srcFile = input.getInputfile();
-	              parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+	              if(sSemanticForStoring !=null) {
+	                parserStoreInPrescript.addSemantic(sSemanticForStoring, syntaxItem, parentResultItem, srcLine, srcColumn[0], srcFile);
+	              } else {
+	                Debugutil.stop();  //only temporary
+	              }
 	            }
 	          } break; //do nothing
 	          case kSyntaxComponent:
@@ -1736,16 +1774,36 @@ public class ZbnfParser
       { boolean bOk;
         String sKeySearchAlreadyParsed = String.format("%9d", input.getCurrentPosition()) + syntaxCmpn.sDefinitionIdent;
         ParseResultlet resultlet = alreadyParsedCmpn.get(sKeySearchAlreadyParsed);
-        if(resultlet !=null){
-          Assert.stop();
+        if(resultlet !=null && ZbnfParser.this.args.bUseResultlet){
+          //The same syntax component was already successfully parsed on this position. 
+          //Get it result. Do not repeat a maybe complex parsing:
+          //The store of the resultlet should not be a member of the current:
+          ZbnfParserStore parserStoreInPrescript = PrescriptParser.this.parserStoreInPrescript;
+          int ixStore = parserStoreInPrescript.items.size();
+          if(resultlet.parseResult !=null && resultlet.parseResult.length >=1) {
+            ParseResultItemImplement parent = parserStoreInPrescript.items.get(ixStore -1);
+            parent.offsetAfterEnd = resultlet.parseResult.length +1;
+            resultlet.parseResult[0].parent = parent;  //The last one.
+            
+          }
+          for(ParseResultItemImplement resultitem: resultlet.parseResult) {
+            int diff = resultitem.idxOwn - ixStore;
+            resultitem.idxOwn = ixStore;
+            resultitem.store = parserStoreInPrescript;
+            parserStoreInPrescript.items.add(resultitem);
+            ixStore +=1;
+          }
+          parserStoreInPrescript.item = null; //should not be used.
+          PrescriptParser.this.input.setCurrentPosition(resultlet.endPosText);
+          bOk = true;
         }
+        else {  
+          if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + syntaxCmpn.sDefinitionIdent + "?" + sSemanticForError + ">");
+          if(syntaxCmpn.sDefinitionIdent.equals("headerBlock") && parentResultItem.sSemantic.equals("CLASS_C"))
+          { stop();
           
-        if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseComponent;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent(" + nRecursion + ") <" + syntaxCmpn.sDefinitionIdent + "?" + sSemanticForError + ">");
-        if(syntaxCmpn.sDefinitionIdent.equals("headerBlock") && parentResultItem.sSemantic.equals("CLASS_C"))
-        { stop();
-        
-        }
-        /**Create the SubParser-instace: */
+          }
+          /**Create the SubParser-instace: */
           final PrescriptParser componentsPrescriptParser;
           
 //          if(sDefinitionIdent.equals("variableDefinition"))
@@ -1799,6 +1857,7 @@ public class ZbnfParser
             { report.reportln(idReportParsing, "parseCompError;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseComponent-error(" + nRecursion + ") <?" + sSemanticForError + ">");
             }
           }
+        }
         return bOk;
       }
   
@@ -2356,6 +2415,8 @@ public class ZbnfParser
   { this(report, 20);
   }
   
+
+  
   
   /**Creates a empty parser instance. 
    * @param report A report output
@@ -2363,9 +2424,20 @@ public class ZbnfParser
    *        If >0, than the last founded parse result is stored to support better analysis of syntax errors,
    *        but the parser is slower.
    */
-  public ZbnfParser( MainCmdLogging_ifc report, int maxParseResultEntriesOnError)
+  public ZbnfParser( MainCmdLogging_ifc report, int maxParseResultEntriesOnError) {
+    this(report, new Args(maxParseResultEntriesOnError));
+  }
+  
+  
+  /**Creates a empty parser instance. 
+   * @param report A report output
+   * @param maxParseResultEntriesOnError if 0 than no parse result is stored.
+   *        If >0, than the last founded parse result is stored to support better analysis of syntax errors,
+   *        but the parser is slower.
+   */
+  public ZbnfParser( MainCmdLogging_ifc report, ZbnfParser.Args args)
   { this.report = report;
-    this.args = new Args();   //Default values.
+    this.args = args;   //Default values.
     //parserStore = new ParserStore();
     listSubPrescript = new TreeMap<String,ZbnfSyntaxPrescript>(); //ListPrescripts();
     //cc080318 create it at start of parse(): parserStore = new ZbnfParserStore();
@@ -2382,7 +2454,7 @@ public class ZbnfParser
   /** Sets the syntax from given string.
    * @param syntax The ZBNF-Syntax.
    */
-  public void setSyntax(String syntax)
+  public void setSyntax(CharSequence syntax)
   throws ParseException
   { setSyntax(new StringPartScan(syntax));
   }
@@ -2393,7 +2465,7 @@ public class ZbnfParser
    * between {@link #setSyntax(File)} and {@link #setSyntax(String)}.
    * @param syntax The ZBNF-Syntax.
    */
-  public void setSyntaxString(String syntax)
+  public void setSyntaxString(CharSequence syntax)
   throws ParseException
   { setSyntax(new StringPartScan(syntax));
   }
@@ -2423,6 +2495,28 @@ public class ZbnfParser
     String sDirParent = fileSyntax.getParent();
     setSyntax(spSyntax, sDirParent);
   }
+  
+  
+  
+  /**Read syntax from a resource (file inside jar archive).
+   * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
+   *   Usually the clazz should be the output data clazz. But it is a user decision. 
+   * @param pathInJar relative Path from clazz. 
+   *   Usually the syntax should be in the same directory as the output data class. Then this is only the file name.
+   *   If the file is stored in a p 
+   * @throws IOException
+   * @throws ParseException 
+   * @throws UnsupportedCharsetException 
+   * @throws IllegalCharsetNameException 
+   */
+  public void setSyntaxFromJar(Class<?> clazz, String pathInJarFromClazz) throws IOException, IllegalCharsetNameException, UnsupportedCharsetException, ParseException {
+    StringPartScan spSyntax = new StringPartFromFileLines(clazz, pathInJarFromClazz, 0, "encoding", null);
+    String sDirImport = null;   //yet not supported: import sub syntax.
+    setSyntax(spSyntax, sDirImport);
+    spSyntax.close();   //closes ssyntax too.
+  }
+
+
   
   
   /** Sets the syntax from given String.
@@ -2638,6 +2732,19 @@ public class ZbnfParser
 
 
   
+  /**Sets another syntax rule as the first entry in the given syntax.
+   * This routine should be invoked only with a given syntax, one of the {@link #setSyntax(File)} routines should be called before.
+   * @param ident syntax rule, <identifier>::=
+   * @throws ParseException
+   */
+  public void setMainSyntax(String ident) throws ParseException {
+    ZbnfSyntaxPrescript rule = this.listSubPrescript.get(ident);
+    if(rule == null) throw new ParseException("syntax rule not found: " + ident, 0);
+    this.mainScript = rule;
+  }
+  
+  
+  
   public ZbnfSyntaxPrescript mainScript() { return mainScript; }
   
   
@@ -2805,9 +2912,36 @@ public class ZbnfParser
   {
     int maxBuffer = 0;  //auto detect, use file size.
     StringPartScan spInput = new StringPartFromFileLines(fInput, maxBuffer, null, null); 
-    return parse(spInput);
+    boolean bOk = false; 
+    try{ bOk = parse(spInput); }
+    finally { spInput.close(); }
+    return bOk;
   }
 
+
+
+  
+  /**Parsed a content which is stored as resource in a jar file.
+   * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
+   *   Usually the clazz should be the output data clazz. But it is a user decision. 
+   * @param pathInJar relative Path from clazz. 
+   *   Usually the syntax should be in the same directory as the output data class. Then this is only the file name.
+   *   If the file is stored in a p 
+   * @throws IOException
+   * @return false, then see {@link #getExpectedSyntaxOnError()} etc.
+   */
+  public boolean parseFileFromJar(Class<?> clazz, String pathInJarFromClazz, int maxSize) throws IOException {
+    boolean bOk = false; 
+    StringPartScan spInput = null;
+    try {  //anyway close 
+      spInput = new StringPartFromFileLines(clazz, pathInJarFromClazz, maxSize, "encoding", null);
+      bOk = parse(spInput); 
+    }
+    finally { 
+      if(spInput !=null) { spInput.close(); }
+    }
+    return bOk;
+  }
 
 
   /**Parses a given Input and produces a parse result.
@@ -3161,11 +3295,12 @@ public class ZbnfParser
    * */
   //public XmlNodeSimple<ZbnfParseResultItem> getResultTree(){
   public XmlNode getResultTree(){
-    if(parserStoreTopLevel.items.size()>0)
-    { //parseResult.idxParserStore = 0;
-    ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
-    //ZbnfParserStore.buildTreeNodeRepresentationXml(null, firstItem, true);
-    return firstItem.treeNodeXml;
+    if(parserStoreTopLevel.items.size()>0) { 
+      ZbnfParserStore.ParseResultItemImplement firstItem = parserStoreTopLevel.items.get(0);
+      if(firstItem.treeNodeXml == null) {
+        builderTreeNodeXml.buildTreeNodeRepresentationXml(null, firstItem, true);
+      }
+      return firstItem.treeNodeXml;
     }
     else return null;
   }
@@ -3290,7 +3425,10 @@ public class ZbnfParser
     final long startPosText;
     long endPosText;
     
-    XmlNode xmlResult;
+    
+    ParseResultItemImplement[] parseResult;
+    
+    //XmlNode xmlResult;
     
     ParseResultlet(ZbnfSyntaxPrescript syntaxPrescript, long startPosText){
       this.syntaxPrescript = syntaxPrescript;

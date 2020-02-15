@@ -44,6 +44,9 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2019-08-20: some operations throws ParseException on syntax errors.
+   * <li>2019-08-26 Hartmut: Some operations with boolean bSpecialSyntax, used in {@link #parseCmpExpr(StringPartScan, Map, Class, String, boolean, int)}
+   *   to prevent accepting ">". It has another meaning in some envronments, for example &lt;datapath> in an {@link org.vishia.util.OutTextPreparer}.
    * <li>2019-06-20 Hartmut; chg {@link #setExpr(String, Map, Class)} etc. with reflectionData. 
    *   It is used in {@link #parseArgument(StringPartScan, Class, String, int)}: If a given DataPath is not found in the variables,
    *   it is searched as constant input in the reflection class.  
@@ -172,8 +175,8 @@ public class CalculatorExpr
     protected final Stack<Value> stack = new Stack<Value>();
     
     public void clean() { 
-      stack.clear();
-      accu.type_ = '?';
+      this.stack.clear();
+      this.accu.type_ = '?';
     }
     
   }
@@ -213,45 +216,45 @@ public class CalculatorExpr
     private CharSequence stringVal;
     private Object oVal;
     
-    public Value(long val){ type_ = 'J'; etype = longExpr; longVal = val; }
+    public Value(long val){ this.type_ = 'J'; this.etype = longExpr; this.longVal = val; }
     
-    public Value(int val){ type_ = 'I'; etype = intExpr; intVal = val; }
+    public Value(int val){ this.type_ = 'I'; this.etype = intExpr; this.intVal = val; }
     
-    public Value(double val){ type_ = 'D'; etype = doubleExpr; doubleVal = val; }
+    public Value(double val){ this.type_ = 'D'; this.etype = doubleExpr; this.doubleVal = val; }
     
-    public Value(float val){ type_ = 'F'; etype = floatExpr; floatVal = val; }
+    public Value(float val){ this.type_ = 'F'; this.etype = floatExpr; this.floatVal = val; }
     
-    public Value(boolean val){ type_ = 'Z'; etype = booleanExpr; boolVal = val; }
+    public Value(boolean val){ this.type_ = 'Z'; this.etype = booleanExpr; this.boolVal = val; }
     
-    public Value(char val){ type_ = 'C'; etype = intExpr; longVal = intVal = val; }
+    public Value(char val){ this.type_ = 'C'; this.etype = intExpr; this.longVal = this.intVal = val; }
     
-    public Value(String val){ type_ = 't'; etype = stringExpr; oVal = stringVal = val; }
+    public Value(String val){ this.type_ = 't'; this.etype = stringExpr; this.oVal = this.stringVal = val; }
     
-    public Value(Appendable val){ type_ = 'a'; etype = objExpr; oVal = val; }
+    public Value(Appendable val){ this.type_ = 'a'; this.etype = objExpr; this.oVal = val; }
     
-    public Value(Object val){ type_ = 'o'; etype = objExpr; oVal = val; }
+    public Value(Object val){ this.type_ = 'o'; this.etype = objExpr; this.oVal = val; }
     
     //public Value(List<DataPathItem> datpath){ type = 'd'; this.datapath = datapath; }
     
-    public Value(){ type_ = '?'; etype = startExpr; }
+    public Value(){ this.type_ = '?'; this.etype = startExpr; }
     
     
     
-    public char type(){ return type_; }
+    public char type(){ return this.type_; }
     
     /**Copy all content from src to this.
      * @param src
      */
     public void copy(Value src){
-      type_ = src.type_;
-      etype = src.etype;
-      longVal = src.longVal;
-      intVal = src.intVal;
-      doubleVal = src.doubleVal;
-      floatVal = src.floatVal;
-      boolVal = src.boolVal;
-      stringVal = src.stringVal;
-      oVal = src.oVal;
+      this.type_ = src.type_;
+      this.etype = src.etype;
+      this.longVal = src.longVal;
+      this.intVal = src.intVal;
+      this.doubleVal = src.doubleVal;
+      this.floatVal = src.floatVal;
+      this.boolVal = src.boolVal;
+      this.stringVal = src.stringVal;
+      this.oVal = src.oVal;
     }
     
     /**Returns a boolean value. If the type of content is a numeric, false is returned if the value is ==0.
@@ -260,10 +263,10 @@ public class CalculatorExpr
      * @return The boolean value.
      */
     public boolean booleanValue()
-    { switch(type_){
-        case 'I': return intVal !=0;
-        case 'J': return longVal !=0;
-        case 'D': return doubleVal !=0;
+    { switch(this.type_){
+        case 'I': return this.intVal !=0;
+        case 'J': return this.longVal !=0;
+        case 'D': return this.doubleVal !=0;
         case 'F': return floatVal !=0;
         case 'C': return intVal !=0;
         case 'Z': return boolVal;
@@ -1446,6 +1449,10 @@ public class CalculatorExpr
      */
     public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws Exception {
       if(sDatapath !=null){
+//      if(sDatapath.startsWith("&("))
+//      Debugutil.stop();
+        if(sDatapath.contains("("))
+          Debugutil.stop();
         //====>
         CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
@@ -1483,10 +1490,11 @@ public class CalculatorExpr
      * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
      * @throws Exception 
      */
-    public Operand(StringPartScan sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws ParseException {
+    public Operand(StringPartScan sDatapath, Map<String, DataAccess.IntegerIx> variables
+    , Class<?> reflData, boolean bSpecialSyntax) throws ParseException {
       if(sDatapath !=null){
         //====>
-        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
+        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData, bSpecialSyntax);
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
         CalculatorExpr.Operand exprOperand;
         if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
@@ -1515,14 +1523,34 @@ public class CalculatorExpr
     }
 
     
-    public Object calc(Object[] vars) throws Exception {
+    
+    /**Accesses and returns the value of this operand. The start object is given 
+     * in varValues with {@link #ixValue}. If {@link #ixValue} is <0 then either the given {@link #dataConst}
+     *   or the {@link #textOrVar} is returned. 
+     * @param nameVariables see {@link DataAccess#access(List, Object, boolean, boolean, Map, Object[], boolean, org.vishia.util.DataAccess.Dst)}
+     *                      necessary on indirect access to variable via String, construct  such as &lt;&&(path)>
+     * @param varValues Array of possible values proper to the given {@link #ixValue}
+     * @return if {@link #dataAccess} is given, it accesses with the given start Object 
+     * @throws Exception
+     */
+    public Object calc(Map<String, IntegerIx> nameVariables, Object[] varValues) throws Exception {
       Object value;
       if(this.ixValue <0) {
-        value = this.textOrVar;   //String literal
+        if(dataConst !=null) {
+          if(dataConst instanceof Value) {
+            value = ((Value)this.dataConst).objValue();
+          } else {
+            assert(false);
+            value = null;
+          }
+          
+        } else {
+          value = this.textOrVar;   //String literal
+        }
       } else {
-        value = vars[this.ixValue];
+        value = varValues[this.ixValue];
         if(this.dataAccess !=null) {
-          value = this.dataAccess.access(value, true, false, vars);
+          value = this.dataAccess.access(value, true, false, nameVariables, varValues);
         }
       }
       return value;
@@ -2358,9 +2386,10 @@ public class CalculatorExpr
    * @param nameVariables see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
    * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
    */
-  public CalculatorExpr(StringPartScan sExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) {
+  public CalculatorExpr(StringPartScan sExpr, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, boolean bSpecialSyntax) {
     this();
-    String sError = setExpr(sExpr, nameVariables, reflData);
+    String sError = setExpr(sExpr, nameVariables, reflData, bSpecialSyntax);
     if(sError !=null) throw new IllegalArgumentException(sError);
   }
   
@@ -2473,7 +2502,7 @@ public class CalculatorExpr
   public String setExpr(String sExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData)
   { StringPartScan spExpr = new StringPartScan(sExpr);
     spExpr.setIgnoreWhitespaces(true);
-    return setExpr(spExpr, nameVariables, reflData);
+    return setExpr(spExpr, nameVariables, reflData, false);
   }
   
   /**Converts the given expression in a stack operable form.
@@ -2485,9 +2514,10 @@ public class CalculatorExpr
    * @param sIdentifier List of identifiers for variables.
    * @return null if ok or an error description.
    */
-  public String setExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData)
+  public String setExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, boolean bSpecialSyntax)
   { listOperations_.clear();
-    try{ parseExpr(spExpr, nameVariables, reflData, "!", 1);  
+    try{ parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  
     } catch(ParseException exc){ return exc.getMessage(); }
     return null;
   }
@@ -2499,7 +2529,7 @@ public class CalculatorExpr
    */
   public String setExpr(String sExpr) { 
     StringPartScan spExpr = new StringPartScan(sExpr);
-    return setExpr(spExpr, null);
+    return setExpr(spExpr, null, false);
   }
   
 
@@ -2510,7 +2540,7 @@ public class CalculatorExpr
    */
   public String setExpr(String sExpr, Class<?> reflData) { 
     StringPartScan spExpr = new StringPartScan(sExpr);
-    return setExpr(spExpr, reflData);
+    return setExpr(spExpr, reflData, false);
   }
   
 
@@ -2520,11 +2550,11 @@ public class CalculatorExpr
    * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
    * @see #setExpr(String, String[])
    */
-  public String setExpr(StringPartScan spExpr, Class<?> reflData) {
+  public String setExpr(StringPartScan spExpr, Class<?> reflData, boolean bSpecialSyntax) {
     listOperations_.clear();
     Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>(); 
     nameVariables.put("X", new DataAccess.IntegerIx(0));
-    try{ parseExpr(spExpr, nameVariables, reflData, "!", 1); 
+    try{ parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1); 
     } catch(ParseException exc){ return exc.getMessage(); }
     return null;
   }
@@ -2539,11 +2569,12 @@ public class CalculatorExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return this
    */
-  protected void parseExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, String startOperation, int recursion)
+  protected void parseExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, String startOperation, boolean bSpecialSyntax, int recursion)
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
-    parseCmpExpr(spExpr, nameVariables, reflData, op, recursion +1);
+    parseCmpExpr(spExpr, nameVariables, reflData, op, bSpecialSyntax, recursion +1);
     
     while(op !=null) {
       if(spExpr.scan("&&").scanOk()) {
@@ -2556,7 +2587,7 @@ public class CalculatorExpr
       }
       //
       if(op !=null) {
-        parseCmpExpr(spExpr, nameVariables, reflData, op, recursion +1);
+        parseCmpExpr(spExpr, nameVariables, reflData, op, bSpecialSyntax, recursion +1);
       }
     }//while boolean operation
   }
@@ -2569,7 +2600,8 @@ public class CalculatorExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return this
    */
-  protected void parseCmpExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, String startOperation, int recursion)
+  protected void parseCmpExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, String startOperation, boolean bSpecialSyntax, int recursion)
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
     String op = startOperation;
@@ -2584,7 +2616,7 @@ public class CalculatorExpr
           op = "!=";
         } else if(spExpr.scan(">=").scanOk()) {
           op = ">=";
-        } else if(spExpr.scan(">").scanOk()) {
+        } else if(!bSpecialSyntax && spExpr.scan(">").scanOk()) {
           op = ">";
         } else if(spExpr.scan("<=").scanOk()) {
           op = "<=";
@@ -2687,7 +2719,8 @@ public class CalculatorExpr
       parseAddExpr(spExpr, nameVariables, reflData, "!", recursion+1);
       if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
       listOperations_.add(new Operation(operation, Operation.kStackOperand));
-    } else if(nameVariables !=null && spExpr.scanSkipSpace().scanIdentifier().scanOk()){
+    } else if(nameVariables !=null && spExpr.scanSkipSpace().scanIdentifier().scanOk()) {
+      //nameVariables !=null means, the first identifier should be a known variable
       String sIdent = spExpr.getLastScannedString();
       DataAccess.IntegerIx ixOvar = nameVariables.get(sIdent);
       int ixVar;
@@ -2956,7 +2989,7 @@ public class CalculatorExpr
               oval2 = oper.operand_.textOrVar;
             } 
             if(oper.operand_.dataAccess !=null) {
-              oval2 = oper.operand_.dataAccess.access(oval2, true, false, args);
+              oval2 = oper.operand_.dataAccess.access(oval2, true, false, null, args);
             }
             convertObj(val2jar, oval2);
             val2 = val2jar;

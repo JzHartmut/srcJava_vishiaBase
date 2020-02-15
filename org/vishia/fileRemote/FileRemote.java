@@ -21,7 +21,7 @@ import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
 import org.vishia.event.EventTimerThread;
 import org.vishia.event.EventTimerThread_ifc;
-import org.vishia.fileLocalAccessor.FileAccessorLocalJava6;
+import org.vishia.fileLocalAccessor.FileAccessorLocalJava7;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -688,8 +688,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   static FileRemoteAccessorSelector getAccessorSelector(){
     if(accessorSelector == null){
-      accessorSelector = FileAccessorLocalJava6.selectLocalFileAlways;
-      // accessorSelector = FileAccessorLocalJava7.selectLocalFileAlways;
+      //accessorSelector = FileAccessorLocalJava6.selectLocalFileAlways;
+      accessorSelector = FileAccessorLocalJava7.selectLocalFileAlways;
     }
     return accessorSelector;
   }

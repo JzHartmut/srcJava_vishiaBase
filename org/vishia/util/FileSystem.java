@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.FileFilter;
@@ -55,6 +56,9 @@ public class FileSystem
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2020-02-11 Hartmut new: {@link #searchFileInParent(File, String...))} used for git GUI 
+   *   to search the .git or *.gitRepository from an inner file in the working area.
+   * <li>2019-12-06 Hartmut new: {@link #readInJar(Class, String, String)} as simple read possibility of a text file. 
    * <li>2017-09-09 Hartmut new: {@link #cleandirForced(File)}, {@link #copyDir(File, File)} 
    * <li>2016-01-17 Hartmut new: {@link #getFirstFileWildcard(File)}   
    * <li>2015-09-06 JcHartmut chg: instead inner class WildcardFilter the new {@link FilepathFilter} used.    
@@ -170,6 +174,8 @@ public class FileSystem
     final public String localPath;
     FileAndBasePath(File file, String sBasePath, String localPath)
     { this.file = file; 
+      assert(sBasePath.indexOf('\\')<0);
+      assert(localPath.indexOf('\\')<0);
       this.basePath = sBasePath;
       this.localPath = localPath;
     }
@@ -226,7 +232,7 @@ public class FileSystem
    * with the local name part starting with <code>localdir/...</code> 
    * in all elements localPath.
    * @param baseDir A base directoy which is the base of sPath. It can be null, then sPath should describe a valid 
-   *   file path.
+   *   file path which contains a ':' to separate the base path.
    * @param sPath may contain a <code>:</code>, this is instead <code>/</code> 
    *        and separates the base path from a local path.
    *        The sPath may contain backslashes for windows using, it will be converted to slash. 
@@ -241,9 +247,14 @@ public class FileSystem
     final File dir;
     final int posLocalPath;
     int posBase = sPath.indexOf(':',2);
+    if(posBase <2) {
+      int posAsterisk = sPath.indexOf('*');
+      posBase = sPath.lastIndexOf('/', posAsterisk);
+      if(posBase <0) { posBase = sPath.lastIndexOf('\\', posAsterisk); }
+    }
     final String sPathLocal;
     final CharSequence sAbsDir;
-    if(posBase >=2)
+    if(posBase >=0)
     { sPathBase = (sPath.substring(0, posBase) + "/").replace('\\', '/');
       sPathLocal = sPath.substring(posBase +1).replace('\\', '/');
       String sAbsDirNonNormalized = baseDir !=null ? baseDir.getAbsolutePath() + "/" + sPathBase : sPathBase;
@@ -296,6 +307,46 @@ public class FileSystem
     return sContent;
   }
 
+  
+  
+  
+  /**Read a file ('Resource') located in a jar file or inside the compiled class files. 
+   * @param clazz The path starts in the package where this class is located and uses the ClassLoader of this class.
+   * @param pathInJar relative to the class.
+   *   Use "filename.ext" if the file is in the same package as the clazz.
+   *   Use "../package/filename.ext" if the file is in another parallel package.
+   *   Note: The file is searched in the bin tree of class files on using in Eclipse IDE
+   * @param encoding use usually "UTF-8" or "US-ASCII" or "ISO-8859-1" for byte-coded content
+   *   or "UTF-16BE"
+   * @return null on error, throws never. Usual an error is a programmatically error not a user's failure.
+   *   Else the return value is a StringBuilder which may be able to change, but it should be used readonly only.
+   *   Use toString() to keep it persistent. 
+   */
+  public static CharSequence readInJar(Class clazz, String pathInJar, String encoding) {
+    //String pathMsg = "jar:" + clazz.getPackage().getName() + "/" + pathInJar;
+    //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    //classLoader.getResource("slx.cfg.xml");
+    try {
+      InputStream jarStream = clazz.getResourceAsStream(pathInJar);  //pathInJar with slash: from root.
+      if(jarStream == null) return null;
+      int zBytes = jarStream.available();  //nr of bytes of this file in jar.
+      StringBuilder buf = new StringBuilder(zBytes);  //maybe some less characters on encoding.
+      InputStreamReader reader = new InputStreamReader(jarStream, encoding);
+      int cc;
+      while( (cc = reader.read()) !=-1) {
+        buf.append((char)cc);
+      }
+      reader.close();
+      //cfgStream.close();
+      return buf;
+    } catch(IOException exc) {
+      return null; //usual faulty pathInJar 
+      //throw new IllegalArgumentException("predefBlocks read from jar fails: " + pathMsg + " error: " + exc);
+    }
+    
+  }
+  
+  
 
   /**Writes the given String as content to a file without exception throwing.
    * This method doesn't throws an exception but returns true of false. It may more simple in application.
@@ -1533,8 +1584,9 @@ public class FileSystem
    * @param path May be more as one local path. Simple it is only one "filename.ext" or "anyDirectory". Possible "path/to/file.ext".
    *   More as one argument may be given, to search one of more given files.
    * @return null if nothing found. Elsewhere the found file which matches to one of path in the start or one of the parent directories
+   * @deprecated not currently tested, use {@link #searchFileInParent(File, String...)} for simple files with wildcard-mask.
    */
-  public static File searchInParent(File start, String ... path)
+  @Deprecated public static File searchInParent(File start, String ... path)
   { File found = null;
     
     File parent = start.isDirectory() ? start : start.getParentFile();
@@ -1579,7 +1631,34 @@ public class FileSystem
     return found;
   }
   
+
   
+  
+  
+  
+  /**Searches a file given with local path in this directory and in all parent directories.
+   * @param start any start file or directory. If it is a file (for example a current one), its directory is used.
+   * @param path May be more as one local path. Simple it is only one "filename.ext" or "anyDirectory". Possible "path/to/file.ext".
+   *   More as one argument may be given, to search one of more given files.
+   * @return null if nothing found. Elsewhere the found file which matches to one of path in the start or one of the parent directories
+   */
+  public static File searchFileInParent(File start, String ... pattern)
+  { File found = null;
+    
+    File parent = start.isDirectory() ? (start.isAbsolute() ? start : start.getAbsoluteFile()) 
+                : (start.isAbsolute() ? start.getParentFile() : start.getAbsoluteFile().getParentFile());
+    do {
+      for(String path1 : pattern){             //check all files with the search paths.
+        File[] result = getFiles(parent, path1);
+        if(result.length >0) {
+          found = result[0];  //use the first matching one.
+        } else {
+          parent = parent.getParentFile();
+        }
+      }
+    } while(found == null && parent !=null);
+    return found;
+  }
 
 
   private static void stop()
