@@ -276,6 +276,7 @@
 2016-12-02 16:00:10  x     SpecialCharStrings.java                  ::          5.407 -1661090385 
 2011-02-26 15:36:54  x     StdHexFormatWriter.java                  ::          4.376  0697421476 
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
+2020-02-11 22:53:47  x     StringCmp.java                           ::           .954  0977957586 
 2019-04-30 14:05:06  x     StringFormatter.java                     ::         49.407 -1031233532 
 2019-12-28 23:07:49  x     StringFunctions.java                     ::         52.923  0882373254 
 2019-10-19 22:49:54  x     StringFunctions_B.java                   ::         10.723 -1605753743 
@@ -283,7 +284,7 @@
 2019-06-18 10:46:16  x     StringPart.java                          ::        122.368  0370589518 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
-2020-02-13 20:16:30  x     StringPartFromFileLines.java             ::         26.638  0450107305 
+2020-02-15 09:33:21  x     StringPartFromFileLines.java             ::         26.630  1027370270 
 2020-02-13 20:19:55  x     StringPartScan.java                      ::         50.066  0225586968 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 
@@ -305,7 +306,7 @@
 2020-02-09 14:05:17  x     GenXmlCfgJavaData.java                   ::         13.397 -2145113072 
 2019-08-18 13:28:03  x     XmlCfg.java                              ::         27.849 -1326807559 
 2020-02-09 13:48:44  x     XmlJzCfgAnalyzer.java                    ::         28.364  0086518356 
-2020-02-13 20:22:39  x     XmlJzReader.java                         ::         39.070  0586701087 
+2020-02-15 09:38:28  x     XmlJzReader.java                         ::         39.078  0802370525 
 
 ============================== org/vishia/xmlSimple/ ===============================================
 2020-02-13 20:26:38  x     SimpleXmlOutputter.java                  ::         11.085 -1306988227 

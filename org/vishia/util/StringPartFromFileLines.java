@@ -267,7 +267,7 @@ public class StringPartFromFileLines extends StringPartScan
     this.cBuffer = new char[sizeBuffer];
     this.charset = null;
     evalLineIndices(0, zBuffer);
-    readnextContentFromFile(0);   //read the start content. Read anytime. Minsize is 0
+    readNextContent(0);   //read the start content. Read anytime. Minsize is 0
     assign(new CharSq(0, -1));
   }
 

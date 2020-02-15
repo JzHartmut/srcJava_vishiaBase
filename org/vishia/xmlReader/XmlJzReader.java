@@ -31,11 +31,11 @@ import org.vishia.xmlSimple.XmlSequWriter;
 
 
 /*Test with jztxtcmd: call jztxtcmd with this java file with its full path:
-D:/vishia/ZBNF/srcJava_vishiaBase/org/vishia/xmlReader/XmlReader.java
+D:/vishia/ZBNF/srcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.java
 ==JZtxtcmd==
 currdir = "D:/vishia/ZBNF/examples_XML/XMLi2reader";
 Obj cfg = File:"readExcel.cfg.xml"; 
-Obj xmlReader = new org.vishia.xmlReader.XmlReader();
+Obj xmlReader = new org.vishia.xmlReader.XmlJzReader();
 xmlReader.setDebugStop(-1);
 xmlReader.readCfg(cfg);    
 Obj src = File:"testExcel_a.xml";
@@ -196,9 +196,9 @@ public class XmlJzReader
       error = readXml(sInput, sPathInput, output, xmlCfg);
       sInput.close();
     } catch(FileNotFoundException exc) {
-      throw new FileNotFoundException( "XmlReader.readXml(...) file not found: " + input.getAbsolutePath());
+      throw new FileNotFoundException( "XmlJzReader.readXml(...) file not found: " + input.getAbsolutePath());
     } catch(IOException exc) {
-      throw new IOException( "XmlReader.readXml(...) any IO exception: " + input.getAbsolutePath());
+      throw new IOException( "XmlJzReader.readXml(...) any IO exception: " + input.getAbsolutePath());
     }
     return error;
   }
