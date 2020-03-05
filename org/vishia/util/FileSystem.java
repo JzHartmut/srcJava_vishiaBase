@@ -56,6 +56,7 @@ public class FileSystem
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2020-03-05 Hartmut new {@link #readFile(File, Appendable, int[])} into a buffer.
    * <li>2020-02-11 Hartmut new: {@link #searchFileInParent(File, String...))} used for git GUI 
    *   to search the .git or *.gitRepository from an inner file in the working area.
    * <li>2019-12-06 Hartmut new: {@link #readInJar(Class, String, String)} as simple read possibility of a text file. 
@@ -283,6 +284,7 @@ public class FileSystem
   }
   
   
+  
   /**Reads the content of a whole file into a String.
    * This method returns a null pointer if an exception has occurs internally,
    * it throws never an Exception itself.
@@ -310,6 +312,47 @@ public class FileSystem
   
   
   
+  /**Reads the content of a whole file into a Appendable dst.
+   * This method returns false if an exception has occurs internally,
+   * it throws never an Exception itself.
+   * @param file The file should be exist, but don't need to exist.
+   * @param dst any appendable, may be an opened other file too, for copy
+   * @return null means, all ok. Any String with an exception text. 
+   *           On file not found null is returned any zDst is not incremented.
+   *           It means, there is nothing to read. Otherwise the string contains the content of the file.
+   */
+  public static String readFile(File file, Appendable dst, int[] zdst)
+  { try
+    { Reader reader = new FileReader(file);
+      BufferedReader bReader = new BufferedReader(reader);
+      int sizeBuffer = (int) file.length();
+      if(sizeBuffer > 0x1000) { sizeBuffer = 0x1000; } //for temporary storing, not too much
+      char[] content = new char[sizeBuffer];
+      int zBytes;
+      do {
+        zBytes = bReader.read(content);
+        if(zBytes >=0) { //-1 is eof
+//          for(int ix = 0; ix < zBytes; ++ix) {
+//            dst.append(content[ix]);  //is it faster than create new .toString()? persistence is not necessary.
+//          }
+          dst.append(new String(content, 0, zBytes));  //This operation is faster, maybe optimized
+          if(zdst !=null) { zdst[0] += zBytes; }
+        }
+      } while(zBytes >0);
+      bReader.close();
+      reader.close();
+    }
+    catch(FileNotFoundException exc)
+    { return null;  
+    }
+    catch(Exception exc)
+    { return exc.getMessage();   //on any other exception than  file not found.
+    }
+    return null; //all ok
+  }
+
+
+
   /**Read a file ('Resource') located in a jar file or inside the compiled class files. 
    * @param clazz The path starts in the package where this class is located and uses the ClassLoader of this class.
    * @param pathInJar relative to the class.
