@@ -288,9 +288,9 @@ public class CmdExecuter implements Closeable
    */
   public CmdQueueEntry executeCmdQueue(boolean abortOnError)
   { CmdQueueEntry e = null;
-    while( cmdQueue !=null && (e = cmdQueue.poll())!=null) {
+    while( this.cmdQueue !=null && (e = this.cmdQueue.poll())!=null) {
       if(e.jzsub !=null) {
-        try{ jzcmdExecuter.execSub(e.jzsub, e.args, true, e.out1, e.currentDir, CmdExecuter.this);
+        try{ this.jzcmdExecuter.execSub(e.jzsub, e.args, true, e.out1, e.currentDir, CmdExecuter.this);
         } catch(ScriptException exc){ 
           String text = "execute JZsub, scriptexception, " + exc.getMessage();
           try{ e.out1.append(text); } catch(IOException exc1){}

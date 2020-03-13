@@ -10,14 +10,14 @@ public class StringCmp {
   static String sEndline = "\n\r";
   
   
-  public static boolean compare(File f1, CharSequence s2
+  public static int compare(File f1, CharSequence s2
       , boolean bWhitespace, String[] comment) {
     CharSequence s1 = FileSystem.readFile(f1);
     return compare(s1, s2, bWhitespace, comment);
   }
   
   
-  public static boolean compare(File f1, File f2
+  public static int compare(File f1, File f2
       , boolean bWhitespace, String[] comment) {
     CharSequence s1 = FileSystem.readFile(f1);
     CharSequence s2 = FileSystem.readFile(f2);
@@ -26,10 +26,16 @@ public class StringCmp {
   
   
   
-  public static boolean compare(CharSequence s1, CharSequence s2
+  /**Complares two Strings with possibility of ignore white spaces and TODO: comments
+   * @param s1
+   * @param s2
+   * @param bWhitespace
+   * @return -1 if equal, else the character position of error
+   */
+  public static int compare(CharSequence s1, CharSequence s2
       , boolean bWhitespace, String[] comment) {
     if(s1 == null || s2 == null) {
-      return false;
+      return s1==s2 ? -1: 0; //both 0 then equal, return -1
     }
     else {
       String endlineComment = comment[0];
@@ -60,7 +66,7 @@ public class StringCmp {
       if(ix2[0] < z2) {
         bok = false;  //s2 is longer than s1
       }
-      return bok;
+      return bok ? -1 : ix1[0];
     }
   }
 
