@@ -60,6 +60,10 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-03-14: Hartmut trouble with {@link #close()}. Only if #lineout exists and the content was flushed,
+   *   the content is deleted yet. That is always true. After close the content is able to evaluate
+   *   respectively stored furthermore in the aggregated {@link #getContent()} if no lineout is given.
+   *   See documentation to {@link #close()}.  
    * <li>2018-09-20: Hartmut new {@link #addHexBlock(byte[], int, int, short, short))} 
    * <li>2018-09-17: {@link #addHex(long, int)} with upper chars  
    * <li>2015-06-07: Hartmut chg: {@link #append(char)} and {@link #flushLine(String)}, now output of the given line end is supported
@@ -1301,17 +1305,26 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   }
 
    
+  /**close of StringFormatter stores yet existing text in a aggregated {@link #lineout}
+   * if a lineout is aggregated. A lineout is the first argument of
+   * ctor {@link StringFormatter#StringFormatter(Appendable, boolean, String, int)}
+   * This Stringformatter is then empty, it can be garbaged.
+   * If a lineout is not aggregated, this operation does nothing. 
+   * The content is preserved. It can be still evaluated. But it should not be written furthermore. 
+   * @see java.io.Closeable#close()
+   */
   @Override
   public void close() throws IOException
   {
     if(lineout !=null){
       lineout.append(buffer);
+      reset();
+      //recursively call close():
       if(bShouldLineoutClose && lineout instanceof Closeable){
         ((Closeable)lineout).close();
         lineout = null;
       }
     }
-    reset();
   }
 
 

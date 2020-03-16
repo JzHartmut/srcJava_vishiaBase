@@ -85,6 +85,8 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-03-14 Hartmut bugfix: {@link ExecuteLevel#ctNesting} should be counted if internal execute levels are created, 
+   *   elsewhere the {@link ExecuteLevel#cmdExecuter} is closed on inner levels. fixed. 
    * <li>2018-10-16 Hartmut bugfix: The empty statement list in script part <code>onerror{}</code> was syntactically admissible but the execution crashes. fixed. 
    * <li>2018-09-22 Hartmut new in {@link ExecuteLevel#exec_OpenTextOut(org.vishia.cmd.JZtxtcmdScript.JZcmditem, StringFormatter, boolean)} :
    *   <code>text = appendableObj</code> can be used yet, it is especially to assign the text output to an GUI output box widget. 
@@ -318,7 +320,7 @@ public class JZtxtcmdExecuter {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2018-10-16";
+  static final public String version = "2020-03-14";
 
   /**This class is the jzcmd main level from a script.
    * @author Hartmut Schorrig
@@ -1205,7 +1207,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     if(out !=null) {
       StringFormatter outFormatter = new StringFormatter(out, out instanceof Closeable, "\n", 200);
       acc.textline = outFormatter;
-      try{ acc.setScriptVariable("text", 'A', out, true);
+      try{ acc.setScriptVariable("text", 'A', out, true); //It is the default output for <:>...<.>
       } catch(IllegalAccessException exc) { throw new JzScriptException(exc); }
     }
     if(!bscriptInitialized && currdir !=null){
@@ -1352,6 +1354,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         , Map<String, DataAccess.Variable<Object>> parentVariables)
     { this.jzcmdMain = acc;
       this.parent = parent;
+      this.ctNesting = parent == null ? 0 : parent.ctNesting+1;  //should not close #cmdExecuter if not the root.
       this.jzClass = jzClass;
       this.threadData = threadData;
       if(parent !=null) {

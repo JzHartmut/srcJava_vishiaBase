@@ -21,6 +21,11 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.StringPart;
 
 /**This class organizes the execution of commands with thread-parallel getting of the process outputs.
+ * It supports both command line invocations of the operation system (via {@link ProcessBuilder})
+ * and call of {@link JZtxtcmdScript} sub routines (which may call internally command lines).
+ * It is especially proper for graphic applications: 
+ * The execution of complex callbacks on graphical buttons should not be done in the graphic thread!
+ *  
  * @author Hartmut Schorrig
  *
  */
@@ -28,6 +33,7 @@ public class CmdExecuter implements Closeable
 {
   /**Version, License and History:
    * <ul>
+   * <li>2020-03-14 Hartmut new: {@link #addCmd(org.vishia.cmd.JZtxtcmdScript.Subroutine, List, Appendable, File, ExecuteAfterFinish)}.  
    * <li>2017-10-05 Hartmut new: {@link #setCharsetForOutput(String)}: git outputs its status etc. in UTF-8.  
    * <li>2017-01-01 Hartmut new: now alternatively to the command process the {@link JZtxtcmdExecuter#execSub(org.vishia.cmd.JZtxtcmdScript.Subroutine, List, boolean, Appendable, File)}
    *   can be invoked by a #add  The JZcmdExecuter may invoke an command process and uses this CmdExecuter too in the main thread. Therefore it is proper
@@ -92,7 +98,7 @@ public class CmdExecuter implements Closeable
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2016-09-18";
+  public static final String version = "2020-03-14";
 
   
   /**Composite instance of the java.lang.ProcessBuilder. */
@@ -240,13 +246,49 @@ public class CmdExecuter implements Closeable
   }
   
   
+
   
-  
-  
+  /**Same as {@link #addCmd(org.vishia.cmd.JZtxtcmdScript.Subroutine, List, Appendable, File, ExecuteAfterFinish)}
+   * but without execFinish
+   * @param jzsub
+   * @param args
+   * @param out
+   * @param currDir
+   */
   public void addCmd( JZtxtcmdScript.Subroutine jzsub
   , List<DataAccess.Variable<Object>> args
   , Appendable out
   , File currDir
+  ) {
+    addCmd(jzsub, args, out, currDir, null);
+  }
+  
+  
+  
+  /**Adds a Subroutine of an jzTc script to execute. 
+   * The subroutine can invoke a cmd for a new process internally, this cmdExecuter is used
+   * because the given instance of a {@link JZtxtcmdExecuter} knows this.
+   * <br>
+   * Note: call {@link #initJZcmdExecuter(JZtxtcmdScript, String, MainCmdLogging_ifc)} with that script
+   * which contains the sub routine before call this operation.
+   * <br><br>
+   * Note: The execution of the subroutine is done in maybe another thread which call 
+   * {@link #executeCmdQueue(boolean)}. Hint: It can be done for example by the main thread in a graphical application.
+   * The execution of complex callbacks on graphical buttons should not be done in the graphic thread!
+   * 
+   * @param jzsub The dedicated subroutine from the script given with {@link #initJZcmdExecuter(JZtxtcmdScript, String, MainCmdLogging_ifc)}
+   * @param args proper arguments
+   * @param out The <:>...<.> text output is written into
+   * @param currDir current directory for script execution
+   * @param execFinish maybe null, this operation is called on finishing the subroutine. 
+   *   Maybe the text output on out should be append to an graphical window or such other,
+   *   or the resulting files are used. 
+   */
+  public void addCmd( JZtxtcmdScript.Subroutine jzsub
+  , List<DataAccess.Variable<Object>> args
+  , Appendable out
+  , File currDir
+  , ExecuteAfterFinish execFinish
   ) {
     if(jzcmdExecuter == null) throw new IllegalArgumentException("The CmdExecuter should be initiaized with initJZcmdExecuter(script,...)");
     if(cmdQueue == null) { cmdQueue = new ConcurrentLinkedQueue<CmdQueueEntry>(); }
@@ -257,6 +299,7 @@ public class CmdExecuter implements Closeable
     e.out = new LinkedList<Appendable>();
     e.out.add(out);
     e.currentDir = currDir;
+    e.executeAfterFinish = execFinish;
     cmdQueue.offer(e);
   }
   
@@ -294,6 +337,9 @@ public class CmdExecuter implements Closeable
         } catch(ScriptException exc){ 
           String text = "execute JZsub, scriptexception, " + exc.getMessage();
           try{ e.out1.append(text); } catch(IOException exc1){}
+        }
+        if(e.executeAfterFinish !=null) {
+          e.executeAfterFinish.exec(0, e.out1, null);
         }
       } else {
         if(e.currentDir !=null) {
