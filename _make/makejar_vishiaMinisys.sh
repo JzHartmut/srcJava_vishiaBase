@@ -9,14 +9,14 @@ export JAVAC_HOME=c:/Programs/Java/jdk1.8.0_211
 
 export CLASSPATH=xx
 export VERSION=2020-03-17
-export JARFILE=../vishiaBase-$VERSION.jar
-export MD5FILE=../vishiaBase-$VERSION.jar.MD5.txt
+export JARFILE=../vishiaMinisys-$VERSION.jar
+export MD5FILE=../vishiaMinisys-$VERSION.jar.MD5.txt
 
 # located from this workingdir as currdir for shell execution:
 export SRCPATH=..
-export MANIFEST=vishiaBase.manifest
+export MANIFEST=minisys.manifest
 # FILE1SRC=../org/vishia/jztxtcmd/JZtxtcmd.java
-export SRC_ALL=..
+export FILE1SRC=@minisys.files
 
 #now run the common script:
 ./makejar.sh
