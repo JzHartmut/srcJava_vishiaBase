@@ -1,16 +1,22 @@
 package org.vishia.util;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
@@ -44,6 +50,7 @@ public class Zip {
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-03-20 Hartmut improvements and extensions for jar, especially sort and time stamp 
    * <li>2014-06-15 Hartmut new: Supports jar 
    * <li>2013-02-09 Hartmut chg: {@link Cmdline#argList} now handled in {@link MainCmd#setArguments(org.vishia.mainCmd.MainCmd.Argument[])}.
    * <li>2013-01-20 Hartmut creation: New idea to use the zip facility of Java.
@@ -72,7 +79,7 @@ public class Zip {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static int version = 20130120;
+  public final static String version = "2020-03-20";
 
   
   
@@ -90,7 +97,7 @@ public class Zip {
    */
   private Manifest manifest;
   
-  
+  private boolean bsort;
   
   /**Creates an empty instance for Zip.
    * One should call {@link #addSource(String)} or {@link #addSource(File, String)}
@@ -178,7 +185,7 @@ public class Zip {
    *   Note: If a given source file was not found, it was ignored but write as return hint.
    * @return an error hint of file errors or null if successful.
    */
-  public String exec(File fileZip, int compressionLevel, String comment)
+  public String exec(File fileZip, int compressionLevel, String comment, long timestamp)
   throws IOException
   { StringBuilder errorFiles = null;
     final byte[] buffer = new byte[0x4000];
@@ -187,7 +194,20 @@ public class Zip {
     try {
       outstream = new FileOutputStream(fileZip);
       if(this.manifest != null){
-        outZip = new JarOutputStream(outstream, manifest); 
+        if(timestamp !=0) {
+          //jar without manifest
+          outZip = new JarOutputStream(outstream);
+          //but add the manifest here, with given timestamp:
+          ZipEntry e = new ZipEntry(JarFile.MANIFEST_NAME);
+          e.setTime(timestamp);
+          outZip.putNextEntry(e);
+          this.manifest.write(new BufferedOutputStream(outZip));
+          outZip.closeEntry();
+          System.out.println("jar-file with timestamp ");
+        } else {
+          outZip = new JarOutputStream(outstream, manifest);
+          System.out.println("jar-file with current file time ");
+        }
       } else {
         outZip = new ZipOutputStream(outstream);
       }
@@ -195,12 +215,37 @@ public class Zip {
       outZip.setLevel(compressionLevel);
       
       
-      for(Src src: listSrc){
-        //get the files.
-        List<FileSystem.FileAndBasePath> listFiles= new ArrayList<FileSystem.FileAndBasePath>();
-        
-        FileSystem.addFilesWithBasePath (src.dir, src.path, listFiles);
-        
+      //get the files.
+      List<FileSystem.FileAndBasePath> listFiles= new ArrayList<FileSystem.FileAndBasePath>();
+      for(Src src: this.listSrc){
+        String path = src.path;
+        if(path.startsWith("/tmp/")) {
+          String sTmp = System.getenv("TMP");  //found on windows
+          if(sTmp !=null) {
+            path = sTmp + path.substring(4);  //use the $TMP instead /tmp
+          }
+        }
+        System.out.println("  + " /*+ src.dir.getAbsoluteFile() */+ " : " + path);
+        FileSystem.addFilesWithBasePath (src.dir, path, listFiles);
+      }
+      if(this.bsort) {
+        Map<String, FileSystem.FileAndBasePath> idxSrc = new TreeMap<String, FileSystem.FileAndBasePath>();
+        for(FileSystem.FileAndBasePath src: listFiles) {
+          idxSrc.put(src.localPath, src);
+        }
+        listFiles.clear();
+        for(Map.Entry<String, FileSystem.FileAndBasePath> e: idxSrc.entrySet()) {
+          listFiles.add(e.getValue());
+        }
+      }
+      
+      System.out.println(" files:" + listFiles.size());
+      
+      
+      
+      
+      
+      
         for(FileSystem.FileAndBasePath filentry: listFiles){
           if(filentry.file.isFile()){
             ZipEntry zipEntry = null;
@@ -215,7 +260,7 @@ public class Zip {
               } else {
                 zipEntry = new ZipEntry(sPath);
               }
-              zipEntry.setTime(filentry.file.lastModified());
+              zipEntry.setTime(timestamp == 0 ? filentry.file.lastModified(): timestamp);
               outZip.putNextEntry(zipEntry);
               in = new FileInputStream(filentry.file);
               int bytes;
@@ -233,7 +278,6 @@ public class Zip {
             //directory is written in zip already by filentry.localPath
           }
         }
-      }  
       outZip.close();
       
     } finally {
@@ -265,8 +309,24 @@ public class Zip {
    * @throws IOException 
    */
   public String exec(Args args) throws IOException{
-    listSrc.addAll(args.listSrc);
-    return exec(args.fOut, args.compress, args.comment);
+    if(args.sManifest !=null) {
+      this.setManifest(new File(args.sManifest));
+    }
+    this.bsort = args.sortFiles;
+    this.listSrc.addAll(args.listSrc);
+    long timestamp = 0;
+    if(args.timestamp !=null) {
+      System.out.println("org.vishia.util.Zip: timestamp = " + args.timestamp + " (" + args.timeFormat + ")");
+      SimpleDateFormat df = new SimpleDateFormat(args.timeFormat);
+      try {
+        Date dd = df.parse(args.timestamp);
+        timestamp = dd.getTime();
+      } catch (ParseException e) {
+        System.err.println("org.vishia.util.Zip: faulty format for -time:" + args.timestamp + " - uses the current file time stamp");
+      }
+    }
+    System.out.println("org.vishia.util.Zip: write zip file to " + args.fOut);
+    return exec(args.fOut, args.compress, args.comment, timestamp);
   }
   
   
@@ -283,7 +343,7 @@ public class Zip {
   public static String zipfiles(File dst, File srcdir, String sPath, int compressionLevel, String comment) throws IOException{
     Zip zip = new Zip();
     zip.addSource(sPath);
-    return zip.exec(dst, compressionLevel, comment); 
+    return zip.exec(dst, compressionLevel, comment, 0); 
   }
 
   
@@ -317,7 +377,15 @@ public class Zip {
     public File fOut;
     
     public String comment = "";
+    
+    public boolean sortFiles;
+    
+    public String sManifest;
 
+    public String timestamp;
+    
+    public String timeFormat = "yyyy-MM-dd+hh:mm";
+    
   }
   
   
@@ -331,25 +399,44 @@ public class Zip {
     MainCmd.SetArgument setCompress = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
       char cc;
       if(val.length()== 1 && (cc=val.charAt(0))>='0' && cc <='9'){
-        args.compress = cc-'0';
+        Cmdline.this.args.compress = cc-'0';
         return true;
       } else return false;
     }};
     
     MainCmd.SetArgument setInput = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.listSrc.add(new Src(val, null));
+      Cmdline.this.args.listSrc.add(new Src(val, null));
       return true;
     }};
     
     MainCmd.SetArgument setOutput = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      args.fOut = new File(val);
+      Cmdline.this.args.fOut = new File(val);
+      return true;
+    }};
+    
+    MainCmd.SetArgument setManifest = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Cmdline.this.args.sManifest = val;
+      return true;
+    }};
+    
+    MainCmd.SetArgument setTimestamp = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Cmdline.this.args.timestamp = val;
+      return true;
+    }};
+    
+    MainCmd.SetArgument sort = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Cmdline.this.args.sortFiles = true;
       return true;
     }};
     
     MainCmd.Argument[] argList =
-    { new MainCmd.Argument("-compress", ":0..9 set the compression rate 0=non .. 90max", setCompress)
-    , new MainCmd.Argument("-o", ":ZIP.zip file for zip output", setOutput)
-    , new MainCmd.Argument("", "INPUT file possible with wildcards also in path like \"path/** /dir* /name*.ext*\"", setInput)
+    { new MainCmd.Argument("-compress", ":0..9 set the compression rate 0=non .. 90max", this.setCompress)
+      , new MainCmd.Argument("-o", ":ZIP.zip file for zip output", this.setOutput)
+      , new MainCmd.Argument("-sort", " sorts entries with path", this.sort)
+      , new MainCmd.Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp", this.setTimestamp)
+      , new MainCmd.Argument("-timeformat", ":yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat", this.setTimestamp)
+       , new MainCmd.Argument("-manifest", ":<manifestfile> creates a jar file", this.setManifest)
+      , new MainCmd.Argument("", "INPUT file possible with wildcards also in path like \"path/** /dir* /name*.ext*\"", this.setInput)
     };
     
 
@@ -364,7 +451,7 @@ public class Zip {
     Cmdline(Args args){
       this.args = args;
       super.addAboutInfo("Zip routine from Java");
-      super.addAboutInfo("made by HSchorrig, 2013-02-09 - 2014-06-15");
+      super.addAboutInfo("made by HSchorrig, 2013-02-09 - 2020-03-20");
       super.addHelpInfo("args: -compress:# -o:ZIP.zip { INPUT}");  //[-w[+|-|0]]
       super.addArgument(argList);
       super.addStandardHelpInfo();

@@ -218,7 +218,7 @@ public class ReadChars3Stream
           nWord>>=6; nBits=(nWord & 0x000f)+(nCheck<<4); //last 4 bits and nCheck
           out.append(cc = (char)(nBits + '0'));  
         }
-        if(--nWords==0) break;       //gekürzte Zeile
+        if(--nWords==0) break;       //shorten line
       }
       out.append("\r\n");  
       

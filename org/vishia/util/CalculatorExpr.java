@@ -443,7 +443,7 @@ public class CalculatorExpr
                 
             }
           }
-          //TODO regard kMGTmuµnp
+          //TODO regard kMGTmuÂµnp
           //TODO let the rest of String in stringVal, it may be the unit.
         } 
         //if more character are present, ignore it.

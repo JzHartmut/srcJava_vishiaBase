@@ -56,6 +56,7 @@ public class FileSystem
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2020-03-20 Hartmut new {@link #absolutePath(String, File)} refactored, some problems on {@link Zip} with jar.
    * <li>2020-03-05 Hartmut new {@link #readFile(File, Appendable, int[])} into a buffer.
    * <li>2020-02-11 Hartmut new: {@link #searchFileInParent(File, String...))} used for git GUI 
    *   to search the .git or *.gitRepository from an inner file in the working area.
@@ -172,6 +173,12 @@ public class FileSystem
   public static class FileAndBasePath
   { final public File file;
     final public String basePath;
+    
+    
+    /**The local path may start with /, it is the fact since some years. Do not change it.
+     * If the path without first / is need, use localPath():
+     * 
+     */
     final public String localPath;
     FileAndBasePath(File file, String sBasePath, String localPath)
     { this.file = file; 
@@ -180,7 +187,11 @@ public class FileSystem
       this.basePath = sBasePath;
       this.localPath = localPath;
     }
-    @Override public String toString() { return basePath+ ":" + localPath; }
+    
+    /**Returns the local path guaranteed not starting with "/", either null or start with the first name. */
+    public String localPath() { return this.localPath.startsWith("/") ? this.localPath.substring(1): this.localPath; }
+    
+    @Override public String toString() { return this.basePath+ ":" + this.localPath; }
   }
   
   /**Temporary class used only inside {@link #addFilesWithBasePath}.
@@ -224,30 +235,34 @@ public class FileSystem
   }
   
   /**Fills the list with found files to sPath.
-   * Example:
-   * <pre>
+   * <br> The complex example: <pre>
    * addFilesWithBasePath("..\\example/dir:localdir/ ** /*.h", list);
    * </pre>
    * fills <code>../example/dir/</code> in all elements basePath of list,
    * and fills all files with mask <code>*.h</code> from localdir and all sub folders,
    * with the local name part starting with <code>localdir/...</code> 
    * in all elements localPath.
-   * @param baseDir A base directoy which is the base of sPath. It can be null, then sPath should describe a valid 
-   *   file path which contains a ':' to separate the base path.
-   * @param sPath may contain a <code>:</code>, this is instead <code>/</code> 
-   *        and separates the base path from a local path.
+   * @param baseDir A base directoy which is the base of sPath, or which is the current directory to resolve relative
+   *        to absolute paths. It can be null, then sPath should describe a valid 
+   *        file path, if relative then starting from the system's current directory <code>new File(".").getAbsolutePath</code>).
+   * @param sPathArg may contain a <code>:</code> on position >2 instead of <code>/</code> 
+   *        to separate the base path from a local path (@since 2012, old feature).
+   *        <br>If a ':' is not found, the last `/`or `\\` before the first '*' separates the base from the local path.
+   *        <br>A ':' on second position is not recognized as path separation, it is usual the drive separator in windows
+   *            on absolute paths.  
    *        The sPath may contain backslashes for windows using, it will be converted to slash. 
    * @param list The list to fill in files with the basepath. 
    *        The basepath is <code>""</code> if no basepath is given in sPath.
    * @return false if no file is found.
    * @throws FileNotFoundException
    */
-  public static boolean addFilesWithBasePath(final File baseDir, final String sPath, List<FileAndBasePath> list) 
+  public static boolean addFilesWithBasePath(final File baseDir, final String sPathArg, List<FileAndBasePath> list) 
   //throws FileNotFoundException
   { final String sPathBase;
     final File dir;
     final int posLocalPath;
-    int posBase = sPath.indexOf(':',2);
+    String sPath = absolutePath(sPathArg, baseDir);
+    int posBase = sPath.indexOf(':',2); //Note: The ':' should be at position >2 to distinguish from drive separator  D: in windows
     if(posBase <2) {
       int posAsterisk = sPath.indexOf('*');
       posBase = sPath.lastIndexOf('/', posAsterisk);
@@ -965,44 +980,39 @@ public class FileSystem
   }
   
   
-  /**Converts to the absolute path if a relative path or HOME path is given.
+  /**Converts to the absolute and normalized path if a relative path or HOME path is given.
    * The filePath may start with
-   * <ul><li>"./" - then the currDir is replaced.
+   * <ul>
    * <li>"~/" - then the home dir is replaced. The home dir is the string 
    *     containing in the HOME environment variable. This style of notification is usual in Linux/Unix
-   * <li>"../../" - then the parent of currDir is replaced.
+   * <li>not with "/", "\\", "D:/", "D:\\" wherby D is any drive letter,
+   *   then the currDir is used as absolute path for the file.
    * </ul>    
+   * The resulting path is cleaned using {@link #normalizePath(CharSequence)}.
+   * It means, it contains only "/", no "\\" and no artifacts of "/../" and "/./"
+   * <br>The currDir can refer to an unknown File, it is not tested here.
+   * <br>If the currDir refers an relativ path, it is not tested, it is used.
    * @param sFileNameP filename. It may contain "\\". "\\" are converted to "/" firstly. 
    * @param currDir The current dir or null. If null then the current dir is gotten calling new File(".");
    * @return The path as absolute path. It is not tested whether it is a valid path. 
    *   The path contains / instead \ on windows.
    */
   public static String absolutePath(String sFileNameP, File currDir)
-  { String sFileName = sFileNameP.replace('\\', '/');
-    final String sAbs;
-    if(sFileName.startsWith("~")){ //The home directory
+  { final String sAbs;
+    if(sFileNameP.startsWith("~")){ //The home directory
       String sHome = System.getenv("HOME");
-      sAbs = sHome + sFileName.substring(1);
-    } else if(sFileName.startsWith("./")){
-      if(currDir == null){
-        currDir = new File(".");   //maybe environment PWD etc. but that is always valid 
-      }
-      sAbs = currDir + sFileName.substring(1); 
-    }
-    else if(sFileName.startsWith("../")){
-      if(currDir == null){
-        currDir = new File(".");   //maybe environment PWD etc. but that is always valid 
-      }
-      File base = currDir;
-      while(sFileName.startsWith("../")){
-        base = currDir.getParentFile();
-        sFileName = sFileName.substring(3);
-      }
-      sAbs = base + "/" + sFileName; 
+      sAbs = sHome + sFileNameP.substring(1);
+    } else if(! 
+        (  sFileNameP.startsWith("/")        //it is not an (absolute path or D:/windowsAbsPath) 
+        || sFileNameP.startsWith("\\")        //it is not an (absolute path or D:/windowsAbsPath) 
+        || sFileNameP.length() >=3 && (sFileNameP.substring(1, 3).equals(":/") || sFileNameP.substring(1, 3).equals(":\\"))
+        ) ){
+      String sCurrdir = currDir == null ? new File(".").getAbsolutePath() : currDir.getAbsolutePath();
+      sAbs = sCurrdir + "/" + sFileNameP; 
     } else {
-      sAbs = sFileName;
+      sAbs = sFileNameP;
     }
-    return cleanAbsolutePath(sAbs);
+    return normalizePath(sAbs).toString();  //removes some /../ or /./ inside
   }
   
   
@@ -1054,7 +1064,10 @@ public class FileSystem
       uPath.delete(pos, pos+2);
       posNext = pos;  //search from pos, it may be found "somewhat/././follow"
     }
-    posNext =1;
+    posNext =0; //skip over leading ../, do not reduce it!
+    while(StringFunctions.startsWith(test, posNext, -1, "../")) {
+      posNext +=3; //start after last leading ../../
+    }
     while( (pos = StringFunctions.indexOf(test, "/../", posNext)) >=0){
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       int posStart = uPath.lastIndexOf("/", pos-1);

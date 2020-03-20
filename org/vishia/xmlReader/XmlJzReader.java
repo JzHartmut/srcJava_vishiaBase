@@ -5,9 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
@@ -137,25 +135,25 @@ public class XmlJzReader
   
   
   public XmlJzReader() {
-    cfgCfg = XmlCfg.newCfgCfg();
-    replaceChars.put("&amp;", "&");
-    replaceChars.put("&lt;", "<");
-    replaceChars.put("&gt;", ">");
-    replaceChars.put("&quot;", "\"");
-    replaceChars.put("&apos;", "\'");
-    replaceChars.put("&nl;", "\n");
-    replaceChars.put("&cr;", "\r");
-    replaceChars.put("&#9;", "\t");
-    replaceChars.put("&#A;", "\n");
-    replaceChars.put("&#D;", "\r");
-    replaceChars.put("&#20;", " ");
+    this.cfgCfg = XmlCfg.newCfgCfg();
+    this.replaceChars.put("&amp;", "&");
+    this.replaceChars.put("&lt;", "<");
+    this.replaceChars.put("&gt;", ">");
+    this.replaceChars.put("&quot;", "\"");
+    this.replaceChars.put("&apos;", "\'");
+    this.replaceChars.put("&nl;", "\n");
+    this.replaceChars.put("&cr;", "\r");
+    this.replaceChars.put("&#9;", "\t");
+    this.replaceChars.put("&#A;", "\n");
+    this.replaceChars.put("&#D;", "\r");
+    this.replaceChars.put("&#20;", " ");
     //not xml conform, old style html
-    replaceChars.put("&auml;", "ä");
-    replaceChars.put("&ouml;", "ö");
-    replaceChars.put("&uuml;", "ü");
-    replaceChars.put("&Auml;", "Ä");
-    replaceChars.put("&Ouml;", "Ö");
-    replaceChars.put("&Uuml;", "Ü");
+    this.replaceChars.put("&auml;", "Ã¤");   //Note: UTF-8 in source, compile with UTF8 for the javac
+    this.replaceChars.put("&ouml;", "Ã¶");
+    this.replaceChars.put("&uuml;", "Ã¼");
+    this.replaceChars.put("&Auml;", "Ã„");
+    this.replaceChars.put("&Ouml;", "Ã–");
+    this.replaceChars.put("&Uuml;", "Ãœ");
   }   
    
   
@@ -163,11 +161,11 @@ public class XmlJzReader
    * @param line
    */
   public void setDebugStop(int line) {
-    debugStopLine = line;
+    this.debugStopLine = line;
   }
    
   public void XXXXreadXmlCfg(File input) {
-    cfg = new XmlCfg();
+    this.cfg = new XmlCfg();
     //read
   }
   
@@ -220,7 +218,7 @@ public class XmlJzReader
       ZipEntry zipEntry = zipFile.getEntry(pathInZip);
       InputStream sInput = zipFile.getInputStream(zipEntry);
       String sInputPath = zipInput.getAbsolutePath() + ":" + pathInZip;
-      error = readXml(sInput, sInputPath, output, cfg);
+      error = readXml(sInput, sInputPath, output, this.cfg);
       sInput.close();
       zipFile.close();
     } catch(Exception exc) {
@@ -249,7 +247,7 @@ public class XmlJzReader
     String error = null;
     StringPartScan inp = null;
     try {
-      inp = new StringPartFromFileLines(input, sInputPath, sizeBuffer, "encoding", null);
+      inp = new StringPartFromFileLines(input, sInputPath, this.sizeBuffer, "encoding", null);
       readXml(inp, output, xmlCfg);
     } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
       // TODO Auto-generated catch block
@@ -300,7 +298,7 @@ public class XmlJzReader
     String error = null;
     StringPartScan inp = null;
     try {
-      inp = new StringPartFromFileLines(input, sInputPath, sizeBuffer);
+      inp = new StringPartFromFileLines(input, sInputPath, this.sizeBuffer);
       readXml(inp, output, xmlCfg);
     } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
       // TODO Auto-generated catch block
@@ -338,7 +336,7 @@ public class XmlJzReader
        }
        else {
         inp.scanOk();
-        inp.readNextContent(sizeBuffer*2/3);
+        inp.readNextContent(this.sizeBuffer*2/3);
         {
           parseElement(inp, output, cfg1.rootNode);  //the only one root element.
         }
@@ -364,9 +362,9 @@ public class XmlJzReader
   throws Exception
   { 
     int dbgline = -7777;
-    if(debugStopLine >=0){
+    if(this.debugStopLine >=0){
       dbgline = inp.getLineAndColumn(null);
-      if(dbgline == debugStopLine)
+      if(dbgline == this.debugStopLine)
         Debugutil.stop();
     }
     //scan the <tag
@@ -431,7 +429,7 @@ public class XmlJzReader
     if(subCfgNode !=null) {
       attribNames[0] = subCfgNode.allArgNames;  //maybe null if no attribs or text and tag are used.
     }
-    @SuppressWarnings("unchecked")
+    //@SuppressWarnings("unchecked")
     String[] attribValues = null;
     @SuppressWarnings("unchecked")
     List<AttribToStore>[] attribsToStore = new List[1];
@@ -443,7 +441,7 @@ public class XmlJzReader
       DataAccess.IntegerIx ixO = attribNames[0].get("tag");
       if(ixO !=null) { attribValues[ixO.ix] = sTag; } 
     }
-    if(dbgline == debugStopLine)
+    if(dbgline == this.debugStopLine)
       Debugutil.stop();
     CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribNames, attribValues);
     //
@@ -477,7 +475,7 @@ public class XmlJzReader
       //
       //loop to parse <tag ...> THE CONTENT </tag>
       while( ! inp.scan().scan("<").scan("/").scanOk()) { //check </ as end of node
-        inp.readNextContent(sizeBuffer/2);
+        inp.readNextContent(this.sizeBuffer/2);
         if(inp.scan("<").scanOk()) {
           if(inp.scan("!--").scanOk()) {
             inp.seekEnd("-->");
@@ -490,7 +488,7 @@ public class XmlJzReader
         }
       }
       //
-      inp.readNextContent(sizeBuffer/2);
+      inp.readNextContent(this.sizeBuffer/2);
       //the </ is parsed on end of while already above.
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
@@ -557,10 +555,10 @@ public class XmlJzReader
           //String nsName = sAttrName.toString();
           if(StringFunctions.equals(ns, "xmlns")){
             String nsValue = sAttrValue.toString();
-            namespaces.put(sAttrName.toString(), nsValue);
+            this.namespaces.put(sAttrName.toString(), nsValue);
             sAttrNsName = null;
           } else {
-            String nsValue = namespaces.get(ns);  //defined in this read xml file.
+            String nsValue = this.namespaces.get(ns);  //defined in this read xml file.
             if(nsValue == null) {
               sAttrNsName = null;  //Namespace not registered in the input file, especially "xml".
             } else if(cfgNode.cfg.xmlnsAssign !=null) {
@@ -618,7 +616,7 @@ public class XmlJzReader
           }
         }
       }
-      inp.readNextContent(sizeBuffer/2);
+      inp.readNextContent(this.sizeBuffer/2);
     } //while
     return keyret;
   }
@@ -636,7 +634,6 @@ public class XmlJzReader
    * @return output if elementStorePath is null, either result of an invoked method via {@link DataAccess} or accessed data
    * @throws Exception
    */
-  @SuppressWarnings("static-method")
   Object getDataForTheElement( Object output, DataAccess.DatapathElement elementStorePath, String[] attribValues) 
   {
     Object subOutput;
@@ -704,15 +701,15 @@ public class XmlJzReader
 
 
 
-  @SuppressWarnings("static-method")
-  private void setOutputAttr(Object output, DataAccess.DatapathElement dstPath, CharSequence name, CharSequence value)
-  {
-    if(dstPath.equals("@") && output instanceof Map) {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> oMap = (Map<String, Object>)output;
-      oMap.put("@"+ name, value.toString());
-    }
-  }
+//  @SuppressWarnings({ "static-method", "unused" })
+//  private void setOutputAttr(Object output, DataAccess.DatapathElement dstPath, CharSequence name, CharSequence value)
+//  {
+//    if(dstPath.equals("@") && output instanceof Map) {
+//      @SuppressWarnings("unchecked")
+//      Map<String, Object> oMap = (Map<String, Object>)output;
+//      oMap.put("@"+ name, value.toString());
+//    }
+//  }
 
 
 
@@ -727,7 +724,7 @@ public class XmlJzReader
   private CharSequence parseContent(StringPartScan inp, StringBuilder buffer)
   throws IOException, ParseException
   { boolean bContReadContent;
-    int posAmp = buffer == null ? 0 : buffer.length()-1; //NOTE: possible text between elements, append, start from current length.
+    //int posAmp = buffer == null ? 0 : buffer.length()-1; //NOTE: possible text between elements, append, start from current length.
     inp.seekNoWhitespace();
     boolean bEofSupposed = false;
     CharSequence content = null;
@@ -764,21 +761,21 @@ public class XmlJzReader
           ((StringBuilder)content).append(content2);
         } 
       }
-      bEofSupposed = inp.readNextContent(sizeBuffer/2);
+      bEofSupposed = inp.readNextContent(this.sizeBuffer/2);
     } while(bContReadContent);
     return content;
   }
   
   
   
-  private void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) {
+  private static void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) {
     DataAccess.DatapathElement dstPath = cfgNode.contentStorePath;
     if(dstPath !=null) {
       try{ 
         if(dstPath.isOperation()) {
-          String[] vars = null; 
+          //String[] vars = null; 
           if(cfgNode.allArgNames !=null) {
-            vars = new String[cfgNode.allArgNames.size()];
+            //vars = new String[cfgNode.allArgNames.size()];
             for(Map.Entry<String, DataAccess.IntegerIx> earg: cfgNode.allArgNames.entrySet()) {
               String argName = earg.getKey();
               int ix = earg.getValue().ix;       //supply the three expected arguments, other are not possible.
@@ -823,7 +820,7 @@ public class XmlJzReader
         int posEnd = StringFunctions.indexOf(b, ';', pos);
         if(posEnd >0 && (posEnd - pos) < 11) {
           String search = b.subSequence(pos, posEnd+1).toString();
-          String replChar = replaceChars.get(search);
+          String replChar = this.replaceChars.get(search);
           if(replChar == null) {
             if( search.charAt(1) == '#') {
               int radix =10, posInt = 2;
@@ -888,7 +885,7 @@ public class XmlJzReader
   
   public XmlCfg readCfg(File file) throws IOException {
     readXml(file, this.cfg.rootNode, this.cfgCfg);
-    cfg.finishReadCfg(this.namespaces);
+    this.cfg.finishReadCfg(this.namespaces);
     return this.cfg;
   }
 
@@ -909,7 +906,7 @@ public class XmlJzReader
     if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
     readXml(xmlCfgStream, pathMsg, this.cfg.rootNode, this.cfgCfg);
     xmlCfgStream.close();
-    cfg.finishReadCfg(this.namespaces);
+    this.cfg.finishReadCfg(this.namespaces);
     return this.cfg;
 
   }
