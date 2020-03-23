@@ -15,9 +15,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.FileFilter;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
 
 
 /*Test with Jbat: call Jbat with this java file with its full path:
@@ -56,7 +56,7 @@ public class FileSystem
   /**Version, history and license.
    * Changes:
    * <ul>
-   * <li>2020-03-20 Hartmut new {@link #absolutePath(String, File)} refactored, some problems on {@link Zip} with jar.
+   * <li>2020-03-20 Hartmut new {@link #absolutePath(String, File)} refactored, some problems on {@link org.vishia.zip.Zip} with jar.
    * <li>2020-03-05 Hartmut new {@link #readFile(File, Appendable, int[])} into a buffer.
    * <li>2020-02-11 Hartmut new: {@link #searchFileInParent(File, String...))} used for git GUI 
    *   to search the .git or *.gitRepository from an inner file in the working area.
@@ -1724,68 +1724,6 @@ public class FileSystem
 
   
   
-  /**Test routine with examples to test {@link #normalizePath(String)}. */
-  public static void test_searchFile(){
-    List<File> foundFile = new LinkedList<File>();
-    boolean bOk = addFileToList("D:/**/vishia/**/srcJava_vishiaBase", foundFile);
-    Assert.check(bOk);
-  }  
-  
-  
-  
-  /**Test routine with examples to test {@link #normalizePath(String)}. */
-  public static void test_addFilesWithBasePath(){
-    CharSequence result;
-    File dir = new File(".");  //it is the current dir, but without absolute path.
-    File dirAbs = dir.getAbsoluteFile();
-    File parent = getDir(dir);   //builds the real parent. It depends on the start directory of this routine.
-    File grandparent = getDir(parent);
-    String sParent = parent.getPath().replace("\\", "/");  //the path
-    int posSlash = sParent.lastIndexOf('/');
-    String sNameParent = sParent.substring(posSlash +1);
-    String searchPath = sNameParent + "/**/*";
-    List<FileAndBasePath> files = new ArrayList<FileAndBasePath>();
-    addFilesWithBasePath(grandparent, searchPath, files);
-    searchPath = sNameParent + "/..:**/*";
-    files.clear();
-    addFilesWithBasePath(parent, searchPath, files);
-  }  
-  
-  
-  
-  /**Test routine with examples to test {@link #normalizePath(String)}. */
-  public static void test_normalizePath(){
-    CharSequence result;
-    result = normalizePath("../path//../file"); 
-    assert(result.toString().equals( "../file"));
-    result = normalizePath("../path/file/."); 
-    assert(result.toString().equals( "../path/file"));
-    result = normalizePath("../path/../."); 
-    assert(result.toString().equals( ".."));
-    result = normalizePath("../path//../file"); 
-    assert(result.toString().equals( "../file"));
-    result = normalizePath("..\\path\\\\..\\file"); 
-    assert(result.toString().equals( "../file"));
-    result = normalizePath("/../path//../file"); 
-    assert(result.toString().equals( "/../file"));  //not for praxis, but correct
-    result = normalizePath("./path//file/"); 
-    assert(result.toString().equals( "path/file/"));    //ending "/" will not deleted.
-    result = normalizePath("path/./../file"); 
-    assert(result.toString().equals( "file"));       
-
-    File dir = new File(".");  //it is the current dir, but without absolute path.
-    File dirAbs = dir.getAbsoluteFile();
-    File parent = dir.getParentFile();  assert(parent == null);  //property of java.io.File
-    parent = getDir(dir);   //builds the real parent. It depends on the start directory of this routine.
-    String sParent = parent.getPath().replace("\\", "/");  //the path
-    int posSlash = sParent.lastIndexOf('/');
-    String sNameParent = sParent.substring(posSlash +1);
-    File fileTest = new File(sParent + "/..",sNameParent); //constructed filecontains "/../" in its path
-    CharSequence sFileTest = normalizePath(fileTest.getAbsolutePath());
-    CharSequence sDirAbs = normalizePath(dirAbs.getAbsolutePath());
-    assert(StringFunctions.equals(sFileTest,sDirAbs));
-  }
-  
   
   /**Returns true if the given file exists. This method transscripts {@link java.io.File.exists()}
    * to support simple usage for jbatch.
@@ -1808,18 +1746,12 @@ public class FileSystem
   
   
   public static boolean isRoot(CharSequence sName){
-    return sName.equals("/") || sName.length() ==3 && sName.subSequence(1,3).equals(":/");
+    return sName.equals("/") || sName.length() ==3 && sName.subSequence(1,3).equals(":/")
+        || sName.equals("\\") || sName.length() ==3 && sName.subSequence(1,3).equals(":\\")
+        ;
   }
   
   
-  /**The main routine contains only tests.
-   * @param args
-   */
-  public static void main(String[] args){
-    //test_normalizePath();
-    //test_addFilesWithBasePath();
-    test_searchFile();
-  }
 
 
 }

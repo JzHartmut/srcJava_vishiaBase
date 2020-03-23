@@ -1,4 +1,4 @@
-package org.vishia.util;
+package org.vishia.zip;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -22,8 +22,12 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.vishia.mainCmd.MainCmd;
-import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.Arguments;
+import org.vishia.util.FileSystem;
+
+
+//import org.vishia.mainCmd.MainCmd;
+//import org.vishia.mainCmd.MainCmdLogging_ifc;
 
 //import org.apache.tools.zip.ZipEntry;
 
@@ -349,12 +353,25 @@ public class Zip {
   
   
   public static void main(String[] args){
+    int exitCode = smain(args);
+    System.exit(exitCode);
+  }
+  
+  
+  
+  
+  
+  /**Main routine able to call inside another java process without exit VM.
+   * @param args cmd line args adequate main
+   * @return exit code
+   */
+  public static int smain(String[] args){
     Args argData = new Args();
-    Cmdline cmd = new Cmdline(argData);
-    try{ cmd.parseArguments(args);
-    } catch(ParseException exc){
-      cmd.setExitErrorLevel(MainCmdLogging_ifc.exitWithArgumentError);
-      cmd.exit();
+    try{ 
+      argData.checkArgs(args);
+    } catch(Exception exc){
+      System.err.println(exc.getMessage());
+      return argData.exitCodeArgError;
     }
     Zip zip = new Zip();
     try{ 
@@ -362,6 +379,7 @@ public class Zip {
     } catch(IOException exc){
       System.err.println(exc.getMessage());
     }
+    return 0;
   }
   
   
@@ -369,7 +387,7 @@ public class Zip {
   
   /**This class holds arguments to zip.
    */
-  public static class Args{
+  public static class Args extends Arguments{
     public final List<Src> listSrc = new ArrayList<Src>();
 
     public int compress = 5;
@@ -386,75 +404,54 @@ public class Zip {
     
     public String timeFormat = "yyyy-MM-dd+hh:mm";
     
-  }
-  
-  
-  
-
-  static class Cmdline extends MainCmd {
-
-    
-    final Args args;
-    
-    MainCmd.SetArgument setCompress = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
+      
+    Arguments.SetArgument setCompress = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
       char cc;
       if(val.length()== 1 && (cc=val.charAt(0))>='0' && cc <='9'){
-        Cmdline.this.args.compress = cc-'0';
+        Args.this.compress = cc-'0';
         return true;
       } else return false;
     }};
     
-    MainCmd.SetArgument setInput = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Cmdline.this.args.listSrc.add(new Src(val, null));
+    Arguments.SetArgument setInput = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.listSrc.add(new Src(val, null));
       return true;
     }};
     
-    MainCmd.SetArgument setOutput = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Cmdline.this.args.fOut = new File(val);
+    Arguments.SetArgument setOutput = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.fOut = new File(val);
       return true;
     }};
     
-    MainCmd.SetArgument setManifest = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Cmdline.this.args.sManifest = val;
+    Arguments.SetArgument setManifest = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.sManifest = val;
       return true;
     }};
     
-    MainCmd.SetArgument setTimestamp = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Cmdline.this.args.timestamp = val;
+    Arguments.SetArgument setTimestamp = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.timestamp = val;
       return true;
     }};
     
-    MainCmd.SetArgument sort = new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Cmdline.this.args.sortFiles = true;
+    Arguments.SetArgument sort = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.sortFiles = true;
       return true;
     }};
-    
-    MainCmd.Argument[] argList =
-    { new MainCmd.Argument("-compress", ":0..9 set the compression rate 0=non .. 90max", this.setCompress)
-      , new MainCmd.Argument("-o", ":ZIP.zip file for zip output", this.setOutput)
-      , new MainCmd.Argument("-sort", " sorts entries with path", this.sort)
-      , new MainCmd.Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp", this.setTimestamp)
-      , new MainCmd.Argument("-timeformat", ":yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat", this.setTimestamp)
-       , new MainCmd.Argument("-manifest", ":<manifestfile> creates a jar file", this.setManifest)
-      , new MainCmd.Argument("", "INPUT file possible with wildcards also in path like \"path/** /dir* /name*.ext*\"", this.setInput)
-    };
     
 
     
-    @Override
-    protected boolean checkArguments() {
-      if(args.fOut !=null){ return true; }
-      else return false;
-    }
-
     
-    Cmdline(Args args){
-      this.args = args;
-      super.addAboutInfo("Zip routine from Java");
-      super.addAboutInfo("made by HSchorrig, 2013-02-09 - 2020-03-20");
-      super.addHelpInfo("args: -compress:# -o:ZIP.zip { INPUT}");  //[-w[+|-|0]]
-      super.addArgument(argList);
-      super.addStandardHelpInfo();
+    Args(){
+      super.aboutInfo = "Zip routine from Java made by HSchorrig, 2013-02-09 - 2020-03-20";
+      super.helpInfo="args: -compress:# -o:ZIP.zip { INPUT}";  //[-w[+|-|0]]
+      addArg(new Argument("-compress", ":0..9 set the compression rate 0=non .. 90max", this.setCompress));
+      addArg(new Argument("-o", ":ZIP.zip file for zip output", this.setOutput));
+      addArg(new Argument("-sort", " sorts entries with path", this.sort));
+      addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp", this.setTimestamp));
+      addArg(new Argument("-timeformat", ":yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat", this.setTimestamp));
+      addArg(new Argument("-manifest", ":<manifestfile> creates a jar file", this.setManifest));
+      addArg(new Argument("", "INPUT file possible with wildcards also in path like \"path/** /dir* /name*.ext*\"", this.setInput));
+      
     }
     
   }
