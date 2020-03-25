@@ -4,8 +4,8 @@
 
 ##Both variables should be corrected for any new version, 
 ##if is used for gradle build and for shell build!
-if test "$VERSION" == ""; then export VERSION="2020-03-23"; fi
-export TIME="2020-03-23+06:12"
+if test "$VERSION" == ""; then export VERSION="2020-03-24"; fi
+if test "$TIME" == ""; then export TIME="2020-03-24+03:02"; fi
 
 #determine out file names from VERSION
 export JARFILE=$DEPLOY$VERSION.jar
@@ -49,7 +49,7 @@ echo $JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -s
 $JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 
 echo build jar
-echo java -cp $JAR_zipjar org.vishia.util.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIME  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIME  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
 java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIME  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
 ##$JAVAC_HOME/bin/jar -n0cvfM $JARFILE -C $TMPJAVAC/binjar . > $TMPJAVAC/jar.txt
 if ! test "$MD5FILE" = ""; then echo output MD5 checksum

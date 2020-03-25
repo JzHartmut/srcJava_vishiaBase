@@ -1,3 +1,5 @@
 .gitCommit
 .gitRepository
+*.jar
+*.MD5.txt
 
