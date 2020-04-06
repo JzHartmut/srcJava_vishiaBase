@@ -575,7 +575,13 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     
   }
 
+
   
+  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
+    //TODO
+  }
+
+
   
   @Override public boolean isLocalFileSystem()
   {  return true;

@@ -323,7 +323,11 @@ public class Zip {
       System.out.println("org.vishia.util.Zip: timestamp = " + args.timestamp + " (" + args.timeFormat + ")");
       SimpleDateFormat df = new SimpleDateFormat(args.timeFormat);
       try {
-        Date dd = df.parse(args.timestamp);
+        String timestampGmt = args.timestamp;
+        if(args.timeFormat.contains("z") && !timestampGmt.contains("GMT")) {
+          timestampGmt += " GMT";  //recommended: Times are always given in GMT without extra designation
+        }
+        Date dd = df.parse(timestampGmt);
         timestamp = dd.getTime();
       } catch (ParseException e) {
         System.err.println("org.vishia.util.Zip: faulty format for -time:" + args.timestamp + " - uses the current file time stamp");
@@ -402,7 +406,7 @@ public class Zip {
 
     public String timestamp;
     
-    public String timeFormat = "yyyy-MM-dd+hh:mm";
+    public String timeFormat = "yyyy-MM-dd+hh:mm z";
     
       
     Arguments.SetArgument setCompress = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
@@ -447,7 +451,7 @@ public class Zip {
       addArg(new Argument("-compress", ":0..9 set the compression rate 0=non .. 90max", this.setCompress));
       addArg(new Argument("-o", ":ZIP.zip file for zip output", this.setOutput));
       addArg(new Argument("-sort", " sorts entries with path", this.sort));
-      addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp", this.setTimestamp));
+      addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
       addArg(new Argument("-timeformat", ":yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat", this.setTimestamp));
       addArg(new Argument("-manifest", ":<manifestfile> creates a jar file", this.setManifest));
       addArg(new Argument("", "INPUT file possible with wildcards also in path like \"path/** /dir* /name*.ext*\"", this.setInput));

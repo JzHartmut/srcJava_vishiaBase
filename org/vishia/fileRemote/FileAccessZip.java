@@ -277,6 +277,13 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   }
 
   
+  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
+    //TODO
+  }
+
+  
+  
+  
   @Override
   public ReadableByteChannel openRead(FileRemote file, long passPhase) {
     // TODO Auto-generated method stub

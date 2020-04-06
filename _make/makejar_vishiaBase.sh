@@ -13,9 +13,9 @@ export SRCPATH=..
 
 
 ##build zipjar:
-export VERSIONZIPJAR="2020-03-24"
+export VERSIONZIPJAR=version  //"2020-04-04"
 export VERSION="$VERSIONZIPJAR"   #generate exact this version   
-export TIME="2020-03-23+06:12"    #check whether it is identically with that
+export TIME="2020-04-04+02:03"    #check generated content!
 export TMPJAVAC=/tmp/javac_vishiaZipJar/build/javac
 export DEPLOY=../vishiaZipJar-
 
@@ -35,8 +35,8 @@ chmod 777 makejar.sh
 
 
 ##build minisys:
-export VERSION=""    ##use inside makejar.sh!
-export TIME=""
+export VERSION="2020-03-24"    ##use inside makejar.sh!
+export TIME="2020-03-24+02:02"
 export TMPJAVAC=/tmp/javac_vishiaMiniSys/build/javac
 export DEPLOY=../vishiaMinisys-
 
@@ -57,6 +57,8 @@ export FILE1SRC="@minisys.files"
 
 
 ##Build the whole vishiaBase
+export VERSION="2020-04-04"    ##use inside makejar.sh!
+export TIME="2020-04-04+02:03"
 export TMPJAVAC=/tmp/javac_vishiaBase/build/javac
 
 #Output files

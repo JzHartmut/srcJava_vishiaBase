@@ -1171,6 +1171,27 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
+  /**Refreshes a file tree and search in  some or all files. This routine creates another thread usually which accesses the file system
+   * and invokes the callback routines. A longer access time does not influence this thread. 
+   * The result is given only if the {@link FileRemoteCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
+   * will be invoked.
+   * @param depth at least 1 for enter in the first directory. Use 0 if all levels should entered.
+   * @param mask a mask to select directory and files
+   * @param bits to select files by its mark, 0 then select all (ignore mark)
+   * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
+   * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
+   */
+  public void refreshAndSearch(int depth, String mask, int mark, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    FileRemoteCallbackSearch callbackSearch = new FileRemoteCallbackSearch(this, search, callbackUser, timeOrderProgress);  //evCallback);
+    this.device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackSearch);  //should work in an extra thread.
+  }
+  
+  
+  
+  
   /**Copies all files from this directory to dst which are selected by the given mask.
    * This routine creates another thread usually which accesses the file system
    * and invokes the callback routines if given. A longer access time does not influence this thread. 
@@ -2343,6 +2364,33 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
+  /**Search in all files. 
+   * <code>this</code> is the dir or file as root for copy to the given pathDst. 
+   * The files to copy are marked in this directory or it is this file.
+   * <br><br>
+   * The copying process is interactive. It is possible to ask whether files should be override etc, the progress is shown.
+   * For that the {@link FileRemoteProgressTimeOrder} is used. This timeOrder should be created as overridden time order
+   * in the applications space with the application specific {@link EventTimerThread_ifc} instance. Especially it can be used
+   * in a graphical environment. See there to show a sequence diagram.
+   * <br><br>
+   * The 
+   * 
+   * @param search String given destination for the copy
+   * @param nameModification Modification for each name. null then no modification. TODO
+   * @param mode One of the bits {@link FileRemote#modeCopyCreateYes} etc.
+   * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
+   * @param timeOrderProgress may be null, to show the progress of copy.
+   */
+  public void search(byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  {
+    if(device == null){
+      device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    device.search(this, search, callbackUser, timeOrderProgress);
+  }
+
+
+
   /**Change the file properties maybe in a remote device.
    * A new name may be given as parameter. Some properties may be changed calling
    * {@link #setWritable(boolean)} etc. or they are given as parameter.

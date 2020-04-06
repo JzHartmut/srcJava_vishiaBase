@@ -181,6 +181,14 @@ public abstract class FileRemoteAccessor implements Closeable
   public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
   
   
+  /**Search in all files.
+   * @param fileSrc dir or file as root for search the given byte[]
+   * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
+   * @param timeOrderProgress may be null, to show the progress of copy.
+   */
+  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
+  
+  
   public abstract ReadableByteChannel openRead(FileRemote file, long passPhase);
   
   /**Creates an InputStream with this fileRemote instance.

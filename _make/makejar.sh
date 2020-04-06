@@ -4,8 +4,8 @@
 
 ##Both variables should be corrected for any new version, 
 ##if is used for gradle build and for shell build!
-if test "$VERSION" == ""; then export VERSION="2020-03-24"; fi
-if test "$TIME" == ""; then export TIME="2020-03-24+03:02"; fi
+if test "$VERSION" == ""; then export VERSION="2020-03-31"; fi
+if test "$TIME" == ""; then export TIME="2020-03-31+03:03"; fi
 
 #determine out file names from VERSION
 export JARFILE=$DEPLOY$VERSION.jar
