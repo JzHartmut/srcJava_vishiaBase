@@ -14,6 +14,10 @@ export LINKPATH=
 export CLASSPATH=xxxxx
 ##export LINKPATH=-link ../docuSrcJava_vishiaBase
 
-../../../../../cmpnJava_vishiaBase/src/main/java/_make/-genjavadocbase.sh
+if test -d ../../srcJava_vishiaBase; then export vishiaBase="../../srcJava_vishiaBase"
+else export vishiaBase="../../../../../../cmpnJava_vishiaBase/src/main/java/srcJava_vishiaBase"
+fi
+
+$vishiaBase/_make/-genjavadocbase.sh
 
 

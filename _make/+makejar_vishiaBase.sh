@@ -26,7 +26,7 @@ export VERSION="2020-06-09"
 #Note: The $VERSIONZIPJAR is used for the further jar builds.
 export VERSIONZIPJAR="$VERSION"   #generate exact this version   
 export TIME="$VERSION+00:00"    #check generated content!
-export TMPJAVAC=/tmp/javac_vishiaZipJar/build/javac
+export TMPJAVAC=/tmp/javac_vishiaZipJar/javac
 export DEPLOY=vishiaZipJar
 
 #use the built before jar to generate jar
@@ -41,6 +41,8 @@ export SRC_ALL=""
 chmod 777 makejar.sh
 ./-makejar-coreScript.sh
 
+#use the built before jar to generate jar
+export JAR_zipjar=$TMPJAVAC/result/vishiaZipJar-$VERSIONZIPJAR.jar
 
 
 
@@ -48,18 +50,14 @@ chmod 777 makejar.sh
 #Note: See comment on TIME above, same procedure!
 export VERSION="2020-03-24"
 export TIME="$VERSION+02:02"
-export TMPJAVAC=/tmp/javac_vishiaMiniSys/build/javac
+export TMPJAVAC=/tmp/javac_vishiaMiniSys/javac
 export DEPLOY=vishiaMinisys
 
-#use the built before jar to generate jar
-export JAR_zipjar=../build/vishiaZipJar-$VERSIONZIPJAR.jar
 
 # located from this workingdir as currdir for shell execution:
 export MANIFEST=minisys.manifest
-# FILE1SRC=../org/vishia/jztxtcmd/JZtxtcmd.java
 export SRC_ALL=""
 export FILE1SRC="@minisys.files"
-#export FILE1SRC=../org/vishia/minisys/GetWebfile.java
 
 #now run the common script:
 ./-makejar-coreScript.sh
@@ -72,16 +70,15 @@ export FILE1SRC="@minisys.files"
 #Hint: This is the whole jar, changes are expectable.
 export VERSION="2020-06-09"
 export TIME="$VERSION+00:00"
-export TMPJAVAC=/tmp/javac_vishiaBase/build/javac
+export TMPJAVAC=/tmp/javac_vishiaBase/javac
 
 #Output files
 export DEPLOY=vishiaBase
 
 #use the built before jar to generate jar
-export JAR_zipjar=../build/vishiaZipJar-$VERSIONZIPJAR.jar
 
 export MANIFEST=vishiaBase.manifest
-export SRC_ALL=..
+export SRC_ALL=".."
 
 #now run the common script:
 ./-makejar-coreScript.sh
