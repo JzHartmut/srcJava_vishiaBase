@@ -4,16 +4,14 @@
 
 ##Both variables should be corrected for any new version, 
 ##if is used for gradle build and for shell build!
-if test "$VERSION" == ""; then export VERSION="2020-03-31"; fi
-if test "$TIME" == ""; then export TIME="2020-03-31+03:03"; fi
 
 #determine out file names from VERSION
-export JARFILE=$DEPLOY$VERSION.jar
-export MD5FILE=$DEPLOY$VERSION.jar.MD5.txt
+export JARFILE=../build/$DEPLOY-$VERSION.jar
+export MD5FILE=../build/$DEPLOY-$VERSION.jar.MD5.txt
 
 echo compile java and generate jar with binary-compatible content. 
 echo JAVAC_HOME = $JAVAC_HOME
-echo VERSION = $VERSION  - determine only output file names
+echo DEPLOY = $DEPLOY  - output file names
 echo TIME = $TIME  - determine timestamp in jar
 echo SRC_ALL = $SRC_ALL  - gather all *.java there
 echo SRC_ALL2 = $SRC_ALL2  - gather all *.java there
@@ -31,6 +29,7 @@ if test "$JAVAC_HOME" = ""; then
   exit 5
 fi
 # clean the binjar because maybe old faulty content:
+if ! test -d ../build; then mkdir ../build; fi
 if test -d $TMPJAVAC/binjar; then rm -f -r -d $TMPJAVAC/binjar; fi
 mkdir -p $TMPJAVAC/binjar
 

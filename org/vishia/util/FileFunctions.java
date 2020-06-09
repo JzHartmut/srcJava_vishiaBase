@@ -3,6 +3,7 @@ package org.vishia.util;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,25 +15,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
-import java.io.FileFilter;
 import java.util.LinkedList;
 import java.util.List;
 
 
-
-/*Test with Jbat: call Jbat with this java file with its full path:
-D:/vishia/Java/srcJava_vishiaBase/org/vishia/util/FileSystem.java
-==JZcmd==
-currdir = scriptdir;
-Obj found = java org.vishia.util.FileSystem.searchInParent(File: ".", "_make/xgenjavadoc.bat", "ximg"); 
-==endJZcmd==
-*/
-
-
-
-
-
-/**This class supports some functions of file system access as enhancement of the class java.io.File
+/**This class contains some static file and command line functions.
+ * It is also a replacement for FileSystem.java
+ * 
+ * This class supports some functions of file system access as enhancement of the class java.io.File
  * independently of other classes of vishia packages, only based on Java standard.
  * Some methods helps a simple using of functionality for standard cases.
  * <br><br>
@@ -49,13 +39,17 @@ Obj found = java org.vishia.util.FileSystem.searchInParent(File: ".", "_make/xge
  * if the input file is not existing. It does not throw a FileNotFoundException. The result is expected, the user
  * can do a null-check easily.
  * 
+ * @author hartmut Schorrig, LPGL license. Do not remove the license hint. 
+ *
  */
-public class FileSystem
-{
-
+public class FileFunctions {
+  
+  
+  
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2020-06-08 Hartmut Move from FileSystem to this class, FileSystem is used in {@link java.nio.file.FileSystem} too. Prevent name clash.
    * <li>2020-03-20 Hartmut new {@link #absolutePath(String, File)} refactored, some problems on {@link org.vishia.zip.Zip} with jar.
    * <li>2020-03-05 Hartmut new {@link #readFile(File, Appendable, int[])} into a buffer.
    * <li>2020-02-11 Hartmut new: {@link #searchFileInParent(File, String...))} used for git GUI 
@@ -300,6 +294,38 @@ public class FileSystem
   
   
   
+
+  
+  
+  /**Sets the current dir from the stored String in a file.
+   * This is a variant to change the current dir for example for tests using a file on a known position.
+   * @param file The file path can contain $(ENV) which will be expanded. 
+   * @return true if the currdir is detect as directory, and {@link System#setProperty(String, String)}
+   *   is executed with setProperty("user.dir", ... file content...)
+   * Check outside whether the currdir is correct. 
+   */
+  public static boolean setCurrdirFromFile(String file) {
+    String file1 = Arguments.replaceEnv(file);
+    String cd = readFile(new File(file1));
+    if(cd == null) return false;
+    else {
+      cd = cd.trim();
+      String os = System.getenv("OS");
+      if(cd.length() >=3 && cd.charAt(0) == '/' && cd.charAt(2) == '/') {  //it is a unix-like path, from pwd, MinGW etc.
+        boolean bWindows = os !=null && os.equals("Windows_NT");  //also for windows-10
+        if(bWindows) {
+          cd = "" + cd.charAt(1) + ":" + cd.substring(2);  //write "d:/..." instead "/d/...."
+        }
+      }
+      File cdfile = new File(cd);
+      if(!cdfile.exists() || !cdfile.isDirectory()) return false;
+      else {
+        System.setProperty("user.dir", cd);
+        return true;
+    } }
+  }
+  
+  
   /**Reads the content of a whole file into a String.
    * This method returns a null pointer if an exception has occurs internally,
    * it throws never an Exception itself.
@@ -481,7 +507,7 @@ public class FileSystem
     }
     catch(Exception exc)
     { 
-    	nrofBytes = 0;
+      nrofBytes = 0;
     }
     return nrofBytes;
   }
@@ -501,7 +527,7 @@ public class FileSystem
     }
     catch(Exception exc)
     { 
-    	nrofBytes = 0;
+      nrofBytes = 0;
     }
     return nrofBytes;
   }
@@ -534,43 +560,43 @@ public class FileSystem
       , boolean bKeepTimestamp, boolean bOverwrite, boolean bOverwriteReadonly) 
   throws IOException
   { 
-  	int nrofBytes = 0;
-  	byte[] buffer = new byte[16384];
-  	if(dst.exists()){
-  		if(!bOverwrite) throw new IllegalArgumentException("FileSystem.copyFile - dst exists, " + dst.getAbsolutePath());
-  	  if(!dst.canWrite()){
-  	    if(!bOverwriteReadonly) throw new IllegalArgumentException("FileSystem.copyFile - dst is read-only, " + dst.getAbsolutePath());
-  			dst.setWritable(true);
-  		}
-  		if(!dst.delete()) throw new IllegalArgumentException("FileSystem.copyFile - dst cannot be deleted, " + dst.getAbsolutePath());
-  	}
-  	InputStream inp;
-  	try{ inp = new FileInputStream(src);
-  	}catch(FileNotFoundException exc){
-  		nrofBytes = -1;
-  		inp = null;
-  	}
-  	if(inp != null){
-	  	OutputStream out = new FileOutputStream(dst);
-	  	int nrofBytesBlock;
-	  	do{
-	  	  nrofBytesBlock = inp.read(buffer);
-	  	  if(nrofBytesBlock >0){
-	  	  	nrofBytes += nrofBytesBlock;
-	  	  	out.write(buffer, 0, nrofBytesBlock);
-	  	  }
-	  	}while(nrofBytesBlock >0);
-	  	inp.close();
-	  	out.close();
-	  	if(bKeepTimestamp) {
-  	    long timeSrc = src.lastModified();
-  	    dst.setLastModified(timeSrc);
-	  	}
-	    if(!src.canWrite()){
-	    	dst.setWritable(false);
-	    }
-  	}
-	  return nrofBytes;
+    int nrofBytes = 0;
+    byte[] buffer = new byte[16384];
+    if(dst.exists()){
+      if(!bOverwrite) throw new IllegalArgumentException("FileSystem.copyFile - dst exists, " + dst.getAbsolutePath());
+      if(!dst.canWrite()){
+        if(!bOverwriteReadonly) throw new IllegalArgumentException("FileSystem.copyFile - dst is read-only, " + dst.getAbsolutePath());
+        dst.setWritable(true);
+      }
+      if(!dst.delete()) throw new IllegalArgumentException("FileSystem.copyFile - dst cannot be deleted, " + dst.getAbsolutePath());
+    }
+    InputStream inp;
+    try{ inp = new FileInputStream(src);
+    }catch(FileNotFoundException exc){
+      nrofBytes = -1;
+      inp = null;
+    }
+    if(inp != null){
+      OutputStream out = new FileOutputStream(dst);
+      int nrofBytesBlock;
+      do{
+        nrofBytesBlock = inp.read(buffer);
+        if(nrofBytesBlock >0){
+          nrofBytes += nrofBytesBlock;
+          out.write(buffer, 0, nrofBytesBlock);
+        }
+      }while(nrofBytesBlock >0);
+      inp.close();
+      out.close();
+      if(bKeepTimestamp) {
+        long timeSrc = src.lastModified();
+        dst.setLastModified(timeSrc);
+      }
+      if(!src.canWrite()){
+        dst.setWritable(false);
+      }
+    }
+    return nrofBytes;
   }
   
   /**checks if a path exists or execute mkdir for all not existing directory levels.
@@ -583,13 +609,13 @@ public class FileSystem
   public static void mkDirPath(File file)
   throws FileNotFoundException
   {
-  	if(file.exists()) return;
-  	String sName = file.getAbsolutePath();
-  	if(file.isDirectory()){ 
+    if(file.exists()) return;
+    String sName = file.getAbsolutePath();
+    if(file.isDirectory()){ 
       //assert(false); 
-  	  sName = sName + "/"; 
+      sName = sName + "/"; 
     }
-  	mkDirPath(sName);
+    mkDirPath(sName);
   }
   
 
@@ -877,12 +903,12 @@ public class FileSystem
    */
   public static String getCanonicalPath(File file)
   { String sPath;
-  	try{ 
-  	  sPath = file.getCanonicalPath();
-  	  sPath = sPath.replace('\\', '/');
-  	}
-  	catch(IOException exc){ sPath = null; }  //the file doesn't exists.
-  	return sPath;
+    try{ 
+      sPath = file.getCanonicalPath();
+      sPath = sPath.replace('\\', '/');
+    }
+    catch(IOException exc){ sPath = null; }  //the file doesn't exists.
+    return sPath;
   }
   
   
@@ -908,7 +934,7 @@ public class FileSystem
   public static String relativatePath(String sInput, String sRefPath)
   { int posInput = 0;
     if(sInput.startsWith("../../../examples_XML"))
-      FileSystem.stop();
+      stop();
     /* old algorithm, the newer does the same and more.
     int posHtmlRef =0;
     while(posHtmlRef >=0 && sInput.substring(posInput, posInput+3).equals("../")){
@@ -970,7 +996,7 @@ public class FileSystem
         if(pathdepth <0){ 
           pathdepth +=1;
         } else {
-    	    sBack +="../";
+          sBack +="../";
         }  
       }
       posSepRefNext = posSepRefNext2 + 1;
@@ -1753,5 +1779,6 @@ public class FileSystem
   
   
 
+  
 
 }

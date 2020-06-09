@@ -10,7 +10,7 @@ import java.util.List;
 
 /**This is a base class for simple argument handling of main(...) arguments.
  * Usage example: See org.vishia.zip.Zip. It substitutes the org.vishia.mainCmd.MainCmd, less dependencies
- * @author Hartmut Schorrig, LGPL-License
+ * @author Hartmut Schorrig, LGPL-License Do not remove the license hint.
  */
 public abstract class Arguments {
 
@@ -96,16 +96,23 @@ public abstract class Arguments {
   
   
   
-  /**Replaces expressions "...$$name$... with the content of the named environment variable
+  /**Replaces expressions "...$(name)... or $$name$ with the content of the named environment variable
    * @param argval
    * @return replaced environment
    * @throws IllegalArgumentException on faulty name of environment variable
    */
-  public String replaceEnv(String argval) {
+  public static String replaceEnv(String argval) {
     int posEnv;
     String argvalRet = argval;
     while( (posEnv=argvalRet.indexOf("$$")) >=0) {
       int posEnvEnd = argvalRet.indexOf('$', posEnv+2);
+      String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
+      String env = System.getenv(nameEnv);
+      if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
+      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
+    }
+    while( (posEnv=argvalRet.indexOf("$(")) >=0) {
+      int posEnvEnd = argvalRet.indexOf(')', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
       String env = System.getenv(nameEnv);
       if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
@@ -117,7 +124,17 @@ public abstract class Arguments {
   
   
 
-
+  /**This operation tests one argument maybe from a container as String[].
+   * <ul>
+   * <li> --- The argument is ignored
+   * <li> --report:value sets {@link #sLogPath}
+   * <li> --rlevel:value sets {@link #sLogLevel}
+   * </ul>
+   * 
+   * @param argc The given argument
+   * @param nArg position of the argument in the container, counted from 0
+   * @return true if argument is accepted, false if not found in the {@link #argList} given on ctor
+   */
   protected boolean testArgument(String argc, int nArg) {
     String value;
     boolean bOk = true;
@@ -194,6 +211,8 @@ public abstract class Arguments {
     } else { return false; }
   }
   
+  
+  
   /**Check whether an arg with value is given.
    * The arg should contain <code>check:value</code> or <code>check=value</code>
    * whereby <code>check</code> is the given check String.
@@ -212,32 +231,119 @@ public abstract class Arguments {
     } else { return null; }
   }
   
+
   
-  public void checkArgs(String[] args) {
+  /**This is the user operation to process all arguments from a container as String[].
+   * It is especially for  <code>main(String[] args)</code>
+   * @param args The argument string array.
+   * @throws IOException 
+   * @throws IllegalArgumentException on argument error
+   */
+  public void checkArgs(String[] args) throws IOException {
+    parseArgs(args, null);
+  }
+  
+  
+  /**This is the user operation to process all arguments from a container as String[].
+   * It is especially for  <code>main(String[] args)</code>
+   * @param args The argument string array.
+   * @throws IOException 
+   * @throws IllegalArgumentException on argument error
+   */
+  public void parseArgs(String[] args) throws IOException {
+    parseArgs(args, null);
+  }
+  
+  
+  
+  /**This is the user operation to process all arguments from a container as String[].
+   * It is especially for  <code>main(String[] args)</code>
+   * @param args The argument string array.
+   * @param errMsg if given then all arguments will be parsed. Errors will be outputed here.
+   * @throws IOException only on unexpected errors writing errMsg 
+   * @throws IllegalArgumentException on argument error only if errMsg == null
+   * @return true if all ok, but the user should call {@link #testArgs(Appendable)} afterwards.
+   *         false argument error, the application may be used though if {@link #testArgs(Appendable)} returns true.
+   */
+  public boolean parseArgs(String[] args, Appendable errMsg) throws IOException {
+    boolean bOk = true;
     int nArg = -1;
     String arg = null;
+    BufferedReader farg = null;
     try {
-    for(String arg1: args) {
-      arg = arg1;
-      if(arg.startsWith("--@")) {
-        BufferedReader farg = new BufferedReader(new FileReader(arg.substring(3)));
-        while( (arg = farg.readLine()) !=null) {
+      for(String arg1: args) {
+        arg = arg1;
+        if(arg.startsWith("--@")) {
+          farg = new BufferedReader(new FileReader(arg.substring(3)));
+          while( (arg = farg.readLine()) !=null) {
+            if(!testArgument(arg, ++nArg)) {
+              if(errMsg !=null) {
+                errMsg.append("  ERROR: ").append(arg).append('\n');
+                bOk = false;
+              } else {
+                farg.close();
+                throw new IllegalArgumentException( arg);
+              }
+            }
+          }
+          farg.close();
+          farg = null;
+        } else {
           if(!testArgument(arg, ++nArg)) {
-            farg.close();
-            throw new IllegalArgumentException( arg);
+            if(errMsg !=null) {
+              errMsg.append("  ERROR: ").append(arg).append('\n');
+              bOk = false;
+            } else {
+              throw new IllegalArgumentException( arg);
+            }
           }
         }
-        farg.close();
-      } else {
-        if(!testArgument(arg, ++nArg)) {
-          throw new IllegalArgumentException( arg);
+      }
+    } 
+    catch(IOException exc) {
+      if(errMsg !=null) {
+        if(farg == null) { errMsg.append("  ERROR: File not found: "); }
+        else {
+          errMsg.append("  ERROR: unexpected File IO-error: ");
+          farg.close();
+          farg = null;
         }
+        errMsg.append(arg).append('\n');
+        bOk = false;
+      } else {
+        if(farg !=null) { farg.close(); }
+        throw new IllegalArgumentException("File not found or IO-error: " + arg);  //it is faulty
+        //throw new IllegalArgumentException( arg);
       }
     }
-    } catch(IOException exc) {
-      throw new IllegalArgumentException("File not found or IO-error: " + arg);  //it is faulty
+    return bOk;
+  }
+  
+  
+  /**Writes all arguments with {@link Argument#arg} {@link Argument#help} in its order in one in a line.
+   * @param out Any output channel
+   * @throws IOException only on unexpected problems with out
+   */
+  public void showHelp(Appendable out) throws IOException {
+    out.append(this.aboutInfo).append('\n');
+    out.append(this.helpInfo).append('\n');
+    for(Argument arg: this.argList) {
+      out.append(arg.toString());  //note: toString ends with \n already.
     }
   }
   
+  
+  public String aboutInfo() { return this.aboutInfo; }
+  
+  
+  /**This operation should be implemented and called by the user.
+   * It should check the consistency of the given arguments as it is need by the application.
+   * <br>
+   * Implementation hint: This operation may invoke {@link #showArgs(Appendable)} to output the help info on error.
+   * @param msg to write out an info as line with \n for faulty arguments. {@link java.lang.System#err} can be used.
+   * @return true if consistent. 
+   * @throws IOException only on unexpected problems writing msg
+   */
+  public abstract boolean testArgs(Appendable msg) throws IOException;
   
 }

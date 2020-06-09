@@ -2541,8 +2541,9 @@ else return pos - begin;
   
   protected final char absCharAt(int index){
     int pos = index;
-    if(pos >=0 && pos < endMax) return content.charAt(pos);
-    else { throwIllegalArgumentException("StringPartBase.charAt - faulty; ",index); return '\0'; }
+    if(content !=null && pos >=0 && pos < /*endMax*/content.length()) return content.charAt(pos);
+    return '?'; //It is better to return a obvious char than trow.
+    //else { throwIllegalArgumentException("StringPartBase.charAt - faulty; ",index); return '\0'; }
   }
 
   /**Returns a String from absolute range.

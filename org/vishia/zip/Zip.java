@@ -20,6 +20,7 @@ import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.vishia.util.Arguments;
@@ -113,7 +114,7 @@ public class Zip {
    * The instance should not be used in multithreading uncoordinated.
    */
   public Zip(){
-    listSrc = new LinkedList<Src>();
+    this.listSrc = new LinkedList<Src>();
   }
   
   /**Creates an instance for Zip with given sources. It is used especially in {@link #main(String[])}.
@@ -134,7 +135,7 @@ public class Zip {
    *   For usage of basepath, localpath and wildcards see {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
    */
   public void addSource(String src){
-    listSrc.add(new Src(src, null));
+    this.listSrc.add(new Src(src, null));
   }
   
 
@@ -147,7 +148,7 @@ public class Zip {
    *   For usage of basepath, localpath and wildcards see {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
    */
   public void addSource(File dir, String src){
-    listSrc.add(new Src(src, dir));
+    this.listSrc.add(new Src(src, dir));
   }
   
 
@@ -164,12 +165,23 @@ public class Zip {
   public void setManifest(File fileManifest) 
   throws IOException
   { 
-    manifest = new Manifest();
+    this.manifest = new Manifest();
     //manifest.  
-    InputStream in = new FileInputStream(fileManifest);
-    manifest.read(in);
+    InputStream in = null;
+    try{ 
+      File fileManifestAbs = fileManifest.getAbsoluteFile();
+      //Note: bug detected Java 8.241: 
+      //After System.setProperty("user.dir", cd); 
+      //    InputfileStream(relPath) does not recognize the changed curr dir.
+      in = new FileInputStream(fileManifestAbs);  
+      this.manifest.read(in);
+    }
+    finally { 
+      if(in !=null) { 
+        in.close(); 
+    } }
     //String vername = Attributes.Name.MANIFEST_VERSION.toString();
-    Attributes attr = manifest.getMainAttributes();  //read from file
+    Attributes attr = this.manifest.getMainAttributes();  //read from file
     String version1 = attr.getValue(Attributes.Name.MANIFEST_VERSION);
     if(version1 == null){
       attr.put(Attributes.Name.MANIFEST_VERSION, "1.0");
@@ -205,11 +217,11 @@ public class Zip {
           ZipEntry e = new ZipEntry(JarFile.MANIFEST_NAME);
           e.setTime(timestamp);
           outZip.putNextEntry(e);
-          this.manifest.write(new BufferedOutputStream(outZip));
+          this.manifest.write(outZip); //new BufferedOutputStream(outZip));
           outZip.closeEntry();
           System.out.println("jar-file with timestamp ");
         } else {
-          outZip = new JarOutputStream(outstream, manifest);
+          outZip = new JarOutputStream(outstream, this.manifest);
           System.out.println("jar-file with current file time ");
         }
       } else {
@@ -291,11 +303,21 @@ public class Zip {
       } catch(IOException exc){ throw new RuntimeException("Archiver.createJar - unexpected IOException"); }
       
     }
-    listSrc.clear();
+    this.listSrc.clear();
     if(errorFiles == null) return null;
     else return errorFiles.toString();
   }
   
+  
+  
+  
+  public static void unzip(InputStream in) throws IOException {
+    ZipInputStream zipInput = new ZipInputStream(in);
+    ZipEntry entry;
+    while( (entry = zipInput.getNextEntry()) !=null) {
+      System.out.println(entry.getName());
+    }
+  }
   
   
   
@@ -356,6 +378,21 @@ public class Zip {
 
   
   
+  /**Invocation from java command line
+   * Zip routine from Java made by HSchorrig, 2013-02-09 - 2020-06-09
+   * <ul>
+   * <li>obligate arguments: -o:ZIP.zip { INPUT}
+   * <li>-compress:0..9 set the compression rate 0=non .. 9=max
+   * <li>-o:ZIP.zip file path for zip output
+   * <li>-sort sorts entries with path
+   * <li>-time:yyyy-MM-dd+hh:mm sets a timestamp for all entries in UTC (GMT)
+   * <li>-timeformat:yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat
+   * <li>-manifest:<manifestfile> if given creates a jar file
+   * <li>INPUT file possible with localpath-separation and wildcards as "path:** /dir* /name*.ext*"
+   * <li>For possibilities of the inputpath see {@link FileSystem#addFilesWithBasePath(File, String, List)}
+   * </ul>
+   * @param args command line arguments
+   */
   public static void main(String[] args){
     int exitCode = smain(args);
     System.exit(exitCode);
@@ -366,13 +403,16 @@ public class Zip {
   
   
   /**Main routine able to call inside another java process without exit VM.
-   * @param args cmd line args adequate main
+   * @param args cmd line args adequate {@link #main(String[])}
    * @return exit code
    */
   public static int smain(String[] args){
     Args argData = new Args();
+    System.out.println(argData.aboutInfo());
     try{ 
-      argData.checkArgs(args);
+      for(String arg: args) { System.out.println(arg); }
+      argData.parseArgs(args, System.err);
+      if(!argData.testArgs(System.err)) { return 1; }
     } catch(Exception exc){
       System.err.println(exc.getMessage());
       return argData.exitCodeArgError;
@@ -391,7 +431,8 @@ public class Zip {
   
   /**This class holds arguments to zip.
    */
-  public static class Args extends Arguments{
+  public static class Args extends Arguments {
+
     public final List<Src> listSrc = new ArrayList<Src>();
 
     public int compress = 5;
@@ -446,17 +487,35 @@ public class Zip {
     
     
     Args(){
-      super.aboutInfo = "Zip routine from Java made by HSchorrig, 2013-02-09 - 2020-03-20";
-      super.helpInfo="args: -compress:# -o:ZIP.zip { INPUT}";  //[-w[+|-|0]]
+      super.aboutInfo = "Zip routine from Java made by HSchorrig, 2013-02-09 - 2020-06-09";
+      super.helpInfo="obligate args: -o:ZIP.zip { INPUT}";  //[-w[+|-|0]]
       addArg(new Argument("-compress", ":0..9 set the compression rate 0=non .. 90max", this.setCompress));
       addArg(new Argument("-o", ":ZIP.zip file for zip output", this.setOutput));
       addArg(new Argument("-sort", " sorts entries with path", this.sort));
       addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
       addArg(new Argument("-timeformat", ":yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat", this.setTimestamp));
       addArg(new Argument("-manifest", ":<manifestfile> creates a jar file", this.setManifest));
-      addArg(new Argument("", "INPUT file possible with wildcards also in path like \"path/** /dir* /name*.ext*\"", this.setInput));
+      addArg(new Argument("", "INPUT file possible with localpath-separation and wildcards as \"path:**/dir*/name*.ext*\"", this.setInput));
       
     }
+
+
+
+
+    @Override
+    public boolean testArgs(Appendable msg) throws IOException {
+      boolean bOk = true;
+      if(this.fOut == null) { msg.append("-o:ZIP.zip is obligate\n"); bOk = false; }
+      if(this.listSrc.size() == 0) { msg.append("warning: no input files given\n"); }
+      if(!bOk) {
+        super.showHelp(msg);
+      }
+      return bOk;
+    }
+    
+    
+    
+    
     
   }
   
