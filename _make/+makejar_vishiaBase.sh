@@ -22,36 +22,18 @@ export SRCPATH=..
 #-----
 #If the checksum and the content does not match, 
 # then set the new date here from the last timestamp of the last commit or changed file.
-export VERSION="2020-06-09"
-#Note: The $VERSIONZIPJAR is used for the further jar builds.
-export VERSIONZIPJAR="$VERSION"   #generate exact this version   
-export TIME="$VERSION+00:00"    #check generated content!
-export TMPJAVAC=/tmp/javac_vishiaZipJar/javac
-export DEPLOY=vishiaZipJar
 
-#use the built before jar to generate jar
-export JAR_zipjar=$TMPJAVAC/binjar
 
-# located from this workingdir as currdir for shell execution:
-export MANIFEST=zipjar.manifest
-export FILE1SRC=../org/vishia/zip/Zip.java
-export SRC_ALL=""
-
-#now run the common script:
-chmod 777 makejar.sh
-./-makejar-coreScript.sh
-
-#use the built before jar to generate jar
-export JAR_zipjar=$TMPJAVAC/result/vishiaZipJar-$VERSIONZIPJAR.jar
-
+if test "$BUILD" = ""; then export BUILD="/tmp/BuildJava_vishiaBase"; fi
 
 
 ##build minisys:
-#Note: See comment on TIME above, same procedure!
-export VERSION="2020-03-24"
-export TIME="$VERSION+02:02"
-export TMPJAVAC=/tmp/javac_vishiaMiniSys/javac
+export VERSION="2020-06-16"
+##Note: Use the same path as in TestJava_vishiaBase for link "build", see +mkLinkBuild.bat or +mkLinkBuild.sh
+export TMPJAVAC=$BUILD/vishiaMiniSys/
 export DEPLOY=vishiaMinisys
+#use the built before jar to generate jar. Hint: binjar is used in the core script.
+export JAR_zipjar=$TMPJAVAC/binjar
 
 
 # located from this workingdir as currdir for shell execution:
@@ -64,13 +46,14 @@ export FILE1SRC="@minisys.files"
 
 
 
+#use the successfull builld minisys for jar 
+export JAR_zipjar=$TMPJAVAC/result/vishiaMinisys-$VERSION.jar
 
 ##Build the whole vishiaBase
 #Note: See comment on VERSION above, same procedure!
 #Hint: This is the whole jar, changes are expectable.
-export VERSION="2020-06-09"
-export TIME="$VERSION+00:00"
-export TMPJAVAC=/tmp/javac_vishiaBase/javac
+export VERSION="2020-06-16"
+export TMPJAVAC=$BUILD/vishiaBase
 
 #Output files
 export DEPLOY=vishiaBase

@@ -150,7 +150,7 @@ public abstract class Arguments {
         Argument argTest = iter.next();
         int argLen = argTest.arg.length();
         if(argLen == 0){
-          emptyArg = argTest;  //possible argument if nothing met.
+          emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
         } else {
           boolean bSeparator = false;
           if((argc.startsWith(argTest.arg)                //correct prefix 

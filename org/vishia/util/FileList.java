@@ -3,7 +3,6 @@ package org.vishia.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,12 +13,9 @@ import java.text.SimpleDateFormat;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.zip.CRC32;
 
-import org.vishia.mainCmd.MainCmd;
-import org.vishia.mainCmd.MainCmd_ifc;
 
 /**This class creates a list which information about a file tree and supports change timestamp of given files (touch). 
  * A file list can be created from any directory tree. 
@@ -38,6 +34,7 @@ public class FileList
 
   /**Version, history and license.
    * <ul>
+   * <li>2020-06-16 Hartmut chg: lesser dependencies, do not use MainCmd, instead Argument. 
    * <li>2016-11-13 Hartmut new: touch only one file from a given list possible. 
    * <li>2016-11-13 Hartmut chg: The directory line does not contain a date up to now.
    * <li>2016-08-20 Hartmut chg: Other format, better able to read, used for restoring time stamps after git-revert.
@@ -74,7 +71,7 @@ public class FileList
   public static final String sVersion = "2016-08-20";
 
   
-  public static class Args
+  public static class Args extends Arguments
   {
     public char cCmd;
     
@@ -92,6 +89,50 @@ public class FileList
     
     /**Name, maybe path of the file list relative to {@link #sDirectory}. */
     public String sFileList;
+
+    
+    
+    Args() {
+      super.aboutInfo = "Generating a list of files or evaluating it \n" + "made by HSchorrig, Version 1.0, 2013-08-07..2020-06-16";
+      super.helpInfo = "obligate: [L|T|C|D] -l:.files ";
+      addArg(new Argument("", "[L|T|C|D]: List, Touch date, Compare, last files per Date", this.setCmd));
+      addArg(new Argument("-l", ":<files.txt> The list file ", this.setListfile));
+      addArg(new Argument("-d", ":<directory path>  ", this.setDir));
+      addArg(new Argument("-m", ":<Mask> mask of files", this.setMask));
+
+    }
+    
+
+
+    
+    Arguments.SetArgument setCmd = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.cCmd = val.charAt(0);
+      return true;
+    }};
+    
+    Arguments.SetArgument setListfile = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.sFileList = val;
+      return true;
+    }};
+    
+    Arguments.SetArgument setDir = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.sDirectory = val;
+      return true;
+    }};
+    
+    Arguments.SetArgument setMask = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.sMask = val;
+      return true;
+    }};
+    
+
+    
+    
+    @Override
+    public boolean testArgs(Appendable msg) throws IOException {
+      // TODO Auto-generated method stub
+      return true;
+    }
   }
   
   final Args args;
@@ -186,8 +227,9 @@ public class FileList
   protected void list(File dir, int posLocalPath, CharSequence localDir, Writer out, int recurs) throws IOException
   { if(recurs > 100) throw new IllegalArgumentException("to deep recursion");
     System.out.println("Filelist.list dir=" + dir.getAbsolutePath());
-    if(dir.exists()) {
-      File[] files = dir.listFiles();
+    File dirAbs = dir.getAbsoluteFile();
+    if(dirAbs.exists()) {
+      File[] files = dirAbs.listFiles();
       Map<String, File> sort = new TreeMap<String, File>();
       for(File file: files){ sort.put(file.getName(), file); }
       for(Map.Entry<String, File> entry: sort.entrySet()){
@@ -205,7 +247,7 @@ public class FileList
         if( file.isDirectory()) {
           String name = file.getName();
           if(name.charAt(0) !='.' && !name.equals(args.sFileList)){
-            writeDirectoryLine(out, file, localDir, name);  //the directory entry
+            writeDirectoryLine(out, file, localDir, name);  //the dirAbsectory entry
             CharSequence path = FileSystem.normalizePath(file);
             CharSequence localDirSub = path.subSequence(posLocalPath, path.length());
             list(file, posLocalPath, localDirSub, out, recurs+1);
@@ -375,6 +417,7 @@ public class FileList
   {
     FileList.Args args = new FileList.Args();
     args.out = out;
+    //File dirAbs = dir
     if(sFilelist ==null ){
       int posDir = dir.lastIndexOf('/');
       int posDir2 = dir.lastIndexOf('\\');
@@ -409,7 +452,7 @@ public class FileList
   
   public void touch(String sFile){
     BufferedReader inp = null;
-    File dir = new File(args.sDirectory);
+    File dir = new File(args.sDirectory).getAbsoluteFile();
     String sDirlocal = "";
     try {
       inp = new BufferedReader(new FileReader(args.sFileList));
@@ -519,56 +562,6 @@ public class FileList
   }
   
   
-  private void XXXreadOneLine(String sLine, File dir){
-    Date filetime;
-    String sPath;
-    try {
-      filetime = dateFormat.parse(sLine);
-      long listtime = filetime.getTime();
-      long listlen = StringFunctions_C.parseLong(sLine, 26, 16, 10, null, " '");
-      sPath = sLine.substring(53);
-      File file = new File(dir, sPath);
-      if(!file.exists()){
-        args.out.append("FileList - touch, file not exist; ").append(sPath).append("\n"); 
-      } else if(file.isDirectory()){
-        //do nothing for a directory.
-      } else {
-        long lastModify = file.lastModified();
-        if(file.length() == listlen){
-          if(Math.abs(listtime - lastModify) > 6000){ //round effect of seconds to 10!
-            //check crc
-            crcCalculator.reset();
-            InputStream inp = new FileInputStream(file);
-            byte[] buffer = new byte[4096];
-            int bytes;
-            while((bytes = inp.read(buffer)) >0){
-              crcCalculator.update(buffer, 0, bytes);
-            }
-            inp.close();
-            int crc = (int)crcCalculator.getValue();
-            int crclist = StringFunctions_C.parseIntRadix(sLine, 43, 8, 16, null);
-            if(crc == crclist){
-              file.setLastModified(listtime);
-              args.out.append("FileList - touching; ").append(sPath).append("\n"); 
-            } else {
-              args.out.append("FileList - touch, file with same length is changed; ").append(sPath).append("\n"); 
-            }
-          } else {
-            //file may not be changed, has the correct timestamp
-          }
-        } else {
-          args.out.append("FileList - touch, file is changed; ").append(sPath).append("\n"); 
-        }
-      }
-      //System.out.println(filetime.toGMTString() + " " + sPath);
-    } catch (IOException e) {
-      e.printStackTrace();
-    } catch (ParseException e) {
-      e.printStackTrace();
-    }
-  }
-  
-  
   
   
   public static void main(String[] sArgs){
@@ -585,15 +578,19 @@ public class FileList
   
   private static String smain(String[] sArgs, boolean shouldExitVM){
     String sRet = null;
+    int nRet = 0;
     Args args = new Args();
-    CmdLine mainCmdLine = new CmdLine(args, sArgs); //the instance to parse arguments and others.
+    System.out.println(args.aboutInfo());
+    try{ 
+      //for(String arg: sArgs) { System.out.println(arg); }
+      args.parseArgs(sArgs, System.err);
+      if(!args.testArgs(System.err)) { return ""; }
+    } catch(Exception exc){
+      System.err.println(exc.getMessage());
+      return exc.getMessage();
+    }
+
     try{
-      try{ mainCmdLine.parseArguments(); }
-      catch(Exception exception)
-      { sRet = "Jbat - Argument error ;" + exception.getMessage();
-        mainCmdLine.report(sRet, exception);
-        mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithArgumentError);
-      }
       if(args.cCmd !=0){
         FileList main = new FileList(args);     //the main instance
         if(sRet == null)
@@ -604,24 +601,23 @@ public class FileList
             switch(args.cCmd){
               case 'L': main.list(); break;
               case 'T': main.touch(); break;
+              default: new IllegalArgumentException("illegal cmd: " + args.cCmd);
             }
           }
           catch(Exception exception)
           { //catch the last level of error. No error is reported direct on command line!
-            sRet = "Jbat - Any internal error;" + exception.getMessage();
-            mainCmdLine.report(sRet, exception);
-            exception.printStackTrace(System.out);
-            mainCmdLine.setExitErrorLevel(MainCmd_ifc.exitWithErrors);
+            sRet = "FileList - Any internal error;" + exception.getMessage();
+            nRet = 6;
           }
         }
       } else {
-        mainCmdLine.writeHelpInfo(null);
+        args.showHelp(System.out);
       }
     } catch(Exception exc){
       sRet = exc.getMessage();
     }
     
-    if(shouldExitVM) { mainCmdLine.exit(); }
+    if(shouldExitVM) { System.exit(nRet); }
     return sRet;
   }
 
@@ -629,51 +625,7 @@ public class FileList
 
   
   
-  protected static class CmdLine extends MainCmd
-  {
-
-    public final Args argData;
-
-    protected final MainCmd.Argument[] argList =
-    { new MainCmd.Argument("", "[L|T|C|D]: List, Touch date, Compare, last files per Date"
-        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.cCmd = val.charAt(0); return true;
-        }})
-    , new MainCmd.Argument("-l", ":<files.txt> The list file "
-        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.sFileList = val; return true;
-        }})
-    , new MainCmd.Argument("-d", ":<directory path>  "
-        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.sDirectory = val; return true;
-        }})
-    , new MainCmd.Argument("-m", ":<Mask> mask of files"
-        , new MainCmd.SetArgument(){ @Override public boolean setArgument(String val){ 
-          argData.sMask = val; return true;
-        }})
-    };
-
-
-    protected CmdLine(Args argData, String[] sCmdlineArgs){
-      super(sCmdlineArgs);
-      this.argData = argData;
-      super.addAboutInfo("Generating a list of files or evaluating it");
-      super.addAboutInfo("made by HSchorrig, Version 1.0, 2013-08-07..2013-08-07");
-      super.addArgument(argList);
-      super.addStandardHelpInfo();
-      
-    }
-    
-    @Override protected void callWithoutArguments()
-    { //overwrite with empty method - it is admissible.
-    }
-
-    
-    @Override protected boolean checkArguments()
-    {
-      return true;
-    } 
-    
-  }
   
+  
+   
 }

@@ -307,10 +307,14 @@ public class StringFunctions {
    *  
    * @param s1 left char sequence
    * @param s2 right char sequence
-   * @return 0 if all characters are equal, positive if s1 > s2, s1 < s2.
-   *   <br>The absolute of return is the number of equal characters +1. 
-   *   <br>-1 means, the first character is different whereby s1.charAt(0) < s2.charAt(0)
-   *   <br> 1 means, the first character is different whereby s1.charAt(0) > s2.charAt(0)
+   * @return 0 if all characters are equal, positive if the part of s1 > s2,  negative if s1 < s2.
+   *   <br>The absolute of return is the number of equal characters +1.
+   *   <br>Note that the different character is charAt(returnValue -1) or the length of the shorter CharSeqence is returnVal -1.
+   *     This convention is necessary because 0 means equal. It should be distinguish from the result charAt(0) is different.
+   *   <br>-1 means, the first character is different whereby s1.charAt(0) < s2.charAt(0) or s1.length()==0 && s2.length() >0
+   *   <br> 1 means, the first character is different whereby s1.charAt(0) > s2.charAt(0) or s1.length() >= && s2.length()==0
+   *   <br> The comparison of "abcx" with "abcy" results -4 because 'x' < 'y' on the position 3.
+   *   <br> The comparison of "abc" with "abcy" results -4 because 'x' < 'y' on the position 3.
    *   
    */
   public static int comparePos(CharSequence s1, CharSequence s2){

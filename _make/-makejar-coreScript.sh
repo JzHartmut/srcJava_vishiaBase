@@ -10,6 +10,8 @@ export JARFILE=$TMPJAVAC/result/$DEPLOY-$VERSION.jar
 export MD5FILE=$TMPJAVAC/result/$DEPLOY-$VERSION.jar.MD5.txt
 export SRCZIPFILE=$TMPJAVAC/result/$DEPLOY-$VERSION-source.zip
 
+if test "$TIME" = ""; then export TIME="$VERSION+00:00"; fi
+
 echo compile java and generate jar with binary-compatible content. 
 echo JAVAC_HOME = $JAVAC_HOME
 echo DEPLOY = $DEPLOY  - output file names
@@ -29,8 +31,8 @@ if test "$JAVAC_HOME" = ""; then
   echo you must set JAVAC_HOME in your system to the installed JDK
   exit 5
 fi
-# clean the binjar because maybe old faulty content:
-if test -d $TMPJAVAC/binjar; then rm -f -r -d $TMPJAVAC/binjar; fi
+# clean the build dir because maybe old faulty content:
+if test -d $TMPJAVAC; then rm -f -r -d $TMPJAVAC; fi
 mkdir -p $TMPJAVAC/binjar
 mkdir $TMPJAVAC/result
 echo
@@ -54,6 +56,7 @@ if ! test "$SRC_ALL2" = ""; then
   export SRCZIP="$SRCZIP $SRC_ALL2/..:**/*"
 fi  
 echo compile javac
+pwd
 echo $JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 $JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 
