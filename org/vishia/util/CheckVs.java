@@ -168,7 +168,7 @@ public class CheckVs {
       u.append(startText);
     }
     if(bWithExceptiontext){
-      u.append(exc.toString()).append("; ");
+      u.append(exc.toString()).append(" @ ");
       //u.append(exc.getMessage()).append("; ");
     }
     StackTraceElement[] stack = exc.getStackTrace();

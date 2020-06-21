@@ -1533,15 +1533,15 @@ public class CalculatorExpr
      * @return if {@link #dataAccess} is given, it accesses with the given start Object 
      * @throws Exception
      */
-    public Object calc(Map<String, IntegerIx> nameVariables, Object[] varValues) throws Exception {
+    public Object calc ( Map<String, IntegerIx> nameVariables, Object[] varValues ) throws Exception {
       Object value;
       if(this.ixValue <0) {
         if(dataConst !=null) {
           if(dataConst instanceof Value) {
             value = ((Value)this.dataConst).objValue();
           } else {
-            assert(false);
-            value = null;
+            //assert(false);
+            value = dataConst;  //use it immediately, often a String
           }
           
         } else {

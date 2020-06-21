@@ -1651,8 +1651,11 @@ public class FilePath
         }
         CharSequence sCurrDir;
         if(env==null) {
-          String ssCurrDir = new File(".").getAbsolutePath();
-          ssCurrDir = ssCurrDir.substring(0, ssCurrDir.length()-2);  //without "\\."
+          String ssCurrDir = System.getProperty("user.dir");
+          if(ssCurrDir == null) {
+            ssCurrDir = new File(".").getAbsolutePath();
+            ssCurrDir = ssCurrDir.substring(0, ssCurrDir.length()-2);  //without "\\."
+          }
           sCurrDir = ssCurrDir.replace('\\', '/');
         } else {
           sCurrDir = env.getCurrentDir();

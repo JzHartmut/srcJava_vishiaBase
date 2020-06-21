@@ -6,9 +6,9 @@
 ##if is used for gradle build and for shell build!
 
 #determine out file names from VERSION
-export JARFILE=$TMPJAVAC/result/$DEPLOY-$VERSION.jar
-export MD5FILE=$TMPJAVAC/result/$DEPLOY-$VERSION.jar.MD5.txt
-export SRCZIPFILE=$TMPJAVAC/result/$DEPLOY-$VERSION-source.zip
+export JARFILE=$DEPLOY.jar
+export MD5FILE=$DEPLOY.jar.MD5.txt
+export SRCZIPFILE=$DEPLOY-source.zip
 
 if test "$TIME" = ""; then export TIME="$VERSION+00:00"; fi
 

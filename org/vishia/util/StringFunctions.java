@@ -23,6 +23,7 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2020-06-21 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)} for comparing empty strings
    * <li>2019-12-28 Hartmut new {@link #indexOfAnyChar(CharSequence, int, int, CharSequence, int[])} returns the number of the found character too
    * <li>2019-06-08 Hartmut new: All StringFunctions with negative to argument, count from end, -1 is till end.
    * <li>   * <li>2019-06-07 Hartmut new: {@value #compareChars(CharSequence, int, int, CharSequence)} as helper to find where is the difference, versus {@link #equals(CharSequence, int, int, CharSequence)} 
@@ -351,12 +352,12 @@ public class StringFunctions {
     if(nrofChars ==0) return 0; //NOTE: following while compares at least one char
     int zChars =  nrofChars >= 0 ? Math.min(nrofChars, Math.min(z1- i1, z2-i2)) : Math.min(z1-i1, z2-i2);
     //z1 -=1; z2 -=1;  //compare before increment then.
-    char c1, c2;
-    do {
+    char c1=0, c2=0;
+    while(c1 == c2 && --zChars >=0) {
       c1 = s1.charAt(i1++);
       c2 = s2.charAt(i2++);
-    } while(c1 == c2 && --zChars >0);
-    if(zChars ==0){
+    } 
+    if(zChars == -1){
       //all characters compared, maybe difference in length.
       if(i2 < z2) return -(i1 - from1 +1);  //s2 is longer, s1 is less.
       else if(i1 < z1) return i1 - from1 +1;  //positive value: s1 is greater because i1 < z2, is longer and c1==c2 
