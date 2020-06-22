@@ -12,8 +12,11 @@ export SRCZIPFILE=$DEPLOY-source.zip
 
 if test "$TIME" = ""; then export TIME="$VERSION+00:00"; fi
 
+echo
+echo =============================================================
+echo ====== javac ================================================
 echo compile java and generate jar with binary-compatible content. 
-echo JAVAC_HOME = $JAVAC_HOME
+##echo JAVAC_HOME = $JAVAC_HOME
 echo DEPLOY = $DEPLOY  - output file names
 echo TIME = $TIME  - determine timestamp in jar
 echo SRC_ALL = $SRC_ALL  - gather all *.java there
@@ -27,15 +30,15 @@ echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation
 echo JARFILE = $JARFILE  - generated jar
 echo MD5FILE = $MD5FILE  - generated MD5 text file
 
-if test "$JAVAC_HOME" = ""; then
-  echo you must set JAVAC_HOME in your system to the installed JDK
-  exit 5
-fi
+if test "$JAVAC" = ""; then
+  export JAVAC="$($(dirname $0)/JAVAC_CMD.sh)"
+fi  
+echo JAVAC = $JAVAC
 # clean the build dir because maybe old faulty content:
 if test -d $TMPJAVAC; then rm -f -r -d $TMPJAVAC; fi
-mkdir -p $TMPJAVAC/binjar
+mkdir -p $TMPJAVAC/binjar   
 mkdir $TMPJAVAC/result
-echo
+echo                                             
 echo Output to: $TMPJAVAC/result
 echo ===============================================================
 
@@ -53,12 +56,13 @@ if ! test "$SRC_ALL2" = ""; then
   echo source-set all files = $SRC_ALL2
   find $SRC_ALL2 -name "*.java" >> $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
-  export SRCZIP="$SRCZIP $SRC_ALL2/..:**/*"
+  export SRCZIP="$SRCZIP $SRC_ALL2/..:**/*"                         
 fi  
 echo compile javac
 pwd
-echo $JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
-$JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+echo javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+###$JAVAC_HOME/bin/
+$JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 
 echo build jar
 ##do not use: $JAVAC_HOME/bin/jar -n0cvfM $JARFILE -C $TMPJAVAC/binjar . > $TMPJAVAC/jar.txt
