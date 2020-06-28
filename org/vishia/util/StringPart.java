@@ -613,7 +613,7 @@ abcdefghijklmnopqrstuvwxyz  The associated string
   </pre>
    * @java2c=return-this.
    * @param src The given StringPart.
-   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   * @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
   */
   @Java4C.Retinline
   @Java4C.ReturnThis 
@@ -634,7 +634,7 @@ abcdefghijklmnopqrstuvwxyz  The associated string
 </pre>
    * @java2c=return-this.
    * @param src The given StringPart.
-   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   * @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
    */
   @Java4C.Retinline
   @Java4C.ReturnThis 
@@ -671,7 +671,7 @@ abcdefghijklmnopqrstuvwxyz  The associated string
             +++++         The valid part after.
     </pre>
     @java2c=return-this.
-    @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+    @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
   */
   @Java4C.Retinline
   @Java4C.ReturnThis 
@@ -773,7 +773,7 @@ private final void throwSubSeqFaulty(int from, int to)
   /** Sets the endposition of the part of string to the given chars after start.
     @java2c=return-this.
     @param len The new length. It must be positive.
-    @return <code>this</code> to concat some operations.
+    @return <code>this</code> to concatenate some operations.
     @throws IndexOutOfBoundsException if the len is negativ or greater than the position endMax.
    */
   public final StringPart lentoPos(int len)
@@ -806,9 +806,10 @@ private final void throwSubSeqFaulty(int from, int to)
     </pre>
     @java2c=return-this.
     @param cc char to determine the exclusively end char.
-    @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-      Sets {@link #bFound} to false if the end char is not found.
-  */
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
   public final StringPart lento(char cc)
   { endLast = end;
     end = begin-1;
@@ -829,8 +830,10 @@ private final void throwSubSeqFaulty(int from, int to)
       of the last part, example see lento(char cc)
       @java2c=return-this.
       @param ss string to determine the exclusively end char.
-      @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-    */
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
   @Java4C.Retinline
   @Java4C.ReturnThis 
   public final 
@@ -848,8 +851,10 @@ private final void throwSubSeqFaulty(int from, int to)
     @java2c=return-this.
     @param ss string to determine the exclusively end char.
     @param mode Mode of seeking the end, seekEnd or 0 is possible.
-    @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-  */
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
   public final StringPart lento(CharSequence ss, int mode)
   { endLast = end;
     int pos = StringFunctions.indexOf(content, begin, end, ss);
@@ -1153,8 +1158,10 @@ abcdefghijklmnopqrstuvwxyz  The associated String
          .              The valid part after is emtpy, if only whitespaces re found.
   </pre>
 *  @java2c=return-this.
-  @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-*/
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
 public final StringPart seekNoWhitespace()
 { beginLast = begin;
   while( begin < end && " \t\r\n\f".indexOf(content.charAt(begin)) >=0 )
@@ -1281,7 +1288,9 @@ that is a liststring and his part The associated String
    * @java2c=return-this.
    * @param sSeek The string to search for.
    * @param mode Mode of seeking, use ones of {@link #mSeekCheck}, {@link #seekBack}, {@link #seekToLeft}, {@link #seekNormal}, added with {@link #seekEnd}.
-   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seek(CharSequence sSeek, int mode){ 
     beginLast = begin;
@@ -1355,7 +1364,9 @@ that is a liststring and his part The associated String
    * Sets {@link #found()} to false if a character of chars is not contained in the current part.
    * Then the current part is not changed.
    * @param sSeek The string to seek backward.
-   * @return this to concatenate
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seekAnyChar(CharSequence chars ){
     int pos = StringFunctions.indexOfAnyChar(content, begin, end, chars);
@@ -1373,7 +1384,9 @@ that is a liststring and his part The associated String
    * Sets {@link #found()} to false if a character of chars is not contained in the current part.
    * Then the current part is not changed.
    * @param sSeek The string to seek backward.
-   * @return this to concatenate
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seekBackToAnyChar(CharSequence chars ){
     int pos = StringFunctions.lastIndexOfAnyChar(content, begin, end, chars);
@@ -1411,7 +1424,9 @@ that is a liststring and his part The associated String
    * This operation calls {@link #seek(CharSequence, int)} with flag {@link #seekNormal}.
    * Use {@link #seekCheck(CharSequence)} or {@link #seek(CharSequence, int)} with {@link #mSeekCheck}.
    * @param sSeek
-   * @return
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
    */
   @Java4C.Inline
   public final StringPart seek(CharSequence sSeek){ return seek(sSeek, seekNormal); }
@@ -1496,8 +1511,10 @@ return this;
   *  @java2c=return-this.
     @param cSeek The character to search for.
     @param mode Mode of seeking, use ones of back, seekToLeft, seekNormal, added with seekEnd.
-    @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-  */
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
   public final StringPart seek(char cSeek, int mode)
   { beginLast = begin;
     int seekArea1, seekArea9;
@@ -1552,8 +1569,10 @@ return this;
                          </pre>
 *  @java2c=return-this.
   @param sChars CharSequence with the chars to overread.
-  @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-*/
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
   public final StringPart seekNoChar(CharSequence sChars)
   { beginLast = begin;
     while(begin < end && StringFunctions.indexOf(sChars, content.charAt(begin)) >=0) begin +=1;
@@ -2088,7 +2107,9 @@ public final StringPart lentoQuotionEnd(char sEndQuotion, int maxToTest)
 /**Sets the length of the current part to the end of the current line.
  * Note The current part is empty if the position is on end of a line yet.
  * @java2c=return-this.
- * @return this itself to concatenate. 
+ * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+ *   Hint: use {@link #found()} to detect whether the end string is found.
+ *   if the end String is not found, the current part has length ==0
  */
 @Java4C.Retinline
 public final StringPart lentoLineEnd(){ return lentoAnyChar("\n\r\f"); }
@@ -2131,7 +2152,7 @@ public final StringPart lentoAnyChar(CharSequence sChars)
   /**Sets the length to the end of the maximal part if the length is 0. This method could be called at example
 if a end char is not detected and for that reason the part is valid to the end.
  * @java2c=return-this.
- @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+ @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
  */
 public final StringPart len0end()
 { if(end <= begin) end = endMax;
@@ -2157,8 +2178,10 @@ public final StringPart len0end()
                              </pre>
    * @java2c=return-this.
       @param sChars CharSequence with the chars to overread.
-      @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-  */
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
+   */
   public final StringPart lenBacktoNoChar(CharSequence sChars)
   { endLast = end;
     while( end > begin && StringFunctions.indexOf(sChars, content.charAt(end-1)) >=0){ end = end -1; }
@@ -2171,7 +2194,9 @@ public final StringPart len0end()
   
   /**Trims all trailing whitespaces within the part.
    * @java2c=return-this.
-   * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
+   *   Hint: use {@link #found()} to detect whether the end string is found.
+   *   if the end String is not found, the current part has length ==0
    */
   public final StringPart lenBacktoNoWhiteSpaces()
   {

@@ -67,6 +67,7 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2020-06-28 Hartmut new now supports &lt;![CDATA[ ... ]]>
    * <li>2020-02-12 Hartmut new {@link #readXml(Reader, String, Object)} and {@link #readXml(StringPartScan, Object)} 
    * <li>2020-01-15 Hartmut Improve handling of &#code characters. 
    * <li>2020-01-01 Hartmut Exception on file errors. 
@@ -105,7 +106,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2020-02-12";
+  public static final String version = "2020-06-28";
   
   
   /**To store the read configuration. */
@@ -368,7 +369,9 @@ public class XmlJzReader
         Debugutil.stop();
     }
     //scan the <tag
-    if(!inp.scanIdentifier(null, "-:.").scanOk()) throw new IllegalArgumentException("tag name expected");
+    if(!inp.scanIdentifier(null, "-:.").scanOk()) {
+      throw new IllegalArgumentException("tag name expected");
+    }
     //
     //The tag name of the element:
     String sTag = inp.getLastScannedString().toString();
@@ -479,7 +482,25 @@ public class XmlJzReader
         if(inp.scan("<").scanOk()) {
           if(inp.scan("!--").scanOk()) {
             inp.seekEnd("-->");
-          } else {
+          }
+          else if(inp.scan("![CDATA[").scanOk()) {
+            if(contentBuffer == null && subOutput !=null) { contentBuffer = new StringBuilder(500); }
+            boolean bEndFound;
+            do { inp.lento("]]>");
+              bEndFound = inp.found();
+              if(!bEndFound) { //the current input does not contain the end characters.
+                inp.len0end().seekPos(-3);  //do not seek till end. It may contain a start of the "]]>" sequence.
+                contentBuffer.append(inp.getCurrent());
+                inp.fromEnd();
+                inp.readNextContent(this.sizeBuffer/2);
+              } else {
+                contentBuffer.append(inp.getCurrent());
+                inp.fromEnd();
+              }
+            } while(!bEndFound || inp.length() == 0);  //should be abort if no "]]>" found in the whole XML
+            inp.seekPos(3); //skip over the "]]>"
+          }
+          else {
             parseElement(inp, subOutput, subCfgNode);  //nested element.
           }
         } else {

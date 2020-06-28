@@ -524,17 +524,18 @@ public class XmlCfg
      * @throws ParseException 
      */
     void setContentStorePath(String text) throws ParseException {
-      if(tag instanceof StringBuilder) { //it is a second node with same tag, but with attributes for check.
-        if(tag.toString().startsWith("Object@"))
+      if(this.tag instanceof StringBuilder) { //it is a second node with same tag, but with attributes for check.
+        if(this.tag.toString().startsWith("Object@"))
           Debugutil.stop();
-        if(tag.toString().startsWith("Array@"))
+        if(this.tag.toString().startsWith("Array@"))
           Debugutil.stop();
-        parent.subnodes.put(tag.toString(), this); //put this node in its parent, it is not done yet. 
+        this.parent.subnodes.put(this.tag.toString(), this); //put this node in its parent, it is not done yet. 
       }
       if(!text.startsWith("!")) throw new IllegalArgumentException("Any content of a config.xml should start with ! because it is a store path.");
       StringPartScan sp = new StringPartScan(text.substring(1));
       
-      contentStorePath = new DataAccess.DatapathElement(sp, allArgNames, null);
+      this.contentStorePath = new DataAccess.DatapathElement(sp, this.allArgNames, null);
+      sp.close();
     }
     
     
