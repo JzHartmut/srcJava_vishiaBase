@@ -20,6 +20,8 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2020-07-16 Hartmut chg using LinkedList instead ArrayList. Question of philosophy. 
+   * <li>2020-07-16 Hartmut new regard &lt;...?""...> store as String and as parsed data.
    * <li>2019-12-08 new control of class name with component::=&lt;name>
    * <li>2019-12-08 Hartmut only formally gardening (prevent warnings)
    * <li>2019-08-17 Hartmut divided in 2 classes, the {@link GenJavaOutClass} has gotten most content from here,
@@ -149,7 +151,7 @@ public class GenZbnfJavaData
       //
     } catch (Exception e1) {
       // TODO Auto-generated catch block
-      System.err.println(e1.getMessage());
+      System.err.println("ERROR: " + e1.getMessage());
     }
     this.genClass.closeWrite();    
   }
@@ -384,7 +386,8 @@ public class GenZbnfJavaData
       }
       else {
         if(item.bStoreAsString) {
-          wrVariable("String", semantic, null, bList, false, null); ////xx
+          String name = item.bDonotStoreData ? semantic : semantic + "_string";
+          wrVariable("String", name, null, bList, false, null); ////xx
         }
         if(!item.bDonotStoreData) {
         //create an own class for the component, write a container here.

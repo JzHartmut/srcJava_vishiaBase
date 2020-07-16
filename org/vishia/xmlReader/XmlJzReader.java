@@ -16,7 +16,7 @@ import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.vishia.util.Assert;
+import org.vishia.util.CheckVs;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -123,6 +123,8 @@ public class XmlJzReader
   
   int debugStopLine = -1;
   
+  String debugTag = null;
+  
   /**Assignment between nameSpace-alias and nameSpace-value gotten from the xmlns:ns="value" declaration in the read XML file. */
   Map<String, String> namespaces = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
    
@@ -163,6 +165,10 @@ public class XmlJzReader
    */
   public void setDebugStop(int line) {
     this.debugStopLine = line;
+  }
+   
+  public void setDebugStopTag(String stag) {
+    this.debugTag = stag;
   }
    
   public void XXXXreadXmlCfg(File input) {
@@ -375,6 +381,10 @@ public class XmlJzReader
     //
     //The tag name of the element:
     String sTag = inp.getLastScannedString().toString();
+    if(this.debugTag !=null && sTag.equals(this.debugTag)) {
+      Debugutil.stop();
+    }
+    
     
     if(this.xmlTestWriter !=null) {
       this.xmlTestWriter.writeElement(sTag);
@@ -397,7 +407,7 @@ public class XmlJzReader
       if(output ==null) {
         Debugutil.stop();
       }
-      Assert.check(output !=null);
+      CheckVs.check(output !=null);
       if(sTag.toString().contains("   "))
         Debugutil.stop();
       if(sTag.toString().startsWith("Object@"))
@@ -484,7 +494,7 @@ public class XmlJzReader
             inp.seekEnd("-->");
           }
           else if(inp.scan("![CDATA[").scanOk()) {
-            if(contentBuffer == null && subOutput !=null) { contentBuffer = new StringBuilder(500); }
+            if(contentBuffer == null) { contentBuffer = new StringBuilder(500); }
             boolean bEndFound;
             do { inp.lento("]]>");
               bEndFound = inp.found();
@@ -673,7 +683,7 @@ public class XmlJzReader
         }
       } catch(Exception exc) {
         subOutput = null;
-        CharSequence sError = Assert.exceptionInfo("", exc, 1, 30);
+        CharSequence sError = CheckVs.exceptionInfo("", exc, 1, 30);
         System.err.println("error getDataForTheElement: " + elementStorePath);
         System.err.println("help: ");
         System.err.println(sError);
