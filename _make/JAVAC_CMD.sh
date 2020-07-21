@@ -1,5 +1,6 @@
 #This script outputs a may be full path call of javac
-#to set in environment. export JAVAC="$(./JAVAC_CMD.sh)"
+#to set in environment. export JAVAC="$($(dirname $0)/JAVAC_CMD.sh)"
+#It sets the JAVAC variable to the text which is stdout of this file.
 #Some possible locations were tested.
 #If no proper location is found this program outputs "javac"
 #Then javac should be found in the systems PATH, it is the standard installation of JAVA_JDK.
