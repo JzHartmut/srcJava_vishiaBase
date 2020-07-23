@@ -106,7 +106,7 @@ public class CheckDependencyFile
    *   The routine {@link #setDirObj(String)} is changed in parameter form.
    * <li>2013-01-06 Hartmut chg order of search in {@link #searchInclFileInIncludePath(String, List)}, not at last 'y'.
    *   Elsewhere not founded includefiles are not reported.
-   * <li>2012-12-25 Hartmut chg: Now This class is able to use independently from {@link CheckDeps}. It should be used
+   * <li>2012-12-25 Hartmut chg: Now This class is able to use independently from {@link CheckDeps_Old}. It should be used
    *   to check file by file. All other classes are adapted. 
    * <li>2012-12-25 Hartmut new: Inserted in the Zbnf component because it is an integral part of the Zmake concept
    *   for C-compilation.
@@ -375,6 +375,21 @@ public class CheckDependencyFile
     return infoFile;
   }
 
+  
+  
+  public InfoFileDependencies processSrcfile(String src)  {
+    int posSep = src.indexOf(':', 2);
+    final File fileSrc;
+    final String sLocalSrc;
+    if(posSep >0) {
+      sLocalSrc = src.substring(posSep+1);
+      fileSrc = new File(src.substring(0, posSep) + "/" + sLocalSrc).getAbsoluteFile();
+    } else {
+      sLocalSrc = src;
+      fileSrc = new File(src).getAbsoluteFile();
+    }
+    return processSrcfile(fileSrc, sLocalSrc);
+  }
   
   
   /**See {@link #processSrcfile(File, String)}

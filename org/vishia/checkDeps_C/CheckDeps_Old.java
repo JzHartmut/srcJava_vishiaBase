@@ -14,7 +14,7 @@ import org.vishia.util.FileSystem;
  * @author Hartmut Schorrig
  *
  */
-public class CheckDeps
+public class CheckDeps_Old
 {
 
   /**Version, history and license.
@@ -152,7 +152,7 @@ public class CheckDeps
   final CheckDependencyFile checkerDependencyFile;
   
   /**Constructor of this class. */
-  public CheckDeps(Report console, Args args) //, CfgData cfgData) {
+  public CheckDeps_Old(Report console, Args args) //, CfgData cfgData) {
   { super();
     this.console = console;
     this.args = args;
@@ -187,7 +187,7 @@ public class CheckDeps
     }
     */
     //if(cfgData !=null){
-      CheckDeps main = new CheckDeps(cmdline, args); //, cfgData);
+      CheckDeps_Old main = new CheckDeps_Old(cmdline, args); //, cfgData);
       try{ main.execute(); } 
       catch(Exception exc){ cmdline.writeError("Any execution error; ", exc); }
     //}
