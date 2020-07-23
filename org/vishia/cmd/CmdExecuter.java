@@ -161,12 +161,12 @@ public class CmdExecuter implements Closeable
    */
   public CmdExecuter()
   { this.processBuilder = new ProcessBuilder("");
-    threadExecOut = new Thread(outThread, "execOut");
-    threadExecError = new Thread(errThread, "execError");
-    threadExecIn = null; //TODO new Thread(inputThread, "execIn");
-    bRunThreads = true;
-    threadExecOut.start();
-    threadExecError.start();
+    this.threadExecOut = new Thread(this.outThread, "execOut");
+    this.threadExecError = new Thread(this.errThread, "execError");
+    this.threadExecIn = null; //TODO new Thread(inputThread, "execIn");
+    this.bRunThreads = true;
+    this.threadExecOut.start();
+    this.threadExecError.start();
     //threadExecIn.start();
   }
   
@@ -174,10 +174,10 @@ public class CmdExecuter implements Closeable
   
   
   public void initJZcmdExecuter(JZtxtcmdScript script, String sCurrdir, MainCmdLogging_ifc log) throws Throwable
-  { if(jzcmdExecuter == null) {
-      jzcmdExecuter = new JZtxtcmdExecuter(log);
+  { if(this.jzcmdExecuter == null) {
+      this.jzcmdExecuter = new JZtxtcmdExecuter(log);
     }
-    jzcmdExecuter.initialize(script, false, sCurrdir);
+    this.jzcmdExecuter.initialize(script, false, sCurrdir);
   }
   
 
@@ -187,7 +187,7 @@ public class CmdExecuter implements Closeable
    */
   public void setCurrentDir(File dir)
   {
-    processBuilder.directory(dir);
+    this.processBuilder.directory(dir);
   }
   
   
@@ -206,12 +206,12 @@ public class CmdExecuter implements Closeable
    * @return the environment of the following executes, able to explore, able to change.
    */
   public Map<String,String> environment(){
-    return processBuilder.environment();
+    return this.processBuilder.environment();
   }
   
   
   public void specifyConsoleInvocation(String cmd){
-    sConsoleInvocation = splitArgs(cmd);
+    this.sConsoleInvocation = splitArgs(cmd);
   }
   
   public void addCmd(String cmdline
@@ -234,7 +234,7 @@ public class CmdExecuter implements Closeable
       , File currentDir
       , ExecuteAfterFinish executeAfterCmd
       )
-  { if(cmdQueue == null) { cmdQueue = new ConcurrentLinkedQueue<CmdQueueEntry>(); }
+  { if(this.cmdQueue == null) { this.cmdQueue = new ConcurrentLinkedQueue<CmdQueueEntry>(); }
     CmdQueueEntry e = new CmdQueueEntry();
     e.cmd = cmdArgs;
     e.input = input;
@@ -242,7 +242,7 @@ public class CmdExecuter implements Closeable
     e.err = errors;
     e.currentDir = currentDir;
     e.executeAfterFinish = executeAfterCmd;
-    cmdQueue.offer(e);
+    this.cmdQueue.offer(e);
   }
   
   
@@ -290,8 +290,8 @@ public class CmdExecuter implements Closeable
   , File currDir
   , ExecuteAfterFinish execFinish
   ) {
-    if(jzcmdExecuter == null) throw new IllegalArgumentException("The CmdExecuter should be initiaized with initJZcmdExecuter(script,...)");
-    if(cmdQueue == null) { cmdQueue = new ConcurrentLinkedQueue<CmdQueueEntry>(); }
+    if(this.jzcmdExecuter == null) throw new IllegalArgumentException("The CmdExecuter should be initiaized with initJZcmdExecuter(script,...)");
+    if(this.cmdQueue == null) { this.cmdQueue = new ConcurrentLinkedQueue<CmdQueueEntry>(); }
     CmdQueueEntry e = new CmdQueueEntry();
     e.jzsub = jzsub;
     e.args = args;
@@ -300,7 +300,7 @@ public class CmdExecuter implements Closeable
     e.out.add(out);
     e.currentDir = currDir;
     e.executeAfterFinish = execFinish;
-    cmdQueue.offer(e);
+    this.cmdQueue.offer(e);
   }
   
   
@@ -309,7 +309,7 @@ public class CmdExecuter implements Closeable
   
   
   public void clearCmdQueue(){
-    if(cmdQueue !=null) { cmdQueue.clear(); }
+    if(this.cmdQueue !=null) { this.cmdQueue.clear(); }
   }
   
   
@@ -390,7 +390,7 @@ public class CmdExecuter implements Closeable
   , Appendable error
   , boolean useShell
   )
-  { String[] preArgs = useShell ? sConsoleInvocation : null;
+  { String[] preArgs = useShell ? this.sConsoleInvocation : null;
     String[] cmdArgs = splitArgs(cmdLine, preArgs, null);
     return execute(cmdArgs, input, output, error);
   }
@@ -473,58 +473,58 @@ public class CmdExecuter implements Closeable
   )
   { int exitCode;
     this.executeAfterCmd = executeAfterCmd;
-    processBuilder.command(cmdArgs);
+    this.processBuilder.command(cmdArgs);
     if(errors == null){ //merge errors in the output stream. It is a feature of ProcessBuilder.
-      processBuilder.redirectErrorStream(true); 
+      this.processBuilder.redirectErrorStream(true); 
     }
     try
     {
-      process = processBuilder.start();       //starts another process on operation system.
+      this.process = this.processBuilder.start();       //starts another process on operation system.
       //
       if(errors !=null){                     //it follows immediately: capture the error output from the process
-        errThread.bProcessIsRunning = true;  //in the error thread.
-        errThread.processOut = new BufferedReader(new InputStreamReader(process.getErrorStream(), this.charsetCmd));
-        errThread.outs = errors;             
-        synchronized(errThread){ errThread.notify(); }  //wake up to work!
+        this.errThread.bProcessIsRunning = true;  //in the error thread.
+        this.errThread.processOut = new BufferedReader(new InputStreamReader(this.process.getErrorStream(), this.charsetCmd));
+        this.errThread.outs = errors;             
+        synchronized(this.errThread){ this.errThread.notify(); }  //wake up to work!
         //processIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
       }
       if(outputs !=null){                    //it follows immediately: capture the output from the process
-        outThread.bProcessIsRunning = true;  //in the output thread.
-        outThread.processOut = new BufferedReader(new InputStreamReader(process.getInputStream(), this.charsetCmd));
-        outThread.outs = outputs;
-        synchronized(outThread){ outThread.notify(); }  //wake up to work!
+        this.outThread.bProcessIsRunning = true;  //in the output thread.
+        this.outThread.processOut = new BufferedReader(new InputStreamReader(this.process.getInputStream(), this.charsetCmd));
+        this.outThread.outs = outputs;
+        synchronized(this.outThread){ this.outThread.notify(); }  //wake up to work!
       }
       if(input !=null){
-        OutputStream sinput = process.getOutputStream();
+        OutputStream sinput = this.process.getOutputStream();
         sinput.write(input.getBytes());
         //Writer processIn = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
       }
       //
       //wait for
       if(input !=null || outputs !=null || errors !=null){
-        exitCode = process.waitFor();  //wait for finishing the process
+        exitCode = this.process.waitFor();  //wait for finishing the process
         //If the outThread or errThread will be attempt to wait, it realizes that the process has been finished. 
-        outThread.bProcessIsRunning =false;
-        errThread.bProcessIsRunning =false;
+        this.outThread.bProcessIsRunning =false;
+        this.errThread.bProcessIsRunning =false;
         //It is possible that the last output isn't gotten because the outThread or errThread
         //is not run in the last time. Run it till it has recognized the end of process itself.
-        synchronized(outThread){
-          if(outThread.processOut !=null){ //will be set to null on 'end of file' detection.
-            outThread.wait();   //wait for finishing getting output. It will be notified if end of file is detected
+        synchronized(this.outThread){
+          if(this.outThread.processOut !=null){ //will be set to null on 'end of file' detection.
+            this.outThread.wait();   //wait for finishing getting output. It will be notified if end of file is detected
           }
         }
-        synchronized(errThread){
-          if(errThread.processOut !=null){ //may be null if err isn't used, will be set to null on 'end of file' detection
-            errThread.wait();   //wait for finishing getting error output. It will be notified if end of file is detected 
+        synchronized(this.errThread){
+          if(this.errThread.processOut !=null){ //may be null if err isn't used, will be set to null on 'end of file' detection
+            this.errThread.wait();   //wait for finishing getting error output. It will be notified if end of file is detected 
           }
         }
       } else if(donotwait){
         exitCode = 0; //don't wait
       } else {
-        exitCode = process.waitFor(); //wait without input, outputs, errors
+        exitCode = this.process.waitFor(); //wait without input, outputs, errors
       }
       synchronized(this){
-        process = null;  //no more used
+        this.process = null;  //no more used
       }
     } 
     catch(Exception exception) { 
@@ -553,8 +553,8 @@ public class CmdExecuter implements Closeable
   public boolean abortCmd()
   { boolean destroyed = false;
     synchronized(this){
-      if(process !=null){
-        process.destroy();
+      if(this.process !=null){
+        this.process.destroy();
         destroyed = true;
       }
       try{ 
@@ -566,8 +566,8 @@ public class CmdExecuter implements Closeable
         System.err.println("error close");
         exc.printStackTrace();
       }
-      outThread.outs = null;  //to abort
-      errThread.outs = null;
+      this.outThread.outs = null;  //to abort
+      this.errThread.outs = null;
     }
     //TODO doesn't work:
     /*
@@ -591,7 +591,7 @@ public class CmdExecuter implements Closeable
   
   public boolean abortAllCmds()
   {
-    cmdQueue.clear();
+    this.cmdQueue.clear();
     return abortCmd();
   }
 
@@ -652,8 +652,8 @@ public class CmdExecuter implements Closeable
       for(String preArg: preArgs){ ret[ixRet++] = preArg; }
     }
     ixArg = -1;
-    for(ixRet = ixRet; ixRet < ret.length; ++ixRet){
-      ret[ixRet] = line.substring(posArgs[++ixArg], posArgs[++ixArg]);
+    while(ixRet < ret.length){
+      ret[ixRet++] = line.substring(posArgs[++ixArg], posArgs[++ixArg]);
     }
     if(postArgs !=null) {
       for(String preArg: preArgs){ ret[ixRet++] = preArg; }
@@ -719,14 +719,14 @@ public class CmdExecuter implements Closeable
     OutThread(boolean isOutThread){ this.isOutThread = isOutThread; }
     
     @Override public void run()
-    { state = 'r';
-      while(bRunThreads){
+    { this.state = 'r';
+      while(CmdExecuter.this.bRunThreads){
         try{
-          if(processOut !=null && outs !=null){  //ask only if processOutput is Set.
+          if(this.processOut !=null && this.outs !=null){  //ask only if processOutput is Set.
             String sLine;
-            if(outs != null && processOut.ready()){
-              if( (sLine= processOut.readLine()) !=null){
-                for(Appendable out :outs){
+            if(this.outs != null && this.processOut.ready()){
+              if( (sLine= this.processOut.readLine()) !=null){
+                for(Appendable out :this.outs){
                   try{
                     out.append(sLine).append("\n");
                   } catch(Exception exc){
@@ -736,22 +736,27 @@ public class CmdExecuter implements Closeable
               } else {
                 //Because processOut returns null, it is "end of file" for the output stream of the started process.
                 //It means, the process is terminated now.
-                processOut = null;  //Set to null because it will not be used up to now. Garbage.
+                this.processOut = null;  //Set to null because it will not be used up to now. Garbage.
               }
             } else {
               //yet no output available. The process may be run still, but doesn't produce output.
               //The process may be finished.
-              if(!bProcessIsRunning){
-                if(isOutThread && executeAfterCmd !=null) {
+              if(!this.bProcessIsRunning){
+                if(this.isOutThread && CmdExecuter.this.executeAfterCmd !=null) {
                   try {
-                    int exitValue = process.exitValue();
-                    executeAfterCmd.exec(exitValue, outs == null? null : outs.get(0), errThread == null || errThread.outs ==null ? null : errThread.outs.get(0));
+                    int exitValue = CmdExecuter.this.process.exitValue();
+                    CmdExecuter.this.executeAfterCmd.exec
+                    ( exitValue
+                    , this.outs == null ? null : this.outs.get(0)
+                    , CmdExecuter.this.errThread == null || CmdExecuter.this.errThread.outs ==null 
+                        ? null : CmdExecuter.this.errThread.outs.get(0)
+                    );
                   } catch (Exception exc) {
                     System.err.println("CmdExecuter - exception in executeAfterCmd");
                   }
-                  executeAfterCmd = null; //is done.
+                  CmdExecuter.this.executeAfterCmd = null; //is done.
                 }
-                outs = null;  
+                this.outs = null;  
               } else {
                 Thread.sleep(100);
               }
@@ -761,11 +766,11 @@ public class CmdExecuter implements Closeable
             //no process is active, wait
             try { synchronized(this){ wait(1000); } } catch (InterruptedException exc) { }
           }
-          if(outs == null && processOut !=null){  //aborted or process is finished.
+          if(this.outs == null && this.processOut !=null){  //aborted or process is finished.
             //if(process !=null){
               synchronized(this){ 
-                processOut.close();
-                processOut = null;
+                this.processOut.close();
+                this.processOut = null;
                 notify();
               }  //notify it!  
             //}
@@ -774,7 +779,7 @@ public class CmdExecuter implements Closeable
           Debugutil.stop();
         }
       }
-      state = 'x';
+      this.state = 'x';
     }
   }
   
@@ -793,22 +798,22 @@ public class CmdExecuter implements Closeable
     
     
     @Override public void run()
-    { while(bRunThreads){
-        if(bRunExec){
+    { while(CmdExecuter.this.bRunThreads){
+        if(this.bRunExec){
           //String sLine;
           boolean bFinished = true;
           try{
-            if( (processIn.append("")) !=null){
+            if( (this.processIn.append("")) !=null){
               bFinished = false;
             }
           } catch(IOException exc){
             stop();
           }
           if(bFinished){
-            bRunExec = false;
+            this.bRunExec = false;
           }
           try { Thread.sleep(50); } catch (InterruptedException exc) { }
-          process.destroy();
+          CmdExecuter.this.process.destroy();
         } else {
           try { Thread.sleep(100); } catch (InterruptedException exc) { }
         }
@@ -823,9 +828,9 @@ public class CmdExecuter implements Closeable
    */
   @Override public void close()
   {
-    bRunThreads = false;
-    while(  outThread !=null && outThread.state == 'r'
-         || errThread !=null && errThread.state == 'r'
+    this.bRunThreads = false;
+    while(  this.outThread !=null && this.outThread.state == 'r'
+         || this.errThread !=null && this.errThread.state == 'r'
          //|| inThread !=null && inThread == 'r'
          ){
       synchronized(this){
@@ -840,7 +845,7 @@ public class CmdExecuter implements Closeable
    */
   @Override public void finalize()
   {
-    bRunThreads = false;
+    this.bRunThreads = false;
   }
   
   

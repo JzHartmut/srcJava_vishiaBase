@@ -5,6 +5,9 @@ public class StringFunctions_B
   
   /**Version, history and license.
    * <ul>
+   * <li>2020-07-22 Hartmut new {@link #checkOneSameChars(CharSequence, CharSequence...)} 
+   *         and {@link #checkMoreSameChars(CharSequence, CharSequence...)} as enhancement to 2016-activity
+   *         used in {@link org.vishia.simSelector.SimSelector} in the script for selection.
    * <li>2016-01-10 Hartmut new: {@link #checkSameChars(CharSequence...)} 
    * <li>2015-11-07 Hartmut created: The functionality to remove indentation was used in JZcmdExecuter.
    *   Now it is implemented here for common usage.
@@ -33,7 +36,7 @@ public class StringFunctions_B
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2015-11-07"; 
+  public final static String version = "2020-07-22"; 
 
   public static final String sWhiteSpaces = " \r\n\t\f";
   
@@ -180,6 +183,67 @@ public class StringFunctions_B
   }
   
   
+  
+  
+  
+  /**Checks whether any char is existing in at least one given check Strings.
+   * This routine is used to check some conditions which are dedicated by some characters in a string.
+   * <ul>
+   * <li>For Example "AC" " Axyz" "Cmno" both contains either the char 'A' or the char 'C', therefore this routine returns true.
+   * <li>For Example "AB" " Axyz" "Cmno" The char 'B' is not found,  returns false. 
+   * @param src some chars to check
+   * @param check some strings where the check chars should be found. 
+   * @return true if at least one char is found which is contained in all src.
+   * @TODO Java2C: Yet without threadcontext because bug with variable argument list
+   */
+  @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkOneSameChars(CharSequence src, CharSequence ... check)
+  {
+    boolean ok = true;
+//    CharSequence cmp = null;
+//    for(CharSequence src1: src){   //search any of inputs where any key chars are contained:
+//      if(src1.length()>0) { cmp = src1; break; }
+//    }
+    
+    if(src == null || src.length() == 0) {
+      ok = true;  //no input with key chars, then ok.
+    } else {
+      int found = 0;
+      int ixCheck = 0;
+      for(CharSequence src1: check) { //Check if at least one char is contained in check.
+        for(int ix = 0; ix < src.length(); ++ix) { //check all given check sources:
+          char cTest = src.charAt(ix);
+          if(  src1.length() >0      //contains any key 
+            && StringFunctions.indexOf(src1, cTest) >= 0  //this is not a common key
+            ) {
+            found |= 1<<ixCheck;
+            break;
+          } 
+        }
+        ixCheck +=1;
+      }
+      int cmp = (1<<ixCheck) -1;
+      ok = found == cmp;  //all check fields have at least one char from src.
+    }
+    //all checked, not found, then ok is false.
+    return ok;
+  }
+  
+  
+  @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkMoreSameChars(CharSequence src, CharSequence ... check)
+  {
+    boolean bOk = false;
+    if(src !=null) {
+      String[] src1 = src.toString().split(":");
+      for(String src2: src1) {
+        if(checkOneSameChars(src2, check)) {
+          bOk = true;
+          break;
+        }
+      }
+    }
+    return bOk;
+  }
+
   
   /**Build a Java Identifier from a given String, maybe tag name in Xml etc.
    * @param src Any String. Non-conform characters will be replaced by '_'

@@ -46,7 +46,7 @@ public class JZtxtcmdThread extends JZtxtcmdThreadData implements Runnable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2014-04-30";
+  static final public String sVersion = "2020-07-22";
 
   /**Item inside the message queues.
    * @author hartmut
@@ -90,15 +90,15 @@ public class JZtxtcmdThread extends JZtxtcmdThreadData implements Runnable
   
   
   @Override public void run(){ 
-    state = 'r';
-    executeLevel.runThread(executeLevel, statement, this); 
-    state = 'y';
-    executeLevel.finishThread(this);
+    this.state = 'r';
+    this.executeLevel.runThread(this.executeLevel, this.statement, this); 
+    this.state = 'y';
+    this.executeLevel.finishThread(this);
   }
 
   
   protected void clear(){
-    state = 'i';
+    this.state = 'i';
   }
   
   

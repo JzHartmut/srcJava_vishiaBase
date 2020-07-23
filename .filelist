@@ -1,7 +1,7 @@
 
 ============================== _make/ =============================================================
 2020-06-09 21:10:15  x     +genjavadoc.sh                           ::           .614 -1441310549 
-2020-07-21 14:07:38  x     +makejar_vishiaBase.sh                   ::          2.710  1791303499 
+2020-07-22 11:52:14  x     +makejar_vishiaBase.sh                   ::          2.710  1853601435 
 2020-06-08 23:28:06  x     -genjavadocbase.sh                       ::          3.540  1802631315 
 2020-07-21 12:34:48  x     -makejar-coreScript.sh                   ::          3.628  1772596121 
 2020-07-21 12:51:54  x     JAVAC_CMD.sh                             ::          1.064 -0769104566 
@@ -87,7 +87,7 @@
 2013-01-03 19:36:18  x     package-info.java                        ::           .395 -2003396739 
 
 ============================== org/vishia/cmd/ =====================================================
-2020-03-14 23:37:52  x     CmdExecuter.java                         ::         33.481 -0699844666 
+2020-07-22 16:39:50  x     CmdExecuter.java                         ::         34.162  1662975441 
 2018-09-22 20:52:01  x     CmdGetFileArgs_ifc.java                  ::          1.660 -2078197694 
 2017-04-03 21:47:02  x     CmdGetterArguments.java                  ::          2.483 -1182376375 
 2017-04-03 21:46:01  x     CmdQueue.java                            ::          3.905  1430471497 
@@ -95,12 +95,12 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2020-03-14 23:37:36  x     JZtxtcmdExecuter.java                    ::        186.111 -1014901657 
+2020-07-23 10:47:59  x     JZtxtcmdExecuter.java                    ::        188.107  1174070699 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2020-02-02 12:34:06  x     JZtxtcmdScript.java                      ::        113.481 -1919376674 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
-2018-09-22 20:53:42  x     JZtxtcmdThread.java                      ::          4.865  1535102351 
+2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
 2018-09-22 00:34:58  x     JZtxtcmdThreadQueue.java                 ::          3.607 -1856078465 
 2017-04-03 21:46:02  x     PrepareCmd.java                          ::         19.252 -1764914125 
@@ -300,7 +300,7 @@
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2020-03-14 18:59:29  x     StringFormatter.java                     ::         50.318 -0567263278 
 2020-06-21 22:59:56  x     StringFunctions.java                     ::         53.597 -1199695117 
-2019-10-19 22:49:54  x     StringFunctions_B.java                   ::         10.723 -1605753743 
+2020-07-23 10:47:17  x     StringFunctions_B.java                   ::         13.244  1245632870 
 2019-06-12 08:33:43  x     StringFunctions_C.java                   ::         14.549  0524182854 
 2020-06-28 22:14:40  x     StringPart.java                          ::        122.126 -1563317770 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
