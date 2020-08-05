@@ -460,10 +460,9 @@ public class OutTextPreparer
   /**Name of the generation script used for debug and comparison with data. */
   public final String sIdent;
   
-  /**Instantiates for a given pattern. 
-   * @param pattern 
-   * @throws Exception never, because the instantiation is possible especially for static variables.
-   *   On faulty pattern the prepared cmd for output contains the error message. 
+  /**Instantiates for a given pattern. See {@link #OutTextPreparer(String, Class, String, String)}
+   * The variables are gotten from the pattern. For this case the order of variable depends on the order in the pattern.
+   * It is essential for access to data via index or via name. ...TODO see where
    */
   public OutTextPreparer(String ident, Class<?> reflData, String pattern) {
     this.sIdent = ident;
@@ -472,9 +471,13 @@ public class OutTextPreparer
     this.parse(reflData, pattern);
   }
   
-  /**Instantiates for a given pattern. 
-   * @param pattern 
-   * @throws Exception never, because the instantiation is possible especially for static variables.
+  /**Constructs the text generation control data for the specific pattern. 
+   * @param ident Any identification not used for the generated text.
+   * @param reflData If the access via reflection should be done, null possible
+   * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
+   * @param pattern The pattern in string given form. 
+   *   This pattern will be parsed and divided in parts for a fast text generation.
+   * @throws never because the instantiation is possible especially for static variables.
    *   On faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> reflData, String variables, String pattern) {
@@ -485,10 +488,10 @@ public class OutTextPreparer
     this.parse(reflData, pattern);
   }
   
-  /**Instantiates for a given pattern. 
-   * @param pattern 
-   * @throws Exception never, because the instantiation is possible especially for static variables.
-   *   On faulty pattern the prepared cmd for output contains the error message. 
+  /**Instantiates for a given pattern. See {@link #OutTextPreparer(String, Class, String, String)}
+   * @param variables Identifier given as list, parsing is not necessary. 
+   *        Able to use if the variable idents are anyway given in a list.
+   * 
    */
   public OutTextPreparer(String ident, Class<?> reflData, List<String> variables, String pattern) {
     this.sIdent = ident;

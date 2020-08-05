@@ -1,18 +1,25 @@
 ## may use a different JDK/JRE for Javadoc. Therefore a batch setJAVA_Javadoc.bat may found in the PATH in users space.
-echo on                                                                                  
-echo JAVAC_HOME=$JAVAC_HOME
+echo on    
+if test "$JAVAC_HOME" = ""; then
+  export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
+fi  
+echo JAVAC_HOME = $JAVAC_HOME
 echo clean $DSTDIR$DST
-echo clean $DSTDIR$DST_priv  
-if test -d $DSTDIR$DST_priv; then rm -f -r  $DSTDIR$DST_priv ; fi
 if test -d $DSTDIR$DST; then rm -f -r  $DSTDIR$DST ; fi
                                                                                                                                              
-if ! test -d $DSTDIR$DST; then mkdir $DSTDIR$DST ; fi
-if ! test -d $DSTDIR$DST_priv ; then mkdir $DSTDIR$DST_priv ; fi
+if ! test -d $DSTDIR$DST; then mkdir --parents $DSTDIR$DST ; fi
 
+##NOTE: unfortunately there is no possible to output private elements but do not output private routines.
+##      View to private elements documents which things contains the class, it is important.
+##      View to private methods is very unnecessary. 
 ## -nodeprecated 
 export ARGS="-Xdoclint:none -d $DSTDIR$DST -private -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
 echo javadoc $ARGS
-$JAVAC_HOME/bin/javadoc.exe $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/javadoc.err                                                       
+"$JAVAC_HOME"javadoc $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/javadoc.err                                                       
+if test -d ../img; then
+	if test ! -d $DSTDIR$DST/img; then mkdir $DSTDIR$DST/img; fi;
+  cp ../img/* $DSTDIR$DST/img 
+fi
 
 ###if errorlevel 1 (
 ###  type %DSTDIR%%DST%\javadoc.err
@@ -23,11 +30,19 @@ $JAVAC_HOME/bin/javadoc.exe $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/java
 #cp ..\..\srcJava_vishiaBase\_make\stylesheet_javadoc.css %DSTDIR%%DST%\stylesheet.css >NUL
 ###
 
-
-export ARGS="-Xdoclint:none -d $DSTDIR$DST_priv -private -linksource -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
-echo javadoc $ARGS
-$JAVAC_HOME/bin/javadoc.exe $ARGS 1> $DSTDIR$DST_priv/javadoc.rpt 2> $DSTDIR$DST_priv/javadoc.err
-
+if ! test "$DSTDIR$DST_priv" = ""; then
+  echo clean $DSTDIR$DST_priv  
+  if test -d $DSTDIR$DST_priv; then rm -f -r  $DSTDIR$DST_priv ; fi
+  if ! test -d $DSTDIR$DST_priv ; then mkdir --parents $DSTDIR$DST_priv ; fi
+  export ARGS="-Xdoclint:none -d $DSTDIR$DST_priv -private -linksource -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
+  echo javadoc $ARGS
+  "$JAVAC_HOME"javadoc $ARGS 1> $DSTDIR$DST_priv/javadoc.rpt 2> $DSTDIR$DST_priv/javadoc.err
+  if test -d ../img; then
+  	if test ! -d "$DSTDIR$DST"_priv/img; then mkdir "$DSTDIR$DST"_priv/img; fi;
+    cp ../img/* "$DSTDIR$DST"_priv/img 
+  fi
+  echo see also $DSTDIR$DST_priv
+fi
 ###echo on                 
 ###%JAVA_JDK%\bin\javadoc -Xdoclint:none -d %DSTDIR%%DST_priv% -private -linksource -notimestamp %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC% 1>%DSTDIR%%DST_priv%\javadoc.rpt 2>%DSTDIR%%DST_priv%\javadoc.err
 ###::%JAVA_JDK%\bin\javadoc -d %DSTDIR%%DST_priv% -private -notimestamp %LINKPATH% -classpath %CLASSPATH% -sourcepath %SRCPATH% %SRC% 1>%DSTDIR%%DST_priv%\javadoc.rpt 2>%DSTDIR%%DST_priv%\javadoc.err
@@ -41,13 +56,12 @@ $JAVAC_HOME/bin/javadoc.exe $ARGS 1> $DSTDIR$DST_priv/javadoc.rpt 2> $DSTDIR$DST
 ###
 ###
 
-if test -d ../img; then
-###  echo copy %DSTDIR%%DST%\img
-	if test ! -d $DSTDIR$DST/img; then mkdir $DSTDIR$DST/img; fi;
-  cp ../img/* $DSTDIR$DST/img 
-	if test ! -d "$DSTDIR$DST"_priv/img; then mkdir "$DSTDIR$DST"_priv/img; fi;
-  cp ../img/* "$DSTDIR$DST"_priv/img 
-fi
+
+echo The javadoc was produced in $DSTDIR$DST
+echo you should copy or compare and copy the doc to the destination
+echo and/or zip the doc, shipment and unzip it on the destination.
+echo it should be manually done.
+
 
 #zip
 ###if test -f  $DSTDIR$DST.zip; then rm $DSTDIR$DST.zip; fi

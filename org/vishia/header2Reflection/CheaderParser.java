@@ -1216,7 +1216,9 @@ type::= [<?@modifier>volatile|const|]
    */
   public static class Type
   {
-    
+    /**It is the name without forward suffix (_, _T, _t or _* admissible, * = any char)
+     * or the name witout "_s" for struct type definitions. 
+     */
     public String basename;
     
     
