@@ -13,12 +13,12 @@ echo script $0
 #If the relevant sources are not change in functionality, may be changed in comment, 
 #  it is not necessary the change this VERSION because the generated content is the same.
 #The next line is the version for vishiaMiniSys:
-export VERSION="2020-06-22"
-export VERSION_VISHIABASE="2020-07-23"
+export VERSION_MINISYS="2020-06-22"
+export VERSION_VISHIABASE="2020-08-12"
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSION
-export SRCZIPFILE="vishiaBase-2020-07-23-source.zip"
+export SRCZIPFILE="vishiaBase-2020-08-12-source.zip"
 
 #No further classpath necessary. 
 #The CLASSPATH is used for reference jars for compilation which should be present on running too.
@@ -41,6 +41,8 @@ export MANIFEST=minisys.manifest
 #$BUILD is the main build output directory. 
 #possible to give $BUILD from outside. On argumentless call determine in tmp.
 if test "$BUILD" = ""; then export BUILD="/tmp/BuildJava_vishiaBase"; fi
+
+export VERSION=$VERSION_MINISYS
 
 #to store temporary class files:
 export TMPJAVAC=$BUILD/vishiaMiniSys/

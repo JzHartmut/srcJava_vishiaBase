@@ -1085,7 +1085,7 @@ public class CheaderParser {
   
   
   
-  /**An attribute in a struct (variable definition).
+  /**An attribute in a struct (variable definition) or in an argument list.
    * Note: the parser creates via syntax more as one instance for <pre>
    *  Type name1, name2; </pre>
    * The Type information is duplicated in the parser's result already. 
@@ -1111,6 +1111,24 @@ public class CheaderParser {
     public String text;
     
     public int bitField;
+    
+    /**Not parsed but possible for postprocessing. Any index in a list. */
+    public int ix;
+    
+    /**Not parsed but possible for postprocessing. Any index in a list. */
+    public long addr;
+    
+    /**Not parsed but possible for postprocessing. Any index in a list. */
+    public String sTstep;
+    
+    /**Not parsed but possible for postprocessing. Any index in a list. */
+    public boolean bOutput;
+    
+    /**Not parsed but possible for postprocessing. Any index in a list. */
+    public boolean bParam;
+    
+    /**Not parsed but possible for postprocessing. Any index in a list. */
+    public int ixInList;
     
     public boolean staticConst;
     

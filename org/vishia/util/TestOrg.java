@@ -7,7 +7,7 @@ import java.io.IOException;
  * <br><br>
  * Pattern to use: <pre>
  * public static void main(String[] args) { 
- *   TestOrg test = new TestOrg("Test routine description", 1, args););
+ *   TestOrg test = new TestOrg("Test routine description", 1, args);
  *   try {
  *     result = doSomethingToTest();
  *     test.expect(result == expected, 7, "test case description");
