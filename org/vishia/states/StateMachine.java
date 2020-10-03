@@ -1,5 +1,6 @@
 package org.vishia.states;
 
+import java.io.Closeable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ import org.vishia.util.InfoAppend;
  * @author hartmut Schorrig
  *
  */
-public class StateMachine implements EventConsumer, InfoAppend
+public class StateMachine implements EventConsumer, InfoAppend, Closeable
 {
   
   /**Version, history and license.
@@ -386,7 +387,10 @@ public class StateMachine implements EventConsumer, InfoAppend
   }
   
   
-  
+  @Override public void close() {
+    this.theThread.close();
+  }
+
   /**Shows the name of the Statemachine and all active states.
    * @see java.lang.Object#toString()
    */

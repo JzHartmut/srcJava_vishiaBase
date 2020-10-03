@@ -1,5 +1,6 @@
 package org.vishia.fileLocalAccessor;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -38,7 +39,7 @@ import org.vishia.util.StringFunctions;
  *
  */
 @SuppressWarnings("synthetic-access") 
-public class FileLocalAccessorCopyStateM implements EventConsumer
+public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
 {
   
   /**Version, history and license.
@@ -797,6 +798,12 @@ public class FileLocalAccessorCopyStateM implements EventConsumer
   }
   
 
+  
+  
+  @Override public void close() {
+    this.statesCopy.close();
+  }
+  
   
   /**This is the state machine of all FileRemote actions which needs interaction, therewith the processing may remain in any state 
    * till the operator responded.

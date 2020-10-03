@@ -167,7 +167,6 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   }
   
   
-  
   /**Returns the singleton instance of this class.
    * Note: The instance will be created and the thread will be started if this routine was called firstly.
    * @return The singleton instance.
@@ -789,7 +788,8 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
 
 
   @Override public void close() throws IOException
-  { singleThreadForCommission.close();
+  { this.singleThreadForCommission.close();
+    this.states.close();  
   }
   
   

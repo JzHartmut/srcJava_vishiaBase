@@ -1,9 +1,9 @@
 
 ============================== _make/ =============================================================
 2020-07-24 18:15:36  x     +genjavadoc.sh                           ::           .535 -1443882296 
-2020-08-12 22:56:47  x     +makejar_vishiaBase.sh                   ::          2.751  0212542398 
+2020-10-03 11:43:24  x     +makejar_vishiaBase.sh                   ::          2.760  0241492844 
 2020-07-24 18:43:52  x     -genjavadocbase.sh                       ::          4.131  0585689153 
-2020-07-21 12:34:48  x     -makejar-coreScript.sh                   ::          3.628  1772596121 
+2020-10-03 11:45:29  x     -makejar-coreScript.sh                   ::          3.619  1023917267 
 2020-07-21 12:51:54  x     JAVAC_CMD.sh                             ::          1.064 -0769104566 
 2020-07-24 18:30:47  x     JAVAC_HOME.sh                            ::          1.166 -1351247325 
 2020-06-16 14:31:26  x     minisys.files                            ::           .133  1645922236 
@@ -134,8 +134,8 @@
 
 ============================== org/vishia/fileLocalAccessor/ =======================================
 2020-03-31 15:45:21  x     FileAccessorLocalJava6.java              ::         30.137 -1618816760 
-2020-10-03 11:08:21  x     FileAccessorLocalJava7.java              ::         60.781 -1126170897 
-2016-11-27 20:10:07  x     FileLocalAccessorCopyStateM.java         ::         54.632 -1973293307 
+2020-10-03 12:18:20  x     FileAccessorLocalJava7.java              ::         60.810  1892051866 
+2020-10-03 12:09:06  x     FileLocalAccessorCopyStateM.java         ::         54.752 -0234359432 
 
 ============================== org/vishia/fileLocalAccessor/test/ ==================================
 2013-09-21 20:42:19  x     TestJava7Files.java                      ::          1.758 -0256371952 
@@ -221,7 +221,7 @@
 2015-12-28 08:29:25  x     StateComposite.java                      ::         19.296  1917775549 
 2015-12-20 00:54:31  x     StateCompositeFlat.java                  ::         10.806 -1653541133 
 2015-12-05 09:25:06  x     StateDeepHistory.java                    ::           .385 -1601912219 
-2015-12-20 21:39:29  x     StateMachine.java                        ::         19.844  1091034644 
+2020-10-03 12:12:45  x     StateMachine.java                        ::         19.949  1294123838 
 2015-12-20 22:47:21  x     StateParallel.java                       ::         12.525 -1239637181 
 2015-11-19 22:54:50  x     StateShallowHistory.java                 ::           .325  1005816589 
 2015-12-27 18:25:05  x     StateSimple.java                         ::         63.275 -1424463854 

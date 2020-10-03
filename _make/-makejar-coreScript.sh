@@ -41,7 +41,7 @@ if test -d $TMPJAVAC; then rm -f -r -d $TMPJAVAC; fi
 mkdir -p $TMPJAVAC/binjar   
 mkdir $TMPJAVAC/result
 echo                                             
-echo Output to: $TMPJAVAC/result
+echo Output to: $DEPLOY
 echo ===============================================================
 
 ##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
