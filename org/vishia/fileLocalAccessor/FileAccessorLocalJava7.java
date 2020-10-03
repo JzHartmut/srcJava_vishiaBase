@@ -216,17 +216,30 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     long length = attribs.size();
     int flags = FileRemote.mExist | FileRemote.mTested;
     if(attribs.isDirectory()){ flags |= FileRemote.mDirectory; }
-    if(attribs.isSymbolicLink()){
-      try{
-        Path target = Files.readSymbolicLink(path);
-        fileRemote.setSymbolicLinkedPath(target.toAbsolutePath().toString());
-      }catch(IOException exc){
-        System.err.println("FileAccessorLocalJava7 - Problem on SymbolicLinkPath; " + fileRemote.getAbsolutePath());
+    String sAbsPath = fileRemote.getAbsolutePath();
+    try {
+      Path linkedPath = path.toRealPath();
+      boolean isSymbolicLink = linkedPath.compareTo(path)!=0;
+      if(isSymbolicLink) {
+        fileRemote.setSymbolicLinkedPath(linkedPath.toAbsolutePath().toString());
+      } else {
         fileRemote.setCanonicalAbsPath(fileRemote.getAbsolutePath());
       }
-    } else {
-      fileRemote.setCanonicalAbsPath(fileRemote.getAbsolutePath());
+    }catch(IOException exc){
+      System.err.println("FileAccessorLocalJava7 - Problem on toRealPath; " + fileRemote.getAbsolutePath());
     }
+    //symbolicLink is already detected by toRealPath, inclusively the Windows JUNCTION which are not regard by isSymbolicLink()
+//    if(attribs.isSymbolicLink()){
+//      try{
+//        Path target = Files.readSymbolicLink(path);
+//        fileRemote.setSymbolicLinkedPath(target.toAbsolutePath().toString());
+//      }catch(IOException exc){
+//        System.err.println("FileAccessorLocalJava7 - Problem on SymbolicLinkPath; " + fileRemote.getAbsolutePath());
+//        fileRemote.setCanonicalAbsPath(fileRemote.getAbsolutePath());
+//      }
+//    } else {
+//      fileRemote.setCanonicalAbsPath(fileRemote.getAbsolutePath());
+//    }
     int flagMask = FileRemote.mExist | FileRemote.mTested | FileRemote.mDirectory;
     if(attribs instanceof DosFileAttributes){
       DosFileAttributes dosAttribs = (DosFileAttributes)attribs;
@@ -1016,7 +1029,7 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
         if(resetMark && curr.levelProcessMarked <= 0){ 
           dir1.resetMarked(0xffffffff); 
         }
-        setAttributes(dir1, dir, attrs);
+        setAttributes(dir1, dir, attrs);   //access to real file system. update the attributes (may be changed meanwhile)
         if(refresh && curr !=null){
           dir1.internalAccess().clrFlagBit(FileRemote.mRefreshChildPending);
           //curr.children.put(name, dir1);

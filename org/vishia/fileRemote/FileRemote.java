@@ -460,6 +460,16 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Constructs an instance. The constructor is protected because only special methods
    * constructs an instance in knowledge of existing instances in {@link FileCluster}.
    * <br><br>
+   * This invocation does not force any access to the file system. The parameter may be given
+   * by a complete communication or file access before construction of this. 
+   * Then they are given as parameter for this constructor.
+   * <br><br>
+   * The parameter of the file (properties, length, date) can be given as 'undefined' 
+   * using the 0 as value. Then the quest {@link #exists()} returns false. This instance
+   * describes a File object only, it does not access to the file system.
+   * The properties of the real file inclusively the length and date can be gotten 
+   * from the file system calling {@link #refreshProperties(CallbackEvent)}. This operation may be
+   * invoked in another thread (depending on the device) and may be need some operation time.
    * 
    *  
    * @param cluster null, then use {@link #clusterOfApplication}, elsewhere the special cluster where the file is member of. 
@@ -483,16 +493,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    */
   /*
    *    * If the length parameter is given or it is 0, 
-   * this invocation does not force any access to the file system. The parameter may be given
-   * by a complete communication or file access before construction of this. 
-   * Then they are given as parameter for this constructor.
-   * <br><br>
-   * The parameter of the file (properties, length, date) can be given as 'undefined' 
-   * using the 0 as value. Then the quest {@link #exists()} returns false. This instance
-   * describes a File object only, it does not access to the file system.
-   * The properties of the real file inclusively the length and date can be gotten 
-   * from the file system calling {@link #refreshProperties(CallbackEvent)}. This operation may be
-   * invoked in another thread (depending on the device) and may be need some operation time.
 
    */
   protected FileRemote(final FileCluster cluster, final FileRemoteAccessor device
@@ -3324,7 +3324,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     @Override public Result finishedParentNode(FileRemote dir, FileRemoteCallback.Counters cnt) {
       boolean bSomeSelect = true;
-      if((cnt.nrofParents + cnt.nrofLeafss) > 0 && cnt.nrofParentSelected == cnt.nrofParents && cnt.nrofLeafSelected == cnt.nrofLeafss) {
+      if(dir.isSymbolicLink()) {
+        bSomeSelect = false;  //do not select, do not handle a symbolic link
+      }
+      else if((cnt.nrofParents + cnt.nrofLeafss) > 0 && cnt.nrofParentSelected == cnt.nrofParents && cnt.nrofLeafSelected == cnt.nrofLeafss) {
         dir.setMarked(FileMark.select);
       } else if(cnt.nrofParentSelected > 0 || cnt.nrofLeafSelected >0) {
         dir.setMarked(FileMark.selectSomeInDir);
@@ -3348,6 +3351,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     @Override public Result offerLeafNode(FileRemote file, Object info) {
       nrofFiles +=1;
       if(file.isDirectory()) { 
+        Debugutil.stop();  //It is never invoked, dir is not a leaf node.
       } else { 
         file.setMarked(FileMark.select);
       }

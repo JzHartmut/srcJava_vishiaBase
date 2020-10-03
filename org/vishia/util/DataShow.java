@@ -571,17 +571,19 @@ public class DataShow extends ObjectId
           if(list.size() >0) {
             out.append("\n      <ol start=\"0\">");
             for(Object item: list) {
-              outField("", item, item.getClass(), null, out, recursiveCount+1);
-              /*
-              out.append("\n        <li>");
-              if(item ==null) {
-                out.append(" = null");
-              } else {
-                addRef(item);
-                outDataShort(item, item.getClass(), item.toString(), out);   
+              if(item !=null) {
+                outField("", item, item.getClass(), null, out, recursiveCount+1);
+                /*
+                out.append("\n        <li>");
+                if(item ==null) {
+                  out.append(" = null");
+                } else {
+                  addRef(item);
+                  outDataShort(item, item.getClass(), item.toString(), out);   
+                }
+                out.append("</li>");
+                */
               }
-              out.append("</li>");
-              */
             }
             out.append("\n      </ol>");
           }

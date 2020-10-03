@@ -134,7 +134,7 @@
 
 ============================== org/vishia/fileLocalAccessor/ =======================================
 2020-03-31 15:45:21  x     FileAccessorLocalJava6.java              ::         30.137 -1618816760 
-2020-03-31 15:46:18  x     FileAccessorLocalJava7.java              ::         60.024 -1772650635 
+2020-10-03 11:08:21  x     FileAccessorLocalJava7.java              ::         60.781 -1126170897 
 2016-11-27 20:10:07  x     FileLocalAccessorCopyStateM.java         ::         54.632 -1973293307 
 
 ============================== org/vishia/fileLocalAccessor/test/ ==================================
@@ -144,7 +144,7 @@
 2020-03-31 15:44:52  x     FileAccessZip.java                       ::         16.875  0406548490 
 2017-09-15 21:38:48  x     FileCluster.java                         ::         23.437  1730001251 
 2017-09-15 09:41:51  x     FileMark.java                            ::          9.228 -1509550908 
-2020-03-31 16:17:24  x     FileRemote.java                          ::        150.671  1200837907 
+2020-10-03 11:05:39  x     FileRemote.java                          ::        150.868 -1289946990 
 2020-03-31 15:44:14  x     FileRemoteAccessor.java                  ::         13.806 -1572962593 
 2014-12-23 15:50:28  x     FileRemoteCallback.java                  ::           .522  1716092114 
 2016-12-27 20:06:54  x     FileRemoteCallbackCmp.java               ::         18.865 -1081659440 
@@ -243,7 +243,7 @@
 2014-04-19 23:17:41  x     Conversion.java                          ::          2.375  1227745384 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
 2020-02-09 19:56:58  x     DataAccess.java                          ::        135.979 -1358887763 
-2019-06-21 09:28:58  x     DataShow.java                            ::         29.206  0163463218 
+2020-09-30 14:26:26  x     DataShow.java                            ::         29.278 -1783647085 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
