@@ -299,6 +299,9 @@ public class FileFunctions {
   
   /**Sets the current dir from the stored String in a file.
    * This is a variant to change the current dir for example for tests using a file on a known position.
+   * <br>
+   * To build such a file a script should be start in the current working dir or "Sandbox",
+   * which is named for example <code>+setWDtoTmp.bat</code> or <code>+setWDtoTmp.sh</code>
    * @param file The file path can contain $(ENV) which will be expanded. 
    * @return true if the currdir is detect as directory, and {@link System#setProperty(String, String)}
    *   is executed with setProperty("user.dir", ... file content...)

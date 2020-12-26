@@ -21,6 +21,7 @@ public class Execode {
     , and(0x70, 1), or(0x70, 1), xor(0x70, 1)
     , equ(0,1), nequ(0,1), lt(0,1), le(0,1), gt(0,1), ge(0,1)
     ;
+    /**The meaning of ix is yet not clarified. Don't change till clarify. Don not use it.  */
     public int ix;
     
     /**<0: push >0 pop
@@ -120,12 +121,17 @@ public class Execode {
 
     public Instruction(EInstruction instr) {
       this.instr = instr;
-      this.text = "";
+      this.text = "@";  //symbol for accu (top stack)
       this.constant = null;
-      this.id = -1;
+      this.id = -1; //instr.instr.stack;    //it is 0, -1 etc. for stack depth
       this.operand = EOperand.stack;
     }
   
+    /**
+     * @param instr
+     * @param id    The identifiation / index of the variable in the users data.
+     * @param name  The name of the variable to show and use for textual presentation
+     */
     public Instruction(EInstruction instr, int id, String name) {
       this.instr = instr;
       this.id = id;
@@ -179,20 +185,27 @@ public class Execode {
   public Iterable<Instruction> code() { return this.code;  }
   
   
+  /**Returns the given Expression as a non-ReversPolishNotation.
+   * @return For viewing.
+   */
   public CharSequence convertToNormalExpression() {
-    StringBuilder u = null;
+    StringBuilder u = new StringBuilder();
     Stack<StringBuilder> uStack = new Stack<StringBuilder>(); 
     for(Instruction instr: this.code) {
       CharSequence rightOp = null; 
-      if(instr.instr.usedStack ==-1) {
+      if(instr.instr.usedStack < 0) {
         if(u !=null) {
           uStack.push(u);
         }
         u = new StringBuilder();
       } else if(instr.operand == EOperand.stack) {
         rightOp = u;  //it is the top stack level or the accu
-        u = uStack.pop();
-        u.insert(0,  '(').append(')');
+        if(instr.instr.usedStack >0 ) {
+          u = uStack.pop();
+          u.insert(0,  '(').append(')');
+        } else {
+          u = new StringBuilder();
+        }
       }
       switch(instr.instr) {
       case set: u.append(""); break;

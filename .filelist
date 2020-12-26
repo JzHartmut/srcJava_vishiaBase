@@ -2,7 +2,7 @@
 ============================== _make/ =============================================================
 2020-07-24 18:15:36  x     +genjavadoc.sh                           ::           .535 -1443882296 
 2020-10-03 11:43:24  x     +makejar_vishiaBase.sh                   ::          2.760  0241492844 
-2020-07-24 18:43:52  x     -genjavadocbase.sh                       ::          4.131  0585689153 
+2020-10-18 23:04:13  x     -genjavadocbase.sh                       ::          2.125  1766724429 
 2020-10-03 11:45:29  x     -makejar-coreScript.sh                   ::          3.619  1023917267 
 2020-07-21 12:51:54  x     JAVAC_CMD.sh                             ::          1.064 -0769104566 
 2020-07-24 18:30:47  x     JAVAC_HOME.sh                            ::          1.166 -1351247325 
@@ -42,14 +42,14 @@
 2016-01-23 22:15:12  x     ByteDataSymbolicAccess.java              ::         24.179 -1050332237 
 2013-11-23 09:03:57  x     ByteDataSymbolicAccessReadConfig.java    ::          3.899 -1849174949 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
-2018-12-26 22:04:13  x     Class_Jc.java                            ::          9.274 -0808382699 
+2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
 2018-12-27 19:09:07  x     Field_Jc.java                            ::         15.680 -1928813301 
 2015-04-12 12:02:22  x     ObjectArraySet_Jc.java                   ::          3.613  2047017229 
 2018-12-26 21:00:12  x     ObjectArray_Jc.java                      ::          3.868 -0012452241 
-2018-12-26 19:27:41  x     Object_Jc.java                           ::         10.518 -0391273176 
+2020-12-20 20:15:35  x     Object_Jc.java                           ::         10.618  0238707061 
 2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
 2018-09-17 09:57:37  x     RawDataAccess.java                       ::          3.779 -0477929894 
-2019-01-01 00:21:17  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.105 -1968001503 
+2020-12-20 20:45:03  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.137  1346048705 
 2013-12-10 09:54:37  x     VariableAccessArray_ifc.java             ::          6.165  0115301257 
 2016-01-23 22:17:31  x     VariableAccessWithBitmask.java           ::          6.370  0738802326 
 2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
@@ -78,7 +78,7 @@
 2017-07-29 11:17:07  x     CfgData.java                             ::          3.560 -0509839928 
 2012-12-25 19:29:36  x     CheckAllDepFile.java                     ::          6.113  1270977477 
 2012-12-25 17:01:12  x     CheckData.java                           ::          4.951  0627506369 
-2020-07-23 20:07:26  x     CheckDependencyFile.java                 ::         48.201  2091541609 
+2020-11-09 14:14:14  x     CheckDependencyFile.java                 ::         48.297 -2039107725 
 2020-07-23 21:31:58  x     CheckDeps.java                           ::          7.493 -0385606125 
 2020-07-23 18:57:23  x     CheckDeps_Old.java                       ::         12.395  0108102733 
 2012-12-25 15:33:10  x     DateTime.java                            ::          1.823  2018610045 
@@ -130,7 +130,7 @@
 2015-02-07 13:01:18  x     TestTimeOrder.java                       ::          2.472  0718797643 
 
 ============================== org/vishia/execode/ =================================================
-2019-12-15 23:26:40  x     Execode.java                             ::          7.203  1598932336 
+2020-10-31 22:20:03  x     Execode.java                             ::          7.808  0335069824 
 
 ============================== org/vishia/fileLocalAccessor/ =======================================
 2020-03-31 15:45:21  x     FileAccessorLocalJava6.java              ::         30.137 -1618816760 
@@ -161,8 +161,8 @@
 2020-07-16 19:41:16  x     GenJavaOutClass.java                     ::         23.466 -0532734720 
 
 ============================== org/vishia/header2Reflection/ =======================================
-2019-01-03 14:23:29  x     BinOutPrep.java                          ::         16.411  1999847849 
-2018-12-27 18:22:42  x     BinOutShow.java                          ::          9.770  2018075799 
+2020-12-20 20:46:11  x     BinOutPrep.java                          ::         16.433 -0918472496 
+2020-12-20 20:46:02  x     BinOutShow.java                          ::          9.792 -0441389883 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
 2020-08-12 23:24:01  x     CheaderParser.java                       ::         60.953 -0922040407 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
@@ -232,6 +232,9 @@
 2015-07-31 22:03:29  x     StatePattern.java                        ::          2.644 -0327090284 
 2015-12-27 00:18:50  x     StatesNestedParallel.java                ::         12.799  1156862005 
 
+============================== org/vishia/testutil/ ================================================
+2020-12-05 15:35:12  x     EvalTestoutfiles.java                    ::          2.737  0801470055 
+
 ============================== org/vishia/util/ ====================================================
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
 2020-06-16 16:04:56  x     Arguments.java                           ::         13.209  1575457414 
@@ -249,7 +252,7 @@
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2019-12-06 20:01:48  x     FileCompare.java                         ::         14.497  0224186183 
 2019-04-09 23:06:11  x     FileFunction.java                        ::          5.914 -1625440232 
-2020-06-09 12:33:04  x     FileFunctions.java                       ::         74.491 -1037048581 
+2020-10-30 20:01:04  x     FileFunctions.java                       ::         74.685 -0947268295 
 2020-06-16 23:16:25  x     FileList.java                            ::         22.544 -0437624496 
 2020-06-20 23:56:57  x     FilePath.java                            ::         89.365  0786039951 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
@@ -269,7 +272,7 @@
 2013-12-01 14:57:42  x     IterableIterator.java                    ::           .445  0451977562 
 2019-10-31 16:56:40  x     IterableMapValue.java                    ::           .942 -1973877381 
 2020-09-02 13:01:36  x     IteratorArrayMask.java                   ::          1.388 -0127160055 
-2020-09-02 13:39:11  x     IteratorMask.java                        ::          1.257 -0092071276 
+2020-10-17 10:25:50  x     IteratorMask.java                        ::          1.269 -0966624057 
 2016-10-16 21:54:24  x     Java4C.java                              ::         16.527 -2096577833 
 2015-10-30 19:10:55  x     KeyCode.java                             ::         12.692  0729595176 
 2011-02-26 21:31:28  x     LeapSeconds.java                         ::          9.557 -0052069336 

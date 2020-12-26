@@ -64,7 +64,7 @@ public class SuperclassIfc_idxMtblJc_ByteDataAccess extends ByteDataAccessBase
   public static final int size = kPos_field + Field_Jc.sizeOf_Field_Jc;
   
   
-  public static final int INIZ_ID = 0xff9;
+  public static final int ID_refl_ClassOffset_idxVtblJc = 0xffa;  //0xff9;
   
   final ObjectArray_Jc head_access = new ObjectArray_Jc();
   

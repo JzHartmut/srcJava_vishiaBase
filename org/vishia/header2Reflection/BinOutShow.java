@@ -136,7 +136,7 @@ public class BinOutShow
         switch(ident) {
         case Class_Jc.INIZ_ID_ClassJc: showClass(fileList, obj); break;
         case Field_Jc.INIZ_ID_FieldJc: showFields(fileList, obj); break;
-        case SuperclassIfc_idxMtblJc_ByteDataAccess.INIZ_ID: showSuper(fileList, obj); break;
+        case SuperclassIfc_idxMtblJc_ByteDataAccess.ID_refl_ClassOffset_idxVtblJc: showSuper(fileList, obj); break;
         default: showUnknown(fileList, obj);
         }
       }

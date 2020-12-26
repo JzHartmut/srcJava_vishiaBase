@@ -29,19 +29,19 @@ package org.vishia.byteData;
 
 
 /**This class enables the access to binary data which presents a C-type ObjectJc.
- * 
+ * The values are valid for a 32-bit-system, since 2020-05, new struct of ObjectJc
  * @author Hartmut Schorrig
  *
  */
 public class Object_Jc  extends ByteDataAccessBase
 {
-  public final static int kPos_objIdentSize = 0x10;
-  private final static int kPos_ownAdress = 0;
+  public final static int kPos_objIdentSize = 0; //0x10;
+  private final static int kPos_ownAdress = 0x0c; //0;
   private final static int kPos_reflectionClassAdress = 8;
   
   
   /** nrofBytes of the C-POD type Object_Jc */
-  public final static int sizeof_Object_Jc = 0x18;// 0x0c;
+  public final static int sizeof_Object_Jc = 0x10; //0x18;// 0x0c;
 
   public final static int mArray_objectIdentSize = 0x40000000;
   
@@ -69,10 +69,10 @@ public class Object_Jc  extends ByteDataAccessBase
   public final static int mIdentLarge_typeSizeIdent =   0x1f000000;
   public final static int kBitIdentLarge_objectIdentSize = 24;
 
-  public final static int OBJTYPE_Class_Jc =           Object_Jc.kIsSmallSize_typeSizeIdent + 0x0ff80000; 
+  public final static int OBJTYPE_Class_Jc =           Object_Jc.kIsSmallSize_typeSizeIdent + 0x0FFC0000; 
  // public final static int OBJTYPE_ReflectionImage_Jc = Object_Jc.mIsLargeSize_typeSizeIdent + 0x3e000000; 
   public final static int OBJTYPE_ReflectionImageBaseAddress_Jc = Object_Jc.kIsSmallSize_typeSizeIdent + 0x0ff70000; 
-  public final static int OBJTYPE_Field_Jc =           Object_Jc.kIsSmallSize_typeSizeIdent + 0x0FF50000; 
+  public final static int OBJTYPE_Field_Jc =           Object_Jc.kIsSmallSize_typeSizeIdent + 0x0FFB0000; 
 
 //NEW
   /*

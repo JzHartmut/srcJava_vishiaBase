@@ -117,10 +117,10 @@ public class Class_Jc extends Object_Jc
   public static final  int sizeof_Class_Jc = kPos_Vtbl +4;
  
   /**The object type defined in Reflect_Jc.h for Class_Jc-objects. */
-  public final static int OBJTYPE_CLASS_Jc =  0x0ff80000; 
+  public final static int OBJTYPE_CLASS_Jc =  0x0ffc0000; 
 
   /**The object type defined in Reflect_Jc.h for Class_Jc-objects. */
-  public final static int INIZ_ID_ClassJc =  0xff8; 
+  public final static int INIZ_ID_ClassJc =  0xffc; 
 
   /**Definition adequate Headerfile ReflectionJc.h in enum  Modifier_reflectJc_t: */
   public static final int 

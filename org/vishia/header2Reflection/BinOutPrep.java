@@ -247,7 +247,7 @@ public class BinOutPrep
     binSuperClass.set_Field("super");
     //binSuperClass.add_Type_idxMtblJc_toBindata(binOutRefl, posClass);
     //
-    binOutSuperArray.setIdentSize(true, true, SuperclassIfc_idxMtblJc_ByteDataAccess.INIZ_ID, binOutSuperArray.getLength());
+    binOutSuperArray.setIdentSize(true, true, SuperclassIfc_idxMtblJc_ByteDataAccess.ID_refl_ClassOffset_idxVtblJc, binOutSuperArray.getLength());
     return binOutSuperArray.getPositionInBuffer();
   }
 

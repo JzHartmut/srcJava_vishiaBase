@@ -19,8 +19,8 @@ public class IteratorMask <T> implements Iterator<T>, Iterable<T> {
    * @param array Any array with proper type
    * @param mask selection which elements should be returned 1-of-64
    */
-  public IteratorMask(Iterator<T> array, long mask) {
-    this.iterSrc = array;
+  public IteratorMask(Iterator<T> iteratorSrc, long mask) {
+    this.iterSrc = iteratorSrc;
     this.mask = mask;
   }
 

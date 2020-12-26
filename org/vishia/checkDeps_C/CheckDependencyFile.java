@@ -418,6 +418,8 @@ public class CheckDependencyFile
     try{
       String sFileSrcGenAbs = FileSystem.getCanonicalPath(fileSrc);
       String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
+      if(sLocalPath.contains("ObjectRefl_emC.c"))
+        Debugutil.stop();
       //boolean needTranslation;
       final File fileSrcMirror = getFileSrcMirror(sLocalPath);
       //final File fileDeps = getFileDependencies(sLocalPath);
@@ -538,7 +540,7 @@ public class CheckDependencyFile
     long timestampSrcNewest = 0;
     final String sFileSrcGenName = fileSrcGen.getName();
     String sLineSrc = null, sLineMirror = null;
-    NextCodeLine codeLineSrc = new NextCodeLine(fileSrcGen);
+    NextCodeLine codeLineSrc = new NextCodeLine(fileSrcGen); //contains a reader
     final NextCodeLine codeLineMirror;
     InfoFileDependencies infoDepsOfFile = new InfoFileDependencies(sFileSrgGenAbs, fileSrcGen
       , fileSrcMirror, fileSrcMirror !=null, console);
