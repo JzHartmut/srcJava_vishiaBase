@@ -13,8 +13,8 @@ echo script $0
 #If the relevant sources are not change in functionality, may be changed in comment, 
 #  it is not necessary the change this VERSION because the generated content is the same.
 #The next line is the version for vishiaMiniSys:
-export VERSION_MINISYS="2020-06-22"
-export VERSION_VISHIABASE="2020-10-03"
+export VERSION_MINISYS="2020-12-26"
+export VERSION_VISHIABASE="2020-12-26"
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSION

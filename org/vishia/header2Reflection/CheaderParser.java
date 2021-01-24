@@ -126,7 +126,8 @@ public class CheaderParser {
   //@SuppressWarnings("hiding")
   static final public String sVersion = "2018-10-11";
 
-  
+  /**All parsed types (class + struct) for this session. */
+  static Map<String, Type> allTypes = new TreeMap<String, Type>(); 
   
   public static class SrcFile
   {
@@ -754,7 +755,10 @@ public class CheaderParser {
     /**If set the struct is conditionally defined in the header file. */
     public String conditionDef, conditionDefNot;
     
-    StructDefinition(HeaderBlock parent, String whatisit, boolean isUnion){ super(parent, whatisit); this.isUnion = isUnion; }
+    StructDefinition(HeaderBlock parent, String whatisit, boolean isUnion){ 
+      super(parent, whatisit);
+      this.isUnion = isUnion; 
+    }
   
     List<AttributeOrTypedef> attribs = new LinkedList<AttributeOrTypedef>();
     
@@ -762,6 +766,7 @@ public class CheaderParser {
     
     public boolean isBasedOnObjectJc;
     
+    /**In a struct a superclass is a struct on start of the struct (nested). */
     public AttributeOrTypedef superclass;
     
     public String tagname, name;
@@ -774,7 +779,12 @@ public class CheaderParser {
     /**Used in an implicitStructAttribute. */
     public Arraysize arraysize;
     
-    public void set_name(String val) { name = val; }
+    public void set_name ( String val ) { 
+      this.name = val;
+      Type type = new Type();
+      type.name = type.basename = val;
+      CheaderParser.allTypes.put(this.name, type);
+    }
     
     public StructDefinition new_implicitStructAttribute() { return new StructDefinition(this, "unnamedStructAttr", false); }
 
@@ -927,6 +937,8 @@ public class CheaderParser {
       }
     } 
     
+    
+    
     /**Returns a name of the struct. It is the tagname for a type definition <code>struct tagname { ...}; </code>*/
     public String name() { return name == null ? tagname : name; }
     
@@ -952,6 +964,17 @@ public class CheaderParser {
     public String accessRight;
     
     public boolean isVirtual;
+    
+    public Type type ( ) { 
+      Type type1 = CheaderParser.allTypes.get(this.name);
+      if(type1 !=null) {
+        return type1;
+      } else {
+        return null;
+      }
+    }
+    
+
   }
 
 
@@ -1021,9 +1044,40 @@ public class CheaderParser {
   
     public String name;
     
+    /**If this is set, the class is a implicitly one. The {@link #name} is from the environment class. 
+     * this element is the name of the element with this class.
+     */
+    public String implicitName;
+    
+
+    
     public Superclass superclass;
     
+    
+    public List<AttributeOrTypedef> attribs = new LinkedList<AttributeOrTypedef>();
+    
     //public List<MethodDef> constructors = new LinkedList<MethodDef>();
+    
+    public void set_name ( String val ) { 
+      this.name = val;
+      Type type = new Type();
+      type.name = type.basename = val;
+      CheaderParser.allTypes.put(this.name, type);
+    }
+
+    
+    /**Adds the attribute in the struct additional to {@link HeaderBlock#entries}.
+     * Invokes super.HeaderBlock{@link #add_attribute(AttributeOrTypedef)}.
+     * @since 2018-09: A first attribute named "super" is the superclass. But then the struct does not based on Object. 
+     *   Hint: Use an implicitly <code>union{ Type super; ObjectJc object;};</code> to express it.
+     * @see org.vishia.header2Reflection.CheaderParser.HeaderBlock#add_attribute(org.vishia.header2Reflection.CheaderParser.AttributeOrTypedef)
+     */
+    @Override public void add_attribute(AttributeOrTypedef val){ 
+      super.add_attribute(val);
+      attribs.add(val);
+    }
+
+    
     
     public ClassDefinition new_classVisibilityBlock() { return this; }
     public void add_classVisibilityBlock(ClassDefinition value) {} 
@@ -1040,6 +1094,27 @@ public class CheaderParser {
     public Operator new_virtualOperator(){ return new Operator(); }
     public void add_virtualOperator(Operator val){ val.visibility = visibility; entries.add(val); }
   
+
+    /**Returns true on a construct: <pre>
+     * class MyClass : MyClass_s {... </pre>
+     * In this case the class should only be used as a wrapper around struct data without own reflection.
+     * @return
+     */
+    public boolean isClassOfStruct ( ) {
+      return superclass !=null && superclass.name.endsWith("_s") 
+          && this.name.equals(superclass.name.substring(0, superclass.name.length()-2));
+    }
+    
+    /**Returns a name of the class. */
+    public String name() { return name; }
+    
+    /**Should be offered, as for struct, but no content. Returns always the name.
+     * @param maybesuffix ignored.
+     * @return The name of the class
+     */
+    public String baseName(String maybesuffix) {
+      return name;
+    } 
 
   }
 
@@ -1156,6 +1231,8 @@ public class CheaderParser {
     public AttributeOrTypedef new_attribute() { return this; }
     public void set_attribute(AttributeOrTypedef val) {}
     
+    
+    public Type type ( ) { return type; }
     
     @Override public String toString(){ return name + ": " + type; }
   

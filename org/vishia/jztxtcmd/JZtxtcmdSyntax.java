@@ -389,7 +389,7 @@ public final class JZtxtcmdSyntax {
     + " andExpr::= <boolExpr?> [{ && <?boolCheckAndOperation> <boolExpr?boolAndOperation>}].\n"    // && of <boolExpr>
     + " \n"  
     + " boolExpr::= [<?boolNot> ! | not| NOT|]\n"
-    + " [ ( <condition?parenthesisExpr>) \n" //Condition> ) \n"                //boolean in paranthesis
+    + " [ ( <condition?parenthesisExpr> ) \n" //Condition> ) \n"                //boolean in paranthesis
     //+ " | <instanceof> \n"                //boolean in paranthesis
     + " | <numExpr?> [<cmpOperation>]\n"  //simple boolean
     + " ].\n"  
