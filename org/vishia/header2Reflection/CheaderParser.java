@@ -417,35 +417,41 @@ public class CheaderParser {
     
   
     public AttributeOrTypedef new_attribute(){ return new AttributeOrTypedef(); }
-    public void add_attribute(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
+    public void add_attribute(AttributeOrTypedef val){ 
+//      if(val.name.equals("waitTxSerial"))
+//        Debugutil.stop();
+      val.visibility = this.visibility; this.entries.add(val); 
+    }
   
     public AttributeOrTypedef new_constDef(){ return new AttributeOrTypedef(); }
-    public void add_constDef(AttributeOrTypedef val){ val.visibility = visibility; entries.add(val); }
+    public void add_constDef(AttributeOrTypedef val){ val.visibility = this.visibility; this.entries.add(val); }
   
     
     public MethodDef new_methodDef(){ return new MethodDef(); }
-    public void add_methodDef(MethodDef val){ val.visibility = visibility; entries.add(val); }
+    public void add_methodDef(MethodDef val){ val.visibility = this.visibility; this.entries.add(val); }
 
     public MethodDef new_virtualMethod(){ return new MethodDef(); }
-    public void add_virtualMethod(MethodDef val){ val.visibility = visibility; val.virtual_ = true; entries.add(val); }
+    public void add_virtualMethod(MethodDef val){ val.visibility = this.visibility; val.virtual_ = true; this.entries.add(val); }
 
     public MethodDef new_abstractMethod(){ return new MethodDef(); }
-    public void add_abstractMethod(MethodDef val){ val.visibility = visibility; val.virtual_ = true; entries.add(val); }
+    public void add_abstractMethod(MethodDef val){ val.visibility = this.visibility; val.virtual_ = true; this.entries.add(val); }
 
     public MethodDef new_staticMethod(){ return new MethodDef(); }
-    public void add_staticMethod(MethodDef val){ val.visibility = visibility; val.static_ = true; entries.add(val); }
+    public void add_staticMethod(MethodDef val){ val.visibility = this.visibility; val.static_ = true; this.entries.add(val); }
 
     public MethodTypedef new_methodTypedef(){ return new MethodTypedef(); }
-    public void add_methodTypedef(MethodTypedef val){ val.visibility = visibility; entries.add(val); }
+    public void add_methodTypedef(MethodTypedef val){ val.visibility = this.visibility; this.entries.add(val); }
   
     public MethodTypedef new_methodPtrTypedef(){ return new MethodTypedef(); }
-    public void add_methodPtrTypedef(MethodTypedef val){ val.visibility = visibility; val.bPointerType = true; entries.add(val); }
+    public void add_methodPtrTypedef(MethodTypedef val){ val.visibility = this.visibility; val.bPointerType = true; this.entries.add(val); }
   
     public MethodDef new_inlineMethod(){ return new MethodDef(); }
-    public void add_inlineMethod(MethodDef val){ val.inline = true; val.visibility = visibility; entries.add(val); }
+    public void add_inlineMethod(MethodDef val){ val.inline = true; val.visibility = this.visibility; this.entries.add(val); }
   
+    @Override
     public Description new_implementDescription(){ return new Description("implementDescription"); }
-    public void add_implementDescription(Description val){ val.visibility = visibility; entries.add(val); }
+    @Override
+    public void add_implementDescription(Description val){ val.visibility = this.visibility; this.entries.add(val); }
   
     public HeaderBlock new_invalidBlock() { return new HeaderBlock(); }
     public void add_invalidBlock(HeaderBlock val) { } //don't add, forget it.
@@ -783,15 +789,15 @@ public class CheaderParser {
     /**If set the struct is conditionally defined in the header file. */
     public String conditionDef, conditionDefNot;
     
-    StructDefinition(HeaderBlock parent, String whatisit, boolean isUnion, boolean isImplicitStructAttr){ 
+    StructDefinition(HeaderBlock parent, String whatisit, boolean isUnion, boolean isInnerStruct){ 
       super(parent, whatisit);
       this.isUnion = isUnion; 
-      this.isImplicitStructAttr = isImplicitStructAttr;
+      this.isInnerStruct = isInnerStruct;
     }
   
     public final boolean isUnion;
     
-    public final boolean isImplicitStructAttr;
+    public final boolean isInnerStruct;
     
     /**In a struct a superclass is a struct on start of the struct (nested). */
     public AttributeOrTypedef superclass;
@@ -802,15 +808,18 @@ public class CheaderParser {
     public Arraysize arraysize;
     
     public void set_name ( String val ) { 
+      if(val.equals("Test_T1CtrlClass_s"))
+        Debugutil.stop();
       this.name = val;
-      Type type = new Type();
-      type.name = type.basename = val;
       CheaderParser.allClasses.put(this.baseName("_s"), this);
       CheaderParser.allClasses.put(this.name, this);  //with full name.
-      
     }
     
-    
+    public void set_tagname ( String val ) { 
+      if(val.equals("Test_T1CtrlClass_T"))
+        Debugutil.stop();
+      this.tagname = val; 
+    }
     
     
     /**It is a struct definition maybe with tag name but without type name, because it is implicitely. */
@@ -823,41 +832,43 @@ public class CheaderParser {
      *   The Reflection generator Cheader2Refl.jztxt.cmd was improved. The element <code>structNameTypeOffs</code> is no more necessary.  
      */
     public void add_implicitStructAttribute(StructDefinition val) { 
-      if(val.name == null) {
-        for(AttributeOrTypedef mem : val.attribs) {  //attributes of the implicit union:
+      if(val.name == null) {                     //If the struct itself is anonymous, only the member are relevant.  
+        for(AttributeOrTypedef mem : val.attribs) {  //add all attributes of the implicit union r struct
           attribs.add(mem);
         }
-      } else {
-        //An explicitely inner struct:
+      } else {                                   //An named inner struct. It is rcognized as type.
         //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
-        String structName;
-        if(this.tagname !=null) {
+        String structName;                       //Build a type name
+        
+        if(this.tagname !=null) {                //this.tagname is the name of the parent (wrapping) struct.
           structName= this.tagname.endsWith("_t") ? this.tagname.substring(0, this.tagname.length()-2) : this.tagname;
         } else {
           structName = "_InnerStruct" + (++ctUnifiedImplicitelyStructName) + "_";
         }
         if(val.tagname !=null) {
-          structName += "_" + val.tagname; //Type Name of the implicit struct.
+          structName += "_" + val.tagname;       //Type Name of the implicit struct.
         } else {
-          structName += "_" + val.name;    //Instance name of the implicit struct.
+          structName += "_" + val.name;          //Instance name of the implicit struct.
         }
+        //
+        //                                       //The struct itself is a type, creaate an attribute as member of the parent. 
         AttributeOrTypedef attr = new AttributeOrTypedef();
         attr.name = val.name;
         attr.type = new Type();
         attr.type.name = structName;
         attribs.add(attr);
         if(parent !=null) {
-          val.implicitName = val.name;
+          val.implicitName = val.name;           //This name is necessary to address the elements in the superior struct.
           //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
           val.name = structName;
           val.whatisit = "structDefinition";
-          parent.entries.add(val);
+          parent.entries.add(val);             
         }
       }
       //entries.add(val); 
     }
 
-    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition(parent, "unnamedUnionAttr", true, true); }
+    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition(this, "unnamedUnionAttr", true, true); }
 
     /**An implicitUnionAttribute is a fully parsed union with or without a name.
      * If no attributes are stored before, it may be the definition of a super class in form:
@@ -961,7 +972,7 @@ public class CheaderParser {
 
     
     public String baseName(String maybesuffix) {
-      if(isImplicitStructAttr) {
+      if(this.isInnerStruct) {
         if(tagname !=null) {
           return tagname;
         } else {
