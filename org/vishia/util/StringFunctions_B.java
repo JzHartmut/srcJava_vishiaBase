@@ -1,5 +1,8 @@
 package org.vishia.util;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class StringFunctions_B
 {
   
@@ -175,6 +178,91 @@ public class StringFunctions_B
         }
         if(bOk1) {  //a key found at all:
           ok = true; break;  //then it is ok.
+        }
+      }
+    }
+    //all checked, not found, then ok is false.
+    return ok;
+  }
+  
+  
+  
+  
+  
+  /**Checks whether any selection item is existing in all given other selects.
+   * This routine is used to check some conditions which are dedicated by some string in a string.
+   * <ul>
+   * <li>For Example "Aa Bb" "AaXy" "Bb Zz" all checks contain one of the select item, either Aa or Bb, returns true.
+   * <li>For Example "Aa Bb" "AaXy" "By Zz" The last cmp string does not contain any of the select items, returns false.
+   * </ul>
+   * The items to compare are built either starting with a upper case char or with a char after a space
+   * till the next space or upper char. 
+   * Spaces are separator.
+   * <ul>
+   * <li>"AaBb" are two items, "Aa" and "Bb"
+   * <li>"Aa Bb" are also two items, "Aa" and "Bb"
+   * <li>"A bb" are also two items, "A" and "bb"
+   * <li>"Aa Bbb" are also two items, "Aa", "Bbb"
+   * <li>"AaBbbC" are threw items, "Aa", "Bbb" and "C"
+   * </ul> 
+   * @param select some char sequences, first is the required items, all next contains items to check.
+   * @return true if at least one of the select items is found in each of the items to check.
+   * @TODO Java2C: Yet without threadcontext because bug with variable argument list
+   */
+  @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkSame2Chars(CharSequence ... select)
+  {
+    boolean ok;
+    List<String> listSel = null;
+    List<List<String>> listcmp = new LinkedList<List<String>>();
+    { String sel = null;
+      for(CharSequence selItem : select) {
+        List<String> listSel2 = new LinkedList<String>();
+        if(listSel == null) { listSel = listSel2; }
+        else { listcmp.add(listSel2); }
+        for(int ix = 0; ix < selItem.length(); ++ix) {
+          char cc = selItem.charAt(ix);
+          if(cc == ' ' && sel !=null) {    //space finishes an item
+            listSel2.add(sel);
+            sel = null;
+          }
+          if(cc != ' ') {
+            if(sel == null) { sel = "" + cc; }
+            else if(cc >= 'A' && cc <= 'Z') {
+              listSel2.add(sel);
+              sel = "" + cc;
+            } else {
+              sel += cc;                   //a next char
+            }
+          } 
+        }
+        if(sel !=null) {
+          listSel2.add(sel);               // last element of this select.
+          sel = null;
+        }
+      }
+    }
+    
+    if(listSel.size() == 0) {
+      ok = true;  //no input with key chars, then ok.
+    } else {
+      ok = true;
+      for(List<String> cmp1: listcmp) {
+        boolean bFoundinCmp;
+        if(cmp1.size()==0) {
+          bFoundinCmp = true;          // empty cmp, is true
+        } else {
+          bFoundinCmp = false;
+          for(String sel: listSel) {
+            for(String cmp11 : cmp1) {
+              if(sel.equals(cmp11)) {
+                bFoundinCmp = true;      // Selection in cmp line found, it is ok
+                break;
+              } }
+          }
+        }
+        if(!bFoundinCmp) {
+          ok = false;                  // If any selection item is not found in any line, it is false.
+          break;
         }
       }
     }

@@ -1,7 +1,7 @@
 
 ============================== _make/ =============================================================
 2020-07-24 18:15:36  x     +genjavadoc.sh                           ::           .535 -1443882296 
-2021-01-25 17:37:52  x     +makejar_vishiaBase.sh                   ::          2.760  0286567640 
+2021-01-28 22:06:27  x     +makejar_vishiaBase.sh                   ::          2.760  0616097380 
 2020-10-18 23:04:13  x     -genjavadocbase.sh                       ::          2.125  1766724429 
 2020-10-03 11:45:29  x     -makejar-coreScript.sh                   ::          3.619  1023917267 
 2020-07-21 12:51:54  x     JAVAC_CMD.sh                             ::          1.064 -0769104566 
@@ -97,7 +97,7 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2020-07-23 10:47:59  x     JZtxtcmdExecuter.java                    ::        188.107  1174070699 
+2021-01-30 21:54:44  x     JZtxtcmdExecuter.java                    ::        188.121 -0770330714 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2020-02-02 12:34:06  x     JZtxtcmdScript.java                      ::        113.481 -1919376674 
@@ -164,7 +164,7 @@
 2020-12-20 20:46:11  x     BinOutPrep.java                          ::         16.433 -0918472496 
 2020-12-20 20:46:02  x     BinOutShow.java                          ::          9.792 -0441389883 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2021-01-26 16:25:21  x     CheaderParser.java                       ::         67.210 -1382511002 
+2021-01-28 22:04:54  x     CheaderParser.java                       ::         67.832  1224570684 
 2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
 2018-12-26 17:53:45  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
 2018-12-27 11:49:18  x     Header2Reflection.java                   ::         82.856 -1926959000 
@@ -307,7 +307,7 @@
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2020-03-14 18:59:29  x     StringFormatter.java                     ::         50.318 -0567263278 
 2020-06-21 22:59:56  x     StringFunctions.java                     ::         53.597 -1199695117 
-2020-07-23 10:47:17  x     StringFunctions_B.java                   ::         13.244  1245632870 
+2021-01-31 00:00:55  x     StringFunctions_B.java                   ::         16.415 -0381434387 
 2019-06-12 08:33:43  x     StringFunctions_C.java                   ::         14.549  0524182854 
 2020-06-28 22:14:40  x     StringPart.java                          ::        122.126 -1563317770 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 

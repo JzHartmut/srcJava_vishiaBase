@@ -1129,7 +1129,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
   throws ScriptException //Throwable
   { checkInitialize(script, true, null, currdir);
     JZtxtcmdScript.Subroutine statement = this.acc.jzcmdScript.getSubroutine(name);
-    if( statement == null) throw new JzScriptException("Subroutine not found: " + name, script.fileScript.getAbsolutePath(), 0,0); 
+    if( statement == null) throw new JzScriptException("Subroutine not found: " + name, this.acc.jzcmdScript.fileScript.getAbsolutePath(), 0,0); 
     return execSub(statement, args, accessPrivate, out, currdir);
   }
     

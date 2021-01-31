@@ -81,11 +81,11 @@ public class CheaderParser {
    *   <pre>struct TYPE_t{....} TYPE_s; class TYPE : TYPE_s{...}; reflection_TYPE </pre>
    *   The reflection_TYPE is for a struct TYPE_s which is presented by a class TYPE without own reflection. 
    * <li>2018-09-02 JzHartmut first super element for non-ObjectJc superclass, see {@link StructDefinition#add_attribute(AttributeOrTypedef)}
-   * <li>2018-09-02 JzHartmut <code>structNameTypeOffs</code> removed, see {@link StructDefinition#add_implicitStructAttribute(StructDefinition)}
+   * <li>2018-09-02 JzHartmut <code>structNameTypeOffs</code> removed, see {@link StructDefinition#add_innerStructAttribute(StructDefinition)}
    * <li>2018-08-28 JzHartmut {@link HeaderBlock#set_const()}, {@link HeaderBlock#new_structContentInsideCondition()} should return a {@link ConditionBlock}.
    *   {@link HeaderBlock#add_macro(AttribAsMacro)} and {@link StructDefinition#add_macro(AttribAsMacro)}: The OS_HandlePtr should be accepted as attribute.
    *   Some more container for semantics from CHeader.zbnf
-   * <li>2018-08-12 JzHartmut implicite named or unnamed struct handled, named struct are stored as extra type..
+   * <li>2018-08-12 JzHartmut inner named or unnamed struct handled, named struct are stored as extra type..
    * <li>2018-01-03 JzHartmut new Some enhancements adequate to syntax in Cheader.zbnf, while testing reflection.
    * <li>2017-12-20 JzHartmut new {@link StructDefinition} with attributes and isBasedOnObjectJc. Used for Sfunction not based on ObjectJc.
    * <li>2017-05-29 JzHartmut {@link Type#pointer_} with {@link Pointer} designation  
@@ -93,7 +93,7 @@ public class CheaderParser {
    * <li>2016-10-18 JzHartmut chg: The UnionVariante is syntactically identically with a struct definition. 
    *   Therefore the same class {@link StructDefinition} is used for {@link HeaderBlock#new_undefDefinition()} instead the older extra class UnionVariante.
    *   the {@link StructDefinition#isUnion} designates that it is a union in semantic. Using scripts should be changed.
-   *   Some new definitions {@link StructDefinition#set_implicitUnion()} and {@link StructDefinition#set_implicitStruct()} are added. 
+   *   Some new definitions {@link StructDefinition#set_innerUnion()} and {@link StructDefinition#set_innerStruct()} are added. 
    * <li>2014-10-18 JzHartmut created. 
    * In the past either the parse result was used immediately with a Java programm as generator, for example for {@link CmdHeader2Reflection},
    * or the generation of some things are done via the XML output from the parser via an XSLT translator.
@@ -132,7 +132,12 @@ public class CheaderParser {
   static Map<String, StructOrClassDef> allClasses = new TreeMap<String, StructOrClassDef>(); 
   
   
-  
+  {
+    StructDefinition objectJc = new StructDefinition(null, "structDefinition", false, false);
+    objectJc.name = "ObjectJc";
+    objectJc.tagname = "ObjectJc_T";
+    allClasses.put("ObjectJc", objectJc);
+  }
   
   
   public static class SrcFile
@@ -766,10 +771,12 @@ public class CheaderParser {
     
     public String name;
 
-    /**If this is set, the struct is a implicitly one. The {@link #name} is from the environment struct. 
+    /**If this is set, the struct is a inner one. The {@link #name} is the type name of the struct as well as,  
      * this element is the name of the element with this struct.
+     * It is necessary to address the elements in the struct from view of the parent struct.
+     * For deeper nested inner struct: This name has the outerparent.parent element name
      */
-    public String implicitName;
+    public String innerName;
 
     List<AttributeOrTypedef> attribs = new LinkedList<AttributeOrTypedef>();
     
@@ -804,7 +811,7 @@ public class CheaderParser {
 
     public String tagname;
     
-    /**Used in an implicitStructAttribute. */
+    /**Used in an innerStructAttribute. */
     public Arraysize arraysize;
     
     public void set_name ( String val ) { 
@@ -822,33 +829,34 @@ public class CheaderParser {
     }
     
     
-    /**It is a struct definition maybe with tag name but without type name, because it is implicitely. */
-    public StructDefinition new_implicitStructAttribute() { return new StructDefinition(this, "unnamedStructAttr", false, true); }
+    /**It is a struct definition maybe with tag name but without type name, because it is inner. */
+    public StructDefinition new_innerStructAttribute() { return new StructDefinition(this, "unnamedStructAttr", false, true); }
 
-    /**Called from ZBNF: <code> structContent:: ... struct\W &lt;structDefinition?+implicitStructAttribute></code>
-     * @param val The parsed implicit struct
+    /**Called from ZBNF: <code> structContent:: ... struct\W &lt;structDefinition?+innerStructAttribute></code>
+     * @param val The parsed inner struct
      * @since 2018-09-02: <code>structNameTypeOffs</code> is removed. It is faulty for <code>struct type_t {...} type_s;</code>
      *   because it can't be deduce from the tag name to the struct name. The last one is need for reflection generation.
      *   The Reflection generator Cheader2Refl.jztxt.cmd was improved. The element <code>structNameTypeOffs</code> is no more necessary.  
      */
-    public void add_implicitStructAttribute(StructDefinition val) { 
+    public void add_innerStructAttribute(StructDefinition val) { 
       if(val.name == null) {                     //If the struct itself is anonymous, only the member are relevant.  
-        for(AttributeOrTypedef mem : val.attribs) {  //add all attributes of the implicit union r struct
+        for(AttributeOrTypedef mem : val.attribs) {  //add all attributes of the inner union r struct
           attribs.add(mem);
         }
       } else {                                   //An named inner struct. It is rcognized as type.
         //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
         String structName;                       //Build a type name
         
-        if(this.tagname !=null) {                //this.tagname is the name of the parent (wrapping) struct.
-          structName= this.tagname.endsWith("_t") ? this.tagname.substring(0, this.tagname.length()-2) : this.tagname;
+        if(val.tagname !=null) {                 //If the inner struct has a tag name, it is used as reflection name.
+          structName = val.tagname;     
         } else {
-          structName = "_InnerStruct" + (++ctUnifiedImplicitelyStructName) + "_";
-        }
-        if(val.tagname !=null) {
-          structName += "_" + val.tagname;       //Type Name of the implicit struct.
-        } else {
-          structName += "_" + val.name;          //Instance name of the implicit struct.
+          structName = val.name;                 //Reflection name is Instance name_ParentName
+          String baseNameParent = this.baseName("_", "_T", "_t", "_s");  //get always from the tagname because name is not given yet.
+          if(baseNameParent !=null) {                //this.tagname is the name of the parent (wrapping) struct.
+            structName += "_" +  baseNameParent;
+          } else {                               //The parent struct has no tagname, what to do:
+            structName += "_" +  "_InnerStruct" + (++ctUnifiedImplicitelyStructName) + "_";
+          }
         }
         //
         //                                       //The struct itself is a type, creaate an attribute as member of the parent. 
@@ -858,9 +866,12 @@ public class CheaderParser {
         attr.type.name = structName;
         attribs.add(attr);
         if(parent !=null) {
-          val.implicitName = val.name;           //This name is necessary to address the elements in the superior struct.
-          //Note: this.name is not set yet because it is set on end of typedef struct{   } <?name> only.
-          val.name = structName;
+          if(this.innerName !=null) {
+            val.innerName = this.innerName + "." + val.name; //deeper nested inner struct.
+          } else {
+            val.innerName = val.name;            //innerName is necessary to address the elements in the superior struct.
+          }
+          val.name = structName;                 //It is the type name of the StructDefinition, as well as on a not inner struct.
           val.whatisit = "structDefinition";
           parent.entries.add(val);             
         }
@@ -868,9 +879,9 @@ public class CheaderParser {
       //entries.add(val); 
     }
 
-    public StructDefinition new_implicitUnionAttribute() { return new StructDefinition(this, "unnamedUnionAttr", true, true); }
+    public StructDefinition new_innerUnionAttribute() { return new StructDefinition(this, "unnamedUnionAttr", true, true); }
 
-    /**An implicitUnionAttribute is a fully parsed union with or without a name.
+    /**An innerUnionAttribute is a fully parsed union with or without a name.
      * If no attributes are stored before, it may be the definition of a super class in form:
      * <pre>
      * typedef struct MyType_t {
@@ -880,12 +891,12 @@ public class CheaderParser {
      * it is from C language. 
      * Because that the first element of the union can be detected as the super class. 
      * <br>
-     * Another implicit union is an attribute. Maybe named or unnamed.
+     * Another inner union is an attribute. Maybe named or unnamed.
      *  
      * Checks whether it is the first member of this struct and one member is ObjectJc, then it is the base class.
      * @param val
      */
-    public void add_implicitUnionAttribute(StructDefinition val) { 
+    public void add_innerUnionAttribute(StructDefinition val) { 
       entries.add(val); 
       boolean bIsSuper = false;
       if(attribs.size()==0 && (val.name == null || val.name.equals("base") || val.name.equals("baseX") || val.name.equals("super"))) { //first one
@@ -896,7 +907,7 @@ public class CheaderParser {
           bIsSuper = true;
         }
         //check the attributes for the first union element, whether it contains ObjectJc or a superclass
-        for(AttributeOrTypedef mem : val.attribs) {  //attributes of the implicit union:
+        for(AttributeOrTypedef mem : val.attribs) {  //attributes of the inner union:
           //Only if ObjectJc is ecplicitely here, this struct based on Object.
           if( mem.type.name.equals("ObjectJc") && mem.type.pointer_==null) {
             this.sBasedOnObjectJc = (val.name == null ? "" : (val.name + ".")) + mem.name;
@@ -909,28 +920,21 @@ public class CheaderParser {
         }
       } 
       if(!bIsSuper) {
-        add_implicitStructAttribute(val);
+        add_innerStructAttribute(val);
       }
     }
 
-    public void set_XXXimplicitStruct() { name = "?"; }
-    
-    public void set_XXXvariante(String val) {} //only formally necessary because [<?variante>...] it stores the text.
-
-    public StructDefinition new_XXXvariante() { return this; }
-
-    public void add_XXXvariante(StructDefinition  val){} //already added.
-    
-    /**Adds the attribute in the struct additional to {@link HeaderBlock#entries}.
+     /**Adds the attribute in the struct additional to {@link HeaderBlock#entries}.
      * Invokes super.HeaderBlock{@link #add_attribute(AttributeOrTypedef)}.
      * @since 2018-09: A first attribute named "super" is the superclass. But then the struct does not based on Object. 
-     *   Hint: Use an implicitly <code>union{ Type super; ObjectJc object;};</code> to express it.
+     *   Hint: Use an inner <code>union{ Type super; ObjectJc object;};</code> to express it.
      * @see org.vishia.header2Reflection.CheaderParser.HeaderBlock#add_attribute(org.vishia.header2Reflection.CheaderParser.AttributeOrTypedef)
      */
     @Override public void add_attribute(AttributeOrTypedef val){ 
       super.add_attribute(val);
       if(attribs.size() == 0 && superclass == null) {
-        //The first element with type Object is the super class.
+        //The first element with type Object or with name super is the super class.
+        //Note: this is used in a inner union { .... } base. The base unit itself is added with add_innerUnionAttribute
         if((val.type.name.equals("ObjectJc") || val.name.equals("super")) && val.type.pointer_==null) {
           superclass = val;
           if(val.name !=null && val.name.endsWith("X"))
@@ -942,7 +946,7 @@ public class CheaderParser {
             this.sBasedOnObjectJc = val.type.typeClass.sBasedOnObjectJc == null ? null : val.name + "." + val.type.typeClass.sBasedOnObjectJc;
           }
         } else {
-          //the first as  normal attribute, the first one. This struct may not based on ObjectJc or has an implicit union.
+          //the first as  normal attribute, the first one. This struct may not based on ObjectJc or has an inner union.
           attribs.add(val);
         }
       } else {
@@ -971,31 +975,31 @@ public class CheaderParser {
     
 
     
-    public String baseName(String maybesuffix) {
-      if(this.isInnerStruct) {
-        if(tagname !=null) {
-          return tagname;
-        } else {
-          return name;
+    /**Returns name without suffix if a suffix is recognized.
+     * @param name
+     * @param maybesuffix
+     * @return
+     */
+    private static String checkNameSuffix(String name, String ... maybesuffix) {
+      for(String suffix: maybesuffix) {
+        if(name.endsWith(suffix)) { 
+          return name.substring(0, name.length() - suffix.length()); 
+      } }
+      return name;
+    }
+    
+    
+    
+    public String baseName ( String ... maybesuffix) {
+      String tagnameBase = this.tagname ==null ? null : checkNameSuffix(this.tagname, maybesuffix);
+      if(this.name !=null) {
+        if(tagnameBase !=null && this.name.equals(tagnameBase)) { return this.name; }  //struct MyName_s_T { ...} MyName_s
+        else {
+          return checkNameSuffix(this.name, maybesuffix);  //without suffix
         }
-      } 
-      else if(name !=null) {
-        int zName = this.name.length();
-        if(tagname !=null) {
-          int zTagname = tagname.length();
-          if(zName < zTagname && this.tagname.startsWith(this.name)) { return this.name; }
-          else {
-            String nameRet = this.name.substring(0, zName-2);  //without _s
-            if(this.tagname.startsWith(nameRet)) { return nameRet; }
-            else return this.name;
-          }
-        }
-        else if(name.endsWith(maybesuffix)) { 
-          return name.substring(0, name.length()-maybesuffix.length()); 
-        }
-        else return name;
-      } else { //a struct tagname {....}; //definition
-        return tagname;  //should not be null. The tagname is the only one given, it is valid.
+      }
+      else {
+        return tagnameBase;  //name not given. mayne null if tagname not given. 
       }
     } 
     
@@ -1029,8 +1033,9 @@ public class CheaderParser {
     
     public boolean isVirtual;
     
-    public StructOrClassDef typeClass;
-    
+    //public StructOrClassDef typeClass;
+    /**It is adequate an attribute, same structure. */
+    public Type type;
     
     public void set_name(String val) {
       this.name = val;
@@ -1038,7 +1043,9 @@ public class CheaderParser {
       if(typeClass == null && val.endsWith("_s")) {
         typeClass = CheaderParser.allClasses.get(val.substring(0, val.length()-2));  //basename
       }
-      this.typeClass = typeClass;
+      Type supertype = new Type();
+      supertype.typeClass = typeClass;
+      this.type = supertype;
     }
 
   }
@@ -1126,8 +1133,8 @@ public class CheaderParser {
     
     public void add_superclass ( Superclass val ) {
       this.superclass = val;
-      if(val.typeClass !=null) {
-        this.sBasedOnObjectJc = val.typeClass.sBasedOnObjectJc;
+      if(val.type.typeClass !=null) {
+        this.sBasedOnObjectJc = val.type.typeClass.sBasedOnObjectJc;
       }
     }
     
@@ -1135,7 +1142,7 @@ public class CheaderParser {
     /**Adds the attribute in the struct additional to {@link HeaderBlock#entries}.
      * Invokes super.HeaderBlock{@link #add_attribute(AttributeOrTypedef)}.
      * @since 2018-09: A first attribute named "super" is the superclass. But then the struct does not based on Object. 
-     *   Hint: Use an implicitly <code>union{ Type super; ObjectJc object;};</code> to express it.
+     *   Hint: Use an inner <code>union{ Type super; ObjectJc object;};</code> to express it.
      * @see org.vishia.header2Reflection.CheaderParser.HeaderBlock#add_attribute(org.vishia.header2Reflection.CheaderParser.AttributeOrTypedef)
      */
     @Override public void add_attribute(AttributeOrTypedef val){ 
@@ -1178,7 +1185,7 @@ public class CheaderParser {
      * @param maybesuffix ignored.
      * @return The name of the class
      */
-    public String baseName(String maybesuffix) {
+    public String baseName(String ... maybesuffix) {
       return name;
     } 
 
@@ -1281,14 +1288,15 @@ public class CheaderParser {
     public Value defaultValue; 
     
     /**It is only for comptatibility for symbolic access from JZtxtcmd, as in {@link CheaderParser.Superclass} */
-    public final AttributeOrTypedef typeClass;
+    //public final AttributeOrTypedef typeClass;
     
     /**Any index value maybe used in an evaluating routine via JZtxtcmd. It is not used by the parser, remain 0. 
      * For Simulink Sfunction -wrapper-generator: It is used for the ixParam to access <code>ssGetSFcnParam(simstruct, ixArg)</code>*/
     public int ixArg;
   
-    AttributeOrTypedef(String whatisit){ super(whatisit); typeClass = this; }
-    AttributeOrTypedef(){ super("Attribute"); typeClass = this; }
+    AttributeOrTypedef(String whatisit){ super(whatisit); } //typeClass = this; }
+    
+    AttributeOrTypedef(){ super("Attribute"); } //typeClass = this; }
   
     public Description new_description() { return description = new Description(); }
     public void add_description(Description val){ /*already added.*/ } 
@@ -1302,7 +1310,7 @@ public class CheaderParser {
     public void set_attribute(AttributeOrTypedef val) {}
     
     
-    public String baseName ( String maybesuffix, String maybeForwardSuffix) { return name; }
+    public String baseName ( String ... maybesuffix) { return name; }
     
     public Type type ( ) { return type; }
     
@@ -1488,7 +1496,7 @@ type::= [<?@modifier>volatile|const|]
      * @param maybeForwardSuffix An expected suffix for forward declaration
      * @return
      */
-    public String baseName(String maybesuffix, String maybeForwardSuffix) {
+    public String baseName ( String maybesuffix, String maybeForwardSuffix) {
       if(forward !=null && name.endsWith(maybeForwardSuffix)) { return name.substring(0, name.length()- maybeForwardSuffix.length()); }
       else if(name.endsWith(maybesuffix)) { return name.substring(0, name.length()-maybesuffix.length()); }
       else return name;
