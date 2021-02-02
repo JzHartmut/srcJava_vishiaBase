@@ -189,6 +189,159 @@ public class StringFunctions_B
   
   
   
+  /**Checks whether some selection item are existing in all given compare strings.
+   * The select pattern has the following syntax (ZBNF):<pre>
+   * select::= { <selAnd> ? : }.  ##multiple independent select pattern, one should match, ':' is a OR 
+   * selAnd::= { <selOr> ? & }.   ##select pattern which`s all parts <selOr> should match.
+   * selOr::=  { <selLine> ? \| }. ##select pattern part which checks some lines, one should match, separated with |
+   * selLine::= { [{<#line>?,}=]{<selItem>? , } }. ##select pattern for items in lines. starts optional with one digit line number.
+   * selItem::= ... ends either with space or an following upper case character. </pre>     
+   * Examples:
+   * <ul>
+   * <li>"1Aa 2Bb" expects "Aa" in the first line and "Bb" in the second line.
+   * <li>"1Aa 1Ab 2Bb" expects "Aa" or "Ab" in the first line and "Bb" in the second line.
+   * <li>"1Aa 1Ab 2Bb, Zz" expects as above, or "Zz" in all lines.
+   * <li>"1Aa 1Ab 2Bb, Zz & 3X" expects as above, but also "X" in line 3. 
+   *                            If "Zz" is contained in line 3, "X" is not need.
+   *                            If only 2 lines exists, "3X" is effectless
+   * <li>"1Aa 1Ab 2Bb, Zz & 3X : Y" as above, but alternatively also "Y" in all lines is expected.                                        
+   * @param select pattern.
+   * @param cmp some char sequences, which should contain all items.
+   * @return true if at least one of the select items is found in each of the items to check.
+   * @TODO Java2C: Yet without threadcontext because bug with variable argument list
+   */
+  @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkSameItem(String select, CharSequence ... cmp)
+  {
+    class NumString {final int mline; final String sel; 
+      NumString(int mline, String sel){ this.mline = mline; this.sel = sel;} 
+      @Override public String toString() { return "" + Integer.toHexString(this.mline) + ":" + this.sel; }
+    }
+    
+    List<List<List<List<NumString>>>> selistAll = new LinkedList<List<List<List<NumString>>>>(); 
+    int zSelAll = select.length();
+    int ixSelAll = 0;
+    while(ixSelAll < zSelAll) {                  // eval whole String, more as one xxx : xxx colon separated blocks
+      int posColon = select.indexOf(':', ixSelAll); if(posColon <0) { posColon = zSelAll; }
+      List<List<List<NumString>>> selistAnd = new LinkedList<List<List<NumString>>>(); 
+      selistAll.add(selistAnd);
+      //                                         // eval String till : 
+      String selAnd = select.substring(ixSelAll, posColon); ixSelAll = posColon +1;
+      int ixSelAnd = 0; int zSelAnd = selAnd.length();
+      while(ixSelAnd < zSelAnd) {
+        int posAmp = selAnd.indexOf('&', ixSelAnd); if(posAmp <0) { posAmp = zSelAnd; }
+        List<List<NumString>> selistOr = new LinkedList<List<NumString>>(); 
+        selistAnd.add(selistOr);
+        //                                         // eval String till : 
+        String selOr = selAnd.substring(ixSelAnd, posAmp); ixSelAnd = posAmp +1;
+        int ixSelOr = 0; int zSelOr = selOr.length();
+        while(ixSelOr < zSelOr) {
+          int posSep = selOr.indexOf('|', ixSelOr); if(posSep <0) { posSep = zSelOr; }
+          List<NumString> selistLine = new LinkedList<NumString>(); 
+          selistOr.add(selistLine);
+          //                                         // eval String till : 
+          String selLine = selOr.substring(ixSelOr, posSep); ixSelOr = posSep +1;
+          int zSelLine = selLine.length();
+          List<NumString> selistItem = selistLine; //new LinkedList<NumString>(); 
+          //selistLine.add(selistItem);
+          String sel = null; int mLine = 0;
+          int mLine1 = 0;
+          for(int ix = 0; ix < zSelLine; ++ix) {
+            char cc = selLine.charAt(ix);
+//            if( (cc == ' ' || cc == ',') && sel !=null) {    //space finishes an item
+//              selistItem.add(new NumString(mLine, sel));
+//              sel = null;
+//            }
+//            if(cc != ' ') {
+              if(sel == null) {                  //line index
+                if(cc >='0' && cc <= '9') { mLine1 |= 1<<(cc - '0'); }
+                else if(cc == ',') { }
+                else if(cc == ' ') { }
+                else if(cc == '=') { mLine = mLine1; }
+                else { sel = "" + cc; }          // first character
+              }
+              else if( sel !=null && ", &;|".indexOf(cc) >= 0) {
+                selistItem.add(new NumString(mLine, sel));
+                sel = null;
+                if(cc != ',') {
+                  mLine1 = 0;
+                }
+              } else {
+                sel += cc;                       //a next char
+              }
+//            } 
+          }
+          if(sel !=null) {    //space finishes an item
+            selistItem.add(new NumString(mLine, sel));
+            sel = null;
+          }
+          
+        }
+        
+      }
+    }
+    boolean ok = false;
+    int mLinesCheckAll = 0;                      //mLinesToCheckAll: all bits set for existing lines (from 1...)
+    int mLinesToCheckAll = ((1 << (cmp.length +1)) -1) & 0xfffffffe;
+    for(int ix = 1; ix <= cmp.length; ++ix) {
+      CharSequence cmp1 =cmp[ix-1];
+      int zCmp1 = cmp1.length();
+      boolean bEmpty = true;
+      for(int ic = 0; ic < zCmp1; ++ix) {
+        char cc = cmp1.charAt(ic);
+        if(cc != ' ') { bEmpty = false; break; }
+      }
+      if(bEmpty) {
+        mLinesToCheckAll &= ~(1<<ix);   //do not check an empty cmp line
+      }
+    }
+    for(List<List<List<NumString>>> selistAnd : selistAll) {
+      for(List<List<NumString>> selistOr : selistAnd) {
+        for(List<NumString> selistItem : selistOr) {
+          int mLinesFound = 0;
+          int mLinesCheck = 0;
+          boolean foundItem = false;
+          for(NumString selItem : selistItem) {
+            for(int ixLine = 1; ixLine <= cmp.length; ++ixLine) {
+              if(  (selItem.mline ==0 || (selItem.mline & (1<<ixLine)) != 0) //either requested line, or all lines
+                && ((mLinesToCheckAll & (1 << ixLine)) !=0)     //exclude line from check which should not be checked. 
+                ) {                                             //ixLine anyway correct for cmp to check against selItem
+                mLinesCheck |= 1 << ixLine;
+                CharSequence cmp1 = cmp[ixLine -1];
+                int zSelItem = selItem.sel.length();
+                int pos = StringFunctions.indexOf(cmp1, selItem.sel);
+                char cc;
+                if(  pos >=0                                 //is found
+                  && (  (pos + zSelItem) == cmp1.length()    //found on end 
+                     || (cc = cmp1.charAt(zSelItem)) == ' '  //follows space
+                     || (cc >='A' && cc <= 'Z')              //follows upper case
+                  )  ) {                                     //conditions for end
+                  foundItem = true;
+                  mLinesFound |= 1<< ixLine;         //set the found bit for the line in mask
+                }
+              }
+              if((selItem.mline & (1<<ixLine)) != 0) { break; }  //exact this line found, break for.
+            }//for ixLine
+          }//for selItem
+          if( (mLinesFound == mLinesCheck)) {
+            mLinesCheckAll |= mLinesFound;
+            break;                                   //one of the item in line selection is ok.
+          }
+        }//for selistItem
+        if(mLinesCheckAll == mLinesToCheckAll) {
+          ok = true;
+          break;
+        }
+      }//for selistOr
+      if(ok) { break; } //already found.
+    }//for selistAnd
+    //all checked, not found, then ok is false.
+    return ok;
+  }
+  
+  
+  
+  
+  
   /**Checks whether any selection item is existing in all given other selects.
    * This routine is used to check some conditions which are dedicated by some string in a string.
    * <ul>
@@ -209,18 +362,18 @@ public class StringFunctions_B
    * @return true if at least one of the select items is found in each of the items to check.
    * @TODO Java2C: Yet without threadcontext because bug with variable argument list
    */
-  @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkSame2Chars(CharSequence ... select)
+  @Java4C.NoStackTrace @Java4C.Exclude public static boolean XXXcheckSame2Char(String select, CharSequence ... cmp)
   {
     boolean ok;
     List<String> listSel = null;
     List<List<String>> listcmp = new LinkedList<List<String>>();
     { String sel = null;
-      for(CharSequence selItem : select) {
+      for(CharSequence cmpItem : cmp) {
         List<String> listSel2 = new LinkedList<String>();
         if(listSel == null) { listSel = listSel2; }
         else { listcmp.add(listSel2); }
-        for(int ix = 0; ix < selItem.length(); ++ix) {
-          char cc = selItem.charAt(ix);
+        for(int ix = 0; ix < cmpItem.length(); ++ix) {
+          char cc = cmpItem.charAt(ix);
           if(cc == ' ' && sel !=null) {    //space finishes an item
             listSel2.add(sel);
             sel = null;
