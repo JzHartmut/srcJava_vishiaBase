@@ -8,6 +8,9 @@ public class StringFunctions_B
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-02-06 Hartmut new {@link #checkSameItem(String, CharSequence...)} and {@link #prepareCheckSameItem(String)}.
+   *         This is newly used in the {@link org.vishia.simSelector.SimSelector} in the script for selection.
+   *         More ability. 
    * <li>2020-07-22 Hartmut new {@link #checkOneSameChars(CharSequence, CharSequence...)} 
    *         and {@link #checkMoreSameChars(CharSequence, CharSequence...)} as enhancement to 2016-activity
    *         used in {@link org.vishia.simSelector.SimSelector} in the script for selection.
@@ -186,37 +189,48 @@ public class StringFunctions_B
   }
   
   
-  
+  static private class NumString {final int mline; final String sel; 
+    NumString(int mline, String sel){ this.mline = mline; this.sel = sel;} 
+    @Override public String toString() { return "" + Integer.toHexString(this.mline) + ":" + this.sel; }
+  }
+
   
   
   /**Checks whether some selection item are existing in all given compare strings.
-   * The select pattern has the following syntax (ZBNF):<pre>
-   * select::= { <selAnd> ? : }.  ##multiple independent select pattern, one should match, ':' is a OR 
-   * selAnd::= { <selOr> ? & }.   ##select pattern which`s all parts <selOr> should match.
-   * selOr::=  { <selLine> ? \| }. ##select pattern part which checks some lines, one should match, separated with |
-   * selLine::= { [{<#line>?,}=]{<selItem>? , } }. ##select pattern for items in lines. starts optional with one digit line number.
-   * selItem::= ... ends either with space or an following upper case character. </pre>     
-   * Examples:
-   * <ul>
-   * <li>"1Aa 2Bb" expects "Aa" in the first line and "Bb" in the second line.
-   * <li>"1Aa 1Ab 2Bb" expects "Aa" or "Ab" in the first line and "Bb" in the second line.
-   * <li>"1Aa 1Ab 2Bb, Zz" expects as above, or "Zz" in all lines.
-   * <li>"1Aa 1Ab 2Bb, Zz & 3X" expects as above, but also "X" in line 3. 
-   *                            If "Zz" is contained in line 3, "X" is not need.
-   *                            If only 2 lines exists, "3X" is effectless
-   * <li>"1Aa 1Ab 2Bb, Zz & 3X : Y" as above, but alternatively also "Y" in all lines is expected.                                        
-   * @param select pattern.
+   * @param select pattern. See syntax on {@link #prepareCheckSameItem(String)}
    * @param cmp some char sequences, which should contain all items.
-   * @return true if at least one of the select items is found in each of the items to check.
-   * @TODO Java2C: Yet without threadcontext because bug with variable argument list
+   * @return true if select matches to the items
+   * @Note Java2C: Yet without threadcontext because bug with variable argument list
    */
   @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkSameItem(String select, CharSequence ... cmp)
   {
-    class NumString {final int mline; final String sel; 
-      NumString(int mline, String sel){ this.mline = mline; this.sel = sel;} 
-      @Override public String toString() { return "" + Integer.toHexString(this.mline) + ":" + this.sel; }
-    }
-    
+    List<List<List<List<NumString>>>> selistAll = prepareCheckSameItem(select);
+    return checkSameItem(selistAll, cmp);
+  }
+  
+  
+  
+  /**Prepares the container for comparison, see {@link #checkSameItem(String, CharSequence...)}
+   * The select pattern has the following syntax (ZBNF):<pre>
+   * select::= { <selAnd> ? : }.  ##multiple independent select pattern, one should match, ':' is a OR 
+   * selAnd::= { <selOr> ? & }.   ##select pattern which`s all parts <selOr> should match.
+   * selOr::=  { <selLine> ? + }. ##select pattern part which checks some lines, one should match, separated with |
+   * selLine::= { [{<#table>?,}=]{<selItem>? , }[;] }. ##select pattern for items in lines. starts optional with one digit line number.
+   * selItem::= ... ends either with space or an following upper case character. </pre>     
+   * Examples:
+   * <ul>
+   * <li>"1=Aa 2=Bb" expects "Aa" in the first line and "Bb" in the second line of table resp. cmp[0], cmp[1].
+   * <li>"1=Aa,Ab 2=Bb" expects "Aa" or "Ab" in the first cmp and "Bb" in the second cmp.
+   * <li>"1=Aa,Ab 2=Bb + Zz" expects as above, or "Zz" in all lines.
+   * <li>"1=Aa,Ab 2=Bb + Zz & 3=X" expects as above, but "X" in cmp[2] in any case . 
+   *                            If "Zz" is contained in line 3, "X" is not need.
+   *                            If only 2 lines exists, "3=X" is effectless
+   * <li>"1Aa,Ab 2=Bb + Zz & 3=X : Y" as above, but alternatively also "Y" in all lines is recognized as ok.
+   * </ul>
+   * @param select text for selection.
+   * @return The container parsed from select
+   */
+  public static List<List<List<List<NumString>>>> prepareCheckSameItem ( String select ) {
     List<List<List<List<NumString>>>> selistAll = new LinkedList<List<List<List<NumString>>>>(); 
     int zSelAll = select.length();
     int ixSelAll = 0;
@@ -232,14 +246,14 @@ public class StringFunctions_B
         List<List<NumString>> selistOr = new LinkedList<List<NumString>>(); 
         selistAnd.add(selistOr);
         //                                         // eval String till : 
-        String selOr = selAnd.substring(ixSelAnd, posAmp); ixSelAnd = posAmp +1;
-        int ixSelOr = 0; int zSelOr = selOr.length();
-        while(ixSelOr < zSelOr) {
-          int posSep = selOr.indexOf('|', ixSelOr); if(posSep <0) { posSep = zSelOr; }
+        String selAdd = selAnd.substring(ixSelAnd, posAmp); ixSelAnd = posAmp +1;
+        int ixSelAdd = 0; int zSelAdd = selAdd.length();
+        while(ixSelAdd < zSelAdd) {
+          int posSep = selAdd.indexOf('+', ixSelAdd); if(posSep <0) { posSep = zSelAdd; }
           List<NumString> selistLine = new LinkedList<NumString>(); 
           selistOr.add(selistLine);
           //                                         // eval String till : 
-          String selLine = selOr.substring(ixSelOr, posSep); ixSelOr = posSep +1;
+          String selLine = selAdd.substring(ixSelAdd, posSep); ixSelAdd = posSep +1;
           int zSelLine = selLine.length();
           List<NumString> selistItem = selistLine; //new LinkedList<NumString>(); 
           //selistLine.add(selistItem);
@@ -247,38 +261,44 @@ public class StringFunctions_B
           int mLine1 = 0;
           for(int ix = 0; ix < zSelLine; ++ix) {
             char cc = selLine.charAt(ix);
-//            if( (cc == ' ' || cc == ',') && sel !=null) {    //space finishes an item
-//              selistItem.add(new NumString(mLine, sel));
-//              sel = null;
-//            }
-//            if(cc != ' ') {
-              if(sel == null) {                  //line index
-                if(cc >='0' && cc <= '9') { mLine1 |= 1<<(cc - '0'); }
-                else if(cc == ',') { }
-                else if(cc == ' ') { }
-                else if(cc == '=') { mLine = mLine1; }
-                else { sel = "" + cc; }          // first character
+            if(sel == null) {                  //line index
+              if(cc >='0' && cc <= '9') { mLine1 |= 1<<(cc - '0'); }
+              else if(cc == ',') { }
+              else if(cc == ';') { }
+              else if(cc == ' ') { }
+              else if(cc == '=') { mLine = mLine1; }
+              else { sel = "" + cc; }          // first character
+            }
+            else if( sel !=null && ", &;+".indexOf(cc) >= 0) {
+              selistItem.add(new NumString(mLine, sel));
+              sel = null;
+              if(cc != ',') {
+                mLine1 = 0;             // not a , => remove the table mask
               }
-              else if( sel !=null && ", &;|".indexOf(cc) >= 0) {
-                selistItem.add(new NumString(mLine, sel));
-                sel = null;
-                if(cc != ',') {
-                  mLine1 = 0;
-                }
-              } else {
-                sel += cc;                       //a next char
-              }
-//            } 
-          }
+            } else {
+              sel += cc;                       //a next char
+            }
+          } //for ...zSelLine
           if(sel !=null) {    //space finishes an item
             selistItem.add(new NumString(mLine, sel));
             sel = null;
           }
-          
-        }
-        
-      }
-    }
+        } //while ... zSelAdd
+      } //while ...zSelAnd
+    } //while ...zSelAll
+    //                                           //selListAll is filled. 
+    return selistAll;
+  }
+  
+  
+  
+  /**Executes the comparison with the given selistAll
+   * @param selistAll returned from {@link #prepareCheckSameItem(String)}
+   * @param cmp some Strings which should match to sellistALl 
+   * @return true if matches
+   */
+  @Java4C.NoStackTrace @Java4C.Exclude public static boolean checkSameItem ( List<List<List<List<NumString>>>> selistAll, CharSequence ... cmp) {
+    //able to improve: Get a filled list for Using in a loop of many selections. 
     boolean ok = false;
     int mLinesCheckAll = 0;                      //mLinesToCheckAll: all bits set for existing lines (from 1...)
     int mLinesToCheckAll = ((1 << (cmp.length +1)) -1) & 0xfffffffe;
@@ -336,95 +356,7 @@ public class StringFunctions_B
     }//for selistAnd
     //all checked, not found, then ok is false.
     return ok;
-  }
-  
-  
-  
-  
-  
-  /**Checks whether any selection item is existing in all given other selects.
-   * This routine is used to check some conditions which are dedicated by some string in a string.
-   * <ul>
-   * <li>For Example "Aa Bb" "AaXy" "Bb Zz" all checks contain one of the select item, either Aa or Bb, returns true.
-   * <li>For Example "Aa Bb" "AaXy" "By Zz" The last cmp string does not contain any of the select items, returns false.
-   * </ul>
-   * The items to compare are built either starting with a upper case char or with a char after a space
-   * till the next space or upper char. 
-   * Spaces are separator.
-   * <ul>
-   * <li>"AaBb" are two items, "Aa" and "Bb"
-   * <li>"Aa Bb" are also two items, "Aa" and "Bb"
-   * <li>"A bb" are also two items, "A" and "bb"
-   * <li>"Aa Bbb" are also two items, "Aa", "Bbb"
-   * <li>"AaBbbC" are threw items, "Aa", "Bbb" and "C"
-   * </ul> 
-   * @param select some char sequences, first is the required items, all next contains items to check.
-   * @return true if at least one of the select items is found in each of the items to check.
-   * @TODO Java2C: Yet without threadcontext because bug with variable argument list
-   */
-  @Java4C.NoStackTrace @Java4C.Exclude public static boolean XXXcheckSame2Char(String select, CharSequence ... cmp)
-  {
-    boolean ok;
-    List<String> listSel = null;
-    List<List<String>> listcmp = new LinkedList<List<String>>();
-    { String sel = null;
-      for(CharSequence cmpItem : cmp) {
-        List<String> listSel2 = new LinkedList<String>();
-        if(listSel == null) { listSel = listSel2; }
-        else { listcmp.add(listSel2); }
-        for(int ix = 0; ix < cmpItem.length(); ++ix) {
-          char cc = cmpItem.charAt(ix);
-          if(cc == ' ' && sel !=null) {    //space finishes an item
-            listSel2.add(sel);
-            sel = null;
-          }
-          if(cc != ' ') {
-            if(sel == null) { sel = "" + cc; }
-            else if(cc >= 'A' && cc <= 'Z') {
-              listSel2.add(sel);
-              sel = "" + cc;
-            } else {
-              sel += cc;                   //a next char
-            }
-          } 
-        }
-        if(sel !=null) {
-          listSel2.add(sel);               // last element of this select.
-          sel = null;
-        }
-      }
-    }
-    
-    if(listSel.size() == 0) {
-      ok = true;  //no input with key chars, then ok.
-    } else {
-      ok = true;
-      for(List<String> cmp1: listcmp) {
-        boolean bFoundinCmp;
-        if(cmp1.size()==0) {
-          bFoundinCmp = true;          // empty cmp, is true
-        } else {
-          bFoundinCmp = false;
-          for(String sel: listSel) {
-            for(String cmp11 : cmp1) {
-              if(sel.equals(cmp11)) {
-                bFoundinCmp = true;      // Selection in cmp line found, it is ok
-                break;
-              } }
-          }
-        }
-        if(!bFoundinCmp) {
-          ok = false;                  // If any selection item is not found in any line, it is false.
-          break;
-        }
-      }
-    }
-    //all checked, not found, then ok is false.
-    return ok;
-  }
-  
-  
-  
+  }  
   
   
   /**Checks whether any char is existing in at least one given check Strings.

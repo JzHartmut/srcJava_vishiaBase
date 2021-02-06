@@ -85,6 +85,7 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-02-06 Hartmut bugfix: Now variables scriptfile and scriptdir are correct.
    * <li>2020-07-22 Hartmut bugfix: now invoke level.close(): {@link ExecuteLevel#close()}, 
    *   it invokes this.cmdExecuter.close() {@link CmdExecuter#close() }which closes the out and error Thread.
    *   Note: The {@link ExecuteLevel#cmdExecuter} will remain open, not removed, so long the level runs. 
@@ -801,7 +802,7 @@ public ExecuteLevel execute_Scriptclass(String sClazz) throws ScriptException
 {
   JZtxtcmdScript.JZcmdClass clazz1 = this.acc.jzcmdScript.getClass(sClazz);
   if(clazz1 == null) throw new IllegalArgumentException("class in script not found: " + sClazz);
-  ExecuteLevel level = new ExecuteLevel(acc, this.acc.jzcmdScript.scriptClass, this.acc.scriptThread, this.acc.scriptLevel, null);
+  ExecuteLevel level = new ExecuteLevel(acc, null, this.acc.jzcmdScript.scriptClass, this.acc.scriptThread, this.acc.scriptLevel, null);
   short ret = level.execute(clazz1, this.acc.textline, 0, level.localVariables, -1);
   if(ret == kException){
     if(acc.scriptThread.exception instanceof ScriptException){
@@ -823,7 +824,7 @@ public ExecuteLevel execute_Scriptclass(String sClazz) throws ScriptException
  */
 public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws ScriptException 
 {
-  ExecuteLevel level = new ExecuteLevel(acc, clazz, this.acc.scriptThread, this.acc.scriptLevel, null);
+  ExecuteLevel level = new ExecuteLevel(acc, null, clazz, this.acc.scriptThread, this.acc.scriptLevel, null);
   short ret = level.execute(clazz, this.acc.textline, 0, level.localVariables, -1);
   if(ret == kException){
     if(acc.scriptThread.exception instanceof ScriptException){
@@ -1044,9 +1045,12 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     }
     
     
-    
+    JZtxtcmdScript.Subroutine mainRoutine = this.acc.jzcmdScript.getMain();
+
     //needs all scriptVariable:
-    ExecuteLevel execFile = new ExecuteLevel(acc, this.acc.jzcmdScript.scriptClass, this.acc.scriptThread, this.acc.scriptLevel, null);
+    JZtxtcmdScript.JZcmdClass mainClass = (JZtxtcmdScript.JZcmdClass)mainRoutine.parentList;
+
+    ExecuteLevel execFile = new ExecuteLevel(acc, mainRoutine, mainClass/*this.acc.jzcmdScript.scriptClass*/, this.acc.scriptThread, this.acc.scriptLevel, null);
     if(acc.jzcmdScript.checkJZcmdXmlFile !=null) {
       CharSequence sFilecheckXml;
       try { sFilecheckXml = this.acc.scriptLevel.evalString(acc.jzcmdScript.checkJZcmdXmlFile);
@@ -1075,7 +1079,6 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         writer.close();
       } catch(IOException exc){ throw new JzScriptException("JZcmd.execute - File error on checkJZcmd; " + filecheck.getAbsolutePath()); }
     }
-    JZtxtcmdScript.Subroutine mainRoutine = this.acc.jzcmdScript.getMain();
     //return execute(execFile, contentScript, true);
     this.acc.startmilli = System.currentTimeMillis();
     this.acc.startnano = System.nanoTime();
@@ -1312,6 +1315,8 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     
     final JZtxtcmdScript.JZcmdClass jzClass;
     
+    final JZtxtcmdScript.Subroutine subRoutine;
+    
     /**The current directory of this level. It is an absolute normalized but not Unix-canonical path. 
      * Note that a Unix-canonical path have to resolved symbolic links. */
     public File currdir;
@@ -1355,12 +1360,13 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
      *   local variables of its calling routine! This argument is only set if nested statement blocks
      *   are to execute. 
      */
-    protected ExecuteLevel(JzTcMain acc, JZtxtcmdScript.JZcmdClass jzClass, JZtxtcmdThreadData threadData, ExecuteLevel parent
+    protected ExecuteLevel(JzTcMain acc, JZtxtcmdScript.Subroutine subRoutine, JZtxtcmdScript.JZcmdClass jzClass, JZtxtcmdThreadData threadData, ExecuteLevel parent
         , Map<String, DataAccess.Variable<Object>> parentVariables)
     { this.jzcmdMain = acc;
       this.parent = parent;
       this.ctNesting = parent == null ? 0 : parent.ctNesting+1;  //should not close #cmdExecuter if not the root.
       this.jzClass = jzClass;
+      this.subRoutine = subRoutine;
       this.threadData = threadData;
       if(parent !=null) {
         this.currdir = parent.currdir;
@@ -1373,20 +1379,20 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         for(Map.Entry<String, DataAccess.Variable<Object>> e: acc.scriptLevel.localVariables.entrySet()){
           DataAccess.Variable<Object> var = e.getValue();
           String key = e.getKey();
-          if(key.equals("scriptdir")){
-            File scriptFileClass = jzClass !=null ? new File(jzClass.srcFile) : acc.jzcmdScript.fileScript;
-            CharSequence scriptdir = FileSystem.normalizePath(FileSystem.getDir(scriptFileClass));
-            //int posName = scriptFileClass.lastIndexOf('/')+1;
-            //String scriptfile = scriptFileClass.substring(posName);
+          if(key.equals("scriptdir")){           //scriptfile either from subroutine if given, or ...
+            File scriptFile = subRoutine !=null ? new File(subRoutine.srcFile) : 
+                              jzClass !=null ? new File(jzClass.srcFile) : acc.jzcmdScript.fileScript ;
+            CharSequence scriptdir = FileSystem.normalizePath(FileSystem.getDir(scriptFile));
             //create a new scriptdir and scriptfile variable
             DataAccess.Variable<Object> var2 = new DataAccess.Variable<Object>('S', "scriptdir", scriptdir, true);
             this.localVariables.put("scriptdir", var2);
-            //create a new scriptdir and scriptfile variable
-            //DataAccess.Variable<Object> varScriptfile = new DataAccess.Variable<Object>('S', "scriptfile", scriptfile, true);
-            this.localVariables.put("scriptfile", var2);
+            //
+            String scriptname = scriptFile.getName();
+            DataAccess.Variable<Object> varFile = new DataAccess.Variable<Object>('S', "scriptfile", scriptname, true);
+            this.localVariables.put("scriptfile", varFile);
           }
           else if(key.equals("scriptfile")){
-            //do nothing, already done
+            //do nothing, already done with scriptdir handling
           } 
           else if(var.isConst()){
             //Scriptvariables which are designated as const cannot be changed in the sub level.
@@ -1414,7 +1420,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     /**Constructs data for the script execution level.
      */
     protected ExecuteLevel(JzTcMain acc, JZtxtcmdThreadData threadData)
-    { this(acc, null, threadData, null, null);
+    { this(acc, null, null, threadData, null, null);
     }
     
     
@@ -1460,12 +1466,12 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
      * @return an error hint.
      * @throws IOException
      */
-    public short executeNewlevel(JZtxtcmdScript.JZcmdClass jzClass, JZtxtcmdScript.StatementList contentScript, final StringFormatter out, int indentOut
+    public short executeNewlevel ( JZtxtcmdScript.StatementList contentScript, final StringFormatter out, int indentOut
         , int nDebug) 
     throws Exception { 
       short result;
       if(contentScript.bContainsVariableDef){
-        final ExecuteLevel level = new ExecuteLevel(this.jzcmdMain, jzClass, this.threadData, this, this.localVariables);
+        final ExecuteLevel level = new ExecuteLevel(this.jzcmdMain, this.subRoutine, this.jzClass, this.threadData, this, this.localVariables);
         result = level.execute(contentScript, out, indentOut, level.localVariables, nDebug);
         level.close();
       } else {
@@ -1801,7 +1807,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           char elementType = elementStm.elementType();
           if(elementType == '*') {
             //A container with variable definition adequate 'M' but not as Map variable
-            final ExecuteLevel level = new ExecuteLevel(this.jzcmdMain, this.jzClass, this.threadData, this, this.localVariables);
+            final ExecuteLevel level = new ExecuteLevel(this.jzcmdMain, this.subRoutine, this.jzClass, this.threadData, this, this.localVariables);
             IndexMultiTable<String, DataAccess.Variable<Object>> elementValue = 
               new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString); 
             //fill the dataStruct with its values:
@@ -2412,7 +2418,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       if(subroutine.useLocals) {  //TODO check whether the subClass == this.jzclass 
         sublevel = this; 
       } else { 
-        sublevel = new ExecuteLevel(this.jzcmdMain, subClass, this.threadData, this, null); 
+        sublevel = new ExecuteLevel(this.jzcmdMain, subroutine, subClass, this.threadData, this, null); 
       }
       return sublevel;
     }
@@ -2580,7 +2586,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         thread = new JZtxtcmdThread();  //without assignment to a variable.
         name = "JZcmd";
       }
-      ExecuteLevel threadLevel = new ExecuteLevel(this.jzcmdMain, this.jzClass, thread, this, this.localVariables);
+      ExecuteLevel threadLevel = new ExecuteLevel(this.jzcmdMain, this.subRoutine, this.jzClass, thread, this, this.localVariables);
       synchronized(this.jzcmdMain.threads){
         this.jzcmdMain.threads.add(thread);
       }
@@ -3316,7 +3322,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       } else if(arg.statementlist !=null){
         StringFormatter u = new StringFormatter();
         //StringPartAppend u = new StringPartAppend();
-        short ret = executeNewlevel(jzClass, arg.statementlist, u, 0, -1);
+        short ret = executeNewlevel(arg.statementlist, u, 0, -1);
         if(ret == kException){ return JZtxtcmdExecuter.retException; }
         else { return u.getBuffer(); }
       } else if(arg.expression !=null){
@@ -3472,7 +3478,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       } else if(arg.statementlist !=null){
         if(arg.elementType == 'M') {  
           //a dataStruct
-          final ExecuteLevel level = new ExecuteLevel(jzcmdMain,jzClass, threadData, this, localVariables);
+          final ExecuteLevel level = new ExecuteLevel(jzcmdMain, this.subRoutine, this.jzClass, threadData, this, localVariables);
           IndexMultiTable<String, DataAccess.Variable<Object>> newVariables = 
             new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString); 
           //fill the dataStruct with its values:
@@ -3482,7 +3488,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           //A statementlist as object can be only a text expression.
           //its value is returned as String.
           StringFormatter u = new StringFormatter();
-          ret = executeNewlevel(jzClass, arg.statementlist, u, 0, -1);
+          ret = executeNewlevel(arg.statementlist, u, 0, -1);
           obj = ret == kException ? JZtxtcmdExecuter.retException:  u.toString();
         }
       } else if(arg.expression !=null){

@@ -49,17 +49,28 @@ public class SelectMask implements MarkMask_ifc
   protected int selectMask;
   
   @Override public int getMark()
-  { return selectMask; }
+  { return this.selectMask; }
   
+  
+  
+  /**Resets some bits of the mask.
+   * @param mask This bits of the {@link SelectMask#selectMask} will be reseted.
+   * @param data not used here.
+   */
   @Override public int setNonMarked(int mask, Object data)
-  { int selectMask1 = selectMask;
-    selectMask &= ~mask;
+  { int selectMask1 = this.selectMask;
+    this.selectMask &= ~mask;
     return selectMask1;
   }
   
+  
+  /**Sets some bits of the mask.
+   * @param mask This bits of the {@link SelectMask#selectMask} will be reseted.
+   * @param data not used here.
+   */
   @Override public int setMarked(int mask, Object data)
-  { int selectMask1 = selectMask;
-    selectMask |= mask;
+  { int selectMask1 = this.selectMask;
+    this.selectMask |= mask;
     return selectMask1;
   }
 }

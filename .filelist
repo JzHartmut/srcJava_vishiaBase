@@ -97,10 +97,10 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2021-01-30 21:54:44  x     JZtxtcmdExecuter.java                    ::        188.121 -0770330714 
+2021-02-06 21:39:05  x     JZtxtcmdExecuter.java                    ::        188.539 -2035860151 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2020-02-02 12:34:06  x     JZtxtcmdScript.java                      ::        113.481 -1919376674 
+2021-02-05 14:29:14  x     JZtxtcmdScript.java                      ::        113.501  1874898666 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -292,7 +292,7 @@
 2012-01-13 20:41:04  x     Removeable.java                          ::          1.095  0388858606 
 2016-09-04 19:23:22  x     ReplaceAlias_ifc.java                    ::          3.027  2081028153 
 2015-08-09 15:53:12  x     RetOrException.java                      ::           .594 -0114585109 
-2013-09-05 10:11:28  x     SelectMask.java                          ::          2.622  0990793746 
+2021-02-06 21:45:38  x     SelectMask.java                          ::          2.897 -0487274019 
 2015-04-25 22:34:23  x     SetLineColumn_ifc.java                   ::          1.045 -1658129807 
 2012-12-20 15:27:36  x     ShortenString.java                       ::          1.254  2002643077 
 2011-02-26 21:31:28  x     Sort.java                                ::          5.416  1121133594 
@@ -307,7 +307,7 @@
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2020-03-14 18:59:29  x     StringFormatter.java                     ::         50.318 -0567263278 
 2020-06-21 22:59:56  x     StringFunctions.java                     ::         53.597 -1199695117 
-2021-01-31 18:10:26  x     StringFunctions_B.java                   ::         24.126 -2010007507 
+2021-02-06 22:08:53  x     StringFunctions_B.java                   ::         22.147  1763679553 
 2019-06-12 08:33:43  x     StringFunctions_C.java                   ::         14.549  0524182854 
 2020-06-28 22:14:40  x     StringPart.java                          ::        122.126 -1563317770 
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 

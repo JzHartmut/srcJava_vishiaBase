@@ -805,7 +805,6 @@ public class JZtxtcmdScript extends CompiledScript
      */
     void writeStructLine(Appendable u) {
       try{
-        u.append(" @").append(srcFile).append(':').append(Integer.toString(srcLine)).append(",").append(Integer.toString(srcColumn)).append("; ").append(elementType);
         switch(elementType){
           case 't': u.append(" text \"").append(textArg).append("\""); break;
           /*
@@ -861,6 +860,8 @@ public class JZtxtcmdScript extends CompiledScript
           case ',': u.append(" errortoOutput "); if(textArg == null){ u.append("off "); } break;
           default: //do nothing. Fo in overridden method.
         }
+        u.append("-").append(elementType).append(" @").append(Integer.toString(srcLine)).append(",").append(Integer.toString(srcColumn)).append(" ").append(srcFile).append(':');
+        
       } catch(IOException exc){
         throw new RuntimeException(exc); //unexpected.
       }
