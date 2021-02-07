@@ -17,6 +17,7 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-02-07 Hartmut new: <code>List ... [ @ <$?keyVariableName> ]</code> 
    * <li>2017-07-12 Hartmut chg: <code>&lt;textExpr?.indent=-3></code> attribute ident to any textExpr, 
    *   hence it is possible to use it in any textDatapath too, for example<pre>
    *   String myString = <:>StartContent
@@ -247,11 +248,8 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " DefBoolVar::= [const <?const>] <definePath?defVariable>  [ = <boolExpr>].\n"  //a text or object or expression
     + " \n"
-    //+ " DefList::= [const <?const>] <definePath?defVariable>  [ =  {<?element> \\{ { <$?elementName> = <\"\"?elementText> ? , } \\} ? , } | = <objExpr?>].\n"  //a text or object or expression
-    + " DefList::= [const <?const>] <definePath?defVariable>  \n"
+    + " DefList::= [const <?const>] <definePath?defVariable> [ @ <$?keyVariableName> ] \n"
     + "[ = \\[ {<?element> \\{ <dataStruct?dataSet> \\} ? , } \\]  ##some { dataSet, ...} \n" 
-    //+ "[ =  {<?element> [ \\{ <dataStruct?dataSet> \\} | <DefVariable?>] ? , } \n" 
-    //+ "[ =  { [ \\{ <dataStruct?dataSet> \\} | <DefVariable>] ? , } \n" 
     + "| = \\[ <dataStruct?>   \\]  ##some String or variable (const) definitions in the container.\n"
     + "| = <objExpr?> [!;]\n"
     + "| = \\[ { <objExpr?objElement> ? , } \\]\n"

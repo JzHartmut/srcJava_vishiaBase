@@ -85,6 +85,8 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-02-07 Hartmut new: <code>List ... [ @ <$?keyVariableName> ]</code> then the List is stored 
+   *   with a Map part to access an element via the value in the named variable. 
    * <li>2021-02-06 Hartmut bugfix: Now variables scriptfile and scriptdir are correct.
    * <li>2020-07-22 Hartmut bugfix: now invoke level.close(): {@link ExecuteLevel#close()}, 
    *   it invokes this.cmdExecuter.close() {@link CmdExecuter#close() }which closes the out and error Thread.
@@ -466,9 +468,45 @@ public class JZtxtcmdExecuter {
     private IndexMultiTable<String, DataAccess.Variable<Object>> new_Variables(){
       return new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
     }
-    
 
+  } //class JzTcMain
+  
+  
+  /**It is a List but also with Map
+   * @author Hartmut Schorrig
+   *
+   */
+  public static class ListMap extends ArrayList<Object> {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -8641598689693432170L;
+    
+    public Map<String, Object> valueMap;
+    
+    void add ( String name, Object data) {
+      this.add(data);
+      if(name !=null) {
+        if(this.valueMap == null) { valueMap = new TreeMap<String, Object>(); }
+        this.valueMap.put(name, data);
+      }
+    }
+    
+    //public Iterable<Object> foreach ( ) { return this.valueList; }
+    
+    /**The get is additional to the List, it accesses the valueMap with the given name as key.
+     * @param name key for access.
+     * @return proper entry to the name or null.
+     * @throws If the get operation is called on a ListMap which has not a valueMap, an Exception is thrown. 
+     *         It is a faulty in programming.
+     */
+    public Object get ( String name ) { return this.valueMap.get(name); }
+    
   }
+  
+  
+  
+  
   private final JzTcMain acc;
   
   /**Variable for any exception while accessing any java resources. It is the $error variable of the script. */
@@ -1802,7 +1840,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       Object value;
       if(statement.statementlist !=null) {
         //the list variable should be build with this statements:
-        ArrayList<Object> valueList = new ArrayList<Object>();
+        ListMap valueList = new ListMap();
         for(JZtxtcmdScript.JZcmditem elementStm: statement.statementlist.statements) {
           char elementType = elementStm.elementType();
           if(elementType == '*') {
@@ -1815,11 +1853,23 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
             level.close();
             if(ret == kException) 
               return ret;
-            else { valueList.add(elementValue); }
+            else {
+              String key = null;
+              if(statement.keyVariableName !=null) {       //do add as Map only if keyVariableName is given, it is List name @keyVariableName = 
+                Object okey = elementValue.get(statement.keyVariableName);
+                if(okey instanceof DataAccess.Variable<?>) {
+                  key = ((DataAccess.Variable<?>)okey).value().toString();
+                }
+                else if(okey !=null) {
+                  key = okey.toString();
+                }
+              }
+              valueList.add(key, elementValue); 
+            }
           } else if (elementStm instanceof JZtxtcmdScript.Subroutine) {
             JZtxtcmdScript.Subroutine stm1 = (JZtxtcmdScript.Subroutine) elementStm;
             DataAccess.Variable<Object> variable = new DataAccess.Variable<Object>('X', stm1.name, stm1);  //create a codeblock (eXectable) variable
-            valueList.add(variable);
+            valueList.add(stm1.name, variable);
           } else if (elementStm instanceof JZtxtcmdScript.DefVariable) {
             //A variable:
             JZtxtcmdScript.DefVariable stm1 = (JZtxtcmdScript.DefVariable) elementStm;
@@ -1832,11 +1882,11 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
               elementValue = evalObject(elementStm, true);
             }
             DataAccess.Variable<Object> variable = new DataAccess.Variable<Object>(elementType, name, elementValue);
-            valueList.add(variable);
+            valueList.add(name, variable);
           } else {
             //Any other expression
             Object elementValue = evalObject(elementStm, true);
-            valueList.add(elementValue);
+            valueList.add(null, elementValue);
           }
         }
         value = valueList;

@@ -410,16 +410,16 @@ public class JZtxtcmdScript extends CompiledScript
   /* (non-Javadoc)
    * @see javax.script.CompiledScript#getEngine()
    */
-  @Override public JZtxtcmdEngine getEngine() { return scriptEngine; }
+  @Override public JZtxtcmdEngine getEngine() { return this.scriptEngine; }
   
   
 
   
-  public JZcmdClass scriptClass(){ return scriptClass; }
+  public JZcmdClass scriptClass(){ return this.scriptClass; }
   
   
   
-  public final Subroutine getMain(){ return mainRoutine; }
+  public final Subroutine getMain(){ return this.mainRoutine; }
   
   
   public Subroutine getSubroutine(CharSequence name){ return subroutinesAll.get(name.toString()); }
@@ -1429,6 +1429,9 @@ public class JZtxtcmdScript extends CompiledScript
   {
     
     //ArrayList<Map<String, String>> elements;
+    
+    /**Name of that variable which value builds the key.*/
+    public String keyVariableName;
     
     boolean bFirst = true;
   
@@ -3230,6 +3233,7 @@ public class JZtxtcmdScript extends CompiledScript
     public StatementList new_mainRoutine(){ 
       scriptfile.mainRoutine = new Subroutine(compiledScript.scriptClass); 
       scriptfile.mainRoutine.statementlist = new StatementList(compiledScript.jzScriptSettings);
+      scriptfile.mainRoutine.srcFile = this.srcFile;
       return scriptfile.mainRoutine.statementlist;
     }
     
