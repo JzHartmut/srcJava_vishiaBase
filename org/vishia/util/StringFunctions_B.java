@@ -189,9 +189,9 @@ public class StringFunctions_B
   }
   
   
-  static private class NumString {final int mline; final String sel; 
-    NumString(int mline, String sel){ this.mline = mline; this.sel = sel;} 
-    @Override public String toString() { return "" + Integer.toHexString(this.mline) + ":" + this.sel; }
+  static private class NumString {final int nline; final String sel; 
+    NumString ( int nline, String sel){ this.nline = nline; this.sel = sel;} 
+    @Override public String toString() { return "" + Integer.toString(this.nline) + ":" + this.sel; }
   }
 
   
@@ -257,30 +257,30 @@ public class StringFunctions_B
           int zSelLine = selLine.length();
           List<NumString> selistItem = selistLine; //new LinkedList<NumString>(); 
           //selistLine.add(selistItem);
-          String sel = null; int mLine = 0;
-          int mLine1 = 0;
+          String sel = null; int nLine = 0;
+          int nLine1 = 0;
           for(int ix = 0; ix < zSelLine; ++ix) {
             char cc = selLine.charAt(ix);
             if(sel == null) {                  //line index
-              if(cc >='0' && cc <= '9') { mLine1 |= 1<<(cc - '0'); }
+              if(cc >='0' && cc <= '9') { nLine1 = /*1<<*/(cc - '0'); }
               else if(cc == ',') { }
               else if(cc == ';') { }
               else if(cc == ' ') { }
-              else if(cc == '=') { mLine = mLine1; }
+              else if(cc == '=') { nLine = nLine1; }
               else { sel = "" + cc; }          // first character
             }
             else if( sel !=null && ", &;+".indexOf(cc) >= 0) {
-              selistItem.add(new NumString(mLine, sel));
+              selistItem.add(new NumString(nLine, sel));
               sel = null;
               if(cc != ',') {
-                mLine1 = 0;             // not a , => remove the table mask
+                nLine1 = 0;             // not a , => remove the table mask
               }
             } else {
               sel += cc;                       //a next char
             }
           } //for ...zSelLine
           if(sel !=null) {    //space finishes an item
-            selistItem.add(new NumString(mLine, sel));
+            selistItem.add(new NumString(nLine, sel));
             sel = null;
           }
         } //while ... zSelAdd
@@ -322,7 +322,7 @@ public class StringFunctions_B
           boolean foundItem = false;
           for(NumString selItem : selistItem) {
             for(int ixLine = 1; ixLine <= cmp.length; ++ixLine) {
-              if(  (selItem.mline ==0 || (selItem.mline & (1<<ixLine)) != 0) //either requested line, or all lines
+              if(  (selItem.nline ==0 || (selItem.nline & (1<<ixLine)) != 0) //either requested line, or all lines
                 && ((mLinesToCheckAll & (1 << ixLine)) !=0)     //exclude line from check which should not be checked. 
                 ) {                                             //ixLine anyway correct for cmp to check against selItem
                 mLinesCheck |= 1 << ixLine;
@@ -339,7 +339,7 @@ public class StringFunctions_B
                   mLinesFound |= 1<< ixLine;         //set the found bit for the line in mask
                 }
               }
-              if((selItem.mline & (1<<ixLine)) != 0) { break; }  //exact this line found, break for.
+              if((selItem.nline & (1<<ixLine)) != 0) { break; }  //exact this line found, break for.
             }//for ixLine
           }//for selItem
           if( (mLinesFound == mLinesCheck)) {

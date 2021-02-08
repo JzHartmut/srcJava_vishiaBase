@@ -1,6 +1,6 @@
 ## may use a different JDK/JRE for Javadoc. Therefore a batch setJAVA_Javadoc.bat may found in the PATH in users space.
 echo on    
-if test "$JAVAC_HOME" = ""; then
+if test -z $JAVAC_HOME; then
   export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
 fi  
 echo JAVAC_HOME = $JAVAC_HOME
@@ -15,20 +15,20 @@ if ! test -d $DSTDIR$DST; then mkdir --parents $DSTDIR$DST ; fi
 ## -nodeprecated 
 export ARGS="-Xdoclint:none -d $DSTDIR$DST -private -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
 echo javadoc $ARGS
-"$JAVAC_HOME"javadoc $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/javadoc.err                                                       
+"$JAVAC_HOME"/bin/javadoc $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/javadoc.err                                                       
 if test -d ../img; then
 	if test ! -d $DSTDIR$DST/img; then mkdir $DSTDIR$DST/img; fi;
   cp ../img/* $DSTDIR$DST/img 
 fi
 
 
-if ! test "$DST_priv" = ""; then
+if ! test -z "$DST_priv"; then
   echo clean $DSTDIR$DST_priv  
   if test -d $DSTDIR$DST_priv; then rm -f -r  $DSTDIR$DST_priv ; fi
   if ! test -d $DSTDIR$DST_priv ; then mkdir --parents $DSTDIR$DST_priv ; fi
   export ARGS="-Xdoclint:none -d $DSTDIR$DST_priv -private -linksource -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
   echo javadoc $ARGS
-  "$JAVAC_HOME"javadoc $ARGS 1> $DSTDIR$DST_priv/javadoc.rpt 2> $DSTDIR$DST_priv/javadoc.err
+  "$JAVAC_HOME"/bin/javadoc $ARGS 1> $DSTDIR$DST_priv/javadoc.rpt 2> $DSTDIR$DST_priv/javadoc.err
   if test -d ../img; then
   	if test ! -d "$DSTDIR$DST"_priv/img; then mkdir "$DSTDIR$DST"_priv/img; fi;
     cp ../img/* "$DSTDIR$DST"_priv/img 
