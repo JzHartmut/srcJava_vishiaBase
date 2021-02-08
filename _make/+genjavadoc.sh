@@ -3,7 +3,7 @@ mkdir --parents $DSTDIR
 #export DSTDIR=D:/vishia/Java/
 
 export DST=docuSrcJava_vishiaBase
-export DST_priv=docuSrcJavaPriv_vishiaBase
+##export DST_priv=docuSrcJavaPriv_vishiaBase
 
 export SRC="-subpackages org.vishia"
 export SRCPATH=..
