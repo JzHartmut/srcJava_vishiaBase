@@ -1,5 +1,6 @@
 package org.vishia.testutil;
 
+import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -38,8 +39,9 @@ public class TestConditionCombi {
    * </ul>
    * @param select text for selection.
    * @return The container parsed from select
+   * @throws ParseException 
    */
-  public static List<List<List<List<NumString>>>> prepareCheckSameItem ( String select ) {
+  private static List<List<List<List<NumString>>>> parseTestCases ( String select, int nrConditions) throws ParseException {
     List<List<List<List<NumString>>>> selistAll = new LinkedList<List<List<List<NumString>>>>(); 
     int zSelAll = select.length();
     int ixSelAll = 0;
@@ -71,21 +73,31 @@ public class TestConditionCombi {
           for(int ix = 0; ix < zSelLine; ++ix) {
             char cc = selLine.charAt(ix);
             if(sel == null) {                  //line index
-              if(cc >='0' && cc <= '9') { nLine1 = /*1<<*/(cc - '0'); }
-              else if(cc == ',') { }
-              else if(cc == ';') { }
-              else if(cc == ' ') { }
-              else if(cc == '=') { nLine = nLine1; }
-              else { sel = "" + cc; }          // first character
-            }
-            else if( sel !=null && ", &;+".indexOf(cc) >= 0) {
-              selistItem.add(new NumString(nLine, sel));
-              sel = null;
-              if(cc != ',') {
-                nLine1 = 0;             // not a , => remove the table mask
+              if(" \n\r\t".indexOf(cc)>=0 && nLine1 ==0) {} //ignore
+              else if(cc >='0' && cc <= '9') { nLine1 = 10*nLine1 + (cc - '0'); }
+              else if(cc == '=') { 
+                nLine = nLine1; sel = ""; 
+                if(nLine <=0 || nLine > nrConditions) {
+                  throw new ParseException("faulty nrCondition =>" + selLine.substring(ix), nLine);
+                }
               }
-            } else {
+              else { throw new ParseException("expected '=', unexpected: =>" + selLine.substring(ix), ix); }          // first character
+            }
+            else if(" \n\r\t".indexOf(cc)>=0 && sel.length()==0) {} //ignore
+            else if( ", \n\r\t&;+".indexOf(cc) >= 0) {
+              selistItem.add(new NumString(nLine, sel));
+              if(cc != ',') {
+                nLine1 = 0;              // not a , => another config number
+                sel = null;              //sel=null forces newly read config number
+              } else {
+                sel = "";
+              }
+            } 
+            else if(Character.isLetterOrDigit(cc) || cc=='_' ){
               sel += cc;                       //a next char
+            }
+            else {
+              throw new ParseException("unexpected: =>" + selLine.substring(ix), ix);  
             }
           } //for ...zSelLine
           if(sel !=null) {    //space finishes an item
@@ -102,103 +114,109 @@ public class TestConditionCombi {
   
   
   public static List<NumString[]> prepareTestCases(String select, int nConditions) {
-    List<List<List<List<NumString>>>> selistAll = prepareCheckSameItem(select);
     
     List<NumString[]> testcasesAll = new LinkedList<NumString[]>();
     
-    
-    
-    for( List<List<List<NumString>>> listOr: selistAll ) {
-      List<List<NumString[]>> combinAnds = new LinkedList<List<NumString[]>>();
-      for (List<List<NumString>> listAnd: listOr) {
-        List<NumString[]> combinAdds = new LinkedList<NumString[]>();
-        for( List<NumString> listAdd: listAnd ) {
-          LinkedList<String>[] conditionsArray = new LinkedList[nConditions];
-          int mCond = 0;
-          for( NumString caseItem: listAdd) {    //sort all members of listAdd to one of its conditionArray.
-            int ixCond = caseItem.nr -1;
-            mCond |= 1<<ixCond;
-            if(conditionsArray[ixCond] ==null) { conditionsArray[ixCond] = new LinkedList<String>(); }
-            conditionsArray[ixCond].add(caseItem.sel);
+    List<List<List<List<NumString>>>> selistAll;
+    try {
+      selistAll = parseTestCases(select, nConditions);
+      for( List<List<List<NumString>>> listOr: selistAll ) {
+        List<List<NumString[]>> combinAnds = new LinkedList<List<NumString[]>>();
+        for (List<List<NumString>> listAnd: listOr) {
+          List<NumString[]> combinAdds = new LinkedList<NumString[]>();
+          for( List<NumString> listAdd: listAnd ) {
+            @SuppressWarnings("unchecked")
+            LinkedList<String>[] conditionsArray = new LinkedList[nConditions];
+            @SuppressWarnings("unused")
+            int mCond = 0;
+            for( NumString caseItem: listAdd) {    //sort all members of listAdd to one of its conditionArray.
+              int ixCond = caseItem.nr -1;
+              mCond |= 1<<ixCond;
+              if(conditionsArray[ixCond] ==null) { conditionsArray[ixCond] = new LinkedList<String>(); }
+              conditionsArray[ixCond].add(caseItem.sel);
+              Debugutil.stop();
+            }
+            Debugutil.stop();
+            List<NumString[]> combinations = new LinkedList<NumString[]>();
+            combinations.add(new NumString[nConditions]);  //with all entries empty.
+            for(int ixCond = 0; ixCond < nConditions; ++ixCond) {
+              List<String> conditions = conditionsArray[ixCond];
+              if(conditions !=null) {
+                boolean bFirst = true;
+                LinkedList<NumString[]> combinationsNew = new LinkedList<NumString[]>();
+                for(String condition : conditions) {
+                  for(NumString[] testcase: combinations) {
+                    NumString[] testcaseNew;
+                    if(bFirst) {
+                      testcaseNew = testcase; //first, use the existing one
+                      bFirst = false;
+                    } else {
+                      testcaseNew = new NumString[nConditions];
+                      for(int ixCase = 0; ixCase < testcase.length; ++ixCase) {
+                        testcaseNew[ixCase] = testcase[ixCase];   //duplicate the case
+                      }
+                    }
+                    testcaseNew[ixCond] = new NumString(ixCond+1, condition);
+                    combinationsNew.add(testcaseNew);
+                  }
+                }
+                combinations = combinationsNew;     //all test cases with condition applied
+              }
+            }
+            combinAdds.addAll(combinations);
             Debugutil.stop();
           }
           Debugutil.stop();
-          List<NumString[]> combinations = new LinkedList<NumString[]>();
-          combinations.add(new NumString[nConditions]);  //with all entries empty.
-          for(int ixCond = 0; ixCond < nConditions; ++ixCond) {
-            List<String> conditions = conditionsArray[ixCond];
-            if(conditions !=null) {
-              boolean bFirst = true;
-              LinkedList<NumString[]> combinationsNew = new LinkedList<NumString[]>();
-              for(String condition : conditions) {
-                for(NumString[] testcase: combinations) {
-                  NumString[] testcaseNew;
-                  if(bFirst) {
-                    testcaseNew = testcase; //first, use the existing one
-                    bFirst = false;
+          combinAnds.add(combinAdds);               //contains the ... & .... expressions
+        } 
+        //combin the ands
+        List<NumString[]> testcases = new LinkedList<NumString[]>();
+        boolean bFirstCombinAnd = true;
+        for(List<NumString[]> combinAnd: combinAnds) {  //re-work with the ... + ... 
+          //boolean bFirstAnd = true;
+          //List<NumString[]> casesAdd = new LinkedList<NumString[]>();
+          //for(List<NumString[]> combinCases: combinAdds) {     //re-work with 1=Ab,Cd; 2=Xy; 
+          List<NumString[]> testcasesNew = new LinkedList<NumString[]>();
+          boolean bFirstVariant = true;  
+          for(NumString[] combin : combinAnd) {          //all testcase of a part till ... +
+              if(bFirstCombinAnd) {
+                testcasesNew.add(combin);                  //first: copy only the testcases from combinations
+                //casesAnd.add(testcase);
+              } else {
+                
+                for(NumString[] testcase: testcases) {
+                  if(bFirstVariant) {
+                    testcasesNew.add(testcase);
+                    for(int ix =0; ix < nConditions; ++ix) {
+                      if(combin[ix] !=null) {
+                        testcase[ix] = combin[ix];  //merge it.
+                      }
+                    }
                   } else {
-                    testcaseNew = new NumString[nConditions];
-                    for(int ixCase = 0; ixCase < testcase.length; ++ixCase) {
-                      testcaseNew[ixCase] = testcase[ixCase];   //duplicate the case
+                    NumString[] testcaseNew = new NumString[nConditions];
+                    testcasesNew.add(testcaseNew);
+                    for(int ix =0; ix < nConditions; ++ix) {
+                      if(combin[ix] !=null) {
+                        testcaseNew[ix] = combin[ix];  //merge it.
+                      } else {
+                        testcaseNew[ix] = testcase[ix];
+                      }
                     }
                   }
-                  testcaseNew[ixCond] = new NumString(ixCond+1, condition);
-                  combinationsNew.add(testcaseNew);
                 }
+                
               }
-              combinations = combinationsNew;     //all test cases with condition applied
-            }
-          }
-          combinAdds.addAll(combinations);
-          Debugutil.stop();
+              bFirstVariant = false;
+            }  
+          bFirstCombinAnd = false;
+          testcases = testcasesNew;
+             //}
         }
-        Debugutil.stop();
-        combinAnds.add(combinAdds);               //contains the ... & .... expressions
-      } 
-      //combin the ands
-      List<NumString[]> testcases = new LinkedList<NumString[]>();
-      boolean bFirstCombinAnd = true;
-      for(List<NumString[]> combinAnd: combinAnds) {  //re-work with the ... + ... 
-        //boolean bFirstAnd = true;
-        //List<NumString[]> casesAdd = new LinkedList<NumString[]>();
-        //for(List<NumString[]> combinCases: combinAdds) {     //re-work with 1=Ab,Cd; 2=Xy; 
-        List<NumString[]> testcasesNew = new LinkedList<NumString[]>();
-        boolean bFirstVariant = true;  
-        for(NumString[] combin : combinAnd) {          //all testcase of a part till ... +
-            if(bFirstCombinAnd) {
-              testcasesNew.add(combin);                  //first: copy only the testcases from combinations
-              //casesAnd.add(testcase);
-            } else {
-              
-              for(NumString[] testcase: testcases) {
-                if(bFirstVariant) {
-                  testcasesNew.add(testcase);
-                  for(int ix =0; ix < nConditions; ++ix) {
-                    if(combin[ix] !=null) {
-                      testcase[ix] = combin[ix];  //merge it.
-                    }
-                  }
-                } else {
-                  NumString[] testcaseNew = new NumString[nConditions];
-                  testcasesNew.add(testcaseNew);
-                  for(int ix =0; ix < nConditions; ++ix) {
-                    if(combin[ix] !=null) {
-                      testcaseNew[ix] = combin[ix];  //merge it.
-                    } else {
-                      testcaseNew[ix] = testcase[ix];
-                    }
-                  }
-                }
-              }
-              
-            }
-            bFirstVariant = false;
-          }  
-        bFirstCombinAnd = false;
-        testcases = testcasesNew;
-           //}
+        testcasesAll.addAll(testcases);
       }
-      testcasesAll.addAll(testcases);
+    } catch (ParseException exc) {
+      // TODO Auto-generated catch block
+      System.out.println(exc.getMessage());
     }
     return testcasesAll;
   }

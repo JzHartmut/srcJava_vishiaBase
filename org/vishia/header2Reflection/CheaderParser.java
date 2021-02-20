@@ -326,7 +326,7 @@ public class CheaderParser {
     /**Type of the HeaderBlockEntry as String, checked in JZcmd. */
     HeaderBlock(HeaderBlock parent, String whatisit){ super(whatisit); this.parent = parent; }
   
-    List<HeaderBlockEntry> entries = new LinkedList<HeaderBlockEntry>();
+    public List<HeaderBlockEntry> entries = new LinkedList<HeaderBlockEntry>();
   
     /**The last created entry in entries, to set something in. */
     HeaderBlockEntry currEntry;

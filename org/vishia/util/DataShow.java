@@ -436,6 +436,27 @@ public class DataShow extends ObjectId
         }
         out.append("\n      </ol>");
       }
+    } else if(data instanceof List) {
+      ////
+      List<?> list = (List<?>)data;
+      out.append(" List length = ").append(Integer.toString(list.size()));
+      if(list.size() >0) {
+        out.append("\n      <ul start=\"0\">");
+        for(Object item: list) {
+          outField("*", item, item.getClass(), null, out, 0);
+          /*  
+          out.append("\n        <li>");
+          if(item ==null) {
+            out.append(" = null");
+          } else {
+            addRef(item);
+            outDataShort(item, item.getClass(), item.toString(), out);   
+          }
+          out.append("</li>");
+          */
+        }
+        out.append("\n      </ol>");
+      }
     } else {
       out.append("<p>").append(" = ").append(content).append("</p>");
       out.append("\n  <h3>this</h3>");      
