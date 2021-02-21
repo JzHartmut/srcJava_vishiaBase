@@ -1509,6 +1509,8 @@ type::= [<?@modifier>volatile|const|]
     
     public boolean constPointer() { return pointer_ ==null ? false : pointer_.get(0).constPointer; }
     
+    public StructOrClassDef typeClass ( ) { return typeClass; }
+    
     @Override public String toString(){ return name; }
   }
   

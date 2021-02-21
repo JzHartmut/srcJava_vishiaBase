@@ -183,6 +183,192 @@ public class SmlkSfn {
     
     public ZbnfFB() { }
     
+    
+    /**
+     * @param zfb
+     * @param zbnfOper if null, does nothing
+     */
+    public void checkArgs(ZbnfOpData zbnfOper) {
+      if(zbnfOper == null) return;
+      CheaderParser.MethodDef zbnfOp = zbnfOper.zbnfOp;
+      for(CheaderParser.AttributeOrTypedef arg : zbnfOp.args) {
+        String name = arg.name;
+        if(name.equals("thiz")) {
+          if(this.thizAttr == null) { 
+            this.thizAttr = arg;
+            this.bStatic = false;
+            this.sBasedOnObject = arg.type.typeClass().sBasedOnObjectJc;
+        } }
+        else if(name.equals("othiz")) {
+          this.bStatic = false; this.bObject = true;
+        }
+        else if(name.equals("Tstep")) {
+          if(this.paramPortIx.get(name) ==null) {
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", this.nrofParams ++);
+            this.paramPorts.add(zbnfPort);
+            this.paramPortIx.put(name, zbnfPort);
+            this.paramsNoTunable.put(name, zbnfPort);
+            this.allArgsIx.put(name, zbnfPort);
+            this.ixParamTstep = zbnfPort.nr;
+            this.nrofParamsNoTunable +=1;
+          }
+        }
+        else if(name.endsWith("_y")) {
+          //name = name.substring(0, name.length()-2);
+          if(this.allArgsOutIx.get(name) ==null) {
+            String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mOutputInit_Entry_DefPortType_emC" : "mOutputStep_Entry_DefPortType_emC";
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, this.nrofOutputs ++);
+            this.outPorts.add(zbnfPort);
+            this.allArgsOutIx.put(name, zbnfPort);
+            this.allArgsIx.put(name, zbnfPort);
+          }
+        }
+        else if(name.endsWith("_param")) {
+          //name = name.substring(0, name.length()-6);
+          if(this.paramPortIx.get(name) ==null) {
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", this.nrofParams ++);
+            this.paramPorts.add(zbnfPort);
+            this.paramPortIx.put(name, zbnfPort);
+            this.allArgsIx.put(name, zbnfPort);
+            if(zbnfOper.whatisit.bParamIsTunable && !arg.type.name.equals("StringJc")) {
+              this.bitsParamTunable |= 1 << zbnfPort.nr;
+              this.nrofParamsTunable +=1;
+            } else {
+              this.nrofParamsNoTunable +=1;
+              this.paramsNoTunable.put(name, zbnfPort);
+            }
+          }
+        }
+        else if(zbnfOper.whatisit.bArgIsNonTunableParam) {
+          if(this.paramPortIx.get(name) ==null) {
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", this.nrofParams ++);
+            this.paramPorts.add(zbnfPort);
+            this.paramPortIx.put(name, zbnfPort);
+            this.allArgsIx.put(name, zbnfPort);
+            this.nrofParamsNoTunable +=1;
+            this.paramsNoTunable.put(name, zbnfPort);
+          }
+        }
+        else {
+          if(this.allArgsInIx.get(name) ==null) {
+            String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mInputInit_Entry_DefPortType_emC" : "mInputStep_Entry_DefPortType_emC";
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, this.nrofInputs ++);
+            this.inPorts.add(zbnfPort);
+            this.allArgsInIx.put(name, zbnfPort);
+            this.allArgsIx.put(name, zbnfPort);
+          }
+        }
+      }
+    }
+
+
+    public void prepareObjectFB() {
+      
+      if(this.op.description.simulinkTag.contains("step-in")) {
+        String name = "step-in";
+        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepIn_Entry_DefPortType_emC", this.nrofInputs ++);
+        this.inPorts.add(zbnfPort);
+        this.allArgsInIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+      }
+      if(this.op.description.simulinkTag.contains("step-out")) {
+        String name = "step-out";
+        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepOut_Entry_DefPortType_emC", this.nrofOutputs ++);
+        this.outPorts.add(zbnfPort);
+        this.allArgsOutIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+      }
+      
+      
+      this.ixInputStep = this.nrofInputs;
+      this.ixOutputStep = this.nrofOutputs;
+      this.ixParamStep = this.nrofParams;
+      checkArgs(this.dataOp);            // build ports & params, firstly from Object-FB
+      
+      this.ixInputUpd = this.nrofInputs;
+      this.ixParamUpd = this.nrofParams;
+      checkArgs(this.dataUpd);           // build ports & params, from update
+      
+      this.ixInputStep2 = this.nrofInputs;
+      this.ixOutputStep2 = this.nrofOutputs;
+      this.ixParamStep2 = this.nrofParams;
+      for(ZbnfOpData zbnfOper : this.operations) {
+        checkArgs(zbnfOper);               // build ports & params, from all other operations
+      }
+      
+      this.ixInputInit = this.nrofInputs;
+      this.ixOutputInit = this.nrofOutputs;
+      this.ixParamInit = this.nrofParams;
+      if(this.init !=null) {
+        checkArgs(this.dataInit);            // build ports & params, from init
+      }
+      
+      this.ixParamCtor = this.nrofParams;
+      if(this.ctor !=null) {
+        checkArgs(this.dataCtor);            // build params, from ctor
+      }
+      this.ixDworkThiz = 0;
+      this.nrofDwork = 1;
+    
+      if(this.ctor == null && !this.bStatic) {
+        String name = "thiz";
+        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mInputStep_Entry_DefPortType_emC", this.nrofInputs ++);
+        this.ixInputThiz = zbnfPort.nr;
+        this.inPorts.add(zbnfPort);
+        this.allArgsInIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+      }
+      if(this.thizAttr == null && this.ctor.type !=null) { // return type of ctor is default the type of FB
+        this.thizAttr = new CheaderParser.AttributeOrTypedef("return");
+        this.thizAttr.type = this.ctor.type;
+        this.thizAttr.name = "return";                         // elsewhere it needs an argument thiz for the type.
+      }                                                        // or it is static, without thiz (Operation-FB) 
+      
+      if(this.ctor != null && !this.op.description.simulinkTag.contains("no-thizStep")) {
+        String name = "thizo";
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", "mOutputThizStep_Entry_DefPortType_emC", this.nrofOutputs ++);
+        this.ixOutputThizStep = zbnfPort.nr;
+        this.outPorts.add(zbnfPort);
+        this.allArgsOutIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+      }
+      if(this.ctor != null && !this.op.description.simulinkTag.contains("no-thizInit")) {
+        String name = "ithizo";
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tinit", "mOutputThizInit_Entry_DefPortType_emC", this.nrofOutputs ++);
+        this.ixOutputThizInit = zbnfPort.nr;
+        this.outPorts.add(zbnfPort);
+        this.allArgsOutIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+      }
+    
+    
+    }
+
+
+    void prepareOperationsFB ( CheaderParser.MethodDef zbnfOp) {
+      this.name = zbnfOp.name;
+      this.dataOp = new ZbnfOpData(zbnfOp, "Tstep", Whatisit.oper);
+      this.op = zbnfOp;
+      if(this.name.equals("addObj_DataNode_Inspc"))
+        Debugutil.stop();
+      checkArgs(this.dataOp);          // build ports & params, firstly from Object-FB
+      if(this.thizAttr !=null) {
+        String name = "thiz";
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", "mInputStep_Entry_DefPortType_emC", this.nrofInputs ++);
+        this.inPorts.add(zbnfPort);
+        this.allArgsInIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+        this.ixInputThiz = zbnfPort.nr;
+      }
+      this.ixInputInit = this.ixInputUpd = this.ixInputStep2 = this.nrofInputs;
+      this.ixOutputInit = this.ixOutputStep2 = this.nrofOutputs;
+      this.ixParamInit = this.ixParamUpd = this.ixParamStep2 = this.ixParamCtor = this.nrofParams;
+      this.isFBstep = true;
+      this.ixDworkThiz = -1;
+      this.nrofDwork = 0;
+      
+    }
+    
     @Override public String toString() { return this.name; }
   }
   
@@ -207,169 +393,6 @@ public class SmlkSfn {
     }
   }
   
-  
-  
-  
-  /**
-   * @param zfb
-   * @param zbnfOper if null, does nothing
-   */
-  public static void checkArgs(ZbnfFB zfb, ZbnfOpData zbnfOper) {
-    if(zbnfOper == null) return;
-    CheaderParser.MethodDef zbnfOp = zbnfOper.zbnfOp;
-    for(CheaderParser.AttributeOrTypedef arg : zbnfOp.args) {
-      String name = arg.name;
-      if(name.equals("thiz")) {
-        if(zfb.thizAttr == null) { zfb.thizAttr = arg; }
-        zfb.bStatic = false;
-      }
-      else if(name.equals("othiz")) {
-        zfb.bStatic = false; zfb.bObject = true;
-      }
-      else if(name.equals("Tstep")) {
-        if(zfb.paramPortIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", zfb.nrofParams ++);
-          zfb.paramPorts.add(zbnfPort);
-          zfb.paramPortIx.put(name, zbnfPort);
-          zfb.paramsNoTunable.put(name, zbnfPort);
-          zfb.allArgsIx.put(name, zbnfPort);
-          zfb.ixParamTstep = zbnfPort.nr;
-          zfb.nrofParamsNoTunable +=1;
-        }
-      }
-      else if(name.endsWith("_y")) {
-        //name = name.substring(0, name.length()-2);
-        if(zfb.allArgsOutIx.get(name) ==null) {
-          String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mOutputInit_Entry_DefPortType_emC" : "mOutputStep_Entry_DefPortType_emC";
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, zfb.nrofOutputs ++);
-          zfb.outPorts.add(zbnfPort);
-          zfb.allArgsOutIx.put(name, zbnfPort);
-          zfb.allArgsIx.put(name, zbnfPort);
-        }
-      }
-      else if(name.endsWith("_param")) {
-        //name = name.substring(0, name.length()-6);
-        if(zfb.paramPortIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", zfb.nrofParams ++);
-          zfb.paramPorts.add(zbnfPort);
-          zfb.paramPortIx.put(name, zbnfPort);
-          zfb.allArgsIx.put(name, zbnfPort);
-          if(zbnfOper.whatisit.bParamIsTunable && !arg.type.name.equals("StringJc")) {
-            zfb.bitsParamTunable |= 1 << zbnfPort.nr;
-            zfb.nrofParamsTunable +=1;
-          } else {
-            zfb.nrofParamsNoTunable +=1;
-            zfb.paramsNoTunable.put(name, zbnfPort);
-          }
-        }
-      }
-      else if(zbnfOper.whatisit.bArgIsNonTunableParam) {
-        if(zfb.paramPortIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", zfb.nrofParams ++);
-          zfb.paramPorts.add(zbnfPort);
-          zfb.paramPortIx.put(name, zbnfPort);
-          zfb.allArgsIx.put(name, zbnfPort);
-          zfb.nrofParamsNoTunable +=1;
-          zfb.paramsNoTunable.put(name, zbnfPort);
-        }
-      }
-      else {
-        if(zfb.allArgsInIx.get(name) ==null) {
-          String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mInputInit_Entry_DefPortType_emC" : "mInputStep_Entry_DefPortType_emC";
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, zfb.nrofInputs ++);
-          zfb.inPorts.add(zbnfPort);
-          zfb.allArgsInIx.put(name, zbnfPort);
-          zfb.allArgsIx.put(name, zbnfPort);
-        }
-      }
-    }
-  }
-
-  
-  
-  
-  
-  public static void checkArgsObjectFB(ZbnfFB zfb) {
-    
-    if(zfb.op.description.simulinkTag.contains("step-in")) {
-      String name = "step-in";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepIn_Entry_DefPortType_emC", zfb.nrofInputs ++);
-      zfb.inPorts.add(zbnfPort);
-      zfb.allArgsInIx.put(name, zbnfPort);
-      zfb.allArgsIx.put(name, zbnfPort);
-    }
-    if(zfb.op.description.simulinkTag.contains("step-out")) {
-      String name = "step-out";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepOut_Entry_DefPortType_emC", zfb.nrofOutputs ++);
-      zfb.outPorts.add(zbnfPort);
-      zfb.allArgsOutIx.put(name, zbnfPort);
-      zfb.allArgsIx.put(name, zbnfPort);
-    }
-    
-    
-    zfb.ixInputStep = zfb.nrofInputs;
-    zfb.ixOutputStep = zfb.nrofOutputs;
-    zfb.ixParamStep = zfb.nrofParams;
-    checkArgs(zfb, zfb.dataOp);            // build ports & params, firstly from Object-FB
-    
-    zfb.ixInputUpd = zfb.nrofInputs;
-    zfb.ixParamUpd = zfb.nrofParams;
-    checkArgs(zfb, zfb.dataUpd);           // build ports & params, from update
-    
-    zfb.ixInputStep2 = zfb.nrofInputs;
-    zfb.ixOutputStep2 = zfb.nrofOutputs;
-    zfb.ixParamStep2 = zfb.nrofParams;
-    for(ZbnfOpData zbnfOper : zfb.operations) {
-      checkArgs(zfb, zbnfOper);               // build ports & params, from all other operations
-    }
-    
-    zfb.ixInputInit = zfb.nrofInputs;
-    zfb.ixOutputInit = zfb.nrofOutputs;
-    zfb.ixParamInit = zfb.nrofParams;
-    if(zfb.init !=null) {
-      checkArgs(zfb, zfb.dataInit);            // build ports & params, from init
-    }
-    
-    zfb.ixParamCtor = zfb.nrofParams;
-    if(zfb.ctor !=null) {
-      checkArgs(zfb, zfb.dataCtor);            // build params, from ctor
-    }
-    zfb.ixDworkThiz = 0;
-    zfb.nrofDwork = 1;
-
-    if(zfb.ctor == null && !zfb.bStatic) {
-      String name = "thiz";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mInputStep_Entry_DefPortType_emC", zfb.nrofInputs ++);
-      zfb.ixInputThiz = zbnfPort.nr;
-      zfb.inPorts.add(zbnfPort);
-      zfb.allArgsInIx.put(name, zbnfPort);
-      zfb.allArgsIx.put(name, zbnfPort);
-    }
-    if(zfb.thizAttr == null && zfb.ctor.type !=null) { // return type of ctor is default the type of FB
-      zfb.thizAttr = new CheaderParser.AttributeOrTypedef("return");
-      zfb.thizAttr.type = zfb.ctor.type;
-      zfb.thizAttr.name = "return";                         // elsewhere it needs an argument thiz for the type.
-    }                                                        // or it is static, without thiz (Operation-FB) 
-    
-    if(zfb.ctor != null && !zfb.op.description.simulinkTag.contains("no-thizStep")) {
-      String name = "thizo";
-      ZbnfPort zbnfPort = new ZbnfPort(zfb.thizAttr, name, "Tstep", "mOutputThizStep_Entry_DefPortType_emC", zfb.nrofOutputs ++);
-      zfb.ixOutputThizStep = zbnfPort.nr;
-      zfb.outPorts.add(zbnfPort);
-      zfb.allArgsOutIx.put(name, zbnfPort);
-      zfb.allArgsIx.put(name, zbnfPort);
-    }
-    if(zfb.ctor != null && !zfb.op.description.simulinkTag.contains("no-thizInit")) {
-      String name = "ithizo";
-      ZbnfPort zbnfPort = new ZbnfPort(zfb.thizAttr, name, "Tinit", "mOutputThizInit_Entry_DefPortType_emC", zfb.nrofOutputs ++);
-      zfb.ixOutputThizInit = zbnfPort.nr;
-      zfb.outPorts.add(zbnfPort);
-      zfb.allArgsOutIx.put(name, zbnfPort);
-      zfb.allArgsIx.put(name, zbnfPort);
-    }
-
-  
-  }
   
   
   
@@ -422,27 +445,7 @@ public class SmlkSfn {
               else if(simulinkTag.contains("Operation-FB")) {
                 //                                           // yet a new FB is found as Operation-FB
                 ZbnfFB zfbOp = new ZbnfFB();   // write it to a new ZbnfFB
-                zfbOp.name = zbnfOp.name;
-                zfbOp.sBasedOnObject = zfb.sBasedOnObject;
-                zfbOp.dataOp = new ZbnfOpData(zbnfOp, "Tstep", Whatisit.oper);
-                zfbOp.op = zbnfOp;
-                if(zfbOp.name.equals("addObj_DataNode_Inspc"))
-                  Debugutil.stop();
-                checkArgs(zfbOp, zfbOp.dataOp);          // build ports & params, firstly from Object-FB
-                if(zfbOp.thizAttr !=null) {
-                  String name = "thiz";
-                  ZbnfPort zbnfPort = new ZbnfPort(zfbOp.thizAttr, name, "Tstep", "mInputStep_Entry_DefPortType_emC", zfbOp.nrofInputs ++);
-                  zfbOp.inPorts.add(zbnfPort);
-                  zfbOp.allArgsInIx.put(name, zbnfPort);
-                  zfbOp.allArgsIx.put(name, zbnfPort);
-                  zfbOp.ixInputThiz = zbnfPort.nr;
-                }
-                zfbOp.ixInputInit = zfbOp.ixInputUpd = zfbOp.ixInputStep2 = zfbOp.nrofInputs;
-                zfbOp.ixOutputInit = zfbOp.ixOutputStep2 = zfbOp.nrofOutputs;
-                zfbOp.ixParamInit = zfbOp.ixParamUpd = zfbOp.ixParamStep2 = zfbOp.ixParamCtor = zfbOp.nrofParams;
-                zfbOp.isFBstep = true;
-                zfbOp.ixDworkThiz = -1;
-                zfbOp.nrofDwork = 0;
+                zfbOp.prepareOperationsFB(zbnfOp);
                 fblocks.add(zfbOp);
                 //                                           // the current zfb remain active
               } 
@@ -452,7 +455,7 @@ public class SmlkSfn {
                 zfb.name = zbnfOp.name;                   // yet a new FB is found as Object-FB
                 if(zfb.name.equals("param_PIDf_Ctrl_emC"))
                   Debugutil.stop();
-                checkArgsObjectFB(zfb);
+                zfb.prepareObjectFB();
                 fblocks.add(zfb);
                 ZbnfFB zfbnew = new ZbnfFB();
                 zfbnew.sBasedOnObject = zfb.sBasedOnObject;
