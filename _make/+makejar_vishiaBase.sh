@@ -14,7 +14,7 @@ echo script $0
 #  it is not necessary the change this VERSION because the generated content is the same.
 #The next line is the version for vishiaMiniSys:
 export VERSION_MINISYS="2020-12-26"
-export VERSION_VISHIABASE="2021-02-09"
+export VERSION_VISHIABASE="2021-02-21"
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSION
@@ -83,6 +83,11 @@ export FILE1SRC=""
 
 #now run the common script:
 ./-makejar-coreScript.sh
+
+if test -f $DEPLOY-$VERSION.jar -a -d D:/vishia/Java/libStd; then
+  cp $DEPLOY-$VERSION.jar D:/vishia/Java/libStd/vishiaBase.jar
+  ls -l D:/vishia/Java/libStd
+fi  
 
 
 

@@ -8,6 +8,7 @@ import java.util.TreeMap;
 import org.vishia.header2Reflection.CheaderParser;
 import org.vishia.header2Reflection.CheaderParser.AttributeOrTypedef;
 import org.vishia.header2Reflection.CheaderParser.ZbnfResultData;
+import org.vishia.util.Debugutil;
 
 /**This class supports generation of Simulink S-Functions from header files. 
  * 
@@ -78,12 +79,14 @@ public class SmlkSfn {
     final CheaderParser.AttributeOrTypedef zbnfArg;
     final String name;
     final String tstep;
+    final String sEnum_SetDefPortTypes;
     final int nr;
     
-    public ZbnfPort(AttributeOrTypedef zbnfArg, String name, String tstep, int nr) {
+    public ZbnfPort(AttributeOrTypedef zbnfArg, String name, String tstep, String sEnum_SetDefPortTypes, int nr) {
       this.zbnfArg = zbnfArg;
       this.name = name;
       this.tstep = tstep;
+      this.sEnum_SetDefPortTypes = sEnum_SetDefPortTypes;
       this.nr = nr;
     }
     
@@ -103,6 +106,9 @@ public class SmlkSfn {
     public boolean bObject;
     
     public boolean bStatic = true;
+    
+    /**Type of thiz, remain null for static. */
+    public CheaderParser.AttributeOrTypedef thizAttr;
     
     /**A FBlock with only one step time. Simulink: Block bases.
      * The step time may be explicitly by param Tstep or inherit from in/outputs. */
@@ -184,16 +190,18 @@ public class SmlkSfn {
   
   
   enum Whatisit {
-    ctor(true, false),
-    dtor(false, false), 
-    init(false, false),
-    oper(false, true),
-    defTcl(false, false),
-    defPortTypes(false, false);
+    ctor(true, true, false),
+    dtor(false, false, false), 
+    init(true, false, false),
+    oper(false, false, true),
+    defTcl(false, false, false),
+    defPortTypes(false, false, false);
     final boolean bArgIsNonTunableParam;
     final boolean bParamIsTunable;
+    final boolean bInit;
     
-    Whatisit( boolean bArgParam, boolean bParamTunable) {
+    Whatisit( boolean bInit, boolean bArgParam, boolean bParamTunable) {
+      this.bInit = bInit;
       this.bArgIsNonTunableParam = bArgParam;
       this.bParamIsTunable = bParamTunable;
     }
@@ -203,70 +211,75 @@ public class SmlkSfn {
   
   
   /**
-   * @param zbnfFB
+   * @param zfb
    * @param zbnfOper if null, does nothing
    */
-  public static void checkArgs(ZbnfFB zbnfFB, ZbnfOpData zbnfOper) {
+  public static void checkArgs(ZbnfFB zfb, ZbnfOpData zbnfOper) {
     if(zbnfOper == null) return;
     CheaderParser.MethodDef zbnfOp = zbnfOper.zbnfOp;
     for(CheaderParser.AttributeOrTypedef arg : zbnfOp.args) {
       String name = arg.name;
       if(name.equals("thiz")) {
-        zbnfFB.bStatic = false;
+        if(zfb.thizAttr == null) { zfb.thizAttr = arg; }
+        zfb.bStatic = false;
       }
       else if(name.equals("othiz")) {
-        zbnfFB.bStatic = false; zbnfFB.bObject = true;
+        zfb.bStatic = false; zfb.bObject = true;
       }
       else if(name.equals("Tstep")) {
-        if(zbnfFB.paramPortIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, zbnfFB.nrofParams ++);
-          zbnfFB.paramPorts.add(zbnfPort);
-          zbnfFB.paramPortIx.put(name, zbnfPort);
-          zbnfFB.paramsNoTunable.put(name, zbnfPort);
-          zbnfFB.allArgsIx.put(name, zbnfPort);
-          zbnfFB.ixParamStep = zbnfPort.nr;
-          zbnfFB.nrofParamsNoTunable +=1;
+        if(zfb.paramPortIx.get(name) ==null) {
+          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", zfb.nrofParams ++);
+          zfb.paramPorts.add(zbnfPort);
+          zfb.paramPortIx.put(name, zbnfPort);
+          zfb.paramsNoTunable.put(name, zbnfPort);
+          zfb.allArgsIx.put(name, zbnfPort);
+          zfb.ixParamTstep = zbnfPort.nr;
+          zfb.nrofParamsNoTunable +=1;
         }
       }
       else if(name.endsWith("_y")) {
-        name = name.substring(0, name.length()-2);
-        if(zbnfFB.allArgsOutIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, zbnfFB.nrofOutputs ++);
-          zbnfFB.outPorts.add(zbnfPort);
-          zbnfFB.allArgsOutIx.put(name, zbnfPort);
-          zbnfFB.allArgsIx.put(name, zbnfPort);
+        //name = name.substring(0, name.length()-2);
+        if(zfb.allArgsOutIx.get(name) ==null) {
+          String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mOutputInit_Entry_DefPortType_emC" : "mOutputStep_Entry_DefPortType_emC";
+          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, zfb.nrofOutputs ++);
+          zfb.outPorts.add(zbnfPort);
+          zfb.allArgsOutIx.put(name, zbnfPort);
+          zfb.allArgsIx.put(name, zbnfPort);
         }
       }
       else if(name.endsWith("_param")) {
-        name = name.substring(0, name.length()-6);
-        if(zbnfFB.paramPortIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, zbnfFB.nrofParams ++);
-          zbnfFB.paramPorts.add(zbnfPort);
-          zbnfFB.paramPortIx.put(name, zbnfPort);
-          zbnfFB.allArgsIx.put(name, zbnfPort);
-          if(zbnfOper.whatisit.bParamIsTunable) {
-            zbnfFB.bitsParamTunable |= 1 << zbnfPort.nr;
-            zbnfFB.nrofParamsTunable +=1;
+        //name = name.substring(0, name.length()-6);
+        if(zfb.paramPortIx.get(name) ==null) {
+          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", zfb.nrofParams ++);
+          zfb.paramPorts.add(zbnfPort);
+          zfb.paramPortIx.put(name, zbnfPort);
+          zfb.allArgsIx.put(name, zbnfPort);
+          if(zbnfOper.whatisit.bParamIsTunable && !arg.type.name.equals("StringJc")) {
+            zfb.bitsParamTunable |= 1 << zbnfPort.nr;
+            zfb.nrofParamsTunable +=1;
           } else {
-            zbnfFB.nrofParamsNoTunable +=1;
+            zfb.nrofParamsNoTunable +=1;
+            zfb.paramsNoTunable.put(name, zbnfPort);
           }
         }
       }
       else if(zbnfOper.whatisit.bArgIsNonTunableParam) {
-        if(zbnfFB.paramPortIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, zbnfFB.nrofParams ++);
-          zbnfFB.paramPorts.add(zbnfPort);
-          zbnfFB.paramPortIx.put(name, zbnfPort);
-          zbnfFB.allArgsIx.put(name, zbnfPort);
-          zbnfFB.nrofParamsNoTunable +=1;
+        if(zfb.paramPortIx.get(name) ==null) {
+          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", zfb.nrofParams ++);
+          zfb.paramPorts.add(zbnfPort);
+          zfb.paramPortIx.put(name, zbnfPort);
+          zfb.allArgsIx.put(name, zbnfPort);
+          zfb.nrofParamsNoTunable +=1;
+          zfb.paramsNoTunable.put(name, zbnfPort);
         }
       }
       else {
-        if(zbnfFB.allArgsInIx.get(name) ==null) {
-          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, zbnfFB.nrofInputs ++);
-          zbnfFB.inPorts.add(zbnfPort);
-          zbnfFB.allArgsInIx.put(name, zbnfPort);
-          zbnfFB.allArgsIx.put(name, zbnfPort);
+        if(zfb.allArgsInIx.get(name) ==null) {
+          String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mInputInit_Entry_DefPortType_emC" : "mInputStep_Entry_DefPortType_emC";
+          ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, zfb.nrofInputs ++);
+          zfb.inPorts.add(zbnfPort);
+          zfb.allArgsInIx.put(name, zbnfPort);
+          zfb.allArgsIx.put(name, zbnfPort);
         }
       }
     }
@@ -276,70 +289,83 @@ public class SmlkSfn {
   
   
   
-  public static void checkArgsObjectFB(ZbnfFB zbnfFB) {
-    if(zbnfFB.op.description.simulinkTag.contains("step-in")) {
+  public static void checkArgsObjectFB(ZbnfFB zfb) {
+    
+    if(zfb.op.description.simulinkTag.contains("step-in")) {
       String name = "step-in";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", zbnfFB.nrofInputs ++);
-      zbnfFB.inPorts.add(zbnfPort);
-      zbnfFB.allArgsInIx.put(name, zbnfPort);
+      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepIn_Entry_DefPortType_emC", zfb.nrofInputs ++);
+      zfb.inPorts.add(zbnfPort);
+      zfb.allArgsInIx.put(name, zbnfPort);
+      zfb.allArgsIx.put(name, zbnfPort);
     }
-    if(zbnfFB.op.description.simulinkTag.contains("step-out")) {
+    if(zfb.op.description.simulinkTag.contains("step-out")) {
       String name = "step-out";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", zbnfFB.nrofOutputs ++);
-      zbnfFB.outPorts.add(zbnfPort);
-      zbnfFB.allArgsOutIx.put(name, zbnfPort);
+      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepOut_Entry_DefPortType_emC", zfb.nrofOutputs ++);
+      zfb.outPorts.add(zbnfPort);
+      zfb.allArgsOutIx.put(name, zbnfPort);
+      zfb.allArgsIx.put(name, zbnfPort);
     }
     
     
-    zbnfFB.ixInputStep = zbnfFB.nrofInputs;
-    zbnfFB.ixOutputStep = zbnfFB.nrofOutputs;
-    zbnfFB.ixParamStep = zbnfFB.nrofParams;
-    checkArgs(zbnfFB, zbnfFB.dataOp);            // build ports & params, firstly from Object-FB
+    zfb.ixInputStep = zfb.nrofInputs;
+    zfb.ixOutputStep = zfb.nrofOutputs;
+    zfb.ixParamStep = zfb.nrofParams;
+    checkArgs(zfb, zfb.dataOp);            // build ports & params, firstly from Object-FB
     
-    zbnfFB.ixInputUpd = zbnfFB.nrofInputs;
-    zbnfFB.ixParamUpd = zbnfFB.nrofParams;
-    checkArgs(zbnfFB, zbnfFB.dataUpd);           // build ports & params, from update
+    zfb.ixInputUpd = zfb.nrofInputs;
+    zfb.ixParamUpd = zfb.nrofParams;
+    checkArgs(zfb, zfb.dataUpd);           // build ports & params, from update
     
-    zbnfFB.ixInputStep2 = zbnfFB.nrofInputs;
-    zbnfFB.ixOutputStep2 = zbnfFB.nrofOutputs;
-    zbnfFB.ixParamStep2 = zbnfFB.nrofParams;
-    for(ZbnfOpData zbnfOper : zbnfFB.operations) {
-      checkArgs(zbnfFB, zbnfOper);               // build ports & params, from all other operations
+    zfb.ixInputStep2 = zfb.nrofInputs;
+    zfb.ixOutputStep2 = zfb.nrofOutputs;
+    zfb.ixParamStep2 = zfb.nrofParams;
+    for(ZbnfOpData zbnfOper : zfb.operations) {
+      checkArgs(zfb, zbnfOper);               // build ports & params, from all other operations
     }
     
-    zbnfFB.ixInputInit = zbnfFB.nrofInputs;
-    zbnfFB.ixOutputInit = zbnfFB.nrofOutputs;
-    zbnfFB.ixParamInit = zbnfFB.nrofParams;
-    if(zbnfFB.init !=null) {
-      checkArgs(zbnfFB, zbnfFB.dataInit);            // build ports & params, from init
+    zfb.ixInputInit = zfb.nrofInputs;
+    zfb.ixOutputInit = zfb.nrofOutputs;
+    zfb.ixParamInit = zfb.nrofParams;
+    if(zfb.init !=null) {
+      checkArgs(zfb, zfb.dataInit);            // build ports & params, from init
     }
-    zbnfFB.ixParamCtor = zbnfFB.nrofParams;
-    if(zbnfFB.ctor !=null) {
-      checkArgs(zbnfFB, zbnfFB.dataCtor);            // build params, from ctor
+    
+    zfb.ixParamCtor = zfb.nrofParams;
+    if(zfb.ctor !=null) {
+      checkArgs(zfb, zfb.dataCtor);            // build params, from ctor
     }
-    zbnfFB.ixDworkThiz = 0;
-    zbnfFB.nrofDwork = 1;
+    zfb.ixDworkThiz = 0;
+    zfb.nrofDwork = 1;
 
-    if(zbnfFB.ctor == null && !zbnfFB.bStatic) {
+    if(zfb.ctor == null && !zfb.bStatic) {
       String name = "thiz";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", zbnfFB.nrofInputs ++);
-      zbnfFB.ixInputThiz = zbnfPort.nr;
-      zbnfFB.inPorts.add(zbnfPort);
-      zbnfFB.allArgsInIx.put(name, zbnfPort);
+      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mInputStep_Entry_DefPortType_emC", zfb.nrofInputs ++);
+      zfb.ixInputThiz = zbnfPort.nr;
+      zfb.inPorts.add(zbnfPort);
+      zfb.allArgsInIx.put(name, zbnfPort);
+      zfb.allArgsIx.put(name, zbnfPort);
     }
-    if(zbnfFB.ctor != null && !zbnfFB.op.description.simulinkTag.contains("no-thizStep")) {
+    if(zfb.thizAttr == null && zfb.ctor.type !=null) { // return type of ctor is default the type of FB
+      zfb.thizAttr = new CheaderParser.AttributeOrTypedef("return");
+      zfb.thizAttr.type = zfb.ctor.type;
+      zfb.thizAttr.name = "return";                         // elsewhere it needs an argument thiz for the type.
+    }                                                        // or it is static, without thiz (Operation-FB) 
+    
+    if(zfb.ctor != null && !zfb.op.description.simulinkTag.contains("no-thizStep")) {
       String name = "thizo";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", zbnfFB.nrofOutputs ++);
-      zbnfFB.ixOutputThizStep = zbnfPort.nr;
-      zbnfFB.outPorts.add(zbnfPort);
-      zbnfFB.allArgsOutIx.put(name, zbnfPort);
+      ZbnfPort zbnfPort = new ZbnfPort(zfb.thizAttr, name, "Tstep", "mOutputThizStep_Entry_DefPortType_emC", zfb.nrofOutputs ++);
+      zfb.ixOutputThizStep = zbnfPort.nr;
+      zfb.outPorts.add(zbnfPort);
+      zfb.allArgsOutIx.put(name, zbnfPort);
+      zfb.allArgsIx.put(name, zbnfPort);
     }
-    if(zbnfFB.ctor != null && !zbnfFB.op.description.simulinkTag.contains("no-thizInit")) {
+    if(zfb.ctor != null && !zfb.op.description.simulinkTag.contains("no-thizInit")) {
       String name = "ithizo";
-      ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tinit", zbnfFB.nrofOutputs ++);
-      zbnfFB.ixOutputThizInit = zbnfPort.nr;
-      zbnfFB.outPorts.add(zbnfPort);
-      zbnfFB.allArgsOutIx.put(name, zbnfPort);
+      ZbnfPort zbnfPort = new ZbnfPort(zfb.thizAttr, name, "Tinit", "mOutputThizInit_Entry_DefPortType_emC", zfb.nrofOutputs ++);
+      zfb.ixOutputThizInit = zbnfPort.nr;
+      zfb.outPorts.add(zbnfPort);
+      zfb.allArgsOutIx.put(name, zbnfPort);
+      zfb.allArgsIx.put(name, zbnfPort);
     }
 
   
@@ -350,7 +376,7 @@ public class SmlkSfn {
   public static List<ZbnfFB> analyseOperations(ZbnfResultData parseResult) {
     List<ZbnfFB> fblocks = new LinkedList<ZbnfFB>();
     
-    ZbnfFB zbnfFB = new ZbnfFB();
+    ZbnfFB zfb = new ZbnfFB();
     
     int nStep = 0;
     
@@ -359,72 +385,88 @@ public class SmlkSfn {
         for(CheaderParser.HeaderBlockEntry entry: classC.entries) {
           if(entry instanceof CheaderParser.StructDefinition) { //  .whatisit == "structDefinition") {
             CheaderParser.StructDefinition zbnfStruct = (CheaderParser.StructDefinition)entry; 
-            zbnfFB = new ZbnfFB();                       // new instance ZbnfFB after a struct definition 
-            zbnfFB.sBasedOnObject = zbnfStruct.sBasedOnObjectJc;     //String to ObjectJc part
+            zfb = new ZbnfFB();                       // new instance ZbnfFB after a struct definition 
+            zfb.sBasedOnObject = zbnfStruct.sBasedOnObjectJc;     //String to ObjectJc part
           }
           else if(entry instanceof CheaderParser.MethodDef) {
             CheaderParser.MethodDef zbnfOp = (CheaderParser.MethodDef)entry; 
             if(entry.description !=null && entry.description.simulinkTag !=null) {
               String simulinkTag = entry.description.simulinkTag;
               if(simulinkTag.contains("ctor")) {
-                zbnfFB.dataCtor = new ZbnfOpData(zbnfOp, "!", Whatisit.ctor);
-                zbnfFB.ctor = zbnfOp;
+                zfb.dataCtor = new ZbnfOpData(zbnfOp, "!", Whatisit.ctor);
+                zfb.ctor = zbnfOp;
               }
               else if(simulinkTag.contains("dtor")) {
-                zbnfFB.dataDtor = new ZbnfOpData(zbnfOp, "~", Whatisit.dtor);
-                zbnfFB.dtor = zbnfOp;
+                zfb.dataDtor = new ZbnfOpData(zbnfOp, "~", Whatisit.dtor);
+                zfb.dtor = zbnfOp;
                 }
               else if(simulinkTag.contains("init")) {
-                zbnfFB.dataInit = new ZbnfOpData(zbnfOp, "Tinit", Whatisit.init);
-                zbnfFB.init = zbnfOp;
+                zfb.dataInit = new ZbnfOpData(zbnfOp, "Tinit", Whatisit.init);
+                zfb.init = zbnfOp;
               } 
               else if(simulinkTag.contains("update")) {
-                zbnfFB.dataUpd = new ZbnfOpData(zbnfOp, "+Tstep", Whatisit.oper);
-                zbnfFB.upd = zbnfOp;
+                zfb.dataUpd = new ZbnfOpData(zbnfOp, "+Tstep", Whatisit.oper);
+                zfb.upd = zbnfOp;
               } 
               else if(simulinkTag.contains("defTlcParam")) {
-                zbnfFB.dataTlcParam = new ZbnfOpData(zbnfOp, "%", Whatisit.defTcl);
-                zbnfFB.tlcParam = zbnfOp;
+                zfb.dataTlcParam = new ZbnfOpData(zbnfOp, "%", Whatisit.defTcl);
+                zfb.tlcParam = zbnfOp;
               } 
               else if(simulinkTag.contains("defPortTypes")) {
-                zbnfFB.dataDPorts = new ZbnfOpData(zbnfOp, "@", Whatisit.defPortTypes);
-                zbnfFB.dPorts = zbnfOp;
+                zfb.dataDPorts = new ZbnfOpData(zbnfOp, "@", Whatisit.defPortTypes);
+                zfb.dPorts = zbnfOp;
               } 
               else if(simulinkTag.contains("PortStep-FB") || simulinkTag.contains("step2")) {
-                zbnfFB.operations.add(new ZbnfOpData(zbnfOp, "Tstep" + Integer.toString(++nStep), Whatisit.oper));
+                zfb.operations.add(new ZbnfOpData(zbnfOp, "Tstep" + Integer.toString(++nStep), Whatisit.oper));
               } 
               else if(simulinkTag.contains("Operation-FB")) {
                 //                                           // yet a new FB is found as Operation-FB
-                ZbnfFB zbnfOperationFB = new ZbnfFB();   // write it to a new ZbnfFB
-                zbnfOperationFB.name = zbnfOp.name;
-                zbnfOperationFB.sBasedOnObject = zbnfFB.sBasedOnObject;
-                zbnfOperationFB.dataOp = new ZbnfOpData(zbnfOp, "Tstep", Whatisit.oper);
-                zbnfOperationFB.op = zbnfOp;
-                checkArgs(zbnfOperationFB, zbnfOperationFB.dataOp);          // build ports & params, firstly from Object-FB
-                zbnfFB.ixDworkThiz = -1;
-                zbnfFB.nrofDwork = 0;
-                fblocks.add(zbnfOperationFB);
-                //                                           // the current zbnfFB remain active
+                ZbnfFB zfbOp = new ZbnfFB();   // write it to a new ZbnfFB
+                zfbOp.name = zbnfOp.name;
+                zfbOp.sBasedOnObject = zfb.sBasedOnObject;
+                zfbOp.dataOp = new ZbnfOpData(zbnfOp, "Tstep", Whatisit.oper);
+                zfbOp.op = zbnfOp;
+                if(zfbOp.name.equals("addObj_DataNode_Inspc"))
+                  Debugutil.stop();
+                checkArgs(zfbOp, zfbOp.dataOp);          // build ports & params, firstly from Object-FB
+                if(zfbOp.thizAttr !=null) {
+                  String name = "thiz";
+                  ZbnfPort zbnfPort = new ZbnfPort(zfbOp.thizAttr, name, "Tstep", "mInputStep_Entry_DefPortType_emC", zfbOp.nrofInputs ++);
+                  zfbOp.inPorts.add(zbnfPort);
+                  zfbOp.allArgsInIx.put(name, zbnfPort);
+                  zfbOp.allArgsIx.put(name, zbnfPort);
+                  zfbOp.ixInputThiz = zbnfPort.nr;
+                }
+                zfbOp.ixInputInit = zfbOp.ixInputUpd = zfbOp.ixInputStep2 = zfbOp.nrofInputs;
+                zfbOp.ixOutputInit = zfbOp.ixOutputStep2 = zfbOp.nrofOutputs;
+                zfbOp.ixParamInit = zfbOp.ixParamUpd = zfbOp.ixParamStep2 = zfbOp.ixParamCtor = zfbOp.nrofParams;
+                zfbOp.isFBstep = true;
+                zfbOp.ixDworkThiz = -1;
+                zfbOp.nrofDwork = 0;
+                fblocks.add(zfbOp);
+                //                                           // the current zfb remain active
               } 
               else if(simulinkTag.contains("Object-FB")) {
-                zbnfFB.dataOp = new ZbnfOpData(zbnfOp, "Tstep", Whatisit.oper);
-                zbnfFB.op = zbnfOp;
-                zbnfFB.name = zbnfOp.name;                   // yet a new FB is found as Object-FB
-                checkArgsObjectFB(zbnfFB);
-                fblocks.add(zbnfFB);
-                ZbnfFB zbnfFBnew = new ZbnfFB();
-                zbnfFBnew.sBasedOnObject = zbnfFB.sBasedOnObject;
-                zbnfFBnew.dataCtor = zbnfFB.dataCtor;                    // ctor, init etc. remain valid for the next ObjectFB
-                zbnfFBnew.dataDtor = zbnfFB.dataDtor;
-                zbnfFBnew.dataInit = zbnfFB.dataInit;
-                zbnfFBnew.dataDPorts = zbnfFB.dataDPorts;
-                zbnfFBnew.dataTlcParam = zbnfFB.dataTlcParam;
-                zbnfFBnew.ctor = zbnfFB.ctor;                    // ctor, init etc. remain valid for the next ObjectFB
-                zbnfFBnew.dtor = zbnfFB.dtor;
-                zbnfFBnew.init = zbnfFB.init;
-                zbnfFBnew.dPorts = zbnfFB.dPorts;
-                zbnfFBnew.tlcParam = zbnfFB.tlcParam;
-                zbnfFB = zbnfFBnew;                              // further usage in new Operation
+                zfb.dataOp = new ZbnfOpData(zbnfOp, "Tstep", Whatisit.oper);
+                zfb.op = zbnfOp;
+                zfb.name = zbnfOp.name;                   // yet a new FB is found as Object-FB
+                if(zfb.name.equals("param_PIDf_Ctrl_emC"))
+                  Debugutil.stop();
+                checkArgsObjectFB(zfb);
+                fblocks.add(zfb);
+                ZbnfFB zfbnew = new ZbnfFB();
+                zfbnew.sBasedOnObject = zfb.sBasedOnObject;
+                zfbnew.dataCtor = zfb.dataCtor;                    // ctor, init etc. remain valid for the next ObjectFB
+                zfbnew.dataDtor = zfb.dataDtor;
+                zfbnew.dataInit = zfb.dataInit;
+                zfbnew.dataDPorts = zfb.dataDPorts;
+                zfbnew.dataTlcParam = zfb.dataTlcParam;
+                zfbnew.ctor = zfb.ctor;                    // ctor, init etc. remain valid for the next ObjectFB
+                zfbnew.dtor = zfb.dtor;
+                zfbnew.init = zfb.init;
+                zfbnew.dPorts = zfb.dPorts;
+                zfbnew.tlcParam = zfb.tlcParam;
+                zfb = zfbnew;                              // further usage in new Operation
               } 
           } }
     } } } 

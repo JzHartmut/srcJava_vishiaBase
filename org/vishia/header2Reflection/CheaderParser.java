@@ -1294,7 +1294,7 @@ public class CheaderParser {
      * For Simulink Sfunction -wrapper-generator: It is used for the ixParam to access <code>ssGetSFcnParam(simstruct, ixArg)</code>*/
     public int ixArg;
   
-    AttributeOrTypedef(String whatisit){ super(whatisit); } //typeClass = this; }
+    public AttributeOrTypedef(String whatisit){ super(whatisit); } //typeClass = this; }
     
     AttributeOrTypedef(){ super("Attribute"); } //typeClass = this; }
   
