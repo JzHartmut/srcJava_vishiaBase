@@ -157,7 +157,7 @@ public class SmlkSfn {
     public int ixBusInfo = 0;
 
 
-    
+    List<String> busTypes;
     
     final List<ZbnfPort> inPorts = new LinkedList<ZbnfPort>();
     
@@ -178,7 +178,7 @@ public class SmlkSfn {
     
     CheaderParser.MethodDef ctor, dtor, init, tlcParam, dPorts, upd, op;
     
-    final List<ZbnfOpData> operations = new LinkedList<ZbnfOpData>();
+    final List<ZbnfOpData> portSteps = new LinkedList<ZbnfOpData>();
 
     
     public ZbnfFB() { }
@@ -193,6 +193,10 @@ public class SmlkSfn {
       CheaderParser.MethodDef zbnfOp = zbnfOper.zbnfOp;
       for(CheaderParser.AttributeOrTypedef arg : zbnfOp.args) {
         String name = arg.name;
+        if( arg.name.endsWith("_bus") || arg.name.endsWith("_ybus") ) {
+          if(this.busTypes == null) { this.busTypes = new LinkedList<String>(); }
+          this.busTypes.add(arg.type.basename);
+        }
         if(name.equals("thiz")) {
           if(this.thizAttr == null) { 
             this.thizAttr = arg;
@@ -204,7 +208,7 @@ public class SmlkSfn {
         }
         else if(name.equals("Tstep")) {
           if(this.paramPortIx.get(name) ==null) {
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", this.nrofParams ++);
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "Tstep, non tunable", this.nrofParams ++);
             this.paramPorts.add(zbnfPort);
             this.paramPortIx.put(name, zbnfPort);
             this.paramsNoTunable.put(name, zbnfPort);
@@ -213,7 +217,19 @@ public class SmlkSfn {
             this.nrofParamsNoTunable +=1;
           }
         }
-        else if(name.endsWith("_y")) {
+        else if( arg.name.startsWith("vport_")) {          // TODO docu
+          this.bVarg = true;
+          if(arg.arraysize !=null && arg.arraysize.value !=0) {
+            this.nrofPortsMax = this.nrofPortsMax + arg.arraysize.value;
+          } else { this.nrofPortsMax = this.nrofPortsMax + 1; }
+        }
+        else if( arg.name.startsWith("_zVaargs_")) {
+          this.bVarg = true;
+        }
+        else if( arg.name.equals("_simtime")) {
+          //do nothing.
+        } 
+        else if(name.endsWith("_y") || name.endsWith("_ybus")) {
           //name = name.substring(0, name.length()-2);
           if(this.allArgsOutIx.get(name) ==null) {
             String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mOutputInit_Entry_DefPortType_emC" : "mOutputStep_Entry_DefPortType_emC";
@@ -226,11 +242,13 @@ public class SmlkSfn {
         else if(name.endsWith("_param")) {
           //name = name.substring(0, name.length()-6);
           if(this.paramPortIx.get(name) ==null) {
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", this.nrofParams ++);
+            boolean bTunable = zbnfOper.whatisit.bParamIsTunable && !arg.type.name.equals("StringJc");
+            String sTunable = (bTunable ? "" : "non-") + "tunable"; 
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sTunable, this.nrofParams ++);
             this.paramPorts.add(zbnfPort);
             this.paramPortIx.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
-            if(zbnfOper.whatisit.bParamIsTunable && !arg.type.name.equals("StringJc")) {
+            if(bTunable) {
               this.bitsParamTunable |= 1 << zbnfPort.nr;
               this.nrofParamsTunable +=1;
             } else {
@@ -239,9 +257,15 @@ public class SmlkSfn {
             }
           }
         }
+        else if( arg.type.basename.equals("DefPortTypes_emC")  || arg.type.basename.equals("EDefPortTypes_emC")) {
+          if(this.ixPworkFBinfo == -1) {                   // it is a special argument TODO docu
+            this.ixPworkFBinfo = this.nrofPwork; 
+            this.nrofPwork = this.nrofPwork +1; 
+          }  
+        }  
         else if(zbnfOper.whatisit.bArgIsNonTunableParam) {
           if(this.paramPortIx.get(name) ==null) {
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "?", this.nrofParams ++);
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "non-tunable", this.nrofParams ++);
             this.paramPorts.add(zbnfPort);
             this.paramPortIx.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
@@ -262,8 +286,33 @@ public class SmlkSfn {
     }
 
 
+    /**Detects all ports which are determined by the ctor, init, step operations which are associated to this Object-FB.
+     * It checks all arguments from this routines. 
+     * Special arguments which are not associated immediately to the ports are detected too:
+     * <ul>
+     * <li>
+     * </ul> 
+     * The type of the Object-FB is detected by the first 'thiz' argument of the given {@link #op} operation 
+     * (only as fallback from the return type of ctor). 
+     */
     public void prepareObjectFB() {
-      
+      AttributeOrTypedef thizArg = this.op.args.get(0);  //The first arg should be this. 
+      if(thizArg.name.equals("thiz")) {                  //not thiz as first arg, then static.
+        this.thizAttr = thizArg;
+      } else {
+        if(this.thizAttr == null && this.ctor.type !=null) { // return type of ctor is default the type of FB
+          this.thizAttr = new CheaderParser.AttributeOrTypedef("return");
+          this.thizAttr.type = this.ctor.type;
+          this.thizAttr.name = "return";                         // elsewhere it needs an argument thiz for the type.
+        }                                                        // or it is static, without thiz (Operation-FB) 
+      }
+      if(this.op.description.simulinkTag.contains("fnCallTrg")) {
+        String name = "trg";
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", "mOutputFnCall_Entry_DefPortType_emC", this.nrofOutputs ++);
+        this.outPorts.add(zbnfPort);
+        this.allArgsOutIx.put(name, zbnfPort);
+        this.allArgsIx.put(name, zbnfPort);
+      }
       if(this.op.description.simulinkTag.contains("step-in")) {
         String name = "step-in";
         ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepIn_Entry_DefPortType_emC", this.nrofInputs ++);
@@ -292,8 +341,8 @@ public class SmlkSfn {
       this.ixInputStep2 = this.nrofInputs;
       this.ixOutputStep2 = this.nrofOutputs;
       this.ixParamStep2 = this.nrofParams;
-      for(ZbnfOpData zbnfOper : this.operations) {
-        checkArgs(zbnfOper);               // build ports & params, from all other operations
+      for(ZbnfOpData portStep : this.portSteps) {
+        checkArgs(portStep);               // build ports & params, from all other operations
       }
       
       this.ixInputInit = this.nrofInputs;
@@ -303,6 +352,7 @@ public class SmlkSfn {
         checkArgs(this.dataInit);            // build ports & params, from init
       }
       
+      this.ixOutputVarg = this.nrofOutputs;
       this.ixParamCtor = this.nrofParams;
       if(this.ctor !=null) {
         checkArgs(this.dataCtor);            // build params, from ctor
@@ -318,11 +368,6 @@ public class SmlkSfn {
         this.allArgsInIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
-      if(this.thizAttr == null && this.ctor.type !=null) { // return type of ctor is default the type of FB
-        this.thizAttr = new CheaderParser.AttributeOrTypedef("return");
-        this.thizAttr.type = this.ctor.type;
-        this.thizAttr.name = "return";                         // elsewhere it needs an argument thiz for the type.
-      }                                                        // or it is static, without thiz (Operation-FB) 
       
       if(this.ctor != null && !this.op.description.simulinkTag.contains("no-thizStep")) {
         String name = "thizo";
@@ -361,7 +406,7 @@ public class SmlkSfn {
         this.ixInputThiz = zbnfPort.nr;
       }
       this.ixInputInit = this.ixInputUpd = this.ixInputStep2 = this.nrofInputs;
-      this.ixOutputInit = this.ixOutputStep2 = this.nrofOutputs;
+      this.ixOutputInit = this.ixOutputStep2 = this.ixOutputVarg = this.nrofOutputs;
       this.ixParamInit = this.ixParamUpd = this.ixParamStep2 = this.ixParamCtor = this.nrofParams;
       this.isFBstep = true;
       this.ixDworkThiz = -1;
@@ -418,6 +463,11 @@ public class SmlkSfn {
               if(simulinkTag.contains("ctor")) {
                 zfb.dataCtor = new ZbnfOpData(zbnfOp, "!", Whatisit.ctor);
                 zfb.ctor = zbnfOp;
+                zfb.dPorts = null;                         // all other operations get invalid on a new ctor
+                zfb.tlcParam = null;
+                zfb.init = null;
+                zfb.upd = null;
+                zfb.portSteps.clear();
               }
               else if(simulinkTag.contains("dtor")) {
                 zfb.dataDtor = new ZbnfOpData(zbnfOp, "~", Whatisit.dtor);
@@ -426,6 +476,13 @@ public class SmlkSfn {
               else if(simulinkTag.contains("init")) {
                 zfb.dataInit = new ZbnfOpData(zbnfOp, "Tinit", Whatisit.init);
                 zfb.init = zbnfOp;
+                zfb.upd = null;                            // the other routines to determine an Object-FB should follow.
+                zfb.dataUpd = null;                        // routines before are invalid. 
+                zfb.portSteps.clear();
+                //zfb.dPorts = null;                       //this routines should be valid furthermore
+                //zfb.dataDPorts = null;
+                //zfb.tlcParam = null;
+                //zfb.dataTlcParam = null;
               } 
               else if(simulinkTag.contains("update")) {
                 zfb.dataUpd = new ZbnfOpData(zbnfOp, "+Tstep", Whatisit.oper);
@@ -440,7 +497,7 @@ public class SmlkSfn {
                 zfb.dPorts = zbnfOp;
               } 
               else if(simulinkTag.contains("PortStep-FB") || simulinkTag.contains("step2")) {
-                zfb.operations.add(new ZbnfOpData(zbnfOp, "Tstep" + Integer.toString(++nStep), Whatisit.oper));
+                zfb.portSteps.add(new ZbnfOpData(zbnfOp, "Tstep" + Integer.toString(++nStep), Whatisit.oper));
               } 
               else if(simulinkTag.contains("Operation-FB")) {
                 //                                           // yet a new FB is found as Operation-FB
