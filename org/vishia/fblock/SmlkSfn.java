@@ -6,13 +6,11 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.header2Reflection.CheaderParser;
-import org.vishia.header2Reflection.CheaderParser.AttributeOrTypedef;
-import org.vishia.header2Reflection.CheaderParser.ZbnfResultData;
 import org.vishia.util.Debugutil;
 
 /**This class supports generation of Simulink S-Functions from header files. 
  * 
- * @author hartmut Schorrig
+ * @author Hartmut Schorrig
  *
  */
 public class SmlkSfn {
@@ -50,6 +48,9 @@ public class SmlkSfn {
   public static final String version = "2021-02-20";
 
 
+  /**Wrapper for Operations with additional information about Step time and characteristic. 
+   * TODO: really need?
+   */
   public static class ZbnfOpData {
     final CheaderParser.MethodDef zbnfOp;
     
@@ -75,18 +76,97 @@ public class SmlkSfn {
   
   
   
-  public static class ZbnfPort {
-    final CheaderParser.AttributeOrTypedef zbnfArg;
-    final String name;
-    final String tstep;
+  
+  /**It describes the kind of Ports and Parameters. Contains the enum Definition 
+   * for C:  <code>EPortType_Entry_DefPortType_emC</code>, see header file <code>emC/Base/DefPortTypes_emC.h</code> 
+   */
+  enum WhatPort {
+    
+    /**Input for this on Operation-FB, used as normal Input. */
+    thisIn(false, "mInputStep_Entry_DefPortType_emC"),
+    
+    /**Dummy input for step order, not used for C-operations.*/
+    stepIn(false, "mStepIn_Entry_DefPortType_emC"),
+    
+    /**Dummy output for step order, not set, remain 0. */
+    stepOut(false, "mStepOut_Entry_DefPortType_emC"),
+    
+    /**Special output for Simulink connection to trigger input of a Triggered Sub system.
+     * It is a special simulink feature. Commonly it is an event connection. */
+    fnCallTrgOut(false, "mOutputFnCall_Entry_DefPortType_emC"),
+    
+    /**Output for thiz, als handle, with Tinit, to connect aggregations. */
+    thisOutInit(false, "mOutputThizInit_Entry_DefPortType_emC"),
+
+    /**Output for thiz, als handle, with Tstep, to connect in step order. */
+    thisOutStep(false, "mOutputThizStep_Entry_DefPortType_emC"),
+    
+    /**Any input used in Tinit, for initialization. May be numbers, bus or handle (as aggregation). */ 
+    inpInit(false, "mInputInit_Entry_DefPortType_emC"),
+    
+    /**Any input used in Tstep, may be numbers, bus or handle (as association). */
+    inpStep(false, "mInputStep_Entry_DefPortType_emC"),
+    
+    /**Any input in another Tstep time then the Tstep. Numbers, bus or handle (as association).*/
+    inpStep2(false, "mInputStep2_Entry_DefPortType_emC"),
+    
+    /**Any output for other initializations, maybe a handle (aggregation) or also calculated number from Tinit or parameter inputs. */
+    outInit(false, "mOutputInit_Entry_DefPortType_emC"),
+    
+    /**Any output in the step time. */
+    outStep(false, "mOutputStep_Entry_DefPortType_emC"),
+    
+    /**Any output from other than the main Tstep time. */
+    outStep2(false, "mOutputStep2_Entry_DefPortType_emC"),
+    
+    /**Any parameter, for parameter dialog in Simulink. Tunable. Input in step operations. */
+    tunableParam(true, "tunable"),
+    
+    /**Any parameter non tunable, used in Ctor and init. */
+    fixParam(true, "non-tunable"),
+    
+    /**Parameter value for the Tstep time. Determines the step time if given (non INHERITED by wiring). 
+     * It may be used or not for operations. */
+    tstepParam(true, "Tstep, non tunable");
+    
     final String sEnum_SetDefPortTypes;
+    final boolean bParam;
+    WhatPort(boolean bParam, String sEnum_SetDefPortTypes) {
+      this.bParam = bParam;
+      this.sEnum_SetDefPortTypes = sEnum_SetDefPortTypes;
+    }
+  }
+  
+  
+  
+  /**Description of one port of parameter. Values are used in JZtxtcmd.  */
+  public static class ZbnfPort {
+    
+    /**The argument of operation from header parser. */
+    final CheaderParser.AttributeOrTypedef zbnfArg;
+    
+    /**The name of the port, usual same as {@link CheaderParser.AttributeOrTypedef#name}*/ 
+    final String name;
+    
+    /**A associated step time independent of the definition of a value. 
+     * It is "Tinit" or "Tstep" or "Tstep1..." accordingly to the operation. */
+    final String tstep;
+    
+    /**It is set from {@link #whatis}: {@link WhatPort#sEnum_SetDefPortTypes}. */
+    final String sEnum_SetDefPortTypes;
+    
+    /**The number of port or parameter starting from 0 independent for in, out and param. */
     final int nr;
     
-    public ZbnfPort(AttributeOrTypedef zbnfArg, String name, String tstep, String sEnum_SetDefPortTypes, int nr) {
+    /**Characteristic of the port or parameter. */
+    final WhatPort whatis;
+    
+    public ZbnfPort(CheaderParser.AttributeOrTypedef zbnfArg, String name, String tstep, WhatPort whatis, int nr) {
       this.zbnfArg = zbnfArg;
       this.name = name;
       this.tstep = tstep;
-      this.sEnum_SetDefPortTypes = sEnum_SetDefPortTypes;
+      this.whatis = whatis;
+      this.sEnum_SetDefPortTypes = whatis.sEnum_SetDefPortTypes;
       this.nr = nr;
     }
     
@@ -97,22 +177,50 @@ public class SmlkSfn {
   
   
   
+  /**The content of this class is used in the JZtxtcmd script to generate SFunction wrapper.c code and tlc code.
+   * The content is prepared accordingly to the necessities of the jzTc generation scripts. 
+   *
+   */
   public static class ZbnfFB {
     
+    /**Name of the SFunction of the FBlock. */
     public String name;
     
+    /**null if not ObjectJc-based, else the path from thiz to ObjectJc instance. */
     public String sBasedOnObject;
     
+    /**Decides whether ObjectJc or the instance is used as first argument in ctor TODO used? maybe name othiz/thiz decides.*/
     public boolean bObject;
     
+    /**maybe needless meanwhile, because {@link #thizAttr}*/
     public boolean bStatic = true;
     
     /**Type of thiz, remain null for static. */
     public CheaderParser.AttributeOrTypedef thizAttr;
     
-    /**A FBlock with only one step time. Simulink: Block bases.
+    /**A FBlock with only one step time. Simulink: Block base sample times.
      * The step time may be explicitly by param Tstep or inherit from in/outputs. */
     public boolean isFBstep;
+    
+    
+    /**All input ports in order. */
+    final List<ZbnfPort> inPorts = new LinkedList<ZbnfPort>();
+    
+    /**All output ports in order. */
+    final List<ZbnfPort> outPorts = new LinkedList<ZbnfPort>();
+    
+    /**All params in order. */
+    final List<ZbnfPort> paramPorts = new LinkedList<ZbnfPort>();
+
+    /**Sorted ports incl. parameter. */
+    final Map<String, ZbnfPort> allArgsIx = new TreeMap<String, ZbnfPort>();
+    
+    
+
+    
+    
+    
+    
     
     public boolean busInputCheck;  //if any argument _bus, _ybus, _cbus, _ycbus are found, set it to generate check code.
     public boolean busInputGather;
@@ -136,6 +244,7 @@ public class SmlkSfn {
     public int ixOutputStep2 = 0;
     public int ixOutputInit = 0;
     public int ixOutputVarg = 0;
+    
     public int ixOutputThizStep = -1;
     public int ixOutputThizInit = -1;
     public int nrofParamsNoTunable = 0;
@@ -156,37 +265,31 @@ public class SmlkSfn {
     public int nrofPwork = 0;
     public int ixBusInfo = 0;
 
-
+    /**Used to include the reflection info. */
     List<String> busTypes;
     
-    final List<ZbnfPort> inPorts = new LinkedList<ZbnfPort>();
-    
-    final Map<String, ZbnfPort> allArgsInIx = new TreeMap<String, ZbnfPort>();
-    
-    final List<ZbnfPort> outPorts = new LinkedList<ZbnfPort>();
-    
-    final Map<String, ZbnfPort> allArgsOutIx = new TreeMap<String, ZbnfPort>();
-    
-    final Map<String, ZbnfPort> allArgsIx = new TreeMap<String, ZbnfPort>();
-    
-    final List<ZbnfPort> paramPorts = new LinkedList<ZbnfPort>();
-    
-    final Map<String, ZbnfPort> paramPortIx = new TreeMap<String, ZbnfPort>();
-    
-    
+    /**Reference to the CHeaderParser operations. The arguments with types are stored there too. */
     ZbnfOpData dataCtor, dataDtor, dataInit, dataTlcParam, dataDPorts, dataUpd, dataOp;
     
+    /**Reference to the CHeaderParser operations. The arguments with types are stored there too. */
     CheaderParser.MethodDef ctor, dtor, init, tlcParam, dPorts, upd, op;
     
+    
+    /**Reference to the CHeaderParser operations for additional step times. The arguments with types are stored there too. */
     final List<ZbnfOpData> portSteps = new LinkedList<ZbnfOpData>();
 
     
     public ZbnfFB() { }
     
     
-    /**
-     * @param zfb
-     * @param zbnfOper if null, does nothing
+    /**Check the arguments (from header parser) of an operation. 
+     * <ul>
+     * <li>thiz first occurrence used to set #thizArg. Detect wheter based on Object: {@link #sBasedOnObject}.
+     *   If all operations have not a thiz (not expected) then the return type of the ctor determins {@link #thizAttr}.
+     * <li>othiz First argument of the ctor. Set {@link #bObject}:
+     * <li>TODO further document   
+     * </ul>
+     * @param zbnfOper The operation. if null, does nothing
      */
     public void checkArgs(ZbnfOpData zbnfOper) {
       if(zbnfOper == null) return;
@@ -207,10 +310,9 @@ public class SmlkSfn {
           this.bStatic = false; this.bObject = true;
         }
         else if(name.equals("Tstep")) {
-          if(this.paramPortIx.get(name) ==null) {
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "Tstep, non tunable", this.nrofParams ++);
+          if(this.allArgsIx.get(name) ==null) {
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, WhatPort.tstepParam, this.nrofParams ++);
             this.paramPorts.add(zbnfPort);
-            this.paramPortIx.put(name, zbnfPort);
             this.paramsNoTunable.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
             this.ixParamTstep = zbnfPort.nr;
@@ -231,22 +333,20 @@ public class SmlkSfn {
         } 
         else if(name.endsWith("_y") || name.endsWith("_ybus")) {
           //name = name.substring(0, name.length()-2);
-          if(this.allArgsOutIx.get(name) ==null) {
-            String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mOutputInit_Entry_DefPortType_emC" : "mOutputStep_Entry_DefPortType_emC";
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, this.nrofOutputs ++);
+          if(this.allArgsIx.get(name) ==null) {
+            WhatPort whatis = zbnfOper.whatisit.bInit ? WhatPort.outInit : WhatPort.outStep;
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, whatis, this.nrofOutputs ++);
             this.outPorts.add(zbnfPort);
-            this.allArgsOutIx.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
           }
         }
         else if(name.endsWith("_param")) {
           //name = name.substring(0, name.length()-6);
-          if(this.paramPortIx.get(name) ==null) {
+          if(this.allArgsIx.get(name) ==null) {
             boolean bTunable = zbnfOper.whatisit.bParamIsTunable && !arg.type.name.equals("StringJc");
-            String sTunable = (bTunable ? "" : "non-") + "tunable"; 
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sTunable, this.nrofParams ++);
+            WhatPort whatis = bTunable ? WhatPort.tunableParam : WhatPort.fixParam;
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, whatis, this.nrofParams ++);
             this.paramPorts.add(zbnfPort);
-            this.paramPortIx.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
             if(bTunable) {
               this.bitsParamTunable |= 1 << zbnfPort.nr;
@@ -264,21 +364,19 @@ public class SmlkSfn {
           }  
         }  
         else if(zbnfOper.whatisit.bArgIsNonTunableParam) {
-          if(this.paramPortIx.get(name) ==null) {
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, "non-tunable", this.nrofParams ++);
+          if(this.allArgsIx.get(name) ==null) {
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, WhatPort.fixParam, this.nrofParams ++);
             this.paramPorts.add(zbnfPort);
-            this.paramPortIx.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
             this.nrofParamsNoTunable +=1;
             this.paramsNoTunable.put(name, zbnfPort);
           }
         }
         else {
-          if(this.allArgsInIx.get(name) ==null) {
-            String sEnum_DefPortTypes = zbnfOper.whatisit.bInit ? "mInputInit_Entry_DefPortType_emC" : "mInputStep_Entry_DefPortType_emC";
-            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, sEnum_DefPortTypes, this.nrofInputs ++);
+          if(this.allArgsIx.get(name) ==null) {
+            WhatPort whatis = zbnfOper.whatisit.bInit ? WhatPort.inpInit : WhatPort.inpStep;
+            ZbnfPort zbnfPort = new ZbnfPort(arg, name, zbnfOper.steptime, whatis, this.nrofInputs ++);
             this.inPorts.add(zbnfPort);
-            this.allArgsInIx.put(name, zbnfPort);
             this.allArgsIx.put(name, zbnfPort);
           }
         }
@@ -296,7 +394,7 @@ public class SmlkSfn {
      * (only as fallback from the return type of ctor). 
      */
     public void prepareObjectFB() {
-      AttributeOrTypedef thizArg = this.op.args.get(0);  //The first arg should be this. 
+      CheaderParser.AttributeOrTypedef thizArg = this.op.args.get(0);  //The first arg should be this. 
       if(thizArg.name.equals("thiz")) {                  //not thiz as first arg, then static.
         this.thizAttr = thizArg;
       } else {
@@ -308,23 +406,20 @@ public class SmlkSfn {
       }
       if(this.op.description.simulinkTag.contains("fnCallTrg")) {
         String name = "trg";
-        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", "mOutputFnCall_Entry_DefPortType_emC", this.nrofOutputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", WhatPort.fnCallTrgOut, this.nrofOutputs ++);
         this.outPorts.add(zbnfPort);
-        this.allArgsOutIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
       if(this.op.description.simulinkTag.contains("step-in")) {
         String name = "step-in";
-        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepIn_Entry_DefPortType_emC", this.nrofInputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", WhatPort.stepIn, this.nrofInputs ++);
         this.inPorts.add(zbnfPort);
-        this.allArgsInIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
       if(this.op.description.simulinkTag.contains("step-out")) {
         String name = "step-out";
-        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mStepOut_Entry_DefPortType_emC", this.nrofOutputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", WhatPort.stepOut, this.nrofOutputs ++);
         this.outPorts.add(zbnfPort);
-        this.allArgsOutIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
       
@@ -362,27 +457,24 @@ public class SmlkSfn {
     
       if(this.ctor == null && !this.bStatic) {
         String name = "thiz";
-        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", "mInputStep_Entry_DefPortType_emC", this.nrofInputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(null, name, "Tstep", WhatPort.thisIn, this.nrofInputs ++);
         this.ixInputThiz = zbnfPort.nr;
         this.inPorts.add(zbnfPort);
-        this.allArgsInIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
       
       if(this.ctor != null && !this.op.description.simulinkTag.contains("no-thizStep")) {
         String name = "thizo";
-        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", "mOutputThizStep_Entry_DefPortType_emC", this.nrofOutputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", WhatPort.thisOutStep, this.nrofOutputs ++);
         this.ixOutputThizStep = zbnfPort.nr;
         this.outPorts.add(zbnfPort);
-        this.allArgsOutIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
       if(this.ctor != null && !this.op.description.simulinkTag.contains("no-thizInit")) {
         String name = "ithizo";
-        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tinit", "mOutputThizInit_Entry_DefPortType_emC", this.nrofOutputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tinit", WhatPort.thisOutInit, this.nrofOutputs ++);
         this.ixOutputThizInit = zbnfPort.nr;
         this.outPorts.add(zbnfPort);
-        this.allArgsOutIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
     
@@ -399,9 +491,8 @@ public class SmlkSfn {
       checkArgs(this.dataOp);          // build ports & params, firstly from Object-FB
       if(this.thizAttr !=null) {
         String name = "thiz";
-        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", "mInputStep_Entry_DefPortType_emC", this.nrofInputs ++);
+        ZbnfPort zbnfPort = new ZbnfPort(this.thizAttr, name, "Tstep", WhatPort.thisIn, this.nrofInputs ++);
         this.inPorts.add(zbnfPort);
-        this.allArgsInIx.put(name, zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
         this.ixInputThiz = zbnfPort.nr;
       }
@@ -420,6 +511,8 @@ public class SmlkSfn {
   
   
   
+  /**It describes the kind of Operation.
+   */
   enum Whatisit {
     ctor(true, true, false),
     dtor(false, false, false), 
@@ -440,8 +533,12 @@ public class SmlkSfn {
   
   
   
-  
-  public static List<ZbnfFB> analyseOperations(ZbnfResultData parseResult) {
+  /**This opeation is called from the JZtxtcmd generation script after parsing. 
+   * 
+   * @param parseResult all parsed files
+   * @return list of prepared informations.
+   */
+  public static List<ZbnfFB> analyseOperations(CheaderParser.ZbnfResultData parseResult) {
     List<ZbnfFB> fblocks = new LinkedList<ZbnfFB>();
     
     ZbnfFB zfb = new ZbnfFB();
@@ -496,7 +593,7 @@ public class SmlkSfn {
                 zfb.dataDPorts = new ZbnfOpData(zbnfOp, "@", Whatisit.defPortTypes);
                 zfb.dPorts = zbnfOp;
               } 
-              else if(simulinkTag.contains("PortStep-FB") || simulinkTag.contains("step2")) {
+              else if(simulinkTag.contains("portStep") || simulinkTag.contains("step2")) {
                 zfb.portSteps.add(new ZbnfOpData(zbnfOp, "Tstep" + Integer.toString(++nStep), Whatisit.oper));
               } 
               else if(simulinkTag.contains("Operation-FB")) {
