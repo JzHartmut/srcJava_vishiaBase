@@ -477,7 +477,7 @@ public class SmlkSfn {
         this.outPorts.add(zbnfPort);
         this.allArgsIx.put(name, zbnfPort);
       }
-    
+      this.nrofPorts = this.nrofInputs + this.nrofOutputs;
     
     }
 
@@ -502,6 +502,7 @@ public class SmlkSfn {
       this.isFBstep = true;
       this.ixDworkThiz = -1;
       this.nrofDwork = 0;
+      this.nrofPorts = this.nrofInputs + this.nrofOutputs;
       
     }
     

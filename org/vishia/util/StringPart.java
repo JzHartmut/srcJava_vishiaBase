@@ -120,6 +120,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2021-03-14 Hartmut new {@link #lentoNumber(boolean, int[], String)}
    * <li>2019-06-07 Hartmut some formally changes: {@link #mSeekToLeft} etc: all bits are named with leading 'm' for mask. 
    * <li>2019-05-15 Hartmut {@link #seekCheck(CharSequence)}: A seek("xyz") shifts the actual position to the end if the seek String is not found. 
    *   This is the programmed behavior since 20 years, but it seems to be inconsequent. It may be better to remain the position, 
@@ -746,6 +747,11 @@ private final void throwSubSeqFaulty(int from, int to)
   @Override public final int 
   length(){ return end - begin; }
 
+  /* (non-Javadoc)
+   * @see java.lang.CharSequence#length()
+   */
+  public final int getLenCurrent(){ return this.end - this.begin; }
+
   /**Returns the lenght of the maximal part from current position. Returns also 0 if no string is valid.
      @return number of chars from current position to end of maximal part.
    */
@@ -921,6 +927,71 @@ private final void throwSubSeqFaulty(int from, int to)
         { end +=1; }
       }  
       bFound = (end > begin);
+    }
+    return this;
+  }
+
+
+  /** Sets the end position of the part of string to the end of the number which is beginning on start.
+   *  If the part starts not with an admissible char, the end is set to the start position 
+   *  and this.bFound is set to false.
+   *  If a number is found, maybe consist only as separatorChars, this.bFound is set to true.
+   *  It may be recommended using this routine if a number character is really expected.
+   *  <br>
+   *  Example: <code> " 1'234'456.235"</code> is parsed correctly as 1234456 
+   *  with separatorChars=" '". The dot is not parsed. 
+   *  <br>
+   *  Example: to parse an expected number with sign, test firstly the sign (before number).
+   *  <pre>
+   *  int[] nr = int[1];
+   *  char cc = sp.{@link #getCurrentChar()};
+   *  if(cc == '-') { bNeg = true; }
+   *  sp.lentoNumber(false, nr, null);
+   *  if(bNeg) { nr[0] = -nr[0]; }
+   *  sp.{@link #fromEnd()} 
+   *  </pre> 
+   *  @java2c=return-this.
+   *  @param bHex also parse a..f and A..F, build a hexa number
+   *  @param dst either null or int[1] as destination for the parsed number. 
+   *    Note: The length of the number for fractional part can be detected with separtorChars=null 
+   *    and {@link #getLenCurrent()} 
+   *  @param separatorChars CharSequence of additional chars there are also accept inside a number
+   *        
+   */
+  public final StringPart lentoNumber(boolean bHex, int[] dst, String separatorChars)
+  { this.endLast = this.end;
+    this.end = begin;
+    int nr = 0;
+    int mult = bHex? 16 : 10;
+    while(this.end < this.endMax){ 
+      char cc = this.content.charAt(end);
+      if(separatorChars !=null && separatorChars.indexOf(cc) >=0) {
+        this.end +=1;                            //admissible additional character
+      }
+      else if(cc >='0' && cc <='9') {
+        nr = nr * mult + (cc - '0');             // add 0..9
+        this.end +=1;
+      }
+      else if(bHex) {
+        if( cc >='a' && cc <='f') {
+          cc -= 'a';
+        }
+        else if( cc >='A' && cc <='F') {
+          cc -= 'A';
+        }
+        else {
+          break;                                 // non number character, break the loop
+        }
+        nr = nr * mult + (cc + 10);              //add a..f or A..F
+        this.end +=1;
+      }
+      else { 
+        break;                                   // non number character, break the loop
+      }
+    }
+    this.bFound = (this.end > this.begin);
+    if(dst !=null) { 
+      dst[0] = nr;                               //store parsed number, dst should be initialized
     }
     return this;
   }
