@@ -20,6 +20,7 @@ public class EvalTestoutfiles {
     try {
       for(String testName : testNames) {
         if(testName !=null) {
+          char cresult = ' ';  //default if no file found
           File ftestOut = new File(fTestDir, testName + ".out");
           if(ftestOut.exists()) {
             try {
@@ -44,23 +45,30 @@ public class EvalTestoutfiles {
                   }
                 }
               }
-              char cresult;
-              if(nrTestError >0) { cresult = 'E'; }
-              else if(nrTestOk != nrTest) { cresult = 'e'; }
-              else if(nrTestOk > 12) { cresult = '.'; }
-              else  { cresult = '\"'; }
-              result.append(cresult);
-              if(cresult !='.') {
+              if(nrTestError >2) { cresult = 'X'; }
+              if(nrTestError >0) { cresult = 'x'; }
+              else if(nrTestOk != nrTest) { cresult = 'v'; }
+              else  { 
+                int nrResult = (nrTestOk +9)/10;
+                if(nrResult >9) { nrResult = 9; }
+                cresult = (char)('0' + nrResult);
+              }
+              if(cresult <'1' || cresult >'9') {
                 problems.append(testName).append('\n');
               }
             } catch (IOException e) {
               // TODO Auto-generated catch block
-              result.append('?');
+              cresult= '?';
               e.printStackTrace();
             }
-          } else {
-            result.append('-');
           }
+          File ftestErr = new File(fTestDir, testName + ".cc_err");
+          if(ftestErr.exists() && ftestErr.length() >0) {
+            //cc_err file exists, change character cerror
+            int nrResult = "0123456789Xxv ".indexOf(cresult)+1;
+            cresult =     "FabcdefghijWwuE".charAt(nrResult);
+          }
+          result.append(cresult);
         }
       } //while(testName !=null);
       //
