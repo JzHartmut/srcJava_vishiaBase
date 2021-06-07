@@ -212,6 +212,7 @@ public final class JZtxtcmdSyntax {
     + " | \\<+:create\\><textExpr?createTextOut>\\<\\.+\\> \n" 
     + " | \\<+:append\\><textExpr?appendTextOut>\\<\\.+\\> \n" 
     + " | \\<+ <textOut> \n"  //Note: The srcLine should be set on start of <+ therefore it is checked in the syntax component. 
+    + " | \\<::\\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> [;] \n"              //flat nesting
     + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\> [;] \n"
     + " | <cmdLineWait?cmdWait> \n"  
     + " | <assignExpr> \n"
@@ -310,16 +311,20 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " \n"
     + " \n"
+    + " text::=  <\"\"?text>                                    ## It is a constant text. \n"
+    + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>                 ## It is a text assembled in runtime. \n"
+    + " | \\<::\\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> ## text assembled in runtime starting in next line. \n"
+    + " .\n"
     + " \n"
     + " \n"
     + " \n"
-    + " textDatapath::=  <\"\"?text> | \\<:\\><textExpr?.indent=-3>\\<\\.\\> | [& [?(] ] <dataAccess> .\n"
+    + " textDatapath::=  <text?> | [& [?(] ] <dataAccess> .\n"
     + " \n"
     //NOTE: a textvalue cannot end on a ':' because command line arguments cannont be parsed with then.
-    + " textValue::=  <\"\"?text> | \\<:\\><textExpr?.indent=-3>\\<\\.\\> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
+    + " textValue::=  <text?> | & <dataAccess> | <*;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     //NOTEtextvalue for a text expression in <subtext:name:...> can end on a ':' .
-    + " textValueTextExpr::=  <\"\"?text> | \\<:\\><textExpr?.indent=-3>\\<\\.\\> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
+    + " textValueTextExpr::=  <text?> | & <dataAccess> | <*:;,)(\\ \\r\\n\\>?text> .\n"
     + " \n"
     + " \n"
     + " objExpr::= \n"
@@ -327,9 +332,8 @@ public final class JZtxtcmdSyntax {
     + "   Filepath : <textValue?Filepath> ## A textValue which builds a Filepath in the currdir \n"
     + " | Fileset : <filesetAccess>  \n"
     + " | \\{ <dataStruct> \\}              ## It is a Map of Variables. \n"
-    + " | <\"\"?text>                       ## It is a constant text. \n"
-    + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>           ## It is a text assembled in runtime. \n"
-    + " | <numExpr>.                      ## special detection of a simple dataAccess.\n"
+    + " | <text?> \n"
+    + " | <numExpr>.                        ## special detection of a simple dataAccess.\n"
     + " \n"
     + " dataStruct::= { <DefVariable?> ; } | { <DefStringVar?textVariable> ? , }.\n"  
     + " \n"
@@ -454,6 +458,7 @@ public final class JZtxtcmdSyntax {
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:<DefVariable?> \\>  \n"
     + " | \\<:=<assignInTextExpr?assignExpr>  \n"
+    + " | \\<::\\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\>\n"              //flat nesting
     + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>\n"               //flat nesting
     + " | <*|\\<:|\\<&|\\#\\#|\\<\\.?plainText>\n"  //Note: beginning "<" of "?plainText>" is left!
     + " ]\n"

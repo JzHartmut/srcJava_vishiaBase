@@ -209,7 +209,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   { buffer = new StringBuilder(defaultBufferLength);
     this.sNewline = newlineString;
     this.lineout = lineout;
-    if(shouldClose){ assert(lineout instanceof Closeable); }
+    //if(shouldClose){ assert(lineout instanceof Closeable); }
     bShouldLineoutClose = shouldClose;
   }
 

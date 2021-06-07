@@ -591,7 +591,7 @@ public class CmdExecuter implements Closeable
   
   public boolean abortAllCmds()
   {
-    this.cmdQueue.clear();
+    if(this.cmdQueue !=null) { this.cmdQueue.clear(); }
     return abortCmd();
   }
 
