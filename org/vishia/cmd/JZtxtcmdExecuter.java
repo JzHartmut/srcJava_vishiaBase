@@ -85,6 +85,7 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-08 Hartmut improved: throw on missing main is a better error messaging.
    * <li>2021-02-07 Hartmut new: <code>List ... [ @ <$?keyVariableName> ]</code> then the List is stored 
    *   with a Map part to access an element via the value in the named variable. Access possible via get(name)
    * <li>2021-02-06 Hartmut bugfix: Now variables scriptfile and scriptdir are correct.
@@ -1084,7 +1085,9 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     
     
     JZtxtcmdScript.Subroutine mainRoutine = this.acc.jzcmdScript.getMain();
-
+    if(mainRoutine == null) {
+      throw new IllegalArgumentException("main routine not found"); 
+    }
     //needs all scriptVariable:
     JZtxtcmdScript.JZcmdClass mainClass = (JZtxtcmdScript.JZcmdClass)mainRoutine.parentList;
 

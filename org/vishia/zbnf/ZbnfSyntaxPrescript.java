@@ -939,26 +939,26 @@ public class ZbnfSyntaxPrescript
     
     
     if( cc == '%')
-    { bDebugParsing = true;
+    { this.bDebugParsing = true;
       cc = spInput.seekPos(1).getCurrentChar();
     }
     //
     if( cc == '*') { 
-      bEntryComponentContainer = true;
+      this.bEntryComponentContainer = true;
       cc = spInput.seekPos(1).getCurrentChar();
     } else if( cc == '-') { 
-      bAssignIntoNextComponent = true;
+      this.bAssignIntoNextComponent = true;
       cc = spInput.seekPos(1).getCurrentChar();
     } else if(cc == '+') { 
-      bAddOuterResults = true;
+      this.bAddOuterResults = true;
       //bTransportOuterResults = true;
       cc = spInput.seekPos(1).getCurrentChar();
     } else if(cc == '"') {                          
       //<Syntax?"!"semantic>: store the input which is parsed.
-      bStoreAsString = true;
+      this.bStoreAsString = true;
       cc = spInput.seekPos(1).getCurrentChar();
       if(cc == '!') { 
-        bDonotStoreData = true;
+        this.bDonotStoreData = true;
         cc = spInput.seekPos(1).getCurrentChar();
       }
       if(cc == '\"') { //skip over a second ", it is only used formally.
@@ -970,7 +970,7 @@ public class ZbnfSyntaxPrescript
     { //call of an inner parsing
       spInput.seek(1).lentoIdentifier();
       if(spInput.length()>0)
-      { sSubSyntax = spInput.getCurrentPart().toString();
+      { this.sSubSyntax = spInput.getCurrentPart().toString();
       }
       else ; //no sDefintionIdent and no Semantic
       spInput.fromEnd();

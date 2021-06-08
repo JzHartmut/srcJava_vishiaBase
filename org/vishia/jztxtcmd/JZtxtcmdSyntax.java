@@ -17,6 +17,15 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-08 Hartmut:Featurefix: Now empty statementlist is possible.
+   *   The problem for that was that an empty statement list such as main() { }
+   *   has had an obscure error message. Secondly sometime an empty statement block may be 
+   *   <br>* Change simple, statementBlock::= { [ <statement?> ] } with option braces.
+   * <li>2021-06-08 Hartmut: Now the <::> can be used for a text start without newline written with ident designation
+   *   <br>* usage: subtext(args) <::>textexpr<.> possible and proposed
+   *   <br>* intern: ZbnfItemAttribute ?.skipFirstnl= and ?.ident= used.
+   * <li>2021-06-08 Hartmut: Some simplifications for inhibit repeat same programming:
+   *   <br>* JZtxtcmdSyntax: definition of text::= 
    * <li>2021-02-07 Hartmut new: <code>List ... [ @ <$?keyVariableName> ]</code> 
    * <li>2017-07-12 Hartmut chg: <code>&lt;textExpr?.indent=-3></code> attribute ident to any textExpr, 
    *   hence it is possible to use it in any textDatapath too, for example<pre>
@@ -167,10 +176,13 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " subroutine::= <$?name> [( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , } |] ) [=] | = <?useLocals>] \\{ [<statementBlock>] \\}. \n"
     + " \n"
-    + " subtext::= <$?name> [( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , } |] ) [=] | = <?useLocals>]  \\<:\\><textExpr>\\<\\.\\>.\n"
+    + " subtext::= <$?name> [( [ use-locals<?useLocals> | { add-locals<?addLocals> | <DefVariable?formalArgument> ? , } |] ) [=] | = <?useLocals>]  \n"
+    + " [ \\<:\\><textExpr?textExpr?.indent=-3>\\<\\.\\> \n"
+    + " | \\<::\\><textExpr?textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> \n"
+    + " ].\n"
     + " \n"
     + " \n"
-    + " statementBlock::= { <statement?> }.\n"
+    + " statementBlock::= { [ <statement?> ] }.\n"
     + " \n"
     + " statement::=\n"
     + "   \\{ [<statementBlock>] \\} \n"
@@ -290,9 +302,6 @@ public final class JZtxtcmdSyntax {
     + " DefFilepath::= <definePath?defVariable> [ = <textValue?> ]. \n"
     + " \n"
     + " \n"
-    //+ " DefSubtext::= <definePath?defVariable> [ = <textValue?> ]. \n"
-    + " \n"
-    //\\<:\\><textExpr>\\<\\.\\>
     + " \n"
     + " XXXFilepath::=<\"\"?!prepFilePath>|<*;\\ \\r\\n,)?!prepFilePath>. \n"
     + " \n"
@@ -313,7 +322,7 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " text::=  <\"\"?text>                                    ## It is a constant text. \n"
     + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>                 ## It is a text assembled in runtime. \n"
-    + " | \\<::\\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> ## text assembled in runtime starting in next line. \n"
+    + " | \\<::\\ \\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> ## text assembled in runtime starting in next line. \n"
     + " .\n"
     + " \n"
     + " \n"

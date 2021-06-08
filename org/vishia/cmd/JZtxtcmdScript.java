@@ -55,6 +55,12 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2021-06-08 Hartmut: Now the <::> can be used for a text start without newline written with ident designation
+   * * usage: subtext(args) <::>textexpr<.> possible and proposed
+   * * intern: ZbnfItemAttribute ?.skipFirstnl= and ?.ident= used.
+   * <li>2021-06-08 Hartmut: Some simplifications for inhibit repeat same programming:
+   *   common use of {@link JZcmditem#new_textExpr(ZbnfParseResultItem)} 
+   *   also in {@link StatementList#new_textExpr(ZbnfParseResultItem)}
    * <li>2020-01-28 Hartmut bugfix {@link #createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
    *   with null as fileScript arg now runs as described.
    * <li>2018-09-22 Hartmut new: important change: Now the compilation of the script is part of this class.
@@ -686,11 +692,40 @@ public class JZtxtcmdScript extends CompiledScript
     
     
 
-    /**From Zbnf, a part <:>...<.> */
-    public StatementList new_textExpr() { 
+    /**Define the whole item as a statement block which is a text expression.
+     * See also {@link StatementList#new_textExpr(ZbnfParseResultItem)}: There such an item
+     * is declared inside a longer statement list. The difference is less, both have the same effect. 
+     * This list does only contain text expression statements.
+     */
+    public StatementList new_textExpr(ZbnfParseResultItem zbnfItem) { 
       //checkEmpty();  //don't check empty, on <+:n> there is stored a newline
-      if(this.statementlist == null){
-        this.statementlist = new StatementList(this); 
+      if(this.statementlist == null){                      // it is a JZcmdItem either subtext, or textEcpr in other expr 
+        this.statementlist = new StatementList(this);      // Should have its own sub statements.
+      }
+      //The input column counts from 1 for left. identDiff for ex. -3 ist from syntax <syntax?semantic|-3>
+      String sIndentDiff = zbnfItem.syntaxItem().getAttribute("indent");
+      int indent;                                          // some special designations for text expr.
+      if(sIndentDiff !=null && sIndentDiff.length() >0) {
+        try{ 
+          if(sIndentDiff.charAt(0) == '-') {
+            int indentDiff = Integer.parseInt(sIndentDiff.substring(1));
+            indent = zbnfItem.getInputColumn() -1 - indentDiff;
+          } else if(sIndentDiff.charAt(0) == '+') {
+            int indentDiff = Integer.parseInt(sIndentDiff.substring(1));
+            indent = zbnfItem.getInputColumn() -1 + indentDiff;
+          } else {
+            indent = Integer.parseInt(sIndentDiff);
+          }
+        } catch(NumberFormatException exc) {
+          throw new RuntimeException("faulty number for indentdiff", exc);
+        }
+      } else {
+        indent = zbnfItem.getInputColumn() -1;
+      }
+      this.statementlist.nIndentInScript = indent;   // valid for all textExpr-statements (all statements)
+      String sSkipFirstnl = zbnfItem.syntaxItem().getAttribute("skipFirstnl");
+      if(sSkipFirstnl !=null) {
+        this.statementlist.bSetSkipSpaces = true;    //Note: valid for the first line because set to false after first line 
       }
       return this.statementlist;
     }
@@ -2338,7 +2373,8 @@ public class JZtxtcmdScript extends CompiledScript
      */
     public boolean bContainsVariableDef;
 
-    /**Set with <code><:s></code> in a textExpression to enforce skipping whithespaces. */
+    /**Set with <code><:s></code> in a textExpression to enforce skipping whithespaces. 
+     * Also true if a text expression starts with &lt;:: >, then the first line feed should not be generated if the text before is empty. */
     boolean bSetSkipSpaces;
     
 
@@ -2355,7 +2391,6 @@ public class JZtxtcmdScript extends CompiledScript
     
     /**indent characters which should be skipped for an text expression.*/
     String sIndentChars = "=+:";
-    
     
     /**Scripts for some local variable. This scripts where executed with current data on start of processing this genContent.
      * The generator stores the results in a Map<String, String> localVariable. 
@@ -2497,37 +2532,22 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     
-    /**Gathers a text which is assigned to the out-instance
+    /**Gathers statements to build a text which is assigned to the out-instance.
+     * It is a sub statement list wrapped by a JZcmdItem as text expr in the current statements.
+     * See also {@link JZcmditem#new_textExpr(ZbnfParseResultItem)}: It is invoked here as sub statement list
+     * for this <code>new JZcmditem(this, ':');</code>. The difference is less, both have the same effect. 
+     * This StatementList contains some sub statements as text expression with this item. 
+     * The text is assembled and outputted to the standard output. 
      */
     public StatementList new_textExpr(ZbnfParseResultItem zbnfItem){ 
       if(zbnfItem.syntaxItem().bDebugParsing){
         Debugutil.stop();
       }
       JZcmditem textExpr = new JZcmditem(this, ':');
-      statements.add(textExpr);
-      textExpr.statementlist = new StatementList(textExpr);
-      //The input column counts from 1 for left. identDiff for ex. -3 ist from syntax <syntax?semantic|-3>
-      String sIndentDiff = zbnfItem.syntaxItem().getAttribute("indent");
-      int indent;
-      if(sIndentDiff !=null && sIndentDiff.length() >0) {
-        try{ 
-          if(sIndentDiff.charAt(0) == '-') {
-            int indentDiff = Integer.parseInt(sIndentDiff.substring(1));
-            indent = zbnfItem.getInputColumn() -1 - indentDiff;
-          } else if(sIndentDiff.charAt(0) == '+') {
-            int indentDiff = Integer.parseInt(sIndentDiff.substring(1));
-            indent = zbnfItem.getInputColumn() -1 + indentDiff;
-          } else {
-            indent = Integer.parseInt(sIndentDiff);
-          }
-        } catch(NumberFormatException exc) {
-          throw new RuntimeException("faulty number for indentdiff", exc);
-        }
-      } else {
-        indent = zbnfItem.getInputColumn() -1;
-      }
-      textExpr.statementlist.nIndentInScript = indent;
-      return textExpr.statementlist;
+      this.statements.add(textExpr);                         // add to the superior statements
+      
+      textExpr.statementlist = new StatementList(textExpr);  // the statementList of this textExpr as sub statements
+      return textExpr.new_textExpr(zbnfItem);                // the statementlist is a textExpr. Use the same as for subtext.
     }
 
     public void add_textExpr(StatementList val){ } 
