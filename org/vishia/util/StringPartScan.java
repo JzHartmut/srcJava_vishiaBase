@@ -54,6 +54,9 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-10 Hartmut new {@link #scanChar(char)} was missing for usage. Firstly in the C++ version.
+   *   Why it is missing? forgotten, really simple necessary. Only tested in the moment in C++, works.
+   *   Hint: {@link #scan(CharSequence)} is possible to use instead, but too complex in C/++ language
    * <li>2020-02-10 Hartmut new: {@link #readNextContent(int)}. 
    *   It is the old routine {@link StringPartFromFileLines#readnextContentFromFile(int)} here offered make it possible
    *   to use a longer input but use this base class too. The default implementation in this class is empty
@@ -277,6 +280,29 @@ public class StringPartScan extends StringPart
 
 
   
+  /**Scans whether the given char is currently follow
+   * @param cmp this char
+   * @return this, use {@link #scanOk()} to test the result.
+   * @since 2021-06, was missing, too simple. But systematically.
+   */
+  public final StringPartScan scanChar(char cmp) {
+    if(scanEntry()) {  //false if scan before is false
+      if(  (this.begin + 1) < this.endMax) {
+        char cc = this.content.charAt(this.begin);
+        if(cc == cmp) {
+          this.begin +=1;    //skip, ok
+        } else {
+          this.bCurrentOk = false;
+        }
+      } else {
+        this.bCurrentOk = false;
+      }
+    }
+    return this;
+  }
+  
+  
+  
   /*=================================================================================================================*/
   /*=================================================================================================================*/
   /*=================================================================================================================*/
@@ -339,7 +365,7 @@ public class StringPartScan extends StringPart
       //
       //now the check can be start:
       char cc;
-      if(  (begin + len) <= endMax //content.length()
+      if(  (this.begin + len) <= this.endMax //content.length()
         && StringFunctions.equals(content, begin, begin+len, sTest)
         && ( bTestToEndOfText ? begin + len == end  //should be the exact length
            : (bTestToNoCidentifier ? 

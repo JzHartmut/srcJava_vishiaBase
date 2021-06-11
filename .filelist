@@ -1,7 +1,7 @@
 
 ============================== _make/ =============================================================
 2021-02-08 23:14:33  x     +genjavadoc.sh                           ::           .537 -0076592556 
-2021-05-01 23:22:45  x     +makejar_vishiaBase.sh                   ::          2.925  1265571983 
+2021-06-08 13:46:46  x     +makejar_vishiaBase.sh                   ::          2.925  1808344218 
 2021-02-07 23:33:52  x     -genjavadocbase.sh                       ::          2.129  0945449481 
 2020-10-03 11:45:29  x     -makejar-coreScript.sh                   ::          3.619  1023917267 
 2020-07-21 12:51:54  x     JAVAC_CMD.sh                             ::          1.064 -0769104566 
@@ -105,7 +105,7 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2021-06-08 13:22:39  x     JZtxtcmdExecuter.java                    ::        190.544 -1308319643 
+2021-06-11 19:46:14  x     JZtxtcmdExecuter.java                    ::        192.002  1754615018 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2021-06-08 13:35:24  x     JZtxtcmdScript.java                      ::        115.839  1220876552 
@@ -325,7 +325,7 @@
 2014-06-14 12:02:17  x     StringPartAppend.java                    ::          5.482 -1907437228 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2020-02-15 09:33:21  x     StringPartFromFileLines.java             ::         26.630  1027370270 
-2020-02-13 20:19:55  x     StringPartScan.java                      ::         50.066  0225586968 
+2021-06-11 19:29:22  x     StringPartScan.java                      ::         51.021  1748807753 
 2014-01-14 08:55:20  x     StringSeq.java                           ::          6.617 -1883922442 
 2020-08-29 16:12:48  x     TestOrg.java                             ::         11.708 -0683566770 
 2011-02-26 21:31:28  x     ThreadContext.java                       ::          2.353 -1963738349 

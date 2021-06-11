@@ -45,7 +45,7 @@ import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FilePath;
 import org.vishia.util.FileSystem;
-import org.vishia.util.IndexMultiTable;
+//import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFormatter;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartAppend;
@@ -85,6 +85,13 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-11 Hartmut refactoring: Only formally replacements, but possible side effects, not supposed but not excluded.
+   * Change IndexMultiTable to TreeMap for the variables. 
+   * The IndexMultiTable is also a Map, but not supported from Eclipse debug view "Show Logical Structure".
+   * It is more complex handling for debugging. Hence replaced.
+   * <br>The difference TreeMap, IndexMultiTable is: last one should not have unique keys.
+   * But for that application the keys are unique (the variables). Hence there should not be side effects.
+   * Only one passage in {@link ExecuteLevel#exec_cmdline(org.vishia.cmd.JZtxtcmdScript.CmdInvoke), see comment there.
    * <li>2021-06-08 Hartmut improved: throw on missing main is a better error messaging.
    * <li>2021-02-07 Hartmut new: <code>List ... [ @ <$?keyVariableName> ]</code> then the List is stored 
    *   with a Map part to access an element via the value in the named variable. Access possible via get(name)
@@ -466,8 +473,9 @@ public class JZtxtcmdExecuter {
     public long calctime(){ return System.currentTimeMillis() - this.startmilli; }
 
 
-    private IndexMultiTable<String, DataAccess.Variable<Object>> new_Variables(){
-      return new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
+    private Map<String, DataAccess.Variable<Object>> new_Variables(){
+      return new TreeMap<String, DataAccess.Variable<Object>>();
+      //return new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
     }
 
   } //class JzTcMain
@@ -1373,7 +1381,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     /**Generated content of local variables in this nested level including the {@link JzTcMain#scriptLevel}.{@link ExecuteLevel#localVariables}.
      * The variables are type invariant on language level. The type is checked and therefore 
      * errors are detected on runtime only. */
-    public final IndexMultiTable<String, DataAccess.Variable<Object>> localVariables;
+    public final Map<String, DataAccess.Variable<Object>> localVariables;
     
     
     /**Initialize firstly on demand. Don't close to speed up following cmd invocations.
@@ -1813,7 +1821,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         //
         //creates the local variable return on demand:
         DataAccess.Variable<Object> ret = new DataAccess.Variable<Object>('M', "return", this.jzcmdMain.new_Variables());
-        this.localVariables.add("return", ret);
+        this.localVariables.put("return", ret); //.add("return", ret);
       }
       //statement.defVariable is type of DataAccess and contains the type. 
       storeValue(statement.defVariable, newVariables, value, this.jzcmdMain.bAccessPrivate);
@@ -1849,8 +1857,9 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           if(elementType == '*') {
             //A container with variable definition adequate 'M' but not as Map variable
             final ExecuteLevel level = new ExecuteLevel(this.jzcmdMain, this.subRoutine, this.jzClass, this.threadData, this, this.localVariables);
-            IndexMultiTable<String, DataAccess.Variable<Object>> elementValue = 
-              new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString); 
+            Map<String, DataAccess.Variable<Object>> elementValue = 
+              new TreeMap<String, DataAccess.Variable<Object>>(); 
+              //new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString); 
             //fill the dataStruct with its values:
             ret = level.execute(elementStm.statementlist, null, 0, elementValue, -1); //Note: extra newVariables
             level.close();
@@ -2746,20 +2755,28 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       if(cmdExecuter == null){ 
         cmdExecuter = new CmdExecuter(); 
         Map<String,String> env = cmdExecuter.environment();
-        Iterator<DataAccess.Variable<Object>> iter = localVariables.iterator("$");
+        //Iterator<DataAccess.Variable<Object>> iter = localVariables.iterator("$");
+        Iterator<Map.Entry<String, DataAccess.Variable<Object>>> iter = localVariables.entrySet().iterator(); //("$");
+        
         boolean cont = true;
         //
         //gather all variables starting with "$" as environment variable. 
+        //Note: Here usage of IndexMultiTable may be more proper, it can pre-select starting with "$".
+        //But for this few variables if-checking is also proper. 
         //
         while(cont && iter.hasNext()){
-          DataAccess.Variable<Object> variable = iter.next();
+          //DataAccess.Variable<Object> variable = iter.next();
+          Map.Entry<String, DataAccess.Variable<Object>> e = iter.next();
+          DataAccess.Variable<Object> variable = e.getValue();
           String name = variable.name();
           Object oValue = variable.value(); 
           if(name.startsWith("$") && oValue !=null){
             String value = oValue.toString();
             env.put(name.substring(1), value);
           } else {
-            cont = false;
+            //removed cont=false, only applicable for IndexMultiTable. 
+            //On TreeMap it would break on beginning too.
+            //cont = false;  //only valid for IndexMultiTable
           }
         }
         cmdExecuter.setCurrentDir(this.currdir);  //from this executer level.
@@ -3255,7 +3272,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           //
           //creates the local variable return on demand:
           DataAccess.Variable<Object> ret = new DataAccess.Variable<Object>('M', "return", jzcmdMain.new_Variables());
-          localVariables.add("return", ret);
+          localVariables.put("return", ret); //.add("return", ret);
         }
         storeValue(statement.defVariable, newVariables, val, jzcmdMain.bAccessPrivate);
         if(cmdExecuter !=null){
@@ -3532,8 +3549,9 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         if(arg.elementType == 'M') {  
           //a dataStruct
           final ExecuteLevel level = new ExecuteLevel(jzcmdMain, this.subRoutine, this.jzClass, threadData, this, localVariables);
-          IndexMultiTable<String, DataAccess.Variable<Object>> newVariables = 
-            new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString); 
+          Map<String, DataAccess.Variable<Object>> newVariables = 
+            new TreeMap<String, DataAccess.Variable<Object>>(); 
+            //new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString); 
           //fill the dataStruct with its values:
           ret = level.execute(arg.statementlist, null, 0, newVariables, -1); //Note: extra newVariables
           obj = ret == kException ? JZtxtcmdExecuter.retException: newVariables;
@@ -4029,9 +4047,9 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
   */
  protected static class JZcmdBindings implements Bindings 
  { 
-   private final IndexMultiTable<String, DataAccess.Variable<Object>> vars;
+   private final Map<String, DataAccess.Variable<Object>> vars;
 
-   public JZcmdBindings(IndexMultiTable<String, DataAccess.Variable<Object>> vars)
+   public JZcmdBindings(Map<String, DataAccess.Variable<Object>> vars)
    { this.vars = vars;
    }
 
