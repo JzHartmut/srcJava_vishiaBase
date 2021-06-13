@@ -85,6 +85,8 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-12 Hartmut now write to System.err if inside a thread there is an error. Before (bug) it was silent,
+   *   an error was not seen.
    * <li>2021-06-12 Hartmut capability of {@link JzTcMain#envar} for simple access to Java data from the calling environment.
    *   {@link #initialize(JZtxtcmdScript, boolean, List, Map, CharSequence)} enhanced for that.
    * <li>2021-06-11 Hartmut refactoring: Only formally replacements, but possible side effects, not supposed but not excluded.
@@ -3754,6 +3756,10 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     
 
     protected void finishThread(JZtxtcmdThreadData thread){
+      if(thread.exception !=null) {
+        CharSequence excInfo = excStacktraceinfo();
+        System.err.println(excInfo);   //show it anywhere, should be visible
+      }
       synchronized(thread){
         thread.notifyAll();   //any other thread may wait for join
       }
