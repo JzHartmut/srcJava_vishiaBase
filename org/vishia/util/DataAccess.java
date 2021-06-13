@@ -2291,6 +2291,23 @@ public class DataAccess {
   }
   
   
+  /**Set or replaces a variable with a simple name in the given container. 
+   * If the variable exists, its content will be replaced by the new definition.
+   * In opposite to {@link #createOrReplaceVariable(Map, String, char, Object, boolean)}
+   * the container will contain the original given ref. 
+   * @param map The container for variables.
+   * @param ref Initialized variable with or without value.
+   */
+  public static void setVariable(Map<String, Variable<Object>> map, DataAccess.Variable<Object> ref) {
+    DataAccess.Variable<Object> var = map.get(ref.name);
+    if(var != null) {
+      map.remove(ref.name);  //necessary if map is IndexMultiTable
+    }
+    map.put(ref.name, ref);
+    return;
+  }
+  
+  
   /**Searches the variale in the container and returns it.
    * @param map The container
    * @param name name of the variable in the container

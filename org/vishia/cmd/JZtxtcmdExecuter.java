@@ -85,6 +85,8 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-12 Hartmut capability of {@link JzTcMain#envar} for simple access to Java data from the calling environment.
+   *   {@link #initialize(JZtxtcmdScript, boolean, List, Map, CharSequence)} enhanced for that.
    * <li>2021-06-11 Hartmut refactoring: Only formally replacements, but possible side effects, not supposed but not excluded.
    * Change IndexMultiTable to TreeMap for the variables. 
    * The IndexMultiTable is also a Map, but not supported from Eclipse debug view "Show Logical Structure".
@@ -398,12 +400,19 @@ public class JZtxtcmdExecuter {
 
     
     public final ExecuteLevel scriptLevel;
+    
+    
+    /**possible environment variables from a calling Java environment. 
+     * null if no environment variables are given on calling {@link JZtxtcmdExecuter#initialize(JZtxtcmdScript, boolean, List, Map, CharSequence)}
+     * @since 2021-06
+     */
+    public Map<String, DataAccess.Variable<Object>> envar;
 
     JzTcMain(MainCmdLogging_ifc log, JZtxtcmdExecuter jzCmdExecuter){
       this.log = log;
       this.jzCmdExecuter = jzCmdExecuter;
       this.scriptThread = new JZtxtcmdThreadData();
-      this.scriptLevel = new ExecuteLevel(this, scriptThread);
+      this.scriptLevel = new ExecuteLevel(this, this.scriptThread);
     }
 
         
@@ -651,6 +660,50 @@ throws ScriptException //, IllegalAccessException
  * {@link #execSub(org.vishia.cmd.JZtxtcmdScript.Subroutine, Map, boolean, Appendable)}
  * with one of the subroutines in the given script.
  * 
+ * @param script jzTc script in java-prepared form. It contains the building prescript
+ *   for the script variables.
+ * @param accessPrivate decision whether private and protected members from Java instances can be accessed.   
+ * @param srcVariables
+ * @param envar Variables from the Java environment used by reference. Preserve content on new initialized script.
+ *              The new initialized script can use the before set content. 
+ * @param sCurrdir
+ * @param bExecuteScriptLevel
+ * @throws ScriptException
+ */
+public void initialize
+( JZtxtcmdScript script
+, boolean accessPrivate
+, List<DataAccess.Variable<Object>> srcVariables
+, Map<String, DataAccess.Variable<Object>> envar
+, CharSequence sCurrdirArg
+) 
+throws ScriptException //, IllegalAccessException
+{ 
+  this.acc.scriptLevel.localVariables.clear();
+  if(srcVariables !=null){
+    for(DataAccess.Variable<Object> var: srcVariables){
+      try{ DataAccess.createOrReplaceVariable(this.acc.scriptLevel.localVariables, var.name(), var.type(), var.value(), var.isConst());
+      } catch(IllegalAccessException exc){
+        throw new JzScriptException("JZcmdExecuter.genScriptVariable - IllegalAccessException; " + exc.getMessage());
+      }
+    }
+  }
+  this.acc.envar = envar;  //use it immediately.
+  initialize_i(script, accessPrivate, sCurrdirArg);
+}
+
+
+
+
+/**Initializes the standard script variables and maybe executes the script level. All content before is removed.
+ * Especially script variables from a previous usage of the instance are removed.
+ * If you want to use a JZcmdExecuter more as one time with different scripts
+ * but with the same script variables, one should call this routine one time on start,
+ * and then {@link #execute(JZtxtcmdScript, boolean, boolean, Appendable)} with maybe several scripts,
+ * which should not contain script variables, or one should call 
+ * {@link #execSub(org.vishia.cmd.JZtxtcmdScript.Subroutine, Map, boolean, Appendable)}
+ * with one of the subroutines in the given script.
+ * 
  * @param genScriptArg Generation script in java-prepared form. It contains the building prescript
  *   for the script variables.
  * @param accessPrivate decision whether private and protected members from Java instances can be accessed.   
@@ -666,18 +719,9 @@ public void initialize
 , CharSequence sCurrdirArg
 ) 
 throws ScriptException //, IllegalAccessException
-{ 
-  this.acc.scriptLevel.localVariables.clear();
-  if(srcVariables !=null){
-    for(DataAccess.Variable<Object> var: srcVariables){
-      try{ DataAccess.createOrReplaceVariable(this.acc.scriptLevel.localVariables, var.name(), var.type(), var.value(), var.isConst());
-      } catch(IllegalAccessException exc){
-        throw new JzScriptException("JZcmdExecuter.genScriptVariable - IllegalAccessException; " + exc.getMessage());
-      }
-    }
-  }
-  initialize_i(script, accessPrivate, sCurrdirArg);
+{ initialize(script, accessPrivate, srcVariables, null, sCurrdirArg);
 }
+
 
 
 

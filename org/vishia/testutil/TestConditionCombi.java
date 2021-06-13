@@ -8,6 +8,8 @@ import org.vishia.util.Debugutil;
 
 public class TestConditionCombi {
 
+  /**Result item of parsing the expression. Consist of the number (the table number) and the select string.
+   */
   static public class NumString { 
     
     public final int nr; 
@@ -20,26 +22,11 @@ public class TestConditionCombi {
   
   
   
-  /**Prepares the container for comparison, see {@link #checkSameItem(String, CharSequence...)}
-   * The select pattern has the following syntax (ZBNF):<pre>
-   * select::= { <selAnd> ? : }.  ##multiple independent select pattern, one should match, ':' is a OR 
-   * selAnd::= { <selOr> ? & }.   ##select pattern which`s all parts <selOr> should match.
-   * selOr::=  { <selLine> ? + }. ##select pattern part which checks some lines, one should match, separated with |
-   * selLine::= { [{<#table>?,}=]{<selItem>? , }[;] }. ##select pattern for items in lines. starts optional with one digit line number.
-   * selItem::= ... ends either with space or an following upper case character. </pre>     
-   * Examples:
-   * <ul>
-   * <li>"1=Aa 2=Bb" expects "Aa" in the first line and "Bb" in the second line of table resp. cmp[0], cmp[1].
-   * <li>"1=Aa,Ab 2=Bb" expects "Aa" or "Ab" in the first cmp and "Bb" in the second cmp.
-   * <li>"1=Aa,Ab 2=Bb + Zz" expects as above, or "Zz" in all lines.
-   * <li>"1=Aa,Ab 2=Bb + Zz & 3=X" expects as above, but "X" in cmp[2] in any case . 
-   *                            If "Zz" is contained in line 3, "X" is not need.
-   *                            If only 2 lines exists, "3=X" is effectless
-   * <li>"1Aa,Ab 2=Bb + Zz & 3=X : Y" as above, but alternatively also "Y" in all lines is recognized as ok.
-   * </ul>
-   * @param select text for selection.
-   * @return The container parsed from select
-   * @throws ParseException 
+  /**Internal operation to parse the test case string. 
+   * @param select
+   * @param nrConditions
+   * @return combined list internal use
+   * @throws ParseException
    */
   private static List<List<List<List<NumString>>>> parseTestCases ( String select, int nrConditions) throws ParseException {
     List<List<List<List<NumString>>>> selistAll = new LinkedList<List<List<List<NumString>>>>(); 
@@ -113,6 +100,30 @@ public class TestConditionCombi {
 
   
   
+  /**Prepares the container for comparison, see {@link #checkSameItem(String, CharSequence...)}
+   * The select pattern has the following syntax (ZBNF):<pre>
+   * select::= { <selAnd> ? : }.  ##multiple independent select pattern, one should match, ':' is a OR 
+   * selAnd::= { <selOr> ? & }.   ##select pattern which`s all parts <selOr> should match.
+   * selOr::=  { <selLine> ? + }. ##select pattern part which checks some lines, one should match, separated with |
+   * selLine::= { [{<#table>?,}=]{<selItem>? , }[;] }. ##select pattern for items in lines. starts optional with one digit line number.
+   * selItem::= ... ends either with space or an following upper case character. </pre>     
+   * Examples:
+   * <ul>
+   * <li>"1=Aa 2=Bb" expects "Aa" in the first line and "Bb" in the second line of table resp. cmp[0], cmp[1].
+   * <li>"1=Aa,Ab 2=Bb" expects "Aa" or "Ab" in the first cmp and "Bb" in the second cmp.
+   * <li>"1=Aa,Ab 2=Bb + Zz" expects as above, or "Zz" in all lines.
+   * <li>"1=Aa,Ab 2=Bb + Zz & 3=X" expects as above, but "X" in cmp[2] in any case . 
+   *                            If "Zz" is contained in line 3, "X" is not need.
+   *                            If only 2 lines exists, "3=X" is effectless
+   * <li>"1Aa,Ab 2=Bb + Zz & 3=X : Y" as above, but alternatively also "Y" in all lines is recognized as ok.
+   * </ul>
+   * @param select text for selection.
+   * @return The container parsed from select. It contains all combinations as List. 
+   *   One item contains an array of select strings for all tables. The order of elements in the array is the order of tables. 
+   *   All items are selected test cases.
+   *   The return .size() is the number of test cases 
+   * @throws ParseException 
+   */
   public static List<NumString[]> prepareTestCases(String select, int nConditions) {
     
     List<NumString[]> testcasesAll = new LinkedList<NumString[]>();
@@ -220,5 +231,32 @@ public class TestConditionCombi {
     }
     return testcasesAll;
   }
+  
+  
+  
+  /**Checks whether the nr in each item element is the same as position in array as expected.
+   * @param selectList The list returned from {@link #prepareTestCases(String, int)}
+   * @param shouldThrow true then throws, false then returns false on error. 
+   * @return true if all ok.
+   */
+  boolean assertCheckNr(List<NumString[]> selectList, boolean shouldThrow) {
+    boolean bOk = true;
+    int ixItem = 0;
+    for(NumString[] item: selectList) {
+      for(int ix=0; ix < item.length; ++ix) {
+        if(item[ix].nr !=ix) { 
+          if(shouldThrow) {
+            throw new IllegalArgumentException("inconsistent nr in item" + ixItem);
+          }
+          bOk = false; break; 
+        }
+      }
+      if(!bOk) break;
+      ixItem +=1;
+    }
+    return bOk;
+  }
+  
+  
   
 } //class

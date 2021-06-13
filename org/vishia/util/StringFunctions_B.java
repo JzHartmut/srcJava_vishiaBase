@@ -9,11 +9,11 @@ public class StringFunctions_B
   /**Version, history and license.
    * <ul>
    * <li>2021-02-06 Hartmut new {@link #checkSameItem(String, CharSequence...)} and {@link #prepareCheckSameItem(String)}.
-   *         This is newly used in the {@link org.vishia.simSelector.SimSelector} in the script for selection.
+   *         This is newly used in the {@link org.vishia.stimuliSelector.StimuliSelector} in the script for selection.
    *         More ability. 
    * <li>2020-07-22 Hartmut new {@link #checkOneSameChars(CharSequence, CharSequence...)} 
    *         and {@link #checkMoreSameChars(CharSequence, CharSequence...)} as enhancement to 2016-activity
-   *         used in {@link org.vishia.simSelector.SimSelector} in the script for selection.
+   *         used in {@link org.vishia.stimuliSelector.StimuliSelector} in the script for selection.
    * <li>2016-01-10 Hartmut new: {@link #checkSameChars(CharSequence...)} 
    * <li>2015-11-07 Hartmut created: The functionality to remove indentation was used in JZcmdExecuter.
    *   Now it is implemented here for common usage.
