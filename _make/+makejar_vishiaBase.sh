@@ -13,8 +13,8 @@ echo script $0
 #If the relevant sources are not change in functionality, may be changed in comment, 
 #  it is not necessary the change this VERSION because the generated content is the same.
 #The next line is the version for vishiaMiniSys:
-export VERSION_MINISYS="2021-06-08"
-export VERSION_VISHIABASE="2021-06-08"
+export VERSION_MINISYS="2021-06-21"
+export VERSION_VISHIABASE="2021-06-21"
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSION
@@ -79,6 +79,9 @@ export DEPLOY="$BUILD/deploy/vishiaBase"
 
 export MANIFEST=vishiaBase.manifest
 export SRC_ALL=".."
+if test -d ../../srcJava_vishiaRun; then export SRC_ALL2="../../srcJava_vishiaRun"
+else export SRC_ALL2="../../../../../../cmpnJava_vishiaRun/src/main/java/srcJava_vishiaRun"
+fi
 export FILE1SRC=""
 
 #now run the common script:

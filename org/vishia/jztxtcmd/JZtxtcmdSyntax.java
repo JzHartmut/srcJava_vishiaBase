@@ -232,7 +232,7 @@ public final class JZtxtcmdSyntax {
     + " .\n"
     + " \n"
     + " \n"
-    + " srcdst::= [{ -n<?newTimestamp>| -w<?overwr> | -r<overwro>}] [ src=] <textValue?src> [ dst=] <textValue?dst> .\n"
+    + " srcdst::= [{ -n<?newTimestamp>| -w<?overwr> | -r<?overwro>}] [ src=] <textValue?src> [ dst=] <textValue?dst> .\n"
     + " oneArg::= <textValue?src> .\n"
     + " \n"
     + " \n"

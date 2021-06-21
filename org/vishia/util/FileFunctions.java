@@ -49,6 +49,8 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2021-06-21 Hartmut new {@link #renameCreate(File, String, String, boolean)}, 
+   *     new {@link #mkDir(File)}
    * <li>2020-06-08 Hartmut Move from FileSystem to this class, FileSystem is used in {@link java.nio.file.FileSystem} too. Prevent name clash.
    * <li>2020-03-20 Hartmut new {@link #absolutePath(String, File)} refactored, some problems on {@link org.vishia.zip.Zip} with jar.
    * <li>2020-03-05 Hartmut new {@link #readFile(File, Appendable, int[])} into a buffer.
@@ -624,7 +626,8 @@ public class FileFunctions {
 
   /**checks if a path exists or execute mkdir for all not existing directory levels.
    *
-   * @param sPath The path. A file name on end will ignored. 
+   * @param sPath The path to a file or directory if it ends with "/" or "\". 
+   *        It means, a file name on end will ignored. It makes the directory for the file. 
    *        The used path to a directory is all before the last / or backslash.
    * @return the directory of the path.
    * @throws FileNotFoundException If the path exists and it is a file or if it is not able to create.
@@ -636,21 +639,30 @@ public class FileFunctions {
     if(pos3 > pos2){ pos2 = pos3; }
     if(pos2 >0)
     { String sPathDir = sPath.substring(0, pos2);
-      File dir = new File(sPathDir);
-      if(!dir.exists())
-      { if(!dir.mkdirs())  //creates all dirs along the path.
-        { //if it fails, throw an exception
-          throw new FileNotFoundException("Directory path mkdirs failed;" + sPath);
-        }
-      }
-      if(!dir.isDirectory()){
-        throw new FileNotFoundException("path is a file, should be a directoy;" + sPath);
-      }
-      return dir;
+      return mkDir(new File(sPathDir));
     }
     else return new File(".");  //the current directory is the current one.
   }
 
+  /**checks if the directory path exists or execute mkdir for all not existing directory levels.
+  *
+  * @param sPath The path to a directory.
+  * @return the File instance of this directory.
+  * @throws FileNotFoundException If the path exists and it is a file or if it is not able to create.
+  */
+  public static File mkDir(File dir) 
+  throws FileNotFoundException {
+    if(!dir.exists())
+    { if(!dir.mkdirs())  //creates all dirs along the path.
+      { //if it fails, throw an exception
+        throw new FileNotFoundException("Directory path mkdirs failed;" + dir.getAbsolutePath());
+      }
+    }
+    if(!dir.isDirectory()){
+      throw new FileNotFoundException("path is a file, should be a directoy;" + dir.getAbsolutePath());
+    }
+    return dir;
+  }
   
   
   public static boolean delete(String path){
@@ -1751,6 +1763,70 @@ public class FileFunctions {
   }
 
 
+ 
+  /**Renames from src or creates the dst file.
+   * This routine is supposed especially if a signal file (a semaphore) should be set.
+   * For such approaches renaming of existing files is better, because it needs lesser effort on the file system:
+   * Only the directory entry is changed in its data, no extra space is used, if the src file exists.
+   * <br>
+   * But this routine cleans up also: If src is given with '*' then it removes all existing file 
+   * except the first one found. The first one is renamed. 
+   * This situation can occur when another tool uses different approaches and the files are messed up.
+   * @param dir The directory. May be a absolute path or relative from the system's current directory.
+   *            Hint: For JZtxtcmd usage it can be written: <code>File: "path"</code>.
+   *            Then the path is used from the JZtxtcmd internal current dir, not from the system's current dir. 
+   * @param src Name of the file in this dir to rename. Need not be existing. If it contains a '*' only one found is renamed,
+   *            all other found are deleted.
+   * @param dst Name of the dst file in this dir. It will be created if the src is not existing.
+   *            The dst file is existing in any case if the routine returns true.
+   *            If the src file is not given with * and the dst file exists already, nothing will be done.
+   *            The src file is not delete then. Hint: Use * in the name of the src if existing files should be cleaned.
+   * @param bException true then an exception is thrown in any error case, false: only the return value inform about problems.            
+   * @return true if the operation is successfull, false on any error.
+   * @throws Exception only if bException is set. It is possible that the dir path is faulty, the dst contains faulty characters etc. 
+   */
+  public static boolean renameCreate(File dir, String src, String dst, boolean bException) 
+  throws Exception {
+    boolean bOk = true;
+    try {
+      File fDir = mkDir(dir);
+      if(src.indexOf('*')>=0) {
+        List<File> filesSrc = new LinkedList<File>();
+        addFileToList(fDir, src, filesSrc);
+        int zFiles = filesSrc.size();
+        if(zFiles ==0) {                         // create the dst file, src does not exists
+          bOk = writeFile("", fDir.getAbsolutePath() + "/" + dst);
+        } else {
+          File fSrc = filesSrc.get(0);
+          File fDst = new File(fDir, dst);
+          bOk = fSrc.renameTo(fDst);                   // rename the first found
+          filesSrc.remove(0);
+          for(File fSrcOther: filesSrc) {
+            fSrcOther.delete();                  // delete all other files
+          }
+        }
+      }
+      else {
+        File fSrc = new File(fDir, src);
+        File fDst = new File(fDir, dst);
+        if(!fDst.exists()) {
+          if(fSrc.exists()) {
+            bOk = fSrc.renameTo(fDst);
+          } else {
+            writeFile("", fDir.getAbsolutePath() + "/" + src);
+          }
+        }
+      }
+    } catch(Exception exc) {
+      if(bException) throw exc;  //throw forward.
+      return false;
+    }
+    if(!bOk && bException) {
+      throw new IllegalArgumentException("any problem");
+    }
+    return true;
+   }
+  
   
   
   

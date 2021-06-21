@@ -1,6 +1,6 @@
 ## may use a different JDK/JRE for Javadoc. Therefore a batch setJAVA_Javadoc.bat may found in the PATH in users space.
-echo on    
 if test -z $JAVAC_HOME; then
+  echo "calls: $($(dirname $0)/JAVAC_HOME.sh)"
   export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
 fi  
 echo JAVAC_HOME = $JAVAC_HOME
