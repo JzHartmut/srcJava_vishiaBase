@@ -839,18 +839,24 @@ public class FileFunctions {
   
   
   /**Returns the directory of the given file.
-   * Note that the {@link java.io.File#getParentFile()} does not return the directory if the File is described as a relative path
-   * which does not contain a directory. This method builds the absolute path of the input file and returns its directory. 
-   * @param file
+   * Note that the {@link java.io.File#getParentFile()} does not return the directory 
+   * if the File is described as a relative path which does not contain a directory. 
+   * Note furthermore that  {@link java.io.File#getParentFile()} does return the formally parent only in the String,
+   * it is not the real parent if the path is for examle "D:\My\path\.".
+   * This method builds the absolute and normalized path of the input file and returns its directory. 
+   * @param file any file or directory, should exist.
    * @return null if the file does not exists or the file is the root directory. 
    *   To distinguish whether the file is not exist or it is the root directory one can check file.exist().  
    */
   public static File getDir(File file)
-  { File dir;
+  { File fileAbs, dir;
     if(!file.exists()) return null;
-    if(!file.isAbsolute()){
-      file = file.getAbsoluteFile();
+    if(file.isAbsolute()){
+      fileAbs = file;
+    } else {  
+      fileAbs = file.getAbsoluteFile();
     }
+    normalizePath(fileAbs);
     dir = file.getParentFile();
     return dir;
   }
@@ -906,7 +912,7 @@ public class FileFunctions {
   
   
   /**Gets the canonical path of a file without exception and with unique slashes. 
-   * See java.io.File.getCanonicalPath().
+   * See java.io.File.getCanonicalPath(). It does the same, but:
    * The separator between directory names is the slash / in windows too!
    * It helps to work with unique designation of paths. 
    * The original java.io.File.getCanonicalPath() produces a backslash in windows systems.
