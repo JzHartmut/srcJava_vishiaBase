@@ -856,8 +856,9 @@ public class FileFunctions {
     } else {  
       fileAbs = file.getAbsoluteFile();
     }
-    normalizePath(fileAbs);
-    dir = file.getParentFile();
+    CharSequence sAbs = normalizePath(fileAbs);
+    File fileNorm = new File(sAbs.toString());
+    dir = fileNorm.getParentFile();
     return dir;
   }
   

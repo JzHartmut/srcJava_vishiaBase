@@ -203,7 +203,7 @@ public class PIDf_Ctrl {
   }
 
 
-  public float step ( float wx, float[] y_y)
+  public float XXXXXXstep ( float wx, float[] y_y)
   {
     if(this.parNew !=null) { 
       //because of data consistence the new parameter factors
@@ -257,6 +257,65 @@ public class PIDf_Ctrl {
   public float y() { return this.y; }
   
   protected float yI() { return this.f.fIy * this.qIhi; }
+  
+  
+  
+  
+  
+  
+  public float step ( float wx, float[] y_y)
+  {
+    if(this.parNew !=null) { 
+      //because of data consistence the new parameter factors
+      //should be copied in the fast working thread.
+      //It does not need a lot of time!
+      this.f = this.parNew;  //it is a memcpy
+      //It cleans only a bit. The rest is done in another time slice.
+      //TODO: unlock_ObjectJc(&this.parNew->base.obj);
+      this.parNew = null;  //remove this event information.
+    }
+    float wxP = wx * this.f.kP;
+    //limit to max output.
+    if (wxP > this.lim) { wxP = this.lim; }
+    else if (wxP < -this.lim) { wxP = -this.lim; }
+    else {} //reamin wxP
+
+    
+    float dwxP = wxP - this.wxP;  //on limitation the dwxP is 0. It is better for increasing the process signal on max output.
+    this.dwxP += (this.f.fTsD * (dwxP - this.dwxP));
+    this.wxP = wxP;  //store for differenzial and to inspect
+    float wxPD = wxP + (this.f.fD * this.dwxP);  //+ D-Part.
+
+    //limit P + D.
+    if (wxPD > this.lim) { wxPD = this.lim; }
+    else if (wxPD < -this.lim) { wxPD = -this.lim; }
+    else {} //remain wxPD
+    this.wxPD = wxPD;  //to inspect.
+
+    int wxP32 = (int)(this.f.fIx * wxP);  //integer representation of wxP
+
+    int wxPD32 = (int)(this.f.fIx * wxPD);     //has never an overflow because wxPD is limited.
+    int yImin, yImax;
+    //limit it to 24 bit
+    if (wxP32 < 0) { yImin = -0x40000000 - wxP32; yImax =  0x40000000; }  //
+    else {          yImax =  0x40000000 - wxP32; yImin = -0x40000000; }
+    this.wxPD32 = wxPD32;  //to inspect
+    long xdI = wxP32 * this.f.fI;
+    long qI1 = this.qI + xdI;
+    int qIhi = (int)(qI1 >> 32);
+    if (qIhi > yImax) { qIhi = yImax; qI1 = ((long)qIhi) << 32; }
+    else if (qIhi < yImin) { qIhi = yImin; qI1 = ((long)qIhi) << 32; }
+    else {} //remain qIhi
+    this.qI = qI1;
+    this.qIhi = qIhi;
+
+    this.y = this.f.fIy * (wxPD32 + qIhi);  //use hi part of integrator for output.
+    if(y_y!=null) { y_y[0] = this.y; }
+    return this.y;
+  }
+
+
+  
   
   
 }

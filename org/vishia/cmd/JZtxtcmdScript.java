@@ -1385,6 +1385,8 @@ public class JZtxtcmdScript extends CompiledScript
     
     boolean bConst;
     
+    boolean bAppendToFile;
+    
     DefVariable(StatementList parentList, char type){
       super(parentList, type);
     }
@@ -1392,6 +1394,11 @@ public class JZtxtcmdScript extends CompiledScript
     
     /**From Zbnf: [ const <?const>] */
     public void set_const(){ bConst = true; } 
+    
+    /**Only used for Openfile += name;
+     * 
+     */
+    public void set_appendToFile() { bAppendToFile = true; }
     
     
     public void set_type(String val){ typeVariable = val; }

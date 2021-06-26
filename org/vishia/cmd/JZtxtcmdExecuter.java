@@ -3159,9 +3159,9 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           //build an absolute filename with $CD, the current directory of the file system is not proper to use.
           
           File fWriter = new File(currdir, sFilename);
-          writer = new FileWriter(fWriter);
+          writer = new FileWriter(fWriter, statement.bAppendToFile);
         } else {
-          writer = new FileWriter(sFilename);  //given absolute path
+          writer = new FileWriter(sFilename, statement.bAppendToFile);  //given absolute path
         }
         storeValue(statement.defVariable, newVariables, writer, jzcmdMain.bAccessPrivate);
         //setLocalVariable(statement.identArgJbat, 'A', writer);

@@ -282,7 +282,7 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " DefMapVar::= [const <?const>] <definePath?defVariable> [ = \\{ <dataStruct> \\}  ].\n" 
     + " \n"
-    + " Openfile::= [const <?const>] <definePath?defVariable> = <textDatapath?> .\n"
+    + " Openfile::= [const <?const>] <definePath?defVariable> [+= <?appendToFile> | = ] <textDatapath?> .\n"
     + " \n"
     + " \n"
     + " definePath::= <$-?startVariable>[ [?\\. \\>] \\.{ <defineSubelement?datapathElement> ? [?\\. \\>] \\.}].\n"
