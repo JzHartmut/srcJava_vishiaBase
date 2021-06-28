@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -49,6 +50,8 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2021-06-28 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} with given directory
+   * <li>2021-06-28 Hartmut new feature: {@link #normalizePath(CharSequence)} regareds ':'   
    * <li>2021-06-21 Hartmut new {@link #renameCreate(File, String, String, boolean)}, 
    *     new {@link #mkDir(File)}
    * <li>2020-06-08 Hartmut Move from FileSystem to this class, FileSystem is used in {@link java.nio.file.FileSystem} too. Prevent name clash.
@@ -251,6 +254,9 @@ public class FileFunctions {
    *        The basepath is <code>""</code> if no basepath is given in sPath.
    * @return false if no file is found.
    * @throws FileNotFoundException
+   * @since 2019, this operation calls the old {@link FileFunctions#addFileToList(File, String, AddFileToList)}
+   *   but the intension was using an own algorithm with {@link Files#walk(java.nio.file.Path, java.nio.file.FileVisitOption...)}.
+   *   later todo.
    */
   public static boolean addFilesWithBasePath(final File baseDir, final String sPathArg, List<FileAndBasePath> list) 
   //throws FileNotFoundException
@@ -267,31 +273,35 @@ public class FileFunctions {
     final String sPathLocal;
     final CharSequence sAbsDir;
     if(posBase >=0)
-    { sPathBase = (sPath.substring(0, posBase) + "/").replace('\\', '/');
-      sPathLocal = sPath.substring(posBase +1).replace('\\', '/');
-      String sAbsDirNonNormalized = baseDir !=null ? baseDir.getAbsolutePath() + "/" + sPathBase : sPathBase;
-      sAbsDir = normalizePath(sAbsDirNonNormalized);
-      posLocalPath = sAbsDir.length();
-      dir = new File(sAbsDir.toString()); //baseDir, sPathBase);
+    { sPathBase = (sPath.substring(0, posBase) + "/");
+      sPathLocal = sPath.substring(posBase +1);
+      posLocalPath = sPathBase.length();
+      //      String sAbsDirNonNormalized = baseDir !=null ? baseDir.getAbsolutePath() + "/" + sPathBase : sPathBase;
+//      sAbsDir = normalizePath(sAbsDirNonNormalized);
+//      posLocalPath = sAbsDir.length();
+//      dir = new File(sAbsDir.toString()); //baseDir, sPathBase);
     }
     else 
     { //sPathBase = "";
-      String sBaseDir = baseDir.getAbsolutePath();
-      sAbsDir = normalizePath(sBaseDir);
-      if(sBaseDir.length() != sAbsDir.length()){
-        dir = new File(sAbsDir.toString());
-      } else {
-        dir = baseDir;  //use same instance, the path is correct
-      }
+//      String sBaseDir = baseDir.getAbsolutePath();
+//      sAbsDir = normalizePath(sBaseDir);
+//      if(sBaseDir.length() != sAbsDir.length()){
+//        dir = new File(sAbsDir.toString());
+//      } else {
+//        dir = baseDir;  //use same instance, the path is correct
+//      }
       sPathLocal = sPath.replace('\\', '/');
-      posLocalPath = sAbsDir.length();
+      sPathBase = "/";
+      posLocalPath = 0;
+//      posLocalPath = sAbsDir.length();
     }
+    dir = new File(sPathBase);
     //The wrapper is created temporary to hold the informations about basepath
     // to fill in the members of the list. 
     // The wrapper instance isn't necessary outside of this static method. 
-    //FilesWithBasePath wrapper = new FilesWithBasePath(sPathBase, posLocalPath, list);
-    FilesWithBasePath wrapper = new FilesWithBasePath(sAbsDir.toString(), posLocalPath, list);
-    return FileSystem.addFileToList(dir,sPathLocal, wrapper);
+    FilesWithBasePath wrapper = new FilesWithBasePath(sPathBase, posLocalPath, list);
+    //FilesWithBasePath wrapper = new FilesWithBasePath(sAbsDir.toString(), posLocalPath, list);
+    return FileFunctions.addFileToList(dir,sPathLocal, wrapper);
   }
   
   
@@ -1076,6 +1086,13 @@ public class FileFunctions {
   
   
   /**Cleans any /../ and /./ from a path, it makes it normalized or canonical.
+   * Moves a <code>:</code> (maybe used as separator between base and local path)
+   * to the correct position for such as <code>path/dir/..:**</code> follows.
+   * <ul>
+   * <li> "path/dir/..:dir2/** /*" => "path:dir2/** /*", the "..:" means the parent, dir is irrelevant
+   * <li> "path/dir/..:** /*" => "path:dir/** /*", the ":" is associated before dir, like above
+   *     but the dir is part of the search path because it is mentioned as access. 
+   * <ul> 
    *
    * @param inp Any path which may contain /./ or /../, with backslash or slash-separator.
    *   If the inp is instanceof StringBuilder, it is used directly for correction and returned in any case.
@@ -1112,15 +1129,42 @@ public class FileFunctions {
       uPath.delete(pos, pos+2);
       posNext = pos;  //search from pos, it may be found "somewhat/././follow"
     }
-    posNext =0; //skip over leading ../, do not reduce it!
+    while( (pos = StringFunctions.indexOf(test, ":./", posNext)) >=0){
+      if(uPath ==null){ test = uPath = new StringBuilder(inp); }
+      uPath.delete(pos+1, pos+3);
+      posNext = pos;  //search from pos, it may be found "somewhat/././follow"
+    }
+    while( (pos = StringFunctions.indexOf(test, "/.:", posNext)) >=0){
+      if(uPath ==null){ test = uPath = new StringBuilder(inp); }
+      uPath.delete(pos, pos+2);
+      posNext = pos;  //search from pos, it may be found "somewhat/././follow"
+    }
+    posNext =0;                                  // skip over leading ../, do not reduce it!
+    if(test.length() >0 && test.charAt(0)=='/') { posNext = 1; }     // start with pos 1 if "/../path"
     while(StringFunctions.startsWith(test, posNext, -1, "../")) {
-      posNext +=3; //start after last leading ../../
+      posNext +=3;                               // start after last leading ../../
     }
     while( (pos = StringFunctions.indexOf(test, "/../", posNext)) >=0){
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       int posStart = uPath.lastIndexOf("/", pos-1);
-      //remove "folder/../"
+      //remove "/folder/.."
       uPath.delete(posStart+1, pos+4);  //delete from 0 in case of "folder/../somemore"
+      posNext = posStart;  //search from posStart, it may be found "path/folder/folder/../../folder/../follow"
+    }
+    while( (pos = StringFunctions.indexOf(test, "/..:**", posNext)) >=0){
+      if(uPath ==null){ test = uPath = new StringBuilder(inp); }
+      int posStart = uPath.lastIndexOf("/", pos-1);
+      //remove "/folder/..", remain ":"
+      uPath.delete(pos+1, pos+4);  //delete from 0 in case of "folder/../somemore"
+      if(posStart >=0) { uPath.setCharAt(posStart, ':'); }
+      posNext = posStart;  //search from posStart, it may be found "path/folder/folder/../../folder/../follow"
+    }
+    while( (pos = StringFunctions.indexOf(test, "/..:", posNext)) >=0){
+      if(uPath ==null){ test = uPath = new StringBuilder(inp); }
+      int posStart = uPath.lastIndexOf("/", pos-1);
+      //remove "/folder/..", remain ":"
+      uPath.delete(posStart+1, pos+4);  //delete from 0 in case of "folder/../somemore"
+      if(posStart >=0) { uPath.setCharAt(posStart, ':'); }
       posNext = posStart;  //search from posStart, it may be found "path/folder/folder/../../folder/../follow"
     }
     int posEnd = test.length();
