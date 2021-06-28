@@ -79,9 +79,9 @@ export DEPLOY="$BUILD/deploy/vishiaBase"
 
 export MANIFEST=vishiaBase.manifest
 export SRC_ALL=".."
-if test -d ../../srcJava_vishiaRun; then export SRC_ALL2="../../srcJava_vishiaRun"
-else export SRC_ALL2="../../../../../../cmpnJava_vishiaRun/src/main/java/srcJava_vishiaRun"
-fi
+##if test -d ../../srcJava_vishiaRun; then export SRC_ALL2="../../srcJava_vishiaRun"
+##else export SRC_ALL2="../../../../../../cmpnJava_vishiaRun/src/main/java/srcJava_vishiaRun"
+##fi
 export FILE1SRC=""
 
 #now run the common script:
