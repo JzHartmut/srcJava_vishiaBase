@@ -1,6 +1,7 @@
 package org.vishia.util;
 
 import java.io.Closeable;
+import java.util.Iterator;
 
 import org.vishia.bridgeC.IllegalArgumentExceptionJc;
 
@@ -116,10 +117,14 @@ import org.vishia.bridgeC.IllegalArgumentExceptionJc;
  * <li>See {@link StringFunctions} for basic operations.  
  * </ul>            
  */
-public class StringPart implements CharSequence, Comparable<CharSequence>, Closeable
+public class StringPart implements CharSequence, Comparable<CharSequence>, Closeable, Iterable<StringPart>
 {
   /**Version, history and license.
    * <ul>
+   * <li>2021-06-28 Hartmut new now it is an Iterable. The Iterator {@link Iter} returns this but with the next selected line.
+   *   It is to evaluate a file line per line. It uses the existing routines {@link #firstlineMaxpart()} and {@link #nextlineMaxpart()}
+   *   which are proper to use. The lines can be evaluated with operations of StringPart. 
+   *   This is used well in JZtxtcmd in a for(element: container) loop.
    * <li>2021-03-14 Hartmut new {@link #lentoNumber(boolean, int[], String)}
    * <li>2019-06-07 Hartmut some formally changes: {@link #mSeekToLeft} etc: all bits are named with leading 'm' for mask. 
    * <li>2019-05-15 Hartmut {@link #seekCheck(CharSequence)}: A seek("xyz") shifts the actual position to the end if the seek String is not found. 
@@ -248,6 +253,7 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
    * But the user must not forgot to remove the rewind positions.
    * TODO
    */
+  @SuppressWarnings("unused")
   private int[] posRewind = new int[20];  //some positions to rewind.
   
   
@@ -349,7 +355,7 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
    
   /** Creates a new empty StringPart without an associated String. See method set() to assign a String.*/
   public StringPart()
-  { this.content = null; begiMin = begin = beginLast= 0; endLast = endMax = end = 0;
+  { this.content = null; this.begiMin = this.begin = this.beginLast= 0; this.endLast = this.endMax = this.end = 0;
   }
 
 
@@ -383,8 +389,8 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   public StringPart(CharSequence src, int start, int end){
     this.begiMin = this.begin = start;
     this.endMax = this.end = end;
-    content = src;
-    assert( end <= content.length());
+    this.content = src;
+    assert( end <= this.content.length());
   }
   
   
@@ -402,7 +408,7 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   @Java4C.Retinline
   @Java4C.ReturnThis 
   public final StringPart assign(CharSequence src) { 
-    content = src;
+    this.content = src;
     setParttoMax();
     return this;
   }
@@ -433,7 +439,7 @@ public final StringPart assignReplaceEnv(StringBuilder input)
       
     } else {
       posident = pos1 +1 ;
-      posidentend = pos9 = StringFunctions.posAfterIdentifier(input, posident, zInput);
+      posidentend = pos9 = StringFunctions.indexAfterIdentifier(input, posident, zInput, null);
     }
     String sEnv = System.getenv(input.substring(posident, posidentend));
     if(sEnv == null){ sEnv = ""; }
@@ -441,9 +447,9 @@ public final StringPart assignReplaceEnv(StringBuilder input)
     zInput = input.length();
   }
   this.content =  input;
-  begiMin = beginLast = begin = 0;
-  endMax = end = endLast = content.length();
-  bStartScan = bCurrentOk = true;
+  this.begiMin = this.beginLast = this.begin = 0;
+  this.endMax = this.end = this.endLast = this.content.length();
+  this.bStartScan = this.bCurrentOk = true;
   return this;
 }
 
@@ -473,12 +479,12 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   public final StringPart assign(StringPart src)
   { if(src == this)
     { //set from the own instance: the maxPart is the actual one.
-      begiMin = beginLast = begin; endMax = endLast = end;
+      this.begiMin = this.beginLast = this.begin; this.endMax = this.endLast = this.end;
     }
     else
     { //set from a other instance, inherit the content.
-      this.content = src.content; begiMin = beginLast = begin = src.begin; endMax = end = endLast = src.end;
-      assert(endMax <= content.length());
+      this.content = src.content; this.begiMin = this.beginLast = this.begin = src.begin; this.endMax = this.end = this.endLast = src.end;
+      assert(this.endMax <= this.content.length());
     }
     return this;
   }
@@ -511,10 +517,10 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   */
   public final StringPart assignFromEnd(StringPart src)
   { this.content = src.content;
-    beginLast = begin;
-    begiMin = begin = src.end;       //from actual end
-    endLast = endMax = end = src.endMax;          //from maximal end
-    assert(endMax <= content.length());
+    this.beginLast = this.begin;
+    this.begiMin = this.begin = src.end;       //from actual end
+    this.endLast = this.endMax = this.end = src.endMax;          //from maximal end
+    assert(this.endMax <= this.content.length());
     return this;
   }
 
@@ -529,9 +535,9 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    * @return The last definition of this feature.
    */
   public final boolean setIgnoreComment(boolean bSet)
-  { boolean bRet = (bitMode & mSkipOverCommentInsideText_mode) != 0;
-    if(bSet) bitMode |= mSkipOverCommentInsideText_mode;
-    else     bitMode &= ~mSkipOverCommentInsideText_mode;
+  { boolean bRet = (this.bitMode & mSkipOverCommentInsideText_mode) != 0;
+    if(bSet) this.bitMode |= mSkipOverCommentInsideText_mode;
+    else     this.bitMode &= ~mSkipOverCommentInsideText_mode;
     return bRet;
   }
   
@@ -545,10 +551,10 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    * @return The last definition of the feature setIgnoreComment(boolean).
    */
   public final boolean setIgnoreComment(String sStart, String sEnd)
-  { boolean bRet = (bitMode & mSkipOverCommentInsideText_mode) != 0;
-    bitMode |= mSkipOverCommentInsideText_mode;
-    sCommentStart = sStart; 
-    sCommentEnd   = sEnd;
+  { boolean bRet = (this.bitMode & mSkipOverCommentInsideText_mode) != 0;
+    this.bitMode |= mSkipOverCommentInsideText_mode;
+    this.sCommentStart = sStart; 
+    this.sCommentEnd   = sEnd;
     return bRet;
   }
   
@@ -563,9 +569,9 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    * @return The last definition of the feature setIgnoreComment(boolean).
    */
   public final boolean setIgnoreEndlineComment(boolean bSet) 
-  { boolean bRet = (bitMode & mSkipOverCommentToEol_mode) != 0;
-    if(bSet) bitMode |= mSkipOverCommentToEol_mode;
-    else     bitMode &= ~mSkipOverCommentToEol_mode;
+  { boolean bRet = (this.bitMode & mSkipOverCommentToEol_mode) != 0;
+    if(bSet) this.bitMode |= mSkipOverCommentToEol_mode;
+    else     this.bitMode &= ~mSkipOverCommentToEol_mode;
     return bRet;
   }
   
@@ -579,9 +585,9 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    * @return The last definition of this feature.
    */
   public final boolean setIgnoreEndlineComment(String sStart) 
-  { boolean bRet = (bitMode & mSkipOverCommentToEol_mode) != 0;
-    bitMode |= mSkipOverCommentToEol_mode;
-    sCommentToEol = sStart;
+  { boolean bRet = (this.bitMode & mSkipOverCommentToEol_mode) != 0;
+    this.bitMode |= mSkipOverCommentToEol_mode;
+    this.sCommentToEol = sStart;
     return bRet;
   }
   
@@ -595,9 +601,9 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    * @return The last definition of this feature.
    */
   public final boolean setIgnoreWhitespaces(boolean bSet)
-  { boolean bRet = (bitMode & mSkipOverWhitespace_mode) != 0;
-    if(bSet) bitMode |= mSkipOverWhitespace_mode;
-    else     bitMode &= ~mSkipOverWhitespace_mode;
+  { boolean bRet = (this.bitMode & mSkipOverWhitespace_mode) != 0;
+    if(bSet) this.bitMode |= mSkipOverWhitespace_mode;
+    else     this.bitMode &= ~mSkipOverWhitespace_mode;
     return bRet;
   }
   
@@ -620,7 +626,7 @@ abcdefghijklmnopqrstuvwxyz  The associated string
   @Java4C.ReturnThis 
   @Java4C.NoStackTrace
   public final StringPart setBeginMaxPart()
-  { begiMin = begin;
+  { this.begiMin = this.begin;
     return this;
   }
 
@@ -641,8 +647,8 @@ abcdefghijklmnopqrstuvwxyz  The associated string
   @Java4C.ReturnThis 
   @Java4C.NoStackTrace
   public final StringPart setCurrentMaxPart()
-  { begiMin = begin;
-    endMax = end;
+  { this.begiMin = this.begin;
+    this.endMax = this.end;
     return this;
   }
 
@@ -655,9 +661,9 @@ abcdefghijklmnopqrstuvwxyz  The associated string
   @Java4C.Retinline
   @Java4C.ReturnThis 
   public final StringPart setParttoMax()
-  { begiMin = beginLast = begin = 0;
-    endMax = end = endLast = content.length();
-    bStartScan = bCurrentOk = true;
+  { this.begiMin = this.beginLast = this.begin = 0;
+    this.endMax = this.end = this.endLast = this.content == null ? 0 : this.content.length();
+    this.bStartScan = this.bCurrentOk = true;
     return this;
   }
   
@@ -679,10 +685,10 @@ abcdefghijklmnopqrstuvwxyz  The associated string
   @Java4C.NoStackTrace
   public final StringPart fromEnd()
   {
-    beginLast = begin;
-    endLast = end;
-    begin = end;
-    end = endMax;
+    this.beginLast = this.begin;
+    this.endLast = this.end;
+    this.begin = this.end;
+    this.end = this.endMax;
     return this;
   }
 
@@ -693,7 +699,7 @@ abcdefghijklmnopqrstuvwxyz  The associated string
 @Override
 @Java4C.Retinline
 public final char charAt(int index){ 
-  return absCharAt(begin + index);
+  return absCharAt(this.begin + index);
 }
 
 
@@ -704,7 +710,7 @@ public final char charAt(int index){
  */
 @Java4C.Retinline 
 public final boolean checkCharAt(int pos, String chars){
-  return (begin + pos >=end) ? false
+  return (this.begin + pos >=this.end) ? false
   : chars.indexOf(charAt(pos)) >=0;  //char found.
 }
 
@@ -723,21 +729,21 @@ public final boolean checkCharAt(int pos, String chars){
  */
 @Java4C.ReturnInThreadCxt
 @Override public final CharSequence subSequence(int from, int to) { 
-  if(from < 0 || to > (end - begin)) {
+  if(from < 0 || to > (this.end - this.begin)) {
     throwSubSeqFaulty(from, to);
     return null;  //It is used for Java2C without throw mechanism.
   }
   @Java4C.InThCxtRet(sign="StringPart.subSequence") 
-  Part ret = new Part(this, begin+from, begin+to);
+  Part ret = new Part(this, this.begin + from, this.begin + to);
   return ret;
 } 
 
 
 
-private final void throwSubSeqFaulty(int from, int to)
+private static final void throwSubSeqFaulty(int from, int to)
 {
 
-  throw new IllegalArgumentException("StringPartBase.subString - faulty;" + from);
+  throw new IllegalArgumentException("StringPartBase.subString - faulty;" + from + ":" + to);
 }
 
   
@@ -745,7 +751,7 @@ private final void throwSubSeqFaulty(int from, int to)
    * @see java.lang.CharSequence#length()
    */
   @Override public final int 
-  length(){ return end - begin; }
+  length(){ return this.end - this.begin; }
 
   /* (non-Javadoc)
    * @see java.lang.CharSequence#length()
@@ -758,7 +764,7 @@ private final void throwSubSeqFaulty(int from, int to)
   @Java4C.Retinline
   @Java4C.NoStackTrace
   public final int lengthMaxPart() { 
-    if(endMax > begin) return endMax - begin;
+    if(this.endMax > this.begin) return this.endMax - this.begin;
     else return 0;
   }
 
@@ -784,11 +790,11 @@ private final void throwSubSeqFaulty(int from, int to)
    */
   public final StringPart lentoPos(int len)
   throws IndexOutOfBoundsException
-  { endLast = end;
-    int endNew = begin + len;
-    if(endNew < begin)  /**@java2c=StringBuilderInThreadCxt.*/ throwIndexOutOfBoundsException("lento(int) negative:" + (endNew - begin));
-    if(endNew > endMax) /**@java2c=StringBuilderInThreadCxt.*/ throwIndexOutOfBoundsException("lento(int) after endMax:" + (endNew - endMax));
-    end = endNew;
+  { this.endLast = this.end;
+    int endNew = this.begin + len;
+    if(endNew < this.begin)  /**@java2c=StringBuilderInThreadCxt.*/ throwIndexOutOfBoundsException("lento(int) negative:" + (endNew - this.begin));
+    if(endNew > this.endMax) /**@java2c=StringBuilderInThreadCxt.*/ throwIndexOutOfBoundsException("lento(int) after endMax:" + (endNew - this.endMax));
+    this.end = endNew;
     return this;
   }
 
@@ -817,13 +823,13 @@ private final void throwSubSeqFaulty(int from, int to)
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart lento(char cc)
-  { endLast = end;
-    end = begin-1;
-    while(++end < endLast){
-      if(content.charAt(end) == cc) { bFound = true; return this; }
+  { this.endLast = this.end;
+    this.end = this.begin - 1;
+    while(++this.end < this.endLast){
+      if(this.content.charAt(this.end) == cc) { this.bFound = true; return this; }
     }
-    end = begin;  //not found
-    bFound = false;
+    this.end = this.begin;  //not found
+    this.bFound = false;
     return this;
   }
 
@@ -862,14 +868,14 @@ private final void throwSubSeqFaulty(int from, int to)
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart lento(CharSequence ss, int mode)
-  { endLast = end;
-    int pos = StringFunctions.indexOf(content, begin, end, ss);
-    bFound = (pos >=0);
+  { this.endLast = this.end;
+    int pos = StringFunctions.indexOf(this.content, this.begin, this.end, ss);
+    this.bFound = (pos >=0);
     if(pos >= 0) { 
-      end = pos; 
-      if((mode & mSeekEnd) != 0){ end += ss.length();}
+      this.end = pos; 
+      if((mode & mSeekEnd) != 0){ this.end += ss.length();}
     }
-    else { end = begin; }
+    else { this.end = this.begin; }
     return this;
   }
 
@@ -904,29 +910,29 @@ private final void throwSubSeqFaulty(int from, int to)
    *         as identifier chars. 
    */
   public final StringPart lentoIdentifier(CharSequence additionalStartChars, CharSequence additionalChars)
-  { endLast = end;
-    end = begin;
-    if(end >= endMax){ bFound = false; }
+  { this.endLast = this.end;
+    this.end = this.begin;
+    if(this.end >= this.endMax){ this.bFound = false; }
     else
       
     { //TODO use StringFunctions.lenIdentifier
-      char cc = content.charAt(end);
+      char cc = this.content.charAt(this.end);
       if(   cc == '_' 
         || (cc >= 'A' && cc <='Z') 
         || (cc >= 'a' && cc <='z') 
         || (additionalStartChars != null && StringFunctions.indexOf(additionalStartChars,cc)>=0)
         )
-      { end +=1;
-        while(  end < endMax 
-             && (  (cc = content.charAt(end)) == '_' 
+      { this.end +=1;
+        while(  this.end < this.endMax 
+             && (  (cc = this.content.charAt(this.end)) == '_' 
                 || (cc >= '0' && cc <='9') 
                 || (cc >= 'A' && cc <='Z') 
                 || (cc >= 'a' && cc <='z') 
                 || (additionalChars != null && StringFunctions.indexOf(additionalChars,cc)>=0)
              )  )
-        { end +=1; }
+        { this.end +=1; }
       }  
-      bFound = (end > begin);
+      this.bFound = (this.end > this.begin);
     }
     return this;
   }
@@ -960,11 +966,11 @@ private final void throwSubSeqFaulty(int from, int to)
    */
   public final StringPart lentoNumber(boolean bHex, int[] dst, String separatorChars)
   { this.endLast = this.end;
-    this.end = begin;
+    this.end = this.begin;
     int nr = 0;
     int mult = bHex? 16 : 10;
     while(this.end < this.endMax){ 
-      char cc = this.content.charAt(end);
+      char cc = this.content.charAt(this.end);
       if(separatorChars !=null && separatorChars.indexOf(cc) >=0) {
         this.end +=1;                            //admissible additional character
       }
@@ -1008,16 +1014,16 @@ private final void throwSubSeqFaulty(int from, int to)
    *  @param sCharsEnd Assembling of chars determine the end of the part.  
    * */
   public final StringPart lentoAnyNonEscapedChar(CharSequence sCharsEnd, int maxToTest)
-  { if(bCurrentOk)
+  { if(this.bCurrentOk)
     { final char cEscape = '\\';
-      endLast = end;
-      int pos = indexOfAnyChar(sCharsEnd,0,maxToTest);
-      while(pos > begin+1 && content.charAt(pos-1)==cEscape)
+      this.endLast = this.end;
+      int pos = indexOfAnyChar(sCharsEnd, 0, maxToTest);
+      while(pos > this.begin +1 && this.content.charAt(pos-1)==cEscape)
       { //the escape char is before immediately. It means, the end char is not matched.
-        pos = indexOfAnyChar(sCharsEnd, pos+1-begin, maxToTest);
+        pos = indexOfAnyChar(sCharsEnd, pos+1 - this.begin, maxToTest);
       }
-      if(pos < 0){ end = begin; bFound = false; }
-      else       { end = begin + pos; bFound = true; }
+      if(pos < 0){ this.end = this.begin; this.bFound = false; }
+      else       { this.end = this.begin + pos; this.bFound = true; }
     }  
     return this;
   }
@@ -1036,16 +1042,16 @@ private final void throwSubSeqFaulty(int from, int to)
    * @param sCharsEnd Assembling of chars determine the end of the part.  
    */
   public final StringPart lentoNonEscapedString(CharSequence sEnd, int maxToTest)
-  { if(bCurrentOk)
+  { if(this.bCurrentOk)
     { final char cEscape = '\\';
-      endLast = end;
+      this.endLast = this.end;
       int pos = indexOf(sEnd,0,maxToTest);
-      while(pos > begin+1 && content.charAt(pos-1)==cEscape)
+      while(pos > this.begin+1 && this.content.charAt(pos-1)==cEscape)
       { //the escape char is before immediately. It means, the end char is not matched.
-        pos = indexOf(sEnd, pos+1-begin, maxToTest);
+        pos = indexOf(sEnd, pos+1 - this.begin, maxToTest);
       }
-      if(pos < 0){ end = begin; bFound = false; }
-      else       { end = begin + pos; bFound = true; }
+      if(pos < 0){ this.end = this.begin; this.bFound = false; }
+      else       { this.end = this.begin + pos; this.bFound = true; }
     }  
     return this;
   }
@@ -1061,12 +1067,12 @@ private final void throwSubSeqFaulty(int from, int to)
    * @return this
    */
   public final StringPart line(){
-    int posStart = StringFunctions.lastIndexOfAnyChar(content, begiMin, begin, "\r\n");
-    if(posStart < 0){ posStart = begiMin; }
-    int posEnd = StringFunctions.indexOfAnyChar(content, begin, endMax, "\r\n");
-    if(posEnd <0){ posEnd = endMax; }
-    begin = posStart;
-    end = posEnd;
+    int posStart = StringFunctions.lastIndexOfAnyChar(this.content, this.begiMin, this.begin, "\r\n");
+    if(posStart < 0){ posStart = this.begiMin; }
+    int posEnd = StringFunctions.indexOfAnyChar(this.content, this.begin, this.endMax, "\r\n");
+    if(posEnd <0){ posEnd = this.endMax; }
+    this.begin = posStart;
+    this.end = posEnd;
     return this;
   }
   
@@ -1080,11 +1086,11 @@ private final void throwSubSeqFaulty(int from, int to)
    * @return this.
    */
   @Java4C.ReturnThis public final StringPart firstlineMaxpart(){
-    begiMin = begin = 0;
-    endMax = end = content.length();
+    this.begiMin = this.begin = 0;
+    this.endMax = this.end = this.content.length();
     lentoAnyChar("\r\n");
     if(!found()){ len0end(); }  //last line without end-line character
-    endMax = end;
+    this.endMax = this.end;
     return this;
   }
 
@@ -1102,21 +1108,23 @@ private final void throwSubSeqFaulty(int from, int to)
    * @return this. Use {@link #found()} to check whether a next line was found.
    */
   @Java4C.ReturnThis public final StringPart nextlineMaxpart(){
-    begiMin = begin = endMax;
+    this.begiMin = this.begin = this.endMax;
     //char test111 = charAt(0);
-    endMax = end = content.length();
-    if(begiMin == endMax) {
-      bFound = false;
+    this.endMax = this.end = this.content.length();
+    if(this.begiMin == this.endMax) {
+      this.bFound = false;
     } else {
       if(checkCharAt(0, "\n")) { seekPos(1); if(found() && checkCharAt(0, "\r")) { seekPos(1); }}
       if(checkCharAt(0, "\r")) { seekPos(1); if(found() && checkCharAt(0, "\n")) { seekPos(1); }}
       //refers next line.
       lentoAnyChar("\r\n");
-      if(!found() && begin < endMax){ len0end(); }  //last line without end-line character
-      begiMin = begin;
-      endMax = end;
+      if(!found() && this.begin < this.endMax) { 
+        len0end(); this.bFound = true;   //last line without end-line character
+      }
+      this.begiMin = this.begin;
+      this.endMax = this.end;
     }
-    return this;
+    return this;  //found() is false on end.
   }
   
 
@@ -1143,15 +1151,15 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    */
   @Deprecated
   public final StringPart seek(int nr)
-  { beginLast = begin;
-    begin += nr;
-    if(begin > end)
+  { this.beginLast = this.begin;
+    this.begin += nr;
+    if(this.begin > this.end)
       /**@java2c=StringBuilderInThreadCxt.*/ 
-      throwIndexOutOfBoundsException("seek=" + nr + " begin=" + (begin-nr) + " end=" + end);
-    else if(begin < begiMin) 
+      throwIndexOutOfBoundsException("seek=" + nr + " begin=" + (this.begin - nr) + " end=" + this.end);
+    else if(this.begin < this.begiMin) 
       /**@java2c=StringBuilderInThreadCxt.*/
-      throwIndexOutOfBoundsException("seek=" + nr + " begin=" + (begin-nr) + " begin-min=" + begiMin);
-    bFound = true;
+      throwIndexOutOfBoundsException("seek=" + nr + " begin=" + (this.begin - nr) + " begin-min=" + this.begiMin);
+    this.bFound = true;
     return this;
   }
 
@@ -1177,12 +1185,12 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    */
   public final StringPart seekPos(int nr)
   { 
-    int begin1 = begin + nr;
-    if(begin1 > end || begin1 < begiMin) {
-      bFound = false;
+    int begin1 = this.begin + nr;
+    if(begin1 > this.end || begin1 < this.begiMin) {
+      this.bFound = false;
     } else { 
-      begin = begin1;
-      bFound = true;
+      this.begin = begin1;
+      this.bFound = true;
     }
     return this;
   }
@@ -1202,12 +1210,12 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    */
   public final StringPart seekPosBack(int nr)
   {
-    int begin1 = end -nr;
-    if(begin1 > end || begin1 < begiMin) {
-      bFound = false;
+    int begin1 = this.end -nr;
+    if(begin1 > this.end || begin1 < this.begiMin) {
+      this.bFound = false;
     } else { 
-      begin = begin1;
-      bFound = true;
+      this.begin = begin1;
+      this.bFound = true;
     }
     return this;
   }
@@ -1234,11 +1242,11 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    *   if the end String is not found, the current part has length ==0
    */
 public final StringPart seekNoWhitespace()
-{ beginLast = begin;
-  while( begin < end && " \t\r\n\f".indexOf(content.charAt(begin)) >=0 )
-  { begin +=1;
+{ this.beginLast = this.begin;
+  while( this.begin < this.end && " \t\r\n\f".indexOf(this.content.charAt(this.begin)) >=0 )
+  { this.begin +=1;
   }
-  bFound = (begin > beginLast);
+  this.bFound = (this.begin > this.beginLast);
   return this;
 }
 
@@ -1276,25 +1284,25 @@ abcdefghijklmnopqrstuvwxyz  The associated String
   @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
 */
 public final StringPart seekNoWhitespaceOrComments()
-{ int start00 = begin;
+{ int start00 = this.begin;
 int start0;
 do
-{ start0 = begin;
-  if( (bitMode & mSkipOverWhitespace_mode) != 0)
+{ start0 = this.begin;
+  if( (this.bitMode & mSkipOverWhitespace_mode) != 0)
   { seekNoWhitespace();
   }
-  if( (bitMode & mSkipOverCommentInsideText_mode) != 0)   
-  { if(StringFunctions.compare(content, begin, sCommentStart, 0, sCommentStart.length())==0) 
-    { seek(sCommentEnd, mSeekEnd);  
+  if( (this.bitMode & mSkipOverCommentInsideText_mode) != 0)   
+  { if(StringFunctions.compare(this.content, this.begin, this.sCommentStart, 0, this.sCommentStart.length())==0) 
+    { seek(this.sCommentEnd, mSeekEnd);  
     }
   }
-  if( (bitMode & mSkipOverCommentToEol_mode) != 0)   
-  { if(StringFunctions.compare(content, begin, sCommentToEol, 0, sCommentToEol.length())==0)
+  if( (this.bitMode & mSkipOverCommentToEol_mode) != 0)   
+  { if(StringFunctions.compare(this.content, this.begin, this.sCommentToEol, 0, this.sCommentToEol.length())==0)
     { seek('\n', mSeekEnd);  
     }
   }
-}while(begin != start0);  //:TRICKY: if something is done, repeat all conditions.
-bFound = (begin > start00);
+} while(this.begin != start0);  //:TRICKY: if something is done, repeat all conditions.
+this.bFound = (this.begin > start00);
 return this;
 }
 
@@ -1305,7 +1313,7 @@ return this;
 * operation matches the condition.
 */
 public final boolean found()
-{ return bFound;
+{ return this.bFound;
 }
 
 
@@ -1321,7 +1329,7 @@ public final boolean found()
  * @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
  */
 public final StringPart seekBegin()
-{ begin = beginLast = begiMin;
+{ this.begin = this.beginLast = this.begiMin;
 return this;
 }
 
@@ -1364,44 +1372,44 @@ that is a liststring and his part The associated String
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seek(CharSequence sSeek, int mode){ 
-    beginLast = begin;
+    this.beginLast = this.begin;
     //if(StringFunctions.startsWith(sSeek, "timestamp:"))
       Debugutil.stop();
     int seekArea1, seekArea9;
     //String sSeekArea;
     int posNotFound;  //position if not found in dependence of area of seek and direction
     if( (mode & mSeekToLeft_) == mSeekToLeft_) { 
-      int posAreaEnd = begin + sSeek.length() -1;  //the sSeek-string may be begin at (begin-1)
-      if(posAreaEnd > endMax) posAreaEnd = endMax;  //but not over the end.
-      seekArea1 = begiMin;
+      int posAreaEnd = this.begin + sSeek.length() -1;  //the sSeek-string may be begin at (begin-1)
+      if(posAreaEnd > this.endMax) posAreaEnd = this.endMax;  //but not over the end.
+      seekArea1 = this.begiMin;
       seekArea9 = posAreaEnd;
       //sSeekArea = content.substring(startMin, posAreaEnd );
-      posNotFound = (mode & mSeekCheck) !=0 ? end : begin; //if not found, the rightest position of area
+      posNotFound = (mode & mSeekCheck) !=0 ? this.end : this.begin; //if not found, the rightest position of area
     }
     else { 
-      seekArea1 = begin;
-      seekArea9 = end;
+      seekArea1 = this.begin;
+      seekArea9 = this.end;
       //sSeekArea = content.substring(begin, end );
-      posNotFound = (mode & mSeekCheck) !=0 ? begin : end; //if not found, the rightest position of area
+      posNotFound = (mode & mSeekCheck) !=0 ? this.begin : this.end; //if not found, the rightest position of area
     }
     
     int pos;
     if( (mode & mSeekBackward_) == mSeekBackward_) { 
-      pos = StringFunctions.lastIndexOf(content, seekArea1, seekArea9, sSeek); //sSeekArea.lastIndexOf(sSeek);
+      pos = StringFunctions.lastIndexOf(this.content, seekArea1, seekArea9, sSeek); //sSeekArea.lastIndexOf(sSeek);
     }
     else { 
-      pos = StringFunctions.indexOf(content, seekArea1, seekArea9, sSeek);
+      pos = StringFunctions.indexOf(this.content, seekArea1, seekArea9, sSeek);
     }
     
     if(pos < 0) { 
-      begin = posNotFound;
-      bFound = false;   
+      this.begin = posNotFound;
+      this.bFound = false;   
     } 
     else { 
-      bFound = true;
-      begin = pos;
+      this.bFound = true;
+      this.begin = pos;
       if( (mode & mSeekEnd) == mSeekEnd ) { 
-        begin += sSeek.length();
+        this.begin += sSeek.length();
       }
     }
     
@@ -1419,10 +1427,10 @@ that is a liststring and his part The associated String
    * @return
    */
   public final StringPart seekBackward(CharSequence sSeek){
-    int pos = StringFunctions.lastIndexOf(content, begin, end, sSeek);
-    if(pos <0) bFound = false;
+    int pos = StringFunctions.lastIndexOf(this.content, this.begin, this.end, sSeek);
+    if(pos <0) this.bFound = false;
     else {
-      begin = pos + sSeek.length();
+      this.begin = pos + sSeek.length();
     }
     return this;
   }
@@ -1440,10 +1448,10 @@ that is a liststring and his part The associated String
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seekAnyChar(CharSequence chars ){
-    int pos = StringFunctions.indexOfAnyChar(content, begin, end, chars);
-    if(pos <0) bFound = false;
+    int pos = StringFunctions.indexOfAnyChar(this.content, this.begin, this.end, chars);
+    if(pos <0) this.bFound = false;
     else {
-      begin = pos;
+      this.begin = pos;
     }
     return this;
   }
@@ -1460,10 +1468,10 @@ that is a liststring and his part The associated String
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seekBackToAnyChar(CharSequence chars ){
-    int pos = StringFunctions.lastIndexOfAnyChar(content, begin, end, chars);
-    if(pos <0) bFound = false;
+    int pos = StringFunctions.lastIndexOfAnyChar(this.content, this.begin, this.end, chars);
+    if(pos <0) this.bFound = false;
     else {
-      begin = pos;
+      this.begin = pos;
     }
     return this;
   }
@@ -1548,16 +1556,16 @@ that is a liststring and his part The associated String
 */  
 public final StringPart seekAnyString(CharSequence[] strings, @Java4C.SimpleVariableRef int[] nrofFoundString)
 //public StringPartBase seekAnyString(List<CharSequence> strings, int[] nrofFoundString)
-{ beginLast = begin;
+{ this.beginLast = this.begin;
 int pos;
 pos = indexOfAnyString(strings, 0, Integer.MAX_VALUE, nrofFoundString, null);
 if(pos < 0)
-{ bFound = false;   
-  begin = end;
+{ this.bFound = false;   
+  this.begin = this.end;
 }
 else
-{ bFound = true;
-  begin = begin + pos;
+{ this.bFound = true;
+  this.begin = this.begin + pos;
 }
 return this;
 }
@@ -1587,41 +1595,41 @@ return this;
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seek(char cSeek, int mode)
-  { beginLast = begin;
+  { this.beginLast = this.begin;
     int seekArea1, seekArea9;
     //String sSeekArea;
     int posNotFound;  //position if not found in dependence of area of seek and direction
     if( (mode & mSeekToLeft_) == mSeekToLeft_)
-    { int posAreaEnd = begin;  //the sSeek-string may be begin at (begin-1)
-      if(posAreaEnd > endMax) posAreaEnd = endMax;  //but not over the end.
-      seekArea1 = begiMin;
+    { int posAreaEnd = this.begin;  //the sSeek-string may be begin at (begin-1)
+      if(posAreaEnd > this.endMax) posAreaEnd = this.endMax;  //but not over the end.
+      seekArea1 = this.begiMin;
       seekArea9 = posAreaEnd;
       //sSeekArea = content.substring(startMin, posAreaEnd );
-      posNotFound = begin; //if not found, the rightest position of area
+      posNotFound = this.begin; //if not found, the rightest position of area
     }
     else
-    { seekArea1 = begin;
-      seekArea9 = end;
+    { seekArea1 = this.begin;
+      seekArea9 = this.end;
       //sSeekArea = content.substring(begin, end );
-      posNotFound = end; //if not found, the rightest position of area
+      posNotFound = this.end; //if not found, the rightest position of area
     }
     int pos;
     if( (mode & mSeekBackward_) == mSeekBackward_){
-      pos = StringFunctions.lastIndexOf(content, seekArea1, seekArea9, cSeek); 
+      pos = StringFunctions.lastIndexOf(this.content, seekArea1, seekArea9, cSeek); 
     }
     else {                                         
-      pos = StringFunctions.indexOf(content, seekArea1, seekArea9, cSeek);
+      pos = StringFunctions.indexOf(this.content, seekArea1, seekArea9, cSeek);
     }
     
     if(pos < 0)
-    { begin = posNotFound;
-      bFound = false;   
+    { this.begin = posNotFound;
+      this.bFound = false;   
     }
     else
-    { bFound = true;
-      begin = pos;
+    { this.bFound = true;
+      this.begin = pos;
       if( (mode & mSeekEnd) == mSeekEnd )
-      { begin += 1;
+      { this.begin += 1;
       }
     }
     
@@ -1645,10 +1653,10 @@ return this;
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seekNoChar(CharSequence sChars)
-  { beginLast = begin;
-    while(begin < end && StringFunctions.indexOf(sChars, content.charAt(begin)) >=0) begin +=1;
-    if(begin < end) bFound = true;
-    else bFound = false;
+  { this.beginLast = this.begin;
+    while(this.begin < this.end && StringFunctions.indexOf(sChars, this.content.charAt(this.begin)) >=0) this.begin +=1;
+    if(this.begin < this.end) this.bFound = true;
+    else this.bFound = false;
     return this;
   }
 
@@ -1659,13 +1667,13 @@ return this;
    * @return this
    */
   public final StringPart seekNextLine(){
-    beginLast = begin;
-    while(begin < end && "\n\r".indexOf(content.charAt(begin)) <0) { begin +=1; }  //search the first \r or \n
-    while(begin < end && "\n\r".indexOf(content.charAt(begin)) >=0) { begin +=1; } //skip over all \r\n one after another
-    if(begin < end){
-      bFound = true;
+    this.beginLast = this.begin;
+    while(this.begin < this.end && "\n\r".indexOf(this.content.charAt(this.begin)) <0) { this.begin +=1; }  //search the first \r or \n
+    while(this.begin < this.end && "\n\r".indexOf(this.content.charAt(this.begin)) >=0) { this.begin +=1; } //skip over all \r\n one after another
+    if(this.begin < this.end){
+      this.bFound = true;
     }
-    else bFound = false;
+    else this.bFound = false;
     return this;
   }
  
@@ -1692,11 +1700,11 @@ return this;
  */
 public final int indexOfAnyChar(CharSequence sChars, final int fromWhere, final int maxToTest)
 {
-  int pos = begin + fromWhere;
-  int max = (end - pos) < maxToTest ? end : pos + maxToTest;
-  int found = StringFunctions.indexOfAnyChar(content, pos, max, sChars); 
+  int pos = this.begin + fromWhere;
+  int max = (this.end - pos) < maxToTest ? this.end : pos + maxToTest;
+  int found = StringFunctions.indexOfAnyChar(this.content, pos, max, sChars); 
   if(found <0) return found;
-  else return found - begin;  //
+  else return found - this.begin;  //
 }
   
 
@@ -1741,15 +1749,15 @@ public final int indexOfAnyChar(CharSequence sChars, final int fromWhere, final 
 */
 public final int indexOfAnyChar(CharSequence sChars, final int fromWhere, final int maxToTest
    , char transcriptChar, char quotationStartChar, char quotationEndChar)
-{ int pos = begin + fromWhere;
- int max = (end - pos) < maxToTest ? end : begin + maxToTest;
+{ int pos = this.begin + fromWhere;
+ int max = (this.end - pos) < maxToTest ? this.end : this.begin + maxToTest;
  boolean bNotFound = true;
  while(pos < max && bNotFound){ 
-   char cc = content.charAt(pos);
+   char cc = this.content.charAt(pos);
    if(cc == quotationStartChar && cc !=0)
-   { int endQuotion = indexEndOfQuotation(quotationEndChar, transcriptChar, pos - begin, max - begin);
+   { int endQuotion = indexEndOfQuotation(quotationEndChar, transcriptChar, pos - this.begin, max - this.begin);
      if(endQuotion < 0){ pos = max; }
-     else{ pos = endQuotion + begin; }
+     else{ pos = endQuotion + this.begin; }
    }
    else if(cc == transcriptChar && cc != 0 && pos < (max-1)){
      pos +=2;
@@ -1763,10 +1771,10 @@ public final int indexOfAnyChar(CharSequence sChars, final int fromWhere, final 
    }
  }
  if(bNotFound){
-   if(StringFunctions.indexOf(sChars, StringFunctions.cEndOfText) >= 0) return pos - begin;  // it is found because cEndOfText is searched too.
+   if(StringFunctions.indexOf(sChars, StringFunctions.cEndOfText) >= 0) return pos - this.begin;  // it is found because cEndOfText is searched too.
    else return -1;
  }
- else return (pos - begin);
+ else return (pos - this.begin);
 }
 
 
@@ -1782,14 +1790,14 @@ public final int indexOfAnyChar(CharSequence sChars, final int fromWhere, final 
          but -1 if the end is reached.
 */
 public final int lastIndexOfAnyChar(CharSequence sChars, final int fromWhere, final int maxToTest)
-{ int pos = (end - begin) < maxToTest ? end-1 : begin + maxToTest-1;
- int min = begin + fromWhere;
+{ int pos = (this.end - this.begin) < maxToTest ? this.end -1 : this.begin + maxToTest-1;
+ int min = this.begin + fromWhere;
  
- while(pos >= min && StringFunctions.indexOf(sChars, content.charAt(pos)) < 0)
+ while(pos >= min && StringFunctions.indexOf(sChars, this.content.charAt(pos)) < 0)
  { pos -=1;
  }
  int index = pos >= min 
-           ? pos - begin  //relative found position
+           ? pos - this.begin  //relative found position
            :  -1;         //not found
  return index;
 }
@@ -1815,11 +1823,11 @@ public final int lastIndexOfAnyChar(CharSequence sChars, final int fromWhere, fi
   , @Java4C.SimpleVariableRef String[] foundString
   )
   { assert(fromWhere >=0);
-    int start = begin + fromWhere;
-    int max = (end - start) < maxToTest ? end : start + maxToTest;
-    int pos = StringFunctions.indexOfAnyString(content, start, max, listStrings, nrofFoundString, foundString);
+    int start = this.begin + fromWhere;
+    int max = (this.end - start) < maxToTest ? this.end : start + maxToTest;
+    int pos = StringFunctions.indexOfAnyString(this.content, start, max, listStrings, nrofFoundString, foundString);
     if(pos >=0) {
-      pos -= begin;  //the position counts in the current part, starting and begin.
+      pos -= this.begin;  //the position counts in the current part, starting and begin.
       assert(pos >=0); //searched from begin + fromWhere
     }
     return pos;
@@ -1843,22 +1851,22 @@ public final int lastIndexOfAnyChar(CharSequence sChars, final int fromWhere, fi
 *   0.. Position of the found character inside the current part, but >= fromWhere
 */
 public final int indexOfAnyCharOutsideQuotion(CharSequence sChars, final int fromWhere, final int maxToTest)
-{ int pos = begin + fromWhere;
-  int max = (end - pos) < maxToTest ? end : begin + maxToTest;
+{ int pos = this.begin + fromWhere;
+  int max = (this.end - pos) < maxToTest ? this.end : this.begin + maxToTest;
   boolean bNotFound = true;
   while(pos < max && bNotFound)
-  { char cc = content.charAt(pos);
+  { char cc = this.content.charAt(pos);
     if(cc == '\"')
-    { int endQuotion = indexEndOfQuotion('\"', pos - begin, max - begin);
+    { int endQuotion = indexEndOfQuotion('\"', pos - this.begin, max - this.begin);
       if(endQuotion < 0){ pos = max; }
-      else{ pos = endQuotion + begin; }
+      else{ pos = endQuotion + this.begin; }
     }
     else
     { if(StringFunctions.indexOf(sChars, cc) >= 0){ bNotFound = false; }
       else{ pos +=1; }
     }
   }
-  return (bNotFound) ? -1 : (pos - begin);
+  return (bNotFound) ? -1 : (pos - this.begin);
 }
 
 
@@ -1896,11 +1904,11 @@ public final int indexEndOfQuotion(char cEndQuotion, final int fromWhere, final 
  *          at least 2 because a quotion has up to 2 chars, the quotion marks itself.
  */
 public final int indexEndOfQuotation(char cEndQuotion, char transcriptChar, final int fromWhere, final int maxToTest)
-{ int pos = begin + fromWhere +1;
- int max = (end - pos) < maxToTest ? end : pos + maxToTest;
+{ int pos = this.begin + fromWhere +1;
+ int max = (this.end - pos) < maxToTest ? this.end : pos + maxToTest;
  boolean bNotFound = true;
  while(pos < max && bNotFound)
- { char cc = content.charAt(pos++);
+ { char cc = this.content.charAt(pos++);
    if(cc == transcriptChar && cc !=0 && (pos+1) < max)
    { pos += 1; //on \ overread the next char, test char after them!
    }
@@ -1908,7 +1916,7 @@ public final int indexEndOfQuotation(char cEndQuotion, char transcriptChar, fina
    { bNotFound = false;
    }
  }
- return (bNotFound ? -1 : (pos - begin));
+ return (bNotFound ? -1 : (pos - this.begin));
 }
 
 
@@ -1933,9 +1941,9 @@ public final int indexOfAnyChar(CharSequence sChars)
  @return position of first foreign char inside the actual part or -1 if not found.
 */
 public final int indexOfNoChar(CharSequence sChars, final int fromWhere)
-{ int pos = begin + fromWhere;
- while(pos < end && StringFunctions.indexOf(sChars, content.charAt(pos)) >= 0) pos +=1;
- return (pos >= end) ? -1 : (pos - begin);
+{ int pos = this.begin + fromWhere;
+ while(pos < this.end && StringFunctions.indexOf(sChars, this.content.charAt(pos)) >= 0) pos +=1;
+ return (pos >= this.end) ? -1 : (pos - this.begin);
 }
 
 
@@ -1981,7 +1989,7 @@ public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest)
 * @return This itself.
 */
 public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest, int mode)
-{ endLast = end;
+{ this.endLast = this.end;
  int pos;
  if((mode & mSeekBackward_) != 0)
  { pos = lastIndexOfAnyChar(sChars, 0, maxToTest);
@@ -1989,8 +1997,8 @@ public final StringPart lentoAnyChar(CharSequence sChars, int maxToTest, int mod
  else
  { pos = indexOfAnyChar(sChars, 0, maxToTest);
  }
- if(pos < 0){ end = begin; bFound = false; }
- else       { end = begin + pos; bFound = true; } 
+ if(pos < 0){ this.end = this.begin; this.bFound = false; }
+ else       { this.end = this.begin + pos; this.bFound = true; } 
  return this;
 }
 
@@ -2030,15 +2038,15 @@ public final StringPart lentoAnyString(CharSequence[] strings, int maxToTest)
 */
 public final StringPart lentoAnyString(CharSequence[] strings, int maxToTest, int mode)
 //public StringPartBase lentoAnyString(List<String> strings, int maxToTest, int mode)
-{ endLast = end;
+{ this.endLast = this.end;
   @Java4C.StackInstance @Java4C.SimpleArray String[] foundString = new String[1];
   int pos = indexOfAnyString(strings, 0, maxToTest, null, foundString);
-  if(pos < 0){ end = begin; bFound = false; }
+  if(pos < 0){ this.end = this.begin; this.bFound = false; }
   else       
   { if( (mode & mSeekEnd) != 0)
     { pos += foundString[0].length();
     }
-    end = begin + pos; bFound = true; 
+    this.end = this.begin + pos; this.bFound = true; 
   } 
   return this;
 }
@@ -2084,21 +2092,21 @@ public final StringPart lentoAnyString(CharSequence[] strings, int maxToTest, in
 */
 public final void lentoAnyStringWithIndent(CharSequence[] strings, CharSequence sIndentChars, int maxToTest, StringBuilder buffer)
 //public String lentoAnyStringWithIndent(List<String> strings, String sIndentChars, int maxToTest)
-{ assert(end <= content.length());
-  endLast = end;
+{ assert(this.end <= this.content.length());
+  this.endLast = this.end;
  //String sRet; sRet = "";
  buffer.setLength(0);
  int indentColumn = getCurrentColumn();
- int startLine = begin;
+ int startLine = this.begin;
  boolean bAlsoWhiteSpaces = (sIndentChars.charAt(sIndentChars.length()-1) == ' ');
  int pos = indexOfAnyString(strings, 0, maxToTest, null, null);
- if(pos < 0){ end = begin; bFound = false; }
+ if(pos < 0){ this.end = this.begin; this.bFound = false; }
  else       
  { this.bFound = true;
    this.end = this.begin + pos; 
    boolean bFinish = false;
    while(!bFinish)  
-   { pos = StringFunctions.indexOf(content, '\n', startLine);
+   { pos = StringFunctions.indexOf(this.content, '\n', startLine);
      if(pos < 0) pos = this.end;
      if(pos > this.end)
      { //next newline after terminated string, that is the last line.
@@ -2107,17 +2115,17 @@ public final void lentoAnyStringWithIndent(CharSequence[] strings, CharSequence 
      }
      else { pos +=1; } // '\n' including
      //append the line to output string:
-     buffer.append(content.subSequence(startLine, pos));
+     buffer.append(this.content.subSequence(startLine, pos));
      if(!bFinish)
      { //skip over indent.
        startLine = pos;
        int posIndent = startLine + indentColumn;
-       if(posIndent > end) posIndent = end;
-       while(startLine < posIndent && StringFunctions.indexOf(sIndentChars, content.charAt(startLine)) >=0)
+       if(posIndent > this.end) posIndent = this.end;
+       while(startLine < posIndent && StringFunctions.indexOf(sIndentChars, this.content.charAt(startLine)) >=0)
        { startLine +=1;
        }
        if(bAlsoWhiteSpaces)
-       { while(" \t".indexOf(content.charAt(startLine)) >=0)
+       { while(" \t".indexOf(this.content.charAt(startLine)) >=0)
          { startLine +=1;
          }
        }
@@ -2148,10 +2156,10 @@ public final void lentoAnyStringWithIndent(CharSequence[] strings, CharSequence 
 * @return This itself.
 */
 public final StringPart lentoAnyCharOutsideQuotion(CharSequence sChars, int maxToTest)
-{ endLast = end;
+{ this.endLast = this.end;
  int pos = indexOfAnyCharOutsideQuotion(sChars, 0, maxToTest);
- if(pos < 0){ end = begin; bFound = false; }
- else       { end = begin + pos; bFound = true; } 
+ if(pos < 0){ this.end = this.begin; this.bFound = false; }
+ else       { this.end = this.begin + pos; this.bFound = true; } 
  return this;
 }
 
@@ -2166,10 +2174,10 @@ public final StringPart lentoAnyCharOutsideQuotion(CharSequence sChars, int maxT
 * @return This itself.
 */
 public final StringPart lentoQuotionEnd(char sEndQuotion, int maxToTest)
-{ endLast = end;
+{ this.endLast = this.end;
  int pos = indexEndOfQuotion(sEndQuotion, 0, maxToTest);
- if(pos < 0){ end = begin; bFound = false; }
- else       { end = begin + pos; bFound = true; } 
+ if(pos < 0){ this.end = this.begin; this.bFound = false; }
+ else       { this.end = this.begin + pos; this.bFound = true; } 
  return this;
 }
 
@@ -2226,7 +2234,7 @@ if a end char is not detected and for that reason the part is valid to the end.
  @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
  */
 public final StringPart len0end()
-{ if(end <= begin) end = endMax;
+{ if(this.end <= this.begin) this.end = this.endMax;
   return this;
 }
 
@@ -2236,7 +2244,7 @@ public final StringPart len0end()
    * @java2c=return-this.
   */
   public final StringPart setLengthMax()
-  { end = endMax;
+  { this.end = this.endMax;
     return this;
   }
 
@@ -2254,12 +2262,12 @@ public final StringPart len0end()
    *   if the end String is not found, the current part has length ==0
    */
   public final StringPart lenBacktoNoChar(CharSequence sChars)
-  { endLast = end;
-    while( end > begin && StringFunctions.indexOf(sChars, content.charAt(end-1)) >=0){ end = end -1; }
-    if(end <= begin)
-    { end = begin; bFound = false;  //all chars skipped to left.
+  { this.endLast = this.end;
+    while( this.end > this.begin && StringFunctions.indexOf(sChars, this.content.charAt(this.end-1)) >=0){ this.end = this.end -1; }
+    if(this.end <= this.begin)
+    { this.end = this.begin; this.bFound = false;  //all chars skipped to left.
     }
-    else bFound = true;
+    else this.bFound = true;
     return this;
   }
   
@@ -2292,11 +2300,11 @@ public final StringPart len0end()
       @return <code>this</code> to concat some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
   */
   final StringPart trimComment()
-  { beginLast = begin;
-    endLast = end;
+  { this.beginLast = this.begin;
+    this.endLast = this.end;
     int posComment = indexOf("//");
-    if(posComment >=0) end = begin + posComment;
-    bFound = (begin > beginLast);
+    if(posComment >=0) this.end = this.begin + posComment;
+    this.bFound = (this.begin > this.beginLast);
     return trim();
   }
 
@@ -2325,9 +2333,9 @@ public final StringPart len0end()
     It is the same behavior like String.indexOf(char, int fromEnd).
   */
   public final int indexOf(char ch)
-  { int pos = StringFunctions.indexOf(content, begin, end, ch);;
+  { int pos = StringFunctions.indexOf(this.content, this.begin, this.end, ch);;
     if(pos < 0) return -1;
-    else return pos - begin;
+    else return pos - this.begin;
   }
 
   /** Returns the position of the char within the part, started inside the part with fromIndex,
@@ -2341,11 +2349,11 @@ public final StringPart len0end()
     It is the same behavior like String.indexOf(char, int fromEnd).
   */
   public final int indexOf(char ch, int fromIndex)
-  { if(fromIndex >= (end - begin) || fromIndex < 0) return -1;
+  { if(fromIndex >= (this.end - this.begin) || fromIndex < 0) return -1;
     else
-    { int pos = StringFunctions.indexOf(content, begin + fromIndex, end, ch);;
+    { int pos = StringFunctions.indexOf(this.content, this.begin + fromIndex, this.end, ch);;
       if(pos < 0) return -1;
-      else return pos - begin + fromIndex;
+      else return pos - this.begin + fromIndex;
     }
   }
 
@@ -2358,9 +2366,9 @@ part:   =============  </pre>
 @return position of the string within the part or -1 if not found within the part.
 */
 public final int indexOf(CharSequence sCmp)
-{ int pos = StringFunctions.indexOf(content, begin, end, sCmp);  //content.substring(begin, end).indexOf(sCmp);
+{ int pos = StringFunctions.indexOf(this.content, this.begin, this.end, sCmp);  //content.substring(begin, end).indexOf(sCmp);
 if(pos < 0) return -1;
-else return pos - begin;
+else return pos - this.begin;
 }
 
 
@@ -2374,9 +2382,9 @@ part:   =============  </pre>
 @return position of the string within the part or -1 if not found within the part.
 */
 public final int XXXindexOf(CharSequence sCmp)
-{ int pos = StringFunctions.indexOf(content, begin, end, sCmp);  //content.substring(begin, end).indexOf(sCmp);
+{ int pos = StringFunctions.indexOf(this.content, this.begin, this.end, sCmp);  //content.substring(begin, end).indexOf(sCmp);
 if(pos < 0) return -1;
-else return pos - begin;
+else return pos - this.begin;
 }
 
 
@@ -2390,12 +2398,12 @@ else return pos - begin;
     @return position of the string within the part or -1 if not found within the part.
   */
   public final int indexOf(CharSequence sCmp, int fromIndex, int maxToTest)
-  { int max = (end - begin) < maxToTest ? end : begin + maxToTest;
-    if(fromIndex >= (max - begin) || fromIndex < 0) return -1;
+  { int max = (this.end - this.begin) < maxToTest ? this.end : this.begin + maxToTest;
+    if(fromIndex >= (max - this.begin) || fromIndex < 0) return -1;
     else
-    { int pos = StringFunctions.indexOf(content, begin + fromIndex, max, sCmp); //content.substring(begin + fromIndex, max).indexOf(sCmp);
+    { int pos = StringFunctions.indexOf(this.content, this.begin + fromIndex, max, sCmp); //content.substring(begin + fromIndex, max).indexOf(sCmp);
       if(pos < 0) return -1;
-      else return pos - begin + fromIndex;
+      else return pos - this.begin + fromIndex;
     }
   }
 
@@ -2406,7 +2414,7 @@ else return pos - begin;
   /** Compares the Part of string with the given string
    */
    public final boolean equals(CharSequence sCmp)
-   { return StringFunctions.equals(content, begin, end, sCmp); //content.substring(start, end).equals(sCmp);
+   { return StringFunctions.equals(this.content, this.begin, this.end, sCmp); //content.substring(start, end).equals(sCmp);
    }
 
 
@@ -2421,15 +2429,15 @@ else return pos - begin;
      
      if(pos_cEndOfText >=0)
      { if(pos_cEndOfText ==0)
-       { return begin == end;
+       { return this.begin == this.end;
        }
        else
-       { return StringFunctions.equals(content, begin, end, sCmp); //content.substring(start, end).equals(sCmp);
+       { return StringFunctions.equals(this.content, this.begin, this.end, sCmp); //content.substring(start, end).equals(sCmp);
        }
        
      }
      else
-     { return StringFunctions.startsWith(content, begin, end, sCmp); //content.substring(start, end).startsWith(sCmp);
+     { return StringFunctions.startsWith(this.content, this.begin, this.end, sCmp); //content.substring(start, end).startsWith(sCmp);
      }
    }
 
@@ -2448,7 +2456,7 @@ else return pos - begin;
     * It is the absolute position of the processed String. 
     */ 
    public final long getCurrentPosition()
-   { return begin + absPos0;
+   { return this.begin + this.absPos0;
    }
    
    
@@ -2465,10 +2473,10 @@ else return pos - begin;
     * @param pos the absolute position
     */ 
    public final void setCurrentPosition(long pos)
-   { if(pos < absPos0) {
-       throw new IllegalArgumentException("Position to rewind is not possible, pos=" + pos + " abspos0=" + absPos0);
+   { if(pos < this.absPos0) {
+       throw new IllegalArgumentException("Position to rewind is not possible, pos=" + pos + " abspos0=" + this.absPos0);
      }
-     begin = (int)(pos - absPos0);
+     this.begin = (int)(pos - this.absPos0);
    }
    
 
@@ -2485,13 +2493,13 @@ else return pos - begin;
   public final Part substring(int pos, int posendP)
   { int posend;
     if(posendP <=0)
-    { posend = endMax - posendP; //if posendP is fault, an exception is thrown.
+    { posend = this.endMax - posendP; //if posendP is fault, an exception is thrown.
     }
     else
     { posend = posendP;
     }
     @Java4C.InThCxtRet(sign="StringPart.subString")
-    Part ret = new Part(this, pos+begiMin, posend); //content.substring(pos+begiMin, posend); 
+    Part ret = new Part(this, pos + this.begiMin, posend); //content.substring(pos+begiMin, posend); 
     return ret;
   }
   
@@ -2506,9 +2514,9 @@ else return pos - begin;
   */
   @Java4C.ReturnInThreadCxt
   public final CharSequence getCurrent(int nChars)
-  { final int nChars1 =  (endMax - begin) < nChars ? endMax - begin : nChars;  //maybe reduced nr of chars
+  { final int nChars1 =  (this.endMax - this.begin) < nChars ? this.endMax - this.begin : nChars;  //maybe reduced nr of chars
     if(nChars1 ==0) return "";
-    else return( new Part(this, begin, begin + nChars1));
+    else return( new Part(this, this.begin, this.begin + nChars1));
   }
 
   
@@ -2516,7 +2524,7 @@ else return pos - begin;
   /**Gets the chars from current Position. */
   @Java4C.ReturnInThreadCxt
   public final CharSequence getCurrent()
-  { return( new Part(this, begin, end));
+  { return( new Part(this, this.begin, this.end));
   }
 
   
@@ -2524,7 +2532,7 @@ else return pos - begin;
   /** Gets the next char at current Position.
   */
   public final char getCurrentChar()
-  { if(begin < endMax){ return content.charAt(begin); }
+  { if(this.begin < this.endMax){ return this.content.charAt(this.begin); }
     else return '\0'; 
   }
  
@@ -2547,16 +2555,16 @@ else return pos - begin;
   public final int getCurrentColumn()
   { //if((bitMode & mGetColumn_mode)==0){ return -1; }
     //else {
-      int pos = StringFunctions.lastIndexOf(content, 0, begin, '\n');
-      if(pos < 0) return begin;  //first line, no \n before
-      else return begin - pos -1;
+      int pos = StringFunctions.lastIndexOf(this.content, 0, this.begin, '\n');
+      if(pos < 0) return this.begin;  //first line, no \n before
+      else return this.begin - pos -1;
     //}
   }
   
   /**This method may be overridden to return the file which is used to build this Stringpart.
    * @return null in this implementation, no file available.
    */
-  public final String getInputfile(){ return sFile; }
+  public final String getInputfile(){ return this.sFile; }
   
   
   /** Returns the actual part of the string.
@@ -2565,8 +2573,8 @@ else return pos - begin;
   @Java4C.ReturnInThreadCxt
   public final Part getCurrentPart()
   { @Java4C.InThCxtRet(sign="StringPart.getCurrentPart") final Part ret_1;
-    if(end > begin) ret_1 = new Part(this, begin, end);
-    else            ret_1 = new Part(this, begin, begin);
+    if(this.end > this.begin) ret_1 = new Part(this, this.begin, this.end);
+    else                      ret_1 = new Part(this, this.begin, this.begin);
     return ret_1 ;
   }
   
@@ -2576,8 +2584,8 @@ else return pos - begin;
    * Note: renaming 1019-05-26 from setCurrentPart(...). 
    */
   protected final void setCurrentPartTo(Part dst)
-  { if(end > begin) dst.setPart(begin, end);
-    else            dst.setPart(begin, begin);
+  { if(this.end > this.begin) dst.setPart(this.begin, this.end);
+    else                      dst.setPart(this.begin, this.begin);
   }
   
 
@@ -2586,8 +2594,8 @@ else return pos - begin;
    */
   @Java4C.ReturnInThreadCxt
   public final CharSequence getLastPart()
-  { if(begin > beginLast) { 
-      @Java4C.InThCxtRet(sign="StringPart.getLastPart") Part ret = new Part(this, beginLast, begin); return ret; 
+  { if(this.begin > this.beginLast) { 
+      @Java4C.InThCxtRet(sign="StringPart.getLastPart") Part ret = new Part(this, this.beginLast, this.begin); return ret; 
     } 
     else return "";
   }
@@ -2600,10 +2608,10 @@ else return pos - begin;
    */
   @Java4C.ReturnInThreadCxt
   public final CharSequence getCurrentPart(int maxLength)
-  { int end1 = maxLength <0 ? end : (end - begin) <  maxLength ? end : begin + maxLength ;
-    if(end > begin) {  
+  { int end1 = maxLength <0 ? this.end : (this.end - this.begin) <  maxLength ? this.end : this.begin + maxLength ;
+    if(this.end > this.begin) {  
       @Java4C.InThCxtRet(sign="StringPart.getCurrentPart")
-      final Part ret = new Part(this, begin, end1);
+      final Part ret = new Part(this, this.begin, end1);
       return ret;
     }
     else return ""; 
@@ -2627,7 +2635,7 @@ else return pos - begin;
    */
   @Java4C.ReturnInThreadCxt
   public final StringPart.Part getPart(int fromPos, int nrofChars){
-    final int nChars1 =  (endMax - fromPos) < nrofChars ? endMax - fromPos : nrofChars;  //maybe reduced nr of chars
+    final int nChars1 =  (this.endMax - fromPos) < nrofChars ? this.endMax - fromPos : nrofChars;  //maybe reduced nr of chars
     @Java4C.InThCxtRet(sign="StringPart.Part.getPart") Part ret = new Part(this, fromPos, fromPos + nChars1);
     return ret;
   }
@@ -2637,7 +2645,7 @@ else return pos - begin;
   
   protected final char absCharAt(int index){
     int pos = index;
-    if(content !=null && pos >=0 && pos < /*endMax*/content.length()) return content.charAt(pos);
+    if(this.content !=null && pos >=0 && pos < /*endMax*/this.content.length()) return this.content.charAt(pos);
     return '?'; //It is better to return a obvious char than trow.
     //else { throwIllegalArgumentException("StringPartBase.charAt - faulty; ",index); return '\0'; }
   }
@@ -2652,12 +2660,12 @@ else return pos - begin;
     int pos = from;
     int len = to - from;
     int end1 = pos + len;
-    if(content == null){ 
+    if(this.content == null){ 
       return " ??null?? ";
     }
-    if(pos >=0 && end1 <= endMax){
+    if(pos >=0 && end1 <= this.endMax){
       //@Java4C.ReturnNew  
-      CharSequence cs1 = content.subSequence(pos, pos + len) ; 
+      CharSequence cs1 = this.content.subSequence(pos, pos + len) ; 
       return cs1.toString(); 
     }
     else { throwIllegalArgumentException("StringPartBase.subSequence - faulty; ",from); return ""; }
@@ -2689,12 +2697,12 @@ else return pos - begin;
   <ul>
 */
 public final String debugString()
-{ int len = endMax;
+{ int len = this.endMax;
   /**@java2c=StringBuilderInThreadCxt,toStringNonPersist.*/ 
-  String ret = content.subSequence(0, len > 20 ? 20 : len) + "<<<" + begin + "," + end + ">>>";
-  if(begin < len){
+  String ret = this.content.subSequence(0, len > 20 ? 20 : len) + "<<<" + this.begin + "," + this.end + ">>>";
+  if(this.begin < len){
     /**@java2c=toStringNonPersist.*/ 
-    ret += content.subSequence(begin, len > (begin + 20) ? begin+20: len); 
+    ret += this.content.subSequence(this.begin, len > (this.begin + 20) ? this.begin + 20: len); 
   }
   /**@java2c=toStringNonPersist.*/ 
   ret += "<<<";
@@ -2728,12 +2736,13 @@ public final String debugString()
    * Note: if only this class is instantiated and the instance will be garbaged, close is not necessary.
    * A warning or error "Resource leak" can be switched off. Therefore the interface {@link java.io.Closeable} is not used here.
    */
+  @Override
   public void close()
   {
-    content = null;
-    begiMin = beginLast = begin = 0;
-    endMax = end = endLast = 0;
-    bCurrentOk = bFound = false;
+    this.content = null;
+    this.begiMin = this.beginLast = this.begin = 0;
+    this.endMax = this.end = this.endLast = 0;
+    this.bCurrentOk = this.bFound = false;
   }
   
 
@@ -2749,13 +2758,13 @@ public final String debugString()
    * @since 2016-11: returns a CharSequence instead String, it is more optimized, does not need an extra maybe unnecessary buffer.
    *   For older usages you should add toString() after the result of this routine to preserve compatibility. 
    */
-  public static CharSequence replace(CharSequence src, CharSequence[] placeholder, CharSequence[] value, StringBuilder dst)
+  public static CharSequence replace(CharSequence src, CharSequence[] placeholder, CharSequence[] value, StringBuilder dstArg)
   { final int len = src.length();
     //int ixPos = 0;
     int nrofToken = placeholder.length;
     if(nrofToken != value.length) {
       throwIllegalArgumentException("token and value should have same size, lesser 20", nrofToken); return src; }
-    if(dst == null){ dst = new StringBuilder(len + 100); }//calculate about 53 chars for identifier
+    StringBuilder dst = dstArg != null ? dstArg : new StringBuilder(len + 100); //calculate about 53 chars for identifier
     //@Java4C.StackInstance final StringPart spPattern = new StringPart(src);
     int posPatternStart = 0;
     int posPattern;
@@ -2809,23 +2818,23 @@ public final String debugString()
     
     
     protected void setPart(int from, int to) {
-      assert(from >= 0 && from <= outer.endMax);
-      assert(to >= 0 && to <= outer.endMax);
+      assert(from >= 0 && from <= this.outer.endMax);
+      assert(to >= 0 && to <= this.outer.endMax);
       assert(from <= to);
-      b1 = from; e1 = to; this.absPos0 = outer.absPos0;
+      this.b1 = from; this.e1 = to; this.absPos0 = this.outer.absPos0;
     }
     
     
     
     @Override
     public final char charAt(int index)
-    { return outer.absCharAt(absPos0 - outer.absPos0 + b1 + index);
+    { return this.outer.absCharAt(this.absPos0 - this.outer.absPos0 + this.b1 + index);
     }
     
     
     @Override
     public final int length()
-    { return e1 - b1;
+    { return this.e1 - this.b1;
     }
     
     @Override public final boolean equals(Object cmp) {
@@ -2841,13 +2850,13 @@ public final String debugString()
     @Override
     @Java4C.ReturnInThreadCxt
     public final CharSequence subSequence(int from, int end)
-    { int start = absPos0 - outer.absPos0 + b1;
-      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(outer, start + from, start + end);
+    { int start = this.absPos0 - this.outer.absPos0 + this.b1;
+      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(this.outer, start + from, start + end);
       return ret;
     }
   
     @Override final public String toString(){
-      return outer.absSubString(this.absPos0 - outer.absPos0 + b1, absPos0 - outer.absPos0 + e1);
+      return this.outer.absSubString(this.absPos0 - this.outer.absPos0 + this.b1, this.absPos0 - this.outer.absPos0 + this.e1);
     }
     
     
@@ -2858,10 +2867,11 @@ public final String debugString()
      * @return the number of copied character
      */
     int copyToBuffer(char[] dst, int from, int to) {
+      int pos = from;
       int max = Math.min(to - from, dst.length - from);
-      if (max > e1 - b1) { max = e1 - b1; }
-      for(int ix = absPos0 - outer.absPos0 + b1; ix < absPos0 - outer.absPos0 + b1 + max ; ++ix ) {
-        dst[from++] = outer.content.charAt(ix);
+      if (max > this.e1 - this.b1) { max = this.e1 - this.b1; }
+      for(int ix = this.absPos0 - this.outer.absPos0 + this.b1; ix < this.absPos0 - this.outer.absPos0 + this.b1 + max ; ++ix ) {
+        dst[pos++] = this.outer.content.charAt(ix);
       }
       return max;
     }
@@ -2874,14 +2884,70 @@ public final String debugString()
      */
     @Java4C.ReturnInThreadCxt
     public final Part trim(){
-      int b2 = absPos0 - outer.absPos0 + b1; int e2 = absPos0 - outer.absPos0 + e1;
-      while(b2 < e2 && " \r\n\t".indexOf(outer.content.charAt(b2)) >=0){ b2 +=1; }
-      while(e2 > b2 && " \r\n".indexOf(outer.content.charAt(e2-1)) >=0){ e2 -=1; }
-      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(outer, b2, e2);
+      int b2 = this.absPos0 - this.outer.absPos0 + this.b1; int e2 = this.absPos0 - this.outer.absPos0 + this.e1;
+      while(b2 < e2 && " \r\n\t".indexOf(this.outer.content.charAt(b2)) >=0){ b2 +=1; }
+      while(e2 > b2 && " \r\n".indexOf(this.outer.content.charAt(e2-1)) >=0){ e2 -=1; }
+      @Java4C.InThCxtRet(sign="StringPart.Part.subSequence") Part ret = new Part(this.outer, b2, e2);
       return ret;
     }
     
     
+  }
+
+
+
+  class Iter implements Iterator<StringPart> { 
+
+    boolean bHasNextCalled = false;
+    boolean bFirst;
+    
+    Iter ( ) {
+      setParttoMax();
+      this.bFirst = true;
+    }
+    
+    
+    /**Check whether a next line is available. 
+     * Calling of hasNext() is normally always before next. 
+     * It switches to the next element to return it on next().
+     * If hasNext() is called twice without next(), it is ok.
+     */
+    @Override
+    public boolean hasNext() { 
+      if(!this.bHasNextCalled) {
+        this.bHasNextCalled = true;
+        if(this.bFirst) { 
+          this.bFirst = false;
+          firstlineMaxpart();
+        }
+        else {
+          nextlineMaxpart();
+        }
+      }
+      return StringPart.this.bFound; 
+//      StringPart.this.end < StringPart.this.content.length()  //not on last position 
+//          || StringPart.this.begin < StringPart.this.end;            //content given
+      //only if end == length && begin == end then it is all.
+    }
+  
+  
+  
+    /**Returns the next line.
+     *
+     */
+    @Override
+    public StringPart next() {
+      if( ! this.bHasNextCalled) { hasNext(); }  //Note: switch to the next content. 
+      this.bHasNextCalled = false;
+      //Note: returns an empty String if hasNext() was not called or evaluated by the user.
+      return StringPart.this; 
+    }
+  }
+
+
+  @Override
+  public Iterator<StringPart> iterator() {
+    return new Iter();
   }
 
 

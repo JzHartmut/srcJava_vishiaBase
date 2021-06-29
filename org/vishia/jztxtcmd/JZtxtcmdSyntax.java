@@ -322,7 +322,7 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " text::=  <\"\"?text>                                    ## It is a constant text. \n"
     + " | \\<:\\><textExpr?.indent=-3>\\<\\.\\>                 ## It is a text assembled in runtime. \n"
-    + " | \\<::\\ \\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> ## text assembled in runtime starting in next line. \n"
+    + " | \\<::\\><textExpr?.indent=-4?.skipFirstnl=1>\\<\\.\\> ## text assembled in runtime starting in next line. \n"
     + " .\n"
     + " \n"
     + " \n"

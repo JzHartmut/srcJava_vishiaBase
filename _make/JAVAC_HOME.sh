@@ -11,14 +11,14 @@
 #You should add more JAVAC_HOME proposals if necessary.
 #
 if test "$OS" = "Windows_NT"; then
-  JAVAC_HOME=c:/Programs/Java/jdk1.8.0_241/bin
+  JAVAC_HOME=c:/Programs/Java/jdk1.8.0_241
   if test -d $JAVAC_HOME; then echo $JAVAC_HOME/; exit; fi
-  JAVAC_HOME="c:/Program Files/Java/jdk1.8.0_241/bin"
+  JAVAC_HOME="c:/Program Files/Java/jdk1.8.0_241"
   if test -f $JAVAC_HOME; then echo $JAVAC_HOME/; exit; fi
   #should be found in path
   echo ""
 else
-  JAVAC_HOME="/usr/share/JDK/jdk1.8.0_241/bin"
+  JAVAC_HOME="/usr/share/JDK/jdk1.8.0_241"
   if test -f $JAVAC_HOME; then echo $JAVAC_HOME/; exit; fi
   echo ""
 fi

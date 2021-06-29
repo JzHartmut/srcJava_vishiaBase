@@ -1,0 +1,29 @@
+==JZtxtcmd==
+
+currdir = scriptdir;
+
+String libsPath=$1;   ##../.../libs etc.
+String buildPath = FileSystem.absolutePath($2, null);  //replace /tmp/
+String cmpnName = $3;   ##vishiaBase  vishiaGui
+String version = $4;    ##yyyy-mm-dd
+
+main() {
+  <+out> <&cmpnName>: <&buildPath> => <&libsPath>/<&cmpnName>-<&version>.jar<.+n>
+  String MD5 = FileSystem.readFile(File: <:><&buildPath>/<&cmpnName>-<&version>.jar.MD5.txt<.>);
+  MD5 = MD5.substring(0, 32);   ##The file contains first the MD% sum, then more info about files.
+  <+out>MD5=<&MD5><.+n>
+  String fnameBom = <:><&libsPath>/bomVishiaJava.txt<.>;
+  Stringjar bom = FileSystem.readFile(File: &fnameBom);
+  Stringjar bomWr;
+  for(bomLine: bom) {
+    ##<+out> <&bomLine><.+n>
+    if(bomLine.startsWith(cmpnName)) {
+      bomLine = <::>
+<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;<.>;
+      <+out><&bomLine><.+n>
+    }
+    <+bomWr><&bomLine><.+n>
+  }
+  Openfile fBomWr = &fnameBom;  ## write changed bom file
+  <+fBomWr><&bomWr><.+close>
+}

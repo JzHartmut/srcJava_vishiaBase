@@ -50,6 +50,8 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2021-06-28 Hartmut feature {@link #absolutePath(String, File)} accepts "/tmp/..." and look for an environment variable TMP or TEMP.
+   *   It is important also for shell scripts in windows. In the shell script /tmp/ may be known, but not in the windows file system. 
    * <li>2021-06-28 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} with given directory
    * <li>2021-06-28 Hartmut new feature: {@link #normalizePath(CharSequence)} regareds ':'   
    * <li>2021-06-21 Hartmut new {@link #renameCreate(File, String, String, boolean)}, 
@@ -1043,6 +1045,8 @@ public class FileFunctions {
    * <ul>
    * <li>"~/" - then the home dir is replaced. The home dir is the string 
    *     containing in the HOME environment variable. This style of notification is usual in Linux/Unix
+   * <li>"/tmp/ - this is the TMP directory for Linux and shell scripts in windows.
+   *    Then TMP or TEMP is searched as environment variable on windows to replace "/tmp/"
    * <li>not with "/", "\\", "D:/", "D:\\" wherby D is any drive letter,
    *   then the currDir is used as absolute path for the file.
    * </ul>    
@@ -1057,9 +1061,17 @@ public class FileFunctions {
    */
   public static String absolutePath(String sFileNameP, File currDir)
   { final String sAbs;
-    if(sFileNameP.startsWith("~")){ //The home directory
+  if(sFileNameP.startsWith("~")){ //The home directory
       String sHome = System.getenv("HOME");
       sAbs = sHome + sFileNameP.substring(1);
+    } else if(sFileNameP.startsWith("/tmp/")){ //The standard tmp directory in linux
+      String sTmp = System.getenv("TMP");
+      if(sTmp==null) { sTmp = System.getenv("TEMP"); }  //on Linux may be not defined, it is ok.
+      if(sTmp !=null) {                        //use this instead "/tmp/
+        sAbs = sTmp + sFileNameP.substring(4); // add beginning from "/...."
+      } else {
+        sAbs = sFileNameP;    //with /tmp/ on start, it is for Linux.
+      }
     } else if(! 
         (  sFileNameP.startsWith("/")        //it is not an (absolute path or D:/windowsAbsPath) 
         || sFileNameP.startsWith("\\")        //it is not an (absolute path or D:/windowsAbsPath) 

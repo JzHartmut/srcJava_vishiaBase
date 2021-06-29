@@ -85,13 +85,35 @@ export SRC_ALL=".."
 export FILE1SRC=""
 
 #now run the common script:
+chmod 777 makejar.sh
 ./-makejar-coreScript.sh
 
-if test -f $DEPLOY-$VERSION.jar -a -d D:/vishia/Java/libStd; then
-  cp $DEPLOY-$VERSION.jar D:/vishia/Java/libStd/vishiaBase.jar
-  ls -l D:/vishia/Java/libStd
-fi  
 
+# Deploy the result
+if test -f $DEPLOY-$VERSION.jar; then   ##compilation successfull
+  ##
+  ## copy to the deploy directory. 
+  if test -d ../../../../../../deploy; then
+    cp $DEPLOY-$VERSION* ../../../../../../deploy
+  elif test -d ../../deploy; then
+    cp $DEPLOY-$VERSION* ../../deploy
+  fi  
+  ##
+  ## copy the useable version to a existing libstd directory:
+  if test -d ../../../../../../libstd; then ##beside cmpnJava... should be existing
+    export DEPLOYPATH="../../../../../../libStd" 
+    ##TODO maybe correct the bomVishiaJava.txt via script.jzTc possible
+  else
+    export DEPLOYPATH="../../jars" 
+    if ! test -d $DEPLOYPATH; then mkdir $DEPLOYPATH; fi
+  fi  
+  if test -v DEPLOYPATH; then
+    cp $DEPLOY-$VERSION.jar $DEPLOYPATH/vishiaBase.jar    
+    ls -l $DEPLOYPATH
+    echo correct the bom file: JZtxtcmd corrBom.jzTc $DEPLOYPATH $BUILD/deploy vishiaBase $VERSION
+    java -cp $DEPLOYPATH/vishiaBase.jar org.vishia.jztxtcmd.JZtxtcmd corrBom.jzTc $DEPLOYPATH $BUILD/deploy vishiaBase $VERSION
+  fi  
+fi  
 
 
 
