@@ -12,18 +12,34 @@ main() {
   String MD5 = FileSystem.readFile(File: <:><&buildPath>/<&cmpnName>-<&version>.jar.MD5.txt<.>);
   MD5 = MD5.substring(0, 32);   ##The file contains first the MD% sum, then more info about files.
   <+out>MD5=<&MD5><.+n>
+  mkdir &libsPath;  ##creates the appropriate directory, if the bom should be created.
   String fnameBom = <:><&libsPath>/bomVishiaJava.txt<.>;
-  Stringjar bom = FileSystem.readFile(File: &fnameBom);
+  Stringjar bom = FileSystem.readFile(File: &fnameBom);  ##null if not found
   Stringjar bomWr;
+  Bool bFoundLine = false;
+  debug;
   for(bomLine: bom) {
-    ##<+out> <&bomLine><.+n>
+    ##<+out>+++><&bomLine><.+n>
     if(bomLine.startsWith(cmpnName)) {
-      bomLine = <::>
-<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;<.>;
+      bomLine = <::>                   ## replace this line:
+======<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;<.>;
+      bFoundLine = true;
       <+out><&bomLine><.+n>
     }
     <+bomWr><&bomLine><.+n>
   }
+  if(not bFoundLine) {
+    String bomLine = <::>              ## create this line:
+======<:x>
+======#Basic for all java applications from vishia:
+======<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;
+======
+======<.>;
+    bFoundLine = true;
+    <+out><&bomLine><.+>
+    <+bomWr><&bomLine><.+>
+  }
   Openfile fBomWr = &fnameBom;  ## write changed bom file
   <+fBomWr><&bomWr><.+close>
 }
+

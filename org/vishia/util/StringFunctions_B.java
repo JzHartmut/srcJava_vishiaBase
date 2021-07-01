@@ -71,7 +71,7 @@ public class StringFunctions_B
    * @param IndentChars some Characters which are expected in the indentation area. 
    * @param tabSize User tab size to prevent tabs as indentation
    * @param sNewline String as newline designation, usual "\n", "\r\n" or "\r".
-   * @param bSkipSpaces true then skip over the first whitespace characters
+   * @param bSkipSpaces true then skip over the first whitespace characters in all following lines.
    * @return either src if it does not contain a newline character and does not contain prevented whitespaces
    *   or a StringBuiler which contains the result.
    */
@@ -94,20 +94,21 @@ public class StringFunctions_B
           posEnd1 = posEnd2;  // \r found before \n
           cEnd = '\r';
         }
-        if(posEnd1 >= 0){ 
-          if(bSkipSpaces1) {
-            while(posLine <posEnd1 && sWhiteSpaces.indexOf(src.charAt(posLine))>=0) {
-              posLine +=1;
-            }
-            if(posLine < posEnd1) { //anything found in the line:
-              bSkipSpaces1 = false;
-            }
+        if(bSkipSpaces1) {                       // skip over the first spaces, also following lines
+          int posEndSpaces = posEnd1 >= 0 ? posEnd1 : zText; 
+          while(posLine <posEndSpaces && sWhiteSpaces.indexOf(src.charAt(posLine))>=0) {
+            posLine +=1;
           }
+          if(posLine < posEndSpaces) {           // anything found in the line:
+            bSkipSpaces1 = false;                // then switch off skip spaces
+          }
+        }
+        if(posEnd1 >= 0){ 
           if(posLine < posEnd1) {
             b.append(src.subSequence(posLine, posEnd1));  
           }
-          if(!bSkipSpaces1) { //don't append a newline if skipSpaces is still active. Then only spaces were found.
-            b.append(sNewline);  //use the newline from argument.
+          if(!bSkipSpaces1) {          // don't append a newline if skipSpaces is still active. Then only spaces were found before.
+            b.append(sNewline);        // use the newline from argument as replacement for all \r\n.
           }
           //skip over posEnd1, skip over the other end line character if found. 
           if(++posEnd1 < zText){

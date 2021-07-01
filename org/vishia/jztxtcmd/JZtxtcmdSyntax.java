@@ -459,11 +459,11 @@ public final class JZtxtcmdSyntax {
     + " | \\<:debugOp:<textValue?debugOp>\\>\n"
     + " | \\<&<dataText>\n"
     //+ " | \\<: [<?transliteration> n | r | t | \\< | # | \\\" ] \\>\n"
-    + " | \\<: [<?transliteration>n|r|t|b|[\\<|#|\\\"]<*\\>?>] \\>\n"
+    + " | \\<: [<?transliteration>n|r|t|b|x|[\\<|#|\\\"]<*\\>?>] \\>\n"
     + " | \\<:[<#?utf16code>|x<#x?utf16code>]\\>\n"
     + " | \\<:lf\\><?newline>\n"
     + " | \\<:\\ \\><!\\\\s*?> [ \\#\\#<*\\r\\n?> <!\\\\s*?> ]\n"      //skip all whitespaces and endlinecomment
-    + " | \\<:s\\><?skipWhiteSpaces>\n"      //skip all whitespaces and endlinecomment
+    + " | \\<:s\\><?skipWhiteSpaces>\n"          //skip all whitespaces and endlinecomment for following plainText
     + " | \\<:@<setColumn>\\>  \n"               //set column 
     + " | \\<:<DefVariable?> \\>  \n"
     + " | \\<:=<assignInTextExpr?assignExpr>  \n"

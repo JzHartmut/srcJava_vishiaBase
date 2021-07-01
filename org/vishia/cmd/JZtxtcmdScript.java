@@ -584,8 +584,9 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     JZcmditem(StatementList parentList, char whatisit){
-      if(parentList == null)
-        Assert.stop();
+      if(parentList == null) {
+        Debugutil.stop();
+      } 
       this.parentList = parentList;
       this.elementType = whatisit;
     }
@@ -2380,8 +2381,12 @@ public class JZtxtcmdScript extends CompiledScript
      */
     public boolean bContainsVariableDef;
 
-    /**Set with <code><:s></code> in a textExpression to enforce skipping whithespaces. 
-     * Also true if a text expression starts with &lt;:: >, then the first line feed should not be generated if the text before is empty. */
+    /**Set with <code><:s></code> in a textExpression to enforce skipping white spaces. 
+     * Also true if a text expression starts with &lt;::>, then the first line feed should not be generated 
+     * if the text before is empty. 
+     * It is valid for the first statements till a statement with content is found. 
+     * Then this variable is set to false.
+     */
     boolean bSetSkipSpaces;
     
 
@@ -2464,6 +2469,7 @@ public class JZtxtcmdScript extends CompiledScript
 
     
     public StatementList new_statementBlock(){
+      this.bSetSkipSpaces = false;
       JZcmditem statement = new JZcmditem(this, 'B');
       statements.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
@@ -2512,6 +2518,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     public void set_scriptdir(){
+      this.bSetSkipSpaces = false;
       JZcmditem textOut = new TextOut(this, 't');
       int posscriptdir = srcFile.lastIndexOf('/');
       textOut.textArg = srcFile.substring(0, posscriptdir);
@@ -2547,6 +2554,7 @@ public class JZtxtcmdScript extends CompiledScript
      * The text is assembled and outputted to the standard output. 
      */
     public StatementList new_textExpr(ZbnfParseResultItem zbnfItem){ 
+      this.bSetSkipSpaces = false;  //nested textExpr switches off leading space skipping. Depending check from nesting text is too complex.
       if(zbnfItem.syntaxItem().bDebugParsing){
         Debugutil.stop();
       }
@@ -2769,7 +2777,10 @@ public class JZtxtcmdScript extends CompiledScript
     //public List<ScriptElement> getLocalVariables(){ return localVariableScripts; }
     
     /**Set from ZBNF:  (\?*<$?dataText>\?) */
-    public DataText new_dataText(){ return new DataText(this); }
+    public DataText new_dataText(){ 
+      this.bSetSkipSpaces = false;     //spaces after this item are not skipped.
+      return new DataText(this); 
+    }
     
     /**Set from ZBNF:  (\?*<*dataText>\?) */
     public void add_dataText(DataText val){ 
@@ -2800,12 +2811,14 @@ public class JZtxtcmdScript extends CompiledScript
     
     /**Sets the plainText From ZBNF. invokes {@link #set_textReplLf(String)} if the text contains
      * other characters as white spaces. 
+     * It regards {@link #bSetSkipSpaces}.
      */
     public void set_plainText(String text){
-      if(text.length() >0){
-        if(text.startsWith("<indent:6=>"))
+      int zText = text.length();
+      CharSequence text1 = text;
+      if(zText >0){
+        if(srcLine == 24)
           Debugutil.stop();
-        JZcmditem statement = new JZcmditem(this, 't');
         //if(parentStatement instanceof TextOut) {
           //TextOut textOut = (TextOut)parentStatement;
         if(jzSettings !=null) {
@@ -2813,14 +2826,17 @@ public class JZtxtcmdScript extends CompiledScript
           final int nIndentScript1;
           sIndentChars1 = this.sIndentChars;
           nIndentScript1 = this.nIndentInScript;
-          CharSequence text1 = StringFunctions_B.removeIndentReplaceNewline(text
+          text1 = StringFunctions_B.removeIndentReplaceNewline(text
               , nIndentScript1, sIndentChars1, jzSettings.srcTabsize, jzSettings.sLinefeed, this.bSetSkipSpaces);
-          statement.textArg = text1.toString();
-          this.bSetSkipSpaces = false;  //it is valid for the following text only, it is used.
-        } else {
-          //special basics
-          statement.textArg = text;
+          zText = text1.length();                          // used text length
+          if( zText>0) {  //it is 0 if all spaces are skipped
+            this.bSetSkipSpaces = false;  //it is valid for the following text only, it is used.
+          }
         }
+      }
+      if(zText >0) {                             // don't add a not given text
+        JZcmditem statement = new JZcmditem(this, 't');
+        statement.textArg = text1.toString();
         statements.add(statement);
         onerrorAccu = null; withoutOnerror.add(statement);
       }
@@ -2828,20 +2844,24 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     public void set_transliteration(String val){
-      JZcmditem statement = new JZcmditem(this, '\\');
+      this.bSetSkipSpaces = false;
       char cc = val.charAt(0);
-      switch(cc){
-        case 'n': statement.textArg = "\n"; break;
-        case 'r': statement.textArg = "\r"; break;
-        case 't': statement.textArg = "\t"; break;
-        case 'b': statement.textArg = "\b"; break;
-        case '<': case '\"': case '#': statement.textArg = val; break;
+      if(cc != 'x') {  //the <:x> means a non existing char, can break a white space sequence
+        JZcmditem statement = new JZcmditem(this, '\\');
+        switch(cc){
+          case 'n': statement.textArg = "\n"; break;
+          case 'r': statement.textArg = "\r"; break;
+          case 't': statement.textArg = "\t"; break;
+          case 'b': statement.textArg = "\b"; break;
+          case '<': case '\"': case '#': statement.textArg = val; break;
+        }
+        statements.add(statement);
+        onerrorAccu = null; withoutOnerror.add(statement);
       }
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
     }
     
     public void set_utf16code(long val){
+      this.bSetSkipSpaces = false;
       JZcmditem statement = new JZcmditem(this, 't');
       statement.textArg = "" + (char)val; //Character.toChars(val);
       statements.add(statement);
@@ -2849,6 +2869,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     public void set_newline(){
+      this.bSetSkipSpaces = false;
       JZcmditem statement = new JZcmditem(this, 'n');
       statements.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
@@ -2938,7 +2959,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     
     
-    public IfStatement new_ifCtrl(){
+    public IfStatement new_ifCtrl ( ) {
+      this.bSetSkipSpaces = false;
       StatementList subGenContent = new StatementList(parentStatement);
       IfStatement statement = new IfStatement(this, 'i');
       statement.statementlist = subGenContent;  //The statement contains a genContent. 
@@ -2977,7 +2999,8 @@ public class JZtxtcmdScript extends CompiledScript
      * @return 
      */
     public ForStatement new_forCtrl()
-    { ForStatement statement = new ForStatement(this, 'f');
+    { this.bSetSkipSpaces = false;
+      ForStatement statement = new ForStatement(this, 'f');
       statements.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
       return statement;
@@ -2987,7 +3010,8 @@ public class JZtxtcmdScript extends CompiledScript
 
 
     public CondStatement new_whileCtrl()
-    { CondStatement statement = new CondStatement(this, 'w');
+    { this.bSetSkipSpaces = false;
+      CondStatement statement = new CondStatement(this, 'w');
       statements.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
       return statement;
@@ -2997,7 +3021,8 @@ public class JZtxtcmdScript extends CompiledScript
 
 
     public CondStatement new_dowhileCtrl()
-    { CondStatement statement = new CondStatement(this, 'u');
+    { this.bSetSkipSpaces = false;
+      CondStatement statement = new CondStatement(this, 'u');
       statements.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
       return statement;
@@ -3019,7 +3044,8 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     public CallStatement new_call()
-    { CallStatement statement = new CallStatement(this, 's');
+    { this.bSetSkipSpaces = false;
+      CallStatement statement = new CallStatement(this, 's');
       statements.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
       return statement;

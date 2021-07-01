@@ -13,8 +13,8 @@ echo script $0
 #If the relevant sources are not change in functionality, may be changed in comment, 
 #  it is not necessary the change this VERSION because the generated content is the same.
 #The next line is the version for vishiaMiniSys:
-export VERSION_MINISYS="2021-06-28"
-export VERSION_VISHIABASE="2021-06-28"
+export VERSION_MINISYS="2021-07-01"
+export VERSION_VISHIABASE="2021-07-01"
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSION
@@ -85,7 +85,7 @@ export SRC_ALL=".."
 export FILE1SRC=""
 
 #now run the common script:
-chmod 777 makejar.sh
+chmod 777 ./-makejar-coreScript.sh
 ./-makejar-coreScript.sh
 
 

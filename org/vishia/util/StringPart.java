@@ -2903,43 +2903,52 @@ public final String debugString()
     
     Iter ( ) {
       setParttoMax();
+      firstlineMaxpart();
       this.bFirst = true;
     }
     
     
     /**Check whether a next line is available. 
-     * Calling of hasNext() is normally always before next. 
-     * It switches to the next element to return it on next().
+     * Calling of hasNext() is usual always before next.
+     * But it is not forbidden to call next before evaluate the content.
+     * Because the returned next() is always the same instance, only with changed position,
+     * here hasNext() must not invoke thinks of the following next()!  
+     * <br>
      * If hasNext() is called twice without next(), it is ok.
      */
     @Override
     public boolean hasNext() { 
-      if(!this.bHasNextCalled) {
-        this.bHasNextCalled = true;
-        if(this.bFirst) { 
-          this.bFirst = false;
-          firstlineMaxpart();
-        }
-        else {
-          nextlineMaxpart();
-        }
-      }
-      return StringPart.this.bFound; 
-//      StringPart.this.end < StringPart.this.content.length()  //not on last position 
-//          || StringPart.this.begin < StringPart.this.end;            //content given
-      //only if end == length && begin == end then it is all.
+      int zContent = StringPart.this.content.length();
+      int startNext = StringPart.this.endMax;
+      char cc =0;
+      if(startNext < zContent && "\r\n".indexOf(cc=StringPart.this.content.charAt(startNext)) >=0) { startNext +=1; }
+      if(cc == '\r' && startNext < zContent && (cc=StringPart.this.content.charAt(startNext)) =='\n') { startNext +=1; }
+      return startNext < zContent  //not on last position 
+          || (this.bFirst && StringPart.this.end >0);            //one line content given without \n
     }
   
   
   
     /**Returns the next line.
-     *
+     * Here the next line is preset in the same instance of the outer class, which is returned.
+     * It uses {@link StringPart#nextlineMaxpart()}.
+     * <br>
+     * Note: Changing the {@link StringPart#endMax} with other operations changes the spread.
+     * That is especially {@link StringPart#setParttoMax()} and {@link StringPart#setCurrentMaxPart()}.
+     * This operations should not be used in this iterator environment.
+     * <br>
+     * But especially all other scan Functions can be used. Especially {@link StringPart#fromEnd()} etc. can be used.
+     * The line returned here is determined with the spread from {@link StringPart#begiMin} to {@link StringPart#endMax}
+     * which are not changed by this operations. 
      */
     @Override
     public StringPart next() {
-      if( ! this.bHasNextCalled) { hasNext(); }  //Note: switch to the next content. 
-      this.bHasNextCalled = false;
-      //Note: returns an empty String if hasNext() was not called or evaluated by the user.
+      if(this.bFirst) { 
+        this.bFirst = false;
+      }
+      else {
+        nextlineMaxpart();
+      }
       return StringPart.this; 
     }
   }
