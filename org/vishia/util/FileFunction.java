@@ -95,7 +95,7 @@ public class FileFunction
    * @param terminateString if not null then till a found String inclusively this string, usual a ";" or "}"
    * @param onStartIndent true then the terminateString is expected only on the same indent as the start.
    * @param  
-   * @return
+   * @return The lines or instead a proper error message
    */
   public static CharSequence getLinesFile(File file, int startLine, String startString
   , int nrofLines, boolean tillEmptyLine, boolean tillLesserIndent

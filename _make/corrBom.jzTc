@@ -10,25 +10,41 @@ String version = $4;    ##yyyy-mm-dd
 main() {
   <+out> <&cmpnName>: <&buildPath> => <&libsPath>/<&cmpnName>-<&version>.jar<.+n>
   String MD5 = FileSystem.readFile(File: <:><&buildPath>/<&cmpnName>-<&version>.jar.MD5.txt<.>);
-  MD5 = MD5.substring(0, 32);   ##The file contains first the MD% sum, then more info about files.
-  <+out>MD5=<&MD5><.+n>
+  MD5 = MD5.substring(0, 32);          ##The file contains first the MD% sum, then more info about files.
+  <+out>MD5=#<&MD5>#<.+n>
   mkdir &libsPath;  ##creates the appropriate directory, if the bom should be created.
   String fnameBom = <:><&libsPath>/bomVishiaJava.txt<.>;
-  Stringjar bom = FileSystem.readFile(File: &fnameBom);  ##null if not found
+  String fnameBomNew = <:><&libsPath>/bomVishiaJava.new.txt<.>;
+  Obj fbomNew = File: &fnameBomNew;
+  if(fbomNew.exists()) {               ## use a new created bom if existing because of other changes
+    Stringjar bom = FileSystem.readFile(File: &fnameBomNew);  
+  } else {                             ## try to read given bom
+    Stringjar bom = FileSystem.readFile(File: &fnameBom);    ##null if not found
+  }
   Stringjar bomWr;
   Bool bFoundLine = false;
+  Bool bChangedMD5 = false;
   debug;
-  for(bomLine: bom) {
+  for(bomLine: bom) {   ## bom = null is admissible
     ##<+out>+++><&bomLine><.+n>
     if(bomLine.startsWith(cmpnName)) {
-      bomLine = <::>                   ## replace this line:
-======<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;<.>;
       bFoundLine = true;
-      <+out><&bomLine><.+n>
+      bomLine.seekEnd("MD5=").lentoPos(32);
+      String MD5curr = bomLine.getCurrent();
+      <+out>MD5curr=#<&MD5curr>#<.+n>
+      if(MD5 != MD5curr) {
+        bomLine = <::>                   ## replace this line:
+========<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;<.>;
+        <+out><&bomLine><.+n>
+        bChangedMD5 = true;              ## if MD5 changed, the new bom should be written.
+      } else {
+        bomLine.line();                  ## restore the whole line if MD5 is the same
+      }
     }
     <+bomWr><&bomLine><.+n>
   }
   if(not bFoundLine) {
+    bChangedMD5 = true;
     String bomLine = <::>              ## create this line:
 ======<:x>
 ======#Basic for all java applications from vishia:
@@ -39,7 +55,13 @@ main() {
     <+out><&bomLine><.+>
     <+bomWr><&bomLine><.+>
   }
-  Openfile fBomWr = &fnameBom;  ## write changed bom file
-  <+fBomWr><&bomWr><.+close>
+  if(bChangedMD5) {
+    Obj fjarOld = File: <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
+    if(not fjarOld.exists()) {         ## Copy the existing jar to version_old to notify of the change
+      copy <:><&libsPath>/<&cmpnName>.jar<.> <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
+    }                                  ## If the old.jar exists, the new .jar should be copied.
+    Openfile fBomWr = &fnameBomNew;    ## It is true and necessary if at least one time MD5 was changed.
+    <+fBomWr><&bomWr><.+close>         ## write changed bom file with .new.txt
+  }
 }
 

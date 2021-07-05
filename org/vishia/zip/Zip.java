@@ -1,6 +1,5 @@
 package org.vishia.zip;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -48,6 +47,7 @@ import org.vishia.util.FileSystem;
     String sError = zip.exec(dst, compressionLevel, comment);
  * </pre>
  * @author Hartmut Schorrig
+ *
  *
  */
 public class Zip {
