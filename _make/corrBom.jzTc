@@ -11,7 +11,7 @@ main() {
   <+out> <&cmpnName>: <&buildPath> => <&libsPath>/<&cmpnName>-<&version>.jar<.+n>
   String MD5 = FileSystem.readFile(File: <:><&buildPath>/<&cmpnName>-<&version>.jar.MD5.txt<.>);
   MD5 = MD5.substring(0, 32);          ##The file contains first the MD% sum, then more info about files.
-  <+out>MD5=#<&MD5>#<.+n>
+  <+out>MD5=<&MD5><.+n>
   mkdir &libsPath;  ##creates the appropriate directory, if the bom should be created.
   String fnameBom = <:><&libsPath>/bomVishiaJava.txt<.>;
   String fnameBomNew = <:><&libsPath>/bomVishiaJava.new.txt<.>;
@@ -59,6 +59,11 @@ main() {
     Obj fjarOld = File: <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
     if(not fjarOld.exists()) {         ## Copy the existing jar to version_old to notify of the change
       copy <:><&libsPath>/<&cmpnName>.jar<.> <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
+      onerror {
+        //copy comes with error:
+        Openfile fJarDummy = <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
+        <+fJarDummy>dummy yet only as marker<.+close>;
+      }
     }                                  ## If the old.jar exists, the new .jar should be copied.
     Openfile fBomWr = &fnameBomNew;    ## It is true and necessary if at least one time MD5 was changed.
     <+fBomWr><&bomWr><.+close>         ## write changed bom file with .new.txt
