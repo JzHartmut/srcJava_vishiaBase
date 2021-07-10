@@ -1,7 +1,6 @@
 package org.vishia.inspcComm;
 
 import org.vishia.byteData.ByteDataAccessBase;
-import org.vishia.byteData.test.TestInspcDatagram;
 
 /**This is an example for {@link ByteDataAccessBase} and also the access to the <em>Inspector datagram</em>. 
  * The Inspector (short <em>Inspc</em>) is a mechanism to access to target embedded processor systems
