@@ -1061,7 +1061,7 @@ public class FileFunctions {
    */
   public static String absolutePath(String sFileNameP, File currDir)
   { final String sAbs;
-  if(sFileNameP.startsWith("~")){ //The home directory
+    if(sFileNameP.startsWith("~")){ //The home directory
       String sHome = System.getenv("HOME");
       sAbs = sHome + sFileNameP.substring(1);
     } else if(sFileNameP.startsWith("/tmp/")){ //The standard tmp directory in linux
@@ -1078,7 +1078,11 @@ public class FileFunctions {
         || sFileNameP.length() >=3 && (sFileNameP.substring(1, 3).equals(":/") || sFileNameP.substring(1, 3).equals(":\\"))
         ) ){
       String sCurrdir = currDir == null ? new File(".").getAbsolutePath() : currDir.getAbsolutePath();
-      sAbs = sCurrdir + "/" + sFileNameP; 
+      if(sFileNameP.startsWith(":")) {
+        sAbs = sCurrdir + sFileNameP;            // sAbs contains the ':' as separator
+      } else {
+        sAbs = sCurrdir + "/" + sFileNameP;
+      }
     } else {
       sAbs = sFileNameP;
     }
@@ -1163,11 +1167,13 @@ public class FileFunctions {
       uPath.delete(posStart+1, pos+4);  //delete from 0 in case of "folder/../somemore"
       posNext = posStart;  //search from posStart, it may be found "path/folder/folder/../../folder/../follow"
     }
-    while( (pos = StringFunctions.indexOf(test, "/..:**", posNext)) >=0){
+    //chg 2021-09-19 check "/..: was a stupid thinking. The /.. selects always the parent. 
+    // but :../** means start on parent position for : with parent as part of ** Test is also changed.
+    while( (pos = StringFunctions.indexOf(test, ":../**", posNext)) >=0){
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       int posStart = uPath.lastIndexOf("/", pos-1);
       //remove "/folder/..", remain ":"
-      uPath.delete(pos+1, pos+4);  //delete from 0 in case of "folder/../somemore"
+      uPath.delete(pos, pos+3);  //delete from 0 in case of "folder/../somemore"
       if(posStart >=0) { uPath.setCharAt(posStart, ':'); }
       posNext = posStart;  //search from posStart, it may be found "path/folder/folder/../../folder/../follow"
     }

@@ -118,8 +118,13 @@ public class XmlJzReader
   
   
   
-  /**Size of the buffer to hold a part of the xml input file. It should be enough large to hold 1 element with attributes (without content). */
-  int sizeBuffer = 20000;
+  /**Size of the buffer to hold a part of the xml input file. 
+   * It should be enough large to hold 1 element with attributes (without content). 
+   * On 2/3 of the buffer it is reloaded. It means the most length of an attribute should be < sizeBuffer/3.
+   * Note that sometimes attributes are very long. 
+   * Maximum size is 16 MByte. 
+   */
+  int sizeBuffer = 200000;
   
   int debugStopLine = -1;
   
@@ -839,7 +844,7 @@ public class XmlJzReader
    */
   private CharSequence replaceSpecialCharsInText(CharSequence src) throws ParseException {
     //Note: older form, since 2020-01: do not convert \n if no &#xa is contained:
-    if(StringFunctions.contains(src, "Comment of Network1"))
+    if(StringFunctions.contains(src, "Comment of Network1xx"))
       Debugutil.stop();
     //commented: if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; }
     if(StringFunctions.indexOf(src, '&') < 0) { return src; } //unchange, no effort
@@ -849,8 +854,9 @@ public class XmlJzReader
       int pos = 0;
       while( ( pos  = StringFunctions.indexOf(b, '&', pos)) >=0) {
         int posEnd = StringFunctions.indexOf(b, ';', pos);
+        String search = "";
         if(posEnd >0 && (posEnd - pos) < 11) {
-          String search = b.subSequence(pos, posEnd+1).toString();
+          search = b.subSequence(pos, posEnd+1).toString();
           String replChar = this.replaceChars.get(search);
           if(replChar == null) {
             if( search.charAt(1) == '#') {
@@ -891,7 +897,7 @@ public class XmlJzReader
             pos +=1;
           }
         } else {
-          throw new ParseException("faulty Characters on ", pos);
+          throw new ParseException("faulty special Characters:" + search + "on #", pos);
         }
       }
       pos = 0;

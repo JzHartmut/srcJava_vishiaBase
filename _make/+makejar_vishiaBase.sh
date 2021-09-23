@@ -11,6 +11,7 @@ echo " ... generates the vishiaBase.jar from srcJava_vishiaBase core sources"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
+## See $TIMEinJAR_VISHIABASE in next block.
 if test "$VERSIONSTAMP" = ""; then export VERSIONSTAMP=$(date -I); fi   ## writes current date
 export VERSION_MINISYS=$VERSIONSTAMP
 export VERSION_VISHIABASE=$VERSIONSTAMP
@@ -27,7 +28,7 @@ export VERSION_VISHIABASE=$VERSIONSTAMP
 ## The comparison byte by byte inside the jar (zip) file is always possible.
 ## Use this timestamp for file in jars, influences the MD5 check:
 export TIMEinJAR_MINISYS="2021-07-01+00:00"
-export TIMEinJAR_VISHIABASE="2021-07-09+00:00"   
+export TIMEinJAR_VISHIABASE="2021-09-23+00:00"   
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP

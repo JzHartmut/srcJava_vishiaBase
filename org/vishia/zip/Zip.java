@@ -242,7 +242,7 @@ public class Zip {
           }
         }
         System.out.println("  + " /*+ src.dir.getAbsoluteFile() */+ " : " + path);
-        FileSystem.addFilesWithBasePath (src.dir, path, listFiles);
+        FileSystem.addFilesWithBasePath (src.dir, path, listFiles);  //Note: src.dir = null always, path contains :
       }
       if(this.bsort) {
         Map<String, FileSystem.FileAndBasePath> idxSrc = new TreeMap<String, FileSystem.FileAndBasePath>();

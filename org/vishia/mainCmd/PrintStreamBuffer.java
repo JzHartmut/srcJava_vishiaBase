@@ -28,15 +28,19 @@ public class PrintStreamBuffer {
     */
     public final static class OutStream extends OutputStream {
      
-     final Appendable out;
+     final Appendable out, out2;
      
-     OutStream(Appendable out){
+     OutStream(Appendable out, Appendable out2){
        this.out = out;
+       this.out2 = out2;
      }
      
      @Override
      public void write(int b) throws IOException
      { this.out.append((char)b);
+       if(this.out2 !=null) { 
+         this.out2.append((char)b); 
+       }
      }
     }; //outStream 
 
@@ -71,7 +75,7 @@ public class PrintStreamBuffer {
     @SuppressWarnings("resource")
     public static PrintStream replaceSystemOut(Appendable buffer) {
       PrintStream outBefore = System.out;
-      PrintStream outNew = new PrintStream(new OutStream(buffer));
+      PrintStream outNew = new PrintStream(new OutStream(buffer, null));
       System.setOut(outNew);
       return outBefore;
     }
@@ -84,7 +88,21 @@ public class PrintStreamBuffer {
     @SuppressWarnings("resource")  
     public static PrintStream replaceSystemErr(Appendable buffer) {
       PrintStream outBefore = System.err;
-      PrintStream outNew = new PrintStream(new OutStream(buffer));
+      PrintStream outNew = new PrintStream(new OutStream(buffer, null));
+      System.setErr(outNew);
+      return outBefore;
+    }
+    
+    
+    
+    /**Replaces the System.err for the whole JVM
+     * @param buffer with this Appendable, usual a StringBuilder
+     * @return the System.err before to restore after usage. 
+     */
+    @SuppressWarnings("resource")  
+    public static PrintStream replaceSystemErr(Appendable buffer, Appendable buffer2) {
+      PrintStream outBefore = System.err;
+      PrintStream outNew = new PrintStream(new OutStream(buffer, buffer2));
       System.setErr(outNew);
       return outBefore;
     }

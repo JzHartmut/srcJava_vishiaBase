@@ -36,8 +36,39 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.Arrays;
 
 
+/**This class extends the StringPartScan to determine the content with reading the String from a file,
+ * from a file resource in jar file or from any other opened resource as {@link Reader}.
+ * <br>
+ * The resource itself can have a unlimited length. The length of the buffer is determined
+ * in the constructor. The next content is read using {@link #readNextContent(int)}.
+ * This routine checks whether there is enough space to read a next content.
+ * The essential values for that are the {@link StringPart#begin} value. 
+ * It is assumed that the content before {@link StringPart#begin} are already processed
+ * and hence no more necessary. 
+ * Additional the {@link #readNextContent(int)} expects an at least number of chars to read.
+ * If the {@link StringPart#begin} is lesser as that argument, nothing is read.
+ * With that rule the {@link #readNextContent(int)} can be called any time without check, 
+ * but does nothing of it is not necessary, to save time. 
+ * <br><br>
+ * <b>Calculation of the buffer size and the minPosToRead:</b><br>
+ * It should be regarded that a currently scan process uses a spread in the text. 
+ * Sometimes the parsing runs in iterations and is reseted to a more left start point.
+ * It depends from the algorithm of evaluating the content. 
+ * The ideal case is, that the whole file can take place in the buffer. 
+ * But then with decision of the buffer size the file size to evaluate is also determined. 
+ * <br><br>
+ * The necessary spread for parsing determines the size. 
+ * If a file can be parsed line per line then the buffer size (constructor argument)
+ * should be greater than twice times the longest expected line
+ * or for non-lined orientated files the longest expected element. 
+ * For example on XML files the longest exepected element is the longest value
+ * for a text of an element of an attribute value. 
+ * @author hartmut
+ *
+ */
 public class StringPartFromFileLines extends StringPartScan
 {
   
@@ -105,7 +136,6 @@ public class StringPartFromFileLines extends StringPartScan
   /**Nr of characters in buffer. */
   int zBuffer;
   
-  //final CharsetDecoder charDecoder;
   
   final Charset charset;
   
@@ -169,9 +199,10 @@ public class StringPartFromFileLines extends StringPartScan
   
   
 
-    /**fills a StringPart from a File. If the file is less than the maxBuffer size,
-   * the whole file is inputted into the StringPart, otherwise the StringPart is 
-   * reloaded if the first area is proceed. This constructor ivokes {@link #StringPartFromFileLines(InputStream, String, int, String, Charset)}
+  /**Fills a StringPart from a File. If the file is less than the maxBuffer size,
+   * the whole file is inputed into the StringPart, otherwise the StringPart is 
+   * reloaded if the first area is proceed. 
+   * This constructor invokes {@link #StringPartFromFileLines(InputStream, String, int, String, Charset)}
    * with the opened file. 
    * 
    * @param fromFile The file to read<br>
@@ -284,6 +315,8 @@ public class StringPartFromFileLines extends StringPartScan
    * 
    * @param sizeBuffer The length of the associated StringBuffer. 
    *        If negative, then determine form input.available, but use the given negate number as maximum if >= (-1000). <br>
+   *        The size should be 2 * greater as the most length expected line. 
+   *        
    * 
    * @param sEncodingDetect If not null, this string is searched in the first 2 lines,
    *        read in US-ASCII or UTF-16-Format. If this string is found, the followed
@@ -443,23 +476,26 @@ public class StringPartFromFileLines extends StringPartScan
   
   
   
-  private void evalLineIndices(int from, int to) 
-  {
+  private int evalLineIndices(int from, int to) 
+  { int startLastLine = 0;
     int ii = from; 
     while(ii < to) {
       char cc = cBuffer[ii++];
       if(cExpectedSesoncNl !=0) {  //newline with 2 characters, \r \n or \n \r:
         if(cc == cExpectedSesoncNl) { //if it is the second newline character, the new line starts after them.
           linePositions.set(++endIxLinePosition, ii);  //after xExpectedNl
+          startLastLine = ii;
           cc = 0;  //don't check it as newline character.
         } else { //if the 2. newline character don't follow, that is the first character of the new line.
           linePositions.set(++endIxLinePosition, ii-1); //cc is the first char of the next line.
+          startLastLine = ii-1;
         } 
         cExpectedSesoncNl = 0;
       }
       if(cc == '\r') { cExpectedSesoncNl = '\n'; }
       else if(cc == '\n') { cExpectedSesoncNl = '\r'; }
     }
+    return startLastLine;
   }
   
   
@@ -490,6 +526,7 @@ public class StringPartFromFileLines extends StringPartScan
       for(int ii = 0; ii < zChars; ++ii) {
         cBuffer[ii] = cBuffer[ii + sh];
       }
+      Arrays.fill(this.cBuffer, zChars, this.cBuffer.length, '\0');
       super.begin -= sh;
       super.begiMin -= sh;
       super.beginLast -= sh;

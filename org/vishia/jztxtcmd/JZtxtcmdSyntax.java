@@ -270,7 +270,7 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " DefSpecVar::= [const <?const>] <definePath?defVariable>  [ = <objExpr?>].\n"  //a text or object or expression
     + " \n"
-    + " DefObjVar::= [const <?const>] <definePath?defVariable> [ : <$\\.?type>]  [ = <objExpr?>].\n"  //a text or object or expression
+    + " DefObjVar::= [const <?const>] <definePath?defVariable> [ : <$\\.$?type>]  [ = <objExpr?>].\n"  //a text or object or expression
     + " \n"
     + " DefClassVar::= [const] <definePath?defVariable>  = \n"  //a text or object or expression
     + "   [: <dataAccess?loader> : ]  ## a datapath to a ClassLoader instance, a Classpath variable. \n"  
@@ -477,7 +477,7 @@ public final class JZtxtcmdSyntax {
     + " dataText::=<dataAccess>[ \\:\\?[<\"\"?errorText>|<*\\>:?errorText>]][ \\: [<\"\"?formatText>|<*\\>?formatText>]] \\>.     ##<*expr: format>\n" 
     + " \n"  
     + " textOut::= [<dataPath?assign>] [:n<?newline>] \\> \n"
-    + "   [<textExpr>]\n"
+    + "   [ <textExpr>]\n"
     + "   [ \\<\\.+\\>                     ## end text variants: \n"
     + "   | \\<\\.n+\\><?newline>  \n"  
     + "   | \\<\\.+n\\><?newline> \n"
@@ -490,12 +490,12 @@ public final class JZtxtcmdSyntax {
     + " setColumn::=<numExpr> [ : <numExpr?minSpaces>] | : <numExpr?minSpaces>.\n"  
     + " \n"
     + " \n"
-    + " assignInTextExpr::= <dataPath?assign>[[ = | += <?append>] <objExpr?> \\> | \\> <textExpr>  \\<\\.=\\> ].\n"
+    + " assignInTextExpr::= <dataPath?assign>[[ = | += <?append>] <objExpr?> \\> | \\><textExpr>\\<\\.=\\> ].\n"
     + " \n"
       //Note: the for-variable is adequate a DefVariable
     + " forCtrl::= ( <$?forVariable> : <dataAccess?forContainer> [ && <condition> ] )  [\\{ [<statementBlock>] \\} | ; ] .\n"
     + " \n"
-    + " forInText::= <$?forVariable> : <dataAccess?forContainer> [ && <condition> ] \\> <textExpr> \\<\\.for[ : <$?@checkForVariable> ]\\>. \n"
+    + " forInText::= <$?forVariable> : <dataAccess?forContainer> [ && <condition> ] \\><textExpr>\\<\\.for[ : <$?@checkForVariable> ]\\>. \n"
     + " ##name is the name of the container element data reference\n"
     + " \n"
     + " ifCtrl::= <ifBlock> [{ elsif <ifBlock>  }][ else \\{ [<statementBlock?elseBlock>] \\} ].\n"
@@ -504,7 +504,7 @@ public final class JZtxtcmdSyntax {
     + " \n"
     + " ifInText::= <ifBlockInText?ifBlock> [{ \\<:elsif : <ifBlockInText?ifBlock>  }][ \\<:else\\> <textExpr?elseBlock> ] \\<\\.if\\>.\n"
     + " \n"
-    + " ifBlockInText::= <conditionInText?condition> \\> <textExpr>.\n"
+    + " ifBlockInText::= <conditionInText?condition> \\><textExpr>.\n"
     + " \n"
     + " whileCtrl::= ( <condition> ) [ \\{ [<statementBlock>] \\} | ; ] .\n"
     + " \n"

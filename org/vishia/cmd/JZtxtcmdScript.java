@@ -721,7 +721,7 @@ public class JZtxtcmdScript extends CompiledScript
           throw new RuntimeException("faulty number for indentdiff", exc);
         }
       } else {
-        indent = zbnfItem.getInputColumn() -1;
+        indent = this.statementlist.parentStatement.statementlist.nIndentInScript; //.ident not given, then from parent. //zbnfItem.getInputColumn() -1;
       }
       this.statementlist.nIndentInScript = indent;   // valid for all textExpr-statements (all statements)
       String sSkipFirstnl = zbnfItem.syntaxItem().getAttribute("skipFirstnl");
