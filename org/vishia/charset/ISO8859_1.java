@@ -1,5 +1,6 @@
 package org.vishia.charset;
 
+import java.nio.charset.Charset;
 
 /**Classes to convert UTF-16 to 8-bit-codings.
  * The implementation of {@link java.nio.charset.Charset} etc. may be over engineered, 
@@ -11,13 +12,19 @@ package org.vishia.charset;
  */
 public class ISO8859_1 implements CodeCharset {
 
+  Charset charset = Charset.forName("ISO8859-1");
   
   @Override public int getCode(char cc) {
-    if(cc < 256) return (int)cc;
+    if(cc < 256) return cc;
     else return 0;
   }
 
   @Override public char getChar(int code) {
     return (char)code;
+  }
+
+  @Override
+  public Charset getCharset() {
+    return this.charset;
   }
 }

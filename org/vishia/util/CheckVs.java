@@ -3,7 +3,6 @@ package org.vishia.util;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.instrument.IllegalClassFormatException;
 import java.util.NoSuchElementException;
 
 /**Supports special handling of Outputs and assertions especially in debug phase. 
@@ -246,8 +245,8 @@ public class CheckVs {
    */
   public static CharSequence stackInfo(CharSequence startText, int firstLevel, int nrofLevel){
     final CharSequence s;
-    try{ throw new IllegalClassFormatException("stackInfo");
-    } catch(IllegalClassFormatException exc){  //use a non-often used Exception type, do not debug it in Eclipse
+    try{ throw new RuntimeException("stackInfo");
+    } catch(RuntimeException exc){  //use a non-often used Exception type, do not debug it in Eclipse
       //exc.printStackTrace(System.out);
       s = exceptionInfo(startText, exc, firstLevel, nrofLevel, false);
     }

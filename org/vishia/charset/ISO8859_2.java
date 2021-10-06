@@ -1,5 +1,7 @@
 package org.vishia.charset;
 
+import java.nio.charset.Charset;
+
 /**Character set of middle european characters
  * See {@linkplain http://www.gymel.com/charsets/ISO8859-2.html}
  * See {@linkplain https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt}
@@ -9,6 +11,7 @@ package org.vishia.charset;
  */
 public class ISO8859_2 implements CodeCharset {
 
+  Charset charset = Charset.forName("ISO8859-2");
   
   @Override public int getCode(char cc) {
     if(cc < 128) return (int)cc;
@@ -147,4 +150,9 @@ public class ISO8859_2 implements CodeCharset {
   0163  ˙
   02D9
   */
+
+  @Override
+  public Charset getCharset() {
+    return this.charset;
+  }
 }

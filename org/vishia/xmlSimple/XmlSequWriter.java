@@ -3,9 +3,9 @@ package org.vishia.xmlSimple;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
@@ -13,8 +13,9 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.util.Stack;
 
 import org.vishia.charset.CodeCharset;
-import org.vishia.util.DataAccess;
+import org.vishia.util.CheckVs;
 import org.vishia.util.StringFunctions;
+
 
 
 /**This is a XML writer which does not store anything. It writes only.
@@ -57,6 +58,11 @@ public class XmlSequWriter {
   
   /**Version, License and History:
    * <ul>
+   * <li>2020-10-05 check encoding stuff, some better documented and changed.
+   *   Hint: Introducing namespace processing is faulty here. 
+   *   The namespace can be written as normal attribute name string or tag,
+   *   as given. Handling of namespaces should be done in the application.
+   *   This class is in documentation yet. See {@linkplain https://vishia.org/Java/html/RWTrans/XmlSeqWriter.html}
    * <li>2019-12-24 created.
    * </ul>
    * 
@@ -88,12 +94,17 @@ public class XmlSequWriter {
 
   
   private class ElementInfo{
-    String sTag;
+    final String sTag;
     boolean bIndented;
     
-    public ElementInfo(String sTag) {
-      super();
+    //Map<String, String> nameSpaces;
+    
+    public ElementInfo(String sTag, ElementInfo parent) {
       this.sTag = sTag;
+//      if(parent !=null && parent.nameSpaces !=null) {
+//        this.nameSpaces = new TreeMap<String, String>();
+//        this.nameSpaces.putAll(parent.nameSpaces);  //copy it because additional namespaces are possible.
+//      }
     }
   }
   
@@ -133,10 +144,11 @@ public class XmlSequWriter {
   
   String sEncoding;
   
-//  CharsetEncoder encoding;
+  //CharsetEncoder encodingX;
   Charset encoding;
   
-  CodeCharset encoding2;
+  /**It is null for UTF encoding*/
+  CodeCharset encodingCode;
   
   /**true then no reason to output transcription characters. */
   boolean bFullEncoding;
@@ -147,30 +159,37 @@ public class XmlSequWriter {
   
   int nColumnMax = 88;
   
-  /**Info of the current element, only {@link ElementInfo#bIndented} should be accessed. */
-  ElementInfo info;
+  /**Info of the current element. */
+  ElementInfo elementCurr;
   
-  Stack<ElementInfo> tags = new Stack<ElementInfo>();
+  /**Store all parent elements, necessary for close etc.
+   * and also for parent namespaces.
+   */
+  Stack<ElementInfo> elementsParent = new Stack<ElementInfo>();
   
   int indent = 1;
   
-  public boolean bTreeComment = true;
+  private String replaceBasics;
+  
+  public boolean bTreeComment = false;  //only able to use for a comment for test.
   
   private static String sIndent = "\n                                                                                ";
   
 
-  
+  public XmlSequWriter ( ) {
+    replaceNewline(false);  //in texts, preserve the \n also in output.
+  }
   
   public void setEncoding(String sEncoding) throws IllegalCharsetNameException {
+    this.encoding = Charset.forName(sEncoding);
     if(sEncoding.startsWith("UTF-")) {
-      this.encoding2 = null;
-      this.encoding = Charset.forName(sEncoding);
+      this.encodingCode = null;        // it is not necessary, UTF can all character
     } else {
-      this.encoding = null;
-      this.encoding2 = CodeCharset.forName(sEncoding);
-      if(this.encoding2 == null) throw new IllegalCharsetNameException("Illegal encoding id: " + sEncoding);
-      
+      this.encodingCode = CodeCharset.forName(sEncoding);  
+      //it may be null, if the encoding is not supported.
+      //if not null, then character are checked and &#x1234; is generated for unknown codes.
     }
+    if(this.encoding == null) throw new IllegalCharsetNameException("Illegal encoding id: " + sEncoding);
     this.sEncoding = sEncoding; //not reached because exception on faulty identifier.
   }
   
@@ -180,27 +199,39 @@ public class XmlSequWriter {
   
   /**Opens for writing in a file, closes an opened file if any is open.
    * @param file can be null, then only the buffer is written.
-   * @param encoding can be null, then default "UTF-8" or the last used one, 
-   *   should be usually "UTF-8" or one of "ISO-8859-x" x=1... or "US-ASCII"
+   * @param encoding can be null, then the last used or given {@link #setEncoding(String)} is valid.
+   *   Default is "UTF-8". If given the {@link #setEncoding(String)} is called here.
+   *   <br>If the encoding is "ISO-8859-x" or "US-ASCII" then non map able characters are written as &#xC0DE;
+   *   <br>On other encodings non mapable character are faulty written as defined by Writer(... Charset).
    * @param buffer can be null, if given, the output is written there, the same as in {@link #setDebugTextOut(Appendable)}  
+   *   The buffer is written with replaced characters by &#xC0DE; as in file.
    * @return null on success, the error on error. It is either "Encoding ..." on unsupportedCharset 
    *   or "File not able to create: ..." with the absolute path of the file.
-   * @throws IOException only on closing an oped file. Not expected. 
+   * @throws IOException only on closing an opened file. Not expected. 
    */
+  //Sets either this.wr or this.fwr, never both.
   public String open(File file, String encoding, Appendable buffer) throws IOException {
     this.twr = buffer;
+    if(encoding !=null) { setEncoding(encoding); }
+    else if(this.sEncoding == null) { setEncoding("UTF-8"); }
     try{
-      if(encoding !=null) { setEncoding(encoding); }
-      else if(this.sEncoding == null) { setEncoding("UTF-8"); }
-      
+      if(this.wr !=null) { this.wr.close(); }
+      else if(this.fwr !=null) { this.fwr.close(); }
+      this.wr = null; this.fwr = null;
       if(file !=null) {
-        OutputStream fwr = new FileOutputStream(file);
-        this.fwr = fwr;
-        if(this.encoding !=null) {
-          this.wr = new OutputStreamWriter(fwr, this.encoding); 
+        if(this.encodingCode !=null) { // encoding with byte output
+          this.fwr = new FileOutputStream(file);
+          assert(this.wr ==null);
         } else {
-          //open(fwr, encoding);
-          this.wr = null;
+          this.wr = new FileWriter(file);
+//          OutputStream fwr = new FileOutputStream(file);
+//          this.fwr = fwr;
+//          if(this.sEncoding.startsWith("UTF-")) {  // this is multibyte, use a Writer
+//            this.wr = new OutputStreamWriter(fwr, this.encoding); 
+//          } else {
+//            assert(this.wr == null);     // not necessary for 1-byte-encoding. 
+//          }
+          assert(this.fwr ==null);
         }
       }
       return null;
@@ -213,25 +244,15 @@ public class XmlSequWriter {
   
   
   
-  /**Writes closing tags if necessary, then close the files.
+  /**Writes closing elementsParent if necessary, then close the files.
    * @throws IOException
    */
   public void close() throws IOException {
-    while(this.info !=null) {
+    while(this.elementCurr !=null) {
       writeElementEnd();
     }
     wrNewline(0);
-    if(this.wr !=null) {
-      this.wr.close();   //flush and close fwr too
-      this.wr = null;
-      this.fwr = null;
-    }
-    else if(this.fwr !=null) {
-      this.fwr.close();
-      this.fwr = null;
-      this.wr = null;
-    }
-    this.twr = null;
+    fileclose();
   }
   
   
@@ -240,6 +261,25 @@ public class XmlSequWriter {
       this.wr.flush();    //flushes fwr too because used in wr
     } else if(this.fwr !=null) {
       this.fwr.flush();
+    }
+  }
+
+  public void fileclose() {
+    try { 
+      if(this.wr !=null) {
+        this.wr.close();   //flush and close fwr too
+        this.wr = null;
+        this.fwr = null;
+      }
+      else if(this.fwr !=null) {
+        this.fwr.close();
+        this.fwr = null;
+        this.wr = null;
+      }
+      this.twr = null;
+    } catch(IOException exc) {
+      String err = CheckVs.exceptionInfo("XmlSeqWriter problem on close", exc, 1, 99).toString();
+      System.err.println(err);
     }
   }
 
@@ -260,11 +300,26 @@ public class XmlSequWriter {
   }
   
   
+  /**Switch the mode for replacing a \n in texts or attribute values.
+   * @param bReplace true, then do not output a \n (line break), instead output &#x0A;
+   *   false then break the line with \n if it occurs in texts and attribute values.
+   */
+  public void replaceNewline(boolean bReplace) {
+    if(bReplace) {
+      this.replaceBasics = "&\"'<>\t\r\n";
+    }
+    else {
+      this.replaceBasics = "&\"'<>\t\r";   //write \n as is.
+    }
+  }
+  
+  
+  
   /**
    * @throws IOException
    */
   private void writeHead() throws IOException {
-    wrTxtAscii("<?xml version=\"1.0\" encoding=\"" + this.sEncoding + "\"?>\n");
+    wrTxtAscii("<?xml version=\"1.0\" encoding=\"" + this.encoding.name() + "\"?>\n");
   }
   
   public void writeComment() {
@@ -283,21 +338,30 @@ public class XmlSequWriter {
     if(this.bElementStart) { //finish the parent element start
       writeElementHeadEnd(true);
     }
-    if(this.info == null) {
+    if(this.elementCurr == null) {
       writeHead();
     }
-    else { //if(this.info.bIndented) { //null on root
-      this.info.bIndented = true;
+    else { //if(this.elementCurr.bIndented) { //null on root
+      this.elementCurr.bIndented = true;
       wrNewline(1);
     }
     wrTxtAscii("<"); wrTxt(sTag);
-    if(this.info !=null) { this.tags.push(this.info); }
-    this.info = new ElementInfo(sTag);
+    if(this.elementCurr !=null) { this.elementsParent.push(this.elementCurr); }
+    this.elementCurr = new ElementInfo(sTag, this.elementCurr);
     this.bElementStart = true;
     //increase indent anyway, may be not used.
     if((this.indent +=2) > sIndent.length()) { this.indent = sIndent.length(); }
 
   }
+  
+  
+  
+  
+//  public void writeNamespace(String namespace, String key) throws IOException {
+//    writeAttribute("xmlns:key", namespace);
+//    if(this.elementCurr.nameSpaces == null) { this.elementCurr.nameSpaces = new TreeMap<String, String>(); }
+//    this.elementCurr.nameSpaces.put(key, namespace);
+//  }
   
   
   private void wrNewline(int add) throws IOException {
@@ -320,7 +384,7 @@ public class XmlSequWriter {
     if(!this.bElementStart) throw new IllegalStateException("not in writing head");
     this.bElementStart = false;
     wrTxtAscii(">");
-    this.info.bIndented = bNewline;
+    this.elementCurr.bIndented = bNewline;
   }
   
   /**Writes a simple end "</tag>" or "/>" depending on invocation of {@link #writeElementHeadEnd()} before
@@ -333,23 +397,23 @@ public class XmlSequWriter {
     if(this.bElementStart) {
       wrTxtAscii("/");            //writes "/>" with newline-indent
       writeElementHeadEnd(true);
-      this.info.bIndented = true;
+      this.elementCurr.bIndented = true;
       this.bElementStart = false;
     } else {
-      if(this.info.bIndented) {
+      if(this.elementCurr.bIndented) {
         wrNewline(-1);
       }
-      wrTxtAscii("</"); wrTxt(this.info.sTag); wrTxtAscii(">");
+      wrTxtAscii("</"); wrTxt(this.elementCurr.sTag); wrTxtAscii(">");
       if(this.bTreeComment) {
         wrTxtAscii("<!--");
-        for(ElementInfo elem: this.tags) {
+        for(ElementInfo elem: this.elementsParent) {
           wrTxtAscii(elem.sTag); wrTxtAscii(" = ");
         }
         wrTxtAscii("-->");
       }
     }
-    if(this.tags.size() >0 ) { this.info = this.tags.pop(); }
-    else { this.info = null; } //after the root.
+    if(this.elementsParent.size() >0 ) { this.elementCurr = this.elementsParent.pop(); }
+    else { this.elementCurr = null; } //after the root.
   }
   
   
@@ -363,8 +427,8 @@ public class XmlSequWriter {
     if(this.bElementStart) { //finish the parent element start
       writeElementHeadEnd(true);
     }
-    this.info.bIndented = bNewline;
-    if(this.info.bIndented) {
+    this.elementCurr.bIndented = bNewline;
+    if(this.elementCurr.bIndented) {
       wrNewline(0);
     }
     wrTxt(txt);  //TODO long text: line break
@@ -372,8 +436,8 @@ public class XmlSequWriter {
   
   
   
-  private static String[] stdReplacement = 
-    { "&amp;", "&quot;", "&apos;", "&lt;", "&gt;", "&#x0a;", "&#x0d;", "&#x09;"};
+  private static String[] stdReplacement =                   //newline character on end!
+    { "&amp;", "&quot;", "&apos;", "&lt;", "&gt;", "&#x09;", "&#x0d;", "&#x0a;"};
   
   
   
@@ -388,7 +452,7 @@ public class XmlSequWriter {
     int endMax = txt1.length();
     int posCorr;
     int[] nr = new int[1];
-    while( ( posCorr= StringFunctions.indexOfAnyChar(txt1, begin, endMax, "&\"'<>\n\r\t", nr)) >=0) {
+    while( ( posCorr= StringFunctions.indexOfAnyChar(txt1, begin, endMax, this.replaceBasics, nr)) >=0) {
       if(begin < posCorr) { 
         wrTxtEncoded(txt1.subSequence(begin, posCorr));
       }
@@ -404,32 +468,39 @@ public class XmlSequWriter {
 
   
   
-  /**Write as given, only ASCII (7 bit) especially for XML syntax.
+  /**Write a text, using {@link #encoding2} to check write character immediately
+   * or as &#x0123; for non encode able character. 
+   * All character which are defined in the 
    * @param txt
    * @throws IOException
    */
   private void wrTxtEncoded(CharSequence txt) throws IOException {
     //this.encoding.
     
-    if(this.wr !=null) {
-      this.wr.write(txt.toString());  //writes with encoding to fwr.
+    if(this.wr !=null) {               //Writes with given encoding. 
+      this.wr.write(txt.toString());   // writes with encoding to fwr.
       if(this.twr !=null) {
         this.twr.append(txt);
       }
-    } else if(this.fwr !=null) { //writes ASCII
-      assert(this.encoding2 !=null);
+    } else if(this.fwr !=null) { //writes Byte code
+      assert(this.encodingCode !=null);
       int zChars = txt.length();
       for(int ix = 0; ix < zChars; ++ix) {
         char cc = txt.charAt(ix);
-        int b = this.encoding2.getCode(cc);
-        if(b !=0) {
+        int b = this.encodingCode.getCode(cc);      
+        if(b !=0) {                    // char is mapped, write it.
           this.fwr.write(b);
           if(this.twr !=null) {
             this.twr.append(cc);
           }
-        } else {
-          String hex = "&#x" + Integer.toHexString(cc) + ";";
+        } else {                        // if not possible to map in given encoding:
+          String hex = Integer.toHexString(cc).toUpperCase();
+          wrTxtAscii("&#x");            // hex is the code point, not the bytes of UTF8. It is the value of UTF-16
+          if((hex.length() & 1) ==1) {
+            wrTxtAscii("0");            // leading 0 for 2, 4, 6, 8 character
+          }
           wrTxtAscii(hex);
+          wrTxtAscii(";");
         }
       }
     } else if(this.twr !=null) { //all other are null, output to twr at least
@@ -491,7 +562,7 @@ public class XmlSequWriter {
   
   
   
-  /**Write as given, only ASCII (7 bit) especially for XML syntax.
+  /**Write as given, only ASCII (7 bit) especially for XML head.
    * @param txt
    * @throws IOException
    */
@@ -514,115 +585,6 @@ public class XmlSequWriter {
   
   
   
-  
-  public static void main(String[] args) {
-    File dir = new File(args.length == 0 ? "T:/" : args[0]);
-    StringBuilder testout = new StringBuilder();
-    XmlSequWriter thiz = new XmlSequWriter();
-    thiz.setEncoding("UTF-8");
-    try {
-      thiz.testWritetree2(new File(dir, "testWritetree2.xml"), testout);
-      thiz.testWritetree2t(new File(dir, "testWritetree2t.xml"), testout);
-      thiz.testWritetree2at(new File(dir, "testWritetree2at.xml"), testout);
-      thiz.testWriteEncodingFile(new File(dir, "testWriteEncodingFile.xml"), testout);
-    } catch(Exception exc) {
-      System.err.println(exc.getMessage());
-    }
-  }
-
-  
-  
-  
-  private void testWritetree2(File file, StringBuilder out) throws IOException {
-    String sCmp = 
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
-        "<root>contentRoot\n" + 
-        "  <child1/>\n" + 
-        "</root>\n" + 
-        "";
-    out.setLength(0);
-    open(file, null, out);
-    writeElement("root");
-    writeText("contentRoot", false);
-    writeElement("child1");  //without content
-    close();
-    if(!sCmp.equals(out.toString())) {
-      throw new IllegalArgumentException("faulty= testWriteTree");
-    }
-  }
-  
-
-  private void testWritetree2t(File file, StringBuilder out) throws IOException {
-    String sCmp = 
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
-        "<root>\n" + 
-        "  contentRoot\n" + 
-        "  <child1>contentChild</child1>\n" + 
-        "</root>\n" + 
-        "";
-    out.setLength(0);
-    open(file, null, out);
-    writeElement("root");
-    writeText("contentRoot", true);
-    writeElement("child1");
-    writeText("contentChild", false);
-    close();
-    if(!sCmp.equals(out.toString())) {
-      throw new IllegalArgumentException("faulty= testWriteTree");
-    }
-  }
-  
-
-  private void testWritetree2at(File file, StringBuilder out) throws IOException {
-    String sCmp = 
-        "<?xml version=\"1.0\" encoding=\"US-ASCII\"?>\n" + 
-        "<root>\n" + 
-        "  contentRoot\n" + 
-        "  <child1 attr=\"value\">\n" + 
-        "    contentChild\n" + 
-        "  </child1>\n" + 
-        "</root>\n" + 
-        "";
-    out.setLength(0);
-    open(file, "US-ASCII", out);
-    writeElement("root");
-    writeText("contentRoot", true);
-    writeElement("child1");
-    writeAttribute("attr", "value");
-    writeText("contentChild", true);
-    close();
-    if(!sCmp.equals(out.toString())) {
-      throw new IllegalArgumentException("faulty= testWriteTree");
-    }
-  }
-  
-  
-  
-  private void testWriteEncodingFile(File file, StringBuilder out) throws IOException {
-    String sCmp = 
-        "<?xml version=\"1.0\" encoding=\"US-ASCII\"?>\n" + 
-        "<root>\n" + 
-        "  contentRoot\n" + 
-        "  <child1 attr=\"value\">contentChild &lt;&#xc4;&#xdc;&#xd6;&gt; special chars</child1>\n" + 
-        "  <child2 attr2=\"text &#x20ac; special chars\"/>\n" + 
-        "</root>\n" + 
-        "";
-    out.setLength(0);
-    setEncoding("US-ASCII");
-    open(file, "US-ASCII", out);
-    writeElement("root");
-      writeText("contentRoot", true);
-    writeElement("child1");
-      writeAttribute("attr", "value");
-      writeText("contentChild <���> special chars", false);
-      writeElementEnd();
-    writeElement("child2");
-      writeAttribute("attr2", "text � special chars");
-    close();
-    if(!sCmp.equals(out.toString())) {
-      throw new IllegalArgumentException("faulty= testWriteTree");
-    }
-  }
   
 
 }

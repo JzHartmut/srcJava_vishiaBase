@@ -17,6 +17,8 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-09-15 Hartmut The path for Obj can contain now also path.to.Class$Subclass separated with $, Important!
+   * <li>2021-09-15 Hartmut &lt;textExpr> some confusion with white spaces, should be carefully visited
    * <li>2021-06-08 Hartmut:Featurefix: Now empty statementlist is possible.
    *   The problem for that was that an empty statement list such as main() { }
    *   has had an obscure error message. Secondly sometime an empty statement block may be 
@@ -120,7 +122,7 @@ public final class JZtxtcmdSyntax {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2019-07-06";
+  static final public String version = "2021-09-15";
 
   
   public final static String syntax =

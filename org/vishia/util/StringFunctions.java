@@ -23,6 +23,10 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2020-10-04 Hartmut new {@link #utf16toUTF8bytes(char, byte[], int)} but also not tested and not used but may be correct. 
+   * <li>2020-10-04 Hartmut rename @link {@link #utf8to16(byte[], int[])} instead link #byte2UTF8(byte[], int[])} but: this function is not tested
+   *   and may be not used yet, may be not correct.
+   * <li>2020-10-04 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: return was one time to high.
    * <li>2020-06-21 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)} for comparing empty strings
    * <li>2019-12-28 Hartmut new {@link #indexOfAnyChar(CharSequence, int, int, CharSequence, int[])} returns the number of the found character too
    * <li>2019-06-08 Hartmut new: All StringFunctions with negative to argument, count from end, -1 is till end.
@@ -357,16 +361,17 @@ public class StringFunctions {
       c1 = s1.charAt(i1++);
       c2 = s2.charAt(i2++);
     } 
+    //Note: On evaluation regard postincrement of i1, @date 2021-10-05
     if(zChars == -1){
       //all characters compared, maybe difference in length.
-      if(i2 < z2) return -(i1 - from1 +1);  //s2 is longer, s1 is less.
-      else if(i1 < z1) return i1 - from1 +1;  //positive value: s1 is greater because i1 < z2, is longer and c1==c2 
+      if(i2 < z2) return -(i1-1 - from1 +1);     // s2 is longer, s1 is less.
+      else if(i1 < z1) return i1-1 - from1 +1;   // positive value: s1 is greater because i1 < z2, is longer and c1==c2 
       else return 0;  //both equal, comparison to end. 
     } 
     else {
       //not all possible characters compared, difference in character
-      if(c1 < c2) return -(i1 - from1);  //c1 !=c2, then compare the last characters. <0 because s1 is lesser.
-      else return (i1 - from1);               //note: == i2 - from2, s2 is lesser.
+      if(c1 < c2) return -(i1-1 - from1);       // c1 !=c2, then compare the last characters. <0 because s1 is lesser.
+      else return (i1-1 - from1);               //note: == i2 - from2, s2 is lesser.
     }
   }
   
@@ -1073,7 +1078,7 @@ public class StringFunctions {
    * <ul>
    * <li>0x00..0x7f: 1 byte UTF8. First byte contains 7 bit. Result 7 bit.
    * <li>0x80..0xbf: It is any second byte of a UTF8 stream. This routine returns 0. Any following byte contains 6 bit.
-   * <li>0xc0..0xdf: 2 byte UTF8. First byte contains 5 bit. Result 11 bit. 0x07ff..0x0
+   * <li>0xc0..0xdf: 2 byte UTF8. First byte contains 5 bit. Result 12 bit. 0x0fff..0x0
    * <li>0xef..0xe0: 3 byte UTF8. First byte contains 4 bit. Result 16 bit  0xffff..0, This it the range of UTF-16
    * <li>0xf7..0xf0: 4 byte UTF8. First byte contains 3 bit. Result 21 bit   
    * <li>0xfb..0xf8: 5 byte UTF8. First byte contains 2 bit. Result 26 bit   
@@ -1104,6 +1109,16 @@ public class StringFunctions {
   
   
   /**Converts the current bytes in a byte[] from UTF-8 in a UTF16-character.
+   * @deprecated, replaced with {@link #utf8to16(byte[], int[])}
+   * @param src
+   * @param ixSrc
+   * @return
+   */
+  public static short byte2UTF8(byte[] src, int[] ixSrc) {
+    return utf8to16(src, ixSrc);
+  }
+  
+  /**Converts the current bytes in a byte[] from UTF-8 in a UTF16-character.
    * <br>
    * Special code error situations: 
    * <ul>
@@ -1124,7 +1139,7 @@ public class StringFunctions {
    *   Special cases: return 0 if byte[ixSrc[0]] does not contain a valid UTF-8 code sequence. 
    *   
    */
-  public static short byte2UTF8(byte[] src, int[] ixSrc)
+  public static short utf8to16(byte[] src, int[] ixSrc)
   { byte b = src[ixSrc[0]];
     if(b >=0) { return (short) b; }
     //
@@ -1173,6 +1188,37 @@ public class StringFunctions {
     if( (b8 & 0xc0) != 0x80) return 0;
     ixSrc[0] +=1;
     return (short)(0xfffd);
+  }
+
+  
+  
+  /**Converts a UTF16 character to 1..3 bytes UTF8
+   * @param cc The character
+   * @param buffer for bytes
+   * @param posBuffer first write position in buffer. The buffer size should be at least posBuffer +3
+   * @return number of written bytes.
+   * See {@link https://en.wikipedia.org/wiki/UTF-8}, {@linkplain https://de.wikipedia.org/wiki/UTF-8}
+   */
+  int utf16toUTF8bytes(char cc, byte[] buffer, int posBuffer) {
+    int ix = posBuffer;
+    int mask, sh;
+    int ci = (int)cc;  //the value
+    if(ci >=0x1000) {  //uses 3 byte output
+      sh = 12;
+      buffer[ix++] = (byte)(0xe0 | (ci >> sh));  //result e0..ef 1. byte
+    }
+    else if(ci >= 0x0080) {
+      sh = 6;
+      buffer[ix++] = (byte)(0xc0 | (ci >> sh));  //result e0..ef 1. byte
+    }
+    else {
+      sh = 0;
+      buffer[ix++] = (byte)(ci);  //result e0..ef 1. byte
+    }
+    while( (sh-=6) >=0) {
+      buffer[ix++] = (byte)(0x80 | ((ci >> sh) & 0x3f));
+    }
+    return ix - posBuffer;
   }
   
 }

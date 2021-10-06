@@ -1,5 +1,6 @@
 package org.vishia.charset;
 
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -9,6 +10,7 @@ import java.util.TreeMap;
  * The conversion between the ISO-8859-1 code page and UTF16 is very simple because it is the low part
  * of UTF-16, see {@link ISO8859_1}. 
  * All other code pages needs three tables with binary search for encoding, see {@link ISO8859_2} etc.  
+ * In the moment only ISO8859-1 is supported.
  * 
  * @author Hartmut Schorrig
  * @since 2019-12-28
@@ -35,11 +37,14 @@ public interface CodeCharset {
   char getChar(int code);
   
   
+  Charset getCharset();
+  
   static Map<String, CodeCharset> charsets = new TreeMap<String, CodeCharset>();
   
   
   public static CodeCharset forName(String name) {
     if(charsets.size() == 0) {
+      charsets.put("ISO8859-1", iso8859_1);
       charsets.put("ISO-8859-1", iso8859_1);
       charsets.put("US-ASCII", ascii);
     }

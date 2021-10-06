@@ -18,7 +18,6 @@ import javax.script.ScriptException;
 import org.vishia.jztxtcmd.JZtxtcmdSyntax;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
-import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
@@ -55,6 +54,9 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <ul>2021-09-15 Hartmut chg: {@link JZcmditem#new_textExpr(ZbnfParseResultItem)}:
+   *   If this new text expression has no semantic specification for attribute "indent" written as (exmpl) <code>?.indent=-3</code>
+   *   then the indent of the parent is valid. It is better for generated text.  
    * <li>2021-06-08 Hartmut: Now the <::> can be used for a text start without newline written with ident designation
    * * usage: subtext(args) <::>textexpr<.> possible and proposed
    * * intern: ZbnfItemAttribute ?.skipFirstnl= and ?.ident= used.
