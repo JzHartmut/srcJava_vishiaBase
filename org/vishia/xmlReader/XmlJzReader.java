@@ -483,14 +483,16 @@ public class XmlJzReader
         System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
       } else {
         for(AttribToStore e: attribsToStore[0]) {
-          storeAttrData(subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
+          storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
     } } }
     if(nameSpacesToStore[0] !=null) { 
       if(subOutput ==null) {
         System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
       } else {
         for(AttribToStore e: nameSpacesToStore[0]) {
-          storeAttrData(subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
+          if(e.daccess !=null) { //only if should be stored. nameSpacesToStore[0] contains all xmlns attributes.
+            storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
+          }
     } } }
     
     //
@@ -732,7 +734,7 @@ public class XmlJzReader
    * @param sAttrValue
    */
   @SuppressWarnings("static-method")
-  void storeAttrData( Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue) 
+  void storeAttrData( StringPartScan inp, Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue) 
   {
     try{ 
       if(dstPath.isOperation()) {
@@ -752,7 +754,7 @@ public class XmlJzReader
         DataAccess.storeValue(dstPath, output, sAttrValue, true);
       }
     } catch(Exception exc) {
-      System.err.println("error storeAttrData: " + exc.getMessage());
+      errMsg(1, inp, "error storeAttrData: ", exc.getMessage());
     }
   }
 
@@ -949,6 +951,7 @@ public class XmlJzReader
       System.err.append(txt1); 
     }
     System.err.append( " @line:").append(Integer.toString(inp.getLineAndColumn(null)));
+    System.err.append(inp.getCurrent(20)).append("...");
   }
   
   
