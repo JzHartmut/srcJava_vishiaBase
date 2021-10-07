@@ -20,7 +20,7 @@ import org.vishia.util.CheckVs;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
-import org.vishia.util.IndexMultiTable;
+//import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
@@ -67,6 +67,10 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2021-10-07 new in {@link #parseElement(StringPartScan, Object, org.vishia.xmlReader.XmlCfg.XmlCfgNode)}
+   *   stores also a namespace definition in user data if required. See cfg.
+   * <li>2021-10-07 new {@link #errMsg(int, StringPartScan, CharSequence...)} as central routine if problems occur. 
+   * <li>2021-10-07 formally change: General using TreeMap (java.util) instead the specific IndexMultiTable, same functionality 
    * <li>2020-06-28 Hartmut new now supports &lt;![CDATA[ ... ]]>
    * <li>2020-02-12 Hartmut new {@link #readXml(Reader, String, Object)} and {@link #readXml(StringPartScan, Object)} 
    * <li>2020-01-15 Hartmut Improve handling of &#code characters. 
@@ -106,7 +110,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2020-06-28";
+  public static final String version = "2021-10-07";
   
   
   /**To store the read configuration. */
@@ -131,7 +135,7 @@ public class XmlJzReader
   String debugTag = null;
   
   /**Assignment between nameSpace-alias and nameSpace-value gotten from the xmlns:ns="value" declaration in the read XML file. */
-  Map<String, String> namespaces = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
+  Map<String, String> namespaces = new TreeMap/*IndexMultiTable*/<String, String>(/*IndexMultiTable.providerString*/);
    
    
   private final Map<String, String> replaceChars = new TreeMap<String, String>();
@@ -451,6 +455,7 @@ public class XmlJzReader
     String[] attribValues = null;
     @SuppressWarnings("unchecked")
     List<AttribToStore>[] attribsToStore = new List[1];
+    List<AttribToStore>[] nameSpacesToStore = new List[1];
     //
     //For attribute evaluation, use the subCfgNode gotten from sTag. It may be necessary to change the subCfgNode after them. 
     //
@@ -461,7 +466,9 @@ public class XmlJzReader
     }
     if(dbgline == this.debugStopLine)
       Debugutil.stop();
-    CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, attribNames, attribValues);
+    //Hint: The element (node) where the attributes should be associated is not created.
+    //output is currently the parent node. Hence store attributes firstly locally. Do nout offer output as argument.
+    CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, nameSpacesToStore, attribNames, attribValues);
     //
     if(keyResearch.length() > sTag.length()) {
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
@@ -478,6 +485,14 @@ public class XmlJzReader
         for(AttribToStore e: attribsToStore[0]) {
           storeAttrData(subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
     } } }
+    if(nameSpacesToStore[0] !=null) { 
+      if(subOutput ==null) {
+        System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+      } else {
+        for(AttribToStore e: nameSpacesToStore[0]) {
+          storeAttrData(subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
+    } } }
+    
     //
     //check content.
     //
@@ -567,7 +582,8 @@ public class XmlJzReader
    * @throws Exception
    */
   private CharSequence parseAttributes(StringPartScan inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
-      , List<AttribToStore>[] attribsToStore, Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
+      , List<AttribToStore>[] attribsToStore, List<AttribToStore>[] namespacesToStore
+      , Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
   throws Exception
   { CharSequence keyret = tag; //no special key. use element.
     StringBuilder keyretBuffer = null;
@@ -580,8 +596,10 @@ public class XmlJzReader
         if(this.xmlTestWriter !=null) {
           this.xmlTestWriter.writeAttribute(sAttrNsNameRaw.toString(), sAttrValue);
         }
-        if(sAttrNsNameRaw.equals("xmlinput:class"))
+        String dbgAttrname = null; //"bom:count";  //"xmlinput:class"
+        if(dbgAttrname !=null && sAttrNsNameRaw.equals(dbgAttrname)) {
           Debugutil.stop();
+        }
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
         final CharSequence sAttrNsName;
         if(posNs >=0) {
@@ -591,11 +609,15 @@ public class XmlJzReader
           //String nsName = sAttrName.toString();
           if(StringFunctions.equals(ns, "xmlns")){
             String nsValue = sAttrValue.toString();
-            this.namespaces.put(sAttrName.toString(), nsValue);
+            String nsName = sAttrName.toString();
+            this.namespaces.put(nsName, nsValue);
+            if(namespacesToStore[0]==null) {namespacesToStore[0] = new LinkedList<AttribToStore>(); }
+            namespacesToStore[0].add(new AttribToStore(cfgNode.nameSpaceDef, nsName, nsValue));
             sAttrNsName = null;
           } else {
             String nsValue = this.namespaces.get(ns);  //defined in this read xml file.
             if(nsValue == null) {
+              errMsg(1, inp, "XmlJzReader-Namespace of attribute not found: ", ns);
               sAttrNsName = null;  //Namespace not registered in the input file, especially "xml".
             } else if(cfgNode.cfg.xmlnsAssign !=null) {
               String nsCfg = cfgNode.cfg.xmlnsAssign.get(nsValue);
@@ -917,6 +939,19 @@ public class XmlJzReader
       return b;
     }
   }
+  
+  
+  
+  private void errMsg(int nr, StringPartScan inp, CharSequence ... txt) {
+    //TODO check when throw
+    System.err.append("\n");
+    for(CharSequence txt1: txt) {
+      System.err.append(txt1); 
+    }
+    System.err.append( " @line:").append(Integer.toString(inp.getLineAndColumn(null)));
+  }
+  
+  
   
   
   

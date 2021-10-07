@@ -19,11 +19,20 @@ import org.vishia.util.OutTextPreparer;
 
 /**Basic functionality to generate a Java class proper for storing results from Zbnf parser and from XmlJzReader. 
  * This class is used from {@link org.vishia.zbnf.GenZbnfJavaData} and from {@link org.vishia.xmlReader.GenXmlCfgJavaData}.
+ * For generating the source the {@link OutTextPreparer} is used. It means the sources are given as templates, 
+ * one for each part. 
+ * <br><br>
+ * Comparison {@link OutTextPreparer} with the JZtxtcmd script executer:<br> 
+ * The {@link OutTextPreparer} is similar the {@link org.vishia.jztxtcmd.JZtxtcmd} but more simple in execution. 
+ * For JZtxtcmd the template for the sources is really given in a textual file. 
+ * Here the template for the sources are contained in this class as Strings. 
+ * It may be possible to read the Strings from a file, for more flexibility to change the sources. 
  * */
 public class GenJavaOutClass {
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-08-17 Hartmut only comments
    * <li>2019-08-17 Hartmut creation copied and reduced from {@link org.vishia.zbnf.GenZbnfJavaData}. It is compare able
    *   with the last version from this class. Some changes made. Tested. 
    * </ul>
@@ -187,7 +196,7 @@ public class GenJavaOutClass {
     + "  }\n"
     + "\n";
   
-  private static final String sJavaEnd = 
+  private static final  String sJavaEnd = 
       "\n"
     + "}\n"
     + "\n";

@@ -8,7 +8,6 @@ import java.util.TreeMap;
 
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
-import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartScan;
 
@@ -84,6 +83,8 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2021-10-07 new: {@link XmlCfgNode#nameSpaceDef} to store namespace definitions in user data.
+   * <li>2021-10-07 formally change: General using TreeMap (java.util) instead the specific IndexMultiTable, same functionality 
    * <li>2019-08-16 {@link XmlCfgNode#allArgNames} gets initial name, value, tag and text as unified for ReadCfgCfg and the used cfg 
    * <li>2019-08-15 Changes in respect of {@link DataAccess} usage of variables.
    * <li>2019-03-13 new {@link XmlCfgNode#addFromSubtree(XmlCfgNode)} copies only not defined attributes from the subtree block definition.
@@ -122,7 +123,7 @@ public class XmlCfg
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2018-08-15";
+  public static final String version = "2018-10-07";
 
 
   /**Assignment between nameSpace-value and nameSpace-alias gotten from the xmlns:ns="value" declaration in the read cfg.XML file. 
@@ -210,7 +211,7 @@ public class XmlCfg
   {
     String sname = name.toString();
     XmlCfgNode subtreeRoot = new XmlCfgNode(null, this, name); //The root for a subtree configuration structure.
-    if(subtrees == null) { subtrees = new IndexMultiTable<String, XmlCfgNode>(IndexMultiTable.providerString); }
+    if(subtrees == null) { subtrees = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(/*IndexMultiTable.providerString*/); }
     subtrees.put(sname, subtreeRoot);  //config-global types of subtrees
     return subtreeRoot;
   }
@@ -218,7 +219,7 @@ public class XmlCfg
 
 
   void transferNamespaceAssignment(Map<String, String> src) {
-    xmlnsAssign = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
+    xmlnsAssign = new TreeMap/*IndexMultiTable*/<String, String>();
     for(Map.Entry<String, String > ens: src.entrySet()) {
       String nsKey = ens.getKey();
       String nsPath = ens.getValue();
@@ -297,9 +298,11 @@ public class XmlCfg
     private final XmlCfgNode parent;
     
     /**Reflection path where the content of that node will be stored.
-     * Because of more as one sub node can be present in the parsed file the destination is usual a list or a map.
-     * If a map is found the key is stored as key in that map too.
-     * 
+     * ??Because of more as one sub node can be present in the parsed file the destination is usual a list or a map.
+     * ??If a map is found the key is stored as key in that map too.
+     * <br>
+     * The {@link DataAccess.DatapathElement#args} contains the arguments for new_...(...). 
+     * This comes from the textual given expression. This values are necessary to store in the created class, but final. 
      */
     DataAccess.DatapathElement elementStorePath;
     
@@ -308,6 +311,11 @@ public class XmlCfg
      */
     boolean bList;
     
+    /**Argument names from attributes which are used for the new_<&element>
+     * but also 4 possible standard argument names: tag, name, value, text. 
+     * It is not the arguments of the new_<&element>(...) only, it can be all possible and unnecessary arguments.
+     * Place holder for possible ones. See {@link #elementStorePath} 
+     */
     Map<String, DataAccess.IntegerIx> allArgNames;
   
     /**The first node in some equal nodes in cfg, which determines the attributes used for check. */
@@ -322,15 +330,18 @@ public class XmlCfg
     /**If not null, contains attribute names which's name and value are used to build the key to found the proper xml noce in the config file.
      * Firstly all attributes should be checked whether their names are contained here.
      */
-    private IndexMultiTable<String, AttribDstCheck> attribsForCheck;
+    private Map/*IndexMultiTable*/<String, AttribDstCheck> attribsForCheck;
     
     /**Key (attribute name with xmlns:name) and reflection path to store the attribute value.
      * Attributes of the read input which are not found here are not stored.
      */
-    IndexMultiTable<String, AttribDstCheck> attribs;
+    Map /*IndexMultiTable*/<String, AttribDstCheck> attribs;
     
     /**If set, the attrib dst for not found attributes to store in a common way. */
     DataAccess.DatapathElement attribsUnspec;
+    
+    /**If not null, the attrib dst for name space definition. */
+    DataAccess.DatapathElement nameSpaceDef;
     
     /**Key (tag name with xmlns:name) and configuration for a sub node.
      * Nodes of the read input which are not found here are not stored.
@@ -420,7 +431,7 @@ public class XmlCfg
         //There it is added to parent.
       }
       else if(sAttrValue.length() >0) {  //empty attribute value in cfg: ignore attribute.
-        if(attribs == null) { attribs = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
+        if(attribs == null) { attribs = new TreeMap<String, AttribDstCheck>(); } //IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
         AttribDstCheck dPathAccess;
         if(!StringFunctions.startsWith(sAttrValue, "!")) throw new IllegalArgumentException("read config: store path should start with !");
         //
@@ -454,6 +465,17 @@ public class XmlCfg
     }
 
     
+    /**Set the dataAccess for storing a namespace definition. 
+     * This is yet only used for {@link XmlJzCfgAnalyzer}.
+     * For reading data from Xml usual a namespace definition should not be used in the read data (...?)
+     * @param dstPath
+     * @throws ParseException
+     */
+    public void setNameSpaceStorePath(String dstPath) throws ParseException {
+      assert(dstPath.startsWith("!"));
+      StringPartScan sp = new StringPartScan(dstPath.substring(1));
+      this.nameSpaceDef = new DataAccess.DatapathElement(sp, this.allArgNames, null);
+    }
     
     
     void addFromSubtree(XmlCfgNode subtree) {
@@ -462,7 +484,7 @@ public class XmlCfg
       this.subnodes = subtree.subnodes;
       if(subtree.attribs !=null) for(Map.Entry<String, AttribDstCheck> e : subtree.attribs.entrySet()) {
         String attrName = e.getKey();
-        if(this.attribs == null) { this.attribs = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
+        if(this.attribs == null) { this.attribs = new TreeMap/*IndexMultiTable*/<String, AttribDstCheck>(); }
         AttribDstCheck attr = this.attribs.get(attrName);
         if(attr == null) {
           this.attribs.put(attrName, e.getValue());  //store the attrib from the subtree instance.
@@ -474,7 +496,7 @@ public class XmlCfg
     
     
     void addSubnode(String key, XmlCfgNode node) {
-      if(subnodes == null) { subnodes = new IndexMultiTable<String, XmlCfgNode>(IndexMultiTable.providerString); }
+      if(subnodes == null) { subnodes = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(); }
       if(key.startsWith("Object@"))
         Debugutil.stop();
       if(key.startsWith("Array@"))

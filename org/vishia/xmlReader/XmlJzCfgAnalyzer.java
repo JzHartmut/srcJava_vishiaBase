@@ -194,7 +194,7 @@ public class XmlJzCfgAnalyzer
     if(recursion <0) throw new IllegalArgumentException();
     if(structNode.nodes !=null || structNode.attribs !=null) {
       
-      wrSetAddContentAttrib(structNode, wrCfgXmlNode);
+      wrSetAddContentAttrib(structNode, wrCfgXmlNode);  //sets the xmlinput:data="..." and xmlinput:list=""
       if(structNode.sSubtreenode !=null) {
         //The tag type occurs more as one time in different situations, but with the same meaning. Use subtree in cfg.
         String sSubtreeName = structNode.sSubtreenode;
@@ -206,13 +206,18 @@ public class XmlJzCfgAnalyzer
           String sClass = StringFunctions_B.replaceNonIdentifierChars(structNode.tagIdent, '-').toString();
           wrCfgXmlNode.setAttribute("class", "xmlinput", sClass  );
         }
+        if(structNode.nameSpaces !=null) {
+          for(Map.Entry<String, String> e: structNode.nameSpaces.entrySet()) {
+            wrCfgXmlNode.addNamespaceDeclaration(e.getKey(), e.getValue());
+          }
+        }
         if(structNode.nodes !=null) { //has subnodes
           for(Map.Entry<String, XmlStructureNode> e: structNode.nodes.entrySet()) {
-          XmlStructureNode subnode = e.getValue();
-          String tag = e.getKey();
-          XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(tag);
-          wrCfgXmlNode.addContent(xmlNodeSub);
-          addWrNode(xmlNodeSub, subnode, recursion-1);
+            XmlStructureNode subnode = e.getValue();
+            String tag = e.getKey();
+            XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(tag);
+            wrCfgXmlNode.addContent(xmlNodeSub);
+            addWrNode(xmlNodeSub, subnode, recursion-1);
         } }
       }
       if(structNode.bText) {
@@ -235,11 +240,12 @@ public class XmlJzCfgAnalyzer
    */
   public void readXmlStruct(File fXmlIn) throws IOException {
     XmlJzReader xmlReader = new XmlJzReader();
-    if(debugStopLineXmlInp >0) {
-      xmlReader.setDebugStop(debugStopLineXmlInp);
+    if(this.debugStopLineXmlInp >0) {
+      xmlReader.setDebugStop(this.debugStopLineXmlInp);
     }
-    xmlReader.readXml(fXmlIn, xmlStructTree, newCfgReadStruct());
-    xmlStructData.checkCfgSubtree(); //removeSingleEntries();
+    XmlCfg cfg = newCfgReadStruct();   // use this special config file to read all data
+    xmlReader.readXml(fXmlIn, this.xmlStructTree, cfg);
+    this.xmlStructData.checkCfgSubtree();   //removeSingleEntries();
     Debugutil.stop();
   }
 
@@ -260,6 +266,7 @@ public class XmlJzCfgAnalyzer
       //On any element the 'addElement(tag)' is invoked via Reflection. 
       rootNode.setNewElementPath("!addElement(tag)");  //executed in the data destination instance.
       rootNode.addAttribStorePath("?", "!setAttribute(name)"); 
+      rootNode.setNameSpaceStorePath("!addNamespace(name, value)");
       rootNode.setContentStorePath("!setTextOccurrence()");
     }
     catch(ParseException exc) {
@@ -620,6 +627,8 @@ public class XmlJzCfgAnalyzer
     /**Found attributes. The list is supplemented if new attribute names are found on further occurrences of elements. */
     Map<String, AttribRead> attribs;
     
+    /**The declared name spaces for this node. */
+    Map<String, String> nameSpaces;
     
     int nrofAttributes = 0;
     
@@ -654,28 +663,32 @@ public class XmlJzCfgAnalyzer
       if(tag.equals("Document")) {
         Debugutil.stop();
       }
-      if(nodes == null) {
-        nodes = new TreeMap<String, XmlStructureNode>();
+      if(this.nodes == null) {
+        this.nodes = new TreeMap<String, XmlStructureNode>();
       }
-      if(nodesLocal == null) {
-        nodesLocal = new TreeMap<String, String>();
+      if(this.nodesLocal == null) {
+        this.nodesLocal = new TreeMap<String, String>();
       }
-      if(tag.equals("Culture"))
-        Debugutil.stop();
-      XmlStructureNode subNode = nodes.get(tag); //use existent one with same tag to strore further content.
+      XmlStructureNode subNode = this.nodes.get(tag); //use existent one with same tag to strore further content.
       if(subNode == null) {
-        subNode = new XmlStructureNode(this, tag, xmlStructData); 
-        nodes.put( tag, subNode);
-        xmlStructData.addStructureNodeOccurence(subNode);
+        subNode = new XmlStructureNode(this, tag, this.xmlStructData); 
+        this.nodes.put( tag, subNode);
+        this.xmlStructData.addStructureNodeOccurence(subNode);
       }
-      if(nodesLocal.get(tag)!=null) { 
+      if(this.nodesLocal.get(tag)!=null) { 
         subNode.onlySingle = false; //at least twice in this tree.
       }
-      nodesLocal.put(tag, tag); //to detect whether it occurs a second one
+      this.nodesLocal.put(tag, tag); //to detect whether it occurs a second one
       subNode.nodesLocal = null;
       return subNode; 
     }
     
+    
+    
+    public void addNamespace(String key, String value) {
+      if(this.nameSpaces == null) { this.nameSpaces = new TreeMap<String, String>(); }
+      this.nameSpaces.put(key, value);
+    }
     
     /**It is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}
      * @param tag
@@ -692,22 +705,22 @@ public class XmlJzCfgAnalyzer
       } else {
         attrib.name = namespacename;
       }
-      if(attribs == null) { 
-        attribs = new TreeMap<String, AttribRead>(); 
-        bNewAttributes = true;
-        attribs.put(namespacename, attrib);  //the first attrin
+      if(this.attribs == null) { 
+        this.attribs = new TreeMap<String, AttribRead>(); 
+        this.bNewAttributes = true;
+        this.attribs.put(namespacename, attrib);  //the first attrin
       }
-      else if(attribs.get(namespacename) ==null) {
-        bNewAttributes = true;
-        attribs.put(namespacename, attrib);  //a new attrib
+      else if(this.attribs.get(namespacename) ==null) {
+        this.bNewAttributes = true;
+        this.attribs.put(namespacename, attrib);  //a new attrib
       }
     }
 
     
-    public void setTextOccurrence() { bText = true; }
+    public void setTextOccurrence() { this.bText = true; }
    
     
-    @Override public String toString(){ return tag + (attribs != null ? " attr:" + attribs.toString():"") + (nodes !=null ? " nodes:" + nodes.toString() : ""); }
+    @Override public String toString(){ return this.tag + (this.attribs != null ? " attr:" + this.attribs.toString():"") + (this.nodes !=null ? " nodes:" + this.nodes.toString() : ""); }
     
   }
 

@@ -26,10 +26,10 @@ import org.vishia.util.StringFunctions;
       writeText("contentRoot", true);
     writeElement("child1");
       writeAttribute("attr", "value");
-      writeText("contentChild &lt;���> special chars", false);
+      writeText("contentChild &lt;???> special chars", false);
       writeElementEnd();
     writeElement("child2");
-      writeAttribute("attr2", "text � special chars");
+      writeAttribute("attr2", "text ? special chars");
     close();
  * </pre>
  * The output for that is: <pre>
