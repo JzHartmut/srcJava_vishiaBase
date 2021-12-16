@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.reflect.Field;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
@@ -67,6 +68,23 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2021-12-16 documentation and fine tuning of storeAttrData(..). Now usage of value is not tested. 
+   *   If the operation for an attribute in cfg returns a #{@link java.lang.reflect.Field} then the value is stored in this return field
+   *   independent whether it is used also as argument. This can be helpfully and it is a special condition lesser.
+   * <li>2021-10-18 new: in {@link #storeAttrData(StringPartScan, Object, org.vishia.util.DataAccess.DatapathElement, Map, CharSequence, CharSequence, String)}
+   *   In the Xmlcfg file now you can use <code>"tag"</code> as attribute value for a <code>xmlinput:data="!CREATE_OPER(..., tag, ...)</code> now. 
+   *   Additionally: If the <code>attr="!OPERATION(?)"</code> does not use "value" as argument 
+   *   and it returns a java.lang.reflect.Field then this field is used to store the attribute value, as also for a simple expression.
+   * <li>2021-10-18 improved: The {@link #readCfg(File)} and {@link #readCfgFromJar(Class, String)} produces now a new instance of {@link XmlCfg} data.
+   *   Before the read cfg data are written in the given instance of {@link #cfg} which means, immediately able to use,
+   *   but the older instance was destroyed. This new version is compatible with the old one (both activates updates the {@link #cfg}),
+   *   but now the reference to a older read config remain valid and can be reused for the now public {@link #readXml(File, Object, XmlCfg)}.
+   *   It means some {@link XmlCfg} can be present and use for different reading approaches with the same XmlJzReader. 
+   *   You can switch between config. This change was done primary because the older implementation was not really good able to document.
+   *   The older approach was firstly done to save memory space (prevent new instances). 
+   *   But this is not true because the Garbage Collector does its work if necessary.  
+   * <li>2021-10-07 new {@link #storeAttrData(StringPartScan, Object, org.vishia.util.DataAccess.DatapathElement, Map, CharSequence, CharSequence, String)}
+   *   gets inp as info only for a better error msg.
    * <li>2021-10-07 new in {@link #parseElement(StringPartScan, Object, org.vishia.xmlReader.XmlCfg.XmlCfgNode)}
    *   stores also a namespace definition in user data if required. See cfg.
    * <li>2021-10-07 new {@link #errMsg(int, StringPartScan, CharSequence...)} as central routine if problems occur. 
@@ -113,8 +131,8 @@ public class XmlJzReader
   public static final String version = "2021-10-07";
   
   
-  /**To store the read configuration. */
-  XmlCfg cfg = new XmlCfg();
+  /**To store the last used configuration, for parsing with the same config. */
+  XmlCfg cfg;
   
   
   /**Configuration to read a config file. */
@@ -331,12 +349,13 @@ public class XmlJzReader
   
   
   /**Core routine to read in whole XML stream.
-   * @param inp
-   * @param output
-   * @param cfg1
+   * @param inp A StringPartScan can be built from a String too, using {@link StringPartScan#assign(CharSequence)}.
+   *   for file reading the constructor {@link StringPartFromFileLines#StringPartFromFileLines(File)} is used.
+   * @param output the data to store the read content. Should match to the root instance in the cfg file.
+   * @param xmlCfg The used configuration (it does not access the {@link #cfg} if the instance, may call with {@link #cfg}.
    * @throws Exception
    */
-  private void readXml(StringPartScan inp, Object output, XmlCfg cfg1) 
+  public void readXml(StringPartScan inp, Object output, XmlCfg xmlCfg) 
   throws Exception
   { inp.setIgnoreWhitespaces(true);
     while(inp.seekEnd("<").found()) { //after the beginning < of a element
@@ -354,7 +373,7 @@ public class XmlJzReader
         inp.scanOk();
         inp.readNextContent(this.sizeBuffer*2/3);
         {
-          parseElement(inp, output, cfg1.rootNode);  //the only one root element.
+          parseElement(inp, output, xmlCfg.rootNode);  //the only one root element.
         }
       }
     }
@@ -483,7 +502,7 @@ public class XmlJzReader
         System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
       } else {
         for(AttribToStore e: attribsToStore[0]) {
-          storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
+          storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
     } } }
     if(nameSpacesToStore[0] !=null) { 
       if(subOutput ==null) {
@@ -491,7 +510,7 @@ public class XmlJzReader
       } else {
         for(AttribToStore e: nameSpacesToStore[0]) {
           if(e.daccess !=null) { //only if should be stored. nameSpacesToStore[0] contains all xmlns attributes.
-            storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value);  //subOutput is the destination to store
+            storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
           }
     } } }
     
@@ -734,7 +753,7 @@ public class XmlJzReader
    * @param sAttrValue
    */
   @SuppressWarnings("static-method")
-  void storeAttrData( StringPartScan inp, Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue) 
+  void storeAttrData( StringPartScan inp, Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue, String sTag) 
   {
     try{ 
       if(dstPath.isOperation()) {
@@ -746,9 +765,15 @@ public class XmlJzReader
             int ix = earg.getValue().ix;       //supply the three expected arguments, other are not possible.
             if(argName.equals("name")) { vars[ix] = sAttrName.toString(); }
             else if(argName.equals("value")) { vars[ix] = sAttrValue.toString(); }
+            else if(argName.equals("tag")) { vars[ix] = sTag; }
           }
         }
-        DataAccess.invokeMethod(dstPath, null, output, true, vars, true);
+        Object dst = DataAccess.invokeMethod(dstPath, null, output, true, vars, true);
+        if(dst !=null) { //TODO test it with String and Integer etc.
+          if(dst instanceof Field) {
+            ((Field)dst).set(output, sAttrValue);
+          }
+        }
         //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
       } else {
         DataAccess.storeValue(dstPath, output, sAttrValue, true);
@@ -958,19 +983,30 @@ public class XmlJzReader
   
   
   
+  /**Read the configuration file for this instance. The configuration contains
+   * how elements of a read xml file are processed and stored.
+   * @param file from this file
+   * @return A new XmlCfg instance which is automatically set as referenced and used in {@link #cfg}.
+   *   But you can store this reference and used for {@link #readXml(File, Object, XmlCfg)} later too.
+   * @throws IOException
+   */
   public XmlCfg readCfg(File file) throws IOException {
-    readXml(file, this.cfg.rootNode, this.cfgCfg);
-    this.cfg.finishReadCfg(this.namespaces);
-    return this.cfg;
+    XmlCfg cfg = new XmlCfg();
+    readXml(file, cfg.rootNode, this.cfgCfg);
+    cfg.finishReadCfg(this.namespaces);
+    this.cfg = cfg;
+    return cfg;
   }
 
 
 
   /**Read from a resource (file inside jar archive).
    * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
-   *   Usually the clazz should be the output data clazz. 
+   *   Often the clazz should be the output data clazz. 
    * @param pathInJar relative Path from clazz. 
    *   Usually the cfg should be in the same directory as the output data class. Then this is only the file name.
+   * @return A new XmlCfg instance which is automatically set as referenced and used in {@link #cfg}.
+   *   But you can store this reference and used for {@link #readXml(File, Object, XmlCfg)} later too.
    * @throws IOException
    */
   public XmlCfg readCfgFromJar(Class<?> clazz, String pathInJarFromClazz) throws IOException {
@@ -979,11 +1015,12 @@ public class XmlJzReader
     //classLoader.getResource("slx.cfg.xml");
     InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
     if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
-    readXml(xmlCfgStream, pathMsg, this.cfg.rootNode, this.cfgCfg);
+    XmlCfg cfg = new XmlCfg();
+    readXml(xmlCfgStream, pathMsg, cfg.rootNode, this.cfgCfg);
     xmlCfgStream.close();
-    this.cfg.finishReadCfg(this.namespaces);
-    return this.cfg;
-
+    cfg.finishReadCfg(this.namespaces);
+    this.cfg = cfg;
+    return cfg;
   }
 
 

@@ -10,6 +10,8 @@ import org.vishia.genJavaOutClass.GenJavaOutClass;
 import org.vishia.genJavaOutClass.GenJavaOutClass.CmdArgs;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.Arguments;
+import org.vishia.util.CheckVs;
 import org.vishia.util.Debugutil;
 
 /**This class is used to generate two Java source files as container for parsed data derived from the zbnf syntax script.
@@ -20,6 +22,10 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2021-11-25 Hartmut chg {@link CmdLine}: Argument <code>-dirJava:$(ENV)/...</code> can contain now environment variables
+   *   which are resolved using {@link Arguments#replaceEnv(String)}.
+   * <li>2021-11-25 Hartmut chg {@link #evaluateSyntax(ZbnfSyntaxPrescript)} better error message, write what is faulty.
+   * <li>2021-11-25 Hartmut chg #evaluateChildSyntax(...) argument <code>item</code> in the moment bad commented.
    * <li>2020-07-16 Hartmut chg using LinkedList instead ArrayList. Question of philosophy. 
    * <li>2020-07-16 Hartmut new regard &lt;...?""...> store as String and as parsed data.
    * <li>2019-12-08 new control of class name with component::=&lt;name>
@@ -139,7 +145,9 @@ public class GenZbnfJavaData
         wrClass.wrClassJava.wrClassCmpn(classData);
         //
         //
-        wrClass.evaluateChildSyntax(classData.subSyntax.childSyntaxPrescripts, false, 0);
+        if(classData.subSyntax.childSyntaxPrescripts !=null) {
+          wrClass.evaluateChildSyntax(classData.subSyntax.childSyntaxPrescripts, false, 0);
+        }
         //
         wrClass.wrClassJava.writeOperations();
         //
@@ -151,7 +159,9 @@ public class GenZbnfJavaData
       //
     } catch (Exception e1) {
       // TODO Auto-generated catch block
-      System.err.println("ERROR: " + e1.getMessage());
+      //System.err.println("ERROR: " + e1.getMessage());
+      CharSequence info = CheckVs.exceptionInfo("ERROR: ", e1, 0, 10);
+      System.err.append(info);
     }
     this.genClass.closeWrite();    
   }
@@ -279,11 +289,11 @@ public class GenZbnfJavaData
                   break;
                 
                 case kFloatWithFactor:
-                case kFloatNumber: wrVariable("float", semantic, null, bList, false, null); break;
+                case kFloatNumber: wrVariable("float", semantic, item, bList, false, null); break;
                 
                 case kPositivNumber:
                 case kIntegerNumber:
-                case kHexNumber: wrVariable("int", semantic, null, bList, false, null); break;
+                case kHexNumber: wrVariable("int", semantic, item, bList, false, null); break;
                 
                 case kStringUntilEndString:
                 case kStringUntilEndStringInclusive:
@@ -297,7 +307,7 @@ public class GenZbnfJavaData
                 case kStringUntilRightEndcharInclusive:
                 case kQuotedString:
                 case kRegularExpression:
-                case kIdentifier:  wrVariable("String", semantic, null, bList, false, null); break;
+                case kIdentifier:  wrVariable("String", semantic, item, bList, false, null); break;
                 
                 case kNegativVariant:
                 case kNotDefined:
@@ -533,7 +543,8 @@ public class GenZbnfJavaData
             }})
           , new MainCmd.Argument("-dirJava", ":<dirJava>    directory for Java output", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
-              CmdLine.this.argData.dirJava = new File(val);  return true;
+              String val1 = Arguments.replaceEnv(val);
+              CmdLine.this.argData.dirJava = new File(val1);  return true;
             }})    
           , new MainCmd.Argument("-pkg", ":<pkg.path>    directory for Java output", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
