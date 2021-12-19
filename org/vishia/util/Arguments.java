@@ -9,7 +9,62 @@ import java.util.List;
 
 
 /**This is a base class for simple argument handling of main(...) arguments.
- * Usage example: See org.vishia.zip.Zip. It substitutes the org.vishia.mainCmd.MainCmd, less dependencies
+ * It substitutes the org.vishia.mainCmd.MainCmd, less dependencies.
+ * Usage example:<br>
+ * In your main class you should create (template):<pre>
+  public static class Args extends Arguments {
+
+    public String argValue;             // the variables which holds the given args
+    
+    boolean foundOptionArg = false;     // state for check
+    
+    
+    Args(){
+      super.aboutInfo = "Your aboutInfo - 2021-12-19";
+      super.helpInfo="obligate args: xxx info";  
+      addArg(new Argument("-cfg", ":path to config file/dir usage $(ENV) possible", this.setCfg));
+      addArg(new Argument("-data", ":path to data file/dir usage $(ENV) possible", this.setData));
+      addArg(new Argument("", "argument without option", this.setDefault));
+    }
+    
+    Arguments.SetArgument setCfg = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.foundOptionArg = true;
+      argValue = val;           //the value after the colon -cfg:VAL
+      return true;              //note: you can check the val and return false if not proper.
+    }};
+    
+    
+    Arguments.SetArgument setCfg = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      if(Args.this.foundOptionArg) {
+        return false;                  // option-less argument only admissible as alone one.
+      }
+      //... use val for option-less argument
+    }};
+    
+
+    (at)Override
+    public boolean testArgs(Appendable msg) throws IOException {
+      return true;   //can check the argument values
+    }
+  }
+ * </pre>
+ * You should instantiate in your application:<pre>
+  Args argData = new Args();
+ * </pre>
+ * In the main you should call:<pre>
+  public static void main(String[] args){
+    MyAppl main = new MyAppl();
+    for(String arg: argData) { System.out.println(arg); }
+    try {
+      if(  false == main.argData.parseArgs(args, System.err)
+        || false == main.argData.testArgs(System.err)
+        ) { 
+        System.exit(1); 
+      }
+      //... call your application using the read argData
+ * </pre>
+ * 
+ * 
  * @author Hartmut Schorrig, LGPL-License Do not remove the license hint.
  */
 public abstract class Arguments {

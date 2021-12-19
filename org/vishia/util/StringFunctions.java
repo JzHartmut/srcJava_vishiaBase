@@ -23,11 +23,14 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
-   * <li>2020-10-04 Hartmut new {@link #utf16toUTF8bytes(char, byte[], int)} but also not tested and not used but may be correct. 
-   * <li>2020-10-04 Hartmut rename @link {@link #utf8to16(byte[], int[])} instead link #byte2UTF8(byte[], int[])} but: this function is not tested
+   * <li>2021-12-19 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: change on 2021-20-04 was wrong!
+   *   The problem is, if the first char is different, it should not return 0, because that means equal. It should retunr 1 or -1
+   *   Because of that sometimes a bad directory was selected in Fcmd (a non exist new directory was detected as the last used).
+   * <li>2021-10-04 Hartmut new {@link #utf16toUTF8bytes(char, byte[], int)} but also not tested and not used but may be correct. 
+   * <li>2021-10-04 Hartmut rename @link {@link #utf8to16(byte[], int[])} instead link #byte2UTF8(byte[], int[])} but: this function is not tested
    *   and may be not used yet, may be not correct.
-   * <li>2020-10-04 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: return was one time to high.
-   * <li>2020-06-21 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)} for comparing empty strings
+   * <li>2021-10-04 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: return was one time to high.
+   * <li>2021-06-21 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)} for comparing empty strings
    * <li>2019-12-28 Hartmut new {@link #indexOfAnyChar(CharSequence, int, int, CharSequence, int[])} returns the number of the found character too
    * <li>2019-06-08 Hartmut new: All StringFunctions with negative to argument, count from end, -1 is till end.
    * <li>   * <li>2019-06-07 Hartmut new: {@value #compareChars(CharSequence, int, int, CharSequence)} as helper to find where is the difference, versus {@link #equals(CharSequence, int, int, CharSequence)} 
@@ -361,17 +364,18 @@ public class StringFunctions {
       c1 = s1.charAt(i1++);
       c2 = s2.charAt(i2++);
     } 
-    //Note: On evaluation regard postincrement of i1, @date 2021-10-05
+    //Note: On evaluation regard postincrement of i1, @date 2021-10-05 => but this was faulty. Returns -1 if the first char is different.
+    //      Elsewhere it returns 0 on first char different, that is not able to use!!!! The contract is clarified. Change on 2021-10-05 was faulty.
     if(zChars == -1){
       //all characters compared, maybe difference in length.
-      if(i2 < z2) return -(i1-1 - from1 +1);     // s2 is longer, s1 is less.
-      else if(i1 < z1) return i1-1 - from1 +1;   // positive value: s1 is greater because i1 < z2, is longer and c1==c2 
+      if(i2 < z2) return -(i1 - from1 +1);     // s2 is longer, s1 is less.
+      else if(i1 < z1) return i1 - from1 +1;   // positive value: s1 is greater because i1 < z2, is longer and c1==c2 
       else return 0;  //both equal, comparison to end. 
     } 
     else {
       //not all possible characters compared, difference in character
-      if(c1 < c2) return -(i1-1 - from1);       // c1 !=c2, then compare the last characters. <0 because s1 is lesser.
-      else return (i1-1 - from1);               //note: == i2 - from2, s2 is lesser.
+      if(c1 < c2) return -(i1 - from1);       // c1 !=c2, then compare the last characters. <0 because s1 is lesser.
+      else return (i1 - from1);               //note: == i2 - from2, s2 is lesser.
     }
   }
   
