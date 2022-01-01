@@ -90,10 +90,10 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2021-06-26 13:47:02  x     JZtxtcmdExecuter.java                    ::        195.195 -0323979194 
+2022-01-01 19:30:03  x     JZtxtcmdExecuter.java                    ::        195.195 -0323979194 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2021-10-06 10:38:51  x     JZtxtcmdScript.java                      ::        117.462 -2092622839 
+2022-01-01 19:11:44  x     JZtxtcmdScript.java                      ::        119.058 -0915245846 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -179,8 +179,8 @@
 2021-10-04 14:29:48  x     Inspcitem.java                           ::          9.566  0638926456 
 
 ============================== org/vishia/jztxtcmd/ ================================================
-2020-02-02 12:35:59  x     JZtxtcmd.java                            ::         51.037  1288021776 
-2021-10-06 10:48:57  x     JZtxtcmdSyntax.java                      ::         31.184 -1045203027 
+2022-01-01 19:27:35  x     JZtxtcmd.java                            ::         52.031  0020673273 
+2022-01-01 19:10:04  x     JZtxtcmdSyntax.java                      ::         31.631  1811430507 
 2018-09-22 20:55:43  x     JZtxtcmdUserExample.java                 ::          1.787 -0446379803 
 2017-04-03 21:49:31  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
 
@@ -251,14 +251,14 @@
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
 2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2021-06-12 19:34:13  x     DataAccess.java                          ::        136.698 -2147085876 
+2022-01-01 19:10:14  x     DataAccess.java                          ::        138.058  0405354159 
 2021-10-04 14:29:51  x     DataShow.java                            ::         29.266 -1447605112 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
 2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
-2021-09-19 21:41:03  x     FileFunctions.java                       ::         82.957  0727665638 
+2022-01-01 19:10:30  x     FileFunctions.java                       ::         85.558  1868905982 
 2020-06-16 23:16:25  x     FileList.java                            ::         22.544 -0437624496 
 2021-10-04 14:29:49  x     FilePath.java                            ::         87.603 -0641162706 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 

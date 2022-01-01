@@ -17,6 +17,10 @@ public final class JZtxtcmdSyntax {
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-12-30 Hartmut Enhancement: Now it is possible to read an include script from an operation,
+   *   which is hence stored in the jar file. Syntay is: include <code>%<#?backlevel>:pkg.path.Class.operation()</code>.
+   *   The <code>backlevel</code> is to built a reference current directory for further includes. 
+   *   It should be relative in the same working tree, usual on the root of a working tree.  
    * <li>2021-09-15 Hartmut The path for Obj can contain now also path.to.Class$Subclass separated with $, Important!
    * <li>2021-09-15 Hartmut &lt;textExpr> some confusion with white spaces, should be carefully visited
    * <li>2021-06-08 Hartmut:Featurefix: Now empty statementlist is possible.
@@ -165,7 +169,7 @@ public final class JZtxtcmdSyntax {
     + " } \\e.\n"
     + " \n"
     + " \n"
-    + " include::= [$<$?envVar>[/|\\\\]][ <\"\"?path> | <*;\\ ?path>].\n"
+    + " include::= [$<$?envVar>[/|\\\\]|%<?bJop>[<#?parentLevel>:]|][ <\"\"?path> | <*;\\ ?path>].\n"
     + " \n"
     + " \n"
     + " subClass::= <$?name> \\{ \n"

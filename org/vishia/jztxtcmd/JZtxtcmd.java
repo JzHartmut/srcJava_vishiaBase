@@ -131,6 +131,14 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-12-30 Hartmut Enhancement: {@link #execute(JZtxtcmdExecuter, File, StringPartScan, Appendable, Map, String, boolean, File, MainCmdLogging_ifc)}: 
+   *   Uses now {@link JZtxtcmdScript#createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
+   *   instead the deprecated {@link #translateAndSetGenCtrl(StringPartScan, org.vishia.cmd.JZtxtcmdScript.ZbnfJZcmdScript, File, File)}.
+   *   Same for {@link #compile(StringPartScan, File, File)}.
+   *   With changes there it is possible to read an include script from an operation,
+   *   which is hence stored in the jar file. Syntay is: include <code>%<#?backlevel>:pkg.path.Class.operation()</code>.
+   *   The <code>backlevel</code> is to built a reference current directory for further includes. 
+   *   It should be relative in the same working tree, usual on the root of a working tree.  
    * <li>2020-02-02 Hartmut new {@link #translateScriptFromJar(Class, String, File, MainCmdLogging_ifc)}
    * <li>2019-02-20 Hartmut chg {@link #execSub(File, String, Map, org.vishia.cmd.JZtxtcmdExecuter.ExecuteLevel, Appendable)} with Appendable as argument.
    *   The old form without this argument is available too.  
@@ -692,7 +700,8 @@ INPUT          pathTo JZcmd-File to execute
   {
     //MainCmdLogging_ifc log1 = log == null ? new MainCmdLoggingStream(System.out) : log;
     JZtxtcmdScript genScript = null; //gen.parseGenScript(fileGenCtrl, null);
-    genScript = translateAndSetGenCtrl(script, log, testOut, fileScript);
+    genScript = JZtxtcmdScript.createScriptFromString(script, log, testOut, fileScript);
+    //genScript = translateAndSetGenCtrl(script, log, testOut, fileScript);
     JZtxtcmdExecuter executer1 = executer == null ? new JZtxtcmdExecuter(log) : executer;
     executer1.execute(genScript, accessPrivate, true, out, data, sCurrdir);
   }
@@ -925,11 +934,7 @@ INPUT          pathTo JZcmd-File to execute
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;
-    JZtxtcmdScript compiledScript = new JZtxtcmdScript(log, fileScript, this);
-    File dirIncludeBase = FileSystem.getDir(fileScript);
-    JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(compiledScript);
-    this.translateAndSetGenCtrl(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
-    return compiledScript;
+    return JZtxtcmdScript.createScriptFromString(sourceScript, this.log, checkXmlOutput, fileScript);
   }
     
   
@@ -948,6 +953,7 @@ INPUT          pathTo JZcmd-File to execute
    * @throws InstantiationException
    * @throws FileNotFoundException
    * @throws IOException
+   * @deprecated see {@link JZtxtcmdScript#createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
    */
   @Deprecated private void translateAndSetGenCtrl(StringPartScan sourceScript, JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript
       , File dirIncludeBase 
@@ -1045,14 +1051,17 @@ INPUT          pathTo JZcmd-File to execute
   public CompiledScript compile(String script) throws ScriptException
   {
     StringPartScan spSource = new StringPartScan(script);
-    JZtxtcmdScript compiledScript = new JZtxtcmdScript(log, null, this);
-    JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(compiledScript);
-    try{ translateAndSetGenCtrl(spSource, zbnfDstScript, null, null);
-    } catch(Exception exc){
-      //cannot compile
-      throw new ScriptException(exc);
-    }
+    JZtxtcmdScript compiledScript = JZtxtcmdScript.createScriptFromString(spSource, this.log, null, null);
+    spSource.close();
     return compiledScript;
+    //    JZtxtcmdScript compiledScript = new JZtxtcmdScript(log, null, this);
+//    JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(compiledScript);
+//    try{ translateAndSetGenCtrl(spSource, zbnfDstScript, null, null);
+//    } catch(Exception exc){
+//      //cannot compile
+//      throw new ScriptException(exc);
+//    }
+//    return compiledScript;
   }
 
 

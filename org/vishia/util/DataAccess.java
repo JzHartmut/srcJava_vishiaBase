@@ -87,6 +87,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2021-12-30: Hartmut: {@link #access(CharSequence, Object, boolean, boolean, boolean, Dst)} now regards a "%..." path for static access.
    * <li>2019-08-20: some operations throws {@link ParseException} on syntax errors.
    * <li>2019-08-23 Hartmut new: Supports now &(path) as indirect access, access to variable with gotten name in path.
    *   Therefore the operations {@link #access(Object, boolean, boolean, Map, Object[])} etc. needs the variableNames.  
@@ -834,8 +835,8 @@ public class DataAccess {
     List<DatapathElement> list = new LinkedList<DatapathElement>();
     int pos;
     char type = path.charAt(0);
-    if("&@$".indexOf(type)>=0){
-      pos = 0;
+    if("&@$".indexOf(type)>=0){      // only for the first element: Do the same as in new DataPathElement
+      pos = 0;                         // but use whatisit instead '.' if one of this chars are not given. 
     } else {
       pos = -1;
       type = whatisit;
@@ -863,7 +864,7 @@ public class DataAccess {
    * <ul>
    * <li>"$ENV": From an environment variable
    * <li>"@variable.element": Read start instance form dataPool 
-   * <li>"%java.package.Class()": invokes a static method.
+   * <li>"%java.package.Class.operation()": invokes a static method.
    * <li>"element": read from dataRoot. Read via get(element) if dataRoot is a Map<String, ?>  
    * <li>"reference.element": read from dataRoot, referenced instance. 
    * </ul>
@@ -888,8 +889,16 @@ public class DataAccess {
   ) 
   throws Exception 
   {
-    List<DatapathElement> list = expandElements(datapathArg, '.');
-    return access(list, dataRoot, accessPrivate, bContainer, null, null, bVariable, dst);
+    if(StringFunctions.startsWith(datapathArg, "%")) {
+      //If access to a static operation is given, do not expand. 
+      DataAccess.DatapathElement element = new DataAccess.DatapathElement(datapathArg.toString());
+      return access(element, dataRoot, accessPrivate, bContainer, null, null, bVariable, dst);
+    }
+    else {
+      //Expand the path, it accesses maybe via more as one instance.
+      List<DatapathElement> list = expandElements(datapathArg, '.');
+      return access(list, dataRoot, accessPrivate, bContainer, null, null, bVariable, dst);
+    }
   }
 
   
@@ -1050,6 +1059,18 @@ public class DataAccess {
   }
 
   
+  /**Access to the given element, used internally, also able to use for one element form extern.
+   * @param element describes the access, can be a field, operation, environment variable or all possibilities
+   * @param data1 If it is instanceof Class, then static access. Can be null for instance access, then output null.
+   * @param accessPrivate
+   * @param bContainer
+   * @param nameVariables
+   * @param varValues
+   * @param bVariable
+   * @param dst
+   * @return The accessed content. 
+   * @throws Exception
+   */
   public static Object access(
       DatapathElement element
       , Object data1
@@ -1062,7 +1083,7 @@ public class DataAccess {
       , Dst dst
   ) throws Exception {
     boolean bStatic;
-    
+    //                                 // Hint: data1 can be null, if the previous access has deliverd null
     if(data1 instanceof Class){
       bStatic = true;              //If a class type is given as argument, static accesses are supported.
     } else if(data1 instanceof Variable<?>){

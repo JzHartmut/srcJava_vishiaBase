@@ -50,6 +50,8 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-01-01 Hartmut bugfix: {@link #getDir(File)} was not proper in special cases. Hence it is refactored and tested.
+   *   Additional {@link #getDirCharseq(File, File)} is created newly which returns an unique path. 
    * <li>2021-06-28 Hartmut feature {@link #absolutePath(String, File)} accepts "/tmp/..." and look for an environment variable TMP or TEMP.
    *   It is important also for shell scripts in windows. In the shell script /tmp/ may be known, but not in the windows file system. 
    * <li>2021-06-28 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} with given directory
@@ -850,6 +852,43 @@ public class FileFunctions {
   
   
   
+  /**Returns the directory of the given file in CharSequence format with canonical path.
+   * Note that the {@link java.io.File#getParentFile()} does not return the directory 
+   * if the File is described as a relative path which does not contain a directory. 
+   * Note furthermore that  {@link java.io.File#getParentFile()} does return the formally parent only in the String,
+   * it is not the real parent if the path is for examle "D:\My\path\.".
+   * <ul>
+   * <li>This method builds firstly the normalized path of the input file and returns its directory if it contains a slash.
+   *   It means it returns formally the part before slash of the normalized form, independent whether the directory exists or not
+   *   and independent of a current directory. 
+   * <li>If the path of the input file does not contain a directory entry in the normalized form,
+   *   then the absolute path is built calling {@link #absolutePath(String, File)}, 
+   *   maybe with the given current directory. Then also the returned directory it absolute. 
+   * </ul>   
+   * @param file any file or directory.
+   * @param any given current directory as base for the absolute path
+   *        or null, then the system's currdir is used, see {@link #absolutePath(String, File)}
+   * @return Always a result independent whether the file describes an existing path.  
+   */
+  public static CharSequence getDirCharseq(File file, File currdir)
+  { File fileAbs, dir;
+    CharSequence sFileNorm = normalizePath(file.getPath());    //any case: remove unexpected writing style
+    int posSlash = StringFunctions.lastIndexOf(sFileNorm, '/');
+    if(posSlash >0) {                   //not the root, really a parent
+      return sFileNorm.subSequence(0,  posSlash+1).toString();  //with ending slash
+    } else {
+      String sFileAbs = absolutePath(sFileNorm.toString(), currdir);
+      posSlash = StringFunctions.lastIndexOf(sFileAbs, '/');
+      return sFileAbs.subSequence(0,  posSlash+1).toString();  //with ending slash
+//      if(posSlash >=0 && posSlash < sFileAbs.length()-1) {                   //not the root, really a parent
+//        return new File(sFileAbs.subSequence(0,  posSlash).toString());
+//      }
+//      return file;    //this is the root
+    }
+  }
+  
+  
+  
   /**Returns the directory of the given file.
    * Note that the {@link java.io.File#getParentFile()} does not return the directory 
    * if the File is described as a relative path which does not contain a directory. 
@@ -857,10 +896,17 @@ public class FileFunctions {
    * it is not the real parent if the path is for examle "D:\My\path\.".
    * This method builds the absolute and normalized path of the input file and returns its directory. 
    * @param file any file or directory, should exist.
-   * @return null if the file does not exists or the file is the root directory. 
-   *   To distinguish whether the file is not exist or it is the root directory one can check file.exist().  
+   * @return A File proper for the operation system, but it may not be existing. 
+   *   It calls internally {@link #getDirCharseq(File, File)} and built a new File(...) with the result.  
    */
-  public static File getDir(File file)
+  public static File getDir(File file) {
+    return new File(getDirCharseq(file, null).toString());
+  }  
+  
+  
+  
+  
+  public static File getDirOld(File file)
   { File fileAbs, dir;
     if(!file.exists()) return null;
     if(file.isAbsolute()){

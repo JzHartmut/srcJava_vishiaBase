@@ -21,6 +21,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FilePath;
 import org.vishia.util.FileSet;
 import org.vishia.util.FileSystem;
@@ -54,6 +55,11 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2021-12-30 Hartmut Enhancement: {@link #setScriptFromString(StringPartScan, ZbnfJZcmdScript, File, File)}: 
+   *   Now it is possible to read an include script from an operation,
+   *   which is hence stored in the jar file. Syntay is: include <code>%<#?backlevel>:pkg.path.Class.operation()</code>.
+   *   The <code>backlevel</code> is to built a reference current directory for further includes. 
+   *   It should be relative in the same working tree, usual on the root of a working tree.  
    * <ul>2021-09-15 Hartmut chg: {@link JZcmditem#new_textExpr(ZbnfParseResultItem)}:
    *   If this new text expression has no semantic specification for attribute "indent" written as (exmpl) <code>?.indent=-3</code>
    *   then the indent of the parent is valid. It is better for generated text.  
@@ -303,7 +309,7 @@ public class JZtxtcmdScript extends CompiledScript
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   throws ScriptException
   { boolean bOk;
-    final ZbnfParser parserGenCtrl = new ZbnfParser(console);
+    final ZbnfParser parserGenCtrl = new ZbnfParser(this.console);
     try{ parserGenCtrl.setSyntax(JZtxtcmdSyntax.syntax);
     } catch(ParseException exc){ throw new ScriptException("JZcmd.ctor - internal syntax error; " + exc.getMessage()); }
     //
@@ -349,31 +355,48 @@ public class JZtxtcmdScript extends CompiledScript
       //If one include contain a main, use it. But override the main after them, see below.
       for(JZtxtcmdScript.JZcmdInclude include: zbnfDstScript.scriptfile.includes){
         String sFileInclude;
-        if(include.envVar !=null){
-          String sEnv = System.getenv(include.envVar);
-          if(sEnv == null) throw include.scriptException("JZcmd.include - cannot find environment variable;" + include.envVar);          sFileInclude = sEnv + '/' + include.path;
-        } else {
-          sFileInclude = include.path;
-        }
-        final File fileInclude;
-        if(FileSystem.isAbsolutePath(sFileInclude)){
-          fileInclude= new File(sFileInclude);
-        } else {
-          fileInclude= new File(dirIncludeBase, sFileInclude);
-        }
-        if(!fileInclude.exists()){
-          System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
-          throw new ScriptException("JZcmd.compile - included file not found: ", fileInclude.getAbsolutePath(), -1, -1);
-        }
-        File fileIncludeParent = FileSystem.getDir(fileInclude);
-        int lengthBufferGenctrl = (int)fileInclude.length();
+        File fileIncludeParent = null;
         StringPartScan sourceScriptIncluded;
-        try {
-          sourceScriptIncluded = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
-        } catch (Exception exc) { throw new ScriptException(exc); }
-        //
+        if(include.bJop) {  
+          try {
+            String sInclScript = (String)DataAccess.access("%" + include.path, null, false, false, false, null);
+            sourceScriptIncluded = new StringPartScan(sInclScript);
+            fileIncludeParent = dirIncludeBase.getAbsoluteFile();
+            int parents = include.parentLevel;
+            while(--parents >=0) {
+              fileIncludeParent = fileIncludeParent.getParentFile();
+            }
+            sourceScriptIncluded.setInputfile(FileFunctions.getCanonicalPath(fileIncludeParent) + "/" + include.path);  //It is only for error messages, show it is from a Class.
+          }
+          catch(Exception exc) { throw new ScriptException(exc); }
+        }
+        else {
+          if(include.envVar !=null){
+            String sEnv = System.getenv(include.envVar);
+            if(sEnv == null) throw include.scriptException("JZcmd.include - cannot find environment variable;" + include.envVar);          sFileInclude = sEnv + '/' + include.path;
+          } else {
+            sFileInclude = include.path;
+          }
+          final File fileInclude;
+          if(FileSystem.isAbsolutePath(sFileInclude)){
+            fileInclude= new File(sFileInclude);
+          } else {
+            fileInclude= new File(dirIncludeBase, sFileInclude);
+          }
+          if(!fileInclude.exists()){
+            System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
+            throw new ScriptException("JZcmd.compile - included file not found: ", fileInclude.getAbsolutePath(), -1, -1);
+          }
+          fileIncludeParent = FileSystem.getDir(fileInclude);
+          int lengthBufferGenctrl = (int)fileInclude.length();
+          try {
+            sourceScriptIncluded = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
+          } catch (Exception exc) { throw new ScriptException(exc); }
+          //
+        }
         //included script, call recursively.
         setScriptFromString(sourceScriptIncluded, zbnfDstScript, fileIncludeParent, checkXmlOutput);
+        sourceScriptIncluded.close();
       }
     }
     //
@@ -3244,7 +3267,13 @@ public class JZtxtcmdScript extends CompiledScript
       super(parentList, '.');
     }
     public String path;
+    /**If given name of an environment variable for the path. */
     public String envVar;
+    
+    /**True then &path.to.java.operation given as path.*/
+    public boolean bJop;
+    
+    public int parentLevel;
     
   }
   
