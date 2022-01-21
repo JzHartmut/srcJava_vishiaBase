@@ -50,6 +50,7 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-01-18 Hartmut enhancement: {@link #absolutePath(String, File)} now resolves also environment variables in the path. 
    * <li>2022-01-01 Hartmut bugfix: {@link #getDir(File)} was not proper in special cases. Hence it is refactored and tested.
    *   Additional {@link #getDirCharseq(File, File)} is created newly which returns an unique path. 
    * <li>2021-06-28 Hartmut feature {@link #absolutePath(String, File)} accepts "/tmp/..." and look for an environment variable TMP or TEMP.
@@ -1087,7 +1088,10 @@ public class FileFunctions {
   
   
   /**Converts to the absolute and normalized path if a relative path or HOME path is given.
-   * The filePath may start with
+   * Since 2022-01: The filePath may contain environment variable written as 
+   * <code>$$NAME$</code> or <code>$(NAME)</code> or <code>$NAME</code> where <code>NAME</code> is an identifier.
+   * <br>
+   * The resulting path may start with
    * <ul>
    * <li>"~/" - then the home dir is replaced. The home dir is the string 
    *     containing in the HOME environment variable. This style of notification is usual in Linux/Unix
@@ -1100,37 +1104,38 @@ public class FileFunctions {
    * It means, it contains only "/", no "\\" and no artifacts of "/../" and "/./"
    * <br>The currDir can refer to an unknown File, it is not tested here.
    * <br>If the currDir refers an relativ path, it is not tested, it is used.
-   * @param sFileNameP filename. It may contain "\\". "\\" are converted to "/" firstly. 
+   * @param sFilePath filename. It may contain "\\". "\\" are converted to "/" firstly. 
    * @param currDir The current dir or null. If null then the current dir is gotten calling new File(".");
    * @return The path as absolute path. It is not tested whether it is a valid path. 
    *   The path contains / instead \ on windows.
    */
-  public static String absolutePath(String sFileNameP, File currDir)
+  public static String absolutePath(String sFilePath, File currDir)
   { final String sAbs;
-    if(sFileNameP.startsWith("~")){ //The home directory
+    String sFilePath1 = Arguments.replaceEnv(sFilePath);
+    if(sFilePath1.startsWith("~")){ //The home directory
       String sHome = System.getenv("HOME");
-      sAbs = sHome + sFileNameP.substring(1);
-    } else if(sFileNameP.startsWith("/tmp/")){ //The standard tmp directory in linux
+      sAbs = sHome + sFilePath1.substring(1);
+    } else if(sFilePath1.startsWith("/tmp/")){ //The standard tmp directory in linux
       String sTmp = System.getenv("TMP");
       if(sTmp==null) { sTmp = System.getenv("TEMP"); }  //on Linux may be not defined, it is ok.
       if(sTmp !=null) {                        //use this instead "/tmp/
-        sAbs = sTmp + sFileNameP.substring(4); // add beginning from "/...."
+        sAbs = sTmp + sFilePath1.substring(4); // add beginning from "/...."
       } else {
-        sAbs = sFileNameP;    //with /tmp/ on start, it is for Linux.
+        sAbs = sFilePath1;    //with /tmp/ on start, it is for Linux.
       }
-    } else if(! 
-        (  sFileNameP.startsWith("/")        //it is not an (absolute path or D:/windowsAbsPath) 
-        || sFileNameP.startsWith("\\")        //it is not an (absolute path or D:/windowsAbsPath) 
-        || sFileNameP.length() >=3 && (sFileNameP.substring(1, 3).equals(":/") || sFileNameP.substring(1, 3).equals(":\\"))
+    } else if(!                        // check whether it is NOT an absolute path:
+        (  sFilePath1.startsWith("/")   
+        || sFilePath1.startsWith("\\") // D:/windowsAbsPath or D:\path 
+        || sFilePath1.length() >=3 && (sFilePath1.substring(1, 3).equals(":/") || sFilePath1.substring(1, 3).equals(":\\"))
         ) ){
       String sCurrdir = currDir == null ? new File(".").getAbsolutePath() : currDir.getAbsolutePath();
-      if(sFileNameP.startsWith(":")) {
-        sAbs = sCurrdir + sFileNameP;            // sAbs contains the ':' as separator
+      if(sFilePath1.startsWith(":")) {
+        sAbs = sCurrdir + sFilePath1;            // sAbs contains the ':' as separator
       } else {
-        sAbs = sCurrdir + "/" + sFileNameP;
+        sAbs = sCurrdir + "/" + sFilePath1;
       }
     } else {
-      sAbs = sFileNameP;
+      sAbs = sFilePath1;               // an absolute path
     }
     return normalizePath(sAbs).toString();  //removes some /../ or /./ inside
   }

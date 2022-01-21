@@ -121,6 +121,9 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-01-20 Hartmut new some enhancements {@link #indexOfAnyCharOutsideQuotation(CharSequence, String, char, int, int)} etc.
+   *   But this routines should use the capability of {@link StringFunctions#indexOfAnyCharOutsideQuotation(CharSequence, int, int, CharSequence, CharSequence, CharSequence, char, int[])}
+   *   etc. TODO test and refactoring. The operations are new and not yet tested. But the definitions (heads) are proper. 
    * <li>2021-06-28 Hartmut new now it is an Iterable. The Iterator {@link Iter} returns this but with the next selected line.
    *   It is to evaluate a file line per line. It uses the existing routines {@link #firstlineMaxpart()} and {@link #nextlineMaxpart()}
    *   which are proper to use. The lines can be evaluated with operations of StringPart. 
@@ -1836,28 +1839,56 @@ public final int lastIndexOfAnyChar(CharSequence sChars, final int fromWhere, fi
 
 
 /** Searches any char contained in sChars in the current part
-* but skip over quotations while testing. Example: The given string in the current part is
-* <pre>abc "yxz" end:zxy</pre>
-* The calling is
-* <pre>lentoAnyCharOutsideQuotion("xyz", 20);</pre>
-* The result is 14 because the character 'z' is found first as the end char, but outside the quoted string "xyz".
-* 
-* @param sChars One of this chars is a endchar. It may be null: means, every chars is a endchar.
-* @param fromWhere Offset after begin to begin search. It may be 0 often.
-* @param maxToTest number of character to test from fromWhere. 
-*   If maxToTest is greater then the length of the current part, only the whole current part is tested.
-*   Especially Integer.MAXVALUE and beu used. 
-* @return -1 if no character from sChars was found in the current part. 
-*   0.. Position of the found character inside the current part, but >= fromWhere
-*/
+ * but skip over quotations while testing. Example: The given string in the current part is
+ * <pre>abc "yxz" end:zxy</pre>
+ * The calling is
+ * <pre>lentoAnyCharOutsideQuotion("xyz", 20);</pre>
+ * The result is 14 because the character 'z' is found first as the end char, but outside the quoted string "xyz".
+ * 
+ * @param sChars One of this chars is a endchar. It may be null: means, every chars is a endchar.
+ * @param fromWhere Offset after begin to begin search. It may be 0 often.
+ * @param maxToTest number of character to test from fromWhere. 
+ *   If maxToTest is greater then the length of the current part, only the whole current part is tested.
+ *   Especially Integer.MAXVALUE and beu used. 
+ * @return -1 if no character from sChars was found in the current part. 
+ *   0.. Position of the found character inside the current part, but >= fromWhere
+ */
 public final int indexOfAnyCharOutsideQuotion(CharSequence sChars, final int fromWhere, final int maxToTest)
-{ int pos = this.begin + fromWhere;
+{ 
+  return indexOfAnyCharOutsideQuotation(sChars, "\"\"", '\0', fromWhere, maxToTest);
+}
+
+
+
+
+/**Searches any char contained in sChars in the current part
+ * but skip over quotations while testing. Example: The given string in the current part is
+ * <pre>abc "yxz" end:zxy</pre>
+ * The calling is
+ * <pre>lentoAnyCharOutsideQuotion("xyz", 20);</pre>
+ * The result is 14 because the character 'z' is found first as the end char, but outside the quoted string "xyz".
+ * 
+ * @param sChars One of this chars is a endchar. It may be null: means, every chars is a endchar.
+ * @param sPossibleQuotChars this defines pares of quotation character. Typically "\"\"" or also "\"\"''" or "\"\"''<>".
+ *   The char on even position is the start char of a quotation and the following is the end char of that quotation, 
+ *   which is the same on the typical "quotation" But not on &lt;quotation>.
+ * @param transliterationChar this is a only one character which defines that the following character is not to test.
+ *   Typical for \" for replacement of a simple quotation mark.    
+ * @param fromWhere Offset after begin to begin search. It may be 0 often.
+ * @param maxToTest number of character to test from fromWhere. 
+ *   If maxToTest is greater then the length of the current part, only the whole current part is tested.
+ *   Especially Integer.MAXVALUE and beu used. 
+ * @return -1 if no character from sChars was found in the current part. 
+ *   0.. Position of the found character inside the current part, but >= fromWhere
+ */
+public final int indexOfAnyCharOutsideQuotation ( CharSequence sChars, String sPossibleQuotChars, char transliterationChar, final int fromWhere, final int maxToTest) {
+  int pos = this.begin + fromWhere;
   int max = (this.end - pos) < maxToTest ? this.end : this.begin + maxToTest;
   boolean bNotFound = true;
   while(pos < max && bNotFound)
   { char cc = this.content.charAt(pos);
     if(cc == '\"')
-    { int endQuotion = indexEndOfQuotion('\"', pos - this.begin, max - this.begin);
+    { int endQuotion = indexEndOfQuotation('\"', sPossibleQuotChars, transliterationChar, pos - this.begin, max - this.begin);
       if(endQuotion < 0){ pos = max; }
       else{ pos = endQuotion + this.begin; }
     }
@@ -1868,10 +1899,6 @@ public final int indexOfAnyCharOutsideQuotion(CharSequence sChars, final int fro
   }
   return (bNotFound) ? -1 : (pos - this.begin);
 }
-
-
-
-
 
 
 
@@ -1917,6 +1944,47 @@ public final int indexEndOfQuotation(char cEndQuotion, char transcriptChar, fina
    }
  }
  return (bNotFound ? -1 : (pos - this.begin));
+}
+
+
+
+
+
+/**Searches the end of a quoted string. In Generally, a backslash skips over the next char
+ * and does not test it as end of the quotion.  
+ * @param cEndQuotion The character which is the end of the quoted text, the end-quote-character.
+ * @param transcriptChar The character which prevents end-of-quote detection if the quote-end-character follows.
+ * @param fromWhere Offset after begin to begin search. 
+ *                  It may be 0 if the quotion starts at begin, it is the position of the left
+ *                  quotion mark.
+ * @param maxToTest Limit for searching, offset from begin. It may be Integer.MAX_INT
+ * @return -1 if no end of quotion is found, else the position of the char after the quotion, 
+ *          at least 2 because a quotion has up to 2 chars, the quotion marks itself.
+ */
+public final int indexEndOfQuotation(char cEndQuotion, String sInnerQuotionChars, char transcriptChar, final int fromWhere, final int maxToTest) { 
+  int pos = this.begin + fromWhere +1;
+  int max = (this.end - pos) < maxToTest ? this.end : pos + maxToTest;
+  int zQu = sInnerQuotionChars ==null ? 0: sInnerQuotionChars.length();
+  assert((zQu % 2) ==0);               // should be even
+  boolean bNotFound = true;
+  while(pos < max && bNotFound)
+  { char cc = this.content.charAt(pos++);
+    for(int ixQu = 0; ixQu < zQu; ixQu+=2) {
+      if(cc == sInnerQuotionChars.charAt(ixQu)) {          // recursively call
+        pos = indexEndOfQuotation(sInnerQuotionChars.charAt(ixQu+1), sInnerQuotionChars,  transcriptChar, pos, maxToTest);
+        if(pos <0) { 
+          return pos; 
+        }
+      }
+    }
+    if(cc == transcriptChar && cc !=0 && (pos+1) < max)
+    { pos += 1; //on \ overread the next char, test char after them!
+    }
+    else if(cc == cEndQuotion)
+    { bNotFound = false;
+    }
+  }
+  return (bNotFound ? -1 : (pos - this.begin));
 }
 
 
@@ -2162,6 +2230,20 @@ public final StringPart lentoAnyCharOutsideQuotion(CharSequence sChars, int maxT
  else       { this.end = this.begin + pos; this.bFound = true; } 
  return this;
 }
+
+
+
+
+public final StringPart lentoAnyCharOutsideQuotation(CharSequence sChars, String sCharQuot, char cSubscribe, int maxToTest)
+{ this.endLast = this.end;
+ int pos = indexOfAnyCharOutsideQuotation(sChars, sCharQuot, cSubscribe, 0, maxToTest);
+ if(pos < 0){ this.end = this.begin; this.bFound = false; }
+ else       { this.end = this.begin + pos; this.bFound = true; } 
+ return this;
+}
+
+
+
 
 
 /** Sets the length of the current part to the end of the quotion. It is not tested here,

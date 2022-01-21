@@ -23,6 +23,8 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-01-20 Hartmut new {@link #indexOfAnyCharOutsideQuotation(CharSequence, int, int, CharSequence, CharSequence, CharSequence, char, int[])}
+   *   etc, handling quotations, here also (not only in {@link org.vishia.util.StringPart}, used for {@link org.vishia.cmd.CmdExecuter#splitArgs(String, int, int)}
    * <li>2021-12-19 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: change on 2021-20-04 was wrong!
    *   The problem is, if the first char is different, it should not return 0, because that means equal. It should retunr 1 or -1
    *   Because of that sometimes a bad directory was selected in Fcmd (a non exist new directory was detected as the last used).
@@ -98,7 +100,7 @@ public class StringFunctions {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2019-06-11"; 
+  public final static String version = "2022-01-20"; 
   
   
   /** The char used to code end of text. It is defined in ASCII as EOT. 
@@ -658,6 +660,114 @@ public class StringFunctions {
 
   
 
+  
+  
+  /**Only internal used. Used to check
+   * @param sq
+   * @param pos current, maybe a quotation or not, this operation tests it.
+   * @param endMax
+   * @param cc character on sq[pos]
+   * @param sQuotChars maybe null
+   * @param sQuotEndChars maybe null
+   * @param zQu
+   * @param transcriptChar
+   * @return Position of the end character of the found quotation or unchanged pos.
+   */
+  private static int skipOverQuotation (CharSequence sq,  int pos, int endMax, char cc, CharSequence sQuotChars, CharSequence sQuotEndChars, int zQu, char transcriptChar) {
+    int pos1 = pos;
+    if(sQuotChars !=null) {
+      int posQuot = indexOf(sQuotChars, cc);
+      if(posQuot >=0) {
+        char cQuotEnd = sQuotEndChars !=null ? sQuotEndChars.charAt(posQuot) : sQuotChars.charAt(posQuot);
+        pos1 = indexOutsideQuotation(sq, pos1 +1, endMax, cQuotEnd, sQuotChars, sQuotEndChars, transcriptChar);
+        if(pos1 <0) {                                        // ^search the end quotation char
+          return pos1;     //-1 if end of quotation not found. 
+        }
+      }
+    }
+    return pos1;             // on the end char of the quotation
+  }
+  
+  
+  
+  
+  /**Searches the first occurrence of the given character in a CharSequence
+   * whereby characters in quotation are not checked.
+   * It is an enhancement in functionality of {@link #indexOf(CharSequence, char)} 
+   * or adequate {@link java.lang.String#indexOf(char, int)} but regarding quotation.
+   * @param sq search into
+   * @param begin start search
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param csearch The character which is searched.
+   * @param sQuotChars null or List of possible start quotation character, for example "\"'"
+   * @param sQuotEndChars null or List of associated end quotation character. If null then the same as start character are used (familiar for "")
+   * @param transcriptChar Character after this char is not checked, usual \ for transcription of \", \n etc. 
+   * @return -1 if not found, else first occurrence where sq.charAt(return) == ch. 
+   */
+  public static int indexOutsideQuotation(CharSequence sq, int begin, int endMax, char csearch, CharSequence sQuotChars, CharSequence sQuotEndChars, char transcriptChar) {
+    int zsq = sq.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax > zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
+    int pos = begin-1;  //pre-increment
+    int zQu = sQuotChars.length();
+    char cc;
+    while(++pos < end && (cc = sq.charAt(pos)) != csearch) {
+      pos = skipOverQuotation(sq, pos, endMax, cc, sQuotChars, sQuotEndChars, zQu, transcriptChar);
+      if(pos <0) {
+        return pos; 
+      }
+    }
+    if(pos < end) { 
+      return pos;
+    }
+    else  return -1;
+  }
+
+  
+  
+  
+  
+  /**Searches the first occurrence of some given characters in a CharSequence
+   * whereby characters in quotation are not checked.
+   * It is an enhancement in functionality of {@link #indexOf(CharSequence, char)} 
+   * or adequate {@link java.lang.String#indexOf(char, int)} but regarding quotation.
+   * @param sq search into
+   * @param begin start search
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param sChars Some characters which are searched.
+   * @param sQuotChars null or List of possible start quotation character, for example "\"'"
+   * @param sQuotEndChars null or List of associated end quotation character. If null then the same as start character are used (familiar for "")
+   * @param transcriptChar Character after this char is not checked, usual \ for transcription of \", \n etc. 
+   * @return -1 if not found, else first occurrence where sq.charAt(return) == ch. 
+   */
+  public static int indexOfAnyCharOutsideQuotation(CharSequence sq, int begin, int endMax, CharSequence sChars, CharSequence sQuotChars, CharSequence sQuotEndChars, char transcriptChar, int[] nr) {
+    int zsq = sq.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax > zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
+    int pos = begin-1;  //pre-increment
+    int nr1 = -1;
+    int zQu = sQuotChars == null ? 0 : sQuotChars.length();
+    char cc;
+    while(++pos < end && (nr1 = indexOf(sChars, (cc = sq.charAt(pos)))) < 0){   //while any of char in sChars not found:
+      pos = skipOverQuotation(sq, pos, endMax, cc, sQuotChars, sQuotEndChars, zQu, transcriptChar);
+      if(pos <0) {
+        return pos; 
+      }
+    }
+    if(pos < end 
+      || (pos == end && indexOf(sChars, cEndOfText) >= 0)
+      ) { 
+      if(nr !=null) { nr[0] = nr1; }
+      return pos;
+    }
+    else  return -1;
+  }
+
+  
+  
+  
+  
+  
+  
+  
   /**Searches any char inside sChars in the given Charsequence
    * @param begin start position to search in sq
    * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src

@@ -69,7 +69,40 @@ import java.util.List;
  */
 public abstract class Arguments {
 
-  
+  /**Version, history and license.
+   * Changes:
+   * <ul>
+   * <li>2022-01-17 Hartmut enhancement: {@link #replaceEnv(String)} with also $identifier 
+   * <li>2020-03-20 Hartmut: created, more simple as the before used {@link org.vishia.mainCmd.MainCmd}.
+   * </ul>
+   * 
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public final static String sVersion = "2022-01-17";
+
   
   /**Interface for implementation of setting arguments.
    * The implementation can be written with an anonymous implementation with the simple form:
@@ -151,8 +184,9 @@ public abstract class Arguments {
   
   
   
-  /**Replaces expressions "...$(name)... or $$name$ with the content of the named environment variable
-   * @param argval
+  /**Replaces expressions "...$name... or $(name)... or $$name$ with the content of the named environment variable.
+   * $name: the java-identifier is used as name. Since 2022-01
+   * @param argval String with environment variables to replace.  
    * @return replaced environment
    * @throws IllegalArgumentException on faulty name of environment variable
    */
@@ -172,6 +206,24 @@ public abstract class Arguments {
       String env = System.getenv(nameEnv);
       if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
+    }
+    while( (posEnv=argvalRet.indexOf("$")) >=0) {
+      int posEnvEnd = posEnv +1;
+      int posEnvEnd9;
+      char cc;
+      if( (cc = argvalRet.charAt(posEnvEnd)) == '(') {
+        posEnvEnd = argvalRet.indexOf(')', posEnv+2);
+        posEnvEnd9 = posEnvEnd +1;    //after ')' 
+      } else {
+        while(  posEnvEnd < (argvalRet.length()-1) 
+             && Character.isJavaIdentifierPart(cc = argvalRet.charAt(++posEnvEnd))) {
+        }
+        posEnvEnd9 = posEnvEnd;
+      }
+      String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
+      String env = System.getenv(nameEnv);
+      if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
+      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9 + 1);
     }
     return argvalRet;
   }

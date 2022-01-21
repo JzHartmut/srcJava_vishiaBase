@@ -18,6 +18,7 @@ import javax.script.ScriptException;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
+import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 
 /**This class organizes the execution of commands with thread-parallel getting of the process outputs.
@@ -33,6 +34,10 @@ public class CmdExecuter implements Closeable
 {
   /**Version, License and History:
    * <ul>
+   * <li>2022-01-21 Hartmut refactored, enhanced: {@link #splitArgs(String, int, int)} now regards also '' as quotation, for inner quotation.
+   *   Using: myCmd -arg="'partial arg' second": Firstly 'partial arg' second is stored, and this is split after them with this operation.   
+   * <li>2022-01-19 Hartmut new: {@link #setEchoCmdOut(Appendable)}
+   * <li>2022-01-18 Hartmut new: {@link #hasEntries()}
    * <li>2020-03-14 Hartmut new: {@link #addCmd(org.vishia.cmd.JZtxtcmdScript.Subroutine, List, Appendable, File, ExecuteAfterFinish)}.  
    * <li>2017-10-05 Hartmut new: {@link #setCharsetForOutput(String)}: git outputs its status etc. in UTF-8.  
    * <li>2017-01-01 Hartmut new: now alternatively to the command process the {@link JZtxtcmdExecuter#execSub(org.vishia.cmd.JZtxtcmdScript.Subroutine, List, boolean, Appendable, File)}
@@ -98,7 +103,7 @@ public class CmdExecuter implements Closeable
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2020-03-14";
+  public static final String version = "2022-01-21";
 
   
   /**Composite instance of the java.lang.ProcessBuilder. */
@@ -109,6 +114,10 @@ public class CmdExecuter implements Closeable
   
   /**Set with an execute invocation, set to null if it was processed. */
   private ExecuteAfterFinish executeAfterCmd;
+  
+  
+  /**Can be set especially for debug the commands. */
+  private Appendable echoCmd;
   
   /**A maybe special charset for Input and output stream. Hint: git uses UTF-8
    * 
@@ -214,6 +223,13 @@ public class CmdExecuter implements Closeable
     this.sConsoleInvocation = splitArgs(cmd);
   }
   
+  
+  /**Possible to use for debugging which commands are executed. 
+   * @param echo Write the cmd and args to echo before execution.
+   * It writes in form: >cmdExecuter>cmd &lt;args> &lt;args> 
+   */
+  public void setEchoCmdOut(Appendable echo) { this.echoCmd = echo; }
+  
   public void addCmd(String cmdline
       , String input
       , Appendable output
@@ -311,6 +327,20 @@ public class CmdExecuter implements Closeable
   public void clearCmdQueue(){
     if(this.cmdQueue !=null) { this.cmdQueue.clear(); }
   }
+  
+  
+  
+  /**Returns true if the associated queue has at least on entry.
+   * This operation can be used to check whether it is necessary to call {@link #executeCmdQueue(boolean)}
+   * for example also for a specific breakpoint in an application:
+   *  
+   * @return
+   */
+  public boolean hasEntries() {
+    return this.cmdQueue !=null && !this.cmdQueue.isEmpty();
+  }
+  
+  
   
   
   /**Executes the commands stored with {@link #addCmd(String[], String, List, List, ExecuteAfterFinish)}.
@@ -473,6 +503,17 @@ public class CmdExecuter implements Closeable
   )
   { int exitCode;
     this.executeAfterCmd = executeAfterCmd;
+    if(this.echoCmd !=null) {
+      try {
+        this.echoCmd.append(">cmdExecuter>");
+        for(String arg: cmdArgs) {
+          this.echoCmd.append(" <").append(arg).append(">"); 
+        }
+        this.echoCmd.append("\n");
+      } catch (IOException e) {
+          //e.printStackTrace();
+      }   
+    }
     this.processBuilder.command(cmdArgs);
     if(errors == null){ //merge errors in the output stream. It is a feature of ProcessBuilder.
       this.processBuilder.redirectErrorStream(true); 
@@ -603,9 +644,60 @@ public class CmdExecuter implements Closeable
   
   /**Splits command line arguments.
    * The arguments can be separated with one or more as one spaces (typical for command lines)
-   * or with white spaces. If arguments are quoted with "" it are taken as one argument.
+   * or with white spaces. If arguments are quoted with "" or '' also maybe nested, it are taken as one argument.
    * The line can be a text with more as one line, for example one line per argument.
    * If a "##" is contained, the text until the end of line is ignored.
+   * @param line The line or more as one line with arguments
+   * @param npreArgs maybe 0, some arguments before them from line.
+   * @param npostArgs maybe 0, some arguments after them from line.
+   * @return Space for all arguments, the line arguments written in one String per element starting from npreArgs.
+   */
+  public static String[] splitArgs(String line, int npreArgs, int npostArgs)
+  {
+    int ixArg = -1;
+    int[] posArgs = new int[200];  //only local, enought size
+    int posArg = 0;
+    int zLine = line.length();
+    while( (posArg = StringFunctions.indexNoWhitespace(line, posArg, zLine)) < zLine) {
+      if(line.substring(posArg, posArg+2) =="##") {
+        posArg = StringFunctions.indexOfAnyChar(line, posArg, zLine, "\n\r");  //skip till line end
+      }
+      else {
+        int posEnd = StringFunctions.indexOfAnyCharOutsideQuotation(line, posArg, zLine, " \t\n\r", "\"'", null, '\0', null);
+        if(posEnd <0) {
+          posEnd = zLine;              // till end of line
+        }
+        int pQuotChar = StringFunctions.indexOf("\"'", line.charAt(posArg));
+        if(pQuotChar >=0) {            // starts with a quotation char:
+          char cQoutEndChar = "\"'".charAt(pQuotChar);
+          if(line.charAt(posEnd-1) == cQoutEndChar) { // both on start and end pair of quotation chars:
+            posArg +=1;                // after quotation start char
+            posEnd -=1;                // text only in quotation, without quotation chars
+          }
+        }
+        posArgs[++ixArg] = posArg;
+        posArgs[++ixArg] = posEnd;
+        posArg = posEnd+1;   // continue here: either the space after arg or the next char, or after end. All ok
+      }
+    }
+    int nArgs = (ixArg+1)/2;   //ixArg is the index of start and end array, two values per 
+    nArgs += npreArgs;
+    nArgs += npostArgs;
+    String[] ret = new String[nArgs];
+    int ixRet = npreArgs;
+    ixArg = -1;
+    while(ixRet < (nArgs - npostArgs)) {         
+      int start = posArgs[++ixArg];    // fill argument strings in dst ret
+      int end = posArgs[++ixArg];      // till now only the positions are stored.
+      ret[ixRet++] = line.substring(start, end);
+    }
+    return ret;
+  }
+
+  
+  
+  /**Splits command line arguments with given pre- and post arg array.
+   * See {@link #splitArgs(String, int, int)}.
    * @param line The line or more as one line with arguments
    * @param preArgs maybe null, some arguments before them from line.
    * @param postArgs maybe null, some arguments after them from line.
@@ -613,53 +705,21 @@ public class CmdExecuter implements Closeable
    */
   public static String[] splitArgs(String line, String[] preArgs, String[] postArgs)
   {
-    StringPart spLine = new StringPart(line);
-    spLine.setIgnoreWhitespaces(true);
-    spLine.setIgnoreEndlineComment("##");
-    int ixArg = -1;
-    int[] posArgs = new int[1000];  //only local, enought size
-    int posArg = 0;
-    while(spLine.length() >0){
-      spLine.seekNoWhitespaceOrComments();
-      posArg = (int)spLine.getCurrentPosition();
-      int length;
-      if(spLine.length() >0 && spLine.getCurrentChar()=='\"'){
-        posArgs[++ixArg] = posArg+1;
-        spLine.lentoQuotionEnd('\"', Integer.MAX_VALUE);
-        length = spLine.length();
-        if(length <=2){ //especially 0 if no end quotion found
-          spLine.setLengthMax();
-          length = spLine.length() - 1;  //without leading "
-        } else {
-          length -= 1;  //without leading ", the trailing " is not   
-        }
-      } else { //non quoted:
-        posArgs[++ixArg] = posArg;
-        spLine.lentoAnyCharOutsideQuotion(" \t\n\r", Integer.MAX_VALUE);
-        spLine.len0end();
-        length = spLine.length();
-      }
-      posArgs[++ixArg] = posArg + length;
-      spLine.fromEnd();
-    }
-    spLine.close();
-    int nArgs = (ixArg+1)/2;
-    if(preArgs !=null) { nArgs += preArgs.length; }
-    if(postArgs !=null) { nArgs += postArgs.length; }
-    String[] ret = new String[nArgs];
+    int nrPreargs = preArgs == null ? 0 : preArgs.length;
+    int nrPostargs = postArgs == null ? 0 : postArgs.length;
+     
+    String[] ret = splitArgs(line, nrPreargs, nrPostargs);
     int ixRet = 0;
     if(preArgs !=null) {
       for(String preArg: preArgs){ ret[ixRet++] = preArg; }
     }
-    ixArg = -1;
-    while(ixRet < ret.length){
-      ret[ixRet++] = line.substring(posArgs[++ixArg], posArgs[++ixArg]);
-    }
+    ixRet = ret.length - nrPostargs;
     if(postArgs !=null) {
       for(String preArg: preArgs){ ret[ixRet++] = preArg; }
     }
     return ret;
   }
+  
   
   
   void stop(){};
