@@ -27,8 +27,8 @@ export VERSION_VISHIABASE=$VERSIONSTAMP
 ## Only then a comparison of MD5 is possible. 
 ## The comparison byte by byte inside the jar (zip) file is always possible.
 ## Use this timestamp for file in jars, influences the MD5 check:
-export TIMEinJAR_MINISYS="2021-12-16+00:00"
-export TIMEinJAR_VISHIABASE="2021-12-19+00:00"   
+export TIMEinJAR_MINISYS="2022-01-24+00:00"
+export TIMEinJAR_VISHIABASE="2022-01-24+00:00"   
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP
@@ -116,9 +116,9 @@ if test ! -f $BUILD_TMP/deploy/vishiaMinisys-$VERSIONSTAMP.jar; then   ##compila
   exit 255
 else                                                       ##compilation not successfull
   ##
-  ## copy the useable version to a existing libstd directory:
-  if test -d ../../../../../../libstd; then ##beside cmpnJava... should be existing
-    export CURRENT_JARS_PATH="../../../../../../libStd" 
+  ## copy the useable version to a existing tools directory:
+  if test -d ../../../../../../tools; then ##beside cmpnJava... should be existing
+    export CURRENT_JARS_PATH="../../../../../../tools" 
   else
     export CURRENT_JARS_PATH="../../jars" 
     if ! test -d $CURRENT_JARS_PATH; then mkdir $CURRENT_JARS_PATH; fi
@@ -149,9 +149,9 @@ fi
 
 # Deploy the result minisys, can be done only after compilation and deploy vishiaBase.jar
   ##
-  ## copy the useable version to a existing libstd directory:
-  if test -d ../../../../../../libstd; then ##beside cmpnJava... should be existing
-    export CURRENT_JARS_PATH="../../../../../../libStd" 
+  ## copy the useable version to a existing tools directory:
+  if test -d ../../../../../../tools; then ##beside cmpnJava... should be existing
+    export CURRENT_JARS_PATH="../../../../../../tools" 
   else
     export CURRENT_JARS_PATH="../../jars" 
     if ! test -d $CURRENT_JARS_PATH; then mkdir $CURRENT_JARS_PATH; fi

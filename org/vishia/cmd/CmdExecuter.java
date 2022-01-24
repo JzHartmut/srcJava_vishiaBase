@@ -11,6 +11,7 @@ import java.nio.charset.Charset;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.script.ScriptException;
@@ -19,7 +20,6 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringFunctions;
-import org.vishia.util.StringPart;
 
 /**This class organizes the execution of commands with thread-parallel getting of the process outputs.
  * It supports both command line invocations of the operation system (via {@link ProcessBuilder})
@@ -34,6 +34,10 @@ public class CmdExecuter implements Closeable
 {
   /**Version, License and History:
    * <ul>
+   * <li>2022-01-21 Hartmut new {@link #setEnvIgnoreCase(String, String)}: The Problem is that windows does not distinguish upper/lower case.
+   *   If an environment variable is existing, and the same with other case is set in the Map from Java's {@link ProcessBuilder#environment()},
+   *   then this variable is twice, with all following catastrophics. This routine repairs, as also {@link #prefixEnvIgnoreCase(String, String)}.
+   * <li>2022-01-21 Hartmut improved: also >cmdExecuter finished on finish, Now it can be shown that a command was really running.
    * <li>2022-01-21 Hartmut refactored, enhanced: {@link #splitArgs(String, int, int)} now regards also '' as quotation, for inner quotation.
    *   Using: myCmd -arg="'partial arg' second": Firstly 'partial arg' second is stored, and this is split after them with this operation.   
    * <li>2022-01-19 Hartmut new: {@link #setEchoCmdOut(Appendable)}
@@ -103,7 +107,7 @@ public class CmdExecuter implements Closeable
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2022-01-21";
+  public static final String version = "2022-01-24";
 
   
   /**Composite instance of the java.lang.ProcessBuilder. */
@@ -217,6 +221,100 @@ public class CmdExecuter implements Closeable
   public Map<String,String> environment(){
     return this.processBuilder.environment();
   }
+  
+  
+  
+  
+  private String getRemoveEnv(String name) {
+    Map<String, String> env = this.processBuilder.environment();
+    String value = null;
+    for(Map.Entry<String, String> e: env.entrySet()) {
+      String nameFound = e.getKey();
+      if(name.equalsIgnoreCase(nameFound.toUpperCase())) {
+        value = e.getValue();
+        env.remove(nameFound);     //remove the entry with no upper case.
+        break;
+      }
+    }
+    return value; //null or found removed
+  }
+  
+  
+  
+  /**Sets an environment variable.
+   * @param name Note: For MS-Windows use {@link #setEnvIgnoreCase(String, String)}
+   * @param value 
+   * @return the given value before, null if it was not defined. Usable for information.
+   */
+  public String setEnv(String name, String value) {
+    Map<String, String> env = this.processBuilder.environment();
+    String ret = env.get(name);
+    env.put(name, value);
+    return ret;
+  }
+  
+  
+  
+  /**Sets an environment variable.
+   * @param name If a variable with abbreviating case exists, this will be deleted.
+   * @param value 
+   * @return the given value before, null if it was not defined. Usable for information.
+   */
+  public String setEnvIgnoreCase(String name, String value) {
+    Map<String, String> env = this.processBuilder.environment();
+    String ret = getRemoveEnv(name);
+    env.put(name, value);
+    return ret;
+  }
+  
+  
+  
+  /**Adds a prefix or sets an environment variable, especially usable for PATH.
+   * @param name Note: For MS-Windows use {@link #prefixEnvIgnoreCase(String, String)}
+   * @param value add as prefix to existing value, or the new value if not exists.
+   * @return the given value before, null if it was not defined. Usable for information.
+   */
+  public String prefixEnv(String name, String value) {
+    Map<String, String> env = this.processBuilder.environment();
+    String valueOld = env.get(name);
+    String newVal = value + (valueOld ==null ? "": valueOld);
+    env.put(name, newVal);             //replace or create
+    return valueOld;
+  }
+  
+  
+  
+  /**Adds a prefix or sets an environment variable, especially usable for PATH.
+   * @param name If a variable with abbreviating case exists, this will be deleted.
+   * @param value add as prefix to existing value, or the new value if not exists.
+   * @return the given value before, null if it was not defined. Usable for information.
+   */
+  public String prefixEnvIgnoreCase(String name, String value) {
+    Map<String, String> env = this.processBuilder.environment();
+    String valueOld = getRemoveEnv(name);
+    String newVal = value + (valueOld ==null ? "": valueOld);
+    env.put(name, newVal);             //replace or create
+    return valueOld;
+  }
+  
+  
+  
+  /**Outputs all environment variables in a sorted form
+   * @param out
+   * @throws IOException
+   */
+  public void outAllEnvironment(Appendable out) throws IOException {
+    Map<String, String> env = this.processBuilder.environment();
+    TreeMap<String, String> sortedEnv = new TreeMap<String, String>();
+    for(Map.Entry<String, String> e: env.entrySet()) {
+       sortedEnv.put(e.getKey(), e.getValue());
+    }
+    for(Map.Entry<String, String> e: sortedEnv.entrySet()) {
+      out.append("env ").append(e.getKey()).append("=").append(e.getValue()).append("<<<\n");
+    }
+  }
+  
+  
   
   
   public void specifyConsoleInvocation(String cmd){
@@ -581,6 +679,17 @@ public class CmdExecuter implements Closeable
         throw new RuntimeException(exception);
       }
       exitCode = -1; //Exception
+    }
+    if(this.echoCmd !=null) {
+      try {
+        if(exitCode !=0) {
+          this.echoCmd.append(">cmdExecuter exit:").append(Integer.toString(exitCode)).append("\n");
+        } else {
+          this.echoCmd.append(">cmdExecuter finished\n");
+        }
+      } catch (IOException e) {
+          //e.printStackTrace();
+      }   
     }
     return exitCode;
   }

@@ -736,10 +736,9 @@ public abstract class MainCmd implements MainCmd_ifc
         else if(cmdLineArgs[iArgs].startsWith("--msgcfg=")) { addMsgConfig(cmdLineArgs[iArgs].substring(9)); }
         else if(cmdLineArgs[iArgs].startsWith("---")) { /*ignore it*/ }
         else
-        { if(main.testArgument(cmdLineArgs[iArgs], iArgs)){
-            hasArguments = true;
-          } else 
-          { main.writeError("failed argument: " + cmdLineArgs[iArgs]);
+        { hasArguments = main.testArgument(cmdLineArgs[iArgs], iArgs); //formal style guide: Use extra statement to assign
+          if( !  hasArguments ) { 
+            main.writeError("failed argument: " + cmdLineArgs[iArgs]);
             throw new ParseException("failed argument:" + cmdLineArgs[iArgs], iArgs);  //ParseException used from java.text
           }
         }
