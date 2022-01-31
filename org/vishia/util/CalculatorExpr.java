@@ -2150,6 +2150,24 @@ public class CalculatorExpr
         addToOperations(); 
       }
   
+      public SetExpr new_divOperation(){
+        if(actOperation !=null){ addToOperations(); }
+        assert(actOperation == null);  //will be set by values. operator will be set by add_addOperation
+        return this;
+      }
+      
+      /**Designates the end of a multiplication operation. Takes the operation into the expression list.
+       * @param val this, unused
+       */
+      public void add_divOperation(SetExpr val){
+        if(actOperation ==null){
+          actOperation = new CalculatorExpr.Operation();
+          actOperation.setStackOperand();  
+        }
+        actOperation.setOperator("/");
+        addToOperations(); 
+      }
+  
   
       /**A character is stored as integer. 
        * @param val

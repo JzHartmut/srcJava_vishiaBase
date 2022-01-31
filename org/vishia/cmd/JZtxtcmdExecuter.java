@@ -85,6 +85,12 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-01-31 Hartmut feature: Now the order of statements from included files are proper. 
+   *   In the versions before script statements of included files were placed
+   *   after the statements of the current file, due to processing the includes after wards.
+   *   Now in the {@link JZtxtcmdScript#createScriptFromString(org.vishia.util.StringPartScan, MainCmdLogging_ifc, File, File)}
+   *   the included script statements are stored in the {@link JZtxtcmdScript.JZcmdInclude} item itself,
+   *   and executed in this order. Additonal case '.' in {@link ExecuteLevel#execute(org.vishia.cmd.JZtxtcmdScript.StatementList, StringFormatter, int, Map, int)}.
    * <li>2021-06-21 Hartmut new jztc.envar A container which can be given to hold variables from the calling environment
    *   (a Java program) This variables are not changed if a new {@link JZtxtcmdScript} is translated and started.
    *   Used firstly for the Stimuli Selector GUI {@linkplain https://vishia.org/StimuliSel/html/StimuliSel.html}
@@ -343,7 +349,7 @@ public class JZtxtcmdExecuter {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2020-07-22";
+  static final public String version = "2022-01-31";
 
   /**This class is the jzcmd main level from a script.
    * @author Hartmut Schorrig
@@ -1710,6 +1716,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           case 'Z': ret = exec_zmake((JZtxtcmdScript.Zmake) statement, outText, indentOut, --nDebug1); break;
           case 'D': break; // a second debug statement one after another or debug on end is ignored.
           case 'H': exec_DebugOp(statement); break; // debugOp
+          case '.': ret = execute(statement.statementlist, outText, indentOutArg, newVariables, nDebugP); break;  //recursively because inlined included statements.
           default: throw new IllegalArgumentException("JZcmd.execute - unknown statement; ");
           }//switch
           

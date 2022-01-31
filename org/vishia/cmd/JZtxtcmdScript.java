@@ -24,7 +24,6 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.FilePath;
 import org.vishia.util.FileSet;
-import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.SetLineColumn_ifc;
@@ -55,6 +54,10 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2022-01-31 Hartmut some fixes: close() missing. this. qualified
+   * <li>2022-01-31 Hartmut enhancement: In {@link JZtxtcmdScript#createScriptFromString(org.vishia.util.StringPartScan, MainCmdLogging_ifc, File, File)}
+   *   the included script statements are stored in the {@link JZtxtcmdScript.JZcmdInclude} item itself,
+   *   and executed in this order. 
    * <li>2021-12-30 Hartmut Enhancement: {@link #setScriptFromString(StringPartScan, ZbnfJZcmdScript, File, File)}: 
    *   Now it is possible to read an include script from an operation,
    *   which is hence stored in the jar file. Syntay is: include <code>%<#?backlevel>:pkg.path.Class.operation()</code>.
@@ -188,7 +191,7 @@ public class JZtxtcmdScript extends CompiledScript
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2020-01-28";
+  static final public String version = "2022-01-31";
 
   final MainCmdLogging_ifc console;
 
@@ -232,7 +235,6 @@ public class JZtxtcmdScript extends CompiledScript
    * @param fileScript The file which has contained the script. It is used only to provide the variables
    *   'scriptdir' and 'scriptfile' for execution. The file is not evaluated. It means, it does not need
    *   to exist.
-
    */
   public JZtxtcmdScript(MainCmdLogging_ifc console, File fileScript, JZtxtcmdEngine scriptEngine)
   { this.console = console;
@@ -267,7 +269,9 @@ public class JZtxtcmdScript extends CompiledScript
       String sError = exc.getMessage();
       throw new ScriptException("JZcmd - Error script file not found; " + fileScript.getAbsolutePath() + "; " + sError); 
     }
-    return createScriptFromString(sourceScript, log, checkXmlOutput, fileScript);
+    JZtxtcmdScript ret = createScriptFromString(sourceScript, log, checkXmlOutput, fileScript);
+    sourceScript.close();
+    return ret;
   }
   
   
@@ -292,7 +296,7 @@ public class JZtxtcmdScript extends CompiledScript
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;
     JZtxtcmdScript thiz = new JZtxtcmdScript(log, fileScript, null);
-    File dirIncludeBase = fileScript==null ? null : FileSystem.getDir(fileScript);
+    File dirIncludeBase = fileScript==null ? null : FileFunctions.getDir(fileScript);
     JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(thiz);
     thiz.setScriptFromString(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
     return thiz;
@@ -310,7 +314,8 @@ public class JZtxtcmdScript extends CompiledScript
   throws ScriptException
   { boolean bOk;
     final ZbnfParser parserGenCtrl = new ZbnfParser(this.console);
-    try{ parserGenCtrl.setSyntax(JZtxtcmdSyntax.syntax);
+    try{ 
+      parserGenCtrl.setSyntax(JZtxtcmdSyntax.syntax);
     } catch(ParseException exc){ throw new ScriptException("JZcmd.ctor - internal syntax error; " + exc.getMessage()); }
     //
     parserGenCtrl.setXmlSrcline(checkXmlOutput !=null);
@@ -334,7 +339,7 @@ public class JZtxtcmdScript extends CompiledScript
     //}
     //write into Java classes:
     /**Helper to transfer parse result into the java classes {@link ZbnfJZcmdScript} etc. */
-    final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(console);
+    final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(this.console);
     //
     //create a new instance of script-file for any file, especially for included.
     zbnfDstScript.scriptfile = new JZtxtcmdScript.Scriptfile();
@@ -350,13 +355,17 @@ public class JZtxtcmdScript extends CompiledScript
     //
     JZtxtcmdScript.Subroutine mainRoutine = zbnfDstScript.scriptfile.getMainRoutine();
     //
-    if(zbnfDstScript.scriptfile.includes !=null){
+    //if(zbnfDstScript.scriptfile.includes !=null){
       //parse includes after processing this file, because the zbnfDstScript.includes are not set before.
       //If one include contain a main, use it. But override the main after them, see below.
-      for(JZtxtcmdScript.JZcmdInclude include: zbnfDstScript.scriptfile.includes){
+      
+      //for(JZtxtcmdScript.JZcmdInclude include: zbnfDstScript.scriptfile.includes){
+    for(JZcmditem item: this.scriptClass.statementsAdd){
+      if(item instanceof JZcmdInclude) {
+        JZtxtcmdScript.JZcmdInclude include = (JZcmdInclude)item;
         String sFileInclude;
         File fileIncludeParent = null;
-        StringPartScan sourceScriptIncluded;
+        StringPartScan sourceScriptIncluded = null;
         if(include.bJop) {  
           try {
             String sInclScript = (String)DataAccess.access("%" + include.path, null, false, false, false, null);
@@ -368,7 +377,10 @@ public class JZtxtcmdScript extends CompiledScript
             }
             sourceScriptIncluded.setInputfile(FileFunctions.getCanonicalPath(fileIncludeParent) + "/" + include.path);  //It is only for error messages, show it is from a Class.
           }
-          catch(Exception exc) { throw new ScriptException(exc); }
+          catch(Exception exc) { 
+            if(sourceScriptIncluded !=null) { sourceScriptIncluded.close(); }
+            throw new ScriptException(exc); 
+          }
         }
         else {
           if(include.envVar !=null){
@@ -378,7 +390,7 @@ public class JZtxtcmdScript extends CompiledScript
             sFileInclude = include.path;
           }
           final File fileInclude;
-          if(FileSystem.isAbsolutePath(sFileInclude)){
+          if(FileFunctions.isAbsolutePath(sFileInclude)){
             fileInclude= new File(sFileInclude);
           } else {
             fileInclude= new File(dirIncludeBase, sFileInclude);
@@ -387,15 +399,21 @@ public class JZtxtcmdScript extends CompiledScript
             System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
             throw new ScriptException("JZcmd.compile - included file not found: ", fileInclude.getAbsolutePath(), -1, -1);
           }
-          fileIncludeParent = FileSystem.getDir(fileInclude);
+          fileIncludeParent = FileFunctions.getDir(fileInclude);
           int lengthBufferGenctrl = (int)fileInclude.length();
           try {
             sourceScriptIncluded = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
-          } catch (Exception exc) { throw new ScriptException(exc); }
+          } catch (Exception exc) {
+            if(sourceScriptIncluded !=null) { sourceScriptIncluded.close(); }
+            throw new ScriptException(exc); 
+          }
           //
         }
-        //included script, call recursively.
+        //process included script, call recursively.
+        List<JZcmditem> statementsBack = zbnfDstScript.statementsAdd;     // to write here in the include statementList.
+        zbnfDstScript.statementsAdd = include.statementlist.statements;   // temporary to add here
         setScriptFromString(sourceScriptIncluded, zbnfDstScript, fileIncludeParent, checkXmlOutput);
+        zbnfDstScript.statementsAdd = statementsBack;                     // restore for further add
         sourceScriptIncluded.close();
       }
     }
@@ -453,14 +471,14 @@ public class JZtxtcmdScript extends CompiledScript
   public final Subroutine getMain(){ return this.mainRoutine; }
   
   
-  public Subroutine getSubroutine(CharSequence name){ return subroutinesAll.get(name.toString()); }
+  public Subroutine getSubroutine(CharSequence name){ return this.subroutinesAll.get(name.toString()); }
   
-  public JZcmdClass getClass(CharSequence name){ return classesAll.get(name); }
+  public JZcmdClass getClass(CharSequence name){ return this.classesAll.get(name); }
   
   
   public void writeStruct(Appendable out) throws IOException{
     //mainRoutine.writeStruct(0, out);
-    scriptClass.writeStruct(0, out);
+    this.scriptClass.writeStruct(0, out);
   }
   
   
@@ -475,7 +493,7 @@ public class JZtxtcmdScript extends CompiledScript
    * maybe a list for selection. 
    */
   public void addContentToSelectContainer(AddSub2List list){
-    addSubOfJZcmdClass(scriptClass, list, 1);  
+    addSubOfJZcmdClass(this.scriptClass, list, 1);  
   }
   
   /**Core and recursively called routine.
@@ -618,13 +636,13 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     @Override public void setLineColumnFile(int line, int column, String sFile){
-      if(srcFile !=null && !srcFile.equals("")){
+      if(this.srcFile !=null && !this.srcFile.equals("")){
         Debugutil.stop();
       }
       //if(line == 388 ){ //&& column == 18){
       //  Debugutil.stop();
       //}
-      srcLine = line; srcColumn = column; srcFile = sFile; 
+      this.srcLine = line; this.srcColumn = column; this.srcFile = sFile; 
     }
 
     /**Returns wheter only the line or only the column should be set.
@@ -635,9 +653,9 @@ public class JZtxtcmdScript extends CompiledScript
 
     
     
-    /*package private*/ char elementType(){ return elementType; }
+    /*package private*/ char elementType(){ return this.elementType; }
     
-    public StatementList statementlist(){ return statementlist; }
+    public StatementList statementlist(){ return this.statementlist; }
 
     
     private void checkEmpty() {
@@ -648,7 +666,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     protected boolean isEmpty() {
-      return statementlist == null && dataAccess == null && expression == null && textArg == null;
+      return this.statementlist == null && this.dataAccess == null && this.expression == null && this.textArg == null;
     }
     
     
@@ -658,7 +676,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     public void add_dataAccess(JZcmdDataAccess val){ 
-      dataAccess = val;
+      this.dataAccess = val;
     }
     
 
@@ -678,7 +696,7 @@ public class JZtxtcmdScript extends CompiledScript
       } else {
         cText = text;
       }
-      textArg = cText.toString(); //StringSeq.create(cText, true);  //let the text inside the StringBuilder.
+      this.textArg = cText.toString(); //StringSeq.create(cText, true);  //let the text inside the StringBuilder.
       //if(statementlist == null){ statementlist = new StatementList(this); }
       //statementlist.set_text(text);
     }
@@ -691,11 +709,11 @@ public class JZtxtcmdScript extends CompiledScript
      */
     public StatementList new_dataStruct(){
       checkEmpty();
-      statementlist = new StatementList(this);
-      if(elementType != 'M') {
-        elementType = 'M';     //should be a Map
+      this.statementlist = new StatementList(this);
+      if(this.elementType != 'M') {
+        this.elementType = 'M';     //should be a Map
       }
-      return statementlist;
+      return this.statementlist;
     }
     
     public void add_dataStruct(StatementList val){ }
@@ -710,8 +728,8 @@ public class JZtxtcmdScript extends CompiledScript
      */
     public StatementList new_statementBlock(){
       checkEmpty();
-      statementlist = new StatementList(this);
-      return statementlist;
+      this.statementlist = new StatementList(this);
+      return this.statementlist;
     }
     
     public void add_statementBlock(StatementList val){ }
@@ -794,19 +812,21 @@ public class JZtxtcmdScript extends CompiledScript
      * @return this, the conversion is set.
      */
     public JZcmditem XXXnew_File(){ 
-      conversion = 'E';
+      this.conversion = 'E';
       return this;
     }
     
+    @SuppressWarnings("unused")
     public void XXXadd_File(JZcmditem val){} //do nothing. 
     
-    public JZcmditem new_Filepath(){ conversion = 'F'; return this; }
+    public JZcmditem new_Filepath(){ this.conversion = 'F'; return this; }
     
+    @SuppressWarnings("unused")
     public void add_Filepath(JZcmditem val){} //do nothing. conversion was set.
     
-    public AccessFilesetname new_filesetAccess(){ return new AccessFilesetname(parentList); }
+    public AccessFilesetname new_filesetAccess(){ return new AccessFilesetname(this.parentList); }
     
-    public void add_filesetAccess(AccessFilesetname val){ conversion = 'G'; subitem = val; };
+    public void add_filesetAccess(AccessFilesetname val){ this.conversion = 'G'; this.subitem = val; };
     
 
     
@@ -817,7 +837,7 @@ public class JZtxtcmdScript extends CompiledScript
      * @param text message of the ScriptException
      */
     public ScriptException scriptException(String text) {
-      return new ScriptException(text, srcFile, srcLine, srcColumn);
+      return new ScriptException(text, this.srcFile, this.srcLine, this.srcColumn);
     }
     
     /**Writes a complete readable information about this item with all nested information.
@@ -830,19 +850,19 @@ public class JZtxtcmdScript extends CompiledScript
       out.append(sIndent);
       writeStructLine(out);
       writeStructAdd(indent, out);
-      if(textArg !=null){
-        out.append("\"").append(textArg).append("\"");
+      if(this.textArg !=null){
+        out.append("\"").append(this.textArg).append("\"");
       }
-      if(dataAccess !=null){
-        dataAccess.writeStruct(out);
+      if(this.dataAccess !=null){
+        this.dataAccess.writeStruct(out);
       }
-      if(expression !=null){
-        String sExpr = expression.toString();
+      if(this.expression !=null){
+        String sExpr = this.expression.toString();
         out.append(sExpr);
       }
       out.append("\n");
-      if(statementlist !=null){
-        for(JZcmditem item: statementlist.statements){
+      if(this.statementlist !=null){
+        for(JZcmditem item: this.statementlist.statements){
           item.writeStruct(indent+1, out);
         }
       }
@@ -866,8 +886,8 @@ public class JZtxtcmdScript extends CompiledScript
      */
     void writeStructLine(Appendable u) {
       try{
-        switch(elementType){
-          case 't': u.append(" text \"").append(textArg).append("\""); break;
+        switch(this.elementType){
+          case 't': u.append(" text \"").append(this.textArg).append("\""); break;
           /*
           case 'S': u.append("String " + identArgJbat;
           case 'O': u.append("Obj " + identArgJbat;
@@ -918,10 +938,10 @@ public class JZtxtcmdScript extends CompiledScript
           case '*': u.append(" Map-container "); break;
           case '_': u.append(" close "); break;
           case ' ': u.append(" skipWhitespace "); break;
-          case ',': u.append(" errortoOutput "); if(textArg == null){ u.append("off "); } break;
+          case ',': u.append(" errortoOutput "); if(this.textArg == null){ u.append("off "); } break;
           default: //do nothing. Fo in overridden method.
         }
-        u.append("-").append(elementType).append(" @").append(Integer.toString(srcLine)).append(",").append(Integer.toString(srcColumn)).append(" ").append(srcFile).append(':');
+        u.append("-").append(this.elementType).append(" @").append(Integer.toString(this.srcLine)).append(",").append(Integer.toString(this.srcColumn)).append(" ").append(this.srcFile).append(':');
         
       } catch(IOException exc){
         throw new RuntimeException(exc); //unexpected.
@@ -936,8 +956,6 @@ public class JZtxtcmdScript extends CompiledScript
     }
 
   }
-  
-  
   
   
   
@@ -961,7 +979,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     public void set_name(String name){ this.identArgJbat = name; }
     
-    public String getIdent(){ return identArgJbat; }
+    public String getIdent(){ return this.identArgJbat; }
     
     
 
@@ -1052,8 +1070,8 @@ public class JZtxtcmdScript extends CompiledScript
     
     /**For ZbnfJavaOutput: Adds argument to {@link #fnArgsExpr}. */
     public void add_argument(JZcmditem val){ 
-      if(fnArgsExpr == null){ fnArgsExpr = new ArrayList<JZcmditem>(); }
-      fnArgsExpr.add(val);
+      if(this.fnArgsExpr == null){ this.fnArgsExpr = new ArrayList<JZcmditem>(); }
+      this.fnArgsExpr.add(val);
     } 
 
     
@@ -1073,14 +1091,14 @@ public class JZtxtcmdScript extends CompiledScript
 
     
     public void add_dataPath(JZcmdDataAccess val){
-      indirectDatapath = val;
+      this.indirectDatapath = val;
     }
     
     public void writeStruct(int indent, Appendable out) throws IOException {
-      out.append(ident).append(':').append(whatisit);
-      if(fnArgsExpr!=null){
+      out.append(this.ident).append(':').append(this.whatisit);
+      if(this.fnArgsExpr!=null){
         //String sep = "(";
-        for(JZcmditem arg: fnArgsExpr){
+        for(JZcmditem arg: this.fnArgsExpr){
           arg.writeStruct(indent+1, out);
         }
       }
@@ -1113,20 +1131,20 @@ public class JZtxtcmdScript extends CompiledScript
     
     /**For ZbnfJavaOutput: Adds argument to {@link #fnArgsExpr}. */
     public void add_argument(JZcmditem val){ 
-      if(fnArgsExpr == null){ fnArgsExpr = new ArrayList<JZcmditem>(); }
-      fnArgsExpr.add(val);
+      if(this.fnArgsExpr == null){ this.fnArgsExpr = new ArrayList<JZcmditem>(); }
+      this.fnArgsExpr.add(val);
     } 
 
     
     public JZcmdDataAccess new_Class_Var(){ return new JZcmdDataAccess(); }
     
-    public void add_Class_Var(JZcmdDataAccess val){ dpathClass = val; }
+    public void add_Class_Var(JZcmdDataAccess val){ this.dpathClass = val; }
     
     /**For ZbnfJavaOutput: Creates a datapath for a specific ClassLoader. */
     public JZcmdDataAccess new_Classpath_Var(){ return new JZcmdDataAccess(); }
     
     /**For ZbnfJavaOutput: Sets the datapath for a specific ClassLoader. */
-    public void add_Classpath_Var(JZcmdDataAccess val){ dpathLoader = val; }
+    public void add_Classpath_Var(JZcmdDataAccess val){ this.dpathLoader = val; }
     
 
   }
@@ -1150,12 +1168,14 @@ public class JZtxtcmdScript extends CompiledScript
       return (JZcmdDataAccess)super.new_dataAccess();  
     }
 
+    @SuppressWarnings("unused")
     public void add_dataAccess(JZcmdDataAccess val){ }
 
     @Override protected JZcmdDataAccess newDataAccessSet(){ return new JZcmdDataAccess(); }
     
     
     public JZcmdInstanceofExpr new_instanceof() { return new JZcmdInstanceofExpr(); }
+    @SuppressWarnings("unused")
     public void add_instanceof(JZcmdInstanceofExpr val) {  }
     
   }
@@ -1220,6 +1240,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     
+    @Override
     public void set_name(String name){
       JZcmdDataAccess dataAccess1 = new JZcmdDataAccess();
       this.dataAccess = dataAccess1;
@@ -1234,10 +1255,11 @@ public class JZtxtcmdScript extends CompiledScript
     //public FilePath.ZbnfFilepath new_commonpath(){ return new FilePath.ZbnfFilepath(); }  //NOTE: it has not a parent. this is not its parent!
     //public void set_commonpath(FilePath.ZbnfFilepath val){ commonBasepath = val.filepath; }
     
-    public void set_commonPath(String val){ fileset.set_commonPath(val); }
+    public void set_commonPath(String val){ this.fileset.set_commonPath(val); }
     
-    public void set_filePath(String val){ fileset.add_filePath(val); }
+    public void set_filePath(String val){ this.fileset.add_filePath(val); }
     
+    @SuppressWarnings("unused")
     public void add_addFileset(String val) { }
     
   }
@@ -1282,15 +1304,15 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     
-    public JZcmditem new_zmakeOutput(){ return new JZcmditem(parentList, '.'); }
+    public JZcmditem new_zmakeOutput(){ return new JZcmditem(this.parentList, '.'); }
     
-    public void add_zmakeOutput(JZcmditem val){ jzoutput = val; }
-    
-    @Override
-    public AccessFilesetname new_filesetAccess(){ return new AccessFilesetname(parentList); }
+    public void add_zmakeOutput(JZcmditem val){ this.jzoutput = val; }
     
     @Override
-    public void add_filesetAccess(AccessFilesetname val){ input.add(val); };
+    public AccessFilesetname new_filesetAccess(){ return new AccessFilesetname(this.parentList); }
+    
+    @Override
+    public void add_filesetAccess(AccessFilesetname val){ this.input.add(val); };
     
     
   }
@@ -1325,7 +1347,7 @@ public class JZtxtcmdScript extends CompiledScript
      * 
      */
     public void set_accessPath(String val){
-      textArg = val;
+      this.textArg = val;
       //accessPath = new FilePath(val);  //prepare it with its parts.
     }
 
@@ -1349,11 +1371,11 @@ public class JZtxtcmdScript extends CompiledScript
      * @param val
      */
     public void XXXset_zmakeFilesetVariable(String val){
-      if(XXXfilesetVariableName !=null){
+      if(this.XXXfilesetVariableName !=null){
         //assert(accessPath == null);
         //a simple accessPath "&name" was recognized as the filesetVariablebame,
         //but it is an accessPath really.
-        textArg = "&" + XXXfilesetVariableName;
+        this.textArg = "&" + this.XXXfilesetVariableName;
         //accessPath = new FilePath("&" + filesetVariableName);  //create afterward.
       }
       this.XXXfilesetVariableName = val; 
@@ -1419,15 +1441,15 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     /**From Zbnf: [ const <?const>] */
-    public void set_const(){ bConst = true; } 
+    public void set_const(){ this.bConst = true; } 
     
     /**Only used for Openfile += name;
      * 
      */
-    public void set_appendToFile() { bAppendToFile = true; }
+    public void set_appendToFile() { this.bAppendToFile = true; }
     
     
-    public void set_type(String val){ typeVariable = val; }
+    public void set_type(String val){ this.typeVariable = val; }
     
     public void set_name(String val){  }
     
@@ -1437,13 +1459,13 @@ public class JZtxtcmdScript extends CompiledScript
     public JZcmdDataAccess new_defVariable(){ return new JZcmdDataAccess(); }
     
     public void add_defVariable(JZcmdDataAccess val){   
-      int whichStatement =     "SPULOKQWMCJFG*{[\0".indexOf(elementType);
+      int whichStatement =     "SPULOKQWMCJFG*{[\0".indexOf(this.elementType);
       char whichVariableType = "SPULOKQAMCJFG*X[\0".charAt(whichStatement);  //from elementType to variable type.
-      if(bConst){
+      if(this.bConst){
         whichVariableType = Character.toLowerCase(whichVariableType);  //see DataAccess.access
       }
       val.setTypeToLastElement(whichVariableType);
-      defVariable = val;
+      this.defVariable = val;
     }
 
     //public void new_statementBlock(){}
@@ -1456,13 +1478,13 @@ public class JZtxtcmdScript extends CompiledScript
      */
     public String getVariableIdent(){
       final String name; 
-      List<DataAccess.DatapathElement> path = defVariable.datapath();
+      List<DataAccess.DatapathElement> path = this.defVariable.datapath();
       int zpath = path.size();
       if(path == null || zpath ==0){
         name = null;
       }
       else if(path.size() == 1){
-        name = defVariable.datapath().get(0).ident();
+        name = this.defVariable.datapath().get(0).ident();
       } else {
         name = null;  //TODO name.name
       }
@@ -1472,7 +1494,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     @Override void writeStructLine(Appendable out) {
       super.writeStructLine(out);
-      try{ out.append(" Defvariable ").append(defVariable !=null ? defVariable.toString(): "no_Variable");
+      try{ out.append(" Defvariable ").append(this.defVariable !=null ? this.defVariable.toString(): "no_Variable");
       
       }catch(IOException exc){ throw new RuntimeException(exc); }  //unexpected
     }
@@ -1513,25 +1535,25 @@ public class JZtxtcmdScript extends CompiledScript
      * @return this
      */
     public DefListElement new_element(){  
-      if(statementlist == null){ statementlist = new StatementList(this); }
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
       return new DefListElement();
     }
     
     public void add_element(DefListElement val){ 
-      statementlist.statements.add(val);
+      this.statementlist.statementsAdd.add(val);
     }
     
     public DefVariable new_textVariable(){ 
-      if(statementlist == null){ statementlist = new StatementList(this); }
-      return new DefVariable(parentList, 'S');    
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
+      return new DefVariable(this.parentList, 'S');    
     }
    
     public void add_textVariable(DefVariable val){
-      statementlist.statements.add(val);
+      this.statementlist.statementsAdd.add(val);
     }
     
     public DefVariable XXXnew_DefSubtext(){
-      return new DefVariable(statementlist, '\0');  
+      return new DefVariable(this.statementlist, '\0');  
     } 
 
     public void XXXadd_DefSubtext(DefVariable val){ 
@@ -1540,14 +1562,14 @@ public class JZtxtcmdScript extends CompiledScript
       } else {
         val.elementType = 'O';  //an expression which should be evaluated on build-time of the container
       }
-      if(statementlist == null){ statementlist = new StatementList(this); }
-      statementlist.statements.add(val);  
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
+      this.statementlist.statementsAdd.add(val);  
     }
     
     
 
     public Subroutine new_DefSubtext(){
-      StatementList parent = parentList;
+      StatementList parent = this.parentList;
       while(parent !=null && !(parent instanceof JZcmdClass)){
         parent = parent.parentStatement.parentList;
       }
@@ -1561,35 +1583,35 @@ public class JZtxtcmdScript extends CompiledScript
       } else {
         val.elementType = 'O';  //an expression which should be evaluated on build-time of the container
       }
-      if(statementlist == null){ statementlist = new StatementList(this); }
-      statementlist.statements.add(val);  
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
+      this.statementlist.statementsAdd.add(val);  
     }
     
     
 
     
     public JZcmditem new_objElement() {
-      if(bFirst && isEmpty()) { return this; //first objElement, the only one is the value which is the list.
+      if(this.bFirst && isEmpty()) { return this; //first objElement, the only one is the value which is the list.
       } else {
-        if(bFirst) {
-          bFirst = false;
+        if(this.bFirst) {
+          this.bFirst = false;
           //it is the second invocation
-          JZcmditem element1 = new JZcmditem(statementlist, '\0');
+          JZcmditem element1 = new JZcmditem(this.statementlist, '\0');
           element1.dataAccess = this.dataAccess; this.dataAccess = null;
           element1.textArg = this.textArg; this.textArg = null;
           element1.expression = this.expression; this.expression = null;
           element1.statementlist = this.statementlist; 
-          statementlist = new StatementList(this);
-          statementlist.statements.add(element1);  //add the copied first content.
+          this.statementlist = new StatementList(this);
+          this.statementlist.statementsAdd.add(element1);  //add the copied first content.
         }    
-        JZcmditem element = new JZcmditem(statementlist, '\0');
+        JZcmditem element = new JZcmditem(this.statementlist, '\0');
         return element;
       }
     }
     
     public void add_objElement(JZcmditem val) {
       if(val !=this) {
-        statementlist.statements.add(val);
+        this.statementlist.statementsAdd.add(val);
       } //else: this is the first or only one. It is the initial value for the list.
     }
     
@@ -1620,6 +1642,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
 
     
+    @SuppressWarnings("unused")
     public void add_dataSet(StatementList val) { }
     
     
@@ -1628,6 +1651,7 @@ public class JZtxtcmdScript extends CompiledScript
       return this; 
     }
     
+    @SuppressWarnings("unused")
     public void XXXadd_textVariable(DefVariable val){}
     
     /**Puts a new element with previous stored {@link #elementName}.
@@ -1654,7 +1678,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     public JZcmdDataAccess new_loader(){ return new JZcmdDataAccess(); }
     
-    public void add_loader(JZcmdDataAccess val){ loader = val; };
+    public void add_loader(JZcmdDataAccess val){ this.loader = val; };
     
     
   }
@@ -1679,14 +1703,14 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     @Override
-    public AccessFilesetname new_filesetAccess(){ return new AccessFilesetname(parentList); }
+    public AccessFilesetname new_filesetAccess(){ return new AccessFilesetname(this.parentList); }
     
     @Override
-    public void add_filesetAccess(AccessFilesetname val){ jarpaths.add(val); };
+    public void add_filesetAccess(AccessFilesetname val){ this.jarpaths.add(val); };
     
 
     public void set_parentClasspath(String val){
-      nameParentClasspath = val;
+      this.nameParentClasspath = val;
     }
     
   }
@@ -1703,19 +1727,21 @@ public class JZtxtcmdScript extends CompiledScript
       super(parentList, whatisit);
     }
 
-    public Argument new_src(){ return src = new Argument(parentList); }
+    public Argument new_src(){ return this.src = new Argument(this.parentList); }
     
+    @SuppressWarnings("unused")
     public void set_src(Argument val) {} 
     
-    public Argument new_dst(){ return dst = new Argument(parentList); }
+    public Argument new_dst(){ return this.dst = new Argument(this.parentList); }
     
+    @SuppressWarnings("unused")
     public void set_dst(Argument val) {}
     
-    public void set_newTimestamp(){ bNewTimestamp = true; }
+    public void set_newTimestamp(){ this.bNewTimestamp = true; }
     
-    public void set_overwr(){ bOverwrite = true; }
+    public void set_overwr(){ this.bOverwrite = true; }
     
-    public void set_overwro(){ bOverwriteReadonly = true; }
+    public void set_overwro(){ this.bOverwriteReadonly = true; }
     
   }  
   
@@ -1740,16 +1766,16 @@ public class JZtxtcmdScript extends CompiledScript
     public JZcmdDataAccess new_assign(){ return new JZcmdDataAccess(); }
     
     public void add_assign(JZcmdDataAccess val){ 
-      if(variable == null){ variable = val; }
+      if(this.variable == null){ this.variable = val; }
       else {
-        if(assignObjs == null){ assignObjs = new LinkedList<JZcmdDataAccess>(); }
-        assignObjs.add(val); 
+        if(this.assignObjs == null){ this.assignObjs = new LinkedList<JZcmdDataAccess>(); }
+        this.assignObjs.add(val); 
       }
     }
 
     
     public void set_append(){
-      if(elementType == '='){ elementType = '+'; }
+      if(this.elementType == '='){ this.elementType = '+'; }
       else throw new IllegalArgumentException("JZcmdScript - unexpected set_append");
     }
     
@@ -1757,9 +1783,9 @@ public class JZtxtcmdScript extends CompiledScript
     @Override void writeStructLine(Appendable out) {
       super.writeStructLine(out);
       try{
-        if(variable !=null){
+        if(this.variable !=null){
           out.append(" assign ");
-          variable.writeStruct(out);
+          this.variable.writeStruct(out);
           out.append(" = ");        
         } else {
           out.append(" invoke ");
@@ -1797,22 +1823,22 @@ public class JZtxtcmdScript extends CompiledScript
     public JZcmdDataAccess new_assign(){ return new JZcmdDataAccess(); }
     
     public void add_assign(JZcmdDataAccess val){ 
-      variable = val; 
+      this.variable = val; 
     }
 
     public void set_newline(){
-      if(statementlist == null){ statementlist = new StatementList(this); }
-      statementlist.statements.add(new JZcmditem(parentList, 'n'));  
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
+      this.statementlist.statementsAdd.add(new JZcmditem(this.parentList, 'n'));  
     }
 
     public void set_flush(){
-      if(statementlist == null){ statementlist = new StatementList(this); }
-      statementlist.statements.add(new JZcmditem(parentList, '!'));  
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
+      this.statementlist.statementsAdd.add(new JZcmditem(this.parentList, '!'));  
     }
 
     public void set_close(){
-      if(statementlist == null){ statementlist = new StatementList(this); }
-      statementlist.statements.add(new JZcmditem(parentList, '_'));  
+      if(this.statementlist == null){ this.statementlist = new StatementList(this); }
+      this.statementlist.statementsAdd.add(new JZcmditem(this.parentList, '_'));  
     }
 
   }
@@ -1868,22 +1894,23 @@ public class JZtxtcmdScript extends CompiledScript
     
     public IfCondition new_ifBlock()
     { //StatementList subGenContent = new StatementList(this);
-      IfCondition statement = new IfCondition(parentList, 'g');
+      IfCondition statement = new IfCondition(this.parentList, 'g');
       //statement.statementlist = subGenContent;  //The statement contains a genContent. 
-      statementlist.statements.add(statement);
-      statementlist.onerrorAccu = null; statementlist.withoutOnerror.add(statement);
+      this.statementlist.statementsAdd.add(statement);
+      this.statementlist.onerrorAccu = null; this.statementlist.withoutOnerror.add(statement);
       return statement;
     }
     
+    @SuppressWarnings("unused")
     public void add_ifBlock(IfCondition val){}
 
 
 
     public StatementList new_elseBlock()
-    { JZcmditem statement = new JZcmditem(parentList, 'E');
+    { JZcmditem statement = new JZcmditem(this.parentList, 'E');
       statement.statementlist = new StatementList(this);  //The statement contains a genContent. 
-      statementlist.statements.add(statement);
-      statementlist.onerrorAccu = null; statementlist.withoutOnerror.add(statement);
+      this.statementlist.statementsAdd.add(statement);
+      this.statementlist.onerrorAccu = null; this.statementlist.withoutOnerror.add(statement);
       return statement.statementlist;  //The else sub statementlist.
     }
     
@@ -1911,12 +1938,12 @@ public class JZtxtcmdScript extends CompiledScript
     /**From Zbnf: < condition>. A condition is an expression. It is the same like {@link #new_numExpr()}
      */
     public JZcmdCalculatorExpr new_condition(){  
-      condition = new JZcmditem(statementlist, '.');
-      return condition.new_numExpr();
+      this.condition = new JZcmditem(this.statementlist, '.');
+      return this.condition.new_numExpr();
     }
     
     public void add_condition(JZcmdCalculatorExpr val){ 
-      condition.add_numExpr(val);
+      this.condition.add_numExpr(val);
     }
     
   };
@@ -1962,7 +1989,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     public void add_forContainer(JZcmdDataAccess val){ 
-      forContainer = val;
+      this.forContainer = val;
     }
     
 
@@ -1998,89 +2025,90 @@ public class JZtxtcmdScript extends CompiledScript
     
     public void set_name(String name){ this.name = name; }
 
-    public void set_useLocals(){ useLocals = true; }
+    public void set_useLocals(){ this.useLocals = true; }
 
-    public void set_addLocals(){ addLocals = true; }
+    public void set_addLocals(){ this.addLocals = true; }
     
     public Subroutine new_formalArgument(){ return this; } //new Argument(parentList); }
     
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
+    @SuppressWarnings("unused")
     public void add_formalArgument(Subroutine val){}
     
     public DefVariable new_DefObjVar(){
-      return new DefVariable(parentList, 'O'); 
+      return new DefVariable(this.parentList, 'O'); 
     }
     
     public void add_DefObjVar(DefVariable val) {
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
 
     /**Defines a variable which is able to use as container.
      */
     public DefContainerVariable new_List(){ 
-      return new DefContainerVariable(parentList, 'L'); 
+      return new DefContainerVariable(this.parentList, 'L'); 
     } 
 
     public void add_List(DefContainerVariable val){ 
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
     
     public DefVariable new_ClassObjVar(){
-      return new DefVariable(parentList, 'C'); 
+      return new DefVariable(this.parentList, 'C'); 
     }
     
     public void add_DefClassVar(DefVariable val) {
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
 
     public DefVariable new_DefNumVar(){
-      return new DefVariable(parentList, 'K'); 
+      return new DefVariable(this.parentList, 'K'); 
     }
     
     public void add_DefNumVar(DefVariable val) {
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
 
     
     public DefVariable new_DefBoolVar(){
-      return new DefVariable(parentList, 'Q'); 
+      return new DefVariable(this.parentList, 'Q'); 
     }
     
     public void add_DefBoolVar(DefVariable val) {
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
 
     
     public DefVariable new_textVariable(){
-      return new DefVariable(parentList, 'S'); 
+      return new DefVariable(this.parentList, 'S'); 
     }
     
     public void add_textVariable(DefVariable val) {
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
 
     
     public DefVariable new_DefMapVar(){
-      return new DefVariable(parentList, 'M'); 
+      return new DefVariable(this.parentList, 'M'); 
     }
     
     public void add_DefMapVar(DefVariable val) {
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
 
     
     public DefVariable new_DefFilepath(){ return new DefVariable(this.parentList, 'F'); } 
 
     public void add_DefFilepath(DefVariable val){ 
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
     
     public UserFileset new_DefFileset(){
@@ -2088,8 +2116,8 @@ public class JZtxtcmdScript extends CompiledScript
     } 
 
     public void add_DefFileset(UserFileset val){ 
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
-      formalArgs.add(val);
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
+      this.formalArgs.add(val);
     }
     
     
@@ -2100,26 +2128,26 @@ public class JZtxtcmdScript extends CompiledScript
      * Handle in the same kind like a String variable
      */
     public DefVariable new_setEnvVar(){ 
-      return new DefVariable(parentList, 'S'); 
+      return new DefVariable(this.parentList, 'S'); 
     } 
 
     /**Defines or changes an environment variable with value. set NAME = TEXT;
      * Handle in the same kind like a String variable but appends a '$' to the first name.
      */
     public void add_setEnvVar(DefVariable val){ 
-      if(formalArgs == null){ formalArgs = new ArrayList<DefVariable>(); }
+      if(this.formalArgs == null){ this.formalArgs = new ArrayList<DefVariable>(); }
       //change the first identifier to $name
       val.defVariable.datapath().get(0).setIdent("$" + val.defVariable.datapath().get(0).ident());
       //val.identArgJbat = "$" + val.identArgJbat;
-      formalArgs.add(val); 
+      this.formalArgs.add(val); 
     } 
 
     
     
     
     @Override void writeStructAdd(int indent, Appendable out) throws IOException{
-      if(formalArgs !=null){
-        for(DefVariable item: formalArgs){
+      if(this.formalArgs !=null){
+        for(DefVariable item: this.formalArgs){
           item.writeStruct(indent+1, out);
         }
       }
@@ -2130,10 +2158,10 @@ public class JZtxtcmdScript extends CompiledScript
     @Override void writeStructLine(Appendable out) {
       super.writeStructLine(out);
       try{ 
-        if(name==null){
+        if(this.name==null){
           out.append(" main(");
         } else {
-          out.append(" sub ").append(name).append("(");
+          out.append(" sub ").append(this.name).append("(");
         }
       }catch(IOException exc){ throw new RuntimeException(exc); }  //unexpected
     }
@@ -2158,24 +2186,24 @@ public class JZtxtcmdScript extends CompiledScript
       super(parentList, elementType);
     }
     
-    public JZcmditem new_callName(){ return call_Name = new Argument(parentList); }
+    public JZcmditem new_callName(){ return this.call_Name = new Argument(this.parentList); }
     
     public void set_callName(JZcmditem val){}
     
     
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
-    public Argument new_actualArgument(){ return new Argument(parentList); }
+    public Argument new_actualArgument(){ return new Argument(this.parentList); }
     
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
     public void add_actualArgument(Argument val){ 
-      if(actualArgs == null){ actualArgs = new ArrayList<Argument>(); }
-      actualArgs.add(val); }
+      if(this.actualArgs == null){ this.actualArgs = new ArrayList<Argument>(); }
+      this.actualArgs.add(val); }
     
     
     @Override void writeStructAdd(int indent, Appendable out) throws IOException{
-      call_Name.writeStruct(0, out);
-      if(actualArgs !=null){
-        for(Argument item: actualArgs){
+      this.call_Name.writeStruct(0, out);
+      if(this.actualArgs !=null){
+        for(Argument item: this.actualArgs){
           item.writeStruct(indent+1, out);
         }
       }
@@ -2222,22 +2250,22 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
-    public JZcmditem new_actualArgument(){ return new JZcmditem(parentList, '.'); }
+    public JZcmditem new_actualArgument(){ return new JZcmditem(this.parentList, '.'); }
      
     /**Set from ZBNF:  \<*subtext:name: { <namedArgument> ?,} \> */
     public void add_actualArgument(JZcmditem val){ 
-      if(cmdArgs == null){ cmdArgs = new ArrayList<JZcmditem>(); }
-      cmdArgs.add(val); 
+      if(this.cmdArgs == null){ this.cmdArgs = new ArrayList<JZcmditem>(); }
+      this.cmdArgs.add(val); 
     }
     
     
     /**Set from ZBNF: */
     public JZcmdDataAccess new_argList(){ 
-      JZcmditem statement = new JZcmditem(parentList, 'L');
+      JZcmditem statement = new JZcmditem(this.parentList, 'L');
       JZcmdDataAccess dataAccess1 = new JZcmdDataAccess(); 
       statement.dataAccess = dataAccess1; 
-      if(cmdArgs == null){ cmdArgs = new ArrayList<JZcmditem>(); }
-      cmdArgs.add(statement); 
+      if(this.cmdArgs == null){ this.cmdArgs = new ArrayList<JZcmditem>(); }
+      this.cmdArgs.add(statement); 
       return dataAccess1;
     }
  
@@ -2249,7 +2277,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     
-    public void set_argsCheck(){ bCmdCheck = true; }
+    public void set_argsCheck(){ this.bCmdCheck = true; }
 
   }
   
@@ -2286,7 +2314,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     public void add_defThreadVar(JZcmdDataAccess val){ 
       val.setTypeToLastElement('T');
-      threadVariable = val;
+      this.threadVariable = val;
       //identArgJbat = "N";  //Marker for a new Variable.
     }
 
@@ -2298,7 +2326,7 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     public void add_assignThreadVar(JZcmdDataAccess val){ 
-      threadVariable = val;
+      this.threadVariable = val;
     }
 
     
@@ -2337,7 +2365,7 @@ public class JZtxtcmdScript extends CompiledScript
     public char errorType = '?';
     
     public void set_errortype(String type){
-      errorType = type.charAt(0); //n, i, f
+      this.errorType = type.charAt(0); //n, i, f
     }
  
     Onerror(StatementList parentList){
@@ -2348,7 +2376,7 @@ public class JZtxtcmdScript extends CompiledScript
      * See {@link JZtxtcmdExecuter.ExecuteLevel#execCmdError(Onerror)}.
      * This method is called in {@link StatementList#add_onerror(Onerror)}.
      */
-    void setCmdError(){ elementType = '#'; }
+    void setCmdError(){ this.elementType = '#'; }
     
  }
   
@@ -2385,9 +2413,16 @@ public class JZtxtcmdScript extends CompiledScript
     
     public String cmpnName;
     
-    public final List<JZcmditem> statements = new ArrayList<JZcmditem>();
+    public final List<JZcmditem> statements = new LinkedList<JZcmditem>();
     
-
+    /**This is only temporary used to to fill statements of script level
+     * also of included statements to the {@link JZcmdInclude} item. 
+     * In this case this list refers the {@link JZcmdInclude#statementlist}.
+     * After processing includes this is set back to the original one.
+     * So further adding of statements can be done if necessary maybe also dynamically. 
+     */
+    protected List<JZcmditem> statementsAdd = this.statements;
+   
     /**List of currently onerror statements.
      * This list is referenced in the appropriate {@link XXXXXXStatement#onerror} too. 
      * If an onerror statement will be gotten next, it is added to this list using this reference.
@@ -2435,7 +2470,7 @@ public class JZtxtcmdScript extends CompiledScript
      */
     //private final List<ScriptElement> localVariableScripts = new ArrayList<ScriptElement>();
     
-    public final List<StatementList> addToList = new ArrayList<StatementList>();
+    //public final List<StatementList> addToList = new ArrayList<StatementList>();
     
     //public List<String> datapath = new ArrayList<String>();
     
@@ -2455,11 +2490,17 @@ public class JZtxtcmdScript extends CompiledScript
         this.sIndentChars = parentStatement.parentList.sIndentChars;
       }
     }
-        
+      
+    
+    
+    
+    
+    
+    
     public JZcmditem new_createTextOut(){
       JZcmditem statement = new JZcmditem(this, 'o');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -2470,8 +2511,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     public JZcmditem new_appendTextOut(){
       JZcmditem statement = new JZcmditem(this, 'q');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -2482,7 +2523,7 @@ public class JZtxtcmdScript extends CompiledScript
 
     
     @Override public void setLineColumnFile(int line, int column, String sFile){
-      srcLine = line; srcColumn = column; srcFile = sFile; 
+      this.srcLine = line; this.srcColumn = column; this.srcFile = sFile; 
     }
 
     /**Returns wheter only the line or only the column should be set.
@@ -2496,8 +2537,8 @@ public class JZtxtcmdScript extends CompiledScript
     public StatementList new_statementBlock(){
       this.bSetSkipSpaces = false;
       JZcmditem statement = new JZcmditem(this, 'B');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement.statementlist = new StatementList(statement);
     }
     
@@ -2518,8 +2559,8 @@ public class JZtxtcmdScript extends CompiledScript
      * Handle in the same kind like a String variable but appends a '$' to the first name.
      */
     public void add_debugOp(JZcmditem val){ 
-      statements.add(val); 
-      onerrorAccu = null; withoutOnerror.add(val);
+      this.statementsAdd.add(val); 
+      this.onerrorAccu = null; this.withoutOnerror.add(val);
     } 
     
     /**Defines or changes an environment variable with value. set NAME = TEXT;
@@ -2533,21 +2574,21 @@ public class JZtxtcmdScript extends CompiledScript
      * Handle in the same kind like a String variable but appends a '$' to the first name.
      */
     public void add_debug(JZcmditem val){ 
-      statements.add(val); 
-      onerrorAccu = null; withoutOnerror.add(val);
+      this.statementsAdd.add(val); 
+      this.onerrorAccu = null; this.withoutOnerror.add(val);
     } 
     
     
     public void set_debug(){
-      statements.add(new JZcmditem(this, 'D'));
+      this.statementsAdd.add(new JZcmditem(this, 'D'));
     }
     
     public void set_scriptdir(){
       this.bSetSkipSpaces = false;
       JZcmditem textOut = new TextOut(this, 't');
-      int posscriptdir = srcFile.lastIndexOf('/');
-      textOut.textArg = srcFile.substring(0, posscriptdir);
-      statements.add(textOut);
+      int posscriptdir = this.srcFile.lastIndexOf('/');
+      textOut.textArg = this.srcFile.substring(0, posscriptdir);
+      this.statementsAdd.add(textOut);
     }
     
     
@@ -2559,13 +2600,13 @@ public class JZtxtcmdScript extends CompiledScript
     }
 
     public void add_textOut(TextOut val){ 
-      statements.add(val); 
+      this.statementsAdd.add(val); 
     } 
     
     
-    public void set_nIndent(long value){ nIndentInScript= (int)value; }
+    public void set_nIndent(long value){ this.nIndentInScript= (int)value; }
     
-    public void set_cIndent(String value){ sIndentChars= value; }  //it has only one character.
+    public void set_cIndent(String value){ this.sIndentChars= value; }  //it has only one character.
     
     
     
@@ -2584,7 +2625,7 @@ public class JZtxtcmdScript extends CompiledScript
         Debugutil.stop();
       }
       JZcmditem textExpr = new JZcmditem(this, ':');
-      this.statements.add(textExpr);                         // add to the superior statements
+      this.statementsAdd.add(textExpr);                         // add to the superior statements
       
       textExpr.statementlist = new StatementList(textExpr);  // the statementList of this textExpr as sub statements
       return textExpr.new_textExpr(zbnfItem);                // the statementlist is a textExpr. Use the same as for subtext.
@@ -2596,7 +2637,7 @@ public class JZtxtcmdScript extends CompiledScript
      */
     public StatementList new_textExprTEST(ZbnfParseResultItem zbnfItem){ 
       JZcmditem textExpr = new JZcmditem(this, ':');
-      statements.add(textExpr);
+      this.statementsAdd.add(textExpr);
       textExpr.statementlist = new StatementList(textExpr);
       return textExpr.statementlist;
     }
@@ -2606,47 +2647,47 @@ public class JZtxtcmdScript extends CompiledScript
     /**Defines a variable with initial value. <= <variableAssign?textVariable> \<\.=\>
      */
     public DefVariable new_textVariable(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'S'); 
     } 
 
-    public void add_textVariable(DefVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val);} 
+    public void add_textVariable(DefVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val);} 
     
     
     /**Defines a variable which is able to use as pipe.
      */
     public DefVariable new_Pipe(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'P'); 
     } 
 
-    public void add_Pipe(DefVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val); }
+    public void add_Pipe(DefVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val); }
     
     /**Defines a variable which is able to use as String buffer.
      */
     public DefVariable new_Stringjar(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'U'); 
     } 
 
-    public void add_Stringjar(DefVariable val){ statements.add(val);  onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_Stringjar(DefVariable val){ this.statementsAdd.add(val);  this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
         
     /**Defines a variable which is able to use as container.
      */
     public DefContainerVariable new_List(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefContainerVariable(this, 'L'); 
     } 
 
-    public void add_List(DefContainerVariable val){ statements.add(val);  onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_List(DefContainerVariable val){ this.statementsAdd.add(val);  this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
     /**Defines a variable which is able to use as container.
      */
     public DefVariable new_DefMapVar(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       DefVariable statement = new DefVariable(this, 'M'); 
-      statements.add(statement);  onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);  this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     } 
 
@@ -2655,60 +2696,60 @@ public class JZtxtcmdScript extends CompiledScript
     /**Defines a variable which is able to use as Appendable, it is a Writer.
      */
     public DefVariable new_Openfile(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'W'); 
     } 
 
     public void add_Openfile(DefVariable val){ 
-      statements.add(val);  
-      onerrorAccu = null; 
-      withoutOnerror.add(val);
+      this.statementsAdd.add(val);  
+      this.onerrorAccu = null; 
+      this.withoutOnerror.add(val);
     }
     
     public DefVariable new_DefFilepath(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'F'); 
     } 
 
     public void add_DefFilepath(DefVariable val){ 
-      statements.add(val);  
-      onerrorAccu = null; 
-      withoutOnerror.add(val);
+      this.statementsAdd.add(val);  
+      this.onerrorAccu = null; 
+      this.withoutOnerror.add(val);
     }
     
     
     public UserFileset new_DefFileset(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new UserFileset(this); 
     } 
 
     public void add_DefFileset(UserFileset val){ 
-      statements.add(val);  
-      onerrorAccu = null; 
-      withoutOnerror.add(val);
+      this.statementsAdd.add(val);  
+      this.onerrorAccu = null; 
+      this.withoutOnerror.add(val);
     }
     
     
     public Zmake new_zmake(){
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new Zmake(this); 
     }
     
     public void add_zmake(Zmake val){ 
-      statements.add(val);  
-      onerrorAccu = null; 
-      withoutOnerror.add(val);
+      this.statementsAdd.add(val);  
+      this.onerrorAccu = null; 
+      this.withoutOnerror.add(val);
     }
     
     
     /**Defines a variable with initial value. <= <$name> : <obj>> \<\.=\>
      */
     public DefVariable new_DefObjVar(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'O'); 
     } 
 
-    public void add_DefObjVar(DefVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_DefObjVar(DefVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
     public DefVariable XXXnew_DefSubtext(){
       return new DefVariable(this, 'C');  
@@ -2720,7 +2761,7 @@ public class JZtxtcmdScript extends CompiledScript
       } else {
         val.elementType = 'O';  //an expression which should be evaluated on build-time of the container
       }
-      statements.add(val);  
+      this.statementsAdd.add(val);  
     }
     
     
@@ -2739,42 +2780,42 @@ public class JZtxtcmdScript extends CompiledScript
       } else {
         val.elementType = 'O';  //an expression which should be evaluated on build-time of the container
       }
-      statements.add(val);  
+      this.statementsAdd.add(val);  
     }
     
     
 
     
     public DefClasspathVariable new_DefClasspath(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefClasspathVariable(this); 
     } 
 
-    public void add_DefClasspath(DefClasspathVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_DefClasspath(DefClasspathVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
     
     public DefClassVariable new_DefClassVar(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefClassVariable(this); 
     } 
 
-    public void add_DefClassVar(DefClassVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_DefClassVar(DefClassVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
     
     public DefVariable new_DefNumVar(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'K'); 
     } 
 
-    public void add_DefNumVar(DefVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_DefNumVar(DefVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
     
     public DefVariable new_DefBoolVar(){ 
-      bContainsVariableDef = true; 
+      this.bContainsVariableDef = true; 
       return new DefVariable(this, 'Q'); 
     } 
 
-    public void add_DefBoolVar(DefVariable val){ statements.add(val); onerrorAccu = null; withoutOnerror.add(val);}
+    public void add_DefBoolVar(DefVariable val){ this.statementsAdd.add(val); this.onerrorAccu = null; this.withoutOnerror.add(val);}
     
     
 
@@ -2794,8 +2835,8 @@ public class JZtxtcmdScript extends CompiledScript
       int ix = datapath.size()-1;  //usual 0 if 1 element for simple set
       DataAccess.DatapathElement lastElement = datapath.get(ix);
       lastElement.setIdent("$" + lastElement.ident());
-      statements.add(val); 
-      onerrorAccu = null; withoutOnerror.add(val);
+      this.statementsAdd.add(val); 
+      this.onerrorAccu = null; this.withoutOnerror.add(val);
     } 
     
 
@@ -2809,8 +2850,8 @@ public class JZtxtcmdScript extends CompiledScript
     
     /**Set from ZBNF:  (\?*<*dataText>\?) */
     public void add_dataText(DataText val){ 
-      statements.add(val);
-      onerrorAccu = null; withoutOnerror.add(val);
+      this.statementsAdd.add(val);
+      this.onerrorAccu = null; this.withoutOnerror.add(val);
     }
     
     /**Sets the textReplLf From ZBNF. 
@@ -2830,7 +2871,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     public void add_setColumn(TextColumn val){ 
-      statements.add(val);
+      this.statementsAdd.add(val);
     }
     
     
@@ -2842,17 +2883,17 @@ public class JZtxtcmdScript extends CompiledScript
       int zText = text.length();
       CharSequence text1 = text;
       if(zText >0){
-        if(srcLine == 24)
+        if(this.srcLine == 24)
           Debugutil.stop();
         //if(parentStatement instanceof TextOut) {
           //TextOut textOut = (TextOut)parentStatement;
-        if(jzSettings !=null) {
+        if(this.jzSettings !=null) {
           final String sIndentChars1;
           final int nIndentScript1;
           sIndentChars1 = this.sIndentChars;
           nIndentScript1 = this.nIndentInScript;
           text1 = StringFunctions_B.removeIndentReplaceNewline(text
-              , nIndentScript1, sIndentChars1, jzSettings.srcTabsize, jzSettings.sLinefeed, this.bSetSkipSpaces);
+              , nIndentScript1, sIndentChars1, this.jzSettings.srcTabsize, this.jzSettings.sLinefeed, this.bSetSkipSpaces);
           zText = text1.length();                          // used text length
           if( zText>0) {  //it is 0 if all spaces are skipped
             this.bSetSkipSpaces = false;  //it is valid for the following text only, it is used.
@@ -2862,8 +2903,8 @@ public class JZtxtcmdScript extends CompiledScript
       if(zText >0) {                             // don't add a not given text
         JZcmditem statement = new JZcmditem(this, 't');
         statement.textArg = text1.toString();
-        statements.add(statement);
-        onerrorAccu = null; withoutOnerror.add(statement);
+        this.statementsAdd.add(statement);
+        this.onerrorAccu = null; this.withoutOnerror.add(statement);
       }
     }
     
@@ -2880,8 +2921,8 @@ public class JZtxtcmdScript extends CompiledScript
           case 'b': statement.textArg = "\b"; break;
           case '<': case '\"': case '#': statement.textArg = val; break;
         }
-        statements.add(statement);
-        onerrorAccu = null; withoutOnerror.add(statement);
+        this.statementsAdd.add(statement);
+        this.onerrorAccu = null; this.withoutOnerror.add(statement);
       }
     }
     
@@ -2889,20 +2930,20 @@ public class JZtxtcmdScript extends CompiledScript
       this.bSetSkipSpaces = false;
       JZcmditem statement = new JZcmditem(this, 't');
       statement.textArg = "" + (char)val; //Character.toChars(val);
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
     }
     
     public void set_newline(){
       this.bSetSkipSpaces = false;
       JZcmditem statement = new JZcmditem(this, 'n');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
     }
     
     
     public void set_skipWhiteSpaces(){
-      bSetSkipSpaces = true;
+      this.bSetSkipSpaces = true;
     }
     
     
@@ -2911,9 +2952,9 @@ public class JZtxtcmdScript extends CompiledScript
     } 
 
     public void add_assignExpr(AssignExpr val){ 
-      statements.add(val);  
-      onerrorAccu = null; 
-      withoutOnerror.add(val);
+      this.statementsAdd.add(val);  
+      this.onerrorAccu = null; 
+      this.withoutOnerror.add(val);
     }
     
     
@@ -2923,23 +2964,23 @@ public class JZtxtcmdScript extends CompiledScript
     } 
 
     public void add_throw(JZcmditem val){ 
-      statements.add(val);  
-      onerrorAccu = null; 
-      withoutOnerror.add(val);
+      this.statementsAdd.add(val);  
+      this.onerrorAccu = null; 
+      this.withoutOnerror.add(val);
     }
     
     public void set_throwonerror(int val){ 
       Onerror statement = new Onerror(this);
       statement.elementType = 'v';
       statement.errorLevel = val;
-      statements.add(statement);
+      this.statementsAdd.add(statement);
     } 
 
     
     public void set_errorToOutput(String val){
       JZcmditem statement = new JZcmditem(this, ',');
       if(val.equals("1")){ statement.textArg = val; }
-      statements.add(statement);
+      this.statementsAdd.add(statement);
     }
     
     
@@ -2952,7 +2993,7 @@ public class JZtxtcmdScript extends CompiledScript
       if(val.errorLevel != Integer.MIN_VALUE){
         val.setCmdError();
       }
-      statements.add(val);
+      this.statementsAdd.add(val);
       /*
       if(statementlist.onerrorAccu == null){ statementlist.onerrorAccu = new LinkedList<Onerror>(); }
       for( JZcmditem previousStatement: statementlist.withoutOnerror){
@@ -2960,7 +3001,7 @@ public class JZtxtcmdScript extends CompiledScript
         //use the same onerror list for all previous statements without error designation.
       }
       */
-      withoutOnerror.clear();  //remove all entries, they are processed.
+      this.withoutOnerror.clear();  //remove all entries, they are processed.
     }
 
     
@@ -2971,13 +3012,13 @@ public class JZtxtcmdScript extends CompiledScript
     
     public void add_iferrorlevel(Onerror val){
       val.setCmdError();
-      statements.add(val);
+      this.statementsAdd.add(val);
     }
 
 
     public void set_breakBlock(){ 
       JZcmditem statement = new JZcmditem(this, 'b');
-      statements.add(statement);
+      this.statementsAdd.add(statement);
     }
     
  
@@ -2986,7 +3027,7 @@ public class JZtxtcmdScript extends CompiledScript
     
     public IfStatement new_ifCtrl ( ) {
       this.bSetSkipSpaces = false;
-      StatementList subGenContent = new StatementList(parentStatement);
+      StatementList subGenContent = new StatementList(this.parentStatement);
       IfStatement statement = new IfStatement(this, 'i');
       statement.statementlist = subGenContent;  //The statement contains a genContent. 
       return statement;
@@ -2995,8 +3036,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     
     public void add_ifCtrl(IfStatement val){
-      statements.add(val);
-      onerrorAccu = null; withoutOnerror.add(val);
+      this.statementsAdd.add(val);
+      this.onerrorAccu = null; this.withoutOnerror.add(val);
       
     }
 
@@ -3004,8 +3045,8 @@ public class JZtxtcmdScript extends CompiledScript
     
     public StatementList new_hasNext()  
     { JZcmditem statement = new JZcmditem(this, 'N');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       if(statement.statementlist == null){
         statement.statementlist = new StatementList(statement); 
       }
@@ -3026,8 +3067,8 @@ public class JZtxtcmdScript extends CompiledScript
     public ForStatement new_forCtrl()
     { this.bSetSkipSpaces = false;
       ForStatement statement = new ForStatement(this, 'f');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3037,8 +3078,8 @@ public class JZtxtcmdScript extends CompiledScript
     public CondStatement new_whileCtrl()
     { this.bSetSkipSpaces = false;
       CondStatement statement = new CondStatement(this, 'w');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3048,8 +3089,8 @@ public class JZtxtcmdScript extends CompiledScript
     public CondStatement new_dowhileCtrl()
     { this.bSetSkipSpaces = false;
       CondStatement statement = new CondStatement(this, 'u');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3058,8 +3099,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     public ThreadBlock new_threadBlock()
     { ThreadBlock statement = new ThreadBlock(this);
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3071,8 +3112,8 @@ public class JZtxtcmdScript extends CompiledScript
     public CallStatement new_call()
     { this.bSetSkipSpaces = false;
       CallStatement statement = new CallStatement(this, 's');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3082,8 +3123,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     public CmdInvoke new_cmdWait()
     { CmdInvoke statement = new CmdInvoke(this, 'c');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3093,8 +3134,8 @@ public class JZtxtcmdScript extends CompiledScript
     public CmdInvoke new_cmdStart()
     { CmdInvoke statement = new CmdInvoke(this, 'c');
       statement.bShouldNotWait = true;
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3105,8 +3146,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     public FileOpArg new_move()
     { FileOpArg statement = new FileOpArg(this, 'm');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3115,8 +3156,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     public FileOpArg new_copy()
     { FileOpArg statement = new FileOpArg(this, 'y');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3125,8 +3166,8 @@ public class JZtxtcmdScript extends CompiledScript
 
     public FileOpArg new_del()
     { FileOpArg statement = new FileOpArg(this, 'l');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3137,15 +3178,15 @@ public class JZtxtcmdScript extends CompiledScript
     public void set_cd(String val)
     { JZcmditem statement = new JZcmditem(this, 'd');
       statement.textArg = StringSeq.create(val);
-      statements.add(statement);
+      this.statementsAdd.add(statement);
       onerrorAccu = null; withoutOnerror.add(statement);
     }
     */
     
     public JZcmditem new_cd(){
       JZcmditem statement = new JZcmditem(this, 'd');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3155,8 +3196,8 @@ public class JZtxtcmdScript extends CompiledScript
     
     public JZcmditem new_mkdir(){
       JZcmditem statement = new JZcmditem(this, '9');
-      statements.add(statement);
-      onerrorAccu = null; withoutOnerror.add(statement);
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
       return statement;
     }
     
@@ -3166,13 +3207,13 @@ public class JZtxtcmdScript extends CompiledScript
     
     
     public void set_name(String name){
-      cmpnName = name;
+      this.cmpnName = name;
     }
     
     
     public void set_exitScript(int val){
       ExitStatement statement = new ExitStatement(this, val);
-      statements.add(statement);
+      this.statementsAdd.add(statement);
     }  
     
   }
@@ -3203,21 +3244,21 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     
-    public final List<JZcmdClass> classes(){ return classes; }
+    public final List<JZcmdClass> classes(){ return this.classes; }
     
-    public final Map<String, JZtxtcmdScript.Subroutine> subroutines(){ return subroutines; }
+    public final Map<String, JZtxtcmdScript.Subroutine> subroutines(){ return this.subroutines; }
     
-    public final List<Object> listClassesAndSubroutines(){ return listClassesAndSubroutines; }
+    public final List<Object> listClassesAndSubroutines(){ return this.listClassesAndSubroutines; }
     
-    public JZcmdClass new_subClass(){ return new JZcmdClass(theScript, theScript.jzScriptSettings); }
+    public JZcmdClass new_subClass(){ return new JZcmdClass(this.theScript, this.theScript.jzScriptSettings); }
     
     public void add_subClass(JZcmdClass val){ 
-      if(classes == null){ classes = new ArrayList<JZcmdClass>(); }
-      classes.add(val); 
-      listClassesAndSubroutines.add(val);
+      if(this.classes == null){ this.classes = new ArrayList<JZcmdClass>(); }
+      this.classes.add(val); 
+      this.listClassesAndSubroutines.add(val);
       String sName = val.cmpnName;
-      String nameGlobal = cmpnName == null ? sName : cmpnName + "." + sName;
-      theScript.classesAll.put(nameGlobal, val); 
+      String nameGlobal = this.cmpnName == null ? sName : this.cmpnName + "." + sName;
+      this.theScript.classesAll.put(nameGlobal, val); 
    
     }
     
@@ -3228,28 +3269,28 @@ public class JZtxtcmdScript extends CompiledScript
         val.name = "main";
       }
       String sName = val.name.toString();
-      subroutines.put(sName, val); 
-      listClassesAndSubroutines.add(val);
-      String nameGlobal = cmpnName == null ? sName : cmpnName + "." + sName;
-      theScript.subroutinesAll.put(nameGlobal, val); 
+      this.subroutines.put(sName, val); 
+      this.listClassesAndSubroutines.add(val);
+      String nameGlobal = this.cmpnName == null ? sName : this.cmpnName + "." + sName;
+      this.theScript.subroutinesAll.put(nameGlobal, val); 
     }
     
     
     
     public void writeStruct(int indent, Appendable out) throws IOException{
       
-      if(statements !=null){
-        for(JZcmditem item: statements){
+      if(this.statements !=null){
+        for(JZcmditem item: this.statements){
           item.writeStruct(indent+1, out);
         }
       }
-      for(Map.Entry<String, Subroutine> entry: subroutines.entrySet()){
+      for(Map.Entry<String, Subroutine> entry: this.subroutines.entrySet()){
         Subroutine sub = entry.getValue();
         sub.writeStruct(0, out);
       }
       //for(Map.Entry<String, JZcmdClass> entry: classes.entrySet()){
-      if(classes !=null){
-        for(JZcmdClass class1: classes){
+      if(this.classes !=null){
+        for(JZcmdClass class1: this.classes){
           class1.writeStruct(indent+1, out);
         }
       }
@@ -3265,7 +3306,9 @@ public class JZtxtcmdScript extends CompiledScript
     JZcmdInclude(StatementList parentList)
     {
       super(parentList, '.');
+      this.statementlist = new StatementList(this);
     }
+    
     public String path;
     /**If given name of an environment variable for the path. */
     public String envVar;
@@ -3304,8 +3347,7 @@ public class JZtxtcmdScript extends CompiledScript
     public JZcmdInclude new_include(){ return new JZcmdInclude(this); }
     
     public void add_include(JZcmdInclude val){
-      if(scriptfile.includes ==null){ scriptfile.includes = new ArrayList<JZcmdInclude>(); }
-      scriptfile.includes.add(val); 
+      this.statementsAdd.add(val);
     }
     
     
@@ -3315,10 +3357,10 @@ public class JZtxtcmdScript extends CompiledScript
      * @return
      */
     public StatementList new_mainRoutine(){ 
-      scriptfile.mainRoutine = new Subroutine(compiledScript.scriptClass); 
-      scriptfile.mainRoutine.statementlist = new StatementList(compiledScript.jzScriptSettings);
-      scriptfile.mainRoutine.srcFile = this.srcFile;
-      return scriptfile.mainRoutine.statementlist;
+      this.scriptfile.mainRoutine = new Subroutine(this.compiledScript.scriptClass); 
+      this.scriptfile.mainRoutine.statementlist = new StatementList(this.compiledScript.jzScriptSettings);
+      this.scriptfile.mainRoutine.srcFile = this.srcFile;
+      return this.scriptfile.mainRoutine.statementlist;
     }
     
     public void add_mainRoutine(StatementList val){  }
@@ -3327,22 +3369,22 @@ public class JZtxtcmdScript extends CompiledScript
     
     public JZcmditem new_checkJZcmdFile(){ return new JZcmditem(this, '\0'); } 
 
-    public void add_checkJZcmdFile(JZcmditem val){ compiledScript.checkJZcmdFile = val; }
+    public void add_checkJZcmdFile(JZcmditem val){ this.compiledScript.checkJZcmdFile = val; }
 
     
     public JZcmditem new_checkXmlFile(){ return new JZcmditem(this, '\0'); } 
 
-    public void add_checkXmlFile(JZcmditem val){ compiledScript.checkJZcmdXmlFile = val; }
+    public void add_checkXmlFile(JZcmditem val){ this.compiledScript.checkJZcmdXmlFile = val; }
 
     
     public void setMainRoutine(Subroutine mainRoutine){
-      compiledScript.mainRoutine = mainRoutine;
+      this.compiledScript.mainRoutine = mainRoutine;
     }
     
-    public boolean isXmlSrcNecessary(){ return compiledScript.checkJZcmdXmlFile !=null; }
+    public boolean isXmlSrcNecessary(){ return this.compiledScript.checkJZcmdXmlFile !=null; }
 
     public void setXmlSrc(XmlNode xmlSrc){
-    	compiledScript.xmlSrc = xmlSrc;	
+    	this.compiledScript.xmlSrc = xmlSrc;	
     }
     
     
@@ -3353,7 +3395,6 @@ public class JZtxtcmdScript extends CompiledScript
   /**For one scriptfile, on include use extra instance per include.
    */
   public static class Scriptfile {
-    public List<JZcmdInclude> includes;
     
     /**The script element for the whole file of this script. 
      * It is possible that it is from a included script.
@@ -3362,7 +3403,7 @@ public class JZtxtcmdScript extends CompiledScript
     Subroutine mainRoutine;
     
     /**Returns the main routine which may be parsed in this maybe included script. */
-    public Subroutine getMainRoutine(){ return mainRoutine; }
+    public Subroutine getMainRoutine(){ return this.mainRoutine; }
     
     
     

@@ -61,7 +61,7 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
    */
   public JZtxtcmdThreadQueue(String name, JZtxtcmdExecuter.JzTcMain jzTc) {
     //An own executeLevel based on the scriptLevel, independent of the calling level
-    this.executeLevel = new JZtxtcmdExecuter.ExecuteLevel(jzTc, this);
+    this.executeLevel = new JZtxtcmdExecuter.ExecuteLevel(jzTc, null, null, this, jzTc.scriptLevel, null);
         
         //(startLevel.jzcmdMain, startLevel.jzClass, startLevel.jzcmdMain.scriptLevel, this, startLevel.localVariables);
     Thread threadmng = new Thread(this, name);

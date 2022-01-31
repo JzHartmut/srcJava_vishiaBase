@@ -131,6 +131,9 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2021-12-30 Hartmut cleanup, some deprecated removed. Because of change in 
+   *     {@link JZtxtcmdScript#createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
+   *     for includes, not twice refactored. Better remove old stuff.
    * <li>2021-12-30 Hartmut Enhancement: {@link #execute(JZtxtcmdExecuter, File, StringPartScan, Appendable, Map, String, boolean, File, MainCmdLogging_ifc)}: 
    *   Uses now {@link JZtxtcmdScript#createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
    *   instead the deprecated {@link #translateAndSetGenCtrl(StringPartScan, org.vishia.cmd.JZtxtcmdScript.ZbnfJZcmdScript, File, File)}.
@@ -192,7 +195,7 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2020-02-02";
+  static final public String version = "2021-01-31";
 
   
   private static class Args{
@@ -833,7 +836,8 @@ INPUT          pathTo JZcmd-File to execute
   public static JZtxtcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, MainCmdLogging_ifc log) 
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException 
   throws ScriptException
-  { return translateAndSetGenCtrl(sourceScript, log, null, null);
+  { // the file is unknown. 
+    return JZtxtcmdScript.createScriptFromString(sourceScript, log, null, null);
   }
   
   
@@ -899,14 +903,8 @@ INPUT          pathTo JZcmd-File to execute
   @Deprecated public static JZtxtcmdScript translateAndSetGenCtrl(StringPartScan sourceScript, 
       MainCmdLogging_ifc log, File checkXmlOutput, File fileScript) 
   throws ScriptException
-  //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
-  { //MainCmdLogging_ifc log1;
-    final JZtxtcmd jzcmd = new JZtxtcmd(log); 
-    JZtxtcmdScript compiledScript = new JZtxtcmdScript(log, fileScript, jzcmd);
-    File dirIncludeBase = FileSystem.getDir(fileScript);
-    JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(compiledScript);
-    jzcmd.translateAndSetGenCtrl(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
-    return compiledScript;
+  { 
+    return JZtxtcmdScript.createScriptFromString(sourceScript, log, checkXmlOutput, fileScript);
   }
     
   
@@ -941,107 +939,6 @@ INPUT          pathTo JZcmd-File to execute
   
   
   
-  /**Translates one file, called recursively for included files.
-   * @param sourceScript The script in form of StringPartScan. User new {@link StringPartScan#StringPartScan(CharSequence)}
-   *   to create one with a String given syntax.
-   * @param zbnfDstScript Instance to store the parse result, it refers the compiled script. 
-   * @param dirIncludeBase The directory which is the anchor for included scripts. Maybe null if included scripts does not exists.
-   * @param checkXmlOutput may be null, for output the script in XML form.
-   * @throws ParseException
-   * @throws IllegalArgumentException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
-   * @throws FileNotFoundException
-   * @throws IOException
-   * @deprecated see {@link JZtxtcmdScript#createScriptFromString(StringPartScan, MainCmdLogging_ifc, File, File)}
-   */
-  @Deprecated private void translateAndSetGenCtrl(StringPartScan sourceScript, JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript
-      , File dirIncludeBase 
-      , File checkXmlOutput) 
-  //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
-  throws ScriptException
-  { boolean bOk;
-    parserGenCtrl.setXmlSrcline(checkXmlOutput !=null);
-    //uncomment if necessary for manually searching propblems in parser.
-    //parserGenCtrl.setDebugPosition(472, 476, 0);
-    bOk = parserGenCtrl.parse(sourceScript);
-    if(!bOk){
-      String sError = parserGenCtrl.getSyntaxErrorReport();
-      throw new ScriptException("\n" + sError, sourceScript.getInputfile(), -1, -1);
-    }
-    if(checkXmlOutput !=null){  //may be used if probles with parserGenCtrl2Java.setContent are given.
-      //XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
-      XmlNode xmlParseResult = parserGenCtrl.getResultTree();
-      SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
-      try{
-        OutputStreamWriter xmlWriter = new OutputStreamWriter(new FileOutputStream(checkXmlOutput));
-        xmlOutputter.write(xmlWriter, xmlParseResult);
-        xmlWriter.close();
-      } catch(IOException exc){ throw new ScriptException(exc); }
-    }
-    //if(log.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
-    //  parserGenCtrl.reportStore((Report)log, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");
-    //}
-    //write into Java classes:
-    /**Helper to transfer parse result into the java classes {@link ZbnfJZcmdScript} etc. */
-    final ZbnfJavaOutput parserGenCtrl2Java = new ZbnfJavaOutput(log);
-    //
-    //create a new instance of script-file for any file, especially for included.
-    zbnfDstScript.scriptfile = new JZtxtcmdScript.Scriptfile();
-    
-    try {
-      parserGenCtrl2Java.setContent(JZtxtcmdScript.ZbnfJZcmdScript.class, zbnfDstScript, parserGenCtrl.getFirstParseResult());
-    } catch (Exception exc) { throw new ScriptException(exc); }
-    if(zbnfDstScript.isXmlSrcNecessary()){
-      zbnfDstScript.setXmlSrc(parserGenCtrl.getResultTree());  //to output XML from Script executer.
-    }
-    //
-    //get the main routine from the first parsed file, store it, set it after processing includefiles.
-    //
-    JZtxtcmdScript.Subroutine mainRoutine = zbnfDstScript.scriptfile.getMainRoutine();
-    //
-    if(zbnfDstScript.scriptfile.includes !=null){
-      //parse includes after processing this file, because the zbnfDstScript.includes are not set before.
-      //If one include contain a main, use it. But override the main after them, see below.
-      for(JZtxtcmdScript.JZcmdInclude include: zbnfDstScript.scriptfile.includes){
-        String sFileInclude;
-        if(include.envVar !=null){
-          String sEnv = System.getenv(include.envVar);
-          if(sEnv == null) throw include.scriptException("JZcmd.include - cannot find environment variable;" + include.envVar);          sFileInclude = sEnv + '/' + include.path;
-        } else {
-          sFileInclude = include.path;
-        }
-        final File fileInclude;
-        if(FileSystem.isAbsolutePath(sFileInclude)){
-          fileInclude= new File(sFileInclude);
-        } else {
-          fileInclude= new File(dirIncludeBase, sFileInclude);
-        }
-        if(!fileInclude.exists()){
-          System.err.printf("TextGenScript - translateAndSetGenCtrl, included file not found; %s\n", fileInclude.getAbsolutePath());
-          throw new ScriptException("JZcmd.compile - included file not found: ", fileInclude.getAbsolutePath(), -1, -1);
-        }
-        File fileIncludeParent = FileSystem.getDir(fileInclude);
-        int lengthBufferGenctrl = (int)fileInclude.length();
-        StringPartScan sourceScriptIncluded;
-        try {
-          sourceScriptIncluded = new StringPartFromFileLines(fileInclude, lengthBufferGenctrl, "encoding", null);
-        } catch (Exception exc) { throw new ScriptException(exc); }
-        //
-        //included script, call recursively.
-        translateAndSetGenCtrl(sourceScriptIncluded, zbnfDstScript, fileIncludeParent, checkXmlOutput);
-      }
-    }
-    //
-    //set the main routine from the first parsed file if existing:
-    //
-    if(mainRoutine !=null){  //the main routine of the main file wins against includes if exists.
-      zbnfDstScript.setMainRoutine(mainRoutine);
-    }
-  }
-  
-  
-
   
   
   /**JSR-223-conform method to compile. This method does not support included scripts with relative path.
@@ -1054,14 +951,6 @@ INPUT          pathTo JZcmd-File to execute
     JZtxtcmdScript compiledScript = JZtxtcmdScript.createScriptFromString(spSource, this.log, null, null);
     spSource.close();
     return compiledScript;
-    //    JZtxtcmdScript compiledScript = new JZtxtcmdScript(log, null, this);
-//    JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(compiledScript);
-//    try{ translateAndSetGenCtrl(spSource, zbnfDstScript, null, null);
-//    } catch(Exception exc){
-//      //cannot compile
-//      throw new ScriptException(exc);
-//    }
-//    return compiledScript;
   }
 
 
