@@ -77,7 +77,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  * processed here is one Syntax term of SBNF, beginning with the identifier and ending with the point:
  * <br>
  * The basic form of syntax is the followed:<br/><br/>
- * <code><i>syntaxident</i>::=</code><i>syntaxprescript</i><code>.</code><br><br/>
+ * <code><i>syntaxident[</i>:<i>[superType]</i>::=</code><i>syntaxprescript</i><code>.</code><br><br/>
  * Pay attention to the point on end of the syntax definition. The <code><i>syntaxident</i></code> is a identifier,
  * like in java or C, written here in italic monospaced font, but the <i>syntaxprescript</i> is a complex expression, written here
  * in italic standard font.<br>
@@ -98,6 +98,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  * <tr><td><code>[?</code><i>syntax1</i><code>|</code><i>syntax2</i><code>]</code></td><td>Test whether it is <b>not</b> matched. This is usefull to abort repetitions.</td></tr>
  * <tr><td><code>{</code><i>syntax</i><code>}</code></td><td>Repetition of the <i>syntax</i>, at least one time.</td></tr>
  * <tr><td><code>{</code><i>syntax1</i><code>|</code><i>syntax2</i><code>}</code></td><td>Alternatives in repetition.</td></tr>
+ * <tr><td><code>{|</code><i>syntax1</i><code>|</code><i>syntax2</i><code>}</code></td><td>Alternatives in repetition but each alternative only one time. This is not tested while parsing. It creates only a scalar, not a list, for each result item in {@link GenZbnfJavaData}</td></tr>
  * <tr><td><code>{</code><i>syntax</i><code>?</code><i>syntaxBackward</i></code>}</code></td><td>A requested repeat syntax. It is a novum BNF-likely, but a require of praxis.
  *                                       If the <i>syntaxBackward</i> is found, the repetition is required.
  *                                       If the <i>syntaxBackward</i> failed, no repetition is required.
@@ -152,6 +153,9 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  * <table border = 1 width=100%>
  * <tr><td><code>&lt;...?-...&gt;</code></td>
  *   <td>Store the result in a temporary buffer to assing to a followed component.</td>
+ * </tr><tr><td><code>&lt;...?+!...&gt;</code></td>
+ *   <td>Position of the parsed before item, into the component. It is not used for parsing itself.
+ *   It is especially for the {@link GenZbnfJavaData} because a data element in the destination class is necessary to store the parsed result.</td>
  * </tr><tr><td><code>&lt;...?+...&gt;</code></td>
  *   <td>Assign a stored result, parsed before, into the component.</td>
  * </tr><tr><td><code>&lt;...?*...&gt;</code></td>
@@ -174,7 +178,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  * On syntax definition a semantic of the syntax component or a part of syntax may be also given in form<br>
  * <code><i>syntaxident</i>::=&lt;?<i>semantic</i>&gt;</code> <i>syntaxprescript</i>.</code>
  * , also possible on parts of the prescript like
- * <code>[&lt;?<i>semantic</i>&gt;... </code>.<br>
+ * <code>[&lt;?<i>semantic[</i>:<i>superType]</i>&gt;... </code>.<br>
  * The construct <code><i>syntaxident</i>::=&lt;?&gt;</code> <i>syntaxprescript</i>
  * means that the syntax component don't create a parse result item, if no special semantic is given at using by <code>&lt;<i>syntax</i>&gt;</code>.
  * 
@@ -225,6 +229,17 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2022-02-10 Hartmut new: {@link #componentSyntax} here existing and set for all syntax rules which uses another syntax component.
+   *   It is set in the parser instead searching the syntax component every time again, saves time. 
+   *   Secondly it contains some important information, especially the implementation type of a result item.
+   *   It is used in {@link ZbnfJavaOutput}.
+   * <li>2022-02-10 Hartmut chg since last new: The <code>{<?*semantic:type> </code> writes in {@link #sDefinitionIdent},
+   *   because it is the implementation type of this part of repetition. Used for {@link ZbnfJavaOutput}.   
+   * <li>2022-02-08 Hartmut new: {@link #sSuperItemType} as a generalizing of a type if items. 
+   *   This is set either for a component:superType::=definition or for {<?innerComponent?semantic:Type>....
+   *   In the next version TODO: if only one item with the same type is stored in the outer level, it is replaced. 
+   * <li>2022-02-07 Hartmut new: regarding {| only as marker for generating {@link GenZbnfJavaData}
+   * <li>2022-02-07 Hartmut new: regarding ?+! then this item is {@link EType#kOnlyMarker} and not regarded for parsing. 
    * <li>2019-07-06 Hartmut new: {@link #objid} for debugging only. No functional changes.  
    * <li>2019-05-30 Hartmut new: {@link #childsHasSemantic()} for evaluation in {@link GenZbnfJavaData}
    * <li>2019-05-29 Hartmut new: prepared for &lt;...?*...> for {@link #bEntryComponentContainer}
@@ -261,7 +276,7 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String version = "2019-05-10";
+  public static final String version = "2022-02-10";
   
   static int objId_ = 1000;
   
@@ -310,6 +325,15 @@ public class ZbnfSyntaxPrescript
    */
   protected String sSemantic;
   
+  
+  
+  /**This element is only set for component syntax call and also on {&lt;?semantic:component>
+   * Only if the element is used, then one time searched. 
+   * It means for all used {@link ZbnfParserStore.ParseResultItemImplement#parentSyntaxElement}
+   * it is referenced it it is a component. (since 2022-02)
+   */
+  protected ZbnfSyntaxPrescript componentSyntax;
+  
   /**If set the parse result and all sub results are not stored as data. 
    * They may be usually stored as {@link #bStoreAsString}*/
   boolean bDonotStoreData;
@@ -355,9 +379,15 @@ public class ZbnfSyntaxPrescript
   private boolean alsoEmptyOption;
 
   /** A string accordingly to the syntax. The meaning depends on the type of prescript,
-   * at example the constant string for terminal characters.
+   * for example the constant string for terminal characters.
    */
   protected String sConstantSyntax;
+
+  /**A string accordingly to the syntax. 
+   * If it is set then it is the name of a super class of the stored data.
+   * Data with the same super class can be changed together. 
+   */
+  protected String sSuperItemType;
 
   /** List of strings used by kStringUntilEndString or null if not used. */
   protected List<String> listStrings;
@@ -505,6 +535,7 @@ public class ZbnfSyntaxPrescript
   , kStringUntilEndStringInclusive   ( 0x35, 's' ) //'I'
   , kStringUntilEndcharInclusive     ( 0x36, 's' ) //'C'
   , kStringUntilRightEndcharInclusive     ( 0x3b, 's' ) //'H' 
+  , kOnlyMarker ( 0x3f, '-')
   ;
     int k;
     /**The type of the item for storing.
@@ -840,8 +871,10 @@ public class ZbnfSyntaxPrescript
 
 
   public static class RepetitionSyntax extends ZbnfSyntaxPrescript
-  { /** Syntax of the forward path*/
-    //SyntaxPrescript forward;
+  { /** Syntax of the forward path is this*/
+    
+    /**Set on {| not tested in zbnf, only for Store in Java*/
+    boolean bOnlyOneEachOption;
     /** Syntax of the repetition path */
     ZbnfSyntaxPrescript backward;
 
@@ -925,7 +958,7 @@ public class ZbnfSyntaxPrescript
   
   /** Converts the semantic behind a ? in a <..?..>-Expression. 
    * @param spInput The input string, the actual position is behind the '?'
-   *                in a expression <..?...>. 
+   *                in a expression <..?...:...>. 
    *                The actual position after work is at the '>'.
    * */
   void getSemantic(StringPartScan spInput)
@@ -950,9 +983,14 @@ public class ZbnfSyntaxPrescript
       this.bAssignIntoNextComponent = true;
       cc = spInput.seekPos(1).getCurrentChar();
     } else if(cc == '+') { 
-      this.bAddOuterResults = true;
-      //bTransportOuterResults = true;
       cc = spInput.seekPos(1).getCurrentChar();
+      if(cc == '!') {
+        cc = spInput.seekPos(1).getCurrentChar();
+        eType = EType.kOnlyMarker;
+      } else {
+        this.bAddOuterResults = true;
+      }
+      //bTransportOuterResults = true;
     } else if(cc == '"') {                          
       //<Syntax?"!"semantic>: store the input which is parsed.
       this.bStoreAsString = true;
@@ -985,7 +1023,7 @@ public class ZbnfSyntaxPrescript
       }
       else
       { //behind ? the semantic is defined. It may be a null-Semantic.
-        spInput.lentoAnyChar("?>");
+        spInput.lentoAnyChar(":?>");
         if(spInput.length()>0)
         { sSemantic = spInput.getCurrentPart().toString();
 //          if(sSemantic.equals("@")) {   TODO yet a problem with XML output see ZBNF/testAllFeatures
@@ -1003,6 +1041,12 @@ public class ZbnfSyntaxPrescript
     this.sSemantic = sSemantic;
     if(sSemantic != null && sSemantic.equals("return"))
       stop();
+    char cNext = spInput.getCurrentChar();
+    if(cNext==':') {
+      spInput.seekPos(1).lento(">");
+      this.sDefinitionIdent = spInput.getCurrentPart().toString();
+      spInput.fromEnd();
+    }
   }
   
   
@@ -1067,17 +1111,20 @@ public class ZbnfSyntaxPrescript
       { //a semantic explanation
         //skip until dot. It is uninteresting here.
         spInput.getCircumScriptionToAnyCharOutsideQuotion(".");
-        spInput.seek(1);  //skip dot.
+        spInput.seekPos(1);  //skip dot.
       }
       else
       { spInput.lentoIdentifier();
         if(spInput.length()>0)
         { sDefinitionIdent = spInput.getCurrentPart().toString();
-          sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
+          this.sSemantic = sDefinitionIdent;  //default if no <?Semantic> follows immediately
           eType = EType.kSyntaxDefinition;
           spInput.fromEnd();
         }
         else throwParseException(spInput, "ZbnfSyntaxPrescript - identifier for prescript expected;");
+        if(spInput.seekNoWhitespace().scan().scan(":").scanIdentifier().scanOk()) {
+          this.sSuperItemType = spInput.getLastScannedString();      // component:superSemantic::=
+        }
         if(!spInput.seekNoWhitespace().scan().scan("::=").scanOk())
         { throwParseException(spInput, "::= expected");
         }
@@ -1396,7 +1443,11 @@ public class ZbnfSyntaxPrescript
     throws ParseException
     {
       RepetitionSyntax repetitionItem = new RepetitionSyntax(this, report, true, spInput.getLineAndColumn(null));
-      spInput.seek(1);
+      spInput.seekPos(1);
+      if(spInput.startsWith("|"))
+      { spInput.seekPos(1);
+        repetitionItem.bOnlyOneEachOption = true;
+      }
       //repetitionItem = repetitionItem.new Syntax();
       repetitionItem.sDefinitionIdent = "i-Repetition";
       repetitionItem.eType = EType.kRepetition;
@@ -1713,7 +1764,7 @@ public class ZbnfSyntaxPrescript
           { sWhat = "...|...";
           } break;
           case kRepetition:
-          { sWhat = "{...}";
+          { sWhat = ((RepetitionSyntax)this).bOnlyOneEachOption ? "{|...}" : "{...}";
           } break;
           case kOnlySemantic:
           { sWhat = "<?";

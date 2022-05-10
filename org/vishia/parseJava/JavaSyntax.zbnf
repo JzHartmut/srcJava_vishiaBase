@@ -1,0 +1,539 @@
+
+##This script describes the syntax of java language to use for Java2C-translating and for Java2XMI. The syntax is tested with some Java sources, there may be some unregarded java features yet.
+##This syntax may be lesser strong as necessary for exact syntax analyzes of a Java source. It is only used for parsing Java sources which have a correct syntax (tested by any javac-Compiler).
+##written by hartmut.schorrig@vishia.de, www.vishia.org as part of Java2C-project. 
+
+##changes:
+##2022-02-08 @ANYANNOTATION("vale") now parses also the value. 
+##% Using new Features of parser. See ":ExprItem"
+##2010-02-06 Hartmut bug: 'nullReference' or such variables was failed. Move detect of <nullRef> null behind detect of variables.
+##2009-05-31 Hartmut corr nonArrayType::= a type without testing [], used for initialized arrays.
+##                   corr [?<!\\w>] used after some keywords in syntax, to prevent a confusion with identifiers, starting with the same text such as 'ref.classRef' and 'ref.class'
+##                   corr newArray::= may have a const initializer like new array[]{ ref1, ref2}
+##                   chg: reference::= is now defined with recursion, like envIdent, not with a repetition. Therefore the result is a nesting <?reference>-tree.
+##2007-09-00 Hartmut creation
+
+
+JavaSrc::=
+[package <classpath?PackageDefinition> ; ]
+[ {<importStatement> } ]
+[{ ##can contain some more classDefinition etc. in any order.
+  <classDefinition> 
+| <interfaceDefinition> 
+| <annotationDefinition> 
+}
+] ##may be empty
+\e.
+
+
+importStatement::= import {<$?packagePath>\.}[<$?class>|List|LinkedList|ArrayList|Iterator|Class|Map|TreeMap|*<?allClasses>] ;.
+
+$keywords::=class|interface|enum|super|new|return|if|else|while|do|for|switch|case|static|final|abstract|transient|private|protected|public|try|catch|finally|throws|throw|null.  ##|List|LinkedList|ArrayList|Iterator|Class|Map|TreeMap.
+
+
+
+description::= <*{ * }|*/?!test_description?content>.
+
+##The test_desciption syntax is used to parse the inner structure of a description.
+test_description::= <*|@param|@throws|@deprecated|@return|@java2c|@Java4C|@since|\e?text>
+[{ @sizeof = <*@\e?sizeofDescription>
+ | @return <returnDescription> 
+ | @param <paramInDescription>
+ | <?staticInstance> @Java2C = staticInstance <*@\e?text>
+ | @java2c = [>{ <java2cTag?> ? , } [:|\.]] <*@\e?rest>
+ | @Java4C\.[<Java4CAnnotationVariable?>|<Java4CAnnotationType?>|<Java4CAnnotationMethod?>] <*@\e?rest>
+ | @ <*@\e?auxDescription>
+ }] \e.
+
+
+returnDescription::=<*|@param|@throws|@deprecated|@return|@java2c|@since|\e?!paramDescription>.
+
+paramInDescription::=<$?variableName> <*|@param|@throws|@deprecated|@return|@java2c|@since|\e?!paramDescription>.
+
+##NOTE: The @java2c-Part is not part of paramDesicription-subtext. TODO
+paramDescription::= <*@\e?text>
+[{ @pjava2c = [>{ <java2cTagParam?> ? , } [:|\.]] <*@\e?rest>
+ | @ <*@\e?auxDescription>
+ }] \e.
+
+
+java2cTagParam::=
+[> xxx            ##abort translation if nothing is matched. The xxx is necessary because any path has <?semenatic>
+| <?simpleArray> simpleArray                  ##to array def: no head informations.
+| <?simpleVariableRef> simpleVariableRef     ##in java forex a int[] x where x[0] is used. In C a int* x
+| <?nonPersistent> nonPersistent   ##attribute to param TODO unused yet. Ask it onnly in paramDesciption.
+| <?zeroTermString> zeroTermString ##to String name; a const char*
+].
+
+
+java2cTag::=
+[> xxx            ##abort translation if nothing is matched. The xxx is necessary because any path has <?semenatic>
+| <?xxxfixStringBuffer> fixStringBuffer          ##deprecated. it is always to final StringBuffer name = new StringBuffer(123); 
+| <?simpleArray> simpleArray                  ##to array def: no head informations.
+| <?simpleVariableRef> simpleVariableRef      ##in java forex a int[] x where x[0] is used. In C a int* x
+| <?staticInstance> staticInstance            ##to class
+| <?embeddedYElements> embeddedArrayElements  ##to array def: all elements are embedded
+| <?noObject> noObject             ##to class: no superclass ObjectJc
+| <?noGC> noGC                     ##only simple, not an enhanced refernece
+| <?noGC> simpleRef                ##only simple, not an enhanced refernece
+| <?nonPersistent> nonPersistent   ##attribute to param TODO unused yet. Ask it onnly in paramDesciption.
+| <?stackInstance> stackInstance   ##new creates an instance in stack
+| <?zeroTermString> zeroTermString ##to String name; a const char*
+| <?ByteStringJc> ByteStringJc     ##to a byte[] array, it is generated as ByteStringJc
+| <?return-this> return-this
+| <?return-new> return-new
+| <?dynamic-call> dynamic-call     ##to declare a enhanced Mtbl-reference in stack.
+##| <?optimizeString> optimize-toString
+| <?xxxoverride-able> override-able   ##virtual method
+| stacktrace: [ no-param <?noThCxt>| no <?noStacktrace>| yes]
+| instanceType : <""?instanceTypeTag>
+| embedded Type : <$?embeddedTypeTag>
+| <?stackSize> stackSize ( { <#?bytes> | <* )+?typeStack> ? + } )  ##only valid at thread.start()
+| <?toStringNonPersist> toStringNonPersist             ##The String is designated as non-persistant, especially located in ThreadContext
+| <?nonPersistent> nonPersistent                       ##The String is used only non-Persist. Written on definition of String variable.
+| <?declarePersist> declarePersist                     ##a StringJc is declared as persistent, the programmer knows it.
+| StringBuilderInStack [:|=] <#?StringBuilderInStack> ##used for String concatenation
+| <?StringBuilderInThreadCxt> StringBuilderInThreadCxt ##used for String concatenation and returned Strings
+| <?returnInThreadCxt> returnInThreadCxt ##used to copy a returned an instance in stack in the thread context.
+].
+
+
+
+Java4CAnnotationClass::=<?>
+[{| 
+  <?staticInstance> StaticInstance            ##to class
+| <?noObject> NoObject             ##to class: no superclass ObjectJc
+| ExtendsOnlyMethods
+| ExcludeInterface(<""?ExcludeInterface>)
+}].
+
+Java4CAnnotationVariable::=
+[ ExcludeCond <?excludeCond>
+| Exclude <?exclude>
+| EmbeddedData <?embeddedData>
+| DynamicCall <?dynamic-call>                        ##creates a Mtbl-Reference in C
+| <?staticInstance> StaticInstance            ##to class
+| <?nonPersistent> NonPersistent   ##attribute to param TODO unused yet. Ask it onnly in paramDesciption.
+| <?stackInstance> StackInstance   ##new creates an instance in stack
+| InstanceType(<""?InstanceType>)                     ##A reference in C refers always this instance type though the reference has a lesser type.
+| <?toStringNonPersist> ToStringNonPersist             ##The String is designated as non-persistant, especially located in ThreadContext
+| <?nonPersistent> NonPersistent                       ##The String is used only non-Persist. Written on definition of String variable.
+| <?declarePersist> DeclarePersist                     ##a StringJc is declared as persistent, the programmer knows it.
+| StringBuilderInStack ( <#?StringBuilderInStack> ) ##used for String concatenation
+| StringBuilderInThreadCxt ( sign = <*)?StringBuilderInThCxt> ) ##used for String concatenation and returned Strings
+##| <?InThreadCxt> InThreadCxt                           ##marks that the instance is located in the thread context.
+| InThCxtRet ( sign = <*)?InThCxtRet> )                           ##marks that the instance is located in the thread context.
+| InThCxtLocal ( sign = <*)?InThCxtLocal> )                           ##marks that the instance is located in the thread context.
+| <?ReturnInThreadCxt> ReturnInThreadCxt               ##marks that the reference is used to return in thread context.
+].
+
+Java4CAnnotationMethod::=
+[ Exclude <?exclude>
+| ExcludeImpl <?excludeImpl>
+| ExtendsOnlyMethods <?extendsOnlyMethods>
+| Inline <?inline>                                    ##method should translated to a simple define or inline function
+| Retinline <?retinline>      
+| <?ReturnThis> ReturnThis
+| <?ReturnNew> ReturnNew
+| <?ReturnInThreadCxt> ReturnInThreadCxt               ##marks that the returned instance is located in the thread context.
+| <?dynamic-call> Dynamic-call     ##to declare a enhanced Mtbl-reference in stack.
+| <?xxxoverride-able> Override-able   ##virtual method
+| Stacktrace: [ no-param <?noThCxt>| no <?noStacktrace>| yes]
+| NoStackTrace <?noStacktrace>
+| InstanceType : <""?instanceTypeAnnot>
+| Embedded Type : <$?embeddedTypeAnnot>
+| <?stackSize> StackSize ( { <#?bytes> | <* )+?typeStack> ? + } )  ##only valid at thread.start()
+].
+
+
+Java4CAnnotationType::=
+  FixArraySize(<#?fixArraySize>)  ##staticArray with fix size, this annotation is able to see in Runtime in Java.
+##| SimpleArraySize(<#?fixArraySize>)  ##staticArray with fix size, this annotation is able to see in Runtime in Java.
+| <?noGC> noGC                     ##only simple, not an enhanced refernece
+| <?noGC> SimpleRef                ##only simple, not an enhanced refernece
+| <?noGC> ConstRef                 ##a reference which is generated with type const* in C language, the referenced object is not modified in Java.
+| <?simpleVariableRef> SimpleVariableRef      ##in java forex a int[] x where x[0] is used. In C a int* x
+| <?simpleVariableRef> SimpleArrayRef      ##in java forex a int[] x where x[0] is used. In C a int* x
+| <?simpleArray> SimpleArray       ##simple Array with size in constructor. 
+| <?PtrVal> PtrVal                            ##in java forex a int[] stored in a PtrVal_TYPE instance.
+| <?embeddedYElements> EmbeddedArrayElements  ##to array def: all elements are embedded
+| <?zeroTermString> ZeroTermString ##to String name; a const char*
+| <?ByteStringJc> ByteStringJc     ##to a byte[] array, it is generated as ByteStringJc
+| StringJc <?StringJc>                                ##A CharSequence should be translated to StringJc.
+.
+
+
+
+
+?en:java2cTag/nonPersistent::="A reference which is designed as non-persistent, shouldn't be stored and used in another threads.".
+
+interfaceDefinition::=
+  [{| @SuppressWarnings ( <""?SuppressWarnings> ) | /**[><description>*/] | <ModifierClass?> }] 
+  interface <$?classident> [<generic>] 
+  [extends {[<?SuperInterface> {<$?>?\.} |xxx] [<generic>] ? , }]
+\{
+  [
+   {  <enumDefinition>
+    | <variableDefinition> ;
+    | <methodDefinition>
+    | <interfaceDefinition>
+    | <annotationDefinition>
+    | <classDefinition>
+  }]
+\} [;].
+
+
+##it is the primitive form yet only. 
+annotationDefinition::= 
+  [{| <annotation> | <rententionpolicy> | /**[><description>*/] }]
+  \@ interface <$?ident> \{ [{ [<?param> <type> <$?ident> ( ) ; ] ?, }] \}.
+
+
+classDefinition::= 
+  [{| @SuppressWarnings ( <""?SuppressWarnings> ) | /**[><description>*/] | <ModifierClass?>}] 
+  class <$?classident> [<generic>]
+  ##[extends [<?Superclass> {<$?>?\.} ][<generic>] ]
+  [extends <typeIdent?Superclass>  ]
+  ##[implements { [<?ImplementedInterface> {<$?>?\.}][<generic>] ? , }]     
+  [implements { <typeIdent?ImplementedInterface> ? , }]     
+\{ [<classContent?>]
+\} [;].
+##Note: Java2c-Translator does not regard an <envIdent> on the type yet, 2015-03-29.
+
+
+classContent::=
+{ ##[/**<description?-?>*/]
+  [ <enumDefinition>
+  | <classDefinition>
+  | <interfaceDefinition>
+  | <variableDefinition> ;
+  | <methodDefinition>
+  | <constructorDefinition>
+  | <annotationDefinition>
+  | static <statementBlock?initializingBlockStatic>
+  | <statementBlock?initializingBlock>
+  | ;
+  ]
+}.
+
+
+
+##An envIdent is a ident in a possible environment class.
+## <?@name> is the outest environment class, inside a <?subIdent> is the next inner <?name> etc.
+##In XML it's: <envIdent name="outestClass"><subIdent name="nextClass"><subIdent name="nextClass"></subIdent></subIdent></envIdent>
+envIdent::=  <$?@name> [<generic?>] \. [?\.\.] [<envIdent?subIdent>] .
+
+
+##A typeIdent is a identifier of a type which maybe defined in a class context or pure.
+## A pure type ident is either a global visible type, or it may an own class type (local visible, than writing pure).
+## A type in a context uses the envIdent.
+typeIdent::= [<envIdent>] <$?@name> [<generic?>].
+
+
+
+##A nonArrayType has the same content like a typeIdent, but additionally an element type (generic type) of a container 
+
+generic::=
+\< { [ \?<?undefGenericType>| <type?GenericType>]    ##The generic type or ? for any derived type. 
+      [ extends {<type?baseGenericKey> ? & } ]   ? , } \>.  ##a generic type may be derived from one or more sub types.
+
+
+
+nonArrayType::= ##[{ @Java4C\.<Java4CAnnotationType?> }] 
+<typeIdent?>  ##nonArrayType produces the same result as typeIdent
+[ <?va_arg>\.\.\.]
+.
+
+##A type has the same content like a nonArrayType, but additionally an array identification may be part of them.
+type::= <nonArrayType?>   
+[ { <?typeArray> \[ \]}
+| <?va_arg>\.\.\.
+|].
+
+
+
+methodDefinition::=
+[{| /**[><description>*/]
+ | @Override<?A_Override>
+ | @Deprecated
+ | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+ | <ModifierMethod>
+}]
+[ \< <$?defineGenericLocal_WhatIsThat> \>] <type> <$?name> ( [<argumentList?>] )
+[ throws {<throwsDeclaration> ? ,}]
+[ <?abstractMethod> ;
+| <statementBlock?methodbody>
+].
+
+constructorDefinition::=
+[{| /**[><description>*/]
+ | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+ | @Deprecated
+ | <ModifierMethod>
+}]
+<$?constructor>
+( [<argumentList?>] )  ##a
+[ throws {<throwsDeclaration> ? ,}]
+\{ [ <superCall> ] 
+   [ <statementsOrDefinition> ]
+\}.
+
+superCall::= [|<reference>]super ( [<actualArguments>] );.
+
+throwsDeclaration::=[{<$?>?\.}|!].
+
+  
+annotation::=<?>
+{ @ SuppressWarnings ( <""?SuppressWarnings> )
+}.
+
+rententionpolicy::=<?> @ Retention ( RetentionPolicy \. [<?RententionPolicy> RUNTIME | CLASS | SOURCE ] ).
+  
+                                                                                                
+classpath::={<$?packageClassName>?\.}.
+
+importpath::={<$?packagePath>\.}[<$?class>|*<?allClasses>].
+
+AccessRight::=<?>[ public<?isPublic> | private<?isPrivate> | protected<?isProtected> |].
+
+enumDefinition::= 
+[{| /**[><description?-?>*/]
+ | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+ | <ModifierClass?-?>
+}] 
+enum <$?ident> \{  [{ <$?value> [ ( <actualArguments> ) ] ? , }]
+[ ; 
+ [ <classContent?> ]
+]
+\}.
+
+##NOTE: write <AccessRight> at last position of alternative because if 'package private' is set (no keyword, no content), the repetition is broken off.
+##      it is a Java specification problem!
+ModifierClass::=<?>[ static<?isStatic> | final<?isFinal> | abstract<?isAbstract>  | @Java4C\.<Java4CAnnotationClass> | @[<?Annotation><$?> [(<*)?>)]] | <AccessRight> ].
+
+ModifierVariable::=<?>[ static<?isStatic> | final<?isFinal> | volatile<?isVolatile> | transient<?isTransient> | @AccessPolicy\.<$?accessPlolicy> | @ReadOnly<?isReadonly>  | @Java4C\.<Java4CAnnotationVariable?> | @Java4C\.<Java4CAnnotationType?> | @[<?Annotation><$?> [(<*)?>)]] | <AccessRight> ].
+
+ModifierMethod::=<?>[ synchronized<?isSynchronized> | static<?isStatic> | final<?isFinal> | abstract<?isAbstract> | @AccessPolicy\.<$?accessPlolicy> | @ReadOnlyRet<?isReadonlyRet>  | @ReadOnly<?isReadonly> | @Java4C\.<Java4CAnnotationType?>| @Java4C\.<Java4CAnnotationMethod?> | @Override<?A_Override> | @[<?Annotation><$?> [(<*)?>)]] | <AccessRight> ].
+
+
+statement::=
+[ /*J2Ctest*/<?J2Ctest>]  ##a test point for the translator. Debug on Java level.
+[ /*<description>*/]
+[ \{ \} <?+emtypStatementBlock>
+| ; <?emptyStatement>
+| <?synchronizedBock> synchronized ( <simpleValue?synchronizedObject> ) <statementBlock>
+| <statementBlock>
+| <if_statement>
+| <switch_statement>
+| <while_statement>
+| <dowhile_statement>
+| <forElement_statement>
+| <for_statement>
+##| <?throwNew> throw\  new <$?exceptionClass> ( <value?text> [, <value?value2>] ) ;
+| <?throwNew> throw\  new <type?exceptionClass> ( [<value>] [ , <value?value2> ] ) ;  ##Note: not all exception parameters are accepted for Java2C, only the usual.
+| <?throwExc> throw\  <value> ; ##value is an exception instance tested at Java comiling level.   old:<$?ExcVariable> ;
+                   ##NOTE: not regarded yet in Java2C-translator 2015-03-29
+| <try_statement>
+| <?returnStmnt> return[!<!\\W?>] [ <value> |] ;  ##no word char expected after return, but not processed
+| <?break_statement> break ;
+| <simpleValue> ;   ##a methodcall is syntactical the same as a simpleValue calling a simple Method
+| <assignment> ;
+]
+[ //<*\r\n?descriptionInline> ]
+.
+
+
+assignment::= <maybeReferencedVariable?leftValue>  [ <assignOperator?>  <value> | ++ <?increment> | -- <?decrement> ] .
+
+
+assignOperator::= [<?@operator> = | += | -= | *= | /= | &= | \|= | \<\<= | \>\>= ] . 
+
+if_statement::=if ( <condition> ) [ ;<?noAction> | <statement>] [ else [ ;<?noAction>| <statement?elseStatement>] ].
+
+while_statement::=while ( <condition> ) [<statement>].
+
+dowhile_statement::=do <statement> while ( <condition> );.
+
+for_statement::=for ( 
+  [[<variableDefinition>] ; | <assignment?startAssignment> ;]  
+  <condition?endCondition> ; 
+  [ <assignment?iteratorAssignment> | <simpleValue?iteratorExpression>]  ##NOTE: a simpleValue contains the pre- and post-increment/decrement forex: ++ix 
+  ) <statement>.
+
+forElement_statement::=for ( <variableDefinition> : <value> ) <statement>.  ##value is the for-container
+
+switch_statement::=switch ( <value> ) 
+\{ [{ <caseExpr>                       ##but at least one statement should be written.
+   }]
+   [ default : [<statementsOrDefinition?defaultExpr>] ] 
+\}.
+
+
+
+caseExpr::={ case <value> : }    ##more as one case value: after another is predictable, it are more cases to the same statements.  
+     [<statementsOrDefinition>].
+
+
+try_statement::=
+  try <statementBlock> 
+  { <catchBlock> } 
+  [finally <statementBlock?finallyBlock>].
+
+
+catchBlock::= catch ( <typeIdent?ExceptionType> <$?exceptionVariable> ) <statementBlock>.
+
+
+statementsOrDefinition::=<?>
+{ <variableDefinition?+?> ; 
+|  <classDefinition>
+| <statement>
+| @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+}.
+
+statementBlock::=\{ 
+[{ //<*\r\n?descriptionOfBlock> }]
+[{ <variableDefinition?+?> ; 
+ |  <classDefinition>
+ | <statement>
+ | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+}] \}.
+
+
+##A value represented a number, string or such one. In other way it's named 'expression'.
+##  But the designation 'expression' is not so precise. It means anywhat.
+
+ExprPart:ExprItem::= <value> <$?operator>.
+
+##A numExpr is a value, which type isn't changed in combining with the given operators. 
+## The highest type of all simpleValues presents the type of the expression: int higher as short etc. Order is double float long int short byte boolean.
+## It is possible that the simpleValue is char or String. Than the order is String, char, numerical. 
+##Note: exclude && and || because there are activ in maybeBooleanValue. Beware the conflict with & and |.
+
+numExpr:ExprItem::= {<?*value:ExprPart>  <simpleValue?value> ? [? && | \|\| ] [<?operator> + | - | * | / | % |  & | \| | ^ | \>\> | \<\< ]  }.
+
+##instanceof::= <simpleValue?instance> instanceof <type?instanceOf>.
+
+##A maybeBooleanValue may be a boolean value, if a cmpOperator is present and/or a combining with booleanOperator is found.
+## Than the type of expression is boolean.
+##A maybeBooleanValue may also be a numExpr.
+
+maybeBooleanExpr:ExprItem::={<?*value:ExprPart> <maybeBooleanValue?value> ? [<?operator> && | \|\| ] }.
+
+maybeBooleanValue:ExprItem::= <numExpr?value>  [ [ instanceof <type?instanceOf>| [<?cmpOperator> \>= | \<= | \> | \< |  == | != ] <numExpr?rightBoolExprValue>]].
+
+
+##A value may be a boolean or not boolean value, but a conditional operation and a assignment are also recognized.
+##If a condition expression are found, the first value is the parsed value before ?. It is a boolean, because the javac-Compiler has tested it.
+## the terms left and right from : are any desired value, including conditionals and assignments.
+##An assignment infers in presenting of a = operator. The left side is a variable than, the javac-Compiler has tested it.
+## Right hand from = there is any desird value, it is the repetition syntax construct. A concatenating of assignments is accepted.
+##The type of expression is the type of the left assignment, or the higher type of trueValue and falseValue, or the type of maybeBooleanValue.
+##The type of expression is used and tested, if a actual paramter for a method is given and the methods signature is searched.
+
+value:ExprItem::= {<?*value:ExprPart> <maybeConditionalValue?value>
+? <assignOperator?>   ##NOTE: In this case the parsed value before = is a left value, the Java-compiler had tested the correctness.  
+}.
+
+maybeConditionalValue:ExprItem::= <maybeBooleanExpr?value>
+  [  \?  <value?trueValue> : <value?falseValue> ]  ##NOTE: the value before ? is the boolean condition.
+.
+
+
+##Hint: [?<!\\w>] requires, that a non word char followes. It is necessary on test of true, false, class to different it from identifier beginning with that words, at ex. "trueValue"
+##A simpleValue is a component of a value not concatenated with operators.
+simpleValue:ExprItem::=
+[ /*J2Ctest<?J2Ctest>*/]  ##a test point for the translater. Debug on Java level.
+[|<unaryOperator>]
+[
+  <""?simpleStringLiteral>[ \. <simpleMethodCall?StringLiteralMethod> ]  ##StringLiteralMethod: It is a special form, in Java "xyz". is a String Object.
+| <''?simpleCharLiteral>
+| [<?booleanConst>true|false] [?<!\\w>]
+| ( <type?typeCast> ) <value>  ##NOTE: must be arranged before ( <simpleValue> ) because confusion with, example (type)simpleValue and (variable)
+##| <?newInstanceAccess> ( <newObject> ) \. [<simpleMethodCall> | <variable> ]
+| 0x<#x?hexNumber>[L]
+| - 0x<#x?hexNumberNegative>[L]
+| <#-?intNumber>[?\.][<?valueFormat> L | l| F| f|]
+| <#f?floatNumber>[<?valueFormat> F| f]
+| <#f?doubleNumber>
+| new <newArray> 
+| <newObject> [\. [<simpleMethodCall> | <simpleVariable> ]]
+| [<reference>] <simpleMethodCall>
+| <$?TypeReflect>  \. class [?<!\\w>]
+| [ -- <?preDecrement>| ++ <?preIncrement>|] [ <reference>] <simpleVariable>[ -- <?postDecrement>| ++ <?postIncrement>|]
+| <?classObject> [ <reference>] class                   ##either class of a type, or class of an instance like myData.class 
+| ( <?parenthesisExpression> <value>)
+| <?nullRef> null
+| <assignment>
+]
+[<arrayElementAccess>]
+.
+
+
+condition::=<value>.  ##The compiler tests that it is a boolean value expression.
+
+ 
+unaryOperator::=<?> [<?unaryOperator> - | ~ | ! ].
+
+##superAccess::=super\..
+
+arrayElementAccess::={ \[ <value> \] }.   ##?arrayIndex
+
+
+##A reference is all things left from point.
+##A referenceValue may be also a simpleMethodCall, but in parenthesis. A simpleMethodCall without () is more immediate. The same is with referenceAssociation.
+reference::=
+[ this \.<?isThis> 
+| super \.<?isSuper> 
+| ( <newObject> ) \.
+| ( <value> ) \.                            ##reference is a value
+| <simpleMethodCall?referenceMethod> \.
+| <simpleVariable?referenceAssociation> \.
+] 
+[ <reference>]
+.
+
+##A variable is either a left value or a kind of value.
+simpleVariable::= <$?variableName>[<?arrayIndex> { \[ <value> \] }].
+
+
+
+
+maybeReferencedVariable::= [<reference>] <simpleVariable?>.
+
+simpleMethodCall::=<$?methodName> ( [<actualArguments>] ).
+
+actualArguments::={ <value> ? , }.
+
+##formal parameter or argument list of methods and constructors:
+argumentList::={ <argument> ? , }.
+
+argument::=[{| <ModifierVariable?>}] <type> <$?variableName>[\[\]<?array>].
+
+
+##A syntactical variableDefinition is such as "int a,b,c". But a semantical variableDefinition is "int a", "int b".
+##Therefore the type is assigned to the syntactical <variableInstance?...>, this is semantical the <...?+variableDefinition>.
+variableDefinition::=<?> 
+[{| /**[><description?-?>*/]
+ | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+ | <ModifierVariable?-?>
+}] <type?-?> {<variableInstance?+variableDefinition>  ? , }.
+
+variableInstance::= <description?+!?> <ModifierVariable?+!?> <type?+!?> <$?variableName>  [ \[\]<?array> ] 
+[ = [ new <newArray> 
+##		| <newObject>  
+    | <constArray> 
+		| <value>
+		] ].
+
+newObject::= [<reference>] new <nonArrayType?newClass> ( [<actualArguments>] ) [\{ [<classContent?impliciteImplementationClass>] \}].
+
+
+newArray::= <nonArrayType?newClass> {\[ [<value>] \]}  [<constArray>] .
+
+
+?newArray/value::="The size of the dimensions are known. For more as one dimensions: The hyper dimensions are setted with references to the sub-dimension-array.".
+##?newArray/arrayRef::="Some emtpy [] on end of a new means, the mulitdimensional array isn't initialized at end. There can be assigned another array reference with given dimensions. ".
+
+?newArray/constArray::="An array can be initialized immediately writing some {value, value, value}. ".
+
+constArray::= \{ [{ <value> | <constArray> ? , }] \}.

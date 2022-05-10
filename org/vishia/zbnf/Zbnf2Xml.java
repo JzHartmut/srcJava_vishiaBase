@@ -39,6 +39,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StringPartScan;
 import org.vishia.util.StringPartFromFileLines;
@@ -65,6 +66,8 @@ public class Zbnf2Xml
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-02-08: Hartmut {@link #writeZbnf2Xml(ZbnfParser, String, Charset)} is new but only refactored.
+   *   content was given, own operation resolved.
    * <li>2019-12-08: new option -opt:1 to use the optimizing of using already parsed results.
    * <li>2014-06-17 Hartmut new: options -xmsSrcline[:[on|off]] -xmsSrctext[:[on|off]] and controls 
    *   whether srcline="xx" and srctext="text" will be written to a XML output  
@@ -105,7 +108,7 @@ public class Zbnf2Xml
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2019-12-08";
+  public static final String sVersion = "2022-02-08";
 
   
   public interface PrepareXmlNode
@@ -480,45 +483,62 @@ public class Zbnf2Xml
     if(bOk)
     { parser.reportStore(logmaincmd);
       logmaincmd.writeInfo(" XML: ");
-      //XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
-      XmlNode xmlTop = parser.getResultTree();
-      TreeMap<String, String> xmlnsList = parser.getXmlnsFromSyntaxPrescript();
-      /**Adds the namespace declarations if exists: */
-      { if(xmlnsList != null)
-        { Iterator<String> iter = xmlnsList.keySet().iterator();
-          while(iter.hasNext())
-          { String nsKey = iter.next();
-            String nsVal = xmlnsList.get(nsKey);
-            //xmlTop.addNamespaceDeclaration(Namespace.getNamespace(nsKey, nsVal));
-            xmlTop.addNamespaceDeclaration(nsKey, nsVal);
-          }
-        }      
-      }
-      if(argsx.encoding == null) 
-      { argsx.encoding = Charset.forName("UTF-8");
-      }
+      
       if(fileXmlOut !=null){
-        try
-        { 
-          FileSystem.mkDirPath(fileXmlOut);
-          FileOutputStream streamOut = new FileOutputStream(fileXmlOut);
-          OutputStreamWriter out = new OutputStreamWriter(streamOut, argsx.encoding);
-          SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
-          xmlOutputter.write(out, xmlTop);
-          out.close();
-          streamOut.close();
+        try {
+          writeZbnf2Xml(parser, argsx.sFileXmlOut, argsx.encoding);
           logmaincmd.writeInfo(" done "); logmaincmd.writeInfoln("");
-        }
-        catch(IOException exception)
-        { logmaincmd.writeError("file not writeable:" + fileXmlOut.getAbsolutePath());
+        } catch(IOException exception) {
+          logmaincmd.writeError("file not writeable:" + fileXmlOut.getAbsolutePath());
           bOk = false;
-        }
-      }      
+         
+        } }          
     }
     return bOk;
   }
 
 
+  
+  
+  
+  /**Write a XML file with the parse result from the given parser.
+   * The parser contains also namespace declarations. 
+   * @param parser has successfully parsed.
+   * @param sFileXmlOut pathfile, destination directories will be created.
+   * @param encoding maybe null, then UTF-8
+   * @throws IOException especially FileNotFoundException on any error
+   */
+  public static void writeZbnf2Xml ( ZbnfParser parser, String sFileXmlOut, Charset encoding) 
+  throws IOException 
+  {
+    //XmlNodeSimple<ZbnfParseResultItem> xmlTop = parser.getResultTree();
+    File fileXmlOut = sFileXmlOut == null ? null : new File(sFileXmlOut);
+    XmlNode xmlTop = parser.getResultTree();
+    TreeMap<String, String> xmlnsList = parser.getXmlnsFromSyntaxPrescript();
+    /**Adds the namespace declarations if exists: */
+    { if(xmlnsList != null)
+      { Iterator<String> iter = xmlnsList.keySet().iterator();
+        while(iter.hasNext())
+        { String nsKey = iter.next();
+          String nsVal = xmlnsList.get(nsKey);
+          //xmlTop.addNamespaceDeclaration(Namespace.getNamespace(nsKey, nsVal));
+          xmlTop.addNamespaceDeclaration(nsKey, nsVal);
+        }
+      }      
+    }
+    Charset encoding2 = encoding;
+    if(encoding2 == null) 
+    { encoding2 = Charset.forName("UTF-8");
+    }
+    FileFunctions.mkDirPath(fileXmlOut);
+    FileOutputStream streamOut = new FileOutputStream(fileXmlOut);
+    OutputStreamWriter out = new OutputStreamWriter(streamOut, encoding2);
+    SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
+    xmlOutputter.write(out, xmlTop);
+    out.close();
+    streamOut.close();
+  }
+  
 
 
 }

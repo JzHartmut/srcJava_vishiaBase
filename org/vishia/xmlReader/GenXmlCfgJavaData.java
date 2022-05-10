@@ -75,7 +75,7 @@ public class GenXmlCfgJavaData {
       while(genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
         SubClassXml classData = (SubClassXml)genClass.listCmpn.get(ixCmpn++);
         wrClass = new WrClassXml();
-        wrClass.wrClassJava.wrClassCmpn(classData);
+        wrClass.wrClassJava.wrClassCmpn(classData, null);
         //
         //
         wrClass.evaluateChildren(classData.subItem, false, 0);
@@ -282,7 +282,7 @@ public class GenXmlCfgJavaData {
             }
           }
           //semantic = semantic.replace("@!", "");
-          wrClassJava.wrVariable(varName, type, bStdType, bList, bCmpn, args); 
+          wrClassJava.wrVariable(varName, type, type, bStdType, bList, bCmpn, args); 
           
         }
       }

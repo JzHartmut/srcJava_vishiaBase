@@ -1,9 +1,9 @@
 package org.vishia.cmd;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -54,6 +54,7 @@ public class JZtxtcmdScript extends CompiledScript
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2022-02-22 Hartmut writes a text instead checkXmlOutput, it is better obviously.
    * <li>2022-01-31 Hartmut some fixes: close() missing. this. qualified
    * <li>2022-01-31 Hartmut enhancement: In {@link JZtxtcmdScript#createScriptFromString(org.vishia.util.StringPartScan, MainCmdLogging_ifc, File, File)}
    *   the included script statements are stored in the {@link JZtxtcmdScript.JZcmdInclude} item itself,
@@ -191,7 +192,7 @@ public class JZtxtcmdScript extends CompiledScript
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2022-01-31";
+  static final public String version = "2022-02-22";
 
   final MainCmdLogging_ifc console;
 
@@ -325,14 +326,20 @@ public class JZtxtcmdScript extends CompiledScript
       throw new ScriptException("\n" + sError, sourceScript.getInputfile(), -1, -1);
     }
     if(checkXmlOutput !=null){  //may be used if probles with parserGenCtrl2Java.setContent are given.
-      //XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
-      XmlNode xmlParseResult = parserGenCtrl.getResultTree();
-      SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
-      try{
-        OutputStreamWriter xmlWriter = new OutputStreamWriter(new FileOutputStream(checkXmlOutput));
-        xmlOutputter.write(xmlWriter, xmlParseResult);
-        xmlWriter.close();
-      } catch(IOException exc){ throw new ScriptException(exc); }
+      try {
+        Writer tout = new FileWriter(checkXmlOutput);  //2022-02 writes instead a text file
+        parserGenCtrl.writeResultAsTextList(tout);
+        tout.close();
+      } catch (IOException exc) { throw new ScriptException(exc); }
+//      
+//      //XmlNodeSimple<?> xmlParseResult = parserGenCtrl.getResultTree();
+//      XmlNode xmlParseResult = parserGenCtrl.getResultTree();
+//      SimpleXmlOutputter xmlOutputter = new SimpleXmlOutputter();
+//      try{
+//        OutputStreamWriter xmlWriter = new OutputStreamWriter(new FileOutputStream(checkXmlOutput));
+//        xmlOutputter.write(xmlWriter, xmlParseResult);
+//        xmlWriter.close();
+//      } catch(IOException exc){ throw new ScriptException(exc); }
     }
     //if(log.getReportLevel() >= MainCmdLogging_ifc.fineInfo){
     //  parserGenCtrl.reportStore((Report)log, MainCmdLogging_ifc.fineInfo, "Zmake-GenScript");

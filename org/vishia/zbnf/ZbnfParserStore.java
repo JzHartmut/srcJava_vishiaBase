@@ -29,13 +29,15 @@
  ****************************************************************************/
 package org.vishia.zbnf; 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.vishia.util.Assert;
+import org.vishia.util.CheckVs;
 import org.vishia.util.Debugutil;
 import org.vishia.util.SortedTreeNode;
+import org.vishia.util.StringFormatter;
 import org.vishia.util.StringPart;
 import org.vishia.xmlSimple.WikistyleTextToSimpleXml;
 import org.vishia.xmlSimple.XmlException;
@@ -64,11 +66,27 @@ import org.vishia.xmlSimple.XmlNodeSimple;
  * <tr><td>&lt;*""endchars?semantic></td><td>         &nbsp;</td><td>kString</td><td>add??</td></tr>
  * </table>
  * */
-@SuppressWarnings("synthetic-access") 
+//@SuppressWarnings("synthetic-access") 
 class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-02-08 Hartmut
+   *   <ul><li>{@link ParseResultItemImplement#elementSyntax} renamed from "parentSyntaxElement". It is not the parent. 
+   *   <li>componentSyntax removed, because it is referenced in the elementSyntax (improved in {@link ZbnfSyntaxPrescript}
+   *   <li>{@link #add(String, ZbnfSyntaxPrescript, ZbnfSyntaxPrescript, CharSequence, int, long, long, int, int, String, ZbnfParseResultItem)}
+   *     and other add: Change of {@link ParseResultItemImplement#offsetAfterEnd} in the parent's items is removed. 
+   *     This was an old concept, no more necessary, and confusing. 
+   *   <li>in {@link #setAlternativeAndOffsetToEnd(int, int)}: Here important change, see description.
+   *   </ul>
+   * <li>2022-02-08 Hartmut new: {@link ParseResultItemImplement#componentSyntax} now references immediately from the result
+   *   to the component for syntax. This gives more information. The data are not too much 
+   *   because there are lesser Syntax definitions as result items.
+   * <li>% renaming {@link ParseResultItemImplement#parentSyntaxElement} from syntaxElement to prevent confusion. 
+   *   The meaning of that element was originally, before 2019, that of {@link ParseResultItemImplement#componentSyntax}
+   *   but with lesser usage. It was a inconsequently change.
+   * <li>% {@link ParseResultItemImplement#getSuperItemType()} uses the change in {@link ZbnfSyntaxPrescript#sSuperItemType}
+   * <li>% {@link #writeContentAsList(Appendable)} as output to check (usual data debug).     
    * <li>2019-05-22 Hartmut chg: {@link ParseResultItemImplement#getText()} improved while testing ZBNF/testAllConecpts (from 2009).<br>
    *   {@link BuilderTreeNodeXml#createXmlNode(XmlNode, ParseResultItemImplement)}: On repetition item an XmlNode for <code>{&lt;?semantic>...</code>
    *   should be created anywhere, because elsewhere only one node exists. 
@@ -126,7 +144,7 @@ class ZbnfParserStore
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de, www.vishia.org
    * 
    */
-  public static final String sVersion = "2017-03-25";
+  public static final String sVersion = "2022-02-10";
 
   
   /** Constant to detect the entry describes a terminate symbol. -32767*/
@@ -192,9 +210,14 @@ class ZbnfParserStore
     /** The action to invoke.*/
     final String sSemantic;
     
-    final ZbnfSyntaxPrescript syntaxElement;
+    /**Reference to the syntax which has determined this element, used for semantic naming etc. */
+    final ZbnfSyntaxPrescript elementSyntax;
     
-    /**Replacement for a non existing syntaxElement instead null-reference. */
+    
+    /**This is the reference to the components syntax is a component is used. Else null. */
+//    final ZbnfSyntaxPrescript componentSyntax;
+    
+    /**Replacement for a non existing parentSyntaxElement instead null-reference. */
     final static ZbnfSyntaxPrescript null_syntaxElement = new ZbnfSyntaxPrescript(null, ZbnfSyntaxPrescript.EType.kNotDefined, 0);
     
     /** The text from input at the position*/
@@ -226,7 +249,10 @@ class ZbnfParserStore
     boolean isAdded = false;
     
     /** The offset to the next item behind the items of this complex morphem.
-     * =1 if it is no complex morphem.
+     * =1 if it is no syntax component or "complex morphem"
+     * The correct value is set with call of {@link ZbnfParserStore#setAlternativeAndOffsetToEnd(int, int)}.
+     * This is done on end of each nested parsing for the appropriate component. 
+     * Recursively then all values are correct on finishing the parent components. 
      */
     int offsetAfterEnd = 1;
 
@@ -254,11 +280,13 @@ class ZbnfParserStore
     
     
     ParseResultItemImplement(ZbnfParserStore store, String sSemantic, ZbnfParseResultItem parent
-        , String syntax, ZbnfSyntaxPrescript syntaxElement) { 
+        , String syntax, ZbnfSyntaxPrescript elementSyntax, ZbnfSyntaxPrescript componentSyntax) { 
       this.store = store;
-      if(syntaxElement !=null && syntaxElement.sDefinitionIdent !=null && syntaxElement.sDefinitionIdent.equals("real_literal"))
+      if(sSemantic.equals("content"))
         Debugutil.stop();
-      if(syntaxElement !=null && syntaxElement.sDefinitionIdent !=null && syntaxElement.sDefinitionIdent.equals("real_type_name"))
+      if(elementSyntax !=null && elementSyntax.sDefinitionIdent !=null && elementSyntax.sDefinitionIdent.equals("real_literal"))
+        Debugutil.stop();
+      if(elementSyntax !=null && elementSyntax.sDefinitionIdent !=null && elementSyntax.sDefinitionIdent.equals("real_type_name"))
         Debugutil.stop();
       int posValue = sSemantic.indexOf('='); 
       if(posValue>0){  //set a value with the given semantic in form "semantic=value"
@@ -271,7 +299,8 @@ class ZbnfParserStore
       }
       this.parent = (ParseResultItemImplement)parent;
       this.syntaxIdent = syntax;
-      this.syntaxElement = syntaxElement;
+      this.elementSyntax = elementSyntax;
+//      this.componentSyntax = componentSyntax;
       if(this.sSemantic.equals("alternateText"))
         Debugutil.stop();
     }
@@ -281,54 +310,60 @@ class ZbnfParserStore
      *
      */
     @Override public String getSemantic()
-    { return (sSemantic != null) ? sSemantic : "Null-Semantic";
+    { return (this.sSemantic != null) ? this.sSemantic : "Null-Semantic";
     }
 
     @Override public String getParsedText()
-    { return sInput;
+    { return this.sInput;
     }
 
     @Override public double getParsedFloat()
-    { return parsedFloatNumber;
+    { return this.parsedFloatNumber;
     }
 
     @Override public long getParsedInteger()
-    { return parsedIntegerNumber;
+    { return this.parsedIntegerNumber;
     }
 
     @Override public String getParsedString()
-    { return parsedString;
+    { return this.parsedString;
     }
 
     @Override public int getInputLine()
-    { return srcLine;
+    { return this.srcLine;
     }
     
     @Override public int getInputColumn()
-    { return srcColumn;
+    { return this.srcColumn;
     }
     
-    @Override public String getInputFile(){ return sFile; }
+    @Override public String getInputFile(){ return this.sFile; }
 
     
     @Override public boolean isComponent()
-    { return (offsetAfterEnd > 1) || kind == kComponent;
+    { return (this.offsetAfterEnd > 1) || this.kind == kComponent;
     }
 
+    
+    @Override public ZbnfSyntaxPrescript getComponentSyntax ( ) {
+      return this.elementSyntax.componentSyntax;
+    }
+    
+    
     @Override public boolean isInteger()
-    { return kind == kIntegerNumber;
+    { return this.kind == kIntegerNumber;
     }
 
     @Override public boolean isFloat()
-    { return kind == kFloatNumber;
+    { return this.kind == kFloatNumber;
     }
 
     @Override public boolean isString()
-    { return kind == kString;
+    { return this.kind == kString;
     }
 
     @Override public boolean isTerminalSymbol()
-    { return kind == kTerminalSymbol;
+    { return this.kind == kTerminalSymbol;
     }
 
     //public boolean isSingleOption()
@@ -336,19 +371,19 @@ class ZbnfParserStore
     //}
 
     @Override public boolean isIdentifier()
-    { return kind == kIdentifier;
+    { return this.kind == kIdentifier;
     }
 
     @Override public boolean isOnlySemantic()
-    { return kind == kOnlySemantic;
+    { return this.kind == kOnlySemantic;
     }
 
     @Override public int isRepeat()
-    { return (kind < 0 && kind > -kMaxRepetition ? -kind : -1);
+    { return (this.kind < 0 && this.kind > -kMaxRepetition ? -this.kind : -1);
     }
 
     @Override public int isRepetition()
-    { return (kind > 0 && kind < kMaxRepetition ? kind : -1);
+    { return (this.kind > 0 && this.kind < kMaxRepetition ? this.kind : -1);
     }
 
     public int xxxisAlternative()
@@ -358,7 +393,7 @@ class ZbnfParserStore
 
     public String getKindOf()
     { String sRet;
-      switch(kind)
+      switch(this.kind)
       { case kComponent: sRet = "complex"; break;
         case kTerminalSymbol: sRet = "constant"; break;
         case kFloatNumber: sRet = "float"; break;
@@ -367,8 +402,8 @@ class ZbnfParserStore
         //case kRepetitionRepeat: sRet = "repeat"; break;
         //case kAlternative: sRet = "choice"; break;
         default:
-        { if(kind >=0) sRet = "repetition nr "+ kind;
-          else              sRet = "choose nr " + kind;
+        { if(this.kind >=0) sRet = "repetition nr "+ this.kind;
+          else              sRet = "choose nr " + this.kind;
         }
       }
       return sRet;
@@ -378,9 +413,9 @@ class ZbnfParserStore
     { String sSemantic = getSemantic();
       if(sSemantic.equals("doubleNumber"))
         stop();
-      String sRet = " [" + idxOwn;
-      if(offsetAfterEnd > 1)
-      { sRet += ".." + (idxOwn + offsetAfterEnd -1);
+      String sRet = " [" + this.idxOwn;
+      if(this.offsetAfterEnd > 1)
+      { sRet += ".." + (this.idxOwn + this.offsetAfterEnd -1);
       }
 
       sRet += "]";
@@ -388,7 +423,7 @@ class ZbnfParserStore
       sRet += "<...?" + sSemantic + ">";
 
       if(sSemantic.equals("operator"))
-        Assert.stop();
+        Debugutil.stop();
       
       sRet += " ";
       int nrofAlternative = getNrofAlternative();
@@ -408,15 +443,15 @@ class ZbnfParserStore
       { sRet += "{?" + isRepeat() + "}";
       }
 
-      sRet += " syntax=" + syntaxIdent;
+      sRet += " syntax=" + this.syntaxIdent;
       
-      sRet += " input=" + start + ".." + end + "(" + srcLine + ", " + srcColumn + ")";
+      sRet += " input=" + this.start + ".." + this.end + "(" + this.srcLine + ", " + this.srcColumn + ")";
       
       String sParsedText = getParsedText();
       if(sParsedText != null)
       { sRet += " read: \"" + sParsedText + "\"";
       }
-      if(treeNodeXml !=null){ sRet += " xmlNode=" + treeNodeXml; }
+      if(this.treeNodeXml !=null){ sRet += " xmlNode=" + this.treeNodeXml; }
       return sRet;
     }
 
@@ -427,25 +462,25 @@ class ZbnfParserStore
      */
     String getText(){
       String ret = null;
-      if(sSemantic.equals("line"))
+      if(this.sSemantic.equals("line"))
         Debugutil.stop();
       if(isComponent()){ 
-        ret = parsedString;  //it is null if only the component's item is stored.
+        ret = this.parsedString;  //it is null if only the component's item is stored.
         //it is not null if [<?semantic> ....] was written.
       }  
       else{  //an item
-        switch(kind){
-          case kTerminalSymbol: ret = parsedString; break;
-          case kIntegerNumber: ret = Long.toString(parsedIntegerNumber); break;
-          case kFloatNumber: ret = Double.toString(parsedFloatNumber); break;
-          case kIdentifier: ret = parsedString; break;
-          case kOption: ret = parsedString!=null ? parsedString : /*sInput !=null ? sInput :*/ ""; break;
-          case kString: ret = parsedString; break;
+        switch(this.kind){
+          case kTerminalSymbol: ret = this.parsedString; break;
+          case kIntegerNumber: ret = Long.toString(this.parsedIntegerNumber); break;
+          case kFloatNumber: ret = Double.toString(this.parsedFloatNumber); break;
+          case kIdentifier: ret = this.parsedString; break;
+          case kOption: ret = this.parsedString!=null ? this.parsedString : /*sInput !=null ? sInput :*/ ""; break;
+          case kString: ret = this.parsedString; break;
           case kOnlySemantic: ret = null; break;
           default:
             //ret = "??unknown kind of node = " + Integer.toHexString(kind) + "=" + Integer.toHexString(-kind) + ".?"; 
             //it is especially on options or repetitions
-            ret = parsedString;
+            ret = this.parsedString;
 //            if(parsedString !=null) {
 //              ret = parsedString;
 //            //} else if(sInput !=null) {
@@ -463,15 +498,17 @@ class ZbnfParserStore
     
     @Override
     protected ParseResultItemImplement clone()
-    { ParseResultItemImplement item = new ParseResultItemImplement(null, sSemantic, null, null, syntaxElement);
-      item.kind = kind;
-      item.nrofAlternative = nrofAlternative;
-      item.parsedFloatNumber = parsedFloatNumber;
-      item.parsedIntegerNumber = parsedIntegerNumber;
-      item.parsedString = parsedString;
+    { ParseResultItemImplement parseResultItemImplement = this;
+    ParseResultItemImplement item = new ParseResultItemImplement(null, parseResultItemImplement.sSemantic, null, null, parseResultItemImplement.elementSyntax, null);
+      item.kind = this.kind;
+      item.nrofAlternative = this.nrofAlternative;
+      item.parsedFloatNumber = this.parsedFloatNumber;
+      item.parsedIntegerNumber = this.parsedIntegerNumber;
+      item.parsedString = this.parsedString;
       item.isAdded = false;
-      item.offsetAfterEnd = offsetAfterEnd;
-      item.syntaxIdent = syntaxIdent;
+      item.offsetAfterEnd = this.offsetAfterEnd;
+      item.syntaxIdent = this.syntaxIdent;
+      
       return item;
     }
     
@@ -488,23 +525,23 @@ class ZbnfParserStore
 
     /** Implements from ParseResultItem */
     @Override public ZbnfParseResultItem next(/*Parser.ParserStore store, */ZbnfParseResultItem parent)
-    { return next(parent, offsetAfterEnd);
+    { return next(parent, this.offsetAfterEnd);
     }
 
 
     /** Implements from ParseResultItem */
     private ZbnfParseResultItem next(/*Parser.ParserStore store, */ZbnfParseResultItem parent, int offset)
-    { int idxNew = idxOwn + offset;
+    { int idxNew = this.idxOwn + offset;
       int idxEnd;
       if(parent != null)
       { ParseResultItemImplement parent1 = (ParseResultItemImplement)(parent);
         idxEnd = parent1.idxOwn + parent1.offsetAfterEnd;
       }
-      else idxEnd = store.items.size();
+      else idxEnd = this.store.items.size();
 
       if( idxNew < idxEnd)
-      { if(idxNew < store.items.size())
-          return store.items.get(idxNew);
+      { if(idxNew < this.store.items.size())
+          return this.store.items.get(idxNew);
         else
         { stop();
           return null;
@@ -522,12 +559,12 @@ class ZbnfParserStore
 
     protected int getIdx()
     {
-      return idxOwn;
+      return this.idxOwn;
     }
 
     protected int getIdxAfterComponent()
     {
-      return idxOwn + offsetAfterEnd;
+      return this.idxOwn + this.offsetAfterEnd;
     }
 
     /*
@@ -548,9 +585,30 @@ class ZbnfParserStore
     { return nrofAlternative;
     }
 
+    
+    
+    /**This is the super type to store the result. 
+     * @return null if not given, on simple items. 
+     */
+    public String getSuperItemType() {
+      if(this.elementSyntax !=null) {
+        if(this.elementSyntax.componentSyntax !=null && this.elementSyntax.componentSyntax.sSuperItemType !=null) {
+          return this.elementSyntax.componentSyntax.sSuperItemType;
+        } 
+        else if(this.elementSyntax.sSuperItemType !=null) {
+          return this.elementSyntax.sSuperItemType;
+        }
+        else { 
+          return null;
+        }
+      }
+      else {
+        return null;
+      }
+    }
 
     @Override public boolean isOption()
-    { return kind == kOption;
+    { return this.kind == kOption;
     }
 
     static class IteratorImpl implements Iterator<ZbnfParseResultItem>
@@ -561,33 +619,37 @@ class ZbnfParserStore
       final ArrayList<ParseResultItemImplement> items;
       
       IteratorImpl(ParseResultItemImplement parent)
-      { idxBegin = parent.idxOwn +1;
-        idxEnd = parent.idxOwn + parent.offsetAfterEnd;
-        items = parent.store.items;
-        idx = idxBegin;
+      { this.idxBegin = parent.idxOwn +1;
+        this.idxEnd = parent.idxOwn + parent.offsetAfterEnd;
+        this.items = parent.store.items;
+        this.idx = this.idxBegin;
       }
       
+      @Override
       public boolean hasNext()
       {
-        return idx < idxEnd;
+        return this.idx < this.idxEnd;
       }
 
+      @Override
       public ZbnfParseResultItem next()
       { 
         if(hasNext())
-        { ParseResultItemImplement item =items.get(idx);
-          idx += item.offsetAfterEnd;
+        { ParseResultItemImplement item =this.items.get(this.idx);
+          this.idx += item.offsetAfterEnd;
           return item;
         }  
         else return null;
       }
 
+      @Override
       public void remove()
       { throw new RuntimeException("remove not expected"); 
       }
       
     }
     
+    @Override
     public Iterator<ZbnfParseResultItem> iteratorChildren()
     { return new IteratorImpl(this);
     }
@@ -595,11 +657,11 @@ class ZbnfParserStore
     
     
     private void buildTreeNodeRepresentation()
-    { treeNodeRepresentation = new SortedTreeNode<ZbnfParseResultItem>();
+    { this.treeNodeRepresentation = new SortedTreeNode<ZbnfParseResultItem>();
       Iterator<ZbnfParseResultItem> iter = iteratorChildren();
       while(iter.hasNext())
       { ZbnfParseResultItem item =iter.next(); 
-        treeNodeRepresentation.add(item.getSemantic(), item);
+        this.treeNodeRepresentation.add(item.getSemantic(), item);
       }
     }
 
@@ -616,17 +678,18 @@ class ZbnfParserStore
      *            separated with slash. '/' This feature is since 2010-06-02
      * implements {@link org.vishia.util.SortedTree#getChild(java.lang.String)}
      */
+    @Override
     public ZbnfParseResultItem getChild(String key)
-    { if(offsetAfterEnd == 1){ return null; }
+    { if(this.offsetAfterEnd == 1){ return null; }
       else if(key == null || key.length()==0)
       {
-        return store.items.get(idxOwn +1);
+        return this.store.items.get(this.idxOwn +1);
       }
       else
-      { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
+      { if(this.treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
         int posSep = key.indexOf('/');
         final String key2 = posSep >=0 ? key.substring(0, posSep) : key; 
-        ZbnfParseResultItem zbnfChild = treeNodeRepresentation.getChild(key2);
+        ZbnfParseResultItem zbnfChild = this.treeNodeRepresentation.getChild(key2);
         if(zbnfChild !=null && posSep >=0){
           final String key3 = key.substring(posSep+1);
           zbnfChild = zbnfChild.getChild(key3);
@@ -636,6 +699,7 @@ class ZbnfParserStore
     }
 
     
+    @Override
     public String getChildString(String key)
     {
       ZbnfParseResultItem child = getChild(key);
@@ -646,38 +710,43 @@ class ZbnfParserStore
     
     
 
+    @Override
     public Iterator<ZbnfParseResultItem> iterChildren()
     { return iteratorChildren();
     }
 
 
+    @Override
     public Iterator<ZbnfParseResultItem> iterChildren(String key)
-    { if(offsetAfterEnd == 1){ return null; }
+    { if(this.offsetAfterEnd == 1){ return null; }
       else
-      { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
-        return treeNodeRepresentation.iterChildren(key);
+      { if(this.treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
+        return this.treeNodeRepresentation.iterChildren(key);
       }
     }
 
 
+    @Override
     public List<ZbnfParseResultItem> listChildren()
-    { if(offsetAfterEnd == 1){ return null; }
+    { if(this.offsetAfterEnd == 1){ return null; }
       else
-      { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
-        return treeNodeRepresentation.listChildren();
+      { if(this.treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
+        return this.treeNodeRepresentation.listChildren();
       }
     }
 
 
+    @Override
     public List<ZbnfParseResultItem> listChildren(String key)
-    { if(offsetAfterEnd == 1){ return null; }
+    { if(this.offsetAfterEnd == 1){ return null; }
       else
-      { if(treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
-        return treeNodeRepresentation.listChildren(key);
+      { if(this.treeNodeRepresentation == null){ buildTreeNodeRepresentation(); }
+        return this.treeNodeRepresentation.listChildren(key);
       }
     }
 
 
+    @Override
     public ZbnfParseResultItem firstChild()
     { return getChild(null);
       //if(offsetAfterEnd > 1)
@@ -687,10 +756,11 @@ class ZbnfParserStore
     }
 
 
+    @Override
     public ZbnfParseResultItem next()
-    { int idxNew = idxOwn + offsetAfterEnd;
-      if(idxNew < store.items.size())
-      { return store.items.get(idxNew);
+    { int idxNew = this.idxOwn + this.offsetAfterEnd;
+      if(idxNew < this.store.items.size())
+      { return this.store.items.get(idxNew);
       }
       else
       { stop();
@@ -735,32 +805,35 @@ class ZbnfParserStore
      * @param srcColumn The column in source on begin of parsed String.
      * @param srcFile The path to the source file.
      */
-    private void addInParent(long begin, long end, int srcLine, int srcColumn, String srcFile)
-    {
-      ParseResultItemImplement parent1 = this;
-        parent1.offsetAfterEnd +=1;
-        if(parent1.sFile ==null && srcFile !=null){
-          parent1.sFile = srcFile;
-          parent1.srcLine = srcLine;
-          parent1.srcColumn = srcColumn;
-        }
-        //correct also all offsetAfterEnd from all parents. If the parents are not ready parsed yet,
-        //its offsetAfterEnd is not correct, but it is set correctly after parsing the component.
-        //in this case the changing here is not necessary but also not interfering.
-        while( (parent1 = (ParseResultItemImplement)parent1.parent) != null 
-             && parent1.offsetAfterEnd >0
-             )
-        { parent1.offsetAfterEnd +=1;
-          if(parent1.sFile ==null && srcFile !=null){
-            parent1.sFile = srcFile;
-            parent1.srcLine = srcLine;
-            parent1.srcColumn = srcColumn;
-          }
-        }
-      }
+//    private void addInParent(long begin, long end, int srcLine, int srcColumn, String srcFile)
+//    {
+//      ParseResultItemImplement parent1 = this;
+//        //parent1.offsetAfterEnd +=1;
+//        if(parent1.sFile ==null && srcFile !=null){
+//          parent1.sFile = srcFile;
+//          parent1.srcLine = srcLine;
+//          parent1.srcColumn = srcColumn;
+//        }
+//        //correct also all offsetAfterEnd from all parents. If the parents are not ready parsed yet,
+//        //its offsetAfterEnd is not correct, but it is set correctly after parsing the component.
+//        //in this case the changing here is not necessary but also not interfering.
+//        while( (parent1 = (ParseResultItemImplement)parent1.parent) != null 
+//             && parent1.offsetAfterEnd >0
+//             )
+//        { parent1.offsetAfterEnd +=1;
+//          if(parent1.sFile ==null && srcFile !=null){
+//            parent1.sFile = srcFile;
+//            parent1.srcLine = srcLine;
+//            parent1.srcColumn = srcColumn;
+//          }
+//        }
+//      }
 
     
-    public ZbnfSyntaxPrescript syntaxItem() { return syntaxElement == null ? null_syntaxElement : syntaxElement; }
+    @Override
+    public ZbnfSyntaxPrescript syntaxItem ( ) { return this.elementSyntax == null ? null_syntaxElement : this.elementSyntax; }
+
+    public ZbnfSyntaxPrescript componentSyntax ( ) { return this.elementSyntax ==null ? null : this.elementSyntax.componentSyntax; }
 
   }
 
@@ -829,8 +902,8 @@ class ZbnfParserStore
 
   
   
-  /** Adds a new item
-   *
+  /**Adds a new item
+   * If this is a components item, on end {@link #setAlternativeAndOffsetToEnd(int, int)} should be called.  
    * @param sSemantic
    * @param sInput
    * @param nAlternative
@@ -840,21 +913,21 @@ class ZbnfParserStore
    * @param nColumn
    * @return The position of this entry, using for rewind(posititon);
    */
-  ParseResultItemImplement add(String sSemantic, ZbnfSyntaxPrescript syntaxElement
+  ParseResultItemImplement add(String sSemantic, ZbnfSyntaxPrescript elementSyntax, ZbnfSyntaxPrescript componentSyntax
       , CharSequence sInput, int nAlternative, long start, long end, int srcLine, int srcColumn, String srcFile
      , ZbnfParseResultItem parent)
   { //if(sSemantic.equals("textExprTEST"))
     //  stop();
     //if(srcLine == 726 ) //&& srcColumn == 7)
     //  stop();
-    if(sSemantic.equals("ST/@Text"))
+    if(sSemantic.equals("plainText"))
       Debugutil.stop();
     if(sSemantic.equals("alternateText"))
       Debugutil.stop();
-    item = new ParseResultItemImplement(this, sSemantic, parent, "?", syntaxElement);
-    item.sInput = sInput == null ? null : sInput.toString();
-    if(item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
-      item.parsedString = item.sInput;
+    this.item = new ParseResultItemImplement(this, sSemantic, parent, "?", elementSyntax, componentSyntax);
+    this.item.sInput = sInput == null ? null : sInput.toString();
+    if(this.item.parsedString == null){ //it is not null if it was set in constructor, especially on sSemantic = "name=value".
+      this.item.parsedString = item.sInput;
     }
     if(item.kind ==0){  //it is not 0 if it was set in constructor, especially on sSemantic = "name=value".
       item.kind = nAlternative;
@@ -875,7 +948,7 @@ class ZbnfParserStore
     //Only the immediately parent.
     if(parent != null)
     { 
-      ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+      //((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
     return item;
     //return items.size() -1;  //position of the entry
@@ -883,62 +956,96 @@ class ZbnfParserStore
 
   
   
-  void XXXadd(ParseResultItemImplement item) {
-    
-  }
+//  void XXXadd(ParseResultItemImplement item) {
+//    
+//  }
   
 
-  /** Sets the number of the alternative into a existing item.
+  /** Sets the spread of the item (@link {@link ParseResultItemImplement#offsetAfterEnd} 
+   * and the number of the alternative into a existing item.
    * The item is to be added on begin of parsing the part, and the
    * number of alternative is to be added at the end of it.
    * The number of alternative is ascertained only at the end. Also at the end
    * it is possible to add the offsetAfterEnd-offset. It is done here.
    * If the item isn't a type of alternative, a RuntimeException is thrown.
+   * <br>
+   * New since 2022-02: If a component is finished, and the parent component 
+   * has the same super type and contains only this only one element,
+   * then the parent is removed.   
    *
    * @param idxStore The index where find the alternative item in the store
    * @param alternative The number of founded, alternative from 1, 0 if it is the empty option.
    */
   void setAlternativeAndOffsetToEnd(int idxStore, int alternative)
-  {
-    ParseResultItemImplement item = items.get(idxStore);
-    item.nrofAlternative = alternative;
-    item.offsetAfterEnd = items.size() - idxStore;
+  { int zItems = this.items.size();
+    int nrItems = zItems - idxStore;
+    ParseResultItemImplement itemStart = this.items.get(idxStore);
+    String sT1 = itemStart.getSuperItemType();
+    if(sT1 !=null) { 
+      ParseResultItemImplement itemNext = this.items.get(idxStore+1);
+      if(itemNext.getIdxAfterComponent() == zItems) {      // only one child in the component
+        String sT2 = itemNext.getSuperItemType();
+        if(sT2 !=null && sT2.equals(sT1)) {                // it is the same superType
+          this.items.remove(idxStore);                     // Then remove this parent component
+          zItems -=1;
+          for(int ix = idxStore; ix < zItems; ++ix) {
+            this.items.get(ix).idxOwn = ix;
+          }
+          nrItems -=1;                                     //the child is the correct presentation.
+          itemStart = itemNext;
+          assert(itemStart.offsetAfterEnd == nrItems);
+        }
+      }
+    }
+//    if(nrItems ==1) {
+//      int ixLast = this.items.size()-1;
+//      ParseResultItemImplement itemCurr = this.items.get(ixLast);
+//      String sSuperItemTypeCurr = itemCurr.getSuperItemType();
+//      String sSuperItemTypePrev = itemStart.getSuperItemType();
+//      if(sSuperItemTypePrev !=null || sSuperItemTypeCurr !=null) { // && sSuperItemTypeCurr.equals(sSuperItemTypePrev)) {
+//        this.items.set(idxStore, itemCurr);
+//        this.items.remove(ixLast);
+//      }
+//    }
+    itemStart.nrofAlternative = alternative;
+    
+    itemStart.offsetAfterEnd = nrItems;
   }
 
   /** Sets the src of the parsing. It is the return value from getParsedText();
    * 
    * @param sInput the parsed text
    */
-  void XXXsetParsedText(int idxStore, String sInput)
-  {
-    ParseResultItemImplement item = items.get(idxStore);
-    item.sInput = sInput;
-  }
+//  void XXXsetParsedText(int idxStore, String sInput)
+//  {
+//    ParseResultItemImplement item = items.get(idxStore);
+//    item.sInput = sInput;
+//  }
   
-  void XXXsetParsedString(int idxStore, String ss)
-  {
-    ParseResultItemImplement item = items.get(idxStore);
-    item.parsedString = ss;
-  }
+//  void XXXsetParsedString(int idxStore, String ss)
+//  {
+//    ParseResultItemImplement item = items.get(idxStore);
+//    item.parsedString = ss;
+//  }
   
   
-  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, ZbnfSyntaxPrescript syntaxElement, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
-  { return add(sSemantic, syntaxElement, null, countRepetition, start, end, nLine, nColumn, sFile, parent);
+  ParseResultItemImplement addRepetition(int countRepetition, String sSemantic, ZbnfSyntaxPrescript elementSyntax, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(sSemantic, elementSyntax, null, null, countRepetition, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, ZbnfSyntaxPrescript syntaxElement, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
-  { return add(sSemantic, syntaxElement, null, -countRepetition, start, end, nLine, nColumn, sFile, parent);
+  ParseResultItemImplement addRepetitionRepeat(int countRepetition, String sSemantic, ZbnfSyntaxPrescript elementSyntax, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(sSemantic, elementSyntax, null, null, -countRepetition, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addConstantSyntax(ZbnfSyntaxPrescript syntaxElement, String sInput, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
-  { return add(null, syntaxElement, sInput, kTerminalSymbol, start, end, nLine, nColumn, sFile, parent);
+  ParseResultItemImplement addConstantSyntax(ZbnfSyntaxPrescript elementSyntax, String sInput, long start, long end, int nLine, int nColumn, String sFile, ZbnfParseResultItem parent )
+  { return add(null, elementSyntax, null, sInput, kTerminalSymbol, start, end, nLine, nColumn, sFile, parent);
   }
 
 
-  ParseResultItemImplement addSemantic(String sSemantic, ZbnfSyntaxPrescript syntaxElement, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  { return add(sSemantic, syntaxElement, null, kOnlySemantic, 0,0, srcLine, srcColumn, srcFile, parent);
+  ParseResultItemImplement addSemantic(String sSemantic, ZbnfSyntaxPrescript elementSyntax, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
+  { return add(sSemantic, elementSyntax, null, null, kOnlySemantic, 0,0, srcLine, srcColumn, srcFile, parent);
   }
 
 
@@ -947,12 +1054,12 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfSyntaxPrescript syntaxElement, ZbnfParseResultItem parent)
+  ParseResultItemImplement addString(StringPart spInput, String sSemantic, ZbnfSyntaxPrescript elementSyntax, ZbnfParseResultItem parent)
   { long start = spInput.getCurrentPosition();
     long end   = start + spInput.length();
     int nLine = spInput.getLineAndColumn(column);
     String sFile = spInput.getInputfile();
-    return add(sSemantic, syntaxElement, spInput.getCurrentPart().toString(), kString, start, end, nLine, column[0], sFile, parent);
+    return add(sSemantic, elementSyntax, null, spInput.getCurrentPart().toString(), kString, start, end, nLine, column[0], sFile, parent);
   }
 
   /** Adds a founded string to the parsers store. It is called at as the issue of
@@ -960,12 +1067,12 @@ class ZbnfParserStore
    * @param spInput
    * @return
    */
-  ParseResultItemImplement addString(CharSequence src, String sSemantic, ZbnfSyntaxPrescript syntaxElement, StringPart spInput, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  { return add(sSemantic, syntaxElement, src, kString, -1, -1, srcLine, srcColumn, srcFile, parent);
+  ParseResultItemImplement addString(CharSequence src, String sSemantic, ZbnfSyntaxPrescript elementSyntax, StringPart spInput, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
+  { return add(sSemantic, elementSyntax, null, src, kString, -1, -1, srcLine, srcColumn, srcFile, parent);
   }
 
-  void addIdentifier(String sSemantic, ZbnfSyntaxPrescript syntaxElement, String sIdent, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
-  { item = new ParseResultItemImplement(this, sSemantic, parent, "$", syntaxElement);
+  void addIdentifier(String sSemantic, ZbnfSyntaxPrescript elementSyntax, String sIdent, ZbnfParseResultItem parent, int srcLine, int srcColumn, String srcFile)
+  { item = new ParseResultItemImplement(this, sSemantic, parent, "$", elementSyntax, null);
     item.sInput = null;
     item.kind = kIdentifier;
     item.parsedString = sIdent;
@@ -978,13 +1085,13 @@ class ZbnfParserStore
       //item.parent.addInParent(-1, -1, srcLine, srcColumn, srcFile);
     }
     if(parent != null) { //only the immediate parent.
-      ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+      //((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
   }
 
 
-  void addIntegerNumber(String sSemantic, ZbnfSyntaxPrescript syntaxElement, long number, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement( this, sSemantic, parent, "#", syntaxElement);
+  void addIntegerNumber(String sSemantic, ZbnfSyntaxPrescript elementSyntax, long number, ZbnfParseResultItem parent)
+  { item = new ParseResultItemImplement( this, sSemantic, parent, "#", elementSyntax, null);
     item.sInput = null;
     item.kind = kIntegerNumber;
     item.parsedIntegerNumber = number;
@@ -993,13 +1100,13 @@ class ZbnfParserStore
       stop();
     items.add(item);
     if(parent != null)
-    { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+    { //((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
   }
 
 
-  void addFloatNumber(String sSemantic, ZbnfSyntaxPrescript syntaxElement, double number, ZbnfParseResultItem parent)
-  { item = new ParseResultItemImplement( this, sSemantic, parent, "#f", syntaxElement);
+  void addFloatNumber(String sSemantic, ZbnfSyntaxPrescript elementSyntax, double number, ZbnfParseResultItem parent)
+  { item = new ParseResultItemImplement( this, sSemantic, parent, "#f", elementSyntax, null);
     item.sInput = null;
     item.kind = kFloatNumber;
     item.parsedFloatNumber = number;
@@ -1008,7 +1115,7 @@ class ZbnfParserStore
       stop();
     items.add(item);
     if(parent != null)
-    { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+    { //((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
     }
   }
 
@@ -1025,33 +1132,33 @@ class ZbnfParserStore
    * @param addStore
    * @return position of the added content. 
    */
-  int xxxadd(ZbnfParserStore addStore, ZbnfParseResultItem parent)
-  { int idx = items.size(); //actual position
-    if(addStore.items.size() >0)
-    { Iterator<ParseResultItemImplement> iter = addStore.items.iterator();
-      while(iter.hasNext())
-      { ParseResultItemImplement item = (iter.next());
-        if(item.isAdded)
-        { //the item is used onetime, therefore clone it.
-          item = item.clone();
-        }
-        if(!item.isAdded)
-        { item.parent = (ParseResultItemImplement)parent;
-          item.isAdded = true;
-          item.idxOwn = items.size();
-          item.store = this;
-          if(item.idxOwn == 80)
-            stop();
-          items.add(item);
-          if(parent != null)
-          { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
-          }
-        }
-      }
-    }
-    //items.addAll(addStore.items);
-    return idx;
-  }
+//  int xxxadd(ZbnfParserStore addStore, ZbnfParseResultItem parent)
+//  { int idx = items.size(); //actual position
+//    if(addStore.items.size() >0)
+//    { Iterator<ParseResultItemImplement> iter = addStore.items.iterator();
+//      while(iter.hasNext())
+//      { ParseResultItemImplement item = (iter.next());
+//        if(item.isAdded)
+//        { //the item is used onetime, therefore clone it.
+//          item = item.clone();
+//        }
+//        if(!item.isAdded)
+//        { item.parent = (ParseResultItemImplement)parent;
+//          item.isAdded = true;
+//          item.idxOwn = items.size();
+//          item.store = this;
+//          if(item.idxOwn == 80)
+//            stop();
+//          items.add(item);
+//          if(parent != null)
+//          { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+//          }
+//        }
+//      }
+//    }
+//    //items.addAll(addStore.items);
+//    return idx;
+//  }
 
 
   /** adds items form another ParserStore. This is used especially to transfer parse results to another component.
@@ -1078,14 +1185,14 @@ class ZbnfParserStore
           items.add(idx, item);
           if(parent != null)
           { ParseResultItemImplement parent1 = ((ParseResultItemImplement)(parent));
-            parent1.offsetAfterEnd +=1;
+            //parent1.offsetAfterEnd +=1;
             //correct also all offsetAfterEnd from all parents. If the parents are not ready parsed yet,
             //its offsetAfterEnd is not correct, but it is set correctly after parsing the component.
             //in this case the changing here is not necessary but also not interfering.
             while( (parent1 = (ParseResultItemImplement)parent1.parent) != null 
                  && parent1.offsetAfterEnd >0
                  )
-            { parent1.offsetAfterEnd +=1;
+            { //parent1.offsetAfterEnd +=1;
             }
           }
           idx +=1;
@@ -1107,27 +1214,27 @@ class ZbnfParserStore
    * @param sSemantic The given semantic, may be null
    * @return the position of the item in array list.
    */
-  int xxxaddComponent(String sSemantic, ZbnfParseResultItem parent, String syntaxIdent)
-  { item = new ParseResultItemImplement(this, sSemantic, parent, syntaxIdent, null);
-    item.kind = kComponent;
-    item.idxOwn = items.size();
-    if(item.idxOwn == 221)
-      stop();
-    items.add(item);
-    if(parent != null)
-    { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
-    }
-    return items.size() -1;
-  }
+//  int xxxaddComponent(String sSemantic, ZbnfParseResultItem parent, String syntaxIdent)
+//  { item = new ParseResultItemImplement(this, sSemantic, parent, syntaxIdent, null, null);
+//    item.kind = kComponent;
+//    item.idxOwn = items.size();
+//    if(item.idxOwn == 221)
+//      stop();
+//    items.add(item);
+//    if(parent != null)
+//    { ((ParseResultItemImplement)(parent)).offsetAfterEnd +=1; 
+//    }
+//    return items.size() -1;
+//  }
 
   /** Sets the offset to the end
    *
    * @param idxFromwhere
    */
-  void xxx_setOffsetToEnd(int idxFromwhere)
-  { ParseResultItemImplement fromWhere = items.get(idxFromwhere);
-    fromWhere.offsetAfterEnd = items.size() - idxFromwhere;
-  }
+//  void xxx_setOffsetToEnd(int idxFromwhere)
+//  { ParseResultItemImplement fromWhere = items.get(idxFromwhere);
+//    fromWhere.offsetAfterEnd = items.size() - idxFromwhere;
+//  }
 
 
   /** Gets the position for the next entry, useable for rewind().
@@ -1223,7 +1330,7 @@ class ZbnfParserStore
               //It is because it is a component, any component has gotten its treeNodeRepresentation already.
               assert(xmlNode !=null);
               if(xmlChild.getParent() !=null){
-                Assert.check(false);
+//                CheckVs.check(false);
               }
               try{ xmlNode.addContent(xmlChild); } catch(XmlException exc){ throw new IllegalArgumentException(exc); }
             } else {
@@ -1360,6 +1467,65 @@ class ZbnfParserStore
     }
     
   }//class BuilderTreeNodeXml
+
+  
+  
+  
+  /**This is called from {@link ZbnfParser#writeResultAsTextList(Appendable)} as wrapper.
+   * @param out
+   * @throws IOException
+   */
+  void writeContentAsList(Appendable out) throws IOException {
+    int indent = 16;
+    int nrItems = 0;
+    int ixNesting = -1;
+    int[] nesting = new int[1000];
+    StringFormatter format = new StringFormatter(out, false, "\n", 200);
+    for(ParseResultItemImplement item: this.items) {
+      while( ixNesting >=0 && nesting[ixNesting] == item.idxOwn) {
+        ixNesting -=1;
+        indent -=1;
+      }
+      format.addint(item.idxOwn, "2221");
+      if(item.offsetAfterEnd !=1) {
+        format.addint(item.idxOwn+item.offsetAfterEnd, "..1111");
+        format.addint(item.offsetAfterEnd, " +1 ");
+      }
+      format.pos(indent);
+      format.add(item.sSemantic);
+      ZbnfSyntaxPrescript cmpnSyntax = item.componentSyntax();
+      if(cmpnSyntax !=null) {
+        String sIdent = cmpnSyntax.sDefinitionIdent;
+        if(sIdent.equals(item.sSemantic)) {
+          sIdent = "%";
+        }
+        format.add("=::").add(sIdent);
+      }
+      String superItemType = item.getSuperItemType();
+      if(superItemType !=null) {
+        format.add(':').add(superItemType);
+      }
+      format.pos(80);
+      String info;
+      if(item.isInteger()) { info = Long.toString(item.parsedIntegerNumber); }
+      else if(item.isFloat()) { info = Double.toString(item.parsedFloatNumber); }
+      else if(item.parsedString !=null) { info = item.parsedString; }
+      else if(item.getParsedText() !=null) { info = item.getParsedText(); }
+      else  { info = item.syntaxIdent; }
+      format.add("  ").add(info);
+      format.flushLine("\n");
+      if(item.offsetAfterEnd >1) {
+        indent +=1;
+        nesting[++ixNesting] = item.idxOwn + item.offsetAfterEnd;
+      }
+      if(indent >40) {
+        indent = 41;
+      }
+    }
+  }
+  
+  
+  
   
   @Override
   public String toString()

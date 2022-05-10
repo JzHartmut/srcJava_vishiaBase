@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.genJavaOutClass.GenJavaOutClass;
@@ -22,6 +23,13 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-02-07 Hartmut chg {@link WrClassZbnf#evaluateChildSyntax(List, boolean, int)}: 
+   *   <ul><li>If {@link ZbnfSyntaxPrescript#bAssignIntoNextComponent} is set, this element must not placed in the current class.
+   *   <li>Instead, in the syntax.zbnf an element <...?+!...> should be defined, not for parsing, only for generating here. See kOnlyMarker
+   *   <li>semantic = "@", this marker is used to set the semantic from {@link ZbnfSyntaxPrescript#sDefinitionIdent}, must regard here, not done in past...?
+   *   <li>Now {@link ZbnfSyntaxPrescript.RepetitionSyntax#bOnlyOneEachOption} is regarded to prevent producing a List for the elements. 
+   *   </ul>   
+   * <li>2022-02-07 Hartmut chg {@link WrClassZbnf#wrVariable(String, String, ZbnfSyntaxPrescript, boolean, boolean, List): better error report.   
    * <li>2021-11-25 Hartmut chg {@link CmdLine}: Argument <code>-dirJava:$(ENV)/...</code> can contain now environment variables
    *   which are resolved using {@link Arguments#replaceEnv(String)}.
    * <li>2021-11-25 Hartmut chg {@link #evaluateSyntax(ZbnfSyntaxPrescript)} better error message, write what is faulty.
@@ -59,7 +67,7 @@ public class GenZbnfJavaData
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2019-12-08";
+  public static final String sVersion = "2022-02-07";
 
   
   
@@ -93,6 +101,9 @@ public class GenZbnfJavaData
 
   
   private final GenJavaOutClass genClass;
+  
+  
+  //private final Map<String, String> superTypes = new TreeMap<String, String>();
   
   
   public GenZbnfJavaData(GenJavaOutClass.CmdArgs cmdArgs, MainCmdLogging_ifc log)
@@ -138,21 +149,25 @@ public class GenZbnfJavaData
       //
       //
       //
-      int ixCmpn = 0;
-      while(this.genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
-        SubClassZbnf classData = (SubClassZbnf)this.genClass.listCmpn.get(ixCmpn++);
-        wrClass = new WrClassZbnf();
-        wrClass.wrClassJava.wrClassCmpn(classData);
-        //
-        //
-        if(classData.subSyntax.childSyntaxPrescripts !=null) {
-          wrClass.evaluateChildSyntax(classData.subSyntax.childSyntaxPrescripts, false, 0);
+      if(this.cmdArgs.bAll) {
+        for(Map.Entry<String, ZbnfSyntaxPrescript> e : this.idxSubSyntax.entrySet()) {
+          String sDefinitionIdent = e.getKey();
+          if(!sDefinitionIdent.equals(mainScript.sDefinitionIdent)) {
+            ZbnfSyntaxPrescript cmpnSyntax = e.getValue();
+            SubClassZbnf classData = new SubClassZbnf(sDefinitionIdent, GenJavaOutClass.firstUppercase(sDefinitionIdent));
+            classData.sDbgIdent = cmpnSyntax.sDefinitionIdent;
+            classData.subSyntax = cmpnSyntax;
+            genCmpnClass(classData);
+          }
         }
-        //
-        wrClass.wrClassJava.writeOperations();
-        //
-        this.genClass.finishCmpnWrite();
-
+      }
+      else {
+        int ixCmpn = 0;
+        while(this.genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
+          SubClassZbnf classData = (SubClassZbnf)this.genClass.listCmpn.get(ixCmpn++);
+          genCmpnClass(classData);
+  
+        }
       }
       //
       this.genClass.finishClassWrite();
@@ -169,7 +184,27 @@ public class GenZbnfJavaData
   
   
   
-  
+  /**Generate the content of a dst class from a syntax component.
+   * @param classData contains syntax
+   * @throws Exception
+   */
+  private void genCmpnClass ( SubClassZbnf classData) throws Exception {
+    String sSuperType = classData.subSyntax.sSuperItemType;
+    WrClassZbnf wrClass = new WrClassZbnf();
+    if(classData.subSyntax.sDefinitionIdent.equals("description"))
+      Debugutil.stop();
+    wrClass.wrClassJava.wrClassCmpn(classData, classData.subSyntax.sSuperItemType);
+    //
+    //
+    if(classData.subSyntax.childSyntaxPrescripts !=null) {
+      wrClass.evaluateChildSyntax(classData.subSyntax.childSyntaxPrescripts, false, 0);
+    }
+    //
+    wrClass.wrClassJava.writeOperations();
+    //
+    this.genClass.finishCmpnWrite();
+    
+  }
 
   
   
@@ -235,113 +270,145 @@ public class GenZbnfJavaData
     
     
     /**An syntax item can have an inner syntax tree. It is not a component. 
-         * The result of the inner tree is stored in the same level.
-         * If a called component is found, it is checked whether it has an own semantic
-         * and the component's syntax is not contained in #idxCmpnWithoutSemantic ( name::=&lt;?> )
-         * Then it is added to build a new class.
-         * If it has not a semantic, the called component is expand here. 
-         * @param childScript
-         * @param bList
-         * @param level
-         * @throws IOException
-         */
-        void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws Exception {
-          for(ZbnfSyntaxPrescript item: childScript) {
-            ZbnfSyntaxPrescript item2 = null;  //any addtional item to convert
-            String semantic = item.sSemantic == null ? "" : item.sSemantic;
-            //if(semantic.startsWith("@")) { semantic = semantic.substring(1); }
-            if(semantic.length() >0 && semantic.charAt(0) != '@' && item.childsHasSemantic() ) {
-              //It is an option etc with [<?semantic>...
-              int posSep = semantic.indexOf('/');
-              String subSemantic = posSep >0 ? semantic.substring(0, posSep) : semantic;
-              getRegisterSubclass(subSemantic, item);
-    //          SubClassZbnf metaclass = idxMetaClass.get(subSemantic);
-    //          if(metaclass == null) { metaclass = new SubClassZbnf(subSemantic); idxMetaClass.put(subSemantic, metaclass); }
-    //          metaclass.subSyntax = item;  //evaluate it in an extra class destination.
-              ////
-            }
-            boolean bRepetition = bList;
-            if(item.eType !=null) {
-              switch(item.eType) {
+     * The result of the inner tree is stored in the same level.
+     * If a called component is found, it is checked whether it has an own semantic
+     * and the component's syntax is not contained in #idxCmpnWithoutSemantic ( name::=&lt;?> )
+     * Then it is added to build a new class.
+     * If it has not a semantic, the called component is expand here. 
+     * @param childScript
+     * @param bList
+     * @param level
+     * @throws IOException
+     */
+    void evaluateChildSyntax(List<ZbnfSyntaxPrescript> childScript, boolean bList, int level) throws Exception {
+      
+      for(ZbnfSyntaxPrescript item: childScript) {
+        if(item.sSemantic !=null && item.sSemantic.equals("argument"))
+          Debugutil.stop();
+        if(item.sDefinitionIdent !=null && item.sDefinitionIdent.equals("type"))
+          Debugutil.stop();
+        if(item.eType == ZbnfSyntaxPrescript.EType.kOnlyMarker)
+          Debugutil.stop();
+        if(item.bAssignIntoNextComponent) {      // ignore this items, not necessary here. 
+          //                                     // It should be defined in the component in form <...?+!...>
+        }
+        else {
+          ZbnfSyntaxPrescript item2 = null;  //any addtional item to convert
+          String semantic = item.sSemantic == null ? "" : item.sSemantic;
+          if(semantic.equals("@")) {             // marker for <syntax?+?> semantic == syntax
+            semantic = item.sDefinitionIdent;
+          }
+          //if(semantic.startsWith("@")) { semantic = semantic.substring(1); }
+          if(semantic.length() >0 && semantic.charAt(0) != '@' && item.childsHasSemantic() ) {
+            //It is an option etc with [<?semantic>...
+            int posSep = semantic.indexOf('/');
+            String subSemantic = posSep >0 ? semantic.substring(0, posSep) : semantic;
+            getRegisterSubclass(subSemantic, item);
+  //          SubClassZbnf metaclass = idxMetaClass.get(subSemantic);
+  //          if(metaclass == null) { metaclass = new SubClassZbnf(subSemantic); idxMetaClass.put(subSemantic, metaclass); }
+  //          metaclass.subSyntax = item;  //evaluate it in an extra class destination.
+            ////
+          }
+          boolean bRepetition = bList;
+          if(item.eType !=null) {
+            switch(item.eType) {
+              
+              case kRepetition: 
+              case kRepetitionRepeat:  
+                if(item instanceof ZbnfSyntaxPrescript.RepetitionSyntax) {     
+                  ZbnfSyntaxPrescript.RepetitionSyntax itemRepeat = (ZbnfSyntaxPrescript.RepetitionSyntax)item;
+                  bRepetition = !itemRepeat.bOnlyOneEachOption && ! itemRepeat.bEntryComponentContainer;
+                  if(!bRepetition)     // not necessery to have Lists for all elements or own element for repetition. 
+                    Debugutil.stop();
+                } else {
+                  Debugutil.stop();    //do not change type of bRepetition
+                  //bRepetition = true; //store immediately result in list
+                }
+                ZbnfSyntaxPrescript.RepetitionSyntax repeatItem = (ZbnfSyntaxPrescript.RepetitionSyntax)item;
+                item2 = repeatItem.backward;
+                if(item.sSemantic !=null) {      // It is [<?semantic>...]: The parsed content in [...] should be stored as String
+                  wrVariable("String", null, semantic+"_Text", item, bRepetition, false, null); 
+                }
+                break;
+              case kOnlySemantic:
+              case kAlternative: 
+              case kAlternativeOptionCheckEmptyFirst:
+              case kSimpleOption:
+              case kAlternativeOption:
+                if(item.sSemantic !=null) {
+                  //It is [<?semantic>...]: The parsed content in [...] should be stored as String
+                  wrVariable("String", null, semantic, item, bList, false, null); 
+                }
+                break;
+              
+              case kExpectedVariant:
+                break;
+              
+              case kFloatWithFactor:
+              case kFloatNumber: wrVariable("float", null, semantic, item, bList, false, null); break;
+              
+              case kPositivNumber:
+              case kIntegerNumber:
+              case kHexNumber: wrVariable("int", null, semantic, item, bList, false, null); break;
+              
+              case kStringUntilEndString:
+              case kStringUntilEndStringInclusive:
+              case kStringUntilEndStringTrim:
+              case kStringUntilEndStringWithIndent:
+              case kStringUntilEndchar:
+              case kStringUntilEndcharInclusive:
+              case kStringUntilEndcharOutsideQuotion:
+              case kStringUntilEndcharWithIndent:
+              case kStringUntilRightEndchar:
+              case kStringUntilRightEndcharInclusive:
+              case kQuotedString:
+              case kRegularExpression:
+              case kIdentifier: {
+                if(item.sSubSyntax ==null) {
+                  wrVariable("String", null, semantic, item, bList, false, null);
+                }
+              } break;
+              
+              case kNegativVariant:
+              case kNotDefined:
+                break;
                 
-                case kRepetition: 
-                case kRepetitionRepeat:  
-                  bRepetition = true; //store immediately result in list
-                  ZbnfSyntaxPrescript.RepetitionSyntax repeatItem = (ZbnfSyntaxPrescript.RepetitionSyntax)item;
-                  item2 = repeatItem.backward;
-                  if(item.sSemantic !=null) {
-                    //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                    wrVariable("String", semantic, item, bList, false, null); 
-                  }
-                  break;
-                case kOnlySemantic:
-                case kAlternative: 
-                case kAlternativeOptionCheckEmptyFirst:
-                case kSimpleOption:
-                case kAlternativeOption:
-                  if(item.sSemantic !=null) {
-                    //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                    wrVariable("String", semantic, item, bList, false, null); 
-                  }
-                  break;
+              case kSkipSpaces:
+                break;
                 
-                case kExpectedVariant:
-                  break;
+              case kOnlyMarker:
+              case kSyntaxComponent: 
+                evaluateSubCmpn(item, bList, level);
+                break;
                 
-                case kFloatWithFactor:
-                case kFloatNumber: wrVariable("float", semantic, item, bList, false, null); break;
-                
-                case kPositivNumber:
-                case kIntegerNumber:
-                case kHexNumber: wrVariable("int", semantic, item, bList, false, null); break;
-                
-                case kStringUntilEndString:
-                case kStringUntilEndStringInclusive:
-                case kStringUntilEndStringTrim:
-                case kStringUntilEndStringWithIndent:
-                case kStringUntilEndchar:
-                case kStringUntilEndcharInclusive:
-                case kStringUntilEndcharOutsideQuotion:
-                case kStringUntilEndcharWithIndent:
-                case kStringUntilRightEndchar:
-                case kStringUntilRightEndcharInclusive:
-                case kQuotedString:
-                case kRegularExpression:
-                case kIdentifier:  wrVariable("String", semantic, item, bList, false, null); break;
-                
-                case kNegativVariant:
-                case kNotDefined:
-                  break;
-                  
-                case kSkipSpaces:
-                  break;
-                  
-                case kSyntaxComponent: 
-                  evaluateSubCmpn(item, bList, level);
-                  break;
-                  
-                case kSyntaxDefinition:
-                  break;
-                case kTerminalSymbol:
-                  break;
-                case kTerminalSymbolInComment:
-                  break;
-                case kUnconditionalVariant:
-                  break;
-                default:
-                  Debugutil.todo();
-              }
-            }
-            //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
-            //in a repetition bList = true;
-            if(item.childSyntaxPrescripts !=null) {
-              evaluateChildSyntax(item.childSyntaxPrescripts, bRepetition, level+1);
-            }
-            if(item2 !=null && item2.childSyntaxPrescripts !=null) {
-              evaluateChildSyntax(item2.childSyntaxPrescripts, bRepetition, level+1);
+              case kSyntaxDefinition:
+                break;
+              case kTerminalSymbol:
+                break;
+              case kTerminalSymbolInComment:
+                break;
+              case kUnconditionalVariant:
+                break;
+              default:
+                Debugutil.todo();
             }
           }
+          if(item.sSubSyntax !=null) {
+            String sType = Character.toUpperCase(item.sSubSyntax.charAt(0)) + item.sSubSyntax.substring(1);
+            String name = semantic !=null ? semantic : Character.toLowerCase(item.sSubSyntax.charAt(0)) + item.sSubSyntax.substring(1);
+            wrVariable(sType, null, name, item, false, false, null);
+          }
+          //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
+          //in a repetition bList = true;
+          if(item.childSyntaxPrescripts !=null) {
+            evaluateChildSyntax(item.childSyntaxPrescripts, bRepetition, level+1);
+          }
+          if(item2 !=null && item2.childSyntaxPrescripts !=null) {
+            evaluateChildSyntax(item2.childSyntaxPrescripts, bRepetition, level+1);
+          }
         }
+      }
+    }
 
     private SubClassZbnf getRegisterSubclass(String name, ZbnfSyntaxPrescript syntaxItem) {
       SubClassZbnf classData = (SubClassZbnf)GenZbnfJavaData.this.genClass.idxRegisteredCmpn.get(name);
@@ -381,7 +448,6 @@ public class GenZbnfJavaData
      * @throws IOException
      */
     private void evaluateSubCmpn(ZbnfSyntaxPrescript item, boolean bList, int level) throws Exception {
-      
       if(item.sDefinitionIdent.startsWith("ST"))
         Debugutil.stop();
       ZbnfSyntaxPrescript prescript = GenZbnfJavaData.this.idxSubSyntax.get(item.sDefinitionIdent); 
@@ -397,7 +463,7 @@ public class GenZbnfJavaData
       else {
         if(item.bStoreAsString) {
           String name = item.bDonotStoreData ? semantic : semantic + "_string";
-          wrVariable("String", name, null, bList, false, null); ////xx
+          wrVariable("String", null, name, null, bList, false, null); ////xx
         }
         if(!item.bDonotStoreData) {
         //create an own class for the component, write a container here.
@@ -409,26 +475,34 @@ public class GenZbnfJavaData
               obligateAttribs.add(subitem.sSemantic.substring(1));
             }
           }
-          String sType = prescript.sSemantic;
-          if(sType == null || sType.equals("@")) {
-            sType = item.sDefinitionIdent;
+          String sTypeObj = prescript.sSemantic;
+          if(sTypeObj == null || sTypeObj.equals("@")) {
+            sTypeObj = item.sDefinitionIdent;
           }
-          sType = GenJavaOutClass.firstUppercase(sType);
-          if(sType.equals("Integer")) {
+          sTypeObj = GenJavaOutClass.firstUppercase(sTypeObj);
+          String sTypeRef = prescript.sSuperItemType;
+          if(sTypeRef ==null) {
+            sTypeRef = sTypeObj;
+          } else {
+            Debugutil.stop();
+          }
+          
+          if(sTypeObj.equals("Integer")) {
             Debugutil.stop();
           } else {
             registerCmpn(item);
           }
-          wrVariable(sType, semantic, item, bList, true, obligateAttribs);
+          wrVariable(sTypeRef, sTypeObj, semantic, item, bList, true, obligateAttribs);
         }
       }
       
     }
 
-    protected void wrVariable(String type, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bList
+    protected void wrVariable(String typeRef, String typeObj, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bList
           , boolean bCmpn, List<String> obligateAttribs
           ) throws Exception {
-          if(semantic !=null && semantic.length() >0) { //else: do not write, parsed without data
+      final String sTypeObj1 = (typeObj == null) ? typeRef :  typeObj;  
+      if(semantic !=null && semantic.length() >0) { //else: do not write, parsed without data
             if(semantic.startsWith("ST"))
               Debugutil.stop();
             int posSep = semantic.indexOf('/');
@@ -448,8 +522,8 @@ public class GenZbnfJavaData
     //            idxMetaClass.put(semantic1, metaClass);
     //          }
               //Writes a new MetaClass, it is like a Component.
-              wrVariable(semantic1, semantic1, syntaxitem, bList, true, obligateAttribs1);  //create the parent
-              GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(type, GenJavaOutClass.firstLowercase(semantic2), semantic2);
+              wrVariable(semantic1, semantic1, semantic1, syntaxitem, bList, true, obligateAttribs1);  //create the parent
+              GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(typeRef, GenJavaOutClass.firstLowercase(semantic2), semantic2);
               //elems.put("varName", firstLowercase(semantic2));
               //elems.put("semantic", semantic2);
               //elems.put("type", type);
@@ -459,17 +533,23 @@ public class GenZbnfJavaData
             else {
               if(semantic.equals("secondOperand"))
                 Debugutil.stop();
-              String sTypeExist = this.wrClassJava.variables.get(semantic);
-              if(sTypeExist !=null) {
-                if(! sTypeExist.equals(type)) {
-                  throw new IllegalArgumentException("Semantic " + semantic + " with different types");
+              String sVariableExist = this.wrClassJava.variables.get(semantic);
+              if(sVariableExist !=null) {                  // sVariableExist is stored with the type
+                if(! sVariableExist.equals(typeRef)) {        // check the type, then ok, else error
+                  ZbnfSyntaxPrescript item1 = syntaxitem;  // error is: using the same semantic in syntax rule with different type.
+                  String sText = "\n  Semantic <...?" + semantic + "> with different types\n  ";
+                  while(item1 !=null) {                    // if the same semantic with same type is used but faultyness,
+                    sText += item1.toString() + "\n  ";    // ... it cannot be detected.
+                    item1 = item1.parent;
+                  }
+                  throw new IllegalArgumentException(sText);
                 }
               } else {
-                final String type2;
-                if(type.equals("Integer")) { 
-                  type2 = "int"; 
+                final String typeRef2;
+                if(typeRef.equals("Integer")) { 
+                  typeRef2 = "int"; 
                 } else {
-                  type2 = type;
+                  typeRef2 = typeRef;
                 }
                 if(semantic.equals("FBType")) {  //a required Attribute in XML
                   Debugutil.stop();
@@ -487,8 +567,10 @@ public class GenZbnfJavaData
                 //semantic = semantic.replace("@!", "");
                 String semantic2 = semantic.replace("@", "");
                 semantic2 = semantic2.replace("/", "_");
+                if(semantic2.equals("value"))
+                  Debugutil.stop();
                 
-                this.wrClassJava.wrVariable(semantic2, type2, !bCmpn, bList, bCmpn, args); 
+                this.wrClassJava.wrVariable(semantic2, typeRef2, sTypeObj1, !bCmpn, bList, bCmpn, args); 
                 
               }  
             }
@@ -553,7 +635,11 @@ public class GenZbnfJavaData
           , new MainCmd.Argument("-class", ":<class>.java    directory for Java output", new MainCmd.SetArgument(){ 
             @Override public boolean setArgument(String val){ 
               CmdLine.this.argData.sJavaClass = val;  return true;
-          }})    
+            }})    
+          , new MainCmd.Argument("-all", " generate Sub classes from all syntax components", new MainCmd.SetArgument(){ 
+                @Override public boolean setArgument(String val){ 
+                  CmdLine.this.argData.bAll = true;  return true;
+            }})    
       };
   
       public final CmdArgs argData;

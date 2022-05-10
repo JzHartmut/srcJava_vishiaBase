@@ -28,7 +28,7 @@ export VERSION_VISHIABASE=$VERSIONSTAMP
 ## The comparison byte by byte inside the jar (zip) file is always possible.
 ## Use this timestamp for file in jars, influences the MD5 check:
 export TIMEinJAR_MINISYS="2022-01-24+00:00"
-export TIMEinJAR_VISHIABASE="2022-01-31+00:00"   
+export TIMEinJAR_VISHIABASE="$VERSIONSTAMP+00:00"   
 
 #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 #It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP

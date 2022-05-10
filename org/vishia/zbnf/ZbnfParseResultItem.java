@@ -162,6 +162,8 @@ public interface ZbnfParseResultItem extends SortedTree<ZbnfParseResultItem>
    */
   public boolean isComponent();
 
+  public ZbnfSyntaxPrescript getComponentSyntax();
+  
   /** Tests if the actual item represents a parsed integer number. 
    * @return true if it is a integer number, false if it is once of the others types querried with is___().
    * */
