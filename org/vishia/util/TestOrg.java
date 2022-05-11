@@ -111,7 +111,7 @@ public class TestOrg {
   
   /**Ctor like {@link #TestOrg(String, int, String[])} but with:
    * @param testout any output channel (may be an opened file) for the test output.
-   *   
+   * See {@link #TestOrg(String, int, String[])}  
    */
   public TestOrg(String title, int nVerbose, String[] args, Appendable testout) {
     this.title = title;

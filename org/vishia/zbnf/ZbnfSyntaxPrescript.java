@@ -21,6 +21,7 @@
  *
  ****************************************************************************/
 package org.vishia.zbnf;
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -118,35 +119,36 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  * The <i>special</i> element is one of the followed:
  *
  * <table border = 1 width=100%>
- * <tr><td><code>$</code></td><td>It is a identifier. Its semantic is given with the semanticident.</td></tr>
- * <tr><td><code>$</code><i>AddChars</i></td><td>It is a identifier with additional chars. At example in XML, an identifier
+ * <tr><td><code>&lt;$?</code></td><td>It is a identifier. Its semantic is given with the semanticident.</td></tr>
+ * <tr><td><code>&lt;$</code><i>AddChars</i>?</td><td>It is a identifier with additional chars. At example in XML, an identifier
  *                                       may have also the char '<code>-</code>' inside. If the '<code>?</code>' is a additional char, it must be written as '<code>\?</code>'.
  *                                       The transcription with '<code>\</code>' is also active here.</td></tr>
- * <tr><td><code>#</code></td><td>It is a positiv number only with the digits 0..9.</td></tr>
- * <tr><td><code>#-</code></td><td>It is a number with a negative sign or not.</td></tr>
- * <tr><td><code>#x</code></td><td>It is a hexadecimal number</td></tr>
- * <tr><td><code>#f</code></td><td>It is a float number</td></tr>
- * <tr><td><code>""</code><i>endchars</i></td><td>A string in quotion marks. Like in Java or C,
+ * <tr><td><code>&lt;#</code>?</td><td>It is a positiv number only with the digits 0..9.</td></tr>
+ * <tr><td><code>&lt;#-</code>?</td><td>It is a number with a negative sign or not.</td></tr>
+ * <tr><td><code>&lt;#x</code>?</td><td>It is a hexadecimal number</td></tr>
+ * <tr><td><code>&lt;#f</code>?</td><td>It is a float number</td></tr>
+ * <tr><td><code>&lt;""</code><i>endchars</i>?</td><td>A string in quotion marks. Like in Java or C,
  *                                       inside the string a sequence <code>\"</code> isn't interpreted as end of quotion. </td></tr>
- * <tr><td><code>''</code><i>endchars</i></td><td>A string in single-quotion marks.
+ * <tr><td><code>&lt;''</code><i>endchars</i>?</td><td>A string in single-quotion marks.
  *                                       Inside the string a sequence <code>\'</code> isn't interpreted as end of quotion. </td></tr>
- * <tr><td><code>*</code><i>endchars</i></td><td>It is a string of any chars, but not containing the <i>endchars</i>.
+ * <tr><td><code>&lt;*</code><i>endchars</i>?</td><td>It is a string of any chars, but not containing the <i>endchars</i>.
  *                                       Regarding the <i>endchars</i> the same rule for transcriptions with '<code>\</code>' is valid.
  *                                       At example the newline char is '<code>\n</code>' and the char '<code>?</code>'
  *                                       must be written as '<code>\?</code>' because the '<code>?</code>' has an extra meaning in this
  *                                       syntax definition, also the '<code>></code>', written as '<code>\></code>'.</td></tr>
- * <tr><td><code>*|</code><i>endstring</i><code>|</code><i>endstring</i></td><td>between | to ? there are some strings as end strings.
+ * <tr><td><code>&lt;*|</code><i>endstring</i>?<code>|</code><i>endstring</i></td><td>between | to ? there are some strings as end strings.
  *                                       All chars are matching until one of the endstring.
  *                                       </td></tr>
- * <tr><td><code>* |</code><i>endstring</i><code>|</code><i>endstring</i></td><td>between | to ? there are some strings as end strings.
+ * <tr><td><code>&lt;* |</code><i>endstring</i><code>|</code><i>endstring</i>?</td><td>between | to ? there are some strings as end strings.
  *                                       All chars are matching until one of the endstring. The parse result is trimmed without leading and trailing white spaces.
  *                                       </td></tr>
- * <tr><td><code>*""</code><i>endchars</i></td><td>Any chars exclusively <i>endchars</i>, but if any of the <i>endchars</i> is inside
+ * <tr><td><code>&lt;*""</code><i>endchars</i>?</td><td>Any chars exclusively <i>endchars</i>, but if any of the <i>endchars</i> is inside
  *                                       a quution, it is claimed as a valid char, not an endchar.</td></tr>
- * <tr><td><code>*{</code><i>indent</i><code>}|</code><i>endstring</i></td><td>It is a special construct to parse text with indentation.
+ * <tr><td><code>&lt;*{</code><i>indent</i><code>}|</code><i>endstring</i>?</td><td>It is a special construct to parse text with indentation.
  *                                       All indentation chars until the column position of the first line are overreaded.
  *                                       See {@link StringPart#lentoAnyStringWithIndent(CharSequence[], CharSequence, int, StringBuilder)} </td></tr>
- * <tr><td><code>!<i>regex</i></code></td><td>Regular expression using java.util.regex.Matcher.lookingAt().</td></tr>
+ * <tr><td><code>&lt;!<i>regex</i>?</code></td><td>Regular expression using java.util.regex.Matcher.lookingAt().</td></tr>
+ * <tr><td><code>&lt;@?</code></td><td>Store the source from this position to the end of the syntax branch as String due to semantic.</td></tr>
  * </table>
  * <br/>
  *There are also some possibilities to use the result of parsing:
@@ -166,6 +168,16 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  *   <td>The semantic is used from the components definition. It is the same as <code>&lt;...&gt;</code> </td>
  * </tr><tr><td><code>&lt;...?@<i>semantic</i>&gt;</code></td>
  *   <td>Its the same like normal semantic, but in XML it is stored in an attribute.</td>
+ * </tr><tr><td><code>&lt;...?""<i>semantic</i>&gt;</code></td>
+ *   <td>Store the parsed source text, in an extra ParseResultItem with the same semantic name (older version)
+ *   but also in the generated parse result item in the element {@link ZbnfParserStore.ParseResultItemImplement#sInput},
+ *   able to get with {@link ZbnfParseResultItem#getParsedText()}.
+ *   <br>Sets {@link #bStoreAsString}</td>
+ * </tr><tr><td><code>&lt;...?"!"<i>semantic</i>&gt;</code></td>
+ *   <td>Store only the parsed source text in the ParseResultItem with the given name.
+ *   able to get with {@link ZbnfParseResultItem#getParsedText()}.
+ *   Does not store the deeper content of the parse result, though the syntax is used to test.
+ *   <br>Sets {@link #bDonotStoreData}</td>
  * </tr><tr><td><code>::=&lt;?<i>semantic</i>&gt;</code> <code>[&lt;?<i>semantic</i>&gt;</code> <code>{&lt;?<i>semantic</i>&gt;</code></td>
  *   <td>If <code>::=&lt;?</code> is written immediately at start of a syntax term, also inside options and so on,
  *     the given semantic and control possibilities is assigned to this term part. So a shorter form is writeable, at ex:
@@ -229,6 +241,9 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2022-04-30: Hartmut new: {@link EType#kStoreSrc} as new feature writing <code>&lt;@?semantic></code>.
+   *   This seems to be the really good variant to store the source to a part of syntax.
+   * <li>2022-02-22: {@link #writeSyntaxStruct(Appendable)} as a new feature, should be existing from beginning...
    * <li>2022-02-10 Hartmut new: {@link #componentSyntax} here existing and set for all syntax rules which uses another syntax component.
    *   It is set in the parser instead searching the syntax component every time again, saves time. 
    *   Secondly it contains some important information, especially the implementation type of a result item.
@@ -535,6 +550,7 @@ public class ZbnfSyntaxPrescript
   , kStringUntilEndStringInclusive   ( 0x35, 's' ) //'I'
   , kStringUntilEndcharInclusive     ( 0x36, 's' ) //'C'
   , kStringUntilRightEndcharInclusive     ( 0x3b, 's' ) //'H' 
+  , kStoreSrc ( 0x3e, '@')
   , kOnlyMarker ( 0x3f, '-')
   ;
     int k;
@@ -677,6 +693,11 @@ public class ZbnfSyntaxPrescript
             { throw new ParseException("failed regex syntax:" + sConstantSyntax,0);
             }
           }
+          else if(cc == '@')
+          { eType = EType.kStoreSrc;
+            sDefinitionIdent = "i-storeSrc";
+            spInput.seekPos(1);
+          } 
           else if(sTest.startsWith("*|"))
           { eType = EType.kStringUntilEndString;
             sDefinitionIdent = "i-StringUntilEndString";
@@ -1741,7 +1762,10 @@ public class ZbnfSyntaxPrescript
         { case kSyntaxDefinition:
           { sWhat = "!" + getDefinitionIdent() + "::=";
           } break;
-          case kTerminalSymbol: sWhat = ":" + sConstantSyntax; break;
+          case kTerminalSymbol: sWhat = sConstantSyntax; 
+            if(sConstantSyntax.equals("public"))
+              Debugutil.stop();
+          break;
           case kSimpleOption:
           { sWhat = "[...]";
           } break;
@@ -1752,7 +1776,7 @@ public class ZbnfSyntaxPrescript
           { sWhat = "[|...|...]";
           } break;
           case kNegativVariant:
-          { sWhat = "[?...|...]";
+          { sWhat = "[?...]";
           } break;
           case kUnconditionalVariant:
           { sWhat = "[>...|...]";
@@ -1826,6 +1850,34 @@ public class ZbnfSyntaxPrescript
   }
 
 
-
+  /**Writes the syntax ({@link #setSyntax(StringPartScan, String)}
+   * in a simple text file using {@link ZbnfSyntaxPrescript#toString()}
+   * in a recursively iteration. It is interesting to see. Can be improved for details.
+   * This routine writes this Prescript and all sub prescripts from {@link #getListPrescripts()}. 
+   * @param out to a Writer, StringBuilder or what ever.
+   * @throws IOException from {@link Appendable#append(char)}
+   */
+  public void writeSyntaxStruct(Appendable out, int recursion) throws IOException {
+    assert(recursion < 12);
+    final String[] sIndent = 
+      { "" 
+      , "  +-"
+      , "  | +-"
+      , "  | | +-"
+      , "  | | | +-"
+      , "  | | | | +-"
+      , "  | | | | | +-"
+      , "  | | | | | | | +-"
+      , "  | | | | | | | | | +-"
+      , "  | | | | | | | | | | +-"
+      , "  | | | | | | | | | | | +-"
+      };
+    out.append(sIndent[recursion]).append(this.toString()).append("\n");
+    if(this.childSyntaxPrescripts !=null) {
+      for(ZbnfSyntaxPrescript childPrescript: this.childSyntaxPrescripts) {
+        childPrescript.writeSyntaxStruct(out, recursion+1);
+      }
+    }
+  }
 
 }

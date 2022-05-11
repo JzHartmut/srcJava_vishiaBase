@@ -74,7 +74,8 @@ public class StringPartFromFileLines extends StringPartScan
   
   /**Version, history and license.
    * list of changes:
-   * <ul>
+   * <ul>2022-03-28 Hartmut bugfix: Now returns the first line as 1. Before, the first line was 0.
+   *    Yet this is used for test, not only manual view, thats why finally fixed.
    * <li>2020-02-10 Hartmut new {@link #StringPartFromFileLines(Reader, String, int)}
    *   <br>{@link #StringPartFromFileLines(InputStream, String, int, String, Charset)} with negativ argument sizeBuffer
    * <li>2020-02-02 Hartmut new {@link #StringPartFromFileLines(Class, String, int, String, Charset)}
@@ -120,7 +121,7 @@ public class StringPartFromFileLines extends StringPartScan
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
 
    */
-  public static final String version = "2020-02-13";
+  public static final String version = "2022-03-28";
   
   //final StringBuilder buffer;
   //char[] fileBuffer = new char[1024];
@@ -170,7 +171,10 @@ public class StringPartFromFileLines extends StringPartScan
   //final FileChannel fileChn;
 
   
-  int nrFirstLineInPositions;
+  /**The number of the first line for the current position
+   * 
+   */
+  int nrFirstLineInPositions =1;
 
   IntegerBlockArray linePositions = new IntegerBlockArray(1000);
   

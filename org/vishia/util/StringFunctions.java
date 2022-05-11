@@ -23,6 +23,8 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-05-09 Hartmut new {@link #startsWithAfterAnyChar(CharSequence, CharSequence, String)}, new {@link #indexAfterAnyChar(CharSequence, int, int, CharSequence)}
+   * <li>2022-05-09 Hartmut new {@link #compareWhSpacePos(CharSequence, int, int, CharSequence, int, int, int[])}
    * <li>2022-01-20 Hartmut new {@link #indexOfAnyCharOutsideQuotation(CharSequence, int, int, CharSequence, CharSequence, CharSequence, char, int[])}
    *   etc, handling quotations, here also (not only in {@link org.vishia.util.StringPart}, used for {@link org.vishia.cmd.CmdExecuter#splitArgs(String, int, int)}
    * <li>2021-12-19 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: change on 2021-20-04 was wrong!
@@ -100,7 +102,7 @@ public class StringFunctions {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2022-01-20"; 
+  public final static String version = "2022-05-10"; 
   
   
   /** The char used to code end of text. It is defined in ASCII as EOT. 
@@ -383,6 +385,60 @@ public class StringFunctions {
   
 
   
+  
+  /**Compare two Strings whereby white spaces are ignored. 
+   * This is ideal for test results where white spaces are non relevant for the results. 
+   * @param s1 Any string, can be null
+   * @param from1 start position
+   * @param to1 -1 then till end, -2... before end, positive: number of chars
+   * @param s2 Second String
+   * @param from2
+   * @param to2
+   * @param p2Out null or an int[1] variable for the error position in s2
+   * @return 0 if both are equal, >=1 if s1 is alphabetic greater or longer, <=-1 if s1 is lesser or shorter. 
+   *   The return value is the error position +1. Errror on start position is 1 (to distinguish from 0 = ok. )
+   */
+  public static int compareWhSpacePos(CharSequence s1, int from1, int to1, CharSequence s2, int from2, int to2, int[] p2Out){
+    if(s1 ==null && s2 ==null) return 0;
+    if(s1 ==null) { return -1;}
+    if(s2 ==null) { return 1; }
+    char c1=0, c2=0;
+    int to11 = to1 >0 ? to1: s1.length() + to1 +1;         // to1 == -1, then till end, to1 <= -2 then before end
+    int to21 = to2 >0 ? to2: s2.length() + to2 +1;
+    int p1 = from1, p2 = from2;
+    
+    while(p1 < to11 && p2 < to21) {
+      c1 = s1.charAt(p1++);
+      c2 = s2.charAt(p2++);
+      while(" \t\n\t\f".indexOf(c1) >=0 && p1 < to11) {                    // whitespace in c1
+        c1 = s1.charAt(p1++);
+      }
+      while(" \t\n\t\f".indexOf(c2) >=0 && p2 < to21) {                    // whitespace in c1
+        c2 = s2.charAt(p2++);
+      }
+      if(c1 != c2) {
+        break;
+      }
+    }
+    if(c1 == c2) {
+      while(p1 < to11 
+          && " \t\n\t\f".indexOf(s1.charAt(p1++)) >=0) {                    // whitespace in c1
+      }
+      while(p2 < to21 
+          && " \t\n\t\f".indexOf(s2.charAt(p2++)) >=0) {                    // whitespace in c1
+      }
+    }
+    if(c1 == c2 && p1 == to11 && p2 == to21) { return 0;}
+    if(p2Out !=null && p2Out.length >=1) {
+      p2Out[0] = p2 - from2;
+    }
+    if(c1 < c2) { return -(p1 - from1);}
+    return (p1 - from1);
+  }
+  
+  
+  
+  
   boolean test(String s){
     if(s==null) return false;
     else return true;
@@ -524,7 +580,7 @@ public class StringFunctions {
     return indexOf(s1, 0, Integer.MAX_VALUE, s2) >=0; 
   }
   
-  /**Checks whether the given CharSequence starts with a CharSequence.
+  /**Checks whether the given CharSequence starts with a defined CharSequence.
    * It is the adequate functionality like {@link java.lang.String#startsWith(String)}
    * but it works proper with {@link java.lang.CharSequence}. See example on {@link #equals(Object)}.
    */
@@ -532,6 +588,24 @@ public class StringFunctions {
     return compare(sq, 0, start, 0, start.length()) == 0;
   }
   
+  
+  /**Checks whether a given sq starts with the compare sequence start,
+   * but after some admissible characters. 
+   * @param sq The string to check
+   * @param start start characters to check
+   * @param anyCharBeforeStart often only one space, or specific indent character.
+   * @return -1 if not starts with start, else position after the start string.
+   */
+  public static int startsWithAfterAnyChar(CharSequence sq, CharSequence start, String anyCharBeforeStart) {
+    int begin = indexAfterAnyChar(sq, 0, -1, anyCharBeforeStart);
+    int zStart = start.length();
+    if(compare(sq, 0, start, 0, zStart)==0) {
+      return begin +zStart; //position of the start string
+    }
+    else {
+      return -1;    //not matched.
+    }
+  }
 
   /**Checks whether the given CharSequence starts with a CharSequence.
    * It is the adequate functionality like {@link java.lang.String#startsWith(String)}
@@ -658,6 +732,22 @@ public class StringFunctions {
     else  return -1;
   }
 
+  
+  /**Searches the first character which is not contains in any given characters.
+   * @param sq search this string
+   * @param begin >=0 for start
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param sChars This characters are skipped
+   * @return position of the first character which is not contained in sChars or the length if to whole string contains only chars from sChars.
+   */
+  public static int indexAfterAnyChar(CharSequence sq, int begin, int endMax, CharSequence sChars) {
+    int zsq = sq.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax > zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
+    int pos = begin -1;
+    while(++pos < end && (indexOf(sChars, sq.charAt(pos))) >= 0){ }  //while any of char in sChars not found:
+    return pos;
+  }
+  
   
 
   

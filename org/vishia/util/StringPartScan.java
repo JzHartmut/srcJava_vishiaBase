@@ -54,6 +54,10 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-04-28 Hartmut new scan of numeric values with a side output for the parsed String:
+   *   Sometimes not the number itself but also the given source writing style is the point of interest. 
+   *   See label @since 2022-04-28 on operations. 
+   * <li>2021-06-10 Hartmut new {@link #scanAnyChar(String)}
    * <li>2021-06-10 Hartmut new {@link #scanChar(char)} was missing for usage. Firstly in the C++ version.
    *   Why it is missing? forgotten, really simple necessary. Only tested in the moment in C++, works.
    *   Hint: {@link #scan(CharSequence)} is possible to use instead, but too complex in C/++ language
@@ -118,7 +122,7 @@ public class StringPartScan extends StringPart
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2019-06-13"; 
+  public final static String sVersion = "2022-04-28"; 
 
   
   /**Position of scanStart() or after scanOk() as begin of next scan operations. */
@@ -303,6 +307,29 @@ public class StringPartScan extends StringPart
   
   
   
+  /**Scans whether one of the given characters is currently follow
+   * @param cmp all expected characters, one of them should match
+   * @return this, use {@link #scanOk()} to test the result.
+   * @since 2021-06, was missing, too simple. But systematically.
+   */
+  public final StringPartScan scanAnyChar(String cmp) {
+    if(scanEntry()) {  //false if scan before is false
+      if(  (this.begin + 1) < this.endMax) {
+        char cc = this.content.charAt(this.begin);
+        if(cmp.indexOf(cc)>=0) {
+          this.begin +=1;    //skip, ok
+        } else {
+          this.bCurrentOk = false;
+        }
+      } else {
+        this.bCurrentOk = false;
+      }
+    }
+    return this;
+  }
+  
+  
+  
   /*=================================================================================================================*/
   /*=================================================================================================================*/
   /*=================================================================================================================*/
@@ -467,16 +494,21 @@ public class StringPartScan extends StringPart
    * @param maxNrofChars Maybe -1, {@link Integer#MAX_VALUE} or a lesser number as the actual part to limit the range. 
    * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
    *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
+   * @param scannedString if given, then [0] is filled with the parsed String to return the format, since 2022-04-28
    * @return long number represent the digits. -1 is returned if no digit is detected (as error value). 
    * @throws ParseException 
+   * @since 2022-04-28
    */
-  public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars) throws ParseException {
+  public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars, String[] scannedString) throws ParseException {
     if(scanEntry()) {
       int max = (end - begin);
       if(maxNrofChars >=0 && maxNrofChars < max) { max = maxNrofChars; }
       int[] parsedChars = new int[1];
       long number = StringFunctions_C.parseUlong(content, begin, max, radix, parsedChars, separatorChars);
       if(parsedChars[0] >0) { //anything parsed
+        if(scannedString !=null) {
+          scannedString[0] = super.content.subSequence(begin, begin + parsedChars[0]).toString();
+        }
         begin += parsedChars[0];
         if(ixLastIntegerNumber < nLastIntegerNumber.length -2)
         { nLastIntegerNumber[++ixLastIntegerNumber] = number;
@@ -491,7 +523,9 @@ public class StringPartScan extends StringPart
   }
   
 
-
+  public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars) throws ParseException {
+    return scanDigits(radix, maxNrofChars, separatorChars, null);
+  }
   
   /**Scanns a integer number as positiv value without sign. 
    * All digit character '0' to '9' will be proceed. 
@@ -536,12 +570,14 @@ public class StringPartScan extends StringPart
    *   without semantic. For example a number with thousand separation written with 1"000'000 are convert as 1000000
    *   if separatorChars are given with "\"'". But 1'000'000 delivers the same result for this example.
    *   Usual only one separatorChar may be given.
+   * @param scannedString if given, then [0] is filled with the parsed String to return the format, since 2022-04-28
    * @return this
    * @throws ParseException
    * @java2c=return-this.
    * @return this
+   * @since 2022-04-28
    */
-  public final StringPartScan scanInteger(String separatorChars) throws ParseException {
+  public final StringPartScan scanInteger(String separatorChars, String[] scannedString) throws ParseException {
     if(scanEntry()) { 
       boolean bNegativeValue = false;
       int begin0 = this.begin;
@@ -557,6 +593,9 @@ public class StringPartScan extends StringPart
         if(bNegativeValue)
         { nLastIntegerNumber[ixLastIntegerNumber] = - nLastIntegerNumber[ixLastIntegerNumber]; 
         }
+        if(scannedString !=null) {
+          scannedString[0] = super.content.subSequence(begin0, this.begin).toString();
+        }
       } else if(bNegativeValue) {
         this.begin = begin0;  //revert the scan of '-'
       }
@@ -564,6 +603,11 @@ public class StringPartScan extends StringPart
     return this;
   }
 
+
+  
+  public final StringPartScan scanInteger(String separatorChars) throws ParseException {
+    return scanInteger(separatorChars, null);
+  }
   
   /**Scans a float number. The result is stored internally
    * and have to be got calling {@link #getLastScannedFloatNumber()}.
@@ -770,13 +814,35 @@ public class StringPartScan extends StringPart
    * and have to be got calling {@link #getLastScannedIntegerNumber()}.
    * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
    * an exception is thrown. 
+   * @param maxNrofChars parse no more, see {@link #scanDigits(int, int, String, String[])}
    * @throws ParseException if the buffer is not free to hold an integer number.
    * @java2c=return-this.
    */
   public final StringPartScan scanHex(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
-  { return scanDigits(16, maxNrofChars, null);
+  { return scanDigits(16, maxNrofChars, null, null);
   }
 
+  
+  
+  
+  /**Scans a sequence of hex chars a hex number. No '0x' or such should be present. 
+   * See scanHexOrInt().
+   * The result as long value is stored internally
+   * and have to be got calling {@link #getLastScannedIntegerNumber()}.
+   * There can stored upto 5 numbers. If more as 5 numbers are stored yet,
+   * an exception is thrown. 
+   * @param maxNrofChars parse no more, see {@link #scanDigits(int, int, String, String[])}
+   * @param scannedString if given, then [0] is filled with the parsed String to return the format, since 2022-04-28
+   * @throws ParseException if the buffer is not free to hold an integer number.
+   * @java2c=return-this.
+   * @since 2022-04-28
+   */
+  public final StringPartScan scanHex(int maxNrofChars, String[] scannedString) throws ParseException  //::TODO:: scanLong(String sPicture)
+  { return scanDigits(16, maxNrofChars, null, scannedString);
+  }
+
+  
+  
   /**Scans a integer number possible as hex, or decimal number.
    * If the number starts with 0x it is hexa. Otherwise it is a decimal number.
    * Octal numbers are not supported!  
@@ -789,7 +855,7 @@ public class StringPartScan extends StringPart
    * @param maxNrofChars The maximal number of chars to scan, if <=0 than no limit.
    * @return this to concatenate the call.
    */
-  public final StringPartScan scanHexOrDecimal(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
+  public final StringPartScan scanHexOrDecimal(int maxNrofChars, String[] scannedString) throws ParseException  //::TODO:: scanLong(String sPicture)
   { if(scanEntry())
     { int begin0 = begin;
       if( StringFunctions.equals(content, begin, begin+2, "0x"))
@@ -799,13 +865,18 @@ public class StringPartScan extends StringPart
       { scanDigits(10, maxNrofChars, null);
       }
       if(!bCurrentOk) { 
+        if(scannedString !=null) {
+          scannedString[0] = super.content.subSequence(begin0, this.begin).toString();
+        }
         begin = begin0;  //revert read "0x"
       }
     }
     return this;
   }
 
-  
+  public final StringPartScan scanHexOrDecimal(int maxNrofChars) throws ParseException {  //::TODO:: scanLong(String sPicture)
+    return scanHexOrDecimal(maxNrofChars, null); 
+  }  
   /**Scans an identifier with start characters A..Z, a..z, _ and all characters 0..9 inside.
    * If an identifier is not found, scanOk() returns false and the current position is preserved.
    * The identifier can be gotten with call of {@link #getLastScannedString()}.

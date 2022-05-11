@@ -49,7 +49,7 @@ export FILE1SRC="@minisys.files" #files to compile contained in this file
 export SRCPATH=..
 
 # Resourcefiles for files in the jar
-export RESOURCEFILES=""
+export RESOURCEFILES="..:**/*.zbnf ..:**/*.txt"
 
 # located from this workingdir as currdir for shell execution:
 export MANIFEST=minisys.manifest

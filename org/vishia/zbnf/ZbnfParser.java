@@ -27,6 +27,7 @@ package org.vishia.zbnf;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
@@ -133,6 +134,28 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-04-29: Hartmut using {@link ZbnfSyntaxPrescript.EType#kStoreSrc}:
+   *   This seems a good opportunity to store the source to an element or component. 
+   *   <ul><li>new {@link SubParser#posStoreSrc} and {@link SubParser#semanticStoreSrc} to save the start position for the source
+   *   <li>In {@link SubParser#parsePrescript(ZbnfSyntaxPrescript, ParseResultItemImplement, boolean, boolean, int)}:
+   *     create the element with the given semantic if bOk.
+   *   </ul>
+   * <li>2022-04-29: For syntax components: If written with <code>&lt;<i>component</i>?""<i>semantic</i></code>
+   *   ( {@link ZbnfSyntaxPrescript#bStoreAsString} is set), then writes the parse result of this component
+   *   in {@link ZbnfParserStore.ParseResultItemImplement#sInput}, now also inside the component. 
+   *   There it is useful to evaluate, used for parsed hex numbers, " 0x000e" is the source, and 14 is the parse result, 
+   *   to less information without knowledge of the source. Used first time for Java2Vhdl translator.   
+   * <li>2022-04-28: for parsing numbers: calls {@link StringPartScan#scanDigits(int, int, String, String[])} 
+   *   with destination of source and stores this source string in {@link ZbnfParserStore.ParseResultItemImplement#sInput}.
+   *   It is offered, what to do with it depends on evaluation of the parse result. See change in {@link ZbnfJavaOutput}. 
+   * <li>2022-02-22: {@link #writeSyntaxStruct(Appendable)} as a new feature, should be existing from beginning...
+   * <li>2022-02-22: In {@link #parse(StringPartScan, List)}: set {@link #nReportLevel} to 0, switch off the old report strategy,
+   *   because the new one with {@link #setLogComponents(Appendable)} seems to be better. In comparison to =3 30% lesser calculation time.
+   * <li>2022-02-15: bugfix: Calling with ctor {@link #ZbnfParser(MainCmdLogging_ifc, Args)} has not reported "found before:".
+   *   The size of the {@link Args#maxParseResultEntriesOnError} was not gotten correctly. 
+   * <li>2022-02-12: new {@link #setLogComponents(Appendable)} new feature tested
+   * <li>2022-02-10: new {@link #sInputMostRightError} set on any parser non matching as most right. The problem was, the input file was not seen,
+   *   only its line and column, but this is not reliable at all times. 
    * <li>2022-02-10: {@link SubParser#parseRepetition(ZbnfSyntaxPrescript, ZbnfSyntaxPrescript, ParseResultItemImplement, boolean, int)}:
    *   regard <code>{<?semantic:Type> </code> as type designation of the created parse result, stores in {@link ZbnfSyntaxPrescript#componentSyntax}
    *   for usage in {@link ZbnfJavaOutput}. Not for the parsing process itself used. 
@@ -302,7 +325,7 @@ public class ZbnfParser
    * <li>2006-05-00 JcHartmut: creation
    * </ul>
    */
-  public static final String sVersion = "2022-02-10";
+  public static final String sVersion = "2022-04-30";
 
   /** Helpfull empty string to build some spaces in strings. */
   static private final String sEmpty = "                                                                                                                                                                                                                                                                                                                          ";
@@ -479,6 +502,12 @@ public class ZbnfParser
     , int nRecursion
     ) throws ParseException
     { //this.input = input;
+      int zComponentsWhileParsing = 0;
+      if( ZbnfParser.this.log1.logComponents !=null) {
+        zComponentsWhileParsing = ZbnfParser.this.log1.componentsWhileParsing.length();
+        ZbnfParser.this.log1.componentsWhileParsing.append("->").append(parentSyntaxItem.sDefinitionIdent);
+        ZbnfParser.this.log1.write(input);
+      }
       this.parserStoreInPrescript = parserStoreInPrescriptP;
       int ixStoreStart = parserStoreInPrescript.items.size();
       int idxRewind = -1; //unused yet.
@@ -528,6 +557,9 @@ public class ZbnfParser
         String key = String.format("%9d", resultlet.startPosText) + resultlet.syntaxPrescript.sDefinitionIdent;
         alreadyParsedCmpn.put(key, resultlet);
       }
+      if(ZbnfParser.this.log1.logComponents !=null) {
+        ZbnfParser.this.log1.componentsWhileParsing.setLength(zComponentsWhileParsing);  //note use local variable because recursive usage.
+      }
       return bOk;
     }
 
@@ -572,6 +604,12 @@ public class ZbnfParser
        * @see getExpectedSyntaxOnError()
        */
       String sSemanticForError;
+  
+      /**If not 0 then &lt@?semantic> was detected, to store the source to this path till end of sub syntax. */
+      long posStoreSrc;
+      
+      /**Associated semantic to store the source. null: nothing to store. */
+      String semanticStoreSrc = null;
       
       final boolean bDoNotStoreData;
       
@@ -684,6 +722,10 @@ public class ZbnfParser
       , int recursion
       ) throws ParseException
       { boolean bFound = false;
+        if(recursion > 300) {
+          Debugutil.stop();
+          throw new IllegalArgumentException("to deep recursion");
+        }
         sSemanticForError = sSemanticForErrorDefault;
         @SuppressWarnings("unused")
         String sSemanticIdent1 = sSemanticIdent; //only debug
@@ -847,8 +889,8 @@ public class ZbnfParser
             } 
             //
             //store parsed String for a component only if wished.
-            if(  args.bStoreInputForComponent ) {
-              resultItem.sInput = parsedInput.toString();
+            if(  args.bStoreInputForComponent || parentSyntaxItem !=null && parentSyntaxItem.bStoreAsString) {  
+              resultItem.sInput = parsedInput.toString();  //The syntax item which invokes this component contains <...?""...>
             }
           } else {
             parsedInput = null;
@@ -914,7 +956,12 @@ public class ZbnfParser
       boolean parsePrescript(ZbnfSyntaxPrescript prescriptItem, ZbnfParserStore.ParseResultItemImplement parentResultItem
           , boolean bSkipSpaceAndCommentForward, boolean bDoNotStoreData, int recursion) 
       throws ParseException 
-      { List<ZbnfSyntaxPrescript> listPrescripts = prescriptItem.getListPrescripts();
+      { 
+        
+        
+        
+        
+        List<ZbnfSyntaxPrescript> listPrescripts = prescriptItem.getListPrescripts();
         boolean bSkipSpaceAndComment = bSkipSpaceAndCommentForward;
         boolean bOk = false;
         //save the current positions in input and result to restore if the prescript does not match:
@@ -972,7 +1019,10 @@ public class ZbnfParser
               will might be needed the whitespaceAndComment-Test in a own way.
             */   
           }
-          
+          if(!bOk && this.semanticStoreSrc !=null) {
+            this.semanticStoreSrc = null;
+            this.posStoreSrc = 0;
+          }
           if(!bOk && forkPoints !=null) {
             ForkPoint forkPoint = forkPoints.remove(forkPoints.size()-1);  //remove last
             if(forkPoints.size() == 0){ forkPoints = null; } //no next
@@ -988,6 +1038,11 @@ public class ZbnfParser
         if(!bOk) {
           input.setCurrentPosition(posInput);
           parserStoreInPrescript.setCurrentPosition(posParseResult);
+        }
+        if(this.semanticStoreSrc !=null) {
+          long posCurrent = input.getCurrentPosition();
+          String src = input.getCharSequenceRange(this.posStoreSrc, -1).toString();
+          parserStoreInPrescript.add(this.semanticStoreSrc, null, null, src, 0, this.posStoreSrc, posCurrent, 0, 0, null, null);
         }
         return bOk;
       }
@@ -1195,6 +1250,11 @@ public class ZbnfParser
 	              case kTerminalSymbolInComment:  //Note: important if bSkipSpaceAndComment = false. 
 	              case kTerminalSymbol: 
 	              { bOk = parseTerminalSymbol(syntaxItem, parentResultItem);
+	              } break;
+	              case kStoreSrc:
+	              { this.posStoreSrc = input.getCurrentPosition();
+	                this.semanticStoreSrc = syntaxItem.sSemantic;
+	                bOk = true;
 	              } break;
 	              case kIdentifier:
 	              { bOk = parseIdentifier( sConstantSyntax, sSemanticForStoring, parentResultItem);
@@ -1551,10 +1611,11 @@ public class ZbnfParser
       private boolean parsePositiveInteger(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parsePositivIntg;       " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parsePosNumber(" + nRecursion + ") <#?" + sSemanticForError + ">");
-        if(input.scanDigits(10, Integer.MAX_VALUE, syntaxItem.getConstantSyntax()).scanOk())  //Note: constantSyntax is separator chars.
+        String[] parsedString = new String[1];
+        if(input.scanDigits(10, Integer.MAX_VALUE, syntaxItem.getConstantSyntax(), parsedString).scanOk())  //Note: constantSyntax is separator chars.
         { bOk = true;
           if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parsedString, parentResultItem);
           }
         }
         else
@@ -1568,10 +1629,11 @@ public class ZbnfParser
       private boolean parseHexNumber(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseHexNumber;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseHex(" + nRecursion + ") <#x?" + sSemanticForError + ">");
-        if(input.scanDigits(16, maxNrofChars, syntaxItem.getConstantSyntax()).scanOk())
+        String[] parsedString = new String[1];
+        if(input.scanDigits(16, maxNrofChars, syntaxItem.getConstantSyntax(), parsedString).scanOk())
         { bOk = true;
           if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parsedString, parentResultItem);
           }
         }
         else
@@ -1592,10 +1654,11 @@ public class ZbnfParser
       private boolean parseNumberRadix(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseHexNumber;         " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseHex(" + nRecursion + ") <#x?" + sSemanticForError + ">");
-        if(input.scanDigits((int)syntaxItem.nFloatFactor, maxNrofChars, syntaxItem.getConstantSyntax()).scanOk())
+        String[] parsedString = new String[1];
+        if(input.scanDigits((int)syntaxItem.nFloatFactor, maxNrofChars, syntaxItem.getConstantSyntax(), parsedString).scanOk())
         { bOk = true;
           if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parsedString, parentResultItem);
           }
         }
         else
@@ -1609,11 +1672,12 @@ public class ZbnfParser
       private boolean parseInteger(ZbnfSyntaxPrescript syntaxItem, ZbnfParserStore.ParseResultItemImplement parentResultItem, int maxNrofChars) throws ParseException
       { boolean bOk;
         if(nReportLevel >= nLevelReportParsing) report.reportln(idReportParsing, "parseInteger;           " + input.getCurrentPosition()+ " " + input.getCurrent(30) + sEmpty.substring(0, nRecursion) + " parseInt(" + nRecursion + ") <#-?" + sSemanticForError + ">");
-        if(input.scanInteger(syntaxItem.getConstantSyntax()).scanOk())  //constantSyntax may contain additional separator chars or null. 
+        String[] parsedString = new String[1];
+        if(input.scanInteger(syntaxItem.getConstantSyntax(), parsedString).scanOk())  //constantSyntax may contain additional separator chars or null. 
         {
           bOk = true;
           if(syntaxItem.getSemantic() != null && ! this.bDoNotStoreData)
-          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parentResultItem);
+          { parserStoreInPrescript.addIntegerNumber(syntaxItem.getSemantic(), null, input.getLastScannedIntegerNumber(), parsedString, parentResultItem);
           }
         }
         else
@@ -1827,6 +1891,8 @@ public class ZbnfParser
           { stop();
           
           }
+          if(sSemanticForStoring !=null && sSemanticForStoring.equals("ModifierMethod"))
+            Debugutil.stop();
           /**Create the SubParser-instace: */
           final PrescriptParser componentsPrescriptParser;
           
@@ -2226,6 +2292,7 @@ public class ZbnfParser
         int posInput = (int)input.getCurrentPosition() + posInputbase;
         if(posRightestError < posInput)
         { posRightestError = posInput;
+          sInputMostRightError = input.getCurrentPart(40).toString();
           int[] column1 = new int[1];
           lineError = input.getLineAndColumn(column1);
           sFileError = input.getInputfile();
@@ -2382,6 +2449,8 @@ public class ZbnfParser
    */
   protected int lineError, columnError;
 
+  String sInputMostRightError;
+  
   /**The file or name of the {@link StringPart#getInputfile()} which was parsed on the rightest error position. */
   protected String sFileError;
   
@@ -2486,7 +2555,7 @@ public class ZbnfParser
    *        If >0, than the last founded parse result is stored to support better analysis of syntax errors,
    *        but the parser is slower.
    */
-  public ZbnfParser( MainCmdLogging_ifc report, ZbnfParser.Args args)
+  public ZbnfParser( MainCmdLogging_ifc report, ZbnfParser.Args args) //, int maxParseResultEntriesOnError)
   { this.report = report;
     this.args = args;   //Default values.
     //parserStore = new ParserStore();
@@ -2494,13 +2563,26 @@ public class ZbnfParser
     //cc080318 create it at start of parse(): parserStore = new ZbnfParserStore();
     //prescriptParserTopLevel = new PrescriptParser(null, "topLevelSyntax"/*cc080318 , parserStore, null*/); 
     log = new LogParsing(report);
-    this.maxParseResultEntriesOnError = maxParseResultEntriesOnError;
+    this.maxParseResultEntriesOnError = args.maxParseResultEntriesOnError;
     listParseResultOnError = maxParseResultEntriesOnError >0 
                            ? new ArrayList<ZbnfParseResultItem>(maxParseResultEntriesOnError)
                            : null;
   }
 
 
+  
+  
+  /**Optional setting to log which syntax components are entered on which input position. 
+   * It is interesting or important if a new syntax definition is created
+   * and this have some problems. Timing: additional ~ 10% of the parsing time.
+   * TODO the older logging capabilities should be removed. This seems to be sufficient.
+   * @since 2022-02 
+   * @param out
+   */
+  public void setLogComponents(Appendable out) {
+    this.log1.logComponents = out;
+  }
+  
   
   /** Sets the syntax from given string.
    * @param syntax The ZBNF-Syntax.
@@ -2561,10 +2643,12 @@ public class ZbnfParser
    * @throws IllegalCharsetNameException 
    */
   public void setSyntaxFromJar(Class<?> clazz, String pathInJarFromClazz) throws IOException, IllegalCharsetNameException, UnsupportedCharsetException, ParseException {
-    StringPartScan spSyntax = new StringPartFromFileLines(clazz, pathInJarFromClazz, 0, "encoding", null);
+    InputStream ijar = clazz.getResourceAsStream(pathInJarFromClazz);
+    StringPartScan spSyntax = new StringPartFromFileLines(ijar, "jar:" + pathInJarFromClazz, 0, "encoding", null);
     String sDirImport = null;   //yet not supported: import sub syntax.
     setSyntax(spSyntax, sDirImport);
-    spSyntax.close();   //closes ssyntax too.
+    spSyntax.close();  
+    ijar.close();
   }
 
 
@@ -2767,6 +2851,11 @@ public class ZbnfParser
           mainScript = subScript;  //the first prescript may be the main.
         }
         String sDefinitionIdent = subScript.getDefinitionIdent();
+//        if(sDefinitionIdent == null) {
+//          Debugutil.stop();
+//        } else if(sDefinitionIdent.equals("maybeConditionalValue")) {
+//          Debugutil.stop();
+//        }
         if(sDefinitionIdent != null)
         { //may be null, especially if found: ?semantic ::= "explaination". 
           listSubPrescript.put(sDefinitionIdent, subScript);
@@ -2795,6 +2884,27 @@ public class ZbnfParser
   }
   
   
+  
+  /**Writes the syntax ({@link #setSyntax(StringPartScan, String)}
+   * in a simple text file using {@link ZbnfSyntaxPrescript#toString()}
+   * via {@link ZbnfSyntaxPrescript#writeSyntaxStruct(Appendable, int)}
+   * in a recursively iteration. It is interesting to see. Can be improved for details.
+   * This routine organizes the main and all sub syntax components known on parser level.
+   * This feature may be proper from beginning. 
+   * @param out to a Writer, StringBuilder or what ever.
+   * @throws IOException from {@link Appendable#append(char)}
+   */
+  public void writeSyntaxStruct(Appendable out) throws IOException {
+    out.append("Main Script\n");
+    this.mainScript.writeSyntaxStruct(out, 0);
+    for(Map.Entry<String, ZbnfSyntaxPrescript> e : this.listSubPrescript.entrySet()) {
+      out.append("Sub Syntax Component: ").append(e.getKey()).append("\n");
+      ZbnfSyntaxPrescript subPrescript = e.getValue();
+      subPrescript.writeSyntaxStruct(out, 0);
+    }
+  }
+
+
   
   public ZbnfSyntaxPrescript mainScript() { return mainScript; }
   
@@ -3034,13 +3144,14 @@ public class ZbnfParser
    *        The elements [0], [2] etc. contains the semantic identifier 
    *        whereas the elements [1], [3] etc. contains the information content.
    * @return true if the input is matched to the syntax, otherwise false.
+   * @throws IOException 
    */
   public boolean parse(StringPartScan input, List<String> additionalInfo) {
 //    nLevelReportParsing = report.getReportLevelFromIdent(idReportParsing);  
 //    nLevelReportComponentParsing = report.getReportLevelFromIdent(idReportComponentParsing);  
 //    nLevelReportInfo = report.getReportLevelFromIdent(idReportInfo);  
 //    nLevelReportError = report.getReportLevelFromIdent(idReportError);  
-    nReportLevel = report.getReportLevel(); //the current reportlevel from the users conditions.
+    nReportLevel = 0; //2022-02 new strategy, switched of 30% faster .....// report.getReportLevel(); //the current reportlevel from the users conditions.
     
     //the old parserStore may be referenced from the evaluation, use anyway a new one!
     parserStoreTopLevel = new ZbnfParserStore(); 
@@ -3074,8 +3185,10 @@ public class ZbnfParser
                   (sSemantic, mainScript, null, parserStoreTopLevel, addParseResult, false, false, 0);
       return bOk;
     }
-    catch(ParseException exc)
+    catch(Exception exc)
     {
+      System.err.println("Parser Error" + exc.getMessage());
+      exc.printStackTrace(System.err);
       return false;
     }
   }
@@ -3250,7 +3363,7 @@ public class ZbnfParser
     if(line >0 || column > 0){
       u.append(" @line, col: ").append(line).append(", ").append(column);
     }
-    
+    u.append( "\n  ...:").append(getRightestInputOnError());
     u.append(" >>>>>").append(sRightestError);
     if(u.length() < 80){u.append("<<<<end of file"); }
     for(int i=0; i < u.length(); ++i) {
@@ -3274,6 +3387,10 @@ public class ZbnfParser
   { return posRightestError;
   }
 
+  
+  public String getRightestInputOnError() { return sInputMostRightError; }
+  
+  
   public int getInputLineOnError(){ return lineError; }
   
   
@@ -3437,7 +3554,7 @@ public class ZbnfParser
     final StringFormatter line = new StringFormatter(250);
   
     final MainCmdLogging_ifc logOut;
-  
+    
     LogParsing(MainCmdLogging_ifc logOut){ this.logOut = logOut;}
     
     void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, String sReportParentComponents
@@ -3463,7 +3580,52 @@ public class ZbnfParser
   }
 
 
+  
+  /**Class for logging.
+   * 
+   * @since 2022-02. The older capabilities for logging should be removed. 
+   * Seems to be sufficient. 
+   *
+   */
+  class LogZbnfParser {
 
+    final StringBuilder componentsWhileParsing = new StringBuilder(4000);
+    
+    Appendable logComponents;
+    
+    final long time0 = System.currentTimeMillis();
+    
+    long timeLast;
+    
+    long zComonentsLast = 0;
+    
+    void write(StringPart input) {
+      try {
+        int pos0 = 0;
+        int pose = this.componentsWhileParsing.length();
+        while(pose-pos0 > 150) {
+          pos0 += 50;
+        }
+        String sInput = input.getCurrent(30).toString().replace('\n', '§');
+        int posInput = (int)input.getCurrentPosition();
+        int time = (int)(System.currentTimeMillis() - time0);
+        
+        int zItemsStored = ZbnfParser.this.parserStoreTopLevel.items.size();
+        
+        this.logComponents.append("\n").append(Integer.toString(posInput)).append(" ").append(sInput).append(" : ")
+          .append(Integer.toString(time)).append(" ms ").append(Integer.toString(zItemsStored)).append("* ")
+          .append(Integer.toString(pos0)).append(this.componentsWhileParsing.subSequence(pos0, pose));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+
+    }
+    
+    
+  }
+  
+
+  final LogZbnfParser log1 = new LogZbnfParser();
 
   /**Element of a Parse result for a part of the syntax.
    * It is possible to reuse an instance of a ParseResultlet though the result was 

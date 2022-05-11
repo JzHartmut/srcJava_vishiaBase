@@ -44,6 +44,7 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.SetLineColumn_ifc;
+import org.vishia.util.SetSrcInfo_ifc;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
@@ -169,8 +170,13 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
-   * <li>2012-02-10 Hartmut: on problem message now the problem starts with a new line, better readable. 
-   * <li>2012-02-10 Hartmut: some changes:
+   * <li>2022-04-28 Hartmut in {@link #writeZbnfResult(DstInstanceAndClass, ZbnfParseResultItem, Class, int)}: 
+   *   Store source of parsing if {@link SetSrcInfo_ifc} is given on a destination class.
+   * <li>2022-02-28 Hartmut in {@link #searchCreateNew(Class, Object, String, DstInstanceAndClass, ZbnfParseResultItem)}:
+   *   A construct as <code>{&lt;?*semantic>...</code> is also a syntax component and should be handled as such. 
+   *   Some trouble for getting the name of the component. Solved. 
+   * <li>2022-02-10 Hartmut: on problem message now the problem starts with a new line, better readable. 
+   * <li>2022-02-10 Hartmut: some changes:
    * <ul><li> {@link #bNewFromType} and {@link #setOutputStrictNewFromType(Object, ZbnfParseResultItem, MainCmdLogging_ifc)}
    *   <li>{@link #writeZbnfResult(DstInstanceAndClass, ZbnfParseResultItem, Class, int)} with mainClass as argument for newfromType approach
    *   <li>{@link #searchCreateNew(Class, Object, String, DstInstanceAndClass, ZbnfParseResultItem)} as worker operation
@@ -247,7 +253,7 @@ public final class ZbnfJavaOutput
    * <li>descr: Change of description of elements.
    * </ul> 
    */
-  public static final String sVersion = "2022-02-10";
+  public static final String sVersion = "2022-04-28";
   
   /**Helper Instance to bundle a class to search methods or fields and the associated instance.
    * It is the destination to search elements via semantic in its {@link #clazz} and store the data in the {@link #instance}.
@@ -458,6 +464,8 @@ public final class ZbnfJavaOutput
   { //instance of writer only for temporary help to organize, no data are stored here: 
     ZbnfJavaOutput instance = new ZbnfJavaOutput(report, strict, bOnlyMethods);  
     instance.bNewFromType = bNewFromType;
+    instance.bOnlyMethods = bOnlyMethods;
+    
     //the available classes of the top level output instance
     Class<?> mainDstClass = topLevelOutput.getClass();
     DstInstanceAndClass dst = new DstInstanceAndClass(null, "topLevel", topLevelOutput, mainDstClass, false);
@@ -534,7 +542,10 @@ public final class ZbnfJavaOutput
       else { inputFile = null; }
       check.setLineColumnFile(inputLine, inputColumn, inputFile);
     }
-    
+    if(dstArg.instance instanceof SetSrcInfo_ifc){
+      SetSrcInfo_ifc check = (SetSrcInfo_ifc) dstArg.instance;
+      check.setSrcInfo(zbnfComponent.getParsedText());
+    }
     { //skip into the component resultItem:
       Iterator<ZbnfParseResultItem> iterChildren = zbnfComponent.iteratorChildren();
       DstInstanceAndClass dst = dstArg;
@@ -545,8 +556,8 @@ public final class ZbnfJavaOutput
         ZbnfParseResultItem childItem = iterChildren.next();
         ZbnfSyntaxPrescript childSyntax = childItem.syntaxItem();
         if(  childSyntax.sDefinitionIdent !=null 
-            && childSyntax.eType == ZbnfSyntaxPrescript.EType.kSyntaxComponent
-            && childSyntax.sDefinitionIdent.contains("real_type_name")
+            //&& childSyntax.eType == ZbnfSyntaxPrescript.EType.kSyntaxComponent
+            && childSyntax.sDefinitionIdent.contains("ExprPart")
             ) {
           Debugutil.stop();
         }
@@ -560,7 +571,7 @@ public final class ZbnfJavaOutput
         /**If the semantic is determined to store in an attribute in xml, the @ is ignored here: */
         final String semantic = semantic1.startsWith("@") ? semantic1.substring(1) : semantic1;
         if(semantic.length() >0){ ///
-          if(semantic.equals("startVariable"))
+          if(semantic.equals("arrayIndex"))
             stop();
           report.reportln(MainCmdLogging_ifc.fineDebug, recursion, "ZbnfJavaOutput: " + semantic + ":");
           if(childItem.isComponent() 
@@ -694,11 +705,18 @@ public final class ZbnfJavaOutput
       //throws IllegalArgumentException, IllegalAccessException
   throws IllegalAccessException
   {
-    if(semantic.equals("content"))
+    if(semantic.equals("ExprPart"))
       Debugutil.stop();
     
     Class<?>[] clazzes= mainDstClazz.getClasses();
-    String sInstanceType = zbnfElement.getComponentSyntax().sDefinitionIdent;
+    String sInstanceType;
+    ZbnfSyntaxPrescript componentSyntax = zbnfElement.getComponentSyntax();
+    if(componentSyntax !=null) {                           // it is the common case, calling a component
+      sInstanceType = componentSyntax.sDefinitionIdent;
+    } 
+    else {                                                 // typical for {<*repPart> or [<?option>...
+      sInstanceType = semantic;                            // Then no other as the semantic is existing, it is succis
+    }
     sInstanceType += "_Zbnf";
     if(Character.isLowerCase(sInstanceType.charAt(0))) {
       sInstanceType = Character.toUpperCase(sInstanceType.charAt(0)) + sInstanceType.substring(1);
@@ -788,7 +806,11 @@ public final class ZbnfJavaOutput
   private void searchAddMethodAndInvoke
   (String semantic, DstInstanceAndClass component, DstInstanceAndClass componentsDestination) 
   throws IllegalArgumentException, IllegalAccessException
-  { Class<?>[][] argtypes = new Class[1][1];
+  { 
+    if(semantic.equals("ExprPart"))
+      Debugutil.stop();
+    
+    Class<?>[][] argtypes = new Class[1][1];
     Class<?> inClazz0 = component.instance instanceof GetTypeToUse ? ((GetTypeToUse)component.instance).getTypeToUse() : component.clazz; //component.instance.getClass();
     Class<?> inClazz = inClazz0;
     Method method = null;
@@ -859,7 +881,7 @@ public final class ZbnfJavaOutput
   throws IllegalArgumentException, IllegalAccessException, InstantiationException
   { /**The returned instance if resultItem is null, and the field is searched. */
     DstInstanceAndClass child = null;
-    if(semantic.equals("cvalue"))
+    if(semantic.equals("ExprPart"))
       Debugutil.stop();
     int posSeparator = semantic.indexOf('/');
     String semanticLowerCase = null;
@@ -1124,8 +1146,8 @@ public final class ZbnfJavaOutput
             }
           }
           else 
-          { //if(!bOnlyMethods)
-            { char firstChar = semantic.charAt(0);
+          { if(!bOnlyMethods){
+              char firstChar = semantic.charAt(0);
               String semanticLowerCase = firstChar >='a' && firstChar <='z' ? semantic : Character.toLowerCase(firstChar) + semantic.substring(1);
               Field element = null;
               Class searchClass = destComponent.clazz;
@@ -1247,7 +1269,7 @@ public final class ZbnfJavaOutput
     }
     catch(IllegalAccessException exc)
     {
-      throw new IllegalAccessException("access to field is denied: " + outputInstance.getClass().getName() + "." + element.getName() + " /Type: " + sType); 
+      throw new IllegalArgumentException("access to field is denied: " + outputInstance.getClass().getName() + "." + element.getName() + " /Type: " + sType); 
     }
     report.report(MainCmdLogging_ifc.fineDebug, " \""+ debugValue + "\" written in Element Type " + sType);
   }

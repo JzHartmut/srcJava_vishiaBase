@@ -20,7 +20,48 @@ import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 public class GenXmlCfgJavaData {
   
   
-  
+  /**Version, history and license.
+   * <ul>
+   * <li>2022-02-18 only adapted to {@link GenJavaOutClass}, argument typeNs should be null. 
+   * <li>201x: Hartmut www.vishia.org creation
+   * </ul>
+   * <ul>
+   * <li>new: new functionality, downward compatibility.
+   * <li>fnChg: Change of functionality, no changing of formal syntax, it may be influencing the functions of user,
+   *            but mostly in a positive kind. 
+   * <li>chg: Change of functionality, it should be checked syntactically, re-compilation necessary.
+   * <li>adap: No changing of own functionality, but adapted to a used changed module.
+   * <li>corr: correction of a bug, it should be a good thing.
+   * <li>bug123: correction of a tracked bug.
+   * <li>nice: Only a nice correction, without changing of functionality, without changing of syntax.
+   * <li>descr: Change of description of elements.
+   * </ul> 
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   */
+  public static final String sVersion = "2022-02-18";
+
   
   
   /**Instances of this class describe a sub class in generated code.
@@ -32,7 +73,7 @@ public class GenXmlCfgJavaData {
     
     
     SubClassXml(String semantic, String className)
-    { super(semantic, className);
+    { super(semantic, className, null);  //superType
     }
   
   }
@@ -66,7 +107,9 @@ public class GenXmlCfgJavaData {
     WrClassXml wrClass = this.new WrClassXml();  //the main class to write
     try {
       XmlCfgNode rootNode = xmlCfg.rootNode;
-      wrClass.evaluateChildren(rootNode, false, 1);
+      SubClassXml classDataRoot = new SubClassXml("root", "root");
+      classDataRoot.subItem = rootNode;
+      wrClass.evaluateChildren(rootNode, classDataRoot, false, 1);
       wrClass.wrClassJava.writeOperations();
       //
       //
@@ -78,7 +121,7 @@ public class GenXmlCfgJavaData {
         wrClass.wrClassJava.wrClassCmpn(classData, null);
         //
         //
-        wrClass.evaluateChildren(classData.subItem, false, 0);
+        wrClass.evaluateChildren(classData.subItem, classData, false, 0);
         //
         wrClass.wrClassJava.writeOperations();
         //
@@ -214,7 +257,7 @@ public class GenXmlCfgJavaData {
     
     
     
-    void evaluateChildren(XmlCfgNode cfgNode, boolean bList, int level) throws Exception {
+    void evaluateChildren(XmlCfgNode cfgNode, SubClassXml classData, boolean bList, int level) throws Exception {
       System.out.println(cfgNode.tag);
 //      if(cfgNode.tag.equals("section"))
 //        Debugutil.stop();
@@ -222,7 +265,7 @@ public class GenXmlCfgJavaData {
         AttribDstCheck attrib = eattrib.getValue();
         //if(attrib.daccess !=null) {
         String sName = StringFunctions_B.replaceNonIdentifierChars(attrib.name, '-').toString();
-        wrVariable("String", sName, attrib.daccess, true, false, false);
+        wrVariable(classData, "String", sName, attrib.daccess, true, false, false);
       }
       if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
         XmlCfgNode childNode = eNode.getValue();
@@ -235,11 +278,11 @@ public class GenXmlCfgJavaData {
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(sType, sName, childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
+          wrVariable(classData, sType, sName, childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
         
         } else {
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable("String", sName, childNode.elementStorePath, true, false, false);
+          wrVariable(classData, "String", sName, childNode.elementStorePath, true, false, false);
             
         }
       }
@@ -248,7 +291,7 @@ public class GenXmlCfgJavaData {
     
     
 
-    protected void wrVariable(String type, String varName, DataAccess.DatapathElement storePath, boolean bStdType, boolean bList, boolean bCmpn
+    protected void wrVariable(SubClassXml classData, String type, String varName, DataAccess.DatapathElement storePath, boolean bStdType, boolean bList, boolean bCmpn
     ) throws Exception {
       if(varName !=null && varName.length() >0) { //else: do not write, parsed without data
         if(varName.startsWith("ST"))
@@ -282,7 +325,7 @@ public class GenXmlCfgJavaData {
             }
           }
           //semantic = semantic.replace("@!", "");
-          wrClassJava.wrVariable(varName, type, type, bStdType, bList, bCmpn, args); 
+          wrClassJava.wrVariable(classData, varName, null, type, type, bStdType, bList, bCmpn, args); 
           
         }
       }
@@ -316,22 +359,26 @@ public class GenXmlCfgJavaData {
     
     
     public final MainCmd.Argument[] defArguments =
-    { new MainCmd.Argument("-cfg", "<fileCfg.xml>    Xml cfg file", new MainCmd.SetArgument(){ 
-          @Override public boolean setArgument(String val){ 
-            argData.fileInput = new File(val);  return true;
-          }})
-        , new MainCmd.Argument("-dirJava", ":<dirJava>    directory for Java output", new MainCmd.SetArgument(){ 
-          @Override public boolean setArgument(String val){ 
-            argData.dirJava = new File(val);  return true;
-          }})    
-        , new MainCmd.Argument("-pkg", ":<pkg.path>    directory for Java output", new MainCmd.SetArgument(){ 
-          @Override public boolean setArgument(String val){ 
-            argData.sJavaPkg = val;  return true;
-          }})    
-        , new MainCmd.Argument("-class", ":<class>     name and file <class>.java for Java output", new MainCmd.SetArgument(){ 
-          @Override public boolean setArgument(String val){ 
-            argData.sJavaClass = val;  return true;
+    { new MainCmd.Argument("-cfg", ":<fileCfg.xml>    Xml cfg file", new MainCmd.SetArgument(){ 
+      @Override public boolean setArgument(String val){ 
+        argData.fileInput = new File(val);  return true;
+      }})
+      , new MainCmd.Argument("-struct", ":<fileStruct.txt> out file to show the struct, optional", new MainCmd.SetArgument(){ 
+        @Override public boolean setArgument(String val){ 
+          argData.fileOutStruct = new File(val);  return true;
+        }})
+      , new MainCmd.Argument("-dirJava", ":<dirJava>    directory for Java output", new MainCmd.SetArgument(){ 
+        @Override public boolean setArgument(String val){ 
+          argData.dirJava = new File(val);  return true;
         }})    
+      , new MainCmd.Argument("-pkg", ":<pkg.path>    directory for Java output", new MainCmd.SetArgument(){ 
+        @Override public boolean setArgument(String val){ 
+          argData.sJavaPkg = val;  return true;
+        }})    
+      , new MainCmd.Argument("-class", ":<class>     name and file <class>.java for Java output", new MainCmd.SetArgument(){ 
+        @Override public boolean setArgument(String val){ 
+          argData.sJavaClass = val;  return true;
+    }})    
     };
 
     public final GenJavaOutClass.CmdArgs argData;

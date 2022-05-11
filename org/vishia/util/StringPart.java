@@ -121,6 +121,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-04-30 Hartmut new: {@link #getCharSequenceRange(long, long)} 
    * <li>2022-01-20 Hartmut new some enhancements {@link #indexOfAnyCharOutsideQuotation(CharSequence, String, char, int, int)} etc.
    *   But this routines should use the capability of {@link StringFunctions#indexOfAnyCharOutsideQuotation(CharSequence, int, int, CharSequence, CharSequence, CharSequence, char, int[])}
    *   etc. TODO test and refactoring. The operations are new and not yet tested. But the definitions (heads) are proper. 
@@ -217,7 +218,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Close
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2019-06-07";
+  public final static String sVersion = "2022-04-30";
   
    
   /** The actual start position of the valid part.*/
@@ -2564,7 +2565,21 @@ else return pos - this.begin;
 
    
    
-   
+  /**Returns the current CharSequence between both given absolute positions. 
+   * If meanwhile the current content is shifted, so that from or to is outside the current content, 
+   * the best possible content is returned, started from current content. 
+   * Usual this operation should be called near to usage without reading and shifting furthermore content.
+   * This is meaningful if {@link StringPartFromFileLines} is used. 
+   * @param from absolute position from beginning of reading the file content.
+   * @param to absolute position of exclusively end, if -1 then the current position. 
+   * @return CharSequence related to the current puffer. It should be immediately processed.
+   * @since 2022-04-30, a little bit more simple as using {@link Part}.
+   */
+  public final CharSequence getCharSequenceRange(long from, long to) {
+     int pos0 = from < this.absPos0 ? 0 : (int)(from - absPos0);
+     int pos9 = to == -1 ? this.begin : to < absPos0 ? 0 : (int)(to - absPos0);
+     return this.content.subSequence(pos0, pos9);
+   }
    
    
   /** Gets a substring inside the maximal part

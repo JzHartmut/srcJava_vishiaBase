@@ -1,6 +1,11 @@
 package org.vishia.util;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.ParseException;
@@ -104,6 +109,8 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-04-17: new {@link #readTemplate(InputStream, String)} to support texts from file. Used firstly for {@link org.vishia.fpga.Java2Vhdl}
+   * <li>2022-02-11: little bit improved error message, hint to error position
    * <li>2019-11-13: ## Comment in a line
    * <li>2019-10-20: &lt;: > capability 
    * <li>2019-08-26: StringPartScan instead String for {@link CalculatorExpr.Operand#Operand(StringPartScan, Map, Class, boolean)}
@@ -135,7 +142,7 @@ public class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2019-10-27";
+  public static final String version = "2022-02-11";
   
   
   /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
@@ -503,6 +510,54 @@ public class OutTextPreparer
   
   
   
+  /**Reads a given template which may contain the pattern for several OutTextPreparer.
+   * The file can contain different patterns in segments: <pre>
+   * === patternName
+   * content <&withVariables>
+   * more lines
+   * 
+   * === nextPatternName
+   *   etc.
+   * </pre>
+   * @param inp The open input to read, can also a resource in jar, then use {@link Class#getResourceAsStream(String)} to open
+   * @param lineStart String which marks a new pattern segment, for the exmaple it should be "=== " 
+   * @return Map contains patternName and pattern String, without empty trailing lines.
+   * @throws IOException
+   */
+  public static Map<String, String> readTemplate ( InputStream inp, String lineStart) throws IOException {
+    Map<String, String> ret = new TreeMap<String, String>();
+    InputStreamReader reader = new InputStreamReader(inp, "UTF-8");
+    BufferedReader rd = new BufferedReader(reader);
+    String line;
+    String name = null;
+    StringBuilder buf = null;
+    int posEnd = 0;
+    while( (line = rd.readLine()) !=null) {
+      if(line.startsWith(lineStart)) {
+        if(name !=null) {
+          buf.setLength(posEnd);  //without trailing newlines.
+          ret.put(name, buf.toString());
+        }
+        name = line.substring(lineStart.length()).trim();
+        buf = new StringBuilder(200);
+        posEnd = 0;
+      }
+      else {
+        buf.append(line).append("\n");
+        if(line.length() >0) {
+          posEnd = buf.length();
+        }
+      }
+    }
+    if(name !=null) {
+      buf.setLength(posEnd);  //without trailing newlines.
+      ret.put(name, buf.toString());
+    }
+    return ret;
+  }
+  
+  
+  
   private void parseVariables(String variables) {
     List<String> listvarValues = new LinkedList<String>();
     StringPartScan sp = new StringPartScan(variables);
@@ -718,8 +773,9 @@ public class OutTextPreparer
             ixixCmd -=1;
           } 
           if(cmd == null) {  //nothing found or <:if not found: 
+            String sError = sp.getCurrent(30).toString();
             sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.if> without <:if> or  <:elsif> ");
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.if> without <:if> or  <:elsif> : " + sError);
           }
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }

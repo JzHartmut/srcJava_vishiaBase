@@ -14,56 +14,71 @@ import java.util.List;
  * In your main class you should create (template):<pre>
   public static class Args extends Arguments {
 
-    public String argValue;             // the variables which holds the given args
+    public File fOut;
     
-    boolean foundOptionArg = false;     // state for check
+    public String timestamp;
     
+    Arguments.SetArgument setOutput = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.fOut = new File(val);
+      return true;
+    }};
+    
+    Arguments.SetArgument setTimestamp = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.timestamp = val;
+      return true;
+    }};
     
     Args(){
-      super.aboutInfo = "Your aboutInfo - 2021-12-19";
-      super.helpInfo="obligate args: xxx info";  
-      addArg(new Argument("-cfg", ":path to config file/dir usage $(ENV) possible", this.setCfg));
-      addArg(new Argument("-data", ":path to data file/dir usage $(ENV) possible", this.setData));
-      addArg(new Argument("", "argument without option", this.setDefault));
+      super.aboutInfo = "Zip routine from Java made by HSchorrig, 2013-02-09 - 2020-06-09";
+      super.helpInfo="obligate args: -o:ZIP.zip { INPUT}";  //[-w[+|-|0]]
+      addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
+      addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
     }
-    
-    Arguments.SetArgument setCfg = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Args.this.foundOptionArg = true;
-      argValue = val;           //the value after the colon -cfg:VAL
-      return true;              //note: you can check the val and return false if not proper.
-    }};
-    
-    
-    Arguments.SetArgument setCfg = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
-      if(Args.this.foundOptionArg) {
-        return false;                  // option-less argument only admissible as alone one.
-      }
-      //... use val for option-less argument
-    }};
-    
 
-    (at)Override
+    @Override
     public boolean testArgs(Appendable msg) throws IOException {
-      return true;   //can check the argument values
+      boolean bOk = true;
+      if(this.fOut == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
+      if(!bOk) {
+        super.showHelp(msg);
+      }
+      return bOk;
     }
+    
   }
  * </pre>
  * You should instantiate in your application:<pre>
-  Args argData = new Args();
+  final Args argData;
  * </pre>
  * In the main you should call:<pre>
-  public static void main(String[] args){
-    MyAppl main = new MyAppl();
-    for(String arg: argData) { System.out.println(arg); }
+  public static void main(String[] cmdArgs) {
+    Args args = new Args();
     try {
-      if(  false == main.argData.parseArgs(args, System.err)
-        || false == main.argData.testArgs(System.err)
-        ) { 
-        System.exit(1); 
+      if(cmdArgs.length ==0) {
+        args.showHelp(System.out);
+        System.exit(1);                // no arguments, help is shown.
       }
-      //... call your application using the read argData
+      if(  false == args.parseArgs(cmdArgs, System.err)
+        || false == args.testArgs(System.err)
+        ) { 
+        System.exit(2);                // argument error
+      }
+    }
+    catch(Exception exc) {
+      System.err.println("Unexpected Exception: " + exc.getMessage());
+      exc.printStackTrace();
+    }
+    smain(args);                       // internal smain with prepared Args
+    System.exit(1); 
+  }
  * </pre>
- * 
+ * Now the <code>smain(args)</code> is also usable inside another Java program, with given Args:<pre>
+  public static void smain(Args args) {
+    try {
+      MyAppl main = new MyAppl(args);   //should store the args in a final reference
+      thiz.exec();
+    }
+ * </pre>
  * 
  * @author Hartmut Schorrig, LGPL-License Do not remove the license hint.
  */
@@ -72,6 +87,9 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-04-09 Hartmut Desription of class improved, from another usage. 
+   * <li>2022-04-09 Hartmut ---commented-argument now accepted
+   * <li>2022-01-17 Hartmut only comment for usage 
    * <li>2022-01-17 Hartmut enhancement: {@link #replaceEnv(String)} with also $identifier 
    * <li>2020-03-20 Hartmut: created, more simple as the before used {@link org.vishia.mainCmd.MainCmd}.
    * </ul>
@@ -101,7 +119,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2022-01-17";
+  public final static String sVersion = "2022-04-09";
 
   
   /**Interface for implementation of setting arguments.
@@ -380,7 +398,10 @@ public abstract class Arguments {
     try {
       for(String arg1: args) {
         arg = arg1;
-        if(arg.startsWith("--@")) {
+        if(arg.startsWith("---")) {
+          // ignore this argument, it is commented.
+        } 
+        else if(arg.startsWith("--@")) {
           farg = new BufferedReader(new FileReader(arg.substring(3)));
           while( (arg = farg.readLine()) !=null) {
             if(!testArgument(arg, ++nArg)) {
@@ -395,7 +416,8 @@ public abstract class Arguments {
           }
           farg.close();
           farg = null;
-        } else {
+        } 
+        else {
           if(!testArgument(arg, ++nArg)) {
             if(errMsg !=null) {
               errMsg.append("  ERROR: ").append(arg).append('\n');

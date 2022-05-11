@@ -1,7 +1,9 @@
 package org.vishia.util;
 
+import java.lang.reflect.Array;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -44,6 +46,17 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-03-14: Hartmut some refactoring, also for better docu, all ExprTypes in a sub class
+   * <li>2022-03-14: Hartmut {@link #calcDataAccess(Map, Object...)}: Now multidim array for Object possible.
+   * <li>2022-03-14: Hartmut {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} now regard precedence of && higher as ||,
+   *   that was faulty before.
+   * <li>2022-03-14: {@link #setRpnExpr(CharSequence, Map, Class)} now with unary operators, used, ok  
+   * <li>2022-03-12: Hartmut {@link #calcDataAccess(Data, Map, Object...)} enhanced, now can access a numeric array.
+   * <li>2022-03-12: Hartmut new {@link #setRpnExpr(CharSequence, Map, Class)}.
+   * <li>2022-03-12: Hartmut new {@link #setLog(Appendable)} if this is set writes a log to the given output. For debug. 
+   * <li>2022-03-12: Hartmut add "#" for put stack and "=" for assign to the textual operators. 
+   * <li>2022-03-12: Hartmut enhance {@link Operation#Operation(String, Operand)} possible stackOperand
+   * <li>2022-03-12: Hartmut new {@link Operators#assignOperation} but not really used.  
    * <li>2019-08-20: some operations throws ParseException on syntax errors.
    * <li>2019-08-26 Hartmut: Some operations with boolean bSpecialSyntax, used in {@link #parseCmpExpr(StringPartScan, Map, Class, String, boolean, int)}
    *   to prevent accepting ">". It has another meaning in some envronments, for example &lt;datapath> in an {@link org.vishia.util.OutTextPreparer}.
@@ -52,7 +65,7 @@ public class CalculatorExpr
    *   it is searched as constant input in the reflection class.  
    * <li>2019-06-18 Hartmut; new {@link Operand#expr}, an Operand can contain a nested expression. It is used as argument value etc.
    *   But for {@link OutTextPreparer} too. {@link Operand#Operand(Map, String, Object)} checks whether the given path presents an expression.
-   * <li>2019-06-18 Hartmut: instean {@link Operation}.value the value is stored in {@link Operand#dataConst}. More systematic. Operand contains all what is an operand.
+   * <li>2019-06-18 Hartmut: instead {@link Operation}.value the value is stored in {@link Operand#dataConst}. More systematic. Operand contains all what is an operand.
    * <li>2019-06-18 Hartmut: {@link #setExpr(StringPartScan)} with Stringpart as part of whole parsing in OutTextPreparer.    
    * <li>2019-06-12 Hartmut 
    *   <ul>
@@ -153,7 +166,7 @@ public class CalculatorExpr
    * 
    */
   //@SuppressWarnings("hiding")
-  public final static String version = "2019-06-18";
+  public final static String version = "2022-03-14";
   
    
   /**It is the data instance for the caluclation.
@@ -206,7 +219,7 @@ public class CalculatorExpr
     /**The expression type to check the second operand. The {@link #type()} is identically with {@link ExpressionType#typeChar()}.
      * It need not checked outside of the internally functionality of the outer class CalculatorExpr.
      */
-    ExpressionType etype = startExpr;
+    ExpressionType etype = ExprTypes.startExpr;
     
     private long longVal;
     private int intVal;
@@ -216,27 +229,27 @@ public class CalculatorExpr
     private CharSequence stringVal;
     private Object oVal;
     
-    public Value(long val){ this.type_ = 'J'; this.etype = longExpr; this.longVal = val; }
+    public Value(long val){ this.type_ = 'J'; this.etype = ExprTypes.longExpr; this.longVal = val; }
     
-    public Value(int val){ this.type_ = 'I'; this.etype = intExpr; this.intVal = val; }
+    public Value(int val){ this.type_ = 'I'; this.etype = ExprTypes.intExpr; this.intVal = val; }
     
-    public Value(double val){ this.type_ = 'D'; this.etype = doubleExpr; this.doubleVal = val; }
+    public Value(double val){ this.type_ = 'D'; this.etype = ExprTypes.doubleExpr; this.doubleVal = val; }
     
-    public Value(float val){ this.type_ = 'F'; this.etype = floatExpr; this.floatVal = val; }
+    public Value(float val){ this.type_ = 'F'; this.etype = ExprTypes.floatExpr; this.floatVal = val; }
     
-    public Value(boolean val){ this.type_ = 'Z'; this.etype = booleanExpr; this.boolVal = val; }
+    public Value(boolean val){ this.type_ = 'Z'; this.etype = ExprTypes.booleanExpr; this.boolVal = val; }
     
-    public Value(char val){ this.type_ = 'C'; this.etype = intExpr; this.longVal = this.intVal = val; }
+    public Value(char val){ this.type_ = 'C'; this.etype = ExprTypes.intExpr; this.longVal = this.intVal = val; }
     
-    public Value(String val){ this.type_ = 't'; this.etype = stringExpr; this.oVal = this.stringVal = val; }
+    public Value(String val){ this.type_ = 't'; this.etype = ExprTypes.stringExpr; this.oVal = this.stringVal = val; }
     
-    public Value(Appendable val){ this.type_ = 'a'; this.etype = objExpr; this.oVal = val; }
+    public Value(Appendable val){ this.type_ = 'a'; this.etype = ExprTypes.objExpr; this.oVal = val; }
     
-    public Value(Object val){ this.type_ = 'o'; this.etype = objExpr; this.oVal = val; }
+    public Value(Object val){ this.type_ = 'o'; this.etype = ExprTypes.objExpr; this.oVal = val; }
     
     //public Value(List<DataPathItem> datpath){ type = 'd'; this.datapath = datapath; }
     
-    public Value(){ this.type_ = '?'; this.etype = startExpr; }
+    public Value(){ this.type_ = '?'; this.etype = ExprTypes.startExpr; }
     
     
     
@@ -448,8 +461,8 @@ public class CalculatorExpr
         } 
         //if more character are present, ignore it.
         if("DF".indexOf(type_) <0) { //not a float or double
-          if(zValue <=9 ) { intVal = (int)value; type_ = 'I'; etype = intExpr; }
-          else { longVal = value; type_ = 'L'; etype = longExpr; }
+          if(zValue <=9 ) { intVal = (int)value; type_ = 'I'; etype = ExprTypes.intExpr; }
+          else { longVal = value; type_ = 'L'; etype = ExprTypes.longExpr; }
         }
       }
     
@@ -476,12 +489,13 @@ public class CalculatorExpr
   }
   
   
-  
+  //tag::ExprType[]
   /**Common interface to check and maybe change the type of expression.
    * All instances of Expression type implements this interface to check and maybe change the arguments adequate to the given or higher type.
    */
   protected interface ExpressionType {
-    abstract char typeChar();
+    
+    char typeChar();
     
     /**Checks the second argument whether it is matching to the current expression type 
      * which matches to the accu.
@@ -491,292 +505,249 @@ public class CalculatorExpr
      * @param val2 the second operand is tested, may be changed.
      * @return type of the expression. Often it is this, sometimes it is an higher type.
      */
-    abstract ExpressionType checkArgument(Value accu, Value val2) throws Exception;
+    ExpressionType checkArgument(Value accu, Value val2) throws Exception;
   }
+  //end::ExprType[]
   
   
+  protected static class ExprTypes {
   
-  /**The type of val2 determines the expression type. The accu is not used because the first operation is a set operation always. 
-   * The accu will be set with the following operation.
-   */
-  protected static final ExpressionType startExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return '!'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) {
-      accu.type_ = val2.type_;
-      switch(val2.type_){
-        case 'I': accu.etype = intExpr; break;
-        case 'J': accu.etype = longExpr; break; 
-        case 'F': accu.etype = floatExpr; break; 
-        case 'D': accu.etype = doubleExpr; break; 
-        case 'C': accu.etype = intExpr; break; 
-        case 'Z': accu.etype = booleanExpr; break; 
-        case 't': accu.etype = stringExpr; break; 
-        case 'o': accu.etype = objExpr; break;   //first operand is any object type. 
-        case 'e': accu.etype = variableNotFoundExpr; break;   //first operand is any object type. 
-        default: throw new IllegalArgumentException("src type");
-      } //switch  
-      return accu.etype;
-    }
-
-    @Override public String toString(){ return "Type=!"; }
-  };
-  
-  /**The current expression type is int. 
-   * Changes the expression type to a higher type and convert the operands
-   * if one of the operand have an abbreviating type.
-   */
-  protected static final ExpressionType intExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return 'I'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
-      switch(val2.type_){
-        case 'C': case 'I': return this; 
-        case 'J': accu.longVal = accu.intVal; accu.type_ = 'J'; return accu.etype = longExpr; 
-        case 'F': accu.floatVal = accu.intVal; accu.type_ = 'F'; return accu.etype = floatExpr; 
-        case 'D': accu.doubleVal = accu.intVal; accu.type_ = 'D'; return accu.etype = doubleExpr; 
-        case 'Z': accu.boolVal = accu.intVal !=0; accu.type_ = 'Z'; return accu.etype = booleanExpr; 
-        case 'o': 
-          if(val2.oVal instanceof Long)          { val2.longVal = ((Long)val2.oVal).longValue();       accu.longVal = accu.intVal; return longExpr; }
-          else if(val2.oVal instanceof Integer)  { val2.intVal = ((Integer)val2.oVal).intValue();      return this; }
-          else if(val2.oVal instanceof Short)    { val2.intVal = ((Short)val2.oVal).shortValue();      return this; }
-          else if(val2.oVal instanceof Byte)     { val2.intVal = ((Byte)val2.oVal).byteValue();        return this; }
-          else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue(); accu.doubleVal = accu.intVal; return doubleExpr; }
-          else if(val2.oVal instanceof Float)    { val2.floatVal = ((Float)val2.oVal).floatValue();    accu.floatVal = accu.intVal; return floatExpr; }
-          else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); accu.boolVal = accu.intVal !=0; return booleanExpr; }
-          else if(val2.oVal instanceof Character){ val2.intVal = ((Character)val2.oVal).charValue();   return this; }
-          else throw new IllegalArgumentException("the value should be of a numeric type");
-        case 'e': throw (Exception)val2.oVal;  //the oVal refers an exception instance.
-        case 't': {
-          try{ val2.longVal = Long.parseLong(val2.stringVal.toString());
-            return this; 
-          } catch(Exception exc){ throw new IllegalArgumentException("CalculatorExpr - String converion error"); }
-        }
-        default: throw new IllegalArgumentException("src type");
-      } //switch  
-    }
-
-    @Override public String toString(){ return "Type=I"; }
-
-
-  };
-
-  /**The current expression type is long. 
-   * Changes the expression type to a higher type and convert the operands
-   * if one of the operand have an abbreviating type.
-   */
-  protected static final ExpressionType longExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return 'J'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
-      switch(val2.type_){
-        case 'C': case 'I': val2.longVal = val2.intVal; return this; 
-        case 'J': return this; 
-        case 'F': accu.floatVal = accu.longVal; accu.type_ = 'F'; return accu.etype = floatExpr; 
-        case 'D': accu.doubleVal = accu.longVal; accu.type_ = 'D'; return accu.etype = doubleExpr; 
-        case 'o': 
-          if(val2.oVal instanceof Long)          { val2.longVal = ((Long)val2.oVal).longValue();       return this; }
-          else if(val2.oVal instanceof Integer)  { val2.longVal = ((Integer)val2.oVal).intValue();     return this; }
-          else if(val2.oVal instanceof Short)    { val2.longVal = ((Short)val2.oVal).shortValue();     return this; }
-          else if(val2.oVal instanceof Byte)     { val2.longVal = ((Byte)val2.oVal).byteValue();       return this; }
-          else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue(); accu.doubleVal = accu.longVal; return doubleExpr; }
-          else if(val2.oVal instanceof Float)    { val2.floatVal = ((Float)val2.oVal).floatValue();    accu.floatVal = accu.longVal; return floatExpr; }
-          else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); accu.boolVal = accu.longVal !=0; return booleanExpr; }
-          else if(val2.oVal instanceof Character){ val2.intVal = ((Character)val2.oVal).charValue();   return this; }
-          else throw new IllegalArgumentException("the value should be of a numeric type");
-        case 'e': throw (Exception)val2.oVal;
-        default: throw new IllegalArgumentException("src type");
-      } //switch  
-    }
-    @Override public String toString(){ return "Type=J"; }
-
-
-  };
-  
-  
-  /**The current expression type is float. 
-   * Changes the expression type to a higher type and convert the operands
-   * if one of the operand have an abbreviating type.
-   */
-  protected static final ExpressionType floatExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return 'F'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
-      switch(val2.type_){
-        case 'C': case 'I': val2.floatVal = val2.intVal; return this; 
-        case 'J': val2.doubleVal = val2.longVal; return doubleExpr; 
-        case 'F': return this; 
-        case 'D': accu.doubleVal = accu.floatVal; accu.type_ = 'D'; return accu.etype = doubleExpr; 
-        case 'o': 
-          if(val2.oVal instanceof Long)          { val2.floatVal = ((Long)val2.oVal).longValue();      return this; }
-          else if(val2.oVal instanceof Integer)  { val2.floatVal = ((Integer)val2.oVal).intValue();    return this; }
-          else if(val2.oVal instanceof Short)    { val2.floatVal = ((Short)val2.oVal).shortValue();    return this; }
-          else if(val2.oVal instanceof Byte)     { val2.floatVal = ((Byte)val2.oVal).byteValue();      return this; }
-          else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue(); accu.doubleVal = accu.floatVal; return doubleExpr; }
-          else if(val2.oVal instanceof Float)    { val2.floatVal = ((Float)val2.oVal).floatValue();    return this; }
-          else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); accu.boolVal = accu.floatVal !=0; return booleanExpr; }
-          else if(val2.oVal instanceof Character){ val2.floatVal = ((Character)val2.oVal).charValue(); return this; }
-          else                                   { return objExpr; } 
-          //else throw new IllegalArgumentException("the value should be of a numeric type");
-        case 'e': throw (Exception)val2.oVal;
-        default: throw new IllegalArgumentException("src type");
-      } //switch  
-    }
-    @Override public String toString(){ return "Type=F"; }
-
-
-  };
-  
-  
-  /**The current expression type is double. 
-   * Convert the operands
-   * if one of the operand have an abbreviating type.
-   */
-  protected static final ExpressionType doubleExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return 'D'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
-      switch(val2.type_){
-        case 'C': case 'I': val2.doubleVal = val2.intVal; return this; 
-        case 'J': val2.doubleVal = val2.longVal; return this; 
-        case 'F': val2.doubleVal = val2.floatVal; return this; 
-        case 'D': return this; 
-        case 'o': 
-          if(val2.oVal instanceof Long)          { val2.doubleVal = ((Long)val2.oVal).longValue();      return this; }
-          else if(val2.oVal instanceof Integer)  { val2.doubleVal = ((Integer)val2.oVal).intValue();    return this; }
-          else if(val2.oVal instanceof Short)    { val2.doubleVal = ((Short)val2.oVal).shortValue();    return this; }
-          else if(val2.oVal instanceof Byte)     { val2.doubleVal = ((Byte)val2.oVal).byteValue();      return this; }
-          else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue();  return this; }
-          else if(val2.oVal instanceof Float)    { val2.doubleVal = ((Float)val2.oVal).floatValue();    return this; }
-          else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue();  accu.boolVal = accu.doubleVal !=0; return booleanExpr; }
-          else if(val2.oVal instanceof Character){ val2.doubleVal = ((Character)val2.oVal).charValue(); return this; }
-          else throw new IllegalArgumentException("the value should be of a numeric type");
-        case 'e': throw (Exception)val2.oVal;
-        default: throw new IllegalArgumentException("src type");
-      } //switch  
-    }
-    @Override public String toString(){ return "Type=D"; }
-
-
-  };
-  
-  
-  
-  /**The current expression type is boolean. 
-   * Convert the operands to boolean
-   * if one of the operand have an abbreviating type.
-   */
-  protected static final ExpressionType booleanExpr = new ExpressionType(){
-
-    @Override public char typeChar() { return 'Z'; }
-    
-    /**Converts the value of val2 to boolean because a booleanExpr is required.
-     * If val2 is an Exception value, then the boolean value is set to false but the type remains exception. 
-     * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
+    /**The type of val2 determines the expression type. The accu is not used because the first operation is a set operation always. 
+     * The accu will be set with the following operation.
      */
-    @Override public ExpressionType checkArgument(Value accu, Value val2) {
-      switch(val2.type_){
-        case 'C': 
-        case 'I': val2.boolVal = val2.intVal !=0; break;
-        case 'J': val2.boolVal = val2.longVal != 0; break;
-        case 'F': val2.boolVal = val2.floatVal !=0; break;
-        case 'D': val2.boolVal = val2.doubleVal !=0; break;
-        case 't': val2.boolVal = val2.stringVal !=null && val2.stringVal.length() >0; break;
-        case 'o':           
-          if(val2.oVal instanceof Long)          { val2.boolVal = ((Long)val2.oVal).longValue() !=0;  }
-          else if(val2.oVal instanceof Integer)  { val2.boolVal = ((Integer)val2.oVal).intValue() !=0; }
-          else if(val2.oVal instanceof Short)    { val2.boolVal = ((Short)val2.oVal).shortValue() !=0; }
-          else if(val2.oVal instanceof Byte)     { val2.boolVal = ((Byte)val2.oVal).byteValue() !=0;  }
-          else if(val2.oVal instanceof Double)   { val2.boolVal = ((Double)val2.oVal).doubleValue() !=0; }
-          else if(val2.oVal instanceof Float)    { val2.boolVal = ((Float)val2.oVal).floatValue() !=0; }
-          else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); }
-          else if(val2.oVal instanceof Character){ val2.boolVal = ((Character)val2.oVal).charValue() !=0; }
-          else { val2.boolVal = val2.oVal !=null; }
-          return this;
-        case 'e': val2.boolVal = false; return this;
-        case 'Z': return this; 
-        default: throw new IllegalArgumentException("src type");
-      } //switch  
-      return this;
-    }
-    @Override public String toString(){ return "Type=Z"; }
-  };
-  
-  
-  /**Converts the value of val2 to boolean because a booleanExpr is required. 
-   */
-  protected static final ExpressionType finishBooleanExpr = new ExpressionType(){
-
-    @Override public char typeChar() { return 'z'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) {
-      //Note: the value is stored in the accu already.
-      return booleanExpr;
-    }
-    @Override public String toString(){ return "Type=z"; }
-  };
-  
-  
-  /**The current expression type is String. 
-   * Convert the operands {@link Object#toString()}
-   * if one of the operand have an abbreviating type.
-   */
-  protected static final ExpressionType stringExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return 't'; }
-    
-    @Override public ExpressionType checkArgument(Value accu, Value val2) {
-      if(accu.type_ !='t'){
-        //especially any object.
-        accu.stringVal = accu.stringValue();
-        accu.type_ = 't';
-      }
-      if(val2.type_ !='t'){ 
-        val2.stringVal = val2.stringValue();
-      }
-      return this;
-    }
-
-    @Override public String toString(){ return "Type=t"; }
-
-
-  };
-  
-
-  /**Only used for the first and only one operand.
-   * 
-   */
-  protected static final ExpressionType objExpr = new ExpressionType(){
-    
-    @Override public char typeChar() { return 'o'; }
-    
-    /**If the accu is clear, sets the accu from val2 and returns the type of val2, elsewhere converts both operands to strings and returns stringExpression.
-     * First one is on set operation, the second for string concatenation.
-     * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
-     */
-    @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
-      if(accu.type_ == '?'){
-        //assert(false);   //should never true because if accu.type=='?' the type of expression should be set to startExpr
+    protected static final ExpressionType startExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return '!'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) {
         accu.type_ = val2.type_;
         switch(val2.type_){
-          case 'Z': return accu.etype = booleanExpr;
-          case 'D': return accu.etype = doubleExpr;
-          case 'F': return accu.etype = floatExpr;
-          case 'I': return accu.etype = intExpr;
-          case 'J': return accu.etype = longExpr;
-          case 'o': return accu.etype = objExpr;
-          case 'e': return accu.etype = objExpr;  //may test it.
-          case 't': return accu.etype = stringExpr; 
-          case '?': throw new IllegalArgumentException("the type is not determined while operation.");
-          default: throw new IllegalArgumentException("unknown type char: " + val2.type_);
-        }//switch
+          case 'I': accu.etype = intExpr; break;
+          case 'J': accu.etype = longExpr; break; 
+          case 'F': accu.etype = floatExpr; break; 
+          case 'D': accu.etype = doubleExpr; break; 
+          case 'C': accu.etype = intExpr; break; 
+          case 'Z': accu.etype = booleanExpr; break; 
+          case 't': accu.etype = stringExpr; break; 
+          case 'o': accu.etype = objExpr; break;   //first operand is any object type. 
+          case 'e': accu.etype = variableNotFoundExpr; break;   //first operand is any object type. 
+          default: throw new IllegalArgumentException("src type");
+        } //switch  
+        return accu.etype;
       }
-      else {
+  
+      @Override public String toString(){ return "Type=!"; }
+    };
+    
+    /**The current expression type is int. 
+     * Changes the expression type to a higher type and convert the operands
+     * if one of the operand have an abbreviating type.
+     */
+    protected static final ExpressionType intExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 'I'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
+        switch(val2.type_){
+          case 'C': case 'I': return this; 
+          case 'J': accu.longVal = accu.intVal; accu.type_ = 'J'; return accu.etype = longExpr; 
+          case 'F': accu.floatVal = accu.intVal; accu.type_ = 'F'; return accu.etype = floatExpr; 
+          case 'D': accu.doubleVal = accu.intVal; accu.type_ = 'D'; return accu.etype = doubleExpr; 
+          case 'Z': accu.boolVal = accu.intVal !=0; accu.type_ = 'Z'; return accu.etype = booleanExpr; 
+          case 'o': 
+            if(val2.oVal instanceof Long)          { val2.longVal = ((Long)val2.oVal).longValue();       accu.longVal = accu.intVal; return longExpr; }
+            else if(val2.oVal instanceof Integer)  { val2.intVal = ((Integer)val2.oVal).intValue();      return this; }
+            else if(val2.oVal instanceof Short)    { val2.intVal = ((Short)val2.oVal).shortValue();      return this; }
+            else if(val2.oVal instanceof Byte)     { val2.intVal = ((Byte)val2.oVal).byteValue();        return this; }
+            else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue(); accu.doubleVal = accu.intVal; return doubleExpr; }
+            else if(val2.oVal instanceof Float)    { val2.floatVal = ((Float)val2.oVal).floatValue();    accu.floatVal = accu.intVal; return floatExpr; }
+            else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); accu.boolVal = accu.intVal !=0; return booleanExpr; }
+            else if(val2.oVal instanceof Character){ val2.intVal = ((Character)val2.oVal).charValue();   return this; }
+            else throw new IllegalArgumentException("the value should be of a numeric type");
+          case 'e': throw (Exception)val2.oVal;  //the oVal refers an exception instance.
+          case 't': {
+            try{ val2.longVal = Long.parseLong(val2.stringVal.toString());
+              return this; 
+            } catch(Exception exc){ throw new IllegalArgumentException("CalculatorExpr - String converion error"); }
+          }
+          default: throw new IllegalArgumentException("src type");
+        } //switch  
+      }
+  
+      @Override public String toString(){ return "Type=I"; }
+  
+  
+    };
+  
+    /**The current expression type is long. 
+     * Changes the expression type to a higher type and convert the operands
+     * if one of the operand have an abbreviating type.
+     */
+    protected static final ExpressionType longExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 'J'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
+        switch(val2.type_){
+          case 'C': case 'I': val2.longVal = val2.intVal; return this; 
+          case 'J': return this; 
+          case 'F': accu.floatVal = accu.longVal; accu.type_ = 'F'; return accu.etype = floatExpr; 
+          case 'D': accu.doubleVal = accu.longVal; accu.type_ = 'D'; return accu.etype = doubleExpr; 
+          case 'o': 
+            if(val2.oVal instanceof Long)          { val2.longVal = ((Long)val2.oVal).longValue();       return this; }
+            else if(val2.oVal instanceof Integer)  { val2.longVal = ((Integer)val2.oVal).intValue();     return this; }
+            else if(val2.oVal instanceof Short)    { val2.longVal = ((Short)val2.oVal).shortValue();     return this; }
+            else if(val2.oVal instanceof Byte)     { val2.longVal = ((Byte)val2.oVal).byteValue();       return this; }
+            else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue(); accu.doubleVal = accu.longVal; return doubleExpr; }
+            else if(val2.oVal instanceof Float)    { val2.floatVal = ((Float)val2.oVal).floatValue();    accu.floatVal = accu.longVal; return floatExpr; }
+            else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); accu.boolVal = accu.longVal !=0; return booleanExpr; }
+            else if(val2.oVal instanceof Character){ val2.intVal = ((Character)val2.oVal).charValue();   return this; }
+            else throw new IllegalArgumentException("the value should be of a numeric type");
+          case 'e': throw (Exception)val2.oVal;
+          default: throw new IllegalArgumentException("src type");
+        } //switch  
+      }
+      @Override public String toString(){ return "Type=J"; }
+  
+  
+    };
+    
+    
+    /**The current expression type is float. 
+     * Changes the expression type to a higher type and convert the operands
+     * if one of the operand have an abbreviating type.
+     */
+    protected static final ExpressionType floatExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 'F'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
+        switch(val2.type_){
+          case 'C': case 'I': val2.floatVal = val2.intVal; return this; 
+          case 'J': val2.doubleVal = val2.longVal; return doubleExpr; 
+          case 'F': return this; 
+          case 'D': accu.doubleVal = accu.floatVal; accu.type_ = 'D'; return accu.etype = doubleExpr; 
+          case 'Z': accu.boolVal = accu.floatVal == 0? false: true; accu.type_ = 'Z'; return accu.etype = booleanExpr; 
+          case 'o': 
+            if(val2.oVal instanceof Long)          { val2.floatVal = ((Long)val2.oVal).longValue();      return this; }
+            else if(val2.oVal instanceof Integer)  { val2.floatVal = ((Integer)val2.oVal).intValue();    return this; }
+            else if(val2.oVal instanceof Short)    { val2.floatVal = ((Short)val2.oVal).shortValue();    return this; }
+            else if(val2.oVal instanceof Byte)     { val2.floatVal = ((Byte)val2.oVal).byteValue();      return this; }
+            else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue(); accu.doubleVal = accu.floatVal; return doubleExpr; }
+            else if(val2.oVal instanceof Float)    { val2.floatVal = ((Float)val2.oVal).floatValue();    return this; }
+            else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); accu.boolVal = accu.floatVal !=0; return booleanExpr; }
+            else if(val2.oVal instanceof Character){ val2.floatVal = ((Character)val2.oVal).charValue(); return this; }
+            else                                   { return objExpr; } 
+            //else throw new IllegalArgumentException("the value should be of a numeric type");
+          case 'e': throw (Exception)val2.oVal;
+          default: throw new IllegalArgumentException("src type");
+        } //switch  
+      }
+      @Override public String toString(){ return "Type=F"; }
+  
+  
+    };
+    
+    
+    /**The current expression type is double. 
+     * Convert the operands
+     * if one of the operand have an abbreviating type.
+     */
+    protected static final ExpressionType doubleExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 'D'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
+        switch(val2.type_){
+          case 'C': case 'I': val2.doubleVal = val2.intVal; return this; 
+          case 'J': val2.doubleVal = val2.longVal; return this; 
+          case 'F': val2.doubleVal = val2.floatVal; return this; 
+          case 'D': return this; 
+          case 'o': 
+            if(val2.oVal instanceof Long)          { val2.doubleVal = ((Long)val2.oVal).longValue();      return this; }
+            else if(val2.oVal instanceof Integer)  { val2.doubleVal = ((Integer)val2.oVal).intValue();    return this; }
+            else if(val2.oVal instanceof Short)    { val2.doubleVal = ((Short)val2.oVal).shortValue();    return this; }
+            else if(val2.oVal instanceof Byte)     { val2.doubleVal = ((Byte)val2.oVal).byteValue();      return this; }
+            else if(val2.oVal instanceof Double)   { val2.doubleVal = ((Double)val2.oVal).doubleValue();  return this; }
+            else if(val2.oVal instanceof Float)    { val2.doubleVal = ((Float)val2.oVal).floatValue();    return this; }
+            else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue();  accu.boolVal = accu.doubleVal !=0; return booleanExpr; }
+            else if(val2.oVal instanceof Character){ val2.doubleVal = ((Character)val2.oVal).charValue(); return this; }
+            else throw new IllegalArgumentException("the value should be of a numeric type");
+          case 'e': throw (Exception)val2.oVal;
+          default: throw new IllegalArgumentException("src type");
+        } //switch  
+      }
+      @Override public String toString(){ return "Type=D"; }
+  
+  
+    };
+    
+    
+    
+    /**The current expression type is boolean. 
+     * Convert the operands to boolean
+     * if one of the operand have an abbreviating type.
+     */
+    protected static final ExpressionType booleanExpr = new ExpressionType(){
+  
+      @Override public char typeChar() { return 'Z'; }
+      
+      /**Converts the value of val2 to boolean because a booleanExpr is required.
+       * If val2 is an Exception value, then the boolean value is set to false but the type remains exception. 
+       * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
+       */
+      @Override public ExpressionType checkArgument(Value accu, Value val2) {
+        switch(val2.type_){
+          case 'C': 
+          case 'I': val2.boolVal = val2.intVal !=0; break;
+          case 'J': val2.boolVal = val2.longVal != 0; break;
+          case 'F': val2.boolVal = val2.floatVal !=0; break;
+          case 'D': val2.boolVal = val2.doubleVal !=0; break;
+          case 't': val2.boolVal = val2.stringVal !=null && val2.stringVal.length() >0; break;
+          case 'o':           
+            if(val2.oVal instanceof Long)          { val2.boolVal = ((Long)val2.oVal).longValue() !=0;  }
+            else if(val2.oVal instanceof Integer)  { val2.boolVal = ((Integer)val2.oVal).intValue() !=0; }
+            else if(val2.oVal instanceof Short)    { val2.boolVal = ((Short)val2.oVal).shortValue() !=0; }
+            else if(val2.oVal instanceof Byte)     { val2.boolVal = ((Byte)val2.oVal).byteValue() !=0;  }
+            else if(val2.oVal instanceof Double)   { val2.boolVal = ((Double)val2.oVal).doubleValue() !=0; }
+            else if(val2.oVal instanceof Float)    { val2.boolVal = ((Float)val2.oVal).floatValue() !=0; }
+            else if(val2.oVal instanceof Boolean)  { val2.boolVal = ((Boolean)val2.oVal).booleanValue(); }
+            else if(val2.oVal instanceof Character){ val2.boolVal = ((Character)val2.oVal).charValue() !=0; }
+            else { val2.boolVal = val2.oVal !=null; }
+            return this;
+          case 'e': val2.boolVal = false; return this;
+          case 'Z': return this; 
+          default: throw new IllegalArgumentException("src type");
+        } //switch  
+        return this;
+      }
+      @Override public String toString(){ return "Type=Z"; }
+    };
+    
+    
+    /**Converts the value of val2 to boolean because a booleanExpr is required. 
+     */
+    protected static final ExpressionType finishBooleanExpr = new ExpressionType(){
+  
+      @Override public char typeChar() { return 'z'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) {
+        //Note: the value is stored in the accu already.
+        return booleanExpr;
+      }
+      @Override public String toString(){ return "Type=z"; }
+    };
+    
+    
+    /**The current expression type is String. 
+     * Convert the operands {@link Object#toString()}
+     * if one of the operand have an abbreviating type.
+     */
+    protected static final ExpressionType stringExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 't'; }
+      
+      @Override public ExpressionType checkArgument(Value accu, Value val2) {
         if(accu.type_ !='t'){
           //especially any object.
           accu.stringVal = accu.stringValue();
@@ -785,50 +756,99 @@ public class CalculatorExpr
         if(val2.type_ !='t'){ 
           val2.stringVal = val2.stringValue();
         }
-        return accu.etype = stringExpr;
+        return this;
       }
-    }
-
-    @Override public String toString(){ return "Type=o"; }
-
-
-  };
   
-
-
-  /**Only used for the first and only one operand.
-   * 
-   */
-  protected static final ExpressionType variableNotFoundExpr = new ExpressionType(){
+      @Override public String toString(){ return "Type=t"; }
+  
+  
+    };
     
-    @Override public char typeChar() { return 'e'; }
-    
-    /**If the accu is clear, sets the accu from val2 and returns the type of val2, elsewhere converts both operands to strings and returns stringExpression.
-     * First one is on set operation, the second for string concatenation.
-     * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
+  
+    /**Only used for the first and only one operand.
+     * 
      */
-    @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
-      if(accu.type_ == '?'){
-        accu.type_ = 'e';
+    protected static final ExpressionType objExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 'o'; }
+      
+      /**If the accu is clear, sets the accu from val2 and returns the type of val2, elsewhere converts both operands to strings and returns stringExpression.
+       * First one is on set operation, the second for string concatenation.
+       * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
+       */
+      @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
+        if(accu.type_ == '?'){
+          //assert(false);   //should never true because if accu.type=='?' the type of expression should be set to startExpr
+          accu.type_ = val2.type_;
+          switch(val2.type_){
+            case 'Z': return accu.etype = booleanExpr;
+            case 'D': return accu.etype = doubleExpr;
+            case 'F': return accu.etype = floatExpr;
+            case 'I': return accu.etype = intExpr;
+            case 'J': return accu.etype = longExpr;
+            case 'o': return accu.etype = objExpr;
+            case 'e': return accu.etype = objExpr;  //may test it.
+            case 't': return accu.etype = stringExpr; 
+            case '?': throw new IllegalArgumentException("the type is not determined while operation.");
+            default: throw new IllegalArgumentException("unknown type char: " + val2.type_);
+          }//switch
+        }
+        else {
+          if(accu.type_ !='t'){
+            //especially any object.
+            accu.stringVal = accu.stringValue();
+            accu.type_ = 't';
+          }
+          if(val2.type_ !='t'){ 
+            val2.stringVal = val2.stringValue();
+          }
+          return accu.etype = stringExpr;
+        }
       }
-      return accu.etype = this;
-    }
-
-    @Override public String toString(){ return "Type=e"; }
-
-
-  };
   
-
-
+      @Override public String toString(){ return "Type=o"; }
   
   
+    };
+    
+  
+  
+    /**Only used for the first and only one operand.
+     * 
+     */
+    protected static final ExpressionType variableNotFoundExpr = new ExpressionType(){
+      
+      @Override public char typeChar() { return 'e'; }
+      
+      /**If the accu is clear, sets the accu from val2 and returns the type of val2, elsewhere converts both operands to strings and returns stringExpression.
+       * First one is on set operation, the second for string concatenation.
+       * @see org.vishia.util.CalculatorExpr.ExpressionType#checkArgument(org.vishia.util.CalculatorExpr.Value, org.vishia.util.CalculatorExpr.Value)
+       */
+      @Override public ExpressionType checkArgument(Value accu, Value val2) throws Exception {
+        if(accu.type_ == '?'){
+          accu.type_ = 'e';
+        }
+        return accu.etype = this;
+      }
+  
+      @Override public String toString(){ return "Type=e"; }
+  
+  
+    };
+    
+  
+  }// static class ExprTypes 
   
   
   
   
   
   
+  
+  
+  
+  
+  //tag::Operator[]
   /**An operator for the current value (accu), the given second value maybe the operand from the {@link Operation},
    * or for some additional values in stack.
    * The operation are such as a set operation (set the arg to accu), add, subtract, negate, boolean operators etc or standard maths routines.
@@ -853,15 +873,12 @@ public class CalculatorExpr
     /**Returns true on an unary operation, false on a operation with both operands. */
     protected abstract boolean isUnary();
 
-
     /**Returns true if this is a bool check operation. */
     protected abstract boolean isBoolCheck();
 
-
-
-
     @Override public String toString(){ return name; }
   }
+  //end::Operator[]
   
                                                   
   
@@ -880,7 +897,7 @@ public class CalculatorExpr
     @Override public void operate(Value val, Value val2) {
       val.boolVal = val.booleanValue();
       val.type_ = 'Z';
-      val.etype = booleanExpr;
+      val.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return true; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -892,7 +909,7 @@ public class CalculatorExpr
     @Override public void operate(Value val, Value value2) {
       val.boolVal = !val.booleanValue();
       val.type_ = 'Z';
-      val.etype = booleanExpr;
+      val.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return true; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1041,7 +1058,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1065,7 +1082,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1090,7 +1107,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1115,7 +1132,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1139,7 +1156,7 @@ public class CalculatorExpr
         case 'e': throw (Exception)accu.oVal;
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1164,7 +1181,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1185,7 +1202,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1206,7 +1223,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1227,7 +1244,7 @@ public class CalculatorExpr
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1241,7 +1258,7 @@ public class CalculatorExpr
     @Override public void operate(Value accu, Value arg) {
       accu.boolVal = accu.booleanValue() && arg.booleanValue();
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1256,7 +1273,7 @@ public class CalculatorExpr
     @Override public void operate(Value accu, Value arg) {
       accu.boolVal = accu.booleanValue() || arg.booleanValue();
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1272,7 +1289,7 @@ public class CalculatorExpr
     @Override public void operate(Value accu, Value arg) {
       accu.boolVal = accu.booleanValue();
       accu.type_ = 'Z';
-      accu.etype = accu.boolVal ? booleanExpr : finishBooleanExpr;  //if false then finish the expression calculation.
+      accu.etype = accu.boolVal ? ExprTypes.booleanExpr : ExprTypes.finishBooleanExpr;  //if false then finish the expression calculation.
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return true; }
@@ -1288,7 +1305,7 @@ public class CalculatorExpr
     @Override public void operate(Value accu, Value arg) {
       accu.boolVal = accu.booleanValue();
       accu.type_ = 'Z';
-      accu.etype = accu.boolVal ? finishBooleanExpr : booleanExpr;  //if true then finish the expression calculation.
+      accu.etype = accu.boolVal ? ExprTypes.finishBooleanExpr : ExprTypes.booleanExpr;  //if true then finish the expression calculation.
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return true; }
@@ -1318,7 +1335,7 @@ public class CalculatorExpr
           || oArg == java.lang.Boolean.class   && "Z".indexOf(accu.type_)>=0       //only a primitive value stored which is a boolean
          ;
       accu.type_ = 'Z';
-      accu.etype = booleanExpr;
+      accu.etype = ExprTypes.booleanExpr;
     }
     @Override public boolean isUnary(){ return false; }
     @Override public boolean isBoolCheck(){ return false; }
@@ -1353,29 +1370,57 @@ public class CalculatorExpr
   };
 
 
+  /**Assign the current value to the left variable. This is not useable currently
+   * because the values are not addresses. Write back never required. 
+   * It is only to complete a possible test. Later improve. */
+  protected static final Operator assignOperation = new Operator("assign"){
+    @Override public void operate(Value accu, Value arg) {
+      accu.type_ = arg.type_;
+      accu.etype = arg.etype;
+      accu.oVal = arg.oVal;  //if given, copy it always
+      switch(accu.type_){
+        case 'B': case 'S': 
+        case 'C': case 'I': accu.intVal = arg.intVal; break;
+        case 'J': accu.longVal = arg.longVal; break;
+        case 'F': accu.floatVal = arg.floatVal; break;
+        case 'D': accu.doubleVal = arg.doubleVal; break;
+        case 'Z': accu.boolVal = arg.boolVal; break;
+        case 't': accu.stringVal = arg.stringVal; break;
+        case 'o': CalculatorExpr.convertObj(accu, arg.oVal); break; //maybe a numeric type Object.
+        case 'e': break;  //oVal 
+        default: throw new IllegalArgumentException("unknown type" + arg.etype.toString());
+      }
+    }
+    @Override public boolean isUnary(){ return false; }
+    @Override public boolean isBoolCheck(){ return false; }
+  };
+
+
   } //class Operators
 
 
 
   
+  //tag::Operand[]
+  /**Operand for a part of the expression, refer from {@link Operation}.
+   */
   public static class Operand {
     
-    /**Index of the value in the parents {@link OutTextPreparer.DataTextPreparer#args} or -1 if not used.*/
+    /**Index of the value contained in a given array on execution, -1 if not used.*/
     public int ixValue;
+    
     /**Set if the value uses reflection. */
     public final DataAccess dataAccess;
     
-    /**Set on construction of {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}
-     * if the value reference is constant, non modified by user data). 
-     * It is especially for call otxXYZ. */
+    /**Set for constant data. */
     public final Object dataConst;
     
-    /**The String literal or the given sDatapath. */
+    /**The String literal or the given sDatapath. Last one is for debug/comment, not for using. */
     public final String textOrVar;
     
     /**If not null the operand is calculated with an expression itself. */
     public final CalculatorExpr expr;
-    
+    //end::Operand[]
     
     /**A ValueAccess without value, only a constant text literal, especially for Text Cmd.
      * @param text
@@ -1560,6 +1605,7 @@ public class CalculatorExpr
     @Override public String toString()
     { String text1 = textOrVar !=null ? "\"" + textOrVar + "\" " : "";
       if(ixValue >=0) return text1 + "[" + ixValue + "]";
+      else if(ixValue == Operation.kStackOperand) { return text1 + "#"; }
       else if(dataConst !=null) return text1 + dataConst.toString();
       else if(dataAccess !=null) return text1 + dataAccess.toString();
       else if(textOrVar !=null) return text1;
@@ -1664,6 +1710,8 @@ public class CalculatorExpr
     }
     
     /**Create an Operation with a given constant value
+     * @sice 2022-03: If the operand contains info {@link Operation#kStackOperand} then it works also.
+     *   Before for that situation the {@link Operation#Operation(Operator, int)} need be used.
      * @param op String given operand
      * @param value usual numerical
      */
@@ -1671,8 +1719,13 @@ public class CalculatorExpr
       setOperator(op);
       //this.operator = op;
       //this.operatorChar = op.name.charAt(0);  //not only for all, therefore deprecated.
-      this.kindOperand = this.operator_.isUnary() ? kUnaryOperation : kDatapath; 
-      this.operand_ = operand;
+      if(operand.ixValue == Operation.kStackOperand) {
+        this.kindOperand = kStackOperand;
+        this.operand_ = null;
+      } else {
+        this.kindOperand = this.operator_.isUnary() ? kUnaryOperation : kDatapath; 
+        this.operand_ = operand;
+      }
     }
     
     /**Create an Operation with a given constant value
@@ -1755,7 +1808,7 @@ public class CalculatorExpr
       }
       Value value = (Value)operand_.dataConst;
       value.type_ = 'I';
-      value.etype = intExpr;
+      value.etype = ExprTypes.intExpr;
       value.intVal = val;
     }
     
@@ -1768,7 +1821,7 @@ public class CalculatorExpr
       }
       Value value = (Value)operand_.dataConst;
       value.type_ = 'D';
-      value.etype = doubleExpr;
+      value.etype = ExprTypes.doubleExpr;
       value.doubleVal = val;
     }
     
@@ -1781,7 +1834,7 @@ public class CalculatorExpr
       }
       Value value = (Value)operand_.dataConst;
       value.type_ = 'C';
-      value.etype = intExpr;
+      value.etype = ExprTypes.intExpr;
       value.intVal = val;
     }
     
@@ -1794,7 +1847,7 @@ public class CalculatorExpr
       }
       Value value = (Value)operand_.dataConst;
       value.type_ = 't';
-      value.etype = stringExpr;
+      value.etype = ExprTypes.stringExpr;
       value.stringVal = StringSeq.create(val);
     }
 
@@ -1825,7 +1878,7 @@ public class CalculatorExpr
     }
     
     public boolean addUnaryOperator(String op){
-      Operator unary = operators.get(op);
+      Operator unary = CalculatorExpr.unaryOperators.get(op);
       if(unary !=null) {
         addUnaryOperator(unary);
         return true;
@@ -2303,13 +2356,16 @@ public class CalculatorExpr
   
   
   
-  
+  //tag::RPNexpr[]
   /**All Operations which acts with the accumulator and the stack of values.
    * They will be executed one after another. All calculation rules of prior should be regarded
    * in this order of operations already. It will not be checked here.
    */
   private final List<Operation> listOperations_ = new ArrayList<Operation>();
+  //end::RPNexpr[]
   
+  
+  private Appendable log;
   
   //private Map<String, DataAccess.IntegerIx> variables = new TreeMap<String, DataAccess.IntegerIx>();
   
@@ -2339,6 +2395,15 @@ public class CalculatorExpr
    */
   protected static Map<String, Operator> operators;
   
+  protected static Map<String, Operator> unaryOperators = new TreeMap<String, Operator>();
+  {
+    unaryOperators.put("!",  Operators.boolNotOperation); 
+    unaryOperators.put("~",  Operators.bitNotOperation);  
+    unaryOperators.put("-",  Operators.negOperation);  
+    unaryOperators.put("+",  null);  
+    
+  }
+  
   
   /**Map of all available unary operators associated with its String expression.
    * It will be initialized with:
@@ -2352,7 +2417,10 @@ public class CalculatorExpr
     if(operators == null){
       operators = new TreeMap<String, Operator>();
       operators.put("!",  Operators.setOperation);   //set accu to operand
+      operators.put("#",  Operators.setOperation);   //set accu to operand
+      operators.put("@",  Operators.setOperation);   //set accu to operand
       operators.put("!set",  Operators.setOperation);   //set accu to operand
+      operators.put("=",  Operators.assignOperation);   //assign
       operators.put("+",  Operators.addOperation);
       operators.put("-",  Operators.subOperation);
       operators.put("*",  Operators.mulOperation);
@@ -2490,6 +2558,12 @@ public class CalculatorExpr
   }
   
   
+  
+  public void setLog(Appendable log) {
+    this.log = log;
+  }
+  
+  
   /**Converts the given expression in a stack operable form.
    * The parsing of sExpr starts with an adding expression.
    * Its operators are read as multExpression.
@@ -2523,22 +2597,34 @@ public class CalculatorExpr
     return setExpr(spExpr, nameVariables, reflData, false);
   }
   
-  /**Converts the given expression in a stack operable form.
-   * The parsing of sExpr starts with an adding expression.
-   * Its operators are read as multExpression.
-   * @param sExpr String given expression such as "X*(Y-1)+Z"
-   * @param nameVariables see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
-   * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
-   * @param sIdentifier List of identifiers for variables.
+
+  
+  //tag::setExpr[]
+  /**Converts the given expression in a stack operable form (Reverse Polish Notation) to execute.
+   * @param spExpr given textual expression
+   * @param nameVariables An operand can be given as name of a variable from this index.
+   *   Then for execution an array should be given as last argument of {@link #calcDataAccess(Map, Object...)}.
+   *   It is the same approach as in {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}.
+   * @param reflData An operand can be given with access to this data via reflection.
+   *   Then for execution data with this reflection class should be given as argument of {@link #calcDataAccess(Map, Object...)}
+   * @param bSpecialSyntax true then ">" is not accepted (as compare operator). 
+   *   It is for texts where the ">" has other meanings. The "gt" can be used to formulate "greater than" instead 
    * @return null if ok or an error description.
+   * @throws ParseException
    */
   public String setExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
   , Class<?> reflData, boolean bSpecialSyntax)
   { listOperations_.clear();
-    try{ parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  
-    } catch(ParseException exc){ return exc.getMessage(); }
+    try{ 
+      parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  
+    } catch(ParseException exc){ 
+      return exc.getMessage(); 
+    }
     return null;
   }
+  //end::setExpr[]
+  
+  
   
   /**Converts the given expression in a stack operable form. One variable with name "X" will be created.
    * It means the expression can use "X" as variable.
@@ -2580,14 +2666,40 @@ public class CalculatorExpr
   
   
   
-  /**The expression is an full (boolean, cmp, numeric) expression.
-   * call recursively for any number of operands.
-   * call {@link #multExpr(StringPartScan, char)} to get the argument values.
-   * @param spExpr
-   * @param operation The first operation. On start operand it is "!" for set.
-   * @return this
+  /**Parses a textual given expression.
+   * @param spExpr given textual expression
+   * @param nameVariables An operand can be given as name of a variable from this index.
+   *   Then for execution an array should be given as last argument of {@link #calcDataAccess(Map, Object...)}.
+   * @param reflData An operand can be given with access to this data via reflection.
+   *   Then for execution data with this reflection class should be given as argument of {@link #calcDataAccess(Map, Object...)}
+   * @param startOperation
+   * @param bSpecialSyntax true then ">" is not accepted (as compare operator). 
+   *   It is for texts where the ">" has other meanings. The "gt" can be used to formulate "greater than" instead 
+   * @param recursion throws on 1000, only for safety
+   * @throws ParseException
    */
   protected void parseExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
+  , Class<?> reflData, String startOperation, boolean bSpecialSyntax, int recursion)
+  throws ParseException
+  { if(recursion > 1000) throw new RuntimeException("recursion");
+    String op = startOperation;
+    parseAndExpr(spExpr, nameVariables, reflData, op, bSpecialSyntax, recursion +1);
+    
+    while(op !=null) {
+      if(spExpr.scan("||").scanOk()) {
+        op = "||";
+      } else { 
+        op = null;  
+      }
+      //
+      if(op !=null) {
+        parseAndExpr(spExpr, nameVariables, reflData, op, bSpecialSyntax, recursion +1);
+      }
+    }//while boolean operation
+  }
+  
+  
+  protected void parseAndExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
   , Class<?> reflData, String startOperation, boolean bSpecialSyntax, int recursion)
   throws ParseException
   { if(recursion > 1000) throw new RuntimeException("recursion");
@@ -2597,10 +2709,7 @@ public class CalculatorExpr
     while(op !=null) {
       if(spExpr.scan("&&").scanOk()) {
         op = "&&";
-      } else if(spExpr.scan("||").scanOk()) {
-        op = "||";
-      }
-      else { 
+      } else { 
         op = null;  
       }
       //
@@ -2777,18 +2886,18 @@ public class CalculatorExpr
         if(spExpr.scan("F").scanOk()){
           value.floatVal = (float)dval;
           value.type_ = 'F';
-          value.etype = floatExpr;
+          value.etype = ExprTypes.floatExpr;
         } else {
           value.doubleVal = dval;
           value.type_ = 'D';
-          value.etype = doubleExpr;
+          value.etype = ExprTypes.doubleExpr;
         }
       } else {
         //no float, check range of integer
         if(longvalue < 0x80000000L && longvalue >= -0x80000000L) {
-          value.intVal = (int)longvalue; value.type_ = 'I'; value.etype = intExpr;
+          value.intVal = (int)longvalue; value.type_ = 'I'; value.etype = ExprTypes.intExpr;
         } else {
-          value.longVal = longvalue; value.type_ = 'J'; value.etype = longExpr;
+          value.longVal = longvalue; value.type_ = 'J'; value.etype = ExprTypes.longExpr;
         }
       }
       listOperations_.add(new Operation(operation, value));
@@ -2803,6 +2912,125 @@ public class CalculatorExpr
   }
   
   
+  
+  //tag::setRpnExpr[]
+  /**Sets the expression from a Revers Polish Notation form.
+   * @param sExpr String given, maybe also StringBuffer etc. 
+   *   From that a {@link StringPartScan#StringPartScan(CharSequence)} will be created 
+   *   and {@link #setRpnExpr(StringPartScan, Map, Class)} is called
+   * @param nameVariables Some variables which can be used given on execution in an array. 
+   *   See {@link #calcDataAccess(Data, Map, Object...)}
+   * @param reflData Access to fields via Reflection also possible. (not done yet).
+   * @throws ParseException
+   * @since 2022-03-12, not all is done yet, only important stuff for first tests.
+   */
+  public void setRpnExpr(CharSequence sExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) throws ParseException {
+    setRpnExpr(new StringPartScan(sExpr), nameVariables, reflData);
+  }
+  //end::setRpnExpr[]
+  
+  
+  
+  
+  /**Sets the expression from a Revers Polish Notation form. Same as {@link #setRpnExpr(CharSequence, Map, Class)}.
+   * This is the working operation.<br>
+   * The syntax of RPN is: &ltoperator> [&ltunary>]&ltoperand><br>
+   * whereby the operator::= is one of that stored in {@value #operators}. It have to be follow by a space as separation to the operand.
+   * 
+   * @param sExpr Given as StringPartScan. 
+   * @param nameVariables
+   * @param reflData
+   * @return
+   * @throws ParseException
+   */
+  public int setRpnExpr(StringPartScan sExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) throws ParseException {
+    sExpr.setIgnoreWhitespaces(true);
+    this.listOperations_.clear();
+    boolean isFieldElements = false;
+    if(sExpr.scanChar('[').scanOk()) {
+      isFieldElements = true;
+//    } else {
+//      sExpr.setBeginMaxPart().setCurrentMaxPart();
+//      sExpr.scanStart();
+    }
+    do {
+      sExpr.seekNoWhitespace().lento(' ');
+      String sOperation = sExpr.getCurrent().toString();
+      sExpr.fromEnd().seekNoWhitespace();
+      String sUnary = null;
+      CharSequence sUnaryCheck = sExpr.getCurrent(2);
+      if(StringFunctions.startsWith(sUnaryCheck, "--")) {
+        sUnary = "--";    //previous decrement
+      } 
+      if(StringFunctions.startsWith(sUnaryCheck, "++")) {
+        sUnary = "++";    //previous increment
+      } 
+      else if(StringFunctions.startsWith(sUnaryCheck, "-")) {
+        sUnary = "-";
+      }
+      else if(StringFunctions.startsWith(sUnaryCheck, "+")) {
+        sUnary = "+";
+      }
+      else if(StringFunctions.startsWith(sUnaryCheck, "~")) {
+        sUnary = "~";
+      }
+      else if(StringFunctions.startsWith(sUnaryCheck, "!")) {
+        sUnary = "!";
+      }
+      if(sUnary !=null) { sExpr.seekPos(sUnary.length()); }
+      sExpr.seekNoWhitespace().scan().scanStart();
+      int ixVariable = -99;
+      String sOperand = null;
+      Operand operand = null;
+      if(sExpr.scanIdentifier().scanOk()) {
+        sOperand = sExpr.getLastScannedString();
+        DataAccess.IntegerIx ix = nameVariables.get(sOperand);
+        if(ix !=null) {
+          ixVariable = ix.ix;
+        }
+        else {
+          ixVariable = 0; //TODO
+        }
+        operand = new Operand(ixVariable, null, null, sOperand);
+      }
+      else if(sExpr.scanAnyChar("#@").scanOk()){
+        ixVariable = Operation.kStackOperand;
+        operand = new Operand(ixVariable, null, null, null);
+      }
+      else if(sExpr.scanFloatNumber('.', true, null).scanOk()) {
+        
+      }
+      else if(sExpr.scanInteger(null).scanOk()) {
+        
+      }
+      else { parseException(sExpr);}
+      Operation oper = new Operation(sOperation, operand);
+      if(sUnary !=null) {
+        oper.addUnaryOperator(sUnary);
+      }
+      sExpr.lentoAnyChar("],;").len0end();
+      if(sOperation!=null && sOperation.equals("=")/* || operand==Operators.assignOperation*/) {
+        // do nothing, assign is not supported
+        Debugutil.stop();
+      }
+      else {
+        listOperations_.add(oper);
+      }
+    } while(sExpr.scanAnyChar(",;").scanOk() && sExpr.seekNoWhitespace().length() >0);
+    if(isFieldElements) {
+      if(sExpr.scanChar('[').scanOk()) {
+      }
+    }
+    return (int)sExpr.getCurrentPosition();
+  }
+  
+  
+  
+  private void parseException(StringPartScan sExpr) throws ParseException {
+    int pos = (int)sExpr.getCurrentPosition();
+    String text = sExpr.setParttoMax().toString();
+    throw new ParseException("CalculaterExpr parse error for:" + text, pos);
+  }
   
   
   
@@ -2954,6 +3182,7 @@ public class CalculatorExpr
   /**Calculates the expression with some inputs, often only 1 input.
    * Before calculate, one should have defined the expression using {@link #setExpr(String)}
    * or {@link #setExpr(String, String[])} or via {@link SetExpr}.
+   * Calls then {@link #calcDataAccess(Data, Map, Object...)} see there for argument args.
    * @param args Array of some inputs
    * @return The result of the expression.
    */
@@ -2966,6 +3195,13 @@ public class CalculatorExpr
   
   
   
+  /**Creates new {@link Data} for calculation and calls
+   * {@link #calcDataAccess(Data, Map, Object...)}, see there
+   * @param javaVariables
+   * @param args
+   * @return
+   * @throws Exception
+   */
   public Value calcDataAccess(Map<String, DataAccess.Variable<Object>> javaVariables, Object... args) throws Exception{
     Data data = new Data();
     return calcDataAccess(data, javaVariables, args);
@@ -2976,7 +3212,14 @@ public class CalculatorExpr
   /**Calculates the expression with possible access to any stored object data with access via reflection.
    * @param data re-used data instance (Stack and accu). Invoke
    * @param javaVariables Any data which are access-able with its name. It is the first part of a datapath.
-   * @param args Some args given immediately. Often numerical args. Often not used.
+   * @param args Some args given immediately. For example numerical args wrappend with Float etc or strings. Often not used.
+   *   It is also possible that args has member as array, often an (numeric) array. 
+   *   Then it is simple to use values from the array. 
+   *   The index of this arguments are related to the 2. argument nameVariables in {@link #setExpr(String, Map, Class)}.
+   *   Using this information the arguments have names. 
+   *   The linear index of the arguments is split to the index of the sub arrays. 
+   *   For example args has two sub arrays with 12 and 8 elements (of two different numerical types).
+   *   Then ix=11 is [0][11] and ix=12 is [1][0] etc. 
    * @return The result wrapped with a Value instance. This Value contains also the type info. 
    * @throws Exception Any exception is possible. Especially {@link java.lang.NoSuchFieldException} or such
    *   if the access via reflection is done.
@@ -2991,85 +3234,155 @@ public class CalculatorExpr
     while(ix < ixEnd){
       Operation oper = listOperations_.get(ix);
       ix +=1;
-      {
-        //Get the operand either from args or from Operation
-        if(oper.operator_.isBoolCheck()) {
-          debug(); //TODO test
+      if(oper.operator_== Operators.assignOperation)
+        Debugutil.stop();
+      val2 = getValue(data, oper, javaVariables, args);
+      //
+      //executes the operation:
+      if(oper.unaryOperator !=null){
+        if(val2 !=null && val2 != val2jar) {
+          //a constant value is referred, don't change it:
+          val2jar.copy(val2);
+          val2 = val2jar;
         }
-        if(oper.operand_ !=null) {
-          Object oval2 = javaVariables;  //maybe start for dataAccess
-          try{
-            if(oper.operand_.ixValue >=0) {
-              oval2 = args[oper.operand_.ixValue];   //may throw ArrayOutOfBoundsException if less arguments
-            } else if(oper.operand_.dataConst !=null) {
-              oval2 = oper.operand_.dataConst;
-            } else if(oper.operand_.textOrVar !=null) {
-              oval2 = oper.operand_.textOrVar;
-            } 
-            if(oper.operand_.dataAccess !=null) {
-              oval2 = oper.operand_.dataAccess.access(oval2, true, false, null, args);
-            }
-            convertObj(val2jar, oval2);
-            val2 = val2jar;
-          } catch(Exception exc){
-            //get data does not found data or returns null:
-            val2jar.type_ = 'e'; val2jar.oVal = exc;  //throw the exception if the oVal is need not for boolean or instanceof
-            val2jar.etype = variableNotFoundExpr;
-            val2 = val2jar;
-          }
-        }  //an input value
-        else if(oper.kindOperand == Operation.kStackOperand){
-          val2 = data.accu;
-          data.accu = data.stack.pop();              //may throw Exception if the stack is emtpy.
-          //oval2 = null;
+        oper.unaryOperator.operate(val2, null);   //change the right value
+      }
+      else if(oper.unaryOperators !=null){
+        if(val2 !=null && val2 != val2jar) {
+          //a constant value is referred, don't change it:
+          val2jar.copy(val2);
+          val2 = val2jar;
         }
-        else {
-          //Assert.checkMsg(false, "unexpected");;
-          val2 = null;  //proper for statements which val2 are not necessary
-          //oval2 = null;
+        for(Operator unary: oper.unaryOperators){
+          unary.operate(val2, null);   //change the right value
         }
-        if(oper.operator_ == Operators.setOperation && data.accu.type_ != '?'){
-          ExpressionType type = data.accu.etype;
-          data.stack.push(data.accu);    //the accu is filled with a value, therefore push it and replace the accu with the new value. The accu is the top of stack substantially.
-          data.accu = new Value();
-          data.accu.etype = type;  //start with the expression type not lower then the pushed. Elsewhere it would set the expression type from the first operand.
-          //type = startExpr;
+      }
+      //!!!!!!!!!!
+      oper.operator_.operate(data.accu, val2);  //operate, may change the type if the operator forces it.
+      //
+      //
+      if(this.log !=null) {
+        Iterator<Value> iter = data.stack.iterator();
+        while(iter.hasNext()) {
+          log.append(iter.next().toString()).append(" | ");
         }
-        //Convert the value adequate the given type of expression:
-        if(!oper.operator_.isUnary() && val2 !=null){  //if unary, don't change the type
-          data.accu.etype.checkArgument(data.accu, val2);    //may change the type.
-        }
-        //
-        //executes the operation:
-        if(oper.unaryOperator !=null){
-          if(val2 !=null && val2 != val2jar) {
-            //a constant value is referred, don't change it:
-            val2jar.copy(val2);
-            val2 = val2jar;
-          }
-          oper.unaryOperator.operate(val2, null);   //change the right value
-        }
-        else if(oper.unaryOperators !=null){
-          if(val2 !=null && val2 != val2jar) {
-            //a constant value is referred, don't change it:
-            val2jar.copy(val2);
-            val2 = val2jar;
-          }
-          for(Operator unary: oper.unaryOperators){
-            unary.operate(val2, null);   //change the right value
-          }
-        }
-        //!!!!!!!!!!
-        oper.operator_.operate(data.accu, val2);  //operate, may change the type if the operator forces it.
-        //
-        if(data.accu.etype == finishBooleanExpr){
-          ix = oper.kindOperand;
-          //break;  //break the operation calculation, the result is given for AND or OR expression.
-        }
+        log.append(data.accu.toString()).append("  <-");
+        log.append(val2.toString());
+        log.append(" ").append(oper.toString());
+        log.append("\n");
+        
+      }
+      //
+      if(data.accu.etype == ExprTypes.finishBooleanExpr){
+        ix = oper.kindOperand;
+        //break;  //break the operation calculation, the result is given for AND or OR expression.
       }
     }
     return data.accu;
   }
+  
+  
+  
+  private Value getValue ( Data data, Operation oper
+      , Map<String, DataAccess.Variable<Object>> javaVariables, Object[] args) throws Exception {
+    //Get the operand either from args or from Operation
+    Value val2;
+    Value val2jar = new Value();  //Instance to hold values for the right side operand.
+    if(oper.operator_.isBoolCheck()) {
+      debug(); //TODO test
+    }
+    if(oper.operand_ !=null) {
+      Object oval2 = javaVariables;  //maybe start for dataAccess
+      try{
+        if(oper.operand_.ixValue >=0) {
+          int ixVar = oper.operand_.ixValue;
+          int ix2 = -2;
+          int ixCheck = 0;
+          while(args.length >= (ixCheck+1) && args[ixCheck].getClass().isArray()) {
+            int z = Array.getLength(args[ixCheck]); 
+            if(ixVar < z) {
+              ix2 = ixVar;
+              ixVar = ixCheck;
+              break;
+            } else {
+              ixVar -= z;
+              ixCheck +=1;
+            }
+            
+          }
+          if(ix2 >=0) {                                    // access to internal array
+            Object array2 = args[ixVar];
+            if(array2 instanceof float[]) {
+              oval2 = ((float[])array2)[ix2];
+            }
+            else if(array2 instanceof int[]) {
+              oval2 = ((int[])array2)[ix2];
+            }
+            else if(array2 instanceof double[]) {
+              oval2 = ((double[])array2)[ix2];
+            }
+            else if(array2 instanceof short[]) {
+              oval2 = ((short[])array2)[ix2];
+            }
+            else if(array2 instanceof byte[]) {
+              oval2 = ((byte[])array2)[ix2];
+            }
+            else if(array2 instanceof char[]) {
+              oval2 = ((char[])array2)[ix2];
+            } 
+            else if(array2 instanceof boolean[]) {
+              oval2 = ((boolean[])array2)[ix2];
+            } 
+            else {
+              oval2 = ((Object[])array2)[ix2];
+            }
+          } else {
+            oval2 = args[ixVar];   //may throw ArrayOutOfBoundsException if less arguments
+          }
+        } else if(oper.operand_.dataConst !=null) {
+          oval2 = oper.operand_.dataConst;
+        } else if(oper.operand_.textOrVar !=null) {
+          oval2 = oper.operand_.textOrVar;
+        } 
+        if(oper.operand_.dataAccess !=null) {
+          oval2 = oper.operand_.dataAccess.access(oval2, true, false, null, args);
+        }
+        if(oval2 ==null)
+          Debugutil.stop();
+        convertObj(val2jar, oval2);
+        val2 = val2jar;
+      } catch(Exception exc){
+        //get data does not found data or returns null:
+        val2jar.type_ = 'e'; val2jar.oVal = exc;  //throw the exception if the oVal is need not for boolean or instanceof
+        val2jar.etype = ExprTypes.variableNotFoundExpr;
+        val2 = val2jar;
+      }
+    }  //an input value
+    else if(oper.kindOperand == Operation.kStackOperand){
+      val2 = data.accu;
+      data.accu = data.stack.pop();              //may throw Exception if the stack is emtpy.
+      //oval2 = null;
+    }
+    else {
+      //Assert.checkMsg(false, "unexpected");;
+      val2 = null;  //proper for statements which val2 are not necessary
+      //oval2 = null;
+    }
+    if(oper.operator_ == Operators.setOperation && data.accu.type_ != '?'){
+      ExpressionType type = data.accu.etype;
+      data.stack.push(data.accu);    //the accu is filled with a value, therefore push it and replace the accu with the new value. The accu is the top of stack substantially.
+      data.accu = new Value();
+      data.accu.etype = type;  //start with the expression type not lower then the pushed. Elsewhere it would set the expression type from the first operand.
+      //type = startExpr;
+    }
+    //Convert the value adequate the given type of expression:
+    if(!oper.operator_.isUnary() && val2 !=null){  //if unary, don't change the type
+      data.accu.etype.checkArgument(data.accu, val2);    //may change the type.
+    }
+    return val2;
+  }
+  
+  
   
   
   
@@ -3083,16 +3396,16 @@ public class CalculatorExpr
     val2jar.oVal = oval2;  //store the value in its wrapped instance in any case. Used for instanceof
     //Note: longVal etc. are not cleaned in any case
     if(oval2 instanceof Value)            { val2jar.copy((Value)oval2); }
-    else if(oval2 instanceof Long)        { val2jar.longVal =   ((Long)oval2).longValue();     val2jar.type_ = 'J'; val2jar.etype = longExpr; }
-    else if(oval2 instanceof Integer)     { val2jar.intVal = ((Integer)oval2).intValue();      val2jar.type_ = 'I'; val2jar.etype = intExpr; }
-    else if(oval2 instanceof Short)       { val2jar.intVal =   ((Short)oval2).intValue();      val2jar.type_ = 'I'; val2jar.etype = intExpr; }
-    else if(oval2 instanceof Byte)        { val2jar.intVal =    ((Byte)oval2).intValue();      val2jar.type_ = 'I'; val2jar.etype = intExpr; }
-    else if(oval2 instanceof Boolean)     { val2jar.boolVal = ((Boolean)oval2).booleanValue(); val2jar.type_ = 'Z'; val2jar.etype = booleanExpr; }
-    else if(oval2 instanceof Double)      { val2jar.doubleVal = ((Double)oval2).doubleValue(); val2jar.type_ = 'D'; val2jar.etype = doubleExpr; }
-    else if(oval2 instanceof Float)       { val2jar.floatVal = ((Float)oval2).floatValue();    val2jar.type_ = 'F'; val2jar.etype = floatExpr; }
-    else if(oval2 instanceof StringSeq)   { val2jar.stringVal = (StringSeq)oval2;              val2jar.type_ = 't'; val2jar.etype = stringExpr; }
-    else if(oval2 instanceof CharSequence){ val2jar.stringVal = (CharSequence)oval2;           val2jar.type_ = 't'; val2jar.etype = stringExpr; }
-    else                                  {                                                    val2jar.type_ = 'o'; val2jar.etype = objExpr; }
+    else if(oval2 instanceof Long)        { val2jar.longVal =   ((Long)oval2).longValue();     val2jar.type_ = 'J'; val2jar.etype = ExprTypes.longExpr; }
+    else if(oval2 instanceof Integer)     { val2jar.intVal = ((Integer)oval2).intValue();      val2jar.type_ = 'I'; val2jar.etype = ExprTypes.intExpr; }
+    else if(oval2 instanceof Short)       { val2jar.intVal =   ((Short)oval2).intValue();      val2jar.type_ = 'I'; val2jar.etype = ExprTypes.intExpr; }
+    else if(oval2 instanceof Byte)        { val2jar.intVal =    ((Byte)oval2).intValue();      val2jar.type_ = 'I'; val2jar.etype = ExprTypes.intExpr; }
+    else if(oval2 instanceof Boolean)     { val2jar.boolVal = ((Boolean)oval2).booleanValue(); val2jar.type_ = 'Z'; val2jar.etype = ExprTypes.booleanExpr; }
+    else if(oval2 instanceof Double)      { val2jar.doubleVal = ((Double)oval2).doubleValue(); val2jar.type_ = 'D'; val2jar.etype = ExprTypes.doubleExpr; }
+    else if(oval2 instanceof Float)       { val2jar.floatVal = ((Float)oval2).floatValue();    val2jar.type_ = 'F'; val2jar.etype = ExprTypes.floatExpr; }
+    else if(oval2 instanceof StringSeq)   { val2jar.stringVal = (StringSeq)oval2;              val2jar.type_ = 't'; val2jar.etype = ExprTypes.stringExpr; }
+    else if(oval2 instanceof CharSequence){ val2jar.stringVal = (CharSequence)oval2;           val2jar.type_ = 't'; val2jar.etype = ExprTypes.stringExpr; }
+    else                                  {                                                    val2jar.type_ = 'o'; val2jar.etype = ExprTypes.objExpr; }
     
   }
   

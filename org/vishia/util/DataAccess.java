@@ -254,7 +254,7 @@ public class DataAccess {
    */
   public static class IntegerIx {
     public final int ix;
-    public IntegerIx(int value){ ix = value; }
+    public IntegerIx(int value){ this.ix = value; }
   }
   
 

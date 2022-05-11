@@ -61,7 +61,13 @@ public class StringFunctions_B
     return src.subSequence(0, pos).toString();
   }
 
-
+  
+  
+  public static CharSequence removeLeadingWhiteSpaces(CharSequence src) {
+    int posStart = StringFunctions.indexNoWhitespace(src, 0, -1);
+    if(posStart >0) return src.subSequence(posStart, src.length());
+    else return src;
+  }
 
 
   

@@ -71,6 +71,8 @@ class ZbnfParserStore
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-04-28 Hartmut {@link #addIdentifier(String, ZbnfSyntaxPrescript, String, ZbnfParseResultItem, int, int, String)}
+   *  and {@link #writeContentAsList(Appendable)}: enhanced to store the source of numeric values.
    * <li>2022-02-08 Hartmut
    *   <ul><li>{@link ParseResultItemImplement#elementSyntax} renamed from "parentSyntaxElement". It is not the parent. 
    *   <li>componentSyntax removed, because it is referenced in the elementSyntax (improved in {@link ZbnfSyntaxPrescript}
@@ -144,7 +146,7 @@ class ZbnfParserStore
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de, www.vishia.org
    * 
    */
-  public static final String sVersion = "2022-02-10";
+  public static final String sVersion = "2022-04-28";
 
   
   /** Constant to detect the entry describes a terminate symbol. -32767*/
@@ -340,13 +342,18 @@ class ZbnfParserStore
     @Override public String getInputFile(){ return this.sFile; }
 
     
+    /**For example also {<?*semantic> is a component, though it has not a componentSyntax.
+     * The componentSyntax is the following syntax straigtforward. 
+     */
     @Override public boolean isComponent()
-    { return (this.offsetAfterEnd > 1) || this.kind == kComponent;
+    { //return this.elementSyntax !=null &&  this.elementSyntax.componentSyntax !=null;
+      return (this.offsetAfterEnd > 1) || this.kind == kComponent;
     }
 
     
     @Override public ZbnfSyntaxPrescript getComponentSyntax ( ) {
-      return this.elementSyntax.componentSyntax;
+      if(this.elementSyntax ==null) return null;
+      else return this.elementSyntax.componentSyntax;  //may be null
     }
     
     
@@ -1090,9 +1097,9 @@ class ZbnfParserStore
   }
 
 
-  void addIntegerNumber(String sSemantic, ZbnfSyntaxPrescript elementSyntax, long number, ZbnfParseResultItem parent)
+  void addIntegerNumber(String sSemantic, ZbnfSyntaxPrescript elementSyntax, long number, String[] sNumber, ZbnfParseResultItem parent)
   { item = new ParseResultItemImplement( this, sSemantic, parent, "#", elementSyntax, null);
-    item.sInput = null;
+    item.sInput = sNumber ==null ? null :  sNumber[0];
     item.kind = kIntegerNumber;
     item.parsedIntegerNumber = number;
     item.idxOwn = items.size();
@@ -1510,9 +1517,11 @@ class ZbnfParserStore
       if(item.isInteger()) { info = Long.toString(item.parsedIntegerNumber); }
       else if(item.isFloat()) { info = Double.toString(item.parsedFloatNumber); }
       else if(item.parsedString !=null) { info = item.parsedString; }
-      else if(item.getParsedText() !=null) { info = item.getParsedText(); }
       else  { info = item.syntaxIdent; }
       format.add("  ").add(info);
+      if(item.sInput !=null && (item.sInput != item.parsedString || item.parsedString ==null)) { 
+        format.add("  >").add(item.getParsedText()).add('<'); 
+      }
       format.flushLine("\n");
       if(item.offsetAfterEnd >1) {
         indent +=1;

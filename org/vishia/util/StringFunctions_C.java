@@ -1,5 +1,6 @@
 package org.vishia.util;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 
 /**Contains routines to convert String to number format.
@@ -10,6 +11,7 @@ public class StringFunctions_C
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-03-29 Hartmut new: {@link #appendHex(Appendable, long, int)} Algorithm copied from {@link StringFormatter#addHex(long, int)}
    * <li>2019-05-23 Hartmut new: {@link #parseUlong(CharSequence, int, int, int, int[], String)} and adaption of the adequate using routines.
    *   Note: It is a base routine now used in {@link StringPartScan#scanDigits(int, int, String)}. It is done because gardening, adequate code unified.
    * <li>2016-10-14 Hartmut bugfix: {@link #parseFloat(CharSequence, int, int, char, int[])} has had a problem with 1 digit after decimal point. 
@@ -49,7 +51,7 @@ public class StringFunctions_C
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2019-05-22"; 
+  public final static String version = "2022-03-29"; 
 
   
   
@@ -310,6 +312,34 @@ public class StringFunctions_C
     return ret;
   }
 
+  
+  
+  
+  /**Append a value in hexa with given number of digits.
+   * @param out to append
+   * @param value
+   * @param nrofDigits if <0 then upper case digits A..F are used, else a..f
+   * @throws IOException
+   */
+  public static void appendHex ( Appendable out, long value, int nrofDigits) throws IOException {
+    final int ctDigits;
+    final char hexBase;
+    if(nrofDigits < 0) {
+      hexBase = 'A';
+      ctDigits = -nrofDigits;
+    } else { 
+      hexBase = 'a';
+      ctDigits = nrofDigits; 
+    }
+    { //show last significant byte at right position, like normal variable or register look
+      int nrofShift = (ctDigits * 4) -4;
+      for(int ii=0; ii < ctDigits; ii++)
+      { char digit = (char)(((value>>nrofShift) & 0x0f) + (byte)('0'));
+        if(digit > '9'){ digit = (char)(digit + (byte)(hexBase) - (byte)('9') -1); }
+        out.append(digit);
+        nrofShift -=4;
+  } } }
+  
   
   
 }

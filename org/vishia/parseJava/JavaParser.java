@@ -24,8 +24,13 @@ public class JavaParser {
   public static void main(String args[]) {
     
     genDstClassForContent();
-    JavaParser thiz = new JavaParser();
-    thiz.parseJava("D:/vishia/Java/cmpnJava_vishiaBase/src/test/java/org/vishia/spehw/SpiSlave.java");
+//    JavaParser thiz = new JavaParser();
+//    try {
+//      thiz.parseJava("D:/vishia/Java/cmpnJava_vishiaBase/src/test/java/org/vishia/parseJava/test/ParseExample.java");
+//    } catch (IllegalCharsetNameException | UnsupportedCharsetException | IOException e) {
+//      // TODO Auto-generated catch block
+//      e.printStackTrace();
+//    }
   }
   
   private final ZbnfParser parser;
@@ -50,45 +55,79 @@ public class JavaParser {
         , "-dirJava:$(TMP)/JavaParser"
         , "---dirJava:D:/vishia/Java/cmpnJava_vishiaBase/src/main/java/srcJava_vishiaBase"
         , "-pkg:org.vishia.parseJava"
-        , "-class:JavaContent"
+        , "-class:JavaSrc"
+        , "-struct:$(TMP)/JavaParser/JavaSyntax.zbnf.struct.txt"
         , "-all"
       };
-    GenZbnfJavaData.smain(args_genJavaOutClass);
+    String sRet = GenZbnfJavaData.smain(args_genJavaOutClass);
+    System.out.println(sRet);
     Debugutil.stop();
   }
 
 
-  public JavaContent parseJava(String pathJavasrc) {
+  
+  public JavaSrc parseJava(String pathJavasrc) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
     File fileIn = new File(pathJavasrc);
+    JavaSrc res = parseJava(fileIn);
+    for(JavaSrc.ClassDefinition rClass: res.get_classDefinition()) {
+      for(JavaSrc.MethodDefinition rOper: rClass.get_methodDefinition()) {
+        for(JavaSrc.Statement rStmnt: rOper.get_methodbody().get_statement()) {
+          JavaSrc.Expression rExpr = rStmnt.get_Expression();      // statement is an expression
+          if(rExpr !=null) {
+            //rExpr.prep(rExpr, null);
+            //JavaSrcPrep.ExpressionPrep rpExpr = new JavaSrcPrep.ExpressionPrep(rExpr, null);
+            Debugutil.stop();
+          }
+        }
+      }
+    }
+    return res;
+  }  
+  
+  public JavaSrc parseJava(File fileIn) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
     boolean bOk = false;
-    try { bOk = this.parser.parseFile(fileIn); } 
-    catch(Exception exc){ throw new IllegalArgumentException("CheaderParser - file ERROR; " + fileIn.getAbsolutePath() + ":" + exc.getMessage() ); }
-    ZbnfParseResultItem resultItem = this.parser.getFirstParseResult();
+    long timeStart = System.currentTimeMillis();
+    Writer logParsingComponents = new FileWriter("T:/logParsingComponents.txt");
+    this.parser.setLogComponents(logParsingComponents);
+    //try 
+    { bOk = this.parser.parseFile(fileIn); 
+    } 
+    logParsingComponents.close();
+    this.parser.setLogComponents(null);
+    
+    //catch(Exception exc){ throw new IllegalArgumentException("JavaParser - file ERROR; " + fileIn.getAbsolutePath() + ":" + exc.getMessage() ); }
     if(!bOk) {
       String sError = this.parser.getSyntaxErrorReport();
       System.err.println("ERROR Parsing file: " + fileIn.getAbsolutePath() + "\n" + sError);
       return null;
     }
     else {
-      
+      System.out.println("JavaParser: parsing ok ms:" + Long.toString(System.currentTimeMillis() - timeStart));
       try {
         Writer outStore = new FileWriter("T:/javaParsResult.text");
         this.parser.writeResultAsTextList(outStore);
         outStore.close();
+        System.out.println("JavaParser: write to T:/javaParsResult.text done ms:" + Long.toString(System.currentTimeMillis() - timeStart));
         
         
-        Zbnf2Xml.writeZbnf2Xml(parser, "T:/javaParsResult.xml", null);
+//        Zbnf2Xml.writeZbnf2Xml(parser, "T:/javaParsResult.xml", null);
+//        System.out.println("JavaParser: write to T:/javaParsResult.xml done ms:" + Long.toString(System.currentTimeMillis() - timeStart));
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
       //Content resultFile = new Content(pathJavasrc);   //Container for the parsed file.
-      JavaContent_Zbnf result = new JavaContent_Zbnf();
+      JavaSrc_Zbnf result = new JavaSrc_Zbnf();
+      ZbnfParseResultItem resultItem = this.parser.getFirstParseResult();
       try{ ZbnfJavaOutput.setOutputStrictNewFromType(result, resultItem, this.console); }
       catch(Exception exc) {
-        throw new IllegalStateException("JavaParser - internal ERROR storing parse result; " + exc.getMessage());
+        String sError = exc.getMessage();
+        System.out.println("JavaParser: store to internal data ERROR ms:" + Long.toString(System.currentTimeMillis() - timeStart) + " ..." + sError);
+        throw new IllegalArgumentException("JavaParser - internal ERROR storing parse result; " + exc.getMessage());
       }
-      return result;
+      System.out.println("JavaParser: store to internal data done ms:" + Long.toString(System.currentTimeMillis() - timeStart));
+      result.dataJavaSrc.postPrepare();
+      return result.dataJavaSrc;
     }    
   }
     

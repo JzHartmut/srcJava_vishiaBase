@@ -55,11 +55,17 @@ import java.util.Date;
  * Every {@link pos(int)}-operation is successfully. If the buffer in shorter as the required position, spaces will be filled
  * onto the required position. So a buffer content can also be filled first right, than left.
  */
-public final class StringFormatter implements Appendable, Closeable, Flushable
+public final class StringFormatter implements Appendable, Flushable
 {
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-03-04: Hartmut new: {@link #addHex(long, int)} now uses {@link StringFunctions_C#appendHex(Appendable, long, int)}.
+   *   For that the {@link Appendable_Intern} instance is necessary. 
+   * <li>2022-03-04: Hartmut new: {@link #addBool(boolean, String)}, interesting for hardware simulation.   
+   * <li>2022-02-14: Hartmut trouble with {@link #close()} again. Now this class is not Closeable, 
+   *   because of too much sophisticated warnings. close() is now optional. It flushs, closes and removes
+   *   the content if a {@link #lineout} exists, else does nothing. 
    * <li>2020-03-14: Hartmut trouble with {@link #close()}. Only if #lineout exists and the content was flushed,
    *   the content is deleted yet. That is always true. After close the content is able to evaluate
    *   respectively stored furthermore in the aggregated {@link #getContent()} if no lineout is given.
@@ -109,7 +115,7 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
    * 
    * 
    */
-  public static final String version = "2019-04-29";
+  public static final String version = "2022-03-04";
   
   private static final byte mNrofBytesInWord = 0x1F;
 
@@ -443,15 +449,15 @@ public final class StringFormatter implements Appendable, Closeable, Flushable
   }
 
  
- /**Adds the given str at the current position but replaces line feed characters by given one.
- *  This method can be used proper if a part of a multi-line-text should be presented in one line for example for logs.
- * @param str to insert
- * @param replaceLinefeed String with 4 characters, first replaces a 0x0a, second for 0x0d, third for 0x0c,4.for all other control keys.
- * @param maxChars limits length to insert
- * @return this
- */
-public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replaceLinefeed, int maxChars)
-{ if(maxChars > str.length()){ maxChars = str.length(); }
+  /**Adds the given str at the current position but replaces line feed characters by given one.
+   *  This method can be used proper if a part of a multi-line-text should be presented in one line for example for logs.
+   * @param str to insert
+   * @param replaceLinefeed String with 4 characters, first replaces a 0x0a, second for 0x0d, third for 0x0c,4.for all other control keys.
+   * @param maxChars limits length to insert
+   * @return this
+   */
+  public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replaceLinefeed, int maxChars)
+  { if(maxChars > str.length()){ maxChars = str.length(); }
   if(replaceLinefeed.length() < 4) throw new IllegalArgumentException("The argument replaceLinefeed should have 4 characters.");
   prepareBufferPos(maxChars);
   int postr= -1;
@@ -469,14 +475,14 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   //buffer.replace(this.pos_, pos_ + nrofChars, str);
   //pos_ += nrofChars;
   return this;
-}
+  }
 
 
-  public StringFormatter add(char ch){     
-  prepareBufferPos(1);
-  buffer.setCharAt(this.pos_++, ch);
-  return this;
-}
+  public StringFormatter add(char ch) {     
+    prepareBufferPos(1);
+    buffer.setCharAt(this.pos_++, ch);
+    return this;
+  }
 
 
 
@@ -691,26 +697,31 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
   * @return this itself
   */
    public StringFormatter addHex(long value, int nrofDigits) { 
-     char hexBase = 'a';
      if(nrofDigits < 0) {
-       hexBase = 'A';
        nrofDigits = -nrofDigits;
      }
      prepareBufferPos(nrofDigits);
-     { //show last significant byte at right position, like normal variable or register look
-       int nrofShift = (nrofDigits * 4) -4;
-       for(int ii=0; ii < nrofDigits; ii++)
-       { char digit = (char)(((value>>nrofShift)&0x0f) + (byte)('0'));
-         if(digit > '9'){ digit = (char)(digit + (byte)(hexBase) - (byte)('9') -1); }
-         buffer.setCharAt(pos_++, digit);
-         nrofShift -=4;
-       }
-       
-     }
+     //Note: the core algorithm is now available as simple static operation
+     //The wrapping with the Appendable does need more calc time, but this is for output features, should be proper.
+     try{ StringFunctions_C.appendHex(this.appendable, value, nrofDigits);
+     } catch(IOException exc) { assert(false); } //does never throw
+     
      return this;
    }
   
    
+   /**Adds one character for a boolean value.
+    * @param value the value
+    * @param hilo must have two characters. "hl" write left character for true value, right char for false
+    * @return this itself
+    */
+    public StringFormatter addBool(boolean value, String hilo) { 
+      prepareBufferPos(1);
+      this.buffer.setCharAt(this.pos_++, value?hilo.charAt(0): hilo.charAt(1));
+      return this;
+    }
+   
+    
   /** Adds a number containing in a long variable in hexa form
    *
    * @param value the value
@@ -1306,14 +1317,15 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
 
    
   /**close of StringFormatter stores yet existing text in a aggregated {@link #lineout}
-   * if a lineout is aggregated. A lineout is the first argument of
-   * ctor {@link StringFormatter#StringFormatter(Appendable, boolean, String, int)}
-   * This Stringformatter is then empty, it can be garbaged.
+   * A lineout is the first argument of ctor {@link StringFormatter#StringFormatter(Appendable, boolean, String, int)}
+   * Then this Stringformatter is {@link #reset()}.
+   * If the lineout is closeable, it will be closed and removed. Then this operation returns with true.
+   * If the lineout is not closeable, it will be also removed. This instance is really closed. It may be garbaged.  
    * If a lineout is not aggregated, this operation does nothing. 
    * The content is preserved. It can be still evaluated. But it should not be written furthermore. 
    * @see java.io.Closeable#close()
    */
-  @Override
+ 
   public void close() throws IOException
   {
     if(lineout !=null){
@@ -1322,12 +1334,42 @@ public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replace
       //recursively call close():
       if(bShouldLineoutClose && lineout instanceof Closeable){
         ((Closeable)lineout).close();
-        lineout = null;
       }
+      lineout = null;
     }
   }
 
 
+  
+  
+  /**Helper class only internally for static functions which outputs to Appendable,
+   * It appends a prepared number of characters to this buffer on {@link StringFormatter#pos_}++
+   */
+  private class Appendable_Intern implements Appendable {
+    
+    
+    /**Not implemented, do not call*/
+    @Override public Appendable append(CharSequence csq) throws IOException {
+      assert(false);
+      return null;
+    }
 
+    /**Not implemented, do not call*/
+    @Override  public Appendable append(CharSequence csq, int start, int end) throws IOException {
+      assert(false);
+      return null;
+    }
+
+    /**Appends to internal buffer on {@link StringFormatter#pos_}++.
+     * Only internal usage, it should be {@link StringFormatter#prepareBufferPos(int)} before!
+     */
+    @Override public Appendable append(char c) throws IOException {
+      buffer.setCharAt(StringFormatter.this.pos_++, c);
+      return this;
+    }
+  }
+  
+  /**See {@link Appendable_Intern}, only internal usage. */
+  private final Appendable_Intern appendable = new Appendable_Intern(); 
    
 }

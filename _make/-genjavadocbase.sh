@@ -13,7 +13,7 @@ if ! test -d $DSTDIR$DST; then mkdir --parents $DSTDIR$DST ; fi
 ##      View to private elements documents which things contains the class, it is important.
 ##      View to private methods is very unnecessary. 
 ## -nodeprecated 
-export ARGS="-Xdoclint:none -d $DSTDIR$DST -private -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
+export ARGS="-Xdoclint:none -d $DSTDIR$DST -encoding UTF-8 -private -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
 echo javadoc $ARGS
 "$JAVAC_HOME"/bin/javadoc $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/javadoc.err                                                       
 if test -d ../img; then
@@ -26,7 +26,7 @@ if ! test -z "$DST_priv"; then
   echo clean $DSTDIR$DST_priv  
   if test -d $DSTDIR$DST_priv; then rm -f -r  $DSTDIR$DST_priv ; fi
   if ! test -d $DSTDIR$DST_priv ; then mkdir --parents $DSTDIR$DST_priv ; fi
-  export ARGS="-Xdoclint:none -d $DSTDIR$DST_priv -private -linksource -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
+  export ARGS="-Xdoclint:none -d $DSTDIR$DST_priv -encoding UTF-8 -private -linksource -notimestamp $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
   echo javadoc $ARGS
   "$JAVAC_HOME"/bin/javadoc $ARGS 1> $DSTDIR$DST_priv/javadoc.rpt 2> $DSTDIR$DST_priv/javadoc.err
   if test -d ../img; then
