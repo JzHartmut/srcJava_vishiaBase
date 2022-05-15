@@ -69,8 +69,9 @@ public class JavaParser {
   public JavaSrc parseJava(String pathJavasrc) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
     File fileIn = new File(pathJavasrc);
     JavaSrc res = parseJava(fileIn);
-    for(JavaSrc.ClassDefinition rClass: res.get_classDefinition()) {
-      for(JavaSrc.MethodDefinition rOper: rClass.get_methodDefinition()) {
+    for(JavaSrc.ClassDefinition theClass: res.get_classDefinition()) {
+      JavaSrc.ClassContent theClassC = theClass.get_classContent();
+      for(JavaSrc.MethodDefinition rOper: theClassC.get_methodDefinition()) {
         for(JavaSrc.Statement rStmnt: rOper.get_methodbody().get_statement()) {
           JavaSrc.Expression rExpr = rStmnt.get_Expression();      // statement is an expression
           if(rExpr !=null) {

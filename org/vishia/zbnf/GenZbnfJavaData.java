@@ -24,6 +24,7 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-05-13 Hartmut new: regards {@link #bOnlyOneEach} ?& to prevent a container for parse result, only one element.    
    * <li>2022-04-30 Hartmut: <ode>{&lt;?*semantic>...</code> is a component, on calling {@link WrClassZbnf#wrVariable(SubClassZbnf, String, String, String, String, ZbnfSyntaxPrescript, boolean, boolean, List)}
    *   called in {@link WrClassZbnf#evaluateChildSyntax(List, SubClassZbnf, boolean, int)}.
    *   There also: regarded there: {@link ZbnfSyntaxPrescript.EType#kStoreSrc}
@@ -340,7 +341,8 @@ public class GenZbnfJavaData
   //          metaclass.subSyntax = item;  //evaluate it in an extra class destination.
             ////
           }
-          boolean bRepetition = bList;
+          boolean bRepetition = bList;                     // from calling level, whether it is inside a repetition. 
+          boolean bListVar = bList && !item.bOnlyOneEach;  // for the current created variable
           boolean bEvaluateChildSyntax = true;
           if(item.eType !=null) {
             switch(item.eType) {
@@ -379,7 +381,7 @@ public class GenZbnfJavaData
               case kAlternativeOption:
                 if(item.sSemantic !=null) {
                   //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                  wrVariable(classData, null, "String", null, semantic, item, bList, false, null); 
+                  wrVariable(classData, null, "String", null, semantic, item, bListVar, false, null); 
                 }
                 break;
               
@@ -387,12 +389,12 @@ public class GenZbnfJavaData
                 break;
               
               case kFloatWithFactor:
-              case kFloatNumber: wrVariable(classData, null, "float", null, semantic, item, bList, false, null);
+              case kFloatNumber: wrVariable(classData, null, "float", null, semantic, item, bListVar, false, null);
               break;
               
               case kPositivNumber:
               case kIntegerNumber:
-              case kHexNumber: wrVariable(classData, null, "int", null, semantic, item, bList, false, null);
+              case kHexNumber: wrVariable(classData, null, "int", null, semantic, item, bListVar, false, null);
               break;
               
               case kStoreSrc:
@@ -410,7 +412,7 @@ public class GenZbnfJavaData
               case kRegularExpression:
               case kIdentifier: {
                 if(item.sSubSyntax ==null) {
-                  wrVariable(classData, null, "String", null, semantic, item, bList, false, null);
+                  wrVariable(classData, null, "String", null, semantic, item, bListVar, false, null);
                 }
               } break;
               
@@ -423,7 +425,7 @@ public class GenZbnfJavaData
                 
               case kOnlyMarker:
               case kSyntaxComponent: 
-                evaluateSubCmpnCall(item, classData, bList, level);
+                evaluateSubCmpnCall(item, classData, bListVar, level);
                 break;
                 
               case kSyntaxDefinition:
@@ -501,14 +503,15 @@ public class GenZbnfJavaData
       //on semantic "@" in the item the semantic of the prescript should be used.
       //That is usually the same like item.sDefinitionIdent, but can be defined other via cpmpn::=<?semantic> 
       String semantic = item.sSemantic == null ? null : item.sSemantic.equals("@") ? prescript.sSemantic : item.sSemantic; 
+      boolean bListVar = bList && !item.bOnlyOneEach;
       if(semantic == null) { //either the item is written with <...?> or the prescript with ::=<?> 
         //-----------------------------------------------  // the components content is expand here:
-        evaluateChildSyntax(prescript.childSyntaxPrescripts, classData, bList, level);
+        evaluateChildSyntax(prescript.childSyntaxPrescripts, classData, bListVar, level);
       }
       else {                                               // creates a variable for the component. 
         if(item.bStoreAsString) {
           String name = item.bDonotStoreData ? semantic : semantic + "_string";
-          wrVariable(classData, null, "String", null, name, null, bList, false, null); ////xx
+          wrVariable(classData, null, "String", null, name, null, bListVar, false, null); ////xx
         }
         if(!item.bDonotStoreData) {
         //create an own class for the component, write a container here.
@@ -544,13 +547,13 @@ public class GenZbnfJavaData
           }
           String typeNs = GenZbnfJavaData.this.cmdArgs.sJavaClass + ".";
           //---------------------------------------------  // the variable for the component's reference
-          wrVariable(classData, typeNs, sTypeRef, sTypeObj, semantic, item, bList, true, obligateAttribs);
+          wrVariable(classData, typeNs, sTypeRef, sTypeObj, semantic, item, bListVar, true, obligateAttribs);
         }
       }
       
     }
 
-    protected void wrVariable(SubClassZbnf classData, String typeNs, String typeRef, String typeObj, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bList
+    protected void wrVariable(SubClassZbnf classData, String typeNs, String typeRef, String typeObj, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bListVar
           , boolean bCmpn, List<String> obligateAttribs
           ) throws Exception {
       final String sTypeObj1 = (typeObj == null) ? typeRef :  typeObj;  
@@ -576,7 +579,7 @@ public class GenZbnfJavaData
 //            idxMetaClass.put(semantic1, metaClass);
 //          }
           //Writes a new MetaClass, it is like a Component.
-          wrVariable(classData, typeNs, semantic1, semantic1, semantic1, syntaxitem, bList, true, obligateAttribs1);  //create the parent
+          wrVariable(classData, typeNs, semantic1, semantic1, semantic1, syntaxitem, bListVar, true, obligateAttribs1);  //create the parent
           GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(typeRef, GenJavaOutClass.firstLowercase(semantic2), semantic2);
           //elems.put("varName", firstLowercase(semantic2));
           //elems.put("semantic", semantic2);
@@ -624,7 +627,7 @@ public class GenZbnfJavaData
             if(semantic2.equals("value"))
               Debugutil.stop();
             
-            this.wrClassJava.wrVariable(classData, semantic2, typeNs, typeRef2, sTypeObj1, !bCmpn, bList, bCmpn, args); 
+            this.wrClassJava.wrVariable(classData, semantic2, typeNs, typeRef2, sTypeObj1, !bCmpn, bListVar, bCmpn, args); 
             
           }  
         }

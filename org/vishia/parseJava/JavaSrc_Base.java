@@ -143,11 +143,11 @@ public class JavaSrc_Base extends SrcInfo {
   
   
     
-    protected String suppressWarnings;
-    
-    
-    
     protected JavaSrc.Description description;
+    
+    
+    
+    protected String suppressWarnings;
     
     
     
@@ -199,51 +199,19 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected List<JavaSrc.EnumDefinition> enumDefinition;
-    
-    
-    
-    protected List<JavaSrc.ClassDefinition> classDefinition;
-    
-    
-    
-    protected List<JavaSrc.InterfaceDefinition> interfaceDefinition;
-    
-    
-    
-    protected List<JavaSrc.VariableInstance> variableDefinition;
-    
-    
-    
-    protected List<JavaSrc.MethodDefinition> methodDefinition;
-    
-    
-    
-    protected List<JavaSrc.ConstructorDefinition> constructorDefinition;
-    
-    
-    
-    protected List<JavaSrc.AnnotationDefinition> annotationDefinition;
-    
-    
-    
-    protected List<JavaSrc.StatementBlock> initializingBlockStatic;
-    
-    
-    
-    protected List<JavaSrc.StatementBlock> initializingBlock;
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_SuppressWarnings() { return suppressWarnings; }
+    protected JavaSrc.ClassContent classContent;
     
     
     
     
     /**Access to parse result.*/
     public JavaSrc.Description get_description() { return description; }
+    
+    
+    
+    
+    /**Access to parse result.*/
+    public String get_SuppressWarnings() { return suppressWarnings; }
     
     
     
@@ -323,83 +291,8 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result, get the elements of the container enumDefinition*/
-    public Iterable<JavaSrc.EnumDefinition> get_enumDefinition() { return enumDefinition; }
-    
-    /**Access to parse result, get the size of the container enumDefinition.*/
-    public int getSize_enumDefinition() { return enumDefinition ==null ? 0 : enumDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container classDefinition*/
-    public Iterable<JavaSrc.ClassDefinition> get_classDefinition() { return classDefinition; }
-    
-    /**Access to parse result, get the size of the container classDefinition.*/
-    public int getSize_classDefinition() { return classDefinition ==null ? 0 : classDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container interfaceDefinition*/
-    public Iterable<JavaSrc.InterfaceDefinition> get_interfaceDefinition() { return interfaceDefinition; }
-    
-    /**Access to parse result, get the size of the container interfaceDefinition.*/
-    public int getSize_interfaceDefinition() { return interfaceDefinition ==null ? 0 : interfaceDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container variableDefinition*/
-    public Iterable<JavaSrc.VariableInstance> get_variableDefinition() { return variableDefinition; }
-    
-    /**Access to parse result, get the size of the container variableDefinition.*/
-    public int getSize_variableDefinition() { return variableDefinition ==null ? 0 : variableDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container methodDefinition*/
-    public Iterable<JavaSrc.MethodDefinition> get_methodDefinition() { return methodDefinition; }
-    
-    /**Access to parse result, get the size of the container methodDefinition.*/
-    public int getSize_methodDefinition() { return methodDefinition ==null ? 0 : methodDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container constructorDefinition*/
-    public Iterable<JavaSrc.ConstructorDefinition> get_constructorDefinition() { return constructorDefinition; }
-    
-    /**Access to parse result, get the size of the container constructorDefinition.*/
-    public int getSize_constructorDefinition() { return constructorDefinition ==null ? 0 : constructorDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container annotationDefinition*/
-    public Iterable<JavaSrc.AnnotationDefinition> get_annotationDefinition() { return annotationDefinition; }
-    
-    /**Access to parse result, get the size of the container annotationDefinition.*/
-    public int getSize_annotationDefinition() { return annotationDefinition ==null ? 0 : annotationDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container initializingBlockStatic*/
-    public Iterable<JavaSrc.StatementBlock> get_initializingBlockStatic() { return initializingBlockStatic; }
-    
-    /**Access to parse result, get the size of the container initializingBlockStatic.*/
-    public int getSize_initializingBlockStatic() { return initializingBlockStatic ==null ? 0 : initializingBlockStatic.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container initializingBlock*/
-    public Iterable<JavaSrc.StatementBlock> get_initializingBlock() { return initializingBlock; }
-    
-    /**Access to parse result, get the size of the container initializingBlock.*/
-    public int getSize_initializingBlock() { return initializingBlock ==null ? 0 : initializingBlock.size(); }
+    /**Access to parse result.*/
+    public JavaSrc.ClassContent get_classContent() { return classContent; }
     
     
   
@@ -806,51 +699,7 @@ public class JavaSrc_Base extends SrcInfo {
   
   
     
-    protected String exclude;
-    
-    
-    
-    protected String excludeImpl;
-    
-    
-    
-    protected String extendsOnlyMethods;
-    
-    
-    
-    protected String inline;
-    
-    
-    
-    protected String retinline;
-    
-    
-    
-    protected String returnThis;
-    
-    
-    
-    protected String returnNew;
-    
-    
-    
-    protected String returnInThreadCxt;
-    
-    
-    
-    protected String dynamic_call;
-    
-    
-    
-    protected String xxxoverride_able;
-    
-    
-    
-    protected String noThCxt;
-    
-    
-    
-    protected String noStacktrace;
+    protected String string;
     
     
     
@@ -876,73 +725,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     /**Access to parse result.*/
-    public String get_exclude() { return exclude; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_excludeImpl() { return excludeImpl; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_extendsOnlyMethods() { return extendsOnlyMethods; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_inline() { return inline; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_retinline() { return retinline; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnThis() { return returnThis; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnNew() { return returnNew; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnInThreadCxt() { return returnInThreadCxt; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_dynamic_call() { return dynamic_call; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_xxxoverride_able() { return xxxoverride_able; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_noThCxt() { return noThCxt; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_noStacktrace() { return noStacktrace; }
+    public String get_string() { return string; }
     
     
     
@@ -996,35 +779,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected String noGC;
-    
-    
-    
-    protected String simpleVariableRef;
-    
-    
-    
-    protected String simpleArray;
-    
-    
-    
-    protected String ptrVal;
-    
-    
-    
-    protected String embeddedYElements;
-    
-    
-    
-    protected String zeroTermString;
-    
-    
-    
-    protected String byteStringJc;
-    
-    
-    
-    protected String stringJc;
+    protected String string;
     
     
     
@@ -1036,49 +791,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     /**Access to parse result.*/
-    public String get_noGC() { return noGC; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_simpleVariableRef() { return simpleVariableRef; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_simpleArray() { return simpleArray; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_PtrVal() { return ptrVal; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_embeddedYElements() { return embeddedYElements; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_zeroTermString() { return zeroTermString; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ByteStringJc() { return byteStringJc; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_StringJc() { return stringJc; }
+    public String get_string() { return string; }
     
     
   
@@ -1092,43 +805,11 @@ public class JavaSrc_Base extends SrcInfo {
   
   
     
-    protected String excludeCond;
-    
-    
-    
-    protected String exclude;
-    
-    
-    
-    protected String embeddedData;
-    
-    
-    
-    protected String dynamic_call;
-    
-    
-    
-    protected String staticInstance;
-    
-    
-    
-    protected String nonPersistent;
-    
-    
-    
-    protected String stackInstance;
+    protected String string;
     
     
     
     protected String instanceType;
-    
-    
-    
-    protected String toStringNonPersist;
-    
-    
-    
-    protected String declarePersist;
     
     
     
@@ -1148,67 +829,15 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected String returnInThreadCxt;
-    
-    
-    
     
     /**Access to parse result.*/
-    public String get_excludeCond() { return excludeCond; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_exclude() { return exclude; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_embeddedData() { return embeddedData; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_dynamic_call() { return dynamic_call; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_staticInstance() { return staticInstance; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_nonPersistent() { return nonPersistent; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_stackInstance() { return stackInstance; }
+    public String get_string() { return string; }
     
     
     
     
     /**Access to parse result.*/
     public String get_InstanceType() { return instanceType; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_toStringNonPersist() { return toStringNonPersist; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_declarePersist() { return declarePersist; }
     
     
     
@@ -1233,12 +862,6 @@ public class JavaSrc_Base extends SrcInfo {
     
     /**Access to parse result.*/
     public String get_InThCxtLocal() { return inThCxtLocal; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnInThreadCxt() { return returnInThreadCxt; }
     
     
   
@@ -1374,83 +997,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected String noGC;
-    
-    
-    
-    protected String simpleVariableRef;
-    
-    
-    
-    protected String simpleArray;
-    
-    
-    
-    protected String ptrVal;
-    
-    
-    
-    protected String embeddedYElements;
-    
-    
-    
-    protected String zeroTermString;
-    
-    
-    
-    protected String byteStringJc;
-    
-    
-    
-    protected String stringJc;
-    
-    
-    
-    protected String exclude;
-    
-    
-    
-    protected String excludeImpl;
-    
-    
-    
-    protected String extendsOnlyMethods;
-    
-    
-    
-    protected String inline;
-    
-    
-    
-    protected String retinline;
-    
-    
-    
-    protected String returnThis;
-    
-    
-    
-    protected String returnNew;
-    
-    
-    
-    protected String returnInThreadCxt;
-    
-    
-    
-    protected String dynamic_call;
-    
-    
-    
-    protected String xxxoverride_able;
-    
-    
-    
-    protected String noThCxt;
-    
-    
-    
-    protected String noStacktrace;
+    protected String string;
     
     
     
@@ -1536,121 +1083,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     /**Access to parse result.*/
-    public String get_noGC() { return noGC; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_simpleVariableRef() { return simpleVariableRef; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_simpleArray() { return simpleArray; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_PtrVal() { return ptrVal; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_embeddedYElements() { return embeddedYElements; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_zeroTermString() { return zeroTermString; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ByteStringJc() { return byteStringJc; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_StringJc() { return stringJc; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_exclude() { return exclude; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_excludeImpl() { return excludeImpl; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_extendsOnlyMethods() { return extendsOnlyMethods; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_inline() { return inline; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_retinline() { return retinline; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnThis() { return returnThis; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnNew() { return returnNew; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnInThreadCxt() { return returnInThreadCxt; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_dynamic_call() { return dynamic_call; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_xxxoverride_able() { return xxxoverride_able; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_noThCxt() { return noThCxt; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_noStacktrace() { return noStacktrace; }
+    public String get_string() { return string; }
     
     
     
@@ -1734,7 +1167,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected String accessPlolicy;
+    protected List<String> accessPlolicy;
     
     
     
@@ -1742,103 +1175,15 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected String excludeCond;
+    protected List<JavaSrc.Java4CAnnotationVariable> java4CAnnotationVariable;
     
     
     
-    protected String exclude;
+    protected List<JavaSrc.Java4CAnnotationType> java4CAnnotationType;
     
     
     
-    protected String embeddedData;
-    
-    
-    
-    protected String dynamic_call;
-    
-    
-    
-    protected String staticInstance;
-    
-    
-    
-    protected String nonPersistent;
-    
-    
-    
-    protected String stackInstance;
-    
-    
-    
-    protected String instanceType;
-    
-    
-    
-    protected String toStringNonPersist;
-    
-    
-    
-    protected String declarePersist;
-    
-    
-    
-    protected int stringBuilderInStack;
-    
-    
-    
-    protected String stringBuilderInThCxt;
-    
-    
-    
-    protected String inThCxtRet;
-    
-    
-    
-    protected String inThCxtLocal;
-    
-    
-    
-    protected String returnInThreadCxt;
-    
-    
-    
-    protected int fixArraySize;
-    
-    
-    
-    protected String noGC;
-    
-    
-    
-    protected String simpleVariableRef;
-    
-    
-    
-    protected String simpleArray;
-    
-    
-    
-    protected String ptrVal;
-    
-    
-    
-    protected String embeddedYElements;
-    
-    
-    
-    protected String zeroTermString;
-    
-    
-    
-    protected String byteStringJc;
-    
-    
-    
-    protected String stringJc;
-    
-    
-    
-    protected String annotation;
+    protected List<String> annotation;
     
     
     
@@ -1871,8 +1216,11 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result.*/
-    public String get_accessPlolicy() { return accessPlolicy; }
+    /**Access to parse result, get the elements of the container accessPlolicy*/
+    public Iterable<String> get_accessPlolicy() { return accessPlolicy; }
+    
+    /**Access to parse result, get the size of the container accessPlolicy.*/
+    public int getSize_accessPlolicy() { return accessPlolicy ==null ? 0 : accessPlolicy.size(); }
     
     
     
@@ -1883,152 +1231,29 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result.*/
-    public String get_excludeCond() { return excludeCond; }
+    /**Access to parse result, get the elements of the container Java4CAnnotationVariable*/
+    public Iterable<JavaSrc.Java4CAnnotationVariable> get_Java4CAnnotationVariable() { return java4CAnnotationVariable; }
     
+    /**Access to parse result, get the size of the container Java4CAnnotationVariable.*/
+    public int getSize_Java4CAnnotationVariable() { return java4CAnnotationVariable ==null ? 0 : java4CAnnotationVariable.size(); }
     
     
     
-    /**Access to parse result.*/
-    public String get_exclude() { return exclude; }
     
+    /**Access to parse result, get the elements of the container Java4CAnnotationType*/
+    public Iterable<JavaSrc.Java4CAnnotationType> get_Java4CAnnotationType() { return java4CAnnotationType; }
     
+    /**Access to parse result, get the size of the container Java4CAnnotationType.*/
+    public int getSize_Java4CAnnotationType() { return java4CAnnotationType ==null ? 0 : java4CAnnotationType.size(); }
     
     
-    /**Access to parse result.*/
-    public String get_embeddedData() { return embeddedData; }
     
     
+    /**Access to parse result, get the elements of the container Annotation*/
+    public Iterable<String> get_Annotation() { return annotation; }
     
-    
-    /**Access to parse result.*/
-    public String get_dynamic_call() { return dynamic_call; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_staticInstance() { return staticInstance; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_nonPersistent() { return nonPersistent; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_stackInstance() { return stackInstance; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_InstanceType() { return instanceType; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_toStringNonPersist() { return toStringNonPersist; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_declarePersist() { return declarePersist; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public int get_StringBuilderInStack() { return stringBuilderInStack; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_StringBuilderInThCxt() { return stringBuilderInThCxt; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_InThCxtRet() { return inThCxtRet; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_InThCxtLocal() { return inThCxtLocal; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ReturnInThreadCxt() { return returnInThreadCxt; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public int get_fixArraySize() { return fixArraySize; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_noGC() { return noGC; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_simpleVariableRef() { return simpleVariableRef; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_simpleArray() { return simpleArray; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_PtrVal() { return ptrVal; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_embeddedYElements() { return embeddedYElements; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_zeroTermString() { return zeroTermString; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_ByteStringJc() { return byteStringJc; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_StringJc() { return stringJc; }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public String get_Annotation() { return annotation; }
+    /**Access to parse result, get the size of the container Annotation.*/
+    public int getSize_Annotation() { return annotation ==null ? 0 : annotation.size(); }
     
     
     
@@ -2722,39 +1947,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected List<JavaSrc.EnumDefinition> enumDefinition;
-    
-    
-    
-    protected List<JavaSrc.ClassDefinition> classDefinition;
-    
-    
-    
-    protected List<JavaSrc.InterfaceDefinition> interfaceDefinition;
-    
-    
-    
-    protected List<JavaSrc.VariableInstance> variableDefinition;
-    
-    
-    
-    protected List<JavaSrc.MethodDefinition> methodDefinition;
-    
-    
-    
-    protected List<JavaSrc.ConstructorDefinition> constructorDefinition;
-    
-    
-    
-    protected List<JavaSrc.AnnotationDefinition> annotationDefinition;
-    
-    
-    
-    protected List<JavaSrc.StatementBlock> initializingBlockStatic;
-    
-    
-    
-    protected List<JavaSrc.StatementBlock> initializingBlock;
+    protected JavaSrc.ClassContent classContent;
     
     
     
@@ -2774,83 +1967,8 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result, get the elements of the container enumDefinition*/
-    public Iterable<JavaSrc.EnumDefinition> get_enumDefinition() { return enumDefinition; }
-    
-    /**Access to parse result, get the size of the container enumDefinition.*/
-    public int getSize_enumDefinition() { return enumDefinition ==null ? 0 : enumDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container classDefinition*/
-    public Iterable<JavaSrc.ClassDefinition> get_classDefinition() { return classDefinition; }
-    
-    /**Access to parse result, get the size of the container classDefinition.*/
-    public int getSize_classDefinition() { return classDefinition ==null ? 0 : classDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container interfaceDefinition*/
-    public Iterable<JavaSrc.InterfaceDefinition> get_interfaceDefinition() { return interfaceDefinition; }
-    
-    /**Access to parse result, get the size of the container interfaceDefinition.*/
-    public int getSize_interfaceDefinition() { return interfaceDefinition ==null ? 0 : interfaceDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container variableDefinition*/
-    public Iterable<JavaSrc.VariableInstance> get_variableDefinition() { return variableDefinition; }
-    
-    /**Access to parse result, get the size of the container variableDefinition.*/
-    public int getSize_variableDefinition() { return variableDefinition ==null ? 0 : variableDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container methodDefinition*/
-    public Iterable<JavaSrc.MethodDefinition> get_methodDefinition() { return methodDefinition; }
-    
-    /**Access to parse result, get the size of the container methodDefinition.*/
-    public int getSize_methodDefinition() { return methodDefinition ==null ? 0 : methodDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container constructorDefinition*/
-    public Iterable<JavaSrc.ConstructorDefinition> get_constructorDefinition() { return constructorDefinition; }
-    
-    /**Access to parse result, get the size of the container constructorDefinition.*/
-    public int getSize_constructorDefinition() { return constructorDefinition ==null ? 0 : constructorDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container annotationDefinition*/
-    public Iterable<JavaSrc.AnnotationDefinition> get_annotationDefinition() { return annotationDefinition; }
-    
-    /**Access to parse result, get the size of the container annotationDefinition.*/
-    public int getSize_annotationDefinition() { return annotationDefinition ==null ? 0 : annotationDefinition.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container initializingBlockStatic*/
-    public Iterable<JavaSrc.StatementBlock> get_initializingBlockStatic() { return initializingBlockStatic; }
-    
-    /**Access to parse result, get the size of the container initializingBlockStatic.*/
-    public int getSize_initializingBlockStatic() { return initializingBlockStatic ==null ? 0 : initializingBlockStatic.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container initializingBlock*/
-    public Iterable<JavaSrc.StatementBlock> get_initializingBlock() { return initializingBlock; }
-    
-    /**Access to parse result, get the size of the container initializingBlock.*/
-    public int getSize_initializingBlock() { return initializingBlock ==null ? 0 : initializingBlock.size(); }
+    /**Access to parse result.*/
+    public JavaSrc.ClassContent get_classContent() { return classContent; }
     
     
   
@@ -4804,11 +3922,11 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected List<String> sizeofDescription;
+    protected String sizeofDescription;
     
     
     
-    protected List<JavaSrc.ReturnDescription> returnDescription;
+    protected JavaSrc.ReturnDescription returnDescription;
     
     
     
@@ -4816,7 +3934,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected List<String> staticInstance;
+    protected String staticInstance;
     
     
     
@@ -4928,35 +4046,7 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected List<String> excludeCond;
-    
-    
-    
-    protected List<String> exclude;
-    
-    
-    
-    protected List<String> embeddedData;
-    
-    
-    
-    protected List<String> instanceType;
-    
-    
-    
-    protected List<String> stringBuilderInThCxt;
-    
-    
-    
-    protected List<String> inThCxtRet;
-    
-    
-    
-    protected List<String> inThCxtLocal;
-    
-    
-    
-    protected List<String> returnInThreadCxt;
+    protected List<JavaSrc.Java4CAnnotationVariable> java4CAnnotationVariable;
     
     
     
@@ -4964,43 +4054,11 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    protected List<String> ptrVal;
+    protected List<String> string;
     
     
     
-    protected List<String> stringJc;
-    
-    
-    
-    protected List<String> excludeImpl;
-    
-    
-    
-    protected List<String> extendsOnlyMethods;
-    
-    
-    
-    protected List<String> inline;
-    
-    
-    
-    protected List<String> retinline;
-    
-    
-    
-    protected List<String> returnThis;
-    
-    
-    
-    protected List<String> returnNew;
-    
-    
-    
-    protected List<String> instanceTypeAnnot;
-    
-    
-    
-    protected List<String> embeddedTypeAnnot;
+    protected List<JavaSrc.Java4CAnnotationMethod> java4CAnnotationMethod;
     
     
     
@@ -5015,20 +4073,14 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result, get the elements of the container sizeofDescription*/
-    public Iterable<String> get_sizeofDescription() { return sizeofDescription; }
-    
-    /**Access to parse result, get the size of the container sizeofDescription.*/
-    public int getSize_sizeofDescription() { return sizeofDescription ==null ? 0 : sizeofDescription.size(); }
+    /**Access to parse result.*/
+    public String get_sizeofDescription() { return sizeofDescription; }
     
     
     
     
-    /**Access to parse result, get the elements of the container returnDescription*/
-    public Iterable<JavaSrc.ReturnDescription> get_returnDescription() { return returnDescription; }
-    
-    /**Access to parse result, get the size of the container returnDescription.*/
-    public int getSize_returnDescription() { return returnDescription ==null ? 0 : returnDescription.size(); }
+    /**Access to parse result.*/
+    public JavaSrc.ReturnDescription get_returnDescription() { return returnDescription; }
     
     
     
@@ -5042,11 +4094,8 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result, get the elements of the container staticInstance*/
-    public Iterable<String> get_staticInstance() { return staticInstance; }
-    
-    /**Access to parse result, get the size of the container staticInstance.*/
-    public int getSize_staticInstance() { return staticInstance ==null ? 0 : staticInstance.size(); }
+    /**Access to parse result.*/
+    public String get_staticInstance() { return staticInstance; }
     
     
     
@@ -5294,74 +4343,11 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result, get the elements of the container excludeCond*/
-    public Iterable<String> get_excludeCond() { return excludeCond; }
+    /**Access to parse result, get the elements of the container Java4CAnnotationVariable*/
+    public Iterable<JavaSrc.Java4CAnnotationVariable> get_Java4CAnnotationVariable() { return java4CAnnotationVariable; }
     
-    /**Access to parse result, get the size of the container excludeCond.*/
-    public int getSize_excludeCond() { return excludeCond ==null ? 0 : excludeCond.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container exclude*/
-    public Iterable<String> get_exclude() { return exclude; }
-    
-    /**Access to parse result, get the size of the container exclude.*/
-    public int getSize_exclude() { return exclude ==null ? 0 : exclude.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container embeddedData*/
-    public Iterable<String> get_embeddedData() { return embeddedData; }
-    
-    /**Access to parse result, get the size of the container embeddedData.*/
-    public int getSize_embeddedData() { return embeddedData ==null ? 0 : embeddedData.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container InstanceType*/
-    public Iterable<String> get_InstanceType() { return instanceType; }
-    
-    /**Access to parse result, get the size of the container InstanceType.*/
-    public int getSize_InstanceType() { return instanceType ==null ? 0 : instanceType.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container StringBuilderInThCxt*/
-    public Iterable<String> get_StringBuilderInThCxt() { return stringBuilderInThCxt; }
-    
-    /**Access to parse result, get the size of the container StringBuilderInThCxt.*/
-    public int getSize_StringBuilderInThCxt() { return stringBuilderInThCxt ==null ? 0 : stringBuilderInThCxt.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container InThCxtRet*/
-    public Iterable<String> get_InThCxtRet() { return inThCxtRet; }
-    
-    /**Access to parse result, get the size of the container InThCxtRet.*/
-    public int getSize_InThCxtRet() { return inThCxtRet ==null ? 0 : inThCxtRet.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container InThCxtLocal*/
-    public Iterable<String> get_InThCxtLocal() { return inThCxtLocal; }
-    
-    /**Access to parse result, get the size of the container InThCxtLocal.*/
-    public int getSize_InThCxtLocal() { return inThCxtLocal ==null ? 0 : inThCxtLocal.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container ReturnInThreadCxt*/
-    public Iterable<String> get_ReturnInThreadCxt() { return returnInThreadCxt; }
-    
-    /**Access to parse result, get the size of the container ReturnInThreadCxt.*/
-    public int getSize_ReturnInThreadCxt() { return returnInThreadCxt ==null ? 0 : returnInThreadCxt.size(); }
+    /**Access to parse result, get the size of the container Java4CAnnotationVariable.*/
+    public int getSize_Java4CAnnotationVariable() { return java4CAnnotationVariable ==null ? 0 : java4CAnnotationVariable.size(); }
     
     
     
@@ -5375,92 +4361,20 @@ public class JavaSrc_Base extends SrcInfo {
     
     
     
-    /**Access to parse result, get the elements of the container PtrVal*/
-    public Iterable<String> get_PtrVal() { return ptrVal; }
+    /**Access to parse result, get the elements of the container string*/
+    public Iterable<String> get_string() { return string; }
     
-    /**Access to parse result, get the size of the container PtrVal.*/
-    public int getSize_PtrVal() { return ptrVal ==null ? 0 : ptrVal.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container StringJc*/
-    public Iterable<String> get_StringJc() { return stringJc; }
-    
-    /**Access to parse result, get the size of the container StringJc.*/
-    public int getSize_StringJc() { return stringJc ==null ? 0 : stringJc.size(); }
+    /**Access to parse result, get the size of the container string.*/
+    public int getSize_string() { return string ==null ? 0 : string.size(); }
     
     
     
     
-    /**Access to parse result, get the elements of the container excludeImpl*/
-    public Iterable<String> get_excludeImpl() { return excludeImpl; }
+    /**Access to parse result, get the elements of the container Java4CAnnotationMethod*/
+    public Iterable<JavaSrc.Java4CAnnotationMethod> get_Java4CAnnotationMethod() { return java4CAnnotationMethod; }
     
-    /**Access to parse result, get the size of the container excludeImpl.*/
-    public int getSize_excludeImpl() { return excludeImpl ==null ? 0 : excludeImpl.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container extendsOnlyMethods*/
-    public Iterable<String> get_extendsOnlyMethods() { return extendsOnlyMethods; }
-    
-    /**Access to parse result, get the size of the container extendsOnlyMethods.*/
-    public int getSize_extendsOnlyMethods() { return extendsOnlyMethods ==null ? 0 : extendsOnlyMethods.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container inline*/
-    public Iterable<String> get_inline() { return inline; }
-    
-    /**Access to parse result, get the size of the container inline.*/
-    public int getSize_inline() { return inline ==null ? 0 : inline.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container retinline*/
-    public Iterable<String> get_retinline() { return retinline; }
-    
-    /**Access to parse result, get the size of the container retinline.*/
-    public int getSize_retinline() { return retinline ==null ? 0 : retinline.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container ReturnThis*/
-    public Iterable<String> get_ReturnThis() { return returnThis; }
-    
-    /**Access to parse result, get the size of the container ReturnThis.*/
-    public int getSize_ReturnThis() { return returnThis ==null ? 0 : returnThis.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container ReturnNew*/
-    public Iterable<String> get_ReturnNew() { return returnNew; }
-    
-    /**Access to parse result, get the size of the container ReturnNew.*/
-    public int getSize_ReturnNew() { return returnNew ==null ? 0 : returnNew.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container instanceTypeAnnot*/
-    public Iterable<String> get_instanceTypeAnnot() { return instanceTypeAnnot; }
-    
-    /**Access to parse result, get the size of the container instanceTypeAnnot.*/
-    public int getSize_instanceTypeAnnot() { return instanceTypeAnnot ==null ? 0 : instanceTypeAnnot.size(); }
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container embeddedTypeAnnot*/
-    public Iterable<String> get_embeddedTypeAnnot() { return embeddedTypeAnnot; }
-    
-    /**Access to parse result, get the size of the container embeddedTypeAnnot.*/
-    public int getSize_embeddedTypeAnnot() { return embeddedTypeAnnot ==null ? 0 : embeddedTypeAnnot.size(); }
+    /**Access to parse result, get the size of the container Java4CAnnotationMethod.*/
+    public int getSize_Java4CAnnotationMethod() { return java4CAnnotationMethod ==null ? 0 : java4CAnnotationMethod.size(); }
     
     
     

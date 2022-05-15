@@ -162,6 +162,8 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
  *   <td>Assign a stored result, parsed before, into the component.</td>
  * </tr><tr><td><code>&lt;...?*...&gt;</code></td>
  *   <td>Transport to deeper levels, but not assign a stored result into the component.</td>
+ * </tr><tr><td><code>&lt;...?&amp;&gt;</code></td>
+ *   <td>In a repetition: onlyOneEach: for data storing only one element (Similar {| on start of repetition).</td>
  * </tr><tr><td><code>&lt;...?&gt;</code></td>
  *   <td>Do not produce a parse result to this components level.</td>
  * </tr><tr><td><code>&lt;...??&gt;</code></td>
@@ -241,6 +243,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
+   * <li>2022-05-13: Hartmut new: {@link #bOnlyOneEach} with designation ?& not relevant for parser, only for {@link GenZbnfJavaData} 
    * <li>2022-04-30: Hartmut new: {@link EType#kStoreSrc} as new feature writing <code>&lt;@?semantic></code>.
    *   This seems to be the really good variant to store the source to a part of syntax.
    * <li>2022-02-22: {@link #writeSyntaxStruct(Appendable)} as a new feature, should be existing from beginning...
@@ -291,7 +294,7 @@ public class ZbnfSyntaxPrescript
    * <li> 2006-05-00: Hartmut creation
    * </ul>
    */
-  public static final String version = "2022-02-10";
+  public static final String version = "2022-05-13";
   
   static int objId_ = 1000;
   
@@ -352,6 +355,14 @@ public class ZbnfSyntaxPrescript
   /**If set the parse result and all sub results are not stored as data. 
    * They may be usually stored as {@link #bStoreAsString}*/
   boolean bDonotStoreData;
+  
+  
+  /**Used in a repetition: The sub syntax is expected only one time though it is possible in the repetition.
+   * This can be checked while parsing with effort (look if it was parsing before), but this is not done yet in 2022-05.
+   * This option is used especially for {@link GenZbnfJavaData} to create not a List container, only a single instance.
+   * Often it is clarified by another parser that this elements are only contained one time, for example for Java language. 
+   */
+  boolean bOnlyOneEach;
   
   /**If set the parse result for this item is stored as String from the source immediately. */
   boolean bStoreAsString;
@@ -1012,6 +1023,9 @@ public class ZbnfSyntaxPrescript
         this.bAddOuterResults = true;
       }
       //bTransportOuterResults = true;
+    } else if( cc == '&') { 
+      this.bOnlyOneEach = true;
+      cc = spInput.seekPos(1).getCurrentChar();
     } else if(cc == '"') {                          
       //<Syntax?"!"semantic>: store the input which is parsed.
       this.bStoreAsString = true;

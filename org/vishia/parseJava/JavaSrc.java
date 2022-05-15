@@ -78,7 +78,8 @@ public class JavaSrc extends JavaSrc_Base {
     if(this.getSize_classDefinition() >0) //...for
     for(JavaSrc.ClassDefinition rClass: this.get_classDefinition()) {
       postPrepareClass(rClass);
-      Iterable<JavaSrc.ClassDefinition> iClasses = rClass.get_classDefinition();
+      JavaSrc.ClassContent clazzC = rClass.get_classContent();
+      Iterable<JavaSrc.ClassDefinition> iClasses = clazzC.get_classDefinition();
       if(iClasses !=null) {
         for(JavaSrc.ClassDefinition iClass: iClasses) {
           postPrepareClass(iClass);
@@ -89,13 +90,14 @@ public class JavaSrc extends JavaSrc_Base {
   
   
   private void postPrepareClass ( JavaSrc.ClassDefinition rClass ) throws IOException {
-    Iterable<JavaSrc.ConstructorDefinition> ctors = rClass.get_constructorDefinition(); 
+    JavaSrc.ClassContent clazzC = rClass.get_classContent();
+    Iterable<JavaSrc.ConstructorDefinition> ctors = clazzC.get_constructorDefinition(); 
     if(ctors !=null) {
     for(JavaSrc.ConstructorDefinition ctor: ctors) {
       postPrepareStatements(ctor.get_statement());
       
     }}
-    Iterable<JavaSrc.MethodDefinition> methods = rClass.get_methodDefinition(); 
+    Iterable<JavaSrc.MethodDefinition> methods = clazzC.get_methodDefinition(); 
     if(methods !=null) {
     for(JavaSrc.MethodDefinition rOper: methods) {
       postPrepareStatements(rOper.get_methodbody().get_statement());

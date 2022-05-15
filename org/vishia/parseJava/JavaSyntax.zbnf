@@ -37,12 +37,12 @@ description::= <*{ * }|*/?!test_description?content>.
 
 ##The test_desciption syntax is used to parse the inner structure of a description.
 test_description::= <*|@param|@throws|@deprecated|@return|@java2c|@Java4C|@since|\e?text>
-[{ @sizeof = <*@\e?sizeofDescription>
- | @return <returnDescription> 
+[{ @sizeof = <*@\e?&sizeofDescription>
+ | @return <returnDescription?&?> 
  | @param <paramInDescription>
- | <?staticInstance> @Java2C = staticInstance <*@\e?text>
+ | <?&staticInstance> @Java2C = staticInstance <*@\e?text>
  | @java2c = [>{ <java2cTag?> ? , } [:|\.]] <*@\e?rest>
- | @Java4C\.[<Java4CAnnotationVariable?>|<Java4CAnnotationType?>|<Java4CAnnotationMethod?>] <*@\e?rest>
+ | @Java4C\.[<Java4CAnnotationVariable>|<Java4CAnnotationType?>|<Java4CAnnotationMethod>] <*@\e?rest>
  | @ <*@\e?auxDescription>
  }] \e.
 
@@ -109,38 +109,40 @@ Java4CAnnotationClass::=<?>
 }].
 
 Java4CAnnotationVariable::=
-[ ExcludeCond <?excludeCond>
-| Exclude <?exclude>
-| EmbeddedData <?embeddedData>
-| DynamicCall <?dynamic-call>                        ##creates a Mtbl-Reference in C
-| <?staticInstance> StaticInstance            ##to class
-| <?nonPersistent> NonPersistent   ##attribute to param TODO unused yet. Ask it onnly in paramDesciption.
-| <?stackInstance> StackInstance   ##new creates an instance in stack
+[ [<?string> ExcludeCond
+  | Exclude
+  | EmbeddedData
+  | DynamicCall                        ##creates a Mtbl-Reference in C
+  | StaticInstance            ##to class
+  | NonPersistent   ##attribute to param TODO unused yet. Ask it onnly in paramDesciption.
+  | StackInstance   ##new creates an instance in stack
+  | ToStringNonPersist             ##The String is designated as non-persistant, especially located in ThreadContext
+  | NonPersistent                       ##The String is used only non-Persist. Written on definition of String variable.
+  | DeclarePersist                     ##a StringJc is declared as persistent, the programmer knows it.
+  | ReturnInThreadCxt               ##marks that the reference is used to return in thread context.
+  ]
 | InstanceType(<""?InstanceType>)                     ##A reference in C refers always this instance type though the reference has a lesser type.
-| <?toStringNonPersist> ToStringNonPersist             ##The String is designated as non-persistant, especially located in ThreadContext
-| <?nonPersistent> NonPersistent                       ##The String is used only non-Persist. Written on definition of String variable.
-| <?declarePersist> DeclarePersist                     ##a StringJc is declared as persistent, the programmer knows it.
 | StringBuilderInStack ( <#?StringBuilderInStack> ) ##used for String concatenation
 | StringBuilderInThreadCxt ( sign = <*)?StringBuilderInThCxt> ) ##used for String concatenation and returned Strings
 ##| <?InThreadCxt> InThreadCxt                           ##marks that the instance is located in the thread context.
 | InThCxtRet ( sign = <*)?InThCxtRet> )                           ##marks that the instance is located in the thread context.
 | InThCxtLocal ( sign = <*)?InThCxtLocal> )                           ##marks that the instance is located in the thread context.
-| <?ReturnInThreadCxt> ReturnInThreadCxt               ##marks that the reference is used to return in thread context.
 ].
 
 Java4CAnnotationMethod::=
-[ Exclude <?exclude>
-| ExcludeImpl <?excludeImpl>
-| ExtendsOnlyMethods <?extendsOnlyMethods>
-| Inline <?inline>                                    ##method should translated to a simple define or inline function
-| Retinline <?retinline>      
-| <?ReturnThis> ReturnThis
-| <?ReturnNew> ReturnNew
-| <?ReturnInThreadCxt> ReturnInThreadCxt               ##marks that the returned instance is located in the thread context.
-| <?dynamic-call> Dynamic-call     ##to declare a enhanced Mtbl-reference in stack.
-| <?xxxoverride-able> Override-able   ##virtual method
-| Stacktrace: [ no-param <?noThCxt>| no <?noStacktrace>| yes]
-| NoStackTrace <?noStacktrace>
+[ [<?string> Exclude
+  | ExcludeImpl 
+  | ExtendsOnlyMethods 
+  | Inline                                    ##method should translated to a simple define or inline function
+  | Retinline      
+  | ReturnThis
+  | ReturnNew
+  | ReturnInThreadCxt               ##marks that the returned instance is located in the thread context.
+  | Dynamic-call     ##to declare a enhanced Mtbl-reference in stack.
+  | Override-able   ##virtual method
+  | Stacktrace: [ no-param | no | yes]
+  | NoStackTrace
+  ]
 | InstanceType : <""?instanceTypeAnnot>
 | Embedded Type : <$?embeddedTypeAnnot>
 | <?stackSize> StackSize ( { <#?bytes> | <* )+?typeStack> ? + } )  ##only valid at thread.start()
@@ -148,19 +150,20 @@ Java4CAnnotationMethod::=
 
 
 Java4CAnnotationType::=
-  FixArraySize(<#?fixArraySize>)  ##staticArray with fix size, this annotation is able to see in Runtime in Java.
-##| SimpleArraySize(<#?fixArraySize>)  ##staticArray with fix size, this annotation is able to see in Runtime in Java.
-| <?noGC> noGC                     ##only simple, not an enhanced refernece
-| <?noGC> SimpleRef                ##only simple, not an enhanced refernece
-| <?noGC> ConstRef                 ##a reference which is generated with type const* in C language, the referenced object is not modified in Java.
-| <?simpleVariableRef> SimpleVariableRef      ##in java forex a int[] x where x[0] is used. In C a int* x
-| <?simpleVariableRef> SimpleArrayRef      ##in java forex a int[] x where x[0] is used. In C a int* x
-| <?simpleArray> SimpleArray       ##simple Array with size in constructor. 
-| <?PtrVal> PtrVal                            ##in java forex a int[] stored in a PtrVal_TYPE instance.
-| <?embeddedYElements> EmbeddedArrayElements  ##to array def: all elements are embedded
-| <?zeroTermString> ZeroTermString ##to String name; a const char*
-| <?ByteStringJc> ByteStringJc     ##to a byte[] array, it is generated as ByteStringJc
-| StringJc <?StringJc>                                ##A CharSequence should be translated to StringJc.
+  FixArraySize(<#?fixArraySize>)                 ##staticArray with fix size, this annotation is able to see in Runtime in Java.
+##| SimpleArraySize(<#?fixArraySize>)            ##staticArray with fix size, this annotation is able to see in Runtime in Java.
+| [<?string> noGC                                ##only simple, not an enhanced refernece
+  | SimpleRef                                    ##only simple, not an enhanced refernece
+  | ConstRef                                     ##a reference which is generated with type const* in C language, the referenced object is not modified in Java.
+  | SimpleVariableRef                            ##in java forex a int[] x where x[0] is used. In C a int* x
+  | SimpleArrayRef                               ##in java forex a int[] x where x[0] is used. In C a int* x
+  | SimpleArray                                  ##simple Array with size in constructor. 
+  | PtrVal                                       ##in java forex a int[] stored in a PtrVal_TYPE instance.
+  | EmbeddedArrayElements                        ##to array def: all elements are embedded
+  | ZeroTermString                               ##to String name; a const char*
+  | ByteStringJc                                 ##to a byte[] array, it is generated as ByteStringJc
+  | StringJc                                     ##A CharSequence should be translated to StringJc.
+  ]
 .
 
 
@@ -197,33 +200,34 @@ annotationDefinition::=
 
 
 classDefinition::= 
+  [/**<description>*/]
   [{| @SuppressWarnings ( <""?SuppressWarnings> ) | /**[><description>*/] | <ModifierClass?>}] 
   class <$?classident> [<generic>]
   ##[extends [<?Superclass> {<$?>?\.} ][<generic>] ]
   [extends <typeIdent?Superclass>  ]
   ##[implements { [<?ImplementedInterface> {<$?>?\.}][<generic>] ? , }]     
   [implements { <typeIdent?ImplementedInterface> ? , }]     
-\{ [<classContent?>]
+\{ [<classContent>]
 \} [;].
 ##Note: Java2c-Translator does not regard an <envIdent> on the type yet, 2015-03-29.
 
 
 classContent::=
 { ##[/**<description?-?>*/]
-    [{| /**[><description?-?>*/]
-     | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
+  ##  [{| /**[><description?-?>*/]
+  ##   | @SuppressWarnings([<""?>| \{ { <""?> ?, } \}])
 ##     | @[<?-Annotation>{<$?>?\.} [(<*)?>)]] 
  ##    | <ModifierClass?-?>
-    }] 
-  [ enum <enumDefinition>
+  ##  }] 
+  [ enum <enumDefinition?+?>
   | <classDefinition?+?>
   | <interfaceDefinition?+?>
   | <variableDefinition?+?> ;
   | <methodDefinition?+?>
   | <constructorDefinition?+?>
-  | <annotationDefinition>
-  | static <statementBlock?initializingBlockStatic>
-  | <statementBlock?initializingBlock>
+  | <annotationDefinition?+?>
+  | static <statementBlock?+initializingBlockStatic>
+  | <statementBlock?+initializingBlock>
   | ;
   ]
 }.
@@ -310,7 +314,7 @@ AccessRight::=<?>[[<?AccessRight>public|private|protected]].
 
 enumDefinition::= <$?enumTypeIdent> \{  [{<?*enumElement> <$?enumIdent> [ ( <actualArguments> ) ] ? , }]
 [ ; 
- [ <classContent?> ]
+ [ <classContent> ]
 ]
 \}.
 
@@ -318,10 +322,10 @@ enumDefinition::= <$?enumTypeIdent> \{  [{<?*enumElement> <$?enumIdent> [ ( <act
 ##      it is a Java specification problem!
 ModifierClass::=[ static<?isStatic> | final<?isFinal> | abstract<?isAbstract>  | @Java4C\.<Java4CAnnotationClass> | @[<?Annotation>{<$?>?\.} [(<*)?>)]] | <AccessRight> ].
 
-ModifierVariable::={| static<?isStatic> | final<?isFinal> | volatile<?isVolatile> | transient<?isTransient> 
-| @AccessPolicy\.<$?accessPlolicy> | @ReadOnly<?isReadonly>  
-| @Java4C\.<Java4CAnnotationVariable?> | @Java4C\.<Java4CAnnotationType?> 
-| @[<?Annotation><$\.?> [(<*)?>)]] | [<?AccessRight>public|private|protected] }.
+ModifierVariable::={ static<?&isStatic> | final<?&isFinal> | volatile<?&isVolatile> | transient<?&isTransient> 
+| @AccessPolicy\.<$?accessPlolicy> | @ReadOnly<?&isReadonly>  
+| @Java4C\.<Java4CAnnotationVariable> | @Java4C\.<Java4CAnnotationType> 
+| @[<?Annotation><$\.?> [(<*)?>)]] | [<?&AccessRight>public|private|protected] }.
 
 ModifierMethod::={|synchronized<?isSynchronized> |static<?isStatic> |final<?isFinal> |abstract<?isAbstract> 
 |@AccessPolicy\.<$?accessPlolicy> |@ReadOnlyRet<?isReadonlyRet>  |@ReadOnly<?isReadonly> 
