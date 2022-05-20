@@ -317,7 +317,9 @@ public final class StringFormatter implements Appendable, Flushable
    * If the pos_ is more right than the length of the buffer, spaces will be included.
    * */
   public StringFormatter pos(int newPos, int minChars)
-  { if(newPos < 0) throw new IndexOutOfBoundsException("negative position not supported");
+  { if(newPos < 0) {
+      throw new IndexOutOfBoundsException("negative position not supported");
+    }
     if(minChars >= 0 && pos_ + minChars > newPos){
       pos_ += minChars;
     } else {

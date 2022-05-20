@@ -109,7 +109,7 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
-   * <li>2022-04-17: new {@link #readTemplate(InputStream, String)} to support texts from file. Used firstly for {@link org.vishia.fpga.Java2Vhdl}
+   * <li>2022-04-17: new {@link #readTemplate(InputStream, String)} to support texts from file. Used firstly for {@link org.vishia.java2Vhdl.Java2Vhdl}
    * <li>2022-02-11: little bit improved error message, hint to error position
    * <li>2019-11-13: ## Comment in a line
    * <li>2019-10-20: &lt;: > capability 

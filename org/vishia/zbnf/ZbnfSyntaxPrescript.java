@@ -243,7 +243,7 @@ public class ZbnfSyntaxPrescript
   /**Version, history and license.
    * list of changes:
    * <ul>
-   * <li>2022-05-13: Hartmut new: {@link #bOnlyOneEach} with designation ?& not relevant for parser, only for {@link GenZbnfJavaData} 
+   * <li>2022-05-13 Hartmut new: {@link #bOnlyOneEach} with designation ?& not relevant for parser, only for {@link GenZbnfJavaData} 
    * <li>2022-04-30: Hartmut new: {@link EType#kStoreSrc} as new feature writing <code>&lt;@?semantic></code>.
    *   This seems to be the really good variant to store the source to a part of syntax.
    * <li>2022-02-22: {@link #writeSyntaxStruct(Appendable)} as a new feature, should be existing from beginning...

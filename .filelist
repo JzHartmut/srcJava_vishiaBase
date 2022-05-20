@@ -298,7 +298,7 @@
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:50  x     OrderForList.java                        ::           .620  0011920407 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2022-04-20 18:17:14  x     OutTextPreparer.java                     ::         54.784 -0989608014 
+2022-05-15 23:42:59  x     OutTextPreparer.java                     ::         54.789  1882362743 
 2020-06-21 21:19:38  x     OutputTwice.java                         ::           .854 -1967010122 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -320,7 +320,7 @@
 2021-10-04 14:29:49  x     StdHexFormatWriter.java                  ::          4.239  0384535192 
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
-2022-03-31 20:28:19  x     StringFormatter.java                     ::         52.445 -1622783819 
+2022-05-19 17:33:01  x     StringFormatter.java                     ::         52.459 -1104213742 
 2022-05-11 10:29:36  x     StringFunctions.java                     ::         65.052 -1565701219 
 2022-03-16 10:56:58  x     StringFunctions_B.java                   ::         14.082  1161478632 
 2022-03-31 20:20:21  x     StringFunctions_C.java                   ::         15.304 -1356679648 
@@ -368,8 +368,8 @@
 2022-04-29 11:21:56  x     ZbnfJavaOutput.java                      ::         89.645 -0975908658 
 2022-02-09 18:28:47  x     ZbnfParseResultItem.java                 ::         12.232 -1807629494 
 2022-05-01 14:48:38  x     ZbnfParser.java                          ::        190.001  0643327568 
-2022-04-29 11:16:14  x     ZbnfParserStore.java                     ::         60.440  0635413395 
-2022-05-15 17:31:40  x     ZbnfSyntaxPrescript.java                 ::         87.034  0571200338 
+2022-05-19 17:36:26  x     ZbnfParserStore.java                     ::         60.453 -1940285188 
+2022-05-15 21:12:20  x     ZbnfSyntaxPrescript.java                 ::         87.033  1625520217 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
 2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
 

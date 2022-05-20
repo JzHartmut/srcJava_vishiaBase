@@ -1489,7 +1489,7 @@ class ZbnfParserStore
     int[] nesting = new int[1000];
     StringFormatter format = new StringFormatter(out, false, "\n", 200);
     for(ParseResultItemImplement item: this.items) {
-      while( ixNesting >=0 && nesting[ixNesting] == item.idxOwn) {
+      while( ixNesting >=0 && nesting[ixNesting] == item.idxOwn && indent >0) {
         ixNesting -=1;
         indent -=1;
       }
