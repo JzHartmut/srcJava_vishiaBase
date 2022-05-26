@@ -65,11 +65,17 @@ if ! test "$SRC_ALL2" = ""; then
   export SRCZIP="$SRCZIP $SRC_ALL2/..:**/*"                         
 fi  
 echo compile javac
-pwd
-echo javac -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+echo pwd=$(pwd)
+##echo ls /tmp
+##ls /tmp
+echo $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 ###$JAVAC_HOME/bin/
 $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
-
+if test ! $? == 0; then
+  echo ERROR javac --?????????????????????????????????????????--
+  if test -f $JARFILE; then rm $JARFILE; fi    ##prevent usage of an older version here.  
+  exit 5
+fi  
 echo build jar
 ##do not use: $JAVAC_HOME/bin/jar -n0cvfM $JARFILE -C $TMPJAVAC/binjar . > $TMPJAVAC/jar.txt
 echo pwd=$(pwd)

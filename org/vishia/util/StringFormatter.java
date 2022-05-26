@@ -55,11 +55,13 @@ import java.util.Date;
  * Every {@link pos(int)}-operation is successfully. If the buffer in shorter as the required position, spaces will be filled
  * onto the required position. So a buffer content can also be filled first right, than left.
  */
-public final class StringFormatter implements Appendable, Flushable
+public final class StringFormatter implements Appendable, Flushable, StringFunctions_C.PrepareBufferPos
 {
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-05-24: Hartmut The strPicture(long, String, String, char) is now contained in {@link StringFunctions_C#strPicture(long, String, String, char, org.vishia.util.StringFunctions_C.PrepareBufferPos)}
+   *   because common usage. Tu fulfill, the interface {@link StringFunctions_C.PrepareBufferPos} is implemented here. 
    * <li>2022-03-04: Hartmut new: {@link #addHex(long, int)} now uses {@link StringFunctions_C#appendHex(Appendable, long, int)}.
    *   For that the {@link Appendable_Intern} instance is necessary. 
    * <li>2022-03-04: Hartmut new: {@link #addBool(boolean, String)}, interesting for hardware simulation.   
@@ -115,7 +117,7 @@ public final class StringFormatter implements Appendable, Flushable
    * 
    * 
    */
-  public static final String version = "2022-03-04";
+  public static final String version = "2022-05-24";
   
   private static final byte mNrofBytesInWord = 0x1F;
 
@@ -381,11 +383,11 @@ public final class StringFormatter implements Appendable, Flushable
 
    
    
-  /**ensures, that the space in buffer started on pos is writeable with setCharAt.
-  * If the buffer content is less than pos, spaces were padded.
-  * @param nrofChars after pos to write somewhat.
-  */
-  private void prepareBufferPos(int nrofChars)
+  /**Ensures, that the space in buffer started on pos is writeable with setCharAt.
+   * If the buffer content is less than pos + nrofChars, spaces were padded.
+   * @param nrofChars after pos to write somewhat.
+   */
+  @Override public void prepareBufferPos(int nrofChars)
   { //if(true || bInsert)
     if(bInsert && pos_ < buffer.length())
     {
@@ -934,195 +936,18 @@ public final class StringFormatter implements Appendable, Flushable
    * @return this to support concatenation.
    */
   public StringFormatter addint(long nr,String sPict)  //Zahl anhngen, rechtsbndig nlen Zeichen oder mehr
-  { strPicture(nr,sPict,"+-..", '.');
+  { try { StringFunctions_C.strPicture(nr,sPict,"+-..", '.', this);
+    } catch(IOException exc) { throw new IllegalArgumentException(exc); }  //can never occur on a StringBuffer
     return this;
   }
   
   /**@deprecated see {@link addint(long, java.lang.String)}*/
   @Deprecated
   public StringFormatter addIntPicture(long nr,String sPict)  //Zahl anhngen, rechtsbndig nlen Zeichen oder mehr
-  { strPicture(nr,sPict,"+-..", '.');
-    return this;
+  { return addint(nr, sPict);
   }
   
-  /**Array with power of 10 to detect the exponent size of a long value. */
-  private final static long[] n10a =                      
-    {1000000000L
-    ,100000000L
-    ,10000000L
-    ,1000000L
-    ,100000L
-    ,10000L
-    ,1000L
-    ,100L
-    ,10L};
-    
-  static String sNeg="+-%";  //dieses Zeichen im Picture (xxx Erweit. auch andere Zeichen wie %)
   
-  /**This algorithm is taken over from C++ routines in strpict.cpp written by JcHartmut in 1993..1999.
-   * 
-   * @param src The number to show
-   * @param pict Picture of the number
-   * @param posNegPointExp String with 4 Character, 
-   *        which are used for positive sign, negative sign, decimal point or exponent char.
-   *        At ex. "+-.@".
-   *        If the pict contains one of this characters, the associated function will be done. 
-   * @param cFracSep Character which is set instead a exponent char
-   * @return
-   */
-  private boolean strPicture
-  ( long src      //numerisch
-  , String pict  //Bild der Zahl
-  , String posNegPointExp
-  , char cFracSep     //Index auf Zeichen anstelle eines zweimal. Trenners
-  )
-  { int n10i;  //Index auf das n10-Feld waehrend der Konvertierung
-    //--------------------------------------------------------------------
-    /**set if the input number is negativ, and it is negated. */
-    boolean bNeg=false;
-    /**number of chars for the sign, it is 0 or 1. */
-    int nrofCharForSign;
-    
-    /**1 if a '-' for sign position is given and the number is positiv. */
-    int nrofCharsForSignUnused = 0;
-    /** setted if left zero-digits are suppressed, no '0' and no space should be shown. */
-    boolean bLeftZeroSuppress =false;
-    int posSignInPicture = StringFunctions.indexOfAnyChar(pict, 0, Integer.MAX_VALUE, sNeg);;  //positChar(pict,pict.length(),sNeg,strlen(sNeg));
-    if(posSignInPicture >= 0)  //im Picture ist ein neg. Vorzeichen vorgesehen
-    { if(src < 0L)                //und die Zahl ist auch negativ:
-      { bNeg=true;
-        src=-src;   //Zahl negieren
-        nrofCharForSign = 1;
-      }
-      else
-      { if(pict.charAt(posSignInPicture) != '-')
-        { nrofCharForSign = 1;  //displays the sign always.
-        }
-        else
-        { nrofCharForSign = 0;  //don't display a sign.
-          nrofCharsForSignUnused = 0;
-        }
-      }
-    }
-    else if(src < 0L)
-    { throw new IllegalArgumentException("value should be only positive: " + src);
-    }
-    //if the number is negativ but a sign is not expected, the number will be shown as positiv value.
-    //
-    //----------------------------------------------------------------------
-    //Feststellung der Groesse der Zahl
-    for(n10i = n10a.length -1; n10i >= 0; n10i--)
-    { //meistens sind es kleine Zahlen, im Mittel geht es also schneller
-      //wenn von Hinten aus getestet wird ob die Zahl groesser ist,
-      //damit weniger Schleifendurchlauefe:
-      if(src < n10a[n10i]) break;
-    }
-    //n10[n10i] ist die Zahl, die um eine Stelle groeser ist.
-    n10i+=1;  //damit ist n10[n10i] die als erste kleinere Zahl.
-              //Achtung: n10i > arraylen(n10) wenn src <10, nur Einerstelle!
-    //--------------------------------------------------------------------
-    //Anzahl der Stellen
-    int nDigits = n10a.length - n10i + 1;
-  
-    //--------------------------------------------------------------------
-    //pict analysieren:
-    int nrofChars = pict.length(); 
-    int ii = nrofChars;     //beginne von rechts
-    int n0Digit=0;   //max. Digits rechts, weggelassen wenn 0
-    int n1Digit=0;   //mdst. Stelle mit 0 auszuschreiben falls Zahl kleiner ('1' im Picture)
-    int n2Digit=0;   //mindest-Platz fuer Digits bzw. linke Leerstellen
-    int n3Digit=0;   //max. Anzahl Digits
-  
-    while(ii>0)
-    { char cp = pict.charAt(--ii);
-      if(cp<='2' && cp>='0')
-      { n2Digit+=1;      //210 in Picture: Soll-Platz fuer Digits
-        n3Digit+=1;
-        if(cp=='0'){ n0Digit+=1; n1Digit=n2Digit; }  //mdst. Stelle auszuschreiben
-        else if(cp=='1') n1Digit=n2Digit;
-      }
-      else if(cp<='9' && cp>='3')
-      { n3Digit+=1;
-      }
-    }
-    
-    boolean bOvf;         //Zahl ist nicht darstellbar weil zu gross
-    if(nDigits > n3Digit)
-    { //Zahl ist nicht darstellbar: stattdessen 99999 darstellen
-      bOvf=true;
-      //n3Digit=0;
-      n2Digit = n3Digit;
-    }
-    else
-    { bOvf=false;
-      if(nDigits > n2Digit) n2Digit=nDigits;  //Anzahl auszugeb. Digits oder Leerstellen
-    }
-    prepareBufferPos(nrofChars - (n3Digit - n2Digit) - nrofCharsForSignUnused);
-    ii = 0;
-    for(ii=0; ii < nrofChars; ii++)
-    { char cp = pict.charAt(ii);
-      char cc;
-      int ixPosNegPointExp;
-      if( cp>='0' && cp<='9')
-      { if(--n3Digit >= n2Digit) cc=0;  //keine Ausgabe weil nicht notwendige fuehr. Stellen
-        else
-        { //Ausgabe aufgrund n2Digit notwendig
-          if(n2Digit>nDigits)
-          { //Anzahl auszuschreib. Stellen groesser als Zahl:
-            if(n1Digit>=n2Digit) cc='0';   //fuerende Null
-            else cc=' ';
-          }
-          else //nDigit<=n2Digit
-          { //Ziffer bestimmen:
-            n1Digit=0;  //keine fuerenden 0 mehr notwendig
-            if(bOvf) cc='#';
-            else if(src==0)
-            { if(n0Digit>=nDigits) cc=0;  //nichts ausgeben bei weglassbaren nachfolg. 0
-              else cc='0';
-            }
-            else if(n10i >= n10a.length)
-            { cc=(char)(src+'0');  //das ist die Einerstelle
-            }
-            else
-            { long src10=n10a[n10i]; n10i+=1;    //Dezimalstelle gehoert dazu
-              cc='0';
-              while( src>=src10){ cc+=(char)(1); src-=src10; } //in Schleife subtr. statt Divis.
-            }
-            nDigits-=1;
-          }
-          n2Digit-=1;
-        }
-      }
-      else if( (ixPosNegPointExp = posNegPointExp.indexOf(cp)) >=0){
-      	/**Any control character found: */
-      	switch(ixPosNegPointExp){
-      	case 0: cc = posNegPointExp.charAt(bNeg? 1 : 0); break; //positiv digit
-      	case 1: { 
-          if(bNeg)
-          { //number is negativ, write a '-' always.
-            cc = cp; 
-          }
-          else
-          { //number is positive:
-            if(bLeftZeroSuppress){ cc=0; }  //write nothing if number is positiv and left zeros are suppressed.
-            else { cc = ' ';}    //write blank if a negative sign is required in picture and the number is positive.
-          }
-      	} break;
-      	case 2: cc = cFracSep;  break; //show the given fractional separator if the control-char for fract. separator is found.
-      	case 3: cc = cFracSep == '.' ? ' ' : cFracSep; break; //don't show if 10^0
-      	default: throw new RuntimeException("unexpected case");
-      	}
-      }
-      else
-      { cc = cp; //anderes Zeichen aus Picture uebertragen
-      }
-      if(cc!=0)
-      { //cc=0 means, the char shouls not be written.
-        buffer.setCharAt(pos_++, cc);
-      }
-    }//for
-    return(!bOvf);
-  }
 
 
   /**Writes a float value in technical representation with exponent as short char a..T
@@ -1177,7 +1002,8 @@ public final class StringFormatter implements Appendable, Flushable
     {
       srcLong = 0;
     }
-    strPicture(srcLong,pict,"+-.@", cFrac.charAt(nExp));
+    try{ StringFunctions_C.strPicture(srcLong,pict,"+-.@", cFrac.charAt(nExp), this);
+    } catch(IOException exc) { throw new IllegalArgumentException(exc); }  //can never occur on a StringBuffer
     return(pict.length());
   }
 
@@ -1372,6 +1198,15 @@ public final class StringFormatter implements Appendable, Flushable
   }
   
   /**See {@link Appendable_Intern}, only internal usage. */
-  private final Appendable_Intern appendable = new Appendable_Intern(); 
+  private final Appendable_Intern appendable = new Appendable_Intern();
+
+
+
+
+
+  @Override
+  public void addBufferPos(char cc) throws IOException {
+    buffer.setCharAt(pos_++, cc);
+  } 
    
 }

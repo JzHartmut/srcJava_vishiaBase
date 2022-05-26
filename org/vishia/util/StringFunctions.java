@@ -928,7 +928,7 @@ public class StringFunctions {
    * It is the adequate functionality like {@link java.lang.String#indexOf(String, int)}. 
    * @param sq A CharSequence
    * @param fromIndex first checked position in sq
-   * @param to >=0 then end position of checked range. 
+   * @param to >=0 then end position of checked range inclusive str
    *        to <0 then relative position from end. to = -1 exact till end
    * @param str  which is searched.
    * @return -1 if not found, else first occurrence of str in sq which is >= fromIndex. 

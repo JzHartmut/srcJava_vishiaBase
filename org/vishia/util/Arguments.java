@@ -29,13 +29,13 @@ import java.util.List;
     }};
     
     Args(){
-      super.aboutInfo = "Zip routine from Java made by HSchorrig, 2013-02-09 - 2020-06-09";
-      super.helpInfo="obligate args: -o:ZIP.zip { INPUT}";  //[-w[+|-|0]]
+      super.aboutInfo = "...your about info";
+      super.helpInfo="obligate args: -o:..."
       addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
       addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
     }
 
-    @Override
+    (at)Override
     public boolean testArgs(Appendable msg) throws IOException {
       boolean bOk = true;
       if(this.fOut == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
@@ -79,6 +79,27 @@ import java.util.List;
       thiz.exec();
     }
  * </pre>
+ * <br>
+ * This class supports
+ * <ul>
+ * <li>Arguments in any order
+ * <li>Arguments starting with a prefix, typical <code>-x:...</code>
+ * <li>Detection of arguments without prefix if no prefix matches
+ * <li><code>---comment</code> simple comment args with three minus
+ * <li><code>--@path/to/file</code> read arguments from a file, whereas one line is one argument.
+ * <li><code>--@path/to/file:label</code> read arguments from a part of a file after the label, see next.
+ * </ul>
+ * The possibility to read the arguments from any file after a label provides the possibility to write arguments in the calling file
+ * which are recognized as commented lines in that file. For example:<pre>
+ * java -cp classpath pkg.path.Class --@localfile.bat:myLabel
+ * ::myLabel ##
+ * ::-o:path/to/myoutput  ##That is the output file for xyz
+ * ::inputfile
+ * pause
+ * </pre>
+ * This is an example/pattern for a batch file, which contains the arguments one per line in the argument file.
+ * This class supports also a comment for the arguments. The comment start string is given after the label, whereby spaces will be omitted (trimmed).
+ * One space after the label means that also trailing spaces in the non commented lines will be trimmed. 
  * 
  * @author Hartmut Schorrig, LGPL-License Do not remove the license hint.
  */
@@ -87,6 +108,7 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-05-24 Hartmut new possibility of --@file:label as described. 
    * <li>2022-04-09 Hartmut Desription of class improved, from another usage. 
    * <li>2022-04-09 Hartmut ---commented-argument now accepted
    * <li>2022-01-17 Hartmut only comment for usage 
@@ -119,7 +141,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2022-04-09";
+  public final static String sVersion = "2022-05-24";
 
   
   /**Interface for implementation of setting arguments.
@@ -402,9 +424,65 @@ public abstract class Arguments {
           // ignore this argument, it is commented.
         } 
         else if(arg.startsWith("--@")) {
-          farg = new BufferedReader(new FileReader(arg.substring(3)));
+          int posLabel = arg.indexOf(':', 6);    //search --@D:x:label after 6. position because on 4th position may be a drive separation
+          final String sFile, sLabel;
+          if(posLabel >0) {
+            sFile = arg.substring(3, posLabel);
+            sLabel = arg.substring(posLabel+1);
+          } else {
+            sFile = arg.substring(3);
+            sLabel = null;
+          }
+          farg = new BufferedReader(new FileReader(sFile));
+          int posArg;                                      // position of the argument in the line may be >0
+          final String sStartLineArg;                      // then all lines should start with this text before posArg.
+          final String sCommentEndline;
+          final boolean bTrimTrailingSpaces;
+          if(sLabel !=null) {                              // posLabel >0, search first line with this label, after this line args starts.
+            int zCheck = sLabel.length()+5;
+            posArg = -1;
+            String sCheckLine = "";
+            while( posArg <0 && (sCheckLine = farg.readLine()) !=null) {
+              posArg = StringFunctions.indexOf(sCheckLine, 0, zCheck, sLabel);  //check whether sLabel is found in range 0...4 in the line
+            }
+            if(posArg <0) {
+              errMsg.append("  ERROR: label not found in ").append(arg).append('\n');
+              posArg = 0;
+              sStartLineArg = null;
+              sCommentEndline = null;
+              bTrimTrailingSpaces = false;
+            } else {
+              sStartLineArg = sCheckLine.substring(0, posArg); //label found, posArg and sStartLineArg set, posArg ==0 possible
+              int zLabelEnd = posArg + sLabel.length();
+              if(sCheckLine.length() > zLabelEnd) {
+                sCommentEndline = sCheckLine.substring(zLabelEnd).trim();
+                bTrimTrailingSpaces = sCheckLine.charAt(zLabelEnd) == ' ';
+              } else {
+                sCommentEndline = null;
+                bTrimTrailingSpaces = false;
+              }
+            }
+          } else {
+            posArg = 0;
+            sStartLineArg = null;
+            sCommentEndline = null;
+            bTrimTrailingSpaces = false;
+          }
+          
           while( (arg = farg.readLine()) !=null) {
-            if(!testArgument(arg, ++nArg)) {
+            if(posArg >0 && !arg.startsWith(sStartLineArg)) { // break of arguments lines if other start
+              break;
+            }
+            String sArg = arg.substring(posArg);
+            int posEnd = sCommentEndline == null ? -1 : sArg.indexOf(sCommentEndline);
+            if(posEnd <0 && bTrimTrailingSpaces) {
+              posEnd = sArg.length();                      //to trim trailing spaces on non commented line.
+            }
+            if(posEnd >0) {                                // trim trailing white spaces always on comment or if desired.
+              while(posEnd >0 && sArg.charAt(posEnd-1)==' ') { posEnd -=1;}
+              sArg = sArg.substring(0, posEnd);
+            }
+            if(!testArgument(sArg, ++nArg)) {  
               if(errMsg !=null) {
                 errMsg.append("  ERROR: ").append(arg).append('\n');
                 bOk = false;

@@ -8,24 +8,31 @@ String cmpnName = $3;   ##vishiaBase  vishiaGui
 String version = $4;    ##yyyy-mm-dd
 
 main() {
+  <+out>-------------- deploy ------------------------------------------------------------------------<.+n>
   <+out> <&cmpnName>: <&buildPath> => <&libsPath>/<&cmpnName>-<&version>.jar<.+n>
   String MD5 = FileSystem.readFile(File: <:><&buildPath>/<&cmpnName>-<&version>.jar.MD5.txt<.>);
   MD5 = MD5.substring(0, 32);          ##The file contains first the MD% sum, then more info about files.
-  <+out>MD5=<&MD5><.+n>
+  <+out>MD5 new=#<&MD5>#<.+n>
   mkdir &libsPath;  ##creates the appropriate directory, if the bom should be created.
-  String fnameBom = <:><&libsPath>/bomVishiaJava.txt<.>;
-  String fnameBomNew = <:><&libsPath>/bomVishiaJava.new.txt<.>;
-  Obj fbomNew = File: &fnameBomNew;
-  if(fbomNew.exists()) {               ## use a new created bom if existing because of other changes
-    Stringjar bom = FileSystem.readFile(File: &fnameBomNew);  
+  String snameBom = <:><&libsPath>/tools.bom<.>;
+  String snameBomNew = <:><&libsPath>/tools_new.bom<.>;
+  Obj fBom = File: &snameBom;
+  Obj fBomNew = File: &snameBomNew;
+  ##
+  ##Opens the till now valid tools.bom, searches the correspond line and compares the MD5
+  ##If the MD5 of the new created file is changed, write a new line and store tools_new.bom
+  ##
+  if(fBomNew.exists()) {               ## use a new created bom if existing because of other changes
+    <+out>Use <&snameBomNew><.+n>
+    Stringjar bom = FileSystem.readFile(File: &snameBomNew);  
   } else {                             ## try to read given bom
-    Stringjar bom = FileSystem.readFile(File: &fnameBom);    ##null if not found
-  }
+    <+out>Use <&snameBom><.+n>
+    Stringjar bom = FileSystem.readFile(File: &snameBom);    
+  }                                    ## bom==null if not found
   Stringjar bomWr;
-  Bool bFoundLine = false;
-  Bool bChangedMD5 = false;
-  debug;
-  for(bomLine: bom) {   ## bom = null is admissible
+  Bool bFoundLine = false;             ## if remain false, then write the tools_new.bom with the new entry.   
+  Bool bChangedMD5 = false;            ## if set to true, then write the tools_new.bom  
+  for(bomLine: bom) {                  ## bom = null is admissible
     ##<+out>+++><&bomLine><.+n>
     if(bomLine.startsWith(cmpnName)) {
       bFoundLine = true;
@@ -33,12 +40,12 @@ main() {
       String MD5curr = bomLine.getCurrent();
       <+out>MD5curr=#<&MD5curr>#<.+n>
       if(MD5 != MD5curr) {
-        bomLine = <::>                   ## replace this line:
+        bomLine = <::>                 ## replace this line:
 ========<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;<.>;
         <+out><&bomLine><.+n>
-        bChangedMD5 = true;              ## if MD5 changed, the new bom should be written.
+        bChangedMD5 = true;            ## if MD5 changed, the new bom should be written.
       } else {
-        bomLine.line();                  ## restore the whole line if MD5 is the same
+        bomLine.line();                ## restore the whole line if MD5 is the same
       }
     }
     <+bomWr><&bomLine><.+n>
@@ -47,7 +54,7 @@ main() {
     bChangedMD5 = true;
     String bomLine = <::>              ## create this line:
 ======<:x>
-======#Basic for all java applications from vishia:
+======#Description for the component, todo (only first time creation)
 ======<&cmpnName>.jar@https://www.vishia.org/Java/deploy/<&cmpnName>-<&version>.jar  ?!MD5=<&MD5>;
 ======
 ======<.>;
@@ -55,18 +62,35 @@ main() {
     <+out><&bomLine><.+>
     <+bomWr><&bomLine><.+>
   }
-  if(bChangedMD5) {
+  if(bChangedMD5) {                     ## It is true and necessary if at least one time MD5 was changed.
+    <+out>copy files because changed MD5<.+>
+    Openfile fBomWr = &snameBomNew;  ## left fBom unchanged to compare   
+    <+fBomWr><&bomWr><.+close>         ## write changed bom file with .new.txt
+    <+out>and create <&snameBomNew><.+n>
+    ##
     Obj fjarOld = File: <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
-    if(not fjarOld.exists()) {         ## Copy the existing jar to version_old to notify of the change
-      copy <:><&libsPath>/<&cmpnName>.jar<.> <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
+    Obj fjarCurr = File: <:><&libsPath>/<&cmpnName>.jar<.>;
+    if(not fjarOld.exists() && fjarCurr.exists()) {   ## Copy the existing jar to version_old to notify of the change, but only one time
+      <+out>rename <:><&libsPath>/<&cmpnName>.jar<.> <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;<.+n>
+      Bool ok = fjarCurr.renameTo(fjarOld); ##copy <:><&libsPath>/<&cmpnName>.jar<.> <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
+      if(NOT ok){
+        <+out>rename ERROR: paths correct?<.+n> 
+      }
       onerror {
-        //copy comes with error:
-        Openfile fJarDummy = <:><&libsPath>/<&cmpnName>-<&version>_old.jar<.>;
-        <+fJarDummy>dummy yet only as marker<.+close>;
+        <+out>rename ERROR: <&error>, paths correct?<.+n> 
       }
     }                                  ## If the old.jar exists, the new .jar should be copied.
-    Openfile fBomWr = &fnameBomNew;    ## It is true and necessary if at least one time MD5 was changed.
-    <+fBomWr><&bomWr><.+close>         ## write changed bom file with .new.txt
+    else {
+      <+out>already exists, do not override for second compilation (or error on copy): <&libsPath>/<&cmpnName>-<&version>_old.jar<.+n>
+    }
+    ## Hint: copy in the JZtxtcmd script is not possible for vishiaBase.jar itself because it is in use, locked. 
+    ## copy to _new.jar and rename in the shell script.
+    { <+out><&buildPath>/<&cmpnName>-<&version>.jar ==> <&libsPath>/<&cmpnName>.new.jar<.+n>
+      copy -w <:><&buildPath>/<&cmpnName>-<&version>.jar<.> <:><&libsPath>/<&cmpnName>.new.jar<.>;
+      onerror {
+        <+out>copy ERROR: <&error>, paths correct?<.+n> 
+      }
+    }
   }
 }
 

@@ -8,6 +8,7 @@ public class ComplexDouble {
     this.re = re; this.im = im;
   }
   
-  public double magn() { return Math.sqrt(re*re + im*im); }
+  public double magn() { return Math.sqrt(this.re*this.re + this.im*this.im); }
   
+
 }
