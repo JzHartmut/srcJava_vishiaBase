@@ -2,21 +2,60 @@
 #it can be run under Windows using MinGW: sh.exe - thisScript.sh
 #MinGW is part of git, it should be known for Gcc compile too.
 
-##Both variables should be corrected for any new version, 
-##if is used for gradle build and for shell build!
+#$BUILD_TMP is the build output directory. 
+#possible to give $BUILD_TMP from outside. On argumentless call determine in build.
+#the build should be a temporary directory for build outputs, beside the src of the src-tree
+#It can be removed too, then always create newly
+echo PWD=$PWD
+if test "$BUILD_TMP" = ""; then                                                      ## check whether a build exists:
+  if test -d ../../build; then export BUILD_TMP="../../build"                        ## beside the component java tree
+  elif test -d ../../../../../build; then export BUILD_TMP="../../../../../build"    ## beside the common src tree
+  else
+    export BUILD_TMP="/tmp/BuildJava/$DSTNAME"
+    if ! test -d $BUILD_TMP; then mkdir -p $BUILD_TMP; fi
+  fi
+fi  
+echo BUILD_TMP = $BUILD_TMP
+
+# clean the build dir because maybe old faulty content: 
+# note there was a problem detected on link folders (JUNCTION) in Windows file system, 
+#      mkdir is related to the original directory, not to the linked folder using ../../../path
+# therefore change temporary to the $BUILD_TMP to use mkdir
+export PWDD="$PWD"
+cd $BUILD_TMP
+echo PWD=$PWD
+if test -d javac_$DSTNAME; then rm -f -r -d javac_$DSTNAME; fi
+mkdir -p javac_$DSTNAME/binjar   
+mkdir javac_$DSTNAME/result
+if ! test -d deploy; then mkdir deploy; fi;
+cd $PWDD
+echo PWD=$PWD
+export TMPJAVAC="$BUILD_TMP/javac_$DSTNAME"
 
 #determine out file names from VERSIONSTAMP
-export JARFILE=$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar
-export MD5FILE=$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar.MD5.txt
+if test "$JARFILE" = ""; then export JARFILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar"; fi
+if test "$MD5FILE" = ""; then export MD5FILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar.MD5.txt"; fi
 
-if test "$TIMEinJAR" = ""; then export TIMEinJAR=$(date -I); TIMEinJAR="$TIMEinJAR+00:00"; fi
+if test "$TIMEinJAR" = ""; then export TIMEinJAR=$VERSIONSTAMP+00:00;  fi
+
+##specific condition, use the yet compiled class files to zip:
+if test "$JAR_vishiaBase" = "__vishiaBase_CLASSfiles__"; then export JAR_vishiaBase=$TMPJAVAC/binjar;
+elif test "$JAR_vishiaBase" = ""; then
+  if test -f ../../tools/vishiaBase.jar; then export JAR_vishiaBase="../../tools/vishiaBase.jar"
+  elif test -f ../../jars/vishiaBase.jar; then export JAR_vishiaBase="../../jars/vishiaBase.jar"
+  elif test -f ../../../../../tools/vishiaBase.jar; then export JAR_vishiaBase="../../../../../tools/vishiaBase.jar"
+  elif test -f ../../../../../../../Java/tools/vishiaBase.jar; then export JAR_vishiaBase="../../../../../../../Java/tools/vishiaBase.jar"
+  else echo ERROR vishiaBase.jar not able to found.
+  fi
+fi
+
 
 echo
 echo ====== javac ================================================
 echo execute  $0
+echo pwd=$(PWD)
 echo  ... compile java and generate jar with binary-compatible content. 
 echo DSTNAME = $DSTNAME  ## output file names
-echo pwd=$(pwd)
 echo BUILD_TMP = $BUILD_TMP  ## root for all temporary outputs
 echo VERSIONSTAMP = $VERSIONSTAMP  ## determine suffix of output file names
 echo TIMEinJAR = $TIMEinJAR  ## determine timestamp in jar
@@ -26,7 +65,7 @@ echo FILE1SRC = $FILE1SRC  ## alternatively: argument files for javac
 echo RESOURCEFILES = $RESOURCEFILES  ## additional files in jar
 echo SRCPATH = $SRCPATH  - search path sources for javac
 echo CLASSPATH = $CLASSPATH - search path jars for javac
-echo JAR_zipjar = $JAR_zipjar  - jar file for jar/zip generation
+echo JAR_vishiaBase = $JAR_vishiaBase  - jar file for jar/zip generation
 echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation
 echo JARFILE = $JARFILE  - generated jar    
 echo MD5FILE = $MD5FILE  - generated MD5 text file
@@ -40,12 +79,7 @@ echo JAVAC_HOME = $JAVAC_HOME
 ##regards an empty JAVAC_HOME, then javac should be able as command in the path:
 if test "$JAVAC_HOME" = ""; then export JAVAC="javac"; else export JAVAC="$JAVAC_HOME/bin/javac"; fi
 echo JAVAC = $JAVAC                                                                                       
-# clean the build dir because maybe old faulty content:
-if test -d $TMPJAVAC; then rm -f -r -d $TMPJAVAC; fi
-mkdir -p $TMPJAVAC/binjar   
-mkdir $TMPJAVAC/result
-echo                                             
-echo Output to: $BUILD_TMP/deploy/$DSTNAME
+echo Output to: $JARFILE
 echo ===============================================================
 
 ##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
@@ -58,7 +92,7 @@ if ! test "$SRC_ALL" = ""; then
   export FILE1SRC=@$TMPJAVAC/sources.txt
   export SRCZIP=$SRC_ALL/..:**/*  ## with the srcJava_... dir
 fi  
-if ! test "$SRC_ALL2" = ""; then
+if ! test "$SRC_ALL2" = ""; then 
   echo source-set all files = $SRC_ALL2
   find $SRC_ALL2 -name "*.java" >> $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
@@ -79,18 +113,27 @@ fi
 echo build jar
 ##do not use: $JAVAC_HOME/bin/jar -n0cvfM $JARFILE -C $TMPJAVAC/binjar . > $TMPJAVAC/jar.txt
 echo pwd=$(pwd)
-echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
-java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+echo java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
 if ! test "$MD5FILE" = ""; then echo output MD5 checksum
   md5sum -b $JARFILE > $MD5FILE
   echo "  srcFiles: $SRCZIPFILE" >> $MD5FILE
 fi  
-echo ok $JARFILE
 
-if test ! "$SRCZIP" = ""; then  ##not produced if $SRC_ALL is empty instead $FILE1SRC is given from outside.
+if test ! "$SRCZIPFILE" = ""; then  ##not produced if $SRC_ALL is empty instead $FILE1SRC is given from outside.
   pwd
-  echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
-  java -cp $JAR_zipjar org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  echo java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  if test -f $BUILD_TMP/deploy/$SRCZIPFILE; then echo ok $BUILD_TMP/deploy/$SRCZIPFILE; else echo ERROR src.zip $BUILD_TMP/deploy/$SRCZIPFILE; fi
 fi  
-  
+
+echo ===================================================================================
+if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
+echo ===================================================================================
+
+
+if test -f $MAKEBASEDIR/-deployJar.sh; then 
+  $MAKEBASEDIR/-deployJar.sh 
+fi
+
 

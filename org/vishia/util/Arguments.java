@@ -285,7 +285,16 @@ public abstract class Arguments {
   protected boolean testArgument(String argc, int nArg) {
     String value;
     boolean bOk = true;
-    if(this.argList !=null){
+    if((value = checkArgVal("--report", argc)) !=null) 
+    { this.sLogPath = value;   //an example for default output
+    }
+    else if((value = checkArgVal("--rlevel", argc)) !=null) 
+    { this.sLogLevel = value;   //an example for default output
+    }
+    else if(argc.startsWith("---")) 
+    { //accept but ignore it. Commented calling arguments.
+    }
+    else if(this.argList !=null){
       Argument emptyArg = null;
       Argument argFound = null;
       int argLenFound = 0;
@@ -331,15 +340,6 @@ public abstract class Arguments {
         //argument not found (not returned in for-loop):
         return false;
       }
-    }
-    else if((value = checkArgVal("--report", argc)) !=null) 
-    { this.sLogPath = value;   //an example for default output
-    }
-    else if((value = checkArgVal("--rlevel", argc)) !=null) 
-    { this.sLogLevel = value;   //an example for default output
-    }
-    else if(argc.startsWith("---")) 
-    { //accept but ignore it. Commented calling arguments.
     }
     else { 
       return bOk = false;
@@ -420,10 +420,7 @@ public abstract class Arguments {
     try {
       for(String arg1: args) {
         arg = arg1;
-        if(arg.startsWith("---")) {
-          // ignore this argument, it is commented.
-        } 
-        else if(arg.startsWith("--@")) {
+        if(arg.startsWith("--@")) {
           int posLabel = arg.indexOf(':', 6);    //search --@D:x:label after 6. position because on 4th position may be a drive separation
           final String sFile, sLabel;
           if(posLabel >0) {
