@@ -134,6 +134,7 @@ public class ZbnfParser
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-06-01: {@link #clean()} to remove temporary stuff.  
    * <li>2022-04-29: Hartmut using {@link ZbnfSyntaxPrescript.EType#kStoreSrc}:
    *   This seems a good opportunity to store the source to an element or component. 
    *   <ul><li>new {@link SubParser#posStoreSrc} and {@link SubParser#semanticStoreSrc} to save the start position for the source
@@ -3515,6 +3516,21 @@ public class ZbnfParser
     return bOld;
   }
 
+  
+  
+  
+  
+  /**Cleans used memory after evaluation of the parse result.
+   * 
+   */
+  public void clean ( ) {
+    this.alreadyParsedCmpn.clear();
+    this.listParseResultOnError.clear();
+    this.parserStoreTopLevel.items.clear();
+    this.parserStoreTopLevel.item = null;  
+    this.prescriptParserTopLevel = null;
+    System.gc();
+  }
 
   /**It's a debug helper. The method is empty, but it is a mark to set a breakpoint. */
   private void stop()

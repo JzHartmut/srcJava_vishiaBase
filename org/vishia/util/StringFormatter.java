@@ -31,7 +31,6 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -60,6 +59,11 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-06-05: Hartmut now warning-free, all used with this. and some argument accesses 
+   * <li>2022-06-05: Hartmut support of more as one line: After {@link #newline()} the position counts from 0 for the next line, 
+   *   and a next line can be prepared. It is tested for a simple example in testJava_vishiaBase but not yet elaborately used. 
+   *   The other also proper possibility is: Store the line in an Appendable, so that the StringFormatter has anytime only one line. 
+   *   This may be better. The concept should be considered before elaborately usage. The idea was, for vertical test recording of signals. 
    * <li>2022-05-24: Hartmut The strPicture(long, String, String, char) is now contained in {@link StringFunctions_C#strPicture(long, String, String, char, org.vishia.util.StringFunctions_C.PrepareBufferPos)}
    *   because common usage. Tu fulfill, the interface {@link StringFunctions_C.PrepareBufferPos} is implemented here. 
    * <li>2022-03-04: Hartmut new: {@link #addHex(long, int)} now uses {@link StringFunctions_C#appendHex(Appendable, long, int)}.
@@ -168,6 +172,8 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * 
    */
   protected int pos_ = 0;
+  
+  protected int posLine_ = 0;
 
   /**True than add inserts, false than it overwrites. */
   private boolean bInsert = false;
@@ -195,9 +201,9 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   
   
   public StringFormatter()
-  { buffer = new StringBuilder();
-    lineout = null;
-    bShouldLineoutClose = false;
+  { this.buffer = new StringBuilder();
+    this.lineout = null;
+    this.bShouldLineoutClose = false;
   }
 
 
@@ -214,11 +220,11 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    *   if a longer line is necessary.
    */
   public StringFormatter(Appendable lineout, boolean shouldClose, String newlineString, int defaultBufferLength)
-  { buffer = new StringBuilder(defaultBufferLength);
+  { this.buffer = new StringBuilder(defaultBufferLength);
     this.sNewline = newlineString;
     this.lineout = lineout;
     //if(shouldClose){ assert(lineout instanceof Closeable); }
-    bShouldLineoutClose = shouldClose;
+    this.bShouldLineoutClose = shouldClose;
   }
 
 
@@ -227,9 +233,9 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @param length length of the internal StringBuffer.
    */
   public StringFormatter(int length)
-  { buffer = new StringBuilder(length);
-    lineout = null;
-    bShouldLineoutClose = false;
+  { this.buffer = new StringBuilder(length);
+    this.lineout = null;
+    this.bShouldLineoutClose = false;
   }
 
 
@@ -238,9 +244,9 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @param str initial value.
    */
   public StringFormatter(String str)
-  { buffer = new StringBuilder(str);
-    lineout = null;
-    bShouldLineoutClose = false;
+  { this.buffer = new StringBuilder(str);
+    this.lineout = null;
+    this.bShouldLineoutClose = false;
   }
 
 
@@ -251,8 +257,8 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    */
   public StringFormatter(StringBuilder buffer)
   { this.buffer = buffer;
-    lineout = null;
-    bShouldLineoutClose = false;
+    this.lineout = null;
+    this.bShouldLineoutClose = false;
   }
 
 
@@ -262,7 +268,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    */
   @Override
   public String toString()
-  { return buffer.toString();
+  { return this.buffer.toString();
   }
   
   /**Gets the accumulated content.
@@ -271,7 +277,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @implementInfo: optimize-toString in not set here, it may be set outside. 
    */
   public String getContent()
-  { return buffer.toString();
+  { return this.buffer.toString();
   }
 
   /**Gets the accumulated content.
@@ -279,12 +285,12 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @return The buffer representing the accumulated content.
    */
   public CharSequence getBuffer()
-  { return buffer;
+  { return this.buffer;
   }
 
   /**Sets an deviant decimal separator for floating point digigs, country-specific. */
   public void setDecimalSeparator(char sep)
-  { cDecimalSeparator = sep;
+  { this.cDecimalSeparator = sep;
   }
   
   
@@ -294,15 +300,16 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    *
    */
   public StringFormatter reset()
-  { pos_ = 0;
-    buffer.setLength(pos_);
+  { this.pos_ = 0;
+    this.posLine_ = 0;
+    this.buffer.setLength(this.pos_);
     return this;
   }
   
 
   /**Sets the current position to the end of the string. */
   public StringFormatter end()
-  { pos_ = buffer.length();
+  { this.pos_ = this.buffer.length() - this.posLine_;
     return this;
   }
   
@@ -322,14 +329,14 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   { if(newPos < 0) {
       throw new IndexOutOfBoundsException("negative position not supported");
     }
-    if(minChars >= 0 && pos_ + minChars > newPos){
-      pos_ += minChars;
+    if(minChars >= 0 && this.pos_ + minChars > newPos){
+      this.pos_ += minChars;
     } else {
-      pos_ = newPos;
+      this.pos_ = newPos;
     }
-    int pos1 = buffer.length();
-    while(pos1 < pos_ )
-    { buffer.append(' '); pos1 +=1;
+    int pos1 = this.buffer.length() - this.posLine_;
+    while(pos1 < this.pos_ )
+    { this.buffer.append(' '); pos1 +=1;
     }
     return this;
   }
@@ -353,14 +360,14 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @return -1 no replacing, not found, else the position of the replacing.
    */
   public int replace(String search, int from, CharSequence src) {
-    int pos1 = buffer.indexOf(search, from);
+    int pos1 = this.buffer.indexOf(search, from);
     if(pos1 >=0) {
       int zsrc = src.length();
       int diff = zsrc - search.length();
-      if(diff >0) { buffer.insert(pos1, spaces.substring(0, diff)); }
-      else if(diff < 0) { buffer.delete(pos1, pos1-diff); } //from to
+      if(diff >0) { this.buffer.insert(pos1, spaces.substring(0, diff)); }
+      else if(diff < 0) { this.buffer.delete(pos1, pos1-diff); } //from to
       for(int i=0; i < zsrc; ++i) {
-        buffer.setCharAt(pos1+i, src.charAt(i));
+        this.buffer.setCharAt(pos1+i, src.charAt(i));
       }
       if(this.pos_ > (pos1 + zsrc)) { this.pos_ += diff; }  //adjust the current write position (end pos)
     }
@@ -373,12 +380,12 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   
   
   /**returns the current length of string. */
-  public int length(){ return buffer.length(); }
+  public int length(){ return this.buffer.length(); }
   
   
   /**returns the current position for add in buffer.
    */
-  public int getPos(){ return pos_; }
+  public int getPos(){ return this.pos_; }
 
 
    
@@ -389,23 +396,24 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    */
   @Override public void prepareBufferPos(int nrofChars)
   { //if(true || bInsert)
-    if(bInsert && pos_ < buffer.length())
+    int nrofChars1 = nrofChars;
+    if(this.bInsert && this.pos_ < this.buffer.length() - this.posLine_)
     {
-      while(nrofChars >0)
-      { if(nrofChars >= spaces.length()){ buffer.insert(pos_, spaces); nrofChars -=spaces.length();}
-        else { buffer.insert(pos_, spaces, 0, nrofChars); nrofChars = 0; }
+      while(nrofChars1 >0)
+      { if(nrofChars1 >= spaces.length()){ this.buffer.insert(this.pos_, spaces); nrofChars1 -=spaces.length();}
+        else { this.buffer.insert(this.pos_, spaces, 0, nrofChars1); nrofChars1 = 0; }
       }      
       //buffer.insert(pos, spaces, 0, nrofChars);
     }
     else
-    { int nrofCharsToEnd = buffer.length() -pos_;
+    { int nrofCharsToEnd = this.buffer.length() - this.posLine_ -this.pos_;
       assert(nrofCharsToEnd >=0);
-      nrofChars -= nrofCharsToEnd;
+      nrofChars1 -= nrofCharsToEnd;
       //nrofChars may be < 0 if the range of overwrite is inside the exiting string.
-      while(nrofChars >0)
+      while(nrofChars1 >0)
       { //appends necessary space on end. the format methods overwrites this space.
-        if(nrofChars >= spaces.length()){ buffer.append(spaces); nrofChars -=spaces.length();}
-        else { buffer.append(spaces, 0, nrofChars); nrofChars = 0; }
+        if(nrofChars1 >= spaces.length()){ this.buffer.append(spaces); nrofChars1 -=spaces.length();}
+        else { this.buffer.append(spaces, 0, nrofChars1); nrofChars1 = 0; }
       }  
     }
     /*
@@ -431,9 +439,9 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   public StringFormatter add(CharSequence str)
   { int nrofChars = str.length();
     prepareBufferPos(nrofChars);
-    buffer.delete(pos_, pos_ + nrofChars);
-    buffer.insert(pos_, str, 0, nrofChars);
-    pos_ += nrofChars;
+    this.buffer.delete(this.pos_, this.pos_ + nrofChars);
+    this.buffer.insert(this.pos_, str, 0, nrofChars);
+    this.pos_ += nrofChars;
     return this;
   }
   
@@ -445,10 +453,10 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   public StringFormatter add(String str)
   { int nrofChars = str.length();
     prepareBufferPos(nrofChars);
-    buffer.delete(pos_, pos_ + nrofChars);
-    buffer.insert(pos_, str, 0, nrofChars);
+    this.buffer.delete(this.posLine_+this.pos_, this.posLine_+this.pos_ + nrofChars);
+    this.buffer.insert(this.posLine_+this.pos_, str, 0, nrofChars);
     //buffer.replace(this.pos_, pos_ + nrofChars, str);
-    pos_ += nrofChars;
+    this.pos_ += nrofChars;
     return this;
   }
 
@@ -457,34 +465,35 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    *  This method can be used proper if a part of a multi-line-text should be presented in one line for example for logs.
    * @param str to insert
    * @param replaceLinefeed String with 4 characters, first replaces a 0x0a, second for 0x0d, third for 0x0c,4.for all other control keys.
-   * @param maxChars limits length to insert
+   * @param maxCharsArg limits length to insert
    * @return this
    */
-  public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replaceLinefeed, int maxChars)
-  { if(maxChars > str.length()){ maxChars = str.length(); }
-  if(replaceLinefeed.length() < 4) throw new IllegalArgumentException("The argument replaceLinefeed should have 4 characters.");
-  prepareBufferPos(maxChars);
-  int postr= -1;
-  while(--maxChars >=0){
-    char cc = str.charAt(++postr);
-    int replace1; replace1 = "\n\r\f".indexOf(cc);  //NOTE: smallbug in Java2C
-    if(replace1 >=0){
-      cc = replaceLinefeed.charAt(replace1);
+  public StringFormatter addReplaceLinefeed(CharSequence str, CharSequence replaceLinefeed, int maxCharsArg) { 
+    int maxChars = maxCharsArg;
+    if(maxChars > str.length()){ maxChars = str.length(); }
+    if(replaceLinefeed.length() < 4) throw new IllegalArgumentException("The argument replaceLinefeed should have 4 characters.");
+    prepareBufferPos(maxChars);
+    int postr= -1;
+    while(--maxChars >=0){
+      char cc = str.charAt(++postr);
+      int replace1; replace1 = "\n\r\f".indexOf(cc);  //NOTE: smallbug in Java2C
+      if(replace1 >=0){
+        cc = replaceLinefeed.charAt(replace1);
+      }
+      if(cc <=0x20){ 
+        cc = replaceLinefeed.charAt(3);
+      }
+      this.buffer.setCharAt(this.pos_++, cc);
     }
-    if(cc <=0x20){ 
-      cc = replaceLinefeed.charAt(3);
-    }
-    buffer.setCharAt(pos_++, cc);
-  }
-  //buffer.replace(this.pos_, pos_ + nrofChars, str);
-  //pos_ += nrofChars;
-  return this;
+    //buffer.replace(this.pos_, pos_ + nrofChars, str);
+    //pos_ += nrofChars;
+    return this;
   }
 
 
   public StringFormatter add(char ch) {     
     prepareBufferPos(1);
-    buffer.setCharAt(this.pos_++, ch);
+    this.buffer.setCharAt(this.pos_++, ch);
     return this;
   }
 
@@ -500,7 +509,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
     while(nrofChars >1 && str[nrofChars-1] == 0){ nrofChars -=1; }
     prepareBufferPos(nrofChars);
     for(int ii = 0; ii < nrofChars; ii++)
-    { buffer.setCharAt(this.pos_, str[ii]);
+    { this.buffer.setCharAt(this.pos_, str[ii]);
       this.pos_ += 1;
     }  
     return this;
@@ -513,16 +522,16 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @return
    */
   public StringFormatter insert(String str)
-  { buffer.insert(pos_,str);
-    pos_ += str.length();
+  { this.buffer.insert(this.pos_,str);
+    this.pos_ += str.length();
     return this;
   }
   
   /**sets the overwrite mode. It is the default. In this mode add will overwrite the current content. */
-  public StringFormatter overwrite(){ bInsert = false; return this; }
+  public StringFormatter overwrite(){ this.bInsert = false; return this; }
   
   /**sets the insert mode. In this mode add will shift the content at pos_ to right. */
-  public StringFormatter insert(){ bInsert = true; return this; }
+  public StringFormatter insert(){ this.bInsert = true; return this; }
   
   /**sets the insert or overwrite mode, returns the current mode before change.
    * @param insert true than insert, false than overwrite.
@@ -544,22 +553,23 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @return
    */
   public StringFormatter addStringLine(byte[] data, int idx, int nrofBytes, String charsetName)
-  { //to convert bytes with a given charset, but show bytes < 0x20 with '.', copy it in a independend buffer:
-    if(nrofBytes > data.length){ nrofBytes = data.length; }
-    byte[] data1 = new byte[nrofBytes];
-    System.arraycopy(data, idx, data1, 0, nrofBytes);
-    for(int ii = 0; ii < nrofBytes; ii++)
+  { int nrofBytes_i = nrofBytes;
+    //to convert bytes with a given charset, but show bytes < 0x20 with '.', copy it in a independend buffer:
+    if(nrofBytes_i > data.length){ nrofBytes_i = data.length; }
+    byte[] data1 = new byte[nrofBytes_i];
+    System.arraycopy(data, idx, data1, 0, nrofBytes_i);
+    for(int ii = 0; ii < nrofBytes_i; ii++)
     { if(data1[ii]< 0x20){ data1[ii] = (byte)('.'); } //write insteads control chars.
     }
     String str;
-    try{ str = new String(data1, 0, nrofBytes, charsetName); }
+    try{ str = new String(data1, 0, nrofBytes_i, charsetName); }
     catch(UnsupportedEncodingException exc)
     { str = "??encoding error??"; }
     //not replace in buffer:
     int strLength = str.length(); //it should be equal nrofBytes, but not in all charsets.
     prepareBufferPos(strLength);
-    buffer.replace(pos_, pos_ + strLength, str);  //replaces exact strLength chars, prepareBufferPos() has regarded insert/overwrite
-    pos_ += strLength;
+    this.buffer.replace(this.pos_, this.pos_ + strLength, str);  //replaces exact strLength chars, prepareBufferPos() has regarded insert/overwrite
+    this.pos_ += strLength;
     return this;
   }
   
@@ -589,7 +599,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
       else
       { //normal operation
         addHexWord_(data, idx1, mode); 
-        buffer.setCharAt(pos_++,' ');
+        this.buffer.setCharAt(this.pos_++,' ');
         nrofBytes1 -= nrofBytesInWord;
         idx1 += nrofBytesInWord;
       }  
@@ -676,17 +686,18 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @return this itself
    */
   private StringFormatter addHexWord_(byte[] data, int idx, short mode)
-  { int nrofBytesInWord = mode & mNrofBytesInWord;
+  { int idx_i = idx;
+    int nrofBytesInWord = mode & mNrofBytesInWord;
     int incrIdx;
     if((mode & mBytesInWordBigEndian) != 0){ incrIdx = 1; }
-    else { incrIdx = -1; idx += nrofBytesInWord -1;}
-    while(--nrofBytesInWord >= 0 && idx < data.length)
-    { byte value = data[idx];
-      idx += incrIdx;  //TRICKY may be 1 or -1 dependend on BigEndian
+    else { incrIdx = -1; idx_i += nrofBytesInWord -1;}
+    while(--nrofBytesInWord >= 0 && idx_i < data.length)
+    { byte value = data[idx_i];
+      idx_i += incrIdx;  //TRICKY may be 1 or -1 dependend on BigEndian
       for(int i=0; i<2; i++)
       { char digit = (char)(((value & 0xf0)>>4) + (byte)('0'));
         if(digit > '9'){ digit = (char)(digit + (byte)('a') - (byte)('9') -1); }
-        buffer.setCharAt(pos_++, digit);
+        this.buffer.setCharAt(this.pos_++, digit);
         value <<=4;
       }
     }
@@ -700,7 +711,8 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   * @param nrofDigits if negativ then writes with upper cases
   * @return this itself
   */
-   public StringFormatter addHex(long value, int nrofDigits) { 
+   public StringFormatter addHex(long value, int nrofDigitsArg) { 
+     int nrofDigits = nrofDigitsArg;
      if(nrofDigits < 0) {
        nrofDigits = -nrofDigits;
      }
@@ -747,11 +759,11 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
        if(cBitPos =='1')
        { int bit = value & mask;        
          char cc = bit != 0 ? sBitCharHi.charAt(ii) : sBitCharLo.charAt(ii);  
-         buffer.setCharAt(pos_++, cc);
+         this.buffer.setCharAt(this.pos_++, cc);
          mask = (mask >> 1) & 0x7FFFFFFF; 
        }
        else 
-       { buffer.setCharAt(pos_++, cBitPos ); 
+       { this.buffer.setCharAt(this.pos_++, cBitPos ); 
        }
      }
      return this;
@@ -768,7 +780,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
     */
    public StringFormatter addHex44(long value)
    { addHex((value >> 16) & 0xffff, 4);
-     buffer.insert(pos_++, '\'');
+     this.buffer.insert(this.pos_++, '\'');
      addHex((value) & 0xffff, 4);
      return this;
    }
@@ -786,19 +798,20 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @return this itself.
    */
   public StringFormatter addFloat(double value, int digitsBeforePoint, int digitsAfterPoint)
-  { int nrofCharsInPicture = digitsBeforePoint + digitsAfterPoint + 2;  //sign and dot
+  { double value_i = value;
+    int nrofCharsInPicture = digitsBeforePoint + digitsAfterPoint + 2;  //sign and dot
     prepareBufferPos(nrofCharsInPicture);
-    if(value < 0)
-    { buffer.setCharAt(pos_++, '-');
-      value = -value;
+    if(value_i < 0)
+    { this.buffer.setCharAt(this.pos_++, '-');
+      value_i = -value_i;
     }
     else
-    { buffer.setCharAt(pos_++, ' ');
+    { this.buffer.setCharAt(this.pos_++, ' ');
     }
-    String sValue = Double.toString(value);
+    String sValue = Double.toString(value_i);
     int posPointInValue = sValue.indexOf('.');
-    if(cDecimalSeparator != '.')
-    { sValue = sValue.replace('.', cDecimalSeparator);
+    if(this.cDecimalSeparator != '.')
+    { sValue = sValue.replace('.', this.cDecimalSeparator);
     }
     //int posPoint = pos_ + digitsBeforePoint;
     int nrofSpacesBefore = digitsBeforePoint - posPointInValue;
@@ -808,7 +821,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
     }
     int nrofValueChars = digitsBeforePoint - nrofSpacesBefore + 1 + digitsAfterPoint - nrofZeroAfter ; 
     while(nrofSpacesBefore >0)
-    { buffer.setCharAt(pos_++, ' ');
+    { this.buffer.setCharAt(this.pos_++, ' ');
       nrofSpacesBefore -=1;
     }
     //int digitsAfterPointInValue =sValue.length() - posPointInValue -1;
@@ -817,14 +830,14 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
     { //the number of digits is to large,
       nrofValueChars = nrofValueChars - (-nrofSpacesBefore)-2;
       //crash situation: write only the beginn of the digit
-      buffer.replace(pos_, pos_ + 2, "##");
-      pos_ +=2;
+      this.buffer.replace(this.pos_, this.pos_ + 2, "##");
+      this.pos_ +=2;
     }
-    buffer.replace(pos_, pos_ + nrofValueChars, sValue.substring(0, nrofValueChars));
-    pos_ += nrofValueChars; 
+    this.buffer.replace(this.pos_, this.pos_ + nrofValueChars, sValue.substring(0, nrofValueChars));
+    this.pos_ += nrofValueChars; 
 
     while(--nrofZeroAfter >=0)
-    { buffer.setCharAt(pos_++, '0');
+    { this.buffer.setCharAt(this.pos_++, '0');
     }
 
     return this;    
@@ -893,7 +906,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   
   
   public StringFormatter setAt(int pos_, char ch)
-  { buffer.setCharAt(pos_, ch);
+  { this.buffer.setCharAt(pos_, ch);
     return this;
   }
   
@@ -969,34 +982,35 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   public int addFloatPicture
   ( float src        //numerical number unsigned long
   , String pict //Erscheinung
-  )
-  { //Exponent der Zahl bestimmen:
+  ) { 
+    float src_i = src;
+    //Exponent der Zahl bestimmen:
     String cFrac = "afpnum.kMGT";
     int nExp = cFrac.indexOf('.');
     //array of max. normalized float for difficult nr of digits
     //final float[] aMax={0.001F, 0.01F, 0.1F, 1.0F, 10.0F, 100.0F, 1000.0F, 10000.0F, 100000.0F, 1000000.0F};
-    int srcHex = Float.floatToRawIntBits(src);
+    int srcHex = Float.floatToRawIntBits(src_i);
     byte nExpF=(byte)((srcHex>>24) & 0x7f);  //Test auf NAN usw.
     if(nExpF >(40+0x40))
       //ueber +/-2E13, insbesond. NAN
-      src=999.9999E15F;
+      src_i=999.9999E15F;
     else if( nExpF< (0x40-40) )
-    	src = 0.0F; //the 0 itself is a 0.
+    	src_i = 0.0F; //the 0 itself is a 0.
     //unused(nExpF + *pSrcHex);
     boolean bNeg=(srcHex <0); //(src != 0.0F && src < 0.0F);
     boolean bIsNull = (srcHex & 0x7F800000) == 0;
     long srcLong;
-    if(bNeg) src=-src;
+    if(bNeg) src_i=-src_i;
 
     if(!bIsNull)  //src!=0.0)  //bei src=0.0 muss "0.0" ausgeg. werden, Sonderfall.  #04
-    { while(src >= 1000.0F && nExp < cFrac.length()-1)
-      { src=src/1000.0F; nExp+=1;
+    { while(src_i >= 1000.0F && nExp < cFrac.length()-1)
+      { src_i=src_i/1000.0F; nExp+=1;
       }
-      while(src < 1.0F && nExp > 0)
-      { src=src*1000.0F; nExp-=1;
+      while(src_i < 1.0F && nExp > 0)
+      { src_i=src_i*1000.0F; nExp-=1;
       }
-      if(bNeg) src=-src;
-      srcLong=(long)(src);
+      if(bNeg) src_i=-src_i;
+      srcLong=(long)(src_i);
     }
     else
     {
@@ -1011,21 +1025,21 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * @param timestamp
    * @return
    */
-  @SuppressWarnings("boxing")
+  //@SuppressWarnings("boxing")
   @Java4C.Exclude
   public String convertTimestampToday(long timestamp){
     long dateNow = System.currentTimeMillis();
     long diffTime = dateNow - timestamp;
     String sDate;
     if(diffTime < -10 * 3600000L){
-      sDate = sDatePrefixNewer + dateFormatNewer.format(timestamp);
+      sDate = this.sDatePrefixNewer + this.dateFormatNewer.format(timestamp);
     } else if(diffTime < 18*3600000){
       //files today
-      sDate = sDatePrefixToday + dateFormatToday.format(timestamp);
+      sDate = this.sDatePrefixToday + this.dateFormatToday.format(timestamp);
     } else if(diffTime < 320 * 24* 3600000L){
-      sDate = sDatePrefixYear + dateFormatYear.format(timestamp);
+      sDate = this.sDatePrefixYear + this.dateFormatYear.format(timestamp);
     } else {
-      sDate = sDatePrefixOlder + dateFormatOlder.format(timestamp);
+      sDate = this.sDatePrefixOlder + this.dateFormatOlder.format(timestamp);
     }
     return sDate;
   }
@@ -1067,16 +1081,31 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    */
   @Override
   public StringFormatter append(char c) throws IOException { 
-    @Java4C.DynamicCall Appendable lineoutMtbl = lineout;
-    if(lineout !=null && (c == '\n' || c=='\r')) {  //on one of the line end characters
-      if(c != secondNewline || pos_ >0) { //if a content is given or c is the first newline character.          // != '\r' ){   //bug: 0d0a0d0a creates only one line:  || c=='\r' && lastNewline != '\n'){
-        flushLine(sNewline);
-        if(sNewline ==null) { 
-          /*J2Cxxtest*/lineoutMtbl.append(c);  //append the found newline character either 0d or 0a like given.
+    
+    @Java4C.DynamicCall Appendable lineoutMtbl = this.lineout;
+    if((c == '\n' || c=='\r')) {  //on one of the line end characters
+      if(c != this.secondNewline || this.pos_ >0) { //if a content is given or c is the first newline character.          // != '\r' ){   //bug: 0d0a0d0a creates only one line:  || c=='\r' && lastNewline != '\n'){
+        if(this.sNewline ==null) { 
+          add(c);
+          ///*J2Cxxtest*/lineoutMtbl.append(c);  //append the found newline character either 0d or 0a like given.
+        } else {
+          add(this.sNewline);
         }
-        secondNewline = c == '\r' ? '\n' : '\r';  //the other one.
-      } else if(sNewline == null) { //c is the secondNewline character, pos_ is 0
-        lineoutMtbl.append(c);          //append it if a special newline is not given.   
+        if(this.lineout !=null) {
+          flushLine(null);    //either has add(c) or appends the sNewline
+        } else {
+          this.posLine_ += this.pos_;
+          this.pos_ =0;
+        }
+        this.secondNewline = c == '\r' ? '\n' : '\r';  //the other one.
+      } else if(this.sNewline == null) { //c is the secondNewline character, pos_ is 0
+        add(c);
+        if(this.lineout!=null) {
+          lineoutMtbl.append(c);          //append it if a special newline is not given.   
+        } else {
+          this.posLine_ += this.pos_;
+          this.pos_ =0;
+        }
       }
     } else {
       add(c);  //normal character, add it.
@@ -1109,10 +1138,10 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   @Override
   public void flush() throws IOException
   {
-    if(lineout !=null){
-      lineout.append(buffer);
-      if(lineout instanceof Flushable){
-        ((Flushable)lineout).flush();
+    if(this.lineout !=null){
+      this.lineout.append(this.buffer);
+      if(this.lineout instanceof Flushable){
+        ((Flushable)this.lineout).flush();
       }
     }
     reset();
@@ -1128,14 +1157,15 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    */
   public int flushLine(String sNewline) throws IOException
   {
-    @Java4C.DynamicCall Appendable lineoutMtbl = lineout;
-    int chars = pos_;
-    if(pos_ >0) { //some content is given
-      lineoutMtbl.append(buffer, 0, pos_);
+    if(this.lineout ==null) return 0;
+    @Java4C.DynamicCall Appendable lineoutMtbl = this.lineout;
+    int chars = this.pos_;
+    if(this.pos_ >0) { //some content is given
+      lineoutMtbl.append(this.buffer, 0, this.pos_);
       //it would be copy characters after pos_ to 0. But that's wrong here:
       //:: buffer.delete(0, pos);
-      buffer.setLength(0);  //clean
-      pos_ = 0;
+      this.buffer.setLength(0);  //clean
+      this.pos_ = 0;
     }
     if(sNewline !=null) { 
       lineoutMtbl.append(sNewline);
@@ -1156,14 +1186,14 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
  
   public void close() throws IOException
   {
-    if(lineout !=null){
-      lineout.append(buffer);
+    if(this.lineout !=null){
+      this.lineout.append(this.buffer);
       reset();
       //recursively call close():
-      if(bShouldLineoutClose && lineout instanceof Closeable){
-        ((Closeable)lineout).close();
+      if(this.bShouldLineoutClose && this.lineout instanceof Closeable){
+        ((Closeable)this.lineout).close();
       }
-      lineout = null;
+      this.lineout = null;
     }
   }
 
@@ -1176,6 +1206,8 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   private class Appendable_Intern implements Appendable {
     
     
+    Appendable_Intern ( ) { }
+
     /**Not implemented, do not call*/
     @Override public Appendable append(CharSequence csq) throws IOException {
       assert(false);
@@ -1192,7 +1224,9 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
      * Only internal usage, it should be {@link StringFormatter#prepareBufferPos(int)} before!
      */
     @Override public Appendable append(char c) throws IOException {
-      buffer.setCharAt(StringFormatter.this.pos_++, c);
+      StringFormatter thise = StringFormatter.this;
+      StringFormatter.this.buffer.setCharAt(thise.posLine_ + thise.pos_, c);  //The position is already prepared
+      thise.pos_ +=1;
       return this;
     }
   }
@@ -1206,7 +1240,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
 
   @Override
   public void addBufferPos(char cc) throws IOException {
-    buffer.setCharAt(pos_++, cc);
+    this.buffer.setCharAt(this.posLine_ + pos_++, cc);
   } 
    
 }

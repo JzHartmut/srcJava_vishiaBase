@@ -215,7 +215,7 @@ public class TestOrg {
   private void showParentTitle(String sPreText) {
     if(!this.bTitleShown) {
       if(this.parent !=null) {
-        parent.showParentTitle(sPreText);
+        this.parent.showParentTitle(null);
       } else { //before first parent:
         outln("=========================================================================");
       }
