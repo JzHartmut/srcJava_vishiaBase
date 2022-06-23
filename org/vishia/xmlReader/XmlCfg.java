@@ -83,6 +83,16 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2022-06-06 new: regards "xmlinput:finish" for a set operation. It is now the same concept as for ZbnfData:
+   *   <ul>
+   *   <li>The "xmlinput:data" delivers the data storage, but need not insert the data storage for this element in the whole data tree.
+   *   <li>The "xmlinput:finish" inserts the data storage (via reference, hold stack local till now) in the whole data tree.
+   *     Depending from the finish operation the data can be post prepared in any kind.
+   *     For ZBNF data storage this is the set... operation. It should be named set_... also here. 
+   *   <li>If the data does not need to be post-prepared, it is also possible that this operation is not given or empty.
+   *     But then the "xmlinput:data" should set the reference in the whole data tree already for the new created data.
+   *     That is the approach till now, furthermore supported.
+   *   </ul>
    * <li>2021-10-07 new: {@link XmlCfgNode#nameSpaceDef} to store namespace definitions in user data.
    * <li>2021-10-07 formally change: General using TreeMap (java.util) instead the specific IndexMultiTable, same functionality 
    * <li>2019-08-16 {@link XmlCfgNode#allArgNames} gets initial name, value, tag and text as unified for ReadCfgCfg and the used cfg 
@@ -123,7 +133,7 @@ public class XmlCfg
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2018-10-07";
+  public static final String version = "2022-06-06";
 
 
   /**Assignment between nameSpace-value and nameSpace-alias gotten from the xmlns:ns="value" declaration in the read cfg.XML file. 
@@ -172,6 +182,7 @@ public class XmlCfg
       //if the attribute xmlinput:data is read in the input config.xml, then its values should be used to set the datapath for the element.
       //It is done via invocation of setNewElementPath(...) on the output config.
       nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+      nodes.addAttribStorePath("xmlinput:finish", "!setFinishElementPath(value)");  
       nodes.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
       nodes.addAttribStorePath("xmlinput:list", "!setList()");  
       nodes.setContentStorePath("!setContentStorePath(text)");
@@ -188,6 +199,7 @@ public class XmlCfg
       nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
       nodeSub.addAttribStorePath("xmlinput:list", "!setList()");  
       nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+      nodeSub.addAttribStorePath("xmlinput:finish", "!setFinishElementPath(value)");  
       nodeSub.setNewElementPath("!addSubTree(subtreename)");
       spAttribStorePath.assign("addAttribStorePath(name, value)");
       nodeSub.attribsUnspec = new DataAccess.DatapathElement(spAttribStorePath, nodes.allArgNames, null);  //use addAttributeStorePath in the dst node to add.
@@ -200,6 +212,9 @@ public class XmlCfg
     }
     return cfgCfg;
   }
+
+  
+  
 
   
   
@@ -297,14 +312,21 @@ public class XmlCfg
     /**Parent node, to navigate in debug, to store this node if {@link #attribsForCheck} are present. */
     private final XmlCfgNode parent;
     
-    /**Reflection path where the content of that node will be stored.
-     * ??Because of more as one sub node can be present in the parsed file the destination is usual a list or a map.
-     * ??If a map is found the key is stored as key in that map too.
+    /**Reflection path either to store the content of the node
+     * or also to get an instance as "sub node" to store the content.
+     * <br>
      * <br>
      * The {@link DataAccess.DatapathElement#args} contains the arguments for new_...(...). 
      * This comes from the textual given expression. This values are necessary to store in the created class, but final. 
      */
     DataAccess.DatapathElement elementStorePath;
+    
+    /**Reflection path of usual an operation which is called on end of the node. 
+     * This is on <code>&lt;/tag></code> or also on <code>/></code> if the node has not further sub nodes.
+     * This operation can be sensible, if the data for the node should be post-prepared if all information inside the node are available.
+     * This element can be null if the store path is not necessary.
+     */
+    DataAccess.DatapathElement elementFinishPath;
     
     /**true then this element is stored with more as one instance. 
      * 
@@ -345,6 +367,8 @@ public class XmlCfg
     
     /**Key (tag name with xmlns:name) and configuration for a sub node.
      * Nodes of the read input which are not found here are not stored.
+     * Special case: If the key is "?" this is a 'unspecific node', taken anyway.
+     * The content is stored as for all nodes with the {@link #contentStorePath}.
      */
     Map<String, XmlCfgNode> subnodes;
     
@@ -371,7 +395,7 @@ public class XmlCfg
       this.allArgNames.put("text", new DataAccess.IntegerIx(3));
     }
   
-    /**Sets the path for the "new element" invocation.
+    /**Sets the path for the "new element" invocation see {@link XmlCfgNode#elementStorePath}.
      * @param dstPath either a method or an access to a field.
      * @throws ParseException 
      */
@@ -381,6 +405,22 @@ public class XmlCfg
       StringPartScan spPath = new StringPartScan(dstPath.substring(1));
       spPath.setIgnoreWhitespaces(true);
       this.elementStorePath = new DataAccess.DatapathElement(spPath, allArgNames, null);  //gathered necessary names.
+      if(this.allArgNames.size() ==0) {
+        this.allArgNames = null; //not necessary.
+      }
+    }
+  
+    
+    /**Sets the path for the "set element" invocation see {@link XmlCfgNode#elementFinishPath}.
+     * @param dstPath either a method or an access to a field.
+     * @throws ParseException 
+     */
+    public void setFinishElementPath(String dstPath) throws ParseException {
+      if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
+      //this.allArgNames = new TreeMap<String, DataAccess.IntegerIx>();
+      StringPartScan spPath = new StringPartScan(dstPath.substring(1));
+      spPath.setIgnoreWhitespaces(true);
+      this.elementFinishPath = new DataAccess.DatapathElement(spPath, allArgNames, null);  //gathered necessary names.
       if(this.allArgNames.size() ==0) {
         this.allArgNames = null; //not necessary.
       }
@@ -567,7 +607,7 @@ public class XmlCfg
      */
     public XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
     {
-      XmlCfgNode subtreenode = cfg.addSubTree(name); //, classDst);
+      XmlCfgNode subtreenode = this.cfg.addSubTree(name); //, classDst);
       //subtreenode.addAttribStorePath("xmlinput:name", name.toString());
       subtreenode.cfgSubtreeName = name.toString();
       return subtreenode;
@@ -575,7 +615,16 @@ public class XmlCfg
     
     
   
-    @Override public String toString(){ return tag + (attribs != null ? " attr:" + attribs.toString():"") + (subnodes !=null ? " nodes:" + subnodes.toString() : ""); }
+    @Override public String toString(){ 
+      if(this.subnodes !=null && this.subnodes.size() >=1) {
+        XmlCfgNode subnode0 = this.subnodes.get("?");
+        if(subnode0 == this) {                             // special case, if the node itself is also in the subtree.
+          return this.tag + (this.attribs != null ? " attr:" + this.attribs.toString():"") + " nodes: ?: own";
+        }                                                  // without the special handling an infinite recursively is forced.
+      }
+      return this.tag + (this.attribs != null ? " attr:" + this.attribs.toString():"") 
+      + (this.subnodes !=null ? " nodes:" + this.subnodes.toString() : ""); 
+    }
     
   
   

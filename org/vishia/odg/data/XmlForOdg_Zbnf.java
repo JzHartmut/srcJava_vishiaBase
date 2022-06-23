@@ -27,6 +27,7 @@ public class XmlForOdg_Zbnf {
     /**Creates an instance for the result Zbnf  (not Xml) . &lt;Office_document_content?office_document_content&gt; for ZBNF data store*/
     public Office_document_content_Zbnf new_office_document_content() { 
       Office_document_content_Zbnf val = new Office_document_content_Zbnf();
+      dataroot.office_document_content = val.dataOffice_document_content;
       return val; //Note: needs the derived Zbnf-Type.
     }
     
@@ -34,13 +35,14 @@ public class XmlForOdg_Zbnf {
     public Office_document_content_Zbnf new_office_document_content(String office_version ) { 
       Office_document_content_Zbnf val = new Office_document_content_Zbnf();
       val.dataOffice_document_content.office_version = office_version;
+      dataXmlForOdg.office_document_content = val.dataOffice_document_content;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
     /**Set the result. &lt;Office_document_content?office_document_content&gt;*/
-    public void set_office_document_content(Office_document_content val) { 
-      dataroot.office_document_content = val;
+    public void set_office_document_content(Office_document_content_Zbnf val) { 
+      dataroot.office_document_content = val.dataOffice_document_content;
     }
     
     
@@ -74,6 +76,10 @@ public class XmlForOdg_Zbnf {
   
   
   
+    /**Set routine for the singular component &lt;String?office_version>. */
+    public void set_office_version(String val) { this.dataOffice_document_content.office_version = val; }
+    
+    
     /**Creates an instance for the result Zbnf . &lt;Office_automatic_styles?office_automatic_styles&gt; for ZBNF data store*/
     public Office_automatic_styles_Zbnf new_office_automatic_styles() { 
       Office_automatic_styles_Zbnf val = new Office_automatic_styles_Zbnf();
@@ -1113,7 +1119,7 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_custom_shape?draw_custom_shape&gt;  */
-    public Draw_custom_shape_Zbnf new_draw_custom_shape(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y ) { 
+    public Draw_custom_shape_Zbnf new_draw_custom_shape(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
       Draw_custom_shape_Zbnf val = new Draw_custom_shape_Zbnf();
       val.dataDraw_custom_shape.draw_id = draw_id;
       val.dataDraw_custom_shape.draw_layer = draw_layer;
@@ -1123,6 +1129,7 @@ public class XmlForOdg_Zbnf {
       val.dataDraw_custom_shape.svg_width = svg_width;
       val.dataDraw_custom_shape.svg_x = svg_x;
       val.dataDraw_custom_shape.svg_y = svg_y;
+      val.dataDraw_custom_shape.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
@@ -1141,7 +1148,7 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
-    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y ) { 
+    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
       Draw_frame_Zbnf val = new Draw_frame_Zbnf();
       val.dataDraw_frame.draw_id = draw_id;
       val.dataDraw_frame.draw_layer = draw_layer;
@@ -1151,6 +1158,7 @@ public class XmlForOdg_Zbnf {
       val.dataDraw_frame.svg_width = svg_width;
       val.dataDraw_frame.svg_x = svg_x;
       val.dataDraw_frame.svg_y = svg_y;
+      val.dataDraw_frame.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
@@ -1169,9 +1177,10 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_g?draw_g&gt;  */
-    public Draw_g_Zbnf new_draw_g(String draw_id ) { 
+    public Draw_g_Zbnf new_draw_g(String draw_id, String xml_id ) { 
       Draw_g_Zbnf val = new Draw_g_Zbnf();
       val.dataDraw_g.draw_id = draw_id;
+      val.dataDraw_g.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
@@ -1437,6 +1446,10 @@ public class XmlForOdg_Zbnf {
     public void set_svg_y(String val) { this.dataDraw_custom_shape.svg_y = val; }
     
     
+    /**Set routine for the singular component &lt;String?xml_id>. */
+    public void set_xml_id(String val) { this.dataDraw_custom_shape.xml_id = val; }
+    
+    
     /**Creates an instance for the result Zbnf  (not Xml) . &lt;Draw_enhanced_geometry?draw_enhanced_geometry&gt; for ZBNF data store*/
     public Draw_enhanced_geometry_Zbnf new_draw_enhanced_geometry() { 
       Draw_enhanced_geometry_Zbnf val = new Draw_enhanced_geometry_Zbnf();
@@ -1549,6 +1562,10 @@ public class XmlForOdg_Zbnf {
     public void set_svg_y(String val) { this.dataDraw_frame.svg_y = val; }
     
     
+    /**Set routine for the singular component &lt;String?xml_id>. */
+    public void set_xml_id(String val) { this.dataDraw_frame.xml_id = val; }
+    
+    
     /**Creates an instance for the result Zbnf . &lt;Draw_text_box?draw_text_box&gt; for ZBNF data store*/
     public Draw_text_box_Zbnf new_draw_text_box() { 
       Draw_text_box_Zbnf val = new Draw_text_box_Zbnf();
@@ -1596,6 +1613,10 @@ public class XmlForOdg_Zbnf {
   
     /**Set routine for the singular component &lt;String?draw_id>. */
     public void set_draw_id(String val) { this.dataDraw_g.draw_id = val; }
+    
+    
+    /**Set routine for the singular component &lt;String?xml_id>. */
+    public void set_xml_id(String val) { this.dataDraw_g.xml_id = val; }
     
     
     /**Creates an instance for the result Zbnf . &lt;Draw_g_A?draw_g&gt; for ZBNF data store*/
@@ -1904,6 +1925,10 @@ public class XmlForOdg_Zbnf {
     public void set_text_s(String val) { this.dataText_p.text_s = val; }
     
     
+    /**Set routine for the singular component &lt;String?text_s>. */
+    public void new_text_s(String val) { this.dataText_p.text_s = val; }
+    
+    
     /**Creates an instance for the result Zbnf  (not Xml) . &lt;Text_span?text_span&gt; for ZBNF data store*/
     public Text_span_Zbnf new_text_span() { 
       Text_span_Zbnf val = new Text_span_Zbnf();
@@ -2017,7 +2042,7 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
-    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y ) { 
+    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
       Draw_frame_Zbnf val = new Draw_frame_Zbnf();
       val.dataDraw_frame.draw_id = draw_id;
       val.dataDraw_frame.draw_layer = draw_layer;
@@ -2027,6 +2052,7 @@ public class XmlForOdg_Zbnf {
       val.dataDraw_frame.svg_width = svg_width;
       val.dataDraw_frame.svg_x = svg_x;
       val.dataDraw_frame.svg_y = svg_y;
+      val.dataDraw_frame.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
@@ -2193,6 +2219,10 @@ public class XmlForOdg_Zbnf {
   
   
   
+    /**Set routine for the singular component &lt;String?text_style_name>. */
+    public void set_text_style_name(String val) { this.dataText_span.text_style_name = val; }
+    
+    
   
   }
 

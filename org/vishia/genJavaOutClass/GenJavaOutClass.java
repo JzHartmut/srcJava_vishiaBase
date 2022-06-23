@@ -33,6 +33,7 @@ public class GenJavaOutClass {
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-06-01 Hartmut: instead "JavaSrc" (special usage) generate name of the correct frame class. 
    * <li>2022-03-28 Hartmut: Now line and column is written in own super class SrcInfo. This can be used by applications
    *   to get line and column info independent of the parse result. Very important. 
    *   It is changed in this generator. The class SrcInfo is new.  
@@ -89,7 +90,7 @@ public class GenJavaOutClass {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2022-03-28";
+  public static final String sVersion = "2022-06-01";
 
   
   
@@ -257,7 +258,7 @@ public class GenJavaOutClass {
     + "\n"
     + "\n"
     + "  /**Class for Component <&semantic>. */\n"
-    + "  public static class <&cmpnClass>_Base extends <:if:superClass>JavaSrc.<&superClass><:else>SrcInfo<.if> {\n"
+    + "  public static class <&cmpnClass>_Base extends <:if:superClass><&dataClass>.<&superClass><:else>SrcInfo<.if> {\n"
 //    + "    <:if:superClass==null>\n"
 //    + "    protected int _srcColumn_, _srcLine_; protected String _srcFile_;\n"
 //    + "    \n"
@@ -336,27 +337,27 @@ public class GenJavaOutClass {
   
   private final OutTextPreparer tJavaSimpleVar = new OutTextPreparer(  "sJavaSimpleVar", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n"
-    + "    protected <:if:typeNs>JavaSrc.<.if><&type> <&varName>;\n"
+    + "    protected <:if:typeNs><&typeNs><.if><&type> <&varName>;\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaListVar = new OutTextPreparer(  "sJavaListVar", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n"
-    + "    protected List<<:if:typeNs>JavaSrc.<.if><&typeGeneric>> <&varName>;\n"
+    + "    protected List<<:if:typeNs><&typeNs><.if><&typeGeneric>> <&varName>;\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaSimpleVarOper = new OutTextPreparer( "sJavaSimpleVarOper", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n    \n"
     + "    /**Access to parse result.*/\n"
-    + "    public <:if:typeNs>JavaSrc.<.if><&type> get_<&name>() { return <&varName>; }\n"
+    + "    public <:if:typeNs><&typeNs><.if><&type> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaListVarOper = new OutTextPreparer( "sJavaListVarOper", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n    \n"
     + "    /**Access to parse result, get the elements of the container <&name>*/\n"
-    + "    public Iterable<<:if:typeNs>JavaSrc.<.if><&typeGeneric>> get_<&name>() { return <&varName>; }\n"
+    + "    public Iterable<<:if:typeNs><&typeNs><.if><&typeGeneric>> get_<&name>() { return <&varName>; }\n"
     + "    \n"
     + "    /**Access to parse result, get the size of the container <&name>.*/\n"
     + "    public int getSize_<&name>() { return <&varName> ==null ? 0 : <&varName>.size(); }\n"
@@ -437,18 +438,18 @@ public class GenJavaOutClass {
     + "    \n");
   
   private final OutTextPreparer sJavaMetaClass = new OutTextPreparer( "sJavaMetaClass", null, "cmpnClass, attrfield, dataClass",
-      "    JavaSrc.<&attrfield.type> <&attrfield.varName>;  \n"
+      "    <&dataClass>.<&attrfield.type> <&attrfield.varName>;  \n"
     + "  \n");
   
 
   private final OutTextPreparer sJavaMetaClassOper = new OutTextPreparer( "sJavaMetaClass", null, "cmpnClass, attrfield, dataClass",
-      "    JavaSrc.<&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
+      "    <&dataClass>.<&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
     + "  \n");
 
   
   
   private final OutTextPreparer tJavaMetaClassZbnf = new OutTextPreparer( "tJavaMetaClassZbnf", null, "attrfield, dataClass, cmpnClass",
-      "    public void set_<&attrfield.semantic>(JavaSrc.<&attrfield.type> <&attrfield.varName>) { data<&cmpnClass>.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
+      "    public void set_<&attrfield.semantic>(<&dataClass>.<&attrfield.type> <&attrfield.varName>) { data<&cmpnClass>.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
   
   
   

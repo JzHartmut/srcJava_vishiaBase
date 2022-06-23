@@ -29,6 +29,8 @@ public class XmlJzCfgAnalyzer
 {
   /**Version, License and History:
    * <ul>
+   * <li>2022-06-06 Hartmut: produces the "xmlinput:finish" entry, see {@link XmlCfg}.
+   * <li>2022-06-06 Hartmut: regards all namespace entries
    * <li>2019-08-18 improvements with namespace and usage for {@link GenXmlCfgJavaData}.
    * <li>2018-09-10 writes cfg attributes.
    * <li>2018-08-15 created.
@@ -80,7 +82,10 @@ public class XmlJzCfgAnalyzer
    * It is tested in {@link XmlStructureNode#addElement(String)}. */
   XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", xmlStructData);  //the root node for reading config
 
+  /**The declared name spaces found in all nodes. */
+  Map<String, String> nameSpacesAll;   //TODO use it.
   
+
   
   public XmlJzCfgAnalyzer(){
     
@@ -102,7 +107,9 @@ public class XmlJzCfgAnalyzer
       //Output it as cfg.xml
       XmlNodeSimple<?> root = new XmlNodeSimple<>("xmlinput:root");
       root.addNamespaceDeclaration("xmlinput", "www.vishia.org/XmlReader-xmlinput");
-
+      for(Map.Entry<String, String> en: this.nameSpacesAll.entrySet()) {
+        root.addNamespaceDeclaration(en.getKey(), en.getValue());
+      }
       for(XmlStructureNode structnode: this.xmlStructData.cfgSubtreeList) {
         //add one subtree node for each tag type in its context:
         assert(structnode.sSubtreenode !=null);  //it should be designated.
@@ -171,12 +178,11 @@ public class XmlJzCfgAnalyzer
       uArg.append(')');
     } else {
       sArg = "()";
-    }
-    if(structNode.onlySingle) {
-      wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
-    } else {
+    }                                            // writes the xmlinput:data="!new_Tag(...)" to create data for the sub nodes and attribs
+    wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
+    wrCfgXmlNode.setAttribute("finish", "xmlinput", "!set_" + structNode.tagIdent + "(data)");
+    if(!structNode.onlySingle) {                 // writes the xmlinput:finish="!set_Tag(data)" to set the data. 
       wrCfgXmlNode.setAttribute("list", "xmlinput", "");
-      wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
     }
   }
   
@@ -223,9 +229,9 @@ public class XmlJzCfgAnalyzer
       if(structNode.bText) {
         wrCfgXmlNode.addContent("!set_text(text)");
       }
-    } else { //no attribs, no sub tree
+    } else { //no attribs, no sub tree, only the text content should be stored.
       if(structNode.onlySingle) {
-        wrCfgXmlNode.addContent("!set_" + structNode.tag + "(text)");
+        wrCfgXmlNode.addContent("!set_" + structNode.tag + "(text)");  //set_TAG(String text)
       } else {
         wrCfgXmlNode.addContent("!add_" + structNode.tag + "(text)");
       }
@@ -246,6 +252,7 @@ public class XmlJzCfgAnalyzer
     XmlCfg cfg = newCfgReadStruct();   // use this special config file to read all data
     xmlReader.readXml(fXmlIn, this.xmlStructTree, cfg);
     this.xmlStructData.checkCfgSubtree();   //removeSingleEntries();
+    this.nameSpacesAll = xmlReader.namespaces;
     Debugutil.stop();
   }
 
@@ -688,6 +695,8 @@ public class XmlJzCfgAnalyzer
     public void addNamespace(String key, String value) {
       if(this.nameSpaces == null) { this.nameSpaces = new TreeMap<String, String>(); }
       this.nameSpaces.put(key, value);
+//TODO      if(nameSpacesAll == null) { this.nameSpacesAll = new TreeMap<String, String>(); }
+//      this.nameSpacesAll.put(key, value);
     }
     
     /**It is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}

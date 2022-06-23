@@ -10,7 +10,13 @@ import org.vishia.util.TreeNodeBase;
 
 /**This is a simple variant of processing XML.*/
 
-/**Representation of a XML node. It contains a tree of nodes or text content. */ 
+/**Representation of a XML node. It contains a tree of nodes or text content. 
+ * Hint: The possibility to reference data is additional to XML concepts, not usable for the XML output but for management of data.
+ * The referenced data are present if the appropriate constructors are used: 
+ * {@link #XmlNodeSimple(String, Object)} and {@link #XmlNodeSimple(String, String, Object)}. 
+ * Elsewhere the {@link TreeNodeBase#data} is left empty. This is for ordinary XML data.
+ * 
+ * */ 
 public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData>, UserData, XmlNode> implements XmlNode
 { 
   /**Version, history and license.
@@ -175,6 +181,20 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   { return new XmlNodeSimple<UserData>(name,namespaceKey);
   }
 
+  
+  
+  /**Creates an independent new XmlNode without data. 
+   * It is static, does not presume existing nodes, in opposite to {@link #createNode(String, String)}
+   * @param name Tag name or "namespacekey:name" if argument namespaceKey is null
+   * @param namespaceKey extra argument as name space key. 
+   *   This is not the namespace itself, it is the key defined in xml with an attribute:
+   *   <code>xmlns:namespaceKey="www.url/of/namespace"</code>
+   * @return the created node.
+   * @since 2022-06 as supplement to {@link #createNode(String, String)} which needs an instance.
+   */
+  public static XmlNode createNewNode(String name, String namespaceKey)
+  { return new XmlNodeSimple<Object>(name,namespaceKey);
+  }
   
   
   @SuppressWarnings("unchecked")

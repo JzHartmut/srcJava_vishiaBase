@@ -117,10 +117,13 @@ import org.vishia.bridgeC.IllegalArgumentExceptionJc;
  * <li>See {@link StringFunctions} for basic operations.  
  * </ul>            
  */
-public class StringPart implements CharSequence, Comparable<CharSequence>, Closeable, Iterable<StringPart>
+public class StringPart implements CharSequence, Comparable<CharSequence>, Iterable<StringPart> //, Closeable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-06-06 Hartmut chg: Now implements {@link Closeable} is removed. This is faulty, because nothing is open. 
+   *   The {@link #close()} operarion does not close, it cleans only. Some unnecessary warnings were created because the Closeable property. 
+   *   The {@link #close()} operation is now designated as deprecated, use instead 
    * <li>2022-04-30 Hartmut new: {@link #getCharSequenceRange(long, long)} 
    * <li>2022-01-20 Hartmut new some enhancements {@link #indexOfAnyCharOutsideQuotation(CharSequence, String, char, int, int)} etc.
    *   But this routines should use the capability of {@link StringFunctions#indexOfAnyCharOutsideQuotation(CharSequence, int, int, CharSequence, CharSequence, CharSequence, char, int[])}
@@ -2824,17 +2827,11 @@ public final String debugString()
     throw new IllegalArgumentExceptionJc(msg, value);
   }
 
-  /**Closes the work. This routine should be called if the StringPart is never used, 
-   * but it may be kept because it is part of class data or part of a statement block which runs.
+  /**Cleans the instance. This routine should be called if the StringPart is no more used, 
+   * but it may be kept because it is part of any other class data or running routine.
    * The associated String is released. It can be recycled by garbage collector.
-   * If this method is overridden, it should used to close a associated file which is opened 
-   * for this String processing. The overridden method should call super->close() too.
-   * <br>
-   * Note: if only this class is instantiated and the instance will be garbaged, close is not necessary.
-   * A warning or error "Resource leak" can be switched off. Therefore the interface {@link java.io.Closeable} is not used here.
    */
-  @Override
-  public void close()
+  public void clean()
   {
     this.content = null;
     this.begiMin = this.beginLast = this.begin = 0;
@@ -2842,6 +2839,21 @@ public final String debugString()
     this.bCurrentOk = this.bFound = false;
   }
   
+  
+  /**The idea offering close() here comes from the following:
+   * <del>Closes the work. This routine should be called if the StringPart is no more used, 
+   * but it may be kept because it is part of class data or part of a statement block which runs.
+   * The associated String is released. It can be recycled by garbage collector.
+   * If this method is overridden, it should used to close a associated file which is opened 
+   * for this String processing. The overridden method should call super->close() too.</del>
+   * <br>
+   * But this is bad, more simple: If the derived class imolements Closeable, that is ok and not related to this class.
+   * On end of close this clean() should be called, simple!
+   * <br>
+   * Note: if only this class is instantiated and the instance will be garbaged, close is not necessary.
+   * A warning or error "Resource leak" can be switched off. Therefore the interface {@link java.io.Closeable} is not used here.
+   */
+  @Deprecated public void close() { clean(); }
 
   /**Replaces up to 20 placeholder with a given content.
    * The method creates a StringBuilder with buffer and a StringPart locally. 

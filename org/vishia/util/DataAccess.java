@@ -1299,8 +1299,8 @@ public class DataAccess {
       if(element.args !=null) {
         args = new Object[element.args.length];
         int ix = -1;
-        for(CalculatorExpr.Operand expr: element.args) {
-          args[++ix] = expr.calc(null, varValues);
+        for(CalculatorExpr.Operand expr: element.args) {   // expr contains the ix in varValues
+          args[++ix] = expr.calc(null, varValues);         // get the proper varValue[ix] due to expr
         }
       }
     }

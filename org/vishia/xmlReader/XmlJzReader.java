@@ -68,6 +68,8 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2022-06-23: "xmlinput:finish" regarded (yet in progress, not ready). 
+   * <li>2022-06-06: new {@link #setNamespaceEntry(String, String)}
    * <li>2021-12-16 documentation and fine tuning of storeAttrData(..). Now usage of value is not tested. 
    *   If the operation for an attribute in cfg returns a #{@link java.lang.reflect.Field} then the value is stored in this return field
    *   independent whether it is used also as argument. This can be helpfully and it is a special condition lesser.
@@ -128,7 +130,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2021-10-07";
+  public static final String version = "2022-06-06";
   
   
   /**To store the last used configuration, for parsing with the same config. */
@@ -210,13 +212,29 @@ public class XmlJzReader
   }
   
   
+  /**This operation is only necessary if a name space declaration is missing
+   * in the xml file to read. It should be called before reading. 
+   * @param key
+   * @param url
+   */
+  public void setNamespaceEntry(String key, String url) {
+    this.namespaces.put(key, url);
+  }
+  
+  
 
   /**Reads an xml file with a given config. 
    * It does not change the stored config which is gotten by {@link #readCfg(File)} or {@link #readCfgFromJar(String)}.
    * This operation is used internally in for all read operations too. It is the common entry to read.
-   * @param input
-   * @param output
-   * @param xmlCfg
+   * @param input The xml file
+   * @param output The empty data where the first operation is called or the first data are stored via reflection.
+   * @param xmlCfg Already read XmlCfg from a file using {{@link #readCfg(File)}} or {@link #readCfgFromJar(Class, String)}
+   *   or alternatively a immediate prepared XmlCfg. 
+   *   <ul>
+   *   <li>For reading the config file itself it is {@link XmlCfg#newCfgCfg()}.
+   *   <li>For storing to a XmlNodeSimple it is 
+   *   <li>Also a user can prepare a XmlCfg by himself.
+   *   </ul>
    * @return
    */
   public String readXml(File input, Object output, XmlCfg xmlCfg) throws IOException {
@@ -493,8 +511,14 @@ public class XmlJzReader
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
     }
+    if(subCfgNode ==null) {
+      Debugutil.stop();
+    }
     //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
     subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode.elementStorePath, attribValues);
+    if(subCfgNode !=null && subCfgNode ==null) {
+      Debugutil.stop();
+    }
     //
     //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
     if(attribsToStore[0] !=null) { 
@@ -573,8 +597,14 @@ public class XmlJzReader
         }
         storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
       }
+      //subCfgNode.elementFinishPath
+      Debugutil.stop();      
+      
     } else {
-      throw new IllegalArgumentException("either \">\" or \"/>\" expected");
+      int[] colmn = new int[1];
+      int line = inp.getLineAndColumn(colmn);
+      String sFile = inp.getInputfile();
+      throw new IllegalArgumentException("either \">\" or \"/>\" expected, " + " in " + sFile + " @" + line + ":" + colmn[0]);
     }
     inp.setLengthMax();  //for next parsing
     if(this.xmlTestWriter !=null) {
@@ -637,6 +667,9 @@ public class XmlJzReader
             sAttrNsName = null;
           } else {
             String nsValue = this.namespaces.get(ns);  //defined in this read xml file.
+            if(nsValue == null && ns.equals("xml")) {
+              nsValue = "http://www.w3.org/1999/xml";  //default for xmlns:xml 
+            }
             if(nsValue == null) {
               errMsg(1, inp, "XmlJzReader-Namespace of attribute not found: ", ns);
               sAttrNsName = null;  //Namespace not registered in the input file, especially "xml".
