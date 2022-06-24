@@ -22,6 +22,7 @@ public class GenXmlCfgJavaData {
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-06-23: set type_ns to produce _Zbnf suffix ("<:if:typeNs>_Zbnf<.if>" in GenJavaOutClass) 
    * <li>2022-02-18 only adapted to {@link GenJavaOutClass}, argument typeNs should be null. 
    * <li>201x: Hartmut www.vishia.org creation
    * </ul>
@@ -325,7 +326,8 @@ public class GenXmlCfgJavaData {
             }
           }
           //semantic = semantic.replace("@!", "");
-          wrClassJava.wrVariable(classData, varName, null, type, type, bStdType, bList, bCmpn, args); 
+          String typeNs = "Type__Ns";
+          wrClassJava.wrVariable(classData, varName, typeNs, type, type, bStdType, bList, bCmpn, args); 
           
         }
       }

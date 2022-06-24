@@ -68,7 +68,7 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
-   * <li>2022-06-23: "xmlinput:finish" regarded (yet in progress, not ready). 
+   * <li>2022-06-23: "xmlinput:finish" regarded, see {@link #finishElement(Object, Object, org.vishia.util.DataAccess.DatapathElement)} 
    * <li>2022-06-06: new {@link #setNamespaceEntry(String, String)}
    * <li>2021-12-16 documentation and fine tuning of storeAttrData(..). Now usage of value is not tested. 
    *   If the operation for an attribute in cfg returns a #{@link java.lang.reflect.Field} then the value is stored in this return field
@@ -597,9 +597,7 @@ public class XmlJzReader
         }
         storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
       }
-      //subCfgNode.elementFinishPath
-      Debugutil.stop();      
-      
+      finishElement(output, subOutput, subCfgNode.elementFinishPath);  // "xmlinput:finish"
     } else {
       int[] colmn = new int[1];
       int line = inp.getLineAndColumn(colmn);
@@ -774,6 +772,48 @@ public class XmlJzReader
   }
 
 
+  /**This op is called on finishing of parsing a element with its sub content.
+   * <ul>
+   * <li>The "xmlinput:data" delivers the data storage, but need not insert the data storage for this element in the whole data tree.
+   * <li>The "xmlinput:finish" inserts the data storage (via reference, hold stack local till now) in the whole data tree.
+   *   Depending from the finish operation the data can be post prepared in any kind.
+   *   For ZBNF data storage this is the set... operation. It should be named set_... also here. 
+   * <li>If the data does not need to be post-prepared, it is also possible that this operation is not given or empty.
+   *   But then the "xmlinput:data" should set the reference in the whole data tree already for the new created data.
+   *   That is the approach till now, furthermore supported.
+   * </ul>
+   * @param parent The element where the content is to insert as sub content.
+   * @param element to insert
+   * @param elementStorePath rule where to insert: It contains:
+   *   <ul>
+   *   <li>{@link DataAccess.DatapathElement#ident}  Immediately the name of the variable of operation to call in parent
+   *   <li>Arguments, whereas the argument for finish should be usual "value", which is the [1] element in the immediately argument list
+   *     for the internal called {@link DataAccess#invokeMethod(org.vishia.util.DataAccess.DatapathElement, Class, Object, boolean, Object[], boolean)} 
+   *     for the "varValues".
+   *   </ul>  
+   * 
+   */
+  void finishElement( Object parent, Object element, DataAccess.DatapathElement elementStorePath) {
+    if(elementStorePath !=null) {
+      try{ 
+        Object[] args = new Object[2];
+        args[1] = element;                                 // use position of "value" in the common #allArgs field
+        if(elementStorePath.isOperation()) {
+          DataAccess.invokeMethod(elementStorePath, null, parent, true, args, false);
+        } else {
+          //it may be a method too but without textual parameter.
+          //subOutput = DataAccess.access(elementStorePath, output, true, false, null, attribValues, false, null);
+        }
+      } catch(Exception exc) {
+        CharSequence sError = CheckVs.exceptionInfo("", exc, 1, 30);
+        System.err.println("error finishElement: " + elementStorePath);
+        System.err.println("help: ");
+        System.err.println(sError);
+      }
+  } }
+      
+  
+  
 
   /**Invokes the associated method to store the attribute value.
    * <ul>

@@ -180,10 +180,15 @@ public class XmlJzCfgAnalyzer
       sArg = "()";
     }                                            // writes the xmlinput:data="!new_Tag(...)" to create data for the sub nodes and attribs
     wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
-    wrCfgXmlNode.setAttribute("finish", "xmlinput", "!set_" + structNode.tagIdent + "(data)");
-    if(!structNode.onlySingle) {                 // writes the xmlinput:finish="!set_Tag(data)" to set the data. 
+    final String setAdd;
+    if(structNode.onlySingle) {                 // writes the xmlinput:finish="!set_Tag(data)" to set the data. 
+      setAdd = "set_";
+    } else {
+      setAdd = "add_";
       wrCfgXmlNode.setAttribute("list", "xmlinput", "");
     }
+    wrCfgXmlNode.setAttribute("finish", "xmlinput", setAdd + structNode.tagIdent + "(value)");
+    
   }
   
   

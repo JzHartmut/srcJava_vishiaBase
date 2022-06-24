@@ -87,8 +87,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_automatic_styles?office_automatic_styles&gt;*/
-    public void set_office_automatic_styles(Office_automatic_styles val) { 
-      dataOffice_document_content.office_automatic_styles = val;
+    public void set_office_automatic_styles(Office_automatic_styles_Zbnf val) { 
+      dataOffice_document_content.office_automatic_styles = val.dataOffice_automatic_styles;
     }
     
     
@@ -99,8 +99,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_body?office_body&gt;*/
-    public void set_office_body(Office_body val) { 
-      dataOffice_document_content.office_body = val;
+    public void set_office_body(Office_body_Zbnf val) { 
+      dataOffice_document_content.office_body = val.dataOffice_body;
     }
     
     
@@ -111,8 +111,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_font_face_decls?office_font_face_decls&gt;*/
-    public void set_office_font_face_decls(Office_font_face_decls val) { 
-      dataOffice_document_content.office_font_face_decls = val;
+    public void set_office_font_face_decls(Office_font_face_decls_Zbnf val) { 
+      dataOffice_document_content.office_font_face_decls = val.dataOffice_font_face_decls;
     }
     
     
@@ -170,9 +170,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Style_style?style_style&gt;*/
-    public void add_style_style(Style_style val) {
-      if(dataOffice_automatic_styles.style_style==null) { dataOffice_automatic_styles.style_style = new LinkedList<Style_style>(); }
-      dataOffice_automatic_styles.style_style.add(val); 
+    public void add_style_style(Style_style_Zbnf val) {
+      if(dataOffice_automatic_styles.style_style==null) { dataOffice_automatic_styles.style_style = new LinkedList<XmlForOdg.Style_style>(); }
+      dataOffice_automatic_styles.style_style.add(val.dataStyle_style); 
     }
     
     
@@ -191,8 +191,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_list_style?text_list_style&gt;*/
-    public void set_text_list_style(Text_list_style val) { 
-      dataOffice_automatic_styles.text_list_style = val;
+    public void set_text_list_style(Text_list_style_Zbnf val) { 
+      dataOffice_automatic_styles.text_list_style = val.dataText_list_style;
     }
     
     
@@ -236,8 +236,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_drawing?office_drawing&gt;*/
-    public void set_office_drawing(Office_drawing val) { 
-      dataOffice_body.office_drawing = val;
+    public void set_office_drawing(Office_drawing_Zbnf val) { 
+      dataOffice_body.office_drawing = val.dataOffice_drawing;
     }
     
     
@@ -293,9 +293,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Style_font_face?style_font_face&gt;*/
-    public void add_style_font_face(Style_font_face val) {
-      if(dataOffice_font_face_decls.style_font_face==null) { dataOffice_font_face_decls.style_font_face = new LinkedList<Style_font_face>(); }
-      dataOffice_font_face_decls.style_font_face.add(val); 
+    public void add_style_font_face(Style_font_face_Zbnf val) {
+      if(dataOffice_font_face_decls.style_font_face==null) { dataOffice_font_face_decls.style_font_face = new LinkedList<XmlForOdg.Style_font_face>(); }
+      dataOffice_font_face_decls.style_font_face.add(val.dataStyle_font_face); 
     }
     
     
@@ -361,8 +361,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Loext_graphic_properties?loext_graphic_properties&gt;*/
-    public void set_loext_graphic_properties(Loext_graphic_properties val) { 
-      dataStyle_style.loext_graphic_properties = val;
+    public void set_loext_graphic_properties(Loext_graphic_properties_Zbnf val) { 
+      dataStyle_style.loext_graphic_properties = val.dataLoext_graphic_properties;
     }
     
     
@@ -394,8 +394,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_graphic_properties?style_graphic_properties&gt;*/
-    public void set_style_graphic_properties(Style_graphic_properties val) { 
-      dataStyle_style.style_graphic_properties = val;
+    public void set_style_graphic_properties(Style_graphic_properties_Zbnf val) { 
+      dataStyle_style.style_graphic_properties = val.dataStyle_graphic_properties;
     }
     
     
@@ -416,8 +416,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_paragraph_properties?style_paragraph_properties&gt;*/
-    public void set_style_paragraph_properties(Style_paragraph_properties val) { 
-      dataStyle_style.style_paragraph_properties = val;
+    public void set_style_paragraph_properties(Style_paragraph_properties_Zbnf val) { 
+      dataStyle_style.style_paragraph_properties = val.dataStyle_paragraph_properties;
     }
     
     
@@ -461,8 +461,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_text_properties?style_text_properties&gt;*/
-    public void set_style_text_properties(Style_text_properties val) { 
-      dataStyle_style.style_text_properties = val;
+    public void set_style_text_properties(Style_text_properties_Zbnf val) { 
+      dataStyle_style.style_text_properties = val.dataStyle_text_properties;
     }
     
     
@@ -519,9 +519,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Text_list_level_style_bullet?text_list_level_style_bullet&gt;*/
-    public void add_text_list_level_style_bullet(Text_list_level_style_bullet val) {
-      if(dataText_list_style.text_list_level_style_bullet==null) { dataText_list_style.text_list_level_style_bullet = new LinkedList<Text_list_level_style_bullet>(); }
-      dataText_list_style.text_list_level_style_bullet.add(val); 
+    public void add_text_list_level_style_bullet(Text_list_level_style_bullet_Zbnf val) {
+      if(dataText_list_style.text_list_level_style_bullet==null) { dataText_list_style.text_list_level_style_bullet = new LinkedList<XmlForOdg.Text_list_level_style_bullet>(); }
+      dataText_list_style.text_list_level_style_bullet.add(val.dataText_list_level_style_bullet); 
     }
     
     
@@ -575,8 +575,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_page?draw_page&gt;*/
-    public void set_draw_page(Draw_page val) { 
-      dataOffice_drawing.draw_page = val;
+    public void set_draw_page(Draw_page_Zbnf val) { 
+      dataOffice_drawing.draw_page = val.dataDraw_page;
     }
     
     
@@ -1006,8 +1006,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_list_level_properties?style_list_level_properties&gt;*/
-    public void set_style_list_level_properties(Style_list_level_properties val) { 
-      dataText_list_level_style_bullet.style_list_level_properties = val;
+    public void set_style_list_level_properties(Style_list_level_properties_Zbnf val) { 
+      dataText_list_level_style_bullet.style_list_level_properties = val.dataStyle_list_level_properties;
     }
     
     
@@ -1028,8 +1028,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_text_properties?style_text_properties&gt;*/
-    public void set_style_text_properties(Style_text_properties val) { 
-      dataText_list_level_style_bullet.style_text_properties = val;
+    public void set_style_text_properties(Style_text_properties_Zbnf val) { 
+      dataText_list_level_style_bullet.style_text_properties = val.dataStyle_text_properties;
     }
     
     
@@ -1106,9 +1106,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_connector?draw_connector&gt;*/
-    public void add_draw_connector(Draw_connector val) {
-      if(dataDraw_page.draw_connector==null) { dataDraw_page.draw_connector = new LinkedList<Draw_connector>(); }
-      dataDraw_page.draw_connector.add(val); 
+    public void add_draw_connector(Draw_connector_Zbnf val) {
+      if(dataDraw_page.draw_connector==null) { dataDraw_page.draw_connector = new LinkedList<XmlForOdg.Draw_connector>(); }
+      dataDraw_page.draw_connector.add(val.dataDraw_connector); 
     }
     
     
@@ -1135,9 +1135,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_custom_shape?draw_custom_shape&gt;*/
-    public void add_draw_custom_shape(Draw_custom_shape val) {
-      if(dataDraw_page.draw_custom_shape==null) { dataDraw_page.draw_custom_shape = new LinkedList<Draw_custom_shape>(); }
-      dataDraw_page.draw_custom_shape.add(val); 
+    public void add_draw_custom_shape(Draw_custom_shape_Zbnf val) {
+      if(dataDraw_page.draw_custom_shape==null) { dataDraw_page.draw_custom_shape = new LinkedList<XmlForOdg.Draw_custom_shape>(); }
+      dataDraw_page.draw_custom_shape.add(val.dataDraw_custom_shape); 
     }
     
     
@@ -1164,9 +1164,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
-    public void add_draw_frame(Draw_frame val) {
-      if(dataDraw_page.draw_frame==null) { dataDraw_page.draw_frame = new LinkedList<Draw_frame>(); }
-      dataDraw_page.draw_frame.add(val); 
+    public void add_draw_frame(Draw_frame_Zbnf val) {
+      if(dataDraw_page.draw_frame==null) { dataDraw_page.draw_frame = new LinkedList<XmlForOdg.Draw_frame>(); }
+      dataDraw_page.draw_frame.add(val.dataDraw_frame); 
     }
     
     
@@ -1186,8 +1186,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_g?draw_g&gt;*/
-    public void set_draw_g(Draw_g val) { 
-      dataDraw_page.draw_g = val;
+    public void set_draw_g(Draw_g_Zbnf val) { 
+      dataDraw_page.draw_g = val.dataDraw_g;
     }
     
     
@@ -1214,9 +1214,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_polygon?draw_polygon&gt;*/
-    public void add_draw_polygon(Draw_polygon val) {
-      if(dataDraw_page.draw_polygon==null) { dataDraw_page.draw_polygon = new LinkedList<Draw_polygon>(); }
-      dataDraw_page.draw_polygon.add(val); 
+    public void add_draw_polygon(Draw_polygon_Zbnf val) {
+      if(dataDraw_page.draw_polygon==null) { dataDraw_page.draw_polygon = new LinkedList<XmlForOdg.Draw_polygon>(); }
+      dataDraw_page.draw_polygon.add(val.dataDraw_polygon); 
     }
     
     
@@ -1242,8 +1242,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_polyline?draw_polyline&gt;*/
-    public void set_draw_polyline(Draw_polyline val) { 
-      dataDraw_page.draw_polyline = val;
+    public void set_draw_polyline(Draw_polyline_Zbnf val) { 
+      dataDraw_page.draw_polyline = val.dataDraw_polyline;
     }
     
     
@@ -1472,8 +1472,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_enhanced_geometry?draw_enhanced_geometry&gt;*/
-    public void set_draw_enhanced_geometry(Draw_enhanced_geometry val) { 
-      dataDraw_custom_shape.draw_enhanced_geometry = val;
+    public void set_draw_enhanced_geometry(Draw_enhanced_geometry_Zbnf val) { 
+      dataDraw_custom_shape.draw_enhanced_geometry = val.dataDraw_enhanced_geometry;
     }
     
     
@@ -1492,8 +1492,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_p?text_p&gt;*/
-    public void set_text_p(Text_p val) { 
-      dataDraw_custom_shape.text_p = val;
+    public void set_text_p(Text_p_Zbnf val) { 
+      dataDraw_custom_shape.text_p = val.dataText_p;
     }
     
     
@@ -1573,8 +1573,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_text_box?draw_text_box&gt;*/
-    public void set_draw_text_box(Draw_text_box val) { 
-      dataDraw_frame.draw_text_box = val;
+    public void set_draw_text_box(Draw_text_box_Zbnf val) { 
+      dataDraw_frame.draw_text_box = val.dataDraw_text_box;
     }
     
     
@@ -1626,8 +1626,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_g_A?draw_g&gt;*/
-    public void set_draw_g(Draw_g_A val) { 
-      dataDraw_g.draw_g = val;
+    public void set_draw_g(Draw_g_A_Zbnf val) { 
+      dataDraw_g.draw_g = val.dataDraw_g_A;
     }
     
     
@@ -1854,9 +1854,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_equation?draw_equation&gt;*/
-    public void add_draw_equation(Draw_equation val) {
-      if(dataDraw_enhanced_geometry.draw_equation==null) { dataDraw_enhanced_geometry.draw_equation = new LinkedList<Draw_equation>(); }
-      dataDraw_enhanced_geometry.draw_equation.add(val); 
+    public void add_draw_equation(Draw_equation_Zbnf val) {
+      if(dataDraw_enhanced_geometry.draw_equation==null) { dataDraw_enhanced_geometry.draw_equation = new LinkedList<XmlForOdg.Draw_equation>(); }
+      dataDraw_enhanced_geometry.draw_equation.add(val.dataDraw_equation); 
     }
     
     
@@ -1879,8 +1879,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_handle?draw_handle&gt;*/
-    public void set_draw_handle(Draw_handle val) { 
-      dataDraw_enhanced_geometry.draw_handle = val;
+    public void set_draw_handle(Draw_handle_Zbnf val) { 
+      dataDraw_enhanced_geometry.draw_handle = val.dataDraw_handle;
     }
     
     
@@ -1944,8 +1944,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_span?text_span&gt;*/
-    public void set_text_span(Text_span val) { 
-      dataText_p.text_span = val;
+    public void set_text_span(Text_span_Zbnf val) { 
+      dataText_p.text_span = val.dataText_span;
     }
     
     
@@ -1997,8 +1997,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_p?text_p&gt;*/
-    public void set_text_p(Text_p val) { 
-      dataDraw_text_box.text_p = val;
+    public void set_text_p(Text_p_Zbnf val) { 
+      dataDraw_text_box.text_p = val.dataText_p;
     }
     
     
@@ -2058,9 +2058,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
-    public void add_draw_frame(Draw_frame val) {
-      if(dataDraw_g_A.draw_frame==null) { dataDraw_g_A.draw_frame = new LinkedList<Draw_frame>(); }
-      dataDraw_g_A.draw_frame.add(val); 
+    public void add_draw_frame(Draw_frame_Zbnf val) {
+      if(dataDraw_g_A.draw_frame==null) { dataDraw_g_A.draw_frame = new LinkedList<XmlForOdg.Draw_frame>(); }
+      dataDraw_g_A.draw_frame.add(val.dataDraw_frame); 
     }
     
     
@@ -2087,8 +2087,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_polygon?draw_polygon&gt;*/
-    public void set_draw_polygon(Draw_polygon val) { 
-      dataDraw_g_A.draw_polygon = val;
+    public void set_draw_polygon(Draw_polygon_Zbnf val) { 
+      dataDraw_g_A.draw_polygon = val.dataDraw_polygon;
     }
     
     
