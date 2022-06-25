@@ -182,9 +182,9 @@ public class XmlJzCfgAnalyzer
     wrCfgXmlNode.setAttribute("data", "xmlinput", "!new_" + structNode.tagIdent + sArg);
     final String setAdd;
     if(structNode.onlySingle) {                 // writes the xmlinput:finish="!set_Tag(data)" to set the data. 
-      setAdd = "set_";
+      setAdd = "!set_";
     } else {
-      setAdd = "add_";
+      setAdd = "!add_";
       wrCfgXmlNode.setAttribute("list", "xmlinput", "");
     }
     wrCfgXmlNode.setAttribute("finish", "xmlinput", setAdd + structNode.tagIdent + "(value)");

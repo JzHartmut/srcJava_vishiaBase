@@ -68,6 +68,9 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2022-06-25: chg: in {@link #storeContent(StringBuilder, org.vishia.xmlReader.XmlCfg.XmlCfgNode, Object, Map[], String[])}:
+   *   the {@link DataAccess#invokeMethod(org.vishia.util.DataAccess.DatapathElement, Class, Object, boolean, Object[], boolean)} 
+   *   was called with true for non exception, that is faulty. To detect writing errors in the xmlcfg file, exceptions are necessary. 
    * <li>2022-06-23: "xmlinput:finish" regarded, see {@link #finishElement(Object, Object, org.vishia.util.DataAccess.DatapathElement)} 
    * <li>2022-06-06: new {@link #setNamespaceEntry(String, String)}
    * <li>2021-12-16 documentation and fine tuning of storeAttrData(..). Now usage of value is not tested. 
@@ -195,17 +198,26 @@ public class XmlJzReader
   public void setDebugStop(int line) {
     this.debugStopLine = line;
   }
-   
+
+  
+  
   public void setDebugStopTag(String stag) {
     this.debugTag = stag;
   }
    
-  public void XXXXreadXmlCfg(File input) {
-    this.cfg = new XmlCfg();
-    //read
-  }
   
-
+  
+  /**Writes the parsed content without processing in this file. 
+   * The writing regards indents for any node, so that a beautification is gotten for the content. 
+   * That is the important application of this functionality.
+   * The call of this operation opens the {@link #xmlTestWriter}.
+   * It is closed on end of JZtxtReader. It means this operation should be called 
+   * immediately before call of {@link #readXml(File, Object)} or also {@link #readCfg(File)}
+   * and all its abbreviations. It should not be called without a read Xml invocation
+   * because otherwise the resource remains open.
+   * @param fout File to write
+   * @throws IOException if open fails
+   */
   public void openXmlTestOut(File fout) throws IOException {
     if(this.xmlTestWriter == null) { this.xmlTestWriter = new XmlSequWriter(); }
     this.xmlTestWriter.open(fout, "UTF-8", null);
@@ -576,12 +588,12 @@ public class XmlJzReader
             inp.seekPos(3); //skip over the "]]>"
           }
           else {
-            parseElement(inp, subOutput, subCfgNode);  //nested element.
+            parseElement(inp, subOutput, subCfgNode);      // nested element.
           }
         } else {
           if(contentBuffer == null && subOutput !=null) { contentBuffer = new StringBuilder(500); }
-          parseContent(inp, contentBuffer);  //add the content between some tags to the content Buffer.
-        }
+          parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
+        }                                                  // call the storeContent(..) operation on end of the node.
       }
       //
       inp.readNextContent(this.sizeBuffer/2);
@@ -597,7 +609,9 @@ public class XmlJzReader
         }
         storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
       }
-      finishElement(output, subOutput, subCfgNode.elementFinishPath);  // "xmlinput:finish"
+      if(subOutput !=null) {
+        finishElement(output, subOutput, subCfgNode.elementFinishPath);  // "xmlinput:finish"
+      }
     } else {
       int[] colmn = new int[1];
       int line = inp.getLineAndColumn(colmn);
@@ -787,7 +801,8 @@ public class XmlJzReader
    * @param elementStorePath rule where to insert: It contains:
    *   <ul>
    *   <li>{@link DataAccess.DatapathElement#ident}  Immediately the name of the variable of operation to call in parent
-   *   <li>Arguments, whereas the argument for finish should be usual "value", which is the [1] element in the immediately argument list
+   *   <li>{@link DataAccess.DatapathElement#args} Arguments, whereas the argument for finish should be usual "value", 
+   *     which is the [1] element in the immediately argument list
    *     for the internal called {@link DataAccess#invokeMethod(org.vishia.util.DataAccess.DatapathElement, Class, Object, boolean, Object[], boolean)} 
    *     for the "varValues".
    *   </ul>  
@@ -929,6 +944,8 @@ public class XmlJzReader
   private static void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) {
     DataAccess.DatapathElement dstPath = cfgNode.contentStorePath;
     if(dstPath !=null) {
+//      if(dstPath.ident().equals("set_text") && output instanceof org.vishia.odg.data.XmlForOdg_Zbnf.Text_span_Zbnf)
+//        Debugutil.stop();
       try{ 
         if(dstPath.isOperation()) {
           //String[] vars = null; 
@@ -942,7 +959,7 @@ public class XmlJzReader
               }
             }
           }
-          DataAccess.invokeMethod(dstPath, null, output, true, attribValues, true);
+          DataAccess.invokeMethod(dstPath, null, output, true, attribValues, false);
           //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
         } else if(buffer !=null) {
           DataAccess.storeValue(dstPath, output, buffer, true);

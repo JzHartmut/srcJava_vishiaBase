@@ -42,7 +42,8 @@ public class XmlForOdg_Zbnf {
     
     /**Set the result. &lt;Office_document_content?office_document_content&gt;*/
     public void set_office_document_content(Office_document_content_Zbnf val) { 
-      dataroot.office_document_content = val.dataOffice_document_content;
+      this.dataXmlForOdg.office_document_content = val.dataOffice_document_content;
+      //dataroot.office_document_content = val.dataOffice_document_content;
     }
     
     
@@ -1186,8 +1187,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_g?draw_g&gt;*/
-    public void set_draw_g(Draw_g_Zbnf val) { 
-      dataDraw_page.draw_g = val.dataDraw_g;
+    public void add_draw_g(Draw_g_Zbnf val) { 
+      if(dataDraw_page.draw_g ==null) { dataDraw_page.draw_g = new LinkedList<Draw_g>(); }
+      dataDraw_page.draw_g.add(val.dataDraw_g);
     }
     
     
@@ -1619,18 +1621,72 @@ public class XmlForOdg_Zbnf {
     public void set_xml_id(String val) { this.dataDraw_g.xml_id = val; }
     
     
-    /**Creates an instance for the result Zbnf . &lt;Draw_g_A?draw_g&gt; for ZBNF data store*/
-    public Draw_g_A_Zbnf new_draw_g() { 
-      Draw_g_A_Zbnf val = new Draw_g_A_Zbnf();
+    /**Creates an instance for the result Zbnf . &lt;Draw_g?draw_g&gt; for ZBNF data store*/
+    public Draw_g_Zbnf new_draw_g() { 
+      return this; //Note: needs the derived Zbnf-Type.
+    }
+    
+    /**Set the result. &lt;Draw_g?draw_g&gt;*/
+    public void set_draw_g(Draw_g_Zbnf val) { 
+    }
+    
+    /**create and add routine for the list component <Draw_frame?draw_frame>. */
+    public Draw_frame_Zbnf new_draw_frame() { 
+      Draw_frame_Zbnf val = new Draw_frame_Zbnf(); 
+      return val; 
+    }
+    
+    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
+    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
+      Draw_frame_Zbnf val = new Draw_frame_Zbnf();
+      val.dataDraw_frame.draw_id = draw_id;
+      val.dataDraw_frame.draw_layer = draw_layer;
+      val.dataDraw_frame.draw_style_name = draw_style_name;
+      val.dataDraw_frame.draw_text_style_name = draw_text_style_name;
+      val.dataDraw_frame.svg_height = svg_height;
+      val.dataDraw_frame.svg_width = svg_width;
+      val.dataDraw_frame.svg_x = svg_x;
+      val.dataDraw_frame.svg_y = svg_y;
+      val.dataDraw_frame.xml_id = xml_id;
+      //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
-    /**Set the result. &lt;Draw_g_A?draw_g&gt;*/
-    public void set_draw_g(Draw_g_A_Zbnf val) { 
-      dataDraw_g.draw_g = val.dataDraw_g_A;
+    /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
+    public void add_draw_frame(Draw_frame_Zbnf val) {
+      if(dataDraw_g.draw_frame==null) { dataDraw_g.draw_frame = new LinkedList<XmlForOdg.Draw_frame>(); }
+      dataDraw_g.draw_frame.add(val.dataDraw_frame); 
     }
     
     
+    /**Creates an instance for the result Zbnf  (not Xml) . &lt;Draw_polygon?draw_polygon&gt; for ZBNF data store*/
+    public Draw_polygon_Zbnf new_draw_polygon() { 
+      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
+      return val; //Note: needs the derived Zbnf-Type.
+    }
+    
+    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_polygon?draw_polygon&gt;  */
+    public Draw_polygon_Zbnf new_draw_polygon(String draw_layer, String draw_points, String draw_style_name, String draw_text_style_name, String svg_height, String svg_viewBox, String svg_width, String svg_x, String svg_y ) { 
+      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
+      val.dataDraw_polygon.draw_layer = draw_layer;
+      val.dataDraw_polygon.draw_points = draw_points;
+      val.dataDraw_polygon.draw_style_name = draw_style_name;
+      val.dataDraw_polygon.draw_text_style_name = draw_text_style_name;
+      val.dataDraw_polygon.svg_height = svg_height;
+      val.dataDraw_polygon.svg_viewBox = svg_viewBox;
+      val.dataDraw_polygon.svg_width = svg_width;
+      val.dataDraw_polygon.svg_x = svg_x;
+      val.dataDraw_polygon.svg_y = svg_y;
+      //
+      return val; //Note: needs the derived Zbnf-Type.
+    }
+    
+    /**Set the result. &lt;Draw_polygon?draw_polygon&gt;*/
+    public void set_draw_polygon(Draw_polygon_Zbnf val) { 
+      dataDraw_g.draw_polygon = val.dataDraw_polygon;
+    }
+    
+
   
   }
 
@@ -1948,7 +2004,9 @@ public class XmlForOdg_Zbnf {
       dataText_p.text_span = val.dataText_span;
     }
     
-    
+    /**Set routine for the singular component &lt;String?text_p>. */
+    public void set_text(String val) { this.dataText_p.text_s = val; }
+
   
   }
 
@@ -2007,93 +2065,6 @@ public class XmlForOdg_Zbnf {
 
 
 
-
-  /**Class for Writing the Component Draw_g_A.*/
-  public static class Draw_g_A_Zbnf implements SetLineColumn_ifc {
-    /**Referenced working instance will be filled.*/
-    final XmlForOdg.Draw_g_A dataDraw_g_A;
-    
-    /**Default ctor for non-inherit instance. */
-    public Draw_g_A_Zbnf ( ) {
-      this.dataDraw_g_A = new XmlForOdg.Draw_g_A();
-    }
-    
-    /**ctor called as super ctor possible, not in any case for a inherited instance. */
-    public Draw_g_A_Zbnf ( XmlForOdg.Draw_g_A data) {
-            this.dataDraw_g_A = data;
-    }
-    
-    @Override public int setLineColumnFileMode ( ) {
-      return SetLineColumn_ifc.mLine + SetLineColumn_ifc.mColumn + SetLineColumn_ifc.mFile; }
-    
-    @Override public void setLineColumnFile ( int line, int column, String sFile) { 
-      this.dataDraw_g_A._srcLine_ = line; 
-      this.dataDraw_g_A._srcColumn_ = column; 
-      this.dataDraw_g_A._srcFile_ = sFile; 
-    }
-  
-  
-  
-  
-    /**create and add routine for the list component <Draw_frame?draw_frame>. */
-    public Draw_frame_Zbnf new_draw_frame() { 
-      Draw_frame_Zbnf val = new Draw_frame_Zbnf(); 
-      return val; 
-    }
-    
-    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
-    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
-      Draw_frame_Zbnf val = new Draw_frame_Zbnf();
-      val.dataDraw_frame.draw_id = draw_id;
-      val.dataDraw_frame.draw_layer = draw_layer;
-      val.dataDraw_frame.draw_style_name = draw_style_name;
-      val.dataDraw_frame.draw_text_style_name = draw_text_style_name;
-      val.dataDraw_frame.svg_height = svg_height;
-      val.dataDraw_frame.svg_width = svg_width;
-      val.dataDraw_frame.svg_x = svg_x;
-      val.dataDraw_frame.svg_y = svg_y;
-      val.dataDraw_frame.xml_id = xml_id;
-      //
-      return val; //Note: needs the derived Zbnf-Type.
-    }
-    
-    /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
-    public void add_draw_frame(Draw_frame_Zbnf val) {
-      if(dataDraw_g_A.draw_frame==null) { dataDraw_g_A.draw_frame = new LinkedList<XmlForOdg.Draw_frame>(); }
-      dataDraw_g_A.draw_frame.add(val.dataDraw_frame); 
-    }
-    
-    
-    /**Creates an instance for the result Zbnf  (not Xml) . &lt;Draw_polygon?draw_polygon&gt; for ZBNF data store*/
-    public Draw_polygon_Zbnf new_draw_polygon() { 
-      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
-      return val; //Note: needs the derived Zbnf-Type.
-    }
-    
-    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_polygon?draw_polygon&gt;  */
-    public Draw_polygon_Zbnf new_draw_polygon(String draw_layer, String draw_points, String draw_style_name, String draw_text_style_name, String svg_height, String svg_viewBox, String svg_width, String svg_x, String svg_y ) { 
-      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
-      val.dataDraw_polygon.draw_layer = draw_layer;
-      val.dataDraw_polygon.draw_points = draw_points;
-      val.dataDraw_polygon.draw_style_name = draw_style_name;
-      val.dataDraw_polygon.draw_text_style_name = draw_text_style_name;
-      val.dataDraw_polygon.svg_height = svg_height;
-      val.dataDraw_polygon.svg_viewBox = svg_viewBox;
-      val.dataDraw_polygon.svg_width = svg_width;
-      val.dataDraw_polygon.svg_x = svg_x;
-      val.dataDraw_polygon.svg_y = svg_y;
-      //
-      return val; //Note: needs the derived Zbnf-Type.
-    }
-    
-    /**Set the result. &lt;Draw_polygon?draw_polygon&gt;*/
-    public void set_draw_polygon(Draw_polygon_Zbnf val) { 
-      dataDraw_g_A.draw_polygon = val.dataDraw_polygon;
-    }
-    
-    
-  
-  }
 
 
 
@@ -2222,7 +2193,7 @@ public class XmlForOdg_Zbnf {
     /**Set routine for the singular component &lt;String?text_style_name>. */
     public void set_text_style_name(String val) { this.dataText_span.text_style_name = val; }
     
-    
+    public void set_text(String val) { this.dataText_span.text = val; }
   
   }
 

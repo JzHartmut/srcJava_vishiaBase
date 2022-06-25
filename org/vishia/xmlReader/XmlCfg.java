@@ -83,6 +83,9 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2022-06-25 new: {@link #newCfgCfg()} also setContentStorePath(...) for the xmlinput:subtree node itself. 
+   *   it is a special case, hence first not regarded, but possible and necessary.
+   *   Some sorting and comments there. 
    * <li>2022-06-06 new: regards "xmlinput:finish" for a set operation. It is now the same concept as for ZbnfData:
    *   <ul>
    *   <li>The "xmlinput:data" delivers the data storage, but need not insert the data storage for this element in the whole data tree.
@@ -158,28 +161,26 @@ public class XmlCfg
    */
   static XmlCfg newCfgCfg()
   { XmlCfg cfgCfg = new XmlCfg();
-    cfgCfg.rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, null);  //The rootnode of the cfg is only formalistic.
-    
-    XmlCfg.XmlCfgNode rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:root");  //<xmlinput:cfg as node 2. level
-    cfgCfg.rootNode.addSubnode(rootNode.tag.toString(), rootNode);        //The cfg file should start with a <xmlinput:root
-    //because nodes.setNewElementPath(...) is not set, the same rootNode acts as cfg for the 2. level. 
-    //It is possible to add <xmlinput:root...> as 2. level, but it is not do so
-    
-    XmlCfg.XmlCfgNode cfgNode = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:cfg");  //<xmlinput:cfg as node 2. level
-    rootNode.addSubnode(cfgNode.tag.toString(), cfgNode);    //2. level add to root node too.
-    
-    //The next XmlCfgNode is used for all subnodes of the <xmlinput.cfg...
-    XmlCfg.XmlCfgNode nodes = new XmlCfg.XmlCfgNode(null, cfgCfg, null); //Any unspecific nodes.
-    cfgNode.addSubnode("?", nodes);    //2. level add to root node too.
-    nodes.addSubnode("?", nodes);
-    
-    
-//    cfgNode.subNodeUnspec = nodes; //it is set to use for all nodes with 
-//    nodes.subNodeUnspec = nodes;  //recursively, all children are unspec.
-    
     try {
+      cfgCfg.rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, null);  //The rootnode of the cfg is only formalistic.
+      
+      XmlCfg.XmlCfgNode rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:root");  //<xmlinput:cfg as node 2. level
+      cfgCfg.rootNode.addSubnode(rootNode.tag.toString(), rootNode);        //The cfg file should start with a <xmlinput:root
+      //because nodes.setNewElementPath(...) is not set, the same rootNode acts as cfg for the 2. level. 
+      //It is possible to add <xmlinput:root...> as 2. level, but it is not do so
+      
+      XmlCfg.XmlCfgNode cfgNode = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:cfg");  //<xmlinput:cfg as node 2. level
+      rootNode.addSubnode(cfgNode.tag.toString(), cfgNode);    //2. level add to root node too.
+      
+      //------------------------------------------------   The next XmlCfgNode is used for all subnodes of the <xmlinput.cfg...
+      XmlCfg.XmlCfgNode nodes = new XmlCfg.XmlCfgNode(null, cfgCfg, null); //Any unspecific nodes.
+      cfgNode.addSubnode("?", nodes);    //2. level add to root node too.
+      nodes.addSubnode("?", nodes);
+      //If the XmlJzReader detects a node with this given tag, 
+      //it creates an instance to store the config via addSubTree
       nodes.setNewElementPath("!newElement(tag)");
-      //if the attribute xmlinput:data is read in the input config.xml, then its values should be used to set the datapath for the element.
+      //if the attribute xmlinput:data is read in the input config.xml, 
+      //then its values should be used to set the datapath for the element.
       //It is done via invocation of setNewElementPath(...) on the output config.
       nodes.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
       nodes.addAttribStorePath("xmlinput:finish", "!setFinishElementPath(value)");  
@@ -189,25 +190,33 @@ public class XmlCfg
       StringPartScan spAttribStorePath = new StringPartScan("addAttribStorePath(name, value)");
       nodes.attribsUnspec = new DataAccess.DatapathElement(spAttribStorePath, nodes.allArgNames, null);  //use addAttributeStorePath in the dst node to add.
       
-      //Nodes for the config-subtree
+      //------------------------------------------------   Nodes for the config-subtree
+      //If the XmlJzReader detects a node with this given tag, 
+      //it uses the following config and store rules.
       XmlCfg.XmlCfgNode nodeSub = new XmlCfg.XmlCfgNode(null, cfgCfg, "xmlinput:subtree");
       rootNode.addSubnode(nodeSub.tag.toString(), nodeSub);
-      //nodeSub.attribsForCheck = new IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); 
-      //AttribDstCheck checkName = new AttribDstCheck(true);
-      //nodeSub.attribsForCheck.put("name", checkName);
-      nodeSub.addAttribStorePath("xmlinput:name", "!@subtreename");  //This attribute value should be used to store locally in name.
-      nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");  //This attribute value should be used to store locally in name.
-      nodeSub.addAttribStorePath("xmlinput:list", "!setList()");  
-      nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
-      nodeSub.addAttribStorePath("xmlinput:finish", "!setFinishElementPath(value)");  
+      //Below this subtree top node the normal cfg nodes should be used.
+      nodeSub.addSubnode("?", nodes);
+      nodeSub.setContentStorePath("!setContentStorePath(text)");  //also the storeContent should be regarded.
+      //If the XmlJzReader detects an attribute with this name, 
+      //it stores the content as argument subtreename used see next.
+      nodeSub.addAttribStorePath("xmlinput:name", "!@subtreename");
+      //If the XmlJzReader detects a node with this given tag, 
+      //it creates an instance to store the config via addSubTree
       nodeSub.setNewElementPath("!addSubTree(subtreename)");
+      //... and it calls this given finish operation on end.
+      nodeSub.addAttribStorePath("xmlinput:finish", "!setFinishElementPath(value)");  
+      //If the XmlJzReader detects an attribute with this name, 
+      //it stores the content in this designated field of the new cfg node.
+      nodeSub.addAttribStorePath("xmlinput:class", "!dstClassName");
+      //If the XmlJzReader detects an attribute with this name, 
+      //it calls the setNewElementPath operation for the given cfg.xml element. 
+      nodeSub.addAttribStorePath("xmlinput:data", "!setNewElementPath(value)");  
+      nodeSub.addAttribStorePath("xmlinput:list", "!setList()");  
       spAttribStorePath.assign("addAttribStorePath(name, value)");
       nodeSub.attribsUnspec = new DataAccess.DatapathElement(spAttribStorePath, nodes.allArgNames, null);  //use addAttributeStorePath in the dst node to add.
-      nodeSub.addSubnode("?", nodes);
-  //    nodeSub.subNodeUnspec = nodes;  //recursively, all children are unspec.
-      //nodeSub.addAttribStorePath("xmlinput:data", "!addSubTree(name)");  //This attribute should be used to set the datapath for this element.
     }
-    catch(ParseException exc) {
+    catch(ParseException exc) {          // addAttribStorePath may invoke this exception but only in fatal error cases.
       throw new RuntimeException(exc); //it is unexpected
     }
     return cfgCfg;
@@ -225,9 +234,11 @@ public class XmlCfg
   XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
   {
     String sname = name.toString();
+//    if(sname.equals("text:span"))
+//      Debugutil.stop();
     XmlCfgNode subtreeRoot = new XmlCfgNode(null, this, name); //The root for a subtree configuration structure.
-    if(subtrees == null) { subtrees = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(/*IndexMultiTable.providerString*/); }
-    subtrees.put(sname, subtreeRoot);  //config-global types of subtrees
+    if(this.subtrees == null) { this.subtrees = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(/*IndexMultiTable.providerString*/); }
+    this.subtrees.put(sname, subtreeRoot);  //config-global types of subtrees
     return subtreeRoot;
   }
   
@@ -294,6 +305,9 @@ public class XmlCfg
       this.name = name;
       this.bUseForCheck = bUseForCheck;
     }
+    
+    
+    @Override public String toString() { return this.name; }
     
   } //class
   
@@ -623,7 +637,7 @@ public class XmlCfg
         }                                                  // without the special handling an infinite recursively is forced.
       }
       return this.tag + (this.attribs != null ? " attr:" + this.attribs.toString():"") 
-      + (this.subnodes !=null ? " nodes:" + this.subnodes.toString() : ""); 
+      + (this.subnodes !=null ? " nodes...:" /*+ this.subnodes.toString()*/ : ""); 
     }
     
   

@@ -930,7 +930,7 @@ public class XmlForOdg_Base extends SrcInfo {
     
     
     
-    protected Draw_g draw_g;
+    protected List<Draw_g> draw_g;
     
     
     
@@ -989,7 +989,7 @@ public class XmlForOdg_Base extends SrcInfo {
     
     
     /**Access to parse result.*/
-    public Draw_g get_draw_g() { return draw_g; }
+    public Iterable<Draw_g> get_draw_g() { return draw_g; }
     
     
     
@@ -1445,10 +1445,29 @@ public class XmlForOdg_Base extends SrcInfo {
     protected String xml_id;
     
     
+    protected List<Draw_frame> draw_frame;
     
-    protected Draw_g_A draw_g;
     
     
+    protected Draw_polygon draw_polygon;
+    
+    
+    
+    
+    /**Access to parse result, get the elements of the container draw_frame*/
+    public Iterable<Draw_frame> get_draw_frame() { return draw_frame; }
+    
+    /**Access to parse result, get the size of the container draw_frame.*/
+    public int getSize_draw_frame() { return draw_frame ==null ? 0 : draw_frame.size(); }
+    
+    
+    
+    
+    /**Access to parse result.*/
+    public Draw_polygon get_draw_polygon() { return draw_polygon; }
+    
+    
+
     
     
     /**Access to parse result.*/
@@ -1462,9 +1481,6 @@ public class XmlForOdg_Base extends SrcInfo {
     
     
     
-    
-    /**Access to parse result.*/
-    public Draw_g_A get_draw_g() { return draw_g; }
     
     
   
@@ -1856,35 +1872,6 @@ public class XmlForOdg_Base extends SrcInfo {
 
 
 
-  /**Class for Component Draw_g_A. */
-  public static class Draw_g_A_Base extends SrcInfo {
-  
-  
-    
-    protected List<Draw_frame> draw_frame;
-    
-    
-    
-    protected Draw_polygon draw_polygon;
-    
-    
-    
-    
-    /**Access to parse result, get the elements of the container draw_frame*/
-    public Iterable<Draw_frame> get_draw_frame() { return draw_frame; }
-    
-    /**Access to parse result, get the size of the container draw_frame.*/
-    public int getSize_draw_frame() { return draw_frame ==null ? 0 : draw_frame.size(); }
-    
-    
-    
-    
-    /**Access to parse result.*/
-    public Draw_polygon get_draw_polygon() { return draw_polygon; }
-    
-    
-  
-  }
 
 
 
@@ -1987,10 +1974,14 @@ public class XmlForOdg_Base extends SrcInfo {
     protected String text_style_name;
     
     
-    
+    protected String text;
     
     /**Access to parse result.*/
     public String get_text_style_name() { return text_style_name; }
+    
+    
+    /**Access to parse result.*/
+    public String get_text() { return text; }
     
     
   

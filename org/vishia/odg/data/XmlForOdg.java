@@ -1,5 +1,12 @@
 package org.vishia.odg.data;
 
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.vishia.odg.data.XmlForOdg.Draw_frame;
+import org.vishia.odg.data.XmlForOdg.Draw_polygon;
+
 //import java.util.LinkedList;
 //import java.util.List;
 
@@ -31,13 +38,23 @@ public class XmlForOdg extends XmlForOdg_Base {
   public static class Office_automatic_styles extends XmlForOdg_Base.Office_automatic_styles_Base {
   
   
-  
+    public Map<String, String> idxStyle = new TreeMap<String, String>();
   
   
     @Override public String toString ( ) { 
-      return "TODO toString";
+      return "contains all dedicated styles see idxStyle";
     }
   
+    
+    public void prepStyles() {
+      for(Style_style style: super.style_style) {
+        this.idxStyle.put(style.style_name, style.style_parent_style_name);
+      }
+    }
+    
+    
+    
+    
   }
 
 
@@ -83,7 +100,7 @@ public class XmlForOdg extends XmlForOdg_Base {
   
   
     @Override public String toString ( ) { 
-      return "TODO toString";
+      return super.style_name + ":" + super.style_parent_style_name;
     }
   
   }
@@ -303,7 +320,7 @@ public class XmlForOdg extends XmlForOdg_Base {
   public static class Draw_g extends XmlForOdg_Base.Draw_g_Base {
   
   
-  
+
   
   
     @Override public String toString ( ) { 
@@ -395,18 +412,6 @@ public class XmlForOdg extends XmlForOdg_Base {
 
 
 
-  /**Class for Writing the Component Draw_g_A.*/
-  public static class Draw_g_A extends XmlForOdg_Base.Draw_g_A_Base {
-  
-  
-  
-  
-  
-    @Override public String toString ( ) { 
-      return "TODO toString";
-    }
-  
-  }
 
 
 
@@ -451,7 +456,7 @@ public class XmlForOdg extends XmlForOdg_Base {
   
   
     @Override public String toString ( ) { 
-      return "TODO toString";
+      return super.text;
     }
   
   }
