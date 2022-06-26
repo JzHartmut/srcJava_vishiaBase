@@ -1,11 +1,14 @@
 package org.vishia.odg.data;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.odg.data.XmlForOdg.Draw_frame;
-import org.vishia.odg.data.XmlForOdg.Draw_polygon;
+import org.vishia.util.DataAccess;
+import org.vishia.xmlReader.XmlJzReader;
+import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
+
 
 //import java.util.LinkedList;
 //import java.util.List;
@@ -15,9 +18,512 @@ import org.vishia.odg.data.XmlForOdg.Draw_polygon;
  * This usage classes can be adapted. */
 public class XmlForOdg extends XmlForOdg_Base {
 
+  
+  /**Version, License and History: See {@link XmlJzReader}.
+   * <ul>
+   * <li>2022-06-26 new: elaborate content for evaluation. 
+   * <li>2022-06-06 Creation originally via generation.
+   *  
+   * 
+   * <li>2017-06 created.
+   * </ul>
+    * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String version = "2022-06-26";
 
 
+  public Map<String, String> idxStyle;
 
+  //public final List<Module> listModule = new LinkedList<Module>();
+  
+  public final List<Connection> listConnection = new LinkedList<Connection>();
+  
+  /**This is only to detect twice same modules, contains only named modules. */
+  private final Map<String, Module> idxModuleByName = new TreeMap<String, Module>();
+  
+  /**This are the sorted modules for comparable report alternatively to the {@link #listModule}. */
+  public final Map<String, Module> idxAllModule = new TreeMap<String, Module>();
+  
+  
+  
+  public final Map<String, Port> idxPortById = new TreeMap<String, Port>();
+  
+  public final Map<String, XrefConn> idxXrefById = new TreeMap<String, XrefConn>();
+  
+  /**Points on a connection line acts similar as Xref, only they have more as one connection and no name. */
+  //public final Map<String, XrefConn> idxConnLineById = new TreeMap<String, XrefConn>();
+  
+  public final Map<String, XrefConn> idxXrefByName = new TreeMap<String, XrefConn>();
+  
+  public void prepareData ( ) {
+    XmlForOdg.Office_document_content doc = this.get_office_document_content();
+    XmlForOdg.Office_body body = doc.get_office_body();
+    XmlForOdg.Office_automatic_styles styles = doc.get_office_automatic_styles();
+    this.idxStyle = styles.prepStyles();
+    XmlForOdg.Office_drawing drawing = body.get_office_drawing();
+    
+    for(XmlForOdg.Draw_page page : drawing.get_draw_page()) {
+      for(XmlForOdg.Draw_g group:  page.get_draw_g()) {      // general: a module is inside a group
+        System.out.println("== group");
+        Module mdl = Module.gatherInternals(group, this);
+        this.idxAllModule.put(mdl.name(), mdl);
+        //this.listModule.add(mdl);
+        
+    } }
+    for(XmlForOdg.Draw_page page : drawing.get_draw_page()) {
+      for(XmlForOdg.Draw_custom_shape xrefConn:  page.get_draw_custom_shape()) {      // general: a module is inside a group
+        prepareXrefConn(xrefConn);
+    } }
+    for(XmlForOdg.Draw_page page : drawing.get_draw_page()) {
+      for(XmlForOdg.Draw_connector con:  page.get_draw_connector()) {      // general: a module is inside a group
+        prepareConnection(con);
+    } }
+    fulfillXref();
+  }
+
+  
+  private void prepareXrefConn ( Draw_custom_shape xref ) {
+    String drawStyle = xref.draw_style_name;
+    String drawStyleParent = this.idxStyle.get(drawStyle);
+    String id = xref.draw_id;
+    String name = xref.getText();
+    if(drawStyleParent.equals("xref")) { 
+      if( id !=null && name !=null) {
+        char[] spec = new char[2];
+        name = detectFuncSpec(name, spec);
+        XrefConn xrefConn = this.idxXrefByName.get(name);
+        if(xrefConn==null) {
+          xrefConn = new XrefConn(name, id);
+          this.idxXrefByName.put(name, xrefConn);  
+        }
+        this.idxXrefById.put(id, xrefConn);
+      } else {
+        System.err.println("xref id or name missing");
+      }
+    } else if(drawStyleParent.equals("oodgConnLine")) { 
+      XrefConn connLine = this.idxXrefById.get(id);
+      if(connLine == null) {
+        connLine = new XrefConn(null, id);
+        this.idxXrefById.put(id, connLine);
+      } else {
+        assert(false);  //should be defined only ones.
+      }
+    } else {
+      System.err.println("shape not recognized");
+    }
+  }
+  
+  
+  private static String detectFuncSpec(String name, char[] spec) {
+    final String name1;
+    int posDir = name.indexOf('<');
+    if(posDir <0) { posDir = name.indexOf('>'); }
+    if(posDir >=0) {
+      final int ixSpec;
+      if(posDir < 2) {
+        ixSpec = 0;
+        name1 = name.substring(posDir+1).trim();
+      } else {
+        ixSpec = 1;
+        name1 = name.substring(0,posDir).trim();
+      }
+      if(spec !=null) { 
+        spec[ixSpec] = name.charAt(posDir);
+        spec[(ixSpec + 1) & 1] = '\0';  //0 for 1, 1 for 0
+      }
+    } else {
+      name1 = name.trim();
+      if(spec !=null) { spec[0] = spec[1] = '\0'; }
+    }
+    return name1;
+  }
+  
+  private void prepareConnection(Draw_connector con) {
+    String style = con.get_draw_style_name();
+    String start = con.get_draw_start_shape();
+    String startpoint = con.get_draw_start_glue_point();
+    String end = con.get_draw_end_shape();
+    String endpoint = con.get_draw_end_glue_point();
+    String id = con.get_svg_d();
+    XrefConn xrefStart = this.idxXrefById.get(start);
+    Port portStart = null;
+    if(xrefStart ==null) {
+      portStart = this.idxPortById.get(start);
+    }
+    Port portEnd = null; 
+    XrefConn xrefEnd = this.idxXrefById.get(end);
+    if(xrefEnd == null) {
+      portEnd = this.idxPortById.get(end);
+    }
+    if(portStart !=null && portStart.kind == Port.Kind.src && xrefEnd !=null) {
+      xrefEnd.setSrc(portStart);
+    }
+    if(portEnd !=null && portEnd.kind == Port.Kind.src && xrefStart !=null) {
+      xrefStart.setSrc(portEnd);
+    }
+    Connection conn = new Connection("name", id, portStart, xrefStart, portEnd, xrefEnd);
+    this.listConnection.add(conn);
+    System.out.println("  " + conn.toString());
+    
+  }
+  
+  
+  private void fulfillXref ( ) {
+    for(Map.Entry<String, XrefConn> exref : this.idxXrefByName.entrySet()) {
+      XrefConn xref = exref.getValue();
+      if(xref.src == null) {
+        System.err.println("Xref has no source: " + xref.name);
+      }
+    }
+    
+    for(Connection conn : this.listConnection) {
+      if(conn.portStart == null) {
+        if(conn.xrefStart == null) {
+          System.err.println("dangling connection");
+        } else {
+          conn.portStart = conn.xrefStart.src;
+        }
+      }
+      if(conn.portEnd == null) {
+        if(conn.xrefEnd == null) {
+          System.err.println("dangling connection");
+        } else {
+          conn.portEnd = conn.xrefEnd.src;
+        }
+      }
+      if(conn.portStart !=null && conn.portStart.kind == Port.Kind.aggr) {
+        Module mdlStart = conn.portStart.mdl;
+        mdlStart.aggregations.add(conn);
+      }
+      if(conn.portEnd !=null && conn.portEnd.kind == Port.Kind.aggr) {
+        Module mdl = conn.portEnd.mdl;
+        mdl.aggregations.add(conn);
+      }
+      if(conn.portStart !=null && conn.portStart.kind == Port.Kind.src) {
+        Module mdlStart = conn.portStart.mdl;
+        mdlStart.aggrSrcs.add(conn);
+      }
+      if(conn.portEnd !=null && conn.portEnd.kind == Port.Kind.src) {
+        Module mdl = conn.portEnd.mdl;
+        mdl.aggrSrcs.add(conn);
+      }
+      
+    }
+  }
+  
+  
+  
+  private void errorMsg(String msg, String ...params ) {
+    System.err.append(msg);
+    for(String param: params) {
+      System.err.append(", ").append(param);
+    }
+    System.err.append('\n');
+  }
+  
+  
+  
+  /**This is a module detected in office draw.
+   *
+   */
+  public static class Module {
+    public String typeName;
+    
+    private String name;
+    
+    public String id;
+    
+    public Map<String, Port> idxAggr = new TreeMap<String, Port>();
+    public Map<String, Port> idxInp = new TreeMap<String, Port>();
+    public Map<String, Port> idxSrc = new TreeMap<String, Port>();
+  
+    public List<Connection> aggregations = new LinkedList<Connection>();
+    
+    public List<Connection> aggrSrcs = new LinkedList<Connection>();
+    
+     
+    Module ( ) {
+    }
+    
+    public String name() { 
+      if(this.name !=null && this.name.length() >0) return this.name;
+      else return this.typeName;
+    }
+    
+    public static Module gatherInternals ( Draw_g group, XmlForOdg odg) {
+      Module mdl = new Module();
+      for(XmlForOdg.Draw_frame textFrame: group.get_draw_frame()) {
+        String text = null;
+        String drawStyle = textFrame.get_draw_style_name();
+        String drawTextStyle = textFrame.get_draw_text_style_name();
+        String id = textFrame.get_draw_id();
+        String posId = textFrame.get_svg_x() + textFrame.get_svg_y();
+        String drawStyleParent = odg.idxStyle.get(drawStyle);
+        //String drawTextStyleParent = odg.idxStyle.get(drawTextStyle);
+        
+        XmlForOdg.Text_p textp = textFrame.get_draw_text_box().get_text_p();
+        if(textp !=null) {
+          XmlForOdg.Text_span textspan = textp.get_text_span();
+          if(textspan !=null) {
+            text = textspan.get_text();
+          } else {
+            text = textp.get_text_s();
+//            System.out.println("text:frame without text:span");
+          }
+        }
+        if(drawStyleParent.equals("oodg-mdlTitle")) {
+          if(mdl.typeName !=null && ! mdl.typeName.equals(text)) {
+            odg.errorMsg("faulty type on second module", mdl.name, text);
+          }
+          mdl.typeName = text;
+          mdl.id = id;
+        } else if(drawStyleParent.equals("oodgName")) {
+          mdl.name = text;
+          mdl = checkTwiceSameModules(mdl, odg);
+         
+        } else if(drawStyleParent.startsWith("oodgPort") || drawStyleParent.startsWith("port")) {
+          char[] spec = new char[2];
+          String determ = detectFuncSpec(text, spec);
+          int posSep = determ.indexOf(':');
+          final String name, type;
+          if(posSep >=0) {
+            name = determ.substring(0, posSep).trim();
+            type = determ.substring(posSep+1).trim();
+          } else {
+            type = determ.trim();
+            name = null;
+          }
+          if(id == null) { id = posId; }
+          Port port = new Port(mdl, name, type, id, spec);
+          odg.idxPortById.put(id, port);
+          if(port.kind == Port.Kind.aggr) {
+            mdl.idxAggr.put(port.key, port);
+          } else if(port.kind == Port.Kind.inp) {
+            mdl.idxInp.put(port.key, port);
+          } else {
+            assert(port.kind == Port.Kind.src);
+            mdl.idxSrc.put(port.key, port);
+          }
+        } else {
+          odg.errorMsg("faulty format: ", text, drawStyleParent);
+        }
+      }
+      System.out.println(mdl);
+      return mdl;
+    } //gatherInternals
+    
+    
+    
+    private static Module checkTwiceSameModules(Module mdl, XmlForOdg odg) {
+      Module mdl2 = odg.idxModuleByName.get(mdl.name);
+      if(mdl2 !=null) {                                // module with same name also existing, merge the data:
+        if(mdl.typeName !=null && !mdl2.typeName.equals(mdl.typeName)) {
+          odg.errorMsg("Module with same name but different type", mdl.name, mdl.typeName);
+          return mdl;
+        } else {
+          for(Map.Entry<String, Port> e : mdl.idxAggr.entrySet()) {
+            Port port = e.getValue();
+            Port port2 = mdl2.idxAggr.get(port.key);
+            if(port2 !=null) {                         // same port is already existing
+              odg.idxPortById.put(port.id, port2);     // Store the always existing Port with the given Id with the existing Port
+            } else {
+              mdl2.idxAggr.put(port.key, port);        // Store the here new regognized port
+            }
+          }
+          for(Map.Entry<String, Port> e : mdl.idxInp.entrySet()) {
+            Port port = e.getValue();
+            Port port2 = mdl2.idxInp.get(port.key);
+            if(port2 !=null) {                         // same port is already existing
+              odg.idxPortById.put(port.id, port2);     // Store the always existing Port with the given Id with the existing Port
+            } else {
+              mdl2.idxInp.put(port.key, port);        // Store the here new regognized port
+            }
+          }
+          for(Map.Entry<String, Port> e : mdl.idxSrc.entrySet()) {
+            Port port = e.getValue();
+            Port port2 = mdl2.idxSrc.get(port.key);
+            if(port2 !=null) {                         // same port is already existing
+              odg.idxPortById.put(port.id, port2);         // replace the already stored Port with the given Id with the used Port
+            } else {
+              mdl2.idxSrc.put(port.key, port);        // Store the here new regognized port
+            }
+          }
+          return mdl2;
+        }
+      } else {
+        odg.idxModuleByName.put(mdl.name, mdl);
+        return mdl;
+      }
+    }
+    
+    
+  
+    public CharSequence showMdlAggregations ( ) {
+      StringBuilder out = new StringBuilder(1000);
+      out.append("\n== Module ").append(this.name()).append('\n');
+      for(Map.Entry<String, Port> einp: this.idxAggr.entrySet()) {
+        out.append("  < ").append(einp.toString()).append('\n');
+      }
+      for(Map.Entry<String, Port> einp: this.idxInp.entrySet()) {
+        out.append("  > ").append(einp.toString()).append("\n");
+      }
+      for(Map.Entry<String, Port> einp: this.idxSrc.entrySet()) {
+        out.append("  = ").append(einp.toString()).append("\n");
+      }
+      for(Connection aggr: this.aggregations) {
+        out.append("  aggr: ").append(aggr).append("\n");
+      }
+      for(Connection aggr: this.aggrSrcs) {
+        out.append("  aggrSrc: ").append(aggr).append("\n");
+      }
+      return out;
+    }
+    
+    
+    
+    @Override public String toString() {
+      return (this.name !=null ? name : "") + " : " + this.typeName;
+    }
+    
+  } //Module
+  
+  
+  /**One port on a module.
+   *
+   */
+  public static class Port {
+    
+    enum Kind { aggr, src, inp };
+    
+    public final Module mdl;
+    
+    public final String name, typeName, key;
+    
+    public final String id;
+
+    public final Kind kind;
+    
+    public Port(Module mdl, String name, String typeName, String id, char[] spec) {
+      if(spec[0] == '<' || spec[1] == '>') { this.kind = Kind.aggr; }
+      else if(spec[0] == '>' || spec[1] == '<') { this.kind = Kind.inp; }
+      else { this.kind = Kind.src; }
+      this.mdl = mdl;
+      this.name = name;
+      this.typeName = typeName;
+      this.id = id;
+      this.key = name !=null && name.length() >0 ? name: typeName;
+      
+    }
+    
+    @Override public String toString() {
+      return this.mdl.name() + "." + this.name + "(" + this.id + ")";
+    }
+    
+    public String info ( ) { return this.mdl.name() + "." + this.key; }
+    
+  }
+
+  
+  
+  public static class XrefConn {
+    
+    public final String id;
+    
+    public final String name;
+    
+    private Port src;
+    
+    
+    
+    public XrefConn(String name, String id) {
+      this.id = id;
+      this.name = name;
+    }
+    
+    
+    void setSrc(Port src) { this.src = src; }
+    
+    public Port src() { return this.src; }
+    
+  }
+  
+  
+  
+  /**
+   * @author hartmut
+   *
+   */
+  public static class Connection {
+    
+    public Port portStart, portEnd;
+    
+    final XrefConn xrefStart, xrefEnd;
+    
+    public String name;
+    
+    public String id;
+
+    public Connection(String name, String id
+        , Port portStart, XrefConn xrefStart
+        , Port portEnd, XrefConn xrefEnd
+        ) {
+      super();
+      this.portStart = portStart;
+      this.portEnd = portEnd;
+      this.xrefStart = xrefStart;
+      this.xrefEnd = xrefEnd;
+      this.name = name;
+      this.id = id;
+    }
+
+
+    @Override public String toString() {
+      return "connection" + " " + this.name + " " 
+          + (this.portStart !=null ? this.portStart.info() : "??") + "-->" 
+          + (this.portEnd !=null ? this.portEnd.info() : "??")
+          + " (" + this.id + ")"
+          ;
+    }
+    
+    
+  }
+
+
+  public interface TextNode {
+    
+    String getText();
+    
+    public static String getText(TextNode node) {
+      String text = null;
+      return text;
+    }
+  }
+  
+  
+  
   /**Class for Writing the Component Office_document_content.*/
   public static class Office_document_content extends XmlForOdg_Base.Office_document_content_Base {
   
@@ -38,18 +544,18 @@ public class XmlForOdg extends XmlForOdg_Base {
   public static class Office_automatic_styles extends XmlForOdg_Base.Office_automatic_styles_Base {
   
   
-    public Map<String, String> idxStyle = new TreeMap<String, String>();
-  
   
     @Override public String toString ( ) { 
       return "contains all dedicated styles see idxStyle";
     }
   
     
-    public void prepStyles() {
+    public Map<String, String> prepStyles() {
+      Map<String, String> idxStyle = new TreeMap<String, String>();
       for(Style_style style: super.style_style) {
-        this.idxStyle.put(style.style_name, style.style_parent_style_name);
+        idxStyle.put(style.style_name, style.style_parent_style_name);
       }
+      return idxStyle;
     }
     
     
@@ -285,7 +791,7 @@ public class XmlForOdg extends XmlForOdg_Base {
 
 
   /**Class for Writing the Component Draw_custom_shape.*/
-  public static class Draw_custom_shape extends XmlForOdg_Base.Draw_custom_shape_Base {
+  public static class Draw_custom_shape extends XmlForOdg_Base.Draw_custom_shape_Base implements TextNode {
   
   
   
@@ -293,6 +799,12 @@ public class XmlForOdg extends XmlForOdg_Base {
   
     @Override public String toString ( ) { 
       return "TODO toString";
+    }
+
+    @Override public String getText () {
+      TextNode src = super.get_text_p();
+      if(src !=null) { return src.getText(); }
+      else return null;
     }
   
   }
@@ -381,10 +893,12 @@ public class XmlForOdg extends XmlForOdg_Base {
 
 
   /**Class for Writing the Component Text_p.*/
-  public static class Text_p extends XmlForOdg_Base.Text_p_Base {
+  public static class Text_p extends XmlForOdg_Base.Text_p_Base implements TextNode {
   
   
-  
+    @Override public String getText() {
+      return super.text_s;
+    }
   
   
     @Override public String toString ( ) { 
@@ -449,16 +963,16 @@ public class XmlForOdg extends XmlForOdg_Base {
 
 
   /**Class for Writing the Component Text_span.*/
-  public static class Text_span extends XmlForOdg_Base.Text_span_Base {
+  public static class Text_span extends XmlForOdg_Base.Text_span_Base implements TextNode {
   
-  
-  
-  
+    @Override public String getText () {
+      return super.get_text();
+    }
   
     @Override public String toString ( ) { 
       return super.text;
     }
-  
+
   }
 
 

@@ -576,8 +576,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_page?draw_page&gt;*/
-    public void set_draw_page(Draw_page_Zbnf val) { 
-      dataOffice_drawing.draw_page = val.dataDraw_page;
+    public void add_draw_page(Draw_page_Zbnf val) { 
+      if(this.dataOffice_drawing.draw_page ==null) { this.dataOffice_drawing.draw_page = new LinkedList<XmlForOdg.Draw_page>(); }
+      this.dataOffice_drawing.draw_page.add(val.dataDraw_page);
     }
     
     

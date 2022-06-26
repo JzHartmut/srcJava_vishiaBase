@@ -276,13 +276,16 @@ public class XmlForOdg_Base extends SrcInfo {
   
   
     
-    protected Draw_page draw_page;
+    protected List<Draw_page> draw_page;
     
     
     
     
-    /**Access to parse result.*/
-    public Draw_page get_draw_page() { return draw_page; }
+    /**Access to parse result, get the elements of the container draw_connector*/
+    public Iterable<Draw_page> get_draw_page() { return this.draw_page; }
+    
+    /**Access to parse result, get the size of the container draw_connector.*/
+    public int getSize_draw_page() { return this.draw_page ==null ? 0 : this.draw_page.size(); }
     
     
   
