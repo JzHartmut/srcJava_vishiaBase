@@ -8,8 +8,8 @@ echo " ... generates the vishiaBase.jar from srcJava_vishiaBase core sources"
 #If the relevant sources are not change in functionality, may be changed in comment, 
 #  it is not necessary the change this VERSIONSTAMP because the generated content is the same.
 #The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
-export VERSIONSTAMP="2022-05-31"
-export VERSION_MINISYS="2022-05-31"
+export VERSIONSTAMP="2022-06-29"
+export VERSION_MINISYS="2022-06-29"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
