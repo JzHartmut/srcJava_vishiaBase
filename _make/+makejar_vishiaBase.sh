@@ -68,7 +68,7 @@ export FILE1SRC=""
 export SRCPATH=..
 
 # Resourcefiles for files in the jar
-export RESOURCEFILES="..:**/*.zbnf ..:**/*.txt"
+export RESOURCEFILES="..:**/*.zbnf ..:**/*.txt ..:**/*.xml"
 
 #use the built before jar to generate jar. This is a special solution for vishiaBase.jar compilation.
 export JAR_vishiaBase="__vishiaBase_CLASSfiles__"

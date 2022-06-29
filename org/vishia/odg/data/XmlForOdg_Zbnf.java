@@ -27,6 +27,7 @@ public class XmlForOdg_Zbnf {
     /**Creates an instance for the result Zbnf  (not Xml) . &lt;Office_document_content?office_document_content&gt; for ZBNF data store*/
     public Office_document_content_Zbnf new_office_document_content() { 
       Office_document_content_Zbnf val = new Office_document_content_Zbnf();
+      dataroot.office_document_content = val.dataOffice_document_content;
       return val; //Note: needs the derived Zbnf-Type.
     }
     
@@ -34,13 +35,15 @@ public class XmlForOdg_Zbnf {
     public Office_document_content_Zbnf new_office_document_content(String office_version ) { 
       Office_document_content_Zbnf val = new Office_document_content_Zbnf();
       val.dataOffice_document_content.office_version = office_version;
+      dataXmlForOdg.office_document_content = val.dataOffice_document_content;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
     /**Set the result. &lt;Office_document_content?office_document_content&gt;*/
-    public void set_office_document_content(Office_document_content val) { 
-      dataroot.office_document_content = val;
+    public void set_office_document_content(Office_document_content_Zbnf val) { 
+      this.dataXmlForOdg.office_document_content = val.dataOffice_document_content;
+      //dataroot.office_document_content = val.dataOffice_document_content;
     }
     
     
@@ -74,6 +77,10 @@ public class XmlForOdg_Zbnf {
   
   
   
+    /**Set routine for the singular component &lt;String?office_version>. */
+    public void set_office_version(String val) { this.dataOffice_document_content.office_version = val; }
+    
+    
     /**Creates an instance for the result Zbnf . &lt;Office_automatic_styles?office_automatic_styles&gt; for ZBNF data store*/
     public Office_automatic_styles_Zbnf new_office_automatic_styles() { 
       Office_automatic_styles_Zbnf val = new Office_automatic_styles_Zbnf();
@@ -81,8 +88,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_automatic_styles?office_automatic_styles&gt;*/
-    public void set_office_automatic_styles(Office_automatic_styles val) { 
-      dataOffice_document_content.office_automatic_styles = val;
+    public void set_office_automatic_styles(Office_automatic_styles_Zbnf val) { 
+      dataOffice_document_content.office_automatic_styles = val.dataOffice_automatic_styles;
     }
     
     
@@ -93,8 +100,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_body?office_body&gt;*/
-    public void set_office_body(Office_body val) { 
-      dataOffice_document_content.office_body = val;
+    public void set_office_body(Office_body_Zbnf val) { 
+      dataOffice_document_content.office_body = val.dataOffice_body;
     }
     
     
@@ -105,8 +112,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_font_face_decls?office_font_face_decls&gt;*/
-    public void set_office_font_face_decls(Office_font_face_decls val) { 
-      dataOffice_document_content.office_font_face_decls = val;
+    public void set_office_font_face_decls(Office_font_face_decls_Zbnf val) { 
+      dataOffice_document_content.office_font_face_decls = val.dataOffice_font_face_decls;
     }
     
     
@@ -164,9 +171,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Style_style?style_style&gt;*/
-    public void add_style_style(Style_style val) {
-      if(dataOffice_automatic_styles.style_style==null) { dataOffice_automatic_styles.style_style = new LinkedList<Style_style>(); }
-      dataOffice_automatic_styles.style_style.add(val); 
+    public void add_style_style(Style_style_Zbnf val) {
+      if(dataOffice_automatic_styles.style_style==null) { dataOffice_automatic_styles.style_style = new LinkedList<XmlForOdg.Style_style>(); }
+      dataOffice_automatic_styles.style_style.add(val.dataStyle_style); 
     }
     
     
@@ -185,8 +192,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_list_style?text_list_style&gt;*/
-    public void set_text_list_style(Text_list_style val) { 
-      dataOffice_automatic_styles.text_list_style = val;
+    public void set_text_list_style(Text_list_style_Zbnf val) { 
+      dataOffice_automatic_styles.text_list_style = val.dataText_list_style;
     }
     
     
@@ -230,8 +237,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Office_drawing?office_drawing&gt;*/
-    public void set_office_drawing(Office_drawing val) { 
-      dataOffice_body.office_drawing = val;
+    public void set_office_drawing(Office_drawing_Zbnf val) { 
+      dataOffice_body.office_drawing = val.dataOffice_drawing;
     }
     
     
@@ -287,9 +294,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Style_font_face?style_font_face&gt;*/
-    public void add_style_font_face(Style_font_face val) {
-      if(dataOffice_font_face_decls.style_font_face==null) { dataOffice_font_face_decls.style_font_face = new LinkedList<Style_font_face>(); }
-      dataOffice_font_face_decls.style_font_face.add(val); 
+    public void add_style_font_face(Style_font_face_Zbnf val) {
+      if(dataOffice_font_face_decls.style_font_face==null) { dataOffice_font_face_decls.style_font_face = new LinkedList<XmlForOdg.Style_font_face>(); }
+      dataOffice_font_face_decls.style_font_face.add(val.dataStyle_font_face); 
     }
     
     
@@ -355,8 +362,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Loext_graphic_properties?loext_graphic_properties&gt;*/
-    public void set_loext_graphic_properties(Loext_graphic_properties val) { 
-      dataStyle_style.loext_graphic_properties = val;
+    public void set_loext_graphic_properties(Loext_graphic_properties_Zbnf val) { 
+      dataStyle_style.loext_graphic_properties = val.dataLoext_graphic_properties;
     }
     
     
@@ -388,8 +395,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_graphic_properties?style_graphic_properties&gt;*/
-    public void set_style_graphic_properties(Style_graphic_properties val) { 
-      dataStyle_style.style_graphic_properties = val;
+    public void set_style_graphic_properties(Style_graphic_properties_Zbnf val) { 
+      dataStyle_style.style_graphic_properties = val.dataStyle_graphic_properties;
     }
     
     
@@ -410,8 +417,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_paragraph_properties?style_paragraph_properties&gt;*/
-    public void set_style_paragraph_properties(Style_paragraph_properties val) { 
-      dataStyle_style.style_paragraph_properties = val;
+    public void set_style_paragraph_properties(Style_paragraph_properties_Zbnf val) { 
+      dataStyle_style.style_paragraph_properties = val.dataStyle_paragraph_properties;
     }
     
     
@@ -455,8 +462,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_text_properties?style_text_properties&gt;*/
-    public void set_style_text_properties(Style_text_properties val) { 
-      dataStyle_style.style_text_properties = val;
+    public void set_style_text_properties(Style_text_properties_Zbnf val) { 
+      dataStyle_style.style_text_properties = val.dataStyle_text_properties;
     }
     
     
@@ -513,9 +520,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Text_list_level_style_bullet?text_list_level_style_bullet&gt;*/
-    public void add_text_list_level_style_bullet(Text_list_level_style_bullet val) {
-      if(dataText_list_style.text_list_level_style_bullet==null) { dataText_list_style.text_list_level_style_bullet = new LinkedList<Text_list_level_style_bullet>(); }
-      dataText_list_style.text_list_level_style_bullet.add(val); 
+    public void add_text_list_level_style_bullet(Text_list_level_style_bullet_Zbnf val) {
+      if(dataText_list_style.text_list_level_style_bullet==null) { dataText_list_style.text_list_level_style_bullet = new LinkedList<XmlForOdg.Text_list_level_style_bullet>(); }
+      dataText_list_style.text_list_level_style_bullet.add(val.dataText_list_level_style_bullet); 
     }
     
     
@@ -569,8 +576,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_page?draw_page&gt;*/
-    public void set_draw_page(Draw_page val) { 
-      dataOffice_drawing.draw_page = val;
+    public void add_draw_page(Draw_page_Zbnf val) { 
+      if(this.dataOffice_drawing.draw_page ==null) { this.dataOffice_drawing.draw_page = new LinkedList<XmlForOdg.Draw_page>(); }
+      this.dataOffice_drawing.draw_page.add(val.dataDraw_page);
     }
     
     
@@ -1000,8 +1008,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_list_level_properties?style_list_level_properties&gt;*/
-    public void set_style_list_level_properties(Style_list_level_properties val) { 
-      dataText_list_level_style_bullet.style_list_level_properties = val;
+    public void set_style_list_level_properties(Style_list_level_properties_Zbnf val) { 
+      dataText_list_level_style_bullet.style_list_level_properties = val.dataStyle_list_level_properties;
     }
     
     
@@ -1022,8 +1030,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Style_text_properties?style_text_properties&gt;*/
-    public void set_style_text_properties(Style_text_properties val) { 
-      dataText_list_level_style_bullet.style_text_properties = val;
+    public void set_style_text_properties(Style_text_properties_Zbnf val) { 
+      dataText_list_level_style_bullet.style_text_properties = val.dataStyle_text_properties;
     }
     
     
@@ -1100,9 +1108,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_connector?draw_connector&gt;*/
-    public void add_draw_connector(Draw_connector val) {
-      if(dataDraw_page.draw_connector==null) { dataDraw_page.draw_connector = new LinkedList<Draw_connector>(); }
-      dataDraw_page.draw_connector.add(val); 
+    public void add_draw_connector(Draw_connector_Zbnf val) {
+      if(dataDraw_page.draw_connector==null) { dataDraw_page.draw_connector = new LinkedList<XmlForOdg.Draw_connector>(); }
+      dataDraw_page.draw_connector.add(val.dataDraw_connector); 
     }
     
     
@@ -1113,7 +1121,7 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_custom_shape?draw_custom_shape&gt;  */
-    public Draw_custom_shape_Zbnf new_draw_custom_shape(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y ) { 
+    public Draw_custom_shape_Zbnf new_draw_custom_shape(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
       Draw_custom_shape_Zbnf val = new Draw_custom_shape_Zbnf();
       val.dataDraw_custom_shape.draw_id = draw_id;
       val.dataDraw_custom_shape.draw_layer = draw_layer;
@@ -1123,14 +1131,15 @@ public class XmlForOdg_Zbnf {
       val.dataDraw_custom_shape.svg_width = svg_width;
       val.dataDraw_custom_shape.svg_x = svg_x;
       val.dataDraw_custom_shape.svg_y = svg_y;
+      val.dataDraw_custom_shape.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
     /**Add the result to the list. &lt;Draw_custom_shape?draw_custom_shape&gt;*/
-    public void add_draw_custom_shape(Draw_custom_shape val) {
-      if(dataDraw_page.draw_custom_shape==null) { dataDraw_page.draw_custom_shape = new LinkedList<Draw_custom_shape>(); }
-      dataDraw_page.draw_custom_shape.add(val); 
+    public void add_draw_custom_shape(Draw_custom_shape_Zbnf val) {
+      if(dataDraw_page.draw_custom_shape==null) { dataDraw_page.draw_custom_shape = new LinkedList<XmlForOdg.Draw_custom_shape>(); }
+      dataDraw_page.draw_custom_shape.add(val.dataDraw_custom_shape); 
     }
     
     
@@ -1141,7 +1150,7 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
-    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y ) { 
+    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
       Draw_frame_Zbnf val = new Draw_frame_Zbnf();
       val.dataDraw_frame.draw_id = draw_id;
       val.dataDraw_frame.draw_layer = draw_layer;
@@ -1151,14 +1160,15 @@ public class XmlForOdg_Zbnf {
       val.dataDraw_frame.svg_width = svg_width;
       val.dataDraw_frame.svg_x = svg_x;
       val.dataDraw_frame.svg_y = svg_y;
+      val.dataDraw_frame.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
     /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
-    public void add_draw_frame(Draw_frame val) {
-      if(dataDraw_page.draw_frame==null) { dataDraw_page.draw_frame = new LinkedList<Draw_frame>(); }
-      dataDraw_page.draw_frame.add(val); 
+    public void add_draw_frame(Draw_frame_Zbnf val) {
+      if(dataDraw_page.draw_frame==null) { dataDraw_page.draw_frame = new LinkedList<XmlForOdg.Draw_frame>(); }
+      dataDraw_page.draw_frame.add(val.dataDraw_frame); 
     }
     
     
@@ -1169,16 +1179,18 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_g?draw_g&gt;  */
-    public Draw_g_Zbnf new_draw_g(String draw_id ) { 
+    public Draw_g_Zbnf new_draw_g(String draw_id, String xml_id ) { 
       Draw_g_Zbnf val = new Draw_g_Zbnf();
       val.dataDraw_g.draw_id = draw_id;
+      val.dataDraw_g.xml_id = xml_id;
       //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
     /**Set the result. &lt;Draw_g?draw_g&gt;*/
-    public void set_draw_g(Draw_g val) { 
-      dataDraw_page.draw_g = val;
+    public void add_draw_g(Draw_g_Zbnf val) { 
+      if(dataDraw_page.draw_g ==null) { dataDraw_page.draw_g = new LinkedList<Draw_g>(); }
+      dataDraw_page.draw_g.add(val.dataDraw_g);
     }
     
     
@@ -1205,9 +1217,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_polygon?draw_polygon&gt;*/
-    public void add_draw_polygon(Draw_polygon val) {
-      if(dataDraw_page.draw_polygon==null) { dataDraw_page.draw_polygon = new LinkedList<Draw_polygon>(); }
-      dataDraw_page.draw_polygon.add(val); 
+    public void add_draw_polygon(Draw_polygon_Zbnf val) {
+      if(dataDraw_page.draw_polygon==null) { dataDraw_page.draw_polygon = new LinkedList<XmlForOdg.Draw_polygon>(); }
+      dataDraw_page.draw_polygon.add(val.dataDraw_polygon); 
     }
     
     
@@ -1233,8 +1245,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_polyline?draw_polyline&gt;*/
-    public void set_draw_polyline(Draw_polyline val) { 
-      dataDraw_page.draw_polyline = val;
+    public void set_draw_polyline(Draw_polyline_Zbnf val) { 
+      dataDraw_page.draw_polyline = val.dataDraw_polyline;
     }
     
     
@@ -1437,6 +1449,10 @@ public class XmlForOdg_Zbnf {
     public void set_svg_y(String val) { this.dataDraw_custom_shape.svg_y = val; }
     
     
+    /**Set routine for the singular component &lt;String?xml_id>. */
+    public void set_xml_id(String val) { this.dataDraw_custom_shape.xml_id = val; }
+    
+    
     /**Creates an instance for the result Zbnf  (not Xml) . &lt;Draw_enhanced_geometry?draw_enhanced_geometry&gt; for ZBNF data store*/
     public Draw_enhanced_geometry_Zbnf new_draw_enhanced_geometry() { 
       Draw_enhanced_geometry_Zbnf val = new Draw_enhanced_geometry_Zbnf();
@@ -1459,8 +1475,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_enhanced_geometry?draw_enhanced_geometry&gt;*/
-    public void set_draw_enhanced_geometry(Draw_enhanced_geometry val) { 
-      dataDraw_custom_shape.draw_enhanced_geometry = val;
+    public void set_draw_enhanced_geometry(Draw_enhanced_geometry_Zbnf val) { 
+      dataDraw_custom_shape.draw_enhanced_geometry = val.dataDraw_enhanced_geometry;
     }
     
     
@@ -1479,8 +1495,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_p?text_p&gt;*/
-    public void set_text_p(Text_p val) { 
-      dataDraw_custom_shape.text_p = val;
+    public void set_text_p(Text_p_Zbnf val) { 
+      dataDraw_custom_shape.text_p = val.dataText_p;
     }
     
     
@@ -1549,6 +1565,10 @@ public class XmlForOdg_Zbnf {
     public void set_svg_y(String val) { this.dataDraw_frame.svg_y = val; }
     
     
+    /**Set routine for the singular component &lt;String?xml_id>. */
+    public void set_xml_id(String val) { this.dataDraw_frame.xml_id = val; }
+    
+    
     /**Creates an instance for the result Zbnf . &lt;Draw_text_box?draw_text_box&gt; for ZBNF data store*/
     public Draw_text_box_Zbnf new_draw_text_box() { 
       Draw_text_box_Zbnf val = new Draw_text_box_Zbnf();
@@ -1556,8 +1576,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_text_box?draw_text_box&gt;*/
-    public void set_draw_text_box(Draw_text_box val) { 
-      dataDraw_frame.draw_text_box = val;
+    public void set_draw_text_box(Draw_text_box_Zbnf val) { 
+      dataDraw_frame.draw_text_box = val.dataDraw_text_box;
     }
     
     
@@ -1598,18 +1618,76 @@ public class XmlForOdg_Zbnf {
     public void set_draw_id(String val) { this.dataDraw_g.draw_id = val; }
     
     
-    /**Creates an instance for the result Zbnf . &lt;Draw_g_A?draw_g&gt; for ZBNF data store*/
-    public Draw_g_A_Zbnf new_draw_g() { 
-      Draw_g_A_Zbnf val = new Draw_g_A_Zbnf();
+    /**Set routine for the singular component &lt;String?xml_id>. */
+    public void set_xml_id(String val) { this.dataDraw_g.xml_id = val; }
+    
+    
+    /**Creates an instance for the result Zbnf . &lt;Draw_g?draw_g&gt; for ZBNF data store*/
+    public Draw_g_Zbnf new_draw_g() { 
+      return this; //Note: needs the derived Zbnf-Type.
+    }
+    
+    /**Set the result. &lt;Draw_g?draw_g&gt;*/
+    public void set_draw_g(Draw_g_Zbnf val) { 
+    }
+    
+    /**create and add routine for the list component <Draw_frame?draw_frame>. */
+    public Draw_frame_Zbnf new_draw_frame() { 
+      Draw_frame_Zbnf val = new Draw_frame_Zbnf(); 
+      return val; 
+    }
+    
+    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
+    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y, String xml_id ) { 
+      Draw_frame_Zbnf val = new Draw_frame_Zbnf();
+      val.dataDraw_frame.draw_id = draw_id;
+      val.dataDraw_frame.draw_layer = draw_layer;
+      val.dataDraw_frame.draw_style_name = draw_style_name;
+      val.dataDraw_frame.draw_text_style_name = draw_text_style_name;
+      val.dataDraw_frame.svg_height = svg_height;
+      val.dataDraw_frame.svg_width = svg_width;
+      val.dataDraw_frame.svg_x = svg_x;
+      val.dataDraw_frame.svg_y = svg_y;
+      val.dataDraw_frame.xml_id = xml_id;
+      //
       return val; //Note: needs the derived Zbnf-Type.
     }
     
-    /**Set the result. &lt;Draw_g_A?draw_g&gt;*/
-    public void set_draw_g(Draw_g_A val) { 
-      dataDraw_g.draw_g = val;
+    /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
+    public void add_draw_frame(Draw_frame_Zbnf val) {
+      if(dataDraw_g.draw_frame==null) { dataDraw_g.draw_frame = new LinkedList<XmlForOdg.Draw_frame>(); }
+      dataDraw_g.draw_frame.add(val.dataDraw_frame); 
     }
     
     
+    /**Creates an instance for the result Zbnf  (not Xml) . &lt;Draw_polygon?draw_polygon&gt; for ZBNF data store*/
+    public Draw_polygon_Zbnf new_draw_polygon() { 
+      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
+      return val; //Note: needs the derived Zbnf-Type.
+    }
+    
+    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_polygon?draw_polygon&gt;  */
+    public Draw_polygon_Zbnf new_draw_polygon(String draw_layer, String draw_points, String draw_style_name, String draw_text_style_name, String svg_height, String svg_viewBox, String svg_width, String svg_x, String svg_y ) { 
+      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
+      val.dataDraw_polygon.draw_layer = draw_layer;
+      val.dataDraw_polygon.draw_points = draw_points;
+      val.dataDraw_polygon.draw_style_name = draw_style_name;
+      val.dataDraw_polygon.draw_text_style_name = draw_text_style_name;
+      val.dataDraw_polygon.svg_height = svg_height;
+      val.dataDraw_polygon.svg_viewBox = svg_viewBox;
+      val.dataDraw_polygon.svg_width = svg_width;
+      val.dataDraw_polygon.svg_x = svg_x;
+      val.dataDraw_polygon.svg_y = svg_y;
+      //
+      return val; //Note: needs the derived Zbnf-Type.
+    }
+    
+    /**Set the result. &lt;Draw_polygon?draw_polygon&gt;*/
+    public void set_draw_polygon(Draw_polygon_Zbnf val) { 
+      dataDraw_g.draw_polygon = val.dataDraw_polygon;
+    }
+    
+
   
   }
 
@@ -1833,9 +1911,9 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Add the result to the list. &lt;Draw_equation?draw_equation&gt;*/
-    public void add_draw_equation(Draw_equation val) {
-      if(dataDraw_enhanced_geometry.draw_equation==null) { dataDraw_enhanced_geometry.draw_equation = new LinkedList<Draw_equation>(); }
-      dataDraw_enhanced_geometry.draw_equation.add(val); 
+    public void add_draw_equation(Draw_equation_Zbnf val) {
+      if(dataDraw_enhanced_geometry.draw_equation==null) { dataDraw_enhanced_geometry.draw_equation = new LinkedList<XmlForOdg.Draw_equation>(); }
+      dataDraw_enhanced_geometry.draw_equation.add(val.dataDraw_equation); 
     }
     
     
@@ -1858,8 +1936,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Draw_handle?draw_handle&gt;*/
-    public void set_draw_handle(Draw_handle val) { 
-      dataDraw_enhanced_geometry.draw_handle = val;
+    public void set_draw_handle(Draw_handle_Zbnf val) { 
+      dataDraw_enhanced_geometry.draw_handle = val.dataDraw_handle;
     }
     
     
@@ -1904,6 +1982,10 @@ public class XmlForOdg_Zbnf {
     public void set_text_s(String val) { this.dataText_p.text_s = val; }
     
     
+    /**Set routine for the singular component &lt;String?text_s>. */
+    public void new_text_s(String val) { this.dataText_p.text_s = val; }
+    
+    
     /**Creates an instance for the result Zbnf  (not Xml) . &lt;Text_span?text_span&gt; for ZBNF data store*/
     public Text_span_Zbnf new_text_span() { 
       Text_span_Zbnf val = new Text_span_Zbnf();
@@ -1919,11 +2001,13 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_span?text_span&gt;*/
-    public void set_text_span(Text_span val) { 
-      dataText_p.text_span = val;
+    public void set_text_span(Text_span_Zbnf val) { 
+      dataText_p.text_span = val.dataText_span;
     }
     
-    
+    /**Set routine for the singular component &lt;String?text_p>. */
+    public void set_text(String val) { this.dataText_p.text_s = val; }
+
   
   }
 
@@ -1972,8 +2056,8 @@ public class XmlForOdg_Zbnf {
     }
     
     /**Set the result. &lt;Text_p?text_p&gt;*/
-    public void set_text_p(Text_p val) { 
-      dataDraw_text_box.text_p = val;
+    public void set_text_p(Text_p_Zbnf val) { 
+      dataDraw_text_box.text_p = val.dataText_p;
     }
     
     
@@ -1982,92 +2066,6 @@ public class XmlForOdg_Zbnf {
 
 
 
-
-  /**Class for Writing the Component Draw_g_A.*/
-  public static class Draw_g_A_Zbnf implements SetLineColumn_ifc {
-    /**Referenced working instance will be filled.*/
-    final XmlForOdg.Draw_g_A dataDraw_g_A;
-    
-    /**Default ctor for non-inherit instance. */
-    public Draw_g_A_Zbnf ( ) {
-      this.dataDraw_g_A = new XmlForOdg.Draw_g_A();
-    }
-    
-    /**ctor called as super ctor possible, not in any case for a inherited instance. */
-    public Draw_g_A_Zbnf ( XmlForOdg.Draw_g_A data) {
-            this.dataDraw_g_A = data;
-    }
-    
-    @Override public int setLineColumnFileMode ( ) {
-      return SetLineColumn_ifc.mLine + SetLineColumn_ifc.mColumn + SetLineColumn_ifc.mFile; }
-    
-    @Override public void setLineColumnFile ( int line, int column, String sFile) { 
-      this.dataDraw_g_A._srcLine_ = line; 
-      this.dataDraw_g_A._srcColumn_ = column; 
-      this.dataDraw_g_A._srcFile_ = sFile; 
-    }
-  
-  
-  
-  
-    /**create and add routine for the list component <Draw_frame?draw_frame>. */
-    public Draw_frame_Zbnf new_draw_frame() { 
-      Draw_frame_Zbnf val = new Draw_frame_Zbnf(); 
-      return val; 
-    }
-    
-    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_frame?draw_frame&gt;  */
-    public Draw_frame_Zbnf new_draw_frame(String draw_id, String draw_layer, String draw_style_name, String draw_text_style_name, String svg_height, String svg_width, String svg_x, String svg_y ) { 
-      Draw_frame_Zbnf val = new Draw_frame_Zbnf();
-      val.dataDraw_frame.draw_id = draw_id;
-      val.dataDraw_frame.draw_layer = draw_layer;
-      val.dataDraw_frame.draw_style_name = draw_style_name;
-      val.dataDraw_frame.draw_text_style_name = draw_text_style_name;
-      val.dataDraw_frame.svg_height = svg_height;
-      val.dataDraw_frame.svg_width = svg_width;
-      val.dataDraw_frame.svg_x = svg_x;
-      val.dataDraw_frame.svg_y = svg_y;
-      //
-      return val; //Note: needs the derived Zbnf-Type.
-    }
-    
-    /**Add the result to the list. &lt;Draw_frame?draw_frame&gt;*/
-    public void add_draw_frame(Draw_frame val) {
-      if(dataDraw_g_A.draw_frame==null) { dataDraw_g_A.draw_frame = new LinkedList<Draw_frame>(); }
-      dataDraw_g_A.draw_frame.add(val); 
-    }
-    
-    
-    /**Creates an instance for the result Zbnf  (not Xml) . &lt;Draw_polygon?draw_polygon&gt; for ZBNF data store*/
-    public Draw_polygon_Zbnf new_draw_polygon() { 
-      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
-      return val; //Note: needs the derived Zbnf-Type.
-    }
-    
-    /**Creates an instance for the Xml data storage with default attibutes. &lt;Draw_polygon?draw_polygon&gt;  */
-    public Draw_polygon_Zbnf new_draw_polygon(String draw_layer, String draw_points, String draw_style_name, String draw_text_style_name, String svg_height, String svg_viewBox, String svg_width, String svg_x, String svg_y ) { 
-      Draw_polygon_Zbnf val = new Draw_polygon_Zbnf();
-      val.dataDraw_polygon.draw_layer = draw_layer;
-      val.dataDraw_polygon.draw_points = draw_points;
-      val.dataDraw_polygon.draw_style_name = draw_style_name;
-      val.dataDraw_polygon.draw_text_style_name = draw_text_style_name;
-      val.dataDraw_polygon.svg_height = svg_height;
-      val.dataDraw_polygon.svg_viewBox = svg_viewBox;
-      val.dataDraw_polygon.svg_width = svg_width;
-      val.dataDraw_polygon.svg_x = svg_x;
-      val.dataDraw_polygon.svg_y = svg_y;
-      //
-      return val; //Note: needs the derived Zbnf-Type.
-    }
-    
-    /**Set the result. &lt;Draw_polygon?draw_polygon&gt;*/
-    public void set_draw_polygon(Draw_polygon val) { 
-      dataDraw_g_A.draw_polygon = val;
-    }
-    
-    
-  
-  }
 
 
 
@@ -2193,6 +2191,10 @@ public class XmlForOdg_Zbnf {
   
   
   
+    /**Set routine for the singular component &lt;String?text_style_name>. */
+    public void set_text_style_name(String val) { this.dataText_span.text_style_name = val; }
+    
+    public void set_text(String val) { this.dataText_span.text = val; }
   
   }
 

@@ -24,6 +24,7 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2022-06-06 Argument for typeNs prepared, due to {@link GenJavaOutClass} change. 
    * <li>2022-05-13 Hartmut new: regards {@link #bOnlyOneEach} ?& to prevent a container for parse result, only one element.    
    * <li>2022-04-30 Hartmut: <ode>{&lt;?*semantic>...</code> is a component, on calling {@link WrClassZbnf#wrVariable(SubClassZbnf, String, String, String, String, ZbnfSyntaxPrescript, boolean, boolean, List)}
    *   called in {@link WrClassZbnf#evaluateChildSyntax(List, SubClassZbnf, boolean, int)}.
@@ -76,7 +77,7 @@ public class GenZbnfJavaData
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2022-04-30";
+  public static final String sVersion = "2022-06-06";
   
   
   
@@ -442,8 +443,9 @@ public class GenZbnfJavaData
           }
           if(item.sSubSyntax !=null) {
             String sType = Character.toUpperCase(item.sSubSyntax.charAt(0)) + item.sSubSyntax.substring(1);
+            String typeNs = GenZbnfJavaData.this.cmdArgs.sJavaClass + ".";  //A type defined inside the dataClass
             String name = semantic !=null ? semantic : Character.toLowerCase(item.sSubSyntax.charAt(0)) + item.sSubSyntax.substring(1);
-            wrVariable(classData, "xx", sType, null, name, item, false, false, null);
+            wrVariable(classData, typeNs, sType, null, name, item, false, false, null);
           }
           //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
           //in a repetition bList = true;

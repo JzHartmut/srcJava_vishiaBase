@@ -30,7 +30,7 @@ import java.util.List;
     
     Args(){
       super.aboutInfo = "...your about info";
-      super.helpInfo="obligate args: -o:..."
+      super.helpInfo="obligate args: -o:...";
       addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
       addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
     }
@@ -126,7 +126,7 @@ public abstract class Arguments {
    * <li> You can redistribute copies of this source to everybody.
    * <li> Every user of this source, also the user of redistribute copies
    *    with or without payment, must accept this license for further using.
-   * <li> But the LPGL ist not appropriate for a whole software product,
+   * <li> But the LPGL is not appropriate for a whole software product,
    *    if this source is only a part of them. It means, the user
    *    must publish this part of source,
    *    but don't need to publish the whole source of the own product.

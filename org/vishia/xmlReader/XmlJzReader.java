@@ -68,6 +68,11 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2022-06-25: chg: in {@link #storeContent(StringBuilder, org.vishia.xmlReader.XmlCfg.XmlCfgNode, Object, Map[], String[])}:
+   *   the {@link DataAccess#invokeMethod(org.vishia.util.DataAccess.DatapathElement, Class, Object, boolean, Object[], boolean)} 
+   *   was called with true for non exception, that is faulty. To detect writing errors in the xmlcfg file, exceptions are necessary. 
+   * <li>2022-06-23: "xmlinput:finish" regarded, see {@link #finishElement(Object, Object, org.vishia.util.DataAccess.DatapathElement)} 
+   * <li>2022-06-06: new {@link #setNamespaceEntry(String, String)}
    * <li>2021-12-16 documentation and fine tuning of storeAttrData(..). Now usage of value is not tested. 
    *   If the operation for an attribute in cfg returns a #{@link java.lang.reflect.Field} then the value is stored in this return field
    *   independent whether it is used also as argument. This can be helpfully and it is a special condition lesser.
@@ -128,7 +133,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2021-10-07";
+  public static final String version = "2022-06-06";
   
   
   /**To store the last used configuration, for parsing with the same config. */
@@ -193,20 +198,39 @@ public class XmlJzReader
   public void setDebugStop(int line) {
     this.debugStopLine = line;
   }
-   
+
+  
+  
   public void setDebugStopTag(String stag) {
     this.debugTag = stag;
   }
    
-  public void XXXXreadXmlCfg(File input) {
-    this.cfg = new XmlCfg();
-    //read
-  }
   
-
+  
+  /**Writes the parsed content without processing in this file. 
+   * The writing regards indents for any node, so that a beautification is gotten for the content. 
+   * That is the important application of this functionality.
+   * The call of this operation opens the {@link #xmlTestWriter}.
+   * It is closed on end of JZtxtReader. It means this operation should be called 
+   * immediately before call of {@link #readXml(File, Object)} or also {@link #readCfg(File)}
+   * and all its abbreviations. It should not be called without a read Xml invocation
+   * because otherwise the resource remains open.
+   * @param fout File to write
+   * @throws IOException if open fails
+   */
   public void openXmlTestOut(File fout) throws IOException {
     if(this.xmlTestWriter == null) { this.xmlTestWriter = new XmlSequWriter(); }
     this.xmlTestWriter.open(fout, "UTF-8", null);
+  }
+  
+  
+  /**This operation is only necessary if a name space declaration is missing
+   * in the xml file to read. It should be called before reading. 
+   * @param key
+   * @param url
+   */
+  public void setNamespaceEntry(String key, String url) {
+    this.namespaces.put(key, url);
   }
   
   
@@ -214,9 +238,15 @@ public class XmlJzReader
   /**Reads an xml file with a given config. 
    * It does not change the stored config which is gotten by {@link #readCfg(File)} or {@link #readCfgFromJar(String)}.
    * This operation is used internally in for all read operations too. It is the common entry to read.
-   * @param input
-   * @param output
-   * @param xmlCfg
+   * @param input The xml file
+   * @param output The empty data where the first operation is called or the first data are stored via reflection.
+   * @param xmlCfg Already read XmlCfg from a file using {{@link #readCfg(File)}} or {@link #readCfgFromJar(Class, String)}
+   *   or alternatively a immediate prepared XmlCfg. 
+   *   <ul>
+   *   <li>For reading the config file itself it is {@link XmlCfg#newCfgCfg()}.
+   *   <li>For storing to a XmlNodeSimple it is 
+   *   <li>Also a user can prepare a XmlCfg by himself.
+   *   </ul>
    * @return
    */
   public String readXml(File input, Object output, XmlCfg xmlCfg) throws IOException {
@@ -493,8 +523,14 @@ public class XmlJzReader
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
       subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
     }
+    if(subCfgNode ==null) {
+      Debugutil.stop();
+    }
     //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
     subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode.elementStorePath, attribValues);
+    if(subCfgNode !=null && subCfgNode ==null) {
+      Debugutil.stop();
+    }
     //
     //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
     if(attribsToStore[0] !=null) { 
@@ -552,12 +588,12 @@ public class XmlJzReader
             inp.seekPos(3); //skip over the "]]>"
           }
           else {
-            parseElement(inp, subOutput, subCfgNode);  //nested element.
+            parseElement(inp, subOutput, subCfgNode);      // nested element.
           }
         } else {
           if(contentBuffer == null && subOutput !=null) { contentBuffer = new StringBuilder(500); }
-          parseContent(inp, contentBuffer);  //add the content between some tags to the content Buffer.
-        }
+          parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
+        }                                                  // call the storeContent(..) operation on end of the node.
       }
       //
       inp.readNextContent(this.sizeBuffer/2);
@@ -573,8 +609,14 @@ public class XmlJzReader
         }
         storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
       }
+      if(subOutput !=null) {
+        finishElement(output, subOutput, subCfgNode.elementFinishPath);  // "xmlinput:finish"
+      }
     } else {
-      throw new IllegalArgumentException("either \">\" or \"/>\" expected");
+      int[] colmn = new int[1];
+      int line = inp.getLineAndColumn(colmn);
+      String sFile = inp.getInputfile();
+      throw new IllegalArgumentException("either \">\" or \"/>\" expected, " + " in " + sFile + " @" + line + ":" + colmn[0]);
     }
     inp.setLengthMax();  //for next parsing
     if(this.xmlTestWriter !=null) {
@@ -637,6 +679,9 @@ public class XmlJzReader
             sAttrNsName = null;
           } else {
             String nsValue = this.namespaces.get(ns);  //defined in this read xml file.
+            if(nsValue == null && ns.equals("xml")) {
+              nsValue = "http://www.w3.org/1999/xml";  //default for xmlns:xml 
+            }
             if(nsValue == null) {
               errMsg(1, inp, "XmlJzReader-Namespace of attribute not found: ", ns);
               sAttrNsName = null;  //Namespace not registered in the input file, especially "xml".
@@ -741,6 +786,49 @@ public class XmlJzReader
   }
 
 
+  /**This op is called on finishing of parsing a element with its sub content.
+   * <ul>
+   * <li>The "xmlinput:data" delivers the data storage, but need not insert the data storage for this element in the whole data tree.
+   * <li>The "xmlinput:finish" inserts the data storage (via reference, hold stack local till now) in the whole data tree.
+   *   Depending from the finish operation the data can be post prepared in any kind.
+   *   For ZBNF data storage this is the set... operation. It should be named set_... also here. 
+   * <li>If the data does not need to be post-prepared, it is also possible that this operation is not given or empty.
+   *   But then the "xmlinput:data" should set the reference in the whole data tree already for the new created data.
+   *   That is the approach till now, furthermore supported.
+   * </ul>
+   * @param parent The element where the content is to insert as sub content.
+   * @param element to insert
+   * @param elementStorePath rule where to insert: It contains:
+   *   <ul>
+   *   <li>{@link DataAccess.DatapathElement#ident}  Immediately the name of the variable of operation to call in parent
+   *   <li>{@link DataAccess.DatapathElement#args} Arguments, whereas the argument for finish should be usual "value", 
+   *     which is the [1] element in the immediately argument list
+   *     for the internal called {@link DataAccess#invokeMethod(org.vishia.util.DataAccess.DatapathElement, Class, Object, boolean, Object[], boolean)} 
+   *     for the "varValues".
+   *   </ul>  
+   * 
+   */
+  void finishElement( Object parent, Object element, DataAccess.DatapathElement elementStorePath) {
+    if(elementStorePath !=null) {
+      try{ 
+        Object[] args = new Object[2];
+        args[1] = element;                                 // use position of "value" in the common #allArgs field
+        if(elementStorePath.isOperation()) {
+          DataAccess.invokeMethod(elementStorePath, null, parent, true, args, false);
+        } else {
+          //it may be a method too but without textual parameter.
+          //subOutput = DataAccess.access(elementStorePath, output, true, false, null, attribValues, false, null);
+        }
+      } catch(Exception exc) {
+        CharSequence sError = CheckVs.exceptionInfo("", exc, 1, 30);
+        System.err.println("error finishElement: " + elementStorePath);
+        System.err.println("help: ");
+        System.err.println(sError);
+      }
+  } }
+      
+  
+  
 
   /**Invokes the associated method to store the attribute value.
    * <ul>
@@ -856,6 +944,8 @@ public class XmlJzReader
   private static void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) {
     DataAccess.DatapathElement dstPath = cfgNode.contentStorePath;
     if(dstPath !=null) {
+//      if(dstPath.ident().equals("set_text") && output instanceof org.vishia.odg.data.XmlForOdg_Zbnf.Text_span_Zbnf)
+//        Debugutil.stop();
       try{ 
         if(dstPath.isOperation()) {
           //String[] vars = null; 
@@ -869,7 +959,7 @@ public class XmlJzReader
               }
             }
           }
-          DataAccess.invokeMethod(dstPath, null, output, true, attribValues, true);
+          DataAccess.invokeMethod(dstPath, null, output, true, attribValues, false);
           //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
         } else if(buffer !=null) {
           DataAccess.storeValue(dstPath, output, buffer, true);

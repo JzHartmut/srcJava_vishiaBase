@@ -1299,8 +1299,8 @@ public class DataAccess {
       if(element.args !=null) {
         args = new Object[element.args.length];
         int ix = -1;
-        for(CalculatorExpr.Operand expr: element.args) {
-          args[++ix] = expr.calc(null, varValues);
+        for(CalculatorExpr.Operand expr: element.args) {   // expr contains the ix in varValues
+          args[++ix] = expr.calc(null, varValues);         // get the proper varValue[ix] due to expr
         }
       }
     }
@@ -2526,8 +2526,9 @@ public class DataAccess {
     
     public void set_ident(String text){ this.ident = text; }
     
-    public void set_index(int val) { 
+    @Deprecated public void set_index(int val) { 
       int ixindices;
+      assert(false);                       //TODO comment this assert if the operation is used anywhere, it is a todo.
       if(super.indices !=null) {
         //TODO increase
         super.indices = new int[1];
@@ -2666,11 +2667,15 @@ public class DataAccess {
     
     public int nrArgNames(){ return args == null ? 0 : args.length; }
     
+    
+    
     /**Returns the name for the argument start variable. 
      * It helps to fill the set the varValues on call of 
      * {@link DataAccess#invokeMethod(DatapathElement, Class, Object, boolean, Object[], boolean)}
      */
     public String argName(int ix){ return args[ix].textOrVar; }
+    
+    
     
     /**Creates a datapath element, for general purpose.
      * If the name starts with the following special chars "$@%+", it is an element with that {@link #whatisit}.
