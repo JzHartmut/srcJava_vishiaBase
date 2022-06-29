@@ -30,7 +30,7 @@ import java.util.List;
     
     Args(){
       super.aboutInfo = "...your about info";
-      super.helpInfo="obligate args: -o:..."
+      super.helpInfo="obligate args: -o:...";
       addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
       addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
     }

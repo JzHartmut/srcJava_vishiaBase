@@ -9,7 +9,7 @@ echo " ... generates the vishiaBase.jar from srcJava_vishiaBase core sources"
 #  it is not necessary the change this VERSIONSTAMP because the generated content is the same.
 #The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
 export VERSIONSTAMP="2022-06-31"
-export VERSION_MINISYS="2022-05-31"
+export VERSION_MINISYS="2022-06-31"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
@@ -68,7 +68,7 @@ export FILE1SRC=""
 export SRCPATH=..
 
 # Resourcefiles for files in the jar
-export RESOURCEFILES="..:**/*.zbnf ..:**/*.txt"
+export RESOURCEFILES="..:**/*.zbnf ..:**/*.txt ..:**/*.xml"
 
 #use the built before jar to generate jar. This is a special solution for vishiaBase.jar compilation.
 export JAR_vishiaBase="__vishiaBase_CLASSfiles__"
