@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.util.DataAccess;
+import org.vishia.util.Debugutil;
 import org.vishia.xmlReader.XmlJzReader;
 import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
@@ -23,9 +24,6 @@ public class XmlForOdg extends XmlForOdg_Base {
    * <ul>
    * <li>2022-06-26 new: elaborate content for evaluation. 
    * <li>2022-06-06 Creation originally via generation.
-   *  
-   * 
-   * <li>2017-06 created.
    * </ul>
     * 
    * <b>Copyright/Copyleft</b>:
@@ -94,18 +92,19 @@ public class XmlForOdg extends XmlForOdg_Base {
         
     } }
     for(XmlForOdg.Draw_page page : drawing.get_draw_page()) {
-      for(XmlForOdg.Draw_custom_shape xrefConn:  page.get_draw_custom_shape()) {      // general: a module is inside a group
-        prepareXrefConn(xrefConn);
+      for(XmlForOdg.Draw_custom_shape xrefConn:  page.get_draw_custom_shape()) {     
+        gatherXref(xrefConn);
     } }
     for(XmlForOdg.Draw_page page : drawing.get_draw_page()) {
       for(XmlForOdg.Draw_connector con:  page.get_draw_connector()) {      // general: a module is inside a group
-        prepareConnection(con);
+        gatherConnection(con);
     } }
-    fulfillXref();
+    fulfillConnectionsUsingXref();
+    buildAggregations();
   }
 
   
-  private void prepareXrefConn ( Draw_custom_shape xref ) {
+  private void gatherXref ( Draw_custom_shape xref ) {
     String drawStyle = xref.draw_style_name;
     String drawStyleParent = this.idxStyle.get(drawStyle);
     String id = xref.draw_id;
@@ -161,78 +160,127 @@ public class XmlForOdg extends XmlForOdg_Base {
     return name1;
   }
   
-  private void prepareConnection(Draw_connector con) {
+  private void gatherConnection(Draw_connector con) {
     String style = con.get_draw_style_name();
     String start = con.get_draw_start_shape();
     String startpoint = con.get_draw_start_glue_point();
     String end = con.get_draw_end_shape();
     String endpoint = con.get_draw_end_glue_point();
     String id = con.get_svg_d();
-    XrefConn xrefStart = this.idxXrefById.get(start);
-    Port portStart = null;
-    if(xrefStart ==null) {
-      portStart = this.idxPortById.get(start);
+    if(start ==null || end==null) {
+      errorMsg("dangling connection, without start or end", id + " "+ start + " " +end);
+    } else {
+      XrefConn xref1 = this.idxXrefById.get(start);
+      Port port1 = null;
+      if(xref1 ==null) {
+        port1 = this.idxPortById.get(start);
+      }
+      Port port2 = null; 
+      XrefConn xref2 = this.idxXrefById.get(end);
+      if(xref2 == null) {                                    // either xref1/2 will be set firstly or port1/2, not both.
+        port2 = this.idxPortById.get(end);
+      }
+      if(port1 !=null && port1.kind == Port.Kind.src && xref2 !=null) {
+        xref2.setSrc(port1);
+      }
+      if(port2 !=null && port2.kind == Port.Kind.src && xref1 !=null) {
+        xref1.setSrc(port2);
+      }
+      if((port1 !=null || xref1 !=null) && (port2 !=null || xref2 !=null)) {
+        Connection conn = new Connection("name", id, port1, xref1, port2, xref2);
+        this.listConnection.add(conn);
+        System.out.println("  " + conn.toString());
+      }
+      else {
+        errorMsg("dangling connection, port or xref not found", id + " "+ start + " " +end);
+      }
     }
-    Port portEnd = null; 
-    XrefConn xrefEnd = this.idxXrefById.get(end);
-    if(xrefEnd == null) {
-      portEnd = this.idxPortById.get(end);
-    }
-    if(portStart !=null && portStart.kind == Port.Kind.src && xrefEnd !=null) {
-      xrefEnd.setSrc(portStart);
-    }
-    if(portEnd !=null && portEnd.kind == Port.Kind.src && xrefStart !=null) {
-      xrefStart.setSrc(portEnd);
-    }
-    Connection conn = new Connection("name", id, portStart, xrefStart, portEnd, xrefEnd);
-    this.listConnection.add(conn);
-    System.out.println("  " + conn.toString());
-    
   }
   
   
-  private void fulfillXref ( ) {
+  private void fulfillConnectionsUsingXref ( ) {
+    boolean bFulfilled;
+    int ctAbort = 100;
+    do {
+      bFulfilled = true;
+      for(Connection conn : this.listConnection) {
+        Port portRet = checkPort(conn.port1, conn.xref1, conn.xref2, conn.id);
+        if(portRet == null) { bFulfilled = false; }
+        else if(portRet != conn.port1) {
+          assert(conn.port1 == null);
+          conn.port1 = portRet;                              // fulfill the port.
+        }
+        portRet = checkPort(conn.port2, conn.xref2, conn.xref1, conn.id);
+        if(portRet == null) { bFulfilled = false; }
+        else if(portRet != conn.port2) {
+          assert(conn.port2 == null);
+          conn.port2 = portRet;                              // fulfill the port.
+        }
+      }
+    } while(!bFulfilled && --ctAbort >0);
+    if(!bFulfilled) {
+      assert(ctAbort ==0);
+      System.err.println("connection error");
+    }
     for(Map.Entry<String, XrefConn> exref : this.idxXrefByName.entrySet()) {
       XrefConn xref = exref.getValue();
       if(xref.src == null) {
         System.err.println("Xref has no source: " + xref.name);
       }
     }
-    
+  }
+
+  private void buildAggregations ( ) {
+
     for(Connection conn : this.listConnection) {
-      if(conn.portStart == null) {
-        if(conn.xrefStart == null) {
-          System.err.println("dangling connection");
-        } else {
-          conn.portStart = conn.xrefStart.src;
-        }
-      }
-      if(conn.portEnd == null) {
-        if(conn.xrefEnd == null) {
-          System.err.println("dangling connection");
-        } else {
-          conn.portEnd = conn.xrefEnd.src;
-        }
-      }
-      if(conn.portStart !=null && conn.portStart.kind == Port.Kind.aggr) {
-        Module mdlStart = conn.portStart.mdl;
+        
+      if(conn.id.equals("M8802 6855h-902v-300h-926"))
+        Debugutil.stop();
+      
+      if(conn.port1 !=null && conn.port1.kind == Port.Kind.aggr) {
+        Module mdlStart = conn.port1.mdl;
         mdlStart.aggregations.add(conn);
       }
-      if(conn.portEnd !=null && conn.portEnd.kind == Port.Kind.aggr) {
-        Module mdl = conn.portEnd.mdl;
+      if(conn.port2 !=null && conn.port2.kind == Port.Kind.aggr) {
+        Module mdl = conn.port2.mdl;
         mdl.aggregations.add(conn);
       }
-      if(conn.portStart !=null && conn.portStart.kind == Port.Kind.src) {
-        Module mdlStart = conn.portStart.mdl;
+      if(conn.port1 !=null && conn.port1.kind == Port.Kind.src) {
+        Module mdlStart = conn.port1.mdl;
         mdlStart.aggrSrcs.add(conn);
       }
-      if(conn.portEnd !=null && conn.portEnd.kind == Port.Kind.src) {
-        Module mdl = conn.portEnd.mdl;
+      if(conn.port2 !=null && conn.port2.kind == Port.Kind.src) {
+        Module mdl = conn.port2.mdl;
         mdl.aggrSrcs.add(conn);
       }
       
     }
   }
+  
+  
+  
+  private Port checkPort(Port port, XrefConn xrefOwn, XrefConn xrefOther, String id) {
+    final Port portRet;                         // note: null if port ==null, means not fulfilled
+    if(port == null) {
+      if(xrefOwn == null) {
+        portRet = Port.dangling;
+        System.err.println("dangling connection id=" + id);
+      } else if(xrefOwn.src() !=null){                // port == null, but xref given: 
+        portRet = xrefOwn.src();                           // fulfill port with src of Xref, maybe null
+      } else {
+        portRet = null;                              // missing src, repeat
+      }
+    } else {
+      portRet = port;          //same returned.
+    }
+    if(portRet !=null && xrefOther !=null && xrefOther.src() == null) { // port given, 
+      if(portRet.kind == Port.Kind.src) {
+        xrefOther.setSrc(portRet);                   // if possible, set src of Xref
+      }
+    }
+    return portRet;
+  }
+  
   
   
   
@@ -416,6 +464,13 @@ public class XmlForOdg extends XmlForOdg_Base {
    */
   public static class Port {
     
+    public static char[] emptySpec = { '\0', '\0'};
+    
+    /**This port is used to fulfill a non existing connection,
+     * firstly to finish searching for open connections. 
+     */
+    public static Port dangling = new Port(null, "?dangling", "?Dangling", null, emptySpec);
+    
     enum Kind { aggr, src, inp };
     
     public final Module mdl;
@@ -467,6 +522,9 @@ public class XmlForOdg extends XmlForOdg_Base {
     void setSrc(Port src) { this.src = src; }
     
     public Port src() { return this.src; }
+   
+    
+    @Override public String toString() { return "Xref " + this.name + "(" + this.id + "):" + this.src; }
     
   }
   
@@ -476,36 +534,49 @@ public class XmlForOdg extends XmlForOdg_Base {
    * @author hartmut
    *
    */
-  public static class Connection {
+  public final static class Connection {
     
-    public Port portStart, portEnd;
+    protected Port port1, port2;
     
-    final XrefConn xrefStart, xrefEnd;
+    /**The original end points of a connection if they met a xref.
+     * Then firstly (on construction) the adequate port is not set.
+     * It is set later.
+     */
+    protected final XrefConn xref1, xref2;
     
-    public String name;
+    public final String name;
     
-    public String id;
+    public final String id;
 
     public Connection(String name, String id
-        , Port portStart, XrefConn xrefStart
-        , Port portEnd, XrefConn xrefEnd
+        , Port port1, XrefConn xref1
+        , Port port2, XrefConn xref2
         ) {
-      super();
-      this.portStart = portStart;
-      this.portEnd = portEnd;
-      this.xrefStart = xrefStart;
-      this.xrefEnd = xrefEnd;
+      assert(xref1==null ? port1 !=null : port1 == null);  // only one of them is set.
+      assert(xref2==null ? port2 !=null : port2 == null);  // only one of them is set.
+      this.port1 = port1;    //Note: port is not final 
+      this.port2 = port2;
+      this.xref1 = xref1;    //Note: xref is final
+      this.xref2 = xref2;
       this.name = name;
       this.id = id;
     }
 
 
     @Override public String toString() {
-      return "connection" + " " + this.name + " " 
-          + (this.portStart !=null ? this.portStart.info() : "??") + "-->" 
-          + (this.portEnd !=null ? this.portEnd.info() : "??")
-          + " (" + this.id + ")"
-          ;
+      if(this.port1 !=null && this.port1.kind == Port.Kind.src) {
+        return "connection" + " " + this.name + " " 
+            + (this.port1 !=null ? this.port1.info() : this.xref1) + "-->" 
+            + (this.port2 !=null ? this.port2.info() : this.xref2)
+            + " (" + this.id + ")"
+            ;
+      } else {
+        return "connection" + " " + this.name + " " 
+            + (this.port2 !=null ? this.port2.info() : this.xref2) + "-->" 
+            + (this.port1 !=null ? this.port1.info() : this.xref1)
+            + " (" + this.id + ")"
+            ;
+      }
     }
     
     
