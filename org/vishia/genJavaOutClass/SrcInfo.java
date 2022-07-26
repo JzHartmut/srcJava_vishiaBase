@@ -53,5 +53,13 @@ public class SrcInfo {
   
   
   public int getLine ( ) { return this._srcLine_; }
+  
+  @Override public String toString() {
+    return " @" + getFileName() + ":" + this._srcLine_ + " ";
+  }
+
+  public String showSrcInfo() {
+    return " @" + getFileName() + ":" + this._srcLine_ + " ";
+  }
 
 }
