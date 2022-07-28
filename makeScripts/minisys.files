@@ -1,5 +1,5 @@
-../org/vishia/minisys/GetWebfile.java
-../org/vishia/minisys/MkLink.java
-../org/vishia/util/FileList.java
-../org/vishia/zip/Zip.java
+java_vishiaBase/java/org/vishia/minisys/GetWebfile.java
+java_vishiaBase/java/org/vishia/minisys/MkLink.java
+java_vishiaBase/java/org/vishia/util/FileList.java
+java_vishiaBase/java/org/vishia/zip/Zip.java
 

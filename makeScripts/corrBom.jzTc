@@ -1,6 +1,6 @@
 ==JZtxtcmd==
 
-currdir = scriptdir;
+currdir = ".";  ## use the calling cmd script dir
 
 String libsPath=$1;   ##../.../libs etc.
 String buildPath = FileSystem.absolutePath($2, null);  //replace /tmp/

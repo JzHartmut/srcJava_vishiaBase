@@ -1,4 +1,4 @@
-
+echo ====== deploy ==================================================================
 
 # Deploy the result
 if test ! -f $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar; then   ##compilation not successfull
@@ -6,14 +6,17 @@ if test ! -f $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar; then   ##compilation 
   exit 255
 else                                                       ##compilation not successfull
   ##
-  ## copy the useable version to a existing tools directory:
-  if test -d ../../../../../../../Java/tools; then ##beside cmpnJava... should be existing
-    export CURRENT_JARS_PATH="../../../../../../../Java/tools" 
+  ## copy the useable version to a existing tools or jar directory:
+  if test -d ../../../Java/tools; then    ##beside cmpnJava... should be existing, for compilations from working tree
+    export CURRENT_JARS_PATH="../../../Java/tools" 
   else
-    export CURRENT_JARS_PATH="../../jars" 
+    export CURRENT_JARS_PATH="jars"       ##This is for compilation from zip file
     if ! test -d $CURRENT_JARS_PATH; then mkdir $CURRENT_JARS_PATH; fi
   fi  
+  echo CURRENT_JARS_PATH = $CURRENT_JARS_PATH
   if test -v CURRENT_JARS_PATH; then
+    ##
+    ##The next script, especially corrBom.jzTc, checks the existing files, checks the MD5 and copies only if necessary 
     echo test and correct the bom file: JZtxtcmd corrBom.jzTc $CURRENT_JARS_PATH $BUILD_TMP/deploy vishiaBase $VERSIONSTAMP
     echo java -cp $JAR_vishiaBase org.vishia.jztxtcmd.JZtxtcmd $MAKEBASEDIR/corrBom.jzTc $CURRENT_JARS_PATH $BUILD_TMP/deploy $DSTNAME $VERSIONSTAMP
     java -cp $JAR_vishiaBase org.vishia.jztxtcmd.JZtxtcmd $MAKEBASEDIR/corrBom.jzTc $CURRENT_JARS_PATH $BUILD_TMP/deploy $DSTNAME $VERSIONSTAMP
@@ -28,15 +31,17 @@ else                                                       ##compilation not suc
       ls -l $CURRENT_JARS_PATH
       ##
     fi  
-    echo copy to the deploy directory if exists, also only the source may be changed
-    if test -d ../../../../../../../Java/deploy; then
-      echo $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* ==> ../../../../../../../Java/deploy
-      cp $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* ../../../../../../../Java/deploy
-    elif test -d ../../deploy; then
-      echo $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* ==> ../../deploy
-      cp $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* ../../deploy
-    else
-      echo deploy directory not found.
+    ##
+    ##The next script copies to the maybe given deploy directory.
+    if test -d ../../../Java/deploy; then export DEPLOYDIR="../../../Java/deploy";
+    elif test -d deploy; then export DEPLOYDIR="deploy";
+    else echo deploy directory not given, create it.
+    fi  
+    if test -v DEPLOYDIR; then
+      echo == Deploy:
+      echo copy to $DEPLOYDIR
+      cp $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* $DEPLOYDIR
+      ls $DEPLOYDIR/$DSTNAME-$VERSIONSTAMP*
     fi  
     echo ======= success ==========================================================
   fi  

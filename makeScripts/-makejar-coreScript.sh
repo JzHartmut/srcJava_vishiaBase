@@ -39,15 +39,25 @@ if test "$MD5FILE" = ""; then export MD5FILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIO
 if test "$TIMEinJAR" = ""; then export TIMEinJAR=$VERSIONSTAMP+00:00;  fi
 
 ##specific condition, use the yet compiled class files to zip:
-if test "$JAR_vishiaBase" = "__vishiaBase_CLASSfiles__"; then export JAR_vishiaBase=$TMPJAVAC/binjar;
-elif test "$JAR_vishiaBase" = ""; then
-  if test -f ../../tools/vishiaBase.jar; then export JAR_vishiaBase="../../tools/vishiaBase.jar"
-  elif test -f ../../jars/vishiaBase.jar; then export JAR_vishiaBase="../../jars/vishiaBase.jar"
-  elif test -f ../../../../../tools/vishiaBase.jar; then export JAR_vishiaBase="../../../../../tools/vishiaBase.jar"
-  elif test -f ../../../../../../../Java/tools/vishiaBase.jar; then export JAR_vishiaBase="../../../../../../../Java/tools/vishiaBase.jar"
+if test "$JAR_zipjar" = "__vishiaBase_CLASSfiles__"; then export JAR_zipjar=$TMPJAVAC/binjar;
+elif test "$JAR_zipjar" = ""; then
+  if test -f tools/vishiaBase.jar; then export JAR_zipjar="tools/vishiaBase.jar"
+  elif test -f jars/vishiaBase.jar; then export JAR_zipjar="jars/vishiaBase.jar"
+  elif test -f ../../tools/vishiaBase.jar; then export JAR_zipjar="../../tools/vishiaBase.jar"
+  elif test -f ../../../Java/tools/vishiaBase.jar; then export JAR_zipjar="../../../Java/tools/vishiaBase.jar"
   else echo ERROR vishiaBase.jar not able to found.
   fi
 fi
+
+if test "$OS" = "Windows_NT"; then export sepPath=";"; else export sepPath=":"; fi
+
+if ! test -v SRCPATH; then
+  if test -v SRC_ALL2; then export SRCPATH="$SRC_ALL$sepPath$SRC_ALL2"
+  else export SRCPATH="$SRC_ALL"
+  fi
+  echo set SRCPATH=$SRCPATH
+fi  
+
 
 
 echo
@@ -65,7 +75,7 @@ echo FILE1SRC = $FILE1SRC  ## alternatively: argument files for javac
 echo RESOURCEFILES = $RESOURCEFILES  ## additional files in jar
 echo SRCPATH = $SRCPATH  - search path sources for javac
 echo CLASSPATH = $CLASSPATH - search path jars for javac
-echo JAR_vishiaBase = $JAR_vishiaBase  - jar file for jar/zip generation
+echo JAR_zipjar = $JAR_zipjar  - jar file for jar/zip generation
 echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation
 echo JARFILE = $JARFILE  - generated jar    
 echo MD5FILE = $MD5FILE  - generated MD5 text file
@@ -90,14 +100,18 @@ if ! test "$SRC_ALL" = ""; then
   echo source-set all files = $SRC_ALL
   find $SRC_ALL -name "*.java" > $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
-  export SRCZIP=$SRC_ALL/..:**/*  ## with the srcJava_... dir
+  export SRCZIP=.:$SRC_ALL/**/*  ## with the srcJava_... dir
 fi  
 if ! test "$SRC_ALL2" = ""; then 
   echo source-set all files = $SRC_ALL2
   find $SRC_ALL2 -name "*.java" >> $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
-  export SRCZIP="$SRCZIP $SRC_ALL2/..:**/*"                         
+  export SRCZIP="$SRCZIP .:$SRC_ALL2/**/*"                         
 fi  
+if test -v SRC_MAKE; then 
+  export SRCZIP="$SRCZIP .:$SRC_MAKE/**/*"                         
+fi  
+
 echo compile javac
 echo pwd=$(pwd)
 ##echo ls /tmp
@@ -113,8 +127,8 @@ fi
 echo build jar
 ##do not use: $JAVAC_HOME/bin/jar -n0cvfM $JARFILE -C $TMPJAVAC/binjar . > $TMPJAVAC/jar.txt
 echo pwd=$(pwd)
-echo java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
-java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
 if ! test "$MD5FILE" = ""; then echo output MD5 checksum
   md5sum -b $JARFILE > $MD5FILE
   echo "  srcFiles: $SRCZIPFILE" >> $MD5FILE
@@ -122,8 +136,8 @@ fi
 
 if test ! "$SRCZIPFILE" = ""; then  ##not produced if $SRC_ALL is empty instead $FILE1SRC is given from outside.
   pwd
-  echo java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
-  java -cp $JAR_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  java -cp $JAR_zipjar org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
   if test -f $BUILD_TMP/deploy/$SRCZIPFILE; then echo ok $BUILD_TMP/deploy/$SRCZIPFILE; else echo ERROR src.zip $BUILD_TMP/deploy/$SRCZIPFILE; fi
 fi  
 
@@ -131,9 +145,8 @@ echo ===========================================================================
 if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
 echo ===================================================================================
 
-
-if test -f $MAKEBASEDIR/-deployJar.sh; then 
-  $MAKEBASEDIR/-deployJar.sh 
+echo DEPLOYSCRIPT=$DEPLOYSCRIPT
+if test -v DEPLOYSCRIPT 
+then $DEPLOYSCRIPT
 fi
-
 

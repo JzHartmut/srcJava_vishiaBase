@@ -1,21 +1,27 @@
 echo =========================================================================
 echo execute  $0
-echo " ... generates the vishiaBase.jar from srcJava_vishiaBase core sources"
+## Set the current dir 2 level before the script, it is the srcDir/makeScripts
+cd $(dirname $0)/../..
+echo currdir $PWD
+export DSTNAME="vishiaBase"
+echo " ... generates the $DSTNAME.jar from srcJava_$DSTNAME core sources"
 
-#it compiles the srcJava_vishisBase to vishisMinisys.jar and vishiaBase.jar
-
-#Set the version newly here to the current date if the sources are changed in jar and checksum.
-#If the relevant sources are not change in functionality, may be changed in comment, 
-#  it is not necessary the change this VERSIONSTAMP because the generated content is the same.
-#The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
+#Do not change the version on repeated build, and check the checksum and content of jar.
+#If it is equal, it is a reproduces build. The $VERSIONSTAMP is important 
+#  because it determines the timestamp and hence the checksum in the jar file. 
 export VERSIONSTAMP="2022-07-26"
+
+## Determine a dedicated vishiaBase-yyyy-mm-dd.jar or deactivate it to use the current vishiaBase.jar:
+export VERSION_VISHIABASE=$VERSIONSTAMP
+
+
+#The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
 export VERSION_MINISYS="2022-06-29"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
 ## See $TIMEinJAR_VISHIABASE in next block.
 if test "$VERSIONSTAMP" = ""; then export VERSIONSTAMP=$(date -I); fi   ## writes current date
-export VERSION_VISHIABASE=$VERSIONSTAMP
 
 ## Determines the timestamp of the files in the jar. The timestamp determines also
 ## the MD5 check code. 
@@ -37,11 +43,18 @@ export TIMEinJAR_VISHIABASE=""   ##get from $VERSIONSTAMP
 #It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP
 export SRCZIPFILE="vishiaBase-$VERSION_VISHIABASE-source.zip"
 
-export MAKEBASEDIR="."
+export SRCDIRNAME="java_vishiaBase"  ##must identical to the own location
+export MAKEBASEDIR="$SRCDIRNAME/makeScripts"     ##must identical in the own location
 
 #No further classpath necessary. 
 #The CLASSPATH is used for reference jars for compilation which should be present on running too.
 export CLASSPATH=xx
+
+
+#use the built before jar to generate jar. This is a special solution for vishiaBase.jar compilation.
+#It is the tool for zip and jar used inside the core script
+export JAR_zipjar="__vishiaBase_CLASSfiles__"
+
 
 
 #Build the whole vishiaBase
@@ -51,31 +64,26 @@ export CLASSPATH=xx
 export VERSIONSTAMP=$VERSION_VISHIABASE
 export TIMEinJAR="$TIMEinJAR_VISHIABASE"
 
-#Output files
-export DSTNAME="vishiaBase"
 
-#use the built before jar to generate jar
+export MANIFEST=$SRCDIRNAME/makeScripts/$DSTNAME.manifest
 
-export MANIFEST=vishiaBase.manifest
+##This selects the files to compile
+export SRC_MAKE="$SRCDIRNAME/makeScripts" 
+export SRC_ALL="$SRCDIRNAME/java"
+unset SRC_ALL2
+unset FILE1SRC    ##left empty to compile all sources
 
-export SRC_ALL=".."
-##if test -d ../../srcJava_vishiaRun; then export SRC_ALL2="../../srcJava_vishiaRun"
-##else export SRC_ALL2="../../../../../../cmpnJava_vishiaRun/src/main/java/srcJava_vishiaRun"
-##fi
-export FILE1SRC=""
-
-# srcpath located from this workingdir as currdir for shell execution:
-export SRCPATH=..
+##This is the path to find sources for javac, maybe more comprehensive as SRC_ALL
+unset SRCPATH       ##set it with SRC_ALL;SRC_ALL2
 
 # Resourcefiles for files in the jar
-export RESOURCEFILES="..:**/*.zbnf ..:**/*.txt ..:**/*.xml"
-
-#use the built before jar to generate jar. This is a special solution for vishiaBase.jar compilation.
-export JAR_vishiaBase="__vishiaBase_CLASSfiles__"
+export RESOURCEFILES="$SRCDIRNAME/java:**/*.zbnf $SRCDIRNAME/java:**/*.txt $SRCDIRNAME/java:**/*.xml"
 
 
-
-#now run the common script for vishiaBase:
+#now run the common script:
+export DEPLOYSCRIPT = "$MAKEBASEDIR/-deployJar.sh"
+chmod 777 $MAKEBASEDIR/-makejar-coreScript.sh
+chmod 777 $DEPLOYSCRIPT
 $MAKEBASEDIR/-makejar-coreScript.sh
 
 echo
@@ -90,21 +98,21 @@ echo
 #==============
 #determine the sources:
 export DSTNAME="vishiaMinisys"
-export SRC_ALL=""
-export SRC_ALL2=""
-export FILE1SRC="@minisys.files" #files to compile contained in this file
+unset SRC_ALL   ##do not build a zio file
+unset SRC_ALL2
+export SRCPATH="$SRCDIRNAME/java"
+export FILE1SRC="@$SRCDIRNAME/makeScripts/minisys.files" #files to compile contained in this file
 
 # located from this workingdir as currdir for shell execution:
-export MANIFEST=minisys.manifest
+export MANIFEST=$SRCDIRNAME/makeScripts/minisys.manifest
 
 
 export VERSIONSTAMP="$VERSION_MINISYS"
 export TIMEinJAR="$TIMEinJAR_MINISYS"
-export SRCZIPFILE=""        ## do not zip this sources
-export JAR_vishiaBase=""    ## search in ../../jars etc. some default locations
+unset SRCZIPFILE=""         ## do not zip this sources
+export JAR_vishiaBase=""    ## search in ../../jars etc. some default locations used from before generated vishiaBase.jar
 
 #now run the common script for MiniSys:
-chmod 777 $MAKEBASEDIR/-makejar-coreScript.sh
-chmod 777 $MAKEBASEDIR/-deployJar.sh
+export DEPLOYSCRIPT = "$MAKEBASEDIR/-deployJar.sh"
 $MAKEBASEDIR/-makejar-coreScript.sh
 
