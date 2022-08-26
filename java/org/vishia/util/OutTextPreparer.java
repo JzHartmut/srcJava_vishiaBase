@@ -47,7 +47,8 @@ import java.util.TreeMap;
  *   whereby <code>CONTENT</code> is the content of <code>var</code>.
  * <li>Note that <code>&lt:if</code> etc. cannot be used for common texts, it is used as control statement:
  * <li><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;else>else-Text&lt;.if></code>
- * <li><code>&lt;for:variable:container>text for any element &lt;&variable> in loop &lt;.for></code>
+ * <li><code>&lt;for:variable:container>text for any element &lt;&variable.element> in loop &lt;:if:variable_next>, &lt;.if>&lt;.for></code><br>
+ *   ##The next variable is also present, here to test whether a separator character should be output. 
  * <li><code>&lt: ></code> skips over whitespaces till next text, does not output the whitespaces, 
  *   able to use for example to write a simple sequence in more as one line for better readability of the script.
  * <li><code>&lt: >   &lt: ></code> A second <code>&lt: ></code> after skipped whitespaces produces one space 
@@ -686,7 +687,7 @@ public class OutTextPreparer
             this.nameVariables.put(entryVar, ixOentry);
           }
           cmd.ixEntryVar = ixOentry.ix;
-          entryVar += "_next";
+          entryVar += "_next";                             // the descendant of the current element is also available. 
           ixOentry = this.nameVariables.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1273,7 +1274,7 @@ public class OutTextPreparer
       boolean bFirst = true;
       for(Map.Entry<Object,Object> item: map.entrySet()) {
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
-        args.args[cmd.ixEntryVarNext] = item.getValue();
+        args.args[cmd.ixEntryVarNext] = item.getValue();   // buffer always 2 elements, sometimes necessary
         if(bFirst) {
           bFirst = false;
         } else { //start on 2. item
@@ -1282,7 +1283,7 @@ public class OutTextPreparer
       }
       if(!bFirst) {  //true only if the container is empty.
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
-        args.args[cmd.ixEntryVarNext] = null;
+        args.args[cmd.ixEntryVarNext] = null;              // execute for the last argument.
         execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }

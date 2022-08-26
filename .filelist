@@ -34,8 +34,8 @@
 2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
 2021-10-04 14:29:49  x     ByteDataAccessSimple.java                ::          5.378 -1939589092 
-2016-01-23 22:15:12  x     ByteDataSymbolicAccess.java              ::         24.179 -1050332237 
-2021-10-04 14:29:49  x     ByteDataSymbolicAccessReadConfig.java    ::          3.789  1341886234 
+2022-08-26 14:42:43  x     ByteDataSymbolicAccess.java              ::         26.751  1167026967 
+2022-08-26 21:01:40  x     ByteDataSymbolicAccessReadConfig.java    ::          4.539 -0785729210 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
 2018-12-27 19:09:07  x     Field_Jc.java                            ::         15.680 -1928813301 
@@ -45,7 +45,7 @@
 2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
 2021-10-04 14:29:52  x     RawDataAccess.java                       ::          3.662  1778324523 
 2020-12-20 20:45:03  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.137  1346048705 
-2021-10-04 14:29:51  x     VariableAccessArray_ifc.java             ::          6.034 -1153822474 
+2022-08-26 14:37:42  x     VariableAccessArray_ifc.java             ::          6.179 -1134572736 
 2021-10-04 14:29:49  x     VariableAccessWithBitmask.java           ::          6.183 -1007294123 
 2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
 2018-04-14 08:27:41  x     VariableAccess_ifc.java                  ::         10.303 -1724949766 
@@ -108,6 +108,7 @@
 2021-10-04 14:29:56  x     InterProcessCommRx_ifc.java              ::          2.586  1150824039 
 2021-10-04 14:29:55  x     InterProcessComm_SocketImpl.java         ::          8.281 -1573873016 
 2021-06-17 22:38:27  x     SocketCmd_InterProcessComm.java          ::          3.252  1695370688 
+2022-08-25 20:50:47  x     SocketCommSimple.java                    ::          2.331  1587322686 
 
 ============================== java/org/vishia/docuGen/ ============================================
 2021-10-04 14:29:52  x     DocuGen.java                             ::         11.946  1773808510 
@@ -302,7 +303,7 @@
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:50  x     OrderForList.java                        ::           .620  0011920407 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2022-05-15 23:42:59  x     OutTextPreparer.java                     ::         54.789  1882362743 
+2022-07-29 13:45:10  x     OutTextPreparer.java                     ::         55.124  0360937670 
 2020-06-21 21:19:38  x     OutputTwice.java                         ::           .854 -1967010122 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -324,7 +325,7 @@
 2021-10-04 14:29:49  x     StdHexFormatWriter.java                  ::          4.239  0384535192 
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
-2022-06-06 00:11:14  x     StringFormatter.java                     ::         48.644 -0367631997 
+2022-08-26 20:52:38  x     StringFormatter.java                     ::         49.792  0834878312 
 2022-05-23 18:13:34  x     StringFunctions.java                     ::         65.064 -2119370343 
 2022-03-16 10:56:58  x     StringFunctions_B.java                   ::         14.082  1161478632 
 2022-05-26 18:12:08  x     StringFunctions_C.java                   ::         26.196  0569123298 

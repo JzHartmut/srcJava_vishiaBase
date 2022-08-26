@@ -26,35 +26,40 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.vishia.mainCmd.Report;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
-public class ByteDataSymbolicAccessReadConfig extends ByteDataSymbolicAccess {
+public class ByteDataSymbolicAccessReadConfig {
 
   /**Version, able to read as hex yyyymmdd.
 	 * Changes:
 	 * <ul>
+	 * <li>2022-08-26 use association instead inheritance for {@link ByteDataSymbolicAccess} 
+	 *   because this ...ReadConfig has its own meaning. The config class need not have the "IS A" property to the {@link ByteDataSymbolicAccess}.
+	 *   It is better to have an extra organization of the access and the config. 
+   * <li>2022-08-26 log removed, use System.err and System.out with its possibility to redirection, a better basically concept. 
    * <li>2013-11-22 Hartmut new: {@link #readVariableCfg(String, String)}, supports more as one instances
    *   with the same variable configuration, but from divergent sources. The variables should have a prefix. 
    * <li>2012-03-02 Hartmut new: extract from its super class, only
 	 * </ul>
 	 */
-	public final static int versionStamp = 0x20120302;
+	public final static int versionStamp = 0x20220826;
 
+	
+	public final ByteDataSymbolicAccess symAccess;
 
-	public class ZbnfResult
-	{ private final List<Variable> variable1 = new LinkedList<Variable>();
+	public final class ZbnfResult
+	{ protected final List<ByteDataSymbolicAccess.Variable> variable1 = new LinkedList<ByteDataSymbolicAccess.Variable>();
 	  //public Variable new_variable(){ return new Variable(); }
 
 		/**New instance for ZBNF-component: <variable> */
-		public Variable new_variable(){
-	  	return new Variable(ByteDataSymbolicAccessReadConfig.this);
+		public ByteDataSymbolicAccess.Variable new_variable(){
+	  	return ByteDataSymbolicAccessReadConfig.this.symAccess.new Variable();
 	  }
 
 		/**Set from ZBNF-component: <variable> */
-		public void add_variable(Variable item){
-	  	variable1.add(item);
+		public void add_variable(ByteDataSymbolicAccess.Variable item){
+	  	this.variable1.add(item);
 	  }
 
 
@@ -73,8 +78,14 @@ public class ByteDataSymbolicAccessReadConfig extends ByteDataSymbolicAccess {
 	+ "variable::= <$/\\.?name> : <!.?typeChar> @<#?bytePos>[\\.0x<#x?bitMask>] [ + <#?nrofBytes> [ * <#?nrofArrayElements>]]."
 	;
 
-  public ByteDataSymbolicAccessReadConfig(Report log) {
-    super(log);
+  public ByteDataSymbolicAccessReadConfig() {
+    super();
+    this.symAccess = new ByteDataSymbolicAccess();
+  }
+
+  public ByteDataSymbolicAccessReadConfig(ByteDataSymbolicAccess symAccess) {
+    super();
+    this.symAccess = symAccess;
   }
 
   
@@ -89,18 +100,18 @@ public class ByteDataSymbolicAccessReadConfig extends ByteDataSymbolicAccess {
   
   public int readVariableCfg(String preName, String sFileCfg)
   {
-		ZbnfJavaOutput parser = new ZbnfJavaOutput(log);
+		ZbnfJavaOutput parser = new ZbnfJavaOutput();
 		ZbnfResult rootParseResult = new ZbnfResult();
 		File fileConfig = new File(sFileCfg);
 		//File fileSyntax = new File("exe/oamVar.zbnf");
 		String sError = parser.parseFileAndFillJavaObject(rootParseResult.getClass(), rootParseResult, fileConfig, syntaxSymbolicDescrFile);
 	  int nrofVariable = 0;
 		if(sError != null){
-	  	log.writeError(sError);
+	  	System.err.println(sError);
 	  } else {
 	  	//success parsing
-	  	for(Variable item: rootParseResult.variable1){
-	  		addVariable(preName + item.name, item);
+	  	for(ByteDataSymbolicAccess.Variable item: rootParseResult.variable1){
+	  		this.symAccess.addVariable(preName + item.name, item);
 	  		nrofVariable +=1;
 	  	}
 		}

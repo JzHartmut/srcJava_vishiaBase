@@ -27,7 +27,7 @@ import java.util.TreeMap;
 
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
 import org.vishia.bridgeC.IllegalArgumentExceptionJc;
-import org.vishia.byteData.RawDataAccess;
+import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.mainCmd.Report;
 
 
@@ -50,7 +50,7 @@ import org.vishia.mainCmd.Report;
  * @author Hartmut Schorrig
  *
  */
-public class ByteDataSymbolicAccess {
+public class ByteDataSymbolicAccess implements VariableContainer_ifc {
 
   /**Version, history and license. The version number is a date written as yyyymmdd as decimal number.
    * <ul>
@@ -102,13 +102,15 @@ public class ByteDataSymbolicAccess {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static int versionStamp = 20120422;
+  public final static int versionStamp = 20220826;
   
-  /**An instance is created and filled from ZBNF-parser using reflection.
+  /**An instance can be created and filled from ZBNF-parser using reflection
+   * or also programmatically created using .
+   * It is a non static class because it is related to the instance of the given {@link ByteDataSymbolicAccess}.
    */
   public class Variable implements VariableAccessArray_ifc
   {
-    public final ByteDataSymbolicAccess bytes;
+    public final ByteDataSymbolicAccess byteDataAccess;
     
     /**The data path. */
     public String name;
@@ -133,12 +135,44 @@ public class ByteDataSymbolicAccess {
     
     public int nrofArrayElements;
 
-    public Variable(ByteDataSymbolicAccess bytes)
-    {
-      super();
-      this.bytes = bytes;
+    /**Creates an instance which's fields can be set afterwards, especially while parsing a textual given file. */
+    public Variable()
+    { this.byteDataAccess = ByteDataSymbolicAccess.this;
     }
 
+    
+    /**Creates an instance which's fields can be set afterwards, especially while parsing a textual given file. */
+    public Variable(String name, String nameShow, int bytePos, char typeChar, int nrofArrayElements)
+    { this.byteDataAccess = ByteDataSymbolicAccess.this;
+      setProps(name, nameShow, bytePos, typeChar, nrofArrayElements);
+    }
+
+    
+    @Deprecated public Variable(ByteDataSymbolicAccess XXXbytes)
+    {
+      super();
+      this.byteDataAccess = ByteDataSymbolicAccess.this;
+    }
+
+    
+    
+    /**Defines which type of variable are found on which position.
+     * The elements of a variable are not final because there are also set as ZBNF parse result. 
+     * But usual a variable is used as final (not reused for several approaches on different positions).
+     * @param name Name for internal administration, unique
+     * @param nameShow name to show
+     * @param bytePos position in the datagram / byte array.
+     * @param typeChar see {@link #typeChar}, Z B S I L F D for boolean, byte, short, int, long, float, double
+     * Note: for boolean values not on bit 0 a bitMask should be set. 
+     * @param nrofArrayElements 0 for scalar, >0 an array more values one after another
+     */
+    public void setProps(String name, String nameShow, int bytePos, char typeChar, int nrofArrayElements) {
+      this.name = name;
+      this.nameShow = nameShow;
+      this.bytePos = bytePos;
+      this.typeChar = typeChar;
+      this.nrofArrayElements = nrofArrayElements;
+    }
     
     @Override public char getType(){ return typeChar; }
     
@@ -359,8 +393,6 @@ public class ByteDataSymbolicAccess {
   }
   
   
-  protected final Report log;
-  
   private final Map<String, ByteDataSymbolicAccess.Variable> indexVariable = new TreeMap<String, ByteDataSymbolicAccess.Variable>();
   
   private byte[] data;
@@ -378,10 +410,20 @@ public class ByteDataSymbolicAccess {
    */
   private long timeSetNewValue;
   
-  private final RawDataAccess dataAccess = new RawDataAccess();
+  private final ByteDataAccessSimple dataAccess;
   
-  public ByteDataSymbolicAccess(Report log)
-  { this.log = log;
+  /**Creates with its own internal (not visible) {@link ByteDataAccessSimple} access operations. */
+  public ByteDataSymbolicAccess()
+  { this.dataAccess = new ByteDataAccessSimple(true);  //access big endian
+  }
+  
+  
+  /**Works with a given ByteDataAccess which can be additional touched with the {@link ByteDataAccessBase} or {@link ByteDataAccessSimple} operations.
+   * with that concept only a part of the whole data may be used for the symbolic access.
+   * @param dataAccess
+   */
+  public ByteDataSymbolicAccess(ByteDataAccessSimple dataAccess)
+  { this.dataAccess = dataAccess;
   }
   
   
@@ -434,10 +476,11 @@ public class ByteDataSymbolicAccess {
   
   /**Searches a variable by name and returns it.
    * A variable is a description of the byte position. length, type in a byte[]-Array.
+   * see {@link VariableContainer_ifc#getVariable(String)}
    * @param name The name 
    * @return null if not found.
    */
-  public Variable getVariable(String name)
+  @Override public Variable getVariable(String name)
   { return indexVariable.get(name);
   }
   
@@ -565,6 +608,14 @@ public class ByteDataSymbolicAccess {
       ix[0] = ixArray;
     }
     return sPathVariable;
+  }
+
+
+  /**see {@link VariableContainer_ifc#setCallbackOnReceivedData(Runnable)}
+   * It is not implemented here.
+   */
+  @Override public void setCallbackOnReceivedData ( Runnable callback ) {
+    // do nothing
   }
 
   

@@ -1,5 +1,9 @@
 package org.vishia.byteData;
 
+/**This interface enhances the {@link VariableAccess_ifc} with the capability to access elements in an array.
+ * @author Hartmut Schorrig
+ *
+ */
 public interface VariableAccessArray_ifc extends VariableAccess_ifc
 {
   /**Version, history and license.

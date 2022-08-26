@@ -59,6 +59,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   
   /**Version, history and license.
    * <ul>
+   * <li>2022.08-03 new {@link #addHexLine(byte[], int, int, short)} programmed but not used and not tested yet.
    * <li>2022-06-05: Hartmut now warning-free, all used with this. and some argument accesses 
    * <li>2022-06-05: Hartmut support of more as one line: After {@link #newline()} the position counts from 0 for the next line, 
    *   and a next line can be prepared. It is tested for a simple example in testJava_vishiaBase but not yet elaborately used. 
@@ -121,7 +122,7 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
    * 
    * 
    */
-  public static final String version = "2022-05-24";
+  public static final String version = "2022-08-03";
   
   private static final byte mNrofBytesInWord = 0x1F;
 
@@ -575,41 +576,77 @@ public final class StringFormatter implements Appendable, Flushable, StringFunct
   
   
   /** Adds at the current position a line of hex numbers.
-   *
-   * @param data byte data
-   * @param idx offset
-   * @param bytes nr of bytes
-   * @param mode mode see {@link k1} to {@link k8Right}
-   * @return this
-   * @java2c=return-this.
-   */
-  public StringFormatter addHexLine(final byte[] data, final int idx, final int nrofBytes, final short mode)
-  { int nrofBytesInWord = mode & mNrofBytesInWord;
-    int nrofWords = nrofBytes / nrofBytesInWord;
-    
-    prepareBufferPos(2 * nrofBytes + nrofWords);
-    int nrofBytes1 = nrofBytes;
-    int idx1 = idx;
-    while(nrofBytes1 > 0)
-    { if( nrofBytes1 < nrofBytesInWord)
-      { //the last hex word is smaller as given in mode: 
-        addHexWord_(data, idx1, (short)((mode & mBytesInWordBigEndian) + nrofBytes1));
-        nrofBytes1 = 0;
-      }
-      else
-      { //normal operation
-        addHexWord_(data, idx1, mode); 
-        this.buffer.setCharAt(this.pos_++,' ');
-        nrofBytes1 -= nrofBytesInWord;
-        idx1 += nrofBytesInWord;
-      }  
+  *
+  * @param data byte data
+  * @param idx offset
+  * @param bytes nr of bytes
+  * @param mode mode see {@link k1} to {@link k8Right}
+  * @return this
+  * @java2c=return-this.
+  */
+ public StringFormatter addHexLine(final byte[] data, final int idx, final int nrofBytes, final short mode)
+ { int nrofBytesInWord = mode & mNrofBytesInWord;
+   int nrofWords = nrofBytes / nrofBytesInWord;
+   
+   prepareBufferPos(2 * nrofBytes + nrofWords);
+   int nrofBytes1 = nrofBytes;
+   int idx1 = idx;
+   while(nrofBytes1 > 0)
+   { if( nrofBytes1 < nrofBytesInWord)
+     { //the last hex word is smaller as given in mode: 
+       addHexWord_(data, idx1, (short)((mode & mBytesInWordBigEndian) + nrofBytes1));
+       nrofBytes1 = 0;
+     }
+     else
+     { //normal operation
+       addHexWord_(data, idx1, mode); 
+       this.buffer.setCharAt(this.pos_++,' ');
+       nrofBytes1 -= nrofBytesInWord;
+       idx1 += nrofBytesInWord;
+     }  
+   }
+   return this;
+ }
+
+
+ 
+ 
+ /** Adds at the current position a line of hex numbers.
+ *
+ * @param data byte data
+ * @param idx offset
+ * @param bytes nr of bytes
+ * @param mode mode see {@link k1} to {@link k8Right}
+ * @return this
+ * @java2c=return-this.
+ * /
+public StringFormatter addHexLine(final int[] data, final int idx, final int nrofBytes, final short mode)
+{ int nrofBytesInWord = mode & mNrofBytesInWord;
+  int nrofWords = nrofBytes / nrofBytesInWord;
+  
+  prepareBufferPos(2 * nrofBytes + nrofWords);
+  int nrofBytes1 = nrofBytes;
+  int idx1 = idx;
+  while(nrofBytes1 > 0)
+  { if( nrofBytes1 < nrofBytesInWord)
+    { //the last hex word is smaller as given in mode: 
+      addHexWord_(data, idx1, (short)((mode & mBytesInWordBigEndian) + nrofBytes1));
+      nrofBytes1 = 0;
     }
-    return this;
+    else
+    { //normal operation
+      addHexWord_(data, idx1, mode); 
+      this.buffer.setCharAt(this.pos_++,' ');
+      nrofBytes1 -= nrofBytesInWord;
+      idx1 += nrofBytesInWord;
+    }  
   }
+  return this;
+}
+*/   //TODO later if need, variant for int, this is only copied from byte[] variant. 
 
 
-  
-  
+
   /**Writes a block in hex. 
    * @param data
    * @param from
