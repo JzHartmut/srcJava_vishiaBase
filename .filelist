@@ -108,7 +108,7 @@
 2021-10-04 14:29:56  x     InterProcessCommRx_ifc.java              ::          2.586  1150824039 
 2021-10-04 14:29:55  x     InterProcessComm_SocketImpl.java         ::          8.281 -1573873016 
 2021-06-17 22:38:27  x     SocketCmd_InterProcessComm.java          ::          3.252  1695370688 
-2022-08-25 20:50:47  x     SocketCommSimple.java                    ::          2.331  1587322686 
+2022-08-26 21:24:11  x     SocketCommSimple.java                    ::          4.055 -0628050349 
 
 ============================== java/org/vishia/docuGen/ ============================================
 2021-10-04 14:29:52  x     DocuGen.java                             ::         11.946  1773808510 
