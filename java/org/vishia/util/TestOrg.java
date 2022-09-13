@@ -74,7 +74,7 @@ import java.io.IOException;
  * <br>
  * All tests of a module are programmed immediately by a <code>main()</code> routine in a <code>TestAll</code> class.
  * 
- * @author Hartmut Schorrig LPGL license or maybe second license model  with special contract. Do not remove this license entry.
+ * @author Hartmut Schorrig LPGL license or maybe second license model with special contract. Do not remove this license entry.
  *
  */
 public class TestOrg {
@@ -100,9 +100,13 @@ public class TestOrg {
    * @param title it is stored on shown on {@link #finish()} or on an error.
    * @param nVerbose verbose level for the title. 
    *     A lower number is a more prior message, a higher (..9) is a message only for a verbose output.
-   * @param args if one of the args contains <code>"---TESTverbose:7"</code>
-   *   where the "7" is a digit between 0 and 9, then all ok messages with its nVerboseLevel <= this number 
-   *   are shown in the ok case too.  
+   *     Hence the output is not shown if the basic level (default 4) is lesser.
+   *     This is the possibility to hide too much information about "ok" test cases.
+   * @param args if one of the args contains <code>"---TESTverbose:4"</code>
+   *   where the "4" is a digit between 0 and 9, then all messages with a nVerboseLevel <= this number 
+   *   are shown also in the ok case as information. 
+   *   ok messages with verbose level > this level are not shown to prevent to much information about test cases.
+   *   The default value is 4.  
    */
   public TestOrg(String title, int nVerbose, String[] args) {
     this(title, nVerbose, args, System.out);
@@ -110,8 +114,8 @@ public class TestOrg {
   
   
   /**Ctor like {@link #TestOrg(String, int, String[])} but with:
+   * Parameter see {@link #TestOrg(String, int, String[])}  
    * @param testout any output channel (may be an opened file) for the test output.
-   * See {@link #TestOrg(String, int, String[])}  
    */
   public TestOrg(String title, int nVerbose, String[] args, Appendable testout) {
     this.title = title;
@@ -155,26 +159,28 @@ public class TestOrg {
    * @param nVerbose level of verbose: Same as in {@link #expect(boolean, int, String)}. 
    *     A lower number is a more prior message, a higher (..9) is a message only for a verbose output.
    * @param txt Understandable description of the test case
+   * @return 0 if matching, position of difference in the strings if >0, never <0
    */
-  public void expect(CharSequence s1, CharSequence s2, int nVerbose, String txt) {
+  public int expect(CharSequence s1, CharSequence s2, int nVerbose, String txt) {
     int eq = StringFunctions.comparePos(s1, s2);
     final String txtShow;
     if(eq !=0) {
-      int pos = Math.abs(eq);
+      eq = Math.abs(eq);
       int pmax = s1.length();
       String more = " ";
-      if(pmax > pos + 20) { pmax = pos + 20; more = "... "; }
-      int plf = StringFunctions.indexOfAnyChar(s1, pos, pmax, "\n\r");
-      CharSequence txtPos = s1.subSequence(pos, pmax);
-      if(plf >= pos && plf < pmax) {
-        txtShow = "@" + pos + ": " + s1.subSequence(pos, plf) + "\\n" + more + ": " + txt; //show which position is different.  
+      if(pmax > eq + 20) { pmax = eq + 20; more = "... "; }
+      int plf = StringFunctions.indexOfAnyChar(s1, eq, pmax, "\n\r");
+      //CharSequence txtPos = s1.subSequence(eq, pmax);
+      if(plf >= eq && plf < pmax) {
+        txtShow = "@" + eq + ": " + s1.subSequence(eq, plf) + "\\n" + more + ": " + txt; //show which position is different.  
       } else {
-        txtShow = "@" + pos + ": " + s1.subSequence(pos, pmax) + ": " + more + txt; //show which position is different.  
+        txtShow = "@" + eq + ": " + s1.subSequence(eq, pmax) + ": " + more + txt; //show which position is different.  
       }
     } else { 
       txtShow = txt; 
     }
     expect_(eq == 0, nVerbose, txtShow, 3);
+    return eq;
   }
   
   

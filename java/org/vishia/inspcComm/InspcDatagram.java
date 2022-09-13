@@ -4,7 +4,7 @@ import org.vishia.byteData.ByteDataAccessBase;
 
 /**This is an example for {@link ByteDataAccessBase} and also the access to the <em>Inspector datagram</em>. 
  * The Inspector (short <em>Inspc</em>) is a mechanism to access to target embedded processor systems
- * which runs often in C to access all data. See {@linkplain www.vishia.org/Inspc}. 
+ * which runs often in C to access all data. See {@link www.vishia.org/Inspc}. 
  * <br><br>
  * A datagram can be sent via socket communication with UDP, via a serial interface or a Dual-Port-Ram access. 
  * It has a limited size of at maximum 1200 Byte. A datagram starts with a header of at least 4 byte in the following C-language struct:
