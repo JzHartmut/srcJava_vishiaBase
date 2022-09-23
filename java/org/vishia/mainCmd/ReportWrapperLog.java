@@ -1,6 +1,7 @@
 package org.vishia.mainCmd;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
@@ -227,6 +228,22 @@ public class ReportWrapperLog implements Report
    */
   public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args){
     return log.sendMsgVaList(identNumber, creationTime, text, args);
+  }
+
+  @Override public Appendable append(CharSequence csq) throws IOException {
+    sendMsg(0, csq.toString());
+    return this;
+  }
+
+  @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
+    sendMsg(0, csq.subSequence(start, end).toString());
+    return this;
+  }
+
+  @Override public Appendable append(char c) throws IOException {
+    String s = "" + c;
+    sendMsg(0, s);
+    return this;
   }
 
   /**Only preliminary, because Java2C doesn't support implementation of interfaces yet.

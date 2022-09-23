@@ -1665,6 +1665,31 @@ public abstract class MainCmd implements MainCmd_ifc
     return redirectLogMessage.sendMsgVaList(identNumber, creationTime, text, args);
   }
 
+  @Override
+  public Appendable append(CharSequence csq) throws IOException {
+    redirectLogMessage.sendMsg(0, csq.toString());
+    return this;
+  }
+
+  @Override
+  public Appendable append(CharSequence csq, int start, int end) throws IOException {
+    redirectLogMessage.sendMsg(0, csq.subSequence(start, end).toString());
+    return this;
+  }
+
+  @Override
+  public Appendable append(char c) throws IOException {
+    String s = "" + c;
+    redirectLogMessage.sendMsg(0, s);
+    return this;
+  }
+
+  
+  
+  
+  
+  
+  
   /**Only preliminary, because Java2C doesn't support implementation of interfaces yet.
    * This method is implemented in C in another kind.
    * @param src 
@@ -1772,6 +1797,26 @@ public abstract class MainCmd implements MainCmd_ifc
       return true;
     }
     
+    
+    @Override
+    public Appendable append(CharSequence csq) throws IOException {
+      sendMsg(0, csq.toString());
+      return this;
+    }
+
+    @Override
+    public Appendable append(CharSequence csq, int start, int end) throws IOException {
+      sendMsg(0, csq.subSequence(start, end).toString());
+      return this;
+    }
+
+    @Override
+    public Appendable append(char c) throws IOException {
+      String s = "" + c;
+      sendMsg(0, s);
+      return this;
+    }
+
     public @Override String toString(){ return "MainCmd.logMessageImplReport"; }
   };
   
@@ -1824,6 +1869,25 @@ public abstract class MainCmd implements MainCmd_ifc
 
     public @Override String toString(){ return "MainCmd.LogMessageImplConsole"; }
 
+    @Override
+    public Appendable append(CharSequence csq) throws IOException {
+      sendMsg(0, csq.toString());
+      return this;
+    }
+
+    @Override
+    public Appendable append(CharSequence csq, int start, int end) throws IOException {
+      sendMsg(0, csq.subSequence(start, end).toString());
+      return this;
+    }
+
+    @Override
+    public Appendable append(char c) throws IOException {
+      String s = "" + c;
+      sendMsg(0, s);
+      return this;
+    }
+
   }
   
 
@@ -1863,6 +1927,22 @@ public abstract class MainCmd implements MainCmd_ifc
     }
 
     public @Override String toString(){ return "MainCmd.LogMessageImplErrConsole"; }
+
+    @Override public Appendable append(CharSequence csq) throws IOException {
+      sendMsg(0, csq.toString());
+      return this;
+    }
+
+    @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
+      sendMsg(0, csq.subSequence(start, end).toString());
+      return this;
+    }
+
+    @Override public Appendable append(char c) throws IOException {
+      String s = "" + c;
+      sendMsg(0, s);
+      return this;
+    }
 
   }
   
@@ -1911,6 +1991,23 @@ public abstract class MainCmd implements MainCmd_ifc
     }
 
     public @Override String toString(){ return "MainCmd.LogMessageImplFile"; }
+
+    @Override public Appendable append(CharSequence csq) throws IOException {
+      sendMsg(0, csq.toString());
+      return this;
+    }
+
+    @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
+      sendMsg(0, csq.subSequence(start, end).toString());
+      return this;
+    }
+
+    @Override public Appendable append(char c) throws IOException {
+      String s = "" + c;
+      sendMsg(0, s);
+      return this;
+    }
+
 
   }
   

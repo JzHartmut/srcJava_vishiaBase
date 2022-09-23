@@ -56,10 +56,12 @@ import org.vishia.bridgeC.Va_list;
  * @author Hartmut Schorrig
  *
  */
-public interface LogMessage
+public interface LogMessage extends Appendable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-09-23 Hartmut new: extends now Appendable, hence usefull for more approaches,
+   *   see also changes in {@link LogMessageStream}. 
    * <li>2014-06-17 Hartmut chg: meaning of return value of {@link #sendMsg(int, String, Object...)} described.
    *   It was not defined and maybe not used in the last 8 years.
    * <li>2008-02-03 Hartmut new: method isOnline
@@ -92,7 +94,7 @@ public interface LogMessage
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2014-06-17";
+  static final public String sVersion = "2022-09-23";
 
   
   /**Sends a message. The timestamp of the message is build with the system time. 

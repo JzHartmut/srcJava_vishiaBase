@@ -532,7 +532,24 @@ public class LogMessageFile implements LogMessage
     return sent;
   }
 
-  
+
+  @Override public Appendable append(CharSequence csq) throws IOException {
+    sendMsg(0, csq.toString());
+    return this;
+  }
+
+  @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
+    sendMsg(0, csq.subSequence(start, end).toString());
+    return this;
+  }
+
+  @Override public Appendable append(char c) throws IOException {
+    String s = "" + c;
+    sendMsg(0, s);
+    return this;
+  }
+
+
   
   /**This method can be called after a cyclic time less than the nrofSecondsToFlush,
    * but in the same thread like writing.

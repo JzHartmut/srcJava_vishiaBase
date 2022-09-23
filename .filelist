@@ -34,7 +34,7 @@
 2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
 2021-10-04 14:29:49  x     ByteDataAccessSimple.java                ::          5.378 -1939589092 
-2022-08-26 14:42:43  x     ByteDataSymbolicAccess.java              ::         26.751  1167026967 
+2022-09-20 09:53:36  x     ByteDataSymbolicAccess.java              ::         26.923  1751867784 
 2022-08-26 21:01:40  x     ByteDataSymbolicAccessReadConfig.java    ::          4.539 -0785729210 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
@@ -183,14 +183,14 @@
 
 ============================== java/org/vishia/mainCmd/ ============================================
 2021-10-04 14:29:51  x     FileWrite.java                           ::          2.095  0880975541 
-2022-01-24 19:01:08  x     MainCmd.java                             ::         90.543 -1582583940 
-2021-10-04 14:29:56  x     MainCmdLoggingStream.java                ::          9.855 -0455753825 
+2022-09-23 18:10:55  x     MainCmd.java                             ::         92.928 -1231600095 
+2022-09-23 18:17:15  x     MainCmdLoggingStream.java                ::         10.291  1992531802 
 2014-06-05 08:58:49  x     MainCmdLogging_ifc.java                  ::         13.219 -2077057750 
 2014-05-29 14:56:39  x     MainCmd_ifc.java                         ::          9.334  0930852519 
 2021-10-04 14:29:56  x     PrintStreamAdapter.java                  ::          2.754  1398952394 
 2021-10-06 10:53:37  x     PrintStreamBuffer.java                   ::          5.261 -1940859745 
 2013-02-24 21:18:18  x     Report.java                              ::          2.856  0928115865 
-2014-06-05 08:59:09  x     ReportWrapperLog.java                    ::          7.738  1116372048 
+2022-09-23 18:24:23  x     ReportWrapperLog.java                    ::          8.200 -0409585777 
 2016-11-27 21:16:15  x     SampleCmdLine.java                       ::         16.637 -1048205269 
 2012-03-17 08:57:20  x     package-info.java                        ::           .158  1302313651 
 
@@ -204,13 +204,13 @@
 
 ============================== java/org/vishia/msgDispatch/ ========================================
 2012-10-07 10:02:50  x     ExceptionInfo.java                       ::           .515 -0745834556 
-2014-12-18 13:39:17  x     LogMessage.java                          ::         10.376 -1416919081 
-2021-10-04 14:29:52  x     LogMessageFile.java                      ::         27.219  1640099199 
-2013-10-19 21:03:01  x     LogMessageStream.java                    ::          4.293  1669485951 
+2022-09-23 20:17:48  x     LogMessage.java                          ::         10.541  0721887488 
+2022-09-23 18:11:58  x     LogMessageFile.java                      ::         27.652 -2065386306 
+2022-09-23 20:18:10  x     LogMessageStream.java                    ::         10.543 -0494412210 
 2014-12-20 21:54:27  x     MsgConfig.java                           ::         11.193 -1733151147 
 2014-12-18 22:51:24  x     MsgDispatchSystemOutErr.java             ::          5.869  1342572906 
 2016-12-21 16:20:43  x     MsgDispatcher.java                       ::         27.941 -0283338192 
-2014-09-06 10:56:04  x     MsgDispatcherCore.java                   ::         24.958  1185103113 
+2022-09-23 18:19:48  x     MsgDispatcherCore.java                   ::         25.668 -1675373615 
 2014-05-29 21:22:46  x     MsgPrintStream.java                      ::         19.456  0790745732 
 2013-03-24 21:17:00  x     MsgPrintStream_ifc.java                  ::           .111  0825089560 
 2021-10-04 14:29:51  x     MsgRedirectConsole.java                  ::          7.397 -0856512848 
@@ -256,7 +256,7 @@
 
 ============================== java/org/vishia/util/ ===============================================
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
-2022-06-29 17:59:06  x     Arguments.java                           ::         22.269 -1395681220 
+2022-09-23 20:12:55  x     Arguments.java                           ::         23.890  0577633220 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2020-03-22 23:02:07  x     Assert.java                              ::          3.039 -1157511839 
 2022-05-11 10:24:43  x     CalculatorExpr.java                      ::        151.273  0467732730 
@@ -304,7 +304,7 @@
 2021-10-04 14:29:50  x     OrderForList.java                        ::           .620  0011920407 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
 2022-07-29 13:45:10  x     OutTextPreparer.java                     ::         55.124  0360937670 
-2020-06-21 21:19:38  x     OutputTwice.java                         ::           .854 -1967010122 
+2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
 2021-10-04 14:29:51  x     ReadChars3Stream.java                    ::          8.021  0795333462 
@@ -401,6 +401,7 @@
 2022-03-13 12:19:25  x     -genjavadocbase.sh                       ::          2.196  0325472742 
 2022-07-28 17:43:13  x     -makejar-coreScript.sh                   ::          6.926  0734310312 
 2021-06-28 23:34:15  x     JAVAC_HOME.sh                            ::          1.154 -1792697615 
+2022-09-17 16:20:31  x     Java2Xmi.jzcmd                           ::          4.373 -1492198453 
 2022-07-27 22:07:55  x     corrBom.jzTc                             ::          4.643 -0135911090 
 2022-07-27 20:38:04  x     minisys.files                            ::           .205 -0923811623 
 2020-03-17 23:16:43  x     minisys.manifest                         ::           . 65  1933756705 

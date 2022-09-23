@@ -108,6 +108,7 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-05-24 Hartmut new {@link Argument} can now also contain the value itself, more simple for pure String arguments.
    * <li>2022-05-24 Hartmut new possibility of --@file:label as described. 
    * <li>2022-04-09 Hartmut Desription of class improved, from another usage. 
    * <li>2022-04-09 Hartmut ---commented-argument now accepted
@@ -163,18 +164,18 @@ public abstract class Arguments {
     boolean setArgument(String val); 
   }
   
-
   
+
   
   /**Class to describe one argument. One can be create static instances with constant content. Example:
    * <pre>
-   * Argument[] argList =
-   * { new Argument("", " argument without key on first position", setmethod)
-   * , new Argument("-arg", ":keyed argument", setmethod)
-   * , new Argument("-x", ":the help text", setx)
-   * , new Argument("", " argument without key on any position", setx)
-   * };
-   * </pre>
+  Argument[] argList =
+  { new Argument("", " argument without key on first position", setmethod)
+  , new Argument("-arg", ":keyed argument", setmethod)
+  , new Argument("-x", ":the help text", setx)
+  , new Argument("", " argument without key on any position", setx)
+  };
+  </pre>
    * <ul>
    * <li>If the {@link #arg} is empty and it is not on the last position, this is a non keyed argument
    * which is expect on this position in the argument list.
@@ -191,18 +192,54 @@ public abstract class Arguments {
    * </ul>    
    *
    */
-  public static class Argument{ 
-    final String arg; 
-    final String help; 
-    final SetArgument set;
+  public final static class Argument{ 
     
-    public Argument(String arg, String help, SetArgument set){
-      this.arg = arg; 
+    /**The value of the string given argument. */
+    public String val;
+    
+    protected final String option; 
+    protected final String help; 
+    protected final SetArgument set;
+    
+    
+    /**Ctor for an instance which holds the argument value, stored as string.
+     * @param option The option to select this argument, usual "-option", "" for option-less arguments.
+     * @param help ":help text", write the dot for proper explanation
+     * @param set the operation to set the value.
+     */
+    public Argument(String option, String help){
+      this.option = option; 
+      this.help = help; 
+      this.set = null;
+    }
+    
+    /**Ctor for an instance which holds the argument value, stored as string and given as default.
+     * @param option The option to select this argument, usual "-option", "" for option-less arguments.
+     * @param help ":help text", write the dot for proper explanation
+     * @param set the operation to set the value.
+     */
+    public Argument(String option, String value, String help){
+      this.val = value;
+      this.option = option; 
+      this.help = help; 
+      this.set = null;
+    }
+    
+    /**Ctor with a specific set operation, the argument value us not used here.
+     * @param option The option to select this argument, usual "-option", "" for option-less arguments.
+     * @param help ":help text", write the dot for proper explanation
+     * @param set the operation to set the value.
+     */
+    public Argument(String option, String help, SetArgument set){
+      this.option = option; 
       this.help = help; 
       this.set = set;
     }
-    @Override public String toString(){ return arg + help + '\n'; }
+    
+    @Override public String toString(){ return option + help + '\n'; }
   }
+  
+
   
 
   protected String aboutInfo;
@@ -304,12 +341,12 @@ public abstract class Arguments {
       Iterator<Argument> iter = this.argList.iterator();
       while(argFound == null && iter.hasNext()){  //break while if found.
         Argument argTest = iter.next();
-        int argLen = argTest.arg.length();
+        int argLen = argTest.option.length();
         if(argLen == 0){
           emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
         } else {
           boolean bSeparator = false;
-          if((argc.startsWith(argTest.arg)                //correct prefix 
+          if((argc.startsWith(argTest.option)                //correct prefix 
                && (  argclen == argLen                      //only the prefix
                   || (bSeparator = ":=".indexOf(argc.charAt(argLen))>=0))  //or prefix ends with the separator characters.
                   || (argLen == 0 && (ixArglist == nArg || ixArglist == lastIxArglist))                         //argument without key characters
@@ -329,7 +366,11 @@ public abstract class Arguments {
                         ? argc              //then use the whole argument as value.
                         : argc.substring(argLenFound);  //use the argument after the separator as value.
         argval = replaceEnv(argval);
-        bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
+        if(argFound.set ==null) {
+          argFound.val = argval;
+        } else {
+          bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
+        }
         //if(!bOk) throw new ParseException("Argument value error: " + argc, nArg);
       } 
       else if(emptyArg !=null){ //argument start string not found but an empty choice possible:

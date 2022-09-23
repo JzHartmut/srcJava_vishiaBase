@@ -22,6 +22,7 @@
  *******************************************************************************/ 
 package org.vishia.msgDispatch;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
@@ -408,7 +409,29 @@ public class MsgDispatcherCore implements LogMessage
   }
   
 
-  
+  /**TODO yet message nr 0 is created, get the message from the start text...
+   * since 2022-09 because enhancement of {@link LogMessage} with Appendable.
+   */
+  @Override public Appendable append(CharSequence csq) throws IOException {
+    sendMsg(0, csq.toString());
+    return this;
+  }
+
+  @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
+    sendMsg(0, csq.subSequence(start, end).toString());
+    return this;
+  }
+
+  /**This is more formally, only one char is nonsense for the MsgDispatcher.
+   *
+   */
+  @Override public Appendable append(char c) throws IOException {
+    String s = "" + c;
+    sendMsg(0, s);
+    return this;
+  }
+
+
   
   @Override public final boolean isOnline()
   { return true;

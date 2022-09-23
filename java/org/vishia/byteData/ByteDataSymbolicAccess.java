@@ -390,6 +390,11 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
 
     @Override public String setString(String value) { return setString(value, 0); }
 
+    @Override public String toString() {
+      return this.name + "/" + this.nameShow + ':' + this.typeChar + this.nrofArrayElements + " @" + this.bytePos;
+    }
+    
+    
   }
   
   

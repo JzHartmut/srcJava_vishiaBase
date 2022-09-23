@@ -326,5 +326,23 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
     }
     return true;
   }
+
+  @Override public Appendable append(CharSequence csq) throws IOException {
+    sendMsg(0, csq.toString());
+    return this;
+  }
+
+  @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
+    sendMsg(0, csq.subSequence(start, end).toString());
+    return this;
+  }
+
+  @Override public Appendable append(char c) throws IOException {
+    String s = "" + c;
+    sendMsg(0, s);
+    return this;
+  }
+
+
 }
   
