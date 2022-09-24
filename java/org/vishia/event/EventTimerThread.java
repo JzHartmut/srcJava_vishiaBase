@@ -88,6 +88,8 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Version and history.
    * <ul>
+   * <li>2022-09-24 Some comments and changed while searching the problem that the execution sometimes hangs. 
+   *   But no functionality changes.  
    * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
    * <li>2015-01-10 Hartmut chg: Better algorithm with {@link #timeCheckNew}
    * <li>2015-01-10 Hartmut renamed from <code>OrderListExecuter</code>
@@ -284,14 +286,16 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       if(sorder.equals("showFilesProcessing"))
         System.out.println("addTimeOrder;" + order.toString());
       queueDelayedOrders.offer(order);
-      long delayAfterCheckNew = order.timeExecution - timeCheckNew;
+      long delayAfterCheckNew = order.timeExecution - this.timeCheckNew;
       if((delayAfterCheckNew) < -2) {  //an imprecision of 2 ms are admissible, don't wakeup because calculation imprecisions.
-        timeCheckNew = order.timeExecution;  //earlier.
+        this.timeCheckNew = order.timeExecution;  //earlier.
         boolean notified;
         synchronized(runTimer){
           notified = stateThreadTimer == 'W';
-          if(notified){
-            runTimer.notify();  
+          if(notified){                          // wake up the waiting thread to poll orders
+            runTimer.notify();                   // elsewhere it would sleep till the last decided sleep time. 
+          } else {                               // should wake up and adjust the sleep time newly.
+            // thread is busy, not wait          
           }
         }
         if(notified){
@@ -421,27 +425,27 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   private int checkTimeOrders(){
     int timeWait = 10000; //10 seconds.
-    timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds.
+    this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
     { EventTimeout order;
       long timeNow = System.currentTimeMillis();
       while( (order = queueDelayedOrders.poll()) !=null){
         long delay = order.timeExecution - timeNow; 
-        if((delay) < 3){  //if it is expired in 2 milliseconds, execute now.
+        if((delay) < 3){                         //if it is expired in 2 milliseconds, execute now.
           order.doTimeElapsed();
-          timeNow = System.currentTimeMillis();  //it may be later.
+          timeNow = System.currentTimeMillis();  //new time after execution for further check
         }
         else {
           //not yet to proceed
           if(delay < timeWait) {
-            timeCheckNew = order.timeExecution;  //earlier
+            this.timeCheckNew = order.timeExecution;  //earlier
             timeWait = (int) delay;
           }
-          queueDelayedTempOrders.offer(order);
-        }
-      }
-      //delayedChangeRequest is tested and empty now.
-      //copy the non-expired orders back to queueDelayedOrders.
-      while( (order = queueDelayedTempOrders.poll()) !=null){
+          queueDelayedTempOrders.offer(order);   // gather this order firstly in the tempOrders
+        }                                        //                                     |
+      }                                          //                                     |
+      //delayedChangeRequest is tested and empty now.                                   |
+      //copy the non-expired orders back to queueDelayedOrders.                         |
+      while( (order = queueDelayedTempOrders.poll()) !=null){    // <-------------------+
         queueDelayedOrders.offer(order); 
       }
     }
@@ -454,7 +458,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * The timer thread is in an delay till
    * @return time to wait. 
    */
-  private int stepThread()
+  private void stepThread()
   {
     boolean bExecute;
     int timeWait;
@@ -477,8 +481,21 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       //therefore check time newly. don't wait, run in this loop.
     } while(bExecute);
     //wait only the calculated timeWait if no additional event has executed.
-    return timeWait;
+    if((debugPrint & 0x0001)!=0) System.out.printf("TimeOrderMng wait %d\n", timeWait);
+    if(timeWait <2){
+      timeWait = 2;  //should not 0  
+    }
+    synchronized(runTimer){
+      EventTimerThread.this.stateThreadTimer = 'W';
+      //====>wait
+      try{ runTimer.wait(timeWait);} catch(InterruptedException exc){}
+      if(stateThreadTimer == 'W'){ //can be changed while waiting, set only to 'r' if 'W' is still present
+        stateThreadTimer = 'r';
+      }
+    } //synchronized
   }
+  
+  
   
   
   
@@ -490,24 +507,12 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   // This routine cannot be changed on the fly.
   public Runnable runTimer = new Runnable(){
     @Override public void run(){ 
-      bThreadRun = true;
-      stateThreadTimer = 'r';
-      while(stateThreadTimer == 'r' && bThreadRun ){
-        int timeWait = EventTimerThread.this.stepThread();
-        if((debugPrint & 0x0001)!=0) System.out.printf("TimeOrderMng wait %d\n", timeWait);
-        if(timeWait <2){
-          timeWait = 2;  //should not 0  
-        }
-        synchronized(runTimer){
-          stateThreadTimer = 'W';
-          //====>wait
-          try{ runTimer.wait(timeWait);} catch(InterruptedException exc){}
-          if(stateThreadTimer == 'W'){ //can be changed while waiting, set only to 'r' if 'W' is still present
-            stateThreadTimer = 'r';
-          }
-        } //synchronized
+      EventTimerThread.this.bThreadRun = true;
+      EventTimerThread.this.stateThreadTimer = 'r';
+      while(EventTimerThread.this.stateThreadTimer == 'r' && EventTimerThread.this.bThreadRun ){
+        stepThread();
       } //while runs
-      stateThreadTimer = 'f';
+      EventTimerThread.this.stateThreadTimer = 'f';
     }
   };
 

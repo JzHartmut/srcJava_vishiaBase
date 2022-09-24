@@ -28,7 +28,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
    * <ul>
    * <li>2018-09-17 Hartmut The class might to be use only for writing. 
    *   The ctors with lengthData {@link ByteDataAccessSimple#ByteDataAccessSimple(byte[], boolean, int)} are documented with 'filled Buffer'
-   *   but they had clean it. Now correct adquate documentation. 
+   *   but they had clean it. Now correct adequate documentation. 
    * <li>2012-04-07 Hartmut created. The now deprecated RawDataAccess has the same approach,
    *   but this naming should be better to find out it. Additional constructors are given yet. 
    * </ul>

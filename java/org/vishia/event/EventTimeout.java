@@ -30,6 +30,11 @@ public class EventTimeout extends EventWithDst
   
   /**Version and history:
    * <ul>
+   * <li>2022-09-24 Some comments and changed in {@link #activateAt(long, long)} while searching the problem 
+   *   that the execution sometimes hangs. Now it does not hang since ~10 min , but the reason is not fully clarified.
+   *   Before, the problem was that the thread has used its 10 seconds waiting time if the event queue is empty.
+   *   It seems to be a missing notify(), but the notify() was programmed. 
+   *   The problem occurs in the Gral vishiaGui with CurveView for redraw events. 
    * <li>2015-01-02 Hartmut created: as super class of {@link TimeOrder} and as event for timeout for state machines.
    * </ul>
    * 
@@ -116,35 +121,45 @@ public class EventTimeout extends EventWithDst
   /**Activate the event at the given absolute time 
    * If the event is activated already for a shorter time, the activation time is deferred to this given time
    * but not later than a latest time given with {@link #activateAt(long, long)}. 
-   * @param date The time stamp.
-   * @param latest The latest time stamp where the event should be processed though it is deferred.
+   * @param executionTime The time stamp for desired execution, can be delayed on second calls.
+   * @param latest The latest time stamp where the event should be processed though it is delayed.
    *   If the event is activated already for a earlier latest time, this argument is ignored. 
    *   The earlier latest time is valid. Use {@link #deactivate()} before this method to set the latest processing time newly. 
    * @see #activateAt(long, long).
    */
-  public void activateAt(long date, long latest) {
-    
-    if(timeExecutionLatest ==0 && latest !=0) {
-      timeExecutionLatest = latest;  //set it only one time if requested.
+  public void activateAt(long executionTime, long latest) {
+    //
+    if(this.timeExecution !=0 && ((this.timeExecution - System.currentTimeMillis()) < -5000)){ 
+      //The execution time is expired since 5 seconds,
+      //can be supposed that the event was not recognized, it is old.
+      //maybe the execution thread hangs:
+      this.timeExecution = 0;  //hence remove it.
+      this.timeExecutionLatest = 0;
+      System.out.println("remove TimeOrder");
+      this.evDstThread.removeTimeOrder(this);
     }
-    if(timeExecution !=0 && ((timeExecution - System.currentTimeMillis()) < -5000)){ 
-      //should be executed since 5 second, it hangs or countExecution was not called:
-      timeExecution = 0;  //remove.
-      evDstThread.removeTimeOrder(this);
+    //
+    final long executionTimeUsed;
+    if(this.timeExecutionLatest ==0) {
+      this.timeExecutionLatest = latest;         // set it only one time if requested.
     }
-    if(timeExecution ==0 ) {
-      this.dateCreation.set(System.currentTimeMillis()); //instead occupy
+    if( this.timeExecutionLatest !=0 && (executionTime - this.timeExecutionLatest) >0) {
+      executionTimeUsed = this.timeExecutionLatest;   // not later as latest.
+    } else {
+      executionTimeUsed = executionTime;
+    }
+    boolean bFree = this.timeExecution ==0;
+    this.timeExecution = executionTimeUsed;  //set it newly
+    if( bFree) {                     // it is free, use this instead occupy
+      this.dateCreation.set(System.currentTimeMillis());  //then set the new occupy time.
     } else { 
       //already added:
-      if(timeExecutionLatest !=0 && (date - timeExecutionLatest) >0 ) return;  //do nothing because new after last execution.
-      dbgctWindup +=1;
+      this.dbgctWindup +=1;
       //else: shift order to future:
       //remove and add new, because its state added in queue or not may be false.
-      evDstThread.removeTimeOrder(this);
+      this.evDstThread.removeTimeOrder(this);  //if it is not in the queue, no problem
     }
-    timeExecution = date;  //set it.
-    evDstThread.addTimeOrder(this);
-
+    this.evDstThread.addTimeOrder(this);    //add newly, delayed event was removed before.
   }
   
   
