@@ -3045,14 +3045,27 @@ public class ZbnfParser
   
   
   /**Parses a given file with standard encoding, produces a parse result.
-   * @param fInput
+   * @param fInput The file to read<br>
+   * 
+   * @param maxBuffer The maximum of length of the associated StringBuffer.<br>
+   * 
+   * @param sEncodingDetect If not null, this string is searched in the first line,
+   *        read in US-ASCII or UTF-16-Format. If this string is found, the followed
+   *        string in quotation marks or as identifier with addition '-' char is read
+   *        and used as charset name. If the charset name is failed, a CharsetException is thrown.
+   *        It means, a failed content of file may cause a charset exception.<br>
+   *        
+   * @param charset If not null, this charset is used as default, if no other charset is found in the files first line,
+   *        see param sEncodingDetect. If null and not charset is found in file, the systems default charset is used.<br>
+   *        
+   * @throws FileNotFoundException If the file is not found
+   * @throws IOException If any other exception is thrown
    * @return true if successfully parsed, false then use {@link #getSyntaxErrorReport()}
    * @throws IOException 
    * @throws FileNotFoundException 
    * @throws UnsupportedCharsetException 
    * @throws IllegalCharsetNameException 
    */
-
   public boolean parseFile(File fInput, int maxBuffer, String sEncodingDetect, Charset charset) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException
   {
     StringPartScan spInput = new StringPartFromFileLines(fInput, maxBuffer, sEncodingDetect, charset); 
@@ -3357,12 +3370,16 @@ public class ZbnfParser
     u.append("ZbnfParser ERROR ");
     if(sFile !=null){
       u.append(" in file ").append(sFile);
+    } else {
+      u.append( "file not available (String given input) ");
     }
     u.append(" @char-pos: "); 
       u.append(getInputPositionOnError());
       u.append("=0x" + Long.toString(getInputPositionOnError(),16) + " ");
     if(line >0 || column > 0){
       u.append(" @line, col: ").append(line).append(", ").append(column);
+    } else {
+      u.append(" @line, col: not available");
     }
     u.append( "\n  ...:").append(getRightestInputOnError());
     u.append(" >>>>>").append(sRightestError);

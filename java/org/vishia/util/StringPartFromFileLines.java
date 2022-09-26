@@ -214,8 +214,8 @@ public class StringPartFromFileLines extends StringPartScan
    * @param maxBuffer The maximum of length of the associated StringBuffer.<br>
    * 
    * @param sEncodingDetect If not null, this string is searched in the first line,
-   *        readed in US-ASCII or UTF-16-Format. If this string is found, the followed
-   *        string in quotion marks or as identifier with addition '-' char is readed
+   *        read in US-ASCII or UTF-16-Format. If this string is found, the followed
+   *        string in quotation marks or as identifier with addition '-' char is read
    *        and used as charset name. If the charset name is failed, a CharsetException is thrown.
    *        It means, a failed content of file may cause a charset exception.<br>
    *        
