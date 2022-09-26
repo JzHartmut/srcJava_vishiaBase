@@ -30,7 +30,7 @@
 
 ============================== java/org/vishia/byteData/ ===========================================
 2016-09-03 22:21:48  x     ByteDataAccess.java                      ::         83.277  0134436295 
-2021-10-04 14:29:51  x     ByteDataAccessBase.java                  ::         93.537 -1835197727 
+2022-09-26 22:26:37  x     ByteDataAccessBase.java                  ::         94.977 -1880576215 
 2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
 2022-09-24 16:51:54  x     ByteDataAccessSimple.java                ::          5.379  1513216866 

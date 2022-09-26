@@ -152,6 +152,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   
   /**The version, history and license. 
    * <ul>
+   * <li>2022-09-26 Hartmut new {@link #setLittleEndianBig2()} necessary if there is little endian for data, but big endian only for 16 bit image.
    * <li>2018-12-27 Hartmut new {@link #upcast(ByteDataAccessBase, int)} replaces the {@link #assignCasted(ByteDataAccessBase, int, int)}. Problems detect on usage of assignCasted:
    *   The cast of a child should influence the parent because the next {@link #addChild(ByteDataAccessBase)} should regard the casting operation. The casting is regarded
    *   to the data in sum. It is not only a isolated view to data. Strategy of upcast is documented there.  
@@ -272,6 +273,9 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   /** Flag is set or get data in big endian or little endian (if false)*/
   protected boolean bBigEndian;
   
+  /** Flag is set or get data in little endian but 2 Bytes as 16 bit word in big endian. */
+  protected boolean bLittleEndianBig2;
+  
   /**If false then never an exception is thrown, Instead the work is done as soon as possible. 
    * See descriptions and return values of some methods.
    */
@@ -336,6 +340,13 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   @Java4C.Inline
   public final void setBigEndian(boolean val)
   { bBigEndian = val;
+    this.bLittleEndianBig2 = false;
+  }
+  
+  @Java4C.Inline
+  public final void setLittleEndianBig2() {
+    this.bBigEndian = false;
+    this.bLittleEndianBig2 = true;
   }
 
 
@@ -485,20 +496,35 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   { if(!checkData()) { return; }
     int idx1, nrofBytes1 = nrofBytes; long val1 = val;  //prevent change of parameters, use register internally.
     int idxStep;
-    if(bBigEndian)
-    { idx1 = ixBegin + idx + nrofBytes -1;
-      idxStep = -1;
+    if(bLittleEndianBig2) {
+      idx1 = idx;
+      nrofBytes1 = nrofBytes; 
+      while(nrofBytes1 >=2) {
+        nrofBytes1 -=2;
+        data[idx1++] = (byte)(val1>>8); //write 16 bit as big endian
+        data[idx1++] = (byte)(val1);    
+        val1 >>=16;                    // next words little endian after it.
+      }
+      if(nrofBytes1 ==1) {
+        data[idx1] = (byte)(val1);     // place the only one byte or last bits on next position independent of endian.
+      }                                // because it is only one data element.
+    } 
+    else {
+      if(bBigEndian)
+      { idx1 = ixBegin + idx + nrofBytes -1;
+        idxStep = -1;
+      }
+      else
+      { idx1 = ixBegin + idx;
+        idxStep = 1;
+      }
+      do
+      { data[idx1] = (byte)(val1);
+        if(--nrofBytes1 <= 0) break;
+        val1 >>=8;
+        idx1 += idxStep;
+      }while(true);  //see break;
     }
-    else
-    { idx1 = ixBegin + idx;
-      idxStep = 1;
-    }
-    do
-    { data[idx1] = (byte)(val1);
-      if(--nrofBytes1 <= 0) break;
-      val1 >>=8;
-      idx1 += idxStep;
-    }while(true);  //see break;
   }
 
   
@@ -692,6 +718,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     } else {
       detach();
       this.bBigEndian = parent.bBigEndian;
+      this.bLittleEndianBig2 = parent.bLittleEndianBig2;
       this.bExc = parent.bExc;
       this.parent = parent;
       this.ixBegin = parent.ixBegin + idxChildInParent;
@@ -743,6 +770,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   { assign(src.data(), lengthDst, src.ixBegin + offsetCastToInput);
     bExpand = src.bExpand;
     bBigEndian = src.bBigEndian;
+    this.bLittleEndianBig2 = src.bLittleEndianBig2;
     bExc = src.bExc;
     if(lengthDst >0){
       setLengthElement(lengthDst);
@@ -758,6 +786,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     this.bExpand = src.bExpand;
     this.bExc = src.bExc;
     this.bBigEndian = src.bBigEndian;
+    this.bLittleEndianBig2 = src.bLittleEndianBig2;
     this.charset = src.charset;
   }
   
@@ -846,6 +875,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
       }
       this.data = parent.getData(recursion-1);
       this.bBigEndian = parent.bBigEndian;
+      this.bLittleEndianBig2 = parent.bLittleEndianBig2;
     }
     return this.data;
   }
@@ -1100,7 +1130,8 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     if(ixChild1 < 0) return false;
     child.ixBegin = ixChild1;   
     child.ixBeginLocal = child.ixBegin - this.ixBegin;
-    child.bBigEndian = bBigEndian;
+    child.bBigEndian = this.bBigEndian;
+    child.bLittleEndianBig2 = this.bLittleEndianBig2;
     child.bExc = bExc;
     child.bExpand = bExpand;
     child.data = this.data;
@@ -1165,6 +1196,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     child.ixEnd = idxBegin + sizeChild;
     child.ixNextChild = idxBegin + child.sizeHead;
     child.bBigEndian = bBigEndian;
+    child.bLittleEndianBig2 = this.bLittleEndianBig2;
     child.bExc = bExc;
     child.bExpand = false; //never expand on a fix position, no sense.  this.bExpand;
     child.parent = this;
@@ -2123,6 +2155,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
     if(data == null && parent !=null) {
       data = parent.getData(99);
       bBigEndian = parent.bBigEndian;
+      this.bLittleEndianBig2 = parent.bLittleEndianBig2;
     }
     if(data == null) {
       throwexc("--no data--",0);
