@@ -1,3 +1,4 @@
+2022-09-26 23:40:51  x     java_vishiaBase_new-22-09-24.zip         ::       1354.272  0514172461 
 
 ============================== jars/ ==============================================================
 2022-07-27 20:42:20  x     tools_new.bom                            ::           .372  0820456687 
@@ -30,11 +31,11 @@
 
 ============================== java/org/vishia/byteData/ ===========================================
 2016-09-03 22:21:48  x     ByteDataAccess.java                      ::         83.277  0134436295 
-2022-09-26 22:26:37  x     ByteDataAccessBase.java                  ::         94.977 -1880576215 
+2022-09-27 23:31:17  x     ByteDataAccessBase.java                  ::         95.700 -0744481635 
 2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
-2022-09-24 16:51:54  x     ByteDataAccessSimple.java                ::          5.379  1513216866 
-2022-09-20 09:53:36  x     ByteDataSymbolicAccess.java              ::         26.923  1751867784 
+2022-09-27 23:06:26  x     ByteDataAccessSimple.java                ::          5.728  1133699112 
+2022-09-27 22:34:52  x     ByteDataSymbolicAccess.java              ::         27.056 -1742568938 
 2022-08-26 21:01:40  x     ByteDataSymbolicAccessReadConfig.java    ::          4.539 -0785729210 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
@@ -108,7 +109,7 @@
 2021-10-04 14:29:56  x     InterProcessCommRx_ifc.java              ::          2.586  1150824039 
 2021-10-04 14:29:55  x     InterProcessComm_SocketImpl.java         ::          8.281 -1573873016 
 2021-06-17 22:38:27  x     SocketCmd_InterProcessComm.java          ::          3.252  1695370688 
-2022-08-26 21:24:11  x     SocketCommSimple.java                    ::          4.055 -0628050349 
+2022-09-26 23:36:27  x     SocketCommSimple.java                    ::          4.085 -1482844922 
 
 ============================== java/org/vishia/docuGen/ ============================================
 2021-10-04 14:29:52  x     DocuGen.java                             ::         11.946  1773808510 
@@ -338,7 +339,8 @@
 2022-09-13 15:01:53  x     TestOrg.java                             ::         13.339 -0742257077 
 2021-10-04 14:29:51  x     ThreadContext.java                       ::          2.293  1218907235 
 2021-10-04 14:29:51  x     ThreadRun.java                           ::          9.438  1862271585 
-2016-03-13 09:36:36  x     Timeshort.java                           ::          4.646 -0882576216 
+2022-09-28 12:09:44  x     TimedValues.java                         ::         10.870 -2003014659 
+2022-09-28 10:10:52  x     Timeshort.java                           ::          9.766 -1923684124 
 2019-04-24 21:59:38  x     TreeNodeBase.java                        ::         41.589  1642086573 
 2021-10-04 14:29:50  x     TreeNodeCallback.java                    ::          2.281  1360272692 
 2019-05-29 11:12:40  x     TreeNodeHtmlOutput.java                  ::          5.557  2032896486 

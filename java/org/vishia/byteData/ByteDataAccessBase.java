@@ -345,7 +345,7 @@ public class ByteDataAccessBase implements InfoFormattedAppend
   
   @Java4C.Inline
   public final void setLittleEndianBig2() {
-    this.bBigEndian = false;
+    this.bBigEndian = true;   //to return int16 correct
     this.bLittleEndianBig2 = true;
   }
 
@@ -400,21 +400,33 @@ public class ByteDataAccessBase implements InfoFormattedAppend
       nrofBytes = - nrofBytesAndSign;
       bSigned = true;
     }
-    if(bBigEndian)
-    { idx = ixBegin + idxInChild;
-      idxStep = 1;
-    }
-    else
-    { idx = ixBegin + idxInChild + nrofBytes -1;
-      idxStep = -1;
-    }
     int nByteCnt = nrofBytes;
-    do
-    { val |= data[idx] & 0xff;
-      if(--nByteCnt <= 0) break;  //TRICKY: break in mid of loop, no shift operation.
-      val <<=8;
-      idx += idxStep;
-    }while(true);  //see break;
+    //
+    if(bLittleEndianBig2) {
+      idx = ixBegin + idxInChild + nrofBytes-2;
+      idxStep = -2;
+      while(nByteCnt >=2) {
+        nByteCnt -=2;       //add 16 bit as big endian
+        val = (val<<16) | ((data[idx]<<8) & 0x00ff00) | (data[idx+1] & 0xff);
+        idx += idxStep;
+      }
+    } 
+    else {
+      if(bBigEndian)
+      { idx = ixBegin + idxInChild;
+        idxStep = 1;
+      }
+      else
+      { idx = ixBegin + idxInChild + nrofBytes -1;
+        idxStep = -1;
+      }
+      do
+      { val |= data[idx] & 0xff;
+        if(--nByteCnt <= 0) break;  //TRICKY: break in mid of loop, no shift operation.
+        val <<=8;
+        idx += idxStep;
+      }while(true);  //see break;
+    }
     if(bSigned){
       int posSign = (nrofBytes*8)-1;  //position of sign of the appropriate nrofBytes 
       long maskSign = 1L<<posSign;
@@ -455,21 +467,33 @@ public class ByteDataAccessBase implements InfoFormattedAppend
       nrofBytes = - nrofBytesAndSign;
       bSigned = true;
     }
-    if(bBigEndian)
-    { idx = ixBegin + idxInChild;
-      idxStep = 1;
-    }
-    else
-    { idx = ixBegin + idxInChild + nrofBytes -1;
-      idxStep = -1;
-    }
     int nByteCnt = nrofBytes;
-    do
-    { val |= data[idx] & 0xff;
-      if(--nByteCnt <= 0) break;  //TRICKY: break in mid of loop, no shift operation.
-      val <<=8;
-      idx += idxStep;
-    }while(true);  //see break;
+    //
+    if(bLittleEndianBig2) {
+      idx = ixBegin + idxInChild + nrofBytes-2;
+      idxStep = -2;
+      while(nByteCnt >=2) {
+        nByteCnt -=2;       //add 16 bit as big endian
+        val = (val<<16) | ((data[idx]<<8) & 0x00ff00) | (data[idx+1] & 0xff);
+        idx += idxStep;
+      }
+    } 
+    else {
+      if(bBigEndian)
+      { idx = ixBegin + idxInChild;
+        idxStep = 1;
+      }
+      else
+      { idx = ixBegin + idxInChild + nrofBytes -1;
+        idxStep = -1;
+      }
+      do
+      { val |= data[idx] & 0xff;
+        if(--nByteCnt <= 0) break;  //TRICKY: break in mid of loop, no shift operation.
+        val <<=8;
+        idx += idxStep;
+      }while(true);  //see break;
+    }
     if(bSigned){
       int posSign = (nrofBytes*8)-1;  //position of sign of the appropriate nrofBytes 
       long maskSign = 1L<<posSign;

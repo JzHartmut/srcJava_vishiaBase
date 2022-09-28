@@ -105,6 +105,17 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
    * @param nrofBytes to read.  
    * @return integer value
    */
+  public final long getLongVal(int idx, int nrofBytes)
+  { return _getLong(idx, nrofBytes);
+  }
+
+  
+  /**Gets a integer value from any offset started from Object_Jc
+   * 
+   * @param idx byte-offset, the offset is not tested. If the offset is wrong, a null-pointer-exception throws.
+   * @param nrofBytes to read.  
+   * @return integer value
+   */
   public final int getIntVal(int idx, int nrofBytes)
   { return (int)_getLong(idx, nrofBytes);
   }

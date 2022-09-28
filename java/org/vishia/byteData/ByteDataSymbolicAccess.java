@@ -415,7 +415,10 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
    */
   private long timeSetNewValue;
   
-  private final ByteDataAccessSimple dataAccess;
+  /**The basically access to data. Hint: It is public to use for experience.
+   * Normally it should not be used from external.
+   */
+  public final ByteDataAccessSimple dataAccess;
   
   /**Creates with its own internal (not visible) {@link ByteDataAccessSimple} access operations. */
   public ByteDataSymbolicAccess()

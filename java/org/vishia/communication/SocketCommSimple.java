@@ -130,6 +130,7 @@ public class SocketCommSimple {
     try {
       this.so.receive(telg);
       zRx = telg.getLength();
+      System.out.append('.');
     } catch (IOException exc) {
       System.err.println(exc.getMessage());
       zRx = -1;
