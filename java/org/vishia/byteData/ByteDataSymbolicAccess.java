@@ -54,6 +54,8 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
 
   /**Version, history and license. The version number is a date written as yyyymmdd as decimal number.
    * <ul>
+   * <li>2022-09-28 Hartmut new: {@link #setTimeShort(int, int)} and {@link Variable#getLastRefreshTimeShort()}
+   *   as support for data from a controller which has a relative timeShort.
    * <li>2013-11-26 Hartmut new: {@link #copyNewData(byte[], int, int, long)}
    * <li>2013-11-26 Hartmut chg {@link #assignData(byte[], long)} with timestamp required. Usages should updated.
    *   A timestamp is a substantial propertiy of dynamic data. Use {@link System#currentTimeMillis()}.
@@ -363,9 +365,20 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
       return (ByteDataSymbolicAccess.this.timeSetNewValue ==0 || timeNew >=0) && timeReq >=0;
     }
     
-    @Override public boolean isRefreshed(){ return (timeSetNewValue - timeRequestNewValue ) >0; }
+    @Override public boolean isRefreshed(){ return (ByteDataSymbolicAccess.this.timeSetNewValue - ByteDataSymbolicAccess.this.timeRequestNewValue ) >0; }
 
     @Override public long getLastRefreshTime(){ return ByteDataSymbolicAccess.this.timeSetNewValue; }
+
+    /**Returns the timeShort of all variable of this sample
+     * This operation does not regard any absolute time stamp. An absolute time stamp can be organized outside.
+     * See for example {@link org.vishia.gral.base.GralCurveView}, there either the system time is used as absolute time,
+     * but also the controller can store an absolute time. The absolute time should be associated at point{0,0} of this timestamp.  
+     * See concept in {@link org.vishia.util.Timeshort}.
+     *
+     */
+    @Override public int[] getLastRefreshTimeShort () {
+      return ByteDataSymbolicAccess.this.timeShortRefresh;
+    }
 
     @Override public void setRefreshed(long time){ ByteDataSymbolicAccess.this.timeSetNewValue = time; }
     
@@ -406,14 +419,19 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
   
   private int nrofData;
   
-  private long timeRequestNewValue;
+  protected long timeRequestNewValue;
+  
+  /**The time of last refresh of the data set. see {@link VariableAccess_ifc#getLastRefreshTimeShort()}. 
+   * 
+   */
+  protected int[] timeShortRefresh = new int[2]; 
   
   private final ConcurrentLinkedQueue<Runnable> runOnRecv = new ConcurrentLinkedQueue<Runnable>();
   
   /**The last refresh time.
    * 
    */
-  private long timeSetNewValue;
+  protected long timeSetNewValue;
   
   /**The basically access to data. Hint: It is public to use for experience.
    * Normally it should not be used from external.
@@ -469,6 +487,20 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
     int len = srclen > data.length ? data.length : srclen;
     System.arraycopy(src, srcpos, data, 0, len);
     timeSetNewValue = time;
+  }
+  
+  
+  /**Sets the timestamp not as absolute but as relative time for this sample.
+   * Concept see {@link org.vishia.util.Timeshort}.
+   * This operation does not regard any absolute time stamp. An absolute time stamp can be organized outside.
+   * See for example {@link org.vishia.gral.base.GralCurveView}, there either the system time is used as absolute time,
+   * but also the controller can store an absolute time. The absolute time should be associated at point{0,0} of this timestamp.  
+   * @param timeShort The internal currently relative time, maybe wrapping. Set to 0 to mark, not used.
+   * @param timeShortAdd An additional part to adjust with a given absolute time. 
+   */
+  public void setTimeShort(int timeShort, int timeShortAdd) {
+    this.timeShortRefresh[0] = timeShort;
+    this.timeShortRefresh[1] = timeShortAdd;
   }
   
   public int lengthData(){ return data ==null ? 0 : data.length; }

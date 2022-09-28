@@ -45,6 +45,7 @@ public interface VariableAccess_ifc
 {
   /**Version, history and license.
    * <ul>
+   * <li>2016-01-23 Hartmut new {@link #getLastRefreshTimeShort()} 
    * <li>2016-01-23 Hartmut chg: {@link #isRequestedValue(long, boolean)} with time parameter for earliest request.
    * <li>2014-05-22 Hartmut new: {@link #isRefreshed()}, implemented in all implementors.  
    * <li>2014-01-10 Hartmut new  enhancement of {@link #requestValue(long, Runnable) with Runnable.
@@ -84,7 +85,7 @@ public interface VariableAccess_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120425;
+  public static final int version = 20220928;
 
   /**Gets a integer value from this variable. The variable contains the information, 
    * whether it is long, short etc. If the variable contains a long value greater as the integer range,
@@ -188,16 +189,26 @@ public interface VariableAccess_ifc
   boolean isRequestedValue(long timeEarlyRequested, boolean retryFaultyVariables);
   //boolean requestValueFromTarget(long timeRequested, boolean retryDisabledVariable);  
 
-  /**Returns true if the variable was refresed after it was requested.
+  /**Returns true if the variable was refreshed after it was requested.
    * false if the variable was never requested or it was requested and not refreshed after them.
    */
   boolean isRefreshed();
   
   public void setRefreshed(long time);
+  
   /**Gets the time stamp when this variable was refreshed lastly.
    * @return -1 if this function is not supported, 0 if this variable was never set.
    */
   long getLastRefreshTime();
+  
+  /**Returns a pair of timeShort and timeShortAdd (see {@link org.vishia.util.Timeshort})
+   * of the last refresh time if timeAbs is not available 
+   * or the necessary resolution should be finer than 1 ms. 
+   * @return null if this operation is not supported. Elsewhere an array with at least 2 elements.
+   *   The first element[0] is the timeShort, the second [1] is timeShortAdd.
+   *   The timeShortAdd may be 0.
+   */
+  int[] getLastRefreshTimeShort();
   
   /**Returns the type of the variable:
    * @return B, S, I, J, F, D, s for byte, short, integer, long, float, double and string.

@@ -71,6 +71,12 @@ public class TimedValues {
     int[] values_I;
     short[] values_S;
     
+    /**Constructs a Track. This is only possible from this class. 
+     * Use {@link TimedValues#addTrack(String, char)} to create a track.
+     * @param name short name should be unique in all appropriate the data.
+     * @param typeChar character D F I S are possible for double, float, int and short.
+     * @param length length due to {@link TimedValues#length}
+     */
     protected Track(String name, char typeChar, int length) {
       this.name = name;
       this.typeChar = typeChar;
@@ -117,7 +123,7 @@ public class TimedValues {
     }
 
     
-    void setFloat(int ix, float value) {
+    public void setFloat(int ix, float value) {
       switch(this.typeChar) {
       case 'D': this.values_D[ix] = value; break;
       case 'F': this.values_F[ix] = value; break;
@@ -127,7 +133,7 @@ public class TimedValues {
       }
     }
   
-    void setDouble(int ix, double value) {
+    public void setDouble(int ix, double value) {
       switch(this.typeChar) {
       case 'D': this.values_D[ix] = value; break;
       case 'F': this.values_F[ix] = (float)value; break;
@@ -137,7 +143,7 @@ public class TimedValues {
       }
     }
   
-    void setInt(int ix, int value) {
+    public void setInt(int ix, int value) {
       switch(this.typeChar) {
       case 'D': this.values_D[ix] = value; break;
       case 'F': this.values_F[ix] = value; break;
@@ -147,7 +153,7 @@ public class TimedValues {
       }
     }
   
-    void setShort(int ix, short value) {
+    public void setShort(int ix, short value) {
       switch(this.typeChar) {
       case 'D': this.values_D[ix] = value; break;
       case 'F': this.values_F[ix] = value; break;
@@ -237,9 +243,10 @@ public class TimedValues {
   
   
   
-  public void addTrack(String name, char typeChar) {
+  public Track addTrack(String name, char typeChar) {
     Track track = new Track(name, typeChar, this.length);
     this.tracks.put(name, track);
+    return track;
   }
   
   /**Get a track to work.

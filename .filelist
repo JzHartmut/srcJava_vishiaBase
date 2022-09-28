@@ -35,7 +35,7 @@
 2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
 2022-09-27 23:06:26  x     ByteDataAccessSimple.java                ::          5.728  1133699112 
-2022-09-27 22:34:52  x     ByteDataSymbolicAccess.java              ::         27.056 -1742568938 
+2022-09-28 22:18:08  x     ByteDataSymbolicAccess.java              ::         28.940  0874928935 
 2022-08-26 21:01:40  x     ByteDataSymbolicAccessReadConfig.java    ::          4.539 -0785729210 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
@@ -47,9 +47,9 @@
 2021-10-04 14:29:52  x     RawDataAccess.java                       ::          3.662  1778324523 
 2020-12-20 20:45:03  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.137  1346048705 
 2022-08-26 14:37:42  x     VariableAccessArray_ifc.java             ::          6.179 -1134572736 
-2021-10-04 14:29:49  x     VariableAccessWithBitmask.java           ::          6.183 -1007294123 
-2016-01-23 22:17:46  x     VariableAccessWithIdx.java               ::          7.634 -0449515952 
-2018-04-14 08:27:41  x     VariableAccess_ifc.java                  ::         10.303 -1724949766 
+2022-09-28 20:08:53  x     VariableAccessWithBitmask.java           ::          6.294  1115140259 
+2022-09-28 20:09:48  x     VariableAccessWithIdx.java               ::          7.745 -1820468043 
+2022-09-28 22:20:19  x     VariableAccess_ifc.java                  ::         10.840 -1981352927 
 2021-10-04 14:29:50  x     VariableContainer_ifc.java               ::          5.203 -1327596121 
 2012-03-03 11:16:26  x     package-info.java                        ::           .155  1770849139 
 
@@ -339,7 +339,7 @@
 2022-09-13 15:01:53  x     TestOrg.java                             ::         13.339 -0742257077 
 2021-10-04 14:29:51  x     ThreadContext.java                       ::          2.293  1218907235 
 2021-10-04 14:29:51  x     ThreadRun.java                           ::          9.438  1862271585 
-2022-09-28 12:09:44  x     TimedValues.java                         ::         10.870 -2003014659 
+2022-09-28 16:13:44  x     TimedValues.java                         ::         11.291 -1462024686 
 2022-09-28 10:10:52  x     Timeshort.java                           ::          9.766 -1923684124 
 2019-04-24 21:59:38  x     TreeNodeBase.java                        ::         41.589  1642086573 
 2021-10-04 14:29:50  x     TreeNodeCallback.java                    ::          2.281  1360272692 

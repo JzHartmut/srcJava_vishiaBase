@@ -102,6 +102,10 @@ public class VariableAccessWithBitmask implements VariableAccess_ifc
     }
   }
 
+  @Override public int[] getLastRefreshTimeShort () {
+    return this.variable.getLastRefreshTimeShort();
+  }
+
   public char getType(){ 
     if(variable == null){
       return '?';
