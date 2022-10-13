@@ -141,8 +141,8 @@ public final class JZtxtcmdSyntax {
     + "   | throw . \n"
     + " \n"
     + " JZtxtcmd::= \n"
-    + " [<*|==JZtxtcmd==?>==JZtxtcmd== ]\n"
-    + " [<*|==JZcmd==?>==JZcmd== ]\n"  //deprecated further valid.
+    + " [<*|==JZtxtcmd==?>==JZtxtcmd== ]\n"      // skip over all content till ==JZtxtcmd== is found, but optional.
+    + " [<*|==JZcmd==?>==JZcmd== ]\n"            // deprecated further valid.
     //+ " [<*|//JZcmd?>//JZcmd ]\n"
     //+ " { \\<:scriptclass : <$\\.?scriptclass> \\> \n"
     + " [{ ! checkjzTc = <textValue?checkJZcmdFile> ; \n"
@@ -153,7 +153,7 @@ public final class JZtxtcmdSyntax {
     + "  | include <include> ; \n"
     + "  | currdir = <textDatapath?cd> ;\n"
     + " }] \n"
-    + " { [//] ==endJZcmd==<*\\e?> \n"
+    + " { [//] ==endJZcmd==<*\\e?> \n"           // if ==endJZcmd== is found, skip all till end of file
     //+ " | //endJZcmd<*\\e?> \n"
     + " | [REM|Rem|rem] <*\\n\\r?> ##Remark like in batch files\n"
     + " | //JZtxtcmd       ##ignore //JZtxtcmd, it may be a comment for another language\n"

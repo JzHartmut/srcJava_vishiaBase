@@ -78,6 +78,16 @@ public class ExcUtil {
    * It should throw to detect the unexpected behavior,
    * but the Exception should not need specifically declared
    * to prevent effort in calling levels for unexpected stuff. 
+   * <br>
+   * Note: On usage in ctor with initializing final variables in a try block
+   * the original RuntimeException line should be written instead,
+   * can be copied from here. Because:
+   * <br>
+   * The java compiler can detect the throw new RuntimeException
+   * as satisfaction of non set final variable, the ctor is aborted.
+   * If this operation is called instead, an compiler error comes
+   * with the message, that final variable are uninitialized.
+   * 
    * @param exc The originally thrown Exception. 
    */
   public static void throwUnexpect(Exception exc) {

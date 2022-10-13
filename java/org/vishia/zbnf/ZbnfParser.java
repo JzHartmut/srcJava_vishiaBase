@@ -3373,7 +3373,7 @@ public class ZbnfParser
     } else {
       u.append( "file not available (String given input) ");
     }
-    u.append(" @char-pos: "); 
+    u.append("\n@char-pos: "); 
       u.append(getInputPositionOnError());
       u.append("=0x" + Long.toString(getInputPositionOnError(),16) + " ");
     if(line >0 || column > 0){
@@ -3381,10 +3381,11 @@ public class ZbnfParser
     } else {
       u.append(" @line, col: not available");
     }
+    int posOneLine = u.length() +1;   //next newline is line before.
     u.append( "\n  ...:").append(getRightestInputOnError());
     u.append(" >>>>>").append(sRightestError);
     if(u.length() < 80){u.append("<<<<end of file"); }
-    for(int i=0; i < u.length(); ++i) {
+    for(int i=posOneLine; i < u.length(); ++i) {
       char cc = u.charAt(i);
       if(cc == '\n' || cc == '\r'){ 
         u.setCharAt(i, '|'); 

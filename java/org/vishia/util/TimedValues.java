@@ -196,6 +196,9 @@ public class TimedValues {
     cleanSetCapacity(capacity);
   }
   
+  
+  public int getLength() { return length; }
+  
   /**Defines the capacity for new tracks and cleans existing tracks. 
    * @param length the number of values able to store.
    */

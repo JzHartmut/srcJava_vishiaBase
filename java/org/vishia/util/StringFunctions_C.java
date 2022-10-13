@@ -349,7 +349,31 @@ public class StringFunctions_C
   
   
   
-  
+  /**Appends some lines with hex numbers
+   * @param out to this Appendable
+   * @param data contains the data
+   * @param from start index in data
+   * @param to end index in data
+   * @param nrofDigits number of digits to present the integer. It is for example 4 to write 16 bit words.
+   *   Then also only 16 bits are used from data[ix].
+   * @param nrFirstLine number of words in the first line before a line break.
+   *   This allows structuring if data starts with some defined head data.
+   *   Use same value as nrWordsPerLine to write the full line.
+   * @param nrWordsPerLine number of words in a line, usual 16  
+   * @return
+   * @throws IOException
+   */
+  public final static Appendable appendHexLine(Appendable out, int[] data, int from, int to
+      , int nrofDigits, int nrFirstLine, int nrWordsPerLine) throws IOException {
+    int nl = nrFirstLine;
+    int nrWordsHalfLine = nrWordsPerLine /2;
+    for(int ixWord = from; ixWord < to; ++ixWord) {
+      StringFunctions_C.appendHex(out, data[ixWord], nrofDigits).append(' ');
+      if(--nl == nrWordsHalfLine) { out.append("\' "); }
+      if(nl==0) { out.append("\n");  nl = nrWordsPerLine; }
+    }
+    return out;
+  }
   
   
   

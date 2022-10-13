@@ -109,6 +109,12 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
   /**An instance can be created and filled from ZBNF-parser using reflection
    * or also programmatically created using .
    * It is a non static class because it is related to the instance of the given {@link ByteDataSymbolicAccess}.
+   * <br><br>
+   * Effort for machine code: There may be a lot of variable, 1000 or more. 
+   * Any variable needs this amount of data space, approximately 50 Byte. 
+   * 50 kByte is not much for PC programming. 
+   * <br>
+   * The access operations are contained only one time in byte and then machine code, this is effective. 
    */
   public class Variable implements VariableAccessArray_ifc
   {

@@ -197,8 +197,11 @@ public abstract class Arguments {
     /**The value of the string given argument. */
     public String val;
     
-    protected final String option; 
-    protected final String help; 
+    /**The option switch used for detect the argument, accessible for help. */
+    public final String option; 
+    
+    public final String help; 
+    
     protected final SetArgument set;
     
     
