@@ -1,6 +1,6 @@
-echo =========================================================================
+echo ====== start script ===============================================================
 echo execute  $0
-## Set the current dir 2 level before the script, it is the srcDir/makeScripts
+## Set the current dir 2 level before the script, it sees the srcDir/makeScripts
 cd $(dirname $0)/../..
 echo currdir $PWD
 export DSTNAME="vishiaBase"
@@ -9,14 +9,14 @@ echo " ... generates the $DSTNAME.jar from srcJava_$DSTNAME core sources"
 #Do not change the version on repeated build, and check the checksum and content of jar.
 #If it is equal, it is a reproduces build. The $VERSIONSTAMP is important 
 #  because it determines the timestamp and hence the checksum in the jar file. 
-export VERSIONSTAMP="2022-07-26"
+export VERSIONSTAMP="2022-10-21"
 
 ## Determine a dedicated vishiaBase-yyyy-mm-dd.jar or deactivate it to use the current vishiaBase.jar:
 export VERSION_VISHIABASE=$VERSIONSTAMP
 
 
 #The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
-export VERSION_MINISYS="2022-06-29"
+export VERSION_MINISYS="2022-10-21"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
@@ -43,7 +43,7 @@ export TIMEinJAR_VISHIABASE=""   ##get from $VERSIONSTAMP
 #It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP
 export SRCZIPFILE="vishiaBase-$VERSION_VISHIABASE-source.zip"
 
-export SRCDIRNAME="java_vishiaBase"  ##must identical to the own location
+export SRCDIRNAME="srcJava_vishiaBase"  ##must identical to the own location
 export MAKEBASEDIR="$SRCDIRNAME/makeScripts"     ##must identical in the own location
 
 #No further classpath necessary. 
@@ -55,7 +55,7 @@ export CLASSPATH=xx
 #It is the tool for zip and jar used inside the core script
 export JAR_zipjar="__vishiaBase_CLASSfiles__"
 
-
+export JAR_vishiaBase=""    ## set same as $JAR_zipjar
 
 #Build the whole vishiaBase
 #==========================
@@ -81,7 +81,8 @@ export RESOURCEFILES="$SRCDIRNAME/java:**/*.zbnf $SRCDIRNAME/java:**/*.txt $SRCD
 
 
 #now run the common script:
-export DEPLOYSCRIPT = "$MAKEBASEDIR/-deployJar.sh"
+# The DEPLOYSCRIPT will be executed after generation in the coreScript if given and found.
+export DEPLOYSCRIPT="$MAKEBASEDIR/-deployJar.sh"
 chmod 777 $MAKEBASEDIR/-makejar-coreScript.sh
 chmod 777 $DEPLOYSCRIPT
 $MAKEBASEDIR/-makejar-coreScript.sh
@@ -94,7 +95,7 @@ echo
 echo
 
 
-#build minisys:
+echo ====== build minisys: =============================================================
 #==============
 #determine the sources:
 export DSTNAME="vishiaMinisys"
@@ -106,13 +107,14 @@ export FILE1SRC="@$SRCDIRNAME/makeScripts/minisys.files" #files to compile conta
 # located from this workingdir as currdir for shell execution:
 export MANIFEST=$SRCDIRNAME/makeScripts/minisys.manifest
 
+export JAR_vishiaBase="../../tools/vishiaBase.jar"    ## set same as $JAR_zipjar
 
 export VERSIONSTAMP="$VERSION_MINISYS"
 export TIMEinJAR="$TIMEinJAR_MINISYS"
 unset SRCZIPFILE=""         ## do not zip this sources
-export JAR_vishiaBase=""    ## search in ../../jars etc. some default locations used from before generated vishiaBase.jar
 
 #now run the common script for MiniSys:
-export DEPLOYSCRIPT = "$MAKEBASEDIR/-deployJar.sh"
+# The DEPLOYSCRIPT will be executed after generation in the coreScript.
+export DEPLOYSCRIPT="$MAKEBASEDIR/-deployJar.sh"
 $MAKEBASEDIR/-makejar-coreScript.sh
 

@@ -6,10 +6,12 @@
 #possible to give $BUILD_TMP from outside. On argumentless call determine in build.
 #the build should be a temporary directory for build outputs, beside the src of the src-tree
 #It can be removed too, then always create newly
+echo
+echo ====== -makejar-coreScript.sh =====================================================
 echo PWD=$PWD
 if test "$BUILD_TMP" = ""; then                                                      ## check whether a build exists:
-  if test -d ../../build; then export BUILD_TMP="../../build"                        ## beside the component java tree
-  elif test -d ../../../../../build; then export BUILD_TMP="../../../../../build"    ## beside the common src tree
+  if test -d build; then export BUILD_TMP="build"                ## beside the components sources
+  elif test -d ../build; then export BUILD_TMP="../build"        ## beside the src dir of all components
   else
     export BUILD_TMP="/tmp/BuildJava/$DSTNAME"
     if ! test -d $BUILD_TMP; then mkdir -p $BUILD_TMP; fi
@@ -43,11 +45,13 @@ if test "$JAR_zipjar" = "__vishiaBase_CLASSfiles__"; then export JAR_zipjar=$TMP
 elif test "$JAR_zipjar" = ""; then
   if test -f tools/vishiaBase.jar; then export JAR_zipjar="tools/vishiaBase.jar"
   elif test -f jars/vishiaBase.jar; then export JAR_zipjar="jars/vishiaBase.jar"
-  elif test -f ../../tools/vishiaBase.jar; then export JAR_zipjar="../../tools/vishiaBase.jar"
-  elif test -f ../../../Java/tools/vishiaBase.jar; then export JAR_zipjar="../../../Java/tools/vishiaBase.jar"
+  elif test -f ../jars/vishiaBase.jar; then export JAR_zipjar="../jars/vishiaBase.jar"
+  elif test -f ../tools/vishiaBase.jar; then export JAR_zipjar="../tools/vishiaBase.jar"
+  elif test -f ../../Java/tools/vishiaBase.jar; then export JAR_zipjar="../../Java/tools/vishiaBase.jar"
   else echo ERROR vishiaBase.jar not able to found.
   fi
 fi
+if test "$JAR_vishiaBase" = ""; then export JAR_vishiaBase=$JAR_zipjar; fi
 
 if test "$OS" = "Windows_NT"; then export sepPath=";"; else export sepPath=":"; fi
 
@@ -90,7 +94,7 @@ echo JAVAC_HOME = $JAVAC_HOME
 if test "$JAVAC_HOME" = ""; then export JAVAC="javac"; else export JAVAC="$JAVAC_HOME/bin/javac"; fi
 echo JAVAC = $JAVAC                                                                                       
 echo Output to: $JARFILE
-echo ===============================================================
+echo ====== gen src.zip ================================================================
 
 ##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
 ##SRC_ALL refers to the java package path root directory,
@@ -143,9 +147,23 @@ fi
 
 echo ===================================================================================
 if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
-echo ===================================================================================
+echo
+echo ====== deploy to jar ==============================================================
+if test -d ../jars; then export DSTJARDIR="../jars"
+elif test -d jars; then export DSTJARDIR="jars"
+else mkdir jars; export DSTJARDIR="jars"
+fi
+echo DSTDIRJAR=$DSTJARDIR
+echo cp $BUILD_TMP/deploy/* $DSTJARDIR
+cp $BUILD_TMP/deploy/* $DSTJARDIR
+echo "if ! test $DSTJARDIR/$DSTNAME.jar; then cp $DSTJARDIR/$JARFILE $DSTJARDIR/$DSTNAME.jar; fi"
+if ! test -f $DSTJARDIR/$DSTNAME.jar; then cp $JARFILE $DSTJARDIR/$DSTNAME.jar; fi
+ls $DSTARDIR
 
+echo
+echo ====== deploy script ==============================================================
 echo DEPLOYSCRIPT=$DEPLOYSCRIPT
+
 if test -v DEPLOYSCRIPT 
 then $DEPLOYSCRIPT
 fi
