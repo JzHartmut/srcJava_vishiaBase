@@ -158,7 +158,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
         if(parentDirNode == null){
           Assert.stop();
         } else {
-          FileRemote dir = parentDirNode.data;
+          FileRemote dir = parentDirNode.nd_data;
           FileRemote fileChild = new FileRemote(dir.itsCluster, zipAccess, dir, sNameChild, sizeChild, dateChild, 0,0, zipEntryProperties, dataChild, true);
           if((zipEntryProperties & FileRemote.mDirectory) !=0){
             dataChild.childrenZip = new TreeNodeBase.TreeNode<FileRemote>(sNameChild, fileChild);
@@ -204,16 +204,16 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
     FileZipData data = (FileZipData)file.oFile;
     int zChildren = data == null ? 0 : data.childrenZip == null ? 0 : (data.childrenZip.hasChildren() ? 0
         : data.childrenZip.nrofChildren())
-        + (data.childrenZip.leafData == null ? 0 : data.childrenZip.leafData.size());
+        + (data.childrenZip.nd_leafData == null ? 0 : data.childrenZip.nd_leafData.size());
     //file.children = new TreeMap<String, FileRemote>(); //[zChildren]; //may be [0]
     if (zChildren > 0) {
       int ii = -1;
       if (data.childrenZip.hasChildren()){
         for (TreeNodeBase.TreeNode<FileRemote> node1 : data.childrenZip.iterator()) {
-          file.putNewChild( node1.data);
+          file.putNewChild( node1.nd_data);
       } }
-      if (data.childrenZip.leafData != null){
-        for (FileRemote node1 : data.childrenZip.leafData) {
+      if (data.childrenZip.nd_leafData != null){
+        for (FileRemote node1 : data.childrenZip.nd_leafData) {
           file.putNewChild( node1);
       } }
     }
@@ -230,17 +230,17 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
     List<File> list = new ArrayList<File>();
     int zChildren = data == null ? 0 : data.childrenZip == null ? 0 : (data.childrenZip.hasChildren() ? 0
         : data.childrenZip.nrofChildren())
-        + (data.childrenZip.leafData == null ? 0 : data.childrenZip.leafData.size());
+        + (data.childrenZip.nd_leafData == null ? 0 : data.childrenZip.nd_leafData.size());
     if (zChildren > 0) {
       int ii = -1;
       if (data.childrenZip.hasChildren()){
         for (TreeNodeBase.TreeNode<FileRemote> node1 : data.childrenZip.iterator()) {
-          if ((filter == null) || filter.accept(node1.data)){
-            list.add(node1.data);
+          if ((filter == null) || filter.accept(node1.nd_data)){
+            list.add(node1.nd_data);
           }
       } }
-      if (data.childrenZip.leafData != null){
-        for (FileRemote node1 : data.childrenZip.leafData) {
+      if (data.childrenZip.nd_leafData != null){
+        for (FileRemote node1 : data.childrenZip.nd_leafData) {
           if ((filter == null) || filter.accept(node1)){
             list.add(node1);
           }

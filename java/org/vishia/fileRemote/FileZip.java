@@ -75,7 +75,7 @@ public class FileZip extends FileRemote {
           } else {
             parentDir = children;
           }
-          FileZip zipDir = new FileZip(parentDir.data, theFile, zipFile, entry);
+          FileZip zipDir = new FileZip(parentDir.nd_data, theFile, zipFile, entry);
         }
       }
       // this.entries.add(entry);
@@ -114,16 +114,16 @@ public class FileZip extends FileRemote {
   @Override
   public FileZip[] listFiles() {
     int zChildren = children == null ? 0 : children.nrofChildren()
-        + (children.leafData == null ? 0 : children.leafData.size());
+        + (children.nd_leafData == null ? 0 : children.nd_leafData.size());
     if (zChildren > 0) {
       int ii = -1;
       FileZip[] ret = new FileZip[zChildren];
       if (children.hasChildren())
         for (TreeNodeBase.TreeNode<FileZip> node1 : children.iterator()) {
-          ret[++ii] = node1.data;
+          ret[++ii] = node1.nd_data;
         }
-      if (children.leafData != null)
-        for (FileZip node1 : children.leafData) {
+      if (children.nd_leafData != null)
+        for (FileZip node1 : children.nd_leafData) {
           ret[++ii] = node1;
         }
       return ret;
@@ -155,7 +155,7 @@ public class FileZip extends FileRemote {
   public FileRemote getParentFile() {
     FileRemote parent1;
     if (children != null && children.parent() != null) {
-      parent1 = children.parent().data;
+      parent1 = children.parent().nd_data;
     } else {
       parent1 = theFile;
     }

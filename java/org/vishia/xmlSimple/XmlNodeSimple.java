@@ -14,7 +14,7 @@ import org.vishia.util.TreeNodeBase;
  * Hint: The possibility to reference data is additional to XML concepts, not usable for the XML output but for management of data.
  * The referenced data are present if the appropriate constructors are used: 
  * {@link #XmlNodeSimple(String, Object)} and {@link #XmlNodeSimple(String, String, Object)}. 
- * Elsewhere the {@link TreeNodeBase#data} is left empty. This is for ordinary XML data.
+ * Elsewhere the {@link TreeNodeBase#nd_data} is left empty. This is for ordinary XML data.
  * 
  * */ 
 public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData>, UserData, XmlNode> implements XmlNode
@@ -99,7 +99,7 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   
   /**Creates a XML node.
    * @param name The tag name. If it contains a "namespace:name", the namespace will be separated.
-   * @param data Additional data stored in the {@link TreeNodeBase#data}
+   * @param data Additional data stored in the {@link TreeNodeBase#nd_data}
    */
   public XmlNodeSimple(String name, UserData data)
   { this(name, null, data);
@@ -124,7 +124,7 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
   /**Creates a XML node.
    * @param name The tag name. If it contains a "namespace:name", the namespace will be separated.
    * @param namespaceKey A given namespace if not contained in name. This argument wins if "namespace:name"
-   * @param data Additional data stored in the {@link TreeNodeBase#data}
+   * @param data Additional data stored in the {@link TreeNodeBase#nd_data}
    */
   public XmlNodeSimple(String name, String namespaceKey, UserData data)
   { super(calcKey(name, namespaceKey), data);  //TreeNodeBase, key is namespace:name
@@ -420,14 +420,14 @@ public class XmlNodeSimple<UserData> extends TreeNodeBase<XmlNodeSimple<UserData
    */
   @Override public String toString()
   { if(text !=null){ return text; }
-    else return "<" + name + (idxChildren !=null ? ">...</>" : ">"); //any container
+    else return "<" + name + (nd_idxChildren !=null ? ">...</>" : ">"); //any container
   }
 
   
   public String toString1()
   { if(namespaceKey !=null && namespaceKey.equals("$")) return text;  //it is the text
     else if(name.startsWith("@")) return name + "=" + text; 
-    else return "<" + name + (idxChildren !=null ? ">...</>" : ">"); //any container
+    else return "<" + name + (nd_idxChildren !=null ? ">...</>" : ">"); //any container
   }
 
   

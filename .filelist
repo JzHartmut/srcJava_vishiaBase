@@ -137,7 +137,7 @@
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2020-03-31 15:44:52  x     FileAccessZip.java                       ::         16.875  0406548490 
+2022-10-22 14:12:16  x     FileAccessZip.java                       ::         16.911  1209284670 
 2021-10-04 14:29:51  x     FileCluster.java                         ::         22.959  1340568083 
 2021-10-04 14:29:52  x     FileMark.java                            ::          8.985 -1421367665 
 2020-10-03 11:05:39  x     FileRemote.java                          ::        150.868 -1289946990 
@@ -148,7 +148,7 @@
 2020-03-31 18:08:03  x     FileRemoteCallbackSearch.java            ::         10.849  0541022134 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
 2021-10-04 14:29:51  x     FileRemoteProgressTimeOrder.java         ::          4.023 -0268806667 
-2015-05-25 22:50:04  x     FileZip.java                             ::          5.683  0977584274 
+2022-10-22 14:12:16  x     FileZip.java                             ::          5.704  0189097144 
 
 ============================== java/org/vishia/fileRemote/test/ ====================================
 2021-10-04 14:29:56  x     TestFileCluster.java                     ::          1.693 -1940540755 
@@ -336,7 +336,7 @@
 2021-10-04 14:29:51  x     ThreadRun.java                           ::          9.438  1862271585 
 2022-10-06 00:17:08  x     TimedValues.java                         ::         11.341 -1313582399 
 2022-09-28 10:10:52  x     Timeshort.java                           ::          9.766 -1923684124 
-2019-04-24 21:59:38  x     TreeNodeBase.java                        ::         41.589  1642086573 
+2022-10-22 14:18:39  x     TreeNodeBase.java                        ::         42.316  0815563807 
 2021-10-04 14:29:50  x     TreeNodeCallback.java                    ::          2.281  1360272692 
 2019-05-29 11:12:40  x     TreeNodeHtmlOutput.java                  ::          5.557  2032896486 
 2021-10-04 14:29:52  x     TreeNodeNamed_ifc.java                   ::           . 85  1747010936 
@@ -360,7 +360,7 @@
 2018-01-07 22:38:28  x     WikistyleTextToSimpleXml.java            ::         60.467 -0091533971 
 2012-12-26 20:03:22  x     XmlException.java                        ::          1.656 -0761622632 
 2019-01-26 15:48:06  x     XmlNode.java                             ::          7.158 -1065056153 
-2022-06-08 18:24:59  x     XmlNodeSimple.java                       ::         16.200 -1352289648 
+2022-10-22 14:12:17  x     XmlNodeSimple.java                       ::         16.215 -0224590100 
 2021-10-07 17:54:36  x     XmlSequWriter.java                       ::         19.076 -0016664965 
 2013-10-27 21:01:40  x     Xsltpre.java                             ::         24.164 -0613607921 
 2012-03-17 08:57:20  x     package-info.java                        ::           .170  2015116723 
