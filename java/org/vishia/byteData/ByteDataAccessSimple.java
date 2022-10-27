@@ -99,7 +99,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
   
 
   
-  /**Gets a integer value from any offset started from Object_Jc
+  /**Gets a integer value from any offset started from the current child element
    * 
    * @param idx byte-offset, the offset is not tested. If the offset is wrong, a null-pointer-exception throws.
    * @param nrofBytes to read.  
@@ -110,7 +110,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
   }
 
   
-  /**Gets a integer value from any offset started from Object_Jc
+  /**Gets a integer value from any offset started from the current child element
    * 
    * @param idx byte-offset, the offset is not tested. If the offset is wrong, a null-pointer-exception throws.
    * @param nrofBytes to read.  
@@ -121,7 +121,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
   }
 
   
-  /**Gets a float value from any offset started from Object_Jc
+  /**Gets a float value from any offset started from the current child element
    * 
    * @param idx byte-offset, the offset is not tested. If the offset is wrong, a null-pointer-exception throws.
    * @return float value
@@ -132,7 +132,7 @@ public class ByteDataAccessSimple extends ByteDataAccessBase
 
   
   
-  /**Gets a double value from any offset started from Object_Jc
+  /**Gets a double value from any offset started from the current child element
    * 
    * @param idx byte-offset, the offset is not tested. If the offset is wrong, a null-pointer-exception throws.
    * @return double value

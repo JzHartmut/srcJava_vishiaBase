@@ -54,6 +54,16 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
 
   /**Version, history and license. The version number is a date written as yyyymmdd as decimal number.
    * <ul>
+   * <li>2022-10-26 Hartmut The {@link #indexVariable} is now not only private, it can be shared with a global index
+   *   using the ctor {@link #ByteDataSymbolicAccess(Map)} as done in org.vishia.guiViewCfg.OamShowValues. 
+   *   In conclusion the members cannot have the specialized type {@link Variable}, 
+   *   instead the abstract common type {@link VariableAccess_ifc}.  
+   *   <br> Some operations here are commented yet because not used, should be refactored with this change.
+   *   The problem is, using the interface instead the specialized type. 
+   *   For array access the variables should implement the {@link VariableAccessArray_ifc},
+   *   and that should be test. If an array access is done (index found in string), then the downcasting should be done.
+   *   It should be able to do, elsewhere the index access cannot be done. 
+   *   This is partially refactored for the necessary operations.   
    * <li>2022-09-28 Hartmut new: {@link #setTimeShort(int, int)} and {@link Variable#getLastRefreshTimeShort()}
    *   as support for data from a controller which has a relative timeShort.
    * <li>2013-11-26 Hartmut new: {@link #copyNewData(byte[], int, int, long)}
@@ -417,7 +427,11 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
   }
   
   
-  private final Map<String, ByteDataSymbolicAccess.Variable> indexVariable = new TreeMap<String, ByteDataSymbolicAccess.Variable>();
+  /**The access to variables, index of variables used internally.
+   * This reference can be set to a common reference, see #setIdx...
+   * 
+   */
+  private final Map<String, VariableAccess_ifc> indexVariable;
   
   private byte[] data;
   
@@ -447,8 +461,15 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
   /**Creates with its own internal (not visible) {@link ByteDataAccessSimple} access operations. */
   public ByteDataSymbolicAccess()
   { this.dataAccess = new ByteDataAccessSimple(true);  //access big endian
+    this.indexVariable = new TreeMap<String, VariableAccess_ifc>();
   }
   
+  
+  
+  public ByteDataSymbolicAccess(Map<String, VariableAccess_ifc> idxVariables) {
+    this.dataAccess = new ByteDataAccessSimple(true);  //access big endian
+    this.indexVariable = idxVariables;
+  }
   
   /**Works with a given ByteDataAccess which can be additional touched with the {@link ByteDataAccessBase} or {@link ByteDataAccessSimple} operations.
    * with that concept only a part of the whole data may be used for the symbolic access.
@@ -456,6 +477,7 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
    */
   public ByteDataSymbolicAccess(ByteDataAccessSimple dataAccess)
   { this.dataAccess = dataAccess;
+    this.indexVariable = new TreeMap<String, VariableAccess_ifc>();
   }
   
   
@@ -470,16 +492,21 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
   }
   
   
+  /**Assigns new data which are filled with byte before, often from a received socket telegram
+   * @param dataP
+   * @param length valid number of bytes, the length + from should not exceed the dataP length. 
+   * @param from byte position where the data for the internal variables starts. This is usual start of the payload, or after them
+   * @param time The timestamp of the received data helpfull for some time relation operations. 
+   */
   public void assignData(byte[] dataP, int length, int from, long time)
   { this.data = dataP;
     this.ixStartData = from;
     this.nrofData = length;
-    assert( (from + length) <= data.length);
-    try{  dataAccess.assign(data, length, from);
+    assert( (from + length) <= dataP.length);
+    try{  this.dataAccess.assign(dataP, length, from);
     } catch (IllegalArgumentException exc) { }
-    dataAccess.setBigEndian(true);
-    timeSetNewValue = time; 
-    timeRequestNewValue = 0; 
+    this.timeSetNewValue = time; 
+    this.timeRequestNewValue = 0; 
   }
   
   /**Replace the data bytes in the buffer.
@@ -526,7 +553,7 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
    * @param name The name 
    * @return null if not found.
    */
-  @Override public Variable getVariable(String name)
+  @Override public VariableAccess_ifc getVariable(String name)
   { return indexVariable.get(name);
   }
   
@@ -536,105 +563,105 @@ public class ByteDataSymbolicAccess implements VariableContainer_ifc {
    * @return null if not found.
    * @throws NoSuchFieldException 
    */
-  public Variable getVariableAssert(String name) throws NoSuchFieldException
-  { ByteDataSymbolicAccess.Variable variable = indexVariable.get(name);
+  public VariableAccess_ifc getVariableAssert(String name) throws NoSuchFieldException
+  { VariableAccess_ifc variable = indexVariable.get(name);
     if(variable == null){
       throw new NoSuchFieldException("ByteDataSymbolicAccess - Variable not found; " + name);
     }
     return variable;
   }
   
-  public double getDouble(String name)
-  { Variable variable = indexVariable.get(name);
-    if(variable == null) throw new IllegalArgumentException("not found:" + name);
-    return getDouble(variable, -1);
-  }
-  
-  public double getDouble(Variable variable, int ixArray){ return variable.getDouble(ixArray); }
-  
-  
-  /**Get a float value from byte-area.
-   * @param name The name of the registered variable, maybe with "[ix]" where ix is a number.
-   * @return The value
-   */
-  public float getFloat(String name)
-  { final int[] ixArrayA = new int[1];
-    final String sPathVariable = ByteDataSymbolicAccess.separateIndex(name, ixArrayA);
-    Variable variable = indexVariable.get(sPathVariable);
-    if(variable == null) return 9.999999F; //throw new IllegalArgumentException("not found:" + name);
-    return variable.getFloat(ixArrayA);
-  }
-  
-  
-  public float getFloat(Variable variable){ return getFloat(variable, -1); }
-  
-  
-  public float getFloat(Variable variable, int ixArray){ return variable.getFloat(ixArray); }
-  
-  
-  
-  
-  public int getInt(String name)
-  { Variable variable = indexVariable.get(name);
-    if(variable == null) throw new IllegalArgumentException("not found:" + name);
-    return getInt(variable, -1);
-  }
-  
-  public int getInt(Variable variable, int ixArray){ return variable.getInt(ixArray); }
-  
-  
-  public boolean getBool(String name)
-  { Variable variable = indexVariable.get(name);
-    if(variable == null) throw new IllegalArgumentException("not found:" + name);
-    return getBool(variable, -1);
-  }
-  
-  public boolean getBool(Variable variable, int ixArray)
-  { boolean value = false;
-    int bytePos = ixArray < 0 ? variable.bytePos : variable.bytePos + (ixArray >>3);  //sizeof(bool) is 1/8.
-    if(bytePos > data.length-4) throw new IllegalArgumentException("file to short: " + data.length + ", necessary: " + bytePos);
-    switch(variable.typeChar){
-    case 'I': value = 0 != dataAccess.getIntVal(bytePos, 4); break;
-    case 'J': value = 0 != dataAccess.getIntVal(bytePos, 8); break;
-    case 'S': value = 0 != dataAccess.getIntVal(bytePos, 2); break;
-    case 'B': value = 0 != dataAccess.getIntVal(bytePos, 1); break;
-    case 'Z': {
-      byte byteVal = (byte)dataAccess.getIntVal(bytePos, 1);
-      value = (byteVal & variable.bitMask) !=0;  //TODO use ixArray
-    }break;
-    default: new IllegalArgumentException("fault type, expected: float, found: " + variable.typeChar);
-    }//switch
-    return value;
-  }
-  
-
-  
-  
-  public void setFloat(String name, float value)
-  { Variable variable = indexVariable.get(name);
-    if(variable == null) throw new IllegalArgumentException("not found:" + name);
-    variable.setFloat(value, -1);
-  }
-  
-  public void setFloat(Variable variable, int ixArray, float value){ variable.setFloat(value, ixArray); }
-  
-  
-  public void setInt(String name, int value)
-  { Variable variable = indexVariable.get(name);
-    if(variable == null) throw new IllegalArgumentException("not found:" + name);
-    setInt(variable, -1, value);
-  }
-  
-  public void setInt(Variable variable, int ixArray, int value){ variable.setInt(value, ixArray); }
+//  public double getDouble(String name)
+//  { VariableAccess_ifc variable = indexVariable.get(name);
+//    if(variable == null) throw new IllegalArgumentException("not found:" + name);
+//    return getDouble(variable, -1);
+//  }
+//  
+//  public double getDouble(VariableAccess_ifc variable, int ixArray){ return variable.getDouble(ixArray); }
+//  
+//  
+//  /**Get a float value from byte-area.
+//   * @param name The name of the registered variable, maybe with "[ix]" where ix is a number.
+//   * @return The value
+//   */
+//  public float getFloat(String name)
+//  { final int[] ixArrayA = new int[1];
+//    final String sPathVariable = ByteDataSymbolicAccess.separateIndex(name, ixArrayA);
+//    VariableAccess_ifc variable = indexVariable.get(sPathVariable);
+//    if(variable == null) return 9.999999F; //throw new IllegalArgumentException("not found:" + name);
+//    return variable.getFloat(ixArrayA);
+//  }
+//  
+//  
+//  public float getFloat(VariableAccess_ifc variable){ return getFloat(variable, -1); }
+//  
+//  
+//  public float getFloat(VariableAccess_ifc variable, int ixArray){ return variable.getFloat(ixArray); }
+//  
+//  
+//  
+//  
+//  public int getInt(String name)
+//  { VariableAccess_ifc variable = indexVariable.get(name);
+//    if(variable == null) throw new IllegalArgumentException("not found:" + name);
+//    return getInt(variable, -1);
+//  }
+//  
+//  public int getInt(VariableAccess_ifc variable, int ixArray){ return variable.getInt(ixArray); }
+//  
+//  
+//  public boolean getBool(String name)
+//  { VariableAccess_ifc variable = indexVariable.get(name);
+//    if(variable == null) throw new IllegalArgumentException("not found:" + name);
+//    return getBool(variable, -1);
+//  }
+//  
+//  public boolean getBool(VariableAccess_ifc variable, int ixArray)
+//  { boolean value = false;
+//    int bytePos = ixArray < 0 ? variable.bytePos : variable.bytePos + (ixArray >>3);  //sizeof(bool) is 1/8.
+//    if(bytePos > data.length-4) throw new IllegalArgumentException("file to short: " + data.length + ", necessary: " + bytePos);
+//    switch(variable.typeChar){
+//    case 'I': value = 0 != dataAccess.getIntVal(bytePos, 4); break;
+//    case 'J': value = 0 != dataAccess.getIntVal(bytePos, 8); break;
+//    case 'S': value = 0 != dataAccess.getIntVal(bytePos, 2); break;
+//    case 'B': value = 0 != dataAccess.getIntVal(bytePos, 1); break;
+//    case 'Z': {
+//      byte byteVal = (byte)dataAccess.getIntVal(bytePos, 1);
+//      value = (byteVal & variable.bitMask) !=0;  //TODO use ixArray
+//    }break;
+//    default: new IllegalArgumentException("fault type, expected: float, found: " + variable.typeChar);
+//    }//switch
+//    return value;
+//  }
+//  
+//
+//  
+//  
+//  public void setFloat(String name, float value)
+//  { VariableAccess_ifc variable = indexVariable.get(name);
+//    if(variable == null) throw new IllegalArgumentException("not found:" + name);
+//    variable.setFloat(value, -1);
+//  }
+//  
+//  public void setFloat(VariableAccess_ifc variable, int ixArray, float value){ variable.setFloat(value, ixArray); }
+//  
+//  
+//  public void setInt(String name, int value)
+//  { VariableAccess_ifc variable = indexVariable.get(name);
+//    if(variable == null) throw new IllegalArgumentException("not found:" + name);
+//    setInt(variable, -1, value);
+//  }
+//  
+//  public void setInt(VariableAccess_ifc variable, int ixArray, int value){ variable.setInt(value, ixArray); }
   
   
   /**Separates an string-given index from a path.
    * The index may contain in the sPathValue at end in form "[index]",
    * where index is numerical, maybe hexa starting with "0x"
-   * @param sPathValue The path
+   * @param sPathValue The path, it can contain "[ix]" on its wnd where ix is the numerical index.
    * @param ix An array with the necessary number of  element to store the index. It may be null
    *           or shorter then the number of indices. Then the indeces are not stored.
-   * @return The sPathValue without the index.
+   * @return The sPathValue without the index. If sPathValue does not contain an index it is == sPathValue.
    */
   public static String separateIndex(String sPathValue, int[] ix)
   {

@@ -28,8 +28,8 @@
 2022-09-27 23:31:17  x     ByteDataAccessBase.java                  ::         95.700 -0744481635 
 2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
-2022-09-27 23:06:26  x     ByteDataAccessSimple.java                ::          5.728  1133699112 
-2022-10-05 15:14:43  x     ByteDataSymbolicAccess.java              ::         29.269  1242631474 
+2022-10-25 00:07:02  x     ByteDataAccessSimple.java                ::          5.792 -1822930907 
+2022-10-27 11:10:11  x     ByteDataSymbolicAccess.java              ::         31.461 -1590403540 
 2022-08-26 21:01:40  x     ByteDataSymbolicAccessReadConfig.java    ::          4.539 -0785729210 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
