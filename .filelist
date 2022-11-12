@@ -178,7 +178,7 @@
 
 ============================== java/org/vishia/mainCmd/ ============================================
 2021-10-04 14:29:51  x     FileWrite.java                           ::          2.095  0880975541 
-2022-09-23 18:10:55  x     MainCmd.java                             ::         92.928 -1231600095 
+2022-11-12 20:35:13  x     MainCmd.java                             ::         92.981  0780611812 
 2022-09-23 18:17:15  x     MainCmdLoggingStream.java                ::         10.291  1992531802 
 2014-06-05 08:58:49  x     MainCmdLogging_ifc.java                  ::         13.219 -2077057750 
 2014-05-29 14:56:39  x     MainCmd_ifc.java                         ::          9.334  0930852519 
@@ -199,13 +199,14 @@
 
 ============================== java/org/vishia/msgDispatch/ ========================================
 2012-10-07 10:02:50  x     ExceptionInfo.java                       ::           .515 -0745834556 
-2022-09-23 20:17:48  x     LogMessage.java                          ::         10.541  0721887488 
-2022-09-23 18:11:58  x     LogMessageFile.java                      ::         27.652 -2065386306 
-2022-09-23 20:18:10  x     LogMessageStream.java                    ::         10.543 -0494412210 
+2022-11-12 23:12:18  x     LogMessage.java                          ::         10.864 -0946560954 
+2022-11-12 23:16:06  x     LogMessageBase.java                      ::           .743 -0620161850 
+2022-11-12 20:35:58  x     LogMessageFile.java                      ::         27.653 -0631351485 
+2022-11-12 21:32:54  x     LogMessageStream.java                    ::         10.546  1718704467 
 2014-12-20 21:54:27  x     MsgConfig.java                           ::         11.193 -1733151147 
 2014-12-18 22:51:24  x     MsgDispatchSystemOutErr.java             ::          5.869  1342572906 
 2016-12-21 16:20:43  x     MsgDispatcher.java                       ::         27.941 -0283338192 
-2022-09-23 18:19:48  x     MsgDispatcherCore.java                   ::         25.668 -1675373615 
+2022-11-12 20:34:29  x     MsgDispatcherCore.java                   ::         25.669  1838888747 
 2014-05-29 21:22:46  x     MsgPrintStream.java                      ::         19.456  0790745732 
 2013-03-24 21:17:00  x     MsgPrintStream_ifc.java                  ::           .111  0825089560 
 2021-10-04 14:29:51  x     MsgRedirectConsole.java                  ::          7.397 -0856512848 
@@ -253,7 +254,7 @@
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
 2022-10-05 16:53:31  x     Arguments.java                           ::         23.973 -1694720723 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
-2020-03-22 23:02:07  x     Assert.java                              ::          3.039 -1157511839 
+2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
 2022-05-11 10:24:43  x     CalculatorExpr.java                      ::        151.273  0467732730 
 2022-10-01 20:48:49  x     CheckVs.java                             ::          1.055 -0027567892 
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
@@ -329,7 +330,7 @@
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2022-09-26 07:41:36  x     StringPartFromFileLines.java             ::         29.023 -0061894436 
-2022-04-29 11:08:12  x     StringPartScan.java                      ::         54.307  1060946707 
+2022-11-12 23:09:47  x     StringPartScan.java                      ::         54.503  0730191856 
 2021-10-04 14:29:58  x     StringSeq.java                           ::          6.443  1891375723 
 2022-09-13 15:01:53  x     TestOrg.java                             ::         13.339 -0742257077 
 2021-10-04 14:29:51  x     ThreadContext.java                       ::          2.293  1218907235 

@@ -54,6 +54,7 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-11-12 Hartmut chg now {@link #scanAnyChar(String)} writes its result also to {@link #getLastScannedString()}.
    * <li>2022-04-28 Hartmut new scan of numeric values with a side output for the parsed String:
    *   Sometimes not the number itself but also the given source writing style is the point of interest. 
    *   See label @since 2022-04-28 on operations. 
@@ -122,7 +123,7 @@ public class StringPartScan extends StringPart
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2022-04-28"; 
+  public final static String sVersion = "2022-11-12"; 
 
   
   /**Position of scanStart() or after scanOk() as begin of next scan operations. */
@@ -317,6 +318,7 @@ public class StringPartScan extends StringPart
       if(  (this.begin + 1) < this.endMax) {
         char cc = this.content.charAt(this.begin);
         if(cmp.indexOf(cc)>=0) {
+          this.setCurrentPartTo(this.sLastString[++this.ixLastString]);
           this.begin +=1;    //skip, ok
         } else {
           this.bCurrentOk = false;

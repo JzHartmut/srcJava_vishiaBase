@@ -40,7 +40,7 @@ import org.vishia.util.Java4C;
  * @author Hartmut Schorrig
  *
  */
-public class MsgDispatcherCore implements LogMessage
+public class MsgDispatcherCore extends LogMessageBase
 {
 
   /**version, history and license.

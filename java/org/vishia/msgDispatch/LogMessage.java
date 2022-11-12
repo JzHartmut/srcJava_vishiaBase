@@ -60,6 +60,9 @@ public interface LogMessage extends Appendable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-09-23 Hartmut new: {@link #writeError(String)} is declared in {@link org.vishia.mainCmd.MainCmd_ifc}
+   *   and used sometimes. It is also yet defined here, but redirected to {@link #append(CharSequence)}
+   *   in the new LogMessageBase implementation. 
    * <li>2022-09-23 Hartmut new: extends now Appendable, hence usefull for more approaches,
    *   see also changes in {@link LogMessageStream}. 
    * <li>2014-06-17 Hartmut chg: meaning of return value of {@link #sendMsg(int, String, Object...)} described.
@@ -155,6 +158,9 @@ public interface LogMessage extends Appendable
    */
   public abstract boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args);
 
+  
+  public abstract void writeError(String text);
+  
   /**Only preliminary, because Java2C doesn't support implementation of interfaces yet.
    * This method is implemented in C in another kind.
    * @param src 

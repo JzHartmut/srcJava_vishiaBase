@@ -58,7 +58,7 @@ import org.vishia.util.Java4C;
  * @author Hartmut Schorrig
  *
  */
-public class LogMessageFile implements LogMessage
+public class LogMessageFile extends LogMessageBase
 {
 
   /**Version, history and license.

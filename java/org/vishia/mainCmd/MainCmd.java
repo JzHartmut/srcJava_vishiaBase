@@ -33,6 +33,7 @@ import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
 import org.vishia.cmd.CmdExecuter;
 import org.vishia.msgDispatch.LogMessage;
+import org.vishia.msgDispatch.LogMessageBase;
 import org.vishia.msgDispatch.MsgDispatcher;
 import org.vishia.msgDispatch.MsgRedirectConsole;
 
@@ -1757,7 +1758,7 @@ public abstract class MainCmd implements MainCmd_ifc
   
   /**Instance to send a LogMessage to the Log interface of maincmd.
    */
-  protected LogMessage logMessageImplReport = new LogMessage()
+  protected LogMessage logMessageImplReport = new LogMessageBase()
   {
 
     @Override
@@ -1830,7 +1831,7 @@ public abstract class MainCmd implements MainCmd_ifc
    * The last one is originally System.out from main invocation but may be redirected, 
    * see {@link MainCmd#setOutputChannels(Appendable, Appendable)}. 
    */
-  private class LogMessageImplConsole implements LogMessage
+  private class LogMessageImplConsole extends LogMessageBase
   {
 
     @Override
@@ -1893,7 +1894,7 @@ public abstract class MainCmd implements MainCmd_ifc
 
   
   
-  class LogMessageImplErrConsole implements LogMessage
+  class LogMessageImplErrConsole extends LogMessageBase
   {
 
     @Override
@@ -1946,7 +1947,7 @@ public abstract class MainCmd implements MainCmd_ifc
 
   }
   
-  class LogMessageImplFile implements LogMessage
+  class LogMessageImplFile extends LogMessageBase
   {
     final private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd HH:mm:ss.SSS: ");
 

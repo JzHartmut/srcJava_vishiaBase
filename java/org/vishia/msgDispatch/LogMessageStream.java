@@ -43,7 +43,7 @@ import org.vishia.bridgeC.Va_list;
  * @author Hartmut Schorrig
  *
  */
-public class LogMessageStream implements LogMessage
+public class LogMessageStream extends LogMessageBase
 {
   
   
@@ -252,7 +252,7 @@ public class LogMessageStream implements LogMessage
     return true;
   }
   
-
+  
   @Override public Appendable append(CharSequence csq) throws IOException {
     byte[] b = csq.toString().getBytes(this.encoding);
     if(this.out1 !=null) { this.out1.write(b); }

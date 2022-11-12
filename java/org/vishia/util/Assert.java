@@ -1,7 +1,7 @@
 package org.vishia.util;
 
 /**Supports special handling of Outputs and assertions especially in debug phase. 
- * @deprecated use {@link CheckVs}
+ * @deprecated use {@link ExcUtil}
  * @author Hartmut Schorrig
  *
  */
