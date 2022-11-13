@@ -18,6 +18,7 @@ import javax.script.ScriptException;
 import org.vishia.jztxtcmd.JZtxtcmdSyntax;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
@@ -194,7 +195,7 @@ public class JZtxtcmdScript extends CompiledScript
   //@SuppressWarnings("hiding")
   static final public String version = "2022-02-22";
 
-  final MainCmdLogging_ifc console;
+  final LogMessage console;
 
   /**The file which has contained the script. It is used only to provide the variables
    * 'scriptdir' and 'scriptfile' for execution. The file is not evaluated. It means, it does not need
@@ -237,7 +238,7 @@ public class JZtxtcmdScript extends CompiledScript
    *   'scriptdir' and 'scriptfile' for execution. The file is not evaluated. It means, it does not need
    *   to exist.
    */
-  public JZtxtcmdScript(MainCmdLogging_ifc console, File fileScript, JZtxtcmdEngine scriptEngine)
+  public JZtxtcmdScript(LogMessage console, File fileScript, JZtxtcmdEngine scriptEngine)
   { this.console = console;
     this.fileScript = fileScript;
     this.scriptEngine = scriptEngine;
@@ -260,7 +261,7 @@ public class JZtxtcmdScript extends CompiledScript
    * @return
    * @throws ScriptException
    */
-  public static JZtxtcmdScript createScriptFromFile(File fileScript,  MainCmdLogging_ifc log, File checkXmlOutput) 
+  public static JZtxtcmdScript createScriptFromFile(File fileScript,  LogMessage log, File checkXmlOutput) 
   throws ScriptException {
     int lengthBufferGenctrl = (int)fileScript.length();
     StringPartScan sourceScript;
@@ -292,7 +293,7 @@ public class JZtxtcmdScript extends CompiledScript
    * @throws ScriptException
    */
   public static JZtxtcmdScript createScriptFromString(StringPartScan sourceScript, 
-      MainCmdLogging_ifc log, File checkXmlOutput, File fileScript) 
+      LogMessage log, File checkXmlOutput, File fileScript) 
   throws ScriptException
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
   { //MainCmdLogging_ifc log1;

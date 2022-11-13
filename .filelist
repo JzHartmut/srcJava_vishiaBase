@@ -83,7 +83,7 @@
 2022-01-31 12:28:44  x     JZtxtcmdExecuter.java                    ::        196.026  0491170528 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2022-02-10 10:58:20  x     JZtxtcmdScript.java                      ::        123.566 -2056800773 
+2022-11-13 15:00:35  x     JZtxtcmdScript.java                      ::        123.576  0321557795 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -178,14 +178,14 @@
 
 ============================== java/org/vishia/mainCmd/ ============================================
 2021-10-04 14:29:51  x     FileWrite.java                           ::          2.095  0880975541 
-2022-11-12 20:35:13  x     MainCmd.java                             ::         92.981  0780611812 
-2022-09-23 18:17:15  x     MainCmdLoggingStream.java                ::         10.291  1992531802 
-2014-06-05 08:58:49  x     MainCmdLogging_ifc.java                  ::         13.219 -2077057750 
+2022-11-13 20:33:07  x     MainCmd.java                             ::         93.134  1333916347 
+2022-11-13 21:22:34  x     MainCmdLoggingStream.java                ::         10.485  1070250625 
+2022-11-13 17:50:14  x     MainCmdLogging_ifc.java                  ::          4.714  0894393979 
 2014-05-29 14:56:39  x     MainCmd_ifc.java                         ::          9.334  0930852519 
 2021-10-04 14:29:56  x     PrintStreamAdapter.java                  ::          2.754  1398952394 
 2021-10-06 10:53:37  x     PrintStreamBuffer.java                   ::          5.261 -1940859745 
 2013-02-24 21:18:18  x     Report.java                              ::          2.856  0928115865 
-2022-09-23 18:24:23  x     ReportWrapperLog.java                    ::          8.200 -0409585777 
+2022-11-13 21:23:24  x     ReportWrapperLog.java                    ::          8.368 -1618908840 
 2016-11-27 21:16:15  x     SampleCmdLine.java                       ::         16.637 -1048205269 
 2012-03-17 08:57:20  x     package-info.java                        ::           .158  1302313651 
 
@@ -199,8 +199,8 @@
 
 ============================== java/org/vishia/msgDispatch/ ========================================
 2012-10-07 10:02:50  x     ExceptionInfo.java                       ::           .515 -0745834556 
-2022-11-12 23:12:18  x     LogMessage.java                          ::         10.864 -0946560954 
-2022-11-12 23:16:06  x     LogMessageBase.java                      ::           .743 -0620161850 
+2022-11-13 21:20:24  x     LogMessage.java                          ::         19.795  2122884603 
+2022-11-13 21:24:35  x     LogMessageBase.java                      ::          3.260 -0673225974 
 2022-11-12 20:35:58  x     LogMessageFile.java                      ::         27.653 -0631351485 
 2022-11-12 21:32:54  x     LogMessageStream.java                    ::         10.546  1718704467 
 2014-12-20 21:54:27  x     MsgConfig.java                           ::         11.193 -1733151147 
@@ -369,11 +369,11 @@
 ============================== java/org/vishia/zbnf/ ===============================================
 2022-06-23 17:14:35  x     GenZbnfJavaData.java                     ::         34.173  0306927906 
 2022-02-08 23:44:38  x     Zbnf2Xml.java                            ::         22.080 -0810343213 
-2022-04-29 11:21:56  x     ZbnfJavaOutput.java                      ::         89.645 -0975908658 
+2022-11-13 17:40:38  x     ZbnfJavaOutput.java                      ::         89.671 -1743031235 
 2022-02-09 18:28:47  x     ZbnfParseResultItem.java                 ::         12.232 -1807629494 
-2022-10-02 21:19:38  x     ZbnfParser.java                          ::        191.553 -1177468295 
+2022-11-13 17:42:39  x     ZbnfParser.java                          ::        191.293  0572222434 
 2022-05-19 17:36:26  x     ZbnfParserStore.java                     ::         60.453 -1940285188 
-2022-05-15 21:12:20  x     ZbnfSyntaxPrescript.java                 ::         87.033  1625520217 
+2022-11-13 17:53:31  x     ZbnfSyntaxPrescript.java                 ::         86.941  0257168713 
 2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
 2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
 

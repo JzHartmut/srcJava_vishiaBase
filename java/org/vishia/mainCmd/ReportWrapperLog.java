@@ -76,28 +76,28 @@ public class ReportWrapperLog implements Report
   }
 
   @Override
-  public void report(int nLevel, String string)
+  public void report(int nLevel, CharSequence string)
   {
-    log.sendMsg(nLevel, string);
+    log.sendMsg(nLevel, string.toString());
     
   }
 
   @Override
-  public void report(String sText, Throwable exception)
+  public void report(CharSequence sText, Throwable exception)
   {
     log.sendMsg(0, sText + exception.getMessage());
     
   }
 
   @Override
-  public void reportln(int nLevel, int nLeftMargin, String string)
+  public void reportln(int nLevel, int nLeftMargin, CharSequence string)
   {
     // TODO Auto-generated method stub
     
   }
 
   @Override
-  public void reportln(int nLevel, String string)
+  public void reportln(int nLevel, CharSequence string)
   {
     // TODO Auto-generated method stub
     
@@ -117,10 +117,16 @@ public class ReportWrapperLog implements Report
     
   }
 
+  @Override public int setReportLevel(int newLevel) {
+    return LogMessage.fineDebug;
+  }
+
+  
+  
   @Override
-  public void writeError(String sError)
+  public void writeError(CharSequence sError)
   {
-    log.sendMsg(0, sError);
+    log.sendMsg(0, sError.toString());
     
   }
 
@@ -132,21 +138,21 @@ public class ReportWrapperLog implements Report
   }
 
   @Override
-  public void writeInfo(String sInfo)
+  public void writeInfo(CharSequence sInfo)
   {
     // TODO Auto-generated method stub
     
   }
 
   @Override
-  public void writeInfoln(String sInfo)
+  public void writeInfoln(CharSequence sInfo)
   {
     // TODO Auto-generated method stub
     
   }
 
   @Override
-  public void writeWarning(String sError)
+  public void writeWarning(CharSequence sError)
   {
     // TODO Auto-generated method stub
     

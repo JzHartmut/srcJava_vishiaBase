@@ -55,33 +55,6 @@ public interface MainCmdLogging_ifc extends LogMessage
   /** exit value to indicate not at all problems.*/
   static final int exitSuccessfull        = 0;
 
-  /*---------------------------------------------------------------------------------------------------------*/
-  /** report level to indicate the report should be written anytime and anyway. Useable especially for errors*/
-  static final int error   =1;
-
-  /** report level to indicate the report should be written if a user is interested on warnings.*/
-  static final int warning    =2;
-
-  /** report level to indicate the report should be written if a user is interested on notes of the progression of programm is working.*/
-  static final int info    =3;
-
-  /** report level to indicate the report should be written if a user is interested on the order of the events finely.*/
-  static final int fineInfo    =4;
-
-  /** report level to indicate the report should be written to detect problems in software.*/
-  static final int debug    =5;
-
-  /** report level to indicate all report should be written to detect problems in software with finely and heavyset reports.*/
-  static final int fineDebug  =6;
-
-  /** Mask for the in fact reportlevel, other bits may have another meaning.*/
-  static final int mReportLevel = 0x7;
-  
-  /** Mask bit to indicate, do not write to display. This bit is used internally in MainCmd.
-   * It is outside the mReportLevel-mask.
-   * */
-  static final int mNeverOutputToDisplay = 0x8;
-  
   /** older reportlevel
       @deprecated use instead Report.error or Report.errorDisplay
   */
@@ -107,68 +80,6 @@ public interface MainCmdLogging_ifc extends LogMessage
   static final int fineEventOrder    =3;
 
 
-  /** Writes an info line.
-      This method should be used instead a directly write via System.out.println(...).
-      The using of System.out writes the output directly on console window of the command line, but in general,
-      the user mostly don't want to write to the console, he only will give an information out. In a GUI-application,
-      this information can be displayed in a status line or scrolling output window.
-      It may also be possible to write the information in a file additional.
-      The implementation of this method writes the output in the conformed way to the application frame. <br/>
-      Before output, the previous line is terminated by a newline, or a status line will be cleared.
-      @param sInfo String to be written.
-  */
-  public void writeInfoln(String sInfo);
-
-  /** Appends an info to the end of the previous info, @see #writeInfoln.
-      @param sInfo String to be written.
-  */
-  public void writeInfo(String sInfo);
-
-  /** Writes an error line.
-      This method should be used instead a directly write via System.err.println(...).
-      The using of System.err writes the output directly on console window of the command line, but in general,
-      the user mostly don't want to write to the console, he will give an information out. In a GUI-application,
-      this information can be displayed in a status line or scrolling output window.
-      It may also be possible to write the information in a file additional.
-      The implementation of this method writes the output in the conformed way to the application frame. <br/>
-      Before output, the previous line is terminated by a newline, or a status line will be cleared.
-      @param sError The error text, it should be without such hot spot words line "!!!WARNING!!!",
-             because the distinction in display should be done by the implementation of this method.
-             A good sample is writeErrorln("file is empty: " + sFileName);
-  */
-  public void writeWarning(String sError);
-
-  /** Writes an error line.
-      This method should be used instead a directly write via System.err.println(...).
-      The using of System.err writes the output directly on console window of the command line, but in general,
-      the user mostly don't want to write to the console, he will give an information out. In a GUI-application,
-      this information can be displayed in a status line or scrolling output window.
-      It may also be possible to write the information in a file additional.
-      The implementation of this method writes the output in the conformed way to the application frame. <br/>
-      Before output, the previous line is terminated by a newline, or a status line will be cleared.
-      @param sError The error text, it should be without such hot spot words line "!!!ERROR!!!",
-             because the distinction in display should be done by the implementation of this method.
-             A good sample is writeErrorln("cannot create file: " + sFileName);
-  */
-  public void writeError(String sError);
-
-
-  /** Writes an error line caused by an exception.
-      This method should be used instead a directly write via System.err.println(...) and by catching
-      an exception.
-      The using of System.err writes the output directly on console window of the command line, but in general,
-      the user mostly don't want to write to the console, he will give an information out. In a GUI-application,
-      this information can be displayed in a status line or scrolling output window.
-      It may also be possible to write the information in a file additional.
-      The implementation of this method writes the output in the conformed way to the application frame. <br/>
-      Before output, the previous line is terminated by a newline, or a status line will be cleared.
-      @param sError The error text, it should be without such hot spot words line "!!!ERROR!!!",
-             because the distinction in display should be done by the implementation of this method.
-             A good sample is writeErrorln("cannot create file: " + sFileName);
-      @param exception The catched Exception. The getMessage()-part of the exception is written after sError.
-             The stacktrace of the exception is written to report.      
-  */
-  public void writeError(String sError, Throwable exception);
 
   
   void writeStackTrace(Exception exc);
@@ -178,80 +89,6 @@ public interface MainCmdLogging_ifc extends LogMessage
   throws FileNotFoundException;
 
 
-  /** report inside a line*/
-  void report(int nLevel, String string);
-  //void report(String string);
-
-  /** report begins at a new a line with left margin
-    * @param nLevel write the report only if the demand level is greater or equal.
-    * @param nLeftMargin determins a left margin. First a new line is outputted, followed by '*' and spaces.
-    * @param string String to write.
-  */
-  void reportln(int nLevel, int nLeftMargin, String string);
-
-  /** report begins at a new a line
-    * @param nLevel write the report only if the demand level is greater or equal.
-    * @param string String to write.
-  */
-  void reportln(int nLevel, String string);
-
-  /** report an error*/
-  //void reportError(String string);
-  /** report a waring*/
-  //void reportWarning(String string);
-  
-  /** report of a excpetion (in a new line)*/
-  void report(String sText, Throwable exception);
-  
-  /** access to the level of report. With the knowledge of the maximal reportlevel
-   * the user can decide on some actions in context of report.
-   * @return The report level, defined by user invoking.
-   * */
-  int getReportLevel();
-
-  
-  /**Writes the content in the physical medium.
-   * The implementation of flush is in the best way as possible. It depends on the possibilities
-   * of the output medium.
-   */
-  void flushReport();
-  
-  /**Sets a dedicated level number to the known output priorities.
-   * This method helps to define several levels to dispatch it.
-   * @param nLevel The number identifying a dedicated level. This number should be greater than
-   *        the known priority levels, it means >= 10 or >=1000. 
-   *        Use dedicated group of numbers for an application. 
-   * @param nLevelActive Ones of the known priotity levels {@link Report.error} to {@link Report.fineDebug}.
-   * <br>
-   * Example of using:
-   * <pre>
-   *   class MyModule
-   *   { /**Define module-specific numbers to identify a level. 
-   *      * The numbers should be define regarding a band of numbers in the application.
-   *      * /  
-   *     static final int myReportLevel1 = 3500, myReportLevel2=3501; 
-   *     
-   *     void init()
-   *     { setLevelActive(myReportLevel1, Report.info);  //This reports should be outputted always
-   *       setLevelActive(myReportLevel2, Report.debug); //This reports are debug infos.
-   *     }
-   *     
-   *     void processAnything()
-   *     { report.reportln( myReportLevel1, "InfoText"); //It depends on the report level settings 
-   *       report.reportln( myReportLevel2, "DebugText");//whether it is outputed or not. 
-   *     }  
-   * </pre>    
-   * 
-   */
-  void setReportLevelToIdent(int ident, int nLevelActive);
-  
-  
-  /**gets the associated report level to a report identifier.
-   * @param ident The identifier.
-   * @return the level.
-   */
-  int getReportLevelFromIdent(int ident);
-  
   /*----------------------------------------------------------------------------------------------------------*/
   /** set the exitErrorLevel of the maximum of given level of every call.
       @param level Errorlevel how defined in Report, 0 is the lowest level (successfull), >0 is worse.

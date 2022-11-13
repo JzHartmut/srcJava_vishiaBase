@@ -60,7 +60,7 @@ import org.vishia.zbnf.ZbnfParser.PrescriptParser.SubParser;
 import org.vishia.zbnf.ZbnfParserStore.ParseResultItemImplement;
 import org.vishia.zbnf.ZbnfSyntaxPrescript.EType;
 import org.vishia.cmd.JZtxtcmdScript.Onerror;
-import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 
 
 /**An instance of ZbnfParser contains a syntax prescript inside and is able to parse a text, test the syntax and output
@@ -152,7 +152,7 @@ public class ZbnfParser
    * <li>2022-02-22: {@link #writeSyntaxStruct(Appendable)} as a new feature, should be existing from beginning...
    * <li>2022-02-22: In {@link #parse(StringPartScan, List)}: set {@link #nReportLevel} to 0, switch off the old report strategy,
    *   because the new one with {@link #setLogComponents(Appendable)} seems to be better. In comparison to =3 30% lesser calculation time.
-   * <li>2022-02-15: bugfix: Calling with ctor {@link #ZbnfParser(MainCmdLogging_ifc, Args)} has not reported "found before:".
+   * <li>2022-02-15: bugfix: Calling with ctor {@link #ZbnfParser(LogMessage, Args)} has not reported "found before:".
    *   The size of the {@link Args#maxParseResultEntriesOnError} was not gotten correctly. 
    * <li>2022-02-12: new {@link #setLogComponents(Appendable)} new feature tested
    * <li>2022-02-10: new {@link #sInputMostRightError} set on any parser non matching as most right. The problem was, the input file was not seen,
@@ -179,7 +179,7 @@ public class ZbnfParser
    * <li>2019-12-09: new: The Usage of already parsed content was prepared in about 2013 but not used till now. 
    *                 Now it is completed, tested and used. But the test overall is owing. 
    *                 Therefore this feature is activted only if  {@link Args#bUseResultlet} is set, default is false.
-   * <li>2019-12-09: new possible {@link #ZbnfParser(MainCmdLogging_ifc, Args)} new {@link Args#bUseResultlet} 
+   * <li>2019-12-09: new possible {@link #ZbnfParser(LogMessage, Args)} new {@link Args#bUseResultlet} 
    * <li>2019-12-09: chg: The XML tree is only built if {@link #getResultNode()} is called, not unnecessarily in any case. 
    *                 The algorithm for reusing already parsed results does not use the XML tree. 
    * <li>2019-10-10: new {@link #setSyntax(CharSequence)} formally with CharSequence instead String, more common useable, especially from new {@link org.vishia.util.FileSystem#readInJar(Class, String, String)}
@@ -302,7 +302,7 @@ public class ZbnfParser
    * <li>2011-10-10 Hartmut bugfix: scanFloatNumber(true). The parser had an exception because more as 5 floats are parsed and not gotten calling {@link StringPartScan#getLastScannedFloatNumber()}.
    * 
    * <li>2011-01-09 Hartmut corr: Improvement of report of parsing: Not the report level {@link #nLevelReportBranchParsing}
-   *     (set with MainCmdLogging_ifc.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
+   *     (set with LogMessage.debug usualy) writes any branch of parsing with ok or error. In that way the working of the parser
    *     in respect to the syntax prescript is able to view. It is if some uncertainty about the correctness of the given syntax is in question. 
    * <li>2011-01-09 Creation of this variable to show the changes in the javadoc.    
    * <li>2010-05-04 Hartmut: corr: sEndlineCommentStringStart: The \n is not included, it will be skipped either as whitespace or it is necessary for the linemode.
@@ -835,8 +835,8 @@ public class ZbnfParser
               //SubParser alternativParser = new SubParser(this, parentResultItem, nRecursion+1); //false);
               //bOk = alternativParser.parseSub(alternativePrescript, "..|..|.."/*sSemanticForError*/, ZbnfParserStore.kOption, "@", bSkipSpaceAndComment, null);
             }
-            if(nReportLevel >= MainCmdLogging_ifc.fineDebug)
-            { report.reportln(MainCmdLogging_ifc.fineDebug
+            if(nReportLevel >= LogMessage.fineDebug)
+            { report.reportln(LogMessage.fineDebug
                 , "parse Error, reset to:  " + input.getCurrent(30)
                 + "...... idxResult = " + parserStoreInPrescript.getNextPosition()
                 + " idxAlternative = " + idxAlternative
@@ -1187,7 +1187,7 @@ public class ZbnfParser
 	            }
 	            if(syntaxCmpn == null) {
 	              bOk = false;
-	              report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
+	              report.reportln(LogMessage.error, "parse - Syntaxprescript not found:" + sDefinitionIdent);
 	              String sError = "prescript for : <" + sDefinitionIdent 
 	              + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
 	              + "> not found.";
@@ -1972,7 +1972,7 @@ public class ZbnfParser
           }
           if(syntaxCmpn == null) {
             bOk = false;
-            report.reportln(MainCmdLogging_ifc.error, "parse - Syntaxprescript not found:" + subSyntax);
+            report.reportln(LogMessage.error, "parse - Syntaxprescript not found:" + subSyntax);
             String sError = "prescript for : <" + subSyntax 
             + ((!sSemanticForError.equals("@") && !sSemanticForError.equals("?") ) ? "?" + sSemanticForError : "")
             + "> not found.";
@@ -2288,7 +2288,7 @@ public class ZbnfParser
        */
       private void saveError(String sSyntax)
       { if(input.length() < input.lengthMaxPart())
-        { report.reportln(MainCmdLogging_ifc.error," saveError: actual length of input is to less");
+        { report.reportln(LogMessage.error," saveError: actual length of input is to less");
         }
         int posInput = (int)input.getCurrentPosition() + posInputbase;
         if(posRightestError < posInput)
@@ -2377,8 +2377,8 @@ public class ZbnfParser
   
   
   
-  /**To MainCmdLogging_ifc something.*/
-  protected final MainCmdLogging_ifc report;
+  /**To LogMessage something.*/
+  protected final LogMessage report;
 
   /**The current report level. 
    * This value is used to compare wether the report arguments are prepared or not.
@@ -2389,13 +2389,13 @@ public class ZbnfParser
   
   protected int nLevelReportParsing, nLevelReportComponentParsing, nLevelReportInfo, nLevelReportError;
 
-  protected int nLevelReportBranchParsing = MainCmdLogging_ifc.error; //debug;
+  protected int nLevelReportBranchParsing = LogMessage.error; //debug;
   /**The ident to report the progress of parsing. */
-  protected int idReportParsing = MainCmdLogging_ifc.fineDebug;
-  protected int idReportComponentParsing = MainCmdLogging_ifc.debug;
-  protected int idReportBranchParsing = MainCmdLogging_ifc.debug;
-  protected int idReportInfo = MainCmdLogging_ifc.info;
-  protected int idReportError = MainCmdLogging_ifc.error;
+  protected int idReportParsing = LogMessage.fineDebug;
+  protected int idReportComponentParsing = LogMessage.debug;
+  protected int idReportBranchParsing = LogMessage.debug;
+  protected int idReportInfo = LogMessage.info;
+  protected int idReportError = LogMessage.error;
   
   
   /** The list of some all syntax definitons (syntax components).*/
@@ -2532,7 +2532,7 @@ public class ZbnfParser
   /**Creates a empty parser instance. 
    * @param report A report output
    * */
-  public ZbnfParser( MainCmdLogging_ifc report)
+  public ZbnfParser( LogMessage report)
   { this(report, 20);
   }
   
@@ -2545,7 +2545,7 @@ public class ZbnfParser
    *        If >0, than the last founded parse result is stored to support better analysis of syntax errors,
    *        but the parser is slower.
    */
-  public ZbnfParser( MainCmdLogging_ifc report, int maxParseResultEntriesOnError) {
+  public ZbnfParser( LogMessage report, int maxParseResultEntriesOnError) {
     this(report, new Args(maxParseResultEntriesOnError));
   }
   
@@ -2556,7 +2556,7 @@ public class ZbnfParser
    *        If >0, than the last founded parse result is stored to support better analysis of syntax errors,
    *        but the parser is slower.
    */
-  public ZbnfParser( MainCmdLogging_ifc report, ZbnfParser.Args args) //, int maxParseResultEntriesOnError)
+  public ZbnfParser( LogMessage report, ZbnfParser.Args args) //, int maxParseResultEntriesOnError)
   { this.report = report;
     this.args = args;   //Default values.
     //parserStore = new ParserStore();
@@ -3028,7 +3028,7 @@ public class ZbnfParser
   
   
   /**sets the ident number for report of the progress of parsing. 
-   * If the idents are  >0 and < MainCmdLogging_ifc.fineDebug, theay are used directly as report level.
+   * If the idents are  >0 and < LogMessage.fineDebug, theay are used directly as report level.
    * @param identError ident for error and warning outputs.
    * @param identInfo ident for progress information output.
    * @param identComponent ident for output if a component is parsing
@@ -3223,7 +3223,7 @@ public class ZbnfParser
 
 
   /** Reports the syntax.*/
-  public void reportSyntax(MainCmdLogging_ifc report, int reportLevel)
+  public void reportSyntax(LogMessage report, int reportLevel)
   {
       mainScript.reportContent(report, reportLevel);
       Iterator<String> iter = listSubPrescript.keySet().iterator();
@@ -3254,24 +3254,24 @@ public class ZbnfParser
    * @param reportLevel level of report. This level is shown in output. 
    *        If the current valid reportLevel of report is less than this parameter, no action is done.
    */
-  public void reportStore(MainCmdLogging_ifc report, int reportLevel, String sTitle)
+  public void reportStore(LogMessage report, int reportLevel, String sTitle)
   { if(report.getReportLevel()>=reportLevel)
-    { report.reportln(reportLevel, 0, "== MainCmdLogging_ifc ParserStore " + sTitle + " ==");
+    { report.reportln(reportLevel, 0, "== LogMessage ParserStore " + sTitle + " ==");
       reportStoreComponent(getFirstParseResult(), report, 1, null, reportLevel);
       report.flushReport();
     }  
   }
 
-  public void reportStore(MainCmdLogging_ifc report, int reportLevel)
+  public void reportStore(LogMessage report, int reportLevel)
   { reportStore(report, reportLevel, "");
   }
 
-  /**Reports the whole content of the parse result in the MainCmdLogging_ifc.fineInfo-level. 
-   * @see {@link reportStore(MainCmdLogging_ifc report, int reportLevel)}.
+  /**Reports the whole content of the parse result in the LogMessage.fineInfo-level. 
+   * @see {@link reportStore(LogMessage report, int reportLevel)}.
    * @param report The report output instance.
    */
-  public void reportStore(MainCmdLogging_ifc report)
-  { reportStore(report, MainCmdLogging_ifc.fineInfo);
+  public void reportStore(LogMessage report)
+  { reportStore(report, LogMessage.fineInfo);
   }
 
   
@@ -3284,7 +3284,7 @@ public class ZbnfParser
    * @return The number of written lines.
    * */
   @SuppressWarnings("deprecation")
-  private int reportStoreComponent(ZbnfParseResultItem parseResultItem, MainCmdLogging_ifc report, int level, ZbnfParseResultItem parent, int reportLevel)
+  private int reportStoreComponent(ZbnfParseResultItem parseResultItem, LogMessage report, int level, ZbnfParseResultItem parent, int reportLevel)
   { int countLines = 0;
     while(parseResultItem != null)
     { countLines +=1;
@@ -3292,7 +3292,7 @@ public class ZbnfParser
       if(parseResultItem.isComponent())
       { //int nLines = 
         reportStoreComponent(parseResultItem.nextSkipIntoComponent(parseResultItem), report, level+1, parseResultItem, reportLevel);
-        //if(nLines >1) report.reportln(MainCmdLogging_ifc.info, 0, "parseResult: " + sEmpty.substring(0, level) + "</?" + "> Component");
+        //if(nLines >1) report.reportln(LogMessage.info, 0, "parseResult: " + sEmpty.substring(0, level) + "</?" + "> Component");
       }
       //parseResultItem = parseResultItem.next();
       parseResultItem = parseResultItem.next(parent);
@@ -3587,9 +3587,9 @@ public class ZbnfParser
   
     final StringFormatter line = new StringFormatter(250);
   
-    final MainCmdLogging_ifc logOut;
+    final LogMessage logOut;
     
-    LogParsing(MainCmdLogging_ifc logOut){ this.logOut = logOut;}
+    LogParsing(LogMessage logOut){ this.logOut = logOut;}
     
     void reportParsing(String sWhat, int nReport, ZbnfSyntaxPrescript syntax, String sReportParentComponents
         , StringPartScan input, int posInput, int nRecursion, boolean bOk){

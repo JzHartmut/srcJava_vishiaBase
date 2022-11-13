@@ -11,6 +11,7 @@ import java.util.Date;
 
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.Assert;
 import org.vishia.util.Writer_Appendable;
 
@@ -156,7 +157,7 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
-  public void report(int nLevel, String string)
+  public void report(int nLevel, CharSequence string)
   { if( (nLevel & mReportLevel) <= reportLevel)
     { u.append(string);
     }
@@ -192,13 +193,13 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   
   
   @Override
-  public void report(String sText, Throwable exception)
+  public void report(CharSequence sText, Throwable exception)
   { CharSequence ctext = Assert.exceptionInfo(sText, exception, 0, 20);
     writeln(MainCmdLogging_ifc.error, 0, ctext);
   }
 
   @Override
-  public void reportln(int nLevel, int nLeftMargin, String string)
+  public void reportln(int nLevel, int nLeftMargin, CharSequence string)
   {
     if( (nLevel & mReportLevel) <= reportLevel)
     { //writes also an error as info on display.
@@ -207,7 +208,7 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
-  public void reportln(int nLevel, String string)
+  public void reportln(int nLevel, CharSequence string)
   { reportln(nLevel, 0 , string);
   }
 
@@ -230,8 +231,16 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
     
   }
 
+  
+  
+  @Override public int setReportLevel(int newLevel) {
+    return LogMessage.fineDebug;
+  }
+
+  
+  
   @Override
-  public void writeError(String sError)
+  public void writeError(CharSequence sError)
   { reportln(MainCmdLogging_ifc.error, sError); 
   }
 
@@ -241,12 +250,12 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
-  public void writeInfo(String sInfo)
+  public void writeInfo(CharSequence sInfo)
   { report(MainCmdLogging_ifc.info, sInfo); 
   }
 
   @Override
-  public void writeInfoln(String sInfo)
+  public void writeInfoln(CharSequence sInfo)
   { reportln(MainCmdLogging_ifc.info, sInfo); 
   }
 
@@ -262,7 +271,7 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
-  public void writeWarning(String sError)
+  public void writeWarning(CharSequence sError)
   { reportln(MainCmdLogging_ifc.warning, sError); 
   }
 

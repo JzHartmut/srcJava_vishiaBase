@@ -33,7 +33,7 @@ import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 
-import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 
 /** This class is a node of the syntax tree. 
  *  <h2>Structure of a node</h2>
@@ -453,8 +453,8 @@ public class ZbnfSyntaxPrescript
   /** The syntax of this element.*/
   //final Syntax syntaxLists;
 
-  /** MainCmdLogging_ifc something*/
-  final MainCmdLogging_ifc report;
+  /** LogMessage something*/
+  final LogMessage report;
 
 
   enum EType {
@@ -597,7 +597,7 @@ public class ZbnfSyntaxPrescript
     /**If it is a Regular Expression, the compiled regex is available here. */
     Pattern regex = null;
 
-    ComplexSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
+    ComplexSyntax(ZbnfSyntaxPrescript parent, LogMessage report, boolean bWithSyntaxList, int linefile)
     { super(parent, report, bWithSyntaxList, linefile);
     }
 
@@ -910,13 +910,13 @@ public class ZbnfSyntaxPrescript
     /** Syntax of the repetition path */
     ZbnfSyntaxPrescript backward;
 
-    RepetitionSyntax(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
+    RepetitionSyntax(ZbnfSyntaxPrescript parent, LogMessage report, boolean bWithSyntaxList, int linefile)
     { super(parent, report, bWithSyntaxList, linefile);
     }
   }
 
   /** Constructor only fills the data.*/
-  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, MainCmdLogging_ifc report, boolean bWithSyntaxList, int linefile)
+  private ZbnfSyntaxPrescript(ZbnfSyntaxPrescript parent, LogMessage report, boolean bWithSyntaxList, int linefile)
   { this.objid = ++objId_;
 //    if(objid == 2813)
 //      Debugutil.stop();
@@ -930,7 +930,7 @@ public class ZbnfSyntaxPrescript
   }
 
   /** Constructor only fills the data.*/
-  private ZbnfSyntaxPrescript(MainCmdLogging_ifc report, boolean bWithSyntaxList, String sCommentStart1, String sCommentStart2, int linefile)
+  private ZbnfSyntaxPrescript(LogMessage report, boolean bWithSyntaxList, String sCommentStart1, String sCommentStart2, int linefile)
   { this.objid = ++objId_;
 //    if(objid == 2813)
 //      Debugutil.stop();
@@ -959,7 +959,7 @@ public class ZbnfSyntaxPrescript
   
 
   /*
-  public static SyntaxPrescript createWithSyntax(String sInput, MainCmdLogging_ifc report)
+  public static SyntaxPrescript createWithSyntax(String sInput, LogMessage report)
   throws ParseException
   { return createWithSyntax(new StringPart(sInput), report);
   }
@@ -978,7 +978,7 @@ public class ZbnfSyntaxPrescript
    * @throws ParseException on error of input syntax. The message of the exception
    *         contains a information about the error position.
    */  
-  static ZbnfSyntaxPrescript createWithSyntax(StringPartScan spInput, String sCommentStart1, String sCommentStart2, MainCmdLogging_ifc report)
+  static ZbnfSyntaxPrescript createWithSyntax(StringPartScan spInput, String sCommentStart1, String sCommentStart2, LogMessage report)
   throws ParseException
   {
     ZbnfSyntaxPrescript ret = new ZbnfSyntaxPrescript(report, true, sCommentStart1, sCommentStart2,0);
@@ -1564,13 +1564,13 @@ public class ZbnfSyntaxPrescript
 
 
 
-  void reportContent(MainCmdLogging_ifc report, int nLevel)
+  void reportContent(LogMessage report, int nLevel)
   {
     reportItem(nLevel, "+-", false, report);
   }
 
 
-  private void reportItem(int nLevel, String sIndent, boolean bHasNext, MainCmdLogging_ifc report)
+  private void reportItem(int nLevel, String sIndent, boolean bHasNext, LogMessage report)
   {
     {
       String sReport;
@@ -1601,7 +1601,7 @@ public class ZbnfSyntaxPrescript
             }
           }
           if(iterPrescriptNext != null)
-          { //report.reportln(MainCmdLogging_ifc.info, 0, "SyntaxPrescript:" + sIndent + "................");
+          { //report.reportln(LogMessage.info, 0, "SyntaxPrescript:" + sIndent + "................");
           }
         }
         */

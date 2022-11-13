@@ -39,6 +39,7 @@ import java.util.Map;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -292,7 +293,7 @@ public final class ZbnfJavaOutput
 
 
 
-  private final MainCmdLogging_ifc report;
+  private final LogMessage report;
   
   /**If it is set, only set_ or add_-methods and new_-methods are accepted,
    * no fields and no inner classes as container.
@@ -334,7 +335,7 @@ public final class ZbnfJavaOutput
   /**Constructor with given log output. 
    * @param report for logging the process of associated, only {@link org.vishia.mainCmd.MainCmdLogging_ifc#fineDebug} will be used.
    */
-  public ZbnfJavaOutput(MainCmdLogging_ifc report)
+  public ZbnfJavaOutput(LogMessage report)
   { this.report = report;
     parser = new ZbnfParser(report);
     init();

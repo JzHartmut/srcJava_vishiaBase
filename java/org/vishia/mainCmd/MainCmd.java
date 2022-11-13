@@ -29,6 +29,7 @@ import java.util.*;  //List
 import java.text.*;  //ParseException
 
 import org.vishia.util.FileSystem;
+import org.vishia.util.StringFunctions;
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
 import org.vishia.cmd.CmdExecuter;
@@ -1308,7 +1309,7 @@ public abstract class MainCmd implements MainCmd_ifc
       The info is written also to report depended on command line arguments --rlevel.
       If the user will overwrite the kind of output, overwrite writeInfoDirectly, it is called here.
   */
-  public final void writeInfo(String sInfo)
+  public final void writeInfo(CharSequence sInfo)
   { writeDirectly(sInfo, kInfo_writeInfoDirectly);
     if(nLevelDisplayToReport >= MainCmdLogging_ifc.info)
     { report(MainCmdLogging_ifc.info | MainCmdLogging_ifc.mNeverOutputToDisplay, sInfo );
@@ -1319,7 +1320,7 @@ public abstract class MainCmd implements MainCmd_ifc
       The info is written also to report depended on command line arguments --rlevel.
       If the user will overwrite the kind of output, overwrite writeInfolnDirectly, it is called here.
   */
-  public final void writeInfoln(String sInfo)  //##a
+  public final void writeInfoln(CharSequence sInfo)  //##a
   { writeDirectly(sInfo, kInfoln_writeInfoDirectly);
     if(nLevelDisplayToReport >= MainCmdLogging_ifc.info)
     { reportln(MainCmdLogging_ifc.info | MainCmdLogging_ifc.mNeverOutputToDisplay, sInfo );
@@ -1331,7 +1332,7 @@ public abstract class MainCmd implements MainCmd_ifc
       The info is written also to report depended on command line arguments --rlevel.
       If the user will overwrite the kind of output, overwrite writeWarningDirectly, it is called here.
   */
-  public final void writeWarning(String sInfo)
+  public final void writeWarning(CharSequence sInfo)
   { writeDirectly(sInfo, kWarning_writeInfoDirectly);
     if(nLevelDisplayToReport >= MainCmdLogging_ifc.warning)
     { reportln(MainCmdLogging_ifc.warning | MainCmdLogging_ifc.mNeverOutputToDisplay, "WARNING:" + sInfo );
@@ -1342,7 +1343,7 @@ public abstract class MainCmd implements MainCmd_ifc
       The info is written also to report depended on command line arguments --rlevel.
       If the user will overwrite the kind of output, overwrite writeErrorDirectly, it is called here.
   */
-  public final void writeError(String sInfo)
+  public final void writeError(CharSequence sInfo)
   { writeDirectly(sInfo, kError_writeInfoDirectly);
     if(nLevelDisplayToReport >= MainCmdLogging_ifc.error)
     { reportln(MainCmdLogging_ifc.error | MainCmdLogging_ifc.mNeverOutputToDisplay, "ERROR:" + sInfo );
@@ -1407,7 +1408,7 @@ public abstract class MainCmd implements MainCmd_ifc
    *  @param kind Combination of bits {@link #mWarning_writeInfoDirectly}, {@link #mError_writeInfoDirectly}
    *    or {@link #mNewln_writeInfoDirectly}.
    */
-  public void writeDirectly(String sInfo, short kind)  //##a
+  public void writeDirectly(CharSequence sInfo, short kind)  //##a
   {
     try{
       if((kind & mWarning_writeInfoDirectly) != 0)
@@ -1424,11 +1425,11 @@ public abstract class MainCmd implements MainCmd_ifc
       { if( (kind & mNewln_writeInfoDirectly) != 0) outConsole.append("\n"); //finishes the previous line
         int posStart = 0;
         int posEol;
-        while( posStart < sInfo.length() && (posEol = sInfo.indexOf('\n', posStart)) >=0)
-        { outConsole.append(sInfo.substring(posStart, posEol)).append("|");
+        while( posStart < sInfo.length() && (posEol = StringFunctions.indexOf(sInfo,'\n', posStart)) >=0)
+        { outConsole.append(sInfo.subSequence(posStart, posEol)).append("|");
           posStart = posEol + 1;
         }
-        if(posStart < sInfo.length()) outConsole.append(sInfo.substring(posStart));
+        if(posStart < sInfo.length()) outConsole.append(sInfo.subSequence(posStart, sInfo.length()));
       }
     } catch(Exception exc){
       System.err.println("Exception while output in MainCmd.writeDirectly(" + sInfo + ")");
@@ -1444,7 +1445,7 @@ public abstract class MainCmd implements MainCmd_ifc
       @param sInfo Text to write in the new line after "EXCEPTION: ".
       @param exception Its getMessage will be written.
   */
-  public void writeErrorDirectly(String sInfo, Throwable exception)
+  public void writeErrorDirectly(CharSequence sInfo, Throwable exception)
   {
     System.err.println("");
     System.err.println( "EXCEPTION: " + sInfo); // + exception.getMessage());
@@ -1463,7 +1464,7 @@ public abstract class MainCmd implements MainCmd_ifc
     * etc.
     * @param ss String to write.
   */
-  public void report(int nLevel, String ss)
+  public void report(int nLevel, CharSequence ss)
   { if( (nLevel & mReportLevel) <= nLogLevel && fReport != null)
     { int posStart = 0;
       //int posEol;
@@ -1473,7 +1474,7 @@ public abstract class MainCmd implements MainCmd_ifc
         posStart = posEol + 1;
       }
       */
-      if(posStart < ss.length()){ fReport.write(ss.substring(posStart)); }
+      if(posStart < ss.length()){ fReport.write(ss.toString().substring(posStart)); }
     }
     if( (nLevel & mReportLevel) <= nReportLevelDisplay && (nLevel & mNeverOutputToDisplay) == 0)
     { //writes also an error as info on display.
@@ -1487,7 +1488,7 @@ public abstract class MainCmd implements MainCmd_ifc
     * @param nLeftMargin determins a left margin. First a new line is outputted, followed by '*' and spaces.
     * @param ss String to write.
   */
-  public void reportln(int nLevel, int nLeftMargin, String ss)
+  public void reportln(int nLevel, int nLeftMargin, CharSequence ss)
   { if( (nLevel & MainCmdLogging_ifc.mReportLevel) <= nLogLevel && fReport != null)
     { fReport.writeln("");
       int nLeftMargin1 = nLeftMargin;
@@ -1501,7 +1502,7 @@ public abstract class MainCmd implements MainCmd_ifc
     report((nLevel | MainCmdLogging_ifc.mNeverOutputToDisplay), ss);
   }
 
-  public void reportln(int nLevel, String ss){ reportln(nLevel, 0, ss); }
+  public void reportln(int nLevel, CharSequence ss){ reportln(nLevel, 0, ss); }
 
 
   /** Reports an exception. This report is written unconditional, like MainCmdLogging_ifc.error.
@@ -1509,7 +1510,7 @@ public abstract class MainCmd implements MainCmd_ifc
       @param sInfo Text to write in the new line after "EXCEPTION: ".
       @param exception Exception info to write
   */
-  public void report(String sInfo, Throwable exception)
+  public void report(CharSequence sInfo, Throwable exception)
   {
     report(sInfo, exception, false); //not written on display yet.
   }
@@ -1521,7 +1522,7 @@ public abstract class MainCmd implements MainCmd_ifc
    * @param exception Exception info to write
    * @param bWrittenOnDisplay true, than the writing to display is always done.
    */
-  private void report(String sInfo, Throwable exception, boolean bWrittenOnDisplay)
+  private void report(CharSequence sInfo, Throwable exception, boolean bWrittenOnDisplay)
   { if(fReport == null){
       if( !bWrittenOnDisplay){
         writeErrorDirectly(sInfo, exception);
