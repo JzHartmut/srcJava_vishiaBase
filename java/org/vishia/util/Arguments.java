@@ -1,6 +1,7 @@
 package org.vishia.util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Iterator;
@@ -108,6 +109,9 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-11-13 Hartmut chg all files are created with new File(System.getProperty("user.dir"),
+   *   hence the current directory comes from a maybe changed user.dir in Java, not from the original operation system's one.
+   *   Important if a java program runs in a JZtxtcmd script, then cd can be used. 
    * <li>2022-05-24 Hartmut new {@link Argument} can now also contain the value itself, more simple for pure String arguments.
    * <li>2022-05-24 Hartmut new possibility of --@file:label as described. 
    * <li>2022-04-09 Hartmut Desription of class improved, from another usage. 
@@ -142,7 +146,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2022-05-24";
+  public final static String sVersion = "2022-11-13";
 
   
   /**Interface for implementation of setting arguments.
@@ -461,6 +465,7 @@ public abstract class Arguments {
     int nArg = -1;
     String arg = null;
     BufferedReader farg = null;
+    File argFile = null;
     try {
       for(String arg1: args) {
         arg = arg1;
@@ -474,7 +479,8 @@ public abstract class Arguments {
             sFile = arg.substring(3);
             sLabel = null;
           }
-          farg = new BufferedReader(new FileReader(sFile));
+          argFile = new File(System.getProperty("user.dir"), sFile);   // accept a changed directory, elsewhere uses the originally OS PWD
+          farg = new BufferedReader(new FileReader(argFile));
           int posArg;                                      // position of the argument in the line may be >0
           final String sStartLineArg;                      // then all lines should start with this text before posArg.
           final String sCommentEndline;
@@ -560,7 +566,7 @@ public abstract class Arguments {
         bOk = false;
       } else {
         if(farg !=null) { farg.close(); }
-        throw new IllegalArgumentException("File not found or IO-error: " + arg);  //it is faulty
+        throw new IllegalArgumentException("File not found or IO-error: " + arg + " File=" + argFile.getAbsolutePath());  //it is faulty
         //throw new IllegalArgumentException( arg);
       }
     }

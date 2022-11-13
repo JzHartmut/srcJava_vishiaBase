@@ -85,6 +85,9 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-11-13 Hartmut meaningful change: {@link ExecuteLevel#changeCurrDir(CharSequence)} now sets the "user.dir" Java system's property.
+   *   With them it is possible generally in Java to open a file via new File(System.getProperty("user.dir"), sRelativePath),
+   *   then this is effective. It does not effect the operation system's PWD, but usable via this property.
    * <li>2022-01-31 Hartmut feature: Now the order of statements from included files are proper. 
    *   In the versions before script statements of included files were placed
    *   after the statements of the current file, due to processing the includes after wards.
@@ -349,7 +352,7 @@ public class JZtxtcmdExecuter {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2022-01-31";
+  static final public String version = "2022-11-13";
 
   /**This class is the jzcmd main level from a script.
    * @author Hartmut Schorrig
@@ -2992,11 +2995,13 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       if(!currdir.exists() || !currdir.isDirectory()){
         throw new IllegalArgumentException("JZcmdExecuter - cd, dir not exists; " + arg);
       }
-      setLocalVariable("currdir", 'O', currdir, true);
+      setLocalVariable("currdir", 'O', this.currdir, true);
       //NOTE: don't do so, because it is global for the JVM (not desired!) but does not affect the operation system.
       //it has not any sense.
       //String sOldDir = System.setProperty("user.dir", currdir.getAbsolutePath());
-      
+      //No it has sense.
+      //use new File(System.getProperty("user.dir"), sRelativePath) whenever a file is necessary.
+      System.setProperty("user.dir", this.currdir.getAbsolutePath());
     }
     
      
