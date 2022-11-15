@@ -2528,7 +2528,7 @@ public class DataAccess {
     
     @Deprecated public void set_index(int val) { 
       int ixindices;
-      assert(false);                       //TODO comment this assert if the operation is used anywhere, it is a todo.
+      //assert(false);                       //TODO comment this assert if the operation is used anywhere, it is a todo.
       if(super.indices !=null) {
         //TODO increase
         super.indices = new int[1];
