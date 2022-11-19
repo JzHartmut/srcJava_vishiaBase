@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 
 
@@ -116,7 +117,7 @@ class ObjectFileDeps
       StringBuilder uDirObj = new StringBuilder(sDirObjRoot);
       int posName = uDirObj.indexOf("*");
       uDirObj.replace(posName, posName+1, sLocalPath.substring(0, posExt));
-      File fileObj = new File(uDirObj.toString());
+      File fileObj = FileFunctions.newFile(uDirObj.toString());
       fileObjs.add(fileObj);
     }
   }

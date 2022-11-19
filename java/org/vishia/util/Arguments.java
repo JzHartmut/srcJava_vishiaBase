@@ -479,7 +479,7 @@ public abstract class Arguments {
             sFile = arg.substring(3);
             sLabel = null;
           }
-          argFile = new File(System.getProperty("user.dir"), sFile);   // accept a changed directory, elsewhere uses the originally OS PWD
+          argFile = FileFunctions.newFile(sFile);   // accept a changed directory, elsewhere uses the originally OS PWD
           farg = new BufferedReader(new FileReader(argFile));
           int posArg;                                      // position of the argument in the line may be >0
           final String sStartLineArg;                      // then all lines should start with this text before posArg.

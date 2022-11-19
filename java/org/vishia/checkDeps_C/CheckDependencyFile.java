@@ -14,6 +14,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 
 
@@ -383,10 +384,10 @@ public class CheckDependencyFile
     final String sLocalSrc;
     if(posSep >0) {
       sLocalSrc = src.substring(posSep+1);
-      fileSrc = new File(src.substring(0, posSep) + "/" + sLocalSrc).getAbsoluteFile();
+      fileSrc = FileFunctions.newFile(src.substring(0, posSep) + "/" + sLocalSrc).getAbsoluteFile();
     } else {
       sLocalSrc = src;
-      fileSrc = new File(src).getAbsoluteFile();
+      fileSrc = FileFunctions.newFile(src).getAbsoluteFile();
     }
     return processSrcfile(fileSrc, sLocalSrc);
   }
@@ -483,7 +484,7 @@ public class CheckDependencyFile
             //The file isn't found in the input dependencies. It means either, it is unknown up to now
             //or it means, it is changed. Changed files are not stored in the indexInfoInput.
             //Therefore check the file directly. Compare source with mirror.
-            File fileSrc = new File(sAbsName);
+            File fileSrc = FileFunctions.newFile(sAbsName);
             if(fileSrc.exists()){
               includingReal = processSrcfile(fileSrc, objDeps, nRecursion +1, idxOnce);
             } else {
@@ -729,7 +730,7 @@ public class CheckDependencyFile
       
       //is the file checked already? Search it in the indexes of short and absolute paths:
       if(includeFromCurrent){ //The include statement is written in "file.h"
-        File fileIncl = new File(sDirCurrentFile + "/" + sFileIncl);
+        File fileIncl = FileFunctions.newFile(sDirCurrentFile + "/" + sFileIncl);
         if(fileIncl.exists()){ 
           //A file relative to the current file is found. It means, that is included.
           //Get its absolute path in check whether it is processed already:
@@ -823,7 +824,7 @@ public class CheckDependencyFile
     File fileIncl = null;
     //first search starting in the current file if it is an ""-include
     if(includeFromCurrent && sDirCurrentFile != null){
-      fileIncl = new File(sDirCurrentFile + "/" + sPathInIncludeLine);
+      fileIncl = FileFunctions.newFile(sDirCurrentFile + "/" + sPathInIncludeLine);
       if(!fileIncl.exists()){ fileIncl = null; }
       else { typeInclude[0] = 'r';
       }
@@ -874,7 +875,7 @@ public class CheckDependencyFile
       //rename the existing file, so a comparison may be done afterward.
       if(true){  //rename to .last in current dir:
         boolean bOk;  
-        File fileBack = new File(fileSrcMirror.getAbsolutePath() + ".last");
+        File fileBack = FileFunctions.newFile(fileSrcMirror.getAbsolutePath() + ".last");
         if(fileBack.exists()){
           if(!fileBack.canWrite()){ 
             bOk = fileBack.setWritable(true);

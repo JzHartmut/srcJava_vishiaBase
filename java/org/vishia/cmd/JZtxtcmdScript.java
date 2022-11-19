@@ -399,7 +399,7 @@ public class JZtxtcmdScript extends CompiledScript
           }
           final File fileInclude;
           if(FileFunctions.isAbsolutePath(sFileInclude)){
-            fileInclude= new File(sFileInclude);
+            fileInclude= FileFunctions.newFile(sFileInclude);
           } else {
             fileInclude= new File(dirIncludeBase, sFileInclude);
           }

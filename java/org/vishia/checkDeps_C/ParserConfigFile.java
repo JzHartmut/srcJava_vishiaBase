@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 
 /**This class is create temporary to parse the config file.
@@ -165,7 +166,7 @@ public class ParserConfigFile
     }
     String sInclPath = uInclPath.toString();
     boolean bAbspath = FileSystem.isAbsolutePath(sInclPath);
-    File dirIncludePath = bAbspath ? new File(sInclPath) : new File(currdir, sInclPath);
+    File dirIncludePath = bAbspath ? FileFunctions.newFile(sInclPath) : new File(currdir, sInclPath);
     if(!dirIncludePath.exists()) {
       console.writeWarning("config file - include path not found; " + sInclPath);
     } else if(!dirIncludePath.isDirectory()) {

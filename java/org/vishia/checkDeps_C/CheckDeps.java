@@ -8,6 +8,7 @@ import java.util.List;
 import org.vishia.mainCmd.MainCmdLoggingStream;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Arguments;
+import org.vishia.util.FileFunctions;
 
 public class CheckDeps {
 
@@ -122,7 +123,7 @@ public class CheckDeps {
     
     Arguments.SetArgument setCurrdir = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
       final boolean bOk;
-      CheckDeps.Args.this.currdir = new File(val).getAbsoluteFile();
+      CheckDeps.Args.this.currdir = FileFunctions.newFile(val).getAbsoluteFile();
       bOk = CheckDeps.Args.this.currdir.exists();
       return bOk;
     }};

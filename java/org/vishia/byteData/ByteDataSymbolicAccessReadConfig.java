@@ -26,6 +26,7 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.util.FileFunctions;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 
@@ -102,7 +103,7 @@ public class ByteDataSymbolicAccessReadConfig {
   {
 		ZbnfJavaOutput parser = new ZbnfJavaOutput();
 		ZbnfResult rootParseResult = new ZbnfResult();
-		File fileConfig = new File(sFileCfg);
+		File fileConfig = FileFunctions.newFile(sFileCfg);
 		//File fileSyntax = new File("exe/oamVar.zbnf");
 		String sError = parser.parseFileAndFillJavaObject(rootParseResult.getClass(), rootParseResult, fileConfig, syntaxSymbolicDescrFile);
 	  int nrofVariable = 0;

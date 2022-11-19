@@ -37,7 +37,7 @@ import org.vishia.cmd.JZtxtcmdScript.Subroutine;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLoggingStream;
-import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.Assert;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.Conversion;
@@ -86,12 +86,12 @@ public class JZtxtcmdExecuter {
   /**Version, history and license.
    * <ul>
    * <li>2022-11-13 Hartmut meaningful change: {@link ExecuteLevel#changeCurrDir(CharSequence)} now sets the "user.dir" Java system's property.
-   *   With them it is possible generally in Java to open a file via new File(System.getProperty("user.dir"), sRelativePath),
+   *   With them it is possible generally in Java to open a file via FileFunctions.newFile(System.getProperty("user.dir"), sRelativePath),
    *   then this is effective. It does not effect the operation system's PWD, but usable via this property.
    * <li>2022-01-31 Hartmut feature: Now the order of statements from included files are proper. 
    *   In the versions before script statements of included files were placed
    *   after the statements of the current file, due to processing the includes after wards.
-   *   Now in the {@link JZtxtcmdScript#createScriptFromString(org.vishia.util.StringPartScan, MainCmdLogging_ifc, File, File)}
+   *   Now in the {@link JZtxtcmdScript#createScriptFromString(org.vishia.util.StringPartScan, LogMessage, File, File)}
    *   the included script statements are stored in the {@link JZtxtcmdScript.JZcmdInclude} item itself,
    *   and executed in this order. Additonal case '.' in {@link ExecuteLevel#execute(org.vishia.cmd.JZtxtcmdScript.StatementList, StringFormatter, int, Map, int)}.
    * <li>2021-06-21 Hartmut new jztc.envar A container which can be given to hold variables from the calling environment
@@ -362,7 +362,7 @@ public class JZtxtcmdExecuter {
   {
     final JZtxtcmdExecuter jzCmdExecuter;
   
-    public final MainCmdLogging_ifc log;
+    public final LogMessage log;
     /**The newline char sequence. */
     public String newline = "\r\n";
     /**The width or size of a tab in the script file is used for detect and ignore tab indentation in the script. */ 
@@ -422,7 +422,7 @@ public class JZtxtcmdExecuter {
      */
     public Map<String, DataAccess.Variable<Object>> envar;
 
-    JzTcMain(MainCmdLogging_ifc log, JZtxtcmdExecuter jzCmdExecuter){
+    JzTcMain(LogMessage log, JZtxtcmdExecuter jzCmdExecuter){
       this.log = log;
       this.jzCmdExecuter = jzCmdExecuter;
       this.scriptThread = new JZtxtcmdThreadData();
@@ -439,7 +439,7 @@ public class JZtxtcmdExecuter {
  
     
     /**Returns the log interface from the environment class. */
-    public MainCmdLogging_ifc log(){ return this.log; }
+    public LogMessage log(){ return this.log; }
     
     public String getstdin() {
       String ret = null;
@@ -606,7 +606,7 @@ public class JZtxtcmdExecuter {
    * 
    * @param log maybe null
    */
-  public JZtxtcmdExecuter(MainCmdLogging_ifc log){
+  public JZtxtcmdExecuter(LogMessage log){
     this.acc = new JzTcMain(log, this);
   }
   
@@ -614,7 +614,7 @@ public class JZtxtcmdExecuter {
 /**Creates a JZcmdExecuter with possible writing exceptions in the output text.
  */
 public JZtxtcmdExecuter(){
-  MainCmdLogging_ifc log = MainCmd.getLogging_ifc();  //maybe started with MainCmd
+  LogMessage log = MainCmd.getLogging_ifc();  //maybe started with MainCmd
   if(log == null){
     log = new MainCmdLoggingStream(System.out);
   }
@@ -792,7 +792,7 @@ throws ScriptException //, IllegalAccessException
   try{
     if(sCurrdirArg == null && scriptLevel.currdir == null){
       //get from the JVM environment respectively from the operation system.
-      scriptLevel.currdir = new File("").getAbsoluteFile();  
+      scriptLevel.currdir = FileFunctions.newFile("").getAbsoluteFile();  
       scriptLevel.sCurrdir = FileFunctions.getCanonicalPath(scriptLevel.currdir);
     } else if(sCurrdirArg !=null) {
       scriptLevel.changeCurrDir(sCurrdirArg);
@@ -1183,7 +1183,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       } catch (Exception exc) { throw new JzScriptException("JZcmd.execute - String eval error on checkJZcmd; "
           , this.acc.jzcmdScript.checkJZcmdFile.srcFile, this.acc.jzcmdScript.checkJZcmdFile.srcLine, this.acc.jzcmdScript.checkJZcmdFile.srcColumn ); 
       }
-      File filecheck = new File(sFilecheck.toString());
+      File filecheck = FileFunctions.newFile(sFilecheck.toString());
       try{
         Writer writer = new FileWriter(filecheck);
         this.acc.jzcmdScript.writeStruct(writer);
@@ -1491,8 +1491,8 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           DataAccess.Variable<Object> var = e.getValue();
           String key = e.getKey();
           if(key.equals("scriptdir")){           //scriptfile either from subroutine if given, or ...
-            File scriptFile = subRoutine !=null ? new File(subRoutine.srcFile) : 
-                              jzClass !=null ? new File(jzClass.srcFile) : acc.jzcmdScript.fileScript ;
+            File scriptFile = subRoutine !=null ? FileFunctions.newFile(subRoutine.srcFile) : 
+                              jzClass !=null ? FileFunctions.newFile(jzClass.srcFile) : acc.jzcmdScript.fileScript ;
             CharSequence scriptdir = FileFunctions.normalizePath(FileFunctions.getDir(scriptFile));
             //create a new scriptdir and scriptfile variable
             DataAccess.Variable<Object> var2 = new DataAccess.Variable<Object>('S', "scriptdir", scriptdir, true);
@@ -1551,7 +1551,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     
     
     /**Returns the log interface from the environment class. */
-    public MainCmdLogging_ifc log(){ return this.jzcmdMain.log; }
+    public LogMessage log(){ return this.jzcmdMain.log; }
     
     
     
@@ -2027,7 +2027,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           JZtxtcmdAccessFileset zjars = new JZtxtcmdAccessFileset(fileset, this);
           List<JZtxtcmdFilepath> jars = zjars.listFilesExpanded();
           for(JZtxtcmdFilepath jfilejar: jars){
-            File filejar = new File(jfilejar.absfile().toString());
+            File filejar = FileFunctions.newFile(jfilejar.absfile().toString());
             if(!filejar.exists()) throw new IllegalArgumentException("JZcmd.addClasspath - file does not exist; " + filejar.getAbsolutePath());
             filesjar.add(filejar);
           }
@@ -2040,7 +2040,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           //  accessPath = fileset.accessPath;
           //}
           JZtxtcmdFilepath jfilejar = new JZtxtcmdFilepath(this, accessPath);
-          File filejar = new File(jfilejar.absfile().toString());
+          File filejar = FileFunctions.newFile(jfilejar.absfile().toString());
           if(!filejar.exists()) throw new IllegalArgumentException("JZcmd.addClasspath - file does not exist; " + filejar.getAbsolutePath());
           filesjar.add(filejar);
         }
@@ -2984,14 +2984,14 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       } else {
         if(this.currdir == null){
           //only on startup, start with operation system's current directory.
-          this.currdir = new File("").getAbsoluteFile();
+          this.currdir = FileFunctions.newFile("").getAbsoluteFile();
         }
         StringBuilder sCurrdir = new StringBuilder();
         sCurrdir.append(currdir.getPath()).append('/').append(arg);
         arg1 = FileFunctions.normalizePath(sCurrdir);
       }
       this.sCurrdir = arg1.toString();
-      this.currdir = new File(this.sCurrdir);
+      this.currdir = FileFunctions.newFile(this.sCurrdir);
       if(!currdir.exists() || !currdir.isDirectory()){
         throw new IllegalArgumentException("JZcmdExecuter - cd, dir not exists; " + arg);
       }
@@ -3088,8 +3088,8 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     {
       CharSequence s1 = evalString(statement.src);
       CharSequence s2 = evalString(statement.dst);
-      File fileSrc = FileFunctions.isAbsolutePath(s1) ? new File(s1.toString()) : new File(currdir, s1.toString());
-      File fileDst = FileFunctions.isAbsolutePath(s2) ? new File(s2.toString()) : new File(currdir, s2.toString());
+      File fileSrc = FileFunctions.isAbsolutePath(s1) ? FileFunctions.newFile(s1.toString()) : new File(currdir, s1.toString());
+      File fileDst = FileFunctions.isAbsolutePath(s2) ? FileFunctions.newFile(s2.toString()) : new File(currdir, s2.toString());
       boolean bOk = fileSrc.renameTo(fileDst);
       if(!bOk) throw new IOException("JZcmd - move not successfully; " + fileSrc.getAbsolutePath() + " to " + fileDst.getAbsolutePath());;
     }
@@ -3128,8 +3128,8 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         dirSrc.copyDirTreeTo(dirDst, 0, sMask, 0, null, null);
         //
       } else {
-        File src = FileFunctions.isAbsolutePath(ssrc) ? new File(ssrc.toString()) : new File(currdir, ssrc.toString());
-        File dst = FileFunctions.isAbsolutePath(sdst) ? new File(sdst.toString()) : new File(currdir, sdst.toString());
+        File src = FileFunctions.isAbsolutePath(ssrc) ? FileFunctions.newFile(ssrc.toString()) : new File(currdir, ssrc.toString());
+        File dst = FileFunctions.isAbsolutePath(sdst) ? FileFunctions.newFile(sdst.toString()) : new File(currdir, sdst.toString());
         
         //CharSequence s1 = evalString(statement.actualArgs.get(0));
         //CharSequence s2 = evalString(statement.actualArgs.get(1));
@@ -3643,7 +3643,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           case 'E': { //TODO not used:
             String value = obj.toString();
             if(FileFunctions.isAbsolutePath(value)){
-              obj = new File(value);
+              obj = FileFunctions.newFile(value);
             } else {
               obj = new File(currdir, value);
             }

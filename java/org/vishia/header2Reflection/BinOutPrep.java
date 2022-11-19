@@ -170,9 +170,9 @@ public class BinOutPrep
   throws FileNotFoundException
   {
     this.sFileBin = sFileBin;
-    File fileBinFile = new File(sFileBin);
+    File fileBinFile = FileFunctions.newFile(sFileBin);
     if(hexOutput){
-      fileBin = new StdHexFormatWriter(new File(sFileBin));
+      fileBin = new StdHexFormatWriter(FileFunctions.newFile(sFileBin));
     } else {
       fileBin = new FileOutputStream(fileBinFile);
     }
@@ -400,9 +400,9 @@ public class BinOutPrep
     fileBin.write(binOutRefl.getData(), 0, zData);
     
     if(this.sFileList !=null) {
-      byte[] binRefl = FileSystem.readBinFile(new File(sFileBin));
+      byte[] binRefl = FileSystem.readBinFile(FileFunctions.newFile(sFileBin));
       BinOutShow binOutShow = new BinOutShow(binRefl, binRefl.length);
-      binOutShow.show(new File(sFileList));
+      binOutShow.show(FileFunctions.newFile(sFileList));
     }
     
   }

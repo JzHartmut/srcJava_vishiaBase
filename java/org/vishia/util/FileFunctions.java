@@ -50,6 +50,8 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-01-18 Hartmut new {@link #newFile(String)} regards System.getProperty("user.dir") set by change dir in {@link org.vishia.jztxtcmd.JZtxtcmd}.
+   *   should be used overall instead new File(String).
    * <li>2022-01-18 Hartmut enhancement: {@link #absolutePath(String, File)} now resolves also environment variables in the path. 
    * <li>2022-01-01 Hartmut bugfix: {@link #getDir(File)} was not proper in special cases. Hence it is refactored and tested.
    *   Additional {@link #getDirCharseq(File, File)} is created newly which returns an unique path. 
@@ -345,6 +347,24 @@ public class FileFunctions {
     } }
   }
   
+  
+  
+  /**Creates a File object from a given Path.
+   * The difference to a simple standard <code>new File(sPath)</code> is:
+   * <br>
+   * If the sPath is relative, it uses the <code>System.getProperty("user.dir")</code>
+   * as base directory, and not the given operation system's current directory.
+   * The first one can be changed with Java capabilities before, the last one cannot be changed inside the JRE.   
+   * @param sPath relative or absolute path
+   * @return File object. Whether or not the path is correct (file exists), is not tested.
+   */
+  public static File newFile(String sPath) {
+    if(isAbsolutePath(sPath)) {
+      return new File(sPath);
+    } else {
+      return new File(System.getProperty("user.dir"), sPath);
+    }
+  }
   
   /**Reads the content of a whole file into a String.
    * This method returns a null pointer if an exception has occurs internally,

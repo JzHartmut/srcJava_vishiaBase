@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.util.FileFunctions;
 
 public class CheckAllDepFile
 {
@@ -67,7 +68,7 @@ public class CheckAllDepFile
   {
     try{
       BufferedReader reader = null;
-      File fileDep = new File(sFileName);
+      File fileDep = FileFunctions.newFile(sFileName);
       if(fileDep.exists()){
         reader = new BufferedReader(new FileReader(fileDep));
         String sLine;
@@ -110,13 +111,13 @@ public class CheckAllDepFile
         dateSource = Long.parseLong(lineParts[5].trim());
         sAbsPathFileBuild = lineParts[2].trim();
         sAbsPathFileSource = lineParts[4].trim();
-        fileMirror = new File(sAbsPathFileBuild);
-        fileSource = new File(sAbsPathFileSource);
+        fileMirror = FileFunctions.newFile(sAbsPathFileBuild);
+        fileSource = FileFunctions.newFile(sAbsPathFileSource);
       } else {
         dateBuild = dateSource = Long.parseLong(lineParts[1].trim());
         sAbsPathFileBuild = sAbsPathFileSource = lineParts[2].trim();
         fileMirror = null;
-        fileSource = new File(sAbsPathFileSource);
+        fileSource = FileFunctions.newFile(sAbsPathFileSource);
       }
       //check the timestamps from .dep-file-line and reality:
       if( Math.abs((int)(fileSource.lastModified() - dateSource)) < maxTimeAbbreviation

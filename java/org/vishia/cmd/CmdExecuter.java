@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.script.ScriptException;
 
-import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringFunctions;
@@ -186,7 +186,7 @@ public class CmdExecuter implements Closeable
   
   
   
-  public void initJZcmdExecuter(JZtxtcmdScript script, String sCurrdir, MainCmdLogging_ifc log) throws Throwable
+  public void initJZcmdExecuter(JZtxtcmdScript script, String sCurrdir, LogMessage log) throws Throwable
   { if(this.jzcmdExecuter == null) {
       this.jzcmdExecuter = new JZtxtcmdExecuter(log);
     }
@@ -383,14 +383,14 @@ public class CmdExecuter implements Closeable
    * The subroutine can invoke a cmd for a new process internally, this cmdExecuter is used
    * because the given instance of a {@link JZtxtcmdExecuter} knows this.
    * <br>
-   * Note: call {@link #initJZcmdExecuter(JZtxtcmdScript, String, MainCmdLogging_ifc)} with that script
+   * Note: call {@link #initJZcmdExecuter(JZtxtcmdScript, String, LogMessage)} with that script
    * which contains the sub routine before call this operation.
    * <br><br>
    * Note: The execution of the subroutine is done in maybe another thread which call 
    * {@link #executeCmdQueue(boolean)}. Hint: It can be done for example by the main thread in a graphical application.
    * The execution of complex callbacks on graphical buttons should not be done in the graphic thread!
    * 
-   * @param jzsub The dedicated subroutine from the script given with {@link #initJZcmdExecuter(JZtxtcmdScript, String, MainCmdLogging_ifc)}
+   * @param jzsub The dedicated subroutine from the script given with {@link #initJZcmdExecuter(JZtxtcmdScript, String, LogMessage)}
    * @param args proper arguments
    * @param out The <:>...<.> text output is written into
    * @param currDir current directory for script execution

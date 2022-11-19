@@ -30,7 +30,7 @@
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
 2022-10-25 00:07:02  x     ByteDataAccessSimple.java                ::          5.792 -1822930907 
 2022-10-27 11:10:11  x     ByteDataSymbolicAccess.java              ::         31.461 -1590403540 
-2022-08-26 21:01:40  x     ByteDataSymbolicAccessReadConfig.java    ::          4.539 -0785729210 
+2022-11-19 21:08:45  x     ByteDataSymbolicAccessReadConfig.java    ::          4.590  0614878915 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
 2018-12-27 19:09:07  x     Field_Jc.java                            ::         15.680 -1928813301 
@@ -59,20 +59,20 @@
 ============================== java/org/vishia/checkDeps_C/ ========================================
 2012-12-25 15:31:12  x     AddDependency_InfoFileDependencies.java  ::          1.874  1876500062 
 2017-07-29 11:17:07  x     CfgData.java                             ::          3.560 -0509839928 
-2012-12-25 19:29:36  x     CheckAllDepFile.java                     ::          6.113  1270977477 
+2022-11-19 21:10:14  x     CheckAllDepFile.java                     ::          6.203 -1215854895 
 2012-12-25 17:01:12  x     CheckData.java                           ::          4.951  0627506369 
-2020-11-09 14:14:14  x     CheckDependencyFile.java                 ::         48.297 -2039107725 
-2020-07-23 21:31:58  x     CheckDeps.java                           ::          7.493 -0385606125 
+2022-11-19 21:11:40  x     CheckDependencyFile.java                 ::         48.413 -2051062432 
+2022-11-19 21:12:42  x     CheckDeps.java                           ::          7.544  1112087630 
 2020-07-23 18:57:23  x     CheckDeps_Old.java                       ::         12.395  0108102733 
 2012-12-25 15:33:10  x     DateTime.java                            ::          1.823  2018610045 
-2017-07-29 11:17:35  x     InfoFileDependencies.java                ::         19.000 -0848432233 
+2022-11-19 21:13:16  x     InfoFileDependencies.java                ::         19.051 -1524932443 
 2014-05-04 22:56:29  x     InputSrc.java                            ::          4.196  1587914190 
-2014-05-13 22:35:41  x     ObjectFileDeps.java                      ::          7.104 -1134084529 
-2017-05-08 20:31:49  x     ParserConfigFile.java                    ::          7.245 -0517457651 
+2022-11-19 21:13:52  x     ObjectFileDeps.java                      ::          7.155 -1917452981 
+2022-11-19 21:15:05  x     ParserConfigFile.java                    ::          7.296 -1932346698 
 2020-07-23 18:57:23  x     package-info.java                        ::           .399  1943722203 
 
 ============================== java/org/vishia/cmd/ ================================================
-2022-01-24 19:07:37  x     CmdExecuter.java                         ::         41.033  0804691366 
+2022-11-15 13:02:27  x     CmdExecuter.java                         ::         41.005 -2071766572 
 2018-09-22 20:52:01  x     CmdGetFileArgs_ifc.java                  ::          1.660 -2078197694 
 2017-04-03 21:47:02  x     CmdGetterArguments.java                  ::          2.483 -1182376375 
 2017-04-03 21:46:01  x     CmdQueue.java                            ::          3.905  1430471497 
@@ -80,10 +80,10 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2022-11-13 22:51:31  x     JZtxtcmdExecuter.java                    ::        196.595 -0764717185 
+2022-11-19 21:17:07  x     JZtxtcmdExecuter.java                    ::        196.717  1001013601 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2022-11-13 15:00:35  x     JZtxtcmdScript.java                      ::        123.576  0321557795 
+2022-11-19 21:18:22  x     JZtxtcmdScript.java                      ::        123.589 -1961472283 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -158,7 +158,7 @@
 2022-07-17 18:10:35  x     SrcInfo.java                             ::          1.815 -0998914685 
 
 ============================== java/org/vishia/header2Reflection/ ==================================
-2020-12-20 20:46:11  x     BinOutPrep.java                          ::         16.433 -0918472496 
+2022-11-19 21:20:18  x     BinOutPrep.java                          ::         16.485 -1840955706 
 2020-12-20 20:46:02  x     BinOutShow.java                          ::          9.792 -0441389883 
 2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
 2021-02-21 22:24:11  x     CheaderParser.java                       ::         67.915  2132928869 
@@ -171,7 +171,7 @@
 2021-10-04 14:29:48  x     Inspcitem.java                           ::          9.566  0638926456 
 
 ============================== java/org/vishia/jztxtcmd/ ===========================================
-2022-01-31 12:20:16  x     JZtxtcmd.java                            ::         46.206  1490144680 
+2022-11-15 12:59:08  x     JZtxtcmd.java                            ::         45.896  1067788552 
 2022-10-02 09:49:03  x     JZtxtcmdSyntax.java                      ::         31.779 -1535274851 
 2018-09-22 20:55:43  x     JZtxtcmdUserExample.java                 ::          1.787 -0446379803 
 2017-04-03 21:49:31  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
@@ -252,7 +252,8 @@
 
 ============================== java/org/vishia/util/ ===============================================
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
-2022-11-13 22:54:36  x     Arguments.java                           ::         24.509 -0082392872 
+2022-11-18 22:38:47  x     ApplMain.java                            ::          1.991  1375569934 
+2022-11-18 23:01:17  x     Arguments.java                           ::         24.490  0422953367 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
 2022-05-11 10:24:43  x     CalculatorExpr.java                      ::        151.273  0467732730 
@@ -268,7 +269,7 @@
 2022-10-12 18:17:52  x     ExcUtil.java                             ::         15.804  1747642112 
 2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
 2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
-2022-01-21 12:18:29  x     FileFunctions.java                       ::         85.969 -0442376478 
+2022-11-19 21:04:59  x     FileFunctions.java                       ::         86.931  0186596813 
 2020-06-16 23:16:25  x     FileList.java                            ::         22.544 -0437624496 
 2021-10-04 14:29:49  x     FilePath.java                            ::         87.603 -0641162706 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 

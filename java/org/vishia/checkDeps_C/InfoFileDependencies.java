@@ -17,6 +17,7 @@ import java.util.TreeMap;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.UnexpectedException;
 
@@ -366,7 +367,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
   { Writer writer = null;
     try{
       if(sDepFileName !=null){
-        File fileDep = new File(sDepFileName);
+        File fileDep = FileFunctions.newFile(sDepFileName);
         try{
           FileSystem.mkDirPath(fileDep);
           writer = new FileWriter(fileDep);
