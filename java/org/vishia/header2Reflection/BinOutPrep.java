@@ -24,6 +24,7 @@ import org.vishia.byteData.RawDataAccess;
 import org.vishia.byteData.SuperclassIfc_idxMtblJc_ByteDataAccess;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StdHexFormatWriter;
 
