@@ -412,7 +412,7 @@ public class Zip {
     try{ 
       for(String arg: args) { System.out.println(arg); }
       argData.parseArgs(args, System.err);
-      if(!argData.testArgs(System.err)) { return 1; }
+      if(!argData.testConsistence(System.err)) { return 1; }
     } catch(Exception exc){
       System.err.println(exc.getMessage());
       return argData.exitCodeArgError;
@@ -503,7 +503,7 @@ public class Zip {
 
 
     @Override
-    public boolean testArgs(Appendable msg) throws IOException {
+    public boolean testConsistence(Appendable msg) throws IOException {
       boolean bOk = true;
       if(this.fOut == null) { msg.append("-o:ZIP.zip is obligate\n"); bOk = false; }
       if(this.listSrc.size() == 0) { msg.append("warning: no input files given\n"); }

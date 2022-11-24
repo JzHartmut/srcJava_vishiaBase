@@ -129,7 +129,7 @@ public class FileList
     
     
     @Override
-    public boolean testArgs(Appendable msg) throws IOException {
+    public boolean testConsistence(Appendable msg) throws IOException {
       // TODO Auto-generated method stub
       return true;
     }
@@ -584,7 +584,7 @@ public class FileList
     try{ 
       //for(String arg: sArgs) { System.out.println(arg); }
       args.parseArgs(sArgs, System.err);
-      if(!args.testArgs(System.err)) { return ""; }
+      if(!args.testConsistence(System.err)) { return ""; }
     } catch(Exception exc){
       System.err.println(exc.getMessage());
       return exc.getMessage();

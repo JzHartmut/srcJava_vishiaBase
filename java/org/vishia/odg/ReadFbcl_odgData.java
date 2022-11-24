@@ -138,7 +138,7 @@ public class ReadFbcl_odgData {
         System.exit(1);                // no arguments, help is shown.
       }
       if(  ! args.parseArgs(sArgs, System.err)
-        || ! args.testArgs(System.err)
+        || ! args.testConsistence(System.err)
         ) { 
         System.exit(2);                // argument error
       }
@@ -188,7 +188,7 @@ public class ReadFbcl_odgData {
     }
 
     @Override
-    public boolean testArgs(Appendable msg) throws IOException {
+    public boolean testConsistence(Appendable msg) throws IOException {
       boolean bOk = true;
       if(this.fOutStruct == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
       if(!bOk) {

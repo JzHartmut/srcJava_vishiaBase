@@ -68,7 +68,7 @@ public class CheckDeps {
     System.out.println(args.aboutInfo());
     try{ 
       args.parseArgs(cmdArgs, System.err);
-      if(!args.testArgs(System.err)) { return 1; }
+      if(!args.testConsistence(System.err)) { return 1; }
     } catch(Exception exc){
       System.err.println("ERROR CheckDeps arguments: " + exc.getMessage());
       return args.exitCodeArgError;
@@ -213,7 +213,7 @@ public class CheckDeps {
     
     
     @Override
-    public boolean testArgs(Appendable msg) throws IOException {
+    public boolean testConsistence(Appendable msg) throws IOException {
       boolean bOk = true;
       if(this.listRootObjExt.size() ==0) {
         msg.append("-obj:path/to/rootObj/*.o should given at least one time.");

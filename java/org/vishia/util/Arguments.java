@@ -15,17 +15,17 @@ import java.util.List;
  * In your main class you should create (template):<pre>
   public static class Args extends Arguments {
 
+    /**Argument is manually tested * /
+    public String sTitle;
+
+    /**Argument needs a Arguments.SetArgument(...) operation, longer form * /
     public File fOut;
     
-    public String timestamp;
+    /**Argument contains the timestamp.val to use as value, shorter form * / 
+    public Argument timestamp = new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)");
     
     Arguments.SetArgument setOutput = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
       Args.this.fOut = new File(val);
-      return true;
-    }};
-    
-    Arguments.SetArgument setTimestamp = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Args.this.timestamp = val;
       return true;
     }};
     
@@ -33,9 +33,23 @@ import java.util.List;
       super.aboutInfo = "...your about info";
       super.helpInfo="obligate args: -o:...";
       addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
-      addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
+      addArg(timestamp);
     }
 
+    /**This operation is necessary only for manual test of argument Strings. * /
+    (at)Override protected boolean testArgument(String arg, int nArg) { 
+      boolean bOk = true;  //set to false if the argc is not passed
+      String value;
+      if( (value = checkArgVal("-title", arg)) !=null) {       
+        this.sTitle = value;  //the graphic GUI-appearance
+      }
+      else {
+        bOk = super.testArgument(arg, nArg);
+      }
+      return bOk;
+    }
+
+    /**This operation checks the consistence of all operations. * /
     (at)Override
     public boolean testArgs(Appendable msg) throws IOException {
       boolean bOk = true;
@@ -57,12 +71,12 @@ import java.util.List;
     try {
       if(cmdArgs.length ==0) {
         args.showHelp(System.out);
-        System.exit(1);                // no arguments, help is shown.
+        System.exit(1);                      // no arguments, help is shown.
       }
-      if(  false == args.parseArgs(cmdArgs, System.err)
-        || false == args.testArgs(System.err)
+      if( ! args.parseArgs(cmdArgs, System.err)
+       || ! args.testArgs(System.err)
         ) { 
-        System.exit(2);                // argument error
+        System.exit(args.exitCodeArgError);  // argument error
       }
     }
     catch(Exception exc) {
@@ -109,6 +123,8 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2022-11-13 Hartmut chg {@link #checkArgVal(String, String)} improved, see comments in code there. Accept spaces
+   * <li>2022-11-13 Hartmut chg rename {@link #testConsistence(Appendable)} instead testArgs(...), more expressive. Adaption necessary and done in all vishia Files 
    * <li>2022-11-13 Hartmut chg all files are created with new File(System.getProperty("user.dir"),
    *   hence the current directory comes from a maybe changed user.dir in Java, not from the original operation system's one.
    *   Important if a java program runs in a JZtxtcmd script, then cd can be used. 
@@ -261,7 +277,7 @@ public abstract class Arguments {
   
   String sLogLevel;
   
-  protected void addArg(Argument arg) {
+  protected final void addArg(Argument arg) {
     if(this.argList == null) { this.argList = new LinkedList<Argument>(); }
     this.argList.add(arg);
   }
@@ -335,6 +351,9 @@ public abstract class Arguments {
     else if((value = checkArgVal("--rlevel", argc)) !=null) 
     { this.sLogLevel = value;   //an example for default output
     }
+    else if((value = checkArgVal("--help", argc)) !=null) 
+    { //TODO    should write the help info, may be to an destination file.
+    }
     else if(argc.startsWith("---")) 
     { //accept but ignore it. Commented calling arguments.
     }
@@ -400,7 +419,7 @@ public abstract class Arguments {
    * @param arg
    * @return
    */
-  protected boolean checkArg(String check, String arg) {
+  protected final boolean checkArg(String check, String arg) {
     if(  arg.equals(check)) { 
       return true;
     } else { return false; }
@@ -409,21 +428,42 @@ public abstract class Arguments {
   
   
   /**Check whether an arg with value is given.
-   * The arg should contain <code>check:value</code> or <code>check=value</code>
-   * whereby <code>check</code> is the given check String.
-   * @param check
-   * @param arg
+   * Possible variants in arg, whereby <code>check</code> is the given check String.
+   * <ul>
+   * <li>"check" returns "", no argument value
+   * <li>"check  " returns "", nor argument value, trailing spaces are ignored
+   * <li>"check:value" returns "value"
+   * <li>"check=value" returns "value"
+   * <li>"check : value" returns " value", spaces before ":" are ignored
+   * <li>"check = value" returns " value"
+   * <li>"check value more text" returns "value more text", all after spaces 
+   * <li>"checkother ..." returns null, check fails, "check" must end with space or : or =
+   * </ul> 
+   * @param check The start sequence of the arg
+   * @param arg given one argument, either one line in arg file, or sequence till space in cmd line
    * @return null if not matching, the <code>value</code> it is matching.
    */
-  protected String checkArgVal(String check, String arg) {
+  protected final String checkArgVal(String check, String arg) {
     int zCheck = check.length();
-    char cc;
-    if(  arg.startsWith(check) 
-      && arg.length() > zCheck 
-      && ((cc = arg.charAt(zCheck)) == ':' || cc == '=')
-      ) {
-      return arg.substring(zCheck+1);
-    } else { return null; }
+    if(  arg.startsWith(check) ) {
+      if(arg.length() == zCheck) { return ""; }            // single argument -arg
+      else {
+        int posEnd = " :=".indexOf(arg.charAt(zCheck)); 
+        if(posEnd <0) { return null; }                     // not matching, arg must end with space, or : =, such as -argother not accepted
+        else {
+          while(posEnd ==0 && arg.length() < (++zCheck)) {
+            posEnd = " :=".indexOf(arg.charAt(zCheck));    // skip over spaces
+          }
+          if(posEnd >=0) {                                 // positive case, -arg:value, returns the value
+            return arg.substring(zCheck+1);                // or returns "" if only spaces are found. 
+          }
+          else {
+            return arg.substring(zCheck);                  // the case -arg other text returns the "other text" 
+          }                                                // it is only for file content or "-arg other text" in cmd line
+        }
+      }
+    } 
+    else { return null; }                                  // not matching
   }
   
 
@@ -434,19 +474,8 @@ public abstract class Arguments {
    * @throws IOException 
    * @throws IllegalArgumentException on argument error
    */
-  public void checkArgs(String[] args) throws IOException {
-    parseArgs(args, null);
-  }
-  
-  
-  /**This is the user operation to process all arguments from a container as String[].
-   * It is especially for  <code>main(String[] args)</code>
-   * @param args The argument string array.
-   * @throws IOException 
-   * @throws IllegalArgumentException on argument error
-   */
-  public void parseArgs(String[] args) throws IOException {
-    parseArgs(args, null);
+  public final boolean parseArgs(String[] args) throws IOException {
+    return parseArgs(args, null);
   }
   
   
@@ -457,10 +486,10 @@ public abstract class Arguments {
    * @param errMsg if given then all arguments will be parsed. Errors will be outputed here.
    * @throws IOException only on unexpected errors writing errMsg 
    * @throws IllegalArgumentException on argument error only if errMsg == null
-   * @return true if all ok, but the user should call {@link #testArgs(Appendable)} afterwards.
-   *         false argument error, the application may be used though if {@link #testArgs(Appendable)} returns true.
+   * @return true if all ok, but the user should call {@link #testConsistence(Appendable)} afterwards.
+   *         false argument error, the application may be used though if {@link #testConsistence(Appendable)} returns true.
    */
-  public boolean parseArgs(String[] args, Appendable errMsg) throws IOException {
+  public final boolean parseArgs(String[] args, Appendable errMsg) throws IOException {
     boolean bOk = true;
     int nArg = -1;
     String arg = null;
@@ -469,7 +498,7 @@ public abstract class Arguments {
     try {
       for(String arg1: args) {
         arg = arg1;
-        if(arg.startsWith("--@")) {
+        if(arg.startsWith("--@")) { //======================= Read args from a file
           int posLabel = arg.indexOf(':', 6);    //search --@D:x:label after 6. position because on 4th position may be a drive separation
           final String sFile, sLabel;
           if(posLabel >0) {
@@ -479,7 +508,7 @@ public abstract class Arguments {
             sFile = arg.substring(3);
             sLabel = null;
           }
-          argFile = FileFunctions.newFile(sFile);   // accept a changed directory, elsewhere uses the originally OS PWD
+          argFile = FileFunctions.newFile(sFile);          // accept a changed directory, elsewhere uses the originally OS PWD
           farg = new BufferedReader(new FileReader(argFile));
           int posArg;                                      // position of the argument in the line may be >0
           final String sStartLineArg;                      // then all lines should start with this text before posArg.
@@ -529,7 +558,8 @@ public abstract class Arguments {
               while(posEnd >0 && sArg.charAt(posEnd-1)==' ') { posEnd -=1;}
               sArg = sArg.substring(0, posEnd);
             }
-            if(!testArgument(sArg, ++nArg)) {  
+            if(  sArg.length() >0                          // don't test an empty line in the file
+              && !testArgument(sArg, ++nArg)) {            // testArg is faulty:
               if(errMsg !=null) {
                 errMsg.append("  ERROR: ").append(arg).append('\n');
                 bOk = false;
@@ -598,6 +628,6 @@ public abstract class Arguments {
    * @return true if consistent. 
    * @throws IOException only on unexpected problems writing msg
    */
-  public abstract boolean testArgs(Appendable msg) throws IOException;
+  public abstract boolean testConsistence(Appendable msg) throws IOException;
   
 }
