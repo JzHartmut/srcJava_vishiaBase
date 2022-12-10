@@ -7,8 +7,8 @@ if test ! -f $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar; then   ##compilation 
 else                                                       ##compilation not successfull
   ##
   ## copy the useable version to a existing tools or jar directory:
-  if test -d ../../../Java/tools; then    ##beside cmpnJava... should be existing, for compilations from working tree
-    export CURRENT_JARS_PATH="../../../Java/tools" 
+  if test -d tools; then    ##beside src/... should be existing, for compilations from working tree
+    export CURRENT_JARS_PATH="tools" 
   else
     export CURRENT_JARS_PATH="jars"       ##This is for compilation from zip file
     if ! test -d $CURRENT_JARS_PATH; then mkdir $CURRENT_JARS_PATH; fi
@@ -33,7 +33,7 @@ else                                                       ##compilation not suc
     fi  
     ##
     ##The next script copies to the maybe given deploy directory.
-    if test -d ../../../Java/deploy; then export DEPLOYDIR="../../../Java/deploy";
+    if test -d ../../Java/deploy; then export DEPLOYDIR="../../Java/deploy";
     elif test -d deploy; then export DEPLOYDIR="deploy";
     else echo deploy directory not given, create it.
     fi  

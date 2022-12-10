@@ -147,20 +147,24 @@ fi
 
 echo ===================================================================================
 if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
-echo
-echo ====== deploy to jar ==============================================================
-if test -d ../jars; then export DSTJARDIR="../jars"
+
+if test -d tools; then export DSTJARDIR="tools"
 elif test -d jars; then export DSTJARDIR="jars"
+elif test -d ../tools; then export DSTJARDIR="../tools"
 else mkdir jars; export DSTJARDIR="jars"
 fi
-echo DSTDIRJAR=$DSTJARDIR
-echo cp $BUILD_TMP/deploy/* $DSTJARDIR
-cp $BUILD_TMP/deploy/* $DSTJARDIR
-echo "if ! test $DSTJARDIR/$DSTNAME.jar; then cp $DSTJARDIR/$JARFILE $DSTJARDIR/$DSTNAME.jar; fi"
-if ! test -f $DSTJARDIR/$DSTNAME.jar; then cp $JARFILE $DSTJARDIR/$DSTNAME.jar; fi
-ls $DSTARDIR
+echo ====== deploy to $DSTJARDIR ==============================================================
+##REM: It should be assumed that the file is correct. 
+##REM It replaces the given in $DSTJARDIR to support more tests with the new jar without more effort.
+##REM Only the jar file is copied. The rest is done by the deploy script.
+##echo cp $BUILD_TMP/deploy/* $DSTJARDIR
+##cp $BUILD_TMP/deploy/* $DSTJARDIR
+echo "cp $DSTJARDIR/$JARFILE $DSTJARDIR/$DSTNAME.jar"
+cp $JARFILE $DSTJARDIR/$DSTNAME.jar
+echo === $DSTJARDIR content:
+ls -all $DSTJARDIR
 
-echo
+echo                                 
 echo ====== deploy script ==============================================================
 echo DEPLOYSCRIPT=$DEPLOYSCRIPT
 
