@@ -32,7 +32,7 @@ package org.vishia.msgDispatch;
  * 2009-02-05 HScho   *adap: no try on org.vishia.util.FileWriter.close()
  */
 
-import org.vishia.util.FileWriter;
+import org.vishia.util.FileAppend;
 import java.io.IOException;
 import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
@@ -137,7 +137,7 @@ public class LogMessageFile extends LogMessageBase
   
   int currentLengthMultifileNr;
   
-  final FileWriter file = new FileWriter();
+  final FileAppend file = new FileAppend();
   
   /**All OS:TimeStamp are simple embedded instances in C, 
    * but derived instances from java.util.Data in java.
@@ -461,7 +461,7 @@ public class LogMessageFile extends LogMessageBase
             }
           }
           else
-          { if(false && error == FileWriter.kFileNotFound)  //TODO C can't difference the errors, is there a solution? open_FileWriterJc!
+          { if(false && error == FileAppend.kFileNotFound)  //TODO C can't difference the errors, is there a solution? open_FileWriterJc!
             { //System.err.println("file path incorrect");
               dbg.cntFilePathIncorrect +=1;
             }

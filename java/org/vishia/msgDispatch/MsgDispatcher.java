@@ -34,7 +34,7 @@ import java.util.Arrays;
 //import java.util.Date;
 
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
-import org.vishia.util.FileWriter;
+import org.vishia.util.FileAppend;
 import org.vishia.util.StringPartScan;
 
 
@@ -495,7 +495,7 @@ public static final int version = 0x20120302;
    *        Hint: A simple writer isn't used because Java2C don't able to translate it yet. (Version 0.84)
    * @return true if no error.       
    */
-  public final boolean reportOutput(FileWriter file)
+  public final boolean reportOutput(FileAppend file)
   { boolean bOk = true;
     try
     { file.write("//Syntax-Example\n");

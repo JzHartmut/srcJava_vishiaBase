@@ -285,9 +285,14 @@ public abstract class Arguments {
   
   
   /**Replaces expressions "...$name... or $(name)... or $$name$ with the content of the named environment variable.
-   * $name: the java-identifier is used as name. Since 2022-01
+   * <ul>
+   * <li>$name: A java-identifier format is used as name. Since 2022-01,
+   * <li>$(name): should be used if after them other Java-identifier are following, as in shell scripts
+   * <li>$$name$: Other syntax for the same approach, may be better readable.
+   * </ul>
    * @param argval String with environment variables to replace.  
-   * @return replaced environment
+   * @return replaced environment, if nothing is replaced, this is identical with argval (same instance referred)
+   *   Hence with argval==returnedArgval it can be checked whether a replacement was done. 
    * @throws IllegalArgumentException on faulty name of environment variable
    */
   public static String replaceEnv(String argval) {

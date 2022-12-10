@@ -21,10 +21,14 @@
  *******************************************************************************/ 
 package org.vishia.util;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.Flushable;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 
 /**This class is a alternative to java.io.FileWriter. 
@@ -36,12 +40,15 @@ import java.io.Writer;
  *   It is because usage in fast realtime systems in C via Java2C-translator.
  *   The implementation in C is written without any dynamically memory.
  * <li>On open() no exceptions are thrown, a boolean return value is used.  
+ * <li>Also {@link #append(CharSequence)} is exception-free similar as in {@link System#out} ( {@link java.io.PrintStream} ).
+ *   Advantage for the user: exchange both without effort of try-catch.  
+ * <li>On {@link #open(String, boolean)} and {@link #open(String, String, boolean)} a path with environment variables
+ *   or starting with "/tmp/" or "~" can be used.
  * </ul>  
  * @author Hartmut Schorrig
- * @deprecated use instead {@link FileAppend}
  *
  */
-@Deprecated public class FileWriter extends Writer
+public class FileAppend implements Appendable, Closeable, Flushable
 {
   /**Version, history and license.
    * Changes:
@@ -77,107 +84,176 @@ import java.io.Writer;
    */
   public final static String sVersion = "2022-01-17";
 
+  public static class Wr implements Appendable {
+
+    int error;
+    
+    OutputStreamWriter writer;
+    
+    public Wr(OutputStream out) {
+      this.writer = new OutputStreamWriter(out);
+    }
+    
+    public Wr(OutputStream out, String encoding) throws UnsupportedEncodingException {
+      this.writer = new OutputStreamWriter(out, encoding);
+    }
+    
+    @Override public FileAppend.Wr append(CharSequence text) {
+      return append(text, 0, text.length());
+    }
+
+    @Override public FileAppend.Wr append ( CharSequence csq, int start, int end ) {
+      try {
+        this.writer.append(csq, start, end);
+      } catch(IOException exc) {
+        this.error = kWriteError;
+      }
+      return this;
+    }
+
+    @Override public FileAppend.Wr append ( char c ) {
+      try {
+        this.writer.append(c);
+      } catch(IOException exc) {
+        this.error = kWriteError;
+      }
+      return this;
+    }
+    
+    
+  };
+  
+  
+  
   /**The OutputStreamWriter can't be used as superclass, because the file is able to open
    * only with calling constructor. 
    * Thats why all methods of OutputStreamWriter have to be wrapped here.
    */
-  protected OutputStreamWriter writer;
+  protected Wr writer;
   
   public static final int kFileNotFound = -1;
   
   public static final int kFileOpenError = -2;
   
+  public static final int kWriteError = -3;
+  
   public String sError;
   
+  private int error;
+  
   /**opens a file to write. 
-   * @param fileName Path to the file. To separate folder, a slash '/' should be used.
+   * Hint: You must not forget {@link #close()} on end of usage. 
+   * @param filePath Path to the file. To separate folder, a slash '/' should be used.
    *        But a backslash is also accepted. 
    *        An absolute path should be start either with slash
    *        or with a one-char drive specifier, following by ':/'.
+   *        The filePath can also contain environment variables due to {@link Arguments#replaceEnv(String)}.
+   *        and also can start with /tmp/ or ~ for home, see {@link FileFunctions#absolutePath(String, java.io.File)}.
    * @param append If the file exists, the content written than is appended.
    * @return 0 if the file is opened, -1 if the file is not found, -2 on other conditions.
    */
-  public int open(String fileName, boolean append)
+  @SuppressWarnings("resource") 
+  public int open(String filePath, boolean append)
   { int error = 0;
-    try
-    { writer = new OutputStreamWriter(new FileOutputStream(fileName, append)); 
+    try { 
+      String fileNameRepl = Arguments.replaceEnv(filePath);
+      String sName = FileFunctions.absolutePath(fileNameRepl, null); 
+      this.writer = new Wr(new FileOutputStream(sName, append)); 
     }
     catch(FileNotFoundException exc)
     { error = kFileNotFound; 
     }
     catch(Exception exc)
     { error = kFileOpenError;
-      sError = exc.getMessage(); 
+      this.sError = exc.getMessage(); 
     }
     return error;
   }
 
   /**opens a file to write. 
-   * @param fileName Path to the file. To separate folder, a slash '/' should be used.
+   * Hint: You must not forget {@link #close()} on end of usage. 
+   * @param filePath Path to the file. To separate folder, a slash '/' should be used.
    *        But a backslash is also accepted. 
-   *        Can contain environment variables, can start with /tmp/ or ~ for home, see {@link FileFunctions#absolutePath(String, java.io.File)}.
    *        An absolute path should be start either with slash
    *        or with a one-char drive specifier, following by ':/'.
+   *        The filePath can also contain environment variables due to {@link Arguments#replaceEnv(String)}
+   *        and also can start with /tmp/ or ~ for home, see {@link FileFunctions#absolutePath(String, java.io.File)}.
    * @param sEncoding character encoding for the binary file, "UTF-8" etc. 
    *   see {@link OutputStreamWriter#OutputStreamWriter(java.io.OutputStream, String)}
    * @param append If the file exists, the content written than is appended.
    * @return 0 if the file is opened, -1 if the file is not found, -2 on other conditions.
    */
+  @SuppressWarnings("resource") 
   public int open(String fileName, String sEncoding, boolean append)
   { int error = 0;
-  
-    String sName = FileFunctions.absolutePath(fileName, null); 
-    try
-    { writer = new OutputStreamWriter(new FileOutputStream(sName, append), sEncoding); 
+    try { 
+      String fileNameRepl = Arguments.replaceEnv(fileName);
+      String sName = FileFunctions.absolutePath(fileNameRepl, null); 
+      this.writer = new Wr(new FileOutputStream(sName, append), sEncoding); 
     }
     catch(FileNotFoundException exc)
     { error = kFileNotFound; 
     }
     catch(Exception exc)
     { error = kFileOpenError;
-      sError = exc.getMessage(); 
+      this.sError = exc.getMessage(); 
     }
     return error;
   }
 
   
   public boolean isOpen()
-  { return writer != null;
+  { return this.writer != null;
   }
   
-  public void close()
-  { if(writer != null)
-    { try{ writer.close(); }
+  @Override public void close()
+  { if(this.writer != null)
+    { try{ this.writer.writer.close(); }
       catch(IOException exc)
       { //ignore it. The file would never used from here. 
       }
-      writer = null; 
+      this.writer = null; 
     }
   }
   
   public void write(String text) throws IOException
-  { if(writer == null) throw new IOException("file isn't opend");
-    writer.write(text);
+  { if(this.writer == null) throw new IOException("file isn't opend");
+    this.writer.append(text);
   }
   
-  public void flush() throws IOException
-  { if(writer != null)
-    { writer.flush();
+  /**In opposite to the original {@link Writer#append(CharSequence)}
+   * this operation does not throw. Instead it does nothing on error,
+   * but the internal {@link #error} is set to {@value #kWriteError}, returned by {@link #getError()}.
+   * The original throw is catched here. 
+   * It is similar System.out.append(), the user does not need additional try, 
+   * An error is able to check for the whole output. 
+   */
+  @Override public FileAppend.Wr append(CharSequence text) {
+    return this.writer.append(text);   
+  }
+  
+  @Override public void flush() throws IOException
+  { if(this.writer != null)
+    { this.writer.writer.flush();
     }
   }
   
-  @Override
-  public void finalize()
+  /**Important: On garbage at least close() is called here to prevent resource leaks. */
+  @Override public void finalize()
   { close();
   }
 
 
-  @Override
-  public void write(char[] cbuf, int off, int len) throws IOException
-  {
-    if(writer == null) throw new IOException("file isn't opend");
-    writer.write(cbuf,off,len);
-    
+  public int getError() { return this.error; }
+  
+
+  @Override public Appendable append ( CharSequence csq, int start, int end ) throws IOException {
+    return this.writer.append(csq, start, end);
+  }
+
+  @Override public Appendable append ( char c ) throws IOException {
+    // TODO Auto-generated method stub
+    return this.writer.append(c);
   }
   
 }

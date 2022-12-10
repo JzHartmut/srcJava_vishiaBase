@@ -201,11 +201,11 @@
 2012-10-07 10:02:50  x     ExceptionInfo.java                       ::           .515 -0745834556 
 2022-11-13 21:20:24  x     LogMessage.java                          ::         19.795  2122884603 
 2022-11-13 21:24:35  x     LogMessageBase.java                      ::          3.260 -0673225974 
-2022-11-12 20:35:58  x     LogMessageFile.java                      ::         27.653 -0631351485 
+2022-12-05 08:59:14  x     LogMessageFile.java                      ::         27.653  1587416973 
 2022-11-12 21:32:54  x     LogMessageStream.java                    ::         10.546  1718704467 
 2014-12-20 21:54:27  x     MsgConfig.java                           ::         11.193 -1733151147 
 2014-12-18 22:51:24  x     MsgDispatchSystemOutErr.java             ::          5.869  1342572906 
-2016-12-21 16:20:43  x     MsgDispatcher.java                       ::         27.941 -0283338192 
+2022-12-05 08:59:14  x     MsgDispatcher.java                       ::         27.941 -0405855001 
 2022-11-12 20:34:29  x     MsgDispatcherCore.java                   ::         25.669  1838888747 
 2014-05-29 21:22:46  x     MsgPrintStream.java                      ::         19.456  0790745732 
 2013-03-24 21:17:00  x     MsgPrintStream_ifc.java                  ::           .111  0825089560 
@@ -252,8 +252,8 @@
 
 ============================== java/org/vishia/util/ ===============================================
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
-2022-11-18 22:38:47  x     ApplMain.java                            ::          1.991  1375569934 
-2022-11-24 22:29:25  x     Arguments.java                           ::         26.774  0166357965 
+2022-12-10 11:38:46  x     ApplMain.java                            ::          1.997 -0661883073 
+2022-12-10 11:22:18  x     Arguments.java                           ::         27.159  1795037050 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
 2022-05-11 10:24:43  x     CalculatorExpr.java                      ::        151.273  0467732730 
@@ -267,6 +267,7 @@
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2022-10-12 18:17:52  x     ExcUtil.java                             ::         15.804  1747642112 
+2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
 2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
 2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
 2022-11-19 21:04:59  x     FileFunctions.java                       ::         86.931  0186596813 
@@ -275,7 +276,7 @@
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
 2021-10-04 14:29:52  x     FileSet.java                             ::          6.497 -0807043280 
 2020-06-09 11:59:24  x     FileSystem.java                          ::          2.037 -1667764877 
-2022-01-21 12:37:10  x     FileWriter.java                          ::          6.747 -0148034173 
+2022-12-10 11:12:14  x     FileWriter.java                          ::          6.805  1282866233 
 2021-10-04 14:29:56  x     FilepathFilter.java                      ::         14.407  2118971474 
 2018-01-25 11:24:23  x     FilesToList.java                         ::          4.861  1950624767 
 2021-10-04 14:29:58  x     GetTypeToUse.java                        ::           .605  1887254405 
