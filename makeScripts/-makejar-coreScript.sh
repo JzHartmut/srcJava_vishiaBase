@@ -148,12 +148,13 @@ fi
 echo ===================================================================================
 if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
 
-if test -d tools; then export DSTJARDIR="tools"
+if test -v DSTJARDIR; then echo DSTJARDIR is set by calling script.
+elif test -d tools; then export DSTJARDIR="tools"
 elif test -d jars; then export DSTJARDIR="jars"
 elif test -d ../tools; then export DSTJARDIR="../tools"
 else mkdir jars; export DSTJARDIR="jars"
 fi
-echo ====== deploy to $DSTJARDIR ==============================================================
+echo ====== deploy to DSTJARDIR=$DSTJARDIR ==============================================================
 ##REM: It should be assumed that the file is correct. 
 ##REM It replaces the given in $DSTJARDIR to support more tests with the new jar without more effort.
 ##REM Only the jar file is copied. The rest is done by the deploy script.

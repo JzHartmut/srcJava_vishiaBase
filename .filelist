@@ -327,7 +327,7 @@
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2022-08-26 20:52:38  x     StringFormatter.java                     ::         49.792  0834878312 
 2022-05-23 18:13:34  x     StringFunctions.java                     ::         65.064 -2119370343 
-2022-03-16 10:56:58  x     StringFunctions_B.java                   ::         14.082  1161478632 
+2022-12-18 23:33:41  x     StringFunctions_B.java                   ::         17.051 -1454583448 
 2022-10-06 17:40:48  x     StringFunctions_C.java                   ::         27.380 -1750178226 
 2022-06-06 11:18:06  x     StringPart.java                          ::        137.434  1776684361 
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
@@ -400,7 +400,7 @@
 2022-12-10 13:07:30  x     +makejar_vishiaBase.sh                   ::          4.931 -0176890944 
 2022-12-10 13:01:57  x     -deployJar.sh                            ::          2.588  2120158065 
 2022-03-13 12:19:25  x     -genjavadocbase.sh                       ::          2.196  0325472742 
-2022-12-10 12:58:25  x     -makejar-coreScript.sh                   ::          7.937 -1090079157 
+2022-12-12 15:15:12  x     -makejar-coreScript.sh                   ::          8.017  0201379121 
 2021-06-28 23:34:15  x     JAVAC_HOME.sh                            ::          1.154 -1792697615 
 2022-09-17 16:20:31  x     Java2Xmi.jzcmd                           ::          4.373 -1492198453 
 2022-07-27 22:07:55  x     corrBom.jzTc                             ::          4.643 -0135911090 

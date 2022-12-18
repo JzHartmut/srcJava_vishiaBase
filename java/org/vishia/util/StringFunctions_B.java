@@ -8,6 +8,7 @@ public class StringFunctions_B
   
   /**Version, history and license.
    * <ul>
+   * <li>2022-12-18 Hartmut new {@link #convertBackslashChars(CharSequence)}
    * <li>2021-02-06 Hartmut new {@link #checkSameItem(String, CharSequence...)} and {@link #prepareCheckSameItem(String)}.
    *         This is newly used in the {@link org.vishia.stimuliSelector.StimuliSelector} in the script for selection.
    *         More ability. 
@@ -306,6 +307,76 @@ public class StringFunctions_B
       return dst;
     }
   }
+  
+  
+  /**Converts a backslash sequence to a appropriate character.
+   * It follows the familiar Java or C/++ conventions, but also additional the possibilities for all UTF16 character similar given also in C#
+   * Some replacements follow the C# conventions, see https://learn.microsoft.com/en-us/dotnet/standard/base-types/character-escapes-in-regular-expressions
+   * <table>
+   * <tr><td>\a</td><td>0x07 (bell)</td><td>C# convention</td></tr>
+   * <tr><td>\b</td><td>0x08 (backspace)</td><td>Java convention</td></tr>
+   * <tr><td>\cX</td><td>0x00..0x1f (X is the ASCII 0x40..7e, builds ctrl character)</td><td>C# convention, enhanced</td></tr>
+   * <tr><td>\e</td><td>0x1b (escape)</td><td>C# convention</td></tr>
+   * <tr><td>\f</td><td>0x0c (form feed, page break)</td><td>Java convention</td></tr>
+   * <tr><td>\n</td><td>0x0a (new line)</td><td>Java convention</td></tr>
+   * <tr><td>\r</td><td>0x0d (carriage return)</td><td>Java convention</td></tr>
+   * <tr><td>\t</td><td>0x09 (tab)</td><td>Java convention</td></tr>
+   * <tr><td>\ u</td><td>todo UTF</td><td>C# convention</td></tr>
+   * <tr><td>\x</td><td>0x00..FF (ASCII)</td><td>C# convention</td></tr>
+   * <tr><td>\}</td><td>0x5F, \ itself</td><td>Java convention</td></tr>
+   * </table>
+   * @param src
+   * @return
+   */
+  public static CharSequence convertBackslashChars(CharSequence src) {
+    StringBuilder ret = null;
+    CharSequence src1 = src;
+    int pos = 0;
+    int len = src1.length();
+    while (pos >=0 && pos < len) {
+      pos = StringFunctions.indexOf(src1, '\\', pos);
+      if(pos >=0) {
+        int nrChars = 2;
+        final char cc = pos < (len-1) ? src1.charAt(pos+1) : 0;
+        final char cReplace;
+        if(cc=='c') {
+          if(pos >= len-2) {
+            cReplace = 0;
+          } else {
+            final char cn = src1.charAt(pos+2);
+            nrChars = 3;
+            if(cn >='A' && cn <0x40) { cReplace = (char)(cn-0x60); }      //\cC is ctrl-C, \cZ is 0x1a, \c\ is 0x1f
+            else if(cn >='@' && cn <0x60) { cReplace = (char)(cn-0x80); } // same for lower chars
+            else cReplace = '\0';
+          }
+        } 
+        else if(cc=='u') {
+          //TODO
+          cReplace = 0;
+        } else {
+          int which = "\0abnrtfe\\".indexOf(cc);
+          if(which >=0) {
+            final char[] cReplaces = {'\0',(char)7, '\b','\n','\r','\t','\f', (char)0x1b, '\\',};
+            cReplace = cReplaces[which];
+          }
+          else {
+            cReplace = 0;   // not replaced
+          }
+        }
+        if(cReplace !=0) {
+          if(ret == null) { 
+            ret = new StringBuilder(src); 
+            src1 = ret;            // use up to now ret for process
+          }
+          ret.delete(pos, pos + nrChars -1);
+          ret.setCharAt(pos, cReplace);
+        }
+        pos += 1; //after replaced.
+      }
+    }
+    return ret==null? src: ret;
+  }
+  
   
   
   /**Converts the first character to lower case if it {@link Character#isUpperCase(char)} ('A'..'Z').
