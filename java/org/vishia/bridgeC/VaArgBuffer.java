@@ -45,7 +45,7 @@ public class VaArgBuffer
    *        In java it's unnecessary because Va_list always contains the type.
    * @param inputVaArgs
    */
-  public void copyFrom(String formatText, Va_list input)  //Object... inputVaArgs)
+  public void copyFrom(CharSequence formatText, Va_list input)  //Object... inputVaArgs)
   { int len = input.buffer.length;
     if(len > length)
     { throw new ArrayIndexOutOfBoundsException("too many arguments");

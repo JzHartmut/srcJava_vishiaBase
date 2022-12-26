@@ -14,6 +14,7 @@ import java.util.Date;
 
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
+import org.vishia.util.ExcUtil;
 
 /**This class adapts a given stream output channel to the LogMessage interface to output messages for example
  * to the System.out or System.err but also to an ordinary file.
@@ -162,10 +163,10 @@ public class LogMessageStream extends LogMessageBase
    * @param args see interface
    */
   @Override
-  public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args)
+  public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args)
   { String line = "?";
     try{
-      line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args.get());
+      line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), args.get());
     } catch(Exception exc){
       line = dateFormat.format(creationTime) + "; " + identNumber + "; " + text;
     }
@@ -210,20 +211,23 @@ public class LogMessageStream extends LogMessageBase
   }
 
   @Override
-  public boolean sendMsg(int identNumber, String text, Object... args) {
-    String line = dateFormat.format(new Date(System.currentTimeMillis())) + "; " + identNumber + "; " + String.format(text,args);
+  public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
+    CharSequence stackInfo = ExcUtil.stackInfo(" : ", 2, 1);
+    String line = dateFormat.format(new Date(System.currentTimeMillis())) 
+                + "; " + identNumber + "; " + String.format(text.toString(),args)
+                + stackInfo;
     try{ 
       byte[] b = line.getBytes(this.encoding);
       if(this.out1 !=null) {
         this.out1.write(b); 
-        this.out1.write(this.sNewLine);
+        //this.out1.write(this.sNewLine);
       }
       if(this.out2 !=null) {
         this.out2.write(b); 
-        this.out2.write(this.sNewLine);
+        //this.out2.write(this.sNewLine);
       }
       if(this.out3 !=null) {
-        this.out3.append(line).append('\n');
+        this.out3.append(line); //.append('\n');
       }
     }
     catch(IOException exc){ }
@@ -232,8 +236,8 @@ public class LogMessageStream extends LogMessageBase
 
   @Override
   public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime,
-      String text, Object... args) {
-    String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args);
+      CharSequence text, Object... args) {
+    String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), args);
     try{ 
       byte[] b = line.getBytes(this.encoding);
       if(this.out1 !=null) {

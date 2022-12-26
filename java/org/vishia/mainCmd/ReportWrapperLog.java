@@ -183,7 +183,7 @@ public class ReportWrapperLog implements Report
    *             The interpretation of the arguments is controlled by param text.
    * @return TODO
    */  
-  public boolean sendMsg(int identNumber, String text, Object... args)
+  public boolean sendMsg(int identNumber, CharSequence text, Object... args)
   { return log.sendMsg(identNumber, text, args);
   }
 
@@ -198,7 +198,7 @@ public class ReportWrapperLog implements Report
    *             The interpretation of the arguments is controlled by param text.
    * @return TODO
    */
-  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args)
+  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args)
   { return log.sendMsgTime(identNumber, creationTime, text, args);
   }
   
@@ -232,7 +232,7 @@ public class ReportWrapperLog implements Report
    *         and backup strategies are necessary 
    *         in the supervise software above sending a single message.           
    */
-  public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args){
+  public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args){
     return log.sendMsgVaList(identNumber, creationTime, text, args);
   }
 

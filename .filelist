@@ -19,7 +19,7 @@
 2021-10-04 14:29:58  x     MemUnit.java                             ::          1.678  0670242877 
 2021-10-04 14:29:50  x     OS_TimeStamp.java                        ::          4.048 -2145152333 
 2021-10-04 14:29:52  x     ThreadContextFW.java                     ::          1.900  1853195616 
-2013-02-27 21:05:10  x     VaArgBuffer.java                         ::          2.714  0477477172 
+2022-12-25 13:40:52  x     VaArgBuffer.java                         ::          2.720 -0399973182 
 2017-01-01 20:58:32  x     Va_list.java                             ::          3.645  1732196344 
 2012-03-17 08:57:20  x     package-info.java                        ::           .521  2072844694 
 
@@ -178,14 +178,14 @@
 
 ============================== java/org/vishia/mainCmd/ ============================================
 2021-10-04 14:29:51  x     FileWrite.java                           ::          2.095  0880975541 
-2022-11-13 20:33:07  x     MainCmd.java                             ::         93.134  1333916347 
-2022-11-13 21:22:34  x     MainCmdLoggingStream.java                ::         10.485  1070250625 
+2022-12-25 13:47:52  x     MainCmd.java                             ::         93.287  0623110350 
+2022-12-25 13:48:50  x     MainCmdLoggingStream.java                ::         10.527 -0276340602 
 2022-11-13 17:50:14  x     MainCmdLogging_ifc.java                  ::          4.714  0894393979 
 2014-05-29 14:56:39  x     MainCmd_ifc.java                         ::          9.334  0930852519 
 2021-10-04 14:29:56  x     PrintStreamAdapter.java                  ::          2.754  1398952394 
 2021-10-06 10:53:37  x     PrintStreamBuffer.java                   ::          5.261 -1940859745 
 2013-02-24 21:18:18  x     Report.java                              ::          2.856  0928115865 
-2022-11-13 21:23:24  x     ReportWrapperLog.java                    ::          8.368 -1618908840 
+2022-12-25 13:53:18  x     ReportWrapperLog.java                    ::          8.386 -1421168351 
 2016-11-27 21:16:15  x     SampleCmdLine.java                       ::         16.637 -1048205269 
 2012-03-17 08:57:20  x     package-info.java                        ::           .158  1302313651 
 
@@ -199,14 +199,14 @@
 
 ============================== java/org/vishia/msgDispatch/ ========================================
 2012-10-07 10:02:50  x     ExceptionInfo.java                       ::           .515 -0745834556 
-2022-11-13 21:20:24  x     LogMessage.java                          ::         19.795  2122884603 
+2022-12-26 11:16:52  x     LogMessage.java                          ::         20.163  0764035606 
 2022-11-13 21:24:35  x     LogMessageBase.java                      ::          3.260 -0673225974 
-2022-12-05 08:59:14  x     LogMessageFile.java                      ::         27.653  1587416973 
-2022-11-12 21:32:54  x     LogMessageStream.java                    ::         10.546  1718704467 
+2022-12-25 13:41:36  x     LogMessageFile.java                      ::         27.699  0313843396 
+2022-12-25 17:31:53  x     LogMessageStream.java                    ::         10.745 -0585055276 
 2014-12-20 21:54:27  x     MsgConfig.java                           ::         11.193 -1733151147 
 2014-12-18 22:51:24  x     MsgDispatchSystemOutErr.java             ::          5.869  1342572906 
 2022-12-05 08:59:14  x     MsgDispatcher.java                       ::         27.941 -0405855001 
-2022-11-12 20:34:29  x     MsgDispatcherCore.java                   ::         25.669  1838888747 
+2022-12-25 13:53:37  x     MsgDispatcherCore.java                   ::         25.728 -1988526208 
 2014-05-29 21:22:46  x     MsgPrintStream.java                      ::         19.456  0790745732 
 2013-03-24 21:17:00  x     MsgPrintStream_ifc.java                  ::           .111  0825089560 
 2021-10-04 14:29:51  x     MsgRedirectConsole.java                  ::          7.397 -0856512848 
@@ -266,7 +266,7 @@
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
-2022-10-12 18:17:52  x     ExcUtil.java                             ::         15.804  1747642112 
+2022-12-25 17:31:30  x     ExcUtil.java                             ::         15.830 -1959735649 
 2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
 2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
 2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
@@ -300,7 +300,7 @@
 2018-08-29 20:51:59  x     Num.java                                 ::          3.547 -0720113062 
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
-2022-11-20 16:45:08  x     ObjectVishia.java                        ::           .873 -0412469040 
+2022-12-25 11:00:01  x     ObjectVishia.java                        ::           .873 -0412469040 
 2021-10-04 14:29:50  x     OrderForList.java                        ::           .620  0011920407 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
 2022-07-29 13:45:10  x     OutTextPreparer.java                     ::         55.124  0360937670 

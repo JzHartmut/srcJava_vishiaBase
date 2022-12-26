@@ -331,7 +331,7 @@ public class MsgDispatcherCore extends LogMessageBase
    * @param args see interface
    * @java2c=stacktrace:no-param.
    */
-   @Override public final boolean  sendMsg(int identNumber, String text, Object... args)
+   @Override public final boolean  sendMsg(int identNumber, CharSequence text, Object... args)
    { /**store the variable arguments in a Va_list to handle for next call.
       * The Va_list is used also to store the arguments between threads in the MessageDispatcher.
       * @java2c=stackInstance.*/
@@ -347,7 +347,7 @@ public class MsgDispatcherCore extends LogMessageBase
     * @param args see interface
     * @java2c=stacktrace:no-param.
     */
-    @Override public final boolean  sendMsgTime(int identNumber, final OS_TimeStamp creationTime, String text, Object... args)
+    @Override public final boolean  sendMsgTime(int identNumber, final OS_TimeStamp creationTime, CharSequence text, Object... args)
     { /**store the variable arguments in a Va_list to handle for next call.
        * The Va_list is used also to store the arguments between threads in the MessageDispatcher.
        * @java2c=stackInstance.*/
@@ -364,7 +364,7 @@ public class MsgDispatcherCore extends LogMessageBase
    *        @java2c=zeroTermString.
    * @param args see interface
    */
-  @Override public final boolean sendMsgVaList(int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
+  @Override public final boolean sendMsgVaList(int identNumber, final OS_TimeStamp creationTime, CharSequence text, final Va_list args)
   {
     int dstBits = searchDispatchBits(identNumber);
     if(dstBits != 0)
@@ -398,7 +398,7 @@ public class MsgDispatcherCore extends LogMessageBase
         { /**write the informations to the entry, store it. */
           entry.dst = dstBitsForDispatcherThread;
           entry.ident = identNumber;
-          entry.text = text;
+          entry.text = text.toString();
           entry.timestamp.set(creationTime);
           entry.values.copyFrom(text, args);
           listOrders.offer(entry);
@@ -544,14 +544,14 @@ public class MsgDispatcherCore extends LogMessageBase
    * @return 0 if all destinations are processed, elsewhere dstBits with bits of non-processed dst.
    */
   protected final int dispatchMsg(int dstBits, boolean bDispatchInDispatcherThread, boolean bDispatchAlways
-      , int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
+      , int identNumber, final OS_TimeStamp creationTime, CharSequence text, final Va_list args)
   { //final boolean bDispatchInDispatcherThread = (dstBits & mDispatchInDispatcherThread)!=0;
     //assert, that dstBits is positive, because >>=1 and 0-test fails elsewhere.
     //The highest Bit has an extra meaning, also extract above.
     dstBits &= mDispatchBits;  
     int bitTest = 0x1;
     int idst = 0;
-    @Java4C.ZeroTermString String sTextMsg = text;  //maybe null if not used.
+    @Java4C.ZeroTermString CharSequence sTextMsg = text;  //maybe null if not used.
     boolean bMsgTextGotten = false;
     while(dstBits != 0 && bitTest < mDispatchBits) //abort if no bits are set anymore.
     { if(  (dstBits & bitTest)!=0 //test if this bit for output is set
@@ -567,7 +567,7 @@ public class MsgDispatcherCore extends LogMessageBase
         { if(!bMsgTextGotten && msgText !=null && channel.bUseText){
             bMsgTextGotten =true;
             sTextMsg =  msgText.getMsgText(identNumber);
-            if(sTextMsg ==null || sTextMsg.isEmpty()){
+            if(sTextMsg ==null || sTextMsg.length()==0 ) { //isEmpty()){
               sTextMsg = text;   //replace the input text if a new one is found.
             }
           }

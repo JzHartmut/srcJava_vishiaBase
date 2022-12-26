@@ -1614,7 +1614,7 @@ public abstract class MainCmd implements MainCmd_ifc
    *             The interpretation of the arguments is controlled by param text.
    * @return true if the message will be dispatched, false if it is suppressed
    */  
-  @Override public boolean sendMsg(int identNumber, String text, Object... args)
+  @Override public boolean sendMsg(int identNumber, CharSequence text, Object... args)
   { return redirectLogMessage.sendMsg(identNumber, text, args);
   }
 
@@ -1629,7 +1629,7 @@ public abstract class MainCmd implements MainCmd_ifc
    *             The interpretation of the arguments is controlled by param text.
    * @return true if the message will be dispatched, false if it is suppressed
    */
-  @Override public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args)
+  @Override public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args)
   { return redirectLogMessage.sendMsgTime(identNumber, creationTime, text, args);
   }
   
@@ -1663,7 +1663,7 @@ public abstract class MainCmd implements MainCmd_ifc
    *         and backup strategies are necessary 
    *         in the supervise software above sending a single message.           
    */
-  @Override public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args){
+  @Override public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args){
     return redirectLogMessage.sendMsgVaList(identNumber, creationTime, text, args);
   }
 
@@ -1727,7 +1727,7 @@ public abstract class MainCmd implements MainCmd_ifc
 
     
   final void sendMsgTimeToAppendableDst(Appendable dst, int identNumber, int reportLevel, OS_TimeStamp creationTime,
-      String text, Object... args) {
+      CharSequence text, Object... args) {
     Object[] argsArg = args;  
     String line;
     if(argsArg.length == 0){
@@ -1737,7 +1737,7 @@ public abstract class MainCmd implements MainCmd_ifc
         if(argsArg[0] instanceof Object[]){
           argsArg = (Object[])argsArg[0];
         }
-        line = dateFormatMsg.format(creationTime) + "; " + identNumber + "; " + String.format(text,argsArg);
+        line = dateFormatMsg.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), argsArg);
       } catch(IllegalFormatException exc){
         line = dateFormatMsg.format(creationTime) + "; FORMATEXCEPTION " + identNumber + "; " + text;
       }
@@ -1772,18 +1772,18 @@ public abstract class MainCmd implements MainCmd_ifc
     public boolean isOnline() { return true; }
 
     @Override
-    public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args) {
+    public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args) {
       Object oArgs = args.get();
       return sendMsgTime(identNumber, creationTime, text, oArgs);
     }
 
     @Override
-    public boolean sendMsg(int identNumber, String text, Object... args) {
+    public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
       return sendMsgTime(identNumber, OS_TimeStamp.os_getDateTime(), text, args);
     }
 
     @Override
-    public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args) {
+    public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args) {
       final int reportLevel = identNumber == 0 ? 
                                MainCmdLogging_ifc.info :
                                identNumber <= MainCmdLogging_ifc.fineDebug ? identNumber : MainCmdLogging_ifc.info;
@@ -1792,7 +1792,7 @@ public abstract class MainCmd implements MainCmd_ifc
       if(args.length == 0){
         line = dateFormatMsg.format(creationTime) + "; " + identNumber + "; " + text;
       } else {
-        line = dateFormatMsg.format(creationTime) + "; " + identNumber + "; " + String.format(text, args);
+        line = dateFormatMsg.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), args);
       }
       reportln(reportLevel, line);
       ///
@@ -1846,7 +1846,7 @@ public abstract class MainCmd implements MainCmd_ifc
 
     @Override
     public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime,
-      String text, Va_list args) {
+      CharSequence text, Va_list args) {
       if(args.size() ==0){
         return sendMsgTime(identNumber, creationTime, text);
       } else {
@@ -1856,12 +1856,12 @@ public abstract class MainCmd implements MainCmd_ifc
     }
 
     @Override
-    public boolean sendMsg(int identNumber, String text, Object... args) {
+    public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
       return sendMsgTime(identNumber, OS_TimeStamp.os_getDateTime(), text, args);
     }
 
     @Override
-    public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args) {
+    public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args) {
       final int reportLevel = identNumber == 0 ? 
                                MainCmdLogging_ifc.info :
                                identNumber <= MainCmdLogging_ifc.fineDebug ? identNumber : MainCmdLogging_ifc.info;
@@ -1909,18 +1909,18 @@ public abstract class MainCmd implements MainCmd_ifc
 
     @Override
     public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime,
-        String text, Va_list args) {
+        CharSequence text, Va_list args) {
       Object oArgs = args.get();
       return sendMsgTime(identNumber, creationTime, text, oArgs);
     }
 
     @Override
-    public boolean sendMsg(int identNumber, String text, Object... args) {
+    public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
       return sendMsgTime(identNumber, OS_TimeStamp.os_getDateTime(), text, args);
     }
 
     @Override
-    public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args) {
+    public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args) {
       final int reportLevel = identNumber == 0 ? 
                                MainCmdLogging_ifc.info :
                                identNumber <= MainCmdLogging_ifc.fineDebug ? identNumber : MainCmdLogging_ifc.info;
@@ -1963,29 +1963,29 @@ public abstract class MainCmd implements MainCmd_ifc
 
     @Override
     public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime,
-        String text, Va_list args) {
-      String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args.get());
+        CharSequence text, Va_list args) {
+      String line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), args.get());
       reportln(MainCmdLogging_ifc.info, line);
       return false;
     }
 
     @Override
-    public boolean sendMsg(int identNumber, String text, Object... args) {
+    public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
       return sendMsgTime(identNumber, OS_TimeStamp.os_getDateTime(), text, args);
     }
 
     @Override
     public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime,
-        String text, Object... args) {
+        CharSequence text, Object... args) {
       if(fReport != null)
       { String line = "*" + identNumber + "; " + dateFormat.format(creationTime) + "; ";
         fReport.writeln("");
         fReport.write(line);
         if(args.length == 0){
           //no arguments, no formatting!
-          line = text;  //may be more as one line, can contain %-character.
+          line = text.toString();  //may be more as one line, can contain %-character.
         } else {
-          line = String.format(text,args);
+          line = String.format(text.toString(),args);
         }
         fReport.write(line);  //may be more as one line.
       }

@@ -60,6 +60,9 @@ public interface LogMessage extends Appendable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-12-25 Hartmut chg: the log texts are now CharSequence, not String. This allows give a StringBuilder reference immediately.
+   *   For post processing also usual a CharSequence is sufficient. This is a refactoring in all message and log sources.
+   *   But it does not influence user sources. Note that a String is also a CharSequence. 
    * <li>2022-09-23 Hartmut new: Most of the operations from the {@link org.vishia.mainCmd.MainCmdLogging_ifc} are moved to this.
    *   It makes possible that some programs such as {@link org.vishia.zbnf.ZbnfParser} now uses the basically LogMessage
    *   instead the older and more complex MainCmdLogging_ifc. 
@@ -143,7 +146,7 @@ public interface LogMessage extends Appendable
    *             The interpretation of the arguments is controlled by param text.
    * @return true if the message will be dispatched, false if it is suppressed
    */  
-  public boolean sendMsg(int identNumber, String text, Object... args);
+  public boolean sendMsg(int identNumber, CharSequence text, Object... args);
 
   /**Sends a message.
    * 
@@ -156,7 +159,7 @@ public interface LogMessage extends Appendable
    *             The interpretation of the arguments is controlled by param text.
    * @return true if the message will be dispatched, false if it is suppressed
    */
-  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args);
+  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args);
   
 
   
@@ -189,7 +192,7 @@ public interface LogMessage extends Appendable
    *         and backup strategies are necessary 
    *         in the supervise software above sending a single message.           
    */
-  public abstract boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args);
+  public abstract boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args);
 
   
   /** Writes an info line.

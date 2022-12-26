@@ -349,7 +349,7 @@ public class LogMessageFile extends LogMessageBase
    * @param args see interface
    * @java2c=stacktrace:no-param.
    */
-   @Override public boolean  sendMsg(int identNumber, String text, Object... args)
+   @Override public boolean  sendMsg(int identNumber, CharSequence text, Object... args)
    { /**store the variable arguments in a Va_list to handle for next call.
       * The Va_list is used also to store the arguments between threads in the MessageDispatcher.
       * @java2c=stackInstance.*/
@@ -366,7 +366,7 @@ public class LogMessageFile extends LogMessageBase
     * @param args see interface
     * @java2c=stacktrace:no-param.
     */
-    @Override final public boolean  sendMsgTime(int identNumber, final OS_TimeStamp creationTime, String text, Object... args)
+    @Override final public boolean  sendMsgTime(int identNumber, final OS_TimeStamp creationTime, CharSequence text, Object... args)
     { /**store the variable arguments in a Va_list to handle for next call.
        * The Va_list is used also to store the arguments between threads in the MessageDispatcher.
        * @java2c=stackInstance.*/
@@ -386,7 +386,7 @@ public class LogMessageFile extends LogMessageBase
    * @param args see interface
    */
   @Override
-  public boolean sendMsgVaList(int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
+  public boolean sendMsgVaList(int identNumber, final OS_TimeStamp creationTime, CharSequence text, final Va_list args)
   {
     final boolean sent; 
     /**@java2c=dynamic-call. Internal reference in stack. */
@@ -516,7 +516,7 @@ public class LogMessageFile extends LogMessageBase
         { /**write the informations to the entry, store it. */
           entry.dst = 0;
           entry.ident = identNumber;
-          entry.text = text;
+          entry.text = text.toString();
           entry.timestamp.set(creationTime);
           entry.values.copyFrom(text, args);
           parkedOrders.offer(entry);
@@ -602,7 +602,7 @@ public class LogMessageFile extends LogMessageBase
    *             @pjava2c=zeroTermString.
    * @param args
    */
-  void writeInFile(int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
+  void writeInFile(int identNumber, final OS_TimeStamp creationTime, CharSequence text, final Va_list args)
   {
     /**@java2c=stackInstance, fixStringBuffer. */
     //@Java4C.
@@ -612,7 +612,7 @@ public class LogMessageFile extends LogMessageBase
     if(args.size() >0){
       /**@java2c=stackInstance. */
       final Formatter formatter = new Formatter(bufferFormat, localization);
-      try{ formatter.format(text, args.get());
+      try{ formatter.format(text.toString(), args.get());
   		} catch(IllegalFormatConversionException exc){
   			bufferFormat.append("error in text format: ").append(text);
   		} catch(IllegalFormatPrecisionException exc){

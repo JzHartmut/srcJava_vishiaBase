@@ -156,7 +156,7 @@ public class ExcUtil {
    * @param exc The exception, its getMessage() will be appended
    * @param firstLevel First level of stack. 0 is the routine where the exception is thrown, 1 the caller etc.
    * @param nrofLevels maximum of numbers of levels to show in stack. Use for example 10 to prevent to long lines if it may be deeper.
-   * @return A string in form of CharSequence. Use ...toString() to build a String if necessary.
+   * @return A string in form of CharSequence ended with newline (0x0a). Use ...toString() to build a String if necessary.
    */
   public static CharSequence exceptionInfo(CharSequence startText, Throwable exc
       , int firstLevel, int nrofLevels, boolean bWithExceptiontext){

@@ -295,14 +295,14 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
-  public boolean sendMsg(int identNumber, String text, Object... args)
+  public boolean sendMsg(int identNumber, CharSequence text, Object... args)
   { return sendMsgTime(identNumber, new OS_TimeStamp(System.currentTimeMillis()), text, args);
   }
 
   @Override
-  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, String text, Object... args)
+  public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args)
   {
-    String sline = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args);
+    String sline = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), args);
     try{ 
       if(out !=null) {
         out.write(sline.getBytes());
@@ -316,10 +316,10 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
-  public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, String text, Va_list args)
+  public boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args)
   { String line = "?";
     try{
-      line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text,args.get());
+      line = dateFormat.format(creationTime) + "; " + identNumber + "; " + String.format(text.toString(), args.get());
     } catch(Exception exc){
       line = dateFormat.format(creationTime) + "; " + identNumber + "; " + text;
     }
