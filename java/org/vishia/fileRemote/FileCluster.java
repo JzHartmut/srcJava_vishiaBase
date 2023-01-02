@@ -26,11 +26,11 @@ public class FileCluster
   /**Version, history and license.
    * <ul>
    * <li>2017-09-15 Hartmut chg: on {@link #getFile(CharSequence, CharSequence, boolean)}: If the file was not found in the index,
-   *   the new private {@link #createOrgetChild(String)} is invoked instead immediately creating a new FileRemote instance. 
+   *   the new private {@link #searchOrCreateDir(String)} is invoked instead immediately creating a new FileRemote instance. 
    *   That routine checks whether the parent is registered and whether the path describes a known FileRemote instance as child of parent.
    *   Then that instance is used and registered. Because that routine is invoked recursively, the root will be found. 
    *   Either that is known, or the root is registered yet, especially on start. For that, all existing FileRemote instances should be re-found, 
-   *   and never a new instance is created though on is exists.  
+   *   and never a new instance is created though one is exists.  
    * <li>2017-08-27 Hartmut chg: On {@link #getFile(CharSequence, CharSequence, boolean)} only {@link FileSystem#normalizePath(CharSequence)}
    *   is invoked. Not {@link FileSystem#getCanonicalPath(File)}: Reason: On this access the operation system's file system must not accessed.
    *   Only an existing {@link FileRemote} instance is searched and returned. Especially if a network directory is accessed and the
@@ -152,7 +152,7 @@ public class FileCluster
     int flagDir = sName == null ? FileRemote.mDirectory : 0;  //if name is not given, it is a directory. Elsewhere a file.
     dirCheck = idxPaths.search(sDir);
     if(dirCheck == null) { //nothing found, a path lesser then all other. for example first time if "C:/path" is searched whereby any "D:/path" are registered already.
-      dirCheck = createOrgetChild(sDir);
+      dirCheck = searchOrCreateDir(sDir);
       //dirCheck = new FileRemote(this, null, null, sDir, 0, 0, 0, 0, flagDir, null, true);
       //idxPaths.put(sDir, dirCheck);
     } else {
@@ -170,7 +170,7 @@ public class FileCluster
         //pathchild.append('/');
         dirCheck = dirCheck.subdir(pathchild);   //it calls this method recursively! It puts the directories. 
       } else { //other directory name, maybe shorter for ex. "path" vs. "path2" or "path1" vs. "path2".
-        dirCheck = createOrgetChild(sDir);
+        dirCheck = searchOrCreateDir(sDir);
         //dirCheck = new FileRemote(this, null, null, sDir, 0, 0, 0, 0, flagDir, null, true);
         //idxPaths.put(sDir, dirCheck);  //Note: parents of the new FileRemote are recognized.
       }
@@ -222,7 +222,18 @@ public class FileCluster
 
 
 
-  private FileRemote createOrgetChild(String sPath)
+  /**Searches a directory due to the given path. 
+   * If it is not found, then search the parent and creates the directory as FileRemote from the parent. 
+   * This is done recursively down till the root. At least the root is created.
+   * Either the directory is known, or created yet referred by the parent, 
+   * at least the root is created yet, especially on start. 
+   * For that, all existing FileRemote instances should be re-found, 
+   * and never a new instance is created though one is exists.  
+   * 
+   * @param sPath a directory path
+   * @return the existing or new created FileRemote instance.
+   */
+  private FileRemote searchOrCreateDir(String sPath)
   { FileRemote ret;
     int pos9 = sPath.lastIndexOf('/');
     assert(pos9 >=0);  //because it is an absolute path.
@@ -236,13 +247,13 @@ public class FileCluster
       String sParent = sPath.substring(0, pos9);
       FileRemote parent = getFile(sParent, null, true);
       if(parent ==null) {
-        parent = createOrgetChild(sParent);  //recursively
+        parent = searchOrCreateDir(sParent);  //recursively
       }
       if(parent == null) {
         parent = new FileRemote(this, null, null, sParent, 0, 0, 0, 0, FileRemote.mDirectory, null, true);
         idxPaths.put(sParent, parent);  //Note: parents of the new FileRemote are recognized.
       }
-      ret = parent.child(sPath.substring(pos9+1));  //creates the child if not found, or found the existing instance.
+      ret = parent.subdir(sPath.substring(pos9+1));  //creates the child if not found, or found the existing instance.
       idxPaths.put(sPath, ret);  //Note: parents of the new FileRemote are recognized.
     }
     return ret;

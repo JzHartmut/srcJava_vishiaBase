@@ -144,6 +144,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-01-02 Hartmut chg: {@link #fromFile(File)} and {@link #child(CharSequence, int, int, long, long, long)}:
+   *   Generally on creating a FileRemote it should not has any access to the file system, because it is remote.
+   *   This is now consequently realized. Till now only the PC file system was used, 
+   *   hence one access was usual not obviously. But on access to a non existing network drive, sometimes trouble occur.
+   *   For The.file.Commander the rule is: Do not access to resources in the graphic thread which are not guaranteed existing.
+   *   The graphic thread should never be delayed. This is now true (should be true).   
    * <li>2015-09-09 Hartmut bug: It marks too much directories with {@link FileMark#selectSomeInDir}, fix: algorithm. 
    * <li>2015-07-04 Hartmut chg: Values of flags {@link #mTested}, {@link #mShouldRefresh}, {@link #mRefreshChildPending}
    *   {@link #mThreadIsRunning} to the highest digit of int, to recognize for manual viewing. That flags should not used in applications.
@@ -622,18 +628,18 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           child = itsCluster.getFile(uPath, null, false);  //try to get the child from the cluster.
         } 
         else { //if(child == null){ //not found, not a pathchild/name 
-          if((flags & mDirectory)!=0){
-            child = itsCluster.getFile(uPath, null, false);  //create the instance.
-            child.length = length;
-            child.date = dateLastModified;
-            child.dateLastAccess = dateLastAccess;
-            child.dateCreation = dateCreation;
-            child.flags = flagNewFile;
-          } else {
+//          if((flags & mDirectory)!=0){
+//            child = itsCluster.getFile(uPath, null, false);  //create the instance.
+//            child.length = length;
+//            child.date = dateLastModified;
+//            child.dateLastAccess = dateLastAccess;
+//            child.dateCreation = dateCreation;
+//            child.flags = flagNewFile;
+//          } else {
             //it is a file, not a directory not found as child up to now, create a new instance:
             child = new FileRemote(itsCluster, device, dir1, pathchild1, length
                 , dateLastModified,dateCreation,dateLastAccess, flags, null, true);
-          }
+//          }
         }
       }
       if(pathchild !=null){
@@ -725,15 +731,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       long len = 0;
       long date = 0;
       int fileProps = 0;
-      if(src.exists()){ fileProps |= mExist; 
-        len = src.length();
-        date = src.lastModified();
-        if(src.isDirectory()){ fileProps |= mDirectory; }
-        if(src.canRead()){ fileProps |= mCanRead | mCanReadGrp | mCanReadAny; }
-        if(src.canWrite()){ fileProps |= mCanWrite | mCanWriteGrp | mCanWriteAny; }
-        if(src.canExecute()){ fileProps |= mExecute | mExecuteGrp | mExecuteAny; }
-        if(src.isHidden()){ fileProps |= mHidden; }
-      }
+//      if(src.exists()){ fileProps |= mExist; 
+//        len = src.length();
+//        date = src.lastModified();
+//        if(src.isDirectory()){ fileProps |= mDirectory; }
+//        if(src.canRead()){ fileProps |= mCanRead | mCanReadGrp | mCanReadAny; }
+//        if(src.canWrite()){ fileProps |= mCanWrite | mCanWriteGrp | mCanWriteAny; }
+//        if(src.canExecute()){ fileProps |= mExecute | mExecuteGrp | mExecuteAny; }
+//        if(src.isHidden()){ fileProps |= mHidden; }
+//      }
       FileRemoteAccessor accessor = getAccessorSelector().selectFileRemoteAccessor(src.getAbsolutePath()); 
       File dir1 = src.getParentFile();
       FileRemote dir, file;
