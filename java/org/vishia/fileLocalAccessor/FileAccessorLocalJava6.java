@@ -789,5 +789,10 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
     }
   };
 
+  @Override public void abortAll () {
+    // TODO Auto-generated method stub
+    
+  }
+
   
 }

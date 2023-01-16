@@ -350,6 +350,19 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
   }
   
   
+  
+  protected void abortAllOrders ( ) {
+    copyAbort();
+    if(this.copyOrder !=null) {
+      Debugutil.stop();
+      this.copyOrder = null;
+    }
+    // send a proper event for the statesCopy
+    //this.statesCopy.stateTop. = States.Ready;
+    this.checkedOrders.clear();
+    this.copyOrders.clear();
+  }
+  
   /**Delegates all events to {@link #statesCopy}.
    */
   @Override public int processEvent(EventObject ev){ 

@@ -903,15 +903,17 @@ public class StringFunctions {
     return lastIndexOf(sq, 0, Integer.MAX_VALUE, ch);
   }
 
-  /**Searches the last occurrence of the given char in a CharSequence.
-   * It is the adequate functionality like {@link java.lang.String#lastIndexOf(char, fromEnd)}. 
+  
+  
+  /**Searches the last occurrence of one of the given chars in a CharSequence.
    * @param sq Any sequence
    * @param from range, it ends searching on from
    *   if from < 0 it throws IndexOutOfBoundsException
-   * @param to if > sq.length() uses sq.length(), it starts searching on to-1
+   * @param to start backward from here 
+   *   if > sq.length() starts from end as well as to = -1
    *   if to < from then returns -1 always.
-   *   if to < 0 then returns 
-   * @param chars to search
+   *   if to < 0 then starts from end - to, use to = -1 to start from end to = -2 to start one for end
+   * @param chars to search for
    * @return -1 if not found, elsewhere the position inside sq, >=fromIndex and < to 
    * @throws IndexOutOfBoundsException if from < 0 or to < 0
    */
@@ -919,8 +921,29 @@ public class StringFunctions {
     int zsq = sq.length();
     int ii = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) ;  //ii is negative if to is left from fromIndex
     if(from <0) throw new IndexOutOfBoundsException("StringFunctions.lastIndexOfAnyChar - form <0; " + from);
-    while(--ii >= from && indexOf(chars, sq.charAt(ii))<0) {} //pre-decrement.
+    while(--ii >= from && indexOf(chars, sq.charAt(ii))<0); //pre-decrement.
     return ii >= from? ii+1 : -1;  //not found;
+  }
+  
+
+  /**Searches the last occurrence in a CharSequence of any char which is not given in chars.
+   * @param sq Any sequence
+   * @param from range, it ends searching on from
+   *   if from < 0 it throws IndexOutOfBoundsException
+   * @param to start backward from here 
+   *   if > sq.length() starts from end as well as to = -1
+   *   if to < from then returns -1 always.
+   *   if to < 0 then starts from end - to, use to = -1 to start from end to = -2 to start one for end
+   * @param chars to search for, for example " \t\n\r" to search the last non-whitespace chararcter
+   * @return -1 if not found, elsewhere last position inside sq, >=fromIndex and < to which is not a char from chars 
+   * @throws IndexOutOfBoundsException if from < 0 or to < 0
+   */
+  public static int lastIndexOfNoChar(CharSequence sq, int from, int to, CharSequence chars){
+    int zsq = sq.length();
+    int ii = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) ;  //ii is negative if to is left from fromIndex
+    if(from <0) throw new IndexOutOfBoundsException("StringFunctions.lastIndexOfAnyChar - form <0; " + from);
+    while(--ii >= from && indexOf(chars, sq.charAt(ii))>=0); //pre-decrement.
+    return ii >= from? ii : -1;  //not found;
   }
   
 

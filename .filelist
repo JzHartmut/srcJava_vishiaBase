@@ -129,19 +129,19 @@
 2020-10-31 22:20:03  x     Execode.java                             ::          7.808  0335069824 
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
-2020-03-31 15:45:21  x     FileAccessorLocalJava6.java              ::         30.137 -1618816760 
-2021-10-04 14:29:48  x     FileAccessorLocalJava7.java              ::         59.369 -0850001827 
-2021-10-04 14:29:49  x     FileLocalAccessorCopyStateM.java         ::         53.413  0305633334 
+2023-01-12 11:45:38  x     FileAccessorLocalJava6.java              ::         30.224 -0479903772 
+2023-01-12 11:44:05  x     FileAccessorLocalJava7.java              ::         59.443  0344485503 
+2023-01-12 12:17:36  x     FileLocalAccessorCopyStateM.java         ::         53.724  1898359602 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2022-10-22 14:12:16  x     FileAccessZip.java                       ::         16.911  1209284670 
+2023-01-12 11:45:26  x     FileAccessZip.java                       ::         17.000 -0407303142 
 2023-01-02 16:27:21  x     FileCluster.java                         ::         23.583  1926694705 
 2021-10-04 14:29:52  x     FileMark.java                            ::          8.985 -1421367665 
-2023-01-02 19:05:55  x     FileRemote.java                          ::        151.559 -0300166446 
-2020-03-31 15:44:14  x     FileRemoteAccessor.java                  ::         13.806 -1572962593 
+2023-01-12 11:44:40  x     FileRemote.java                          ::        151.582 -0991324067 
+2023-01-12 11:44:12  x     FileRemoteAccessor.java                  ::         13.914 -0701367458 
 2021-10-04 14:29:48  x     FileRemoteCallback.java                  ::           .507 -1980823866 
 2021-10-04 14:29:58  x     FileRemoteCallbackCmp.java               ::         18.364 -1465418742 
 2021-10-04 14:29:49  x     FileRemoteCallbackCopy.java              ::          5.606  0993778788 
@@ -326,8 +326,8 @@
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2022-08-26 20:52:38  x     StringFormatter.java                     ::         49.792  0834878312 
-2022-05-23 18:13:34  x     StringFunctions.java                     ::         65.064 -2119370343 
-2022-12-18 23:33:41  x     StringFunctions_B.java                   ::         17.051 -1454583448 
+2023-01-16 20:14:03  x     StringFunctions.java                     ::         66.308  0730118049 
+2023-01-16 20:16:57  x     StringFunctions_B.java                   ::         17.952  0790867183 
 2022-10-06 17:40:48  x     StringFunctions_C.java                   ::         27.380 -1750178226 
 2022-06-06 11:18:06  x     StringPart.java                          ::        137.434  1776684361 
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 

@@ -456,6 +456,13 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   {
     //TODO
   }
+
+
+
+  @Override public void abortAll () {
+    // TODO Auto-generated method stub
+    
+  }
   
 
   

@@ -601,7 +601,9 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
 
   @Override public CharSequence getStateInfo(){ return states.getStateInfo(); }
   
-  
+  @Override public void abortAll ( ) {
+    this.states.abortAllOrders();
+  }
   
   /**Creates an CmdEvent if necessary, elsewhere uses the opponent of the given evBack and occupies it.
    * While occupying the Cmdevent is completed with the destination, it is {@link #executerCommission}.

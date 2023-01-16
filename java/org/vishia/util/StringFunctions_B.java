@@ -71,6 +71,25 @@ public class StringFunctions_B
   }
 
 
+  public static CharSequence removeLeadingTrailingWhiteSpacesAndQuotation(CharSequence src, char cQuotation) {
+    int len = src.length();
+    int posStart = StringFunctions.indexNoWhitespace(src, 0, -1);
+    int posEnd = StringFunctions.lastIndexOfNoChar(src, posStart, -1, " \r\n\t\f") +1;  // len or first whitespace
+    if(posStart < posEnd) {
+      if(src.charAt(posStart) == cQuotation && src.charAt(posEnd-1) == cQuotation && (posEnd - posStart) >=2) {
+        return src.subSequence(posStart+1, posEnd-1);      // .."return text" ... between the quotation
+      } else {
+        if(posStart ==0 && posEnd == len) {
+          return src;                                      // no whitespaces, no quotation, returns the original.
+        } else {
+          return src.subSequence(posStart, posEnd);        // ..return text ..., quotation not found
+        }
+      }
+    }
+    return src;
+  }
+
+
   
   /**Cleans a text which may be parsed or such, remove undesired indentation and replace the line end characters. 
    * @param src Any source String with indentation

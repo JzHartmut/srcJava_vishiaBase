@@ -220,6 +220,9 @@ public abstract class FileRemoteAccessor implements Closeable
   
   public abstract CharSequence getStateInfo();
   
+  /**Abort currently running and saved copy, check etc. actions. */
+  public abstract void abortAll ( );
+  
   
   /**This class offers a Thread especially for {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, FileFilter, int, CallbackFile)}
    * which can be use for devices which can evaluate the files by immediately system calls without communication but with maybe waiting for response.

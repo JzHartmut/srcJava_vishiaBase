@@ -2543,6 +2543,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * 
    */
   public void abortAction(){
+    device.abortAll();
     CmdEvent ev = device.prepareCmdEvent(500, null);
     ev.filesrc = this;
     ev.filedst = null;
