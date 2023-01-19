@@ -922,7 +922,7 @@ public class StringFunctions {
     int ii = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) ;  //ii is negative if to is left from fromIndex
     if(from <0) throw new IndexOutOfBoundsException("StringFunctions.lastIndexOfAnyChar - form <0; " + from);
     while(--ii >= from && indexOf(chars, sq.charAt(ii))<0); //pre-decrement.
-    return ii >= from? ii+1 : -1;  //not found;
+    return ii >= from? ii : -1;  //not found;
   }
   
 
