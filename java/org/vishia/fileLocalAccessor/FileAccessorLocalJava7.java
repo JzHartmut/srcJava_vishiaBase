@@ -655,6 +655,7 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
       File fileRenamed = new File(co.filesrc.getParent(), co.newName());
       ok &= co.filesrc.renameTo(fileRenamed);
       dst = FileRemote.fromFile(co.filesrc.itsCluster, fileRenamed);
+      dst.refreshProperties(null);
     } else {
       dst = co.filesrc;
     }
@@ -724,7 +725,7 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     int chg = maskFlags;
     int mask = 1;
     while(mask !=0){
-      if((chg & mask)!=0){ 
+      if((chg & mask & maskFlags)!=0){ 
         if(!chgFile1(dst, mask, newFlags)){
           ok = false;
         }

@@ -130,7 +130,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-01-12 11:45:38  x     FileAccessorLocalJava6.java              ::         30.224 -0479903772 
-2023-01-12 11:44:05  x     FileAccessorLocalJava7.java              ::         59.443  0344485503 
+2023-01-21 23:38:01  x     FileAccessorLocalJava7.java              ::         59.490 -1837079129 
 2023-01-12 12:17:36  x     FileLocalAccessorCopyStateM.java         ::         53.724  1898359602 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
@@ -140,7 +140,7 @@
 2023-01-12 11:45:26  x     FileAccessZip.java                       ::         17.000 -0407303142 
 2023-01-02 16:27:21  x     FileCluster.java                         ::         23.583  1926694705 
 2021-10-04 14:29:52  x     FileMark.java                            ::          8.985 -1421367665 
-2023-01-12 11:44:40  x     FileRemote.java                          ::        151.582 -0991324067 
+2023-01-21 23:18:37  x     FileRemote.java                          ::        152.505  1085265823 
 2023-01-12 11:44:12  x     FileRemoteAccessor.java                  ::         13.914 -0701367458 
 2021-10-04 14:29:48  x     FileRemoteCallback.java                  ::           .507 -1980823866 
 2021-10-04 14:29:58  x     FileRemoteCallbackCmp.java               ::         18.364 -1465418742 

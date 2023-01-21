@@ -1407,7 +1407,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   public void setFileObject(Object oFile){ this.oFile = oFile; }
   
-  public int getFlags(){ return flags; }
+  public int getFlags ( ){ return flags; }
   
   
   @Override public String getName(){ return sFile; }
@@ -1690,6 +1690,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return sFile.equals("/");
   }
   
+  /**true if due to Java orientation to the file system the file is not read only.
+   * it follows {@link File#canWrite()}
+   */
   @Override public boolean canWrite(){ 
     if((flags & mTested) ==0){
       //The children are not known yet, get it:
@@ -1703,7 +1706,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  @Override public boolean canRead(){ 
+  /**true if due to Java orientation to the file system the file is readable (visible).
+   * it follows {@link File#canRead()}
+   */
+  @Override public boolean canRead ( ){ 
     if((flags & mTested) ==0){
       //The children are not known yet, get it:
       if(device == null){
@@ -1714,7 +1720,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return (flags & mCanRead) !=0; 
   }
   
-  @Override public boolean canExecute(){ 
+  /**true if due to Java orientation to the file system the file is executable.
+   * it follows {@link File#canExecute()}
+   */
+  @Override public boolean canExecute ( ){ 
     if((flags & mTested) ==0){
       //The children are not known yet, get it:
       if(device == null){
@@ -1724,6 +1733,23 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     return (flags & mExecute) !=0; 
   }
+  
+  
+  /**Return the flags of the file after tested with file system itself.
+   * This operation may use more time if access to the file system is necessary.
+   * @return the flags, see {@link #mCanRead} etc.
+   */
+  public int getFlagsTested ( ) {
+    if((flags & mTested) ==0){
+      //The children are not known yet, get it:
+      if(device == null){
+        device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+      }
+      device.refreshFileProperties(this, null);
+    }
+    return flags; 
+  }
+  
   
   public boolean isSymbolicLink(){ 
     if((flags & mTested) ==0){
