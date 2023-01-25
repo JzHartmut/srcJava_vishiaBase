@@ -50,6 +50,7 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-01-25 Hartmut new {@link WildcardFilter} now in test, was never used before.  
    * <li>2022-01-18 Hartmut new {@link #newFile(String)} regards System.getProperty("user.dir") set by change dir in {@link org.vishia.jztxtcmd.JZtxtcmd}.
    *   should be used overall instead new File(String).
    * <li>2022-01-18 Hartmut enhancement: {@link #absolutePath(String, File)} now resolves also environment variables in the path. 
@@ -155,7 +156,7 @@ public class FileFunctions {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2016-01-17";
+  public final static String sVersion = "2023-01-25";
 
   public interface AddFileToList
   {
@@ -1697,60 +1698,408 @@ public class FileFunctions {
    *   The difference may be marginal.But {@link java.io.File#list(FileFilter)} produces some more instances in the heap,
    *   which are unnecessary. 
    */
-  private static class WildcardFilter implements FilenameFilter
-  {
-    private final String sBefore, sBehind, sContain;
+  public static class WildcardFilter extends ObjectVishia implements FilenameFilter {
+
+    /**This is the next part in the original path between /child/*/
+    public final WildcardFilter afilterChild;
+
+    private final String sBegin, sContain, sEnd;
+    
+    int zBegin, zContain, zEnd;
     
     /**True if the filter path on ctor has contained "**". Then apply the filter on subdirs too. */
-    private final boolean bAllTree;
+    public final boolean bAllTree;
     
-    /**True if the filter path on ctor was "**". Then accept all directory entries. */
-    private final boolean bAllEntries;
+    private final boolean bNoWildcard;
+    
+    /**Variants either instead sBefore or instead sBehind. 
+     * 
+     */
+    List<String> variantsBegin, variantsEnd;
+    
+    /**up to 32 bit for negation of variants, bit 0 for first text etc.*/
+    boolean bNotBegin, bNotEnd;
+    
+    
+    /**This list is not null if more as one varieties are exsiting,
+     * separated by [var1|var2]
+     */
+    //List<WildcardFilter> filterVariety;
+    
+    //WildcardFilter afterVarieties;
 
-    public WildcardFilter(String sMask)
-    { 
-      bAllEntries = sMask.equals("**");
-      if(bAllEntries){
-        bAllTree = true;
-        sBefore = sBehind = sContain = null;
-      } else {
-        int len = sMask.length();
-        int pos1 = sMask.indexOf('*');
-        int pos1a;
-        bAllTree = pos1 <= len-2 && sMask.charAt(pos1+1) == '*';
-        if(bAllTree){
-          pos1a = pos1 +1;
-          
-        } else {
-          pos1a = pos1;
+    /**Creates a WildcardFilter for one level. 
+     * <br>
+     * <b>Basic wildcard features:</b>
+     * 
+     * <table>
+     * <tr><td><code>fix</code></td>
+     *   <td>The filter accepts only this name</td></tr>
+     * <tr><td><code>begin*</code></td>
+     *   <td>The filter accepts names starting with "begin" and "begin" itself.
+     *   <br>Familiar example: "myfile.*", all files with this name and any extension. 
+     *   Or "myFile.c*" accepts also "myFile.cpp", but also for example "myFile.ci" if given. </td></tr>
+     * <tr><td><code>*end</code></td>
+     *   <td>The filter accepts names ending with "end" and "end" itself.
+     *   Familiar example: "*.cpp", all files with extension "cpp"
+     * <tr><td><code>begin*end</code></td>
+     *   <td>The filter accepts names starting with "begin" and ending with end after before.
+     *   <br>Familiar examples: "file*.cpp": All files starting with "file" with extension ".cpp"</td></tr>
+     * <tr><td><code>begin*mid*end</code></td>
+     *   <td>The filter accepts names starting with "begin", ending with end after before
+     *   and containing "mid" between "begin" and "end".
+     *   <br>Familiar examples: "file*.cpp": All files starting with "file" with extension ".cpp"</td></tr>
+     * <tr><td><code>begin*mid*</code></td>
+     *   <td>The filter accepts names starting with "begin" and containing "mid" after "begin".
+     *   <br>Familiar examples: "file*.c*": All files starting with "file" with extension ".c" but also ".cpp"
+     *   <br>This is a special case of <code>begin*mid*end</code>.</td></tr>
+     * <tr><td><code>*mid*</code></td>
+     *   <td>The filter accepts names which contains "mid" but also only "mid".
+     *   <br>Familiar examples: "*.c*": All fileswith extension ".c" but also ".cpp"
+     *   <br>This is a special case of <code>begin*mid*end</code>.</td></tr>
+     * <tr><td><code>*</code></td>
+     *   <td>The filter accepts all names, returns always true.</tr></td>
+     * </table>
+     * Generally two wildcards are accepted in the mask.
+     * <br>
+     * <b>bAlltree: Two <code>**</code></b>
+     * <br>General if the first asterisk is written twice, it means the same mask is used also for the next level,
+     * especially child on a file path. Only if it does not match, the next {@link #afilterChild} is used.
+     * <br>Some examples (applicable for all <code>*</code>)
+     * <table>
+     * <tr><td><code>**</code></td>
+     *   <td>The filter accepts all names, returns always true.
+     *   This stands for any deepness of a directory tree till the following child pattern does also match. 
+     *   It means the child pattern is tested. If it does match, it (and the following children) is used for further checking. 
+     *   If the child pattern does not match, matching is true and the child pattern is not used for this level. 
+     *   </td></tr>
+     * <tr><td><code>begin**</code></td>
+     *   <td>The filter accepts names starting with "begin" and "begin" itself. 
+     *   <br>It the next level starts also with begin, it is preconditional.
+     *   But nevertheless the next child level is checked. If it matches, it is used. 
+     * <tr><td><code>begin**mid*end</code></td>
+     *   <td>It is similar for all other wildcard variants.
+     *   <br><b>Note: The <code>"**"</code> must be written on the first wildcard position.</td></tr>
+     * </table>
+     * <br>
+     * <b>variants given</b>
+     * <br>Variants are written in <code>[var1|var2]</code> for positive variants 
+     * for the <code>begin</code> and <code>end</code> parts or as part of them between the wildcards.
+     * <br> and written as <code>~[var1|var2]</code> for negative variants. 
+     * Then not only one given string for <code>begin</code> and <code>end</code> are valid (matching)
+     * but either one of the possible, or all Strings exclusively the given. Look on examples:
+     * <table>
+     * <tr><td><code>[dirA|dirB]</code></td>
+     *   <td>The filter accepts only this both names</td></tr>
+     * <tr><td><code>*~[bak|old]</code></td>
+     *   <td>The filter does not accept names ending with this both
+     *   <br>Note: Either a positive or a negative variant choice is possible. Both is nonsense.</td></tr>
+     * <tr><td><code>[dirA|dirB]*</code></td>
+     *   <td>The filter accepts names starting with "dirA" or "dirB". After them the name can be continued.
+     *   <br>Example: "[back|old]*", all names starting with "back" or "old"</td></tr>
+     * <tr><td><code>*~[bak|old]</code></td>
+     *   <td>The filter does not accept names ending with this both
+     *   <br>Note: Either a positive or a negative variant choice is possible. Both is nonsense.</td></tr>
+     * <tr><td><code>*.[c|cpp]</code></td>
+     *   <td>The filter accepts names ending with ".c" or ".cpp".
+     *   This is the better possibility instead <code>*.c*</code> to accept C and C++ files.
+     *   <br>Note: The list to check {@link #variantsEnd} contains "<code>.c</code>" and "<code>.cpp</code>",
+     *   the complete text. 
+     *   The writing style with the "<code>.</code>" outside of the variants is only an abbreviation for writing. </td></tr>
+     * </table>
+     * For usage see also {@link FileFunctions#createWildcardFilter(String)} for a whole path
+     * and see {@link #accept(File, String)}.
+     * @param sMask mask due to given examples
+     * @param filterChild null or a child filter for the next level. 
+     */
+    public WildcardFilter ( String sMask, WildcardFilter filterChild) { 
+      int pos1 = sMask.indexOf('*');
+      int pos2 = sMask.lastIndexOf('*');
+      int zMask = sMask.length();
+      this.afilterChild = filterChild;
+      //
+      this.bNoWildcard = pos1 <0;
+      if(this.bNoWildcard) {
+        pos1 = zMask;
+      }
+      int posBracket = sMask.indexOf('[');
+      if(posBracket >=0 && (posBracket < pos1 || pos1 <0)) { // variants before first '*'
+        if(posBracket >0 && sMask.charAt(posBracket-1)=='~') {
+          this.bNotBegin = true;
         }
-        int pos2 = sMask.lastIndexOf('*');
-        //
-        if(pos1 >0){ sBefore = sMask.substring(0, pos1); }
-        else { sBefore = null; }
-        //
-        if(pos2 < len){ sBehind = sMask.substring(pos2+1); }  // "*behind", "before*behind", "before*contain*behind"
-        else { sBehind = null; }                             // "*", "before*", "before*contain*", "*contain*"
-        //
-        if(pos2 > pos1a){ sContain = sMask.substring(pos1+1, pos2); }  //Note: pos2 == pos1 if only one asterisk.
-        else { sContain = null; }
+        this.variantsBegin = new LinkedList<String>();
+        this.sBegin = parseVariants(sMask.substring(0, pos1), posBracket, this.variantsBegin);
+        this.zBegin = posBracket;
+      }
+      else if(pos1 >=0) {                                  // "before*" but without [
+        this.sBegin = sMask.substring(0, pos1);
+        this.zBegin = pos1;                               
+      } else {
+        this.sBegin = sMask;
+        this.zBegin = zMask;
+      }
+      //
+      
+      if(pos1 <= zMask -2 && sMask.charAt(pos1 +1) == '*') {
+        this.bAllTree = true;                      // "...**..."
+        pos1 +=1;
+      } else {
+        this.bAllTree = false;
+      }
+      //
+      if(pos2 >=0 && pos2 < zMask) {                                   // "....*behind"
+        posBracket = sMask.indexOf('[', pos2);
+        if(posBracket >=0) { // variants before first '*'
+          if(posBracket >0 && sMask.charAt(posBracket-1)=='~') {
+            this.bNotEnd = true;
+          }
+          this.variantsEnd = new LinkedList<String>();
+          this.sEnd = parseVariants(sMask.substring(pos2+1), posBracket, this.variantsEnd);
+          this.zEnd = this.sEnd.length();
+        }
+        else {                                  // "before*" but without [
+          this.sEnd = sMask.substring(pos2+1);
+          this.zEnd = zMask - pos2 -1;                               
+        }
+      } else {
+        this.variantsEnd = null;
+        this.sEnd = null;
+        this.zEnd = 0;
+      }
+      //
+      this.zContain = pos2 - pos1 -1;            // "....**contain*...."
+      if(this.zContain >0) {
+        this.sContain = sMask.substring(pos1+1, pos2);
+      } else {
+        this.sContain = null;
+      }
+//      
+//      
+//      
+//        this.bAllEntries = sMask.equals("**");
+//        this.bNot = sMask.startsWith("~");
+//        int pos0 = this.bNot ? 1 : 0;
+//        if(this.bAllEntries){
+//          this.bAllTree = true;
+//          this.sBefore = this.sBehind = this.sContain = null;
+//        } else {
+//          int len = sMask.length();
+//          int pos1a;
+//          this.bAllTree = pos1 <= len-2 && sMask.charAt(pos1+1) == '*';   //before**between*end also possible
+//          if(this.bAllTree) {
+//            pos1a = pos1 +1;
+//            
+//          } else {
+//            pos1a = pos1;
+//          }
+//          //
+//          if(pos1 <0) {
+//            this.sBefore = sMask.substring(pos0);
+//            this.zBefore = sMask.length() - pos0;
+//            this.sBehind = null;
+//            this.sContain = null;
+//          } else {
+//            this.sBefore = sMask.substring(pos0, pos1);     // sBefore*...
+//            this.zBefore = pos1 - pos0;
+//            //
+//            if(pos2 < len -1) { 
+//              this.sBehind = sMask.substring(pos2+1);        // "*behind"
+//              this.zBehind = sMask.length()-pos2-1;
+//            } else { 
+//              this.sBehind = "";                             // "...*" 
+//            }                             // "*", "before*", "before*contain*", "*contain*"
+//            //
+//            if(pos2 > pos1a){                                // "*sContain*"
+//              this.sContain = sMask.substring(pos1a+1, pos2); 
+//              this.zContain = pos2 - pos1a -1;
+//            } else { 
+//              this.sContain = null; 
+//            }
+//          }
+//      }
+    }
+
+    
+    private static String parseVariants(String sPart, int posBracket, List<String> list) {
+      int posEndBracket = sPart.indexOf(']');
+      String sPart1 = sPart.substring(0, posBracket);
+      String sPart2;
+      if(posEndBracket <0) { 
+        posEndBracket = sPart.length(); 
+        sPart2 = "";
+      } else {
+        sPart2 = sPart.substring(posEndBracket+1);
+      }
+      int posVariety = posBracket +1;                    // check [variety|...
+      while(posVariety < posEndBracket) {                // do not enter if no [ or ] found.  
+        int posEndVariety = sPart.indexOf('|', posVariety);
+        if(posEndVariety <0) { posEndVariety = posEndBracket; }
+        String sVariant = sPart1 + sPart.substring(posVariety, posEndVariety) + sPart2;
+        list.add(sVariant);
+        posVariety = posEndVariety +1;
+      }
+      return sPart1 + "*" + sPart2;
+    }
+    
+    
+    
+    
+    
+    public WildcardFilter nextChild () {
+      return this.afilterChild;
+    }
+    
+
+    /**Checks whether the name matches due to this filter. 
+     * It checks only this level, not {@link #nextChild()} and also not a path separated with '/' or '\'.
+     * See FileFunctions#checkPathTODO
+     */
+    @Override public boolean accept(File dir, String name) { 
+      int zName = name.length();
+      int posEndBefore = this.zBegin;
+      int posStartBehind = zName - this.zEnd;
+      if(this.zBegin > posStartBehind) {
+        return false;                                      // name is to short for the mask sBefore*sBehind
+      } else {
+        if(this.variantsBegin !=null) {
+          boolean bOkBefore = true;
+          for(String sBefore: this.variantsBegin) {
+            if(name.startsWith(sBefore)) {
+              if(this.bNotBegin) {
+                return false;                              // false if variantBefore matches but with not
+              } else {
+                bOkBefore = true;                          // a matching sBefore found in list.
+                posEndBefore = sBefore.length();
+                break;
+              }
+            } else if(!this.bNotBegin) {
+              bOkBefore = false;                           // at least one positive variant not found, a positive variant is necessary. 
+            }
+          }
+          if(!bOkBefore) {
+            return false;                                  // positive varinants given, both nothing matches.
+          }
+        } else if(this.sBegin !=null ) {
+          if(!name.startsWith(this.sBegin)) {
+            return false;
+          }
+        }
+        if(this.variantsEnd !=null) {
+          boolean bOkBehind = true;
+          for(String sBefore: this.variantsEnd) {
+            if(name.endsWith(sBefore)) {
+              if(this.bNotEnd) {
+                return false;                              // false if variantBefore matches but with not
+              } else {
+                bOkBehind = true;                          // a matching sBefore found in list.
+                posStartBehind = zName - sBefore.length();
+                break; 
+              }
+            }
+          }
+        } else if(this.sEnd !=null ) {
+          if(!name.endsWith(this.sEnd)) {
+            return false;
+          }
+        }
+        if(this.sContain !=null) {
+          if(! name.substring(posEndBefore, posStartBehind).contains(this.sContain)) {
+            return false;                                  // does non contains *contain*
+          }
+        }
+        return true;                                       // all has matched
       }
     }
-
-
-    public boolean accept(File dir, String name)
-    {
-      return bAllEntries
-         ||(sBefore ==null  || name.startsWith(sBefore))
-           && (sContain ==null || name.contains(sContain))
-           && (sBehind ==null  || name.endsWith(sBehind));
+    
+    
+    @Override public Appendable toString(Appendable app, String ... cond) throws IOException {
+      if(this.variantsBegin !=null) {
+        char cSep = '[';
+        if( this.bNotBegin) { app.append('~'); }
+        for(String var : this.variantsBegin) {
+          app.append(cSep);
+          cSep ='|';
+          app.append(var);
+        }
+        app.append(']');
+        
+      }
+      else if(this.sBegin !=null) { 
+        app.append(this.sBegin); 
+      }
+      if(this.bAllTree) { 
+        app.append('*');
+        if(this.sEnd == null && this.sContain ==null) {
+          app.append('*');                                 // "before**" or only "**"
+        }
+      }
+      if(this.sContain !=null) { app.append('*').append(this.sContain); }  // maybe also only "...*" if sBehing ==""
+      //
+      if(this.sEnd !=null) { 
+        app.append('*'); 
+      }
+      if(this.variantsEnd !=null) {
+        char cSep = '[';
+        if( this.bNotEnd) { app.append('~'); }
+        for(String var : this.variantsEnd) {
+          app.append(cSep);
+          cSep ='|';
+          app.append(var);
+        }
+        app.append(']');
+        
+      }
+      else if(this.sEnd !=null) { 
+        app.append(this.sEnd);    // maybe also only "...*" if sBehing ==""
+      }
+      if(this.afilterChild !=null) {
+        app.append('/');
+        this.afilterChild.toString(app);
+      }
+      return app;
     }
+    
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      try { toString(sb);} catch(IOException exc) {}
+      return sb.toString();
+    }
+    
   }
 
 
   
+  /**Creates a WildcardFilter with given mask.
+   * Examples for filter strings:
+   * <ul><li>"path/to/file*ext": dedicated parent path, one wildcard in last children
+   * <li>"[dirX|dirY]/**": exact two named directories on level 1, then all files
+   * <li>"~[dirX|dirY]/[dirA|dirB]/** /name.*ext": all directories exclusive determined ones, next level only this two determined directories,
+   *   then all levels, but on last level name with wildcard.
+   * </ul>
+   * @param maskP as examples above, for possibities in each level see {@link WildcardFilter#WildcardFilter(String, WildcardFilter)}
+   * @return filter to use for example in TODO
+   */
+  public static WildcardFilter createWildcardFilter(String maskP) {
+    String mask = maskP.replace('\\', '/');
+    int zMask = mask.length();
+    int posEnd = zMask;
+    WildcardFilter filterChild = null;
+    while(posEnd >0) {
+      int posDir = mask.lastIndexOf('/', posEnd-1);
+      String sChild = mask.substring(posDir+1, posEnd);
+      //======>>>>
+      WildcardFilter filter = new WildcardFilter(sChild, filterChild);  // filter =^ before*behind till [ or /
+      posEnd = posDir;                                  // next child level
+      filterChild = filter;                          
+    }
+    
+    return filterChild;
+  }
+
   
 
+  
+  
   /**Searches the first line with given text in 1 file, returns the line or null.
    * @param file The file
    * @param what content to search, a simple text, not an regular expression.
