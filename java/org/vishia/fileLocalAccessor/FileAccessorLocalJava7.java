@@ -44,6 +44,16 @@ import org.vishia.util.FileSystem;
 import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.TreeWalkerPathCheck;
 
+/**This is the implementation of the FileRemoteAccessor working with {@link FileRemote}
+ * which uses the java.nio.files startegy (new from Java-7)
+ * 
+ * <br>
+ * German description for the java.nio.file:
+ * <br><a href="https://entwickler.de/java/javaniofile-hoher-weiter-schneller">https://entwickler.de/java/javaniofile-hoher-weiter-schneller</a>
+ *
+ * @author hartmut
+ *
+ */
 @SuppressWarnings("synthetic-access") 
 public class FileAccessorLocalJava7 extends FileRemoteAccessor
 {

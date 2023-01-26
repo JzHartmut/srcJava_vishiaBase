@@ -1,0 +1,111 @@
+##Zmake generate control file for XMI-generation from header or Java files.
+
+Fileset xslJars = (saxon9-jdom.jar, saxon9.jar, jdom.jar); 
+Classpath cpXsl = <:><&$XML_TOOLS><.>&xslJars, <:><:scriptdir>/../../../../vishiajar/Xslt.jar<.>;
+
+
+main()
+{ <+> output <.n+>
+  for(target: zmake.targets){
+    call *target.translator(target=target);
+  }
+}
+
+
+##This method is used as an target. The Zmake user script file can contain 'dst := genXMI(sources);'
+sub genXMI(Obj target, Filepath tmpxml = <:><&$TMP>/tmpxml<.>)
+{
+
+  ## create the instance of the XSL translator. Use from xslJars with the named classes:
+  Obj xslt = java new :cpXsl:org.vishia.xml.Xslt(cpXsl, "org.vishia.xml.XmlMReaderJdomSaxon", "net.sf.saxon.TransformerFactoryImpl");
+
+  ##gather all inputs maybe given with wild cards:
+  List inputsExpanded = target.allInputFilesExpanded();
+
+  ##parse:
+  for(input:inputsExpanded) {
+    ##checkNewless: deletes the destination file if it is older than the source. call schema: checkNewless(source, destination, deleteit);
+    String xml = <:><&tmpxml.absfile()>/<&input.localfile()>.xml<.>;
+    String inputfile = input.absfile();
+    Obj checkNew = %org.vishia.util.FileSystem.checkNewless(File: &inputfile, File: &xml, 1);
+    <+out><&xml>: checkNew = <&checkNew><.n+>
+    if(checkNew >= 1) {
+      String exec = %org.vishia.zbnf.Zbnf2Xml.smain(
+          <:>-i:<&input.absfile()><.>
+        , <:>-s:<&$ZBNFJAX_HOME>/zbnf/Java2C.zbnf<.>
+        , <:>-y:<&tmpxml.absfile()>/<&input.localfile()>.xml<.>
+        , <:>-a:@filename=<&input.name()><.>
+        , <:>--report:<&tmpxml.absfile()>/<&input.localfile()>.zbnf.rpt<.>
+        , "--rlevel:333");
+      <+>*parse: <&input.localfile()> : <&exec><.n+>
+    } else {
+      <+>*is parsed: <&input.localfile()><.n+>
+    }
+  } ##for
+  
+  (?
+  ##gather all inputs as argument for Xslt:
+  Stringjar inputfiles = "";                                            ##variable with all input files
+  List listInputs;
+  for(input:inputsExpanded) {
+    <+inputfiles>-i:<&tmpxml.absfile()>/<&input.localfile()><.n+>;    
+    listInputs += <:>-i:<&tmpxml.absfile()>/<&input.localfile()>.xml<.>;
+  }
+  <+>
+    Inputfiles:
+    <&inputfiles>
+  <.+>
+  ?)
+  
+  ##set all parsed xml files from inputs as argument for Xslt:
+  for(input:inputsExpanded) {
+    xslt.addInputfile(<:><&tmpxml.absfile()>/<&input.localfile()>.xml<.>);
+  }
+
+  
+  
+  ##translate all input files with Java2xmiTypes.xsl to gather all types. build a temporary types-xmi.xml to use for second pass
+  xslt.setXsltfile(<:><:scriptdir>/../xsl/Java2xmiTypes.xsl<.>);
+  String sTypesfile = <:><&target.output.absdir()>/types-xmi.xml<.>;
+  <+out>Java2Xmi.jzcmd - generate types; <&sTypesfile><.+n>
+  FileSystem.mkDirPath(sTypesfile);
+  xslt.setOutputfile(sTypesfile);
+  String xsltresult = xslt.transform();
+  if(xslresult){ <+err>Cheader2Xmi.jzcmd - Error XSLT; <&xsltresult><.+n> }
+  
+  ##translate all input files with Java2xmi.xsl and the types in types-xmi.xml to the output.xmi
+  String sOutfile = target.output.absfile();
+  <+out>Java2Xmi.jzcmd - generate XMI; <&sOutfile><.+n>
+  xslt.addInputfile(<:><&target.output.absdir()>/types-xmi.xml<.>);  //Note: all other inputfiles remain.
+  xslt.setXsltfile(<:><:scriptdir>/../xsl/gen/Java2xmi.xsl<.>);
+  xslt.setOutputfile(sOutfile);
+  String xsltresult = xslt.transform();
+  if(xslresult){ <+err>Cheader2Xmi.jzcmd - Error XSLT; <&xsltresult><.+n> }
+
+
+  
+  
+  (?
+  ##translate all input files with Java2xmiTypes.xsl to gather all types. build a temporary types-xmi.xml to use for second pass
+  List xsltArgs;
+  xsltArgs += <:>-t<&$ZBNFJAX_HOME>/xsl/Java2xmiTypes.xsl<.>;
+  xsltArgs += "-w+"; 
+  xsltArgs += <:>-y<&tmpxml>/types-xmi.xml<.>;
+  xsltArgs += listInputs;
+  String xsltresult = java cpXsl:org.vishia.xml.Xslt.exec(conv.stringArray(xsltArgs));
+  <+out><&xsltresult><.n+>
+  
+  ##translate all input files with Java2xmi.xsl and the types in types-xmi.xml to the output.xmi
+  xsltArgs.clear();
+  xsltArgs += <:>-t<&$ZBNFJAX_HOME>/xsl/gen/Java2xmi.xsl<.>;
+  xsltArgs += "-w+"; 
+  xsltArgs += <:>-y<&target.output><.>;
+  xsltArgs += <:>-i<&tmpxml>/types-xmi.xml<.>;
+  xsltArgs += listInputs;
+  String xsltresult = java org.vishia.xml.Xslt.exec(conv.stringArray(xsltArgs));
+  <+out><&xsltresult><.n+>
+  ?)
+  
+}
+
+

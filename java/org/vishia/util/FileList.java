@@ -209,14 +209,19 @@ public class FileList
 
   /**Creates a list of all files which's path and mask is given by {@link #args}. 
    * @throws IOException */
-  protected void list() throws IOException
-  {
+  protected void list() throws IOException {
+    final FilepathFilterM filter;
+    if(this.args.sMask !=null && args.sMask.length()>0) {
+      filter = FilepathFilterM.createWildcardFilter(this.args.sMask);
+    } else {
+      filter = null;
+    }
     File dir = new File(args.sDirectory);
-    CharSequence sDir = FileSystem.normalizePath(dir);  
+    CharSequence sDir = FileFunctions.normalizePath(dir);  
     int posLocalPath = sDir.length()+1;
     Writer out = null;
     out = new java.io.FileWriter(args.sFileList);
-    list(dir, posLocalPath, "", out, 0);
+    list(dir, filter, posLocalPath, "", out, 0);
     if(out !=null) { out.close(); }
 
   }
@@ -224,10 +229,11 @@ public class FileList
   
   /**Creates a list of all files which's path and mask is given by {@link #args}. 
    * @throws IOException */
-  protected void list(File dir, int posLocalPath, CharSequence localDir, Writer out, int recurs) throws IOException
+  protected void list(File dir, FilepathFilterM filter, int posLocalPath, CharSequence localDir, Writer out, int recurs) throws IOException
   { if(recurs > 100) throw new IllegalArgumentException("to deep recursion");
     System.out.println("Filelist.list dir=" + dir.getAbsolutePath());
     File dirAbs = dir.getAbsoluteFile();
+    FilepathFilterM[] filterChild = new FilepathFilterM[1];
     if(dirAbs.exists()) {
       File[] files = dirAbs.listFiles();
       Map<String, File> sort = new TreeMap<String, File>();
@@ -237,7 +243,14 @@ public class FileList
         File file = entry.getValue();
         if( ! file.isDirectory()) {
           String name = file.getName();
-          if(name.charAt(0) !='.'){
+          if(name.startsWith("#"))
+             Debugutil.stop();
+          if( ! name.equals(this.args.sFileList)
+           && filter.check(name, false, filterChild)
+           && ( filterChild[0] ==null                      // it is the last entry of a path
+             || filterChild[0].bAllTree
+            ) ){
+          //if(name.charAt(0) !='.'){
             writeOneFile(out, file, localDir, name);
           }
         }
@@ -246,11 +259,13 @@ public class FileList
         File file = entry.getValue();
         if( file.isDirectory()) {
           String name = file.getName();
-          if(name.charAt(0) !='.' && !name.equals(args.sFileList)){
+          if( filter.check(name, true, filterChild)
+           && filterChild[0] !=null                        // not the last entry of a path, filter for a directory
+           ){
             writeDirectoryLine(out, file, localDir, name);  //the dirAbsectory entry
             CharSequence path = FileSystem.normalizePath(file);
             CharSequence localDirSub = path.subSequence(posLocalPath, path.length());
-            list(file, posLocalPath, localDirSub, out, recurs+1);
+            list(file, filterChild[0], posLocalPath, localDirSub, out, recurs+1);
           }
         }
       }
@@ -604,9 +619,11 @@ public class FileList
               default: new IllegalArgumentException("illegal cmd: " + args.cCmd);
             }
           }
-          catch(Exception exception)
+          catch(Exception exc)
           { //catch the last level of error. No error is reported direct on command line!
-            sRet = "FileList - Any internal error;" + exception.getMessage();
+            CharSequence sError = ExcUtil.exceptionInfo("FileList unexpected:", exc, 0, 20);
+            System.err.println(sError);
+            sRet = "FileList - Any internal error;" + exc.getMessage();
             nRet = 6;
           }
         }
