@@ -126,22 +126,22 @@ public class TestConditionCombi {
    */
   public static List<NumString[]> prepareTestCases(String select, int nConditions) {
     
-    List<NumString[]> testcasesAll = new LinkedList<NumString[]>();
+    List<NumString[]> testcasesAll = new LinkedList<NumString[]>();  //filled for return, NumString is ix with select string
     
     List<List<List<List<NumString>>>> selistAll;
     try {
-      selistAll = parseTestCases(select, nConditions);
-      for( List<List<List<NumString>>> listOr: selistAll ) {
+      selistAll = parseTestCases(select, nConditions);     // prepares the test cases in lists as given in select
+      for( List<List<List<NumString>>> listOr: selistAll ) { // roll to stop 1th level: select::= { <selAnd> ? : }.
         List<List<NumString[]>> combinAnds = new LinkedList<List<NumString[]>>();
-        for (List<List<NumString>> listAnd: listOr) {
+        for (List<List<NumString>> listAnd: listOr) {      // roll to stop 2th level: selAnd::= { <selOr> ? & }.
           List<NumString[]> combinAdds = new LinkedList<NumString[]>();
-          for( List<NumString> listAdd: listAnd ) {
+          for( List<NumString> listAdd: listAnd ) {        // roll to stop 3th level: selOr::=  { <selLine> ? + }.
             @SuppressWarnings("unchecked")
             LinkedList<String>[] conditionsArray = new LinkedList[nConditions];
             @SuppressWarnings("unused")
-            int mCond = 0;
-            for( NumString caseItem: listAdd) {    //sort all members of listAdd to one of its conditionArray.
-              int ixCond = caseItem.nr -1;
+            int mCond = 0;                                 // ?? sort all members of listAdd to one of its conditionArray.
+            for( NumString caseItem: listAdd) {            // roll to stop 3th level: selLine::= { [{<#table>?,}=]{<selItem>? , }[;] }.
+              int ixCond = caseItem.nr -1;                 // ixCond is #table, count from 0, 
               mCond |= 1<<ixCond;
               if(conditionsArray[ixCond] ==null) { conditionsArray[ixCond] = new LinkedList<String>(); }
               conditionsArray[ixCond].add(caseItem.sel);

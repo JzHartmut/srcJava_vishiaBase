@@ -54,7 +54,8 @@ public class JZtxtcmdScript extends CompiledScript
 {
   /**Version, history and license.
    * 
-   * <ul>
+   * <ul>2023-01-28 Hartmut chg {@link JZcmditem#writeStructLine(Appendable)} starts now with "JZtxtcmdScript: " 
+   *   because elsewhere its output cannot be associated "what is it" in applications. Only console output.
    * <li>2022-02-22 Hartmut writes a text instead checkXmlOutput, it is better obviously.
    * <li>2022-01-31 Hartmut some fixes: close() missing. this. qualified
    * <li>2022-01-31 Hartmut enhancement: In {@link JZtxtcmdScript#createScriptFromString(org.vishia.util.StringPartScan, MainCmdLogging_ifc, File, File)}
@@ -894,6 +895,7 @@ public class JZtxtcmdScript extends CompiledScript
      */
     void writeStructLine(Appendable u) {
       try{
+        u.append("JZtxtcmdScript: ");
         switch(this.elementType){
           case 't': u.append(" text \"").append(this.textArg).append("\""); break;
           /*
@@ -949,7 +951,7 @@ public class JZtxtcmdScript extends CompiledScript
           case ',': u.append(" errortoOutput "); if(this.textArg == null){ u.append("off "); } break;
           default: //do nothing. Fo in overridden method.
         }
-        u.append("-").append(this.elementType).append(" @").append(Integer.toString(this.srcLine)).append(",").append(Integer.toString(this.srcColumn)).append(" ").append(this.srcFile).append(':');
+        u/*.append("-").append(this.elementType)*/.append(" @").append(Integer.toString(this.srcLine)).append(",").append(Integer.toString(this.srcColumn)).append(" ").append(this.srcFile).append(':');
         
       } catch(IOException exc){
         throw new RuntimeException(exc); //unexpected.

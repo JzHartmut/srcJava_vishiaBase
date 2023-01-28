@@ -611,8 +611,9 @@ public class StringFunctions_C
      * This operation can be empty on a simple appendable.
      * It should be fullfilled if a given position is used.
      * @param nrofChars planned number of characters to add at position.
+     * @return position in buffer where to write
      */
-    void prepareBufferPos(int nrofChars);
+    int prepareBufferPos(int nrofChars);
     
     
     /**Adds a character either on end (Appendable#append)
@@ -638,7 +639,8 @@ public class StringFunctions_C
     }
     
     /**Does nothing, nothing necessary. */
-    @Override public void prepareBufferPos(int nrofChars) {
+    @Override public int prepareBufferPos(int nrofChars) {
+      return 0;   //length is unknown append always on end
     }
 
     /**Append the character. */

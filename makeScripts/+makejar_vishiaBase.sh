@@ -9,14 +9,14 @@ echo " ... generates the $DSTNAME.jar from srcJava_$DSTNAME core sources"
 #Do not change the version on repeated build, and check the checksum and content of jar.
 #If it is equal, it is a reproduces build. The $VERSIONSTAMP is important 
 #  because it determines the timestamp and hence the checksum in the jar file. 
-export VERSIONSTAMP="2022-12-10"
+export VERSIONSTAMP="2023-01-28"
 
 ## Determine a dedicated vishiaBase-yyyy-mm-dd.jar or deactivate it to use the current vishiaBase.jar:
 export VERSION_VISHIABASE=$VERSIONSTAMP
 
 
 #The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
-export VERSION_MINISYS="2022-12-10"
+export VERSION_MINISYS="2022-01-28"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
