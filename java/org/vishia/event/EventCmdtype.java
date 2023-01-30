@@ -1,6 +1,14 @@
 package org.vishia.event;
 
 
+/**This class extends the {@link EventWithDst} only with an cmd enum.
+ * @param <CmdEnum> Type containing some enum definition as cmd for this event. 
+ *  
+ * <br> This class is extended in this package with {@link EventCmdtypeWithBackEvent}
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
 public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
 {
   private static final long serialVersionUID = -137947223084491817L;

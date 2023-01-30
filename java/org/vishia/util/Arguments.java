@@ -123,6 +123,9 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-01-27 Hartmut new in sArg in a argument file: "$=" is the directory of the argument file.
+   *   With this designation all arguments can be related to the argfile's directory
+   *   which is given in the "--@path/to/argfile". This is an amazing feature, but similar as relative links in html. 
    * <li>2022-11-13 Hartmut chg {@link #checkArgVal(String, String)} improved, see comments in code there. Accept spaces
    * <li>2022-11-13 Hartmut chg rename {@link #testConsistence(Appendable)} instead testArgs(...), more expressive. Adaption necessary and done in all vishia Files 
    * <li>2022-11-13 Hartmut chg all files are created with new File(System.getProperty("user.dir"),
@@ -500,6 +503,7 @@ public abstract class Arguments {
     String arg = null;
     BufferedReader farg = null;
     File argFile = null;
+    String sDirArgFile = null;
     try {
       for(String arg1: args) {
         arg = arg1;
@@ -515,6 +519,7 @@ public abstract class Arguments {
           }
           argFile = FileFunctions.newFile(sFile);          // accept a changed directory, elsewhere uses the originally OS PWD
           farg = new BufferedReader(new FileReader(argFile));
+          sDirArgFile = argFile.getParent();
           int posArg;                                      // position of the argument in the line may be >0
           final String sStartLineArg;                      // then all lines should start with this text before posArg.
           final String sCommentEndline;
@@ -563,6 +568,7 @@ public abstract class Arguments {
               while(posEnd >0 && sArg.charAt(posEnd-1)==' ') { posEnd -=1;}
               sArg = sArg.substring(0, posEnd);
             }
+            sArg = sArg.replace("$=", sDirArgFile);              // $= replaces the absolute directory of the own argument file.
             if(  sArg.length() >0                          // don't test an empty line in the file
               && !testArgument(sArg, ++nArg)) {            // testArg is faulty:
               if(errMsg !=null) {

@@ -10,12 +10,13 @@ import org.vishia.util.DateOrder;
 /**This class is the basic class for all events of this package. It is derived from the Java standard
  * {@link EventObject}. It contains a reference to its destination, which should execute this event,
  * and to an instance which queues and forces the execution of the event (delegates to the destination).
+ * The super class from java standard EventObject does only contain the source. 
  * <pre>
- *                                      +----UserEvent
- *                                      |        |
- *                                      |     -more_Data
+ * Object<--source-+                    +----UserEvent
+ *         EventObject <|-+             |        |
+ *                        |             |     -more_Data
  *                     EventWithDst<|---+
- *  Object<---source------|
+ *                        |
  *                        |-------evDstThread--->{@link EventTimerThread_ifc}
  *                        |
  *                        |-------------evdst--->{@link EventConsumer}
@@ -28,6 +29,8 @@ import org.vishia.util.DateOrder;
  *          
  * </pre>
  * UML Presentation see {@link org.vishia.util.Docu_UML_simpleNotation}
+ * <br>
+ * Note: A derived class in this package is {@link EventCmdtype}.
  * @author Hartmut Schorrig
  *
  */
@@ -564,8 +567,8 @@ public class EventWithDst extends EventObject
   
 
   
-  /**Sends the event again to the same destination with the same command.
-   * This method can be used by an application if an Event is received but stored for deferred usage.
+  /**Sends the event the given destination with the given command.
+   * see {@link #occupy(int, EventSource, EventConsumer, EventTimerThread)}
    * @return true
    */
   public boolean sendEvent(){

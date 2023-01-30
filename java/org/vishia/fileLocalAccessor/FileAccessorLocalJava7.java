@@ -580,9 +580,12 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   @Override public boolean delete(FileRemote file, FileRemote.CallbackEvent callback){
     File fileLocal = getLocalFile(file);
     if(callback == null){
-      return fileLocal.delete();
+      return fileLocal.delete();                           // access immediately the file system in this thread
     } else {
-      boolean bOk = fileLocal.delete();
+      boolean bOk = fileLocal.delete();          // also access immediately the file system in this thread
+      if(bOk) {
+        file._setProperties(0, 0, 0, 0, 0, null);;                          // file is no more existing, all clean
+      }
       callback.occupy(evSrc, true);
       callback.sendEvent(bOk ? FileRemote.CallbackCmd.done : FileRemote.CallbackCmd.errorDelete );
       return bOk;
@@ -680,9 +683,11 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     } else {
       cmd = FileRemote.CallbackCmd.nok; 
     }
-    FileRemote.CallbackEvent evback = co.getOpponent();
-    
-    evback.occupy(evSrc, true);
+    FileRemote.CallbackEvent evback = co.getOpponent();    // the back event should be occupied already.
+    if(!evback.isOccupied()) {
+      evback.occupy(this.evSrc, dst, true);                // but then the action is not clarified....
+    }
+    evback.setFileSrc(dst);
     evback.sendEvent(cmd );
   }
   
