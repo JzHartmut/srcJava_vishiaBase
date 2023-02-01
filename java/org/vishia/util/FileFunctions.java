@@ -1363,6 +1363,27 @@ public class FileFunctions {
   public static String cleanAbsolutePath(String inp){ return normalizePath(inp).toString(); }
   
   
+  
+  
+  /**Separates dir and name from a given path
+   * @param sPath should be normalized, using '/', not \
+   * @return [0] is the directory string ends with "/" for root, else does not end with backslash 
+   *         {1] is null if sPath ends with "/", else the last part from sPath, the child in dir
+   */
+  public static CharSequence[] separateDirName(CharSequence sPath) {
+    final CharSequence[] ret = new CharSequence[2];
+    final int zPath = sPath.length();
+    final int posFile = StringFunctions.lastIndexOf(sPath, '/');
+    final int posDir;
+    if(posFile ==2 && sPath.charAt(1)==':') {              // it is "D:/file  in windows
+      posDir = posFile+1;                                  // "D:/" for dir
+    } else { posDir = posFile; }
+    ret[0] = sPath.subSequence(0, posDir);
+    ret[1] = posFile+1 == zPath ? null: sPath.subSequence(posFile+1, zPath);
+    return ret;
+  }
+  
+  
   /**Returns true if the file is symbolic linked. This works on Unix-like file systems.
    * For windows it returns true if the cleaned absolute path is identical with the result of
    * file.getCanonicalPath() whereby the comparison is done ignoring the lower/upper case of letters and with

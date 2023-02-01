@@ -16,6 +16,7 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.FileTime;
@@ -147,11 +148,9 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   EventConsumer executerCommission = new EventConsumer(){
     @Override public int processEvent(EventObject ev) {
       if(ev instanceof FileLocalAccessorCopyStateM.EventInternal){ //internal Event
-        states.statesCopy.processEvent(ev);
-        return 1;
+        return FileAccessorLocalJava7.this.states.statesCopy.processEvent(ev);
       } else if(ev instanceof FileRemote.CmdEvent){  //event from extern
-            execCommission((FileRemote.CmdEvent)ev);
-        return 1;
+        return execCommission((FileRemote.CmdEvent)ev);
       } else {
         return 0;
       }
@@ -266,28 +265,28 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   
 
   
-  /**Sets the file properties from the local file.
+  /**Sets the file properties from the existing file on the device.
    * checks whether the file exists and set the {@link FileRemote#mTested} flag any time.
    * If the file exists, the properties of the file were set, elsewhere they were set to 0.
+   * <br>
+   * This operation creates a temporary thread to do this action if callback is given,
+   * callback is invoked in this thread.
+   * 
    * @see {@link org.vishia.fileRemote.FileRemoteAccessor#refreshFileProperties(org.vishia.fileRemote.FileRemote)}
    */
-  @Override public void refreshFileProperties(final FileRemote fileRemote, final FileRemote.CallbackEvent callback)
-  { 
-  
-    
-    /**Strategy: use an inner private routine which is encapsulated in a Runnable instance.
-     * either run it locally or run it in an extra thread.
-     */
+  @Override public void refreshFileProperties(final FileRemote fileRemote, final FileRemote.CallbackEvent callback) { 
+    //Strategy: use an inner private routine which is encapsulated in a Runnable instance.
+    // either run it locally or run it in an extra thread.
+    // The new instance is necessary because it should store the both given references.
+    // It is a cheap operation in Java inclusively the garbage of the instance.
+    //
     Runnable thread = new RunRefresh(fileRemote, callback);
-  
-    //the method body:
     if(callback == null){
       thread.run(); //run direct
     } else {
-      Thread threadObj = new Thread(thread);
-      threadObj.start(); //run in an extra thread, the caller doesn't wait.
+      Thread threadObj = new Thread(thread);    // the threadObj and thread is garbaged if run is finished.
+      threadObj.start();                        //run in an extra thread, the caller doesn't wait.
     }
-  
   }  
     
 
@@ -376,7 +375,7 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     String sPath = startDir.getAbsolutePath();
     if(FileSystem.isRoot(sPath))
       Assert.stop();
-    Path pathdir = Paths.get(sPath);
+    java.nio.file.Path pathdir = java.nio.file.Paths.get(sPath);
     if(bRefreshChildren) { // && filter == null) {
       startDir.internalAccess().newChildren();
     }
@@ -389,7 +388,7 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
         , bMarkCheck, callback);
     Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
     try{ 
-      Files.walkFileTree(pathdir, options, depth1, visitor);  
+      java.nio.file.Files.walkFileTree(pathdir, options, depth1, visitor);  
     } catch(IOException exc){
       System.err.println("FileAccessorLocalData.walkFileTree - unexpected IOException; " + exc.getMessage() );
     }
@@ -600,6 +599,41 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     
   }
 
+  @Override public void copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback) {
+    try {
+      Files.copy(src.path, dst.path, StandardCopyOption.COPY_ATTRIBUTES);
+    } 
+    catch(Exception exc) {
+      CharSequence sExc = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10);
+      System.err.println(sExc);
+    }
+  }
+
+  
+  @Override public String moveFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback) {
+    if(callback == null) {
+      String sError;
+      try {
+        Files.move(src.path, dst.path, StandardCopyOption.REPLACE_EXISTING);
+        sError = null;
+      } 
+      catch(Exception exc) {                  // not moved
+        sError = org.vishia.util.ExcUtil.exceptionInfo("moveFile", exc, 0, 10).toString();
+      }
+      return sError;                          // return null if success
+    } else {
+      Runnable run = new Runnable() {
+        @Override public void run () {
+          String sError = moveFile(src, dst, null);
+          callback.errorMsg = sError;
+          callback.sendEvent(sError == null? FileRemote.CallbackCmd.done : FileRemote.CallbackCmd.error);
+        }
+      };
+      Thread thread = new Thread(run, "FileAcc-moveFile " + src.getName());
+      thread.start();
+      return null;
+    }
+  }
 
   
   @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
@@ -635,7 +669,15 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   }
   
   
-  void execCommission(FileRemote.CmdEvent commission){
+  /**Executes the given event as commission.
+   * @param commission
+   * @return Some bits defined in {@link StateSimple}, 
+   *   especially from here {@link StateSimple#mEventConsumed} and {@link StateSimple#mEventDonotRelinquish}.
+   *   The last one is identically with  {@link EventConsumer.mEventDonotRelinquish}
+   *   and is set, if this event is forwarded to the #theThreaad of this state machine.    
+   */
+  int execCommission(FileRemote.CmdEvent commission){
+    int ret = 0;
     FileRemote.Cmd cmd = commission.getCmd();
     switch(cmd){
       case check: //copy.checkCopy(commission); break;
@@ -643,17 +685,16 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
       case delChecked:
       case moveChecked:
       case copyChecked: 
-        states.statesCopy.processEvent(commission); break;
-      case move: states.execMove(commission); break;
+        ret = this.states.statesCopy.processEvent(commission); break;
+      case move: ret = 0; this.states.execMove(commission); break;  //TODO this was never run.
       case chgProps:  execChgProps(commission); break;
       case chgPropsRecurs:  execChgPropsRecurs(commission); break;
       case countLength:  execCountLength(commission); break;
       case delete:  execDel(commission); break;
       case mkDir: mkdir(false, commission); break;
       case mkDirs: mkdir(true, commission); break;
-  
-      
     }
+    return ret;
   }
   
   

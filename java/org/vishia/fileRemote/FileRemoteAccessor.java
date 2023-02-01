@@ -85,11 +85,15 @@ public abstract class FileRemoteAccessor implements Closeable
   
   /**Gets the properties of the file from the physical file.
    * @param file the destination file object.
-   * @param callback If null then the method waits for response from the maybe remote file system
-   *   with a suitable timeout. 
-   *   If not null then the method may return immediately without any waiting
-   *   and the callback method in the {@link EventCmdPingPongType#callback()} is invoked maybe in another thread
-   *   if the answer is gotten. 
+   * @param callback If null then the method should access the file system immediately in this thread.
+   *   It means it is possible that this needs a longer time for wait for response 
+   *   from a maybe remote file system with a suitable timeout.
+   *   <br> 
+   *   If the callback is given, the implementor should install a temporary thread
+   *   which does the access and calls the callback on finishing. 
+   *   This operation returns immediately. 
+   *   That is especially proper if the operation is called in an event procedure in a graphic system. 
+   *   Prevent scrolling wheel on the screen. 
    */
   public abstract void refreshFileProperties(FileRemote file, FileRemote.CallbackEvent callback);
 
@@ -160,6 +164,11 @@ public abstract class FileRemoteAccessor implements Closeable
   
   public abstract boolean createNewFile(FileRemote file, FileRemote.CallbackEvent callback) throws IOException;
 
+  
+  public abstract String moveFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
+  
+  public abstract void copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
+  
   /**Try to delete the file.
    * @param callback
    * @return If the callback is null, the method returns if the file is deleted or it can't be deleted.

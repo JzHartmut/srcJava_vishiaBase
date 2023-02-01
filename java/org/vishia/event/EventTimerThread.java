@@ -88,6 +88,9 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Version and history.
    * <ul>
+   * <li>2023-01-31 The {@link #delayMax} now also valid if no time order was processed.
+   *   Before, it was 1000 days. This is not problematically for event processing, 
+   *   because an event wakes up the wait by {@link #runTimer}.{@link Object#notify()} but it is stupid on debugging.  
    * <li>2022-09-24 Some comments and changed while searching the problem that the execution sometimes hangs. 
    *   But no functionality changes.  
    * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
@@ -160,11 +163,18 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   private boolean bThreadRun;
   
+  /**The delay [ms] for one step if nothing is to do.
+   * It is a proper time also for debugging to see what's happen. 
+   * Can modified, maybe also 1000 ms
+   */
+  private int delayMax = 10000;
+  
   /**timestamp for a new time entry. It is set in synchronized operation between {@link #addTimeOrder(TimeEvent, long)}
    * and the wait in the {@link #run()} operation.
-   * 
+   * The default value is 10 seconds after now, because no time order may be added. 
+   * 10 sec is the limited delay to run one step. 
    */
-  private long timeCheckNew = System.currentTimeMillis() + 1000 * 3600 * 24;
+  private long timeCheckNew = System.currentTimeMillis() + this.delayMax;
 
   /**The time on start waiting*/
   private long timeSleep;
@@ -423,20 +433,23 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
 
   
+  /**Check all time orders whether there are expired, or if not calculate the next time to check. 
+   * @return the delay time in ms.
+   */
   private int checkTimeOrders(){
-    int timeWait = 10000; //10 seconds.
+    int timeWait = this.delayMax; //10 seconds.
     this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
     { EventTimeout order;
       long timeNow = System.currentTimeMillis();
       while( (order = queueDelayedOrders.poll()) !=null){
         long delay = order.timeExecution - timeNow; 
-        if((delay) < 3){                         //if it is expired in 2 milliseconds, execute now.
-          order.doTimeElapsed();
+        if((delay) < 3){                         //if it is expired in <=2 milliseconds, execute now.
+          order.doTimeElapsed();                 // execute the event now.
           timeNow = System.currentTimeMillis();  //new time after execution for further check
         }
         else {
           //not yet to proceed
-          if(delay < timeWait) {
+          if(delay < timeWait) {                 // calculate the timeWait, for the first event.
             this.timeCheckNew = order.timeExecution;  //earlier
             timeWait = (int) delay;
           }
@@ -466,8 +479,8 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       stateThreadTimer = 'c';
       timeSleep = System.currentTimeMillis();
       timeWait = (int)(timeCheckNew - timeSleep);
-      if(timeWait < 0){ //firstly check all time orders if one of them is expired.
-        timeWait = checkTimeOrders();
+      if(timeWait < 0){                          //firstly check all time orders if one of them is expired.
+        timeWait = checkTimeOrders();            // execute expired events, calculate new waiting time
       }
       bExecute = false;
       while(checkEventAndRun()){

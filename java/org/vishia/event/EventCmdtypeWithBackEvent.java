@@ -5,6 +5,15 @@ import java.util.Date;
 
 import org.vishia.util.DateOrder;
 
+/**This event contains an event instance for back information, named "opponent".
+ * The opponent should be initialized but free for use (not occupied),
+ * but it should be free for {@link EventWithDst#occupy(EventSource, EventConsumer, EventTimerThread, boolean)}
+ * by the destination of this event. 
+ * @author Hartmut Schorrig
+ *
+ * @param <CmdEnum> Enum Type of commands as in the super class {@link EventCmdtype} 
+ * @param <EventBack> Type of the opponent event for back information. 
+ */
 public class EventCmdtypeWithBackEvent<CmdEnum extends Enum<CmdEnum>, EventBack extends EventWithDst> extends EventCmdtype<CmdEnum>
 {
   

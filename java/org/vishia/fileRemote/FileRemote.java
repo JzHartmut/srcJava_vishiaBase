@@ -7,6 +7,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ConcurrentModificationException;
 import java.util.EventObject;
 import java.util.Iterator;
@@ -24,6 +26,7 @@ import org.vishia.event.EventTimerThread_ifc;
 import org.vishia.fileLocalAccessor.FileAccessorLocalJava7;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.MarkMask_ifc;
@@ -34,22 +37,31 @@ import org.vishia.util.SortedTreeWalkerCallback.Result;
 import org.vishia.util.TreeNodeNamed_ifc;
 
 
-/**This class stores the name and some attributes of one File. 
- * The file may be localized on any maybe remote device or it may be a normal file in the operation system's file tree.
- * The information of the file (date, size, attributes) are accessible in a fast way without opeation system access. 
- * But therefore they may be correct or not: A file on its data storage can be changed or removed. 
- * The data of this class should be refreshed if it seems to be necessary. 
+/**This class stores the name, some attributes of one File and also a List of all children 
+ * if the file is a directory.
+ * This class inherites from javaio.File to provide all capabilities of {@link File} 
+ * but it does not immediately or never use the implementation of File. All operations are overridden.
+ * The implementation is part of the aggregated {@link #device} which may use the capabilities of java.io.File
+ * or also java.nio.files.  
+ * <br>The file may be localized on any maybe remote device or it may be a normal file in the operation system's file tree.
+ * The information about the file (date, size, attributes) are stored locally in the instance of this class,
+ * hence they are accessible in a fast way without operation system access. 
+ * But therefore they can be correct or not: A file on its data storage can be changed or removed. 
+ * The data of this class should be refreshed if it seems to be necessary.
+ * <br> 
  * Such an refresh operation can be done if there is enough time, no traffic on system level. 
  * Then the information about the file may be actual and fast accessible if an application needs one of them.
  * <br><br>
- * In comparison to the standard {@link java.io.File} the information are gotten from the operation system in any case, 
- * the access is correct but slow.
+ * In comparison to the standard {@link java.io.File}, there the information are gotten from the operation system 
+ * in any case, the access is correct but can be slow especially the file is located anywhere in network 
+ * or in a specific device.
  * <br><br>
- * A remote file should be accessed by {@link FileRemoteAccessor} implementations. It may be any information
- * on an embedded hardware, not only in a standard network. For example the access to zip archives are implemented by
- * {@link FileAccessZip}. A file can be present only with one line in a text document which contains path, size, date.
+ * A remote file should be accessed by {@link FileRemoteAccessor} implementations referenced with {@link #device}. 
+ * It may be any information on an embedded hardware, not only in a standard network. 
+ * For example the access to zip archives are implemented by {@link FileAccessZip}. 
+ * A file can be present only with one line in a text document which contains path, size, date.
  * In this case the content is not available, but the properties of the file. See {@link org.vishia.util.FileList}.
- * <br><br>
+ * <br>
  * This class stores the following information (overview)
  * <ul>
  * <li>path, timestamp, length, flags for read/write etc. like known for file systems.
@@ -67,18 +79,48 @@ import org.vishia.util.TreeNodeNamed_ifc;
  * <li>Information about a mark state. There are some bits for simple mark or for mark that it is
  *   equal, new etc. in any comparison. This bits can be used by applications.  
  * </ul>
+ * <br>
+ * <b>The cluster of files, {@link #clusterOfApplication}:</b><br>
+ * The {@link FileCluster} assures that any file has only exact one FileRemote instance as presentation. 
+ * On the one hand this prevents too many access to the file system. 
+ * If the instance is refreshed a short time ago then it should not be refreshed for the same physical file
+ * in another instance.
+ * <br>
+ * The other aspect is: If a file is marked, it is marked for the whole application.
+ * Marking ({@link #setMarked(int)} is not supported by a file system itself but it is supported here.
+ * The {@link #itsCluster} for a file (usual the {@link #clusterOfApplication}) is independent 
+ * of the {@link #device()} which is the reference to the file system implementor.
  * <br><br>
  * <b>How to create instances of this class?</b><br>
- * This class contains a static reference to a {@link #clusterOfApplication} which is used as default. 
- * It means there is only one cluster. But you can create a special {@link FileCluster} for some FileRemote instances too.
- * The FileCluster prevents more instances of FileRemote for the same physical file and supports
- * additional properties for a file as instance of FileRemote.  
- * If you have any other FileRemote instance, it knows its {@link #itsCluster}.
- * You can create a child of an existing file by given path using {@link #child(CharSequence)}, {@link #subdir(CharSequence)}
+ * The constructor of this class is protected, hence only internally accessible.
+ * To create a FileRemote instance you can use
+ * <ul><li>{@link #fromFile(File)} if you have already given a java.io.File instance.
+ * <li>{@link #get(String)} with relative or absolute given path.
+ * <li>{@link #getDir(CharSequence)} explicitely get or create a directory
+ * <li>{@link #getFile(CharSequence, CharSequence)} in opposite to get(String) with dispersed directory path and name
+ * <li>{@link #child(CharSequence)} from a given FileRemote as directory
+ * <li>{@link #child(CharSequence, int, int, long, long, long)} to create a child with partially known properties
+ * <li>{@link #subdir(CharSequence)} to get or create definitely a directory inside a given FileRemote directory. 
+ * </ul>
+ * All these operations do not access the real file system. Instead they search in the {@link #clusterOfApplication}
+ * whether the file is already known and returns it, or they create and register the adequate FileRemote instance
+ * in the cluster. 
+ * The FileRemote instance should/can be synchronized with the real file instance by calling {@link #refreshProperties(CallbackEvent)}
+ * or for directory instances with {@link #refreshPropertiesAndChildren()}
+ * 
+ * from the local file system you can call
+ * {@link #fromFile(File)}. This delegates working to {@link #fromFile(FileCluster, File)}
+ * with the static given {@link #clusterOfApplication} which looks whether the FileRemote instance 
+ * is existing already, or registeres it in the file cluster. 
+ * The implementor of the file system depends on the given path.
+ * <br>
+ * You can create a child of an existing file by given FileRemote directory instance
+ * using {@link #child(CharSequence)}, {@link #subdir(CharSequence)}
  * or {@link #child(CharSequence, int, int, long, long, long)}
- * whereby the child can be a deeper one, the path is a relative path from the given parent. This FileRemote instance
- * describes a possible existing file or maybe a non existing one, adequate like creation of instances
- * of {@link java.io.File}. Note that on {@link #refreshPropertiesAndChildren(CallbackEvent)} this instance will be removed
+ * whereby the child can be a deeper one, the path is a relative path from the given parent. 
+ * This FileRemote instance describes a possible existing file or maybe a non existing one, 
+ * adequate like creation of instance  of {@link java.io.File}. 
+ * Note that on {@link #refreshPropertiesAndChildren(CallbackEvent)} this instance will be removed
  * from the children list if it is not existing.
  * <br>
  * You can get any FileRemote instance with any absolute path calling {@link FileCluster#getFile(CharSequence)}.
@@ -460,7 +502,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   Object oFile;
   
   
-  
+  /**can be null or set with the valid path.
+   * It is the concept using java.nio.file.
+   * Note: This element hides the File#path of the super class which is final and private.
+   * It should not confuse the user.
+   */
+  public final Path path;
   
   
   /**Constructs an instance. The constructor is protected because only special methods
@@ -546,13 +593,14 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     //Assert.check(this.sDir.length() == 0 || this.sDir.endsWith("/"));
     //TODO Assert.check(!this.sDir.endsWith("//"));
     Assert.check(length >=0);
-    oFile = oFileP;
+    this.oFile = oFileP;
     this.length = length;
     this.date = dateLastModified;
     this.dateCreation = dateCreation;
     this.dateLastAccess = dateLastAccess;
-    this.sCanonicalPath = this.sDir + (sFile !=null ? "/"  + this.sFile : "");  //maybe overwrite from setSymbolicLinkedPath
-    
+    final String sPath1 = this.sDir + (sFile !=null ? "/"  + this.sFile : "");  //maybe overwrite from setSymbolicLinkedPath
+    this.sCanonicalPath = sPath1;
+    this.path = Paths.get(sPath1);
     ///
     if(this.device == null){
       this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -728,36 +776,58 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     else {
       //it is a file description of standard java in the local file system.
       String sPath = src.getAbsolutePath();
-      long len = 0;
-      long date = 0;
-      int fileProps = 0;
-//      if(src.exists()){ fileProps |= mExist; 
-//        len = src.length();
-//        date = src.lastModified();
-//        if(src.isDirectory()){ fileProps |= mDirectory; }
-//        if(src.canRead()){ fileProps |= mCanRead | mCanReadGrp | mCanReadAny; }
-//        if(src.canWrite()){ fileProps |= mCanWrite | mCanWriteGrp | mCanWriteAny; }
-//        if(src.canExecute()){ fileProps |= mExecute | mExecuteGrp | mExecuteAny; }
-//        if(src.isHidden()){ fileProps |= mHidden; }
-//      }
-      FileRemoteAccessor accessor = getAccessorSelector().selectFileRemoteAccessor(src.getAbsolutePath()); 
-      File dir1 = src.getParentFile();
-      FileRemote dir, file;
-      if(dir1 !=null){
-        dir= cluster.getDir(dir1.getAbsolutePath());
-        file = dir.child(src.getName());
-      } else {
-        dir = null;
-        file = cluster.getDir(src.getAbsolutePath());
-      }
-      file.length = len;
-      file.flags = fileProps;
-      file.date = date;
-      file.oFile = src;
-      return file; //new FileRemote(accessor, dir, sPath, null, len, date, fileProps, src);
+      return get(cluster, sPath);
     }
   }
+
   
+  
+  public static FileRemote get(FileCluster cluster, String filePath ) {
+//    if(src.exists()){ fileProps |= mExist; 
+//      len = src.length();
+//      date = src.lastModified();
+//      if(src.isDirectory()){ fileProps |= mDirectory; }
+//      if(src.canRead()){ fileProps |= mCanRead | mCanReadGrp | mCanReadAny; }
+//      if(src.canWrite()){ fileProps |= mCanWrite | mCanWriteGrp | mCanWriteAny; }
+//      if(src.canExecute()){ fileProps |= mExecute | mExecuteGrp | mExecuteAny; }
+//      if(src.isHidden()){ fileProps |= mHidden; }
+//    }
+    final String sPath1;
+    if(!FileFunctions.isAbsolutePath(filePath)) {
+      String userDir = System.getProperty("user.dir");
+      sPath1 = userDir + "/" + filePath;
+    } else { sPath1 = filePath; }
+    final CharSequence sPath2 = FileFunctions.normalizePath(sPath1);
+    CharSequence[] dirName = FileFunctions.separateDirName(sPath2);
+    final FileRemote dir = cluster.getDir(dirName[0]);
+    if(dirName[1] !=null) {
+      final FileRemote file = dir.child(dirName[1]);
+      return file;
+    } else {
+      return dir;
+    }
+  }  
+    
+//    FileRemoteAccessor accessor = getAccessorSelector().selectFileRemoteAccessor(src.getAbsolutePath()); 
+//    File dir1 = src.getParentFile();
+//    FileRemote dir, file;
+//    if(dir1 !=null){
+//      dir= cluster.getDir(dir1.getAbsolutePath());
+//      file = dir.child(src.getName());
+//    } else {
+//      dir = null;
+//      file = cluster.getDir(src.getAbsolutePath());
+//    }
+//    file.length = len;
+//    file.flags = fileProps;
+//    file.date = date;
+//    file.oFile = src;
+//    return file; //new FileRemote(accessor, dir, sPath, null, len, date, fileProps, src);
+
+  
+  public static FileRemote get(String filePath ) {
+    return get(clusterOfApplication, filePath);
+  }
   
   /**Returns the instance which is associated to the given directory.
    * @param path The directory path where the file is located, given absolute.
@@ -1085,7 +1155,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   /**Gets the properties of the file from the physical file.
-   * @param callback
+   * @param callback if null gets the properties immediately in this thread.
+   * 
    */
   public void refreshProperties(CallbackEvent callback){
     if(device == null){
@@ -1094,6 +1165,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     device.refreshFileProperties(this, callback);
   }
   
+  
+  
+  /**Gets the properties of the file from the physical file immediately in this thread.*/
+  public void refreshProperties ( ) {
+    refreshProperties(null);
+  }
   
   /**Gets the properties of the file from the physical file.
    * @param callback
@@ -1211,17 +1288,43 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   If given then this routine works in an extra thread.
    */
   public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
-    if(device == null){
-      device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackCopy callbackCopy = new FileRemoteCallbackCopy(dirDst, callbackUser, timeOrderProgress);  //evCallback);
     boolean bWait = callbackUser ==null; //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
     boolean bResetMark = false;
-    device.walkFileTreeCheck(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  callbackCopy);  //should work in an extra thread.
+    this.device.walkFileTreeCheck(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  callbackCopy);  //should work in an extra thread.
   }
   
   
+  
+  public void copyTo(FileRemote dst, FileRemote.CallbackEvent  callbackUser) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    this.device.copyFile(this, dst, callbackUser);    
+  }
+  
+  public String renameTo(FileRemote dst, FileRemote.CallbackEvent  callbackUser) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    return this.device.moveFile(this, dst, callbackUser);    
+  }
+  
+  
+  /**renames or moves this file to the given path in dst. 
+   * This is the alternative implementation against {@link File#renameTo(File)} which is not used.  
+   * The File dst should be either a FileRemote instance, or it is converted to it for temporary usage.
+   */
+  @Override public boolean renameTo(File dst) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    return this.device.moveFile(this, fromFile(dst), null) == null;    
+  }
   
   
   /**Sets this as a symbolic linked file or dir with the given path. 
@@ -2790,6 +2893,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     public int nrofFiles;
     
     public int successCode;
+    
+    public String errorMsg;
     
     public int promilleCopiedFiles, promilleCopiedBytes;
     

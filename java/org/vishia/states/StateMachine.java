@@ -351,23 +351,28 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
    * as {@link EventConsumer}. If the statemachine is aggregated with a {@link EventTimerThread} 
    * by constructor {@link #StateMachine(String, EventTimerThread)}
    * and this routine is invoked from another thread then the event will be stored in {@link #theThread}.
-   * If the state machine is not aggregated with a EventTimerThread then the execution is done.
-   * Then the {@link #eventDebug(EventObject)} is invoked.
+   * If the state machine is not aggregated with a EventTimerThread then the execution is immediately done.
+   * via call of {@link #eventDebug(EventObject)}.
    * <br><br>
    * This method can be called by the user instead {@link EventWithDst#sendEvent()} especially if the state machine should be executed
    * in the users thread and without events.  
-   * This method is invoked from the {@link EventTimerThread} if the event queue is processed there. 
+   * This method is invoked from the {@link EventTimerThread} if the event queue is processed there.
+   * @param ev the event to execute 
+   * @return Some bits defined in {@link StateSimple}, 
+   *   especially from here {@link StateSimple#mEventConsumed} and {@link StateSimple#mEventDonotRelinquish}.
+   *   The last one is identically with  {@link EventConsumer.mEventDonotRelinquish}
+   *   and is set, if this event is forwarded to the #theThreaad of this state machine.    
    */
   @Override public int processEvent(EventObject ev)
   { if(theThread == null || theThread.isCurrentThread()) {
       return eventDebug(ev); 
-    } else if(ev !=null){
+    } else if(ev !=null){                        // it is called from another thread
       if(ev instanceof EventWithDst){
         EventWithDst ev1 = (EventWithDst)ev;
         //ev1.donotRelinquish();  
-        ev1.setDst(this);  //only this may be the destination of the event.
+        ev1.setDst(this);                        // the new dst is this statemachine.
       }
-      theThread.storeEvent(ev);
+      theThread.storeEvent(ev);                  // store here to execute in the own 'theThread'
       return mEventConsumed         //because it should not applied to other states in the Run-to-complete cycle. 
            | mEventDonotRelinquish; //because it is stored here. Relinquishes after dequeuing!
     }

@@ -60,7 +60,8 @@ public interface EventConsumer
   /**This routine should be overwritten to processes an event. 
    * @param ev The event. It contains some data. The type of the event is not specified here. Any events
    *   can be processed.
-   * @return 0 or {@link #mEventConsumed} or some other designation bits.
+   * @return 0 or {@link #mEventConsumed} or {@link #mEventDonotRelinquish}, or maybe some other designation bits
+   *   from {@link org.vishia.states.StateSimple}.
    *   It is possible to build a chain of responsibility. It is possible too to process a event from 
    *   more as one instance. 
    */

@@ -18,6 +18,7 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 import org.vishia.event.EventCmdtypeWithBackEvent;
+import org.vishia.fileRemote.FileRemote.CallbackEvent;
 import org.vishia.fileRemote.FileRemote.Cmd;
 import org.vishia.fileRemote.FileRemote.CmdEvent;
 import org.vishia.util.Assert;
@@ -462,6 +463,20 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   @Override public void abortAll () {
     // TODO Auto-generated method stub
     
+  }
+
+
+
+  @Override public void copyFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
+    // TODO Auto-generated method stub
+    
+  }
+
+
+
+  @Override public String moveFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
+    // TODO Auto-generated method stub
+    return "not implemented";
   }
   
 

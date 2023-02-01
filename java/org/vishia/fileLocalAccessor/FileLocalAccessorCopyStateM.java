@@ -587,7 +587,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
         mResult |= mAsk;
       }
   
-      try{ FileLocalAccessorCopyStateM.this.in = new FileInputStream(actData.src);
+      try{ this.in = new FileInputStream(actData.src);
       } catch(IOException exc){
         sendEventAsk(actData.src, FileRemote.CallbackCmd.askErrorSrcOpen );
         mResult |= mAsk;

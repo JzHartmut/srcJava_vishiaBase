@@ -217,7 +217,7 @@ public abstract class StateComposite extends StateCompositeFlat implements InfoA
    * 
    * 
    * @param evP The event.
-   * @return Some bits  
+   * @return Some bits defined in {@link StateSimple}  
    */
   /*package private*/ @Override int processEvent(final EventObject evP){  //NOTE: should be protected.
     int cont = 0;
