@@ -193,26 +193,26 @@ public class TestOrg {
    *     A lower number is a more prior message, a higher (..9) is a message only for a verbose output.
    * @param txt Understandable description of the test case
    */
-  public void expect(boolean cond, int nVerbose, String txt) {
-    expect_(cond, nVerbose, txt, 3);
+  public void expect(boolean cond, int nVerbose, String txt, Object ... args) {
+    expect_(cond, nVerbose, txt, 3, args);
   }  
   
 
   /**core test routine
    */
-  private void expect_(boolean cond, int nVerbose, String txt, int nStackLevel) {
+  private void expect_(boolean cond, int nVerbose, String txt, int nStackLevel, Object ... args) {
     boolean bShowAlsoOkTxt =  this.nTestVerboseLevel >= nVerbose;
     if(!cond || bShowAlsoOkTxt && !this.bTitleShown) {
       showParentTitle(null);
     }
     if(cond) {
-      if(bShowAlsoOkTxt) { out("  ok: "); outln(txt); }
+      if(bShowAlsoOkTxt) { out("  ok: "); outln(txt, args); }
     } else {
       TestOrg parent = this;
       while(parent !=null) { parent.bOk = false; parent = parent.parent; }
       //Note: the first levels before nStackLevel are from TestOrg itself, not to show. 
       CharSequence sFileLine = CheckVs.stackInfo("", nStackLevel, 3);
-      out("  ERROR: "); out(txt); out(" @ "); out(sFileLine);  //sFileLine has 0x0a on end.
+      out("  ERROR: "); out(txt, args); out(" @ "); out(sFileLine);  //sFileLine has 0x0a on end.
     }
   }
   
@@ -299,21 +299,23 @@ public class TestOrg {
   /**Out to the test output. 
    * @param txt
    */
-  public void out(CharSequence txt) {
-    try{ out.append(txt);
+  public void out(CharSequence txt, Object ... args) {
+    try{
+      CharSequence txt2;
+      if(args.length >0) {
+        txt2 = String.format(txt.toString(), args);
+      } else { txt2 = txt; }
+      this.out.append(txt2);
     } catch(IOException exc) {
-      System.err.append(txt);
+      System.err.append("Exception on TestOrg.out / ").append(txt);
     }
   }
   
   /**Out to the test output with following newline ('\n'). 
    * @param txt
    */
-  public void outln(CharSequence txt) {
-    try{ out.append(txt).append('\n');
-    } catch(IOException exc) {
-      System.err.append("Exception on TestOrg.out / ").append(txt);
-    }
+  public void outln(CharSequence txt, Object ... args) {
+    out(txt + "\n", args);
   }
   
   

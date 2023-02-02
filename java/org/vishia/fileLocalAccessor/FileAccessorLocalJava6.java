@@ -796,9 +796,10 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
 
 
 
-  @Override public void copyFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
+  @Override public String copyFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
     // TODO Auto-generated method stub
-    
+    return "not implemented";
+
   }
 
 
@@ -806,6 +807,13 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
   @Override public String moveFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
     // TODO Auto-generated method stub
     return "not implemented";
+  }
+
+
+
+  @Override public void activate () {
+    // TODO Auto-generated method stub
+    
   }
 
   

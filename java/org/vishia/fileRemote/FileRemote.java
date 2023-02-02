@@ -1306,6 +1306,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     this.device.copyFile(this, dst, callbackUser);    
   }
+
+
+
   
   public String renameTo(FileRemote dst, FileRemote.CallbackEvent  callbackUser) {
     if(this.device == null){
@@ -2946,6 +2949,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     
     public void setFileSrc(FileRemote fileSrc){ this.filesrc = fileSrc; }
+
+    public void setFiles(FileRemote fileSrc, FileRemote fileDst){ 
+      this.filesrc = fileSrc;
+      this.filedst = fileDst;
+    }
 
     
     

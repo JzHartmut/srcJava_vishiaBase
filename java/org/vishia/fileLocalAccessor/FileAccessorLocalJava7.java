@@ -139,8 +139,12 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   
 
   
-  /**This thread runs after creation. Only one thread for all events. */
+  /**This thread runs after creation. Only one thread for all events to access the file system
+   * separated by the user thread. */
   EventTimerThread singleThreadForCommission = new EventTimerThread("FileAccessor-local");
+  
+  
+  
   
   /**Destination for all events which forces actions in the execution thread.
    * 
@@ -174,6 +178,11 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     //singleThreadForCommission.startThread();
     systemAttribtype = DosFileAttributes.class;
   }
+  
+  public void activate() {
+    this.singleThreadForCommission.startThread();
+  }
+  
   
   
   /**Returns the singleton instance of this class.
@@ -599,16 +608,50 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     
   }
 
-  @Override public void copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback) {
-    try {
-      Files.copy(src.path, dst.path, StandardCopyOption.COPY_ATTRIBUTES);
-    } 
-    catch(Exception exc) {
-      CharSequence sExc = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10);
-      System.err.println(sExc);
+  
+  
+  
+  
+  
+  
+  
+  @Override public String copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback) {
+    String sError = null;
+    if(callback == null) {
+      try {
+        Files.copy(src.path, dst.path, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+      } 
+      catch(Exception exc) {
+        sError = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10).toString();
+      }
+    } else {
+      FileRemote.CmdEvent evCmd = callback.getOpponent();
+      if(evCmd.occupy(this.evSrc, this.execCopyFile, this.singleThreadForCommission, true)) {
+        evCmd.filesrc = src;
+        evCmd.filedst = dst;
+        evCmd.sendEvent();
+      } else {
+        sError = "unexpected: evCmd is in use";
+      }
     }
+    return sError;
   }
 
+  
+  EventConsumer execCopyFile = new EventConsumer() {
+    @Override public int processEvent ( EventObject evP ) {
+      FileRemote.CmdEvent ev = (FileRemote.CmdEvent)evP;
+      String sError = copyFile(ev.filesrc, ev.filedst, null);  // action and back event.    
+      FileRemote.CallbackEvent callback = ev.getOpponent();
+      callback.errorMsg = sError;
+      callback.sendEvent(sError == null? FileRemote.CallbackCmd.done : FileRemote.CallbackCmd.error);
+      return mEventConsumed;
+    }
+    
+  };
+  
+
+  
   
   @Override public String moveFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback) {
     if(callback == null) {

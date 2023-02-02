@@ -54,7 +54,10 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
    */
   public EventCmdtype(EventSource source, EventConsumer consumer, EventTimerThread_ifc thread){ super(source, consumer, thread);}
   
-  
+  @Override protected void cleanData() {
+    this.cmde = null;
+  }
+
 
   public void setCmd(CmdEnum cmd){ this.cmde = cmd; }
   

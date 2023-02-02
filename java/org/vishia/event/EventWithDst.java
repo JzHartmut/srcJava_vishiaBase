@@ -253,6 +253,11 @@ public class EventWithDst extends EventObject
   
   
   
+  protected void cleanData() {
+    
+  }
+  
+  
   /**Check whether this event is free and occupies it. An event instance can be re-used. 
    * If the {@link #dateCreation()} is set, the event is occupied. In a target communication 
    * with embedded devices often the communication resources are limited. 
@@ -272,8 +277,13 @@ public class EventWithDst extends EventObject
   public boolean occupy(EventSource source, EventConsumer dst, EventTimerThread thread, boolean expect){ 
     DateOrder date = DateOrder.get();
     if(dateCreation.compareAndSet(0, date.date)){
+      cleanData();                                         // cleanDate overridden in derived events, clean.
       dateOrder = date.order;
-      super.source = source == null ? EventSource.nullSource : source;  //don't use null pointer.
+      if(source !=null) {
+        super.source = source;  //don't use null pointer.
+      } else if( super.source == null) {
+        super.source = EventSource.nullSource;             //don't use null pointer.
+      }
       this.ctConsumed =0;
       //if(refData !=null || dst !=null) { this.refData = refData; }
       if(dst != null) { 

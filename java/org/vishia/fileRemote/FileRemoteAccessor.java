@@ -83,6 +83,11 @@ public abstract class FileRemoteAccessor implements Closeable
     
   }
   
+  
+  /**Activates working of the devide, thread starting, communication establishing etc. */
+  public abstract void activate();
+  
+  
   /**Gets the properties of the file from the physical file.
    * @param file the destination file object.
    * @param callback If null then the method should access the file system immediately in this thread.
@@ -167,7 +172,7 @@ public abstract class FileRemoteAccessor implements Closeable
   
   public abstract String moveFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
   
-  public abstract void copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
+  public abstract String copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
   
   /**Try to delete the file.
    * @param callback
