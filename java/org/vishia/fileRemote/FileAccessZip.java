@@ -450,14 +450,6 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   }
   
   
-  /**Routine for walk through all really files of the file system for PC file systems and Java7 or higher. 
-   * It calls {@link Files#walkFileTree(Path, Set, int, FileVisitor)} in an extra thread.
-   * defined in {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteCallback)} 
-   */
-  @Override public void walkFileTreeCheck(FileRemote startDir, final boolean bWait, boolean bRefreshChildren, boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteCallback callback)
-  {
-    //TODO
-  }
 
 
 

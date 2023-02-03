@@ -1301,7 +1301,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     boolean bWait = callbackUser ==null; //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
     boolean bResetMark = false;          // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-    this.device.walkFileTreeCheck(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  mission);  //should work in an extra thread.
+    this.device.walkFileTree(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  mission);  //should work in an extra thread.
   }
   
   

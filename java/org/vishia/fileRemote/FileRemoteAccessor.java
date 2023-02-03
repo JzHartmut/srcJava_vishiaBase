@@ -164,9 +164,6 @@ public abstract class FileRemoteAccessor implements Closeable
       , boolean resetMark, String sMaskCheck, long bMarkCheck, int depth, FileRemoteCallback callback);
   
   
-  public abstract void walkFileTreeCheck(FileRemote startDir, final boolean bWait, boolean bRefreshChildren
-      , boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteCallback callback);
-
   protected abstract boolean setLastModified(FileRemote file, long time);
   
   
