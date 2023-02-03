@@ -1118,17 +1118,26 @@ public class FileFunctions {
    *     containing in the HOME environment variable. This style of notification is usual in Linux/Unix
    * <li>"/tmp/ - this is the TMP directory for Linux and shell scripts in windows.
    *    Then TMP or TEMP is searched as environment variable on windows to replace "/tmp/"
-   * <li>not with "/", "\\", "D:/", "D:\\" wherby D is any drive letter,
-   *   then the currDir is used as absolute path for the file.
+   * <li>not starting with "/", "\\", "D:/", "D:\\" wherby D is any drive letter,
+   *   then a given currDir is used as anchor to build the absolute path for the file.
+   *   <br>The currDir can refer to an unknown File, it is not tested here.
+   *   <br>If the currDir itself is relative, {@link File#getAbsoluteFile()} is called to use.
+   *   <br> it means you can use <code>new File(".")</code> to get the current dir of the cmd environment of the Java call.
+   *   <br>currDir may be null, see next:
+   * <li>not starting with "/", "\\", "D:/", and currDir is null,
+   *   then <code>System.getProperty("user.dir")</code> is used for the anchor of the given relative path.
+   *   The difference to the current dir gotten with <code>new File(".")</code> is: 
+   *   The System.setProperty("user.dir", xxx) can be changed in the application, 
+   *   in this kind the current dir inside the application can be changed.
    * </ul>    
    * The resulting path is cleaned using {@link #normalizePath(CharSequence)}.
    * It means, it contains only "/", no "\\" and no artifacts of "/../" and "/./"
-   * <br>The currDir can refer to an unknown File, it is not tested here.
-   * <br>If the currDir refers an relativ path, it is not tested, it is used.
+   * 
    * @param sFilePath filename. It may contain "\\". "\\" are converted to "/" firstly. 
-   * @param currDir The current dir or null. If null then the current dir is gotten calling new File(".");
+   * @param currDir The current dir or null. If null then a necessary current dir for a relative given path
+   *   is gotten calling <code>System.getProperty("user.dir")</code>
    * @return The path as absolute path. It is not tested whether it is a valid path. 
-   *   The path contains / instead \ on windows.
+   *   The path contains always / instead \, also on windows.
    */
   public static String absolutePath(String sFilePath, File currDir)
   { final String sAbs;
@@ -1144,7 +1153,7 @@ public class FileFunctions {
       } else {
         sAbs = sFilePath1;    //with /tmp/ on start, it is for Linux.
       }
-    } else if(!                        // check whether it is NOT an absolute path:
+    } else if(!                                // check whether it is NOT an absolute path:
         (  sFilePath1.startsWith("/")   
         || sFilePath1.startsWith("\\") // D:/windowsAbsPath or D:\path 
         || sFilePath1.length() >=3 && (sFilePath1.substring(1, 3).equals(":/") || sFilePath1.substring(1, 3).equals(":\\"))
@@ -1177,7 +1186,7 @@ public class FileFunctions {
   
   /**Cleans any /../ and /./ from a path, it makes it normalized.
    * This operation does not build a absolute path. Too much ../ on start fails.
-   * Hint call it with an completed absolute path before.
+   * Hint call it with an completed absolute path before or use instead 
    * Moves a <code>:</code> (maybe used as separator between base and local path)
    * to the correct position for such as <code>path/dir/..:**</code> follows.
    * <ul>

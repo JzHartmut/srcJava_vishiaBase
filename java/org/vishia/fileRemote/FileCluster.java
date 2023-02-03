@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
@@ -25,6 +26,9 @@ public class FileCluster
 {
   /**Version, history and license.
    * <ul>
+   * <li>2013-02-03 Hartmut chg: not processed but asserted that the given directory for all calls is normalized. 
+   *   This saves unnecessary calculation time, because usual the path is normalized and absolute, because it comes from the cluster itself
+   *   or proper from the file system. 
    * <li>2017-09-15 Hartmut chg: on {@link #getFile(CharSequence, CharSequence, boolean)}: If the file was not found in the index,
    *   the new private {@link #searchOrCreateDir(String)} is invoked instead immediately creating a new FileRemote instance. 
    *   That routine checks whether the parent is registered and whether the path describes a known FileRemote instance as child of parent.
@@ -74,25 +78,16 @@ public class FileCluster
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2017-08-30";
+  public static final String version = "2023-02-03";
   
-  /**This index contains the association between paths and its FileRemote instances.
+  /**This index contains the association between paths and its FileRemote instances for all known directories.
+   * It are the used directories in the application, not all of the file system. 
+   * The files in the directory and also sub directories are contained in {@link FileRemote#children}.
+   * It is possible that a sub directory is referenced in children, but not registered here. 
+   * That is if it is itself not used with the content. 
    */
   protected IndexMultiTable<String, FileRemote> idxPaths = new IndexMultiTable<String, FileRemote>(IndexMultiTable.providerString);
   
-
-  /**Number of selected bytes in all selected files. */
-  //long[] selectBytes = new long[2];
-  
-  /**Number of selected files. */
-  //int[] selectFiles = new int[2];
-  
-  
-  /**The directory where the selection should be done.
-   * 
-   */
-  //FileRemote dirBaseOfSelection;
-
   
   public FileCluster(){
   }
@@ -123,21 +118,25 @@ public class FileCluster
    * <li>The file is not registered in the index in this class if it is found as children of a registered directory.
    * <li>The parent of the file is created and registered too because the returned file should have a parent.
    * </ul> 
-   * @param sDirP String describes a directory. This string can have backslash instead slash and a non-normalized path (with .. etec.
+   * @param sDirP String describes a directory. This string can have backslash instead slash and a non-normalized path (with .. etc.
+   *   First {@link FileFunctions#normalizePath(CharSequence)} will be called with it.
+   *   It must be an absolute path without environment variable usage, asserted. The absolute path is not build here.
    * @param sName If null then a directory is returned. If given then the returned instance is decided as a file.
    * @param assumeChild true then check whether a requested directory is a child or sub child of a found parent directory.
    *   It is possible to create a child without registration here for new files which are not decided as directory firstly.
    *   <br>false then don't assume that the file is a child of a found file. That is only to break a recursion with
    *   {@link FileRemote#child(CharSequence)} because that method calls this. 
    *   It creates the FileRemote directory instance in case of not found in the {@link #idxPaths}.
-   * @return
+   * @return A registered FileRemote instance. It is not tested yet, {@link FileRemote#refreshProperties()} may be necessary.
+   * 
+   * @visibility package private because used in FileRemote
    */
-
   FileRemote getFile( final CharSequence sDirP, final CharSequence sName, boolean assumeChild){
     //File file1 = new File(sDirP.toString());
     //String sDir1 = FileSystem.getCanonicalPath(file1); //problem: it accesses to the file system. not expected here. 
-    CharSequence sDir1 = FileSystem.normalizePath(sDirP); //sPath.replace('\\', '/');
-    if(!FileSystem.isAbsolutePath(sDir1)) {
+    assert(sDirP == FileFunctions.normalizePath(sDirP)); //sPath.replace('\\', '/'); // it should be incomming normalized!
+    final CharSequence sDir1 = sDirP;
+    if(!FileFunctions.isAbsolutePath(sDirP)) {
       throw new IllegalArgumentException("absolute path expected, " + sDir1);
     }
     final String sDir;
