@@ -1149,7 +1149,8 @@ public class FileFunctions {
         || sFilePath1.startsWith("\\") // D:/windowsAbsPath or D:\path 
         || sFilePath1.length() >=3 && (sFilePath1.substring(1, 3).equals(":/") || sFilePath1.substring(1, 3).equals(":\\"))
         ) ){
-      String sCurrdir = currDir == null ? new File(".").getAbsolutePath() : currDir.getAbsolutePath();
+      //String sCurrdir = currDir == null ? new File(".").getAbsolutePath() : currDir.getAbsolutePath();
+      String sCurrdir = currDir == null ? System.getProperty("user.dir") : currDir.getAbsolutePath();
       if(sFilePath1.startsWith(":")) {
         sAbs = sCurrdir + sFilePath1;            // sAbs contains the ':' as separator
       } else {
@@ -1164,6 +1165,7 @@ public class FileFunctions {
   
   
   /**Returns the normalized absolute path from a file. See {@link #normalizePath(CharSequence)}.
+   * This function builds the absolte path if the file is relative.
    * @param file Any relative or absolute file.
    * @return The returned CharSequence is a StringBuilder which is never referenced elsewhere
    *   or it is a String.
@@ -1173,7 +1175,9 @@ public class FileFunctions {
   }
   
   
-  /**Cleans any /../ and /./ from a path, it makes it normalized or canonical.
+  /**Cleans any /../ and /./ from a path, it makes it normalized.
+   * This operation does not build a absolute path. Too much ../ on start fails.
+   * Hint call it with an completed absolute path before.
    * Moves a <code>:</code> (maybe used as separator between base and local path)
    * to the correct position for such as <code>path/dir/..:**</code> follows.
    * <ul>
@@ -1195,7 +1199,7 @@ public class FileFunctions {
     CharSequence test = inp;
     StringBuilder uPath = inp instanceof StringBuilder ? (StringBuilder)inp : null;
     int posBackslash = StringFunctions.indexOf(inp, '\\', 0);
-    if(posBackslash >=0){
+    if(posBackslash >=0) {                                 // replace \ by /
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       do {
         uPath.setCharAt(posBackslash, '/');
@@ -1206,18 +1210,18 @@ public class FileFunctions {
     
     int posNext = 0;
     int pos;
-    while( (pos = StringFunctions.indexOf(test, "//", posNext)) >=0){
+    while( (pos = StringFunctions.indexOf(test, "//", posNext)) >=0){  //replace to //
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       uPath.delete(pos, pos+1);
       posNext = pos;  //search from pos, it may be found "somewhat///follow"
     }
-    posNext =0;
+    posNext =0;                                            // replace /./
     while( (pos = StringFunctions.indexOf(test, "/./", posNext)) >=0){
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       uPath.delete(pos, pos+2);
       posNext = pos;  //search from pos, it may be found "somewhat/././follow"
     }
-    while( (pos = StringFunctions.indexOf(test, ":./", posNext)) >=0){
+    while( (pos = StringFunctions.indexOf(test, ":./", posNext)) >=0){  //replace :./ (: for local path separator)
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       uPath.delete(pos+1, pos+3);
       posNext = pos;  //search from pos, it may be found "somewhat/././follow"
@@ -1227,10 +1231,10 @@ public class FileFunctions {
       uPath.delete(pos, pos+2);
       posNext = pos;  //search from pos, it may be found "somewhat/././follow"
     }
-    posNext =0;                                  // skip over leading ../, do not reduce it!
+    posNext =0;                                            // skip over leading ../, do not reduce it!
     if(test.length() >0 && test.charAt(0)=='/') { posNext = 1; }     // start with pos 1 if "/../path"
     while(StringFunctions.startsWith(test, posNext, -1, "../")) {
-      posNext +=3;                               // start after last leading ../../
+      posNext +=3;                                        // start after last leading ../../
     }
     while( (pos = StringFunctions.indexOf(test, "/../", posNext)) >=0){
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
@@ -1258,7 +1262,7 @@ public class FileFunctions {
       posNext = posStart;  //search from posStart, it may be found "path/folder/folder/../../folder/../follow"
     }
     int posEnd = test.length();
-    while( StringFunctions.endsWith(test, "/..")){
+    while( StringFunctions.endsWith(test, "/..")) {        /// handle /.. on end
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       int posStart = uPath.lastIndexOf("/", posEnd-4);
       if(posStart < 0){
@@ -1273,7 +1277,7 @@ public class FileFunctions {
         posEnd = posStart;  //it has removed on end
       }  
     }
-    while( StringFunctions.endsWith(test, "/.")){
+    while( StringFunctions.endsWith(test, "/.")){          // remove /. on end
       if(uPath ==null){ test = uPath = new StringBuilder(inp); }
       int posStart = posEnd -2;
       if(posStart == 0 || posStart == 2 && uPath.charAt(1)==':'){

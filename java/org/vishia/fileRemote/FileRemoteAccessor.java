@@ -122,7 +122,8 @@ public abstract class FileRemoteAccessor implements Closeable
    *   and the callback method in the {@link EventCmdPingPongType#callback()} is invoked maybe in another thread
    *   if the answer is gotten. 
    */
-  public abstract void refreshFilePropertiesAndChildren(FileRemote file, FileRemote.CallbackEvent callback);
+  public void XXXrefreshFilePropertiesAndChildren() {}
+  //public abstract void refreshFilePropertiesAndChildren(FileRemote file, FileRemote.CallbackEvent callback);
 
   
   /**Gets files and sub directories of a directory. This method uses the {@link java.io.File} access methods to get the children of this file.
@@ -132,7 +133,7 @@ public abstract class FileRemoteAccessor implements Closeable
    */
   public abstract List<File> getChildren(FileRemote file, FileFilter filter);
   
-  /**Walks through all children of the given file with given filter on the storage medium, maybe refreshes the files 
+  /**Walks through all children with the given file with given filter on the storage medium, maybe refreshes the files 
    * and inform the user on any directory entry and and file or directory via callback.
    * The callback may be done in another thread, because it may be a result of communication.
    * This routine may return immediately. It does not block if a communication is necessary.
@@ -159,10 +160,12 @@ public abstract class FileRemoteAccessor implements Closeable
    *   If negative then the absolute is number of levels (maybe Integer.MAXVALUE) but uses the first level to enter only marked files.
    * @param callback this callback will be invoked on any file or directory.
    */
-  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren, boolean resetMark, String sMaskCheck, long bMarkCheck, int depth, FileRemoteCallback callback);
+  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
+      , boolean resetMark, String sMaskCheck, long bMarkCheck, int depth, FileRemoteCallback callback);
   
   
-  public abstract void walkFileTreeCheck(FileRemote startDir, final boolean bWait, boolean bRefreshChildren, boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteCallback callback);
+  public abstract void walkFileTreeCheck(FileRemote startDir, final boolean bWait, boolean bRefreshChildren
+      , boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteCallback callback);
 
   protected abstract boolean setLastModified(FileRemote file, long time);
   

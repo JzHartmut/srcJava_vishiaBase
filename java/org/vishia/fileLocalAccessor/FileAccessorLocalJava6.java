@@ -228,7 +228,8 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
     
 
   
-  @Override public void refreshFilePropertiesAndChildren(final FileRemote fileRemote, final FileRemote.CallbackEvent callback){
+  //@Override 
+  public void XXXXrefreshFilePropertiesAndChildren(final FileRemote fileRemote, final FileRemote.CallbackEvent callback){
     //a temporary instance for the thread routine.
     RunRefreshWithChildren thread = new RunRefreshWithChildren(fileRemote, callback);
     //the method body:
@@ -279,7 +280,7 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
     
   public FileRemoteCallback.Result walkSubTree(FileRemote file, FileFilter filter, int depth, FileRemoteCallback callback)
   {
-    refreshFilePropertiesAndChildren(file, null);
+    XXXXrefreshFilePropertiesAndChildren(file, null);
     Map<String, FileRemote> children = file.children();
     FileRemoteCallback.Result result = FileRemoteCallback.Result.cont;
     if(children !=null){

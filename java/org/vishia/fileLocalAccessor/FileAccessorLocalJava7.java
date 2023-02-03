@@ -300,7 +300,8 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
     
 
   
-  @Override public void refreshFilePropertiesAndChildren(final FileRemote fileRemote, final FileRemote.CallbackEvent callback){
+  //@Override 
+  public void XXXXrefreshFilePropertiesAndChildren(final FileRemote fileRemote, final FileRemote.CallbackEvent callback){
     //a temporary instance for the thread routine.
     RunRefreshWithChildren thread = new RunRefreshWithChildren(fileRemote, callback);
     //the method body:
@@ -867,6 +868,12 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
   }
   
   
+  /**Uses the java.io.File
+   * @param file
+   * @param sum
+   * @param recursion
+   * @return
+   */
   private long countLengthDir(File file, long sum, int recursion){
     if(recursion > 100){
       throw new IllegalArgumentException("FileRemoteAccessorLocal.chgProsRecursive: too many recursions ");
@@ -1404,7 +1411,7 @@ public class FileAccessorLocalJava7 extends FileRemoteAccessor
         if(resetMark && curr.levelProcessMarked <= 0){ 
           dir1.resetMarked(0xffffffff); 
         }
-        setAttributes(dir1, dir, attrs);
+        setAttributes(dir1, dir, attrs);                   // copy the file attributes from nio.file..Path to FileRemote
         if(refresh && curr !=null){
           dir1.internalAccess().clrFlagBit(FileRemote.mRefreshChildPending);
           //curr.children.put(name, dir1);

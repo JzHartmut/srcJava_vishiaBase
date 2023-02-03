@@ -201,7 +201,8 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
     }
   }
 
-  @Override public void refreshFilePropertiesAndChildren(FileRemote file, FileRemote.CallbackEvent callback) {
+  //@Override 
+  public void XXXrefreshFilePropertiesAndChildren(FileRemote file, FileRemote.CallbackEvent callback) {
     FileZipData data = (FileZipData)file.oFile;
     int zChildren = data == null ? 0 : data.childrenZip == null ? 0 : (data.childrenZip.hasChildren() ? 0
         : data.childrenZip.nrofChildren())

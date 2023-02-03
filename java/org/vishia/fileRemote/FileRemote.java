@@ -1175,11 +1175,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Gets the properties of the file from the physical file.
    * @param callback
    */
-  public void refreshPropertiesAndChildren(CallbackEvent callback){
-    if(device == null){
-      device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+  public void refreshPropertiesAndChildren(FileRemoteCallback callback) {  //CallbackEvent callback){
+    if(this.device == null){
+      this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    device.refreshFilePropertiesAndChildren(this, callback);
+    final boolean bWait = callback ==null;                 // then execute it in this thread.
+    this.device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback); 
+    //device.refreshFilePropertiesAndChildren(this, callback);
   }
   
   
@@ -1286,16 +1288,20 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param set or reset the bit.
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    *   If given then this routine works in an extra thread.
+   * @param timeOrderProgress this is a second possibility beside callbackUser, one of them may be sufficient. 
+   *   On start, any file, any directory and the finish some information will be written in this instance.
+   *   This {@link org.vishia.event.TimeOrder} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
+   * @since 2015-05. Tested elaborately and documented in 2023-02  
    */
   public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    FileRemoteCallbackCopy callbackCopy = new FileRemoteCallbackCopy(dirDst, callbackUser, timeOrderProgress);  //evCallback);
+    FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(dirDst, callbackUser, timeOrderProgress);  //evCallback);
     boolean bWait = callbackUser ==null; //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
-    boolean bResetMark = false;
-    this.device.walkFileTreeCheck(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  callbackCopy);  //should work in an extra thread.
+    boolean bResetMark = false;          // walkFileTreeCheck is a common operation from the device, mission describes what to do  
+    this.device.walkFileTreeCheck(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  mission);  //should work in an extra thread.
   }
   
   
@@ -1892,7 +1898,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       if(device == null){
         device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
       }
-      device.refreshFilePropertiesAndChildren(this, null);
+      refreshPropertiesAndChildren();
+      //device.refreshFilePropertiesAndChildren(this, null);
     }
     if(children == null) { return null; }
     else {
@@ -1917,7 +1924,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       if(device == null){
         device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
       }
-      device.refreshFilePropertiesAndChildren(this, null);
+      refreshPropertiesAndChildren();
+      //device.refreshFilePropertiesAndChildren(this, null);
     }
     List<File> children = device.getChildren(this, filter);
     File[] aChildren = new File[children.size()];
@@ -2577,11 +2585,18 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Walks to the tree of children with given files, without synchronization with the device.
+  /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
    * To run this routine in an extra Thread use {@link #walkFileTreeThread(int, FileRemoteCallback)}.
+   * This operation is not intent to use working with the real file system.
+   * For example {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteCallback, FileRemoteProgressTimeOrder)}
+   * calls internally {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteCallback)}
+   * which is implemented in the device, for example using java.nio.file.Files operations.
+   * This operation iterates only over the children and sub children in the FileRemote directory tree.
+   * Whether the FileRemote instances are synchronized with the file device or not, should be clarified in the callback.
+   * 
    * Note: it should not change the children list, because it uses an iterator.
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
-   * @param callback
+   * @param callback contains the quest and operations due to the files.
    */
   public void walkFileTree(int depth, FileRemoteCallback callback)
   {
@@ -2593,7 +2608,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Walks to the tree of children with given files, without synchronization with the device.
+  /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
    * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteCallback)} in that thread.
    * The user is informed about progress and results via the callback instance.
    * Note: The file tree should not be changed outside or inside the callback methods because the walk method uses an iterators.
@@ -2871,17 +2886,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
     private FileRemote filesrc, filedst;
 
-    /**Source of the forward event, the oppenent of this. It is the instance which creates the event. */
+    /**Source of the forward event, the opponent of this. It is the instance which creates the event. */
     private final EventSource evSrcCmd;
-    
-    /**For {@link #kChgProps}: a new name. */
-    String newName;
-    
-    /**For {@link #kChgProps}: new properties with bit designation see {@link FileRemote#flags}. 
-     * maskFlags contains bits which properties should change, newFlags contains the value of that bit. */
-    int maskFlags, newFlags;
-    
-    long newDate;
     
     /**callback data: the yet handled file. It is a character array because it should not need a new instance. */
     public char[] fileName = new char[100];

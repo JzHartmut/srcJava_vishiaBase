@@ -15,6 +15,13 @@ import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 
 
+/**This class contains the callback operations used for 
+ * {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteCallback)}
+ * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteCallback, FileRemoteProgressTimeOrder)}.
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
 public class FileRemoteCallbackCopy implements FileRemoteCallback
 {
   /**Version, history and license.
@@ -100,6 +107,9 @@ public class FileRemoteCallbackCopy implements FileRemoteCallback
     } else {
       String name = dir.getName();
       dirDst = FileRemote.getDir(dirDst.getPathChars() + "/" + name);
+      if(this.timeOrderProgress !=null) {
+        this.timeOrderProgress.currDir = dir;
+      }
     }
     return Result.cont;
     
@@ -123,21 +133,31 @@ public class FileRemoteCallbackCopy implements FileRemoteCallback
     InputStream inp = null;
     OutputStream wr = null;
     try{
+      long nrofBytesSum0 = 0;
+      if(this.timeOrderProgress !=null) {
+        nrofBytesSum0 = this.timeOrderProgress.nrofBytesAll;
+        this.timeOrderProgress.nrofBytesFile = file.length();
+        this.timeOrderProgress.nrofBytesFileCopied = 0;
+        this.timeOrderProgress.nrFilesProcessed +=1;
+        this.timeOrderProgress.currFile = file;
+      }
+
       inp = file.openInputStream(0);
       wr = fileDst.openOutputStream(0);
       if(inp == null || wr == null) {
         
       } else {
         int bytes, sum = 0;
-        while( (bytes = inp.read(buffer)) >0){
-          wr.write(buffer, 0, bytes);
+        while( (bytes = inp.read(this.buffer)) >0){
+          wr.write(this.buffer, 0, bytes);
           sum += bytes;
+          if(this.timeOrderProgress !=null) {
+            this.timeOrderProgress.nrofBytesFileCopied = sum;
+            this.timeOrderProgress.nrofBytesAll = nrofBytesSum0 + sum;
+          }
         }
-        if(callbackUser !=null) {
-          callbackUser.offerLeafNode(file, info);
-        }
-        if(timeOrderProgress !=null) {
-          timeOrderProgress.nrofBytesFile = sum;
+        if(this.callbackUser !=null) {
+          this.callbackUser.offerLeafNode(file, info);
         }
       }
     } catch(IOException exc) {

@@ -1,9 +1,4 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
-2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-02-02 09:16:44  x     .gitCommit                               ::           . 26 -0637512517 
-2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
-2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
-2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
 
 ============================== java/ ==============================================================
 
@@ -135,22 +130,22 @@
 2020-10-31 22:20:03  x     Execode.java                             ::          7.808  0335069824 
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
-2023-02-01 21:26:00  x     FileAccessorLocalJava6.java              ::         30.658  0370071266 
-2023-02-01 21:27:24  x     FileAccessorLocalJava7.java              ::         63.684  0559380532 
+2023-02-03 09:06:21  x     FileAccessorLocalJava6.java              ::         30.671 -2126394935 
+2023-02-03 09:05:23  x     FileAccessorLocalJava7.java              ::         63.874  0783556043 
 2023-01-31 12:07:09  x     FileLocalAccessorCopyStateM.java         ::         53.696 -0621361516 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2023-02-01 21:26:09  x     FileAccessZip.java                       ::         17.493  1886214873 
+2023-02-03 09:05:07  x     FileAccessZip.java                       ::         17.501  0021777291 
 2023-01-02 16:27:21  x     FileCluster.java                         ::         23.583  1926694705 
 2021-10-04 14:29:52  x     FileMark.java                            ::          8.985 -1421367665 
-2023-02-02 09:15:35  x     FileRemote.java                          ::        157.634 -1780115045 
-2023-02-01 21:25:43  x     FileRemoteAccessor.java                  ::         14.515 -0610678059 
-2021-10-04 14:29:48  x     FileRemoteCallback.java                  ::           .507 -1980823866 
+2023-02-03 09:17:09  x     FileRemote.java                          ::        158.854  1281159185 
+2023-02-03 09:18:19  x     FileRemoteAccessor.java                  ::         14.588  1137612440 
+2023-02-03 07:32:40  x     FileRemoteCallback.java                  ::           .598 -0876288558 
 2021-10-04 14:29:58  x     FileRemoteCallbackCmp.java               ::         18.364 -1465418742 
-2021-10-04 14:29:49  x     FileRemoteCallbackCopy.java              ::          5.606  0993778788 
+2023-02-03 07:33:45  x     FileRemoteCallbackCopy.java              ::          6.564  1784931918 
 2020-03-31 18:08:03  x     FileRemoteCallbackSearch.java            ::         10.849  0541022134 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
 2021-10-04 14:29:51  x     FileRemoteProgressTimeOrder.java         ::          4.023 -0268806667 
@@ -273,7 +268,7 @@
 2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
 2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
 2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
-2023-01-31 18:49:25  x     FileFunctions.java                       ::         85.693 -0380242211 
+2023-02-02 11:49:17  x     FileFunctions.java                       ::         86.239  0821941779 
 2023-01-26 21:35:34  x     FileList.java                            ::         23.423 -0475231390 
 2021-10-04 14:29:49  x     FilePath.java                            ::         87.603 -0641162706 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
