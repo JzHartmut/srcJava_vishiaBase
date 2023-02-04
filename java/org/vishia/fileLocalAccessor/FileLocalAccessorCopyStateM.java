@@ -18,7 +18,7 @@ import org.vishia.event.EventTimerThread;
 import org.vishia.event.EventTimerThread_ifc;
 import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
-import org.vishia.fileRemote.FileRemoteCallback;
+import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.FileRemoteCopyOrder;
 import org.vishia.fileRemote.FileRemoteProgressTimeOrder;
 import org.vishia.states.StateComposite;
@@ -185,7 +185,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
     String pathDst;
     String nameModification;
     int mode;
-    FileRemoteCallback callbackUser;
+    FileRemoteWalkerCallback callbackUser;
     FileRemoteProgressTimeOrder timeOrderProgress;
   }
   
@@ -320,7 +320,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
   }
   
   
-  public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
   {
     
     CopyOrder order = new CopyOrder();

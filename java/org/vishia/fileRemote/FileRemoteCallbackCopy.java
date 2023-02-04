@@ -16,13 +16,13 @@ import org.vishia.util.StringFunctions;
 
 
 /**This class contains the callback operations used for 
- * {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteCallback)}
- * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteCallback, FileRemoteProgressTimeOrder)}.
+ * {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
+ * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressTimeOrder)}.
  * 
  * @author Hartmut Schorrig
  *
  */
-public class FileRemoteCallbackCopy implements FileRemoteCallback
+public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
 {
   /**Version, history and license.
    * <ul>
@@ -70,7 +70,7 @@ public class FileRemoteCallbackCopy implements FileRemoteCallback
   /**Event instance for user callback. */
   private final FileRemoteProgressTimeOrder timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
   
-  private final FileRemoteCallback callbackUser;
+  private final FileRemoteWalkerCallback callbackUser;
   
   int mode;
   
@@ -85,7 +85,7 @@ public class FileRemoteCallbackCopy implements FileRemoteCallback
    * @param dirDst
    * @param evCallback maybe null, if given, this event will be sent to show the progression of the comparison
    */
-  FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     this.timeOrderProgress = timeOrderProgress;
     this.callbackUser = callbackUser;
@@ -117,7 +117,7 @@ public class FileRemoteCallbackCopy implements FileRemoteCallback
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, FileRemoteCallback.Counters cnt){
+  @Override public Result finishedParentNode(FileRemote file){
     dirDst = dirDst.getParentFile();
     return Result.cont;      
   }
@@ -185,7 +185,7 @@ public class FileRemoteCallbackCopy implements FileRemoteCallback
   
   
   
-  @Override public void finished(FileRemote startDir, SortedTreeWalkerCallback.Counters cnt)
+  @Override public void finished(FileRemote startDir)
   {
     if(timeOrderProgress !=null){
       timeOrderProgress.bDone = true; 

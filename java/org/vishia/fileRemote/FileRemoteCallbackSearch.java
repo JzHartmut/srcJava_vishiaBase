@@ -15,7 +15,7 @@ import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.SortedTreeWalkerCallback.Result;
 
-public class FileRemoteCallbackSearch implements FileRemoteCallback {
+public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   static final public String sVersion = "2016-12-27";
   
   class CompareCtrl {
@@ -55,7 +55,7 @@ public class FileRemoteCallbackSearch implements FileRemoteCallback {
   /**Event instance for user callback. */
   private final FileRemoteProgressTimeOrder timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
   
-  private final FileRemoteCallback callbackUser;
+  private final FileRemoteWalkerCallback callbackUser;
   
   int mode;
   
@@ -83,7 +83,7 @@ public class FileRemoteCallbackSearch implements FileRemoteCallback {
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  FileRemoteCallbackSearch(FileRemote dir1, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackSearch(FileRemote dir1, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     this.timeOrderProgress = timeOrderProgress;
     this.callbackUser = callbackUser;
@@ -127,7 +127,7 @@ public class FileRemoteCallbackSearch implements FileRemoteCallback {
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, FileRemoteCallback.Counters cnt){
+  @Override public Result finishedParentNode(FileRemote file){
     
     return Result.cont;      
   }
@@ -308,7 +308,7 @@ public class FileRemoteCallbackSearch implements FileRemoteCallback {
   
   
   
-  @Override public void finished(FileRemote startDir, SortedTreeWalkerCallback.Counters cnt)
+  @Override public void finished(FileRemote startDir)
   {
     if(timeOrderProgress !=null){
       timeOrderProgress.bDone = true; 

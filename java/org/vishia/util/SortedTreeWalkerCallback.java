@@ -13,7 +13,7 @@ public interface SortedTreeWalkerCallback<Type>
   
   /**Version, history and license.
    * <ul>
-   * <li>2014-12-24 Hartmut created from the more special interface {@link org.vishia.fileRemote.FileRemoteCallback}.                  
+   * <li>2014-12-24 Hartmut created from the more special interface {@link org.vishia.fileRemote.FileRemoteWalkerCallback}.                  
    * </ul>
    * <br><br>
    * <b>Copyright/Copyleft</b>:
@@ -59,19 +59,19 @@ public interface SortedTreeWalkerCallback<Type>
    * @author hartmut
    *
    */
-  public static class Counters
-  { /**Any number of internal data. */
-    public long nrofBytes;
-    
-    /**Number of parent nodes and number of leaf nodes which are processed. */
-    public int nrofParents, nrofLeafss;
-  
-    /**Number of parent nodes and number of leaf nodes which are selected. */
-    public int nrofParentSelected, nrofLeafSelected;
-    
-    public void clear(){ nrofBytes = 0; nrofParents = nrofLeafss = nrofParentSelected = nrofLeafSelected = 0; }
-    
-  }
+//  public static class Counters
+//  { /**Any number of internal data. */
+//    public long nrofBytes;
+//    
+//    /**Number of parent nodes and number of leaf nodes which are processed. */
+//    public int nrofParents, nrofLeafss;
+//  
+//    /**Number of parent nodes and number of leaf nodes which are selected. */
+//    public int nrofParentSelected, nrofLeafSelected;
+//    
+//    public void clear(){ nrofBytes = 0; nrofParents = nrofLeafss = nrofParentSelected = nrofLeafSelected = 0; }
+//    
+//  }
   
   /**Invoked before start of a walk through the tree.
    */
@@ -90,7 +90,7 @@ public interface SortedTreeWalkerCallback<Type>
    *   and {@link Counters#nrofParents} == {@link Counters#nrofParentSelected}
    *   then all children are selected.
    */
-  Result finishedParentNode(Type parentNode, Counters cnt);
+  Result finishedParentNode(Type parentNode);
   
   /**Invoked for any node which has no children or which is not processed because the depth of walking through the tree is reached.
    * It is called in opposite to {@link #offerLeafNode(Object)}, only one of both is called for a node.
@@ -102,7 +102,7 @@ public interface SortedTreeWalkerCallback<Type>
   
   /**Invoked after finishing the walking through.
    */
-  void finished(Type startNode, Counters cnt);
+  void finished(Type startNode);
   
   
   /**Returns true if the tree walking should be terminated respectively aborted.
@@ -119,13 +119,13 @@ public interface SortedTreeWalkerCallback<Type>
   {
 
     @Override public void start(Object startDir) {  }
-    @Override public void finished(Object parentNode, SortedTreeWalkerCallback.Counters cnt) {  }
+    @Override public void finished(Object parentNode) {  }
 
     @Override public Result offerParentNode(Object file) {
       return Result.cont;      
     }
     
-    @Override public Result finishedParentNode(Object file, SortedTreeWalkerCallback.Counters cnt) {
+    @Override public Result finishedParentNode(Object file) {
       return Result.cont;      
     }
     

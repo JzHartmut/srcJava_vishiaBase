@@ -6,7 +6,7 @@ export DST=docuSrcJava_vishiaBase
 ##export DST_priv=docuSrcJavaPriv_vishiaBase
 
 export SRC="-subpackages org.vishia"
-export SRCPATH=..
+export SRCPATH=../Java
 export CLASSPATH=xxxxx
 export LINKPATH=
 ##export LINKPATH=-link ../docuSrcJava_vishiaBase
@@ -15,6 +15,6 @@ if test -d ../../srcJava_vishiaBase; then export vishiaBase="../../srcJava_vishi
 else export vishiaBase="../../../../../../cmpnJava_vishiaBase/src/main/java/srcJava_vishiaBase"
 fi
 
-$vishiaBase/_make/-genjavadocbase.sh
+$vishiaBase/makeScripts/-genjavadocbase.sh
 
 

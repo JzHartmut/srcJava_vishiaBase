@@ -17,7 +17,7 @@ import org.vishia.util.StringFunctions;
  * @author Hartmut Schorrig
  *
  */
-public class FileRemoteCallbackCmp implements FileRemoteCallback
+public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
 {
   
   /**Version, history and license.
@@ -90,9 +90,9 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
   private final int zBasePath1;
   
   /**Event instance for user callback. */
-  private final FileRemoteProgressTimeOrder timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
+  private final FileRemoteProgressTimeOrder progress;  //FileRemote.CallbackEvent evCallback;
   
-  private final FileRemoteCallback callbackUser;
+  private final FileRemoteWalkerCallback callbackUser;
   
   int mode;
   
@@ -115,9 +115,9 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
-    this.timeOrderProgress = timeOrderProgress;
+    this.progress = timeOrderProgress;
     this.callbackUser = callbackUser;
     this.dir1 = dir1; this.dir2 = dir2;
     basepath1 = FileSystem.normalizePath(dir1.getAbsolutePath()).toString();
@@ -182,7 +182,7 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
         dir2sub.resetMarked(FileMark.cmpAlone);
-        dir2sub.device.walkFileTree(dir2sub, true, true, false, null, 0, 1, callbackMarkSecondAlone);
+        dir2sub.device.walkFileTree(dir2sub, true, true, false, null, 0, 1, callbackMarkSecondAlone, progress);
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
         //waitfor
         //dir2sub.refreshPropertiesAndChildren(null);        
@@ -193,7 +193,7 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, FileRemoteCallback.Counters cnt){
+  @Override public Result finishedParentNode(FileRemote file){
     
     return Result.cont;      
   }
@@ -226,10 +226,10 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
       if(callbackUser !=null) {
         callbackUser.offerLeafNode(file, new Integer(cmprBits));  ////
       }
-      if(timeOrderProgress !=null){
-        timeOrderProgress.currFile = file;
-        timeOrderProgress.nrFilesProcessed +=1;
-        timeOrderProgress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, null);
+      if(progress !=null){
+        progress.currFile = file;
+        progress.nrFilesProcessed +=1;
+        progress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, null);
       }
       /*
       if(evCallback.occupy(null, file, false)) {
@@ -439,11 +439,11 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
   
   
   
-  @Override public void finished(FileRemote startDir, SortedTreeWalkerCallback.Counters cnt)
+  @Override public void finished(FileRemote startDir)
   {
-    if(timeOrderProgress !=null){
-      timeOrderProgress.bDone = true; 
-      timeOrderProgress.show(FileRemote.CallbackCmd.done, null);
+    if(progress !=null){
+      progress.bDone = true; 
+      progress.show(FileRemote.CallbackCmd.done, null);
     }
     /*
     if(evCallback !=null && evCallback.occupyRecall(500, null, true) !=0){
@@ -460,15 +460,15 @@ public class FileRemoteCallbackCmp implements FileRemoteCallback
    * in the dir1. A new dir is searched in the dir2 tree, then the children in 1 level are marked. 
    * 
    */
-  final FileRemoteCallback callbackMarkSecondAlone = new FileRemoteCallback()
+  final FileRemoteWalkerCallback callbackMarkSecondAlone = new FileRemoteWalkerCallback()
   {
 
     @Override
-    public void finished(FileRemote startDir, SortedTreeWalkerCallback.Counters cnt)
+    public void finished(FileRemote startDir)
     { }
 
     @Override
-    public Result finishedParentNode(FileRemote file, FileRemoteCallback.Counters cnt)
+    public Result finishedParentNode(FileRemote file)
     { return Result.cont; }
 
     @Override

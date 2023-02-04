@@ -146,7 +146,7 @@ import org.vishia.util.TreeNodeNamed_ifc;
  * <b>Concepts of callback</b>: <br>
  * This class offers some methods to deal with directory trees:
  * <ul>
- * <li>{@link #refreshAndMark(int, boolean, String, int, int, FileRemoteCallback)} marks files for copy, move or delete.
+ * <li>{@link #refreshAndMark(int, boolean, String, int, int, FileRemoteWalkerCallback)} marks files for copy, move or delete.
  * <li>{@link #refreshAndCompare(FileRemote, int, String, int, FileRemoteProgressTimeOrder)} compares two trees of files.
  * <li>{@link #copyChecked(String, String, int, CallbackEvent)} copies some or all files in a tree.
  * <li>{@link #deleteChecked(CallbackEvent, int)} deletes some or all files in a tree.
@@ -154,7 +154,7 @@ import org.vishia.util.TreeNodeNamed_ifc;
  * This operations may need more seconds, sometimes till minutes if there are a lot of files in a remote device with network access.
  * To show the progress two startegies are used:
  * <ul>
- * <li>{@link FileRemoteCallback}: It is a callback interface with methods for each file and each started and finished directory.
+ * <li>{@link FileRemoteWalkerCallback}: It is a callback interface with methods for each file and each started and finished directory.
  * <li>{@link FileRemoteProgressTimeOrder}: It is an instance which is filled with data. The time order is handled by a timer
  *   which activates it for example in a cycle for 200 milliseconds. The user extends this base class with the showing method. 
  *   In a time range of 200 milliseconds there can be executed some more files, for example 1000 if the file system is local. 
@@ -196,12 +196,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * <li>2015-07-04 Hartmut chg: Values of flags {@link #mTested}, {@link #mShouldRefresh}, {@link #mRefreshChildPending}
    *   {@link #mThreadIsRunning} to the highest digit of int, to recognize for manual viewing. That flags should not used in applications.
    *   Remove of flags for comparison, the bits are used and defined inside {@link FileMark} for a longer time.  
-   * <li>2015-05-30 Hartmut new: {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteCallback, FileRemoteProgressTimeOrder)} 
+   * <li>2015-05-30 Hartmut new: {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressTimeOrder)} 
    * <li>2015-05-25 Hartmut new: {@link #clusterOfApplication}: There is a singleton, the {@link FileCluster}
    *   is not necessary as argument for {@link #fromFile(File)} especially to work more simple to use FileRemote
    *   capabilities for File operations.
    * <li>2014-12-20 Hartmut new: {@link #refreshPropertiesAndChildren(CallbackFile)} used in Fcmd with an Thread on demand, 
-   *   see {@link org.vishia.fileLocalAccessor.FileAccessorLocalJava7#walkFileTree(FileRemote, boolean, boolean, String, int, int, FileRemoteCallback)}
+   *   see {@link org.vishia.fileLocalAccessor.FileAccessorLocalJava7#walkFileTree(FileRemote, boolean, boolean, String, int, int, FileRemoteWalkerCallback)}
    *   and {@link FileRemoteAccessor.FileWalkerThread}.
    * <li>2014-07-30 Hartmut new: calling {@link FileAccessorLocalJava6#selectLocalFileAlways} in {@link #getAccessorSelector()}
    *   for compatibility with Java6. There the existence of java.nio.file.Files is checked, and the File access
@@ -491,7 +491,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   FileRemote parent;
   
   /**The content of a directory. It contains all files, proper for return {@link #listFiles()} without filter. 
-   * The content is valid at the time of calling {@link #refreshPropertiesAndChildren(FileRemoteCallback, boolean)} or its adequate.
+   * The content is valid at the time of calling {@link #refreshPropertiesAndChildren(FileRemoteWalkerCallback, boolean)} or its adequate.
    * It is possible that the content of the physical directory is changed meanwhile.
    * If this field should be returned without null, especially on {@link #listFiles()} and the file is a directory, 
    * the {@link #refreshPropertiesAndChildren()} will be called.  
@@ -866,7 +866,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @return A report text to see what is happen. This CharSequence (a StringBuilder instance) is not referenced anywhere else.
    *   If null then no difference is found. 
    */
-  public static CharSequence cmprDirs(int modeLog, File dir1, File dir2, String mask, List<String> ignoreInContent)
+  public static CharSequence cmprDirs(int modeLog, File dir1, File dir2, String mask, List<String> ignoreInContentc, FileRemoteProgressTimeOrder progress)
   { FileRemote dir1a, dir2a;
     dir1a = fromFile(dir1); 
     dir2a = fromFile(dir2);
@@ -875,7 +875,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     CallbackCmpDirs callbackCmpDirs = new CallbackCmpDirs(modeLog);  //instance for this invocation.  
     FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(dir1a, dir2a, callbackCmpDirs, null);  //evCallback);
-    dir1a.device.walkFileTree(dir1a,  true, true, false, mask, 0,  0,  callbackCmp);  //should work in an extra thread.
+    dir1a.device.walkFileTree(dir1a,  true, true, false, mask, 0,  0,  callbackCmp, progress);  //should work in an extra thread.
     //dir1a.refreshAndCompare(dir2a, -1, mask, 0, callbackCmpDirs, null);
     if( (modeLog & modeCmprLogNotEqualFiles) ==0 && callbackCmpDirs.bNotEqual) {
       if(callbackCmpDirs.ret == null){ callbackCmpDirs.ret = new StringBuilder(); }
@@ -887,7 +887,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  static class CallbackCmpDirs implements FileRemoteCallback
+  static class CallbackCmpDirs implements FileRemoteWalkerCallback
   {
     final int modeLog;
     
@@ -916,7 +916,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
 
     @Override public org.vishia.util.SortedTreeWalkerCallback.Result finishedParentNode(
-        FileRemote parentNode, org.vishia.util.SortedTreeWalkerCallback.Counters cnt)
+        FileRemote parentNode)
     {
       // TODO Auto-generated method stub
       return null;
@@ -962,7 +962,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     
 
-    @Override public void finished(FileRemote startNode, org.vishia.util.SortedTreeWalkerCallback.Counters cnt)
+    @Override public void finished(FileRemote startNode)
     {
       // TODO Auto-generated method stub
       
@@ -1175,12 +1175,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Gets the properties of the file from the physical file.
    * @param callback
    */
-  public void refreshPropertiesAndChildren(FileRemoteCallback callback) {  //CallbackEvent callback){
+  public void refreshPropertiesAndChildren(FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress) {  //CallbackEvent callback){
     if(this.device == null){
       this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     final boolean bWait = callback ==null;                 // then execute it in this thread.
-    this.device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback); 
+    this.device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback, progress); 
     //device.refreshFilePropertiesAndChildren(this, callback);
   }
   
@@ -1195,28 +1195,28 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   Note: Whether or not another thread is used for communication it is not defined with them. It is possible to start another thread
    *   and wait for success, for example if communication with a remote device is necessary. 
    */
-  public void refreshPropertiesAndChildren(FileRemoteCallback callback, boolean bWait) {
+  public void refreshPropertiesAndChildren(FileRemoteWalkerCallback callback, boolean bWait, FileRemoteProgressTimeOrder progress) {
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback);  //should work in an extra thread.
+    device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback, progress);  //should work in an extra thread.
   }
   
   
   /**Uses walk through file tree to refresh but without user callback.  It waits for success respectively executes the walk in this thread.
-   * It calls {@link #refreshPropertiesAndChildren(FileRemoteCallback, boolean)} with null and true.
+   * It calls {@link #refreshPropertiesAndChildren(FileRemoteWalkerCallback, boolean)} with null and true.
    * 
    */
   public void refreshPropertiesAndChildren() {
-    FileRemoteCallback callback = null;
-    refreshPropertiesAndChildren(callback, true);
+    FileRemoteWalkerCallback callback = null;
+    refreshPropertiesAndChildren(callback, true, null);
   }
   
   
   
   /**Refreshes a file tree and mark some files. This routine creates another thread usually, which accesses the file system
    * and invokes the callback routines. A longer access time does not influence this thread. 
-   * The result is given only if the {@link FileRemoteCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
+   * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
    * will be invoked.
    * @param resetMark true then remove existing mark to create a new marking. false: Existing marked files left marked independent of mask.
    * @param sMaskSelection a mask to select directory and files
@@ -1225,19 +1225,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress instance for callback.
    */
-  public void refreshAndMark(boolean resetMark, String sMaskSelection, long bMarkSelection, int depth, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
+  public void refreshAndMark(boolean resetMark, String sMaskSelection, long bMarkSelection, int depth, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder progress) {
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CallbackMark callbackMark = new CallbackMark(callbackUser, timeOrderProgress); //, nLevelProcessOnlyMarked);  //negativ... TODO
-    device.walkFileTree(this,  false, true, resetMark, sMaskSelection, bMarkSelection,  depth,  callbackMark);  //should work in an extra thread.
+    CallbackMark callbackMark = new CallbackMark(callbackUser, progress); //, nLevelProcessOnlyMarked);  //negativ... TODO
+    device.walkFileTree(this,  false, true, resetMark, sMaskSelection, bMarkSelection,  depth,  callbackMark, progress);  //should work in an extra thread.
   }
   
   
   
   /**Refreshes a file tree and compare some or all files. This routine creates another thread usually which accesses the file system
    * and invokes the callback routines. A longer access time does not influence this thread. 
-   * The result is given only if the {@link FileRemoteCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
+   * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
    * will be invoked.
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should entered.
    * @param mask a mask to select directory and files
@@ -1245,12 +1245,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
    */
-  public void refreshAndCompare(FileRemote dirCmp, int depth, String mask, int mark, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
+  public void refreshAndCompare(FileRemote dirCmp, int depth, String mask, int mark, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(this, dirCmp, callbackUser, timeOrderProgress);  //evCallback);
-    device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackCmp);  //should work in an extra thread.
+    device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackCmp, timeOrderProgress);  //should work in an extra thread.
   }
   
   
@@ -1258,7 +1258,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   /**Refreshes a file tree and search in  some or all files. This routine creates another thread usually which accesses the file system
    * and invokes the callback routines. A longer access time does not influence this thread. 
-   * The result is given only if the {@link FileRemoteCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
+   * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
    * will be invoked.
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should entered.
    * @param mask a mask to select directory and files
@@ -1266,12 +1266,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
    */
-  public void refreshAndSearch(int depth, String mask, int mark, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
+  public void refreshAndSearch(int depth, String mask, int mark, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackSearch callbackSearch = new FileRemoteCallbackSearch(this, search, callbackUser, timeOrderProgress);  //evCallback);
-    this.device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackSearch);  //should work in an extra thread.
+    this.device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackSearch, timeOrderProgress);  //should work in an extra thread.
   }
   
   
@@ -1280,7 +1280,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Copies all files from this directory to dst which are selected by the given mask.
    * This routine creates another thread usually which accesses the file system
    * and invokes the callback routines if given. A longer access time does not influence this thread. 
-   * The result is given only if the {@link FileRemoteCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
+   * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
    * will be invoked. Elsewhere it works in the current thread.
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
    * @param mask a mask to select directory and files. See {@link org.vishia.util.PathCheck}, that is used.
@@ -1293,7 +1293,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   This {@link org.vishia.event.TimeOrder} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
    * @since 2015-05. Tested elaborately and documented in 2023-02  
    */
-  public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
+  public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
@@ -1301,7 +1301,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     boolean bWait = callbackUser ==null; //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
     boolean bResetMark = false;          // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-    this.device.walkFileTree(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  mission);  //should work in an extra thread.
+    this.device.walkFileTree(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  mission, timeOrderProgress);  //should work in an extra thread.
   }
   
   
@@ -2046,40 +2046,39 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   /**Walks to the tree of children with given files, without synchronization with the device.
-   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteCallback)} in that thread.
+   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteWalkerCallback)} in that thread.
    * The user is informed about progress and results via the callback instance.
    * Note: it should not change the children list, because it uses an iterator.
    * @param depth at least 1, 0 to enter all levels.
    * @param callback
    */
-  public void deleteMarkedInThread(int mark, FileRemoteCallback callback)
+  public void deleteMarkedInThread(int mark, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
   {
-    DeleteThread thread1 = new DeleteThread(mark, this, callback);
+    DeleteThread thread1 = new DeleteThread(mark, this, callback, progress);
     thread1.start();
   }
   
   
   /**Walks to the tree of children with given files, without synchronization with the device.
-   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteCallback)} in that thread.
+   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteWalkerCallback)} in that thread.
    * The user is informed about progress and results via the callback instance.
    * Note: it should not change the children list, because it uses an iterator.
    * @param depth at least 1, 0 to enter all levels.
    * @param callback
    */
-  public void deleteMarked(int mark, FileRemoteCallback callback)
+  public void deleteMarked(int mark, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
   {
-    FileRemoteCallback.Counters cntAll = new FileRemoteCallback.Counters();
     if(callback != null) { callback.start(this); }
-    if(deleteMarkedSub(cntAll, mark, this, 10000, callback)) {
+    if(deleteMarkedSub(mark, this, 10000, callback, progress)) {
       delete(); //delete the directory or file.
     }
-    if(callback != null) { callback.finished(this, cntAll); }
+    if(callback != null) { callback.finished(this); }
     
   }
   
   
   
-  /**Deletes a subdirectory. This routine is invoked from {@link #deleteMarked(int, FileRemoteCallback)} and recursively in this routine
+  /**Deletes a subdirectory. This routine is invoked from {@link #deleteMarked(int, FileRemoteWalkerCallback)} and recursively in this routine
    * for sub directories.
    * @param mark
    * @param file The directory
@@ -2087,29 +2086,26 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callback
    * @return true if the directory is empty or it is a file.
    */
-  private static boolean deleteMarkedSub( FileRemoteCallback.Counters cntAll, int mark, FileRemote file, int depth, FileRemoteCallback callback)
+  private static boolean deleteMarkedSub( int mark, FileRemote file, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
   {
-    FileRemoteCallback.Counters cnt = new FileRemoteCallback.Counters();
     boolean bDeleteParent = true;
     Map<String, FileRemote> children;
-    FileRemoteCallback.Result result;
+    FileRemoteWalkerCallback.Result result;
     if(file.isDirectory() && (children = file.children()) !=null)
     {
       System.out.println("FileRemote.deleteMarkedSub - offerDir; " + file.getAbsolutePath());
       result = callback.offerParentNode(file);
-      if(result == FileRemoteCallback.Result.cont) { //only walk through subdir if cont
+      if(result == FileRemoteWalkerCallback.Result.cont) { //only walk through subdir if cont
         Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
-        while(result == FileRemoteCallback.Result.cont && iter.hasNext()) {
+        while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
           try {
             Map.Entry<String, FileRemote> file1 = iter.next();
             FileRemote file2 = file1.getValue();
             boolean bCheckDelete;
             if(file2.isDirectory()){
-              cnt.nrofParents +=1;
-              cntAll.nrofParents +=1;
               if(depth >1){
                 //invokes offerDir for file2
-                bCheckDelete = deleteMarkedSub(cntAll, mark, file2, depth-1, callback);  //directory is not delete completely.
+                bCheckDelete = deleteMarkedSub(mark, file2, depth-1, callback, progress);  //directory is not delete completely.
               } else {
                 //because the depth is reached, offerFile is called.
                 System.out.println("FileRemote.deleteMarkedSub - offer empty dir; " + file2.getName());
@@ -2118,8 +2114,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
               }
             } else {
               //a file:
-              cnt.nrofLeafss +=1;
-              cntAll.nrofLeafss +=1;
               result = callback !=null ? callback.offerLeafNode(file2, null) : Result.cont;  //show it as file instead walk through tree
               bCheckDelete = result == Result.cont;
             }
@@ -2127,8 +2121,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
             if(bCheckDelete) {
               //delete the file or the directory which's content is successfully removed.
               if(checkAndDelete(file2, iter, mark)) {
-                cnt.nrofLeafSelected +=1;
-                cntAll.nrofLeafSelected +=1;
+//                cnt.nrofLeafSelected +=1;
+//                cntAll.nrofLeafSelected +=1;
               } else {
                 bDeleteParent = false;
               }
@@ -2140,9 +2134,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
             System.err.println(Assert.exceptionInfo("FileRemote unexpected - deleteMarkedSub", exc, 0, 20, true)); 
           }
         }//while
-        if(result != FileRemoteCallback.Result.terminate){
+        if(result != FileRemoteWalkerCallback.Result.terminate){
           //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-          result = callback.finishedParentNode(file, cnt); //FileRemoteCallback.Result.cont;
+          result = callback.finishedParentNode(file); //FileRemoteWalkerCallback.Result.cont;
         }
       }//cont = openDir(...) 
       // else: not cont, do nothing
@@ -2365,7 +2359,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public void copyChecked(String pathDst, String nameModification, int mode, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  public void copyChecked(String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
   {
     if(device == null){
       device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -2527,7 +2521,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public void search(byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  public void search(byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
   {
     if(device == null){
       device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -2586,10 +2580,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
-   * To run this routine in an extra Thread use {@link #walkFileTreeThread(int, FileRemoteCallback)}.
+   * To run this routine in an extra Thread use {@link #walkFileTreeThread(int, FileRemoteWalkerCallback)}.
    * This operation is not intent to use working with the real file system.
-   * For example {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteCallback, FileRemoteProgressTimeOrder)}
-   * calls internally {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteCallback)}
+   * For example {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressTimeOrder)}
+   * calls internally {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
    * which is implemented in the device, for example using java.nio.file.Files operations.
    * This operation iterates only over the children and sub children in the FileRemote directory tree.
    * Whether the FileRemote instances are synchronized with the file device or not, should be clarified in the callback.
@@ -2598,18 +2592,18 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
    * @param callback contains the quest and operations due to the files.
    */
-  public void walkFileTree(int depth, FileRemoteCallback callback)
+  public void walkFileTree(int depth, FileRemoteWalkerCallback callback)
   {
     callback.start(this);
     walkSubTree(this, depth <=0 ? Integer.MAX_VALUE: depth, callback);
-    callback.finished(this, null);
+    callback.finished(this);
   }
     
   
   
   
   /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
-   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteCallback)} in that thread.
+   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteWalkerCallback)} in that thread.
    * The user is informed about progress and results via the callback instance.
    * Note: The file tree should not be changed outside or inside the callback methods because the walk method uses an iterators.
    * If the children lists are changed concurrently, then the walking procedure may be aborted because an {@link ConcurrentModificationException}
@@ -2617,7 +2611,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param depth at least 1. Use 0 to enter all levels.
    * @param callback
    */
-  public void walkFileTreeThread(int depth, FileRemoteCallback callback)
+  public void walkFileTreeThread(int depth, FileRemoteWalkerCallback callback)
   {
     WalkThread thread1 = new WalkThread(this, depth, callback);
     thread1.start();
@@ -2625,23 +2619,22 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**See {@link #walkFileTree(int, FileRemoteCallback)}, invoked internally recursively.
+  /**See {@link #walkFileTree(int, FileRemoteWalkerCallback)}, invoked internally recursively.
    */
-  private static FileRemoteCallback.Result walkSubTree(FileRemote dir, int depth, FileRemoteCallback callback)
+  private static FileRemoteWalkerCallback.Result walkSubTree(FileRemote dir, int depth, FileRemoteWalkerCallback callback)
   {
-    FileRemoteCallback.Counters cnt = new FileRemoteCallback.Counters();
     
     Map<String, FileRemote> children = dir.children();
-    FileRemoteCallback.Result result = FileRemoteCallback.Result.cont;
+    FileRemoteWalkerCallback.Result result = FileRemoteWalkerCallback.Result.cont;
     result = callback.offerParentNode(dir);
-    if(result == FileRemoteCallback.Result.cont && children !=null){ //only walk through subdir if cont
+    if(result == FileRemoteWalkerCallback.Result.cont && children !=null){ //only walk through subdir if cont
       Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
-      while(result == FileRemoteCallback.Result.cont && iter.hasNext()) {
+      while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
         try{
           Map.Entry<String, FileRemote> file1 = iter.next();
           FileRemote file2 = file1.getValue();
           if(file2.isDirectory()){
-            cnt.nrofParents +=1;
+//            cnt.nrofParents +=1;
             if(depth >1){
               //invokes offerDir for file2
               result = walkSubTree(file2, depth-1, callback);  
@@ -2650,15 +2643,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
               result = callback.offerLeafNode(file2, null);  //show it as file instead walk through tree
             }
           } else {
-            cnt.nrofLeafss +=1;
+//            cnt.nrofLeafss +=1;
             result = callback.offerLeafNode(file2, null);  //a regular file.
           }
         }catch(Exception exc){ System.err.println(Assert.exceptionInfo("FileRemote unexpected - walkSubtree", exc, 0, 20, true)); }
       }
     } 
-    if(result != FileRemoteCallback.Result.terminate){
+    if(result != FileRemoteWalkerCallback.Result.terminate){
       //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-      result = callback.finishedParentNode(dir, cnt); //FileRemoteCallback.Result.cont;
+      result = callback.finishedParentNode(dir); //FileRemoteWalkerCallback.Result.cont;
     }
     return result;  //maybe terminate
   }
@@ -3370,12 +3363,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
 
     /**The implementation of the callback interface 
-     * for {@link FileRemoteAccessor#walkFileTree(FileRemote, FileFilter, int, org.vishia.fileRemote.FileRemoteCallback)}
+     * for {@link FileRemoteAccessor#walkFileTree(FileRemote, FileFilter, int, org.vishia.fileRemote.FileRemoteWalkerCallback)}
      * It is used in {@link FileRemote#getChildren(ChildrenEvent)}.
      * It is an protected non-static inner instance of the class {@link ChildrenEvent} because its implementing routines
      * should have access to the event data, especially {@link ChildrenEvent#newChildren}.
      */
-    public FileRemoteCallback callbackChildren = new FileRemoteCallback()
+    public FileRemoteWalkerCallback callbackChildren = new FileRemoteWalkerCallback()
     {
 
       @Override public Result offerParentNode(FileRemote file){
@@ -3383,14 +3376,14 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         return Result.cont;
       }
       
-      @Override public Result finishedParentNode(FileRemote file, FileRemoteCallback.Counters cnt){
+      @Override public Result finishedParentNode(FileRemote file){
         return Result.cont;      
       }
       
       
 
       /* (non-Javadoc)
-       * @see org.vishia.fileRemote.FileRemoteCallback#offerFile(org.vishia.fileRemote.FileRemote)
+       * @see org.vishia.fileRemote.FileRemoteWalkerCallback#offerFile(org.vishia.fileRemote.FileRemote)
        */
       @Override public Result offerLeafNode(FileRemote file, Object info)
       {
@@ -3402,7 +3395,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
        * If there are some files yet in the queue, send the event for the last time.
        * But wait till the other thread has finished it.
        */
-      @Override public void finished(FileRemote startDir, SortedTreeWalkerCallback.Counters cnt)
+      @Override public void finished(FileRemote startDir)
       { if(0 != occupyRecall(4000, evSrcCmd, false)){
           finished = true;
           sendEvent();
@@ -3432,11 +3425,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Callback for walkThroughFiles for {@link FileRemote#}.
    *
    */
-  public class CallbackMark implements FileRemoteCallback {
+  public class CallbackMark implements FileRemoteWalkerCallback {
     
-    final FileRemoteCallback callbackUser;
+    final FileRemoteWalkerCallback callbackUser;
     
-    final FileRemoteProgressTimeOrder timeOrderProgress;
+    final FileRemoteProgressTimeOrder progress, cnt;
     
     FileRemote startDir;
     
@@ -3451,10 +3444,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param callbackUser This callback will be invoked after the child is registered in this.
      * @param updateThis true then remove and update #children.
      */
-    public CallbackMark(FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+    public CallbackMark(FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
     {
       this.callbackUser = callbackUser;
-      this.timeOrderProgress = timeOrderProgress;
+      this.progress = timeOrderProgress;
+      this.cnt = timeOrderProgress;
       //this.levelProcessMarked = levelProcessOnlyMarked;
     }
     
@@ -3464,8 +3458,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       //startDir.setMarked(FileMark.selectRoot);
     }
     
-    @Override public void finished(FileRemote startDir, SortedTreeWalkerCallback.Counters cnt) {  
-      if(callbackUser !=null){ callbackUser.finished(startDir, cnt); }
+    @Override public void finished(FileRemote startDir) {  
+      if(callbackUser !=null){ callbackUser.finished(startDir); }
     }
 
     @Override public Result offerParentNode(FileRemote file) {
@@ -3474,14 +3468,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       else return Result.cont;      
     }
     
-    @Override public Result finishedParentNode(FileRemote dir, FileRemoteCallback.Counters cnt) {
+    @Override public Result finishedParentNode(FileRemote dir) {
       boolean bSomeSelect = true;
       if(dir.isSymbolicLink()) {
         bSomeSelect = false;  //do not select, do not handle a symbolic link
       }
-      else if((cnt.nrofParents + cnt.nrofLeafss) > 0 && cnt.nrofParentSelected == cnt.nrofParents && cnt.nrofLeafSelected == cnt.nrofLeafss) {
+      //else if((cnt.nrofParents + cnt.nrofLeafss) > 0 && cnt.nrofParentSelected == cnt.nrofParents && cnt.nrofLeafSelected == cnt.nrofLeafss) {
+      else if(dir.mark.nrofFilesSelected() == dir.children.size()) {
         dir.setMarked(FileMark.select);
-      } else if(cnt.nrofParentSelected > 0 || cnt.nrofLeafSelected >0) {
+      } else if(dir.mark.nrofFilesSelected() >0) {
         dir.setMarked(FileMark.selectSomeInDir);
       } else {
         bSomeSelect = false;
@@ -3494,7 +3489,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           else { parent = null; } //finish while
         }
       }
-      if(callbackUser !=null) return callbackUser.finishedParentNode(dir, cnt); 
+      if(callbackUser !=null) return callbackUser.finishedParentNode(dir); 
       else return Result.cont;      
     }
     
@@ -3529,8 +3524,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Class to build a Thread instance to execute {@link FileRemote#walkFileTree(int, FileRemoteCallback)} in an extra thread.
-   * This instance is created while calling {@link FileRemote#walkFileTreeThread(int, FileRemoteCallback)}.
+  /**Class to build a Thread instance to execute {@link FileRemote#walkFileTree(int, FileRemoteWalkerCallback)} in an extra thread.
+   * This instance is created while calling {@link FileRemote#walkFileTreeThread(int, FileRemoteWalkerCallback)}.
    * The thread should be started from outside via {@link #start()}. The thread is destroyed on finishing the walking.
    * 
    * The user is informed about the progress via the callback interface, see ctor. 
@@ -3538,7 +3533,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   static class WalkThread extends Thread 
   { 
     final int depth; 
-    final FileRemoteCallback callback;
+    final FileRemoteWalkerCallback callback;
     final FileRemote startdir;
     
     /**Constructs with given file and callback.
@@ -3546,7 +3541,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param depth
      * @param callback
      */
-    WalkThread(FileRemote startdir, int depth, FileRemoteCallback callback) {
+    WalkThread(FileRemote startdir, int depth, FileRemoteWalkerCallback callback) {
       super("walkFileTreeThread");
       this.depth = depth;
       this.callback = callback;
@@ -3568,8 +3563,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Class to build a Thread instance to execute {@link FileRemote#walkFileTree(int, FileRemoteCallback)} in an extra thread.
-   * This instance is created while calling {@link FileRemote#walkFileTreeThread(int, FileRemoteCallback)}.
+  /**Class to build a Thread instance to execute {@link FileRemote#walkFileTree(int, FileRemoteWalkerCallback)} in an extra thread.
+   * This instance is created while calling {@link FileRemote#walkFileTreeThread(int, FileRemoteWalkerCallback)}.
    * The thread should be started from outside via {@link #start()}. The thread is destroyed on finishing the walking.
    * 
    * The user is informed about the progress via the callback interface, see ctor. 
@@ -3577,7 +3572,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   static class DeleteThread extends Thread 
   { 
     final int mark;
-    final FileRemoteCallback callback;
+    final FileRemoteWalkerCallback callback;
+    final FileRemoteProgressTimeOrder progress;
     final FileRemote startdir;
     
     /**Constructs with given file and callback.
@@ -3585,17 +3581,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param depth
      * @param callback
      */
-    DeleteThread(int mark, FileRemote startdir, FileRemoteCallback callback) {
+    DeleteThread(int mark, FileRemote startdir
+        , FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress) {
       super("walkFileTreeThread");
       this.mark = mark;
       this.callback = callback;
+      this.progress = progress;
       this.startdir = startdir;
     }
     
     
     @Override public void run(){
       try{
-        startdir.deleteMarked(mark, callback);
+        startdir.deleteMarked(mark, callback, this.progress);
       } catch( Exception exc){
         System.out.println("FileRemote - walkFileTreeThread");
       }

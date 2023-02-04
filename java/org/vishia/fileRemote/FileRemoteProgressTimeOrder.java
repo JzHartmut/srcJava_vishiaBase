@@ -81,6 +81,17 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
   
   private StateMachine consumerAnswer;
   
+  
+  public void clear() {
+    this.nrDirAvail = 0;
+    this.nrFilesAvail = 0;
+    this.nrofBytesAll = 0;
+    this.nrofBytesFile = 0;
+    this.nrofBytesFileCopied = 0;
+    this.nrFilesProcessed = 0;
+    this.nrofFilesMarked = 0;
+  }
+  
   public FileRemote.CallbackCmd quest(){ return quest; }
   
   public FileRemote.Cmd answer(){ return answer; }
@@ -111,6 +122,11 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
     this.consumerAnswer = stateM;
     activateAt(System.currentTimeMillis() + delay);   //to execute the request
   }
+
+//  @Override protected void executeOrder () {
+//    //empty implementation. For implementation use inheritance. 
+//    
+//  }
   
   
   

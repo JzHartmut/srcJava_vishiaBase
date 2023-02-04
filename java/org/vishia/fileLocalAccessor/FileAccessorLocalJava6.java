@@ -26,7 +26,7 @@ import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteAccessor;
 import org.vishia.fileRemote.FileRemote.CallbackEvent;
 import org.vishia.fileRemote.FileRemote.Cmd;
-import org.vishia.fileRemote.FileRemoteCallback;
+import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.FileRemoteProgressTimeOrder;
 import org.vishia.util.Assert;
 import org.vishia.util.FileSystem;
@@ -267,27 +267,27 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
    * from the operation system using {@link java.io.File#list()}. Therefore {@link #refreshFilePropertiesAndChildren(FileRemote, CallbackEvent)}
    * will be called. Then this list is iterated and the file properties are gotten using 
    * {@link #refreshFileProperties(FileRemote, CallbackEvent)}. In any iteration step the file
-   * is offered to the application calling {@link FileRemoteCallback#offerLeafNode(FileRemote)}.
+   * is offered to the application calling {@link FileRemoteWalkerCallback#offerLeafNode(FileRemote)}.
    * 
-   * @see org.vishia.fileRemote.FileRemoteAccessor#walkFileTree(org.vishia.fileRemote.FileRemote, java.io.FileFilter, int, org.vishia.fileRemote.FileRemoteCallback)
+   * @see org.vishia.fileRemote.FileRemoteAccessor#walkFileTree(org.vishia.fileRemote.FileRemote, java.io.FileFilter, int, org.vishia.fileRemote.FileRemoteWalkerCallback)
    */
-  @Override public void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren, boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteCallback callback)
+  @Override public void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren, boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteWalkerCallback callback)
   {
     callback.start(startDir);
     walkSubTree(startDir, null, depth, callback);
     callback.finished(startDir, null);
   }
     
-  public FileRemoteCallback.Result walkSubTree(FileRemote file, FileFilter filter, int depth, FileRemoteCallback callback)
+  public FileRemoteWalkerCallback.Result walkSubTree(FileRemote file, FileFilter filter, int depth, FileRemoteWalkerCallback callback)
   {
     XXXXrefreshFilePropertiesAndChildren(file, null);
     Map<String, FileRemote> children = file.children();
-    FileRemoteCallback.Result result = FileRemoteCallback.Result.cont;
+    FileRemoteWalkerCallback.Result result = FileRemoteWalkerCallback.Result.cont;
     if(children !=null){
       result = callback.offerParentNode(file);
-      if(result == FileRemoteCallback.Result.cont){ //only walk through subdir if cont
+      if(result == FileRemoteWalkerCallback.Result.cont){ //only walk through subdir if cont
         Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
-        while(result == FileRemoteCallback.Result.cont && iter.hasNext()) {
+        while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
           Map.Entry<String, FileRemote> file1 = iter.next();
           FileRemote file2 = file1.getValue();
           refreshFileProperties(file2, null);
@@ -303,9 +303,9 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
         }
       } 
     }
-    if(result != FileRemoteCallback.Result.terminate){
+    if(result != FileRemoteWalkerCallback.Result.terminate){
       //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-      result = FileRemoteCallback.Result.cont;
+      result = FileRemoteWalkerCallback.Result.cont;
     }
     return result;  //maybe terminate
   }
@@ -428,13 +428,13 @@ public class FileAccessorLocalJava6 extends FileRemoteAccessor
 
   
   
-  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
   {
     states.copyChecked(fileSrc, pathDst, nameModification, mode, callbackUser, timeOrderProgress);
   }
 
   
-  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
+  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
     //TODO
   }
 

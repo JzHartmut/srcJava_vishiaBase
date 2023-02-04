@@ -273,13 +273,13 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   }
   
   
-  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
   {
     //TODO
   }
 
   
-  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
+  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
     //TODO
   }
 
@@ -443,7 +443,8 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   }
 
   @Override
-  public void walkFileTree(FileRemote file, boolean bWait, boolean bRefreshChildren, boolean resetMark, String sMask, long bMarkCheck, int depth, FileRemoteCallback callback)
+  public void walkFileTree(FileRemote file, boolean bWait, boolean bRefreshChildren, boolean resetMark
+      , String sMask, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
   {
     // TODO Auto-generated method stub
     

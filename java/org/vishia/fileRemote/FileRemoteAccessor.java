@@ -25,7 +25,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * <li>2012-05-30 Hartmut new: {@link #openOutputStream(FileRemote, long)}
    *   Note: it may be that the {@link #openRead(FileRemote, long)} and {@link #openWrite(FileRemote, long)}
    *   is not proper for some requirements, working with the traditional streams may be better.
-   * <li>2015-05-30 Hartmut new: {@link #walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteCallback)}
+   * <li>2015-05-30 Hartmut new: {@link #walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
    * <li>2012-09-14 Hartmut new: {@link CallbackFile}, {@link #walkFileTree(FileRemote, FileFilter, int, CallbackFile)}. 
    * <li>2012-08-12 Hartmut chg: Now it is an interface, not an abstract class, only formal.
    * <li>2012-08-12 Hartmut new: {@link #setLastModified(FileRemote, long)}. 
@@ -160,8 +160,8 @@ public abstract class FileRemoteAccessor implements Closeable
    *   If negative then the absolute is number of levels (maybe Integer.MAXVALUE) but uses the first level to enter only marked files.
    * @param callback this callback will be invoked on any file or directory.
    */
-  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
-      , boolean resetMark, String sMaskCheck, long bMarkCheck, int depth, FileRemoteCallback callback);
+  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren, boolean resetMark
+      , String sMaskCheck, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress);
   
   
   protected abstract boolean setLastModified(FileRemote file, long time);
@@ -192,7 +192,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
+  public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
   
   
   /**Search in all files.
@@ -200,7 +200,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
+  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
   
   
   public abstract ReadableByteChannel openRead(FileRemote file, long passPhase);
@@ -248,11 +248,11 @@ public abstract class FileRemoteAccessor implements Closeable
     //final protected FileFilter filter; 
     final protected String sMask;
     final protected long bMarkCheck;
-    final protected FileRemoteCallback callback;
+    final protected FileRemoteWalkerCallback callback;
     final protected boolean bRefresh, resetMark;
     final protected int depth;
     
-    public FileWalkerThread(FileRemote startDir, boolean bRefreshChildren, boolean resetMark, int depth, String sMask, long bMarkCheck, FileRemoteCallback callback)
+    public FileWalkerThread(FileRemote startDir, boolean bRefreshChildren, boolean resetMark, int depth, String sMask, long bMarkCheck, FileRemoteWalkerCallback callback)
     { super("FileRemoteRefresh");
       this.startDir = startDir;
       this.bRefresh = bRefreshChildren;

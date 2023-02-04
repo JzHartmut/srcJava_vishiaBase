@@ -38,26 +38,6 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
    */
   public static final String sVersion = "2015-05-25";
 
-  
-  
-  /**This class contains the number of files etc. for callback.
-   * @author hartmut
-   *
-   */
-  public static class Counters
-  { /**Any number of internal data. */
-    public long nrofBytes;
-    
-    /**Number of parent nodes and number of leaf nodes which are processed. */
-    public int nrofParents, nrofLeafss;
-  
-    /**Number of parent nodes and number of leaf nodes which are selected. */
-    public int nrofParentSelected, nrofLeafSelected;
-    
-    public void clear(){ nrofBytes = 0; nrofParents = nrofLeafss = nrofParentSelected = nrofLeafSelected = 0; }
-    
-  }
-  
 
   
   /**Data chained from a first parent to deepness of dir tree for each level.
@@ -69,7 +49,6 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
     /**The directory of the level. */
     String dir;
     
-    final Counters cnt = new Counters();
     
     int levelProcessMarked;
     
@@ -125,8 +104,7 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
 
   
   
-  public SortedTreeWalkerCallback.Result finishedParentNode(String parentNode,
-      org.vishia.util.SortedTreeWalkerCallback.Counters cnt)
+  @Override public SortedTreeWalkerCallback.Result finishedParentNode(String parentNode)
   {
     //checkRet[0] = check.bAllTree ? check : check.parent;
     curr = curr.parent;
@@ -143,7 +121,7 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
     else return Result.cont; //callback.offerLeafNode(leafNode);
   }
 
-  public void finished(String startNode, org.vishia.util.SortedTreeWalkerCallback.Counters cnt)
+  @Override public void finished(String startNode)
   {
     //callback.finished(startNode, cnt);
     

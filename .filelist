@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-02-03 20:06:30  x     .gitCommit                               ::           .388  0753375641 
+2023-02-04 23:30:36  x     .gitCommit                               ::           .468 -0354763874 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
 2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
@@ -135,25 +135,25 @@
 2020-10-31 22:20:03  x     Execode.java                             ::          7.808  0335069824 
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
-2023-02-03 14:11:06  x     FileAccessorLocalJava6.java              ::         30.113  0899987715 
-2023-02-03 19:13:09  x     FileAccessorLocalJava7.java              ::         49.911  0708670697 
-2023-01-31 12:07:09  x     FileLocalAccessorCopyStateM.java         ::         53.696 -0621361516 
+2023-02-03 23:42:47  x     FileAccessorLocalJava6.java              ::         30.197  0856149247 
+2023-02-04 22:41:58  x     FileAccessorLocalJava7.java              ::         50.326  1237444323 
+2023-02-03 23:41:42  x     FileLocalAccessorCopyStateM.java         ::         53.714 -1247778708 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2023-02-03 14:11:38  x     FileAccessZip.java                       ::         16.943  2079609542 
+2023-02-04 14:40:20  x     FileAccessZip.java                       ::         17.006  0742604186 
 2023-02-03 20:05:08  x     FileCluster.java                         ::         24.461 -1079424838 
 2021-10-04 14:29:52  x     FileMark.java                            ::          8.985 -1421367665 
-2023-02-03 14:10:40  x     FileRemote.java                          ::        158.849  1458301380 
-2023-02-03 14:10:17  x     FileRemoteAccessor.java                  ::         14.380  1223849336 
-2023-02-03 07:32:40  x     FileRemoteCallback.java                  ::           .598 -0876288558 
-2021-10-04 14:29:58  x     FileRemoteCallbackCmp.java               ::         18.364 -1465418742 
-2023-02-03 07:33:45  x     FileRemoteCallbackCopy.java              ::          6.564  1784931918 
-2020-03-31 18:08:03  x     FileRemoteCallbackSearch.java            ::         10.849  0541022134 
+2023-02-04 22:46:08  x     FileRemote.java                          ::        159.070  0090430199 
+2023-02-04 12:20:08  x     FileRemoteAccessor.java                  ::         14.454  0346773870 
+2023-02-04 14:37:04  x     FileRemoteCallbackCmp.java               ::         18.179  1709083310 
+2023-02-04 14:39:19  x     FileRemoteCallbackCopy.java              ::          6.522  1500822964 
+2023-02-04 22:47:04  x     FileRemoteCallbackSearch.java            ::         10.795  0388063248 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
-2021-10-04 14:29:51  x     FileRemoteProgressTimeOrder.java         ::          4.023 -0268806667 
+2023-02-04 22:58:21  x     FileRemoteProgressTimeOrder.java         ::          4.387  1990804064 
+2023-02-03 23:41:42  x     FileRemoteWalkerCallback.java            ::           .604 -1739361347 
 2022-10-22 14:12:16  x     FileZip.java                             ::          5.704  0189097144 
 
 ============================== java/org/vishia/genJavaOutClass/ ====================================
@@ -324,7 +324,7 @@
 2021-10-04 14:29:49  x     SortedStringList.java                    ::          3.388 -0917403468 
 2021-10-04 14:29:48  x     SortedTree.java                          ::          3.706 -1255774842 
 2021-10-04 14:29:49  x     SortedTreeNode.java                      ::          5.702 -1009691353 
-2021-10-04 14:29:51  x     SortedTreeWalkerCallback.java            ::          5.326  0868583063 
+2023-02-04 11:03:38  x     SortedTreeWalkerCallback.java            ::          5.252 -0633832758 
 2021-10-04 14:29:51  x     SpecialCharStrings.java                  ::          5.298  0013480220 
 2021-10-04 14:29:49  x     StdHexFormatWriter.java                  ::          4.239  0384535192 
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
@@ -350,7 +350,7 @@
 2021-10-04 14:29:52  x     TreeNodeNamed_ifc.java                   ::           . 85  1747010936 
 2012-11-05 22:07:50  x     TreeNodeUniqueKey.java                   ::          2.003  0862351950 
 2017-08-31 08:44:51  x     TreeNode_ifc.java                        ::          3.804  1798566168 
-2021-10-04 14:29:51  x     TreeWalkerPathCheck.java                 ::          5.930  2014666764 
+2023-02-04 14:34:19  x     TreeWalkerPathCheck.java                 ::          5.207 -0592358266 
 2013-01-06 16:24:48  x     UnexpectedException.java                 ::           .984 -0050084027 
 2022-02-10 11:19:27  x     Writer_Appendable.java                   ::          2.766 -0209530376 
 2013-05-25 22:37:51  x     package-info.java                        ::           .474 -0681213086 
@@ -400,7 +400,7 @@
 2022-11-21 00:21:27  x     Zip.java                                 ::         19.221  0792645650 
 
 ============================== makeScripts/ =======================================================
-2021-02-08 23:14:33  x     +genjavadoc.sh                           ::           .537 -0076592556 
+2023-02-04 09:57:03  x     +genjavadoc.sh                           ::           .548  1189752483 
 2023-01-28 12:25:16  x     +makejar_vishiaBase.sh                   ::          4.931 -1227909828 
 2022-12-10 13:01:57  x     -deployJar.sh                            ::          2.588  2120158065 
 2022-03-13 12:19:25  x     -genjavadocbase.sh                       ::          2.196  0325472742 
