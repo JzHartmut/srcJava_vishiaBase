@@ -295,7 +295,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       String sorder = order.toString();
       if(sorder.equals("showFilesProcessing"))
         System.out.println("addTimeOrder;" + order.toString());
-      queueDelayedOrders.offer(order);
+      this.queueDelayedOrders.offer(order);
       long delayAfterCheckNew = order.timeExecution - this.timeCheckNew;
       if((delayAfterCheckNew) < -2) {  //an imprecision of 2 ms are admissible, don't wakeup because calculation imprecisions.
         this.timeCheckNew = order.timeExecution;  //earlier.

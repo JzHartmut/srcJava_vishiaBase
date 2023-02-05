@@ -27,7 +27,7 @@ import java.util.EventObject;
  * <pre>
  *  
  * private static class EnqueueInGraphicThread implements EventConsumer {
- *   QOverride public int processEvent(EventObject ev)
+ *   (at)Override public int processEvent(EventObject ev)
  *   { execThread.queueOrders.put((< EventTimeOrder >)ev);  //casting admissible because special using.
  *     return mEventConsumed;
  *   }

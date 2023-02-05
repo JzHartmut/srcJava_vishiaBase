@@ -450,7 +450,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   protected FileRemoteAccessor device;
   
   /**A mark and count instance for this file. It is null if it is not necessary. */
-  public FileMark mark;
+  protected FileMark mark;
   
   /**The last time where the file was synchronized with its physical properties. */
   public long timeRefresh, timeChildren;
@@ -1084,13 +1084,29 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return bytes;
   }
   
+  
+  /**Gets or creates a {@link FileMark} for this file.
+   * @return
+   */
+  public FileMark getCreateMark () { 
+    if(this.mark == null) { this.mark = new FileMark(this); } 
+    return mark;
+  }
+  
+  
+  /**Gets the {@link FileMark} for this file or null if not marked in any kind.
+   * @return
+   */
+  public FileMark mark () { return mark; }
+  
+  
   /**Returns the mark of a {@link #mark} or 0 if it is not present.
    * @see org.vishia.util.MarkMask_ifc#getMark()
    */
-  @Override public int getMark()
-  { if(sFile.equals("ReleaseNotes.topic"))
-      Debugutil.stop();
-    return mark == null ? 0 : mark.getMark();
+  @Override public int getMark() { 
+//    if(sFile.equals("ReleaseNotes.topic"))
+//      Debugutil.stop();
+    return this.mark == null ? 0 : this.mark.getMark();
   }
 
 
@@ -1220,17 +1236,17 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * will be invoked.
    * @param resetMark true then remove existing mark to create a new marking. false: Existing marked files left marked independent of mask.
    * @param sMaskSelection a mask to select directory and files
-   * @param bMarkSelection bits to select mark, hi bits above 32 is depth.
+   * @param markSelection bits to select mark such as {@link FileMark#select}, hi bits above 32 is depth.
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress instance for callback.
    */
-  public void refreshAndMark(boolean resetMark, String sMaskSelection, long bMarkSelection, int depth, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder progress) {
+  public void refreshAndMark(boolean resetMark, String sMaskSelection, long markSelection, int depth, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder progress) {
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CallbackMark callbackMark = new CallbackMark(callbackUser, progress); //, nLevelProcessOnlyMarked);  //negativ... TODO
-    device.walkFileTree(this,  false, true, resetMark, sMaskSelection, bMarkSelection,  depth,  callbackMark, progress);  //should work in an extra thread.
+    //CallbackMark callbackMark = new CallbackMark(callbackUser, progress); //, nLevelProcessOnlyMarked);  //negativ... TODO
+    device.walkFileTree(this,  false, true, resetMark, sMaskSelection, markSelection,  depth,  callbackUser, progress);  //should work in an extra thread.
   }
   
   
@@ -3159,11 +3175,17 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     public int setFlagBits(int mask, int bits){ flags &= ~mask; flags |= bits; return flags; }
 
     
+    /**The values are set if there are not ==-1
+     * @param length
+     * @param dateLastModified
+     * @param dateCreation
+     * @param dateLastAccess
+     */
     public void setLengthAndDate(long length, long dateLastModified, long dateCreation, long dateLastAccess){
-      FileRemote.this.date = dateLastModified;
-      FileRemote.this.dateLastAccess = dateLastAccess;
-      FileRemote.this.dateCreation = dateCreation;
-      FileRemote.this.length = length;
+      if(dateLastModified !=-1) { FileRemote.this.date = dateLastModified; }
+      if(dateLastAccess !=-1) { FileRemote.this.dateLastAccess = dateLastAccess; }
+      if(dateCreation !=-1) { FileRemote.this.dateCreation = dateCreation; }
+      if(length !=-1) { FileRemote.this.length = length; }
     }
     
     public int setOrClrFlagBit(int bit, boolean set){ if(set){ flags |= bit; } else { flags &= ~bit;} return flags; }
@@ -3474,6 +3496,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         bSomeSelect = false;  //do not select, do not handle a symbolic link
       }
       //else if((cnt.nrofParents + cnt.nrofLeafss) > 0 && cnt.nrofParentSelected == cnt.nrofParents && cnt.nrofLeafSelected == cnt.nrofLeafss) {
+      else if(dir.mark ==null) {
+        bSomeSelect = false;
+      }
       else if(dir.mark.nrofFilesSelected() == dir.children.size()) {
         dir.setMarked(FileMark.select);
       } else if(dir.mark.nrofFilesSelected() >0) {

@@ -71,7 +71,7 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
   
   private FileRemote.Cmd answer;
   
-  private FileRemote.Cmd cmd;
+//  private FileRemote.Cmd cmd;
   
   /**Mode of operation, see {@link FileRemote#modeCopyCreateAsk} etc. */
   public int modeCopyOper;
@@ -91,12 +91,19 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
     this.nrFilesProcessed = 0;
     this.nrofFilesMarked = 0;
   }
+
+  
+  public void activateDone() {
+    deactivate();                      // removes from a timer queue if queued
+    this.bDone = true;                 // activates the same thread as after activate, but yet with done.
+    super.activate(0);                 // activate immediately.
+  }
   
   public FileRemote.CallbackCmd quest(){ return quest; }
   
   public FileRemote.Cmd answer(){ return answer; }
   
-  public FileRemote.Cmd cmd(){ return cmd; }
+//  public FileRemote.Cmd cmd(){ return cmd; }
   
   public void clearAnswer(){ answer = FileRemote.Cmd.noCmd; } //remove the cmd as event-like; }
   

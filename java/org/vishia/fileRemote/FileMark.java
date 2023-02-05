@@ -112,11 +112,11 @@ public class FileMark extends SelectMask
   
   protected final FileRemote itsFile;
   
-  int nrofFilesSelected;
+  public int nrofFilesSelected;
   
   
   
-  long nrofBytesSelected;
+  public long nrofBytesSelected;
 
   
   public FileMark(FileRemote itsFile){

@@ -168,7 +168,9 @@ public class EventTimeout extends EventWithDst
   public void deactivate(){
     timeExecution = 0;
     timeExecutionLatest = 0;
-    evDstThread.removeTimeOrder(this);
+    if(this.evDstThread !=null) {
+      this.evDstThread.removeTimeOrder(this);
+    }
   }
   
   /**Returns the time stamp where the time is elapsed

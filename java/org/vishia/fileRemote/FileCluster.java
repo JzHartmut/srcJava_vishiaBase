@@ -11,6 +11,8 @@ import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringFunctions_B;
+import org.vishia.util.StringFunctions_C;
 import org.vishia.util.StringPart;
 
 /**This class combines some {@link FileRemote} instances for common usage.
@@ -131,10 +133,14 @@ public class FileCluster
    * 
    * @visibility package private because used in FileRemote
    */
-  FileRemote getFile( final CharSequence sDirP, final CharSequence sName, boolean assumeChild){
+  FileRemote getFile( final CharSequence sDirP1, final CharSequence sName, boolean assumeChild){
     //File file1 = new File(sDirP.toString());
     //String sDir1 = FileSystem.getCanonicalPath(file1); //problem: it accesses to the file system. not expected here. 
-    assert(sDirP == FileFunctions.normalizePath(sDirP)); //sPath.replace('\\', '/'); // it should be incomming normalized!
+    CharSequence sDirP2 = StringFunctions_B.replace(sDirP1, '\\', '/');
+    CharSequence sDirP = FileFunctions.normalizePath(sDirP2); //sPath.replace('\\', '/'); // it should be incomming normalized!
+    if(sDirP != sDirP2) {
+      Debugutil.stop();
+    }
     final CharSequence sDir1 = sDirP;
     if(!FileFunctions.isAbsolutePath(sDirP)) {
       throw new IllegalArgumentException("absolute path expected, " + sDir1);

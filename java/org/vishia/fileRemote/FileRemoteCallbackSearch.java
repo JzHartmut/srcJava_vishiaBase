@@ -310,9 +310,8 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   
   @Override public void finished(FileRemote startDir)
   {
-    if(timeOrderProgress !=null){
-      timeOrderProgress.bDone = true; 
-      timeOrderProgress.show(FileRemote.CallbackCmd.done, null);
+    if(this.timeOrderProgress !=null){
+      this.timeOrderProgress.activateDone();
     }
     /*
     if(evCallback !=null && evCallback.occupyRecall(500, null, true) !=0){

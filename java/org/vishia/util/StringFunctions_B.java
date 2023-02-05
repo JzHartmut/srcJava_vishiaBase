@@ -8,6 +8,7 @@ public class StringFunctions_B
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-05 Hartmut new {@link #replace(CharSequence, char, char)} 
    * <li>2022-12-18 Hartmut new {@link #convertBackslashChars(CharSequence)}
    * <li>2021-02-06 Hartmut new {@link #checkSameItem(String, CharSequence...)} and {@link #prepareCheckSameItem(String)}.
    *         This is newly used in the {@link org.vishia.stimuliSelector.StimuliSelector} in the script for selection.
@@ -43,7 +44,7 @@ public class StringFunctions_B
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2020-07-22"; 
+  public final static String version = "2023-02-05"; 
 
   public static final String sWhiteSpaces = " \r\n\t\f";
   
@@ -279,6 +280,28 @@ public class StringFunctions_B
     return bOk;
   }
 
+  
+  
+  /**Replaces all occurences of cc to cr. Often use to change \ to /
+   * @param src
+   * @param cc 
+   * @param cr
+   * @return src itself if cc is not found, else a StringBuilder with replacement
+   */
+  public static CharSequence replace ( CharSequence src, char cc, char cr) {
+    int zsrc = src.length();
+    StringBuilder ret = null;
+    for(int ix = 0; ix < zsrc; ++ix) {
+      if(src.charAt(ix) == cc) {
+        if(ret == null) { ret = new StringBuilder(zsrc); ret.append(src); }
+        ret.setCharAt(ix, cr);
+      }
+    }
+    return ret !=null ? ret : src;
+  }
+  
+  
+  
   
   /**Build a Java Identifier from a given String, maybe tag name in Xml etc.
    * @param src Any String. Non-conform characters will be replaced by '_'
