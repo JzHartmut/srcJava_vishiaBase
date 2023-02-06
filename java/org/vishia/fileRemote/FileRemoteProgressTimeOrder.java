@@ -1,17 +1,57 @@
 package org.vishia.fileRemote;
 
 import org.vishia.event.EventCmdtype;
+import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
+import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread_ifc;
-import org.vishia.event.TimeOrder;
 import org.vishia.states.StateMachine;
 
 /**This TimeOrder is used for progress showing in the callers area. It should be extended from the application
  * to start any showing process for the progress.  The extension should override the method {@link #executeOrder()} from the super class. 
  */
 @SuppressWarnings("synthetic-access")  
-public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
+public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
 {
+
+  /**Version, license and history.
+   * <ul>
+   * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link EventTimeout} also here. Some adpations done. 
+   * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
+   * <li>2015-05-03 Hartmut chg: occupyRecall(500,...) for answer events especially abort after exception, prevent hanging of copy in Fcmd
+   * <li>2015-01-11 Hartmut created
+   *   this class is the base class of them now. The algorithm is able to use outside of that graphic too.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are indent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  public final static String version = "2023-02-05";
+
+  
+  
   private static final long serialVersionUID = 1L;
 
 
@@ -44,8 +84,9 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
    *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
    * @param delay The delay to start the oder execution after #show()
    */
-  protected FileRemoteProgressTimeOrder(String name, EventSource srcAnswer, EventTimerThread_ifc mng, int delay){ 
-    super(name, mng);
+  public FileRemoteProgressTimeOrder(String name, EventSource srcAnswer, EventConsumer evConsumer, EventTimerThread_ifc thread, int delay){ 
+    //super(name, mng);
+    super(evConsumer, thread);
     this.srcAnswer = srcAnswer;
     this.delay = delay;
   }
@@ -58,7 +99,7 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
   public int nrDirAvail, nrFilesAvail;
   
   /**Processed bytes. */
-  public long nrofBytesAll, nrofBytesFile, nrofBytesFileCopied;
+  public long nrofBytesAllAvail, nrofBytesAll, nrofBytesFile, nrofBytesFileCopied;
   
   /**Number of processed directories and files. */
   public int nrDirProcessed, nrFilesProcessed;
@@ -84,14 +125,35 @@ public abstract class FileRemoteProgressTimeOrder  extends TimeOrder
   
   public void clear() {
     this.nrDirAvail = 0;
+    this.nrDirProcessed = 0;
     this.nrFilesAvail = 0;
+    this.nrFilesProcessed = 0;
+    this.nrofFilesMarked = 0;
+    this.nrofBytesAllAvail = 0;
     this.nrofBytesAll = 0;
     this.nrofBytesFile = 0;
     this.nrofBytesFileCopied = 0;
-    this.nrFilesProcessed = 0;
-    this.nrofFilesMarked = 0;
+    this.bDone = false;
   }
 
+  /**This operation moves the gathered number of to the available numbers.
+   * This is the necessary operation between prepare or mark,
+   * and the true action (for example copy).
+   * With that the progress in percent (proportional) can be shown).
+   */
+  public void setAvailClear() {
+    this.nrDirAvail = this.nrDirProcessed;
+    this.nrDirProcessed = 0;
+    this.nrFilesAvail = this.nrofFilesMarked;
+    this.nrofFilesMarked = 0;
+    this.nrFilesProcessed = 0;
+    this.nrofBytesAllAvail = this.nrofBytesAll;
+    this.nrofBytesAll = 0;
+    this.nrofBytesFile = 0;
+    this.nrofBytesFileCopied = 0;
+    this.bDone = false;
+  }
+  
   
   public void activateDone() {
     deactivate();                      // removes from a timer queue if queued

@@ -207,8 +207,8 @@ public class EventTimeout extends EventWithDst
     timeExecution = 0;     //forces new adding if requested. Before execution itself!
     if(evDst !=null){
       evDst.processEvent(this);  //especially if it is a timeout. Executed in the timer respectively event thread.
-    } else if(this instanceof TimeOrder){
-      ((TimeOrder)this).doExecute();   //executes immediately in this thread.
+//    } else if(this instanceof TimeOrder){
+//      ((TimeOrder)this).doExecute();   //executes immediately in this thread.
     }
   }
   

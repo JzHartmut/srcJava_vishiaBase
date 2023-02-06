@@ -1,13 +1,11 @@
 package org.vishia.event;
 
 import java.io.Closeable;
-import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.vishia.states.StateMachine;
-import org.vishia.util.Assert;
+import org.vishia.util.ExcUtil;
 import org.vishia.util.InfoAppend;
 
 /**This class stores events, starts the processing of the events in one thread and manages and executes time orders in the same thread. 
@@ -63,7 +61,7 @@ import org.vishia.util.InfoAppend;
  * and its execution routine of {@link EventConsumer#processEvent(EventObject)} is invoked. The events are processed one after another.
  * The execution routine is usual a {@link org.vishia.states.StateMachine} but any other {@link EventConsumer} is able to use too. 
  * <br><br>
- * {@link TimeOrder} or {@link EventTimeout} are stored in another {@link java.util.concurrent.ConcurrentLinkedQueue}. 
+ * {@link EventTimeout} are stored in another {@link java.util.concurrent.ConcurrentLinkedQueue}. 
  * The absolute time of the next execution is stored in the internal value of {@link #timeCheckNew}. The thread sleeps either
  * till this time is expired or till an event is given. If the time is expired all stored time orders are checked
  * whether its time is elapsed. Then either the {@link EventConsumer#processEvent(EventObject)} is invoked 
@@ -74,8 +72,8 @@ import org.vishia.util.InfoAppend;
  * is invoked if an event should be {@link EventWithDst#occupyRecall(EventSource, boolean)}. That is if the event should be used
  * newly.
  * <br><br>
- * A time order or timeout event can be removed from execution with the method EventTimeout  {@link EventTimeout#deactivate()}.
- * This routine calls {@link #removeTimeOrder(EventTimeout)}.
+ * Note: An {@link EventTimeout} can be removed from execution with the method {@link EventTimeout#deactivate()}.
+ * Adequate is done with {@link #removeTimeOrder(EventTimeout)}.
  * 
  *   
  * @author Hartmut Schorrig
@@ -88,6 +86,9 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Version and history.
    * <ul>
+   * <li>2023-02-06 An inheritance of this class is used for {@link org.vishia.gral.base.GralMng} as graphic thread.
+   *   Hence some stuff is now protected, only a few operations are overridden, see there. 
+   *   All non overridden operations are set to final now here.    
    * <li>2023-01-31 The {@link #delayMax} now also valid if no time order was processed.
    *   Before, it was 1000 days. This is not problematically for event processing, 
    *   because an event wakes up the wait by {@link #runTimer}.{@link Object#notify()} but it is stupid on debugging.  
@@ -125,7 +126,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * 
    * 
    */
-  public final static String version = "2015-01-11";
+  public final static String version = "2023-02-05";
 
   
   
@@ -146,7 +147,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   protected final String threadName;
 
   /**The thread which executes delayed wake up. */
-  private Thread threadTimer;
+  protected Thread threadTimer;
 
 
   private EventConsumer eventProcessor;
@@ -161,7 +162,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * This queue is empty outside running one step of runTimer(). */
   private final ConcurrentLinkedQueue<EventTimeout> queueDelayedTempOrders = new ConcurrentLinkedQueue<EventTimeout>();
   
-  private boolean bThreadRun;
+  protected boolean bThreadRun;
   
   /**The delay [ms] for one step if nothing is to do.
    * It is a proper time also for debugging to see what's happen. 
@@ -174,7 +175,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * The default value is 10 seconds after now, because no time order may be added. 
    * 10 sec is the limited delay to run one step. 
    */
-  private long timeCheckNew = System.currentTimeMillis() + this.delayMax;
+  protected long timeCheckNew = System.currentTimeMillis() + this.delayMax;
 
   /**The time on start waiting*/
   private long timeSleep;
@@ -184,14 +185,14 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**State of the thread, used for debug and mutex mechanism. This variable is set 'W' under mutex while the timer waits. Then it should
    * be notified in {@link #addTimeOrder(EventTimeout)} with delayed order. */
-  char stateThreadTimer = '?';
+  protected char stateThreadTimer = '?';
   
   /**Set if any external event is set. Then the dispatcher shouldn't sleep after finishing dispatching. 
    * This is important if the external event occurs while the GUI is busy in the operation-system-dispatching loop.
    */
   private final AtomicBoolean extEventSet = new AtomicBoolean(false);
 
-  private boolean startOnDemand;
+  protected boolean startOnDemand;
   
   private int ctWaitEmptyQueue;
   
@@ -228,20 +229,27 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   }
 
   
-  public void start(){ startThread(); }
-  
-
   /**Creates and starts the thread. If this routine is called from the user, the thread runs
    * till the close() method was called. If this method is not invoked from the user,
    * the thread is created and started automatically if {@link #storeEvent(EventCmdtype)} was called.
    * In that case the thread stops its execution if the event queue is empty and about 5 seconds
    * are gone.  */
-  public void startThread(){ 
-    if(threadTimer == null && !bThreadRun) {
-      threadTimer = new Thread(runTimer, threadName);
-      startOnDemand = false;
-      threadTimer.start(); 
+  public final void start(){ 
+    if(this.threadTimer == null && !this.bThreadRun) {
+      createThread_();
+      this.startOnDemand = false;
+      this.threadTimer.start(); 
     }
+  }
+  
+
+  /**This operation can be overridden if another thread organization, 
+   * especially another {@link #stepThread()} should be used.
+   * Then just another Runnable implementation for the thread is used.
+   * 
+   */
+  protected void createThread_ ( ){ 
+    this.threadTimer = new Thread(this.runTimer, this.threadName);
   }
   
 
@@ -250,21 +258,21 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   /**Stores an event in the queue, able to invoke from any thread.
    * @param ev
    */
-  public void storeEvent(EventObject ev){
+  @Override public final void storeEvent(EventObject ev){
     if(ev instanceof EventWithDst) { ((EventWithDst)ev).stateOfEvent = 'q'; }
-    queueEvents.offer(ev);
+    this.queueEvents.offer(ev);
     startOrNotify();
   }
   
 
   private void startOrNotify(){
     if(threadTimer == null){
-      startThread();
+      createThread_();
       startOnDemand = true;
     } else {
       synchronized(runTimer){
         if(stateThreadTimer == 'W'){
-          runTimer.notify();
+          wakeup_();
         } else {
           //stateOfThread = 'c';
         }
@@ -273,15 +281,28 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   }
 
 
+  /**Wakes up the waiting thread because a new event is enqueues.
+   * <br>This operation can be overridden for another thread organization. 
+   * 
+   */
+  protected void wakeup_ ( ) {
+    runTimer.notify();
+  }
+  
+  
+  
+  
+  
   /**Should only be called on end of the whole application to finish the timer thread. This method does not need to be called
    * if a @link {@link ConnectionExecThread} is given as Argument of @link {@link EventTimerThread#TimeOrderMng(ConnectionExecThread)}
    * and this instance implements the @link {@link ConnectionExecThread#isRunning()} method. If that method returns false
    * then the timer thread is finished too.
+   * <br>This operation can be overridden for another thread organization. 
    * 
    * @see java.io.Closeable#close()
    */
   @Override public void close(){
-    bThreadRun = false;
+    this.bThreadRun = false;
     notifyTimer();
   }
 
@@ -289,7 +310,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   /* (non-Javadoc)
    * @see org.vishia.event.EventThreadIfc#addTimeOrder(org.vishia.event.EventTimeout)
    */
-  public void addTimeOrder(EventTimeout order){ 
+  public final void addTimeOrder(EventTimeout order){ 
     long delay = order.timeToExecution(); 
     if(delay >=0){
       String sorder = order.toString();
@@ -331,7 +352,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * 
    * @param order
    */
-  public boolean removeTimeOrder(EventTimeout order)
+  public final boolean removeTimeOrder(EventTimeout order)
   { boolean found = queueDelayedOrders.remove(order);
     //do not: if(!found){ removeFromQueue(order); }  //it is possible that it hangs in the event queue.
     return found;
@@ -345,7 +366,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * @param ev The event which should be dequeued
    * @return true if found. 
    */
-  public boolean removeFromQueue(EventObject ev){
+  public final boolean removeFromQueue(EventObject ev){
     boolean found;
     found= queueEvents.remove(ev);
     if(found && ev instanceof EventWithDst){ 
@@ -377,13 +398,13 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         //event.donotRelinquish = false;   //may be overridden in processEvent if the event is stored in another queue
         event.stateOfEvent = 'r';
         EventConsumer dst = event.evDst;
-        if(dst == null && ev instanceof TimeOrder) {
-          ((TimeOrder)ev).executeOrder();   //relinquish it.
-        } else {
+        if(dst != null ) { //&& ev instanceof TimeOrder) {
+//          ((TimeOrder)ev).executeOrder();   //relinquish it.
+//        } else {
           retProcess = dst.processEvent(event);  //may set bit doNotRelinquish 
         }
       } catch(Exception exc) {
-        CharSequence excMsg = Assert.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);
+        CharSequence excMsg = ExcUtil.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);
         System.err.append(excMsg);
         //exc.printStackTrace(System.err);
       }
@@ -393,8 +414,8 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         event.relinquish();  //the event can be reused, a waiting thread will be notified.
       }
     }
-    else if(eventProcessor !=null) {
-      eventProcessor.processEvent(ev);
+    else if(this.eventProcessor !=null) {
+      this.eventProcessor.processEvent(ev);
     } 
     else {
       throw new IllegalStateException("destination for event execution is unknown. Use setStdEventProcessor(...). ");
@@ -424,7 +445,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         }
       }
     } catch(Exception exc){
-      CharSequence text = Assert.exceptionInfo("EventThread unexpected Exception - ", exc, 0, 50);
+      CharSequence text = ExcUtil.exceptionInfo("EventThread unexpected Exception - ", exc, 0, 50);
       System.err.append(text);
     }
     return processedOne;
@@ -471,17 +492,19 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * The timer thread is in an delay till
    * @return time to wait. 
    */
-  private void stepThread()
+  protected final int stepThread()
   {
     boolean bExecute;
     int timeWait;
     do {
       stateThreadTimer = 'c';
+      //----------------------------------------------------- check all time order, timeWait is the minimal time for next call.
       timeSleep = System.currentTimeMillis();
-      timeWait = (int)(timeCheckNew - timeSleep);
-      if(timeWait < 0){                          //firstly check all time orders if one of them is expired.
-        timeWait = checkTimeOrders();            // execute expired events, calculate new waiting time
+      timeWait = (int)(this.timeCheckNew - timeSleep);     // use timeCheckNew for decision look in all time orders.
+      if(timeWait < 0){                                    // check all time orders only if at least one of them is expired.
+        timeWait = checkTimeOrders();                      // execute expired events, calculate new waiting time
       }
+      //----------------------------------------------------- check all current stored events.
       bExecute = false;
       while(checkEventAndRun()){
         bExecute = true;
@@ -498,14 +521,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     if(timeWait <2){
       timeWait = 2;  //should not 0  
     }
-    synchronized(runTimer){
-      EventTimerThread.this.stateThreadTimer = 'W';
-      //====>wait
-      try{ runTimer.wait(timeWait);} catch(InterruptedException exc){}
-      if(stateThreadTimer == 'W'){ //can be changed while waiting, set only to 'r' if 'W' is still present
-        stateThreadTimer = 'r';
-      }
-    } //synchronized
+    return timeWait;
   }
   
   
@@ -514,16 +530,25 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Instance as Runnable contains invocation of {@link EventTimerThread#stepThread()}
    * and the {@link Object#wait()} with the calculated timeWait.
-   * 
+   * Note desired for overridden implementation.
    */
   //NOTE: On debugging and changing the stepThread can be repeated because the CPU stays in the wait or breaks here.
   // This routine cannot be changed on the fly.
-  public Runnable runTimer = new Runnable(){
+  private Runnable runTimer = new Runnable(){
     @Override public void run(){ 
       EventTimerThread.this.bThreadRun = true;
       EventTimerThread.this.stateThreadTimer = 'r';
       while(EventTimerThread.this.stateThreadTimer == 'r' && EventTimerThread.this.bThreadRun ){
-        stepThread();
+        int timeWait = stepThread();
+        synchronized(EventTimerThread.this.runTimer){
+          EventTimerThread.this.stateThreadTimer = 'W';
+          //====>wait
+          try{ EventTimerThread.this.runTimer.wait(timeWait);} catch(InterruptedException exc){}
+          if(EventTimerThread.this.stateThreadTimer == 'W'){ //can be changed while waiting, set only to 'r' if 'W' is still present
+            EventTimerThread.this.stateThreadTimer = 'r';
+          }
+        } //synchronized
+
       } //while runs
       EventTimerThread.this.stateThreadTimer = 'f';
     }
@@ -533,8 +558,8 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * It means the {@link #run()} method has called this method.
    * @return false if a statement in another thread checks whether this EventThread runs.
    */
-  public boolean isCurrentThread() {
-    return threadTimer == Thread.currentThread();
+  public final boolean isCurrentThread() {
+    return this.threadTimer == Thread.currentThread();
   }
   
   /**Returns the current state of the thread.
@@ -545,12 +570,12 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * <li>f: finished
    * </ul>
    */
-  public char getState(){ return stateThreadTimer; }
+  public final char getState(){ return this.stateThreadTimer; }
 
 
 
   /**Wakes up the {@link #runTimer} queue to execute delayed requests.
-   * 
+   * <br>This operation can be overridden for another thread organization. 
    */
   public void notifyTimer(){
     synchronized(runTimer){
@@ -562,9 +587,13 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   
   
+  /**Info for debugging 
+   * <br>This operation can be overridden for another thread organization. 
+   *
+   */
   @Override public CharSequence infoAppend(StringBuilder u) {
     if(u == null) { u = new StringBuilder(); }
-    u.append("Thread ");
+    u.append("Thread ").append(this.threadName);
     u.append("; ");
     return u;
   }

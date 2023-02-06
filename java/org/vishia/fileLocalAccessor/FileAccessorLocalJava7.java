@@ -185,7 +185,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
   
   public void activate() {
-    this.singleThreadForCommission.startThread();
+    this.singleThreadForCommission.start();
   }
   
   

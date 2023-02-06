@@ -170,6 +170,8 @@ public class EventWithDst extends EventObject
    * It is for new-obviating usage. */
   protected final AtomicLong dateCreation = new AtomicLong();
   
+  /**Order of time stamps created in the same millisec of #dateCreation. Only used if necessary, usual not. 
+   * Maybe for debugging approaches. */
   int dateOrder;
   
   /**Any value of this event. Mostly it is a return value. */
