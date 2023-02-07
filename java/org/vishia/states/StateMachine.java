@@ -1,6 +1,7 @@
 package org.vishia.states;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -10,11 +11,11 @@ import java.util.List;
 
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
-import org.vishia.event.EventTimerThread;
+import org.vishia.event.EventThread_ifc;
+import org.vishia.event.EventTimerThread_ifc;
 import org.vishia.event.EventWithDst;
 import org.vishia.util.DataAccess;
 import org.vishia.util.DataShow;
-import org.vishia.util.Java4C;
 import org.vishia.util.InfoAppend;
 
 /**
@@ -90,6 +91,11 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-07 Hartmut new: two different threads for {@link #theThread} for the stateMachine execution itself,
+   *   whereby this is now the common {@link EventThread_ifc} instead the specific used {@link org.vihia.event.EventTimerThread} 
+   *   and {@link #timerThread} maybe the same, maybe another thread for timeout handling. 
+   *   This is due to new properties of {@link org.vishia.event.EventTimeout}.
+   *   
    * <li>2015-11-03 Hartmut chg: renaming topState in {@link #stateTop}, more unique
    * <li>2015-01-11 Hartmut chg:  
    * <li>2014-12-30 Hartmut chg: test, gardening 
@@ -144,8 +150,16 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
    * The state machine should processed in only one thread.
    * But this aggregation may be null if the state machine will be processed in a users thread.
    */
-  final EventTimerThread theThread;
+  final EventThread_ifc theThread;
   
+  
+  /**Aggregation to the used timer thread for this timeouts in the stateMachine.
+   */
+  final EventTimerThread_ifc timerThread;
+  
+  
+  /**The event source for timeout events is the statemachine itself. */
+  final EventSource evSourceTimeout;
   
   final EventWithDst triggerEvent;
   
@@ -192,7 +206,7 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
   /**Creates a state machine which is executed directly by {@link #processEvent}. {@link StateSimple.Timeout} is not possible.
    * 
    */
-  public StateMachine(String name) { this(name, null);}
+  public StateMachine(String name) { this(name, null, null);}
   
   /**Constructs a state machine with a given thread and a given timer manager.
    * The constructor of the whole stateMachine does the same as the {@link StateComposite#StateComposite()}: 
@@ -215,15 +229,17 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
    * @param thread if given all events are stored in the thread's event queue, the state machine is executed only in that thread.
    * @param if given timer events can be created. 
    */
-  public StateMachine(String name, EventTimerThread thread) //, EventTimerMng timer)
+  public StateMachine(String name, EventTimerThread_ifc timerThread, EventThread_ifc evThread) //, EventTimerMng timer)
   { this.name = name;
-    this.theThread = thread;
+    this.theThread = evThread;
+    this.timerThread = timerThread;
     //this.theTimer = timer;
-    if(thread !=null){
-      triggerEvent = new EventWithDst(null, this, theThread);
+    if(evThread !=null){
+      triggerEvent = new EventWithDst(name + "-trigger", null, this, evThread);
     } else {
       triggerEvent = null;
     }
+    this.evSourceTimeout = new EventSource(name);
     final StateSimple[] aSubstates;
     Class<?>[] innerClasses = this.getClass().getDeclaredClasses();
     if(innerClasses.length ==0) throw new IllegalArgumentException("The StateMachine should have inner classes which are the states.");  //expected.
@@ -276,10 +292,12 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
    */
   protected StateMachine(StateSimple[] aSubstates) {
     this.name = "StateMachine";
+    this.evSourceTimeout = new EventSource(name);
     this.stateTop = new StateCompositeTop(this, aSubstates);
     //theTimer = null;
     triggerEvent = null;
     theThread = null;
+    this.timerThread = null;
   }
   
   
@@ -372,7 +390,7 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
         //ev1.donotRelinquish();  
         ev1.setDst(this);                        // the new dst is this statemachine.
       }
-      theThread.storeEvent(ev);                  // store here to execute in the own 'theThread'
+      this.theThread.storeEvent(ev);                  // store here to execute in the own 'theThread'
       return mEventConsumed         //because it should not applied to other states in the Run-to-complete cycle. 
            | mEventDonotRelinquish; //because it is stored here. Relinquishes after dequeuing!
     }
@@ -382,17 +400,17 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
     
   @Override public CharSequence infoAppend(StringBuilder u){
     if(u == null){ u = new StringBuilder(200); }
-    u.append(name).append(':');
-    stateTop.infoAppend(u);  //fills the buffer with all aktive sub states.
+    u.append(this.name).append(':');
+    this.stateTop.infoAppend(u);  //fills the buffer with all aktive sub states.
     u.append("; ");
-    if(theThread !=null){
-      theThread.infoAppend(u);
+    if(this.theThread !=null){
+      this.theThread.infoAppend(u);
     }
     return u;
   }
   
   
-  @Override public void close() {
+  @Override public void close() throws IOException {
     this.theThread.close();
   }
 

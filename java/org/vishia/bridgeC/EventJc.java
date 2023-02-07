@@ -53,8 +53,8 @@ extends EventCmdtypeWithBackEvent<CmdEnum, EventJc<CmdBack, CmdEnum >>
    * before first usage. Use {@link #relinquish()} to release the usage. 
    * 
    */
-  public EventJc(boolean permanentInstance){
-    super();
+  public EventJc(String name, boolean permanentInstance){
+    super(name);
     bPermanent = permanentInstance;
   }
   
@@ -64,8 +64,8 @@ extends EventCmdtypeWithBackEvent<CmdEnum, EventJc<CmdBack, CmdEnum >>
    * @param consumer The destination object for the event.
    * @param thread an optional thread to store the event in an event queue, maybe null.
    */
-  public EventJc(boolean permanentInstance, EventSource evSrc, EventConsumer consumer, EventTimerThread thread){
-    super(evSrc, consumer, thread);
+  public EventJc(String name, boolean permanentInstance, EventSource evSrc, EventConsumer consumer, EventTimerThread thread){
+    super(name, evSrc, consumer, thread);
     bPermanent = permanentInstance;
   }
   
@@ -77,8 +77,8 @@ extends EventCmdtypeWithBackEvent<CmdEnum, EventJc<CmdBack, CmdEnum >>
    * @param thread an optional thread to store the event in an event queue, maybe null.
    * @param callback Another event to interplay with the source of this event.
    */
-  public EventJc(boolean permanentInstance, EventSource evSrc, EventConsumer consumer, EventTimerThread thread, EventJc<CmdBack, CmdEnum > callback){
-    super(evSrc, consumer, thread, callback);
+  public EventJc(String name, boolean permanentInstance, EventSource evSrc, EventConsumer consumer, EventTimerThread thread, EventJc<CmdBack, CmdEnum > callback){
+    super(name, evSrc, consumer, thread, callback);
     bPermanent = permanentInstance;
   }
 

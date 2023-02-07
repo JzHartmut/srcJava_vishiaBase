@@ -84,7 +84,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
 {
   
   
-  /**Version and history.
+  /**Version, license and history.
    * <ul>
    * <li>2023-02-06 An inheritance of this class is used for {@link org.vishia.gral.base.GralMng} as graphic thread.
    *   Hence some stuff is now protected, only a few operations are overridden, see there. 
@@ -409,7 +409,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         //exc.printStackTrace(System.err);
       }
       //if(event.stateOfEvent == 'r') {  //doNotRelinquish was not invoked inside processEvent().
-      if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0) {
+      if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0 && !event.bStaticOccupied) {
         //Note: relinquishes it in case of exception too!
         event.relinquish();  //the event can be reused, a waiting thread will be notified.
       }

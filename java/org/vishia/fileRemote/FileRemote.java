@@ -2805,15 +2805,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param thread
      * @param callback
      */
-    public CmdEvent(EventSource evSrc, EventConsumer dst, EventTimerThread thread, CallbackEvent callback){ 
-      super(evSrc, dst, thread, callback); 
+    public CmdEvent(String name, EventSource evSrc, EventConsumer dst, EventTimerThread thread, CallbackEvent callback){ 
+      super(name, evSrc, dst, thread, callback); 
     }
     
     /**Creates a non-occupied empty event.
      * 
      */
-    public CmdEvent(){ 
-      super(); 
+    public CmdEvent(String name){ 
+      super(name); 
     }
     
     /**Creates an event.
@@ -2827,8 +2827,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param dst
      * @param thread
      */
-    public CmdEvent(EventSource evSrc, FileRemote fileSrc, FileRemote fileDst, EventConsumer dst, EventTimerThread thread){ 
-      super(evSrc, dst, thread, null); 
+    public CmdEvent(String name, EventSource evSrc, FileRemote fileSrc, FileRemote fileDst, EventConsumer dst, EventTimerThread thread){ 
+      super(name, evSrc, dst, thread, null); 
     }
 
     /** Gets the callback event which is given on construction.
@@ -2924,8 +2924,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param thread
      * @param evSrcCmd
      */
-    public CallbackEvent(EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd){ 
-      super(null, dst, thread, new CmdEvent()); 
+    public CallbackEvent(String name, EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd){ 
+      super(name, null, dst, thread, new CmdEvent(name + "-cmd")); 
       this.evSrcCmd = evSrcCmd;
     }
     
@@ -2939,9 +2939,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param thread The thread which stores the event in its queue, or null if the dst can be called
      *   in the transmitters thread.
      */
-    public CallbackEvent(EventSource evSrcCallback, FileRemote filesrc, FileRemote fileDst
+    public CallbackEvent(String name, EventSource evSrcCallback, FileRemote filesrc, FileRemote fileDst
         , EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd){ 
-      super(null, dst, thread, new CmdEvent(evSrcCmd, filesrc, fileDst, null, null)); 
+      super(name, null, dst, thread, new CmdEvent(name + "-cmd", evSrcCmd, filesrc, fileDst, null, null)); 
       this.filesrc = filesrc;
       this.filedst = fileDst;
       this.evSrcCmd = evSrcCmd;
@@ -3297,8 +3297,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param thread A thread to store this callback event, or null if the callback should be execute in the source thread.
      * @param evSrcCmd The event source for the opponent command event.
      */
-    public ChildrenEvent(EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd){ 
-      super(null, dst, thread, new CmdEvent()); 
+    public ChildrenEvent(String name, EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd){ 
+      super(name, null, dst, thread, new CmdEvent(name + "-cmd")); 
       this.evSrcCmd = evSrcCmd;
     }
     

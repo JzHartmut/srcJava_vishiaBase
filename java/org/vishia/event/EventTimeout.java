@@ -6,19 +6,20 @@ package org.vishia.event;
  * of a parallel state machine or of the top state if timeouts are used in the states.
  * <br>
  * Instantiation pattern:<pre>
- *   EventThread thread = new EventThread("stateThread");
+ *   EventTimerThread thread = new EventTimerThread("stateThread");
  *   //uses the thread as timer manager and as event executer
- *   EventTimeout timeout = new EventTimeout(stateMachine, thread);
+ *   EventTimeout timeout = new EventTimeout("name", stateMachine, thread);
  * </pre>
  * Activate the timeout event:<pre>
  *   timeout.activate(7000);  //in 7 seconds.
  * </pre>
  * <ul>
- * <li>Constructors: {@link EventTimeout#EventTimeout(EventConsumer, EventTimerThread)}, {@link EventTimeout#EventTimeout()}.
+ * <li>Constructor for dedicate usage: {@link EventTimeout#EventTimeout(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}.
+ * <li>Constructor for free usage, different destinations, using {@link #occupy(EventSource, EventConsumer, EventTimerThread, boolean)}: 
+ *    {@link EventTimeout#EventTimeout(String, EventTimerThread_ifc)}.
  * <li>methods to activate: {@link #activate(int)}, {@link #activateAt(long)}, {@link #activateAt(long, long)}
  * <li>Remove a currently timeout: {@link #deactivate()}
  * <li>Check: {@link #timeExecution()}, {@link #timeExecutionLatest()}, {@link #timeToExecution()} {@link #used()}
- * <li>see {@link TimeOrder}.
  * <li>see {@link EventTimerThread}
  * <li>see {@link org.vishia.states.StateMachine}
  * </ul>
@@ -63,9 +64,11 @@ public class EventTimeout extends EventWithDst
    * 
    * 
    */
-  public final static String version = "2015-01-11";
+  @SuppressWarnings("hiding") public final static String version = "2015-01-11";
 
 
+  public final EventTimerThread_ifc timerThread;
+  
   private static final long serialVersionUID = 2695620140769906847L;
 
   /**If not 0, it is the time to execute it. Elsewhere it should be delayed. */
@@ -84,18 +87,40 @@ public class EventTimeout extends EventWithDst
    * before first usage. Use {@link #relinquish()} to release the usage.
    * Usual the parameterized method {@link EventTimeout#EventTimeout(EventSource, EventConsumer, EventThreadIfc)} 
    * should be used.
+   * @param name
+   * @param timerThread The thread used for the timer should be known and it is fix.
    */
-  public EventTimeout(){ super(); }
+  public EventTimeout ( String name, EventTimerThread_ifc timerThread) { 
+    super(name); 
+    this.timerThread = timerThread;
+  }
 
   
   /**Creates an event as static or dynamic object for usage. See also {@link EventWithDst#EventWithDst(EventSource, EventConsumer, EventThreadIfc)}
    * The timeout instance may be static usual (permanent referenced) and not allocated on demand (with new)
    * because it is used whenever a special state is entered.
+   * @param name
+   * @param timerThread The thread used for the timer should be known and it is fix.
+   * @param src the event is occupied with this given EventSource instance.
    * @param consumer The destination object for the event. If it is null nothing will be executed if the event is expired.
-   * @param thread thread to handle the time order. It is obligatory.
+   *   But you can set the consumer with {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}
+   *   or with {@link #setDst(EventConsumer)} afterwards
+   * @param thread evThread if null, then the event is handled by the same thread as the timerThread, immediately after expire.
+   *   It means the timeout is handled before the other queued events are handled. This is important for state machine. 
+   *   It means if a timeout transition has its timeout, then this is prior.  
+   *   <br>If you give the same thread as timerThread (not null), then the event is firstly enqueued in the own event queue after expiring. 
+   *   It means events which are queued before already are first executed. For state machines this means, if just a timeout has expired
+   *   but there are other events given in the queue, the other events changes the state before and the timeout event may be not used.
+   *   The difference is only in the small time of expiring.
+   *   <br>  
+   *   If this is another thread than timerThread, then the event is handled in the other thread. 
+   *   Instead execution with {@link EventConsumer#processEvent(java.util.EventObject)} it is queued in the other thread
+   *   and there executed.
+   *   With this approach a central timer can be used for several statemachine threads.
    */
-  public EventTimeout(EventConsumer consumer, EventTimerThread_ifc thread){
-    super(null, consumer, thread);
+  public EventTimeout ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
+    super(name, src, consumer, evThread);
+    this.timerThread = timerThread;
   }
   
   
@@ -136,7 +161,7 @@ public class EventTimeout extends EventWithDst
       this.timeExecution = 0;  //hence remove it.
       this.timeExecutionLatest = 0;
       System.out.println("remove TimeOrder");
-      this.evDstThread.removeTimeOrder(this);
+      this.timerThread.removeTimeOrder(this);
     }
     //
     final long executionTimeUsed;
@@ -157,37 +182,37 @@ public class EventTimeout extends EventWithDst
       this.dbgctWindup +=1;
       //else: shift order to future:
       //remove and add new, because its state added in queue or not may be false.
-      this.evDstThread.removeTimeOrder(this);  //if it is not in the queue, no problem
+      this.timerThread.removeTimeOrder(this);  //if it is not in the queue, no problem
     }
-    this.evDstThread.addTimeOrder(this);    //add newly, delayed event was removed before.
+    this.timerThread.addTimeOrder(this);    //add newly, delayed event was removed before.
   }
   
   
   /**Remove this from the queue of timer events and orders 
    */
   public void deactivate(){
-    timeExecution = 0;
-    timeExecutionLatest = 0;
-    if(this.evDstThread !=null) {
-      this.evDstThread.removeTimeOrder(this);
+    this.timeExecution = 0;
+    this.timeExecutionLatest = 0;
+    if(this.timerThread !=null) {
+      this.timerThread.removeTimeOrder(this);
     }
   }
   
   /**Returns the time stamp where the time is elapsed
    * @return milliseconds after 1970, 0 if the event is not activated yet.
    */
-  public long timeExecution(){ return timeExecution; }
+  public long timeExecution(){ return this.timeExecution; }
  
   
   /**Returns the time stamp where the time is elapsed latest.
    * @return milliseconds after 1970, 0 if the event is not activated yet.
    */
-  public long timeExecutionLatest(){ return timeExecutionLatest; }
+  public long timeExecutionLatest(){ return this.timeExecutionLatest; }
  
   
 
   
-  public boolean used(){ return timeExecution !=0; }
+  public boolean used(){ return this.timeExecution !=0; }
 
 
   /**Processes the event or timeOrder. This routine is called in the {@link EventTimerThread} if the time is elapsed.
@@ -203,13 +228,14 @@ public class EventTimeout extends EventWithDst
    * with a new time for elapsing. It is executed newly therefore.
    */
   protected final void doTimeElapsed() {
-    timeExecutionLatest = 0; //set first before timeExecution = 0. Thread safety.
-    timeExecution = 0;     //forces new adding if requested. Before execution itself!
-    if(evDst !=null){
-      evDst.processEvent(this);  //especially if it is a timeout. Executed in the timer respectively event thread.
+    this.timeExecutionLatest = 0;                // Note: set first before timeExecution = 0. Thread safety.
+    this.timeExecution = 0;                      // may force newly adding if requested. Before execution itself!
+    super.sendEvent();                           // it is executed immediately if evThread is not given. Else enqueues
+//    if(this.evDst !=null){
+//      this.evDst.processEvent(this);  //especially if it is a timeout. Executed in the timer respectively event thread.
 //    } else if(this instanceof TimeOrder){
 //      ((TimeOrder)this).doExecute();   //executes immediately in this thread.
-    }
+//    }
   }
   
   
@@ -218,10 +244,10 @@ public class EventTimeout extends EventWithDst
   
   
   /**Checks whether it should be executed.
-   * @return time in milliseconds for first execution or value <0 to execute immediately.
+   * @return time in milliseconds for first execution or value <0 to execute immediately or it is not in use ??.
    */
   public int timeToExecution(){ 
-    return timeExecution == 0 ? -1 : (int)( timeExecution - System.currentTimeMillis()); 
+    return this.timeExecution == 0 ? -1 : (int)( this.timeExecution - System.currentTimeMillis()); 
   }
   
 

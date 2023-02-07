@@ -575,7 +575,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         return null;
       }
     } else {
-      cmdEvent1 = new FileRemote.CmdEvent(evSrc, executerCommission, singleThreadForCommission, (FileRemote.CallbackEvent)evBack);
+      cmdEvent1 = new FileRemote.CmdEvent("FileLocalAccessor-cmd-temp", this.evSrc, this.executerCommission, this.singleThreadForCommission, (FileRemote.CallbackEvent)evBack);
     }
     return  cmdEvent1; 
   }

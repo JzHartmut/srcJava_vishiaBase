@@ -1297,7 +1297,7 @@ protected final void exitTheState(int level) {
     StateSimple stateExit = statePath[ixStatePath];
     stateExit.durationLast = time - dateLastEntry;
     if(stateExit.evTimeout !=null && stateExit.evTimeout.used()) {
-      stateMachine.theThread.removeTimeOrder(evTimeout);
+      stateMachine.timerThread.removeTimeOrder(evTimeout);
     }
     if(stateExit instanceof StateComposite && stateExitLast == null) { //NOTE: don't use dynamic linked methods, it is better to seen what's happen in one method.
       //exits the current state of composite if it is the first state to exit.

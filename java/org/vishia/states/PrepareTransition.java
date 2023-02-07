@@ -308,22 +308,22 @@ class PrepareTransition
    * All non-parallel states need only one timeout event instance because only one of them is used.
    */
   private void searchOrCreateTimerEvent() {
-    if(state.stateMachine.theThread == null) {
+    if(this.state.stateMachine.theThread == null) {
       throw new IllegalArgumentException("This statemachine needs a thread and a timer manager because timeouts are used. Use StateMachine(thread, timer); to construct it");
     }
     //Search in the most superior StateComposite which is either the top state (has not a enclState)
     //or which is a StateParallel.
-    StateSimple topParallel = state;
+    StateSimple topParallel = this.state;
     while(topParallel.enclState !=null && !(topParallel.enclState instanceof StateParallel)) {
       topParallel = topParallel.enclState;
     }
     //parent is either the top state or a StateComposite inside a StateParallel
     if(topParallel.evTimeout == null) {
-      topParallel.evTimeout = new EventTimeout(state.stateMachine, state.stateMachine.theThread);
+      topParallel.evTimeout = new EventTimeout(this.state.getName() + "-timeout", this.state.stateMachine.timerThread, this.state.stateMachine.evSourceTimeout, this.state.stateMachine, this.state.stateMachine.theThread);
       //parent.evTimeout = stateMachine.theThread.new TimeEventOrder(stateMachine, stateMachine.theThread);
     }
     //Store the reference to the evTimeout in this state too to detect the own timeout event.
-    state.evTimeout = topParallel.evTimeout;
+    this.state.evTimeout = topParallel.evTimeout;
   }
 
 

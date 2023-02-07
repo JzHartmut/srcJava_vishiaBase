@@ -111,13 +111,13 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
     private static final long serialVersionUID = 0L;
   
     /**The constructor to create the double event. */
-    EventInternal(EventConsumer dst, EventTimerThread_ifc thread){
-      super(null, dst, thread, new EventInternal(dst, thread, true));
+    EventInternal(String name, EventConsumer dst, EventTimerThread_ifc thread){
+      super(name, null, dst, thread, new EventInternal(name + "-back", dst, thread, true));
     }
     
     /**Creates a simple event as opponent. */
-    EventInternal(EventConsumer dst, EventTimerThread_ifc thread, boolean second){
-      super(null, dst, thread, null);
+    EventInternal(String name, EventConsumer dst, EventTimerThread_ifc thread, boolean second){
+      super(name, null, dst, thread, null);
     }
     
     /**Sends either with this or the opponent, one of them is able to occupy always.
@@ -315,8 +315,8 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
   public FileLocalAccessorCopyStateM()
   {
     statesCopy = new States();
-    evCpy = new EventInternal(statesCopy, stateThread);
-    evStart = new EventInternal(statesCopy, stateThread);
+    evCpy = new EventInternal("FileAccessorCopyStM-copy", statesCopy, stateThread);
+    evStart = new EventInternal("FileAccessorCopyStM-start", statesCopy, stateThread);
   }
   
   
@@ -813,7 +813,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
 
   
   
-  @Override public void close() {
+  @Override public void close() throws IOException {
     this.statesCopy.close();
   }
   
@@ -825,8 +825,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
   {
     
     public States()
-    {
-      super("FileRemoteCopy", stateThread);  //no timer necessary, use abort action
+    { super("FileRemoteCopy", null, stateThread);  //no timer necessary, use abort action
       super.permitException = true;
     }
     

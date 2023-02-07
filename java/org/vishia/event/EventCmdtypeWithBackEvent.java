@@ -66,8 +66,8 @@ public class EventCmdtypeWithBackEvent<CmdEnum extends Enum<CmdEnum>, EventBack 
    * before first usage. Use {@link #relinquish()} to release the usage. 
    * 
    */
-  public EventCmdtypeWithBackEvent(){
-    super(); //EventSource.nullSource);
+  public EventCmdtypeWithBackEvent(String name){
+    super(name); //EventSource.nullSource);
   }
   
 
@@ -80,8 +80,8 @@ public class EventCmdtypeWithBackEvent<CmdEnum extends Enum<CmdEnum>, EventBack 
    * @param cmd a given Command. It may be null, it can be overwritten later with {@link #setCmd(Enum)}
    *   or using {@link #sendEvent(Enum)}.
    */
-  public EventCmdtypeWithBackEvent(CmdEnum cmd){
-    super(cmd);
+  public EventCmdtypeWithBackEvent(String name, CmdEnum cmd){
+    super(name, cmd);
   }
   
   
@@ -93,8 +93,8 @@ public class EventCmdtypeWithBackEvent<CmdEnum extends Enum<CmdEnum>, EventBack 
    * @param consumer The destination object for the event.
    * @param thread an optional thread to store the event in an event queue, maybe null.
    */
-  public EventCmdtypeWithBackEvent(EventSource source, EventConsumer consumer, EventTimerThread_ifc thread){
-    super(source, consumer, thread);
+  public EventCmdtypeWithBackEvent(String name, EventSource source, EventConsumer consumer, EventTimerThread_ifc thread){
+    super(name, source, consumer, thread);
     this.opponent = null;
   }
   
@@ -108,9 +108,9 @@ public class EventCmdtypeWithBackEvent<CmdEnum extends Enum<CmdEnum>, EventBack 
    * @param thread an optional thread to store the event in an event queue, maybe null.
    * @param callback Another event to interplay with the source of this event.
    */
-  public EventCmdtypeWithBackEvent(EventSource source, EventConsumer consumer, EventTimerThread_ifc thread
+  public EventCmdtypeWithBackEvent(String name, EventSource source, EventConsumer consumer, EventTimerThread_ifc thread
       , EventBack callback){
-    super(); //EventSource.nullSource);
+    super(name); //EventSource.nullSource);
     if(source == null || consumer == null){
       this.dateCreation.set(0);
     } else {

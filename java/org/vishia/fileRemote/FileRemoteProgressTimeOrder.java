@@ -62,6 +62,11 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
   @SuppressWarnings("serial")  
   public final class EventCopyCtrl extends EventCmdtype<Answer> {
     
+    public EventCopyCtrl(String name) {
+      super(name);
+    }
+    
+    
     public int modeCopyOper;
     public void send(Answer cmd, int modeCopyOper) {
       if(occupyRecall(500, srcAnswer, consumerAnswer, null, false) !=0) {  //recall it for another decision if it is not processed yet.
@@ -72,7 +77,7 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
     }
   }
   
-  public final EventCopyCtrl evAnswer = new EventCopyCtrl();
+  public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
   
   private final EventSource srcAnswer;
   
@@ -84,9 +89,9 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
    *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
    * @param delay The delay to start the oder execution after #show()
    */
-  public FileRemoteProgressTimeOrder(String name, EventSource srcAnswer, EventConsumer evConsumer, EventTimerThread_ifc thread, int delay){ 
+  public FileRemoteProgressTimeOrder(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
     //super(name, mng);
-    super(evConsumer, thread);
+    super(name, timerThread, srcAnswer, evConsumer, null);
     this.srcAnswer = srcAnswer;
     this.delay = delay;
   }

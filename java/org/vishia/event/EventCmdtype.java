@@ -29,8 +29,8 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
    * @param cmd a given Command. It may be null, it can be overwritten later with {@link #setCmd(Enum)}
    *   or using {@link #sendEvent(Enum)}.
    */
-  public EventCmdtype(CmdEnum cmd){
-    super(EventSource.nullSource);
+  public EventCmdtype ( String name, CmdEnum cmd){
+    super(name, EventSource.nullSource);
     dateCreation.set(System.currentTimeMillis());
     this.cmde = cmd;
   }
@@ -40,7 +40,7 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
    * before first usage. Use {@link #relinquish()} to release the usage. 
    * 
    */
-  public EventCmdtype(){ super(); }
+  public EventCmdtype( String name){ super(name); }
   
   
   
@@ -52,18 +52,20 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
    * @param consumer The destination object for the event.
    * @param thread an optional thread to store the event in an event queue, maybe null.
    */
-  public EventCmdtype(EventSource source, EventConsumer consumer, EventTimerThread_ifc thread){ super(source, consumer, thread);}
+  public EventCmdtype ( String name, EventSource source, EventConsumer consumer, EventTimerThread_ifc thread) { 
+    super(name, source, consumer, thread);
+  }
   
-  @Override protected void cleanData() {
+  @Override protected void cleanData ( ) {
     this.cmde = null;
   }
 
 
-  public void setCmd(CmdEnum cmd){ this.cmde = cmd; }
+  public void setCmd ( CmdEnum cmd){ this.cmde = cmd; }
   
   
   
-  public CmdEnum getCmd(){ return cmde; }
+  public CmdEnum getCmd ( ){ return cmde; }
 
   
   /**Sends this event to its destination instance.
@@ -79,7 +81,7 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
    * @param cmd The cmd to complete the event.
    * @return true if the event was sent.
    */
-  public boolean sendEvent(CmdEnum cmd){
+  public boolean sendEvent ( CmdEnum cmd){
     cmde = cmd;
     return sendEvent();
     /*
