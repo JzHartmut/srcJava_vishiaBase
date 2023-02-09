@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.vishia.event.EventTimeout;
+import org.vishia.event.TimeEntry;
 import org.vishia.util.Debugutil;
 
 /**An instance of this class is created only temporary to build the transition path, set the #exitStates
@@ -319,7 +319,7 @@ class PrepareTransition
     }
     //parent is either the top state or a StateComposite inside a StateParallel
     if(topParallel.evTimeout == null) {
-      topParallel.evTimeout = new EventTimeout(this.state.getName() + "-timeout", this.state.stateMachine.timerThread, this.state.stateMachine.evSourceTimeout, this.state.stateMachine, this.state.stateMachine.theThread);
+      topParallel.evTimeout = new TimeEntry(this.state.getName() + "-timeout", this.state.stateMachine.timerThread, this.state.stateMachine.evSourceTimeout, this.state.stateMachine, this.state.stateMachine.theThread);
       //parent.evTimeout = stateMachine.theThread.new TimeEventOrder(stateMachine, stateMachine.theThread);
     }
     //Store the reference to the evTimeout in this state too to detect the own timeout event.

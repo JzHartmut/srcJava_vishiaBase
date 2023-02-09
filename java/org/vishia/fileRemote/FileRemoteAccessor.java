@@ -161,7 +161,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callback this callback will be invoked on any file or directory.
    */
   public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren, boolean resetMark
-      , String sMaskCheck, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress);
+      , String sMaskCheck, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress);
   
   
   protected abstract boolean setLastModified(FileRemote file, long time);
@@ -192,7 +192,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
+  public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress);
   
   
   /**Search in all files.
@@ -200,7 +200,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress);
+  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress);
   
   
   public abstract ReadableByteChannel openRead(FileRemote file, long passPhase);

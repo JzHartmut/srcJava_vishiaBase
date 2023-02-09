@@ -90,7 +90,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   private final int zBasePath1;
   
   /**Event instance for user callback. */
-  private final FileRemoteProgressTimeOrder progress;  //FileRemote.CallbackEvent evCallback;
+  private final FileRemoteProgressEvent progress;  //FileRemote.CallbackEvent evCallback;
   
   private final FileRemoteWalkerCallback callbackUser;
   
@@ -115,7 +115,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     this.progress = timeOrderProgress;
     this.callbackUser = callbackUser;

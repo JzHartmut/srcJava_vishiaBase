@@ -1,22 +1,30 @@
 package org.vishia.event;
 
-/**This class is a ready-to-use timeout event for state machines or the base class for time orders.
+/**This class builds a timeout instance for state machines or other time entries.
+ * It is intent do use for {@link EventTimerThread} or another implementation using {@link EventTimerThread_ifc}.
+ * It is also used for the vishia graphical programming (GRAL) referenced in {@link org.vishia.gral.base.GralGraphicEventTimeOrder}
+ * and also for {@link org.vishia.fileRemote.FileRemoteProgressEvent}.
+ * It can be referenced by the data of any user event if the event should be delayed in execution. 
  * <br>
- * An EventTimeout is used inside {@link org.vishia.states.StateMachine} as persistent instance 
+ * An TimeEntry is used inside {@link org.vishia.states.StateMachine} as persistent instance 
  * of a parallel state machine or of the top state if timeouts are used in the states.
  * <br>
  * Instantiation pattern:<pre>
  *   EventTimerThread thread = new EventTimerThread("stateThread");
  *   //uses the thread as timer manager and as event executer
- *   EventTimeout timeout = new EventTimeout("name", stateMachine, thread);
+ *   TimeEntry timeout = new TimeEntry("name", stateMachine, thread);
  * </pre>
  * Activate the timeout event:<pre>
  *   timeout.activate(7000);  //in 7 seconds.
  * </pre>
  * <ul>
- * <li>Constructor for dedicate usage: {@link EventTimeout#EventTimeout(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}.
- * <li>Constructor for free usage, different destinations, using {@link #occupy(EventSource, EventConsumer, EventTimerThread, boolean)}: 
- *    {@link EventTimeout#EventTimeout(String, EventTimerThread_ifc)}.
+ * <li>Constructor for dedicate usage with an ordinary {@link EventWithDst}: 
+ *   {@link TimeEntry#TimeEntry(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}.
+ * <li>Constructor for free usage, different destinations, using {@link EventWithDst#occupy(EventSource, EventConsumer, EventTimerThread, boolean)}:
+ *   for the {@link #event} after construction: 
+ *   {@link TimeEntry#TimeEntry(String, EventTimerThread_ifc)}.
+ * <li>Constructor for a given event of any derived specific type:
+ *   {@link TimeEntry#TimeEntry(String, EventTimerThread_ifc, EventWithDst)}.    
  * <li>methods to activate: {@link #activate(int)}, {@link #activateAt(long)}, {@link #activateAt(long, long)}
  * <li>Remove a currently timeout: {@link #deactivate()}
  * <li>Check: {@link #timeExecution()}, {@link #timeExecutionLatest()}, {@link #timeToExecution()} {@link #used()}
@@ -26,7 +34,7 @@ package org.vishia.event;
  * @author Hartmut Schorrig
  *
  */
-public class EventTimeout extends EventWithDst
+public class TimeEntry extends EventSource
 {
   
   /**Version and history:
@@ -36,7 +44,7 @@ public class EventTimeout extends EventWithDst
    *   Before, the problem was that the thread has used its 10 seconds waiting time if the event queue is empty.
    *   It seems to be a missing notify(), but the notify() was programmed. 
    *   The problem occurs in the Gral vishiaGui with CurveView for redraw events. 
-   * <li>2015-01-02 Hartmut created: as super class of {@link TimeOrder} and as event for timeout for state machines.
+   * <li>2015-01-02 Hartmut created: as super class of {@link TimeEntry} and as event for timeout for state machines.
    * </ul>
    * 
    * <b>Copyright/Copyleft</b>:
@@ -66,7 +74,13 @@ public class EventTimeout extends EventWithDst
    */
   @SuppressWarnings("hiding") public final static String version = "2015-01-11";
 
-
+  public final String name;
+  
+  
+  
+    
+  protected EventWithDst event;
+  
   public final EventTimerThread_ifc timerThread;
   
   private static final long serialVersionUID = 2695620140769906847L;
@@ -79,28 +93,69 @@ public class EventTimeout extends EventWithDst
    */
   protected long timeExecutionLatest;
 
+  /**Set if {@link #awaitExecution(int, int)} is called. 
+   * It means a thread is waiting. this.notify() is necessary.
+   */
+  protected boolean bAwaiting;
+  
+  protected boolean bNotifyAlsoOnException;
+  
+  protected boolean bTimeElapsed;
+  
+  /**True if {@link EventConsumer#processEvent(java.util.EventObject)} has returned the bit {@link EventConsumer#mEventConsumerException}. */
+  protected boolean bEventException;
+  
+  protected int ctConsumed;  
+  
+  /**True if {@link EventConsumer#processEvent(java.util.EventObject)} has returned the bit {@link EventConsumer#mEventConsumed}. */
+  protected boolean bEventExecuted;
+  
+  /**True if {@link EventConsumer#processEvent(java.util.EventObject)} has returned the bit {@link EventConsumer#mEventConsumFinished}. */
+  protected boolean bDone;
+  
+  
   /**It is counted only. Used for debug. Possible to set. */
   public int dbgctWindup = 0;
   
 
   /**Creates an event as a static object for re-usage. Use {@link #occupy(EventSource, EventConsumer, EventTimerThread, boolean)}
    * before first usage. Use {@link #relinquish()} to release the usage.
-   * Usual the parameterized method {@link EventTimeout#EventTimeout(EventSource, EventConsumer, EventThreadIfc)} 
+   * Usual the parameterized method {@link TimeEntry#TimeEntry(EventSource, EventConsumer, EventThreadIfc)} 
    * should be used.
-   * @param name
-   * @param timerThread The thread used for the timer should be known and it is fix.
+   * @param name for debugging and log
+   * @param timerThread where the time entry should be used in, it is determined.
    */
-  public EventTimeout ( String name, EventTimerThread_ifc timerThread) { 
-    super(name); 
+  public TimeEntry ( String name, EventTimerThread_ifc timerThread) { 
+    super(name);
+    this.name = name;
+    this.event = new EventWithDst(name);
+    this.timerThread = timerThread;
+  }
+
+  /**Construction of a time entry with any desired specific event to execute. 
+   * @param name for debugging and log
+   * @param timerThread where the time entry should be used in, it is determined.
+   * @param event The event for execution.
+   */
+  public TimeEntry ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
+    super(name);
+    this.name = name;
+    this.event = event;
     this.timerThread = timerThread;
   }
 
   
+  public void setEvent(EventWithDst event) {
+    this.event = event;
+  }
+  
+  public EventWithDst event() { return event; }
+  
   /**Creates an event as static or dynamic object for usage. See also {@link EventWithDst#EventWithDst(EventSource, EventConsumer, EventThreadIfc)}
    * The timeout instance may be static usual (permanent referenced) and not allocated on demand (with new)
    * because it is used whenever a special state is entered.
-   * @param name
-   * @param timerThread The thread used for the timer should be known and it is fix.
+   * @param name for debugging and log
+   * @param timerThread where the time entry should be used in, it is determined.
    * @param src the event is occupied with this given EventSource instance.
    * @param consumer The destination object for the event. If it is null nothing will be executed if the event is expired.
    *   But you can set the consumer with {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}
@@ -118,11 +173,28 @@ public class EventTimeout extends EventWithDst
    *   and there executed.
    *   With this approach a central timer can be used for several statemachine threads.
    */
-  public EventTimeout ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
-    super(name, src, consumer, evThread);
+  public TimeEntry ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
+    super(name);
+    this.name = name;
+    this.event = new EventWithDst(name, src, consumer, evThread !=null ? evThread : timerThread);
+
     this.timerThread = timerThread;
   }
   
+  
+  public void clear() {
+    this.timeExecution = this.timeExecutionLatest = 0;
+    this.bAwaiting = false;
+    this.bNotifyAlsoOnException = false;
+    this.bTimeElapsed = false;
+    this.bEventException = false;
+    this.bEventExecuted = false;
+    this.ctConsumed = 0;
+    this.bDone = false;
+    this.timerThread.removeTimeEntry(this);
+    this.timerThread.removeFromQueue(this.event);
+    this.event.clean();
+  }
   
   
   /**Activate the event for the given laps of time.
@@ -131,7 +203,7 @@ public class EventTimeout extends EventWithDst
    * @param millisec if a negative value or a value less then 3 is given the event is processed immediately.
    * @see #activateAt(long, long).
    */
-  public void activate(int millisec){ activateAt(System.currentTimeMillis() + millisec, 0);}
+  public final void activate(int millisec){ activateAt(System.currentTimeMillis() + millisec, 0);}
   
   /**Activates the timeout event to the given timestamp.
    * With this method the event or time order is enqueued in its thread given by construction.
@@ -140,7 +212,7 @@ public class EventTimeout extends EventWithDst
    *     myEvent.activateAt(System.currentTimeMillis() + delay);
    *   </pre>
    */
-  public void activateAt(long date) { activateAt(date, 0); }
+  public final void activateAt(long date) { activateAt(date, 0); }
   
   
   /**Activate the event at the given absolute time 
@@ -152,7 +224,7 @@ public class EventTimeout extends EventWithDst
    *   The earlier latest time is valid. Use {@link #deactivate()} before this method to set the latest processing time newly. 
    * @see #activateAt(long, long).
    */
-  public void activateAt(long executionTime, long latest) {
+  public final void activateAt(long executionTime, long latest) {
     //
     if(this.timeExecution !=0 && ((this.timeExecution - System.currentTimeMillis()) < -5000)){ 
       //The execution time is expired since 5 seconds,
@@ -160,8 +232,8 @@ public class EventTimeout extends EventWithDst
       //maybe the execution thread hangs:
       this.timeExecution = 0;  //hence remove it.
       this.timeExecutionLatest = 0;
-      System.out.println("remove TimeOrder");
-      this.timerThread.removeTimeOrder(this);
+      System.out.println("remove TimeEntry");
+      this.timerThread.removeTimeEntry(this);
     }
     //
     final long executionTimeUsed;
@@ -176,53 +248,53 @@ public class EventTimeout extends EventWithDst
     boolean bFree = this.timeExecution ==0;
     this.timeExecution = executionTimeUsed;  //set it newly
     if( bFree) {                     // it is free, use this instead occupy
-      this.dateCreation.set(System.currentTimeMillis());  //then set the new occupy time.
+      this.event.dateCreation.set(System.currentTimeMillis());  //then set the new occupy time.
     } else { 
       //already added:
       this.dbgctWindup +=1;
       //else: shift order to future:
       //remove and add new, because its state added in queue or not may be false.
-      this.timerThread.removeTimeOrder(this);  //if it is not in the queue, no problem
+      this.timerThread.removeTimeEntry(this);  //if it is not in the queue, no problem
     }
-    this.timerThread.addTimeOrder(this);    //add newly, delayed event was removed before.
+    this.timerThread.addTimeEntry(this);    //add newly, delayed event was removed before.
   }
   
   
   /**Remove this from the queue of timer events and orders 
    */
-  public void deactivate(){
+  public final void deactivate(){
     this.timeExecution = 0;
     this.timeExecutionLatest = 0;
     if(this.timerThread !=null) {
-      this.timerThread.removeTimeOrder(this);
+      this.timerThread.removeTimeEntry(this);
     }
   }
   
   /**Returns the time stamp where the time is elapsed
    * @return milliseconds after 1970, 0 if the event is not activated yet.
    */
-  public long timeExecution(){ return this.timeExecution; }
+  public final long timeExecution(){ return this.timeExecution; }
  
   
   /**Returns the time stamp where the time is elapsed latest.
    * @return milliseconds after 1970, 0 if the event is not activated yet.
    */
-  public long timeExecutionLatest(){ return this.timeExecutionLatest; }
+  public final long timeExecutionLatest(){ return this.timeExecutionLatest; }
  
   
 
   
-  public boolean used(){ return this.timeExecution !=0; }
+  public final boolean used(){ return this.timeExecution !=0; }
 
 
   /**Processes the event or timeOrder. This routine is called in the {@link EventTimerThread} if the time is elapsed.
    * <br><br>
    * If the {@link #evDst()} is given the {@link EventConsumer#processEvent(java.util.EventObject)} is called
    * though this instance may be a timeOrder. This method can enqueue this instance in another queue for execution
-   * in any other thread which invokes then {@link TimeOrder#doExecute()}.
+   * in any other thread which invokes then {@link TimeEntry#doExecute()}.
    * <br><br> 
-   * It this is a {@link TimeOrder} and the #evDst is not given by constructor
-   * then the {@link TimeOrder#doExecute()} is called to execute the time order.
+   * It this is a {@link TimeEntry} and the #evDst is not given by constructor
+   * then the {@link TimeEntry#doExecute()} is called to execute the time order.
    * <br><br>
    * If this routine is started then an invocation of {@link #activate(int)} etc. enqueues this instance newly
    * with a new time for elapsing. It is executed newly therefore.
@@ -230,25 +302,77 @@ public class EventTimeout extends EventWithDst
   protected final void doTimeElapsed() {
     this.timeExecutionLatest = 0;                // Note: set first before timeExecution = 0. Thread safety.
     this.timeExecution = 0;                      // may force newly adding if requested. Before execution itself!
-    super.sendEvent();                           // it is executed immediately if evThread is not given. Else enqueues
-//    if(this.evDst !=null){
-//      this.evDst.processEvent(this);  //especially if it is a timeout. Executed in the timer respectively event thread.
-//    } else if(this instanceof TimeOrder){
-//      ((TimeOrder)this).doExecute();   //executes immediately in this thread.
-//    }
+    if(this.timerThread != this.event.evDstThread) {
+      this.event.sendEvent();                    // it is enqueued in the evThread
+    } else {
+      this.event.processEvent();                 // it is executed immediately in the timerThread if evThread is the same
+    }
   }
   
   
-  
+  /**This operation should not called by the user. It is intent to call via the interface {@link EventSource}
+   * from the event management classes, especially {@link EventTimerThread} or adequate implementations of {@link EventThread_ifc}
+   * if {@link EventConsumer#processEvent(java.util.EventObject)} is returned.
+   * @param state the return value of processEvent, bits 31..24 is the {@link EventWithDst#ctConsumed}.
+   */
+  @Override public void notifyConsumed ( int state) {
+    this.bEventException = (state & EventConsumer.mEventConsumerException) !=0;
+    if( (state & EventConsumer.mEventConsumed) !=0) {
+      this.ctConsumed +=1;
+    }
+    int mask = EventConsumer.mEventConsumFinished;
+    if(this.bNotifyAlsoOnException) {
+      mask += EventConsumer.mEventConsumerException;
+    }
+    if((state & mask) !=0) {
+      synchronized(this) {
+        this.bDone = true;
+        if(this.bAwaiting) {
+          this.notify();
+        }
+      }
+    }
+  }
+
 
   
   
   /**Checks whether it should be executed.
-   * @return time in milliseconds for first execution or value <0 to execute immediately or it is not in use ??.
+   * @return time in milliseconds for first execution or value <0 if it is expired (to execute immediately)
+   *   or the Integer.MAX_VALUE if it is not in use (expires in a very long time).
    */
-  public int timeToExecution(){ 
-    return this.timeExecution == 0 ? -1 : (int)( this.timeExecution - System.currentTimeMillis()); 
+  public final int timeToExecution(){ 
+    return this.timeExecution == 0 ? Integer.MAX_VALUE : (int)( this.timeExecution - System.currentTimeMillis()); 
   }
   
 
+  
+  
+  /**Waits for execution in any other thread. This method can be called in any thread, especially in that thread, 
+   * which initializes the request. 
+   * @param ctDoneRequested Number of executions requested.
+   * @param timeout maximal waiting time in milliseconds, 0 means wait forever.
+   * @return true if it is executed the requested number of.
+   */
+  public boolean awaitExecution(int timeout, boolean bAlsoOnException)
+  { 
+    long timeEnd = System.currentTimeMillis() + timeout; 
+    synchronized(this) {
+      this.bNotifyAlsoOnException = bAlsoOnException;
+      while(!this.bDone) {
+        long waitingTime = timeEnd - System.currentTimeMillis();
+        if(waitingTime > 0 || timeout == 0 ) { //should wait, or special: wait till end of routine.
+          this.bAwaiting = true;
+          try{ wait(waitingTime); } catch(InterruptedException exc){}
+          this.bAwaiting = false;
+        } 
+      };
+    }
+    return(this.bEventExecuted);
+  }
+  
+
+  
+  
+  
 }

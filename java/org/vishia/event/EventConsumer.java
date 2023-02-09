@@ -1,6 +1,7 @@
 package org.vishia.event;
 
 import java.util.EventObject;
+import org.vishia.states.StateSimple;   //only for comment
 
 /**This interface describe the consumer interface for events.
  * The class which implements this interface is able to get events for example from a common queue
@@ -57,13 +58,30 @@ public interface EventConsumer
   public static final int version = 20130511;
 
   
-  /**This routine should be overwritten to processes an event. 
+  /**This routine should be overwritten from the user to processes an event. 
+   * The return value of the users implementation can contain the following bits:
+   * <ul>
+   * <li>0x01 = {@link #mEventConsumed} or {@link StateSimple#mEventConsumed}: The event is designated as consumed. 
+   *   If not set, the event should applied on other {@link #processEvent(EventObject)} operations, 
+   *   for example for other states if possible
+   * <li>0x02 = {@link #mEventDonotRelinquish} or {@link StateSimple#mEventDonotRelinquish}: The event should not be relinquished
+   *   by the manager of the events (EventTimerThread), it will be relinquished later in the application after completion detection.
+   *   It means the application (user) declares itself responsible for relinquish. See {@link EventWithDst#relinquish()}.
+   * <li>0x04 = {@link #mEventConsumerFinished}: The task which should be organized by the event is finished. 
+   *   This bit is especially used to designate a {@link TimeEntry} as finished for usage, quest in {@link TimeEntry#awaitExecution(int, int)}.
+   *   Note that a task can need some more events or other conditions, this bit should be set on the last expected event 
+   *   in the return value of {@link #processEvent(EventObject)}. For example if a copy of a file tree is finished, 
+   *   or the graphic implementation is completely built.
+   * <li>0x08 = {@link #mEventConsumerException}: The execution of {@link #processEvent(EventObject)} has thrown an error,
+   *   which is caught in the calling environment in {@link EventTimerThread}.
+   *   How to deal with this information - the application is responsible to, the problem should be logged or debugged.
+   * <li>0x010000 .. 0x80000 = see {@link StateSimple}.
+   * </ul>  
    * @param ev The event. It contains some data. The type of the event is not specified here. Any events
    *   can be processed.
-   * @return 0 or {@link #mEventConsumed} or {@link #mEventDonotRelinquish}, or maybe some other designation bits
-   *   from {@link org.vishia.states.StateSimple}.
-   *   It is possible to build a chain of responsibility. It is possible too to process a event from 
-   *   more as one instance. 
+   * @return 0 or {@link #mEventConsumed} or {@link #mEventDonotRelinquish} etc. see list above.
+   *   This value is forwarded to {@link EventSource#notifyConsumed(int)} and can be evaluated by the application 
+   *   in the calling thread or in any other thread which have access to implementation of {@link EventSource}.
    */
   public abstract int processEvent(EventObject ev); 
   
@@ -80,8 +98,21 @@ public interface EventConsumer
    */
   public final static int mEventDonotRelinquish =0x2;
   
+  /**This is the bit that the event consumption is really finished, the work is done. 
+   * The difference to {@link #mEventConsumed}: Last one is on each call of {@link #processEvent(EventObject)},
+   * If the process needs more events to transmit till if it is ready, then the last call should set this bit.
+   * If the process is finished with one event processing, this bit should be set by the first return.  
+   */
+  public final static int mEventConsumFinished = 0x4;
   
-  public final static int mMaskReservedHere = 0xfffc;  
+  /**This bit is set if the consumption causes an exception which is not intended. */
+  public final static int mEventConsumerException = 0x8;
+  
+  
+  /**This is only a hint which bits are usable here for further usage. 
+   * Note: Bits in range 0xff0000 are used in {@link org.vishia.states.StateSimple#mRunToComplete} etc.
+   */
+  final static int mMaskReservedHere = 0xfff0;  
   
   
 }

@@ -3,20 +3,21 @@ package org.vishia.fileRemote;
 import org.vishia.event.EventCmdtype;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
-import org.vishia.event.EventTimeout;
+import org.vishia.event.TimeEntry;
 import org.vishia.event.EventTimerThread_ifc;
+import org.vishia.event.EventWithDst;
 import org.vishia.states.StateMachine;
 
 /**This TimeOrder is used for progress showing in the callers area. It should be extended from the application
  * to start any showing process for the progress.  The extension should override the method {@link #executeOrder()} from the super class. 
  */
 @SuppressWarnings("synthetic-access")  
-public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
+public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
 {
 
   /**Version, license and history.
    * <ul>
-   * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link EventTimeout} also here. Some adpations done. 
+   * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link TimeEntry} also here. Some adpations done. 
    * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
    * <li>2015-05-03 Hartmut chg: occupyRecall(500,...) for answer events especially abort after exception, prevent hanging of copy in Fcmd
    * <li>2015-01-11 Hartmut created
@@ -77,6 +78,10 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
     }
   }
   
+  
+  public final TimeEntry timeEntry;
+  
+  
   public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
   
   private final EventSource srcAnswer;
@@ -89,9 +94,11 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
    *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
    * @param delay The delay to start the oder execution after #show()
    */
-  public FileRemoteProgressTimeOrder(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
+  public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
     //super(name, mng);
-    super(name, timerThread, srcAnswer, evConsumer, null);
+    super(name, new TimeEntry(name, timerThread, null), evConsumer, timerThread);
+    this.timeEntry = (TimeEntry)this.getSource(); //new TimeEntry(name, timerThread, this);
+    this.timeEntry.setEvent(this);
     this.srcAnswer = srcAnswer;
     this.delay = delay;
   }
@@ -139,6 +146,7 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
     this.nrofBytesFile = 0;
     this.nrofBytesFileCopied = 0;
     this.bDone = false;
+    this.timeEntry.clear();
   }
 
   /**This operation moves the gathered number of to the available numbers.
@@ -161,9 +169,9 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
   
   
   public void activateDone() {
-    deactivate();                      // removes from a timer queue if queued
+    this.timeEntry.deactivate();                      // removes from a timer queue if queued
     this.bDone = true;                 // activates the same thread as after activate, but yet with done.
-    super.activate(0);                 // activate immediately.
+    this.timeEntry.activate(0);                 // activate immediately.
   }
   
   public FileRemote.CallbackCmd quest(){ return quest; }
@@ -182,7 +190,7 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
     this.consumerAnswer = stateM;
     this.quest = state;
     System.out.println("FileRemote.show");
-    activateAt(System.currentTimeMillis() + delay);  //Note: it does not add twice if it is added already.
+    this.timeEntry.activateAt(System.currentTimeMillis() + delay);  //Note: it does not add twice if it is added already.
   }
   
   
@@ -194,7 +202,7 @@ public class FileRemoteProgressTimeOrder  extends EventTimeout //TimeOrder
   public void requAnswer(FileRemote.CallbackCmd quest, StateMachine stateM) {
     this.quest = quest;
     this.consumerAnswer = stateM;
-    activateAt(System.currentTimeMillis() + delay);   //to execute the request
+    this.timeEntry.activateAt(System.currentTimeMillis() + delay);   //to execute the request
   }
 
 //  @Override protected void executeOrder () {

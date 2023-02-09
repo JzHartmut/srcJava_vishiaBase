@@ -20,7 +20,7 @@ import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.FileRemoteCopyOrder;
-import org.vishia.fileRemote.FileRemoteProgressTimeOrder;
+import org.vishia.fileRemote.FileRemoteProgressEvent;
 import org.vishia.states.StateComposite;
 import org.vishia.states.StateMachine;
 import org.vishia.states.StateSimple;
@@ -45,7 +45,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
   /**Version, history and license.
    * <ul>
    * <li>2016-01-23 Hartmut chg:  {@link States.Process.Ask#checkTrans(EventObject)}: 
-   *   now regards {@link FileRemoteProgressTimeOrder.Answer#cont} as command to continue, important for retry copying. 
+   *   now regards {@link FileRemoteProgressEvent.Answer#cont} as command to continue, important for retry copying. 
    * <li>2015-01-04 Hartmut chg: The new state execution is used. 
    *   The source is moved from the file org.vishia.fileLocalAccessor.Copy_FileLocalAccJava7 to this location 
    *   because it is independent of the File system. Both sources are compare-able, the functionality is the same.
@@ -186,7 +186,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
     String nameModification;
     int mode;
     FileRemoteWalkerCallback callbackUser;
-    FileRemoteProgressTimeOrder timeOrderProgress;
+    FileRemoteProgressEvent timeOrderProgress;
   }
   
   
@@ -320,7 +320,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
   }
   
   
-  public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress)
   {
     
     CopyOrder order = new CopyOrder();
@@ -965,20 +965,20 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
       @SuppressWarnings("synthetic-access") 
       @Override protected Trans checkTrans(EventObject ev){
         //prepare event to check:
-        final FileRemoteProgressTimeOrder.Answer cmd;
+        final FileRemoteProgressEvent.Answer cmd;
         if(ev == copyOrder.timeOrderProgress.evAnswer) {
           cmd = copyOrder.timeOrderProgress.evAnswer.getCmd();
           copyOrder.timeOrderProgress.clearAnswer();  //remove the cmd as event-like
           modeCopyOper = copyOrder.timeOrderProgress.evAnswer.modeCopyOper;
         } else {
-           cmd = FileRemoteProgressTimeOrder.Answer.noCmd;
+           cmd = FileRemoteProgressEvent.Answer.noCmd;
         }
         //test
-        if(cmd == FileRemoteProgressTimeOrder.Answer.abortAll) { 
+        if(cmd == FileRemoteProgressEvent.Answer.abortAll) { 
           return transAbortAll.eventConsumed();
-        } else if(cmd == FileRemoteProgressTimeOrder.Answer.abortDir) {
+        } else if(cmd == FileRemoteProgressEvent.Answer.abortDir) {
           return transAbortDir.eventConsumed();
-        } else if(cmd == FileRemoteProgressTimeOrder.Answer.abortFile) {
+        } else if(cmd == FileRemoteProgressEvent.Answer.abortFile) {
           return transAbortFile.eventConsumed();
         } else if((mResult & mAsk) !=0) { 
           mResult &= ~mAsk; return transAsk; 
@@ -1235,19 +1235,19 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
         
         @Override protected Trans checkTrans(EventObject ev) {
           //prepare event to check:
-          final FileRemoteProgressTimeOrder.Answer cmd;
+          final FileRemoteProgressEvent.Answer cmd;
           if(ev == copyOrder.timeOrderProgress.evAnswer) {
             cmd = copyOrder.timeOrderProgress.evAnswer.getCmd();
             modeCopyOper = copyOrder.timeOrderProgress.evAnswer.modeCopyOper;
           } else {
-             cmd = FileRemoteProgressTimeOrder.Answer.noCmd;
+             cmd = FileRemoteProgressEvent.Answer.noCmd;
           }
           //test
           if(ev instanceof EventInternal && ((EventInternal)ev).getCmd() == CmdIntern.copyFileContent) {
             bContinue_dontClose = true;
             return transCopyContent_continue.eventConsumed(); 
-          } else if(cmd == FileRemoteProgressTimeOrder.Answer.abortFile) return transAbortFile.eventConsumed();
-          else if(cmd == FileRemoteProgressTimeOrder.Answer.abortDir) return transAbortCopyDir.eventConsumed();
+          } else if(cmd == FileRemoteProgressEvent.Answer.abortFile) return transAbortFile.eventConsumed();
+          else if(cmd == FileRemoteProgressEvent.Answer.abortDir) return transAbortCopyDir.eventConsumed();
           else return null;   //Note: ask and next file are regarded on Process.selectTrans().
         }
 
@@ -1330,17 +1330,17 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
         @SuppressWarnings("synthetic-access") 
         @Override protected Trans checkTrans(EventObject ev) {
           //prepare event to check:
-          final FileRemoteProgressTimeOrder.Answer cmd;
+          final FileRemoteProgressEvent.Answer cmd;
           if(ev == copyOrder.timeOrderProgress.evAnswer) {
             cmd = copyOrder.timeOrderProgress.evAnswer.getCmd();
             copyOrder.timeOrderProgress.clearAnswer();
             modeCopyOper = copyOrder.timeOrderProgress.evAnswer.modeCopyOper;
           } else {
-             cmd = FileRemoteProgressTimeOrder.Answer.noCmd;
+             cmd = FileRemoteProgressEvent.Answer.noCmd;
           }
           //test
-          if(cmd == FileRemoteProgressTimeOrder.Answer.overwrite) return transDirOrFile_Overwr.eventConsumed(); 
-          else if(cmd == FileRemoteProgressTimeOrder.Answer.cont) return transDirOrFile_Retry.eventConsumed(); //NOTE: file state may be changed.
+          if(cmd == FileRemoteProgressEvent.Answer.overwrite) return transDirOrFile_Overwr.eventConsumed(); 
+          else if(cmd == FileRemoteProgressEvent.Answer.cont) return transDirOrFile_Retry.eventConsumed(); //NOTE: file state may be changed.
           else return null;
         }
       }

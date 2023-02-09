@@ -17,7 +17,7 @@ import org.vishia.util.StringFunctions;
 
 /**This class contains the callback operations used for 
  * {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
- * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressTimeOrder)}.
+ * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)}.
  * 
  * @author Hartmut Schorrig
  *
@@ -68,7 +68,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
   //private final int zBasePath1;
   
   /**Event instance for user callback. */
-  private final FileRemoteProgressTimeOrder timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
+  private final FileRemoteProgressEvent timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
   
   private final FileRemoteWalkerCallback callbackUser;
   
@@ -85,7 +85,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
    * @param dirDst
    * @param evCallback maybe null, if given, this event will be sent to show the progression of the comparison
    */
-  FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     this.timeOrderProgress = timeOrderProgress;
     this.callbackUser = callbackUser;

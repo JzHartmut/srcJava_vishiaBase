@@ -11,7 +11,7 @@ import org.vishia.util.InfoAppend;
 /**This class stores events, starts the processing of the events in one thread and manages and executes time orders in the same thread. 
  * An instance of this class is the main instance to execute state machines in one thread. 
  * The methods of this class except {@link #start()} and {@link #close()} are used from instances of {@link EventWithDst}, 
- * {@link EventTimeout} and {@link TimeOrder} internally.
+ * {@link TimeEntry} and {@link TimeEntry} internally.
  * They should not be invoked by an application directly. 
  * But if any other event derived from {@link java.util.EventObject} is used then the methods 
  * {@link #setStdEventProcessor(EventConsumer)}, {@link #storeEvent(EventObject)} and maybe {@link #removeFromQueue(EventObject)}
@@ -39,10 +39,10 @@ import org.vishia.util.InfoAppend;
  * 
   myExecutionThread.storeEvent(eventObject);
  * </pre>
- * This class is used as time manager too. It manages and executes {@link EventTimeout} 
+ * This class is used as time manager too. It manages and executes {@link TimeEntry} 
  * which are used especially for {@link org.vishia.states.StateMachine},
- * but it can execute {@link TimeOrder} in this thread too. To add a timeout event or a time order 
- * use the methods of the {@link EventTimeout#activateAt(long)} etc:
+ * but it can execute {@link TimeEntry} in this thread too. To add a timeout event or a time order 
+ * use the methods of the {@link TimeEntry#activateAt(long)} etc:
  * <pre>
  * 
   TimeOrder myTimeOrder = new TimeOrder("name", myExecutionThread) {
@@ -51,7 +51,7 @@ import org.vishia.util.InfoAppend;
   ...
   myTimeOrder.activate(100);  //in 100 milliseconds.
  * </pre> 
- * That routine invokes the routine {@link #addTimeOrder(EventTimeout)} of this class.
+ * That routine invokes the routine {@link #addTimeEntry(TimeEntry)} of this class.
  * <br><br>
  * This class starts a thread. The thread sleeps if no event or time order is given. 
  * <br><br>
@@ -61,19 +61,19 @@ import org.vishia.util.InfoAppend;
  * and its execution routine of {@link EventConsumer#processEvent(EventObject)} is invoked. The events are processed one after another.
  * The execution routine is usual a {@link org.vishia.states.StateMachine} but any other {@link EventConsumer} is able to use too. 
  * <br><br>
- * {@link EventTimeout} are stored in another {@link java.util.concurrent.ConcurrentLinkedQueue}. 
+ * {@link TimeEntry} are stored in another {@link java.util.concurrent.ConcurrentLinkedQueue}. 
  * The absolute time of the next execution is stored in the internal value of {@link #timeCheckNew}. The thread sleeps either
  * till this time is expired or till an event is given. If the time is expired all stored time orders are checked
  * whether its time is elapsed. Then either the {@link EventConsumer#processEvent(EventObject)} is invoked 
- * if an {@link EventTimeout} is given or a {@link TimeOrder} has a destination. Elsewhere the {@link TimeOrder#doExecute} 
- * is invoked to execute the {@link TimeOrder#executeOrder()} in this thread.
+ * if an {@link TimeEntry} is given or a {@link TimeEntry} has a destination. Elsewhere the {@link TimeEntry#doExecute} 
+ * is invoked to execute the {@link TimeEntry#executeOrder()} in this thread.
  * <br><br>
  * An event can be removed from the queue if it is not executed up to now. The routine {@link #removeFromQueue(EventObject)}
  * is invoked if an event should be {@link EventWithDst#occupyRecall(EventSource, boolean)}. That is if the event should be used
  * newly.
  * <br><br>
- * Note: An {@link EventTimeout} can be removed from execution with the method {@link EventTimeout#deactivate()}.
- * Adequate is done with {@link #removeTimeOrder(EventTimeout)}.
+ * Note: An {@link TimeEntry} can be removed from execution with the method {@link TimeEntry#deactivate()}.
+ * Adequate is done with {@link #removeTimeEntry(TimeEntry)}.
  * 
  *   
  * @author Hartmut Schorrig
@@ -156,11 +156,11 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   private final ConcurrentLinkedQueue<EventObject> queueEvents = new ConcurrentLinkedQueue<EventObject>();
   
   /**Queue of orders which are executed with delay yet. */
-  private final ConcurrentLinkedQueue<EventTimeout> queueDelayedOrders = new ConcurrentLinkedQueue<EventTimeout>();
+  private final ConcurrentLinkedQueue<TimeEntry> queueDelayedOrders = new ConcurrentLinkedQueue<TimeEntry>();
   
   /**Temporary used instance of delayed orders while {@link #runTimer} organizes the delayed orders.
    * This queue is empty outside running one step of runTimer(). */
-  private final ConcurrentLinkedQueue<EventTimeout> queueDelayedTempOrders = new ConcurrentLinkedQueue<EventTimeout>();
+  private final ConcurrentLinkedQueue<TimeEntry> queueDelayedTempOrders = new ConcurrentLinkedQueue<TimeEntry>();
   
   protected boolean bThreadRun;
   
@@ -184,7 +184,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   //private final boolean bExecutesTheOrder;
   
   /**State of the thread, used for debug and mutex mechanism. This variable is set 'W' under mutex while the timer waits. Then it should
-   * be notified in {@link #addTimeOrder(EventTimeout)} with delayed order. */
+   * be notified in {@link #addTimeEntry(TimeEntry)} with delayed order. */
   protected char stateThreadTimer = '?';
   
   /**Set if any external event is set. Then the dispatcher shouldn't sleep after finishing dispatching. 
@@ -218,7 +218,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Sets the event processor for all events which are not type of {@link EventWithDst}. That events are executed with
    * the given eventProcessor's method {@link EventConsumer#processEvent(EventObject)}.
-   * This eventProcessor is not used for {@link EventWithDst}. They need a destination or they should be a {@link TimeOrder}.
+   * This eventProcessor is not used for {@link EventWithDst}. They need a destination or they should be a {@link TimeEntry}.
    * <br>
    * This routine should be invoked usual one time before start. But the changing of the eventProcessor is possible.
    * 
@@ -310,38 +310,34 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   /* (non-Javadoc)
    * @see org.vishia.event.EventThreadIfc#addTimeOrder(org.vishia.event.EventTimeout)
    */
-  public final void addTimeOrder(EventTimeout order){ 
+  public final char addTimeEntry(TimeEntry order){ 
+    final char retc;
     long delay = order.timeToExecution(); 
     if(delay >=0){
-      String sorder = order.toString();
-      if(sorder.equals("showFilesProcessing"))
-        System.out.println("addTimeOrder;" + order.toString());
-      this.queueDelayedOrders.offer(order);
-      long delayAfterCheckNew = order.timeExecution - this.timeCheckNew;
-      if((delayAfterCheckNew) < -2) {  //an imprecision of 2 ms are admissible, don't wakeup because calculation imprecisions.
-        this.timeCheckNew = order.timeExecution;  //earlier.
+      this.queueDelayedOrders.offer(order);                // enqueue the timeEntry
+      //----------------------------------------------------- check whether the new wake up time is lesser than the given one 
+      long delayAfterCheckNew = order.timeExecution - this.timeCheckNew;  //positive: It is after timeCheckNew
+      if((delayAfterCheckNew) < -2) {                      // an imprecision of 2 ms are admissible, don't wakeup because calculation imprecisions.
+        this.timeCheckNew = order.timeExecution;           // an earlier wakeup is necessary than current wait(timediffToCheckNew)
         boolean notified;
-        synchronized(runTimer){
+        synchronized(runTimer) {                           // then the wait(timediffToCheckNew) should be interrupted
           notified = stateThreadTimer == 'W';
-          if(notified){                          // wake up the waiting thread to poll orders
-            runTimer.notify();                   // elsewhere it would sleep till the last decided sleep time. 
-          } else {                               // should wake up and adjust the sleep time newly.
-            // thread is busy, not wait          
+          if(notified){                                    // wake up the time thread to poll orders
+            retc = 'n';   //new time
+            runTimer.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
+          } else {                                         // should wake up and adjust the sleep time newly.
+            // thread is busy, not wait, it will detect the new this.timeCheckNew          
+            retc = 'b';   // 
           }
         }
-        if(notified){
-          if((debugPrint & 0x100)!=0) System.out.printf("TimeOrderMng notify %d\n", delayAfterCheckNew);
-        } else {
-          if((debugPrint & 0x200)!=0) System.out.printf("TimeOrderMng not notified because checking %d\n", delayAfterCheckNew);
-        }
       } else {
-        //don't notify because the time order is later than the planned check time (or not so far sooner)
-        if((debugPrint & 0x400)!=0) System.out.printf("TimeOrderMng not notified, future %d\n", delayAfterCheckNew);
+        retc = 'l';  // it is later
       }
     } else {
-      if((debugPrint & 0x800)!=0) System.out.printf("TimeOrderMng yet %d\n", delay);
       order.doTimeElapsed();
+      retc = 'x';  //eXecuted
     }
+    return retc;
   }
   
   
@@ -352,7 +348,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * 
    * @param order
    */
-  public final boolean removeTimeOrder(EventTimeout order)
+  public final boolean removeTimeEntry(TimeEntry order)
   { boolean found = queueDelayedOrders.remove(order);
     //do not: if(!found){ removeFromQueue(order); }  //it is possible that it hangs in the event queue.
     return found;
@@ -391,28 +387,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   {
     if(ev instanceof EventWithDst){
       EventWithDst event = (EventWithDst) ev;
-      event.stateOfEvent = 'e';
-      event.notifyDequeued();
-      int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
-      try{
-        //event.donotRelinquish = false;   //may be overridden in processEvent if the event is stored in another queue
-        event.stateOfEvent = 'r';
-        EventConsumer dst = event.evDst;
-        if(dst != null ) { //&& ev instanceof TimeOrder) {
-//          ((TimeOrder)ev).executeOrder();   //relinquish it.
-//        } else {
-          retProcess = dst.processEvent(event);  //may set bit doNotRelinquish 
-        }
-      } catch(Exception exc) {
-        CharSequence excMsg = ExcUtil.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);
-        System.err.append(excMsg);
-        //exc.printStackTrace(System.err);
-      }
-      //if(event.stateOfEvent == 'r') {  //doNotRelinquish was not invoked inside processEvent().
-      if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0 && !event.bStaticOccupied) {
-        //Note: relinquishes it in case of exception too!
-        event.relinquish();  //the event can be reused, a waiting thread will be notified.
-      }
+      event.processEvent();
     }
     else if(this.eventProcessor !=null) {
       this.eventProcessor.processEvent(ev);
@@ -460,7 +435,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   private int checkTimeOrders(){
     int timeWait = this.delayMax; //10 seconds.
     this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
-    { EventTimeout order;
+    { TimeEntry order;
       long timeNow = System.currentTimeMillis();
       while( (order = queueDelayedOrders.poll()) !=null){
         long delay = order.timeExecution - timeNow; 

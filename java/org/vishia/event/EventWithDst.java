@@ -6,6 +6,7 @@ import java.util.EventObject;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.vishia.util.DateOrder;
+import org.vishia.util.ExcUtil;
 
 /**This class is the basic class for all events of this package. It is derived from the Java standard
  * {@link EventObject}. It contains a reference to its destination, which should execute this event,
@@ -274,8 +275,16 @@ public class EventWithDst extends EventObject
   
   
   
-  protected void cleanData() {
-    
+  /**This is an empty operation for the basic event. 
+   * It is intent to override for derived events to clean the event data.
+   */
+  protected void cleanData ( ) { }
+  
+  
+  public void clean() {
+    cleanData();
+    this.removeFromQueue();
+    this.relinquish();
   }
   
   
@@ -550,7 +559,7 @@ public class EventWithDst extends EventObject
    *   false if the event was not found in the queue or the destination thread is not set.
    */
   public boolean removeFromQueue(){
-    if(evDstThread !=null) return evDstThread.removeFromQueue(this);
+    if(this.evDstThread !=null) return this.evDstThread.removeFromQueue(this);
     else return false;
   }
   
@@ -570,20 +579,23 @@ public class EventWithDst extends EventObject
    */
   public void relinquish(){
     //if(stateOfEvent != 'r') throw new IllegalStateException("relinquish should only be called in stateOfEvent == 'r'");
-    if(this.bStaticOccupied) return;                       // do nothing if statically occupied.
-    EventSource source1 = ((EventSource)source);
-    if(source1 !=null){
-      source1.notifyRelinquished(ctConsumed);
+    if(this.dateCreation.get() !=0) {
+      this.dateCreation.set(0);
+      EventSource source1 = ((EventSource)this.source);
+      this.orderId = 0;
+      if(source1 !=null){
+        source1.notifyRelinquished(this.ctConsumed);
+      }
     }
-    //this.stateOfEvent= 'a';
-    this.orderId = 0;
-    //data1 = data2 = 0;
-    super.source = EventSource.nullSource;
-    dateCreation.set(0);
-    if(bAwaitReserve){
-      synchronized(this){ notify(); }
+    if(!this.bStaticOccupied) {                            // do nothing if statically occupied.
+      //this.stateOfEvent= 'a';
+      //data1 = data2 = 0;
+      super.source = EventSource.nullSource;
+      if(this.bAwaitReserve){
+        synchronized(this){ notify(); }
+      }
+      this.stateOfEvent = 'f';
     }
-    stateOfEvent = 'f';
   }
 
   
@@ -603,41 +615,63 @@ public class EventWithDst extends EventObject
   
 
   
-  /**Sends the event the given destination with the given command.
-   * see {@link #occupy(int, EventSource, EventConsumer, EventThread_ifc)}
+  /**Sends the event to the given destination.
+   * If the {@link #evDstThread} is given on construction or on {@link #occupy(int, EventSource, EventConsumer, EventThread_ifc)}
+   * then the event is stored in the queue of this thread to execute it using {@link EventThread_ifc#storeEvent(EventObject)}. 
+   * <br>If the thread is not given, {@link EventConsumer#processEvent(EventObject)} is called to execute the event in the current thread.
+   * <br>Generally, the event is relinquished and the {@link EventSource} is informed if the event is processed,
+   * see description of {@link EventConsumer#processEvent(EventObject)}.
+   * It means, if the event is applied or processed, it is free for further usage or it can contain back information, 
+   * then it should be evaluated and freed by the application. This is decided with the return value of the processEvent operation.
+   * <br>The {@link #evDst()} must no == null, should be given by construction with {@link EventWithDst#EventWithDst(String, EventSource, EventConsumer, EventThread_ifc)}
+   * or by {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}. If it is null, an exception is thrown.
    * @return true
    */
   public boolean sendEvent ( ) {
     if(this.evDst == null) throw new IllegalArgumentException("event should have a destination");
+    if(this.dateCreation.get()==0) {
+      DateOrder date = DateOrder.get();
+      this.dateCreation.set(date.date);
+      this.dateOrder = date.order;
+    }
     if(this.evDstThread !=null){
       this.evDstThread.storeEvent(this);
     } else {
-      int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
-      try{
-        this.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
-        retProcess = this.evDst.processEvent(this);  //may set bit doNotRelinquish
-      } catch(Exception exc) {
-        System.err.println("Exception while processing an event: " + exc.getMessage());
-        exc.printStackTrace(System.err);
-      }
-      //if(stateOfEvent == 'r') {
-      if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0 && !this.bStaticOccupied) {
-        //Note: relinquishes it in case of exception too!
-        relinquish();
-      }
+      processEvent();
     }
     return true;
+  }
+
+  
+  
+  /*package private*/ 
+  void processEvent() {
+    int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
+    try{
+      this.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
+      notifyDequeued();
+      retProcess = this.evDst.processEvent(this);  //may set bit doNotRelinquish
+    } catch(Exception exc) {
+      CharSequence excMsg = ExcUtil.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);
+      retProcess |= EventConsumer.mEventConsumerException;
+    }
+    consumed(retProcess);
+    //if(stateOfEvent == 'r') {
+    if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0 && !this.bStaticOccupied) {
+      //Note: relinquishes it in case of exception too!
+      relinquish();
+    }
   }
   
   
   
   /**This routine should be called after consuming the event. It counts the number of consuming and invokes
    * {@link EventSource#notifyConsumed(int)} with this number if a source is given. Usual that is helpfully for debugging. */
-  public void consumed(){
-    ctConsumed +=1;
+  public void consumed(int retFromConsumer){
+    this.ctConsumed +=1;
     EventSource source1 = ((EventSource)source);
     if(source1 !=null){
-      source1.notifyConsumed(ctConsumed);
+      source1.notifyConsumed((this.ctConsumed<<24) | (retFromConsumer & 0x00ffffff));
     }
   }
   

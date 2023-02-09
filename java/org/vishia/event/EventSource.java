@@ -75,7 +75,15 @@ public class EventSource
   /**It is called if the event is dequeued from the {@link EventWithDst#evDstThread} queue and attempt to processed. */
   public void notifyDequeued(){}
   
-  public void notifyConsumed(int ctConsumed){}
+  /**This operation is called after calling {@link EventConsumer#processEvent(java.util.EventObject)}
+   * in {@link EventTimerThread} and should be called also in all other implementations of {@link EventThread_ifc}
+   * to assign, how the event is used. 
+   * @param state The return value on {@link EventConsumer#processEvent(java.util.EventObject)} given from the user implementation.
+   *   It is recommended to use the defined bits in {@link EventConsumer#mEventConsumed} etc.
+   *   or also from {@link org.vishia.states.StateSimple#mStateEntered} etc.
+   *   The bits 31..24 the {@link EventWithDst#ctConsumed} especially for debugging. 
+   */
+  public void notifyConsumed(int state){}
   
   public void notifyRelinquished(int ctConsumed){}
 

@@ -37,7 +37,7 @@ import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteAccessor;
 import org.vishia.fileRemote.FileRemote.Cmd;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
-import org.vishia.fileRemote.FileRemoteProgressTimeOrder;
+import org.vishia.fileRemote.FileRemoteProgressEvent;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
@@ -471,7 +471,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 
   
   
-  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress)
+  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress)
   {
     states.copyChecked(fileSrc, pathDst, nameModification, mode, callbackUser, timeOrderProgress);
     
@@ -548,7 +548,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
 
   
-  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressTimeOrder timeOrderProgress) {
+  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) {
     //TODO
   }
 
@@ -884,7 +884,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    * defined in {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)} 
    */
   @Override public void walkFileTree(FileRemote startDir, final boolean bWait, boolean bRefreshChildren, boolean resetMark
-      , String sMask, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
+      , String sMask, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress)
   { if(bWait){
       //execute it in this thread, therewith wait for success.
       walkFileTreeExecInThisThread(startDir, bRefreshChildren, resetMark, sMask, bMarkCheck, depth, callback, progress);
@@ -920,7 +920,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    * @param callback invoked for any directory entry and finsih and for any file.
    */
   protected void walkFileTreeExecInThisThread(FileRemote startDir, boolean bRefreshChildren, boolean resetMark, String sMask, long bMarkCheck, int depth
-      , FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
+      , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress)
   {
     if(callback !=null) { callback.start(startDir); }
 //    String sPath = startDir.getAbsolutePath();
@@ -945,7 +945,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     }
     if(callback !=null) { callback.finished(startDir); }
     if(progress !=null && progress.getDstThread() !=null) {
-      progress.activateDone();                 // remove the progress event from the timer queue, sends done to the same thread.
+      progress.bDone = true;
+      progress.sendEvent(); //activateDone();                 // remove the progress event from the timer queue, sends done to the same thread.
     }
     
   }
@@ -1030,7 +1031,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     
     //FilepathFilter mask;
     
-    final FileRemoteProgressTimeOrder progress;
+    final FileRemoteProgressEvent progress;
     
     final TreeWalkerPathCheck checker;
     
@@ -1048,7 +1049,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
      */
     public WalkFileTreeVisitor(FileCluster fileCluster, boolean refreshChildren, boolean resetMark, String sMask
         , long bMarkCheck
-        , FileRemoteWalkerCallback callback, FileRemoteProgressTimeOrder progress)
+        , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress)
     {
       this.fileCluster = fileCluster;
       this.refresh = refreshChildren;
@@ -1076,7 +1077,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     }
     
     
-    private void reset(){ if(this.progress !=null) { this.progress.clear(); } }
+    private void reset(){ } //if(this.progress !=null) { this.progress.clear(); } }
     
     
     

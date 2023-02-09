@@ -65,8 +65,19 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
   
   
   
-  public CmdEnum getCmd ( ){ return cmde; }
+  public CmdEnum getCmd ( ){ return this.cmde; }
 
+  
+  /**Checks whether the type of cmd of this event is derived from TimeoutCmd
+   * and whether the value is {@link TimeoutCmd#timeout}
+   * @return true if the condition is true, it is a timeout, false in any other case:
+   *   false if either the generic type is not TimeoutCmd or the value is not timeout.
+   */
+  public boolean isTimeout() {
+    return this.cmde instanceof TimeoutCmd && ((TimeoutCmd)this.cmde) == TimeoutCmd.timeout;
+  }
+  
+  
   
   /**Sends this event to its destination instance.
    * The event is used to send only if it is not in use yet. See <a href="#lifecycle">Life cycle of an event object</a>.
