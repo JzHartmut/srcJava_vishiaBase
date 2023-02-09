@@ -5,6 +5,9 @@ package org.vishia.msgDispatch;
 
 */
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
 
@@ -60,6 +63,7 @@ public interface LogMessage extends Appendable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-12-25 Hartmut new: {@link #timeMsg(long, String)} as helper for simple preparation an String with timestamp in absolute in ms. 
    * <li>2022-12-25 Hartmut chg: the log texts are now CharSequence, not String. This allows give a StringBuilder reference immediately.
    *   For post processing also usual a CharSequence is sufficient. This is a refactoring in all message and log sources.
    *   But it does not influence user sources. Note that a String is also a CharSequence. 
@@ -381,5 +385,12 @@ int getReportLevelFromIdent(int ident);
    */
   //public abstract void tickAndFlushOrClose();
   
+  final public static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd HH:mm:ss.SSS: ");
   
+  /**This is a simple static output operation independent of the log system.
+   * @param ms Milliseconds after 1970
+   * @param msg
+   * @return
+   */
+  public static String timeMsg(long ms, String msg) { return dateFormat.format(new Date(ms)) + ": " + msg; } 
 }

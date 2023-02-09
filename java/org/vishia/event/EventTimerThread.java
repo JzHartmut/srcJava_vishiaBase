@@ -2,6 +2,7 @@ package org.vishia.event;
 
 import java.io.Closeable;
 import java.util.EventObject;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -86,6 +87,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Version, license and history.
    * <ul>
+   * <li>2023-02-09 Operations with TimeOrder now synchronized, some fine refactoring.  
    * <li>2023-02-06 An inheritance of this class is used for {@link org.vishia.gral.base.GralMng} as graphic thread.
    *   Hence some stuff is now protected, only a few operations are overridden, see there. 
    *   All non overridden operations are set to final now here.    
@@ -158,9 +160,9 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   /**Queue of orders which are executed with delay yet. */
   private final ConcurrentLinkedQueue<TimeOrder> queueDelayedOrders = new ConcurrentLinkedQueue<TimeOrder>();
   
-  /**Temporary used instance of delayed orders while {@link #runTimer} organizes the delayed orders.
+  /**Temporary used instance for orders ready to execute while {@link #runTimer} organizes the delayed orders.
    * This queue is empty outside running one step of runTimer(). */
-  private final ConcurrentLinkedQueue<TimeOrder> queueDelayedTempOrders = new ConcurrentLinkedQueue<TimeOrder>();
+  private final ConcurrentLinkedQueue<TimeOrder> queueOrdersToExecute = new ConcurrentLinkedQueue<TimeOrder>();
   
   protected boolean bThreadRun;
   
@@ -310,7 +312,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   /* (non-Javadoc)
    * @see org.vishia.event.EventThreadIfc#addTimeOrder(org.vishia.event.EventTimeout)
    */
-  public final char addTimeEntry(TimeOrder order){ 
+  @Override public final char addTimeEntry(TimeOrder order){ 
     final char retc;
     long delay = order.timeToExecution(); 
     if(delay >=0){
@@ -320,11 +322,11 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       if((delayAfterCheckNew) < -2) {                      // an imprecision of 2 ms are admissible, don't wakeup because calculation imprecisions.
         this.timeCheckNew = order.timeExecution;           // an earlier wakeup is necessary than current wait(timediffToCheckNew)
         boolean notified;
-        synchronized(runTimer) {                           // then the wait(timediffToCheckNew) should be interrupted
+        synchronized(this) {                           // then the wait(timediffToCheckNew) should be interrupted
           notified = stateThreadTimer == 'W';
           if(notified){                                    // wake up the time thread to poll orders
             retc = 'n';   //new time
-            runTimer.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
+            this.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
           } else {                                         // should wake up and adjust the sleep time newly.
             // thread is busy, not wait, it will detect the new this.timeCheckNew          
             retc = 'b';   // 
@@ -334,7 +336,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         retc = 'l';  // it is later
       }
     } else {
-      order.doTimeElapsed();
+      order.event.sendEvent();  //doTimeElapsed();
       retc = 'x';  //eXecuted
     }
     return retc;
@@ -430,35 +432,63 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
 
   
   /**Check all time orders whether there are expired, or if not calculate the next time to check. 
+   * This operation runs under mutex in that part which changes TimeOrders and the {@link #queueDelayedOrders}
+   * regarding changing also for and because {@link TimeOrder#activateAt(long, long)}, which uses this as mutex.
+   * <br><br>
+   * If a TimeOrder is expired:
+   * <br>If the {@link #evDst()} is given the {@link EventConsumer#processEvent(java.util.EventObject)} is called
+   * though this instance may be a timeOrder. This method can enqueue this instance in another queue for execution
+   * in any other thread which invokes then {@link TimeOrder#doExecute()}.
+   * <br> 
+   * It this is a {@link TimeOrder} and the #evDst is not given by constructor
+   * then the {@link TimeOrder#doExecute()} is called to execute the time order.
+   * <br>
+   * If this routine is started then an invocation of {@link #activate(int)} etc. enqueues this instance newly
+   * with a new time for elapsing. It is executed newly therefore.
    * @return the delay time in ms.
    */
   private int checkTimeOrders(){
     int timeWait = this.delayMax; //10 seconds.
     this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
-    { TimeOrder order;
+    TimeOrder order;
+    //System.out.println(org.vishia.msgDispatch.LogMessage.timeMsg(System.currentTimeMillis(), "checkTimeOrders").toString());
+    synchronized(this) {                         // operations executed under mutex, synchronized to TimeOrder.activateAt
+      Iterator<TimeOrder> iter = this.queueDelayedOrders.iterator();
       long timeNow = System.currentTimeMillis();
-      while( (order = queueDelayedOrders.poll()) !=null){
+      while(iter.hasNext()) {
+        order = iter.next();
         long delay = order.timeExecution - timeNow; 
-        if((delay) < 3){                         //if it is expired in <=2 milliseconds, execute now.
-          order.doTimeElapsed();                 // execute the event now.
-          timeNow = System.currentTimeMillis();  //new time after execution for further check
+        if((delay) < 3){                                   //if it is expired in <=2 milliseconds, execute now.
+          iter.remove();
+          order.timeExecutionLatest = 0;                   // Note: set first before timeExecution = 0. Thread safety.
+          order.timeExecution = 0;                         // may force newly adding if requested. Before execution itself!
+          this.queueOrdersToExecute.offer(order);
         }
         else {
           //not yet to proceed
-          if(delay < timeWait) {                 // calculate the timeWait, for the first event.
+          if(delay < timeWait) {                           // calculate the timeWait, for the first event.
             this.timeCheckNew = order.timeExecution;  //earlier
             timeWait = (int) delay;
           }
-          queueDelayedTempOrders.offer(order);   // gather this order firstly in the tempOrders
         }                                        //                                     |
-      }                                          //                                     |
-      //delayedChangeRequest is tested and empty now.                                   |
-      //copy the non-expired orders back to queueDelayedOrders.                         |
-      while( (order = queueDelayedTempOrders.poll()) !=null){    // <-------------------+
-        queueDelayedOrders.offer(order); 
+      }
+    } //synchronized
+    // ====================================================== The queueDelayedOrders is evaluated, now execute outside sync.
+    //                                                        possible, that the same TimeOrder is queued again via TimeOrder.activateAt(...)
+    while( (order = this.queueOrdersToExecute.poll()) !=null){    // that can be especially done just in the processEvent execution!
+      if(order.timerThread != order.event.evDstThread) {
+        order.event.sendEvent();                           // it is enqueued in the evThread
+      } else {
+        order.event.processEvent();                        // it is executed immediately in the timerThread if evThread is the same
       }
     }
-    return timeWait;
+    //======================================================= During processEvent new TimeOrders may be added.
+    //                                                        It can be change the timeCheckNew. Hence new calculation. 
+    long timeWait1 = this.timeCheckNew - System.currentTimeMillis();
+    if(timeWait1 < timeWait) {
+      timeWait = (int)timeWait1;
+    }
+    return timeWait;                                       // this is the sleep time for the thread.
   }
   
   
@@ -515,10 +545,11 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       EventTimerThread.this.stateThreadTimer = 'r';
       while(EventTimerThread.this.stateThreadTimer == 'r' && EventTimerThread.this.bThreadRun ){
         int timeWait = stepThread();
-        synchronized(EventTimerThread.this.runTimer){
+        synchronized(EventTimerThread.this){
           EventTimerThread.this.stateThreadTimer = 'W';
           //====>wait
-          try{ EventTimerThread.this.runTimer.wait(timeWait);} catch(InterruptedException exc){}
+          //System.out.println(org.vishia.msgDispatch.LogMessage.timeMsg(System.currentTimeMillis(), String.format("runTimer, timeWait=%d\n", timeWait)));
+          try{ EventTimerThread.this.wait(timeWait);} catch(InterruptedException exc){}
           if(EventTimerThread.this.stateThreadTimer == 'W'){ //can be changed while waiting, set only to 'r' if 'W' is still present
             EventTimerThread.this.stateThreadTimer = 'r';
           }

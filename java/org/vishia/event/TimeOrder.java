@@ -1,6 +1,9 @@
 package org.vishia.event;
 
+
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.Debugutil;
+import org.vishia.util.ExcUtil;
 
 /**This class builds a time order instance usable as timeout for state machines or other time orders.
  * It is intent do use for {@link EventTimerThread} or another implementation using {@link EventTimerThread_ifc}.
@@ -33,6 +36,8 @@ public class TimeOrder extends EventSource
   
   /**Version and history:
    * <ul>
+   * <li>2023-02-09 refactoring, deferred time orders etc. The TimeOrder is now final aggregated from an {@link EventWithDst} if necessary.
+   *   It aggregates the event by itself. Execution is done only via the {@link #event()} and its {@link EventWithDst#evDst}. 
    * <li>2022-09-24 Some comments and changed in {@link #activateAt(long, long)} while searching the problem 
    *   that the execution sometimes hangs. Now it does not hang since ~10 min , but the reason is not fully clarified.
    *   Before, the problem was that the thread has used its 10 seconds waiting time if the event queue is empty.
@@ -66,7 +71,7 @@ public class TimeOrder extends EventSource
    * 
    * 
    */
-  @SuppressWarnings("hiding") public final static String version = "2015-01-11";
+  @SuppressWarnings("hiding") public final static String version = "2023-02-09";
 
   public final String name;
   
@@ -202,7 +207,13 @@ public class TimeOrder extends EventSource
   /**Enters the TimeEntry to activates the event to the given timestamp with a given latest time stamp.
    * This is proper for deferment an event by given a new time also by call of {@link #activateAt(long)} or {@link #activate(int)}.
    * If the event is activated already for a shorter time, then the activation time is deferred to this given time
-   * but not later than a latest time given with {@link #activateAt(long, long)}. 
+   * but not later than a latest time given with {@link #activateAt(long, long)}.
+   * <br><br>
+   * If the TimeOrder is not in the time queue but is in execution just now, the execution is not influenced.
+   * Instead, as desired, the TimeOrder is activated for a further execution in the given time. 
+   * Normally this new execution time should be later than the finishing of the current execution.
+   * If this is not so, the new execution is done after the current one. TODO
+   *  
    * @param executionTime The time stamp for desired execution, can be delayed on second calls.
    * @param latest The latest time stamp where the event should be processed though it is delayed.
    *   If the event is activated already for a earlier latest time, this argument is ignored. 
@@ -217,34 +228,60 @@ public class TimeOrder extends EventSource
       //maybe the execution thread hangs:
       this.timeExecution = 0;  //hence remove it.
       this.timeExecutionLatest = 0;
-      System.out.println("remove TimeEntry");
+      //System.out.println("remove TimeEntry");
       this.timerThread.removeTimeEntry(this);
     }
     if(this.timeExecution ==0 && this.timeExecutionLatest !=0) {
       Debugutil.stop();
     }
     //
+    final boolean bFree;
     final long executionTimeUsed;
     if(this.timeExecutionLatest ==0) {                     // only on a new time order
       this.timeExecutionLatest = latest == 0 ? executionTime : latest;
     }
-    if( this.timeExecutionLatest !=0 && (executionTime - this.timeExecutionLatest) >0) {
-      executionTimeUsed = this.timeExecutionLatest;   // not later as latest.
-    } else {
-      executionTimeUsed = executionTime;
+    synchronized(this.timerThread) {
+      if(this.timeExecution ==0) {
+        bFree = true;
+        executionTimeUsed = executionTime;          // a new time order.
+      } else {
+        bFree = false;                              // Then this time order is in queue
+        long dtimeExecutionLatest = executionTime - this.timeExecutionLatest; 
+        if(dtimeExecutionLatest >=0 ) {              // .............X...L...N       
+          if(this.timeExecution == this.timeExecutionLatest) {   //     <----
+            executionTimeUsed = 0;                  //ignore it, should be handled in the future before.
+            //System.out.print(LogMessage.timeMsg(executionTime, "deferred ignored timeorder ") + ExcUtil.stackInfo("", 2, 8));
+          } else {                                  // use the latest time instead, add newly for deferment to latest time
+            executionTimeUsed = this.timeExecutionLatest;
+            //System.out.print(LogMessage.timeMsg(executionTimeUsed, "deferred latest timeorder ") + ExcUtil.stackInfo("", 2, 8));
+          }
+        } else {
+          long dtimeExecutionNew = executionTime - this.timeExecution;  //>0 for deferment.
+          if(dtimeExecutionNew <0) {                //          <----
+            executionTimeUsed = executionTime;      // .........N...X        the new time order is earlier. 
+          } else {                                  // .............X...N...L
+            executionTimeUsed = executionTime;      //              ---->    the new time is later but valid.
+          }
+          //System.out.print(LogMessage.timeMsg(executionTimeUsed, "deferred new timeorder ") + ExcUtil.stackInfo("", 2, 8));
+        }
+      }
+      if(executionTimeUsed !=0) {
+        this.timeExecution = executionTimeUsed;  //set it newly
+        if( bFree) {                     // it is free, use this instead occupy
+          //System.out.println(LogMessage.timeMsg(this.timeExecution, "new timeorder ") + ExcUtil.stackInfo("", 2, 8));
+          this.event.dateCreation.set(System.currentTimeMillis());  //then set the new occupy time.
+          this.dbgctWindup = 0;
+          this.timerThread.addTimeEntry(this);    //add newly, delayed event was removed before.
+        } else {                                   //already added, shifted to the future
+          //System.out.println(LogMessage.timeMsg(this.timeExecution, "deferred timeorder ") + ExcUtil.stackInfo("", 2, 8));
+          this.dbgctWindup +=1;
+          //remove and add new, because its state added in queue or not may be false.
+          this.timerThread.removeTimeEntry(this);  //if it is not in the queue, no problem
+          //this.timerThread.removeFromQueue(this.event);  // if it is not in execution
+          this.timerThread.addTimeEntry(this);    //add newly, delayed event was removed before.
+        }
+      }
     }
-    boolean bFree = this.timeExecution ==0;
-    this.timeExecution = executionTimeUsed;  //set it newly
-    if( bFree) {                     // it is free, use this instead occupy
-      this.event.dateCreation.set(System.currentTimeMillis());  //then set the new occupy time.
-    } else { 
-      //already added:
-      this.dbgctWindup +=1;
-      //else: shift order to future:
-      //remove and add new, because its state added in queue or not may be false.
-      this.timerThread.removeTimeEntry(this);  //if it is not in the queue, no problem
-    }
-    this.timerThread.addTimeEntry(this);    //add newly, delayed event was removed before.
   }
   
   
@@ -275,28 +312,6 @@ public class TimeOrder extends EventSource
   public final boolean used(){ return this.timeExecution !=0; }
 
 
-  /**Processes the event or timeOrder. This routine is called in the {@link EventTimerThread} if the time is elapsed.
-   * <br><br>
-   * If the {@link #evDst()} is given the {@link EventConsumer#processEvent(java.util.EventObject)} is called
-   * though this instance may be a timeOrder. This method can enqueue this instance in another queue for execution
-   * in any other thread which invokes then {@link TimeOrder#doExecute()}.
-   * <br><br> 
-   * It this is a {@link TimeOrder} and the #evDst is not given by constructor
-   * then the {@link TimeOrder#doExecute()} is called to execute the time order.
-   * <br><br>
-   * If this routine is started then an invocation of {@link #activate(int)} etc. enqueues this instance newly
-   * with a new time for elapsing. It is executed newly therefore.
-   */
-  protected final void doTimeElapsed() {
-    this.timeExecutionLatest = 0;                // Note: set first before timeExecution = 0. Thread safety.
-    this.timeExecution = 0;                      // may force newly adding if requested. Before execution itself!
-    if(this.timerThread != this.event.evDstThread) {
-      this.event.sendEvent();                    // it is enqueued in the evThread
-    } else {
-      this.event.processEvent();                 // it is executed immediately in the timerThread if evThread is the same
-    }
-  }
-  
   
   /**This operation should not called by the user. It is intent to call via the interface {@link EventSource}
    * from the event management classes, especially {@link EventTimerThread} or adequate implementations of {@link EventThread_ifc}
