@@ -94,7 +94,7 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
    * <li>2023-02-07 Hartmut new: two different threads for {@link #theThread} for the stateMachine execution itself,
    *   whereby this is now the common {@link EventThread_ifc} instead the specific used {@link org.vihia.event.EventTimerThread} 
    *   and {@link #timerThread} maybe the same, maybe another thread for timeout handling. 
-   *   This is due to new properties of {@link org.vishia.event.TimeEntry}.
+   *   This is due to new properties of {@link org.vishia.event.TimeOrder}.
    *   
    * <li>2015-11-03 Hartmut chg: renaming topState in {@link #stateTop}, more unique
    * <li>2015-01-11 Hartmut chg:  

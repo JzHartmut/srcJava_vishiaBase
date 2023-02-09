@@ -1306,7 +1306,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   If given then this routine works in an extra thread.
    * @param timeOrderProgress this is a second possibility beside callbackUser, one of them may be sufficient. 
    *   On start, any file, any directory and the finish some information will be written in this instance.
-   *   This {@link org.vishia.event.TimeEntry} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
+   *   This {@link org.vishia.event.TimeOrder} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
    * @since 2015-05. Tested elaborately and documented in 2023-02  
    */
   public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////

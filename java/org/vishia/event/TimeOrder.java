@@ -1,30 +1,24 @@
 package org.vishia.event;
 
-/**This class builds a timeout instance for state machines or other time entries.
+import org.vishia.util.Debugutil;
+
+/**This class builds a time order instance usable as timeout for state machines or other time orders.
  * It is intent do use for {@link EventTimerThread} or another implementation using {@link EventTimerThread_ifc}.
  * It is also used for the vishia graphical programming (GRAL) referenced in {@link org.vishia.gral.base.GralGraphicEventTimeOrder}
  * and also for {@link org.vishia.fileRemote.FileRemoteProgressEvent}.
- * It can be referenced by the data of any user event if the event should be delayed in execution. 
+ * It is referenced by {@link EventWithDst#timeOrder} and only constructed in that class
+ * calling {@link EventWithDst#EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}
+ * or enhanced classes from {@link EventWithDst} if the event should be delayed.
  * <br>
- * An TimeEntry is used inside {@link org.vishia.states.StateMachine} as persistent instance 
- * of a parallel state machine or of the top state if timeouts are used in the states.
- * <br>
- * Instantiation pattern:<pre>
- *   EventTimerThread thread = new EventTimerThread("stateThread");
- *   //uses the thread as timer manager and as event executer
- *   TimeEntry timeout = new TimeEntry("name", stateMachine, thread);
- * </pre>
+ * An {@link EventCmdtype} with {@link TimeoutCmd} is used inside {@link org.vishia.states.StateMachine} as persistent instance 
+ * of any parallel state machine or of the top state if timeouts are used in the states.
+ * <br><br>
  * Activate the timeout event:<pre>
- *   timeout.activate(7000);  //in 7 seconds.
+ *   myEvent.timeOrder.activate(7000);  //activate execution of the event in 7 seconds.
  * </pre>
  * <ul>
- * <li>Constructor for dedicate usage with an ordinary {@link EventWithDst}: 
- *   {@link TimeEntry#TimeEntry(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}.
- * <li>Constructor for free usage, different destinations, using {@link EventWithDst#occupy(EventSource, EventConsumer, EventTimerThread, boolean)}:
- *   for the {@link #event} after construction: 
- *   {@link TimeEntry#TimeEntry(String, EventTimerThread_ifc)}.
  * <li>Constructor for a given event of any derived specific type:
- *   {@link TimeEntry#TimeEntry(String, EventTimerThread_ifc, EventWithDst)}.    
+ *   {@link TimeOrder#TimeEntry(String, EventTimerThread_ifc, EventWithDst)}.    
  * <li>methods to activate: {@link #activate(int)}, {@link #activateAt(long)}, {@link #activateAt(long, long)}
  * <li>Remove a currently timeout: {@link #deactivate()}
  * <li>Check: {@link #timeExecution()}, {@link #timeExecutionLatest()}, {@link #timeToExecution()} {@link #used()}
@@ -34,7 +28,7 @@ package org.vishia.event;
  * @author Hartmut Schorrig
  *
  */
-public class TimeEntry extends EventSource
+public class TimeOrder extends EventSource
 {
   
   /**Version and history:
@@ -44,7 +38,7 @@ public class TimeEntry extends EventSource
    *   Before, the problem was that the thread has used its 10 seconds waiting time if the event queue is empty.
    *   It seems to be a missing notify(), but the notify() was programmed. 
    *   The problem occurs in the Gral vishiaGui with CurveView for redraw events. 
-   * <li>2015-01-02 Hartmut created: as super class of {@link TimeEntry} and as event for timeout for state machines.
+   * <li>2015-01-02 Hartmut created: as super class of {@link TimeOrder} and as event for timeout for state machines.
    * </ul>
    * 
    * <b>Copyright/Copyleft</b>:
@@ -118,26 +112,14 @@ public class TimeEntry extends EventSource
   public int dbgctWindup = 0;
   
 
-  /**Creates an event as a static object for re-usage. Use {@link #occupy(EventSource, EventConsumer, EventTimerThread, boolean)}
-   * before first usage. Use {@link #relinquish()} to release the usage.
-   * Usual the parameterized method {@link TimeEntry#TimeEntry(EventSource, EventConsumer, EventThreadIfc)} 
-   * should be used.
-   * @param name for debugging and log
-   * @param timerThread where the time entry should be used in, it is determined.
-   */
-  public TimeEntry ( String name, EventTimerThread_ifc timerThread) { 
-    super(name);
-    this.name = name;
-    this.event = new EventWithDst(name);
-    this.timerThread = timerThread;
-  }
-
-  /**Construction of a time entry with any desired specific event to execute. 
+ 
+  /**Construction of a time order with any desired specific event to execute.
+   * The ctor is package private, only used in {@link EventWithDst#EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}. 
    * @param name for debugging and log
    * @param timerThread where the time entry should be used in, it is determined.
    * @param event The event for execution.
    */
-  public TimeEntry ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
+  TimeOrder ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
     super(name);
     this.name = name;
     this.event = event;
@@ -145,7 +127,7 @@ public class TimeEntry extends EventSource
   }
 
   
-  public void setEvent(EventWithDst event) {
+  void setEvent(EventWithDst event) {
     this.event = event;
   }
   
@@ -173,7 +155,7 @@ public class TimeEntry extends EventSource
    *   and there executed.
    *   With this approach a central timer can be used for several statemachine threads.
    */
-  public TimeEntry ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
+  public TimeOrder ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
     super(name);
     this.name = name;
     this.event = new EventWithDst(name, src, consumer, evThread !=null ? evThread : timerThread);
@@ -205,8 +187,10 @@ public class TimeEntry extends EventSource
    */
   public final void activate(int millisec){ activateAt(System.currentTimeMillis() + millisec, 0);}
   
-  /**Activates the timeout event to the given timestamp.
-   * With this method the event or time order is enqueued in its thread given by construction.
+  /**Enters the TimeEntry to activates the event to the given timestamp.
+   * <br>If the event is entered already for a shorter time, and this is also the latest time,
+   * then nothing is done. The event will be activated at the time as given before. 
+   * See also {@link #activateAt(long, long)}.
    * @param date The absolute time stamp in seconds after 1970 UTC like given with {@link java.lang.System#currentTimeMillis()}.
    *   To set a relative time you must write <pre>
    *     myEvent.activateAt(System.currentTimeMillis() + delay);
@@ -215,14 +199,15 @@ public class TimeEntry extends EventSource
   public final void activateAt(long date) { activateAt(date, 0); }
   
   
-  /**Activate the event at the given absolute time 
-   * If the event is activated already for a shorter time, the activation time is deferred to this given time
+  /**Enters the TimeEntry to activates the event to the given timestamp with a given latest time stamp.
+   * This is proper for deferment an event by given a new time also by call of {@link #activateAt(long)} or {@link #activate(int)}.
+   * If the event is activated already for a shorter time, then the activation time is deferred to this given time
    * but not later than a latest time given with {@link #activateAt(long, long)}. 
    * @param executionTime The time stamp for desired execution, can be delayed on second calls.
    * @param latest The latest time stamp where the event should be processed though it is delayed.
    *   If the event is activated already for a earlier latest time, this argument is ignored. 
    *   The earlier latest time is valid. Use {@link #deactivate()} before this method to set the latest processing time newly. 
-   * @see #activateAt(long, long).
+   * @see #activateAt(long).
    */
   public final void activateAt(long executionTime, long latest) {
     //
@@ -235,10 +220,13 @@ public class TimeEntry extends EventSource
       System.out.println("remove TimeEntry");
       this.timerThread.removeTimeEntry(this);
     }
+    if(this.timeExecution ==0 && this.timeExecutionLatest !=0) {
+      Debugutil.stop();
+    }
     //
     final long executionTimeUsed;
-    if(this.timeExecutionLatest ==0) {
-      this.timeExecutionLatest = latest;         // set it only one time if requested.
+    if(this.timeExecutionLatest ==0) {                     // only on a new time order
+      this.timeExecutionLatest = latest == 0 ? executionTime : latest;
     }
     if( this.timeExecutionLatest !=0 && (executionTime - this.timeExecutionLatest) >0) {
       executionTimeUsed = this.timeExecutionLatest;   // not later as latest.
@@ -291,10 +279,10 @@ public class TimeEntry extends EventSource
    * <br><br>
    * If the {@link #evDst()} is given the {@link EventConsumer#processEvent(java.util.EventObject)} is called
    * though this instance may be a timeOrder. This method can enqueue this instance in another queue for execution
-   * in any other thread which invokes then {@link TimeEntry#doExecute()}.
+   * in any other thread which invokes then {@link TimeOrder#doExecute()}.
    * <br><br> 
-   * It this is a {@link TimeEntry} and the #evDst is not given by constructor
-   * then the {@link TimeEntry#doExecute()} is called to execute the time order.
+   * It this is a {@link TimeOrder} and the #evDst is not given by constructor
+   * then the {@link TimeOrder#doExecute()} is called to execute the time order.
    * <br><br>
    * If this routine is started then an invocation of {@link #activate(int)} etc. enqueues this instance newly
    * with a new time for elapsing. It is executed newly therefore.

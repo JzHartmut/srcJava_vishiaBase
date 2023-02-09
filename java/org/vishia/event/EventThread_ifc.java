@@ -26,7 +26,7 @@ public interface EventThread_ifc extends Closeable, InfoAppend {
   public boolean removeFromQueue ( EventObject ev);
   
   /**Checks whether the thread is busy. This is used especially for debug,
-   * if a {@link TimeEntry} waits for its finishing. If an execution remains in process because debugging, this method returns true. 
+   * if a {@link TimeOrder} waits for its finishing. If an execution remains in process because debugging, this method returns true. 
    * @return
    */
   boolean isBusy ( );

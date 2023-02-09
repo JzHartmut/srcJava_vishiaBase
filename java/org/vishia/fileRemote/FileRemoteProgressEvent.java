@@ -3,7 +3,7 @@ package org.vishia.fileRemote;
 import org.vishia.event.EventCmdtype;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
-import org.vishia.event.TimeEntry;
+import org.vishia.event.TimeOrder;
 import org.vishia.event.EventTimerThread_ifc;
 import org.vishia.event.EventWithDst;
 import org.vishia.states.StateMachine;
@@ -17,7 +17,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
 
   /**Version, license and history.
    * <ul>
-   * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link TimeEntry} also here. Some adpations done. 
+   * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link TimeOrder} also here. Some adpations done. 
    * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
    * <li>2015-05-03 Hartmut chg: occupyRecall(500,...) for answer events especially abort after exception, prevent hanging of copy in Fcmd
    * <li>2015-01-11 Hartmut created
@@ -79,7 +79,6 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
   }
   
   
-  public final TimeEntry timeEntry;
   
   
   public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
@@ -96,9 +95,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
    */
   public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
     //super(name, mng);
-    super(name, new TimeEntry(name, timerThread, null), evConsumer, timerThread);
-    this.timeEntry = (TimeEntry)this.getSource(); //new TimeEntry(name, timerThread, this);
-    this.timeEntry.setEvent(this);
+    super(name, timerThread, null, evConsumer, timerThread);
     this.srcAnswer = srcAnswer;
     this.delay = delay;
   }
@@ -146,7 +143,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
     this.nrofBytesFile = 0;
     this.nrofBytesFileCopied = 0;
     this.bDone = false;
-    this.timeEntry.clear();
+    this.timeOrder.clear();
   }
 
   /**This operation moves the gathered number of to the available numbers.
@@ -169,9 +166,9 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
   
   
   public void activateDone() {
-    this.timeEntry.deactivate();                      // removes from a timer queue if queued
+    this.timeOrder.deactivate();                      // removes from a timer queue if queued
     this.bDone = true;                 // activates the same thread as after activate, but yet with done.
-    this.timeEntry.activate(0);                 // activate immediately.
+    this.timeOrder.activate(0);                 // activate immediately.
   }
   
   public FileRemote.CallbackCmd quest(){ return quest; }
@@ -190,7 +187,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
     this.consumerAnswer = stateM;
     this.quest = state;
     System.out.println("FileRemote.show");
-    this.timeEntry.activateAt(System.currentTimeMillis() + delay);  //Note: it does not add twice if it is added already.
+    this.timeOrder.activateAt(System.currentTimeMillis() + delay);  //Note: it does not add twice if it is added already.
   }
   
   
@@ -202,7 +199,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
   public void requAnswer(FileRemote.CallbackCmd quest, StateMachine stateM) {
     this.quest = quest;
     this.consumerAnswer = stateM;
-    this.timeEntry.activateAt(System.currentTimeMillis() + delay);   //to execute the request
+    this.timeOrder.activateAt(System.currentTimeMillis() + delay);   //to execute the request
   }
 
 //  @Override protected void executeOrder () {

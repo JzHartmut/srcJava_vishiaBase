@@ -68,7 +68,7 @@ public interface EventConsumer
    *   by the manager of the events (EventTimerThread), it will be relinquished later in the application after completion detection.
    *   It means the application (user) declares itself responsible for relinquish. See {@link EventWithDst#relinquish()}.
    * <li>0x04 = {@link #mEventConsumerFinished}: The task which should be organized by the event is finished. 
-   *   This bit is especially used to designate a {@link TimeEntry} as finished for usage, quest in {@link TimeEntry#awaitExecution(int, int)}.
+   *   This bit is especially used to designate a {@link TimeOrder} as finished for usage, quest in {@link TimeOrder#awaitExecution(int, int)}.
    *   Note that a task can need some more events or other conditions, this bit should be set on the last expected event 
    *   in the return value of {@link #processEvent(EventObject)}. For example if a copy of a file tree is finished, 
    *   or the graphic implementation is completely built.

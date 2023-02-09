@@ -90,6 +90,8 @@ public class EventSource
   public void notifyShouldSentButInUse(){}
 
   public void notifyShouldOccupyButInUse(){}
+  
+  public void notifyUnexpectedException(CharSequence msg) {}
 
   @Override public String toString(){ return name; }
   

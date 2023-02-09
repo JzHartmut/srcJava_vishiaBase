@@ -13,7 +13,7 @@ import java.util.Map;
 
 //import org.vishia.event.EventMsg2;
 import org.vishia.event.EventConsumer;
-import org.vishia.event.TimeEntry;
+import org.vishia.event.TimeOrder;
 import org.vishia.util.Assert;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
@@ -263,7 +263,7 @@ Timeout transTimeout;
  * This reference is null if this state has not a timeout transition. 
  * If this state is the top state or a StateParallel this refers the same instance for all states of this Composite.
  * More as one parallel states have differen timeouts. */
-TimeEntry evTimeout;
+TimeOrder evTimeout;
 
 
 /**It is either 0 or {@link #mRunToComplete}. Or to the return value of entry. */
@@ -1277,7 +1277,7 @@ final int entryTheState(EventObject ev, boolean history) { //int isConsumed){
  *   It means, this method is called recursively for all StateComposite of the current statePath.
  * <li>If the exit will be invoked for a StateCompositeFlat, this routine is called for the current StateSimple of the {@link StateComposite#compositeState()}.
  *   It means always the really current state will be exiting. See {@link Trans#doExit()}.  
- * <li>If the state has a timeout {@link #evTimeout} then it is removed from {@link StateMachine#theThread}. {@link org.vishia.event.EventTimerThread#removeTimeEntry(TimeEntry)}.
+ * <li>If the state has a timeout {@link #evTimeout} then it is removed from {@link StateMachine#theThread}. {@link org.vishia.event.EventTimerThread#removeTimeEntry(TimeOrder)}.
  * <li>If the state is a {@link StateParallel} all current parallel states are exiting.
  * <li>The users {@link #exit()} routine is invoked, or the {@link #exit} is run, if {@link #setExitAction(Runnable)} was set.
  * <li>If {@link StateMachine#debugEntryExit} is set the exit text is written with System.out().
