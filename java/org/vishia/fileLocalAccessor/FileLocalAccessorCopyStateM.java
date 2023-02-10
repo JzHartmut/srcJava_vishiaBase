@@ -414,7 +414,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
     }
     else if(actData.src !=null && copyOrder.timeOrderProgress !=null){
       copyOrder.timeOrderProgress.currFile = actData.src;
-      copyOrder.timeOrderProgress.show(FileRemote.CallbackCmd.copyDir, statesCopy);
+      //copyOrder.timeOrderProgress.show(FileRemote.CallbackCmd.copyDir, statesCopy);
       if(cmdFile == FileRemote.Cmd.copyChecked || cmdFile == FileRemote.Cmd.moveChecked){
         actData.dst.mkdirs();
       }
@@ -644,7 +644,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
               copyOrder.timeOrderProgress.nrofBytesFile = zBytesFile;
               copyOrder.timeOrderProgress.nrFilesProcessed = zFilesCopied;
               copyOrder.timeOrderProgress.nrofBytesFile = zBytesFileCopied;
-              copyOrder.timeOrderProgress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, statesCopy);
+              //copyOrder.timeOrderProgress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, statesCopy);
             }
             evCpy.sendInternalEvent(CmdIntern.copyFileContent, true); //keep alive the copy process.
             bCont = false;
@@ -1285,7 +1285,7 @@ public class FileLocalAccessorCopyStateM implements EventConsumer, Closeable
               copyOrder.timeOrderProgress.nrFilesProcessed = zFilesCopied;
               copyOrder.timeOrderProgress.nrofBytesFile = zBytesFileCopied;
               copyOrder.timeOrderProgress.bDone = true;
-              copyOrder.timeOrderProgress.show(FileRemote.CallbackCmd.done, null);  //remove the stateMachines reference. Nothing able to do.
+              //copyOrder.timeOrderProgress.show(FileRemote.CallbackCmd.done, null);  //remove the stateMachines reference. Nothing able to do.
             }
           }
         };

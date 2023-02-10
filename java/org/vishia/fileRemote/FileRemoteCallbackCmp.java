@@ -22,6 +22,8 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-10 Hartmut new concept with the {@link FileRemoteProgressEvent}: remove <code>progress.show(...)</code>
+   *   because it is called in the timer thread instead. Independent of continue the process here. 
    * <li>2016-12-20 Hartmut bugfix: {@link #readIgnoreComment(BufferedReader)}: The second line after //line is ignored too. In a rarely case
    *   it was the only one line which was different, and the comparison has failed. 
    * <li>2014-12-12 Hartmut bugfix: {@link #compareFileContent(FileRemote, FileRemote)}: if the 2. file is longer, it is a difference!  
@@ -55,7 +57,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2016-12-27";
+  static final public String sVersion = "2023-02-10";
   
   class CompareCtrl {
     
@@ -229,7 +231,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
       if(progress !=null){
         progress.currFile = file;
         progress.nrFilesProcessed +=1;
-        progress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, null);
+        //progress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, null);
       }
       /*
       if(evCallback.occupy(null, file, false)) {
@@ -443,7 +445,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   {
     if(progress !=null){
       progress.bDone = true; 
-      progress.show(FileRemote.CallbackCmd.done, null);
+      //progress.show(FileRemote.CallbackCmd.done, null);
     }
     /*
     if(evCallback !=null && evCallback.occupyRecall(500, null, true) !=0){

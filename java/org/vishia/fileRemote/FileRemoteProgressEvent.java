@@ -17,6 +17,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
 
   /**Version, license and history.
    * <ul>
+   * <li>2023-02-10 refactoring in progress. Tested with The.file.Commenader 
    * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link TimeOrder} also here. Some adpations done. 
    * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
    * <li>2015-05-03 Hartmut chg: occupyRecall(500,...) for answer events especially abort after exception, prevent hanging of copy in Fcmd
@@ -60,30 +61,30 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
     noCmd, cont, overwrite, skip, abortFile, abortDir, abortAll
   }
   
-  @SuppressWarnings("serial")  
-  public final class EventCopyCtrl extends EventCmdtype<Answer> {
-    
-    public EventCopyCtrl(String name) {
-      super(name);
-    }
-    
-    
-    public int modeCopyOper;
-    public void send(Answer cmd, int modeCopyOper) {
-      if(occupyRecall(500, srcAnswer, consumerAnswer, null, false) !=0) {  //recall it for another decision if it is not processed yet.
-        this.modeCopyOper = modeCopyOper;
-        sendEvent(cmd);
-      } //else: if the event is processed yet, it is not send.
-      else { System.err.println("FileRemoteProgressTimeOrder - event hangs"); }
-    }
-  }
+//  @SuppressWarnings("serial")  
+//  public final class EventCopyCtrl extends EventCmdtype<Answer> {
+//    
+//    public EventCopyCtrl(String name) {
+//      super(name);
+//    }
+//    
+//    
+//    public int modeCopyOper;
+//    public void send(Answer cmd, int modeCopyOper) {
+//      if(occupyRecall(500, srcAnswer, consumerAnswer, null, false) !=0) {  //recall it for another decision if it is not processed yet.
+//        this.modeCopyOper = modeCopyOper;
+//        sendEvent(cmd);
+//      } //else: if the event is processed yet, it is not send.
+//      else { System.err.println("FileRemoteProgressTimeOrder - event hangs"); }
+//    }
+//  }
+//  
   
   
   
+  //public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
   
-  public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
-  
-  private final EventSource srcAnswer;
+  //private final EventSource srcAnswer;
   
   protected int delay;
 
@@ -96,7 +97,7 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
   public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
     //super(name, mng);
     super(name, timerThread, null, evConsumer, timerThread);
-    this.srcAnswer = srcAnswer;
+//    this.srcAnswer = srcAnswer;
     this.delay = delay;
   }
   
@@ -116,9 +117,11 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
   /**Number of Files which are handled special. */
   public int nrofFilesMarked;
   
-  /**Command for asking or showing somewhat. */
+  /**Command for asking or showing somewhat from executer to application. */
   private FileRemote.CallbackCmd quest;
   
+  
+  /**Answer from Application to Executer. */
   private FileRemote.Cmd answer;
   
 //  private FileRemote.Cmd cmd;
@@ -126,10 +129,26 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
   /**Mode of operation, see {@link FileRemote#modeCopyCreateAsk} etc. */
   public int modeCopyOper;
     
+  /**Set on success.*/
   public boolean bDone;
 
   
-  private StateMachine consumerAnswer;
+  /**True then the service has stopped execution (thread is in wait) for an answer.
+   * After set the answer bits call notify().
+   */
+  public boolean bQuest;
+  
+  /**True then the application will be stop the execution.
+   * The execution should be go to wait, set #bQuest before.
+   * After notify some of continue etc. should be come.
+   */
+  public boolean bPause;
+  
+  /**These are bits for communication from set from the application.*/
+  protected boolean bAbort, bOverwrite, bOverwriteAll, bMkdirAll;
+  
+  
+//  private StateMachine consumerAnswer;
   
   
   public void clear() {
@@ -171,36 +190,129 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
     this.timeOrder.activate(0);                 // activate immediately.
   }
   
-  public FileRemote.CallbackCmd quest(){ return quest; }
+  public FileRemote.CallbackCmd quest ( ){ return this.quest; }
   
-  public FileRemote.Cmd answer(){ return answer; }
-  
-//  public FileRemote.Cmd cmd(){ return cmd; }
-  
-  public void clearAnswer(){ answer = FileRemote.Cmd.noCmd; } //remove the cmd as event-like; }
-  
-  /**Invoked from any FileRemote operation, to show the state.
-   * 
-   * @param stateM the state machine which can be triggered to run or influenced by a pause event.
+  /**This operation should be called by the executer if a non clarified situation exists.
+   * The executer thread goes in wait till setAnswer is given. 
+   * @param quest the quest to the application.
+   * @return the given answer from the application. The stored {@link #answer()} is deleted to prevent twice usage.
    */
-  public void show(FileRemote.CallbackCmd state, StateMachine stateM) {
-    this.consumerAnswer = stateM;
-    this.quest = state;
-    System.out.println("FileRemote.show");
-    this.timeOrder.activateAt(System.currentTimeMillis() + delay);  //Note: it does not add twice if it is added already.
-  }
-  
-  
-  /**Invoked from any FileRemote operation, provides the state with requiring an answer.
-   * The information in this instance should be filled actually.
-   * @param cmd The quest
-   * @param stateM instance which should be triggered to run on the answer.
-   */
-  public void requAnswer(FileRemote.CallbackCmd quest, StateMachine stateM) {
+  public synchronized final FileRemote.Cmd setQuest ( FileRemote.CallbackCmd quest ) {
     this.quest = quest;
-    this.consumerAnswer = stateM;
-    this.timeOrder.activateAt(System.currentTimeMillis() + delay);   //to execute the request
+    this.answer = FileRemote.Cmd.noCmd;  // the answer cannot be given yet.
+    do {
+      this.bQuest = true;
+      try { this.wait(10000); } catch(InterruptedException exc) {}
+      this.bQuest = false;
+    } while( this.answer == FileRemote.Cmd.noCmd);
+    FileRemote.Cmd answer = this.answer;
+    this.answer =  FileRemote.Cmd.noCmd;  
+    return answer;                                         // return the given answer from application
   }
+  
+  
+  /**This operation should be called by the application if a {@link #quest()} is detected.
+   * If the executer waits then it will be notified.
+   * @param answer the answer for the quest.
+   */
+  public final void setAnswer ( FileRemote.Cmd answer ) {
+    this.answer = answer;
+    if(this.bQuest) {
+      synchronized(this) {
+        notify();
+      }
+    }
+  }
+  
+  
+  
+  
+  /**Quest from executer. The application can {@link #setAbort()} for example by user handling any time.
+   * @return true if should be aborted.
+   */
+  public boolean abort ( ) { return this.bAbort; }
+   
+  /**Set from application to force abort in the executer.*/
+  public void setAbort ( ) { this.bAbort = true; }
+  
+  
+  /**Quest from executer while working. If the bit {@link #setPause(boolean)} is given,
+   * then the thread goes in wait, checks in an interval of 10 seconds whether {@link #bPause} is still set,
+   * and continues if {@link #bPause} is false again. 
+   * Note that {@link #setPause(boolean)} with false wakes up waiting.
+   * @return true if the execution has paused.
+   */
+  public boolean pause ( ) { 
+    boolean ret = false;
+    while(this.bPause) {
+      ret = true;
+      synchronized(this) {
+        this.bQuest = true;
+        try { wait(10000); } catch (InterruptedException e) { }
+        this.bQuest = false;
+      }
+    }
+    return ret;
+  }
+   
+  /**Set from application to force abort in the executer working in the current.*/
+  public void setPause ( boolean value ) { 
+    this.bPause = value; 
+    if(this.bQuest && !value) {
+      synchronized(this) {
+        notify();
+      }
+    }
+  }
+  
+  
+  /**Quest from executer. The application can {@link #setAbort()} for example by user handling any time.
+   * @return true if should be aborted.
+   */
+  public boolean overwrite ( ) { return this.bOverwrite; }
+   
+  /**Set from application to force abort in the executer.*/
+  public void setOverwrite ( boolean value ) { this.bOverwrite = value; }
+  
+  /**Quest from executer. The application can {@link #setAbort()} for example by user handling any time.
+   * @return true if should be aborted.
+   */
+  public boolean bOverwriteAll ( ) { return this.bOverwriteAll; }
+   
+  /**Set from application to force abort in the executer.*/
+  public void setbOverwriteAll ( boolean value ) { this.bOverwriteAll = value; }
+  
+  /**Quest from executer. 
+   * @return true if all directories should created on copy or move.
+   */
+  public boolean mkdirAll ( ) { return this.bMkdirAll; }
+   
+  /**Set from application to force abort in the executer.*/
+  public void setMkdirAll ( boolean value) { this.bMkdirAll = value; }
+  
+  
+//  /**Invoked from any FileRemote operation, to show the state.
+//   * 
+//   * @param stateM the state machine which can be triggered to run or influenced by a pause event.
+//   */
+//  public void show(FileRemote.CallbackCmd state, StateMachine stateM) {
+//    this.consumerAnswer = stateM;
+//    this.quest = state;
+//    System.out.println("FileRemote.show");
+//    this.timeOrder.activateAt(System.currentTimeMillis() + delay);  //Note: it does not add twice if it is added already.
+//  }
+  
+  
+//  /**Invoked from any FileRemote operation, provides the state with requiring an answer.
+//   * The information in this instance should be filled actually.
+//   * @param cmd The quest
+//   * @param stateM instance which should be triggered to run on the answer.
+//   */
+//  public void requAnswer(FileRemote.CallbackCmd quest, StateMachine stateM) {
+//    this.quest = quest;
+//    this.consumerAnswer = stateM;
+//    this.timeOrder.activateAt(System.currentTimeMillis() + delay);   //to execute the request
+//  }
 
 //  @Override protected void executeOrder () {
 //    //empty implementation. For implementation use inheritance. 

@@ -23,6 +23,7 @@ import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
 import org.vishia.event.EventTimerThread;
 import org.vishia.event.EventTimerThread_ifc;
+import org.vishia.event.EventWithDst;
 import org.vishia.fileLocalAccessor.FileAccessorLocalJava7;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
@@ -2739,14 +2740,14 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**Abort the currently action. */
     abortAll,
     /**Abort the copy process of the current directory or skip this directory if it is asking a file. */
-    //abortCopyDir,
+    abortCopyDir,
     /**Abort the copy process of the current file or skip this file if it is asking. */
-    //abortCopyFile,
+    abortCopyFile,
     /**Overwrite a read-only file. */
-    //overwr,
+    overwr,
     /**Last. */
     last,
-    //docontinue
+    docontinue
   }
   
   

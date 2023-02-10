@@ -31,6 +31,7 @@ import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventSource;
 import org.vishia.event.EventTimerThread;
+import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileCluster;
 import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
@@ -62,6 +63,15 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-03 Hartmut chg: experience with Thread priority. 
+   *   It seems to be that the walker has generally a higher priority,  it is not proper interuptable by the SWT graphic thread ??
+   *   Yet wait(10) after each directory in {@link WalkFileTreeVisitor#postVisitDirectory(Path, IOException)}
+   *   to allow the graphic thread working. 
+   * <li>2023-02-03 Hartmut chg: the  {@link #walkFileTreeExecInThisThread(FileRemote, boolean, boolean, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)}
+   *   is called recursively by {@link org.vishia.fileRemote.FileRemoteCallbackCmp#offerParentNode(FileRemote)}.
+   *   Hence it is bad to set <code>progress.bDone = true;</code> in this operation, it kills the progress visibility
+   *   because it sets to bDone after a sub directory. It is shifted to {@link #walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)}
+   *   done after really finished. 
    * <li>2023-02-03 Hartmut refactoring, the WalkFileTreeVisitorCheck is removed respectively merge to the {@link WalkFileTreeVisitor}.
    *   It was a new feature: check with a duplicated implementation instead refactored implementation. Now it is refactored. 
    *   Test: {@link org.vishia.commander.Fcmd} runs, {@link org.vishia.fileRemote.test.TestFileRemote} used for test. 
@@ -129,7 +139,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    * Note: the {@link Copy#Copy(FileAccessorLocalJava7)} needs initialized references
    * of {@link #singleThreadForCommission} and {@link #executerCommission}.
    */
-  protected final FileLocalAccessorCopyStateM states = new FileLocalAccessorCopyStateM();  
+//  protected final FileLocalAccessorCopyStateM states = new FileLocalAccessorCopyStateM();  
   
   EventSource evSrc = new EventSource("FileLocalAccessor"){
     @Override public void notifyDequeued(){}
@@ -156,9 +166,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    */
   EventConsumer executerCommission = new EventConsumer(){
     @Override public int processEvent(EventObject ev) {
-      if(ev instanceof FileLocalAccessorCopyStateM.EventInternal){ //internal Event
-        return FileAccessorLocalJava7.this.states.statesCopy.processEvent(ev);
-      } else if(ev instanceof FileRemote.CmdEvent){  //event from extern
+//      if(ev instanceof FileLocalAccessorCopyStateM.EventInternal){ //internal Event
+//        return FileAccessorLocalJava7.this.states.statesCopy.processEvent(ev);
+//      } else 
+      if(ev instanceof FileRemote.CmdEvent){  //event from extern
         return execCommission((FileRemote.CmdEvent)ev);
       } else {
         return 0;
@@ -473,7 +484,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress)
   {
-    states.copyChecked(fileSrc, pathDst, nameModification, mode, callbackUser, timeOrderProgress);
+    //states.copyChecked(fileSrc, pathDst, nameModification, mode, callbackUser, timeOrderProgress);
     
   }
 
@@ -558,10 +569,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   {  return true;
   }
 
-  @Override public CharSequence getStateInfo(){ return states.getStateInfo(); }
+  @Override public CharSequence getStateInfo(){ return "no stateInfo"; } //states.getStateInfo(); }
   
   @Override public void abortAll ( ) {
-    this.states.abortAllOrders();
+//    this.states.abortAllOrders();
   }
   
   /**Creates an CmdEvent if necessary, elsewhere uses the opponent of the given evBack and occupies it.
@@ -596,9 +607,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       case abortAll:     //should abort the state machine!
       case delChecked:
       case moveChecked:
-      case copyChecked: 
-        ret = this.states.statesCopy.processEvent(commission); break;
-      case move: ret = 0; this.states.execMove(commission); break;  //TODO this was never run.
+//      case copyChecked: 
+//        ret = this.states.statesCopy.processEvent(commission); break;
+//      case move: ret = 0; this.states.execMove(commission); break;  //TODO this was never run.
       case chgProps:  execChgProps(commission); break;
       case chgPropsRecurs:  execChgPropsRecurs(commission); break;
       case countLength:  execCountLength(commission); break;
@@ -766,7 +777,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 
   @Override public void close() throws IOException
   { this.singleThreadForCommission.close();
-    this.states.close();  
+//    this.states.close();  
   }
   
   
@@ -894,13 +905,18 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         @Override public void run() {
           try{
             FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(startDir, bRefresh, resetMark, sMask, bMarkCheck, depth, callback, progress);
-          } 
+              if(progress !=null && progress.getDstThread() !=null) {
+                progress.bDone = true;
+                progress.sendEvent(); //activateDone();                 // remove the progress event from the timer queue, sends done to the same thread.
+              }
+            } 
           catch(Exception exc){
             CharSequence text = Assert.exceptionInfo("FileAccessorLocalJava7 - RefreshThread Exception; ", exc, 0, 20, true);
             System.err.println(text);
           }
         }
       };
+      thread.setPriority(Thread.MIN_PRIORITY +1);
       thread.start();
     }
   }
@@ -944,10 +960,6 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       System.err.println("FileAccessorLocalData.walkFileTree - unexpected IOException; " + exc.getMessage() );
     }
     if(callback !=null) { callback.finished(startDir); }
-    if(progress !=null && progress.getDstThread() !=null) {
-      progress.bDone = true;
-      progress.sendEvent(); //activateDone();                 // remove the progress event from the timer queue, sends done to the same thread.
-    }
     
   }
   
@@ -1160,6 +1172,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         this.progress.nrofBytesAll += this.curr.nrBytesInDir;
         this.progress.nrFilesProcessed += this.curr.dir.children().size();
       }
+      synchronized(this) { try{ wait(10);} catch(InterruptedException exc1) {}}
+
       FileRemoteWalkerCallback.Result result = (this.callback !=null) ? 
                                          this.callback.finishedParentNode(this.curr.dir) 
                                        : SortedTreeWalkerCallback.Result.cont;

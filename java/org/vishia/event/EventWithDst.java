@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.EventObject;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DateOrder;
 import org.vishia.util.ExcUtil;
 
@@ -659,6 +660,7 @@ public class EventWithDst extends EventObject
   /*package private*/ 
   void processEvent() {
     int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
+    System.out.println(LogMessage.timeCurr("processEvent:") + this.name);
     try{
       this.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
       notifyDequeued();

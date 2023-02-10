@@ -63,6 +63,8 @@ public interface LogMessage extends Appendable
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-12-25 Hartmut new: Some enhancements with nice static operations:
+   *   {@link #timeCurr(String)} etc.
    * <li>2022-12-25 Hartmut new: {@link #timeMsg(long, String)} as helper for simple preparation an String with timestamp in absolute in ms. 
    * <li>2022-12-25 Hartmut chg: the log texts are now CharSequence, not String. This allows give a StringBuilder reference immediately.
    *   For post processing also usual a CharSequence is sufficient. This is a refactoring in all message and log sources.
@@ -108,7 +110,7 @@ public interface LogMessage extends Appendable
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2022-09-23";
+  static final public String sVersion = "2023-02-10";
 
   
   /*---------------------------------------------------------------------------------------------------------*/
@@ -387,10 +389,25 @@ int getReportLevelFromIdent(int ident);
   
   final public static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd HH:mm:ss.SSS: ");
   
+  final public static SimpleDateFormat minSecondsFormat = new SimpleDateFormat("mm:ss.SSS: ");
+  
   /**This is a simple static output operation independent of the log system.
    * @param ms Milliseconds after 1970
    * @param msg
-   * @return
+   * @return 
    */
   public static String timeMsg(long ms, String msg) { return dateFormat.format(new Date(ms)) + ": " + msg; } 
+  
+  /**It prepares a message part with given mm:ss.SSS (till millisec accuracy) with a given absolute time. 
+   * @param msg Text before, shold have the form "time=" or "at " or such.
+   * @param ms absolute time for the millisec
+   * @return It shows msg 13:45.124
+   */
+  public static String msgSec(String msg, long ms) { return msg + minSecondsFormat.format(new Date(ms)); } 
+  
+  /**It prepares a message with the current time and a String after it.
+   * @param msg any text.
+   * @return String to log
+   */
+  public static String timeCurr(String msg) { return dateFormat.format(System.currentTimeMillis()) + msg; }
 }

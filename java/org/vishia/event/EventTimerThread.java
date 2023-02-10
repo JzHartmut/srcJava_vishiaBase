@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.vishia.msgDispatch.LogMessage;
+import org.vishia.util.Debugutil;
 import org.vishia.util.ExcUtil;
 import org.vishia.util.InfoAppend;
 
@@ -260,20 +262,28 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   /**Stores an event in the queue, able to invoke from any thread.
    * @param ev
    */
-  @Override public final void storeEvent(EventObject ev){
-    if(ev instanceof EventWithDst) { ((EventWithDst)ev).stateOfEvent = 'q'; }
+  @Override public final boolean storeEvent(EventObject ev){
+    if(ev instanceof EventWithDst) {
+      EventWithDst event = (EventWithDst)ev;
+      if(event.stateOfEvent == 'q') {                      // if the event is already queued, don't do it again.
+        return false;            
+      }
+      ((EventWithDst)ev).stateOfEvent = 'q';               // it is queued.
+      System.out.println(LogMessage.timeCurr("EventTimerThread.storeEvent(..): ") + event.name + ExcUtil.stackInfo(" stack: ", 1, 10));
+    }
     this.queueEvents.offer(ev);
     startOrNotify();
+    return true;
   }
   
 
   private void startOrNotify(){
-    if(threadTimer == null){
+    if(this.threadTimer == null){
       createThread_();
-      startOnDemand = true;
+      this.startOnDemand = true;
     } else {
-      synchronized(runTimer){
-        if(stateThreadTimer == 'W'){
+      synchronized(this.runTimer){
+        if(this.stateThreadTimer == 'W'){
           wakeup_();
         } else {
           //stateOfThread = 'c';
@@ -330,12 +340,15 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
           } else {                                         // should wake up and adjust the sleep time newly.
             // thread is busy, not wait, it will detect the new this.timeCheckNew          
             retc = 'b';   // 
+            this.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
           }
         }
+        System.out.println(LogMessage.timeCurr("addTimeOrder added:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution) + " notify:" + (notified? "yes" : "no"));
       } else {
         retc = 'l';  // it is later
       }
     } else {
+      System.out.println(LogMessage.timeCurr("addTimeOrder expired:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution));
       order.event.sendEvent();  //doTimeElapsed();
       retc = 'x';  //eXecuted
     }
@@ -350,8 +363,10 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * 
    * @param order
    */
-  public final boolean removeTimeEntry(TimeOrder order)
-  { boolean found = queueDelayedOrders.remove(order);
+  public final boolean removeTimeEntry(TimeOrder order) {
+    boolean found = this.queueDelayedOrders.remove(order);
+    System.out.println(LogMessage.timeCurr(found ? "timeOrder removed: " : "timeOrder not removed") + order.event.name + LogMessage.msgSec(" at ", order.timeExecution) + ExcUtil.stackInfo("", 2, 8));
+
     //do not: if(!found){ removeFromQueue(order); }  //it is possible that it hangs in the event queue.
     return found;
   }
@@ -385,10 +400,10 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * This method is proper for events of type {@link EventCmdtype} which knows their destination.
    * @param ev
    */
-  private final void applyEvent(EventObject ev)
-  {
+  private final void applyEvent ( EventObject ev) {
     if(ev instanceof EventWithDst){
       EventWithDst event = (EventWithDst) ev;
+      System.out.println(LogMessage.timeCurr("applyEvent:") + event.name);
       event.processEvent();
     }
     else if(this.eventProcessor !=null) {
@@ -408,8 +423,12 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   private boolean checkEventAndRun()
   { boolean processedOne = false;
     try{ //never let the thread crash
-      EventObject event;
-      if( (event = queueEvents.poll()) !=null){
+      EventObject ev;
+      if( (ev = this.queueEvents.poll()) !=null){
+        if(ev instanceof EventWithDst ) {
+          EventWithDst event = (EventWithDst)ev;
+          event.stateOfEvent = 'e';
+        }
         this.ctWaitEmptyQueue = 0;
         synchronized(this){
           if(stateThreadTimer != 'x'){
@@ -417,7 +436,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
           }
         }
         if(stateThreadTimer == 'b'){
-          applyEvent(event);
+          applyEvent(ev);
           processedOne = true;
         }
       }
@@ -451,7 +470,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     int timeWait = this.delayMax; //10 seconds.
     this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
     TimeOrder order;
-    //System.out.println(org.vishia.msgDispatch.LogMessage.timeMsg(System.currentTimeMillis(), "checkTimeOrders").toString());
+    System.out.print("$" + this.queueDelayedOrders.size());
     synchronized(this) {                         // operations executed under mutex, synchronized to TimeOrder.activateAt
       Iterator<TimeOrder> iter = this.queueDelayedOrders.iterator();
       long timeNow = System.currentTimeMillis();
@@ -473,12 +492,16 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         }                                        //                                     |
       }
     } //synchronized
+    //System.out.println(LogMessage.timeMsg(System.currentTimeMillis(), "checkTimeOrders").toString() + " timeCheckNew = " + LogMessage.timeMsg(this.timeCheckNew,"") );
+    System.out.print("°" + this.queueDelayedOrders.size());
     // ====================================================== The queueDelayedOrders is evaluated, now execute outside sync.
     //                                                        possible, that the same TimeOrder is queued again via TimeOrder.activateAt(...)
     while( (order = this.queueOrdersToExecute.poll()) !=null){    // that can be especially done just in the processEvent execution!
       if(order.timerThread != order.event.evDstThread) {
+        System.out.println(LogMessage.timeCurr("timeOrder send event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
         order.event.sendEvent();                           // it is enqueued in the evThread
       } else {
+        System.out.println(LogMessage.timeCurr("timeOrder process event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
         order.event.processEvent();                        // it is executed immediately in the timerThread if evThread is the same
       }
     }
@@ -487,6 +510,11 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     long timeWait1 = this.timeCheckNew - System.currentTimeMillis();
     if(timeWait1 < timeWait) {
       timeWait = (int)timeWait1;
+    }
+    if(timeWait <2)
+      Debugutil.stop();
+    if(timeWait > 500) {
+      timeWait = 500;
     }
     return timeWait;                                       // this is the sleep time for the thread.
   }

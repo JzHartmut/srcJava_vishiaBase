@@ -6,14 +6,18 @@ import java.util.EventObject;
 import org.vishia.util.InfoAppend;
 
 public interface EventThread_ifc extends Closeable, InfoAppend {
+  
+  
   /**Adds an event to execute it in the thread of the implementor of this interface. 
    * if a {@link EventWithDst} is used it has an aggregation to the implementor of this and ivokes this method
    * in its {@link EventWithDst#sendEvent()}. 
    * In that case this method should not be called by an application directly. It is only a rule to implement. 
    * But this method should be used if another event type is used. Then the implementor should know what to do with the event.
-   * @param order
+   * @param ev the Event to store
+   * @return false if the event is not stored, because for example it is already stored.
+   *   true if stored.
    */
-  void storeEvent ( EventObject ev);
+  boolean storeEvent ( EventObject ev);
   
   
   /**Removes this event from its queue if it is in the event queue.
