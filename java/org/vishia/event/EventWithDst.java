@@ -660,7 +660,7 @@ public class EventWithDst extends EventObject
   /*package private*/ 
   void processEvent() {
     int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
-    System.out.println(LogMessage.timeCurr("processEvent:") + this.name);
+    //System.out.println(LogMessage.timeCurr("processEvent:") + this.name);
     try{
       this.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
       notifyDequeued();

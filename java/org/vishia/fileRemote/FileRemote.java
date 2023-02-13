@@ -876,7 +876,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     CallbackCmpDirs callbackCmpDirs = new CallbackCmpDirs(modeLog);  //instance for this invocation.  
     FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(dir1a, dir2a, callbackCmpDirs, null);  //evCallback);
-    dir1a.device.walkFileTree(dir1a,  true, true, false, mask, 0,  0,  callbackCmp, progress);  //should work in an extra thread.
+    dir1a.device.walkFileTree(dir1a,  true, true, 0, 0, mask, 0,  0,  callbackCmp, progress);  //should work in an extra thread.
     //dir1a.refreshAndCompare(dir2a, -1, mask, 0, callbackCmpDirs, null);
     if( (modeLog & modeCmprLogNotEqualFiles) ==0 && callbackCmpDirs.bNotEqual) {
       if(callbackCmpDirs.ret == null){ callbackCmpDirs.ret = new StringBuilder(); }
@@ -1197,7 +1197,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     final boolean bWait = callback ==null;                 // then execute it in this thread.
-    this.device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback, progress); 
+    this.device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, progress); 
     //device.refreshFilePropertiesAndChildren(this, callback);
   }
   
@@ -1216,7 +1216,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    device.walkFileTree(this, bWait, true, false, null, 0,  1,  callback, progress);  //should work in an extra thread.
+    device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, progress);  //should work in an extra thread.
   }
   
   
@@ -1242,12 +1242,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress instance for callback.
    */
-  public void refreshAndMark(boolean resetMark, String sMaskSelection, long markSelection, int depth, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent progress) {
+  public void refreshAndMark(int setMark, int setMarkDir, String sMaskSelection, long markSelection, int depth, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent progress) {
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     //CallbackMark callbackMark = new CallbackMark(callbackUser, progress); //, nLevelProcessOnlyMarked);  //negativ... TODO
-    device.walkFileTree(this,  false, true, resetMark, sMaskSelection, markSelection,  depth,  callbackUser, progress);  //should work in an extra thread.
+    device.walkFileTree(this,  false, true, setMark, setMarkDir, sMaskSelection, markSelection,  depth,  callbackUser, progress);  //should work in an extra thread.
   }
   
   
@@ -1267,7 +1267,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(this, dirCmp, callbackUser, timeOrderProgress);  //evCallback);
-    device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackCmp, timeOrderProgress);  //should work in an extra thread.
+    device.walkFileTree(this,  false, true, 0, 0, mask, mark,  depth,  callbackCmp, timeOrderProgress);  //should work in an extra thread.
   }
   
   
@@ -1288,7 +1288,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackSearch callbackSearch = new FileRemoteCallbackSearch(this, search, callbackUser, timeOrderProgress);  //evCallback);
-    this.device.walkFileTree(this,  false, true, false, mask, mark,  depth,  callbackSearch, timeOrderProgress);  //should work in an extra thread.
+    this.device.walkFileTree(this,  false, true, FileMark.select, FileMark.selectSomeInDir, mask, mark,  depth,  callbackSearch, timeOrderProgress);  //should work in an extra thread.
   }
   
   
@@ -1315,10 +1315,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(dirDst, callbackUser, timeOrderProgress);  //evCallback);
-    boolean bWait = callbackUser ==null; //wait if there is not a callback possibility.
+    boolean bWait = timeOrderProgress ==null;    //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
-    boolean bResetMark = false;          // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-    this.device.walkFileTree(this,  bWait, bRefreshChildren, bResetMark, mask, mark,  depth,  mission, timeOrderProgress);  //should work in an extra thread.
+    int setMark = FileMark.alternativeFunction | mark; // if mark is given to select, reset it.
+    //======>>>>                                 // walkFileTreeCheck is a common operation from the device, mission describes what to do  
+    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMark, mask, mark,  depth,  mission, timeOrderProgress);  //should work in an extra thread.
   }
   
   

@@ -268,12 +268,12 @@ public class TimeOrder extends EventSource
       if(executionTimeUsed !=0) {
         this.timeExecution = executionTimeUsed;  //set it newly
         if( bFree) {                     // it is free, use this instead occupy
-          System.out.println(LogMessage.timeCurr("timeOrder activate new: ") + this.event.name + LogMessage.msgSec(" at ", this.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
+          //System.out.println(LogMessage.timeCurr("timeOrder activate new: ") + this.event.name + LogMessage.msgSec(" at ", this.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
           this.event.dateCreation.set(System.currentTimeMillis());  //then set the new occupy time.
           this.dbgctWindup = 0;
           this.timerThread.addTimeEntry(this);    //add newly, delayed event was removed before.
         } else {                                   //already added, shifted to the future
-          System.out.println(LogMessage.timeCurr("timeOrder activate deferred: ") + this.event.name + LogMessage.msgSec(" at ", this.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
+          //System.out.println(LogMessage.timeCurr("timeOrder activate deferred: ") + this.event.name + LogMessage.msgSec(" at ", this.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
           this.dbgctWindup +=1;
           //remove and add new, because its state added in queue or not may be false.
           this.timerThread.removeTimeEntry(this);  //if it is not in the queue, no problem
@@ -281,7 +281,7 @@ public class TimeOrder extends EventSource
           this.timerThread.addTimeEntry(this);    //add newly, delayed event was removed before.
         }
       } else {
-        System.out.println(LogMessage.timeCurr("timeOrder activate ignored: ") + this.event.name + LogMessage.msgSec(" at ", executionTime)); // + ExcUtil.stackInfo("", 2, 8));
+        //System.out.println(LogMessage.timeCurr("timeOrder activate ignored: ") + this.event.name + LogMessage.msgSec(" at ", executionTime)); // + ExcUtil.stackInfo("", 2, 8));
         
       }
     }

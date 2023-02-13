@@ -138,6 +138,11 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   
   
+  /**On start of comparison it refreshes the second dir tree.
+   * Secondly it resets all mark bits in the known files. Don't use the java.nio.file walker,
+   * Only do it for the given files. It are lesser. The other FileRemote instances are not known till now.
+   * This is a fast operation because it does not access the file system. 
+   */
   @Override public void start(FileRemote startDir)
   {
     if(dir1.device == null){
@@ -153,7 +158,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
       | FileMark.cmpFileDifferences | FileMark.cmpContentNotEqual | FileMark.cmpMissingFiles;
     dir1.resetMarkedRecurs(markReset, null);
     dir2.resetMarkedRecurs(markReset, null);
-    dir1.setMarked(FileMark.markRoot);
+    dir1.setMarked(FileMark.markRoot);            // a marker to stop going backward with dir marking.
     dir2.setMarked(FileMark.markRoot);
   }
   
@@ -184,7 +189,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
         dir2sub.resetMarked(FileMark.cmpAlone);
-        dir2sub.device.walkFileTree(dir2sub, true, true, false, null, 0, 1, callbackMarkSecondAlone, progress);
+        dir2sub.device.walkFileTree(dir2sub, true, true, 0, 0, null, 0, 1, callbackMarkSecondAlone, progress);
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
         //waitfor
         //dir2sub.refreshPropertiesAndChildren(null);        

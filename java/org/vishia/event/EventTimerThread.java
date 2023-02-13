@@ -269,7 +269,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         return false;            
       }
       ((EventWithDst)ev).stateOfEvent = 'q';               // it is queued.
-      System.out.println(LogMessage.timeCurr("EventTimerThread.storeEvent(..): ") + event.name + ExcUtil.stackInfo(" stack: ", 1, 10));
+      //System.out.println(LogMessage.timeCurr("EventTimerThread.storeEvent(..): ") + event.name + ExcUtil.stackInfo(" stack: ", 1, 10));
     }
     this.queueEvents.offer(ev);
     startOrNotify();
@@ -343,12 +343,12 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
             this.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
           }
         }
-        System.out.println(LogMessage.timeCurr("addTimeOrder added:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution) + " notify:" + (notified? "yes" : "no"));
+        //System.out.println(LogMessage.timeCurr("addTimeOrder added:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution) + " notify:" + (notified? "yes" : "no"));
       } else {
         retc = 'l';  // it is later
       }
     } else {
-      System.out.println(LogMessage.timeCurr("addTimeOrder expired:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution));
+      //System.out.println(LogMessage.timeCurr("addTimeOrder expired:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution));
       order.event.sendEvent();  //doTimeElapsed();
       retc = 'x';  //eXecuted
     }
@@ -365,7 +365,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    */
   public final boolean removeTimeEntry(TimeOrder order) {
     boolean found = this.queueDelayedOrders.remove(order);
-    System.out.println(LogMessage.timeCurr(found ? "timeOrder removed: " : "timeOrder not removed") + order.event.name + LogMessage.msgSec(" at ", order.timeExecution) + ExcUtil.stackInfo("", 2, 8));
+    //System.out.println(LogMessage.timeCurr(found ? "timeOrder removed: " : "timeOrder not removed") + order.event.name + LogMessage.msgSec(" at ", order.timeExecution) + ExcUtil.stackInfo("", 2, 8));
 
     //do not: if(!found){ removeFromQueue(order); }  //it is possible that it hangs in the event queue.
     return found;
@@ -403,7 +403,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   private final void applyEvent ( EventObject ev) {
     if(ev instanceof EventWithDst){
       EventWithDst event = (EventWithDst) ev;
-      System.out.println(LogMessage.timeCurr("applyEvent:") + event.name);
+      //System.out.println(LogMessage.timeCurr("applyEvent:") + event.name);
       event.processEvent();
     }
     else if(this.eventProcessor !=null) {
@@ -470,7 +470,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     int timeWait = this.delayMax; //10 seconds.
     this.timeCheckNew = System.currentTimeMillis() + timeWait;  //the next check time in 10 seconds as default if no event found 
     TimeOrder order;
-    System.out.print("$" + this.queueDelayedOrders.size());
+    //System.out.print("$" + this.queueDelayedOrders.size());
     synchronized(this) {                         // operations executed under mutex, synchronized to TimeOrder.activateAt
       Iterator<TimeOrder> iter = this.queueDelayedOrders.iterator();
       long timeNow = System.currentTimeMillis();
@@ -493,15 +493,15 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       }
     } //synchronized
     //System.out.println(LogMessage.timeMsg(System.currentTimeMillis(), "checkTimeOrders").toString() + " timeCheckNew = " + LogMessage.timeMsg(this.timeCheckNew,"") );
-    System.out.print("°" + this.queueDelayedOrders.size());
+    //System.out.print("°" + this.queueDelayedOrders.size());
     // ====================================================== The queueDelayedOrders is evaluated, now execute outside sync.
     //                                                        possible, that the same TimeOrder is queued again via TimeOrder.activateAt(...)
     while( (order = this.queueOrdersToExecute.poll()) !=null){    // that can be especially done just in the processEvent execution!
       if(order.timerThread != order.event.evDstThread) {
-        System.out.println(LogMessage.timeCurr("timeOrder send event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
+        //System.out.println(LogMessage.timeCurr("timeOrder send event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
         order.event.sendEvent();                           // it is enqueued in the evThread
       } else {
-        System.out.println(LogMessage.timeCurr("timeOrder process event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
+        //System.out.println(LogMessage.timeCurr("timeOrder process event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
         order.event.processEvent();                        // it is executed immediately in the timerThread if evThread is the same
       }
     }

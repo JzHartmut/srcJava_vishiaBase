@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Queue;
 
 import org.vishia.util.Debugutil;
+import org.vishia.util.MarkMask_ifc;
 import org.vishia.util.SelectMask;
 
 /**Class can be associated with a {@link FileRemote} to store comparison or mark information.
@@ -16,6 +17,9 @@ public class FileMark extends SelectMask
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-12 Hartmut it has uses constants from {@link MarkMask_ifc} de facto, but not documented.
+   *   Not documented. Enhanced with {@link #selectForCopy} =^ {@link MarkMask_ifc#select2}.
+   *   Also shown as colors in the {@link org.vishia.gral.widget.GralFileSelector}. 
    * <li>2013-05-22 Hartmut created: A {@link FileRemote} may have information about a select status
    *   or about a comparison result. It is stored in a referred instance of this type. Experience.
    * </ul>
@@ -62,16 +66,20 @@ public class FileMark extends SelectMask
   /**Flags as result of an comparison: the other file is checked by content maybe with restricitons. */
   public static final char XXXcharCmpContentEqualwithoutSpaces = '+';
 
-  /**Flags is a simple marker for selecting. */
-  public static final int select = 0x00000001;
+  /**Flags is a simple marker for manual selecting for a file, also for a directory, shown in red in Fcmd. */
+  public static final int select = MarkMask_ifc.select;
 
   /**Flags means that some but not all files are marked inside a directory. */
-  public static final int selectSomeInDir = 0x00000002;
+  public static final int selectSomeInDir = MarkMask_ifc.selectParent;
 
-  /**Flags for the root directory for selecting. */
-  //public static final int selectRoot = 0x00000008;
+  /**Flags is a marker for files or the whole dir to copy, select in orange in Fcmd. */
+  public static final int selectForCopy = MarkMask_ifc.select2;
 
-  /**Flags means that this file is the root of mark. */
+  /**Flags is a marker for directory which contains some to copy, select in light orange in Fcmd. */
+  public static final int selectForCopySomeInDir = MarkMask_ifc.select2Parent;
+
+
+  /**Flags means that this file is the root of mark. It is used for {@link FileMark#setMarkParent(int, boolean)} */
   public static final int markRoot = 0x00100000;
 
   /**Flags means that this file is any directory which is in the mark tree. */
@@ -92,7 +100,8 @@ public class FileMark extends SelectMask
   /**Flags as result of an comparison: the other file does not exist, or exists only with same length or with same time stamp */
   public static final int cmpContentEqual =    0x04000000;
 
-  /**Flags as result of an comparison: the other file does not exist, or exists only with same length or with same time stamp */
+  /**Flags as result of an comparison: the other file does not exist, 
+   * or exists with other length or other timestamp, or with other content also with same length or with same time stamp */
   public static final int cmpContentNotEqual = 0x08000000;
 
   /**mask of all bits for comparison one file. */
@@ -108,7 +117,17 @@ public class FileMark extends SelectMask
    * or there are differences. */
   public static final int cmpFileDifferences = 0x20000000;
 
-
+  /**This is not used for mark, only for a mark command. 
+   * It means if this bit is set: OR relation for selection together with a select mask.
+   * If this bit is not set, it is a AND relation with the select mask.
+   */
+  public static final int orWithSelectString = 0x40000000;
+  
+  /**This is not used for mark, only for a mark command. 
+   * It means if this bit is set: reset instead set of a mark */
+  public static final int alternativeFunction = 0x80000000;
+  
+  
   
   protected final FileRemote itsFile;
   

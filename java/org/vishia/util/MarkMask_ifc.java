@@ -89,4 +89,18 @@ public interface MarkMask_ifc
    */
   public int setMarked(int mask, Object data);
 
+  
+  /**Flags is a simple marker for selecting a node. */
+  public static final int select = 0x00000001;
+
+  /**Flags is a simple marker for selecting a parent node which contains node with {@link #select}. */
+  public static final int selectParent = 0x00000002;
+
+  /**Flags is a simple marker for selecting a node. */
+  public static final int select2 = 0x00000004;
+
+  /**Flags is a simple marker for selecting a parent node which contains node with {@link #select}. */
+  public static final int select2Parent = 0x00000008;
+
+  
 }

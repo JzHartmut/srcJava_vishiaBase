@@ -160,7 +160,8 @@ public abstract class FileRemoteAccessor implements Closeable
    *   If negative then the absolute is number of levels (maybe Integer.MAXVALUE) but uses the first level to enter only marked files.
    * @param callback this callback will be invoked on any file or directory.
    */
-  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren, boolean resetMark
+  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
+      , int markSet, int markSetDir
       , String sMaskCheck, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress);
   
   
@@ -246,17 +247,19 @@ public abstract class FileRemoteAccessor implements Closeable
   {
     final protected FileRemote startDir; 
     //final protected FileFilter filter; 
+    final protected int markSet, markSetDir;
     final protected String sMask;
     final protected long bMarkCheck;
     final protected FileRemoteWalkerCallback callback;
-    final protected boolean bRefresh, resetMark;
+    final protected boolean bRefresh;
     final protected int depth;
     
-    public FileWalkerThread(FileRemote startDir, boolean bRefreshChildren, boolean resetMark, int depth, String sMask, long bMarkCheck, FileRemoteWalkerCallback callback)
+    public FileWalkerThread(FileRemote startDir, boolean bRefreshChildren, int depth, int markSet, int markSetDir, String sMask, long bMarkCheck, FileRemoteWalkerCallback callback)
     { super("FileRemoteRefresh");
       this.startDir = startDir;
       this.bRefresh = bRefreshChildren;
-      this.resetMark = resetMark;
+      this.markSet = markSet;
+      this.markSetDir = markSetDir;
       this.depth = depth;
       //this.filter = filter;
       this.sMask = sMask;
