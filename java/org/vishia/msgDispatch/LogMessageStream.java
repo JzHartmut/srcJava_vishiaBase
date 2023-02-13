@@ -15,6 +15,7 @@ import java.util.Date;
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
 import org.vishia.util.ExcUtil;
+import org.vishia.util.StringFunctions;
 
 /**This class adapts a given stream output channel to the LogMessage interface to output messages for example
  * to the System.out or System.err but also to an ordinary file.
@@ -50,6 +51,7 @@ public class LogMessageStream extends LogMessageBase
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-13 Experience with stack info on messages. It is nice to know from where the message comes (srcfile, line). 
    * <li>2022-09-23 enhanced  with a second channel to output twice, 
    * and also with an Appendable channel as second channel to output immediately to a StringBuilder or any other Appendable destination. 
    * <li>2009-00-00 Hartmut created to output a message via LogMessage interface simple in any opened stream.  
@@ -212,22 +214,26 @@ public class LogMessageStream extends LogMessageBase
 
   @Override
   public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
-    CharSequence stackInfo = ExcUtil.stackInfo(" : ", 2, 1);
-    String line = dateFormat.format(new Date(System.currentTimeMillis())) 
+//    int posStack = StringFunctions.indexOf(text, "$Stack");
+//    if(posStack >0) {
+//      
+//    }
+    CharSequence stackInfo = ExcUtil.stackInfo(" $", 2, 1);
+    String line = this.dateFormat.format(new Date(System.currentTimeMillis())) 
                 + "; " + identNumber + "; " + String.format(text.toString(),args)
                 + stackInfo;
     try{ 
       byte[] b = line.getBytes(this.encoding);
       if(this.out1 !=null) {
         this.out1.write(b); 
-        //this.out1.write(this.sNewLine);
+        this.out1.write(this.sNewLine);
       }
       if(this.out2 !=null) {
         this.out2.write(b); 
-        //this.out2.write(this.sNewLine);
+        this.out2.write(this.sNewLine);
       }
       if(this.out3 !=null) {
-        this.out3.append(line); //.append('\n');
+        this.out3.append(line).append('\n');
       }
     }
     catch(IOException exc){ }

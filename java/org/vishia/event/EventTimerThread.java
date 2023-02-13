@@ -442,7 +442,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       }
     } catch(Exception exc){
       CharSequence text = ExcUtil.exceptionInfo("EventThread unexpected Exception - ", exc, 0, 50);
-      System.err.append(text);
+      System.err.append(text).append('\n');
     }
     return processedOne;
   }

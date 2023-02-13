@@ -48,7 +48,7 @@ public class FileMark extends SelectMask
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2014-12-24";
+  public static final String sVersion = "2023-02-13";
 
 
   /**Flags as result of an comparison: the other file is checked by content maybe with restricitons. */

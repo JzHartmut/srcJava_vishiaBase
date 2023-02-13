@@ -527,7 +527,7 @@ public class Trans
         u.append(";");
         if(ev !=null){ u.append("event: ").append(ev.toString()); }
         CharSequence text = Assert.exceptionInfo(u, exc, 0, 50);
-        System.err.append(text);
+        System.err.append(text).append('\n');
       } else {
         throw new RuntimeException(exc); //forward it but without need of declaration of throws exception
       }
@@ -1179,7 +1179,7 @@ final int _checkTransitions(EventObject ev) {
       u.append("StateSimple trans exception - "); stateMachine.infoAppend(u); u.append(";");
       if(ev !=null){ u.append("event: ").append(ev.toString()); }
       CharSequence text = Assert.exceptionInfo(u, exc, 0, 50);
-      System.err.append(text);
+      System.err.append(text).append('\n');
       trans = null;
     } else {
       throw new RuntimeException(exc); //forward it but without need of declaration of throws exception
@@ -1257,7 +1257,7 @@ final int entryTheState(EventObject ev, boolean history) { //int isConsumed){
       u.append("StateSimple entry exception - "); stateMachine.infoAppend(u); u.append(";");
       if(ev !=null){ u.append("event: ").append(ev.toString()); }
       CharSequence text = Assert.exceptionInfo(u, exc, 0, 50);
-      System.err.append(text);
+      System.err.append(text).append('\n');
       entryVal = 0;
     } else {
       throw new RuntimeException(exc); //forward it but without need of declaration of throws exception
@@ -1333,7 +1333,7 @@ protected final void exitTheState(int level) {
         StringBuilder u = new StringBuilder(1000);
         u.append("StateSimple exit exception - "); stateMachine.infoAppend(u); u.append(";");
         CharSequence text = Assert.exceptionInfo(u, exc, 0, 50);
-        System.err.append(text);
+        System.err.append(text).append('\n');
       } else {
         throw new RuntimeException(exc); //forward it but without need of declaration of throws exception
       }

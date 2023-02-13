@@ -9,6 +9,10 @@ public class ExcUtil {
 
   /**Version, history and license.
    * <ul>
+   * <li>2020-03-22 Hartmut {@link #exceptionInfo(CharSequence, Throwable, int, int, boolean)} without newline on end.
+   *   It should be clarified from the application. This is a feature change, should be adapted in the application.
+   *   Generally a function should not determine too much by itself. Whether of not the line should be terminated
+   *   is not a decision by exceptionInfo(), it is a decision by the application. 
    * <li>2020-03-22 Hartmut moved from {@link CheckVs}, a better name. 
    * <li>2020-03-22 Hartmut moved from org.vishia.util.Assert to this class because name clash with junit..Assert
    * <li>2013-07-14 Hartmut chg: {@link #stackInfo(String, int, int)} produces a text which supports hyperlinking
@@ -183,7 +187,7 @@ public class ExcUtil {
       .append(":").append(stack[ix].getLineNumber())
       .append("); ");
     }
-    u.append("\n");
+//    u.append("\n");
     return u;
   }
   
