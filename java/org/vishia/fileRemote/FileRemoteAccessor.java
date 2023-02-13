@@ -162,7 +162,8 @@ public abstract class FileRemoteAccessor implements Closeable
    */
   public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
       , int markSet, int markSetDir
-      , String sMaskCheck, long bMarkCheck, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress);
+      , String sMaskCheck, long bMarkCheck, int depth
+      , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress, boolean debugOut);
   
   
   protected abstract boolean setLastModified(FileRemote file, long time);
@@ -253,8 +254,10 @@ public abstract class FileRemoteAccessor implements Closeable
     final protected FileRemoteWalkerCallback callback;
     final protected boolean bRefresh;
     final protected int depth;
+    final protected boolean debugOut;
     
-    public FileWalkerThread(FileRemote startDir, boolean bRefreshChildren, int depth, int markSet, int markSetDir, String sMask, long bMarkCheck, FileRemoteWalkerCallback callback)
+    public FileWalkerThread(FileRemote startDir, boolean bRefreshChildren, int depth, int markSet, int markSetDir
+        , String sMask, long bMarkCheck, FileRemoteWalkerCallback callback, boolean debugOut)
     { super("FileRemoteRefresh");
       this.startDir = startDir;
       this.bRefresh = bRefreshChildren;
@@ -265,6 +268,7 @@ public abstract class FileRemoteAccessor implements Closeable
       this.sMask = sMask;
       this.bMarkCheck = bMarkCheck;
       this.callback = callback;
+      this.debugOut = debugOut;
     }
     
   }

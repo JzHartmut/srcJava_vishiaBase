@@ -187,6 +187,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-13 Hartmut new: {@link #getDirFileDst(String, FileRemote, String[])} usable for String given dir and mask
    * <li>2023-01-02 Hartmut chg: {@link #fromFile(File)} and {@link #child(CharSequence, int, int, long, long, long)}:
    *   Generally on creating a FileRemote it should not has any access to the file system, because it is remote.
    *   This is now consequently realized. Till now only the PC file system was used, 
@@ -361,7 +362,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20130524;
+  public static final int version = 20230213;
 
   public final static int modeCopyReadOnlyMask = 0x00f
   , modeCopyReadOnlyNever = 0x1, modeCopyReadOnlyOverwrite = 0x3, modeCopyReadOnlyAks = 0;
@@ -876,7 +877,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     CallbackCmpDirs callbackCmpDirs = new CallbackCmpDirs(modeLog);  //instance for this invocation.  
     FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(dir1a, dir2a, callbackCmpDirs, null);  //evCallback);
-    dir1a.device.walkFileTree(dir1a,  true, true, 0, 0, mask, 0,  0,  callbackCmp, progress);  //should work in an extra thread.
+    dir1a.device.walkFileTree(dir1a,  true, true, 0, 0, mask, 0,  0,  callbackCmp, progress, false);  //should work in an extra thread.
     //dir1a.refreshAndCompare(dir2a, -1, mask, 0, callbackCmpDirs, null);
     if( (modeLog & modeCmprLogNotEqualFiles) ==0 && callbackCmpDirs.bNotEqual) {
       if(callbackCmpDirs.ret == null){ callbackCmpDirs.ret = new StringBuilder(); }
@@ -978,7 +979,55 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
   };
   
-  
+  /**Analyzes a given destination path:
+   * <ul>
+   * <li>"/path/to/dst": returns this path as file or directory, as found, sFileMaskRet[0] = null; 
+   * <li>"/path/to/dst/": returns this path as directory, sFileMaskRet[0] = null; 
+   * <li>"/path/to/dst/*": returns this /path/to/dst/ as directory, sFileMaskRet[0] = "*"; 
+   * <li>"/path/to/dst/name*ext": returns this /path/to/dst/ as directory, sFileMaskRet[0] = "name*ext";
+   * <li>"/path/t*o/dst/": if the asterisk is in mid of the path, returns null. It is invalid.; 
+   * <li>"subdir/name*ext": If not absolute path is given, returns subdir of srcDir,
+   * <li>"subdir/file.ext": If not absolute path is given, returns file of srcDir maybe a directory,
+   * <li>"subdir/": ... or also create a subdir of srcDir´if not found.
+   * </ul>
+   * @param sDst An input string from a field, backslash instead / is accepted.
+   * @param srcDir a given existing source directory only used if sDst is not an absolute path.
+   * @param sFileMaskRet can be null, if not null at least String[1]
+   * @return File or directopry as given in sDst
+   */
+  public static FileRemote getDirFileDst ( String sDst, FileRemote srcDir, String[] sFileMaskRet) {
+    int posSep = sDst.lastIndexOf('/');
+    int posSep2 = sDst.lastIndexOf('\\');
+    if(posSep2 >=0 && posSep2 > posSep){ posSep = posSep2; }
+    int posWildcard = sDst.indexOf('*');
+    String sDstDir;
+    final String sFileMask;
+    FileRemote fileDst;
+    if(posWildcard == -1 || posWildcard > posSep){
+      if(posWildcard == -1) {
+        sDstDir = sDst;
+        sFileMask = null;
+      } else {
+        sDstDir = sDst.substring(0, posSep+1);
+        sFileMask = posSep == sDst.length()-1? "*" : sDst.substring(posSep+1);
+      }
+      if(FileFunctions.isAbsolutePathOrDrive(sDstDir)) {
+        fileDst = FileRemote.clusterOfApplication.getDir(sDstDir);  //maybe a file or directory
+      } else {
+        fileDst = srcDir.child(sDstDir);  //relative to source
+      }
+    } else {
+      //no asterisk, either it is one file or it is the destination dir:
+      fileDst = null;
+      sFileMask = null;
+    }
+    if(sFileMaskRet !=null) {
+      sFileMaskRet[0] = sFileMask;
+    }
+    return fileDst;
+  }
+
+
   
   
   //FileRemoteProgressTimeOrder progressCmdDirs = new FileRemoteProgressTimeOrder()
@@ -1197,7 +1246,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     final boolean bWait = callback ==null;                 // then execute it in this thread.
-    this.device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, progress); 
+    this.device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, progress, false); 
     //device.refreshFilePropertiesAndChildren(this, callback);
   }
   
@@ -1216,7 +1265,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, progress);  //should work in an extra thread.
+    device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, progress, false);  //should work in an extra thread.
   }
   
   
@@ -1247,7 +1296,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     //CallbackMark callbackMark = new CallbackMark(callbackUser, progress); //, nLevelProcessOnlyMarked);  //negativ... TODO
-    device.walkFileTree(this,  false, true, setMark, setMarkDir, sMaskSelection, markSelection,  depth,  callbackUser, progress);  //should work in an extra thread.
+    boolean debugOut = true;
+    this.device.walkFileTree(this,  false, true, setMark, setMarkDir
+          , sMaskSelection, markSelection,  depth,  callbackUser, progress, debugOut);  //should work in an extra thread.
   }
   
   
@@ -1267,7 +1318,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(this, dirCmp, callbackUser, timeOrderProgress);  //evCallback);
-    device.walkFileTree(this,  false, true, 0, 0, mask, mark,  depth,  callbackCmp, timeOrderProgress);  //should work in an extra thread.
+    device.walkFileTree(this,  false, true, 0, 0, mask, mark,  depth,  callbackCmp, timeOrderProgress, false);  //should work in an extra thread.
   }
   
   
@@ -1288,7 +1339,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCallbackSearch callbackSearch = new FileRemoteCallbackSearch(this, search, callbackUser, timeOrderProgress);  //evCallback);
-    this.device.walkFileTree(this,  false, true, FileMark.select, FileMark.selectSomeInDir, mask, mark,  depth,  callbackSearch, timeOrderProgress);  //should work in an extra thread.
+    this.device.walkFileTree(this,  false, true, FileMark.select, FileMark.selectSomeInDir
+        , mask, mark,  depth,  callbackSearch, timeOrderProgress, false);  //should work in an extra thread.
   }
   
   
@@ -1319,7 +1371,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     boolean bRefreshChildren = false;
     int setMark = FileMark.alternativeFunction | mark; // if mark is given to select, reset it.
     //======>>>>                                 // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMark, mask, mark,  depth,  mission, timeOrderProgress);  //should work in an extra thread.
+    boolean debugOut = true;
+    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMark
+        , mask, mark,  depth,  mission, timeOrderProgress, debugOut);  //should work in an extra thread.
   }
   
   

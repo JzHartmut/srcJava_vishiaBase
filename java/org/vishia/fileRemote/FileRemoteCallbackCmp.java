@@ -189,7 +189,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
         dir2sub.resetMarked(FileMark.cmpAlone);
-        dir2sub.device.walkFileTree(dir2sub, true, true, 0, 0, null, 0, 1, callbackMarkSecondAlone, progress);
+        dir2sub.device.walkFileTree(dir2sub, true, true, 0, 0, null, 0, 1, callbackMarkSecondAlone, progress, false);
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
         //waitfor
         //dir2sub.refreshPropertiesAndChildren(null);        

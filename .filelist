@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-02-13 19:39:57  x     .gitCommit                               ::           .519  0747817037 
+2023-02-14 00:09:15  x     .gitCommit                               ::           .171  1092888872 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
 2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
@@ -137,19 +137,19 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java              ::         30.197  0856149247 
-2023-02-13 11:36:59  x     FileAccessorLocalJava7.java              ::         57.307  0534039149 
+2023-02-14 00:08:47  x     FileAccessorLocalJava7.java              ::         57.790 -1071206815 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java         ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2023-02-11 22:37:41  x     FileAccessZip.java                       ::         17.004 -0439088472 
+2023-02-13 23:58:28  x     FileAccessZip.java                       ::         17.029 -0346835682 
 2023-02-05 22:12:13  x     FileCluster.java                         ::         24.679 -1734786501 
 2023-02-13 11:46:16  x     FileMark.java                            ::         10.236 -0314268890 
-2023-02-12 22:29:55  x     FileRemote.java                          ::        160.075 -2009686610 
-2023-02-11 22:33:23  x     FileRemoteAccessor.java                  ::         14.535 -2050869792 
-2023-02-12 17:54:25  x     FileRemoteCallbackCmp.java               ::         18.803  0885478253 
+2023-02-14 00:09:07  x     FileRemote.java                          ::        162.549 -1092778062 
+2023-02-13 23:56:06  x     FileRemoteAccessor.java                  ::         14.657  1329740690 
+2023-02-13 23:53:19  x     FileRemoteCallbackCmp.java               ::         18.810  1396783308 
 2023-02-08 18:26:39  x     FileRemoteCallbackCopy.java              ::          6.457 -0344452208 
 2023-02-08 18:26:39  x     FileRemoteCallbackSearch.java            ::         10.733 -0660601740 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
