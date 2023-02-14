@@ -233,7 +233,7 @@ public class FileList
   { if(recurs > 100) throw new IllegalArgumentException("to deep recursion");
     System.out.println("Filelist.list dir=" + dir.getAbsolutePath());
     File dirAbs = dir.getAbsoluteFile();
-    FilepathFilterM[] filterChild = new FilepathFilterM[1];
+    FilepathFilterM filterChild;
     if(dirAbs.exists()) {
       File[] files = dirAbs.listFiles();
       Map<String, File> sort = new TreeMap<String, File>();
@@ -246,10 +246,8 @@ public class FileList
           if(name.startsWith("#"))
              Debugutil.stop();
           if( ! name.equals(this.args.sFileList)
-           && filter.check(name, false, filterChild)
-           && ( filterChild[0] ==null                      // it is the last entry of a path
-             || filterChild[0].bAllTree
-            ) ){
+           && (filterChild = filter.check(name, false)) !=null
+            ) {
           //if(name.charAt(0) !='.'){
             writeOneFile(out, file, localDir, name);
           }
@@ -259,13 +257,16 @@ public class FileList
         File file = entry.getValue();
         if( file.isDirectory()) {
           String name = file.getName();
-          if( filter.check(name, true, filterChild)
-           && filterChild[0] !=null                        // not the last entry of a path, filter for a directory
-           ){
+          if(name.equals("test"))
+            Debugutil.stop();
+          filterChild = filter.check(name, true);
+          if( filterChild !=null) {
+//           && filterChild[0] !=null                        // not the last entry of a path, filter for a directory
+//           ){
             writeDirectoryLine(out, file, localDir, name);  //the dirAbsectory entry
             CharSequence path = FileSystem.normalizePath(file);
             CharSequence localDirSub = path.subSequence(posLocalPath, path.length());
-            list(file, filterChild[0], posLocalPath, localDirSub, out, recurs+1);
+            list(file, filterChild, posLocalPath, localDirSub, out, recurs+1);
           }
         }
       }

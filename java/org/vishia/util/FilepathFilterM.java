@@ -26,6 +26,8 @@ public class FilepathFilterM extends ObjectVishia {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-02-14 Hartmut improved: better usable operation {@link #check(String, boolean)}, test is done. 
+   *   Adaption in application necessary (since 2 weeks...)  
    * <li>2023-01-26 Hartmut created: This class is an enhancement of {@link FilepathFilter} with the multi selection. 
    *   The idea is old, it was present in the path as <code>WildcardFilter</code> in {@link FileFunctions}
    *   but not used. Now it es tested, and used for the {@link FileList}.   
@@ -184,7 +186,7 @@ public class FilepathFilterM extends ObjectVishia {
    * For usage see also {@link FileFunctions#createWildcardFilter(String)} for a whole path
    * and see {@link #accept(File, String)}.
    * @param sMask mask due to given examples
-   * @param filterChild null or a child filter for the next level. 
+   * @param filterChild null or a child filter for the next level. Note: Parsing is done backward.
    */
   public FilepathFilterM ( String sMask, boolean bLast, FilepathFilterM filterChild) { 
     int pos0 = 0;
@@ -442,95 +444,122 @@ public class FilepathFilterM extends ObjectVishia {
     }
   }
   
-  public boolean check(String name, boolean bDir, FilepathFilterM[] next) { 
+  /**Checks the given name against the current Level of this FilepathFilterM.
+   * <br>If it is a directory, the current filter is "**" and the next directory level matches, 
+   * then it uses the next level.
+   * <br>If it is a directory, the current filter is "**" and the next directory level does not match,
+   *   it uses the "**", means matches, and returns also the current level this itself for next level.
+   *    
+   * @param name The name of a file or directory to check.
+   * @param bDir true then it is a directory name what is to check.
+   * @return null if the filter does not match, or the next level to use for the next entry.
+   *   On a non directory entry this return value should not be used, it marks only !=null, it is not used on a leaf.  
+   */
+  public FilepathFilterM check(String name, boolean bDir) { //, FilepathFilterM[] next) { 
+    FilepathFilterM nextf;
     if( this.bAllTree && this.aFilterChild !=null 
-     && ( bDir && this.aFilterChild.aFilterChild !=null  // only check the child for bDir if it is not the last child 
-       || !bDir && this.aFilterChild.aFilterChild ==null
-      ) ) { 
-      if( this.aFilterChild.check(name, bDir, next)) {     // the next filter accepts the entry,
-        if(next !=null) {
-          next[0] = this.aFilterChild.bAllTree ? this.aFilterChild //reuse the used child for the next test.
-                  : this.aFilterChild.aFilterChild;        // use the next next child for next test
-        }
-        return true;                                       // then continue with it. 
+     && ( bDir && this.aFilterChild.aFilterChild !=null    // only check the child for bDir if it is not the last child 
+       || !bDir && this.aFilterChild.aFilterChild ==null   // the entry after "**/aFilterChild" has not a child
+      ) ) {
+      nextf = this.aFilterChild.check(name, bDir);
+      if( nextf !=null ) {                                 // the next filter accepts the entry,
+        return nextf;                                      // then continue with it. 
       } else if(!bDir) {
-        return false;                                      // the next entry must accept the name, if it is the last (!bDir)
+        return null;                                       // the next entry must accept the name, if it is the last (!bDir)
+      } else {
+        nextf = this;                                      // the next entry was not accepted, it means this with "**" is valid.
       }
-    } else {
-      if(next !=null) { next[0] = this.aFilterChild; }     // yet guess, use the next filter aFilterChild
+    } else {                                               // it is not "**"
+      nextf = !bDir ? this :                               // default return on positive test is for !bDir  !=null (leaf)  
+              this.bAllTree ? this : this.aFilterChild;    // use normally child for next, but for "**" this itself.
     }
     if(!bDir && this.aFilterChild !=null) {
-      return false;                                        // a file, it must be the last entry
+      return null;                                         // a file, it must be the last entry in the filter queue
     }
     int zName = name.length();
-    int posEndBegin = this.zBegin;
+    int posEndBegin[] = new int[1];
+    posEndBegin[0] = this.zBegin;
     int posStartEnd = zName - this.zEnd;
     if(this.zBegin > posStartEnd) {                        // name is to short for the mask sBefore*sBehind
-      return this.bNotBegin;                               // returns true if the matching should be false
+      return this.bNotBegin ? nextf : null;                               // returns true if the matching should be false
     } 
     if(this.sBegin !=null ) {
       if(this.bNotBegin == name.startsWith(this.sBegin)) { // bNotBegin && sbegin matches or !bNotBegin and does not match:
-        return false;                                      // then faulty.
+        return null;                                      // then faulty.
       }
     }
-    if(this.variantsBegin !=null) {
-      boolean bOkBeginVariants = false;
-      FilepathFilterM[] filterNext = new FilepathFilterM[1];
-      //for(String sBefore: this.variantsBegin) {
-      for(FilepathFilterM variant: this.variantsBegin) {
-        final String sPart = name.substring(posEndBegin, posStartEnd);
-        if(variant.check(sPart, bDir, filterNext)) {         // check a variant
-            bOkBeginVariants = true;                          // if the variant is matching
-            posEndBegin = this.sBegin.length();        // then use it.
-            break;
-          }
-      }
-      if(this.bNotBegin == bOkBeginVariants) {
-        return false;                                      // positive varinants given, both nothing matches.
-      }
-      if(filterNext[0]!=null && next !=null) {
-        next[0] = filterNext[0];
+    if(this.variantsBegin !=null) {                        // variants given on begin, test it.
+      nextf = checkVariants(name, bDir, posEndBegin, posStartEnd); //The variants contains the next filter 
+      if(nextf == null) {               // ^- updated on the posBegin inside the variant. 
+        return null;
       }
     }
     boolean bOk = true; //! this.bNotBegin;                      // false if begin has matched
     int posEnd = zName;
-    if(this.variantsEnd !=null) {
-      boolean bOkEnd = false;
-      int mBit = 0x1;
-      for(String sVar: this.variantsEnd) {
-        if(name.endsWith(sVar)) {                        // end is proper, but:
-          if((this.mNotEnd & mBit)!=0) {
-            return !bOk; //false;                                // false if variantBefore matches but with not
-          } else {                                    
-            bOkEnd = true;                               // a matching sBefore found in list.
-            posEnd = zName - sVar.length();
-            posStartEnd = posEnd - this.zEnd;
-            break; 
-          }
-        }
-        mBit <<=1;
+    if(this.variantsEnd !=null) {                          //"*[end1|end2|...]" given
+      int posEndVariant = checkVariantsEnd(name, zName);
+      if(posEndVariant <0) {                               // posEndVariant is the position in name before fond [end1|end2|...]
+        return null;                                       // -1 then checkVariantsEnd does not match, return null
       }
-      if(!bOkEnd) {
-        return !bOk; //false;
-      }
+      posEnd = posEndVariant;
+      posStartEnd = posEndVariant - this.zEnd;
+    } else {
+      posEnd = zName;
     }
     if(this.sEnd !=null ) {
-      if(  posStartEnd <0                                // not enough character for sEnd 
+      if(  posStartEnd <0                                  // not enough character for sEnd 
        || !name.substring(posStartEnd, posEnd).equals(this.sEnd)
        ) {
-        return !bOk;
+        return null;
       }
     }
     if(this.sContain !=null) {
-      if(! name.substring(posEndBegin, posStartEnd).contains(this.sContain)) {
-        return false;                                    // does non contains *contain*
+      if(! name.substring(posEndBegin[0], posStartEnd).contains(this.sContain)) {
+        return null;                                    // does non contains *contain*
       }
     }
-    if(next !=null && bOk && this.bAllTree) {
-      next[0] = this;                                      // reuse this furthermore because it has matched with bAllTree.
-    }
-    return bOk;                                         // all has matched
+    return nextf;                                         // all has matched
   }
+  
+  
+  
+  
+  private FilepathFilterM checkVariants ( String name, boolean bDir, int[] posEndBegin, int posStartEnd) {
+    boolean bOkBeginVariants = false;
+    FilepathFilterM nextf2 = null;
+    for(FilepathFilterM variant: this.variantsBegin) {
+      final String sPart = name.substring(posEndBegin[0], posStartEnd);
+      nextf2 = variant.check(sPart, bDir);
+      if(nextf2 !=null) {         // check a variant
+          bOkBeginVariants = true;                          // if the variant is matching
+          posEndBegin[0] = variant.sBegin.length();        // then use it.
+          break;
+        }
+    }
+    if(this.bNotBegin == bOkBeginVariants) {
+      return null;                                      // positive varinants given, both nothing matches.
+    }
+    return nextf2;
+  }
+  
+  
+  
+  
+  private int checkVariantsEnd ( String name, int zName) {
+    int mBit = 0x1;
+    for(String sVar: this.variantsEnd) {
+      if(name.endsWith(sVar)) {                        // end is proper, but:
+        if((this.mNotEnd & mBit)!=0) {
+          return -1; //false;                                // false if variantBefore matches but with not
+        } else {                                    
+          return zName - sVar.length();
+        }
+      }
+      mBit <<=1;
+    }
+    return -1;
+  }
+  
   
   
   
