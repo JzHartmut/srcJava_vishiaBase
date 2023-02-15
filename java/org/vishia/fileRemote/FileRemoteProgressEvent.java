@@ -12,7 +12,7 @@ import org.vishia.states.StateMachine;
  * to start any showing process for the progress.  The extension should override the method {@link #executeOrder()} from the super class. 
  */
 @SuppressWarnings("synthetic-access")  
-public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
+public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCmd> 
 {
 
   /**Version, license and history.
@@ -95,7 +95,6 @@ public class FileRemoteProgressEvent  extends EventWithDst //TimeOrder
    * @param delay The delay to start the oder execution after #show()
    */
   public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
-    //super(name, mng);
     super(name, timerThread, null, evConsumer, timerThread);
 //    this.srcAnswer = srcAnswer;
     this.delay = delay;

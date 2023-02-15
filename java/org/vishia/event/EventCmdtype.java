@@ -44,16 +44,26 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
   
   
   
-  /**Creates an event as dynamic object for usage. Use {@link #relinquish()} after the event is used and it is not referenced
-   * anymore. 
+  /**Creates an event as dynamic object.
+   * @param name usual for debugging
    * @param source Source of the event. If null then the event is not occupied, especially the {@link #dateCreation()} 
    *   is set to 0.
-   * @param refData Associated data to the event. It is the source of the event.
    * @param consumer The destination object for the event.
    * @param thread an optional thread to store the event in an event queue, maybe null.
    */
   public EventCmdtype ( String name, EventSource source, EventConsumer consumer, EventTimerThread_ifc thread) { 
     super(name, source, consumer, thread);
+  }
+  
+  /**Creates an event with an aggregated TimeOrder
+   * @param name usual for debugging
+   * @param timerThread the thread for the TimeOrder to execute.
+   * @param source Source of the event. If null then the TimeOrder is the source.
+   * @param consumer The destination object for the event.
+   * @param evThread an optional thread to store the event in an event queue, maybe null.
+   */
+  public EventCmdtype ( String name, EventTimerThread_ifc timerThread, EventSource source, EventConsumer consumer, EventTimerThread_ifc evThread) { 
+    super(name, timerThread, source, consumer, evThread);
   }
   
   @Override protected void cleanData ( ) {

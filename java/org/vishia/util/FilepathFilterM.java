@@ -95,6 +95,7 @@ public class FilepathFilterM extends ObjectVishia {
   //FilepathFilterM afterVarieties;
 
   /**Creates a FilepathFilterM for one level. 
+   * protected, use {@link #createWildcardFilter(String)}.
    * <br>
    * <b>Basic wildcard features:</b>
    * 
@@ -188,7 +189,7 @@ public class FilepathFilterM extends ObjectVishia {
    * @param sMask mask due to given examples
    * @param filterChild null or a child filter for the next level. Note: Parsing is done backward.
    */
-  public FilepathFilterM ( String sMask, boolean bLast, FilepathFilterM filterChild) { 
+  protected FilepathFilterM ( String sMask, boolean bLast, FilepathFilterM filterChild) { 
     int pos0 = 0;
     int zMask = sMask.length();                            // regard internal paths can also contain '*', do not find them
     int pos1 = StringFunctions.indexOfAnyCharOutsideQuotation(sMask, 0, zMask, "*", "[", "]", '\\', null); //  sMask.indexOf('*');

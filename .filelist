@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-02-14 22:38:46  x     .gitCommit                               ::           .167 -1008652323 
+2023-02-15 12:15:14  x     .gitCommit                               ::           . 88  1123341056 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
 2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
@@ -115,7 +115,7 @@
 2021-10-04 14:29:52  x     DocuGen.java                             ::         11.946  1773808510 
 
 ============================== java/org/vishia/event/ ==============================================
-2023-02-08 08:59:32  x     EventCmdtype.java                        ::          4.168 -0372257898 
+2023-02-15 12:12:39  x     EventCmdtype.java                        ::          4.628 -0690816194 
 2023-02-07 15:06:04  x     EventCmdtypeWithBackEvent.java           ::          6.973  2024357094 
 2023-02-10 14:09:20  x     EventConsumer.java                       ::          6.804 -0174617829 
 2023-02-09 10:25:02  x     EventSource.java                         ::          4.203  1175884664 
@@ -137,7 +137,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java              ::         30.197  0856149247 
-2023-02-14 00:08:47  x     FileAccessorLocalJava7.java              ::         57.790 -1071206815 
+2023-02-15 11:53:41  x     FileAccessorLocalJava7.java              ::         57.624 -2071047120 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java         ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
@@ -153,7 +153,7 @@
 2023-02-08 18:26:39  x     FileRemoteCallbackCopy.java              ::          6.457 -0344452208 
 2023-02-08 18:26:39  x     FileRemoteCallbackSearch.java            ::         10.733 -0660601740 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
-2023-02-10 23:00:28  x     FileRemoteProgressEvent.java             ::         11.739 -1044088052 
+2023-02-15 12:12:53  x     FileRemoteProgressEvent.java             ::         11.728 -0613792019 
 2023-02-03 23:41:42  x     FileRemoteWalkerCallback.java            ::           .604 -1739361347 
 2022-10-22 14:12:16  x     FileZip.java                             ::          5.704  0189097144 
 
@@ -282,7 +282,7 @@
 2020-06-09 11:59:24  x     FileSystem.java                          ::          2.037 -1667764877 
 2022-12-10 11:12:14  x     FileWriter.java                          ::          6.805  1282866233 
 2021-10-04 14:29:56  x     FilepathFilter.java                      ::         14.407  2118971474 
-2023-02-14 22:08:24  x     FilepathFilterM.java                     ::         29.020  0947282868 
+2023-02-14 23:21:42  x     FilepathFilterM.java                     ::         29.082 -1832265554 
 2018-01-25 11:24:23  x     FilesToList.java                         ::          4.861  1950624767 
 2021-10-04 14:29:58  x     GetTypeToUse.java                        ::           .605  1887254405 
 2021-10-04 14:29:51  x     IndexMultiTable.java                     ::         44.043  0606115824 
