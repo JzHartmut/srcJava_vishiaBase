@@ -308,17 +308,7 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   
   
   
-  @Override public void finished(FileRemote startDir)
-  {
-    if(this.timeOrderProgress !=null){
-      this.timeOrderProgress.activateDone();
-    }
-    /*
-    if(evCallback !=null && evCallback.occupyRecall(500, null, true) !=0){
-      evCallback.sendEvent(FileRemote.CallbackCmd.done);
-    }
-    */
-  }
+  @Override public void finished ( FileRemote startDir) { }
 
 
   

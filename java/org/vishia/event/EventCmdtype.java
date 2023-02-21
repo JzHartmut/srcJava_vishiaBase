@@ -79,12 +79,12 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
 
   
   /**Checks whether the type of cmd of this event is derived from TimeoutCmd
-   * and whether the value is {@link TimeoutCmd#timeout}
+   * and whether the value is {@link TimeOrderCmd#timeout}
    * @return true if the condition is true, it is a timeout, false in any other case:
    *   false if either the generic type is not TimeoutCmd or the value is not timeout.
    */
   public boolean isTimeout() {
-    return this.cmde instanceof TimeoutCmd && ((TimeoutCmd)this.cmde) == TimeoutCmd.timeout;
+    return this.cmde instanceof TimeOrderCmd && ((TimeOrderCmd)this.cmde) == TimeOrderCmd.timeout;
   }
   
   
@@ -104,7 +104,7 @@ public class EventCmdtype<CmdEnum extends Enum<CmdEnum>> extends EventWithDst
    */
   public boolean sendEvent ( CmdEnum cmd){
     cmde = cmd;
-    return sendEvent();
+    return super.sendEvent();
     /*
     if(source == null)
       source = null;

@@ -504,6 +504,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         //System.out.println(LogMessage.timeCurr("timeOrder process event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
         order.event.processEvent();                        // it is executed immediately in the timerThread if evThread is the same
       }
+      order.repeatCyclic();
     }
     //======================================================= During processEvent new TimeOrders may be added.
     //                                                        It can be change the timeCheckNew. Hence new calculation. 

@@ -600,14 +600,15 @@ public class EventWithDst extends EventObject
         source1.notifyRelinquished(this.ctConsumed);
       }
     }
-    if(!this.bStaticOccupied) {                            // do nothing if statically occupied.
+    if(!this.bStaticOccupied) {                  // do not change evDst and source if statically occupied.
       //this.stateOfEvent= 'a';
       //data1 = data2 = 0;
+      this.evDst = null;                         // this is used to check occupied
       super.source = EventSource.nullSource;
-      if(this.bAwaitReserve){
+      if(this.bAwaitReserve){                    // any thread waits for this event ...
         synchronized(this){ notify(); }
       }
-      this.stateOfEvent = 'f';
+      this.stateOfEvent = 'f';                   // event is "free"
     }
   }
 
@@ -657,7 +658,8 @@ public class EventWithDst extends EventObject
 
   
   
-  /*package private*/ 
+  /**This operation is only called if the #evDstThread is not set. For local events.
+   * package private*/ 
   void processEvent() {
     int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
     //System.out.println(LogMessage.timeCurr("processEvent:") + this.name);
@@ -673,7 +675,6 @@ public class EventWithDst extends EventObject
       }
       retProcess |= EventConsumer.mEventConsumerException;
     }
-    consumed(retProcess);
     //if(stateOfEvent == 'r') {
     if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0 && !this.bStaticOccupied) {
       //Note: relinquishes it in case of exception too!
@@ -683,22 +684,25 @@ public class EventWithDst extends EventObject
   
   
   
+
+  
+  
   /**This routine is be called after consuming the event. It counts the number of consuming and invokes
    * {@link EventSource#notifyConsumed(int)} with this number if a source is given. Usual that is helpfully for debugging. 
    * If a {@link #timeOrder} is given which is not identically with the source,
    * also {@link TimeOrder#notifyConsumed(int)} is called.
    */
-  private void consumed(int retFromConsumer){
-    this.ctConsumed +=1;
-    int valueNotify = (this.ctConsumed<<24) | (retFromConsumer & 0x00ffffff);
-    EventSource source1 = ((EventSource)super.source);
-    if(source1 !=null){
-      source1.notifyConsumed(valueNotify);
-    }
-    if(this.timeOrder !=null && this.timeOrder != source1) {
-      this.timeOrder.notifyConsumed(valueNotify);
-    }
-  }
+//  private void consumed(int retFromConsumer){
+//    this.ctConsumed +=1;
+//    int valueNotify = (this.ctConsumed<<24) | (retFromConsumer & 0x00ffffff);
+//    EventSource source1 = ((EventSource)super.source);
+//    if(source1 !=null){
+//      source1.notifyConsumed(valueNotify);
+//    }
+//    if(this.timeOrder !=null && this.timeOrder != source1) {
+//      this.timeOrder.notifyConsumed(valueNotify);
+//    }
+//  }
   
 
   /**Informs the {@link EventSource#notifyDequeued()}, invoked on dequeuing.  */

@@ -62,6 +62,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-21 some fine tuning 
    * <li>2023-02-13 Hartmut new: {@link WalkFileTreeVisitor#debugOut } as helper.
    * <li>2023-02-12 {@link #walkFileTree(FileRemote, boolean, boolean, int, int, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)}
    *   with selection via mask, used for copy of selected files. Additional: mark during walk. 
@@ -155,7 +156,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**This thread runs after creation. Only one thread for all events to access the file system
    * separated by the user thread. */
-  EventTimerThread singleThreadForCommission = new EventTimerThread("FileAccessor-local");
+  EventTimerThread singleThreadForCommission;
   
   
   
@@ -175,6 +176,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
     }
     
+    @Override public boolean awaitExecution ( long timeout ) { return false; }
+
     @Override public String toString(){ return "FileRemoteAccessorLocal - executerCommision"; }
 
   };
@@ -191,11 +194,13 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   public FileAccessorLocalJava7() {
     //singleThreadForCommission.startThread();
-    systemAttribtype = DosFileAttributes.class;
+    this.systemAttribtype = DosFileAttributes.class;
+    this.singleThreadForCommission = new EventTimerThread("FileAccessor-local");
+    this.singleThreadForCommission.start();
   }
   
   public void activate() {
-    this.singleThreadForCommission.start();
+    //this.singleThreadForCommission.start();
   }
   
   
@@ -526,6 +531,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       callback.sendEvent(sError == null? FileRemote.CallbackCmd.done : FileRemote.CallbackCmd.error);
       return mEventConsumed;
     }
+
+    @Override public boolean awaitExecution ( long timeout ) { return false; }
     
   };
   
@@ -906,23 +913,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       FileRemoteAccessor.FileWalkerThread thread = new FileRemoteAccessor.FileWalkerThread(startDir, bRefreshChildren, depth, markSet, markSetDir
           , sMask, bMarkCheck, callback, debugOut) {
         @Override public void run() {
-          try{
-            FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(this.startDir, this.bRefresh, this.markSet, this.markSetDir
+          FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(this.startDir, this.bRefresh, this.markSet, this.markSetDir
                 , this.sMask, this.bMarkCheck, this.depth, this.callback, progress, debugOut);
-              if(progress !=null && progress.getDstThread() !=null) {
-                progress.bDone = true;
-                progress.sendEvent(); //activateDone();                 // remove the progress event from the timer queue, sends done to the same thread.
-              }
-            } 
-          catch(Throwable exc){
-            CharSequence text = Assert.exceptionInfo("FileAccessorLocalJava7 - walkFileTree Thread Exception; ", exc, 0, 40, true);
-            if(progress !=null && progress.getDstThread() !=null) {
-              progress.bDone = true;
-              //progress.sErr = text.toString();
-              progress.sendEvent(); //activateDone();                 // remove the progress event from the timer queue, sends done to the same thread.
-            }
-            System.err.println(text);
-          }
         }
       };
       thread.setPriority(Thread.MIN_PRIORITY +1);
@@ -948,29 +940,37 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       , String sMask, long bMarkCheck, int depth
       , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress, boolean debugOut)
   {
-    if(callback !=null) { callback.start(startDir); }
-//    String sPath = startDir.getAbsolutePath();
-//    if(FileSystem.isRoot(sPath))
-//      Assert.stop();
-//    java.nio.file.Path pathdir = java.nio.file.Paths.get(sPath);
-    if(bRefreshChildren) { // && filter == null) {
-      startDir.internalAccess().newChildren();
-    }
-    int depth1;
-    if(depth ==0){ depth1 = Integer.MAX_VALUE; }
-    else if(depth < 0){ depth1 = -depth; }
-    else { depth1 = depth; }
-
-    WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(startDir.itsCluster, bRefreshChildren
-        , markSet, markSetDir, sMask, bMarkCheck, callback, progress, debugOut);
-    Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
+    int timeOrderFinish = EventConsumer.mEventConsumFinished;
+    String sError = null;
     try{ 
+      if(progress !=null && progress.timeOrder !=null) {
+        progress.timeOrder.activateCyclic();
+      }
+      if(callback !=null) { callback.start(startDir); }
+  //    String sPath = startDir.getAbsolutePath();
+  //    if(FileSystem.isRoot(sPath))
+  //      Assert.stop();
+  //    java.nio.file.Path pathdir = java.nio.file.Paths.get(sPath);
+      if(bRefreshChildren) { // && filter == null) {
+        startDir.internalAccess().newChildren();
+      }
+      int depth1;
+      if(depth ==0){ depth1 = Integer.MAX_VALUE; }
+      else if(depth < 0){ depth1 = -depth; }
+      else { depth1 = depth; }
+  
+      WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(startDir.itsCluster, bRefreshChildren
+          , markSet, markSetDir, sMask, bMarkCheck, callback, progress, debugOut);
+      Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
       java.nio.file.Files.walkFileTree(startDir.path, options, depth1, visitor);  
     } catch(IOException exc){
-      System.err.println("FileAccessorLocalData.walkFileTree - unexpected IOException; " + exc.getMessage() );
+      sError = org.vishia.util.ExcUtil.exceptionInfo("FileAccessorLocalData.walkFileTree - unexpected Exception; ", exc, 0, 20).toString();
+      timeOrderFinish = EventConsumer.mEventConsumerException;
     }
     if(callback !=null) { callback.finished(startDir); }
-    
+    if(progress !=null ) {
+      progress.done(timeOrderFinish, sError);
+    }
   }
   
   

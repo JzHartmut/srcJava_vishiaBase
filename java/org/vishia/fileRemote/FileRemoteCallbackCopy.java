@@ -17,7 +17,7 @@ import org.vishia.util.StringFunctions;
 
 /**This class contains the callback operations used for 
  * {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
- * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)}.
+ * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteProgressEvent)}.
  * 
  * @author Hartmut Schorrig
  *
@@ -185,17 +185,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
   
   
   
-  @Override public void finished(FileRemote startDir)
-  {
-    if(this.timeOrderProgress !=null){
-      this.timeOrderProgress.activateDone(); 
-    }
-    /*
-    if(evCallback !=null && evCallback.occupyRecall(500, null, true) !=0){
-      evCallback.sendEvent(FileRemote.CallbackCmd.done);
-    }
-    */
-  }
+  @Override public void finished ( FileRemote startDir) { }
 
 
   

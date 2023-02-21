@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-02-15 12:15:14  x     .gitCommit                               ::           . 88  1123341056 
+2023-02-21 22:36:00  x     .gitCommit                               ::           .565  2123322812 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
 2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
@@ -86,7 +86,7 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2023-01-28 01:23:38  x     JZtxtcmdExecuter.java                    ::        196.717  1001013601 
+2023-02-21 14:59:20  x     JZtxtcmdExecuter.java                    ::        196.717  1001013601 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2023-01-28 22:23:44  x     JZtxtcmdScript.java                      ::        123.843 -2116227386 
@@ -115,16 +115,17 @@
 2021-10-04 14:29:52  x     DocuGen.java                             ::         11.946  1773808510 
 
 ============================== java/org/vishia/event/ ==============================================
-2023-02-15 12:12:39  x     EventCmdtype.java                        ::          4.628 -0690816194 
+2023-02-15 13:00:47  x     EventCmdtype.java                        ::          4.642 -0314978998 
 2023-02-07 15:06:04  x     EventCmdtypeWithBackEvent.java           ::          6.973  2024357094 
-2023-02-10 14:09:20  x     EventConsumer.java                       ::          6.804 -0174617829 
+2023-02-21 22:17:57  x     EventConsumer.java                       ::          7.961  0028806064 
+2023-02-21 13:07:12  x     EventConsumerAwait.java                  ::          1.472  0722333870 
 2023-02-09 10:25:02  x     EventSource.java                         ::          4.203  1175884664 
 2023-02-10 14:18:39  x     EventThread_ifc.java                     ::          1.832  1650964286 
-2023-02-13 18:48:41  x     EventTimerThread.java                    ::         28.437 -0181486655 
+2023-02-20 23:42:25  x     EventTimerThread.java                    ::         28.465  1062604403 
 2023-02-09 11:04:42  x     EventTimerThread_ifc.java                ::          1.407 -0366775010 
-2023-02-12 23:17:17  x     EventWithDst.java                        ::         33.586  0501724090 
-2023-02-12 23:06:53  x     TimeOrder.java                           ::         18.575  0131279742 
-2023-02-08 09:41:22  x     TimeoutCmd.java                          ::           .485  0124531114 
+2023-02-21 21:37:25  x     EventWithDst.java                        ::         33.863  0592797047 
+2023-02-21 22:26:25  x     TimeOrder.java                           ::         21.191  0825831764 
+2023-02-15 13:06:19  x     TimeOrderCmd.java                        ::          1.136 -0585113868 
 2021-10-04 14:29:51  x     package-info.java                        ::           . 87 -1252882733 
 
 ============================== java/org/vishia/event/test/ =========================================
@@ -137,7 +138,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java              ::         30.197  0856149247 
-2023-02-15 11:53:41  x     FileAccessorLocalJava7.java              ::         57.624 -2071047120 
+2023-02-21 22:29:00  x     FileAccessorLocalJava7.java              ::         57.460 -1329527176 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java         ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
@@ -147,14 +148,15 @@
 2023-02-13 23:58:28  x     FileAccessZip.java                       ::         17.029 -0346835682 
 2023-02-05 22:12:13  x     FileCluster.java                         ::         24.679 -1734786501 
 2023-02-13 11:46:16  x     FileMark.java                            ::         10.236 -0314268890 
-2023-02-14 00:09:07  x     FileRemote.java                          ::        162.549 -1092778062 
+2023-02-21 17:57:53  x     FileRemote.java                          ::        163.244 -0505815130 
 2023-02-13 23:56:06  x     FileRemoteAccessor.java                  ::         14.657  1329740690 
 2023-02-13 23:53:19  x     FileRemoteCallbackCmp.java               ::         18.810  1396783308 
-2023-02-08 18:26:39  x     FileRemoteCallbackCopy.java              ::          6.457 -0344452208 
-2023-02-08 18:26:39  x     FileRemoteCallbackSearch.java            ::         10.733 -0660601740 
+2023-02-20 23:27:54  x     FileRemoteCallbackCopy.java              ::          6.186  1214596622 
+2023-02-20 23:27:36  x     FileRemoteCallbackSearch.java            ::         10.489  0964967885 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
-2023-02-15 12:12:53  x     FileRemoteProgressEvent.java             ::         11.728 -0613792019 
+2023-02-21 22:35:04  x     FileRemoteProgressEvent.java             ::         12.833 -0854061322 
 2023-02-03 23:41:42  x     FileRemoteWalkerCallback.java            ::           .604 -1739361347 
+2023-02-21 15:13:50  x     FileRemoteWalkerCallbackLog.java         ::          2.466  0836540270 
 2022-10-22 14:12:16  x     FileZip.java                             ::          5.704  0189097144 
 
 ============================== java/org/vishia/genJavaOutClass/ ====================================
@@ -239,7 +241,7 @@
 2023-01-31 10:18:26  x     StateComposite.java                      ::         18.909  1483464924 
 2021-10-04 14:29:58  x     StateCompositeFlat.java                  ::         10.553  0857986834 
 2021-10-04 14:29:58  x     StateDeepHistory.java                    ::           .365  1053809590 
-2023-02-10 14:13:43  x     StateMachine.java                        ::         21.048  0830141620 
+2023-02-21 00:46:03  x     StateMachine.java                        ::         21.129 -0543033711 
 2021-10-04 14:29:51  x     StateParallel.java                       ::         12.235 -1121530841 
 2021-10-04 14:29:58  x     StateShallowHistory.java                 ::           .309 -1425259298 
 2023-02-13 19:41:28  x     StateSimple.java                         ::         61.905 -2059967186 

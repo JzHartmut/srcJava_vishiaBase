@@ -6,6 +6,9 @@ import org.vishia.states.StateSimple;   //only for comment
 /**This interface describe the consumer interface for events.
  * The class which implements this interface is able to get events for example from a common queue
  * and executes the {@link #processEvent(EventMsg)} method with the event.
+ * <br>
+ * Another thread can wait for execution of specific conditions on events.
+ * The 
  * 
  * @author Hartmut Schorrig
  *
@@ -14,7 +17,8 @@ public interface EventConsumer
 {
   /**Version, history and license
    * <ul>
-   * <li>2015-01-04 Hartmut chg:It is an abstract class instead an interface yet for new data, less effort for adaption.
+   * <li>2023-02-21 Hartmut new: {@link #awaitExecution(long)}
+   * <li>2015-01-04 Hartmut chg: It is an abstract class instead an interface yet for new data, less effort for adaption.
    *   New method {@link #shouldRun} which does not need to override in all implementation.
    * <li>2015-01-04 Hartmut chg: With the method {@link #getStateInfo()} any instance is able to quest for its state. 
    *   It may be an important method for debugging and showing.
@@ -83,8 +87,27 @@ public interface EventConsumer
    *   This value is forwarded to {@link EventSource#notifyConsumed(int)} and can be evaluated by the application 
    *   in the calling thread or in any other thread which have access to implementation of {@link EventSource}.
    */
-  public abstract int processEvent(EventObject ev); 
+  int processEvent(EventObject ev); 
   
+  
+  
+  /**Awaits for specific execution in any other thread.
+   * This operation may be implemented per default with only { return false; } it it is not desired.
+   * If it is desired it is possible to wait in any thread for succeed the event. 
+   * <br>
+   * Hint: The implementor of this interface may be inherited from {@link EventConsumerAwait}.
+   * This abstract class implements this operation in a standard way. 
+   * Then only {@link #processEvent(EventObject)} should be overridden
+   * and should call {@link EventConsumerAwait#setDone(String)} if the event is succeed.
+   * <br>
+   * Second hint: Succeed does not need to receive any event. 
+   * It can mean that a special event with special data is received.
+   * That is evaluated in the {@link #processEvent(EventObject)} implementation. 
+   * 
+   * @param timeout comes back unconditionally in the timeout time.
+   * @return true if the execution was done, false on timeout or default implementation. 
+   */
+  boolean awaitExecution ( long timeout);
   
   
   /**Bit in return value of the {@link #processEvent(EventObject)}

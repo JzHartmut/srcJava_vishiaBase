@@ -12,11 +12,14 @@ import org.vishia.states.StateMachine;
  * to start any showing process for the progress.  The extension should override the method {@link #executeOrder()} from the super class. 
  */
 @SuppressWarnings("synthetic-access")  
-public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCmd> 
+public class FileRemoteProgressEvent  extends EventWithDst 
 {
 
   /**Version, license and history.
    * <ul>
+   * <li>2023-02-21 {@link #done()} in cohesion with {@link org.vishia.event.EventConsumerAwait#awaitExecution(long)}
+   *   and {@link TimeOrder#repeatCyclic()}. If {@link #done()} was called the cyclically repeat ends 
+   *   because it calls {@link TimeOrder#clear()}.  
    * <li>2023-02-10 refactoring in progress. Tested with The.file.Commenader 
    * <li>2023-02-06 The class TimeOrder is outdated, use its super class {@link TimeOrder} also here. Some adpations done. 
    * <li>2015-05-03 Hartmut new: possibility to check {@link #isBusy()}
@@ -94,8 +97,10 @@ public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCm
    *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
    * @param delay The delay to start the oder execution after #show()
    */
-  public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer, EventConsumer evConsumer, int delay){ 
-    super(name, timerThread, null, evConsumer, timerThread);
+  public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer
+      , EventConsumer evConsumer, int delay){ 
+    super(name, timerThread, null, evConsumer, timerThread);  //EventWithDst, eventSource is TimeOrder
+    super.timeOrder.setCycle(1, delay);
 //    this.srcAnswer = srcAnswer;
     this.delay = delay;
   }
@@ -116,6 +121,11 @@ public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCm
   /**Number of Files which are handled special. */
   public int nrofFilesMarked;
   
+  /**Set to not null if 
+   * 
+   */
+  private String sError;
+  
   /**Command for asking or showing somewhat from executer to application. */
   private FileRemote.CallbackCmd quest;
   
@@ -129,7 +139,7 @@ public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCm
   public int modeCopyOper;
     
   /**Set on success.*/
-  public boolean bDone;
+  protected boolean bDone;
 
   
   /**True then the service has stopped execution (thread is in wait) for an answer.
@@ -161,6 +171,7 @@ public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCm
     this.nrofBytesFile = 0;
     this.nrofBytesFileCopied = 0;
     this.bDone = false;
+    this.sError = null;
     this.timeOrder.clear();
   }
 
@@ -183,13 +194,23 @@ public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCm
   }
   
   
-  public void activateDone() {
+  /**Set the event to the done() state, all is done maybe with error.
+   * @param timeOrderFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
+   * @param sError a message if any what was unexpected. Especially on unexpected exception. 
+   */
+  public void done(int timeOrderFinish, String sError) {
+    this.sError = sError;
+    this.timeOrder.notifyConsumed(timeOrderFinish);
+    this.timeOrder.clear();
     this.timeOrder.deactivate();                      // removes from a timer queue if queued
     this.bDone = true;                 // activates the same thread as after activate, but yet with done.
-    this.timeOrder.activate(0);                 // activate immediately.
+    this.sendEvent();
+    //this.timeOrder.activate(0);                 // activate immediately.
   }
   
   public FileRemote.CallbackCmd quest ( ){ return this.quest; }
+  
+  public boolean done ( ){ return this.bDone; }
   
   /**This operation should be called by the executer if a non clarified situation exists.
    * The executer thread goes in wait till setAnswer is given. 
@@ -289,6 +310,11 @@ public class FileRemoteProgressEvent  extends EventCmdtype<FileRemote.CallbackCm
   /**Set from application to force abort in the executer.*/
   public void setMkdirAll ( boolean value) { this.bMkdirAll = value; }
   
+  
+//  @Override public boolean sendEvent() {
+//    throw new IllegalStateException("use sendEvent(cmd) instead, this is not allowed here.");
+//    //return false;
+//  }
   
 //  /**Invoked from any FileRemote operation, to show the state.
 //   * 

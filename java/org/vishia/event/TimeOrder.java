@@ -7,13 +7,13 @@ import org.vishia.util.ExcUtil;
 
 /**This class builds a time order instance usable as timeout for state machines or other time orders.
  * It is intent do use for {@link EventTimerThread} or another implementation using {@link EventTimerThread_ifc}.
- * It is also used for the vishia graphical programming (GRAL) referenced in {@link org.vishia.gral.base.GralGraphicEventTimeOrder}
+ * It is also used for the vishia graphical programming (GRAL) referenced in {@link org.vishia.gral.base.GralGraphicOrder}
  * and also for {@link org.vishia.fileRemote.FileRemoteProgressEvent}.
  * It is referenced by {@link EventWithDst#timeOrder} and only constructed in that class
  * calling {@link EventWithDst#EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}
  * or enhanced classes from {@link EventWithDst} if the event should be delayed.
  * <br>
- * An {@link EventCmdtype} with {@link TimeoutCmd} is used inside {@link org.vishia.states.StateMachine} as persistent instance 
+ * An {@link EventCmdtype} with {@link TimeOrderCmd} is used inside {@link org.vishia.states.StateMachine} as persistent instance 
  * of any parallel state machine or of the top state if timeouts are used in the states.
  * <br><br>
  * Activate the timeout event:<pre>
@@ -36,6 +36,12 @@ public class TimeOrder extends EventSource
   
   /**Version and history:
    * <ul>
+   * <li>2023-02-21 new: {@link #activateCyclic()}. The approach is, that the activating must not initiate from the receiver
+   *   because in a remote situation (network device) the receiver has no access to the TimeOrder.
+   *   Instead the sender should do it. Hence the {@link #setCycle(int, int)} should be called on time to determine the cycle.
+   *   The {@link #activateCyclic()} should be called only one time if the sender gets active.
+   *   The {@link #repeatCyclic()} is set by the {@link EventTimerThread} if one event is fired.
+   *   {@link #clear()} or {@link #deactivate()} removes this {@link #repeatCyclic()} behavior. 
    * <li>2023-02-09 refactoring, deferred time orders etc. The TimeOrder is now final aggregated from an {@link EventWithDst} if necessary.
    *   It aggregates the event by itself. Execution is done only via the {@link #event()} and its {@link EventWithDst#evDst}. 
    * <li>2022-09-24 Some comments and changed in {@link #activateAt(long, long)} while searching the problem 
@@ -73,17 +79,21 @@ public class TimeOrder extends EventSource
    */
   @SuppressWarnings("hiding") public final static String version = "2023-02-09";
 
+  private static final long serialVersionUID = 2695620140769906847L;
+
   public final String name;
   
-  
-  
-    
+     
   protected EventWithDst event;
   
   public final EventTimerThread_ifc timerThread;
   
-  private static final long serialVersionUID = 2695620140769906847L;
-
+  /**The cycle of execution for the first time and cyclic. */
+  private int timeCycleFirst = 1, timeCycle = 200;
+  
+  /**If this bit is set, {@link #repeatCyclic()} activates again. */
+  private boolean bCyclic;
+  
   /**If not 0, it is the time to execute it. Elsewhere it should be delayed. */
   protected long timeExecution;
   
@@ -110,7 +120,7 @@ public class TimeOrder extends EventSource
   protected boolean bEventExecuted;
   
   /**True if {@link EventConsumer#processEvent(java.util.EventObject)} has returned the bit {@link EventConsumer#mEventConsumFinished}. */
-  protected boolean bDone;
+  protected boolean bTimeOrderFinished;
   
   
   /**It is counted only. Used for debug. Possible to set. */
@@ -118,28 +128,8 @@ public class TimeOrder extends EventSource
   
 
  
-  /**Construction of a time order with any desired specific event to execute.
-   * The ctor is package private, only used in {@link EventWithDst#EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}. 
-   * @param name for debugging and log
-   * @param timerThread where the time entry should be used in, it is determined.
-   * @param event The event for execution.
-   */
-  TimeOrder ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
-    super(name);
-    this.name = name;
-    this.event = event;
-    this.timerThread = timerThread;
-  }
-
-  
-  void setEvent(EventWithDst event) {
-    this.event = event;
-  }
-  
-  public EventWithDst event() { return event; }
-  
-  /**Creates an event as static or dynamic object for usage. See also {@link EventWithDst#EventWithDst(EventSource, EventConsumer, EventThreadIfc)}
-   * The timeout instance may be static usual (permanent referenced) and not allocated on demand (with new)
+  /**Constructs a time order for usage. 
+   * The time order instance may be static usual (permanent referenced) and not allocated on demand (with new)
    * because it is used whenever a special state is entered.
    * @param name for debugging and log
    * @param timerThread where the time entry should be used in, it is determined.
@@ -147,7 +137,7 @@ public class TimeOrder extends EventSource
    * @param consumer The destination object for the event. If it is null nothing will be executed if the event is expired.
    *   But you can set the consumer with {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}
    *   or with {@link #setDst(EventConsumer)} afterwards
-   * @param thread evThread if null, then the event is handled by the same thread as the timerThread, immediately after expire.
+   * @param evThread if null, then the event is handled by the same thread as the timerThread, immediately after expire.
    *   It means the timeout is handled before the other queued events are handled. This is important for state machine. 
    *   It means if a timeout transition has its timeout, then this is prior.  
    *   <br>If you give the same thread as timerThread (not null), then the event is firstly enqueued in the own event queue after expiring. 
@@ -164,12 +154,59 @@ public class TimeOrder extends EventSource
     super(name);
     this.name = name;
     this.event = new EventWithDst(name, src, consumer, evThread !=null ? evThread : timerThread);
-
+  
     this.timerThread = timerThread;
+  }
+
+
+  /**Construction of a time order with any desired specific event to execute.
+   * The ctor is package private, only used in {@link EventWithDst#EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}. 
+   * It means the user constructs the event with time order (any derived event type),
+   * and the ctor of the event calls this ctor to organize a bidirectional aggregation. 
+   * 
+   * @param name for debugging and log
+   * @param timerThread where the time entry should be used in, it is determined.
+   * @param event The event for execution.
+   */
+  TimeOrder ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
+    super(name);
+    this.name = name;
+    this.event = event;
+    this.timerThread = timerThread;
+  }
+
+  
+  
+  void setEvent ( EventWithDst event) {
+    this.event = event;
   }
   
   
+  
+  /**Sets the cycle of the event for {@link #activateCyclic()}.
+   * If this operation is never called, the initial values are valid.
+   * @param first Milliseconds from {@link #activateCyclic()} to the first invocation, default 1 ms.
+   * @param cycle Milliseconds for repeated call, used from {@link #repeatCyclic()}.
+   */
+  public void setCycle ( int first, int cycle) {
+    this.timeCycleFirst = first; this.timeCycle = cycle;
+  }
+  
+  
+  
+  public EventWithDst event() { return event; }
+  
+  
+  
+  /**Clears the order, set to 0 all data excluded {@link #timeCycleFirst} and {@link #timeCycle} 
+   * and removes the order from the queue and also a pending event from the queue.
+   * If any thread has called {@link #awaitExecution(int, boolean)} 
+   * this thread is notified firstly to prevent a hanging thread.
+   */
   public void clear() {
+    notifyConsumed(EventConsumer.mEventConsumFinished);
+    this.event.removeFromQueue();
+    this.timerThread.removeTimeEntry(this);
     this.timeExecution = this.timeExecutionLatest = 0;
     this.bAwaiting = false;
     this.bNotifyAlsoOnException = false;
@@ -177,20 +214,38 @@ public class TimeOrder extends EventSource
     this.bEventException = false;
     this.bEventExecuted = false;
     this.ctConsumed = 0;
-    this.bDone = false;
-    this.timerThread.removeTimeEntry(this);
-    this.timerThread.removeFromQueue(this.event);
-    this.event.clean();
+    this.bTimeOrderFinished = false;
+    this.bCyclic = false;
+    //this.event.clean();
   }
   
   
-  /**Activate the event for the given laps of time.
+  /**Activate the time order for the first time from the source of the event.
+   * This should be called by the source of the event which gives also feedbacks.
+   * It calls {@link #activate(int)} with the first time set on {@link #setCycle(int, int)}, default 1 ms.
+   */
+  public final void activateCyclic ( ){ 
+    this.bCyclic = true;
+    activate( this.timeCycleFirst );
+  }
+  
+    
+  /**Repeat activating the time order with the cycle.
+   * This is called in the EventTimerThread if cyclic is activated, after one is expired.
+   * Hence it is package private.
+   * It calls {@link #activate(int)} with the {@link #timeCycle}.
+   */
+  final void repeatCyclic ( ){ if(this.bCyclic) { activate( this.timeCycle ); } }
+  
+    
+  /**Activate the time order to send the event for the given laps of time.
    * If the event is activated already for a shorter time, the activation time is deferred to this given time
    * but not later than a latest time given with {@link #activateAt(long, long)}. 
    * @param millisec if a negative value or a value less then 3 is given the event is processed immediately.
    * @see #activateAt(long, long).
    */
-  public final void activate(int millisec){ activateAt(System.currentTimeMillis() + millisec, 0);}
+  public final void activate ( int millisec){ activateAt(System.currentTimeMillis() + millisec, 0);}
+  
   
   /**Enters the TimeEntry to activates the event to the given timestamp.
    * <br>If the event is entered already for a shorter time, and this is also the latest time,
@@ -201,7 +256,7 @@ public class TimeOrder extends EventSource
    *     myEvent.activateAt(System.currentTimeMillis() + delay);
    *   </pre>
    */
-  public final void activateAt(long date) { activateAt(date, 0); }
+  public final void activateAt ( long date) { activateAt(date, 0); }
   
   
   /**Enters the TimeEntry to activates the event to the given timestamp with a given latest time stamp.
@@ -220,7 +275,7 @@ public class TimeOrder extends EventSource
    *   The earlier latest time is valid. Use {@link #deactivate()} before this method to set the latest processing time newly. 
    * @see #activateAt(long).
    */
-  public final void activateAt(long executionTime, long latest) {
+  public final void activateAt ( long executionTime, long latest) {
     //
     if(this.timeExecution !=0 && ((this.timeExecution - System.currentTimeMillis()) < -5000)){ 
       //The execution time is expired since 5 seconds,
@@ -290,9 +345,10 @@ public class TimeOrder extends EventSource
   
   /**Remove this from the queue of timer events and orders 
    */
-  public final void deactivate(){
+  public final void deactivate ( ){
     this.timeExecution = 0;
     this.timeExecutionLatest = 0;
+    this.bCyclic = false;
     if(this.timerThread !=null) {
       this.timerThread.removeTimeEntry(this);
     }
@@ -301,18 +357,18 @@ public class TimeOrder extends EventSource
   /**Returns the time stamp where the time is elapsed
    * @return milliseconds after 1970, 0 if the event is not activated yet.
    */
-  public final long timeExecution(){ return this.timeExecution; }
+  public final long timeExecution ( ){ return this.timeExecution; }
  
   
   /**Returns the time stamp where the time is elapsed latest.
    * @return milliseconds after 1970, 0 if the event is not activated yet.
    */
-  public final long timeExecutionLatest(){ return this.timeExecutionLatest; }
+  public final long timeExecutionLatest ( ){ return this.timeExecutionLatest; }
  
   
 
   
-  public final boolean used(){ return this.timeExecution !=0; }
+  public final boolean used ( ){ return this.timeExecution !=0; }
 
 
   
@@ -332,7 +388,7 @@ public class TimeOrder extends EventSource
     }
     if((state & mask) !=0) {
       synchronized(this) {
-        this.bDone = true;
+        this.bTimeOrderFinished = true;
         if(this.bAwaiting) {
           this.notify();
         }
@@ -347,7 +403,7 @@ public class TimeOrder extends EventSource
    * @return time in milliseconds for first execution or value <0 if it is expired (to execute immediately)
    *   or the Integer.MAX_VALUE if it is not in use (expires in a very long time).
    */
-  public final int timeToExecution(){ 
+  public final int timeToExecution ( ){ 
     return this.timeExecution == 0 ? Integer.MAX_VALUE : (int)( this.timeExecution - System.currentTimeMillis()); 
   }
   
@@ -360,12 +416,12 @@ public class TimeOrder extends EventSource
    * @param timeout maximal waiting time in milliseconds, 0 means wait forever.
    * @return true if it is executed the requested number of.
    */
-  public boolean awaitExecution(int timeout, boolean bAlsoOnException)
+  public boolean XXXawaitExecution ( int timeout, boolean bAlsoOnException)
   { 
     long timeEnd = System.currentTimeMillis() + timeout; 
     synchronized(this) {
       this.bNotifyAlsoOnException = bAlsoOnException;
-      while(!this.bDone) {
+      while(!this.bTimeOrderFinished) {
         long waitingTime = timeEnd - System.currentTimeMillis();
         if(waitingTime > 0 || timeout == 0 ) { //should wait, or special: wait till end of routine.
           this.bAwaiting = true;

@@ -198,7 +198,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * <li>2015-07-04 Hartmut chg: Values of flags {@link #mTested}, {@link #mShouldRefresh}, {@link #mRefreshChildPending}
    *   {@link #mThreadIsRunning} to the highest digit of int, to recognize for manual viewing. That flags should not used in applications.
    *   Remove of flags for comparison, the bits are used and defined inside {@link FileMark} for a longer time.  
-   * <li>2015-05-30 Hartmut new: {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)} 
+   * <li>2015-05-30 Hartmut new: {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteProgressEvent)} 
    * <li>2015-05-25 Hartmut new: {@link #clusterOfApplication}: There is a singleton, the {@link FileCluster}
    *   is not necessary as argument for {@link #fromFile(File)} especially to work more simple to use FileRemote
    *   capabilities for File operations.
@@ -1291,14 +1291,14 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress instance for callback.
    */
-  public void refreshAndMark(int setMark, int setMarkDir, String sMaskSelection, long markSelection, int depth, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent progress) {
-    if(device == null){
-      device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+  public void refreshAndMark(int setMark, int setMarkDir, String sMaskSelection, long markSelection, int depth
+      , FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent progress) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     //CallbackMark callbackMark = new CallbackMark(callbackUser, progress); //, nLevelProcessOnlyMarked);  //negativ... TODO
-    boolean debugOut = true;
     this.device.walkFileTree(this,  false, true, setMark, setMarkDir
-          , sMaskSelection, markSelection,  depth,  callbackUser, progress, debugOut);  //should work in an extra thread.
+          , sMaskSelection, markSelection,  depth,  callbackUser, progress, false);  //should work in an extra thread.
   }
   
   
@@ -1313,11 +1313,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
    */
-  public void refreshAndCompare(FileRemote dirCmp, int depth, String mask, int mark, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
+  public void refreshAndCompare(FileRemote dirCmp, int depth, String mask, int mark, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
     if(device == null){
       device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(this, dirCmp, callbackUser, timeOrderProgress);  //evCallback);
+    FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(this, dirCmp, null, timeOrderProgress);  //evCallback);
     device.walkFileTree(this,  false, true, 0, 0, mask, mark,  depth,  callbackCmp, timeOrderProgress, false);  //should work in an extra thread.
   }
   
@@ -1356,24 +1356,31 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param mark bits to select with mark alternatively 
    * @param set or reset the bit.
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
-   *   If given then this routine works in an extra thread.
-   * @param timeOrderProgress this is a second possibility beside callbackUser, one of them may be sufficient. 
-   *   On start, any file, any directory and the finish some information will be written in this instance.
+   * @param progressEvent If given then this routine works in an extra thread. 
+   *   The progress and the success is sent via an event in the given time to the given destination, 
+   *   see {@link FileRemoteProgressEvent#FileRemoteProgressEvent(String, EventTimerThread_ifc, EventSource, EventConsumer, int)}.
+   *   The progress {@link EventConsumer#processEvent(EventObject)} runs in another thread as the FileRemote activity
+   *   and also in another thread then the caller of this operation. 
+   *   The caller thread of this operation can poll the progress and done status, 
+   *   but it can also call {@link EventConsumer#awaitExecution(long)} to wait for success.
+   *   <br>If this argument is null, the FileRemote activity is executed in the own thread. 
+   * this is a second possibility beside callbackUser, one of them may be sufficient. 
+   *   
    *   This {@link org.vishia.event.TimeOrder} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
    * @since 2015-05. Tested elaborately and documented in 2023-02  
    */
-  public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback) { ////
+  public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark
+      , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progressEvent) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(dirDst, callbackUser, timeOrderProgress);  //evCallback);
-    boolean bWait = timeOrderProgress ==null;    //wait if there is not a callback possibility.
+    FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(dirDst, callback, progressEvent);  //evCallback);
+    boolean bWait = progressEvent ==null;    //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
     int setMark = FileMark.alternativeFunction | mark; // if mark is given to select, reset it.
     //======>>>>                                 // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-    boolean debugOut = true;
     this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMark
-        , mask, mark,  depth,  mission, timeOrderProgress, debugOut);  //should work in an extra thread.
+        , mask, mark,  depth,  mission, progressEvent, false);  //should work in an extra thread.
   }
   
   
@@ -2608,11 +2615,16 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * {@link #setWritable(boolean)} etc. or they are given as parameter.
    * <br><br>
    * It is a send-only routine without feedback in this routine, 
-   * because the calling thread should not be waiting for success. The success is notified with invocation of the 
-   * {@link EventCmdPingPongType#callback}.{@link EventConsumer#processEvent(EventCmdPingPongType)} method. 
+   * because the calling thread should not be waiting for success. 
+   * The success is notified with invocation of the evback.
+   * The command itself uses the {@link EventCmdtypeWithBackEvent#opponent}
+   * which is type of {@link CmdEvent} to send the request.
    * 
    * @param newName A new name for the file. This parameter may be null, then the old name remain.
-   * @param backEvent The event for success.
+   * @param maskFlags mask which flags should be changed
+   * @param newFlags value of the flag bits.
+   * @param newDate if not 0 a new time stamp of file
+   * @param evback The event for success, containing the cmd event as opponent.
    */
   public void chgProps(String newName, int maskFlags, int newFlags, long newDate, FileRemote.CallbackEvent evback){
     CmdEvent ev = device.prepareCmdEvent(500, evback);
@@ -2654,7 +2666,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
    * To run this routine in an extra Thread use {@link #walkFileTreeThread(int, FileRemoteWalkerCallback)}.
    * This operation is not intent to use working with the real file system.
-   * For example {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteWalkerCallback, FileRemoteProgressEvent)}
+   * For example {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteProgressEvent)}
    * calls internally {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
    * which is implemented in the device, for example using java.nio.file.Files operations.
    * This operation iterates only over the children and sub children in the FileRemote directory tree.
@@ -3131,7 +3143,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
-  public enum CallbackCmd {
+  public enum CallbackCmd  {
     /**Ordinary value=0, same as {@link Event.Cmd#free}. */
     free ,
     /**Ordinary value=1, same as {@link Event.Cmd#reserve}. */
@@ -3202,6 +3214,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       }
       return 1;
     }
+    
+    
+    @Override public boolean awaitExecution(long timeout) { return false; }
     
   }
   
