@@ -105,9 +105,10 @@ public interface EventConsumer
    * That is evaluated in the {@link #processEvent(EventObject)} implementation. 
    * 
    * @param timeout comes back unconditionally in the timeout time.
+   * @param clearDone if true then clear the done flag in mutex if it is waiting and done was set.
    * @return true if the execution was done, false on timeout or default implementation. 
    */
-  boolean awaitExecution ( long timeout);
+  boolean awaitExecution ( long timeout, boolean clearDone);
   
   
   /**Bit in return value of the {@link #processEvent(EventObject)}

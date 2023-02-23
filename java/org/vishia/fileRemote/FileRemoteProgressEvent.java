@@ -115,10 +115,14 @@ public class FileRemoteProgressEvent  extends EventWithDst
   /**Processed bytes. */
   public long nrofBytesAllAvail, nrofBytesAll, nrofBytesFile, nrofBytesFileCopied;
   
-  /**Number of processed directories and files. */
-  public int nrDirProcessed, nrFilesProcessed;
+  /**Number of processed directories and files independent of mark situation,
+   * but don't count directories which are not entered. */
+  public int nrDirVisited, nrDirProcessed, nrFilesVisited;
   
-  /**Number of Files which are handled special. */
+  /**Number of Files which are selected by String mask or marked bits. */
+  public int nrofFilesSelected;
+  
+  /**Number of Files which are marked while walking and processing. */
   public int nrofFilesMarked;
   
   /**Set to not null if 
@@ -163,8 +167,10 @@ public class FileRemoteProgressEvent  extends EventWithDst
   public void clear() {
     this.nrDirAvail = 0;
     this.nrDirProcessed = 0;
+    this.nrDirVisited = 0;
+    this.nrFilesVisited = 0;
     this.nrFilesAvail = 0;
-    this.nrFilesProcessed = 0;
+    this.nrofFilesSelected = 0;
     this.nrofFilesMarked = 0;
     this.nrofBytesAllAvail = 0;
     this.nrofBytesAll = 0;
@@ -183,9 +189,11 @@ public class FileRemoteProgressEvent  extends EventWithDst
   public void setAvailClear() {
     this.nrDirAvail = this.nrDirProcessed;
     this.nrDirProcessed = 0;
-    this.nrFilesAvail = this.nrofFilesMarked;
+    this.nrDirVisited = 0;
+    this.nrFilesVisited = 0;
+    this.nrFilesAvail = this.nrofFilesSelected;
     this.nrofFilesMarked = 0;
-    this.nrFilesProcessed = 0;
+    this.nrofFilesSelected = 0;
     this.nrofBytesAllAvail = this.nrofBytesAll;
     this.nrofBytesAll = 0;
     this.nrofBytesFile = 0;

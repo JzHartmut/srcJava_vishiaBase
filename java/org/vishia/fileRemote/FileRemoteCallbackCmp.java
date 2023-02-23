@@ -233,18 +233,6 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
       if(callbackUser !=null) {
         callbackUser.offerLeafNode(file, new Integer(cmprBits));  ////
       }
-      if(progress !=null){
-        progress.currFile = file;
-        progress.nrFilesProcessed +=1;
-        //progress.show(FileRemote.CallbackCmd.nrofFilesAndBytes, null);
-      }
-      /*
-      if(evCallback.occupy(null, file, false)) {
-        evCallback.setFileSrc(file);
-        evCallback.setCmd(FileRemote.CallbackCmd.nrofFilesAndBytes);
-        evCallback.sendEvent();   //inform about the state of progress of comparison.
-      }
-      */
       return Result.cont;
     }
   }

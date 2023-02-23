@@ -29,6 +29,7 @@ import java.util.TreeSet;
 
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventConsumer;
+import org.vishia.event.EventConsumerAwait;
 import org.vishia.event.EventSource;
 import org.vishia.event.EventTimerThread;
 import org.vishia.event.EventWithDst;
@@ -176,7 +177,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
     }
     
-    @Override public boolean awaitExecution ( long timeout ) { return false; }
+    @Override public boolean awaitExecution ( long timeout, boolean cleanDone ) { return false; }
 
     @Override public String toString(){ return "FileRemoteAccessorLocal - executerCommision"; }
 
@@ -522,7 +523,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
 
   
-  EventConsumer execCopyFile = new EventConsumer() {
+  EventConsumer execCopyFile = new EventConsumerAwait() {
     @Override public int processEvent ( EventObject evP ) {
       FileRemote.CmdEvent ev = (FileRemote.CmdEvent)evP;
       String sError = copyFile(ev.filesrc, ev.filedst, null);  // action and back event.    
@@ -532,7 +533,6 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       return mEventConsumed;
     }
 
-    @Override public boolean awaitExecution ( long timeout ) { return false; }
     
   };
   
@@ -1172,7 +1172,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
       if(!selected) {                            // after this.markCheck still not selected
         if(this.markSet !=0) {
-          if( (this.markSet & FileMark.alternativeFunction) !=0) {
+          if( (this.markSet & FileMark.resetMark) !=0) {
             dir1.setMarked(this.markSet);
           } else {
             dir1.resetMarked(this.markSet);
@@ -1183,7 +1183,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         ret = FileVisitResult.CONTINUE;
         //enter in directory always if curr.levelProcessMarked !=1
         if(this.markSet !=0) {
-          if( (this.markSet & FileMark.alternativeFunction) !=0) {
+          if( (this.markSet & FileMark.resetMark) !=0) {
             dir1.resetMarked(this.markSet);
           } else {
             dir1.setMarked(this.markSet);
@@ -1231,7 +1231,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         this.curr.dir.internalAccess().setLengthAndDate(this.curr.nrBytesInDir, -1, -1, System.currentTimeMillis());
       }
       if(this.curr.markSetDirCurrTree !=0) {
-        if( (this.curr.markSetDirCurrTree & FileMark.alternativeFunction) !=0) {
+        if( (this.curr.markSetDirCurrTree & FileMark.resetMark) !=0) {
           this.curr.dir.resetMarked(this.curr.markSetDirCurrTree);
         } else {
           this.curr.dir.setMarked(this.curr.markSetDirCurrTree);
@@ -1270,30 +1270,39 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     {
       final FileVisitResult ret;
       String name = file.getFileName().toString();
-      if(name.startsWith("Byte"))
-        Debugutil.stop();
+//      if(name.startsWith("Byte"))
+//        Debugutil.stop();
       boolean bDirectory = attrs.isDirectory();
-      boolean selected = (this.fileFilter == null) 
-                      || this.curr.fileFilter.check(name, bDirectory) !=null;
-      if( !selected && this.markSet == 0 
-       && ( this.markCheck == 0 || (this.markCheck & FileMark.orWithSelectString) ==0 )
-        ) {                                      // if not selected and no more to do
-        return FileVisitResult.CONTINUE;         // ====>> return but does nothing with the file,  
+      if(this.progress !=null) {
+        if(bDirectory) {
+          this.progress.nrDirVisited +=1;
+        } else {
+          this.progress.nrFilesVisited +=1;
+        }
       }
-      //------------------------------------------- continue get the file
+      boolean selected = (this.fileFilter == null)         // check selection via String, fileFilter: 
+                      || this.curr.fileFilter.check(name, bDirectory) !=null;
+      if( !selected                                        // not selected via String
+       && this.markSet == 0                                // and no set mark operation necessary 
+       && ( this.markCheck == 0                            // AND no select mask given,
+         || (this.markCheck & FileMark.orWithSelectString) ==0 //OR no OR-selectmask given,
+        ) ) {                                              // it means not selected and no more to do
+        return FileVisitResult.CONTINUE;                   // ====>> return but does nothing with the file,  
+      }
+      //----------------------------------------------------- continue get the file
       FileRemote fileRemote;
       if(this.curr.dir !=null) { 
-        if(bDirectory) {                // visitFile comes also on directory entries
-          fileRemote = this.curr.dir.subdir(name);         // get or create a child in FileRemote
+        if(bDirectory) {                                   // visitFile comes also on directory entries
+          fileRemote = this.curr.dir.subdir(name);         // get or create a sub directory in given dir
         } else {
-          fileRemote = this.curr.dir.child(name);
+          fileRemote = this.curr.dir.child(name);          // get or create a file in given dir
         }
       } else {                                             // first time:
-        assert(false);  //starts always with a directory!
+        assert(false);                                     // NO: starts always with a directory!
         String sDir = file.getParent().toString();         // get directory from nio.file.Path
-        fileRemote = this.fileCluster.getFile(sDir, name);      // and gets a new directory
+        fileRemote = this.fileCluster.getFile(sDir, name); // and gets a new directory
       }
-      //------------------------------------------- If a markCheck is given, then the subdir should contain one of the bit.
+      //----------------------------------------------------- If a markCheck is given, then the subdir should contain one of the bit.
       if(this.markCheck !=0) {
         boolean bMarkSelect = (fileRemote.getMark() & this.markCheck) !=0;
         if( (this.markCheck & FileMark.orWithSelectString) !=0) {
@@ -1311,15 +1320,20 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 //          }
         }
         ret = FileVisitResult.CONTINUE;  //but does nothing with the file.      
-      } else {
-        if(this.markSet !=0) {
-          if( (this.markSet & FileMark.alternativeFunction) !=0) {
+      } 
+      else {  //--------------------------------------------- The file is selected.
+        if(this.markSet !=0) {                             // setMark activity necessary: do it here
+          if( (this.markSet & FileMark.resetMark) !=0) {
             fileRemote.resetMarked(this.markSet);
           } else {
             fileRemote.setMarked(this.markSet);
           }
+          if(this.progress !=null) {
+            this.progress.nrofFilesMarked +=1;
+          }
         }
-        this.curr.markSetDirCurrTree = this.markSetDir;
+        this.curr.markSetDirCurrTree = this.markSetDir;    // markSetDirCurrTree processed in postVisitDirectory if selected
+        //
         setAttributes(fileRemote, file, attrs);            // copy the file attributes from nio.file..Path to FileRemote
         long size = attrs.size();
         assert(this.curr.dir == fileRemote.getParentFile());
@@ -1328,7 +1342,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         this.curr.nrofFilesSelected +=1;
         if(this.progress !=null) {
           this.progress.currFile = fileRemote;
-          this.progress.nrFilesProcessed +=1;
+          this.progress.nrofFilesSelected +=1;
           this.progress.nrofBytesAll += size;
         }
         if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - file; " + name);

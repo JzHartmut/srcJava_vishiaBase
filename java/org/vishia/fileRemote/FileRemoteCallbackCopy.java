@@ -135,11 +135,10 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
     try{
       long nrofBytesSum0 = 0;
       if(this.timeOrderProgress !=null) {
-        nrofBytesSum0 = this.timeOrderProgress.nrofBytesAll;
         this.timeOrderProgress.nrofBytesFile = file.length();
         this.timeOrderProgress.nrofBytesFileCopied = 0;
-        this.timeOrderProgress.nrFilesProcessed +=1;
-        this.timeOrderProgress.currFile = file;
+        //this.timeOrderProgress.nrFilesProcessed +=1;
+        //this.timeOrderProgress.currFile = file;
       }
 
       inp = file.openInputStream(0);
@@ -153,7 +152,6 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
           sum += bytes;
           if(this.timeOrderProgress !=null) {
             this.timeOrderProgress.nrofBytesFileCopied = sum;
-            this.timeOrderProgress.nrofBytesAll = nrofBytesSum0 + sum;
           }
         }
         if(this.callbackUser !=null) {

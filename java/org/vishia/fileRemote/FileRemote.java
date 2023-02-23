@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventConsumer;
+import org.vishia.event.EventConsumerAwait;
 import org.vishia.event.EventSource;
 import org.vishia.event.EventTimerThread;
 import org.vishia.event.EventTimerThread_ifc;
@@ -187,6 +188,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-02-13 Hartmut chg: {@link #refreshAndMark(int, int, int, String, long, FileRemoteWalkerCallback, FileRemoteProgressEvent)}
+   *   the depths should be unique as first or second argument, todo change the other operations adequate 
    * <li>2023-02-13 Hartmut new: {@link #getDirFileDst(String, FileRemote, String[])} usable for String given dir and mask
    * <li>2023-01-02 Hartmut chg: {@link #fromFile(File)} and {@link #child(CharSequence, int, int, long, long, long)}:
    *   Generally on creating a FileRemote it should not has any access to the file system, because it is remote.
@@ -1291,7 +1294,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress instance for callback.
    */
-  public void refreshAndMark(int setMark, int setMarkDir, String sMaskSelection, long markSelection, int depth
+  public void refreshAndMark(int depth, int setMark, int setMarkDir, String sMaskSelection, long markSelection
       , FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent progress) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -1369,7 +1372,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   This {@link org.vishia.event.TimeOrder} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
    * @since 2015-05. Tested elaborately and documented in 2023-02  
    */
-  public void copyDirTreeTo(FileRemote dirDst, int depth, String mask, int mark
+  public void copyDirTreeTo(FileRemote dirDst, int depth, int setMark, int setMarkDir, String mask, int mark
       , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progressEvent) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -1377,9 +1380,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(dirDst, callback, progressEvent);  //evCallback);
     boolean bWait = progressEvent ==null;    //wait if there is not a callback possibility.
     boolean bRefreshChildren = false;
-    int setMark = FileMark.alternativeFunction | mark; // if mark is given to select, reset it.
     //======>>>>                                 // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMark
+    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMarkDir
         , mask, mark,  depth,  mission, progressEvent, false);  //should work in an extra thread.
   }
   
@@ -3204,19 +3206,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
 
   
-  protected class CallbackWait implements EventConsumer{
+  protected class CallbackWait extends EventConsumerAwait{
     public CallbackWait(){  }
 
     @Override public int processEvent(EventObject ev)
     {
       synchronized(FileRemote.this){
         FileRemote.this.notify();
+        setDone(null);
       }
       return 1;
     }
     
     
-    @Override public boolean awaitExecution(long timeout) { return false; }
     
   }
   

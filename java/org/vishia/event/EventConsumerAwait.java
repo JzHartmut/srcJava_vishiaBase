@@ -15,7 +15,7 @@ public abstract class EventConsumerAwait implements EventConsumer{
   protected boolean bWait, bDone;
   
   protected String sError;
-  
+
 
   protected final void setDone(String sError) {
     this.sError = sError;
@@ -29,11 +29,13 @@ public abstract class EventConsumerAwait implements EventConsumer{
   
 
   
+  public boolean done() { return this.bDone; }
+  
   
   /**Awaits for execution of the TimeOrder. */
-  @Override public final boolean awaitExecution(long timeout) { 
+  @Override public final boolean awaitExecution(long timeout, boolean clearDone) { 
     long timeEnd = System.currentTimeMillis() + timeout; 
-    
+    boolean ret;
     synchronized(this) {
       long waitingTime = 1;
       while(!this.bDone && (waitingTime >0 || timeout == 0)) {
@@ -43,10 +45,23 @@ public abstract class EventConsumerAwait implements EventConsumer{
           try{ wait(waitingTime); } catch(InterruptedException exc){}
           this.bWait = false;
         } 
-      };
+      };                                         // clear bDone if clearDone.
+      ret = this.bDone;
+      if(clearDone) { this.bDone = false; }      // clear also if timeout is expired, expected bDone is still false.
     }
-    return(this.bDone);
+    return(ret);
   }
 
+  
+  public void clean() {
+    this.bDone = false;
+    this.sError = null;
+    if(this.bWait) {                   // any thread is waiting
+      synchronized(this) {
+        notify();
+      }
+      this.bWait = false;              // set bWait anytime to false, clean an unexpected situation. 
+    }
+  }
 
 }

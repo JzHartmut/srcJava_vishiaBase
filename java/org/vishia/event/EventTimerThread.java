@@ -282,7 +282,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       createThread_();
       this.startOnDemand = true;
     } else {
-      synchronized(this.runTimer){
+      synchronized(this){
         if(this.stateThreadTimer == 'W'){
           wakeup_();
         } else {
@@ -293,12 +293,13 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   }
 
 
-  /**Wakes up the waiting thread because a new event is enqueues.
-   * <br>This operation can be overridden for another thread organization. 
+  /**Wakes up the waiting thread because a new event or time entry is enqueues.
+   * <br>This operation can be overridden for another thread organization.
+   * especially in {@link org.vishia.gral.base.GralMng}. 
    * 
    */
   protected void wakeup_ ( ) {
-    runTimer.notify();
+    this.notify();
   }
   
   
@@ -336,11 +337,11 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
           notified = stateThreadTimer == 'W';
           if(notified){                                    // wake up the time thread to poll orders
             retc = 'n';   //new time
-            this.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
+            wakeup_();                             // (elsewhere it would sleep till the last decided sleep time.) 
           } else {                                         // should wake up and adjust the sleep time newly.
             // thread is busy, not wait, it will detect the new this.timeCheckNew          
             retc = 'b';   // 
-            this.notify();                             // (elsewhere it would sleep till the last decided sleep time.) 
+            wakeup_();                             // (elsewhere it would sleep till the last decided sleep time.) 
           }
         }
         //System.out.println(LogMessage.timeCurr("addTimeOrder added:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution) + " notify:" + (notified? "yes" : "no"));

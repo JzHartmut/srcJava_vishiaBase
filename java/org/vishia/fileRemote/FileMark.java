@@ -125,7 +125,7 @@ public class FileMark extends SelectMask
   
   /**This is not used for mark, only for a mark command. 
    * It means if this bit is set: reset instead set of a mark */
-  public static final int alternativeFunction = 0x80000000;
+  public static final int resetMark = 0x80000000;
   
   
   
