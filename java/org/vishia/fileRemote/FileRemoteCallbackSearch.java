@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemoteCallbackCmp.CompareCtrl;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -53,7 +54,8 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   private final int zBasePath1;
   
   /**Event instance for user callback. */
-  private final FileRemoteProgressEvent timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
+  private final EventWithDst<FileRemoteProgressEvData,?> evBack;
+  private final FileRemoteProgressEvData progress;  //FileRemote.CallbackEvent evCallback;
   
   private final FileRemoteWalkerCallback callbackUser;
   
@@ -83,9 +85,10 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  FileRemoteCallbackSearch(FileRemote dir1, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackSearch(FileRemote dir1, byte[] search, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
-    this.timeOrderProgress = timeOrderProgress;
+    this.evBack = evBack;
+    this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dir1 = dir1;
     this.search = search;

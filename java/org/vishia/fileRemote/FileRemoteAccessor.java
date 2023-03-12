@@ -10,7 +10,12 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.List;
 
-import org.vishia.event.EventCmdtypeWithBackEvent;
+//import org.vishia.event.EventCmdtypeWithBackEvent;
+import org.vishia.event.EventConsumer;
+import org.vishia.event.EventConsumerAwait;
+import org.vishia.event.EventSource;
+import org.vishia.event.EventThread_ifc;
+import org.vishia.event.EventWithDst;
 
 /**Interface for instances, which organizes a remote access to files.
  * One instance per transfer protocol are need.
@@ -18,8 +23,10 @@ import org.vishia.event.EventCmdtypeWithBackEvent;
  * @author Hartmut Schorrig
  *
  */
-public abstract class FileRemoteAccessor implements Closeable
+public abstract class FileRemoteAccessor implements Closeable, EventConsumer 
 {
+  private static final long serialVersionUID = 1589913596618865454L;
+  
   /**Version, history and license.
    * <ul>
    * <li>2012-05-30 Hartmut new: {@link #openOutputStream(FileRemote, long)}
@@ -79,8 +86,9 @@ public abstract class FileRemoteAccessor implements Closeable
   //, kFinishError = 0xf1e3303, kNrofFilesAndBytes = 0xd00001, kCopyDir = 0xd0cd13;
 
 
-  protected FileRemoteAccessor(){
+  protected FileRemoteAccessor ( ) { //String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread ) {
     
+    //super(name, source, consumer, evThread);
   }
   
   
@@ -100,8 +108,12 @@ public abstract class FileRemoteAccessor implements Closeable
    *   That is especially proper if the operation is called in an event procedure in a graphic system. 
    *   Prevent scrolling wheel on the screen. 
    */
-  public abstract void refreshFileProperties(FileRemote file, FileRemote.CallbackEvent callback);
+  public abstract void refreshFileProperties(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack);
 
+  
+  public abstract void cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack);
+  
+  
   /**Gets the properties and the children of the file from the physical file.
    * <br><br>
    * The properties of the children are not gotten for the Standard-PC-Filesystem using Java-6. 
@@ -149,41 +161,53 @@ public abstract class FileRemoteAccessor implements Closeable
    *   false then this method may return immediately. The callback routines are not invoked. The walk is done in another thread.
    *   Note: Whether or not another thread is used for communication it is not defined with them. It is possible to start another thread
    *   and wait for success, for example if communication with a remote device is necessary. 
-   * @param bRefresh if true then refreshes all entries in file and maybe found children. If false then let file unchanged.
+   * @param bRefreshChildren if true then refreshes all entries in file and maybe found children. If false then let file unchanged.
    *   If filter is not null, only the filtered children will be updated,
    *   all other children remain unchanged. It means it is possible that non exists files are remain as children.
-   * @param sMaskCheck Any filter which files will be accepted.
-   * @param bMarkCheck Bits 31..0 which are used to select files to mark if this mark bits are set. Additional (AND) to the sMask.
-   *    If 0 all files, marked or non marked are checked. The Bits 63..32 contains the number of levels to process. 
-   *    It is especially 2 (0x200000000 in argument) if the first level of a directory should be checked. 
-   * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
-   *   If negative then the absolute is number of levels (maybe Integer.MAXVALUE) but uses the first level to enter only marked files.
-   * @param callback this callback will be invoked on any file or directory.
+   * @param depth deepness to entry in the directory tree. Use 0 if all levels should enter.
+   * @param setMark bits to set in the {@link #mark()} {@link FileMark#selectMask} for the selected files
+   *   If {@link FileMark#resetMark} is set, the bits given in this field will be set to 0.
+   * @param setMarkDir bits to set in the {@link #mark()} for the directories containing selected files
+   *   If {@link FileMark#resetMark} is set, the bits given in this field will be set to 0.
+   * @param sMaskSelection Any filter which files will be accepted.
+   * @param markSelection Bits to select with mark bits. 
+   *   If {@link FileMark#orWithSelectString} is set, this is a OR relation, elsewhere AND with the select string.
+   *   OR relation means, a file is selected either with the sMaskSelection or with one of this bits.
+   *   AND relation means, one of this bits should be set, and the sMaskSelection should be matching.  
+   * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
+   * @param progress event for callback.
+   * @param debugOut true then prints some progress to System.out
    */
   public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
-      , int markSet, int markSetDir
-      , String sMaskCheck, long bMarkCheck, int depth
-      , FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress, boolean debugOut);
+      , int setMark, int setMarkDir
+      , String sMaskSelection, long markSelection, int depth
+      , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut);
   
   
   protected abstract boolean setLastModified(FileRemote file, long time);
   
   
-  public abstract boolean createNewFile(FileRemote file, FileRemote.CallbackEvent callback) throws IOException;
+  public abstract boolean createNewFile(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack) throws IOException;
 
   
-  public abstract String moveFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
+  public abstract String moveFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
-  public abstract String copyFile(FileRemote src, FileRemote dst, FileRemote.CallbackEvent callback);
+  public abstract String copyFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   /**Try to delete the file.
    * @param callback
    * @return If the callback is null, the method returns if the file is deleted or it can't be deleted.
    *   The it returns true if the file is deleted successfully. If the callback is not null, it returns true.
    */
-  public abstract boolean delete(FileRemote file, FileRemote.CallbackEvent callback);
+  public abstract boolean delete(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
-  public abstract boolean mkdir(FileRemote file, boolean subdirs, FileRemote.CallbackEvent callback);
+  /**
+   * @param file
+   * @param subdirs true then create all necessary dirs on the path
+   * @param evBack It will be called on any directory which was made, to update the local instance of FileRemote.
+   * @return
+   */
+  public abstract boolean mkdir(FileRemote file, boolean subdirs, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   
   /**Copies all files which are checked before.
@@ -194,7 +218,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress);
+  public abstract void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvData timeOrderProgress);
   
   
   /**Search in all files.
@@ -202,7 +226,7 @@ public abstract class FileRemoteAccessor implements Closeable
    * @param callbackUser Maybe null, elsewhere on every directory and file which is finished to copy a callback is invoked.
    * @param timeOrderProgress may be null, to show the progress of copy.
    */
-  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress);
+  public abstract void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvData timeOrderProgress);
   
   
   public abstract ReadableByteChannel openRead(FileRemote file, long passPhase);
@@ -228,7 +252,7 @@ public abstract class FileRemoteAccessor implements Closeable
   /**Creates or prepares a CmdEvent to send to the correct destination. The event is ready to use but not  occupied yet. 
    * If the evBack contains a CmdEvent as its opponent, it is used. In that way a non-dynamic event management
    * is possible. */
-  public abstract FileRemote.CmdEvent prepareCmdEvent(int timeout, EventCmdtypeWithBackEvent<?, FileRemote.CmdEvent> evBack);
+//  public abstract FileRemote.CmdEvent prepareCmdEvent(int timeout, EventCmdtypeWithBackEvent<?, FileRemote.CmdEvent> evBack);
 
   
   public abstract boolean isLocalFileSystem();

@@ -8,7 +8,7 @@ import org.vishia.util.ExcUtil;
 /**This class builds a time order instance usable as timeout for state machines or other time orders.
  * It is intent do use for {@link EventTimerThread} or another implementation using {@link EventTimerThread_ifc}.
  * It is also used for the vishia graphical programming (GRAL) referenced in {@link org.vishia.gral.base.GralGraphicOrder}
- * and also for {@link org.vishia.fileRemote.FileRemoteProgressEvent}.
+ * and also for {@link org.vishia.fileRemote.FileRemoteProgressEvData}.
  * It is referenced by {@link EventWithDst#timeOrder} and only constructed in that class
  * calling {@link EventWithDst#EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}
  * or enhanced classes from {@link EventWithDst} if the event should be delayed.
@@ -36,6 +36,7 @@ public class TimeOrder extends EventSource
   
   /**Version and history:
    * <ul>
+   * <li>2023-03-12 new: {@link #bHoldTimeorder}, {@link #hold()} to change data, prevent processing in {@link EventTimerThread} 
    * <li>2023-02-21 new: {@link #activateCyclic()}. The approach is, that the activating must not initiate from the receiver
    *   because in a remote situation (network device) the receiver has no access to the TimeOrder.
    *   Instead the sender should do it. Hence the {@link #setCycle(int, int)} should be called on time to determine the cycle.
@@ -77,7 +78,7 @@ public class TimeOrder extends EventSource
    * 
    * 
    */
-  @SuppressWarnings("hiding") public final static String version = "2023-02-09";
+  @SuppressWarnings("hiding") public final static String version = "2023-03-12";
 
   private static final long serialVersionUID = 2695620140769906847L;
 
@@ -106,6 +107,11 @@ public class TimeOrder extends EventSource
    * It means a thread is waiting. this.notify() is necessary.
    */
   protected boolean bAwaiting;
+  
+  /**If true then the current active time order should not be send as event if the time is expired,
+   * because some data are changed. 
+   */
+  protected boolean bHoldTimeorder;
   
   protected boolean bNotifyAlsoOnException;
   
@@ -153,7 +159,7 @@ public class TimeOrder extends EventSource
   public TimeOrder ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
     super(name);
     this.name = name;
-    this.event = new EventWithDst(name, src, consumer, evThread !=null ? evThread : timerThread);
+    this.event = new EventWithDst<Object, Object>(name, src, consumer, evThread !=null ? evThread : timerThread, null);
   
     this.timerThread = timerThread;
   }
@@ -165,14 +171,23 @@ public class TimeOrder extends EventSource
    * and the ctor of the event calls this ctor to organize a bidirectional aggregation. 
    * 
    * @param name for debugging and log
-   * @param timerThread where the time entry should be used in, it is determined.
+   * @param timerThread where the time entry should be used in, if null use the event's thread.
    * @param event The event for execution.
+   * @throws IllegalArgumentException if timerThread argument is null and the event do not refer an EventTimerThread_ifc
    */
-  TimeOrder ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
+  public TimeOrder ( String name, EventTimerThread_ifc timerThread, EventWithDst event) { 
     super(name);
     this.name = name;
     this.event = event;
-    this.timerThread = timerThread;
+    if(timerThread != null) {
+      this.timerThread = timerThread;
+    } else {
+      EventThread_ifc evThread = event.getDstThread();
+      if(!(evThread instanceof EventTimerThread_ifc)) {
+        throw new IllegalArgumentException("event should refer an EventTimerThread_ifc");
+      }
+      this.timerThread = (EventTimerThread_ifc)evThread;
+    }
   }
 
   
@@ -236,6 +251,18 @@ public class TimeOrder extends EventSource
    * It calls {@link #activate(int)} with the {@link #timeCycle}.
    */
   final void repeatCyclic ( ){ if(this.bCyclic) { activate( this.timeCycle ); } }
+  
+  
+  /**Prevent activating a time order because some data may be changed just now.
+   * After changing data a new {@link #activate(int)} should be called to activate again.
+   * @return true if the time is expired or the timeOrder is free.
+   * It means the time Order should be entered newly. 
+   * But it is usual no difference, {@link #activate(int)} should be called anyway.
+   */
+  public final synchronized boolean hold() { 
+    this.bHoldTimeorder = true; 
+    return this.timeExecution ==0; 
+  }
   
     
   /**Activate the time order to send the event for the given laps of time.
@@ -339,6 +366,7 @@ public class TimeOrder extends EventSource
         //System.out.println(LogMessage.timeCurr("timeOrder activate ignored: ") + this.event.name + LogMessage.msgSec(" at ", executionTime)); // + ExcUtil.stackInfo("", 2, 8));
         
       }
+      this.bHoldTimeorder = false;
     }
   }
   
@@ -370,7 +398,10 @@ public class TimeOrder extends EventSource
   
   public final boolean used ( ){ return this.timeExecution !=0; }
 
-
+  /**Quest whether the time order was finished executing.
+   * @return true if it was executed. Returns {@link #bEventExecuted}.
+   */
+  public final boolean isExecuted() { return this.bEventExecuted; }
   
   /**This operation should not called by the user. It is intent to call via the interface {@link EventSource}
    * from the event management classes, especially {@link EventTimerThread} or adequate implementations of {@link EventThread_ifc}

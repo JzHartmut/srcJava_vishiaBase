@@ -14,30 +14,34 @@ import org.vishia.util.ExcUtil;
  * and to an instance which queues and forces the execution of the event (delegates to the destination).
  * The super class from java standard EventObject does only contain the source. 
  * <pre>
- * Object<--source-+                    +----UserEvent
+ * Object <--source-+                   +---<>Payload
  *         EventObject <|-+             |        |
  *                        |             |     -more_Data
- *                     EventWithDst<|---+
+ *                     EventWithDst ----+
  *                        |
  *                        |-------evDstThread--->{@link EventTimerThread_ifc}
  *                        |
- *                        |-------------evdst--->{@link EventConsumer}
+ *                        |-------------evDst--->{@link EventConsumer}
  *                        |
  *                 -name
  *                 -dateCreation 
  *                 -dateOrder
  *                 -stateOfEvent
  *                 -ctConsumed
- *                 -orderId         
- *          
+ *                 -orderId 
  * </pre>
  * UML Presentation see {@link org.vishia.util.Docu_UML_simpleNotation}
  * <br>
  * Note: A derived class in this package is {@link EventCmdtype}.
+ * <br>
+ * Note: If the event was transferred via for example socket connection, 
+ *   its data of the derived "UserEvent" should be received as payload and reconstructed.
+ *   The aggregated data {@link #evDstThread} and {@link #evDst()} are set by initialization
+ *   in the received environment.
  * @author Hartmut Schorrig
  *
  */
-public class EventWithDst extends EventObject
+public final class EventWithDst<Payload extends Object, PayloadBack extends Object> extends EventObject
 {
 
   private static final long serialVersionUID = 3976120105528632683L;
@@ -45,6 +49,18 @@ public class EventWithDst extends EventObject
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-03-12 Hartmut chg The org.vishia.event is refactored:
+   *   <ul><li>Only the final EventWithDst is existent.
+   *   <li>The data of the event are not defined by derivation, now they are defined by a aggregated payload.
+   *   <li>The payload should be Serializable, because exact this are all data to transfer an event.
+   *   <li>The classes EventCmdtype and EventCmdtypeWithBackEvent are dissolved.
+   *     The Cmd is part of Payload. The aggregation {@link #evBack} is now contained here.
+   *     It is null if a back event is not given.
+   *   <li>{@link TimeOrder} is no more aggregated, but the TimeOrder aggregates its event.
+   *   <li>{@link EventConsumer} can decide about the thread.
+   *   <li>{@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)} is related only to the {@link #dateCreation} and not to the {@link #evDst}
+   *     The {@link #evDst()} can be determined by construction, as well as the {@link EventObject#source}. 
+   *   </ul>
    * <li>2023-02-07 Hartmut chg {@link #timeOrder} as possible aggreation (on construction) with the proper ctor:
    *   {@link #EventWithDst(String, EventTimerThread_ifc, EventSource, EventConsumer, EventThread_ifc)}
    * <li>2023-02-07 Hartmut chg now the event has a {@link #name}, helps on debug  
@@ -117,7 +133,7 @@ public class EventWithDst extends EventObject
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2015-01-03";
+  public static final String version = "2023-03-12";
 
   
   /**The current owner of the event. It is that instance, which has gotten the event instance.
@@ -126,6 +142,8 @@ public class EventWithDst extends EventObject
   
   
   public final String name;
+  
+  
   
   /**The queue for events of the {@link EventThread_ifc} if this event should be used
    * in a really event driven system (without directly callback). 
@@ -137,12 +155,14 @@ public class EventWithDst extends EventObject
    * the dst is invoked while polling the queue. Elsewhere the dst is the callback instance. */
   EventConsumer evDst;
   
-  /**Possibility for a time entry for a delayed event in a {@link EventTimerThread_ifc}
-   * Especially for timeout events, see also {@link EventTimerThread}.
-   * This can be final null if the event is not used with a time entry.
+  /**All data to this event, should be transferred via InterProcessComm.
+   * Also the type of the event should be transferred, for events without payload.
+   * It means Payload can be null, if the type is sufficient to regocnize the event.
    */
-  public final TimeOrder timeOrder;
-
+  Payload d;
+  
+  
+  EventWithDst<PayloadBack, Payload> evBack;
   
   /**State of the event: 
    * <ul>
@@ -161,13 +181,6 @@ public class EventWithDst extends EventObject
   ///**package private*/ boolean donotRelinquish;
   
   boolean bAwaitReserve;
-  
-  /**True if the event is statically occupied. occupy returns false and relinquish does nothing.
-   * Set on construction if evDst is given. 
-   */
-  public final boolean bStaticOccupied;
-  
-  //protected int answer;
   
   protected int ctConsumed;
   
@@ -193,18 +206,13 @@ public class EventWithDst extends EventObject
    * before first usage. {@link #relinquish()} will be called on release the usage. 
    * @param name of the event used only for debug.
    */
-  public EventWithDst(String name) {
-    super(EventSource.nullSource);
-    this.bStaticOccupied = false;
-    this.timeOrder = null;
-    this.name = name;
-    this.dateCreation.set(0);
+  public EventWithDst(String name, Payload data) {
+    this(name, EventSource.nullSource, data);
   }
   
-  public EventWithDst(String name, Object source)
+  public EventWithDst(String name, Object source, Payload data)
   { super(source);
-    this.bStaticOccupied = false;
-    this.timeOrder = null;
+    this.d = data;
     this.name = name;
   }
 
@@ -213,40 +221,24 @@ public class EventWithDst extends EventObject
   /**Creates an event as static or dynamic object for usage.  
    * @param name of the event used only for debug.
    * @param source Source of the event. 
-   * @param consumer If null then the event is not occupied, especially the {@link #dateCreation()} 
-   *   is set to 0. Use {@link #occupy(EventSource, boolean)} before usage. 
-   *   That is for a static instance.
+   * @param consumer If null then the event should be occupied before usage.
+   *   If given {@link #occupy(EventSource, boolean)} is not necessary for usage but possible.
    * @param thread an optional thread to store the event in an event queue, maybe null.
+   *   If null but the {@link EventConsumer#evThread()} returns not null, it is used.
+   *   It means the {@link EventConsumer} can decide about the event thread.
+   *   But this argument is used if given.
    */
-  public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread) {
-    this(name, null, source, consumer, evThread);
-  }
-  
-  public EventWithDst(String name, EventTimerThread_ifc timerThread, EventSource source, EventConsumer consumer, EventThread_ifc evThread){
-    super(source == null ? timerThread ==null ? EventSource.nullSource : new TimeOrder(name, timerThread, null) : source);   //EventObject does not allow null pointer.
-    this.name = name;                                      // if timerThread is given and source==null, the TimeEntry is the source.
-    if(timerThread ==null) {
-      this.timeOrder = null;                               // not timeEntry if timerThread ==null
-    } else if (source == null ){
-      this.timeOrder = (TimeOrder) getSource();            // the timeEntry and the source of event are identically
-      this.timeOrder.setEvent(this);
-    } else {                                               // should have an extra timeEntry
-      this.timeOrder = new TimeOrder(name, timerThread, this);
-    }
-    if(consumer == null) {                                 // no consumer, occupy should be called in application.
-      this.dateCreation.set(0);
-      this.bStaticOccupied = false;
-    } else {
-      DateOrder date = DateOrder.get();                    // consumer given, occupy unnecessary. 
-      this.dateCreation.set(date.date);                    // but relinquish cleans the dataCreation.
-      this.dateOrder = date.order;
-      this.bStaticOccupied = true;
-    }
+  public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, Payload d){
+    super(source == null ? EventSource.nullSource : source);   //EventObject does not allow null pointer.
+    this.name = name;
     this.evDst = consumer;                                 //maybe null if occupy is intent to call.  
-    this.evDstThread = evThread;                           //maybe null
+    @SuppressWarnings("resource") 
+    EventThread_ifc thread = (consumer == null ? null : consumer.evThread());
+    this.evDstThread = evThread != null ? evThread : thread;                           //maybe null
+    this.d = d;
   }
   
-  
+
  
   public void setOrderId(long order){ this.orderId = order; }
   
@@ -259,8 +251,8 @@ public class EventWithDst extends EventObject
    */
   @Deprecated public void XXXdonotRelinquish(){ 
     //if(stateOfEvent !='r') throw new IllegalStateException("donotRelinquish() should be called only in a processEvent-routine.");
-    if(stateOfEvent == 'r'){
-      stateOfEvent = 'p';  //secondary queued. donotRelinquish = true;
+    if(this.stateOfEvent == 'r'){
+      this.stateOfEvent = 'p';  //secondary queued. donotRelinquish = true;
     }
   }
   
@@ -271,6 +263,8 @@ public class EventWithDst extends EventObject
    */
   public EventConsumer evDst() { return this.evDst; }
   
+  
+  public Payload data() { return this.d; }
   
   /**Returns the time stamp of creation or occupying the event.
    * @return null if the event is not occupied, a free static object.
@@ -311,18 +305,20 @@ public class EventWithDst extends EventObject
    * @param source Source instance able to use for monitoring the event life cycle. null is admissible.
    * @param dst The destination instance which should receive this event.
    *   If null, the dst given by constructor or the last given dst is used.
-   * @param thread A thread which queues the event. If null and dst !=null then the dst method 
-   *   {@link EventConsumer#processEvent(EventMsg)} is invoked in the current thread. If dst ==null this parameter is not used.
+   * @param thread A thread which queues the event, stored in {@link #evDstThread} .
+   *   If null, then the given thread by constructor or the last given thread is used.
+   *   If null and dst !=null then the {@link EventConsumer#evThread()} is used, but it can be also null. 
+   *   If the {@link #evDstThread} remains null, then the event is used as callback,
+   *   the {@link EventConsumer#processEvent(EventObject)} is immediately called on {@link #sendEvent()}.
    * @param expect If true and the event is not able to occupy, then the method {@link EventSource#notifyShouldOccupyButInUse()} 
    *   from the given source is invoked. It may cause an exception for example. 
    * @return true if the event instance is occupied and ready to use.
    */
   public boolean occupy(EventSource source, EventConsumer dst, EventThread_ifc thread, boolean expect){ 
-    assert(!this.bStaticOccupied);
     DateOrder date = DateOrder.get();
-    if(dateCreation.compareAndSet(0, date.date)){
+    if(this.dateCreation.compareAndSet(0, date.date)){
       cleanData();                                         // cleanDate overridden in derived events, clean.
-      dateOrder = date.order;
+      this.dateOrder = date.order;
       if(source !=null) {
         super.source = source;  //don't use null pointer.
       } else if( super.source == null) {
@@ -332,7 +328,11 @@ public class EventWithDst extends EventObject
       //if(refData !=null || dst !=null) { this.refData = refData; }
       if(dst != null) { 
         this.evDst = dst;
-        this.evDstThread = thread;
+        if(thread == null) {
+          this.evDstThread = dst.evThread();     // dst.evThread may also be null, then immediately forward the event.
+        } else {
+          this.evDstThread = thread;
+        }
       }
       
       this.stateOfEvent = 'a';
@@ -362,14 +362,13 @@ public class EventWithDst extends EventObject
    * @return true if occupied, false if the other thread which should process the event hangs.
    */
   public boolean occupy(int timeout, EventSource evSrc, EventConsumer dst, EventThread_ifc thread){
-    assert(!this.bStaticOccupied);
     boolean bOk = occupy(evSrc, dst, thread, false);
     if(!bOk){
       synchronized(this){
-        bAwaitReserve = true;
+        this.bAwaitReserve = true;
         try{ wait(timeout); } catch(InterruptedException exc){ }
-        bAwaitReserve = false;
-        bOk = occupy(((EventSource)source), dst, thread, false);
+        this.bAwaitReserve = false;
+        bOk = occupy(((EventSource)this.source), dst, thread, false);
       }
     }
     return bOk;
@@ -402,11 +401,10 @@ public class EventWithDst extends EventObject
    * @return true if the event is occupied.
    */
   public boolean occupyRecall(EventSource source, EventConsumer dst, EventThread_ifc thread, boolean expect){ 
-    assert(!this.bStaticOccupied);
     boolean bOk = occupy(source, dst, thread, false);
-    if(!bOk && !this.bStaticOccupied){
-      if(evDstThread !=null){
-        bOk = evDstThread.removeFromQueue(this);
+    if(!bOk){
+      if(this.evDstThread !=null){
+        bOk = this.evDstThread.removeFromQueue(this);
         if(bOk){
           //it was in the queue, it means it is not in process.
           //therefore set it as consumed.
@@ -480,13 +478,12 @@ public class EventWithDst extends EventObject
    *   </ul> 
    */
   public int occupyRecall(int timeout, EventSource source, EventConsumer dst, EventThread_ifc thread, boolean expect){
-    assert(!this.bStaticOccupied);
     int ok = 0;
     boolean bOk = occupy(source, dst, thread, false);
     if(bOk){ ok = 1; }
     if(!bOk){
-      if(evDstThread !=null){
-        bOk = evDstThread.removeFromQueue(this);
+      if(this.evDstThread !=null){
+        bOk = this.evDstThread.removeFromQueue(this);
         if(bOk){
           //it was in the queue, it means it is not in process.
           //therefore set it as consumed.
@@ -499,21 +496,21 @@ public class EventWithDst extends EventObject
     if(!bOk){
       long time1 = System.currentTimeMillis();
       synchronized(this){
-        bAwaitReserve = true;
+        this.bAwaitReserve = true;
         try{ wait(timeout); } catch(InterruptedException exc){ }
-        bAwaitReserve = false;
+        this.bAwaitReserve = false;
       }//synchronized
       bOk = occupy(source, dst, thread, false);
       if(bOk){ ok = 1; }
       else {
         synchronized(this){
-          long timeCreation = dateCreation.get();
+          long timeCreation = this.dateCreation.get();
           if(!bOk && timeCreation !=0 && (timeCreation - time1) < 0) {
             //the event is not occupied newly. It means it hangs usual because an exception which has prevented relinquish():
             //force new usage:
             //donotRelinquish = false;
-            bAwaitReserve = false;
-            stateOfEvent = 'r';
+            this.bAwaitReserve = false;
+            this.stateOfEvent = 'r';
             relinquish();
             bOk = occupy(source, dst, thread, false);
           }
@@ -567,6 +564,9 @@ public class EventWithDst extends EventObject
    */
   public EventConsumer getDst(){ return this.evDst; }
   
+  
+  public EventWithDst<PayloadBack, Payload> getOpponent ( ){ return this.evBack;}
+  
   /**Try to remove the event from the queue of the destination thread.
    * @return true if it was in the queue and it is removed successfully.
    *   false if the event was not found in the queue or the destination thread is not set.
@@ -600,15 +600,9 @@ public class EventWithDst extends EventObject
         source1.notifyRelinquished(this.ctConsumed);
       }
     }
-    if(!this.bStaticOccupied) {                  // do not change evDst and source if statically occupied.
-      //this.stateOfEvent= 'a';
-      //data1 = data2 = 0;
-      this.evDst = null;                         // this is used to check occupied
-      super.source = EventSource.nullSource;
-      if(this.bAwaitReserve){                    // any thread waits for this event ...
-        synchronized(this){ notify(); }
-      }
-      this.stateOfEvent = 'f';                   // event is "free"
+    this.stateOfEvent = 'f';                   // event is "free"
+    if(this.bAwaitReserve){                    // any thread waits for this event ...
+      synchronized(this){ notify(); }
     }
   }
 
@@ -639,33 +633,37 @@ public class EventWithDst extends EventObject
    * then it should be evaluated and freed by the application. This is decided with the return value of the processEvent operation.
    * <br>The {@link #evDst()} must no == null, should be given by construction with {@link EventWithDst#EventWithDst(String, EventSource, EventConsumer, EventThread_ifc)}
    * or by {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}. If it is null, an exception is thrown.
-   * @return true
+   * @return true if the event is already processed, false if it is stored in a queue, not processed yet.
    */
   public boolean sendEvent ( ) {
-    if(this.evDst == null) throw new IllegalArgumentException("event should have a destination");
-    if(this.dateCreation.get()==0) {
-      DateOrder date = DateOrder.get();
-      this.dateCreation.set(date.date);
-      this.dateOrder = date.order;
+    assert(this.evDst !=null);
+    //if(this.evDst == null) throw new IllegalArgumentException("event should have a destination");
+    if(this.evDstThread !=null){  //--------------- dstThread given, then
+      if(this.dateCreation.get()==0) {           // occupy the event afterwards
+        DateOrder date = DateOrder.get();
+        this.dateCreation.set(date.date);
+        this.dateOrder = date.order;
+      }
+      this.evDstThread.storeEvent(this);         // and store in queue
+      return false;
+    } else {                  //------------------- or
+      processEvent();                            // it is a callback, immediately
+      return true;
     }
-    if(this.evDstThread !=null){
-      this.evDstThread.storeEvent(this);
-    } else {
-      processEvent();
-    }
-    return true;
   }
 
   
   
-  /**This operation is only called if the #evDstThread is not set. For local events.
-   * package private*/ 
-  void processEvent() {
+  /**Applies the event to its {@link #evDst()} to processes it (EventConsumer{@link #processEvent()}) 
+   * On {@link #sendEvent()} this operation is called immediately if the #evDstThread is not set. For callback like events.
+   * This operation should not be called immediately from the user, call {@link #sendEvent()}, 
+   * but it is equal to {@link #sendEvent()} if no thread is given. 
+   * It is called from {@link EventTimerThread} and it is intent to call from other event queue organizations.
+   */ 
+  public int processEvent() {
     int retProcess = 0;  //check doNotRelinquish, relinquishes it in case of exception too!
     //System.out.println(LogMessage.timeCurr("processEvent:") + this.name);
     try{
-      this.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
-      notifyDequeued();
       retProcess = this.evDst.processEvent(this);  //may set bit doNotRelinquish
     } catch(Exception exc) {
       CharSequence excMsg = ExcUtil.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);
@@ -675,11 +673,7 @@ public class EventWithDst extends EventObject
       }
       retProcess |= EventConsumer.mEventConsumerException;
     }
-    //if(stateOfEvent == 'r') {
-    if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0 && !this.bStaticOccupied) {
-      //Note: relinquishes it in case of exception too!
-      relinquish();
-    }
+    return retProcess;
   }
   
   
@@ -707,7 +701,7 @@ public class EventWithDst extends EventObject
 
   /**Informs the {@link EventSource#notifyDequeued()}, invoked on dequeuing.  */
   /*package private*/ void notifyDequeued(){
-    EventSource source1 = ((EventSource)source);
+    EventSource source1 = ((EventSource)this.source);
     if(source1 !=null){
       source1.notifyDequeued();
     }
@@ -722,7 +716,7 @@ public class EventWithDst extends EventObject
   }*/
 
   private void notifyShouldOccupyButInUse(){
-    EventSource source1 = ((EventSource)source);
+    EventSource source1 = ((EventSource)this.source);
     if(source1 !=null){
       source1.notifyShouldOccupyButInUse();
     }

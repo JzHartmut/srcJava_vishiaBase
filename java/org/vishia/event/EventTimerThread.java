@@ -89,6 +89,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Version, license and history.
    * <ul>
+   * <li>2023-02-09 new: regard {@link TimeOrder#bHoldTimeorder} to change data in time order, prevent processing.
    * <li>2023-02-09 Operations with TimeOrder now synchronized, some fine refactoring.  
    * <li>2023-02-06 An inheritance of this class is used for {@link org.vishia.gral.base.GralMng} as graphic thread.
    *   Hence some stuff is now protected, only a few operations are overridden, see there. 
@@ -130,7 +131,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * 
    * 
    */
-  public final static String version = "2023-02-05";
+  public final static String version = "2023-03-12";
 
   
   
@@ -395,30 +396,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
 
   
   
-  /**Applies an event from the queue to the destination in the event thread. 
-   * This method should be overridden if other events then {@link EventCmdtype} are used because the destination of an event
-   * is not defined for a java.util.EventObject. Therefore it should be defined in a user-specific way in the overridden method.
-   * This method is proper for events of type {@link EventCmdtype} which knows their destination.
-   * @param ev
-   */
-  private final void applyEvent ( EventObject ev) {
-    if(ev instanceof EventWithDst){
-      EventWithDst event = (EventWithDst) ev;
-      //System.out.println(LogMessage.timeCurr("applyEvent:") + event.name);
-      event.processEvent();
-    }
-    else if(this.eventProcessor !=null) {
-      this.eventProcessor.processEvent(ev);
-    } 
-    else {
-      throw new IllegalStateException("destination for event execution is unknown. Use setStdEventProcessor(...). ");
-    }
-  }
-  
-  
-  
-
-  /**
+  /**Applies an events from the queue to the destination in the event thread. 
    * @return true if any action was done because an event was found. false if the queue is empty.
    */
   private boolean checkEventAndRun()
@@ -437,7 +415,26 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
           }
         }
         if(stateThreadTimer == 'b'){
-          applyEvent(ev);
+          if(ev instanceof EventWithDst){
+            EventWithDst event = (EventWithDst) ev;
+            //System.out.println(LogMessage.timeCurr("applyEvent:") + event.name);
+            event.stateOfEvent = 'r';  //it is possible that the processEvent sets donotRelinquish to true.
+            event.notifyDequeued();
+            int retProcess = event.processEvent();
+            //if(stateOfEvent == 'r') {
+            //--------------------------------------------- relinquish anytime except special cases.
+            if( (retProcess & EventConsumer.mEventDonotRelinquish) ==0) { //&& !this.bStaticOccupied) {
+              //Note: relinquishes it in case of exception in event execution too!
+              event.relinquish();
+            }
+
+          }
+          else if(this.eventProcessor !=null) {
+            this.eventProcessor.processEvent(ev);
+          } 
+          else {
+            throw new IllegalStateException("destination for event execution is unknown. Use setStdEventProcessor(...). ");
+          }
           processedOne = true;
         }
       }
@@ -479,10 +476,14 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
         order = iter.next();
         long delay = order.timeExecution - timeNow; 
         if((delay) < 3){                                   //if it is expired in <=2 milliseconds, execute now.
-          iter.remove();
-          order.timeExecutionLatest = 0;                   // Note: set first before timeExecution = 0. Thread safety.
-          order.timeExecution = 0;                         // may force newly adding if requested. Before execution itself!
-          this.queueOrdersToExecute.offer(order);
+          synchronized(this) {
+            if(!order.bHoldTimeorder) {
+              iter.remove();
+              order.timeExecutionLatest = 0;                   // Note: set first before timeExecution = 0. Thread safety.
+              order.timeExecution = 0;                         // may force newly adding if requested. Before execution itself!
+              this.queueOrdersToExecute.offer(order);
+            }
+          }
         }
         else {
           //not yet to proceed

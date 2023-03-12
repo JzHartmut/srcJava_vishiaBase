@@ -77,7 +77,7 @@ import org.vishia.util.InfoAppend;
  * The timer manager can manage any number of time orders.
  * It sends an {@link EventTimerMng.TimeEvent} to this StateMachine it the time is expired.
  * <br><br>
- * The state machine can be animated using {@link org.vishia.states.StateMachine#applyEvent(EventMsg2)} with or without events
+ * The state machine can be animated using {@link org.vishia.states.StateMachine#processEvent(EventObject)} with or without events
  * by given a null argument, for example cyclically if an {@link EventTimerThread} is not used.
  * <br><br>
  * 
@@ -235,7 +235,7 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
     this.timerThread = timerThread;
     //this.theTimer = timer;
     if(evThread !=null){
-      triggerEvent = new EventWithDst(name + "-trigger", null, this, evThread);
+      triggerEvent = new EventWithDst(name + "-trigger", null, this, evThread, null);
     } else {
       triggerEvent = null;
     }
@@ -300,7 +300,10 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
     this.timerThread = null;
   }
   
-  
+   @Override public final EventThread_ifc evThread () {
+     return this.theThread;
+   }
+
 
   /**This method can be overridden if applying an event should be debugged
    * or for example logged in the derived class. It should be done with the pattern:

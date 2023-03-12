@@ -1,18 +1,18 @@
 package org.vishia.fileRemote;
 
-import org.vishia.event.EventCmdtype;
-import org.vishia.event.EventConsumer;
-import org.vishia.event.EventSource;
-import org.vishia.event.TimeOrder;
-import org.vishia.event.EventTimerThread_ifc;
-import org.vishia.event.EventWithDst;
-import org.vishia.states.StateMachine;
+import java.io.Serializable;
 
-/**This TimeOrder is used for progress showing in the callers area. It should be extended from the application
- * to start any showing process for the progress.  The extension should override the method {@link #executeOrder()} from the super class. 
+//import org.vishia.event.EventCmdtype;
+//import org.vishia.event.EventCmdtypeWithBackEvent;
+import org.vishia.event.EventConsumer;
+import org.vishia.event.TimeOrder;
+import org.vishia.event.EventWithDst;
+
+/**This are the data for an {@link EventWithDst} for FileRemote actions.
+ * Hint: the {@link EventConsumer} evaluating this data repectively for the evBack of file operations should be
+ * an derived instance of {@link FileRemoteProgress}.
  */
-@SuppressWarnings("synthetic-access")  
-public class FileRemoteProgressEvent  extends EventWithDst 
+public class FileRemoteProgressEvData implements Serializable
 {
 
   /**Version, license and history.
@@ -89,7 +89,6 @@ public class FileRemoteProgressEvent  extends EventWithDst
   
   //private final EventSource srcAnswer;
   
-  protected int delay;
 
   /**super constructor:
    * @param name Only for toString(), debug
@@ -97,23 +96,18 @@ public class FileRemoteProgressEvent  extends EventWithDst
    *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
    * @param delay The delay to start the oder execution after #show()
    */
-  public FileRemoteProgressEvent(String name, EventTimerThread_ifc timerThread, EventSource srcAnswer
-      , EventConsumer evConsumer, int delay){ 
-    super(name, timerThread, null, evConsumer, timerThread);  //EventWithDst, eventSource is TimeOrder
-    super.timeOrder.setCycle(1, delay);
-//    this.srcAnswer = srcAnswer;
-    this.delay = delay;
+  public FileRemoteProgressEvData ( ){ 
+    //super(name, timerThread, null, evConsumer, timerThread, eventWalker);
   }
   
   
   /**Current processed file. */
   public FileRemote currFile, currDir;
   
-  /**Number of available directories and files, filled on check. */
-  public int nrDirAvail, nrFilesAvail;
+  public long dateCreate, dateLastAccess;
   
   /**Processed bytes. */
-  public long nrofBytesAllAvail, nrofBytesAll, nrofBytesFile, nrofBytesFileCopied;
+  public long nrofBytesAll, nrofBytesFile, nrofBytesFileCopied;
   
   /**Number of processed directories and files independent of mark situation,
    * but don't count directories which are not entered. */
@@ -128,14 +122,14 @@ public class FileRemoteProgressEvent  extends EventWithDst
   /**Set to not null if 
    * 
    */
-  private String sError;
+  public String sError;
   
   /**Command for asking or showing somewhat from executer to application. */
   private FileRemote.CallbackCmd quest;
   
   
   /**Answer from Application to Executer. */
-  private FileRemote.Cmd answer;
+  public FileRemote.Cmd answer;
   
 //  private FileRemote.Cmd cmd;
   
@@ -165,42 +159,19 @@ public class FileRemoteProgressEvent  extends EventWithDst
   
   
   public void clear() {
-    this.nrDirAvail = 0;
     this.nrDirProcessed = 0;
     this.nrDirVisited = 0;
     this.nrFilesVisited = 0;
-    this.nrFilesAvail = 0;
     this.nrofFilesSelected = 0;
     this.nrofFilesMarked = 0;
-    this.nrofBytesAllAvail = 0;
     this.nrofBytesAll = 0;
     this.nrofBytesFile = 0;
     this.nrofBytesFileCopied = 0;
     this.bDone = false;
     this.sError = null;
-    this.timeOrder.clear();
+//    this.timeOrder.clear();
   }
 
-  /**This operation moves the gathered number of to the available numbers.
-   * This is the necessary operation between prepare or mark,
-   * and the true action (for example copy).
-   * With that the progress in percent (proportional) can be shown).
-   */
-  public void setAvailClear() {
-    this.nrDirAvail = this.nrDirProcessed;
-    this.nrDirProcessed = 0;
-    this.nrDirVisited = 0;
-    this.nrFilesVisited = 0;
-    this.nrFilesAvail = this.nrofFilesSelected;
-    this.nrofFilesMarked = 0;
-    this.nrofFilesSelected = 0;
-    this.nrofBytesAllAvail = this.nrofBytesAll;
-    this.nrofBytesAll = 0;
-    this.nrofBytesFile = 0;
-    this.nrofBytesFileCopied = 0;
-    this.bDone = false;
-  }
-  
   
   /**Set the event to the done() state, all is done maybe with error.
    * @param timeOrderFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
@@ -208,11 +179,13 @@ public class FileRemoteProgressEvent  extends EventWithDst
    */
   public void done(int timeOrderFinish, String sError) {
     this.sError = sError;
-    this.timeOrder.notifyConsumed(timeOrderFinish);
-    this.timeOrder.clear();
-    this.timeOrder.deactivate();                      // removes from a timer queue if queued
+//    if(this.timeOrder !=null) {
+//      this.timeOrder.notifyConsumed(timeOrderFinish);
+//      this.timeOrder.clear();
+//      this.timeOrder.deactivate();                      // removes from a timer queue if queued
+//    }
     this.bDone = true;                 // activates the same thread as after activate, but yet with done.
-    this.sendEvent();
+//    this.sendEvent();
     //this.timeOrder.activate(0);                 // activate immediately.
   }
   
@@ -225,19 +198,19 @@ public class FileRemoteProgressEvent  extends EventWithDst
    * @param quest the quest to the application.
    * @return the given answer from the application. The stored {@link #answer()} is deleted to prevent twice usage.
    */
-  public synchronized final FileRemote.Cmd setQuest ( FileRemote.CallbackCmd quest ) {
-    this.quest = quest;
-    this.answer = FileRemote.Cmd.noCmd;  // the answer cannot be given yet.
-    do {
-      this.bQuest = true;
-      try { this.wait(10000); } catch(InterruptedException exc) {}
-      this.bQuest = false;
-    } while( this.answer == FileRemote.Cmd.noCmd);
-    FileRemote.Cmd answer = this.answer;
-    this.answer =  FileRemote.Cmd.noCmd;  
-    return answer;                                         // return the given answer from application
-  }
-  
+//  public synchronized final FileRemote.Cmd setQuest ( FileRemote.CallbackCmd quest ) {
+//    this.quest = quest;
+//    this.answer = FileRemote.Cmd.noCmd;  // the answer cannot be given yet.
+//    do {
+//      this.bQuest = true;
+//      try { this.wait(10000); } catch(InterruptedException exc) {}
+//      this.bQuest = false;
+//    } while( this.answer == FileRemote.Cmd.noCmd);
+//    FileRemote.Cmd answer = this.answer;
+//    this.answer =  FileRemote.Cmd.noCmd;  
+//    return answer;                                         // return the given answer from application
+//  }
+//  
   
   /**This operation should be called by the application if a {@link #quest()} is detected.
    * If the executer waits then it will be notified.

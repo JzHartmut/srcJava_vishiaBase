@@ -118,15 +118,22 @@ public class FileMark extends SelectMask
   public static final int cmpFileDifferences = 0x20000000;
 
   /**This is not used for mark, only for a mark command. 
+   * It means if this bit is set: reset instead set of a mark */
+  public static final int resetMark = 0x80000000;
+  
+  /**This is not used for mark, used for selection. 
    * It means if this bit is set: OR relation for selection together with a select mask.
    * If this bit is not set, it is a AND relation with the select mask.
    */
   public static final int orWithSelectString = 0x40000000;
   
-  /**This is not used for mark, only for a mark command. 
-   * It means if this bit is set: reset instead set of a mark */
-  public static final int resetMark = 0x80000000;
+  /**This is not used for mark, used for selection. 
+   * If this bit is set: symbolic links of directories are not selected, should be ignored.
+   * This is especially important for copy and compare operations etc.
+   */
+  public static final int ignoreSymbolicLinks = 0x80000000;
   
+  public static final int mSelectMarkBits = 0x3fffffff;
   
   
   protected final FileRemote itsFile;
@@ -173,10 +180,11 @@ public class FileMark extends SelectMask
     return selectOld;
   }
 
-  @Override public int setMarked(int mask, Object data)
-  { if(itsFile.getName().equals("ReleaseNotes.topic"))
+  @Override public int setMarked(int mask, Object data) { 
+    if(itsFile.getName().equals("ReleaseNotes.topic"))
       Debugutil.stop();
-  
+    if(mask ==2)
+      Debugutil.stop();
     int selectOld = super.setMarked(mask, null);
     //FileRemote file = (FileRemote)data;
     if(itsFile.isDirectory()){
@@ -256,7 +264,9 @@ public class FileMark extends SelectMask
   }
   
   
-  
+  @Override public String toString() {
+    return Integer.toHexString(super.selectMask) + (this.nrofFilesSelected ==0? "" : " files=" + this.nrofFilesSelected);
+  }
   
   
 }

@@ -9,6 +9,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.event.EventWithDst;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.SortedTreeWalkerCallback;
@@ -17,7 +18,7 @@ import org.vishia.util.StringFunctions;
 
 /**This class contains the callback operations used for 
  * {@link FileRemoteAccessor#walkFileTreeCheck(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
- * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteProgressEvent)}.
+ * to copy the content of a directory tree called in {@link FileRemote#copyDirTreeTo(FileRemote, int, String, int, FileRemoteProgressEvData)}.
  * 
  * @author Hartmut Schorrig
  *
@@ -68,7 +69,8 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
   //private final int zBasePath1;
   
   /**Event instance for user callback. */
-  private final FileRemoteProgressEvent timeOrderProgress;  //FileRemote.CallbackEvent evCallback;
+  private final EventWithDst<FileRemoteProgressEvData,?> evBack;
+  private final FileRemoteProgressEvData progress;  //FileRemote.CallbackEvent evCallback;
   
   private final FileRemoteWalkerCallback callbackUser;
   
@@ -85,9 +87,10 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
    * @param dirDst
    * @param evCallback maybe null, if given, this event will be sent to show the progression of the comparison
    */
-  FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  public FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
-    this.timeOrderProgress = timeOrderProgress;
+    this.evBack = evBack;
+    this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dirDst = dirDstStart;
   }
@@ -107,8 +110,8 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
     } else {
       String name = dir.getName();
       dirDst = FileRemote.getDir(dirDst.getPathChars() + "/" + name);
-      if(this.timeOrderProgress !=null) {
-        this.timeOrderProgress.currDir = dir;
+      if(this.progress !=null) {
+        this.progress.currDir = dir;
       }
     }
     return Result.cont;
@@ -134,11 +137,11 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
     OutputStream wr = null;
     try{
       long nrofBytesSum0 = 0;
-      if(this.timeOrderProgress !=null) {
-        this.timeOrderProgress.nrofBytesFile = file.length();
-        this.timeOrderProgress.nrofBytesFileCopied = 0;
-        //this.timeOrderProgress.nrFilesProcessed +=1;
-        //this.timeOrderProgress.currFile = file;
+      if(this.progress !=null) {
+        this.progress.nrofBytesFile = file.length();
+        this.progress.nrofBytesFileCopied = 0;
+        //this.progress.nrFilesProcessed +=1;
+        //this.progress.currFile = file;
       }
 
       inp = file.openInputStream(0);
@@ -150,8 +153,8 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
         while( (bytes = inp.read(this.buffer)) >0){
           wr.write(this.buffer, 0, bytes);
           sum += bytes;
-          if(this.timeOrderProgress !=null) {
-            this.timeOrderProgress.nrofBytesFileCopied = sum;
+          if(this.progress !=null) {
+            this.progress.nrofBytesFileCopied = sum;
           }
         }
         if(this.callbackUser !=null) {

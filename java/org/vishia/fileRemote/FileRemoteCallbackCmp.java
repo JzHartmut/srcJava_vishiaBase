@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.event.EventWithDst;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -22,7 +23,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   /**Version, history and license.
    * <ul>
-   * <li>2023-02-10 Hartmut new concept with the {@link FileRemoteProgressEvent}: remove <code>progress.show(...)</code>
+   * <li>2023-02-10 Hartmut new concept with the {@link FileRemoteProgressEvData}: remove <code>progress.show(...)</code>
    *   because it is called in the timer thread instead. Independent of continue the process here. 
    * <li>2016-12-20 Hartmut bugfix: {@link #readIgnoreComment(BufferedReader)}: The second line after //line is ignored too. In a rarely case
    *   it was the only one line which was different, and the comparison has failed. 
@@ -92,7 +93,14 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   private final int zBasePath1;
   
   /**Event instance for user callback. */
-  private final FileRemoteProgressEvent progress;  //FileRemote.CallbackEvent evCallback;
+  private final EventWithDst<FileRemoteProgressEvData,?> evBack;  //FileRemote.CallbackEvent evCallback;
+  
+  private final FileRemoteProgressEvData progress;
+  
+  /**Event to walk through the second tree.
+   * 
+   */
+  //private final FileRemoteWalkerEvent evWalker2;
   
   private final FileRemoteWalkerCallback callbackUser;
   
@@ -117,9 +125,11 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) { //FileRemote.CallbackEvent evCallback){
+  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
-    this.progress = timeOrderProgress;
+    //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
+    this.evBack = evBack;
+    this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dir1 = dir1; this.dir2 = dir2;
     basepath1 = FileSystem.normalizePath(dir1.getAbsolutePath()).toString();
@@ -151,7 +161,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
     if(dir2.device == null){
       dir2.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir2.getAbsolutePath());
     }
-    dir2.refreshPropertiesAndChildren();        
+    dir2.refreshPropertiesAndChildren(true, null);  //do it in this thread      
     
     //try{ 
     int markReset = FileMark.markRoot | FileMark.markDir | FileMark.markDir | FileMark.cmpAlone | FileMark.cmpContentEqual
@@ -189,7 +199,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
         dir2sub.resetMarked(FileMark.cmpAlone);
-        dir2sub.device.walkFileTree(dir2sub, true, true, 0, 0, null, 0, 1, callbackMarkSecondAlone, progress, false);
+        dir2sub.device.walkFileTree(dir2sub, true, true, 0, 0, null, 0, 1, callbackMarkSecondAlone, null, false);
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
         //waitfor
         //dir2sub.refreshPropertiesAndChildren(null);        
@@ -436,7 +446,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   @Override public void finished(FileRemote startDir)
   {
-    if(progress !=null){
+    if(this.evBack !=null) {
       progress.bDone = true; 
       //progress.show(FileRemote.CallbackCmd.done, null);
     }

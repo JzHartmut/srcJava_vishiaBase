@@ -3,13 +3,10 @@ package org.vishia.event;
 import java.util.EventObject;
 import org.vishia.states.StateSimple;   //only for comment
 
-/**This interface describe the consumer interface for events.
+/**This interface describe the access to consumers for events.
  * The class which implements this interface is able to get events for example from a common queue
  * and executes the {@link #processEvent(EventMsg)} method with the event.
  * <br>
- * Another thread can wait for execution of specific conditions on events.
- * The 
- * 
  * @author Hartmut Schorrig
  *
  */
@@ -17,6 +14,7 @@ public interface EventConsumer
 {
   /**Version, history and license
    * <ul>
+   * <li>2023-03-10 Hartmut new: {@link #evThread()} 
    * <li>2023-02-21 Hartmut new: {@link #awaitExecution(long)}
    * <li>2015-01-04 Hartmut chg: It is an abstract class instead an interface yet for new data, less effort for adaption.
    *   New method {@link #shouldRun} which does not need to override in all implementation.
@@ -59,8 +57,14 @@ public interface EventConsumer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20130511;
+  public static final String version = "2023-03-10";
 
+  
+  /**This operation should return that thread, which is associated to this consumer.
+   * @return null possible if no specific thread was associated.
+   */
+  EventThread_ifc evThread();
+  
   
   /**This routine should be overwritten from the user to processes an event. 
    * The return value of the users implementation can contain the following bits:

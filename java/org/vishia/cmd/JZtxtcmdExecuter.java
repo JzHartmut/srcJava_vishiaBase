@@ -3124,8 +3124,8 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
         String sMask = ssrc.substring(posSep +1);
         FileRemote dirSrc = FileRemote.getDir(sDirSrc);
         FileRemote dirDst = FileRemote.getDir(sdst);
-        //====>
-        dirSrc.copyDirTreeTo(dirDst, 0, 0, 0, sMask, 0, null, null);
+        //======>>>>                           // copy in this thread
+        dirSrc.copyDirTreeTo(true, dirDst, 0, 0, 0, sMask, 0, null, null);
         //
       } else {
         File src = FileFunctions.isAbsolutePath(ssrc) ? FileFunctions.newFile(ssrc.toString()) : new File(currdir, ssrc.toString());

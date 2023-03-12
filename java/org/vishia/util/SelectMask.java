@@ -46,6 +46,11 @@ public class SelectMask implements MarkMask_ifc
   public static final int version = 20130428;
 
   
+  /**The mask with some mark bits. 
+   * See {@link #getMark()}
+   * See {@link #setMarked(int, Object)}
+   * 
+   */
   protected int selectMask;
   
   @Override public int getMark()

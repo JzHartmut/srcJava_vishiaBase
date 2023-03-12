@@ -11,14 +11,19 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.EventObject;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-import org.vishia.event.EventCmdtypeWithBackEvent;
-import org.vishia.fileRemote.FileRemote.CallbackEvent;
+//import org.vishia.event.EventCmdtypeWithBackEvent;
+import org.vishia.event.EventConsumer;
+import org.vishia.event.EventSource;
+import org.vishia.event.EventThread_ifc;
+import org.vishia.event.EventWithDst;
+import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemote.Cmd;
 import org.vishia.fileRemote.FileRemote.CmdEvent;
 import org.vishia.util.Assert;
@@ -72,6 +77,15 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   private static FileAccessZip instance;
   
   
+  
+  
+  public FileAccessZip ( ) { //String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread) {
+    
+    //super(name, source, consumer, evThread);
+  }
+
+
+
   /**Returns the singleton instance of this class.
    * Note: The instance will be created and the thread will be started if this routine was called firstly.
    * @return The singleton instance.
@@ -194,15 +208,15 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   }
   
   
-  @Override public void refreshFileProperties(FileRemote file, FileRemote.CallbackEvent callback) {
+  @Override public void refreshFileProperties(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     // TODO Auto-generated method stub
-    if(callback !=null){
-      callback.sendEvent(FileRemote.CallbackCmd.done);
+    if(evBack !=null){
+    //  callback.sendEvent(FileRemote.CallbackCmd.done);
     }
   }
 
   //@Override 
-  public void XXXrefreshFilePropertiesAndChildren(FileRemote file, FileRemote.CallbackEvent callback) {
+  public void XXXrefreshFilePropertiesAndChildren(FileRemote file, FileRemoteProgressEvData callback) {
     FileZipData data = (FileZipData)file.oFile;
     int zChildren = data == null ? 0 : data.childrenZip == null ? 0 : (data.childrenZip.hasChildren() ? 0
         : data.childrenZip.nrofChildren())
@@ -220,7 +234,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
       } }
     }
     if(callback !=null){
-      callback.sendEvent(FileRemote.CallbackCmd.done);
+//      callback.sendEvent(FileRemote.CallbackCmd.done);
     }
   }
 
@@ -253,33 +267,33 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   
   
   
-  @Override public boolean createNewFile(FileRemote file, FileRemote.CallbackEvent callback) throws IOException{
-    if(callback !=null){
-      callback.sendEvent(FileRemote.CallbackCmd.errorDelete);
+  @Override public boolean createNewFile(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack) throws IOException{
+    if(evBack !=null){
+//      callback.sendEvent(FileRemote.CallbackCmd.errorDelete);
     }
     return false;   // not implement: changing of file.
   }
 
 
-  @Override public boolean mkdir(FileRemote file, boolean subdirs, FileRemote.CallbackEvent evback){
+  @Override public boolean mkdir(FileRemote file, boolean subdirs, EventWithDst<FileRemoteProgressEvData,?> evBack){
     return false;
   }
   
-  @Override public boolean delete(FileRemote file, FileRemote.CallbackEvent callback){
-    if(callback !=null){
-      callback.sendEvent(FileRemote.CallbackCmd.errorDelete);
+  @Override public boolean delete(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack){
+    if(evBack !=null){
+//      callback.sendEvent(FileRemote.CallbackCmd.errorDelete);
     }
     return false;   // not implement: changing of file.
   }
   
   
-  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress)
+  @Override public void copyChecked(FileRemote fileSrc, String pathDst, String nameModification, int mode, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvData timeOrderProgress)
   {
     //TODO
   }
 
   
-  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvent timeOrderProgress) {
+  @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvData timeOrderProgress) {
     //TODO
   }
 
@@ -358,9 +372,9 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   }
 
   
-  @Override public FileRemote.CmdEvent prepareCmdEvent(int timeout, EventCmdtypeWithBackEvent<?, FileRemote.CmdEvent> evBack){
-    return null; //TODO
-  }
+//  @Override public FileRemote.CmdEvent prepareCmdEvent(int timeout, EventCmdtypeWithBackEvent<?, FileRemote.CmdEvent> evBack){
+//    return null; //TODO
+//  }
 
 
   
@@ -445,7 +459,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   @Override
   public void walkFileTree(FileRemote file, boolean bWait, boolean bRefreshChildren, int markSet, int markSetDir
       , String sMask, long bMarkCheck
-      , int depth, FileRemoteWalkerCallback callback, FileRemoteProgressEvent progress, boolean debugOut)
+      , int depth, FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut)
   {
     // TODO Auto-generated method stub
     
@@ -462,7 +476,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
 
-  @Override public String copyFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
+  @Override public String copyFile ( FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack ) {
     // TODO Auto-generated method stub
     
     return "not implemented";
@@ -470,7 +484,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
 
-  @Override public String moveFile ( FileRemote src, FileRemote dst, CallbackEvent callback ) {
+  @Override public String moveFile ( FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack ) {
     // TODO Auto-generated method stub
     return "not implemented";
   }
@@ -478,6 +492,34 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
   @Override public void activate () {
+    // TODO Auto-generated method stub
+    
+  }
+
+
+
+  @Override public EventThread_ifc evThread () {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+
+  @Override public int processEvent ( EventObject ev ) {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+
+  @Override public boolean awaitExecution ( long timeout, boolean clearDone ) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+
+
+  @Override public void cmd ( boolean bWait,  CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack ) {
     // TODO Auto-generated method stub
     
   }
