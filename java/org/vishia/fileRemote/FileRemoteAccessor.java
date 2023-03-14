@@ -23,12 +23,14 @@ import org.vishia.event.EventWithDst;
  * @author Hartmut Schorrig
  *
  */
-public abstract class FileRemoteAccessor implements Closeable, EventConsumer 
+public abstract class FileRemoteAccessor implements EventConsumer 
 {
   private static final long serialVersionUID = 1589913596618865454L;
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-03-15 Hartmut chg: no more derived from Closeable, instead {@link #close()} defined here,
+   *   because there are anytime again unnecessary warnings "resource" on access to this instance.  
    * <li>2012-05-30 Hartmut new: {@link #openOutputStream(FileRemote, long)}
    *   Note: it may be that the {@link #openRead(FileRemote, long)} and {@link #openWrite(FileRemote, long)}
    *   is not proper for some requirements, working with the traditional streams may be better.
@@ -96,6 +98,15 @@ public abstract class FileRemoteAccessor implements Closeable, EventConsumer
   public abstract void activate();
   
   
+  public abstract void close();
+  
+  /**Returns a unique absolute path for the file regarding maybe tmp, home, environment variables etc.
+   * @param path given path
+   * @return path to get the file.
+   */
+  public abstract CharSequence completeFilePath(CharSequence path);
+  
+  
   /**Gets the properties of the file from the physical file.
    * @param file the destination file object.
    * @param callback If null then the method should access the file system immediately in this thread.
@@ -111,6 +122,20 @@ public abstract class FileRemoteAccessor implements Closeable, EventConsumer
   public abstract void refreshFileProperties(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack);
 
   
+  /**Common form of a command with the file.
+   * @param bWait true then wait for fulfill. If it is a local file (depends on {@link FileRemote#device()},
+   *   then the execution is immediately done in the same thread.
+   *   If it is especially a file on a remote device only able to reach via communication 
+   *   ( for example on an embedded device), the operation should wait for success.
+   * @param co Command description. It is the payload of an command event. 
+   * @param evBack prepared event for back information or also for progress.
+   *   The event knows a destination where the back event is processed. 
+   *   If this argument is null, no back information will be sent. This is sensible if bWait is true,
+   *   and if the caller can check what is happen. 
+   *   Hint: Usual an instance of {@link FileRemoteProgress} can be used to execute the event, 
+   *   and also to wait for success on user level.
+   * @since 2023-03, the new concept.  
+   */
   public abstract void cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   

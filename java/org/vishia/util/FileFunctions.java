@@ -50,6 +50,7 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-03-15 Hartmut enhancements on {@link #absolutePath(String, File)}. 
    * <li>2023-01-25 Hartmut new {@link WildcardFilter} now in test, was never used before.  
    * <li>2022-01-18 Hartmut new {@link #newFile(String)} regards System.getProperty("user.dir") set by change dir in {@link org.vishia.jztxtcmd.JZtxtcmd}.
    *   should be used overall instead new File(String).
@@ -1115,9 +1116,12 @@ public class FileFunctions {
    * The resulting path may start with
    * <ul>
    * <li>"~/" - then the home dir is replaced. The home dir is the string 
-   *     containing in the HOME environment variable. This style of notification is usual in Linux/Unix
-   * <li>"/tmp/ - this is the TMP directory for Linux and shell scripts in windows.
+   *     containing in the HOME environment variable, or if not found 
+   *     in HOMEDRIVE/HOMEPATH especially for windows. 
+   *     This style of notation is usable in Linux/Unix as also in Windows.
+   * <li>"/tmp/ - use the TMP directory for Linux and shell scripts in windows.
    *    Then TMP or TEMP is searched as environment variable on windows to replace "/tmp/"
+   *    If TMP or TEMP is not found then keep /tmp/, proper for LINUX.
    * <li>not starting with "/", "\\", "D:/", "D:\\" wherby D is any drive letter,
    *   then a given currDir is used as anchor to build the absolute path for the file.
    *   <br>The currDir can refer to an unknown File, it is not tested here.
@@ -1144,14 +1148,22 @@ public class FileFunctions {
     String sFilePath1 = Arguments.replaceEnv(sFilePath);
     if(sFilePath1.startsWith("~")){ //The home directory
       String sHome = System.getenv("HOME");
+      if(sHome == null) {
+        sHome = System.getenv("HOMEDRIVE");    // it is for MS-Windows
+        if(sHome == null) { sHome = ""; }
+        String sHomePath = System.getenv("HOMEPATH");
+        if(sHomePath == null) { sHomePath = System.getenv("TMP");}
+        sHome += sHomePath;
+      }
       sAbs = sHome + sFilePath1.substring(1);
     } else if(sFilePath1.startsWith("/tmp/")){ //The standard tmp directory in linux
-      String sTmp = System.getenv("TMP");
-      if(sTmp==null) { sTmp = System.getenv("TEMP"); }  //on Linux may be not defined, it is ok.
-      if(sTmp !=null) {                        //use this instead "/tmp/
-        sAbs = sTmp + sFilePath1.substring(4); // add beginning from "/...."
-      } else {
-        sAbs = sFilePath1;    //with /tmp/ on start, it is for Linux.
+      String sTmp;
+      sTmp = System.getenv("TMP");               // may be also defined on linux, any TMP dir 
+      if(sTmp==null) { sTmp = System.getenv("TEMP"); }  
+      if(sTmp !=null) {                          //use this instead "/tmp/
+        sAbs = sTmp + sFilePath1.substring(4);   // add beginning from "/...."
+      } else {                                   // TMP or TEMP not found,  
+        sAbs = sFilePath1;                       // do not change  /tmp/ on start, it is for Linux.
       }
     } else if(!                                // check whether it is NOT an absolute path:
         (  sFilePath1.startsWith("/")   

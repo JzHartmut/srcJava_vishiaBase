@@ -97,6 +97,14 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
     return instance;
   }
   
+  /**Returns a unique absolute path for the file regarding maybe tmp, home, environment variables etc.
+   * It uses {@link FileFunctions#absolutePath(String, File)} to fulfill all.
+   * @param path given path
+   * @return path to get the file. 
+   */
+  @Override public CharSequence completeFilePath(CharSequence sPath) {
+    return sPath;
+  }
 
   
   /**It examines a zip file. Some {@link FileRemote} instances are created, one for each zip file entry. 
@@ -194,7 +202,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
   
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     // TODO Auto-generated method stub
     
   }

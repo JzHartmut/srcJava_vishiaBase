@@ -182,13 +182,15 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param sPath
      * @return
      */
-    FileRemoteAccessor selectFileRemoteAccessor(String sPath);
+    @SuppressWarnings("resource")
+    FileRemoteAccessor selectFileRemoteAccessor(CharSequence sPath);
   }
 
   private static final long serialVersionUID = -5568304770699633308L;
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-03-15 Hartmut chg: refactoring {@link #get(String)}, {@link #getFile(CharSequence, CharSequence)}, {@link #getDir(String)}
    * <li>2023-02-13 Hartmut chg: {@link #refreshAndMark(int, int, int, String, long, FileRemoteWalkerCallback, FileRemoteProgressEvData)}
    *   the depths should be unique as first or second argument, todo change the other operations adequate 
    * <li>2023-02-13 Hartmut new: {@link #getDirFileDst(String, FileRemote, String[])} usable for String given dir and mask
@@ -790,48 +792,21 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   public static FileRemote get(FileCluster cluster, String filePath ) {
-//    if(src.exists()){ fileProps |= mExist; 
-//      len = src.length();
-//      date = src.lastModified();
-//      if(src.isDirectory()){ fileProps |= mDirectory; }
-//      if(src.canRead()){ fileProps |= mCanRead | mCanReadGrp | mCanReadAny; }
-//      if(src.canWrite()){ fileProps |= mCanWrite | mCanWriteGrp | mCanWriteAny; }
-//      if(src.canExecute()){ fileProps |= mExecute | mExecuteGrp | mExecuteAny; }
-//      if(src.isHidden()){ fileProps |= mHidden; }
-//    }
-    final String sPath1;
-    if(!FileFunctions.isAbsolutePath(filePath)) {
-      String userDir = System.getProperty("user.dir");
-      sPath1 = userDir + "/" + filePath;
-    } else { sPath1 = filePath; }
-    final CharSequence sPath2 = FileFunctions.normalizePath(sPath1);
-    CharSequence[] dirName = FileFunctions.separateDirName(sPath2);
-    final FileRemote dir = cluster.getDir(dirName[0]);
-    if(dirName[1] !=null) {
-      final FileRemote file = dir.child(dirName[1]);
-      return file;
-    } else {
-      return dir;
+    FileRemoteAccessor device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(filePath);
+    CharSequence sfPath = null;
+    if(device !=null) {
+      sfPath = device.completeFilePath(filePath);
     }
+    CharSequence[] dirName = FileFunctions.separateDirName(sfPath);
+    return cluster.getFile(dirName[0], dirName[1]);
   }  
     
-//    FileRemoteAccessor accessor = getAccessorSelector().selectFileRemoteAccessor(src.getAbsolutePath()); 
-//    File dir1 = src.getParentFile();
-//    FileRemote dir, file;
-//    if(dir1 !=null){
-//      dir= cluster.getDir(dir1.getAbsolutePath());
-//      file = dir.child(src.getName());
-//    } else {
-//      dir = null;
-//      file = cluster.getDir(src.getAbsolutePath());
-//    }
-//    file.length = len;
-//    file.flags = fileProps;
-//    file.date = date;
-//    file.oFile = src;
-//    return file; //new FileRemote(accessor, dir, sPath, null, len, date, fileProps, src);
 
   
+  /**Gets an existing FileRemote instance or creates a new one.
+   * @param filePath if ends with "/" then gets or creates a directory.
+   * @return 
+   */
   public static FileRemote get(String filePath ) {
     return get(clusterOfApplication, filePath);
   }
@@ -840,16 +815,42 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param path The directory path where the file is located, given absolute.
    * @return A existing or new instance.
    */
-  public static FileRemote getDir(CharSequence path){ return clusterOfApplication.getDir(path); }
+  public static FileRemote getDir(FileCluster cluster, CharSequence dirPath){ 
+    FileRemoteAccessor device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dirPath);
+    CharSequence sfPath = null;
+    if(device !=null) {
+      sfPath = device.completeFilePath(dirPath);
+    }
+    return cluster.getFile(sfPath, null);
+  }  
+  
+  public static FileRemote getDir(String dirPath ) {
+    return getDir(clusterOfApplication, dirPath);
+  }
   
  
+  /**Returns the instance which is associated to the given directory and the file in this directory.
+   * @param dirPath The directory path where the file is located,
+   * @param name The name of the file.
+   * @return A existing or new instance.
+   */
+  public static FileRemote getFile(FileCluster cluster, CharSequence dirPath, CharSequence name){ 
+    FileRemoteAccessor device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dirPath);
+    CharSequence sfPath = null;
+    if(device !=null) {
+      sfPath = device.completeFilePath(dirPath);
+    }
+    return cluster.getFile(sfPath, name);
+  }  
+
   /**Returns the instance which is associated to the given directory and name.
    * @param dir The directory path where the file is located, given absolute.
    * @param name The name of the file.
    * @return A existing or new instance.
    */
-  public static FileRemote getFile(CharSequence dir, CharSequence name){ return clusterOfApplication.getFile(dir, name); }
-  
+  public static FileRemote getFile(CharSequence dir, CharSequence name){ 
+    return getFile(clusterOfApplication, dir, name); 
+  }  
  
   /**Compare all files in the 2 directory trees. The files are compared only till the first difference, this routine is not intent
    * to report all differences in the files. The result is <code>null</code> if both directories contains the identically files.
@@ -1017,7 +1018,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         sFileMask = posSep == sDst.length()-1? "*" : sDst.substring(posSep+1);
       }
       if(FileFunctions.isAbsolutePathOrDrive(sDstDir)) {
-        fileDst = FileRemote.clusterOfApplication.getDir(sDstDir);  //maybe a file or directory
+        fileDst = FileRemote.getDir(sDstDir);  //maybe a file or directory
       } else {
         fileDst = srcDir.child(sDstDir);  //relative to source
       }

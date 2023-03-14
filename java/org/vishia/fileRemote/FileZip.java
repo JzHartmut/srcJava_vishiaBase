@@ -179,8 +179,7 @@ public class FileZip extends FileRemote {
    * @param args
    */
   public static void main(String[] args) {
-    FileCluster fileCluster = FileRemote.clusterOfApplication;
-    FileRemote file = fileCluster.getDir("/home/hartmut/vishia/Java/srcJava_Zbnf.zip");
+    FileRemote file = FileRemote.getDir("/home/hartmut/vishia/Java/srcJava_Zbnf.zip");
     FileZip fileZip = new FileZip(file);
     //TreeNodeBase.TreeNode<FileZip> test = new TreeNodeBase.TreeNode<FileZip>(fileZip.children, "", null);
     // boolean x = test.isDirectory();

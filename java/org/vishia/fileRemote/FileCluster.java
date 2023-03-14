@@ -99,15 +99,15 @@ public class FileCluster
   /**Gets the existing directory instance with this path from the file system or creates and registers a new one.
    * If the file is not existing on the file system it is created anyway because the file may be a new candidate. 
    */
-  public FileRemote getDir( final CharSequence sPath){
-   return(getFile(sPath, null));
-  }
+//  public FileRemote getDir( final CharSequence sPath){
+//   return(getFile(sPath, null));
+//  }
 
   
   /**Gets the existing file instance with this path from the file system or creates and registers a new one.
    * If the file is not existing on the file system it is created anyway because the file may be a new candidate. 
    */
-  public FileRemote getFile( final CharSequence sDirP, final CharSequence sName){
+  FileRemote getFile( final CharSequence sDirP, final CharSequence sName){
     return getFile(sDirP, sName, true);
   }  
   

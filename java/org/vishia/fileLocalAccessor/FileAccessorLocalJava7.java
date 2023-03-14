@@ -239,6 +239,14 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     return instance;
   }
   
+  /**Returns a unique absolute path for the file regarding maybe tmp, home, environment variables etc.
+   * It uses {@link FileFunctions#absolutePath(String, File)} to fulfill all.
+   * @param path given path
+   * @return path to get the file. 
+   */
+  @Override public CharSequence completeFilePath(CharSequence sPath) {
+    return FileFunctions.absolutePath(sPath.toString(), null);
+  }
 
   
   
@@ -685,6 +693,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   
   
   
+  /**See {@link FileRemoteAccessor#cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}.
+   * Hint: Set breakpoint to {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+   * to stop in the execution thread.
+   */
   @Override public void cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(bWait) {
       execCmd(co, evBack);                       // execute in this thread.
@@ -853,7 +865,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   }
 
 
-  @Override public void close() throws IOException
+  @Override public void close()
   { if(this.singleThreadForCommission !=null) { this.singleThreadForCommission.close(); }
     for(WalkerThread th: this.walkerThread) {
       if(th !=null) { th.bRun = false; }
@@ -1300,7 +1312,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         dir1 = this.curr.dir.subdir(name);       // get or create a child in FileRemote
       } else {                                   // first time:
         String sDir = dir.toString();            // get directory from nio.file.Path
-        dir1 = this.fileCluster.getDir(sDir);    // and gets the root directory from file cluster
+        dir1 = FileRemote.getDir(sDir);          // and gets the root directory from file cluster
       }
       //------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
       if((this.co.selectMask & FileMark.mSelectMarkBits) !=0) {
@@ -1460,7 +1472,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       } else {                                             // first time:
         assert(false);                                     // NO: starts always with a directory!
         String sDir = file.getParent().toString();         // get directory from nio.file.Path
-        fileRemote = this.fileCluster.getFile(sDir, name); // and gets a new directory
+        fileRemote = FileRemote.getFile(sDir, name); // and gets a new directory
       }
       //----------------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
       if((this.co.selectMask & FileMark.mSelectMarkBits) !=0) {
@@ -1640,7 +1652,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
    * 
    */
   public static FileRemote.FileRemoteAccessorSelector selectLocalFileAlways = new FileRemote.FileRemoteAccessorSelector() {
-    @Override public FileRemoteAccessor selectFileRemoteAccessor(String sPath) {
+    @Override public FileRemoteAccessor selectFileRemoteAccessor(CharSequence sPath) {
       return FileAccessorLocalJava7.getInstance();
     }
   };
