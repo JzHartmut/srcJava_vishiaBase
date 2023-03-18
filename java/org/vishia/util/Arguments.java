@@ -74,7 +74,7 @@ import java.util.List;
         System.exit(1);                      // no arguments, help is shown.
       }
       if( ! args.parseArgs(cmdArgs, System.err)
-       || ! args.testArgs(System.err)
+       || ! args.testConsistence(System.err)
         ) { 
         System.exit(args.exitCodeArgError);  // argument error
       }
@@ -123,6 +123,7 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-03-17 Hartmut new {@link #readArguments(String[])} as ready to usable in main().
    * <li>2023-01-27 Hartmut new in sArg in a argument file: "$=" is the directory of the argument file.
    *   With this designation all arguments can be related to the argfile's directory
    *   which is given in the "--@path/to/argfile". This is an amazing feature, but similar as relative links in html. 
@@ -165,7 +166,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2022-11-13";
+  public final static String sVersion = "2023-03-17";
 
   
   /**Interface for implementation of setting arguments.
@@ -274,7 +275,7 @@ public abstract class Arguments {
   
   protected List<Argument> argList;
   
-  public int exitCodeArgError = 6;
+  public static int exitCodeArgError = 6;
   
   String sLogPath;
   
@@ -632,7 +633,8 @@ public abstract class Arguments {
   
   
   /**This operation should be implemented and called by the user.
-   * It should check the consistency of the given arguments as it is need by the application.
+   * It should check the consistency of the given arguments as it is need by the application
+   * and may also prepare some derived arguments, for example .
    * <br>
    * Implementation hint: This operation may invoke {@link #showArgs(Appendable)} to output the help info on error.
    * @param msg to write out an info as line with \n for faulty arguments. {@link java.lang.System#err} can be used.
@@ -640,5 +642,29 @@ public abstract class Arguments {
    * @throws IOException only on unexpected problems writing msg
    */
   public abstract boolean testConsistence(Appendable msg) throws IOException;
+ 
+  
+  
+  
+  /**Read arguments from given command line arguments. Can be used immediately in main()
+   * @param cmdArgs
+   */
+  public void readArguments(String[] cmdArgs) {
+    try {
+      if(cmdArgs.length ==0) {
+        this.showHelp(System.out);
+        System.exit(1);                      // no arguments, help is shown.
+      }
+      if( ! this.parseArgs(cmdArgs, System.err)
+       || ! this.testConsistence(System.err)
+        ) { 
+        System.exit(Arguments.exitCodeArgError);  // argument error
+      }
+    }
+    catch(Exception exc) {
+      System.err.println("Unexpected Exception: " + exc.getMessage());
+      exc.printStackTrace();
+    }
+  }
   
 }

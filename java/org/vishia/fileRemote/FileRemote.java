@@ -767,28 +767,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    */
   public static FileRemote fromFile(File src){ 
     if(src instanceof FileRemote) return (FileRemote)src; 
-    else return fromFile(clusterOfApplication, src); 
+    else return get(src.getAbsolutePath());              // use only the given path
   }
   
   
   
-  /**Returns a FileRemote instance from a standard java.io.File instance.
-   * If src is instanceof FileRemote already, it returns src.
-   * Elsewhere it builds a new instance of FileRemote which inherits from File,
-   * it is a new instance of File too.
-   * @param cluster The special cluster of maybe {@link #clusterOfApplication}. It should not be null. See
-   * @param src Any File or FileRemote instance.
-   * @return src if it is instanceof FileRemote or a new Instance.
-   */
-  public static FileRemote fromFile(FileCluster cluster, File src){
-    if(src instanceof FileRemote){ return (FileRemote)src; }
-    else {
-      //it is a file description of standard java in the local file system.
-      String sPath = src.getAbsolutePath();
-      return get(cluster, sPath);
-    }
-  }
-
   
   
   public static FileRemote get(FileCluster cluster, String filePath ) {

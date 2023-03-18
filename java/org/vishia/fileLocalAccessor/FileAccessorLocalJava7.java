@@ -578,7 +578,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     if(evBack == null) {
       String sError;
       try {
-        Files.move(src.path, dst.path, StandardCopyOption.REPLACE_EXISTING);
+        @SuppressWarnings("unused") Path newPath = 
+          Files.move(src.path, dst.path, StandardCopyOption.REPLACE_EXISTING);
+        // Note: newPath should be the same as dst.path
         sError = null;
       } 
       catch(Exception exc) {                  // not moved
@@ -716,9 +718,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     //FileRemote.FileRemoteEvent callBack = co;  //access only 1 time, check callBack. co may be changed from another thread.
     boolean ok = co !=null;
     if(co.newName() !=null && ! co.newName().equals(co.filesrc().getName())){
-      File fileRenamed = new File(co.filesrc.getParent(), co.newName());
-      ok &= co.filesrc.renameTo(fileRenamed);
-      dst = FileRemote.fromFile(co.filesrc.itsCluster, fileRenamed);
+      dst = co.filesrc.getParentFile().child(co.newName());   // new file in the same directory
+      //File fileRenamed = new File(co.filesrc.getParent(), co.newName());
+      ok &= co.filesrc.renameTo(dst);              // call File#renameTo
+      //dst = FileRemote.fromFile(co.filesrc.itsCluster, fileRenamed);
       dst.refreshProperties(null);
     } else {
       dst = co.filesrc;
