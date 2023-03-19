@@ -9,6 +9,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.vishia.util.Arguments;
 import org.vishia.util.ExcUtil;
@@ -56,38 +58,60 @@ public class ReadWriteFileBase {
   static class ArgsBase extends Arguments {
 
     /**Argument contains the timestamp.val to use as value, shorter form */ 
-    public Argument sfworkingDir = new Argument("-wd", ":working dir path, default: system's current dir");
-    public Argument sfIn = new Argument("-in", ":input file path (*.adoc)");
     public Argument sfOut = new Argument("-o", ":output file path (*.adoc), default: -in:...Y");
     public Argument encodingIn = new Argument("-inCharset", ":Encoding for -in, default UTF-8");
     public Argument encodingOut = new Argument("-outCharset", ":Encoding for -o, default UTF-8");
 
-    File dirWrk, fIn, fOut;
+    File dirWrk, fOut;
+    
+    List<File> fIn = new LinkedList<File>();
+    
+    Arguments.SetArgument set_dirWrk = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      ArgsBase.this.dirWrk = new File(FileFunctions.absolutePath(val, null).toString());
+      return true;
+    }};
+
+    Arguments.SetArgument set_fIn = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      ArgsBase.this.fIn.add(new File(FileFunctions.absolutePath(val, ArgsBase.this.dirWrk)));  //note: dirWrk may be null
+      return true;
+    }};
+
     
     Charset csIn, csOut;
     
+    ArgsBase(String sAbout, String sHelp){
+      super.aboutInfo = sAbout;
+      super.helpInfo="obligate args: -in:...";
+      addArg(new Argument("-wd", ":working dir path, default: system's current dir", this.set_dirWrk));
+      addArg(new Argument("-in", ":input file path", this.set_fIn));
+      addArg(this.sfOut);
+      addArg(this.encodingIn);
+      addArg(this.encodingOut);
+    }
+
     @Override public boolean testConsistence ( Appendable msg ) throws IOException {
-      if(this.sfworkingDir.val !=null) {
-        this.dirWrk = new File(FileFunctions.absolutePath(this.sfworkingDir.val, null).toString());
-        if(!this.dirWrk.exists() || !this.dirWrk.isDirectory()) {
-          msg.append("-wd:" + this.sfworkingDir.val + " : not existing or not a directory\n");
+      if(this.dirWrk !=null) {
+        if(!ArgsBase.this.dirWrk.exists() || !ArgsBase.this.dirWrk.isDirectory()) {
+          msg.append("-wd:" + this.dirWrk.getAbsolutePath() + " : not existing or not a directory\n");
           return false;
         }
       }
-      if(this.sfIn.val == null) {
+      if(this.fIn.size() == 0) {
         msg.append("-in:path/to/input.adoc is obligate\n");
         return false;
-      }
-      this.fIn = new File(FileFunctions.absolutePath(this.sfIn.val, this.dirWrk));  //note: dirWrk may be null
-      if(!this.fIn.exists()) {
-        msg.append("-in:" + this.sfIn.val + " : file not found\n");
-        return false;
+      } else {
+        for(File fIn : this.fIn) {
+          if(!fIn.exists()) {
+            msg.append("-in:" + fIn.getAbsolutePath() + " : file not found\n");
+            return false;
+          }
+        }
       }
       //                                                   // -o: not given, use -i:...Y
-      final String sfOut = this.sfOut.val != null ? this.sfOut.val : this.sfIn.val + "Y";
+      final String sfOut = this.sfOut.val != null ? this.sfOut.val : this.fIn.get(0).getAbsolutePath() + "Y";
       String sfOutAbs = FileFunctions.absolutePath(sfOut, this.dirWrk);
       if(sfOutAbs.endsWith("/")) {                         // -o:path/to/dirOut/ is given
-        sfOutAbs += this.fIn.getName();
+        sfOutAbs += this.fIn.get(0).getName();
       }
       this.fOut = new File(sfOutAbs);  //note: dirWrk may be null
       if(!this.fOut.getParentFile().exists()) {
@@ -106,16 +130,6 @@ public class ReadWriteFileBase {
       return true;
     }
     
-    ArgsBase(String sAbout, String sHelp){
-      super.aboutInfo = sAbout;
-      super.helpInfo="obligate args: -in:...";
-      addArg(this.sfworkingDir);
-      addArg(this.sfIn);
-      addArg(this.sfOut);
-      addArg(this.encodingIn);
-      addArg(this.encodingOut);
-    }
-
   }
   
   
@@ -135,14 +149,16 @@ public class ReadWriteFileBase {
 
 
   public static void smain(ArgsBase args) throws IOException {
-    BufferedReader frIn = new BufferedReader(new InputStreamReader(new FileInputStream(args.fIn), args.csIn));
     Writer fwOut = new OutputStreamWriter(new FileOutputStream(args.fOut), args.csOut);
-    String sLine;
-    while( (sLine = frIn.readLine()) !=null) {
-      fwOut.append(sLine).append('\n');
+    for(File fIn: args.fIn) {
+      BufferedReader frIn = new BufferedReader(new InputStreamReader(new FileInputStream(fIn), args.csIn));
+      String sLine;
+      while( (sLine = frIn.readLine()) !=null) {
+        fwOut.append(sLine).append('\n');
+      }
+      frIn.close();
     }
     fwOut.close();
-    frIn.close();
   }
 
 
