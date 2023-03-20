@@ -26,6 +26,7 @@ import org.vishia.event.EventSource;
 import org.vishia.event.EventTimerThread;
 import org.vishia.event.EventTimerThread_ifc;
 import org.vishia.event.EventWithDst;
+import org.vishia.event.Payload;
 import org.vishia.fileLocalAccessor.FileAccessorLocalJava7;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
@@ -2841,12 +2842,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**Last. */
     last,
     docontinue,
-    /**Refresh answer from walker*/
-    refreshDirPre, refreshDirPost, refreshFile,
-    refreshFileFaulty, 
-    done,
-    nok, error
   }
+  
   
   
   /**Possibilities for comparison. */
@@ -2864,7 +2861,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Event object for all commands to a remote device or other thread for file operations. It should be used for implementations
    * of {@link FileRemoteAccessor}.
    */
-  public static class CmdEvent { //extends EventCmdtypeWithBackEvent<FileRemote.Cmd, FileRemote.CallbackEvent>
+  public static class CmdEvent implements Payload { //extends EventCmdtypeWithBackEvent<FileRemote.Cmd, FileRemote.CallbackEvent>
   
     private static final long serialVersionUID = 1L;
 
@@ -2957,6 +2954,24 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     public final long newDate()
     {
       return newDate;
+    }
+
+
+    @Override public void clean () {
+      // TODO Auto-generated method stub
+      
+    }
+
+
+    @Override public byte[] serialize () {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+
+    @Override public boolean deserialize ( byte[] data ) {
+      // TODO Auto-generated method stub
+      return false;
     }
     
     

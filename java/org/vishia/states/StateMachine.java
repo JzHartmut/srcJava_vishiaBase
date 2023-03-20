@@ -333,7 +333,7 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
       return true;
     } else {
       if(triggerEvent.occupy(source, false)){
-        triggerEvent.sendEvent();
+        triggerEvent.sendEvent("triggerRun");
       }
       //else: if it is occupied, then it is in processing or in the queue, do nothing. Don't disturb.
       return false;

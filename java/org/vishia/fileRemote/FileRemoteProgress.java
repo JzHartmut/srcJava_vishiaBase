@@ -17,16 +17,12 @@ import org.vishia.event.EventWithDst;
  */
 public abstract class FileRemoteProgress extends EventConsumerAwait {
 
-  public FileRemoteProgress(EventThread_ifc evThread) {
-    super(evThread);
-  }
-
-
-
   public enum Cmd {
 
   }
 
+  public final String name;
+  
   /**Number of available directories and files, filled on check. */
   public int nrDirAvail, nrFilesAvail;
   
@@ -35,6 +31,13 @@ public abstract class FileRemoteProgress extends EventConsumerAwait {
   
   
   
+  public FileRemoteProgress(String name, EventThread_ifc evThread) {
+    super(evThread);
+    this.name = name;
+  }
+
+
+
   public void clear() {
     this.nrDirAvail = 0;
     this.nrFilesAvail = 0;

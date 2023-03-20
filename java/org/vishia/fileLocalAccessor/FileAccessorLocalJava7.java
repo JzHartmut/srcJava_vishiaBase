@@ -486,11 +486,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       progress.currDir = parent;
       progress.dateLastAccess = file1.lastModified();
       //file1.
-      progress.setAnswer(bOk ? Cmd.mkDir: Cmd.mkDirError);
+      progress.setAnswer(bOk ? FileRemoteProgressEvData.ProgressCmd.done: FileRemoteProgressEvData.ProgressCmd.error);
       if(recursive ==0) {
         progress.done(0, null);
       }
-      evBack.sendEvent();
+      evBack.sendEvent("mkdir");
     }
     return bOk;
   }
@@ -731,11 +731,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     if(date !=0) {
       ok &= dst.setLastModified(date);
     }
-    FileRemote.Cmd cmd;
+    FileRemoteProgressEvData.ProgressCmd cmd;
     if(ok){
-      cmd = FileRemote.Cmd.done; 
+      cmd = FileRemoteProgressEvData.ProgressCmd.done; 
     } else {
-      cmd = FileRemote.Cmd.nok; 
+      cmd = FileRemoteProgressEvData.ProgressCmd.nok; 
     }
     if(!evBack.isOccupied()) {
       evBack.occupy(this.evSrc, true);                // but then the action is not clarified....
@@ -743,7 +743,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     FileRemoteProgressEvData progress = evBack.data();
     progress.currFile = dst;
     progress.setAnswer(cmd);
-    evBack.sendEvent();
+    evBack.sendEvent("execChgProps");
   }
   
   
@@ -758,16 +758,16 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       dst = co.filesrc;
     }
     ok &= chgPropsRecursive(dst, co.maskFlags(), co.newFlags(), ok, 0);
-    FileRemote.Cmd cmd;
+    FileRemoteProgressEvData.ProgressCmd cmd;
     if(ok){
-      cmd = FileRemote.Cmd.done ; 
+      cmd = FileRemoteProgressEvData.ProgressCmd.done ; 
     } else {
-      cmd = FileRemote.Cmd.error ; 
+      cmd = FileRemoteProgressEvData.ProgressCmd.error ; 
     }
     FileRemoteProgressEvData progress = evBack.data();
     progress.currFile = dst;
     progress.setAnswer(cmd);
-    evBack.sendEvent();
+    evBack.sendEvent("execChgPropsRecurs");
   }
   
   
@@ -826,17 +826,17 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   
   private void execCountLength(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     long length = countLengthDir(co.filesrc, 0, 0);    
-    FileRemote.Cmd cmd;
+    FileRemoteProgressEvData.ProgressCmd cmd;
     FileRemoteProgressEvData progress = evBack.data();
     if(length >=0){
-      cmd = FileRemote.Cmd.done; 
+      cmd = FileRemoteProgressEvData.ProgressCmd.done; 
       progress.nrofBytesAll = length;
     } else {
-      cmd = FileRemote.Cmd.nok; 
+      cmd = FileRemoteProgressEvData.ProgressCmd.nok; 
     }
     progress.currFile = co.filesrc;
     progress.setAnswer(cmd);
-    evBack.sendEvent();
+    evBack.sendEvent("execCountLength");
   }
   
   
@@ -902,9 +902,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       fileRemote.timeRefresh = System.currentTimeMillis();
       if(evBack !=null){
         FileRemoteProgressEvData progress = evBack.data();
-        progress.setAnswer(FileRemote.Cmd.done);
+        progress.setAnswer(FileRemoteProgressEvData.ProgressCmd.done);
         evBack.occupy(evSrc, true);
-        evBack.sendEvent();
+        evBack.sendEvent("RunFrefresh");
       }
     }
     
@@ -1067,7 +1067,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       if(co.depthWalk ==0){ depth1 = Integer.MAX_VALUE; }
       else if(co.depthWalk < 0){ depth1 = -co.depthWalk; }
       else { depth1 = co.depthWalk; }
-  
+      if(evBack !=null) {
+        evBack.data().clean();       //cleans the payload for cummulate
+      }
       WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(co.filesrc.itsCluster, bRefreshChildren
           , co, callback, evBack, debugOut);
       Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
@@ -1084,7 +1086,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     if(evBack !=null ) {                       // back event for finish
       FileRemoteProgressEvData progress = evBack.data();
       progress.done(progressFinish, sError);
-      evBack.sendEvent();
+      evBack.sendEvent("walkFileTreeExecInThisThread-done");
     }
   }
   //end::walkFileTreeExecInThisThread[]
@@ -1355,11 +1357,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         if(this.progress !=null) {                         
           //--------------------------------------- creates or updates a time order for the state. 
           if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-          this.progress.answer = FileRemote.Cmd.refreshDirPre;
+          this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshDirPre;
           this.progress.nrDirProcessed +=1;
           this.progress.currDir = dir1;          // all information about the FileRemote will be proper serialized if remote
           if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
-            this.evBack.sendEvent();             // evBack is associated to the progress
+            this.evBack.sendEvent(this);             // evBack is associated to the progress
           } else {                               // send cyclically only informations about progress
             long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
             this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
@@ -1412,10 +1414,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       if(this.progress !=null) {                         
         //--------------------------------------- creates or updates a time order for the state. 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-        this.progress.answer = FileRemote.Cmd.refreshDirPost;
+        this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshDirPost;
         this.progress.currFile = this.curr.dir;          // all information about the FileRemote will be proper serialized if remote
         if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
-          this.evBack.sendEvent();             // evBack is associated to the progress
+          this.evBack.sendEvent(this);             // evBack is associated to the progress
         } else {                               // send cyclically only informations about progress
           long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
           this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
@@ -1517,12 +1519,12 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         if(this.progress !=null) {                         
           //--------------------------------------- creates or updates a time order for the state. 
           if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-          this.progress.answer = FileRemote.Cmd.refreshFile;
+          this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshFile;
           this.progress.nrofFilesSelected +=1;
           this.progress.nrofBytesAll += size;
           this.progress.currFile = fileRemote;          // all information about the FileRemote will be proper serialized if remote
           if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
-            this.evBack.sendEvent();             // evBack is associated to the progress
+            this.evBack.sendEvent(this);             // evBack is associated to the progress
           } else {                               // send cyclically only informations about progress
             long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
             this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
@@ -1562,9 +1564,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       if(this.progress !=null) {                         
         //--------------------------------------- creates or updates a time order for the state. 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-        this.progress.answer = FileRemote.Cmd.refreshFileFaulty;
+        this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshFileFaulty;
         if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
-          this.evBack.sendEvent();             // evBack is associated to the progress
+          this.evBack.sendEvent(this);             // evBack is associated to the progress
         } else {                               // send cyclically only informations about progress
           long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
           this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic

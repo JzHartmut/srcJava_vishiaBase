@@ -41,7 +41,7 @@ import org.vishia.util.ExcUtil;
  * @author Hartmut Schorrig
  *
  */
-public final class EventWithDst<Payload extends Object, PayloadBack extends Object> extends EventObject
+public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends Payload> extends EventObject
 {
 
   private static final long serialVersionUID = 3976120105528632683L;
@@ -49,12 +49,21 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-03-20 Hartmut The payload {@link #d} is now typed with the new interface {@link Payload}.
+   *   For serialize of the payload some thinking should be done. 
+   * <li>2023-03-20 Hartmut chg the role of {@link EventObject#source}: originally it should be the creator of the event. 
+   *   But intrinsic it should be the instance which emits the event. The last one is only important on debugging. 
+   *   It is interesting on receiving from a queue, from where comes the event. 
+   *   Intrinsically it should show a __FILE__ and __LINE__ (as in C) to see where the event was emitted. 
+   *   That may be possible with StackTrace entries. Yet only sometimes a string is stored for that reason.
+   *   The source is filled as argument now on {@link #sendEvent(Object)}. 
+   *   The up to now usage of source as the owner of the event is now stored in {@link #evOwner} in this class.    
    * <li>2023-03-12 Hartmut chg The org.vishia.event is refactored:
    *   <ul><li>Only the final EventWithDst is existent.
    *   <li>The data of the event are not defined by derivation, now they are defined by a aggregated payload.
    *   <li>The payload should be Serializable, because exact this are all data to transfer an event.
    *   <li>The classes EventCmdtype and EventCmdtypeWithBackEvent are dissolved.
-   *     The Cmd is part of Payload. The aggregation {@link #evBack} is now contained here.
+   *     The Cmd is part of Payload. The aggregation {@link #evOpp} is now contained here.
    *     It is null if a back event is not given.
    *   <li>{@link TimeOrder} is no more aggregated, but the TimeOrder aggregates its event.
    *   <li>{@link EventConsumer} can decide about the thread.
@@ -133,7 +142,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2023-03-12";
+  public static final String version = "2023-03-20";
 
   
   /**The current owner of the event. It is that instance, which has gotten the event instance.
@@ -143,7 +152,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
   
   public final String name;
   
-  
+  EventSource evOwner;
   
   /**The queue for events of the {@link EventThread_ifc} if this event should be used
    * in a really event driven system (without directly callback). 
@@ -159,10 +168,14 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
    * Also the type of the event should be transferred, for events without payload.
    * It means Payload can be null, if the type is sufficient to regocnize the event.
    */
-  Payload d;
+  T_Payload d;
   
   
-  EventWithDst<PayloadBack, Payload> evBack;
+  /**This is an associated event which can be used for the back direction.
+   * Often a pair of events for back communication is necessary.
+   * It is null if unused.
+   */
+  EventWithDst<T_PayloadOpp, T_Payload> evOpp;
   
   /**State of the event: 
    * <ul>
@@ -206,11 +219,11 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
    * before first usage. {@link #relinquish()} will be called on release the usage. 
    * @param name of the event used only for debug.
    */
-  public EventWithDst(String name, Payload data) {
+  public EventWithDst(String name, T_Payload data) {
     this(name, EventSource.nullSource, data);
   }
   
-  public EventWithDst(String name, Object source, Payload data)
+  public EventWithDst(String name, Object source, T_Payload data)
   { super(source);
     this.d = data;
     this.name = name;
@@ -228,8 +241,9 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
    *   It means the {@link EventConsumer} can decide about the event thread.
    *   But this argument is used if given.
    */
-  public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, Payload d){
-    super(source == null ? EventSource.nullSource : source);   //EventObject does not allow null pointer.
+  public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, T_Payload d){
+    super("free");                                 // the source will be set on sent
+    this.evOwner = source == null ? EventSource.nullSource : source;   //EventObject does not allow null pointer.
     this.name = name;
     this.evDst = consumer;                                 //maybe null if occupy is intent to call.  
     @SuppressWarnings("resource") 
@@ -239,6 +253,8 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
   }
   
 
+  
+  void setSource(Object src) { super.source = src; }
  
   public void setOrderId(long order){ this.orderId = order; }
   
@@ -264,7 +280,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
   public EventConsumer evDst() { return this.evDst; }
   
   
-  public Payload data() { return this.d; }
+  public T_Payload data() { return this.d; }
   
   /**Returns the time stamp of creation or occupying the event.
    * @return null if the event is not occupied, a free static object.
@@ -320,9 +336,9 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
       cleanData();                                         // cleanDate overridden in derived events, clean.
       this.dateOrder = date.order;
       if(source !=null) {
-        super.source = source;  //don't use null pointer.
-      } else if( super.source == null) {
-        super.source = EventSource.nullSource;             //don't use null pointer.
+        this.evOwner = source;  //don't use null pointer.
+      } else if( this.evOwner == null) {
+        this.evOwner = EventSource.nullSource;             //don't use null pointer.
       }
       this.ctConsumed =0;
       //if(refData !=null || dst !=null) { this.refData = refData; }
@@ -368,7 +384,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
         this.bAwaitReserve = true;
         try{ wait(timeout); } catch(InterruptedException exc){ }
         this.bAwaitReserve = false;
-        bOk = occupy(((EventSource)this.source), dst, thread, false);
+        bOk = occupy(this.evOwner, dst, thread, false);
       }
     }
     return bOk;
@@ -552,7 +568,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
    * 
    * @return false if it is ready to re-use.
    */
-  public boolean isOccupied(){ return this.evDst !=null; }
+  public boolean isOccupied(){ return this.dateCreation.get() !=0; }
   
   
   /**Returns the stored destination thread for queuing the event. */
@@ -565,7 +581,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
   public EventConsumer getDst(){ return this.evDst; }
   
   
-  public EventWithDst<PayloadBack, Payload> getOpponent ( ){ return this.evBack;}
+  public EventWithDst<T_PayloadOpp, T_Payload> getOpponent ( ){ return this.evOpp;}
   
   /**Try to remove the event from the queue of the destination thread.
    * @return true if it was in the queue and it is removed successfully.
@@ -594,7 +610,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
     //if(stateOfEvent != 'r') throw new IllegalStateException("relinquish should only be called in stateOfEvent == 'r'");
     if(this.dateCreation.get() !=0) {
       this.dateCreation.set(0);
-      EventSource source1 = ((EventSource)this.source);
+      EventSource source1 = ((EventSource)this.evOwner);
       this.orderId = 0;
       if(source1 !=null){
         source1.notifyRelinquished(this.ctConsumed);
@@ -635,7 +651,8 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
    * or by {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}. If it is null, an exception is thrown.
    * @return true if the event is already processed, false if it is stored in a queue, not processed yet.
    */
-  public boolean sendEvent ( ) {
+  public boolean sendEvent ( Object source ) {
+    super.source = source;                       // it is only for debug, info about the source of the event.
     assert(this.evDst !=null);
     //if(this.evDst == null) throw new IllegalArgumentException("event should have a destination");
     if(this.evDstThread !=null){  //--------------- dstThread given, then
@@ -667,7 +684,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
       retProcess = this.evDst.processEvent(this);  //may set bit doNotRelinquish
     } catch(Exception exc) {
       CharSequence excMsg = ExcUtil.exceptionInfo("EventThread.applyEvent exception", exc, 0, 50);
-      EventSource source1 = ((EventSource)super.source);
+      EventSource source1 = ((EventSource)this.evOwner);
       if(source1 !=null){
         source1.notifyUnexpectedException(excMsg);
       }
@@ -701,7 +718,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
 
   /**Informs the {@link EventSource#notifyDequeued()}, invoked on dequeuing.  */
   /*package private*/ void notifyDequeued(){
-    EventSource source1 = ((EventSource)this.source);
+    EventSource source1 = (this.evOwner);
     if(source1 !=null){
       source1.notifyDequeued();
     }
@@ -716,7 +733,7 @@ public final class EventWithDst<Payload extends Object, PayloadBack extends Obje
   }*/
 
   private void notifyShouldOccupyButInUse(){
-    EventSource source1 = ((EventSource)this.source);
+    EventSource source1 = ((EventSource)this.evOwner);
     if(source1 !=null){
       source1.notifyShouldOccupyButInUse();
     }

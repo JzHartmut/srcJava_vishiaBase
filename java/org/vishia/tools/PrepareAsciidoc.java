@@ -91,6 +91,11 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
   
   private static String sChpAdd = "=====";
   
+  int[] chpNr = new int[5];
+
+  String chpLabel = null;
+  
+  
   Map<String, String> idxChpLabel = new TreeMap<String, String>(); 
   
   Map<String, String> idxChpNr = new TreeMap<String, String>(); 
@@ -112,63 +117,57 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
 
   public static void smain ( Args args) throws IOException {
     PrepareAsciidoc thiz = new PrepareAsciidoc();
-    thiz.processChapterStruct(args);
-    thiz.processFile(args);
+    thiz.processFile(null, args);                // Process all files only for detection chapter struct.
+    System.out.println("all chapter label gathered ");
+
+    Writer fwOut = new OutputStreamWriter(new FileOutputStream(args.fOut), args.csOut);
+    
+    thiz.processFile(fwOut, args);
+    fwOut.close();
   }
 
 
-  void processChapterStruct ( Args args) throws IOException {
-    for(File fIn: args.fIn) {
-      BufferedReader frIn = new BufferedReader(new InputStreamReader(new FileInputStream(fIn), args.csIn));
-      String sLine;
-      String chpLabel = null;
-      int[] chpNr = new int[5];
-      while( (sLine = frIn.readLine()) !=null) {
+  void processChapterStruct ( String sLine, Args args) throws IOException {
         int nChp = 0;
         if(sLine.startsWith("[#")) {
           int posEnd = sLine.indexOf(']');
-          chpLabel = sLine.substring(2, posEnd);
+          this.chpLabel = sLine.substring(2, posEnd);
         } else if(sLine.startsWith("== ")) {
-          chpNr[0] +=1; chpNr[1] = 0; chpNr[2] = 0; chpNr[3] = 0; chpNr[4] = 0; 
+          this.chpNr[0] +=1; this.chpNr[1] = 0; this.chpNr[2] = 0; this.chpNr[3] = 0; this.chpNr[4] = 0; 
           nChp = 1;
         } else if(sLine.startsWith("=== ")) {
-          chpNr[1] +=1; chpNr[2] = 0; chpNr[3] = 0; chpNr[4] = 0; 
+          this.chpNr[1] +=1; this.chpNr[2] = 0; this.chpNr[3] = 0; this.chpNr[4] = 0; 
           nChp = 2;
         } else if(sLine.startsWith("==== ")) {
-          chpNr[2] +=1; chpNr[3] = 0; chpNr[4] = 0; 
+          this.chpNr[2] +=1; this.chpNr[3] = 0; this.chpNr[4] = 0; 
           nChp = 3;
         } else if(sLine.startsWith("===== ")) {
-          chpNr[3] +=1; chpNr[4] = 0; 
+          this.chpNr[3] +=1; this.chpNr[4] = 0; 
           nChp = 4;
         } else if(sLine.startsWith("====== ")) {
-          chpNr[4] +=1;  
+          this.chpNr[4] +=1;  
           nChp = 5;
         } else {
           nChp = 0;
-          chpLabel = null;  //after any line not a chapter start
+          this.chpLabel = null;  //after any line not a chapter start
         }
         if(nChp >0) {
           String sChpNr = "";
           for(int ix = 0; ix < nChp; ++ix) {
             if(ix >0) { sChpNr += '.'; }
-            sChpNr += Integer.toString(chpNr[ix]);
+            sChpNr += Integer.toString(this.chpNr[ix]);
           }
           if(chpLabel == null) {
             System.err.println("No chapter label for " + sChpNr + sLine);
           } else {
-            this.idxChpNr.put(chpLabel, sChpNr);
-            this.idxChpLabel.put(sChpNr, chpLabel);
+            this.idxChpNr.put(this.chpLabel, sChpNr);
+            this.idxChpLabel.put(sChpNr, this.chpLabel);
           }
         }
-      }
-      frIn.close();
-    }
-    System.out.println("all chapter label gathered ");
   }
   
   
-  void processFile ( Args args) throws IOException {
-    Writer fwOut = new OutputStreamWriter(new FileOutputStream(args.fOut), args.csOut);
+  void processFile ( Writer fwOut, Args args) throws IOException {
     boolean bFirst = true;
     for(File fIn: args.fIn) {
       File dirIn = fIn.getParentFile();
@@ -190,18 +189,29 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
       //
       frIn.close();
     }
-    fwOut.close();
     System.out.println("successfull: " + args.fOut.getPath());
   }
   
   
   
+  /**Replace something in line.
+   * <ul><li>link:../link with given arguments in {@link Args#rlink} for the given number of ../
+   * <li>chapter <<# with chapter NR <<# 
+   * <ul> 
+   * @param sLine
+   * @param args
+   * @return
+   */
   void processLine ( String sLine, BufferedReader frIn, Writer fwOut, File dirIn, Args args) throws IOException {
     if(sLine.equals("----")) {
-      processPre(frIn, fwOut, dirIn, args);
+      if(fwOut !=null) { processPre(frIn, fwOut, dirIn, args); }
+      else { skipPre(frIn); }
     } else if(sLine.startsWith("include::")) {
       processIncludeAdoc(sLine, fwOut, dirIn, args);
-    } else {
+    } else if(fwOut == null) {
+      processChapterStruct(sLine, args);
+
+    } else {                                     // wOut !=null, preprocess!
       String sLineNew = sLine;
       int posLink = sLine.indexOf("link:");
       if(posLink >=0) {
@@ -233,10 +243,15 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
   
   
   
+  /**Searches whether the line contains "<<#label>>" for a linked chapter
+   * and pads it with the chapter number.
+   * @param sLine
+   * @return changed sLine
+   */
   private String addChapterNrToChapterLink(String sLine) {
     String sLineNew = sLine;
     int posChapterLink, posChapterLinkEnd = 0;
-    while( (posChapterLink = sLineNew.indexOf("<<#",posChapterLinkEnd)) >=0) {
+    while( (posChapterLink = sLineNew.indexOf("<<#", posChapterLinkEnd)) >=0) {
       posChapterLinkEnd = sLineNew.indexOf(">>", posChapterLink);
       String sLabel = sLineNew.substring(posChapterLink+3, posChapterLinkEnd);
       String sNr = this.idxChpNr.get(sLabel);
@@ -244,6 +259,7 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
         System.err.println("chapter label not found: " + sLabel);
       } else {
         sLineNew = sLineNew.substring(0, posChapterLink) + sNr + ' ' + sLineNew.substring(posChapterLink);
+        posChapterLinkEnd += sNr.length()+1;       // uses the changed sLineNew
       }
     }
     return sLineNew;
@@ -304,8 +320,8 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
             pgBreakBefore = false;
           }
         }
-        if(pgBreakBefore) {
-          fwOut.append("<<<\n\n");
+        if(fwOut !=null && pgBreakBefore) {
+//          fwOut.append("<<<\n\n");
         }
         boolean bLastChpLabel = false;
         while(sLine !=null) {
@@ -337,42 +353,6 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
   
   
   
-  /**Replace something in line.
-   * <ul><li>link:../link with given arguments in {@link Args#rlink} for the given number of ../
-   * <li>chapter <<# with chapter NR <<# 
-   * <ul> 
-   * @param sLine
-   * @param args
-   * @return
-   */
-  private String processLine ( String sLine, Args args) {
-    String sLineNew = sLine;
-    int posLink = sLine.indexOf("link:");
-    if(posLink >=0) {
-      String sLink = sLine.substring(posLink + 5);
-      if(!sLink.startsWith("https:") && !sLink.startsWith("http:") && !sLink.startsWith("www.")) {
-        int ixBack = 0;
-        while(sLink.substring(3*ixBack).startsWith("../")) {
-          ixBack +=1;
-        }
-        //      before and  "...link:"       from arg: "https:..."   rest after the "../../    
-        String sLineEnd = ixBack == 0 ? "/" + sLink : sLink.substring(3*ixBack-1);
-        sLineNew = sLine.substring(0, posLink+5) + args.rlink[ixBack] + sLineEnd;
-      }
-    }
-    int posChapterLink, posChapterLinkEnd = 0;
-    while( (posChapterLink = sLineNew.indexOf("<<#",posChapterLinkEnd)) >=0) {
-      posChapterLinkEnd = sLineNew.indexOf(">>", posChapterLink);
-      String sLabel = sLineNew.substring(posChapterLink+3, posChapterLinkEnd);
-      String sNr = this.idxChpNr.get(sLabel);
-      if(sNr ==null) { 
-        System.err.println("chapter label not found: " + sLabel);
-      } else {
-        sLineNew = sLineNew.substring(0, posChapterLink) + sNr + ' ' + sLineNew.substring(posChapterLink);
-      }
-    }
-    return sLineNew;
-  }
   
   
   void processPre(BufferedReader frIn, Writer fwOut, File dirIn, Args args) throws IOException {
@@ -398,6 +378,17 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
         break;
       } else {
         fwOut.append(shortenPreLine(sLine, args)).append('\n');
+      }
+    }
+  }
+  
+  
+  
+  void skipPre(BufferedReader frIn) throws IOException {
+    String sLine;
+    while( (sLine = frIn.readLine()) !=null) {
+      if(sLine.startsWith("----")) {
+        break;
       }
     }
   }

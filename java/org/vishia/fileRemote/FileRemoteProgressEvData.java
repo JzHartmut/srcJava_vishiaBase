@@ -6,17 +6,21 @@ import java.io.Serializable;
 //import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.TimeOrder;
+import org.vishia.fileRemote.FileRemote;
 import org.vishia.event.EventWithDst;
+import org.vishia.event.Payload;
 
 /**This are the data for an {@link EventWithDst} for FileRemote actions.
  * Hint: the {@link EventConsumer} evaluating this data repectively for the evBack of file operations should be
  * an derived instance of {@link FileRemoteProgress}.
  */
-public class FileRemoteProgressEvData implements Serializable
+public class FileRemoteProgressEvData implements Serializable, Payload
 {
 
   /**Version, license and history.
    * <ul>
+   * <li>2023-02-21 new implements Payload and hence {@link #clean()}
+   * <li>2023-02-21 chg {@link #answer} is of type {@link ProgressCmd}, separated now from {@link FileRemote.Cmd}
    * <li>2023-02-21 {@link #done()} in cohesion with {@link org.vishia.event.EventConsumerAwait#awaitExecution(long)}
    *   and {@link TimeOrder#repeatCyclic()}. If {@link #done()} was called the cyclically repeat ends 
    *   because it calls {@link TimeOrder#clear()}.  
@@ -60,6 +64,10 @@ public class FileRemoteProgressEvData implements Serializable
   private static final long serialVersionUID = 1L;
 
 
+  /**Possible answers from quest.
+   * @author hartmut
+   *
+   */
   public enum Answer{
     noCmd, cont, overwrite, skip, abortFile, abortDir, abortAll
   }
@@ -84,6 +92,18 @@ public class FileRemoteProgressEvData implements Serializable
 //  
   
   
+  
+  public enum ProgressCmd {
+    /**Refresh answer from walker*/
+    noCmd,
+    refreshDirPre, refreshDirPost, refreshFile,
+    refreshFileFaulty, 
+    done,
+    nok, error
+
+  }
+  
+
   
   //public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
   
@@ -129,7 +149,7 @@ public class FileRemoteProgressEvData implements Serializable
   
   
   /**Answer from Application to Executer. */
-  public FileRemote.Cmd answer;
+  public ProgressCmd answer;
   
 //  private FileRemote.Cmd cmd;
   
@@ -173,6 +193,33 @@ public class FileRemoteProgressEvData implements Serializable
   }
 
   
+  @Override public void clean () {
+  this.currFile = null;
+  this.currDir = null;
+  this.sError = null;
+  this.quest = FileRemote.CallbackCmd.free;
+  this.answer = FileRemoteProgressEvData.ProgressCmd.noCmd;
+  this.dateCreate = 0;
+  this.dateLastAccess = 0;
+  this.nrDirProcessed = 0;
+  this.nrDirVisited = 0;
+  this.nrFilesVisited = 0;
+  this.nrofFilesSelected = 0;
+  this.nrofFilesMarked = 0;
+  this.nrofBytesAll = 0;
+  this.nrofBytesFile = 0;
+  this.nrofBytesFileCopied = 0;
+  this.bDone = false;
+  this.bQuest = false;
+  this.bPause = false;
+  this.bAbort = false;
+  this.bOverwrite = false;
+  this.bOverwriteAll = false;
+  this.bMkdirAll = false;
+
+}
+
+
   /**Set the event to the done() state, all is done maybe with error.
    * @param timeOrderFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
    * @param sError a message if any what was unexpected. Especially on unexpected exception. 
@@ -216,7 +263,7 @@ public class FileRemoteProgressEvData implements Serializable
    * If the executer waits then it will be notified.
    * @param answer the answer for the quest.
    */
-  public final void setAnswer ( FileRemote.Cmd answer ) {
+  public final void setAnswer ( FileRemoteProgressEvData.ProgressCmd answer ) {
     this.answer = answer;
     if(this.bQuest) {
       synchronized(this) {
@@ -290,6 +337,18 @@ public class FileRemoteProgressEvData implements Serializable
    
   /**Set from application to force abort in the executer.*/
   public void setMkdirAll ( boolean value) { this.bMkdirAll = value; }
+
+
+  @Override public byte[] serialize () {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override public boolean deserialize ( byte[] data ) {
+    // TODO Auto-generated method stub
+    return false;
+  }
   
   
 //  @Override public boolean sendEvent() {

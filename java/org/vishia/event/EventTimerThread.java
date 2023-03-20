@@ -351,7 +351,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       }
     } else {
       //System.out.println(LogMessage.timeCurr("addTimeOrder expired:") + order.event.name + LogMessage.msgSec(", timeExec=", order.timeExecution));
-      order.event.sendEvent();  //doTimeElapsed();
+      order.event.sendEvent(order.event.getSource());  //doTimeElapsed();
       retc = 'x';  //eXecuted
     }
     return retc;
@@ -501,7 +501,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     while( (order = this.queueOrdersToExecute.poll()) !=null){    // that can be especially done just in the processEvent execution!
       if(order.timerThread != order.event.evDstThread) {
         //System.out.println(LogMessage.timeCurr("timeOrder send event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
-        order.event.sendEvent();                           // it is enqueued in the evThread
+        order.event.sendEvent(order.event.getSource());                           // it is enqueued in the evThread
       } else {
         //System.out.println(LogMessage.timeCurr("timeOrder process event: ") + order.event.name + LogMessage.msgSec(" time execution= ", order.timeExecution));  //+ ExcUtil.stackInfo("", 2, 8));
         order.event.processEvent();                        // it is executed immediately in the timerThread if evThread is the same

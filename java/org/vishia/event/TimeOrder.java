@@ -159,7 +159,7 @@ public class TimeOrder extends EventSource
   public TimeOrder ( String name, EventTimerThread_ifc timerThread, EventSource src, EventConsumer consumer, EventThread_ifc evThread){
     super(name);
     this.name = name;
-    this.event = new EventWithDst<Object, Object>(name, src, consumer, evThread !=null ? evThread : timerThread, null);
+    this.event = new EventWithDst<Payload, Payload>(name, src, consumer, evThread !=null ? evThread : timerThread, null);
   
     this.timerThread = timerThread;
   }
