@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-03-20 20:36:30  x     .gitCommit                               ::           .184  1924994147 
+2023-04-03 10:49:15  x     .gitCommit                               ::           .479  0138548009 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
 2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
@@ -134,7 +134,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2023-03-20 20:12:40  x     FileAccessorLocalJava7.java              ::         73.053 -0386364239 
+2023-03-21 10:40:09  x     FileAccessorLocalJava7.java              ::         73.242 -0211819655 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
@@ -142,16 +142,16 @@
 
 ============================== java/org/vishia/fileRemote/ =========================================
 2023-03-14 23:13:55  x     FileAccessZip.java                       ::         18.391 -0794241394 
-2023-03-14 23:39:02  x     FileCluster.java                         ::         24.678  0735629774 
+2023-04-03 10:46:46  x     FileCluster.java                         ::         18.284  0386716375 
 2023-03-12 14:35:13  x     FileMark.java                            ::         10.765 -0673201036 
-2023-03-20 20:06:04  x     FileRemote.java                          ::        165.575 -1179212265 
+2023-04-03 10:19:12  x     FileRemote.java                          ::        165.858  0240398851 
 2023-03-15 00:09:22  x     FileRemoteAccessor.java                  ::         17.421  0999977132 
 2023-03-12 21:04:14  x     FileRemoteCallbackCmp.java               ::         18.724  0509550455 
 2023-03-12 15:36:15  x     FileRemoteCallbackCopy.java              ::          6.099  0620617007 
 2023-03-12 15:36:15  x     FileRemoteCallbackSearch.java            ::         10.603  1804195436 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
 2023-03-20 13:12:47  x     FileRemoteProgress.java                  ::          1.984 -1505590491 
-2023-03-20 20:34:20  x     FileRemoteProgressEvData.java            ::         13.468 -1095756941 
+2023-04-03 10:23:25  x     FileRemoteProgressEvData.java            ::         14.023 -0923670000 
 2023-03-09 23:29:14  x     FileRemoteWalkerCallback.java            ::           .601 -1408725602 
 2023-02-21 15:13:50  x     FileRemoteWalkerCallbackLog.java         ::          2.466  0836540270 
 2023-03-14 23:45:12  x     FileZip.java                             ::          5.640  1234857640 
@@ -250,7 +250,7 @@
 2023-01-28 11:49:13  x     TestConditionCombi.java                  ::         12.358 -0287196220 
 
 ============================== java/org/vishia/tools/ ==============================================
-2023-03-19 21:59:41  x     PrepareAsciidoc.java                     ::         15.338  0232729096 
+2023-03-22 20:20:16  x     PrepareAsciidoc.java                     ::         15.959  2087727639 
 2023-03-18 23:12:27  x     ReadWriteFileBase.java                   ::          6.192  1815994311 
 
 ============================== java/org/vishia/util/ ===============================================
@@ -329,7 +329,7 @@
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2023-01-28 22:17:16  x     StringFormatter.java                     ::         51.459 -1023273497 
-2023-01-16 23:26:30  x     StringFunctions.java                     ::         66.306  1162878805 
+2023-04-03 10:26:55  x     StringFunctions.java                     ::         66.605  0228064508 
 2023-02-05 22:17:06  x     StringFunctions_B.java                   ::         18.615 -0708190660 
 2023-01-28 11:17:22  x     StringFunctions_C.java                   ::         27.486 -0583475873 
 2022-06-06 11:18:06  x     StringPart.java                          ::        137.434  1776684361 

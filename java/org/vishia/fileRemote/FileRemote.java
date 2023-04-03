@@ -191,6 +191,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-02 Hartmut chg: {@link #getPathChars()} now returns dir path ends with slash. 
+   *   This is in opposite to {@link #getPath()}, unchanged, defined by {@link File#getPath()}.
    * <li>2023-03-15 Hartmut chg: refactoring {@link #get(String)}, {@link #getFile(CharSequence, CharSequence)}, {@link #getDir(String)}
    * <li>2023-02-13 Hartmut chg: {@link #refreshAndMark(int, int, int, String, long, FileRemoteWalkerCallback, FileRemoteProgressEvData)}
    *   the depths should be unique as first or second argument, todo change the other operations adequate 
@@ -1644,9 +1646,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * The return path of this routine is the path without dissolving symbolic links.
    * @return path never ending with "/", but canonical, slash as separator. 
    */
-  @Override public String getPath(){ return getPathChars().toString(); } 
+  @Override public String getPath(){ 
+    CharSequence csPath = getPathChars();
+    int zcs = csPath.length();
+    if(csPath.charAt(zcs-1) == '/') {
+      return csPath.subSequence(0, zcs-1).toString();
+    } else {
+      return csPath.toString(); 
+    }
+  } 
   
-  /**Returns the same as {@link #getPath()} but does not build a String from a new StringBuilder if not necessary.
+  /**Returns the same as {@link #getPath()} for files, but ends with '/' if this is a directory.
+   * It is very sensible and useful to dedicate a path to an existing directory with ending '/'. 
+   * It does not build a String from a new StringBuilder.
    * @return The path to the file.
    */
   public CharSequence getPathChars(){
@@ -1663,18 +1675,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         }
       }
       ret.append(sFile);
+      if(this.isDirectory()){
+        ret.append('/');
+      }
       return ret;
     } else {
       return sDir;
-      /*
-      int zDir = sDir.length();
-      //Assert.check(sDir.charAt(zDir-1) == '/');
-      if(zDir == 1 || zDir == 3 && sDir.charAt(1) == ':'){
-        return sDir;  //with ending slash because it is root.
-      } else {
-        return sDir.substring(0, zDir-1);  //without /
-      }
-      */
     }    
   }
   
@@ -3185,7 +3191,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 //  }
   
   
-  public static enum CallbackCmd  {
+  public static enum XXXCallbackCmd  {
     /**Ordinary value=0, same as {@link Event.Cmd#free}. */
     free ,
     /**Ordinary value=1, same as {@link Event.Cmd#reserve}. */

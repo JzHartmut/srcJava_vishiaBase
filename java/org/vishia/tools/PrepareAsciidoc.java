@@ -253,14 +253,16 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
     int posChapterLink, posChapterLinkEnd = 0;
     while( (posChapterLink = sLineNew.indexOf("<<#", posChapterLinkEnd)) >=0) {
       posChapterLinkEnd = sLineNew.indexOf(">>", posChapterLink);
-      String sLabel = sLineNew.substring(posChapterLink+3, posChapterLinkEnd);
-      String sNr = this.idxChpNr.get(sLabel);
-      if(sNr ==null) { 
-        System.err.println("chapter label not found: " + sLabel);
-      } else {
-        sLineNew = sLineNew.substring(0, posChapterLink) + sNr + ' ' + sLineNew.substring(posChapterLink);
-        posChapterLinkEnd += sNr.length()+1;       // uses the changed sLineNew
-      }
+      //if(posChapterLinkEnd > posChapterLink) {   // ...>> was found. 
+        String sLabel = sLineNew.substring(posChapterLink+3, posChapterLinkEnd);
+        String sNr = this.idxChpNr.get(sLabel);
+        if(sNr ==null) { 
+          System.err.println("chapter label not found: " + sLabel);
+        } else {
+          sLineNew = sLineNew.substring(0, posChapterLink) + sNr + ' ' + sLineNew.substring(posChapterLink);
+          posChapterLinkEnd += sNr.length()+1;   // uses the changed sLineNew
+        }
+      //}
     }
     return sLineNew;
   }
@@ -325,25 +327,30 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
         }
         boolean bLastChpLabel = false;
         while(sLine !=null) {
-          if(sChpLabel9 !=null  && sLine.startsWith(sChpLabel9)) {
-            bLastChpLabel = true;
-            nLevelChp = 0;
-          }
-          if(sLine.startsWith("==")){
-            nLevelChpCurr = 1;
-            while(sLine.charAt(++nLevelChpCurr) == '=');   // counts "=== "
-            if(bLastChpLabel) {
-              if(nLevelChp == 0) {
-                nLevelChp = nLevelChpCurr;
-              } else if(nLevelChpCurr <= nLevelChp){
-                break;
+          try {
+            if(sChpLabel9 !=null  && sLine.startsWith(sChpLabel9)) {
+              bLastChpLabel = true;
+              nLevelChp = 0;
+            }
+            if(sLine.startsWith("==")){
+              nLevelChpCurr = 1;
+              while(sLine.charAt(++nLevelChpCurr) == '=');   // counts "=== "
+              if(bLastChpLabel) {
+                if(nLevelChp == 0) {
+                  nLevelChp = nLevelChpCurr;
+                } else if(nLevelChpCurr <= nLevelChp){
+                  break;
+                }
+              }
+              if(levelOffs >0) {
+                sLine = sChpAdd.substring(0, levelOffs) + sLine;
               }
             }
-            if(levelOffs >0) {
-              sLine = sChpAdd.substring(0, levelOffs) + sLine;
-            }
+            processLine(sLine, frIncl, fwOut, dirIn, args);
+          } catch(Exception exc) {               // any Exception: output the sLine with error msg
+            CharSequence sErr = ExcUtil.exceptionInfo(" // ERROR in Line while PrepareAsciidoc.java: ", exc, 0,10);
+            fwOut.append(sLine + sErr);
           }
-          processLine(sLine, frIncl, fwOut, dirIn, args);
           sLine = frIncl.readLine();
         } //while
         frIncl.close();
@@ -396,7 +403,11 @@ public class PrepareAsciidoc extends ReadWriteFileBase {
   
   
   private String shortenPreLine ( String sLine, Args args) {
-    if(sLine.length() > args.maxLineLength) {
+    int length = sLine.length();
+    while(length > args.maxLineLength && sLine.charAt(length-1) == ' ' ) {
+      length -=1;                               // if has unused spaces on end, shorten the spaces.
+    }
+    if(length > args.maxLineLength) {
       return sLine.substring(0, args.maxLineLength -3) + "...";
     }
     else return sLine;

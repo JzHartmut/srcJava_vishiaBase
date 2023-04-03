@@ -23,6 +23,8 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-02 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: 
+   *   If any String is longer than nrofChars but the rest is equal, now returns 0. (Before, returns a value > nrofChars).  
    * <li>2022-05-09 Hartmut new {@link #startsWithAfterAnyChar(CharSequence, CharSequence, String)}, new {@link #indexAfterAnyChar(CharSequence, int, int, CharSequence)}
    * <li>2022-05-09 Hartmut new {@link #compareWhSpacePos(CharSequence, int, int, CharSequence, int, int, int[])}
    * <li>2022-01-20 Hartmut new {@link #indexOfAnyCharOutsideQuotation(CharSequence, int, int, CharSequence, CharSequence, CharSequence, char, int[])}
@@ -363,6 +365,8 @@ public class StringFunctions {
     if(nrofChars ==0) return 0; //NOTE: following while compares at least one char
     int zChars =  nrofChars >= 0 ? Math.min(nrofChars, Math.min(z1- i1, z2-i2)) : Math.min(z1-i1, z2-i2);
     //z1 -=1; z2 -=1;  //compare before increment then.
+    if(z1 > zChars) { z1 = zChars; }
+    if(z2 > zChars) { z2 = zChars; }
     char c1=0, c2=0;
     while(c1 == c2 && --zChars >=0) {
       c1 = s1.charAt(i1++);

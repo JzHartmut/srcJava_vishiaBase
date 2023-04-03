@@ -19,8 +19,9 @@ public class FileRemoteProgressEvData implements Serializable, Payload
 
   /**Version, license and history.
    * <ul>
+   * <li>2023-03-26 {@link ProgressCmd} now contains all cmd for ask, yet in progress. 
    * <li>2023-02-21 new implements Payload and hence {@link #clean()}
-   * <li>2023-02-21 chg {@link #answer} is of type {@link ProgressCmd}, separated now from {@link FileRemote.Cmd}
+   * <li>2023-02-21 chg {@link #progressCmd} is of type {@link ProgressCmd}, separated now from {@link FileRemote.Cmd}
    * <li>2023-02-21 {@link #done()} in cohesion with {@link org.vishia.event.EventConsumerAwait#awaitExecution(long)}
    *   and {@link TimeOrder#repeatCyclic()}. If {@link #done()} was called the cyclically repeat ends 
    *   because it calls {@link TimeOrder#clear()}.  
@@ -99,7 +100,31 @@ public class FileRemoteProgressEvData implements Serializable, Payload
     refreshDirPre, refreshDirPost, refreshFile,
     refreshFileFaulty, 
     done,
-    nok, error
+    nok, error,
+    /**callback to ask what to do because the source file or directory is not able to open. */
+    askErrorSrcOpen,
+    
+    /**callback to ask what to do because the destination file or directory is not able to create. */
+    askErrorDstCreate,
+    
+    /**callback to ask what to do on a file which is existing but able to overwrite. */
+    askDstOverwr,
+    
+    /**callback to ask what to do on a file which is existing and read only. */
+    askDstReadonly,
+    
+    /**callback to ask that the file is not able to overwrite. The user can try it ones more or can press skip. */
+    askDstNotAbletoOverwr,
+    
+    /**callback to ask what to do because an copy file part error is occurred. */
+    askErrorCopy,
+    
+    acknAbortAll,
+    
+    acknAbortDir,
+    
+    acknAbortFile,
+    
 
   }
   
@@ -110,17 +135,12 @@ public class FileRemoteProgressEvData implements Serializable, Payload
   //private final EventSource srcAnswer;
   
 
-  /**super constructor:
-   * @param name Only for toString(), debug
-   * @param mng The manager for this time order to execute it for showing, often a graphic thread adaption.
-   *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
-   * @param delay The delay to start the oder execution after #show()
-   */
-  public FileRemoteProgressEvData ( ){ 
-    //super(name, timerThread, null, evConsumer, timerThread, eventWalker);
-  }
-  
-  
+  /**Cmd describes what the progress event contains. */
+  public ProgressCmd progressCmd;
+
+  /**The original command which this is answer to. */
+  public FileRemote.Cmd answerToCmd;
+
   /**Current processed file. */
   public FileRemote currFile, currDir;
   
@@ -144,12 +164,8 @@ public class FileRemoteProgressEvData implements Serializable, Payload
    */
   public String sError;
   
-  /**Command for asking or showing somewhat from executer to application. */
-  private FileRemote.CallbackCmd quest;
   
   
-  /**Answer from Application to Executer. */
-  public ProgressCmd answer;
   
 //  private FileRemote.Cmd cmd;
   
@@ -178,27 +194,28 @@ public class FileRemoteProgressEvData implements Serializable, Payload
 //  private StateMachine consumerAnswer;
   
   
-  public void clear() {
-    this.nrDirProcessed = 0;
-    this.nrDirVisited = 0;
-    this.nrFilesVisited = 0;
-    this.nrofFilesSelected = 0;
-    this.nrofFilesMarked = 0;
-    this.nrofBytesAll = 0;
-    this.nrofBytesFile = 0;
-    this.nrofBytesFileCopied = 0;
-    this.bDone = false;
-    this.sError = null;
-//    this.timeOrder.clear();
+  //public final EventCopyCtrl evAnswer = new EventCopyCtrl("copyAnswer");
+  
+  //private final EventSource srcAnswer;
+  
+  
+  /**super constructor:
+   * @param name Only for toString(), debug
+   * @param mng The manager for this time order to execute it for showing, often a graphic thread adaption.
+   *  For example use {@link org.vishia.gral.base.GralMng#gralDevice()} and there {@link org.vishia.gral.base.GralGraphicThread#orderList()}. 
+   * @param delay The delay to start the oder execution after #show()
+   */
+  public FileRemoteProgressEvData ( ){ 
+    //super(name, timerThread, null, evConsumer, timerThread, eventWalker);
   }
+
 
   
   @Override public void clean () {
   this.currFile = null;
   this.currDir = null;
   this.sError = null;
-  this.quest = FileRemote.CallbackCmd.free;
-  this.answer = FileRemoteProgressEvData.ProgressCmd.noCmd;
+  this.progressCmd = FileRemoteProgressEvData.ProgressCmd.noCmd;
   this.dateCreate = 0;
   this.dateLastAccess = 0;
   this.nrDirProcessed = 0;
@@ -236,7 +253,6 @@ public class FileRemoteProgressEvData implements Serializable, Payload
     //this.timeOrder.activate(0);                 // activate immediately.
   }
   
-  public FileRemote.CallbackCmd quest ( ){ return this.quest; }
   
   public boolean done ( ){ return this.bDone; }
   
@@ -264,7 +280,7 @@ public class FileRemoteProgressEvData implements Serializable, Payload
    * @param answer the answer for the quest.
    */
   public final void setAnswer ( FileRemoteProgressEvData.ProgressCmd answer ) {
-    this.answer = answer;
+    this.progressCmd = answer;
     if(this.bQuest) {
       synchronized(this) {
         notify();

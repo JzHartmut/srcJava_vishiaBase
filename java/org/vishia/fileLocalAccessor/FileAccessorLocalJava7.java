@@ -481,7 +481,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     if(evBack != null){ 
       FileRemoteProgressEvData progress = evBack.data();
       //FileRemote.CmdEvent ev = prepareCmdEvent(500, evBack);
-      progress.clear();
+      progress.clean();
+      progress.answerToCmd = FileRemote.Cmd.mkDir;
       progress.currFile = dir;
       progress.currDir = parent;
       progress.dateLastAccess = file1.lastModified();
@@ -1068,7 +1069,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       else if(co.depthWalk < 0){ depth1 = -co.depthWalk; }
       else { depth1 = co.depthWalk; }
       if(evBack !=null) {
-        evBack.data().clean();       //cleans the payload for cummulate
+        FileRemoteProgressEvData progress = evBack.data();
+        progress.clean();       //cleans the payload for cummulate
+        progress.answerToCmd = co.cmd;
+        
       }
       WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(co.filesrc.itsCluster, bRefreshChildren
           , co, callback, evBack, debugOut);
@@ -1330,13 +1334,13 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       }                                          // if co.selectMask does not contain mSelectMarkBits, do nothing with it.
       //
       if(!selected) {                            // after this.co.selectMask still not selected
-        if(this.co.markSet !=0) {
-          if( (this.co.markSet & FileMark.resetMark) !=0) {
-            dir1.setMarked(this.co.markSet);
-          } else {
-            dir1.resetMarked(this.co.markSet);
-          }
-        }
+//        if(this.co.markSet !=0) {
+//          if( (this.co.markSet & FileMark.resetMark) !=0) {
+//            dir1.setMarked(this.co.markSet);
+//          } else {
+//            dir1.resetMarked(this.co.markSet);
+//          }
+//        }
         ret =  FileVisitResult.SKIP_SUBTREE;  //but does nothing with the file.      
       } else {
         ret = FileVisitResult.CONTINUE;
@@ -1357,7 +1361,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         if(this.progress !=null) {                         
           //--------------------------------------- creates or updates a time order for the state. 
           if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-          this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshDirPre;
+          this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPre;
           this.progress.nrDirProcessed +=1;
           this.progress.currDir = dir1;          // all information about the FileRemote will be proper serialized if remote
           if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
@@ -1414,7 +1418,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       if(this.progress !=null) {                         
         //--------------------------------------- creates or updates a time order for the state. 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-        this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshDirPost;
+        this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPost;
         this.progress.currFile = this.curr.dir;          // all information about the FileRemote will be proper serialized if remote
         if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
           this.evBack.sendEvent(this);             // evBack is associated to the progress
@@ -1475,7 +1479,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
           fileRemote = this.curr.dir.child(name);          // get or create a file in given dir
         }
       } else {                                             // first time:
-        assert(false);                                     // NO: starts always with a directory!
+        //assert(false);                                     // NO: starts always with a directory!
         String sDir = file.getParent().toString();         // get directory from nio.file.Path
         fileRemote = FileRemote.getFile(sDir, name); // and gets a new directory
       }
@@ -1519,7 +1523,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         if(this.progress !=null) {                         
           //--------------------------------------- creates or updates a time order for the state. 
           if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-          this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshFile;
+          this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshFile;
           this.progress.nrofFilesSelected +=1;
           this.progress.nrofBytesAll += size;
           this.progress.currFile = fileRemote;          // all information about the FileRemote will be proper serialized if remote
@@ -1564,7 +1568,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       if(this.progress !=null) {                         
         //--------------------------------------- creates or updates a time order for the state. 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-        this.progress.answer = FileRemoteProgressEvData.ProgressCmd.refreshFileFaulty;
+        this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshFileFaulty;
         if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
           this.evBack.sendEvent(this);             // evBack is associated to the progress
         } else {                               // send cyclically only informations about progress
