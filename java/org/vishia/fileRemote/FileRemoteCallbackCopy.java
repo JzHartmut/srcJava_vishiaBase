@@ -105,11 +105,12 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
   
   
   @Override public Result offerParentNode(FileRemote dir){
-    if(first){
-      first = false;  //first level: don't change dirDst. It matches to the first source dir.
+    if(this.first){
+      this.first = false;  //first level: don't change dirDst. It matches to the first source dir.
     } else {
       String name = dir.getName();
-      dirDst = FileRemote.getDir(dirDst.getPathChars() + "/" + name);
+      this.dirDst = FileRemote.getDir(dirDst.getPathChars() + "/" + name);
+      this.dirDst.mkdir();
       if(this.progress !=null) {
         this.progress.currDir = dir;
       }
@@ -157,7 +158,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
             this.progress.nrofBytesFileCopied = sum;
           }
         }
-        if(this.callbackUser !=null) {
+        if(this.callbackUser !=null) {           // it is a callback in the callback, usual not used.
           this.callbackUser.offerLeafNode(file, info);
         }
       }

@@ -15,6 +15,7 @@ import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -271,7 +272,13 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   
   
   
+  /**Sets the real attributs.
+   * @param fileRemote
+   * @param path should be gotten as existing path, 
+   * @param attribs
+   */
   protected static void setAttributes(FileRemote fileRemote, Path path, BasicFileAttributes attribs){
+    fileRemote.internalAccess().setPath(path);
     FileTime fileTime = attribs.lastModifiedTime();
     long dateLastModified = fileTime.toMillis();
     long dateCreation = attribs.creationTime().toMillis();
@@ -540,7 +547,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     String sError = null;
     if(evBack == null) {
       try {
-        Files.copy(src.path, dst.path, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(src.path(), dst.path(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
       } 
       catch(Exception exc) {
         sError = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10).toString();
@@ -580,7 +587,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       String sError;
       try {
         @SuppressWarnings("unused") Path newPath = 
-          Files.move(src.path, dst.path, StandardCopyOption.REPLACE_EXISTING);
+          Files.move(src.path(), dst.path(), StandardCopyOption.REPLACE_EXISTING);
         // Note: newPath should be the same as dst.path
         sError = null;
       } 
@@ -688,7 +695,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       break;
     case walkCopyDirTree:
       FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(co.filedst, null, evBack);  //evCallback);
-      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, mission, evBack , false); 
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, mission, evBack , false); 
       break;
     default:
     }//switch
@@ -893,10 +900,22 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     
     public void run() {///
       String sPath = fileRemote.getAbsolutePath();
+      String name = fileRemote.getName();
       Path pathfile = Paths.get(sPath);
-      try{
-        BasicFileAttributes attribs = Files.readAttributes(pathfile, systemAttribtype);
-        setAttributes(fileRemote, pathfile, attribs);
+      int x = 1;
+//      try{
+//        Path pDir = pathfile.getParent();        // yet not clarified whether it exists
+        //useless: Path pFile = pDir.resolve(name);
+//Path path = Paths.get(pDir);
+      try {
+        Path pathFileExists = pathfile.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        //        FileRemote rDir = FileRemote.get(pDir.toString());
+//        if(!rDir.isTested()) {
+//          rDir.refreshPropertiesAndChildren(true, null);
+//        }
+//        FileRemote rFile = rDir.getChild(name);  // it is completely refreshed because refreshing the parent.
+        BasicFileAttributes attribs = Files.readAttributes(pathFileExists, FileAccessorLocalJava7.this.systemAttribtype);
+        setAttributes(fileRemote, pathFileExists, attribs);
       }catch(IOException exc){
         fileRemote.internalAccess().clrFlagBit(FileRemote.mExist);
       }
@@ -1078,7 +1097,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
           , co, callback, evBack, debugOut);
       Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
       //------------------------------------------- call of the java.nio-walker
-      java.nio.file.Files.walkFileTree(co.filesrc.path, options, depth1, visitor);  
+      java.nio.file.Files.walkFileTree(co.filesrc.path(), options, depth1, visitor);  
       if(visitor.timeOrderProgress !=null ) { visitor.timeOrderProgress.deactivate(); }
     } catch(IOException exc){
       sError = org.vishia.util.ExcUtil.exceptionInfo("FileAccessorLocalJava7.walkFileTree - unexpected Exception; ", exc, 0, 20).toString();
@@ -1451,7 +1470,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     {
       final FileVisitResult ret;
       String name = file.getFileName().toString();
-//      if(name.startsWith("Byte"))
+//      if(name.startsWith("docs"))
 //        Debugutil.stop();
       boolean bDirectory = attrs.isDirectory();
       if(this.progress !=null) {
@@ -1478,9 +1497,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         } else {
           fileRemote = this.curr.dir.child(name);          // get or create a file in given dir
         }
-      } else {                                             // first time:
-        //assert(false);                                     // NO: starts always with a directory!
+      } else {     // only a file is selected.             // get the file immediately.
+        //assert(false);                                   // NO: starts always with a directory!
         String sDir = file.getParent().toString();         // get directory from nio.file.Path
+        this.curr.dir = FileRemote.getFile(sDir, null);
         fileRemote = FileRemote.getFile(sDir, name); // and gets a new directory
       }
       //----------------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.

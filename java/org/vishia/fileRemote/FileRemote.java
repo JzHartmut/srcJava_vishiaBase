@@ -475,12 +475,14 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * If the instance is the root, this element contains an empty String in UNIX systems, the "C:" drive in Windows
    * or a special remote designation before the first slash in the path.
    */  
-  protected final String sDir;
+  protected String sDir;
   
   /**The name with extension of the file or directory name. 
    * If this instance is the root, this element contains "/".
+   * Note: It is not final because the name may be varied in upper or lower case on Windows file system.
+   * It is possible that first the file is defined in other case writing, then corrected on refresh. 
    */
-  protected final String sFile;
+  protected String sFile;
   
   /**The unique path to the file or directory entry. If the file is symbolic linked (on UNIX systems),
    * this field contains the non-linked direct path. But the {@link #sDir} contains the linked path. 
@@ -518,7 +520,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * Note: This element hides the File#path of the super class which is final and private.
    * It should not confuse the user.
    */
-  public final Path path;
+  protected Path path;
   
   
   /**Constructs an instance. The constructor is protected because only special methods
@@ -623,6 +625,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
+  public Path path() { return this.path; }
+  
+  public File file() { return this.oFile instanceof File ? (File)this.oFile : null; } 
+  
+  
   
   /**Gets or creates a child with the given name. 
    * If the child is not existing, it is create as a new FileRemote instance which is not tested.
@@ -677,10 +684,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     boolean bCont = true;
     int flagNewFile = 0; //FileRemote.mDirectory;
     StringBuilder uPath = new StringBuilder(100);
+    boolean bWindows = this.sDir.charAt(1) == ':';
     do{
       uPath.setLength(0);
       dir1.setPathTo(uPath).append('/').append(pathchild1);
-      child = dir1.children == null ? null : dir1.children.get(pathchild1); //search whether the child is known already.
+      final CharSequence pathchildKey = bWindows ? pathchild1.toString().toUpperCase(): pathchild1;
+      child = dir1.children == null ? null : dir1.children.get(pathchildKey); //search whether the child is known already.
       if(child == null) {
         if( pathchild !=null){  //a child given with a pathchild/name
           //maybe the child directory is registered already, take it.
@@ -699,6 +708,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
             child = new FileRemote(itsCluster, device, dir1, pathchild1, length
                 , dateLastModified,dateCreation,dateLastAccess, flags, null, true);
 //          }
+        }
+      } else {
+        if(StringFunctions.compare(child.sFile, pathchild1)!=0) {
+          child.sFile = pathchild1.toString();   // correct the name writing with correct upper/lower case.
         }
       }
       if(pathchild !=null){
@@ -722,7 +735,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
  
   public FileRemote getChild(CharSequence name){
-    return children == null ? null : children.get(name);
+    boolean bWindows = this.sDir.charAt(1) == ':';
+    String key = bWindows ? name.toString().toUpperCase() : name.toString();
+    return this.children == null ? null : this.children.get(key);
   }
   
   
@@ -1046,7 +1061,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       }
       child.parent = this;
     }
-    children.put(child.sFile, child);  //it may replace the same child with itself. But search is necessary.
+    final boolean bWindows = this.sDir.charAt(1) == ':';
+    String key = bWindows ? child.sFile.toUpperCase() : child.sFile;
+    this.children.put(key, child);  //it may replace the same child with itself. But search is necessary.
     child.flags &= ~mRefreshChildPending;
   }
   
@@ -1794,7 +1811,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         if(this.parent.children == null){
           //at least this is the child of the parent. All other children are unknown yet. 
           this.parent.children = createChildrenList(); //new IndexMultiTable<String, FileRemote>(IndexMultiTable.providerString);  //TreeMap<String, FileRemote>();
-          this.parent.children.put(this.sFile, this);
+          final boolean bWindows = this.sDir.charAt(1) == ':';
+          String key = bWindows ? this.sFile.toUpperCase() : this.sFile;
+          this.parent.children.put(key, this);
           this.parent.timeChildren = 0; //it may be more children. Not evaluated.
         }
       }
@@ -3293,6 +3312,22 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     public int setFlagBits(int mask, int bits){ flags &= ~mask; flags |= bits; return flags; }
 
+    
+    public void setPath(Path path) {
+      //FileRemote.this.path = path;
+      String sPath = path.toString();
+      File fileExists = path.toFile();
+      //CharSequence snPath = ;
+      CharSequence[] dirName = FileFunctions.separateDirName(FileFunctions.normalizePath(sPath));
+      boolean bOkDirName = StringFunctions.compare(FileRemote.this.sDir, dirName[0]) == 0
+                        && StringFunctions.compare(FileRemote.this.sFile, dirName[1]) == 0;
+      if(!bOkDirName) {           // do only change if necessary
+        FileRemote.this.oFile = path.toFile();
+        FileRemote.this.path = path;
+        FileRemote.this.sDir = dirName[0].toString();
+        FileRemote.this.sFile = dirName[1].toString();
+      }
+    }
     
     /**The values are set if there are not ==-1
      * @param length
