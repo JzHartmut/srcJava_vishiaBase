@@ -909,6 +909,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
 //Path path = Paths.get(pDir);
       try {
         Path pathFileExists = pathfile.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        boolean bExists = Files.exists(pathFileExists);
         //        FileRemote rDir = FileRemote.get(pDir.toString());
 //        if(!rDir.isTested()) {
 //          rDir.refreshPropertiesAndChildren(true, null);
@@ -1096,7 +1097,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(co.filesrc.itsCluster, bRefreshChildren
           , co, callback, evBack, debugOut);
       Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
-      //------------------------------------------- call of the java.nio-walker
+      //======>>>>                ----------------- call of the java.nio-walker
       java.nio.file.Files.walkFileTree(co.filesrc.path(), options, depth1, visitor);  
       if(visitor.timeOrderProgress !=null ) { visitor.timeOrderProgress.deactivate(); }
     } catch(IOException exc){

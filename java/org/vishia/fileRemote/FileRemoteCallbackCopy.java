@@ -93,13 +93,13 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
     this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dirDst = dirDstStart;
+    this.first = true; //true;   //depends on input line...
   }
   
   
   
   @Override public void start(FileRemote startDir)
   {
-    first = true;
   }
   
   
