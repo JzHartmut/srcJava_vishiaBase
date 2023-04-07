@@ -134,9 +134,11 @@ public abstract class FileRemoteAccessor implements EventConsumer
    *   and if the caller can check what is happen. 
    *   Hint: Usual an instance of {@link FileRemoteProgress} can be used to execute the event, 
    *   and also to wait for success on user level.
-   * @since 2023-03, the new concept.  
+   * @return null if executed in another thread (bWait = false), else return null if no error.
+   * @since 2023-03, the new concept.
+   *   
    */
-  public abstract void cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack);
+  public abstract String cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   
   /**Gets the properties and the children of the file from the physical file.
@@ -215,9 +217,9 @@ public abstract class FileRemoteAccessor implements EventConsumer
   public abstract boolean createNewFile(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack) throws IOException;
 
   
-  public abstract String moveFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack);
+  //public abstract String moveFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
-  public abstract String copyFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack);
+  //public abstract String copyFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   /**Try to delete the file.
    * @param callback

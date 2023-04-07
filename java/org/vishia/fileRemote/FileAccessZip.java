@@ -484,20 +484,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
 
-  @Override public String copyFile ( FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack ) {
-    // TODO Auto-generated method stub
-    
-    return "not implemented";
-  }
-
-
-
-  @Override public String moveFile ( FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack ) {
-    // TODO Auto-generated method stub
-    return "not implemented";
-  }
-
-
+ 
 
   @Override public void activate () {
     // TODO Auto-generated method stub
@@ -527,9 +514,9 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
 
-  @Override public void cmd ( boolean bWait,  CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack ) {
+  @Override public String cmd ( boolean bWait,  CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack ) {
     // TODO Auto-generated method stub
-    
+    return "not implemented";
   }
   
 

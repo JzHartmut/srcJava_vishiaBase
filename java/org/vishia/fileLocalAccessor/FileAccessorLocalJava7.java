@@ -70,6 +70,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-06 Hartmut new: chg: {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)} now also with copyFile, moveFile
    * <li>2023-02-21 some fine tuning 
    * <li>2023-02-13 Hartmut new: {@link WalkFileTreeVisitor#debugOut } as helper.
    * <li>2023-02-12 {@link #walkFileTree(FileRemote, boolean, boolean, int, int, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvData)}
@@ -496,7 +497,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       //file1.
       progress.setAnswer(bOk ? FileRemoteProgressEvData.ProgressCmd.done: FileRemoteProgressEvData.ProgressCmd.error);
       if(recursive ==0) {
-        progress.done(0, null);
+        progress.done(FileRemote.Cmd.mkDir, null);
       }
       evBack.sendEvent("mkdir");
     }
@@ -511,9 +512,21 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   
   
   @Override public boolean delete(FileRemote file, EventWithDst<FileRemoteProgressEvData,?> evBack){
+    
+    //Path path7 = file.path();
     File fileLocal = getLocalFile(file);
-    Path path = file.toPath();
-    return file.delete();
+    final boolean bOk;
+    if(fileLocal.exists()) {
+      if(fileLocal.isDirectory()) {
+        bOk = FileFunctions.rmdir(fileLocal);
+      } else {
+        bOk = fileLocal.delete();
+      }
+    } else {
+      bOk = true;
+    }
+    evBack.relinquish();  // not used yet.
+    return bOk; 
     //Files.delete(path);
 //    if(callback == null){
 //      return fileLocal.delete();                           // access immediately the file system in this thread
@@ -543,24 +556,33 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   
   
   
-  @Override public String copyFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  protected static String copyFile(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String sError = null;
-    if(evBack == null) {
-      try {
-        Files.copy(src.path(), dst.path(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
-      } 
-      catch(Exception exc) {
-        sError = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10).toString();
-      }
-    } else {
-//      FileRemote.CmdEvent evCmd = callback.getOpponent();
-//      if(evCmd.occupy(this.evSrc, this.execCopyFile, this.singleThreadForCommission, true)) {
-//        evCmd.filesrc = src;
-//        evCmd.filedst = dst;
-//        evCmd.sendEvent();
-//      } else {
-//        sError = "unexpected: evCmd is in use";
-//      }
+    try {
+      Files.copy(co.filesrc.path(), co.filedst.path(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+    } 
+    catch(Exception exc) {
+      sError = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10).toString();
+    }
+    if(evBack != null) {
+      evBack.data().done(FileRemote.Cmd.copyFile, sError);
+      evBack.sendEvent("copy");
+    }
+    return sError;
+  }
+
+  
+  protected static String moveFile(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+    String sError = null;
+    try {
+      Files.move(co.filesrc.path(), co.filedst.path(), StandardCopyOption.REPLACE_EXISTING);
+    } 
+    catch(Exception exc) {
+      sError = org.vishia.util.ExcUtil.exceptionInfo("copyFile", exc, 0, 10).toString();
+    }
+    if(evBack != null) {
+      evBack.data().done(FileRemote.Cmd.moveFile, sError);
+      evBack.sendEvent("move");
     }
     return sError;
   }
@@ -582,33 +604,6 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
 
   
   
-  @Override public String moveFile(FileRemote src, FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack) {
-    if(evBack == null) {
-      String sError;
-      try {
-        @SuppressWarnings("unused") Path newPath = 
-          Files.move(src.path(), dst.path(), StandardCopyOption.REPLACE_EXISTING);
-        // Note: newPath should be the same as dst.path
-        sError = null;
-      } 
-      catch(Exception exc) {                  // not moved
-        sError = org.vishia.util.ExcUtil.exceptionInfo("moveFile", exc, 0, 10).toString();
-      }
-      return sError;                          // return null if success
-    } else {
-      Runnable run = new Runnable() {
-        @Override public void run () {
-          String sError = moveFile(src, dst, null);
-//          callback.errorMsg = sError;
-//          callback.sendEvent(sError == null? FileRemote.CallbackCmd.done : FileRemote.CallbackCmd.error);
-        }
-      };
-      Thread thread = new Thread(run, "FileAcc-moveFile " + src.getName());
-      thread.start();
-      return null;
-    }
-  }
-
   
   @Override public void search(FileRemote fileSrc, byte[] search, FileRemoteWalkerCallback callbackUser, FileRemoteProgressEvData timeOrderProgress) {
     //TODO
@@ -674,8 +669,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   }
   
   
-  void execCmd ( FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
-    
+  String execCmd ( FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+    String ret = null;
     switch(co.cmd){
     case check: //copy.checkCopy(commission); break;
     case abortAll:     //should abort the state machine!
@@ -690,6 +685,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     case delete:  execDel(co); break;
     case mkDir: mkdir(co.filesrc(), false, evBack); break;
     case mkDirs: mkdir(co.filesrc(), true, evBack); break;
+    case copyFile: copyFile(co, evBack); break;
+    case moveFile: moveFile(co, evBack); break;
     case walkSelectMark: //also refreshs with selection, and mark functionality.
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, null, evBack , false); 
       break;
@@ -697,8 +694,12 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(co.filedst, null, evBack);  //evCallback);
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, mission, evBack , false); 
       break;
+    case walkCompare:
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, null, evBack , false); 
+      break;
     default:
     }//switch
+    return ret;
   }
   
   
@@ -707,15 +708,18 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
    * Hint: Set breakpoint to {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
    * to stop in the execution thread.
    */
-  @Override public void cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  @Override public String cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(bWait) {
-      execCmd(co, evBack);                       // execute in this thread.
+      return execCmd(co, evBack);                       // execute in this thread.
     } else {
+      String ret = "no thread free";
       for(WalkerThread th : this.walkerThread) {
         if(th.isFree() && th.setOrder(co, evBack)) {
+          ret = null;
           break;
         }
       }
+      return ret;
     }
   }
 
@@ -1081,6 +1085,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
 //        evWalker.progress.timeOrder.activateCyclic();     // timeOrder back event to inform
 //      }
       if(callback !=null) { callback.start(co.filesrc); }
+      else if(co.callback !=null) { co.callback.start(co.filesrc); }
       if(bRefreshChildren) {                     // refreshChildren is for children in FileRemote instance
         co.filesrc.internalAccess().newChildren(); 
       }
@@ -1109,7 +1114,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     }
     if(evBack !=null ) {                       // back event for finish
       FileRemoteProgressEvData progress = evBack.data();
-      progress.done(progressFinish, sError);
+      progress.done(co.cmd, sError);
       evBack.sendEvent("walkFileTreeExecInThisThread-done");
     }
   }
@@ -1272,7 +1277,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       //this.markSetDir = markSetDir;
       this.fileFilter = co.selectFilter == null ? null : FilepathFilterM.createWildcardFilter(co.selectFilter);
       //this.markCheck = (int)(bMarkCheck & 0xffffffff);
-      this.callback = callback;
+      this.callback = callback == null ? co.callback : callback;
       //this.ev = ev;
       this.evBack = evBack;
       this.progress = evBack == null ? null : evBack.data();

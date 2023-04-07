@@ -191,6 +191,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-06 Hartmut chg: {@link #copyTo(FileRemote, EventWithDst)} and {@link #moveTo(String, FileRemote, FileRemoteProgressEvData)}
+   *   now via device.cmd(), the new approach. Used in The.file.Commander  
    * <li>2023-04-02 Hartmut chg: {@link #getPathChars()} now returns dir path ends with slash. 
    *   This is in opposite to {@link #getPath()}, unchanged, defined by {@link File#getPath()}.
    * <li>2023-03-15 Hartmut chg: refactoring {@link #get(String)}, {@link #getFile(CharSequence, CharSequence)}, {@link #getDir(String)}
@@ -1329,23 +1331,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Refreshes a file tree and compare some or all files. This routine creates another thread usually which accesses the file system
-   * and invokes the callback routines. A longer access time does not influence this thread. 
-   * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
-   * will be invoked.
-   * @param depth at least 1 for enter in the first directory. Use 0 if all levels should entered.
-   * @param mask a mask to select directory and files
-   * @param bits to select files by its mark, 0 then select all (ignore mark)
-   * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
-   * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
-   */
-  public void refreshAndCompare(FileRemote dirCmp, int depth, String mask, int mark, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback) { ////
-    if(device == null){
-      device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
-    }
-    FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(this, dirCmp, null, evBack);  //evCallback);
-    device.walkFileTree(this,  false, true, 0, 0, mask, mark,  depth,  callbackCmp, evBack, false);  //should work in an extra thread.
-  }
   
   
   
@@ -1372,29 +1357,38 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Copies all files from this directory to dst which are selected by the given mask and/or mark bits.
-   * This routine creates another thread usually which accesses the file system
-   * and invokes the callback routines if given. A longer access time does not influence this thread. 
+  /**Refreshes a file tree and compare some or all files. This routine creates another thread usually which accesses the file system
+   * and invokes the callback routines. A longer access time does not influence this thread. 
    * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
-   * will be invoked. Elsewhere it works in the current thread.
-   * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
-   * @param mask a mask to select directory and files. See {@link org.vishia.util.PathCheck}, that is used.
-   * @param mark bits to select with mark alternatively 
-   * @param set or reset the bit.
-   * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
-   * @param progressEvent If given then this routine works in an extra thread. 
-   *   The progress and the success is sent via an event in the given time to the given destination, 
-   *   see {@link FileRemoteProgressEvData#FileRemoteProgressEvent(String, EventTimerThread_ifc, EventSource, EventConsumer, int)}.
-   *   The progress {@link EventConsumer#processEvent(EventObject)} runs in another thread as the FileRemote activity
-   *   and also in another thread then the caller of this operation. 
-   *   The caller thread of this operation can poll the progress and done status, 
-   *   but it can also call {@link EventConsumer#awaitExecution(long)} to wait for success.
-   *   <br>If this argument is null, the FileRemote activity is executed in the own thread. 
-   * this is a second possibility beside callbackUser, one of them may be sufficient. 
-   *   
-   *   This {@link org.vishia.event.TimeOrder} can be cyclically activated to see what's happen, whereby the thread to evaluate is free to define. 
-   * @since 2015-05. Tested elaborately and documented in 2023-02  
+   * will be invoked.
+   * @param depth at least 1 for enter in the first directory. Use 0 if all levels should entered.
+   * @param mask a mask to select directory and files
+   * @param bits to select files by its mark, 0 then select all (ignore mark)
+   * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
+   * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
    */
+  public void cmprDirTreeTo(boolean bWait, FileRemote dir2, String mask, int selectMark
+      , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    CmdEvent co = new CmdEvent();
+    co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);
+    co.cmd = Cmd.walkCompare;
+    co.depthWalk = 0;                            // walk through all levels.
+    co.filesrc = this;
+    co.filedst = dir2;
+    co.depthWalk = 0;
+    co.markSet = 0;
+    co.markSetDir = 0;
+    co.selectFilter = mask;
+    co.selectMask = selectMark;
+    co.cycleCallback = 100;                        //calback on any file and dir
+    this.device.cmd(bWait, co, evBack);
+  }
+  
+  
+  
   public void copyDirTreeTo(boolean bWait, FileRemote dirDst, int depth, int setMark, int setMarkDir, String mask, int mark
       , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
@@ -1423,11 +1417,24 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  public void copyTo(FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  public String copyTo(FileRemote dst, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    this.device.copyFile(this, dst, evBack);    
+    CmdEvent co = new CmdEvent();
+    co.callback = null;  //evCallback);
+    co.cmd = Cmd.copyFile;
+    co.depthWalk = 0;                            // walk through all levels.
+    co.filesrc = this;
+    co.filedst = dst;
+    co.depthWalk = 0;
+    co.markSet = 0;
+    co.markSetDir = 0;
+    co.selectFilter = null;
+    co.selectMask = 0;
+    co.cycleCallback = 100;                        //calback on any file and dir
+    return this.device.cmd(evBack ==null, co, evBack);
+    //this.device.copyFile(this, dst, evBack);    
   }
 
 
@@ -1437,7 +1444,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    return this.device.moveFile(this, dst, evBack);    
+    CmdEvent co = new CmdEvent();
+    co.callback = null;  //evCallback);
+    co.cmd = Cmd.moveFile;
+    co.depthWalk = 0;                            // walk through all levels.
+    co.filesrc = this;
+    co.filedst = dst;
+    co.depthWalk = 0;
+    co.markSet = 0;
+    co.markSetDir = 0;
+    co.selectFilter = null;
+    co.selectMask = 0;
+    co.cycleCallback = 100;                        //calback on any file and dir
+    return this.device.cmd(evBack ==null, co, evBack);
   }
   
   
@@ -1446,10 +1465,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * The File dst should be either a FileRemote instance, or it is converted to it for temporary usage.
    */
   @Override public boolean renameTo(File dst) {
-    if(this.device == null){
-      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
-    }
-    return this.device.moveFile(this, fromFile(dst), null) == null;    
+    return renameTo(fromFile(dst), null) ==null;    
   }
   
   
@@ -1700,6 +1716,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       return sDir;
     }    
   }
+
+  
+  public CharSequence getDirChars() {
+    return sDir;
+  }
+  
+  
   
   /**Fills the path to the given StringBuilder and returns the StringBuilder to concatenate.
    * This method helps to build a path with this FileRemote and maybe other String elements with low effort of memory allocation and copying. 
@@ -2836,6 +2859,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**Ordinary value=1. */
     reserve,  //first 2 ordinaries from Event.Cmd
     /**Check files. */
+    copyFile,
+    moveFile,
     check,
     move,
     moveChecked,
@@ -2938,6 +2963,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     /**For {@link Cmd#chgProps}: A new time stamp. */
     long newDate;
+    
+    public FileRemoteWalkerCallback callback;
     
     
     /**Creates the payload of a command event

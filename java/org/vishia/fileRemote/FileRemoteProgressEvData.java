@@ -238,11 +238,12 @@ public class FileRemoteProgressEvData implements Serializable, Payload
 
 
   /**Set the event to the done() state, all is done maybe with error.
-   * @param timeOrderFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
+   * @param infoUnusedFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
    * @param sError a message if any what was unexpected. Especially on unexpected exception. 
    */
-  public void done(int timeOrderFinish, String sError) {
+  public void done(FileRemote.Cmd answer, String sError) {
     this.sError = sError;
+    this.answerToCmd = answer;
 //    if(this.timeOrder !=null) {
 //      this.timeOrder.notifyConsumed(timeOrderFinish);
 //      this.timeOrder.clear();
