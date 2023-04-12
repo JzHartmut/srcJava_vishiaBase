@@ -6,6 +6,12 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.CopyOption;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.spi.FileSystemProvider;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -27,6 +33,8 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-09 improve: #offerLeafNode: Use {@link Files#copy(Path, Path, CopyOption...) if possible.
+   *   It is faster if both files are in network on the same drive. No network data transmission clarified by OS level. 
    * <li>2014-12-12 Hartmut new: {@link CompareCtrl}: Comparison with suppressed parts especially comments. 
    * <li>2013-09-19 created. Comparison in callback routine of walkThroughFiles instead in the graphic thread.
    * </ul>
@@ -131,36 +139,51 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
    * Note: because the FileRemote concept the file can be located on any remote device.
    * @see org.vishia.util.SortedTreeWalkerCallback#offerLeafNode(java.lang.Object)
    */
-  @Override public Result offerLeafNode(FileRemote file, Object info)
-  {
+  @Override public Result offerLeafNode(FileRemote file, Object info) {
+    int repeat = 5;
     FileRemote fileDst = dirDst.child(file.getName());
+    Path pathSrc = file.path();
+    Path pathDst = fileDst.path();
     InputStream inp = null;
     OutputStream wr = null;
     try{
-      long nrofBytesSum0 = 0;
+      FileStore fstoreSrc = Files.getFileStore(pathSrc);
+      FileStore fstoreDst = Files.getFileStore(pathDst.getParent());
+      FileSystemProvider provSrc = pathSrc.getFileSystem().provider();
+      FileSystemProvider provDst = pathDst.getParent().getFileSystem().provider();
       if(this.progress !=null) {
         this.progress.nrofBytesFile = file.length();
-        this.progress.nrofBytesFileCopied = 0;
-        //this.progress.nrFilesProcessed +=1;
-        //this.progress.currFile = file;
       }
-
-      inp = file.openInputStream(0);
-      wr = fileDst.openOutputStream(0);
-      if(inp == null || wr == null) {
-        
+      if(provSrc == provDst) {
+      //if(fstoreSrc == fstoreDst) {               // files on the same device, the copy is faster than manually copy.
+        Files.copy(pathSrc, pathDst, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        if(this.progress !=null) {
+          this.progress.nrofBytesFileCopied = this.progress.nrofBytesFile;
+        }
       } else {
-        int bytes, sum = 0;
-        while( (bytes = inp.read(this.buffer)) >0){
-          wr.write(this.buffer, 0, bytes);
-          sum += bytes;
-          if(this.progress !=null) {
-            this.progress.nrofBytesFileCopied = sum;
+        if(this.progress !=null) {
+          this.progress.nrofBytesFileCopied = 0;
+          //this.progress.nrFilesProcessed +=1;
+          //this.progress.currFile = file;
+        }
+        //
+        inp = file.openInputStream(0);
+        wr = fileDst.openOutputStream(0);
+        if(inp == null || wr == null) {
+          
+        } else {
+          int bytes, sum = 0;
+          while( (bytes = inp.read(this.buffer)) >0){
+            wr.write(this.buffer, 0, bytes);
+            sum += bytes;
+            if(this.progress !=null) {
+              this.progress.nrofBytesFileCopied = sum;
+            }
           }
         }
-        if(this.callbackUser !=null) {           // it is a callback in the callback, usual not used.
-          this.callbackUser.offerLeafNode(file, info);
-        }
+      }
+      if(this.callbackUser !=null) {           // it is a callback in the callback, usual not used.
+        this.callbackUser.offerLeafNode(file, info);
       }
     } catch(IOException exc) {
       System.err.println(exc.toString());

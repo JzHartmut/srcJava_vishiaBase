@@ -157,7 +157,7 @@ public class FileCluster
     if(!FileFunctions.isAbsolutePath(sDirP)) {
       throw new IllegalArgumentException("absolute path expected, " + sDir1);
     }
-    boolean bWindowsPath = sDirP.charAt(1) == ':';  // windows should have always a drive letter here. regard non case sensitive
+    boolean bWindowsPath = sDirP.length()>=2 && sDirP.charAt(1) == ':';  // windows should have always a drive letter here. regard non case sensitive
     final String sDir2;
     int zDir = sDir1.length();
     if(sDir1.charAt(zDir-1) == '/' && zDir >3)
@@ -260,7 +260,7 @@ public class FileCluster
    */
   private FileRemote searchOrCreateDir(String sPath){ 
     FileRemote ret;
-    boolean bWindows = sPath.charAt(1)==':';
+    boolean bWindows = sPath.length()>=2 && sPath.charAt(1)==':';
     String sPathKey = bWindows ? sPath.toUpperCase(): sPath;
     int pos9 = sPath.lastIndexOf('/');
     assert(pos9 >=0);  //because it is an absolute path.
