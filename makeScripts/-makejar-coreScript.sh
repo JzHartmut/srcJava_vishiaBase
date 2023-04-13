@@ -105,7 +105,7 @@ if ! test "$SRC_ALL" = ""; then
   find $SRC_ALL -name "*.java" > $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
   export SRCZIP=.:$SRC_ALL/**/*  ## with the srcJava_... dir
-fi  
+fi                                                                                        
 if ! test "$SRC_ALL2" = ""; then 
   echo source-set all files = $SRC_ALL2
   find $SRC_ALL2 -name "*.java" >> $TMPJAVAC/sources.txt
@@ -160,8 +160,14 @@ echo ====== deploy to DSTJARDIR=$DSTJARDIR =====================================
 ##REM Only the jar file is copied. The rest is done by the deploy script.
 ##echo cp $BUILD_TMP/deploy/* $DSTJARDIR
 ##cp $BUILD_TMP/deploy/* $DSTJARDIR
-echo "cp $DSTJARDIR/$JARFILE $DSTJARDIR/$DSTNAME.jar"
+echo "current dir =$PWD"
+echo "JARFILE=$JARFILE"
+echo "cp $JARFILE $DSTJARDIR/$DSTNAME.jar"
 cp $JARFILE $DSTJARDIR/$DSTNAME.jar
+echo "cp $MD5FILE $DSTJARDIR"
+cp $MD5FILE $DSTJARDIR
+echo "cp $BUILD_TMP/deploy/$SRCZIPFILE $DSTJARDIR"
+cp $BUILD_TMP/deploy/$SRCZIPFILE $DSTJARDIR 
 echo === $DSTJARDIR content:
 ls -all $DSTJARDIR
 

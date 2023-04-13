@@ -1,4 +1,12 @@
 ## may use a different JDK/JRE for Javadoc. Therefore a batch setJAVA_Javadoc.bat may found in the PATH in users space.
+if test -d ../../../build/; then export DSTDIR="../../../build/" 
+elif test -d ../../../javadoc/; then export DSTDIR="../../../javadoc/" 
+else export DSTDIR=$TMP/_Javadoc/
+fi
+if ! test -d $DSTDIR; then mkdir $DSTDIR; fi
+if ! test -d $DSTDIR; then export DSTDIR="../../"; fi
+echo %DSTDIR%
+
 if test -z $JAVAC_HOME; then
   echo "calls: $($(dirname $0)/JAVAC_HOME.sh)"
   export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"

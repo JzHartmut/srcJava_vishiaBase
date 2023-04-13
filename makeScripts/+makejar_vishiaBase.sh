@@ -9,14 +9,14 @@ echo " ... generates the $DSTNAME.jar from srcJava_$DSTNAME core sources"
 #Do not change the version on repeated build, and check the checksum and content of jar.
 #If it is equal, it is a reproduces build. The $VERSIONSTAMP is important 
 #  because it determines the timestamp and hence the checksum in the jar file. 
-export VERSIONSTAMP="2023-04-09"
+export VERSIONSTAMP="2023-04-12"
 
 ## Determine a dedicated vishiaBase-yyyy-mm-dd.jar or deactivate it to use the current vishiaBase.jar:
 export VERSION_VISHIABASE=$VERSIONSTAMP
 
 
 #The next line is the version for vishiaMiniSys. Change it only if the content of generated MiniSys.jar is changed.
-export VERSION_MINISYS="2022-03-19"
+export VERSION_MINISYS="2023-04-12"
 
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
@@ -39,12 +39,16 @@ export TIMEinJAR_VISHIABASE=""   ##get from $VERSIONSTAMP
 ##Note: The next is worse because it prevents reproducible results:
 ##export TIMEinJAR_VISHIABASE="$VERSIONSTAMP+00:00"   
 
-#The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
-#It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP
-export SRCZIPFILE="vishiaBase-$VERSION_VISHIABASE-source.zip"
-
+## This directory is the source directory for this component to create a jar
 export SRCDIRNAME="src/srcJava_vishiaBase"  ##must proper to the own location
-export MAKEBASEDIR="$SRCDIRNAME/makeScripts"     ##must proper in the own location
+
+## This directory contains some basic scripts. Should be exists
+export MAKEBASEDIR="src/srcJava_vishiaBase/makeScripts"     ##must proper in the own location
+
+#The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
+# It should have anytime the stamp of the newest file, independing of the VERSIONSTAMP
+export SRCZIPFILE="$DSTNAME-$VERSIONSTAMP-source.zip"
+
 
 #No further classpath necessary. 
 #The CLASSPATH is used for reference jars for compilation which should be present on running too.
@@ -77,12 +81,14 @@ unset FILE1SRC    ##left empty to compile all sources
 unset SRCPATH       ##set it with SRC_ALL;SRC_ALL2
 
 # Resourcefiles for files in the jar
-export RESOURCEFILES="$SRCDIRNAME/java:**/*.zbnf $SRCDIRNAME/java:**/*.txt $SRCDIRNAME/java:**/*.xml"
+export RESOURCEFILES="$SRC_ALL:**/*.zbnf $SRC_ALL:**/*.txt $SRC_ALL:**/*.xml $SRC_ALL:**/*.png"
 
 
 #now run the common script:
 # The DEPLOYSCRIPT will be executed after generation in the coreScript if given and found.
 export DEPLOYSCRIPT="$MAKEBASEDIR/-deployJar.sh"
+echo DEPLOYSCRIPT=$DEPLOYSCRIPT
+
 chmod 777 $MAKEBASEDIR/-makejar-coreScript.sh
 chmod 777 $DEPLOYSCRIPT
 $MAKEBASEDIR/-makejar-coreScript.sh
