@@ -69,6 +69,11 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2023-05-02: chg: newline characters after and before text: Then all white spaces after and before text are removed.
+   *   If a newline char does not appear, nothing is removed. spaces on start or end are admissible.
+   *   Then the XML file should not do beautification and should not contain newline characters there.
+   *   If a newline character is necessary in text content, the &#x0a; etc. should be used.
+   *   Changed in {@link #storeContent(StringBuilder, org.vishia.xmlReader.XmlCfg.XmlCfgNode, Object, Map[], String[])}.
    * <li>2022-06-25: chg: in {@link #storeContent(StringBuilder, org.vishia.xmlReader.XmlCfg.XmlCfgNode, Object, Map[], String[])}:
    *   the {@link DataAccess#invokeMethod(org.vishia.util.DataAccess.DatapathElement, Class, Object, boolean, Object[], boolean)} 
    *   was called with true for non exception, that is faulty. To detect writing errors in the xmlcfg file, exceptions are necessary. 
@@ -911,8 +916,7 @@ public class XmlJzReader
   private CharSequence parseContent(StringPartScan inp, StringBuilder buffer)
   throws IOException, ParseException
   { boolean bContReadContent;
-    //int posAmp = buffer == null ? 0 : buffer.length()-1; //NOTE: possible text between elements, append, start from current length.
-    inp.seekNoWhitespace();
+    //?? inp.seekNoWhitespace();
     boolean bEofSupposed = false;
     CharSequence content = null;
     do { //maybe read a long content in more as one portions.
@@ -926,7 +930,14 @@ public class XmlJzReader
       } else {
         inp.lenBacktoNoWhiteSpaces();
       }
-      CharSequence content2 = replaceSpecialCharsInText(inp.getCurrentPart());
+      CharSequence csText = inp.getCurrentPart();
+      if(csText.charAt(0)== ' ')
+        Debugutil.stop();
+      int posLf = StringFunctions.indexOf(csText, '\n');
+      if(posLf>0) {
+        Debugutil.stop();
+      }
+      CharSequence content2 = replaceSpecialCharsInText(csText);
       if(this.xmlTestWriter !=null) {
         this.xmlTestWriter.writeText(content2, false);
       }
@@ -1001,10 +1012,34 @@ public class XmlJzReader
     if(StringFunctions.contains(src, "Comment of Network1xx"))
       Debugutil.stop();
     //commented: if(StringFunctions.indexOfAnyChar(src, 0, -1, "&\n") < 0) { return src; }
-    if(StringFunctions.indexOf(src, '&') < 0) { return src; } //unchange, no effort
-    else {
+    int posStartNewline = -1;
+    int zChar = src.length();
+    int posEndNewline = zChar;
+    boolean bNewline = false;
+    while(++posStartNewline < zChar) {           // check whether text starts with spaces which contains newline
+      char cc = src.charAt(posStartNewline);
+      if("\n\r\t ".indexOf(cc)<0) break;
+      bNewline |= cc == '\n' || cc == '\r';
+    }
+    if(!bNewline) {
+      posStartNewline = 0;   // does not starts with spaces which contains newline
+    }
+    while(--posEndNewline >= posStartNewline) {                // check whether text ends with spaces which contains newline
+      char cc = src.charAt(posEndNewline);
+      if("\n\r\t ".indexOf(cc)<0) break;
+      bNewline |= cc == '\n' || cc == '\r';
+    }
+    if(!bNewline) {                               
+      posEndNewline = zChar;  // does not ends with spaces which contains newline
+    }
+    if(StringFunctions.indexOf(src, '&') < 0 && posStartNewline ==0 && posEndNewline == zChar) { 
+      return src;                                //unchanged src, no effort returns src
+    } else {
       StringBuilder b = new StringBuilder(src); //need, at least one & is to be replaced.
 //      boolean bLinefeedfound = false;
+      if(posEndNewline < zChar) {b.delete(posEndNewline, zChar); }
+      if(posStartNewline >0) { b.delete(0, posStartNewline); }
+      
       int pos = 0;
       while( ( pos  = StringFunctions.indexOf(b, '&', pos)) >=0) {
         int posEnd = StringFunctions.indexOf(b, ';', pos);

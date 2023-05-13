@@ -1384,24 +1384,30 @@ public class DataAccess {
     if(!bOk && !bNoExceptionifNotFound) {
       StringBuilder msg = new StringBuilder(1000);
       if(methodFound){
-        msg.append("DataAccess - method parameters don't match\n ...in class: >>");
+        msg.append("DataAccess - method parameters don't match, found:\n  ");
       } else {
-        msg.append("DataAccess - method not found\n ...in class >>");
+        msg.append("DataAccess - method not found, searched:\n  ");
       }
-      msg.append(clazz1.getName()).append("<<\n ...operation: >>") .append(element.ident) .append("(");
+      msg.append(clazz1.getName()).append(".") .append(element.ident) .append("(");
+      boolean bNext = false;
       if(args !=null) {
         for(Object arg: args) {
+          if(bNext) { msg.append(", "); }
+          bNext = true;
           if(arg !=null) {
-            msg.append(arg.getClass()).append(", ");
+            msg.append(arg.getClass());
           }
         }
       }
-      else if(element.args !=null) {
+      msg.append(")\n ...given arg names:");
+      bNext = false;
+      if(element.args !=null) {
         for(CalculatorExpr.Operand arg: element.args) {
-          msg.append(arg.textOrVar).append(", ");
+          if(bNext) { msg.append(", "); }
+          msg.append(arg.textOrVar);
         }
       }
-      msg.append(")<<;\n ... stackInfo: ");
+      msg.append("<<;\n ... stackInfo: ");
       CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
       if(debugMethod !=null && debugMethod.equals("")){
         debug();
