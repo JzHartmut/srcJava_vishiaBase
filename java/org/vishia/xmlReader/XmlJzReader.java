@@ -1088,6 +1088,11 @@ public class XmlJzReader
     return cfg;
   }
 
+  
+  /**Set the CmlCfg with a Java-given structure, especially for config reading.
+   * @param cfg
+   */
+  public void setCfg(XmlCfg cfg) { this.cfg = cfg; }
 
 
   /**Read from a resource (file inside jar archive).

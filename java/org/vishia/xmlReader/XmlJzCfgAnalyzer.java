@@ -1,8 +1,16 @@
 package org.vishia.xmlReader;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.Writer;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -10,8 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.util.ApplMain;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.ExcUtil;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions_B;
 import org.vishia.xmlSimple.SimpleXmlOutputter;
@@ -83,7 +93,7 @@ public class XmlJzCfgAnalyzer
   XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", xmlStructData);  //the root node for reading config
 
   /**The declared name spaces found in all nodes. */
-  Map<String, String> nameSpacesAll;   //TODO use it.
+  Map<String, String> nameSpacesAll = new TreeMap<String, String>();   //TODO use it.
   
 
   
@@ -101,6 +111,9 @@ public class XmlJzCfgAnalyzer
   
   
   
+  /**Writes the config file for the XmlJzReader with config file.
+   * @param wrCfg the output file.
+   */
   public void writeCfgTemplate(File wrCfg) {
     FileWriter writer = null;
     try {
@@ -110,7 +123,8 @@ public class XmlJzCfgAnalyzer
       for(Map.Entry<String, String> en: this.nameSpacesAll.entrySet()) {
         root.addNamespaceDeclaration(en.getKey(), en.getValue());
       }
-      for(XmlStructureNode structnode: this.xmlStructData.cfgSubtreeList) {
+      for(Map.Entry<String, XmlStructureNode> estructnode: this.xmlStructData.cfgSubtreeList.entrySet()) {
+        XmlStructureNode structnode = estructnode.getValue();
         //add one subtree node for each tag type in its context:
         assert(structnode.sSubtreenode !=null);  //it should be designated.
         XmlNode wrCfgsubtreenode = root.addNewNode("subtree", "xmlinput"); //second node "cfg"
@@ -157,6 +171,161 @@ public class XmlJzCfgAnalyzer
   }
 
 
+  
+  
+  /**Writes the config file for the XmlJzReader with config file.
+   * @param wrCfg the output file.
+   */
+  public void writeCfgText(File fout) {
+    Writer out = null;
+    try {
+      out = new OutputStreamWriter(new FileOutputStream(fout), "UTF-8");
+      //Output it as cfg.xml
+      out.append("== NameSpaces ==");
+      for(Map.Entry<String, String> en: this.nameSpacesAll.entrySet()) {
+        ApplMain.outNewlineIndent(out,0);
+        out.append(en.getKey()).append(" = ").append(en.getValue());
+      }
+      out.append("\n\n== Subtree nodes ==\n");
+      for(Map.Entry<String, XmlStructureNode> estructnode: this.xmlStructData.cfgSubtreeList.entrySet()) {
+        XmlStructureNode structnode = estructnode.getValue();
+        //add one subtree node for each tag type in its context:
+        if(structnode.sSubtreenode ==null)
+          Debugutil.stop();
+        //assert(structnode.sSubtreenode !=null);  //it should be designated.
+        structnode.writeData(out, 0);
+        //
+//        if(structnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: structnode.nodes.entrySet()) {
+//          XmlStructureNode srcSubnode = e_srcSubnode.getValue();
+//          srcSubnode.writeData(out, 2);          // calls recursively more subnodes
+//          ApplMain.outNewlineIndent(out, 0);
+//        }
+      }
+      out.append("\n\n== The root struct ==\n");
+      for(Map.Entry<String, XmlStructureNode> enode: this.xmlStructTree.nodes.entrySet()) {
+        XmlStructureNode node = enode.getValue();
+        node.writeData(out,0);
+      }
+      ApplMain.outNewlineIndent(out, 0);
+      
+      out.close();
+    } catch(Exception exc) {
+      CharSequence error = ExcUtil.exceptionInfo("unexpected", exc, 0, 100);
+      System.err.append(error);
+    } finally {
+      if(out !=null) {
+        try { out.close(); } catch(IOException exc) { System.err.append("cannot close" + fout.getAbsolutePath());}
+      }
+    }
+  }
+
+
+  public void readConfigText(File fin) {
+    BufferedReader rd = null;
+    try {
+      rd = new BufferedReader(new InputStreamReader(new FileInputStream(fin), "UTF-8"));
+      String sLine;
+      boolean bSubTreeNodes = true;
+      boolean bReadNodes = false;
+      boolean bReadNamespaces = true;
+      while( (sLine = rd.readLine()) !=null) {
+        sLine = sLine.trim();                    // indentation is only for viewing
+        if(sLine.length() == 0) {}               // ignore empty line
+        else if(sLine.startsWith("== NameSpaces ==")) {
+          bReadNamespaces = true;
+        }
+        else if(sLine.startsWith("== Subtree nodes ==")) {  
+          bReadNamespaces = false;
+          bReadNodes = true;
+          bSubTreeNodes = true;
+        }
+        else if(sLine.startsWith("== The root struct ==")) { 
+          bReadNamespaces = false;
+          bReadNodes = true;
+          bSubTreeNodes = false;
+        }
+        else if(bReadNamespaces) {
+          readNameSpace(sLine);
+        }
+        else if(bReadNodes) {
+          XmlStructureNode node = readNode(rd, sLine);
+          if(bSubTreeNodes) {
+            this.xmlStructData.cfgSubtreeList.put(node.tagIdent, node);
+          } else {
+            this.xmlStructTree.putSubnode(node);
+          }
+        } else if(sLine.length() >0) {
+          System.err.println("faulty line: " + sLine);
+        }
+        
+      }
+    } catch(Exception exc) {
+      CharSequence error = ExcUtil.exceptionInfo("unexpected", exc, 0, 100);
+      System.err.append(error);
+    } finally {
+      if(rd !=null) {
+        try { rd.close(); } catch(IOException exc) { System.err.append("cannot close" + fin.getAbsolutePath());}
+      }
+    }
+  }
+  
+  
+  private void readNameSpace(String sLine) {
+    int sep = sLine.indexOf(" = ");
+    this.nameSpacesAll.put(sLine.substring(0, sep), sLine.substring(sep+3));
+  }
+
+  
+  private XmlStructureNode readNode ( BufferedReader rd, String sLine1) throws IOException {
+    String sLine = sLine1 != null ? sLine1 : rd.readLine();
+    sLine = sLine.trim();
+    assert(sLine.startsWith("<"));
+    int posSpace = sLine.indexOf(' ');
+    String sTag = sLine.substring(1, posSpace);
+    int posSpace2 = sLine.indexOf(' ', posSpace +1);
+//    String tagIdent = sLine.substring(posSpace+1, posSpace2);
+    int posSep = sLine.indexOf('=', posSpace2+1);
+    String sSubtreenode = sLine.substring(posSpace2+1, posSep);
+    XmlStructureNode node = new XmlStructureNode(null, sTag, this.xmlStructData);
+    if(!sSubtreenode.equals("null")) {
+      node.sSubtreenode = sSubtreenode;
+    }
+    node.bText = sLine.indexOf(" TEXT") >=0;
+    node.onlySingle = sLine.indexOf(" SINGLE") >=0;
+    node.bDependencyChecked = sLine.indexOf(" DEPCHECKED") >=0;
+    while( (sLine= rd.readLine()) !=null) {
+      sLine = sLine.trim();
+      if(sLine.startsWith(">")) {                // end of node
+        break;
+      }
+      else if(sLine.startsWith("<")) {
+        XmlStructureNode subNode = readNode(rd, sLine);
+        node.putSubnode(subNode);
+      }
+      else if(sLine.startsWith("@")) {
+        int posSep2 = sLine.indexOf(" = ");
+        node.setAttribute(sLine.substring(1, posSep2));
+      }
+      else if(sLine.length()==0) {}
+      else {
+        System.err.println("read cfgTxt unknown: " + sLine);
+        Debugutil.stop();
+      }
+    }
+    return node;
+  }
+
+  
+  private char readAttributeOrSubnode(String sLine) {
+    
+    return 'a';
+  }
+  
+
+  private void readRootStructure(String sLine) {
+    
+  }
+  
   
   
   
@@ -261,6 +430,30 @@ public class XmlJzCfgAnalyzer
     Debugutil.stop();
   }
 
+  /**Reads any XML file and stores the structure in the {@link #xmlStructTree}.
+   *  
+   * @param fXmlIn
+   * @throws IOException 
+   */
+  public void readXmlStructZip(File fXmlIn, String pathInZip) throws IOException {
+    XmlJzReader xmlReader = new XmlJzReader();
+    xmlReader.setCfg(newCfgReadStruct());
+    if(this.debugStopLineXmlInp >0) {
+      xmlReader.setDebugStop(this.debugStopLineXmlInp);
+    }
+    xmlReader.readZipXml(fXmlIn, pathInZip, this.xmlStructTree);
+    this.xmlStructData.checkCfgSubtree();   //removeSingleEntries();
+    this.nameSpacesAll = xmlReader.namespaces;
+    Debugutil.stop();
+  }
+
+  public void writeData ( File fout) throws IOException {
+    Writer out = new OutputStreamWriter(new FileOutputStream(fout), "UTF-8");
+    this.xmlStructTree.writeData(out, 0);
+    ApplMain.outNewlineIndent(out, 0);
+    out.close();
+  }    
+
 
   
   /**Creates the configuration to read any xml file to store its structure especially in {@link XmlJzCfgAnalyzer.XmlStructureNode}.
@@ -297,12 +490,14 @@ public class XmlJzCfgAnalyzer
   public static void main(String[] args) {
     XmlJzCfgAnalyzer main = new XmlJzCfgAnalyzer();
     if(args.length == 0) {
-      System.out.println("java -cp .... org.vishia.xmlReader.XmlJzCfgAnalyzer INFILE OUTFILE\n"
+      System.out.println("java -cp .... org.vishia.xmlReader.XmlJzCfgAnalyzer INFILE OUTFILE DATAFILE\n"
           + "  INFILE: Any user xml file\n"
           + "  OUTFILE: A config.xml file as template to create the config file for XmlJzReader\n");
     } else {
       try {
         main.readXmlStruct(new File(args[0]));
+        if(args.length>=3)
+        main.writeData(new File(args[2]));
         //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
         main.writeCfgTemplate(new File(args[1]));
       } catch (Exception e) {
@@ -314,7 +509,7 @@ public class XmlJzCfgAnalyzer
   
   
   
-  static class XmlStructureData {
+  static final class XmlStructureData {
     
     /**Contains all elements with its {@link #occurrence}.
      *
@@ -360,11 +555,13 @@ public class XmlJzCfgAnalyzer
 
     
     
-    /**Stores all node types per tagName, with its occurence in the structure file. 
+    /**Stores all node types per tagName, with its occurrence in the structure file. 
      * */
     TreeMap<String, CfgSubtreeType> allElementTypes = new TreeMap<String, CfgSubtreeType>();
    
-    /**Stores all node types with occurrence more as one time, with tag name but with extra entry for any different content (really different type with same tag). */
+    /**Stores all node types with occurrence more as one time, with tag name 
+     * but with extra entry for any different content (really different type with same tag). 
+     */
     IndexMultiTable<String, CfgSubtreeType2> allElementTypes2 = new IndexMultiTable<String, CfgSubtreeType2>(IndexMultiTable.providerString);
    
     
@@ -373,7 +570,7 @@ public class XmlJzCfgAnalyzer
     Map<String, XmlStructureNode> cfgSubtreeByName = new TreeMap<String, XmlStructureNode>();
     
     /**Stores the cfg subtree in the usage order. */
-    List<XmlStructureNode> cfgSubtreeList = new ArrayList<XmlStructureNode>();
+    Map<String, XmlStructureNode> cfgSubtreeList = new TreeMap<String, XmlStructureNode>();
     
     
     
@@ -468,6 +665,9 @@ public class XmlJzCfgAnalyzer
               String key = e.getKey();
               if(cfgSubtreeType.attributeNames.get(key) ==null) {
                 cfgSubtreeType.attributeNames.put(key, key);     //an attribute non detected as yet, add it in representative.;
+                if(cfgSubtreeType.representative.attribs == null) {
+                  cfgSubtreeType.representative.attribs = new TreeMap<String, AttribRead>();
+                }
                 cfgSubtreeType.representative.attribs.put(key, e.getValue());
               }
             }
@@ -476,6 +676,10 @@ public class XmlJzCfgAnalyzer
               foundNodeNames.put(key, key);
               if(cfgSubtreeType.nodeNames.get(e.getKey()) ==null) {
                 cfgSubtreeType.nodeNames.put(key, key);    //a node non detected as yet, add it in representative.
+                if(cfgSubtreeType.representative.nodes ==null) {
+                  //cfgSubtreeType.representative.addElement(key);
+                  cfgSubtreeType.representative.nodes = new TreeMap<String, XmlStructureNode>();
+                }
                 cfgSubtreeType.representative.nodes.put(key, e.getValue());
               }
             }
@@ -491,7 +695,7 @@ public class XmlJzCfgAnalyzer
     
     
     
-    private void checkCfgSubtree() {
+    protected void checkCfgSubtree() {
       for(Map.Entry<String, CfgSubtreeType> e: allElementTypes.entrySet()) {
         CfgSubtreeType cfgSubtreeOccurrences = e.getValue();
         if(cfgSubtreeOccurrences.occurrence.size() >1) { 
@@ -526,7 +730,10 @@ public class XmlJzCfgAnalyzer
       assert(recursionCt >=0);
       if(!cfgSubtree.bSort ) {
         if(cfgSubtree.dependings.size()==0) {
-          cfgSubtreeList.add(cfgSubtree.representative);
+          if(this.cfgSubtreeList.get(cfgSubtree.tag) !=null) {
+            System.out.println("processDependingCfgSubtree twice: " + cfgSubtree.tag);
+          }
+          this.cfgSubtreeList.put(cfgSubtree.tag, cfgSubtree.representative);
           cfgSubtree.bSort = true;
         } else {
           cfgSubtree.bSort = true;  //prevent recursion on own depending 
@@ -534,7 +741,10 @@ public class XmlJzCfgAnalyzer
             processDependingCfgSubtree(dep, recursionCt-1);
           }
           //all dependencies processed.
-          cfgSubtreeList.add(cfgSubtree.representative);
+          if(this.cfgSubtreeList.get(cfgSubtree.tag) !=null) {
+            System.out.println("processDependingCfgSubtree-2 twice: " + cfgSubtree.tag);
+          }
+          this.cfgSubtreeList.put(cfgSubtree.tag, cfgSubtree.representative);
         }
       }
     }
@@ -607,6 +817,7 @@ public class XmlJzCfgAnalyzer
     /**Tag name of the element. */
     final String tag;
     
+    /**Tag name of the element as written in Java code, only identifier chars. */
     final String tagIdent;
     
     String sSubtreenode;
@@ -634,6 +845,7 @@ public class XmlJzCfgAnalyzer
      */
     Map<String, XmlStructureNode> nodes;
     
+    /**Only for test whether or not a node is found twice. If twice, {@link #onlySingle} is set to false for this node. */
     Map<String, String> nodesLocal;
     
     /**Found attributes. The list is supplemented if new attribute names are found on further occurrences of elements. */
@@ -658,6 +870,13 @@ public class XmlJzCfgAnalyzer
       this.tagIdent = StringFunctions_B.replaceNonIdentifierChars(tag, '-').toString();
       
       this.xmlStructData = xmlStructData; 
+    }
+    
+    
+    
+    void putSubnode(XmlStructureNode subNode) {
+      if(this.nodes == null) { this.nodes = new TreeMap<String, XmlStructureNode>(); }
+      this.nodes.put(subNode.tag, subNode);
     }
     
     
@@ -733,6 +952,37 @@ public class XmlJzCfgAnalyzer
     
     public void setTextOccurrence() { this.bText = true; }
    
+    
+    void writeNodeData ( Appendable out, int indent) throws IOException {
+      ApplMain.outIndent(out, indent);
+      out.append('<').append(this.tag).append(' ').append(this.tagIdent).append(' ').append(this.sSubtreenode).append('=');
+      if(this.bText) { out.append(" TEXT "); }
+      if(this.bDependencyChecked) { out.append(" DEPCHECKED "); }
+      if(this.onlySingle) { out.append(" SINGLE "); }
+      out.append('\n');
+      if(this.attribs !=null) {
+        for(Map.Entry<String, AttribRead> e_attrib : this.attribs.entrySet()) {
+          ApplMain.outIndent(out, indent +2);
+          AttribRead attrib = e_attrib.getValue();
+          out.append('@');
+          if(attrib.namespace !=null) { out.append(attrib.namespace).append(':'); }
+          out.append(attrib.name).append(" = ").append(attrib.value).append("\n");
+        }
+      }
+      
+    }
+    
+    void writeData ( Appendable out, int indent) throws IOException {
+      writeNodeData(out, indent);
+      if(this.nodes !=null) {
+        for(Map.Entry<String, XmlStructureNode> e_node : this.nodes.entrySet()) {
+          XmlStructureNode node = e_node.getValue();
+          node.writeData(out, indent +2);
+        }
+      }
+      ApplMain.outIndent(out, indent);
+      out.append(">\n");
+    }
     
     @Override public String toString(){ return this.tag + (this.attribs != null ? " attr:" + this.attribs.toString():"") + (this.nodes !=null ? " nodes:" + this.nodes.toString() : ""); }
     

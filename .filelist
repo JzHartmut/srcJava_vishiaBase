@@ -1,413 +1,397 @@
-2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
-2021-07-06 00:36:37  x     .git                                     ::           . 68 -2101163421 
-2023-04-07 21:05:01  x     .gitCommit                               ::           .151 -1218734296 
-2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
-2020-02-15 10:06:32  x     .gitRepository                           ::           . 60 -1077802871 
-2020-06-16 11:25:49  x     .gitignore                               ::           . 43  1031902514 
+2023-04-29 08:24:20  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 
 ============================== java/ ==============================================================
 
 ============================== java/org/ ===========================================================
 
 ============================== java/org/vishia/ ====================================================
-2012-03-17 08:57:20  x     package-info.java                        ::           .579  0152360617 
+2023-04-29 08:24:20  x     package-info.java                        ::           .579  0152360617 
 
 ============================== java/org/vishia/bridgeC/ ============================================
-2021-10-04 14:29:49  x     AllocInBlock.java                        ::          6.885 -1312518409 
-2021-10-04 14:29:59  x     ConcurrentLinkedQueue.java               ::          3.928 -0565058111 
-2021-10-04 14:29:48  x     DivideJc.java                            ::          5.508 -1228857044 
-2023-03-09 20:33:07  x     EventJc.java#                            ::          3.929  1473134797 
-2021-10-04 14:29:52  x     ExampleTestFloat.java                    ::           .789 -0507002341 
-2021-10-04 14:29:56  x     FixArray.java                            ::          2.095  0347180581 
-2021-10-04 14:29:52  x     IllegalArgumentExceptionJc.java          ::           .244  0233558470 
-2014-09-06 09:12:18  x     MemC.java                                ::          2.064 -0772417856 
-2021-10-04 14:29:48  x     MemSegmJc.java                           ::          2.771  1610801306 
-2021-10-04 14:29:58  x     MemUnit.java                             ::          1.678  0670242877 
-2021-10-04 14:29:50  x     OS_TimeStamp.java                        ::          4.048 -2145152333 
-2021-10-04 14:29:52  x     ThreadContextFW.java                     ::          1.900  1853195616 
-2022-12-25 13:40:52  x     VaArgBuffer.java                         ::          2.720 -0399973182 
-2017-01-01 20:58:32  x     Va_list.java                             ::          3.645  1732196344 
-2012-03-17 08:57:20  x     package-info.java                        ::           .521  2072844694 
+2023-04-29 08:24:20  x     AllocInBlock.java                        ::          6.885 -1312518409 
+2023-04-29 08:24:20  x     ConcurrentLinkedQueue.java               ::          3.928 -0565058111 
+2023-04-29 08:24:20  x     DivideJc.java                            ::          5.508 -1228857044 
+2023-04-29 08:24:20  x     ExampleTestFloat.java                    ::           .789 -0507002341 
+2023-04-29 08:24:20  x     FixArray.java                            ::          2.095  0347180581 
+2023-04-29 08:24:20  x     IllegalArgumentExceptionJc.java          ::           .244  0233558470 
+2023-04-29 08:24:20  x     MemC.java                                ::          2.064 -0772417856 
+2023-04-29 08:24:20  x     MemSegmJc.java                           ::          2.771  1610801306 
+2023-04-29 08:24:20  x     MemUnit.java                             ::          1.678  0670242877 
+2023-04-29 08:24:20  x     OS_TimeStamp.java                        ::          4.048 -2145152333 
+2023-04-29 08:24:20  x     ThreadContextFW.java                     ::          1.900  1853195616 
+2023-04-29 08:24:20  x     VaArgBuffer.java                         ::          2.720 -0399973182 
+2023-04-29 08:24:20  x     Va_list.java                             ::          3.645  1732196344 
+2023-04-29 08:24:20  x     package-info.java                        ::           .521  2072844694 
 
 ============================== java/org/vishia/byteData/ ===========================================
-2016-09-03 22:21:48  x     ByteDataAccess.java                      ::         83.277  0134436295 
-2022-09-27 23:31:17  x     ByteDataAccessBase.java                  ::         95.700 -0744481635 
-2021-10-04 14:29:51  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
-2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
-2022-10-25 00:07:02  x     ByteDataAccessSimple.java                ::          5.792 -1822930907 
-2022-10-27 11:10:11  x     ByteDataSymbolicAccess.java              ::         31.461 -1590403540 
-2022-11-19 21:08:45  x     ByteDataSymbolicAccessReadConfig.java    ::          4.590  0614878915 
-2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
-2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
-2018-12-27 19:09:07  x     Field_Jc.java                            ::         15.680 -1928813301 
-2021-10-04 14:29:51  x     ObjectArraySet_Jc.java                   ::          3.512  0958484692 
-2018-12-26 21:00:12  x     ObjectArray_Jc.java                      ::          3.868 -0012452241 
-2020-12-20 20:15:35  x     Object_Jc.java                           ::         10.618  0238707061 
-2012-12-23 20:43:36  x     PositionElementInStruct.java             ::          2.793  0818954365 
-2021-10-04 14:29:52  x     RawDataAccess.java                       ::          3.662  1778324523 
-2020-12-20 20:45:03  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.137  1346048705 
-2022-08-26 14:37:42  x     VariableAccessArray_ifc.java             ::          6.179 -1134572736 
-2022-09-28 20:08:53  x     VariableAccessWithBitmask.java           ::          6.294  1115140259 
-2022-09-28 20:09:48  x     VariableAccessWithIdx.java               ::          7.745 -1820468043 
-2022-09-28 22:20:19  x     VariableAccess_ifc.java                  ::         10.840 -1981352927 
-2021-10-04 14:29:50  x     VariableContainer_ifc.java               ::          5.203 -1327596121 
-2012-03-03 11:16:26  x     package-info.java                        ::           .155  1770849139 
+2023-04-29 08:24:20  x     ByteDataAccess.java                      ::         83.277  0134436295 
+2023-04-29 08:24:20  x     ByteDataAccessBase.java                  ::         95.700 -0744481635 
+2023-04-29 08:24:20  x     ByteDataAccessDbg.java                   ::          1.434 -0084905992 
+2023-04-29 08:24:20  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
+2023-04-29 08:24:20  x     ByteDataAccessSimple.java                ::          5.792 -1822930907 
+2023-04-29 08:24:20  x     ByteDataSymbolicAccess.java              ::         31.461 -1590403540 
+2023-04-29 08:24:20  x     ByteDataSymbolicAccessReadConfig.java    ::          4.590  0614878915 
+2023-04-29 08:24:20  x     ByteDataVariable.java                    ::          8.522 -0284685645 
+2023-04-29 08:24:20  x     Class_Jc.java                            ::          9.274 -1758001948 
+2023-04-29 08:24:20  x     Field_Jc.java                            ::         15.680 -1928813301 
+2023-04-29 08:24:20  x     ObjectArraySet_Jc.java                   ::          3.512  0958484692 
+2023-04-29 08:24:20  x     ObjectArray_Jc.java                      ::          3.868 -0012452241 
+2023-04-29 08:24:20  x     Object_Jc.java                           ::         10.618  0238707061 
+2023-04-29 08:24:20  x     PositionElementInStruct.java             ::          2.793  0818954365 
+2023-04-29 08:24:20  x     RawDataAccess.java                       ::          3.662  1778324523 
+2023-04-29 08:24:20  x     SuperclassIfc_idxMtblJc_ByteDataAccess.java ::          4.137  1346048705 
+2023-04-29 08:24:20  x     VariableAccessArray_ifc.java             ::          6.179 -1134572736 
+2023-04-29 08:24:20  x     VariableAccessWithBitmask.java           ::          6.294  1115140259 
+2023-04-29 08:24:20  x     VariableAccessWithIdx.java               ::          7.745 -1820468043 
+2023-04-29 08:24:20  x     VariableAccess_ifc.java                  ::         10.840 -1981352927 
+2023-04-29 08:24:20  x     VariableContainer_ifc.java               ::          5.203 -1327596121 
+2023-04-29 08:24:20  x     package-info.java                        ::           .155  1770849139 
 
 ============================== java/org/vishia/byteData/reflection_Jc/ =============================
-2021-10-04 14:29:58  x     Reflection_Jc.java                       ::          5.940  1232102109 
+2023-04-29 08:24:20  x     Reflection_Jc.java                       ::          5.940  1232102109 
 
 ============================== java/org/vishia/charset/ ============================================
-2021-10-04 22:25:55  x     ASCII7bit.java                           ::           .413  1631729279 
-2021-10-05 12:50:12  x     CodeCharset.java                         ::          1.781  0456656812 
-2021-10-04 22:25:50  x     ISO8859_1.java                           ::           .864 -0043435681 
-2021-10-04 22:28:25  x     ISO8859_2.java                           ::          2.121  0939206437 
+2023-04-29 08:24:20  x     ASCII7bit.java                           ::           .413  1631729279 
+2023-04-29 08:24:20  x     CodeCharset.java                         ::          1.781  0456656812 
+2023-04-29 08:24:20  x     ISO8859_1.java                           ::           .864 -0043435681 
+2023-04-29 08:24:20  x     ISO8859_2.java                           ::          2.121  0939206437 
 
 ============================== java/org/vishia/checkDeps_C/ ========================================
-2012-12-25 15:31:12  x     AddDependency_InfoFileDependencies.java  ::          1.874  1876500062 
-2017-07-29 11:17:07  x     CfgData.java                             ::          3.560 -0509839928 
-2022-11-19 21:10:14  x     CheckAllDepFile.java                     ::          6.203 -1215854895 
-2012-12-25 17:01:12  x     CheckData.java                           ::          4.951  0627506369 
-2022-11-19 21:11:40  x     CheckDependencyFile.java                 ::         48.413 -2051062432 
-2023-03-17 09:38:48  x     CheckDeps.java                           ::          7.535 -2019813555 
-2020-07-23 18:57:23  x     CheckDeps_Old.java                       ::         12.395  0108102733 
-2012-12-25 15:33:10  x     DateTime.java                            ::          1.823  2018610045 
-2022-11-19 21:13:16  x     InfoFileDependencies.java                ::         19.051 -1524932443 
-2014-05-04 22:56:29  x     InputSrc.java                            ::          4.196  1587914190 
-2022-11-19 21:13:52  x     ObjectFileDeps.java                      ::          7.155 -1917452981 
-2022-11-19 21:15:05  x     ParserConfigFile.java                    ::          7.296 -1932346698 
-2020-07-23 18:57:23  x     package-info.java                        ::           .399  1943722203 
+2023-04-29 08:24:20  x     AddDependency_InfoFileDependencies.java  ::          1.874  1876500062 
+2023-04-29 08:24:20  x     CfgData.java                             ::          3.560 -0509839928 
+2023-04-29 08:24:20  x     CheckAllDepFile.java                     ::          6.203 -1215854895 
+2023-04-29 08:24:20  x     CheckData.java                           ::          4.951  0627506369 
+2023-04-29 08:24:20  x     CheckDependencyFile.java                 ::         48.413 -2051062432 
+2023-04-29 08:24:20  x     CheckDeps.java                           ::          7.535 -2019813555 
+2023-04-29 08:24:20  x     CheckDeps_Old.java                       ::         12.395  0108102733 
+2023-04-29 08:24:20  x     DateTime.java                            ::          1.823  2018610045 
+2023-04-29 08:24:20  x     InfoFileDependencies.java                ::         19.051 -1524932443 
+2023-04-29 08:24:20  x     InputSrc.java                            ::          4.196  1587914190 
+2023-04-29 08:24:20  x     ObjectFileDeps.java                      ::          7.155 -1917452981 
+2023-04-29 08:24:20  x     ParserConfigFile.java                    ::          7.296 -1932346698 
+2023-04-29 08:24:20  x     package-info.java                        ::           .399  1943722203 
 
 ============================== java/org/vishia/cmd/ ================================================
-2022-11-15 13:02:27  x     CmdExecuter.java                         ::         41.005 -2071766572 
-2018-09-22 20:52:01  x     CmdGetFileArgs_ifc.java                  ::          1.660 -2078197694 
-2017-04-03 21:47:02  x     CmdGetterArguments.java                  ::          2.483 -1182376375 
-2017-04-03 21:46:01  x     CmdQueue.java                            ::          3.905  1430471497 
-2017-04-03 21:48:59  x     CmdStore.java                            ::          3.481  1111586781 
-2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
-2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
-2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2023-03-12 20:42:37  x     JZtxtcmdExecuter.java                    ::        196.783 -0049911720 
-2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
-2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2023-01-28 22:23:44  x     JZtxtcmdScript.java                      ::        123.843 -2116227386 
-2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
-2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
-2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
-2022-01-27 23:57:46  x     JZtxtcmdThreadQueue.java                 ::          3.643 -1162795541 
-2017-04-03 21:46:02  x     PrepareCmd.java                          ::         19.252 -1764914125 
-2018-09-22 20:54:22  x     ZmakeTarget.java                         ::          4.530  0228026837 
-2017-04-03 21:47:03  x     package-info.java                        ::           .603 -1584113308 
+2023-04-29 08:24:20  x     CmdExecuter.java                         ::         41.005 -2071766572 
+2023-04-29 08:24:20  x     CmdGetFileArgs_ifc.java                  ::          1.660 -2078197694 
+2023-04-29 08:24:20  x     CmdGetterArguments.java                  ::          2.483 -1182376375 
+2023-04-29 08:24:20  x     CmdQueue.java                            ::          3.905  1430471497 
+2023-04-29 08:24:20  x     CmdStore.java                            ::          3.481  1111586781 
+2023-04-29 08:24:20  x     Filecmd.java                             ::          7.182  0296091865 
+2023-04-29 08:24:20  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
+2023-04-29 08:24:20  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
+2023-04-29 08:24:20  x     JZtxtcmdExecuter.java                    ::        196.783 -0049911720 
+2023-04-29 08:24:20  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
+2023-04-29 08:24:20  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
+2023-04-29 08:24:20  x     JZtxtcmdScript.java                      ::        123.843 -2116227386 
+2023-04-29 08:24:20  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
+2023-04-29 08:24:20  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
+2023-04-29 08:24:20  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
+2023-04-29 08:24:20  x     JZtxtcmdThreadQueue.java                 ::          3.643 -1162795541 
+2023-04-29 08:24:20  x     PrepareCmd.java                          ::         19.252 -1764914125 
+2023-04-29 08:24:20  x     ZmakeTarget.java                         ::          4.530  0228026837 
+2023-04-29 08:24:20  x     package-info.java                        ::           .603 -1584113308 
 
 ============================== java/org/vishia/communication/ ======================================
-2021-10-04 14:29:51  x     Address_InterProcessComm.java            ::          1.599 -2127093968 
-2021-10-04 14:29:50  x     Address_InterProcessComm_Socket.java     ::          7.341  0744607115 
-2014-09-06 00:31:52  x     InterProcessComm.java                    ::          9.933 -0109160651 
-2021-10-04 14:29:51  x     InterProcessCommFactory.java             ::          5.733 -1086932790 
-2021-10-04 14:29:58  x     InterProcessCommFactoryAccessor.java     ::          1.678  0187574045 
-2021-10-04 14:29:59  x     InterProcessCommFactorySocket.java       ::          5.838 -0752225136 
-2021-10-04 14:29:56  x     InterProcessCommRxThread.java            ::         11.114  0978461821 
-2021-10-04 14:29:56  x     InterProcessCommRx_ifc.java              ::          2.586  1150824039 
-2021-10-04 14:29:55  x     InterProcessComm_SocketImpl.java         ::          8.281 -1573873016 
-2021-06-17 22:38:27  x     SocketCmd_InterProcessComm.java          ::          3.252  1695370688 
-2022-09-26 23:36:27  x     SocketCommSimple.java                    ::          4.085 -1482844922 
+2023-04-29 08:24:20  x     Address_InterProcessComm.java            ::          1.599 -2127093968 
+2023-04-29 08:24:20  x     Address_InterProcessComm_Socket.java     ::          7.341  0744607115 
+2023-04-29 08:24:20  x     InterProcessComm.java                    ::          9.933 -0109160651 
+2023-04-29 08:24:20  x     InterProcessCommFactory.java             ::          5.733 -1086932790 
+2023-04-29 08:24:20  x     InterProcessCommFactoryAccessor.java     ::          1.678  0187574045 
+2023-04-29 08:24:20  x     InterProcessCommFactorySocket.java       ::          5.838 -0752225136 
+2023-04-29 08:24:20  x     InterProcessCommRxThread.java            ::         11.114  0978461821 
+2023-04-29 08:24:20  x     InterProcessCommRx_ifc.java              ::          2.586  1150824039 
+2023-04-29 08:24:20  x     InterProcessComm_SocketImpl.java         ::          8.281 -1573873016 
+2023-04-29 08:24:20  x     SocketCmd_InterProcessComm.java          ::          3.252  1695370688 
+2023-04-29 08:24:20  x     SocketCommSimple.java                    ::          4.085 -1482844922 
 
 ============================== java/org/vishia/docuGen/ ============================================
-2021-10-04 14:29:52  x     DocuGen.java                             ::         11.946  1773808510 
+2023-04-29 08:24:20  x     DocuGen.java                             ::         11.946  1773808510 
 
 ============================== java/org/vishia/event/ ==============================================
-2023-03-10 10:27:34  x     EventCmdtype.java#                       ::          4.637 -1492754660 
-2023-03-10 10:55:48  x     EventCmdtypeWithBackEvent.java#          ::          7.051  1377390151 
-2023-03-12 20:50:45  x     EventConsumer.java                       ::          8.246 -0463545133 
-2023-03-12 20:57:55  x     EventConsumerAwait.java                  ::          5.018 -1998732713 
-2023-02-09 10:25:02  x     EventSource.java                         ::          4.203  1175884664 
-2023-02-10 14:18:39  x     EventThread_ifc.java                     ::          1.832  1650964286 
-2023-03-20 15:28:04  x     EventTimerThread.java                    ::         28.923  0738002140 
-2023-02-09 11:04:42  x     EventTimerThread_ifc.java                ::          1.407 -0366775010 
-2023-03-20 20:30:34  x     EventWithDst.java                        ::         35.913 -2080275154 
-2023-03-20 18:13:28  x     Payload.java                             ::           .820  0618315210 
-2023-03-20 18:21:11  x     TimeOrder.java                           ::         22.731  0696971915 
-2023-02-15 13:06:19  x     TimeOrderCmd.java                        ::          1.136 -0585113868 
-2021-10-04 14:29:51  x     package-info.java                        ::           . 87 -1252882733 
+2023-04-29 08:24:20  x     EventConsumer.java                       ::          8.246 -0463545133 
+2023-04-29 08:24:20  x     EventConsumerAwait.java                  ::          5.018 -1998732713 
+2023-04-29 08:24:20  x     EventSource.java                         ::          4.203  1175884664 
+2023-04-29 08:24:20  x     EventThread_ifc.java                     ::          1.832  1650964286 
+2023-04-29 08:24:20  x     EventTimerThread.java                    ::         28.923  0738002140 
+2023-04-29 08:24:20  x     EventTimerThread_ifc.java                ::          1.407 -0366775010 
+2023-04-29 08:24:20  x     EventWithDst.java                        ::         35.913 -2080275154 
+2023-04-29 08:24:20  x     Payload.java                             ::           .820  0618315210 
+2023-04-29 08:24:20  x     TimeOrder.java                           ::         22.731  0696971915 
+2023-04-29 08:24:20  x     TimeOrderCmd.java                        ::          1.136 -0585113868 
+2023-04-29 08:24:20  x     package-info.java                        ::           . 87 -1252882733 
 
 ============================== java/org/vishia/execode/ ============================================
-2020-10-31 22:20:03  x     Execode.java                             ::          7.808  0335069824 
+2023-04-29 08:24:20  x     Execode.java                             ::          7.808  0335069824 
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
-2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2023-04-07 21:08:16  x     FileAccessorLocalJava7.java              ::         74.313 -0165820085 
-2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
+2023-04-29 08:24:20  x     FileAccessorLocalJava7.java              ::         74.313 -0165820085 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
-2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
+2023-04-29 08:24:20  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2023-04-06 21:09:28  x     FileAccessZip.java                       ::         18.022 -0322229997 
-2023-04-03 10:46:46  x     FileCluster.java                         ::         18.284  0386716375 
-2023-03-12 14:35:13  x     FileMark.java                            ::         10.765 -0673201036 
-2023-04-07 21:03:09  x     FileRemote.java                          ::        167.142 -1019479750 
-2023-04-06 21:08:48  x     FileRemoteAccessor.java                  ::         17.528 -1061826971 
-2023-03-12 21:04:14  x     FileRemoteCallbackCmp.java               ::         18.724  0509550455 
-2023-04-04 18:45:24  x     FileRemoteCallbackCopy.java              ::          6.246  1788049178 
-2023-03-12 15:36:15  x     FileRemoteCallbackSearch.java            ::         10.603  1804195436 
-2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
-2023-03-20 13:12:47  x     FileRemoteProgress.java                  ::          1.984 -1505590491 
-2023-04-06 21:41:34  x     FileRemoteProgressEvData.java            ::         14.057 -1148092246 
-2023-03-09 23:29:14  x     FileRemoteWalkerCallback.java            ::           .601 -1408725602 
-2023-02-21 15:13:50  x     FileRemoteWalkerCallbackLog.java         ::          2.466  0836540270 
-2023-03-14 23:45:12  x     FileZip.java                             ::          5.640  1234857640 
-2023-03-12 21:04:59  x     XXXFileRemoteWalkerEvent.java            ::          2.686  1910227989 
+2023-04-29 08:24:20  x     FileAccessZip.java                       ::         18.022 -0322229997 
+2023-04-29 08:24:20  x     FileCluster.java                         ::         18.326 -0054036912 
+2023-04-29 08:24:20  x     FileMark.java                            ::         10.765 -0673201036 
+2023-04-29 08:24:20  x     FileRemote.java                          ::        167.142 -1019479750 
+2023-04-29 08:24:20  x     FileRemoteAccessor.java                  ::         17.528 -1061826971 
+2023-04-29 08:24:20  x     FileRemoteCallbackCmp.java               ::         18.724  0509550455 
+2023-04-29 08:24:20  x     FileRemoteCallbackCopy.java              ::          7.502 -1588859808 
+2023-04-29 08:24:20  x     FileRemoteCallbackSearch.java            ::         10.603  1804195436 
+2023-04-29 08:24:20  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
+2023-04-29 08:24:20  x     FileRemoteProgress.java                  ::          1.984 -1505590491 
+2023-04-29 08:24:20  x     FileRemoteProgressEvData.java            ::         14.057 -1148092246 
+2023-04-29 08:24:20  x     FileRemoteWalkerCallback.java            ::           .601 -1408725602 
+2023-04-29 08:24:20  x     FileRemoteWalkerCallbackLog.java         ::          2.466  0836540270 
+2023-04-29 08:24:20  x     FileZip.java                             ::          5.640  1234857640 
 
 ============================== java/org/vishia/genJavaOutClass/ ====================================
-2022-06-23 16:55:50  x     GenJavaOutClass.java                     ::         38.057 -2054405634 
-2022-07-17 18:10:35  x     SrcInfo.java                             ::          1.815 -0998914685 
+2023-04-29 08:24:20  x     GenJavaOutClass.java                     ::         38.057 -2054405634 
+2023-04-29 08:24:20  x     SrcInfo.java                             ::          1.815 -0998914685 
 
 ============================== java/org/vishia/header2Reflection/ ==================================
-2022-11-19 21:25:12  x     BinOutPrep.java                          ::         16.523 -0742786778 
-2020-12-20 20:46:02  x     BinOutShow.java                          ::          9.792 -0441389883 
-2014-12-14 21:36:18  x     C2DataDeps.java                          ::         10.327 -0335989070 
-2021-02-21 22:24:11  x     CheaderParser.java                       ::         67.915  2132928869 
-2015-06-06 07:01:42  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
-2018-12-26 17:53:45  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
-2018-12-27 11:49:18  x     Header2Reflection.java                   ::         82.856 -1926959000 
+2023-04-29 08:24:20  x     BinOutPrep.java                          ::         16.523 -0742786778 
+2023-04-29 08:24:20  x     BinOutShow.java                          ::          9.792 -0441389883 
+2023-04-29 08:24:20  x     C2DataDeps.java                          ::         10.327 -0335989070 
+2023-04-29 08:24:20  x     CheaderParser.java                       ::         67.915  2132928869 
+2023-04-29 08:24:20  x     CmdHeader2Reflection.java                ::          8.866  0445892408 
+2023-04-29 08:24:20  x     ExtReflection_Insp_h.java                ::          1.595 -0538466206 
+2023-04-29 08:24:20  x     Header2Reflection.java                   ::         82.856 -1926959000 
 
 ============================== java/org/vishia/inspcComm/ ==========================================
-2022-09-01 22:37:54  x     InspcDatagram.java                       ::          3.872  0462937621 
-2021-10-04 14:29:48  x     Inspcitem.java                           ::          9.566  0638926456 
+2023-04-29 08:24:20  x     InspcDatagram.java                       ::          3.872  0462937621 
+2023-04-29 08:24:20  x     Inspcitem.java                           ::          9.566  0638926456 
 
 ============================== java/org/vishia/jztxtcmd/ ===========================================
-2022-11-15 12:59:08  x     JZtxtcmd.java                            ::         45.896  1067788552 
-2022-10-02 09:49:03  x     JZtxtcmdSyntax.java                      ::         31.779 -1535274851 
-2018-09-22 20:55:43  x     JZtxtcmdUserExample.java                 ::          1.787 -0446379803 
-2017-04-03 21:49:31  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
+2023-04-29 08:24:20  x     JZtxtcmd.java                            ::         45.896  1067788552 
+2023-04-29 08:24:20  x     JZtxtcmdSyntax.java                      ::         31.779 -1535274851 
+2023-04-29 08:24:20  x     JZtxtcmdUserExample.java                 ::          1.787 -0446379803 
+2023-04-29 08:24:20  x     JZtxtcmdUtil.java                        ::          2.526  1732090346 
 
 ============================== java/org/vishia/mainCmd/ ============================================
-2021-10-04 14:29:51  x     FileWrite.java                           ::          2.095  0880975541 
-2022-12-25 13:47:52  x     MainCmd.java                             ::         93.287  0623110350 
-2022-12-25 13:48:50  x     MainCmdLoggingStream.java                ::         10.527 -0276340602 
-2022-11-13 17:50:14  x     MainCmdLogging_ifc.java                  ::          4.714  0894393979 
-2014-05-29 14:56:39  x     MainCmd_ifc.java                         ::          9.334  0930852519 
-2021-10-04 14:29:56  x     PrintStreamAdapter.java                  ::          2.754  1398952394 
-2021-10-06 10:53:37  x     PrintStreamBuffer.java                   ::          5.261 -1940859745 
-2013-02-24 21:18:18  x     Report.java                              ::          2.856  0928115865 
-2022-12-25 13:53:18  x     ReportWrapperLog.java                    ::          8.386 -1421168351 
-2016-11-27 21:16:15  x     SampleCmdLine.java                       ::         16.637 -1048205269 
-2012-03-17 08:57:20  x     package-info.java                        ::           .158  1302313651 
+2023-04-29 08:24:20  x     FileWrite.java                           ::          2.095  0880975541 
+2023-04-29 08:24:20  x     MainCmd.java                             ::         93.287  0623110350 
+2023-04-29 08:24:20  x     MainCmdLoggingStream.java                ::         10.527 -0276340602 
+2023-04-29 08:24:20  x     MainCmdLogging_ifc.java                  ::          4.714  0894393979 
+2023-04-29 08:24:20  x     MainCmd_ifc.java                         ::          9.334  0930852519 
+2023-04-29 08:24:20  x     PrintStreamAdapter.java                  ::          2.754  1398952394 
+2023-04-29 08:24:20  x     PrintStreamBuffer.java                   ::          5.261 -1940859745 
+2023-04-29 08:24:20  x     Report.java                              ::          2.856  0928115865 
+2023-04-29 08:24:20  x     ReportWrapperLog.java                    ::          8.386 -1421168351 
+2023-04-29 08:24:20  x     SampleCmdLine.java                       ::         16.637 -1048205269 
+2023-04-29 08:24:20  x     package-info.java                        ::           .158  1302313651 
 
 ============================== java/org/vishia/math/ ===============================================
-2022-05-26 16:30:51  x     ComplexDouble.java                       ::           .254  0891182520 
-2021-10-04 14:29:57  x     CurveInterpolation.java                  ::         13.564 -2057798107 
+2023-04-29 08:24:20  x     ComplexDouble.java                       ::           .254  0891182520 
+2023-04-29 08:24:20  x     CurveInterpolation.java                  ::         13.564 -2057798107 
 
 ============================== java/org/vishia/minisys/ ============================================
-2020-03-24 23:21:10  x     GetWebfile.java                          ::         10.330 -0892084533 
-2020-03-20 10:14:26  x     MkLink.java                              ::          1.837 -0561499951 
+2023-04-29 08:24:20  x     GetWebfile.java                          ::         10.330 -0892084533 
+2023-04-29 08:24:20  x     MkLink.java                              ::          1.837 -0561499951 
 
 ============================== java/org/vishia/msgDispatch/ ========================================
-2012-10-07 10:02:50  x     ExceptionInfo.java                       ::           .515 -0745834556 
-2023-02-10 23:06:49  x     LogMessage.java                          ::         21.564 -1779439338 
-2022-11-13 21:24:35  x     LogMessageBase.java                      ::          3.260 -0673225974 
-2022-12-25 13:41:36  x     LogMessageFile.java                      ::         27.699  0313843396 
-2023-02-13 18:42:16  x     LogMessageStream.java                    ::         11.010 -1910902351 
-2014-12-20 21:54:27  x     MsgConfig.java                           ::         11.193 -1733151147 
-2014-12-18 22:51:24  x     MsgDispatchSystemOutErr.java             ::          5.869  1342572906 
-2022-12-05 08:59:14  x     MsgDispatcher.java                       ::         27.941 -0405855001 
-2022-12-25 13:53:37  x     MsgDispatcherCore.java                   ::         25.728 -1988526208 
-2014-05-29 21:22:46  x     MsgPrintStream.java                      ::         19.456  0790745732 
-2013-03-24 21:17:00  x     MsgPrintStream_ifc.java                  ::           .111  0825089560 
-2021-10-04 14:29:51  x     MsgRedirectConsole.java                  ::          7.397 -0856512848 
-2013-03-02 18:41:42  x     MsgText_ifc.java                         ::          2.884 -1407696230 
-2012-03-17 08:57:20  x     package-info.java                        ::           .680 -1091198639 
+2023-04-29 08:24:20  x     ExceptionInfo.java                       ::           .515 -0745834556 
+2023-04-29 08:24:20  x     LogMessage.java                          ::         21.564 -1779439338 
+2023-04-29 08:24:20  x     LogMessageBase.java                      ::          3.260 -0673225974 
+2023-04-29 08:24:20  x     LogMessageFile.java                      ::         27.699  0313843396 
+2023-04-29 08:24:20  x     LogMessageStream.java                    ::         11.038 -1422074786 
+2023-04-29 08:24:20  x     MsgConfig.java                           ::         11.193 -1733151147 
+2023-04-29 08:24:20  x     MsgDispatchSystemOutErr.java             ::          5.869  1342572906 
+2023-04-29 08:24:20  x     MsgDispatcher.java                       ::         27.941 -0405855001 
+2023-04-29 08:24:20  x     MsgDispatcherCore.java                   ::         25.728 -1988526208 
+2023-04-29 08:24:20  x     MsgPrintStream.java                      ::         19.456  0790745732 
+2023-04-29 08:24:20  x     MsgPrintStream_ifc.java                  ::           .111  0825089560 
+2023-04-29 08:24:20  x     MsgRedirectConsole.java                  ::          7.397 -0856512848 
+2023-04-29 08:24:20  x     MsgText_ifc.java                         ::          2.884 -1407696230 
+2023-04-29 08:24:20  x     package-info.java                        ::           .680 -1091198639 
 
 ============================== java/org/vishia/odg/ ================================================
-2022-11-21 00:21:27  x     ReadFbcl_odgData.java                    ::          7.162  0497997724 
+2023-04-29 08:24:20  x     ReadFbcl_odgData.java                    ::          7.883  1423333863 
 
 ============================== java/org/vishia/odg/data/ ===========================================
-2022-06-28 13:08:01  x     XmlForOdg.java                           ::         27.926 -1445141106 
-2022-06-26 20:32:44  x     XmlForOdg_Base.java                      ::         35.979  1440162804 
-2022-06-26 20:34:20  x     XmlForOdg_Zbnf.java                      ::         94.979  1083372517 
-2022-06-26 20:29:11  x     odgxmlcfg.xml                            ::         24.189  1631275111 
-
-============================== java/org/vishia/parseJava/ ==========================================
-2022-05-15 13:25:58  x     JavaParser.java#                         ::          5.923  0777948094 
-2022-05-25 23:52:07  x     JavaSrc.java#                            ::         40.708  0168233674 
-2022-05-15 13:37:55  x     JavaSrc_Base.java#                       ::        105.651 -0033768839 
-2022-05-15 13:41:21  x     JavaSrc_Zbnf.java#                       ::        197.826 -0468737057 
-2022-05-15 13:58:40  x     JavaSyntax.zbnf#                         ::         23.108 -0459551353 
+2023-04-29 08:24:20  x     XmlForOdg.java                           ::         27.926 -1445141106 
+2023-04-29 08:24:20  x     XmlForOdg_Base.java                      ::         35.979  1440162804 
+2023-04-29 08:24:20  x     XmlForOdg_Zbnf.java                      ::         94.979  1083372517 
+2023-04-29 08:24:20  x     odgxmlcfg.xml                            ::         24.189  1631275111 
 
 ============================== java/org/vishia/states/ =============================================
-2023-02-09 11:04:42  x     PrepareTransition.java                   ::         15.505  0108313658 
-2021-10-04 14:29:58  x     StateAction.java                         ::          1.105  0997231073 
-2023-01-31 10:18:26  x     StateComposite.java                      ::         18.909  1483464924 
-2021-10-04 14:29:58  x     StateCompositeFlat.java                  ::         10.553  0857986834 
-2021-10-04 14:29:58  x     StateDeepHistory.java                    ::           .365  1053809590 
-2023-03-20 15:30:01  x     StateMachine.java                        ::         21.257 -1946597739 
-2021-10-04 14:29:51  x     StateParallel.java                       ::         12.235 -1121530841 
-2021-10-04 14:29:58  x     StateShallowHistory.java                 ::           .309 -1425259298 
-2023-02-13 19:41:28  x     StateSimple.java                         ::         61.905 -2059967186 
-2021-10-04 14:29:58  x     package-info.java                        ::           .427  1679732459 
+2023-04-29 08:24:20  x     PrepareTransition.java                   ::         15.505  0108313658 
+2023-04-29 08:24:20  x     StateAction.java                         ::          1.105  0997231073 
+2023-04-29 08:24:20  x     StateComposite.java                      ::         18.909  1483464924 
+2023-04-29 08:24:20  x     StateCompositeFlat.java                  ::         10.553  0857986834 
+2023-04-29 08:24:20  x     StateDeepHistory.java                    ::           .365  1053809590 
+2023-04-29 08:24:20  x     StateMachine.java                        ::         21.257 -1946597739 
+2023-04-29 08:24:20  x     StateParallel.java                       ::         12.235 -1121530841 
+2023-04-29 08:24:20  x     StateShallowHistory.java                 ::           .309 -1425259298 
+2023-04-29 08:24:20  x     StateSimple.java                         ::         61.905 -2059967186 
+2023-04-29 08:24:20  x     package-info.java                        ::           .427  1679732459 
 
 ============================== java/org/vishia/testutil/ ===========================================
-2022-02-02 18:53:20  x     EvalTestoutfiles.java                    ::          4.033 -0260416721 
-2023-01-28 11:49:13  x     TestConditionCombi.java                  ::         12.358 -0287196220 
+2023-04-29 08:24:20  x     EvalTestoutfiles.java                    ::          4.033 -0260416721 
+2023-04-29 08:24:20  x     TestConditionCombi.java                  ::         12.358 -0287196220 
 
 ============================== java/org/vishia/tools/ ==============================================
-2023-03-22 20:20:16  x     PrepareAsciidoc.java                     ::         15.959  2087727639 
-2023-03-18 23:12:27  x     ReadWriteFileBase.java                   ::          6.192  1815994311 
+2023-04-29 08:24:20  x     PrepareAsciidoc.java                     ::         15.959  2087727639 
+2023-04-29 08:24:20  x     ReadWriteFileBase.java                   ::          6.192  1815994311 
 
 ============================== java/org/vishia/util/ ===============================================
-2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
-2022-12-10 11:38:46  x     ApplMain.java                            ::          1.997 -0661883073 
-2023-03-18 09:21:43  x     Arguments.java                           ::         28.504  0895817347 
-2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
-2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
-2022-05-11 10:24:43  x     CalculatorExpr.java                      ::        151.273  0467732730 
-2022-10-01 20:48:49  x     CheckVs.java                             ::          1.055 -0027567892 
-2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
-2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
-2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2022-11-13 23:52:57  x     DataAccess.java                          ::        138.306  0260654364 
-2021-10-04 14:29:51  x     DataShow.java                            ::         29.266 -1447605112 
-2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
-2019-07-14 01:08:00  x     Debugutil.java                           ::          1.352 -1716398343 
-2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
-2023-02-13 19:38:19  x     ExcUtil.java                             ::         16.264  1736409490 
-2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
-2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
-2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
-2023-03-15 00:06:41  x     FileFunctions.java                       ::         87.657 -1594920906 
-2023-03-17 09:34:57  x     FileList.java                            ::         23.371  0742653671 
-2021-10-04 14:29:49  x     FilePath.java                            ::         87.603 -0641162706 
-2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
-2021-10-04 14:29:52  x     FileSet.java                             ::          6.497 -0807043280 
-2020-06-09 11:59:24  x     FileSystem.java                          ::          2.037 -1667764877 
-2022-12-10 11:12:14  x     FileWriter.java                          ::          6.805  1282866233 
-2021-10-04 14:29:56  x     FilepathFilter.java                      ::         14.407  2118971474 
-2023-02-14 23:21:42  x     FilepathFilterM.java                     ::         29.082 -1832265554 
-2018-01-25 11:24:23  x     FilesToList.java                         ::          4.861  1950624767 
-2021-10-04 14:29:58  x     GetTypeToUse.java                        ::           .605  1887254405 
-2021-10-04 14:29:51  x     IndexMultiTable.java                     ::         44.043  0606115824 
-2021-10-04 14:29:52  x     IndexMultiTableInteger.java              ::         30.557 -0476465162 
-2021-10-04 14:29:58  x     IndexMultiTable_Table.java               ::         34.935  0776138642 
-2021-10-04 14:29:48  x     InfoAppend.java                          ::          3.788  0366410480 
-2021-10-04 14:29:49  x     InfoFormattedAppend.java                 ::          2.258  1668745967 
-2021-10-04 14:29:49  x     IntegerBlockArray.java                   ::          5.920 -1972066887 
-2019-12-20 20:54:41  x     IterableIndirect.java                    ::          1.369  0394683047 
-2021-10-04 14:29:49  x     IterableIterator.java                    ::           .433 -0658760924 
-2019-10-31 16:56:40  x     IterableMapValue.java                    ::           .942 -1973877381 
-2020-09-02 13:01:36  x     IteratorArrayMask.java                   ::          1.388 -0127160055 
-2020-10-17 10:25:50  x     IteratorMask.java                        ::          1.269 -0966624057 
-2016-10-16 21:54:24  x     Java4C.java                              ::         16.527 -2096577833 
-2015-10-30 19:10:55  x     KeyCode.java                             ::         12.692  0729595176 
-2021-10-04 14:29:51  x     LeapSeconds.java                         ::          9.363  0348706195 
-2023-02-11 23:06:47  x     MarkMask_ifc.java                        ::          5.035 -0470578625 
-2021-10-04 14:29:58  x     MessageQueue.java                        ::          1.645 -0583985751 
-2021-10-04 14:29:51  x     MinMaxTime.java                          ::          3.044  1366289975 
-2018-08-29 20:51:59  x     Num.java                                 ::          3.547 -0720113062 
-2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
-2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
-2022-12-25 11:00:01  x     ObjectVishia.java                        ::           .873 -0412469040 
-2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2022-07-29 13:45:10  x     OutTextPreparer.java                     ::         55.124  0360937670 
-2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
-2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
-2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
-2021-10-04 14:29:51  x     ReadChars3Stream.java                    ::          8.021  0795333462 
-2021-10-04 14:29:51  x     Removeable.java                          ::          1.071 -0180311788 
-2021-10-04 14:29:49  x     ReplaceAlias_ifc.java                    ::          2.956 -1272795683 
-2021-10-04 14:29:58  x     RetOrException.java                      ::           .575  1089063394 
-2023-03-06 23:54:54  x     SelectMask.java                          ::          3.014 -1704872889 
-2022-04-28 23:53:36  x     SetLineColumn_ifc.java                   ::           .728 -0988610785 
-2022-04-28 23:54:10  x     SetSrcInfo_ifc.java                      ::           .408  0016370651 
-2012-12-20 15:27:36  x     ShortenString.java                       ::          1.254  2002643077 
-2021-10-04 14:29:52  x     Sort.java                                ::          5.282 -1351541877 
-2021-10-04 14:29:52  x     SortedList.java                          ::         15.483  1832750366 
-2021-10-04 14:29:49  x     SortedStringList.java                    ::          3.388 -0917403468 
-2021-10-04 14:29:48  x     SortedTree.java                          ::          3.706 -1255774842 
-2021-10-04 14:29:49  x     SortedTreeNode.java                      ::          5.702 -1009691353 
-2023-02-04 11:03:38  x     SortedTreeWalkerCallback.java            ::          5.252 -0633832758 
-2021-10-04 14:29:51  x     SpecialCharStrings.java                  ::          5.298  0013480220 
-2021-10-04 14:29:49  x     StdHexFormatWriter.java                  ::          4.239  0384535192 
-2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
-2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
-2023-01-28 22:17:16  x     StringFormatter.java                     ::         51.459 -1023273497 
-2023-04-03 10:26:55  x     StringFunctions.java                     ::         66.605  0228064508 
-2023-02-05 22:17:06  x     StringFunctions_B.java                   ::         18.615 -0708190660 
-2023-01-28 11:17:22  x     StringFunctions_C.java                   ::         27.486 -0583475873 
-2022-06-06 11:18:06  x     StringPart.java                          ::        137.434  1776684361 
-2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
-2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
-2022-09-26 07:41:36  x     StringPartFromFileLines.java             ::         29.023 -0061894436 
-2022-11-12 23:09:47  x     StringPartScan.java                      ::         54.503  0730191856 
-2021-10-04 14:29:58  x     StringSeq.java                           ::          6.443  1891375723 
-2023-02-01 21:59:22  x     TestOrg.java                             ::         13.491 -0885071798 
-2021-10-04 14:29:51  x     ThreadContext.java                       ::          2.293  1218907235 
-2021-10-04 14:29:51  x     ThreadRun.java                           ::          9.438  1862271585 
-2022-10-06 00:17:08  x     TimedValues.java                         ::         11.341 -1313582399 
-2022-09-28 10:10:52  x     Timeshort.java                           ::          9.766 -1923684124 
-2022-10-22 14:18:39  x     TreeNodeBase.java                        ::         42.316  0815563807 
-2021-10-04 14:29:50  x     TreeNodeCallback.java                    ::          2.281  1360272692 
-2019-05-29 11:12:40  x     TreeNodeHtmlOutput.java                  ::          5.557  2032896486 
-2021-10-04 14:29:52  x     TreeNodeNamed_ifc.java                   ::           . 85  1747010936 
-2012-11-05 22:07:50  x     TreeNodeUniqueKey.java                   ::          2.003  0862351950 
-2017-08-31 08:44:51  x     TreeNode_ifc.java                        ::          3.804  1798566168 
-2023-02-12 19:42:04  x     TreeWalkerPathCheck.java                 ::          5.124 -2080069118 
-2013-01-06 16:24:48  x     UnexpectedException.java                 ::           .984 -0050084027 
-2022-02-10 11:19:27  x     Writer_Appendable.java                   ::          2.766 -0209530376 
-2013-05-25 22:37:51  x     package-info.java                        ::           .474 -0681213086 
+2023-04-29 08:24:20  x     AccessPolicy.java                        ::          1.093  1156331393 
+2023-04-29 08:24:20  x     ApplMain.java                            ::          2.570  1317011550 
+2023-04-29 08:24:20  x     Arguments.java                           ::         28.504  0895817347 
+2023-04-29 08:24:20  x     Arguments.java_new                       ::         13.517 -0150313183 
+2023-04-29 08:24:20  x     Assert.java                              ::          3.039  0340149536 
+2023-04-29 08:24:20  x     CalculatorExpr.java                      ::        151.273  0467732730 
+2023-04-29 08:24:20  x     CheckVs.java                             ::          1.055 -0027567892 
+2023-04-29 08:24:20  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
+2023-04-29 08:24:20  x     Conversion.java                          ::          2.311 -1170445937 
+2023-04-29 08:24:20  x     Copy.java                                ::           . 51  0836434438 
+2023-04-29 08:24:20  x     DataAccess.java                          ::        138.306  0260654364 
+2023-04-29 08:24:20  x     DataShow.java                            ::         29.266 -1447605112 
+2023-04-29 08:24:20  x     DateOrder.java                           ::          4.061  1657283238 
+2023-04-29 08:24:20  x     Debugutil.java                           ::          1.352 -1716398343 
+2023-04-29 08:24:20  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
+2023-04-29 08:24:20  x     ExcUtil.java                             ::         16.379  0412129714 
+2023-04-29 08:24:20  x     FileAppend.java                          ::          9.804 -1860003572 
+2023-04-29 08:24:20  x     FileCompare.java                         ::         14.078  0813352070 
+2023-04-29 08:24:20  x     FileFunction.java                        ::          5.958  0063748389 
+2023-04-29 08:24:20  x     FileFunctions.java                       ::         87.657 -1594920906 
+2023-04-29 08:24:20  x     FileList.java                            ::         23.371  0742653671 
+2023-04-29 08:24:20  x     FilePath.java                            ::         87.603 -0641162706 
+2023-04-29 08:24:20  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
+2023-04-29 08:24:20  x     FileSet.java                             ::          6.497 -0807043280 
+2023-04-29 08:24:20  x     FileSystem.java                          ::          2.037 -1667764877 
+2023-04-29 08:24:20  x     FileWriter.java                          ::          6.805  1282866233 
+2023-04-29 08:24:20  x     FilepathFilter.java                      ::         14.407  2118971474 
+2023-04-29 08:24:20  x     FilepathFilterM.java                     ::         29.082 -1832265554 
+2023-04-29 08:24:20  x     FilesToList.java                         ::          4.861  1950624767 
+2023-04-29 08:24:20  x     GetTypeToUse.java                        ::           .605  1887254405 
+2023-04-29 08:24:20  x     IndexMultiTable.java                     ::         44.043  0606115824 
+2023-04-29 08:24:20  x     IndexMultiTableInteger.java              ::         30.557 -0476465162 
+2023-04-29 08:24:20  x     IndexMultiTable_Table.java               ::         34.935  0776138642 
+2023-04-29 08:24:20  x     InfoAppend.java                          ::          3.788  0366410480 
+2023-04-29 08:24:20  x     InfoFormattedAppend.java                 ::          2.258  1668745967 
+2023-04-29 08:24:20  x     IntegerBlockArray.java                   ::          5.920 -1972066887 
+2023-04-29 08:24:20  x     IterableIndirect.java                    ::          1.369  0394683047 
+2023-04-29 08:24:20  x     IterableIterator.java                    ::           .433 -0658760924 
+2023-04-29 08:24:20  x     IterableMapValue.java                    ::           .942 -1973877381 
+2023-04-29 08:24:20  x     IteratorArrayMask.java                   ::          1.388 -0127160055 
+2023-04-29 08:24:20  x     IteratorMask.java                        ::          1.269 -0966624057 
+2023-04-29 08:24:20  x     Java4C.java                              ::         16.527 -2096577833 
+2023-04-29 08:24:20  x     KeyCode.java                             ::         12.692  0729595176 
+2023-04-29 08:24:20  x     LeapSeconds.java                         ::          9.363  0348706195 
+2023-04-29 08:24:20  x     MarkMask_ifc.java                        ::          5.035 -0470578625 
+2023-04-29 08:24:20  x     MessageQueue.java                        ::          1.645 -0583985751 
+2023-04-29 08:24:20  x     MinMaxTime.java                          ::          3.044  1366289975 
+2023-04-29 08:24:20  x     Num.java                                 ::          3.547 -0720113062 
+2023-04-29 08:24:20  x     ObjectId.java                            ::          7.448  1779547736 
+2023-04-29 08:24:20  x     ObjectValue.java                         ::          1.129 -1707393614 
+2023-04-29 08:24:20  x     ObjectVishia.java                        ::           .873 -0412469040 
+2023-04-29 08:24:20  x     OrderListExecuter.java                   ::           .333 -1361536439 
+2023-04-29 08:24:20  x     OutTextPreparer.java                     ::         55.124  0360937670 
+2023-04-29 08:24:20  x     OutputTwice.java                         ::          2.192  1551916794 
+2023-04-29 08:24:20  x     PathCheck.java                           ::          5.593 -2108435717 
+2023-04-29 08:24:20  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
+2023-04-29 08:24:20  x     ReadChars3Stream.java                    ::          8.021  0795333462 
+2023-04-29 08:24:20  x     Removeable.java                          ::          1.071 -0180311788 
+2023-04-29 08:24:20  x     ReplaceAlias_ifc.java                    ::          2.956 -1272795683 
+2023-04-29 08:24:20  x     RetOrException.java                      ::           .575  1089063394 
+2023-04-29 08:24:20  x     SelectMask.java                          ::          3.014 -1704872889 
+2023-04-29 08:24:20  x     SetLineColumn_ifc.java                   ::           .728 -0988610785 
+2023-04-29 08:24:20  x     SetSrcInfo_ifc.java                      ::           .408  0016370651 
+2023-04-29 08:24:20  x     ShortenString.java                       ::          1.254  2002643077 
+2023-04-29 08:24:20  x     Sort.java                                ::          5.282 -1351541877 
+2023-04-29 08:24:20  x     SortedList.java                          ::         15.483  1832750366 
+2023-04-29 08:24:20  x     SortedStringList.java                    ::          3.388 -0917403468 
+2023-04-29 08:24:20  x     SortedTree.java                          ::          3.706 -1255774842 
+2023-04-29 08:24:20  x     SortedTreeNode.java                      ::          5.702 -1009691353 
+2023-04-29 08:24:20  x     SortedTreeWalkerCallback.java            ::          5.252 -0633832758 
+2023-04-29 08:24:20  x     SpecialCharStrings.java                  ::          5.298  0013480220 
+2023-04-29 08:24:20  x     StdHexFormatWriter.java                  ::          4.239  0384535192 
+2023-04-29 08:24:20  x     StringAdd.java                           ::          1.871  1585552295 
+2023-04-29 08:24:20  x     StringArray.java                         ::           .570  1268918082 
+2023-04-29 08:24:20  x     StringCmp.java                           ::          5.062  0434603964 
+2023-04-29 08:24:20  x     StringFormatter.java                     ::         51.459 -1023273497 
+2023-04-29 08:24:20  x     StringFunctions.java                     ::         66.625 -0279141023 
+2023-04-29 08:24:20  x     StringFunctions_B.java                   ::         18.615 -0708190660 
+2023-04-29 08:24:20  x     StringFunctions_C.java                   ::         27.486 -0583475873 
+2023-04-29 08:24:20  x     StringPart.java                          ::        137.434  1776684361 
+2023-04-29 08:24:20  x     StringPartAppend.java                    ::          5.309 -1348645578 
+2023-04-29 08:24:20  x     StringPartFromFile.java                  ::          2.812  0877476463 
+2023-04-29 08:24:20  x     StringPartFromFileLines.java             ::         29.023 -0061894436 
+2023-04-29 08:24:20  x     StringPartScan.java                      ::         54.503  0730191856 
+2023-04-29 08:24:20  x     StringSeq.java                           ::          6.443  1891375723 
+2023-04-29 08:24:20  x     TestOrg.java                             ::         13.491 -0885071798 
+2023-04-29 08:24:20  x     ThreadContext.java                       ::          2.293  1218907235 
+2023-04-29 08:24:20  x     ThreadRun.java                           ::          9.438  1862271585 
+2023-04-29 08:24:20  x     TimedValues.java                         ::         11.341 -1313582399 
+2023-04-29 08:24:20  x     Timeshort.java                           ::          9.766 -1923684124 
+2023-04-29 08:24:20  x     TreeNodeBase.java                        ::         42.316  0815563807 
+2023-04-29 08:24:20  x     TreeNodeCallback.java                    ::          2.281  1360272692 
+2023-04-29 08:24:20  x     TreeNodeHtmlOutput.java                  ::          5.557  2032896486 
+2023-04-29 08:24:20  x     TreeNodeNamed_ifc.java                   ::           . 85  1747010936 
+2023-04-29 08:24:20  x     TreeNodeUniqueKey.java                   ::          2.003  0862351950 
+2023-04-29 08:24:20  x     TreeNode_ifc.java                        ::          3.804  1798566168 
+2023-04-29 08:24:20  x     TreeWalkerPathCheck.java                 ::          5.124 -2080069118 
+2023-04-29 08:24:20  x     UnexpectedException.java                 ::           .984 -0050084027 
+2023-04-29 08:24:20  x     Writer_Appendable.java                   ::          2.766 -0209530376 
+2023-04-29 08:24:20  x     package-info.java                        ::           .474 -0681213086 
 
 ============================== java/org/vishia/xmlReader/ ==========================================
-2022-06-24 17:36:13  x     GenXmlCfgJavaData.java                   ::         16.241 -0355119633 
-2022-06-25 13:15:54  x     XmlCfg.java                              ::         33.297 -0657461973 
-2022-06-24 20:52:05  x     XmlJzCfgAnalyzer.java                    ::         30.095 -0026801969 
-2022-06-25 13:21:06  x     XmlJzReader.java                         ::         51.633 -0869707054 
-2022-06-08 21:14:43  x     XmlNodeSimpleReader.java                 ::          2.313  0733459123 
+2023-04-29 08:24:20  x     GenXmlCfgJavaData.java                   ::         16.410  0614327134 
+2023-04-29 08:24:20  x     XmlCfg.java                              ::         33.297 -0657461973 
+2023-04-29 08:24:20  x     XmlJzCfgAnalyzer.java                    ::         39.526 -1521113978 
+2023-04-29 08:24:20  x     XmlJzReader.java                         ::         51.791 -0494807336 
+2023-04-29 08:24:20  x     XmlNodeSimpleReader.java                 ::          2.313  0733459123 
 
 ============================== java/org/vishia/xmlSimple/ ==========================================
-2020-02-13 20:26:38  x     SimpleXmlOutputter.java                  ::         11.085 -1306988227 
-2017-01-25 23:02:51  x     SimpleXmlOutputter_Test.java             ::           .737  0464495945 
-2018-01-07 22:38:28  x     WikistyleTextToSimpleXml.java            ::         60.467 -0091533971 
-2012-12-26 20:03:22  x     XmlException.java                        ::          1.656 -0761622632 
-2019-01-26 15:48:06  x     XmlNode.java                             ::          7.158 -1065056153 
-2022-10-22 14:12:17  x     XmlNodeSimple.java                       ::         16.215 -0224590100 
-2021-10-07 17:54:36  x     XmlSequWriter.java                       ::         19.076 -0016664965 
-2013-10-27 21:01:40  x     Xsltpre.java                             ::         24.164 -0613607921 
-2012-03-17 08:57:20  x     package-info.java                        ::           .170  2015116723 
+2023-04-29 08:24:20  x     SimpleXmlOutputter.java                  ::         11.085 -1306988227 
+2023-04-29 08:24:20  x     SimpleXmlOutputter_Test.java             ::           .737  0464495945 
+2023-04-29 08:24:20  x     WikistyleTextToSimpleXml.java            ::         60.467 -0091533971 
+2023-04-29 08:24:20  x     XmlBeautificator.java                    ::         10.996 -0695863043 
+2023-04-29 08:24:20  x     XmlException.java                        ::          1.656 -0761622632 
+2023-04-29 08:24:20  x     XmlNode.java                             ::          7.158 -1065056153 
+2023-04-29 08:24:20  x     XmlNodeSimple.java                       ::         16.215 -0224590100 
+2023-04-29 08:24:20  x     XmlSequWriter.java                       ::         19.076 -0016664965 
+2023-04-29 08:24:20  x     Xsltpre.java                             ::         24.164 -0613607921 
+2023-04-29 08:24:20  x     package-info.java                        ::           .170  2015116723 
 
 ============================== java/org/vishia/zbnf/ ===============================================
-2022-06-23 17:14:35  x     GenZbnfJavaData.java                     ::         34.173  0306927906 
-2022-02-08 23:44:38  x     Zbnf2Xml.java                            ::         22.080 -0810343213 
-2022-11-13 17:40:38  x     ZbnfJavaOutput.java                      ::         89.671 -1743031235 
-2022-02-09 18:28:47  x     ZbnfParseResultItem.java                 ::         12.232 -1807629494 
-2022-11-13 17:42:39  x     ZbnfParser.java                          ::        191.293  0572222434 
-2022-05-19 17:36:26  x     ZbnfParserStore.java                     ::         60.453 -1940285188 
-2022-11-13 17:53:31  x     ZbnfSyntaxPrescript.java                 ::         86.941  0257168713 
-2013-06-09 19:13:32  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
-2012-12-26 17:34:50  x     Zmake.java                               ::         18.884 -0206480344 
+2023-04-29 08:24:20  x     GenZbnfJavaData.java                     ::         34.173  0306927906 
+2023-04-29 08:24:20  x     Zbnf2Xml.java                            ::         22.080 -0810343213 
+2023-04-29 08:24:20  x     ZbnfJavaOutput.java                      ::         89.671 -1743031235 
+2023-04-29 08:24:20  x     ZbnfParseResultItem.java                 ::         12.232 -1807629494 
+2023-04-29 08:24:20  x     ZbnfParser.java                          ::        191.293  0572222434 
+2023-04-29 08:24:20  x     ZbnfParserStore.java                     ::         60.453 -1940285188 
+2023-04-29 08:24:20  x     ZbnfSyntaxPrescript.java                 ::         86.941  0257168713 
+2023-04-29 08:24:20  x     ZbnfXmlOutput.java                       ::         14.168 -0583010662 
+2023-04-29 08:24:20  x     Zmake.java                               ::         18.884 -0206480344 
 
 ============================== java/org/vishia/zbnf/ebnfConvert/ ===================================
-2019-05-25 10:40:56  x     EBNFconvert.java                         ::         14.358  1433369927 
-2019-05-24 23:13:21  x     EBNFread.java                            ::          9.792 -0573932290 
-2019-05-19 23:01:37  x     package-info.java                        ::           . 88  1273194282 
+2023-04-29 08:24:20  x     EBNFconvert.java                         ::         14.358  1433369927 
+2023-04-29 08:24:20  x     EBNFread.java                            ::          9.792 -0573932290 
+2023-04-29 08:24:20  x     package-info.java                        ::           . 88  1273194282 
 
 ============================== java/org/vishia/zcmd/ ===============================================
-2021-10-04 14:29:56  x     Bin2Data.java                            ::         12.374 -1431562321 
-2021-10-04 14:29:50  x     Csv2Data.java                            ::         14.203 -1171583683 
-2017-04-03 21:49:00  x     JZcmd.java                               ::           .522 -0159697125 
-2017-04-03 21:46:49  x     OutputDataTree.java                      ::          2.039  0857798168 
-2021-10-04 14:29:58  x     Zbnf2Text.java                           ::         15.342 -1326656536 
+2023-04-29 08:24:20  x     Bin2Data.java                            ::         12.374 -1431562321 
+2023-04-29 08:24:20  x     Csv2Data.java                            ::         14.203 -1171583683 
+2023-04-29 08:24:20  x     JZcmd.java                               ::           .522 -0159697125 
+2023-04-29 08:24:20  x     OutputDataTree.java                      ::          2.039  0857798168 
+2023-04-29 08:24:20  x     Zbnf2Text.java                           ::         15.342 -1326656536 
 
 ============================== java/org/vishia/zip/ ================================================
-2022-11-21 00:21:27  x     Zip.java                                 ::         19.221  0792645650 
+2023-04-29 08:24:20  x     Zip.java                                 ::         19.221  0792645650 
 
 ============================== makeScripts/ =======================================================
-2023-02-04 09:57:03  x     +genjavadoc.sh                           ::           .548  1189752483 
-2023-04-07 21:00:05  x     +makejar_vishiaBase.sh                   ::          4.931 -0062114737 
-2022-12-10 13:01:57  x     -deployJar.sh                            ::          2.588  2120158065 
-2022-03-13 12:19:25  x     -genjavadocbase.sh                       ::          2.196  0325472742 
-2022-12-12 15:15:12  x     -makejar-coreScript.sh                   ::          8.017  0201379121 
-2021-06-28 23:34:15  x     JAVAC_HOME.sh                            ::          1.154 -1792697615 
-2022-09-17 16:20:31  x     Java2Xmi.jzcmd                           ::          4.373 -1492198453 
-2022-07-27 22:07:55  x     corrBom.jzTc                             ::          4.643 -0135911090 
-2022-12-10 12:33:55  x     minisys.files                            ::           .233  2125848980 
-2020-03-17 23:16:43  x     minisys.manifest                         ::           . 65  1933756705 
-2020-03-17 09:15:21  x     vishiaBase.manifest                      ::           . 67  1361500741 
-2020-03-23 11:22:28  x     zipjar.manifest                          ::           . 54  1025718497 
+2023-04-29 08:24:20  x     +genjavadoc.sh                           ::           .464 -0989684273 
+2023-04-29 08:24:20  x     +makejar_vishiaBase.sh                   ::          5.105  1661536616 
+2023-04-29 08:24:20  x     -deployJar.sh                            ::          2.588  2120158065 
+2023-04-29 08:24:20  x     -genjavadocbase.sh                       ::          2.493  1912977088 
+2023-04-29 08:24:20  x     -makejar-coreScript.sh                   ::          8.290  1488437677 
+2023-04-29 08:24:20  x     JAVAC_HOME.sh                            ::          1.154 -1792697615 
+2023-04-29 08:24:20  x     Java2Xmi.jzcmd                           ::          4.373 -1492198453 
+2023-04-29 08:24:20  x     corrBom.jzTc                             ::          4.643 -0135911090 
+2023-04-29 08:24:20  x     minisys.files                            ::           .233  2125848980 
+2023-04-29 08:24:20  x     minisys.manifest                         ::           . 65  1933756705 
+2023-04-29 08:24:20  x     vishiaBase.manifest                      ::           . 67  1361500741 
+2023-04-29 08:24:20  x     zipjar.manifest                          ::           . 54  1025718497 

@@ -1,5 +1,7 @@
 package org.vishia.util;
 
+import java.io.IOException;
+
 /**This is a new replacement for the org.vishia.mainCmd.MainCmd which is now deprecated.
  * <br>
  * TODO in future, yet empty.
@@ -44,7 +46,18 @@ public class ApplMain {
    */
   public static final String version = "2022-11-16";
 
+  
+  /**A string for indentation up to 100 spaces. Should be normally enough. */
+  public static final String sNewlineIndent = "\n                                                                                                    ";
 
+  public final static void outNewlineIndent ( Appendable out, int nIndent) throws IOException {
+    out.append(sNewlineIndent.substring(0, nIndent+1));
+  }
+  
+  public final static void outIndent ( Appendable out, int nIndent) throws IOException {
+    out.append(sNewlineIndent.substring(1, nIndent+1));
+  }
+  
   protected ApplMain(){}
 
 }

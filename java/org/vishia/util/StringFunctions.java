@@ -673,7 +673,8 @@ public class StringFunctions {
         return -1;
     }
     while(++ii < max){
-      if(sq.charAt(ii) == ch) {
+      char cc = sq.charAt(ii);
+      if(cc == ch) {
         return ii;
       }
     }

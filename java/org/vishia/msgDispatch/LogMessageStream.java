@@ -214,11 +214,8 @@ public class LogMessageStream extends LogMessageBase
 
   @Override
   public boolean sendMsg(int identNumber, CharSequence text, Object... args) {
-//    int posStack = StringFunctions.indexOf(text, "$Stack");
-//    if(posStack >0) {
-//      
-//    }
-    CharSequence stackInfo = ExcUtil.stackInfo(" $", 2, 1);
+    //faulty: CharSequence stackInfo = ExcUtil.stackInfo(" $", 2, 1);  //$ is disturbing for navigation in eclipse to the file/line
+    CharSequence stackInfo = ExcUtil.stackInfo(" ", 2, 1);
     String line = this.dateFormat.format(new Date(System.currentTimeMillis())) 
                 + "; " + identNumber + "; " + String.format(text.toString(),args)
                 + stackInfo;

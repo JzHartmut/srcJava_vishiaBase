@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.vishia.cmd.JZtxtcmdTester;
+import org.vishia.fbcl.fblockwr.CreateFBlock_Instance_FBrd;
 import org.vishia.odg.data.XmlForOdg;
 import org.vishia.odg.data.XmlForOdg_Zbnf;
 import org.vishia.util.Arguments;
@@ -14,6 +15,7 @@ import org.vishia.xmlReader.XmlCfg;
 import org.vishia.xmlReader.XmlJzCfgAnalyzer;
 import org.vishia.xmlReader.XmlJzReader;
 import org.vishia.xmlReader.XmlNodeSimpleReader;
+import org.vishia.xmlSimple.XmlBeautificator;
 import org.vishia.xmlSimple.XmlNodeSimple;
 
 public class ReadFbcl_odgData {
@@ -143,6 +145,10 @@ public class ReadFbcl_odgData {
         System.exit(2);                // argument error
       }
       ReadFbcl_odgData main = new ReadFbcl_odgData();
+      if(args.fInBeautificated !=null) {
+        String[] argsBeautificator = new String[] { args.fIn.getAbsolutePath() + ":zip:content.xml", args.fInBeautificated.getAbsolutePath()};
+        XmlBeautificator.main(argsBeautificator);
+      }
 //      main.analyzeXmlStruct(new File("d:\\vishia\\spe\\SPE-card\\FPGA\\src\\main\\oodg\\content.xml"));
 //      main.genJavaData();
       main.parseExample(args);
@@ -157,12 +163,18 @@ public class ReadFbcl_odgData {
   
   public static class Args extends Arguments {
 
-    public File fIn, fOutStruct, fOutDataHtml;
+    public File fIn, fInBeautificated, fOutStruct, fOutDataHtml;
 
     
     
     Arguments.SetArgument setInput = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
       Args.this.fIn = new File(val);
+      return true;
+    }};
+    
+    
+    Arguments.SetArgument setBeautificated = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.fInBeautificated = new File(val);
       return true;
     }};
     
@@ -183,7 +195,8 @@ public class ReadFbcl_odgData {
       super.aboutInfo = "...Reader content from odg for FunctionBlockGrafic";
       super.helpInfo="obligate args: -o:... ...input";
       addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
-      addArg(new Argument("-datahtml", ":path/to/data.html", this.setOutput));
+      addArg(new Argument("-datahtml", ":path/to/data.html", this.setOutDataHtml));
+      addArg(new Argument("-ibeauty", ":path/to/inputBeautificated.xml if given writes the beautificated input", this.setBeautificated));
       addArg(new Argument("", "path/to/input.odg", this.setInput));
     }
 

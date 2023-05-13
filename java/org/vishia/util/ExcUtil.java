@@ -249,9 +249,9 @@ public class ExcUtil {
    * @return A string in form of CharSequence. Use ...toString() to build a String if necessary.
    */
   public static CharSequence stackInfo(CharSequence startText, int firstLevel, int nrofLevel){
-    final CharSequence s;
-    try{ throw new RuntimeException("stackInfo");
-    } catch(RuntimeException exc){  //use a non-often used Exception type, do not debug it in Eclipse
+    final CharSequence s;  //Hint: use an exception type which is not so frequently, to prevent stop on an exception breakpoint.
+    try{ throw new NoSuchElementException("stackInfo");
+    } catch(NoSuchElementException exc){  //use a non-often used Exception type, do not debug it in Eclipse
       //exc.printStackTrace(System.out);
       s = exceptionInfo(startText, exc, firstLevel, nrofLevel, false);
     }

@@ -415,8 +415,9 @@ public class GenXmlCfgJavaData {
     protected boolean checkArguments()
     { boolean bOk = true;
   
-      if(argData.fileInput == null)            { bOk = false; writeError("ERROR argument Syntaxfile is obligat."); }
-      else if(argData.fileInput.length()==0)   { bOk = false; writeError("ERROR argument Syntaxfile without content.");}
+      if(this.argData.fileInput == null)            { bOk = false; writeError("ERROR argument Syntaxfile is obligat."); }
+      else if(!this.argData.fileInput.exists())     { bOk = false; writeError("ERROR argument Syntaxfile not found " + argData.fileInput.getAbsolutePath()); }
+      else if(this.argData.fileInput.length()==0)   { bOk = false; writeError("ERROR argument Syntaxfile without content.");}
   
       return bOk;
   
