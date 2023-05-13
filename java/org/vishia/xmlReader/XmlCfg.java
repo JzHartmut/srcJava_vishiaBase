@@ -1,5 +1,6 @@
 package org.vishia.xmlReader;
 
+import java.io.File;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -147,7 +148,8 @@ public class XmlCfg
    * With them it can be found here. */
   Map<String, XmlCfgNode> subtrees;
   
-  /**entries of usage of subtree instances which are defined later in the text. */
+  /**entries of usage of subtree instances which are defined later in the text. 
+   * This element is only used for reading the config. It is used and set to null after {@link #finishReadCfg(Map)}. */
   Map<String, List<XmlCfgNode>> subtreeForward;
   
   XmlCfgNode rootNode = new XmlCfgNode(null, this, "root");
@@ -256,7 +258,13 @@ public class XmlCfg
   }
 
   
-  
+  public void setCfgFromZml ( File fin) {
+    ZmlReader zReader = new ZmlReader();
+     zReader.readZml(fin);
+    for(Map.Entry<String, ZmlReader.ZmlNode> e : zReader.idxNodes.entrySet()) {
+      
+    }
+  }
   
   
   void finishReadCfg(Map<String, String> namespaces) {
@@ -319,7 +327,7 @@ public class XmlCfg
    */
   public static class XmlCfgNode
   {
-    /**The whole config. Especially {@link XmlCfg#xmlnsAssign} is used to evaluate attributes. 
+    /**Back reference to the whole config. Especially {@link XmlCfg#xmlnsAssign} is used to evaluate attributes. 
      * The nameSpace is singular for the whole config. */
     final XmlCfg cfg;
 

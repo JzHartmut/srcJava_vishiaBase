@@ -121,6 +121,7 @@ public class StringPart implements CharSequence, Comparable<CharSequence>, Itera
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-30 Hartmut new: {@link #contentTillSpaceEndOrQuotation(String, char)}
    * <li>2022-06-06 Hartmut chg: Now implements {@link Closeable} is removed. This is faulty, because nothing is open. 
    *   The {@link #close()} operarion does not close, it cleans only. Some unnecessary warnings were created because the Closeable property. 
    *   The {@link #close()} operation is now designated as deprecated, use instead 
@@ -1009,6 +1010,34 @@ private static final void throwSubSeqFaulty(int from, int to)
     return this;
   }
 
+  
+  /**Sets the current part either to the whole quotation if it it starts with the quotation char, 
+   * or sets it till the first space, or till end if the space is not found. 
+   * The return value is the String inside the quotation, or the current part.
+   * <br>
+   * This operation helps to read a String either in quotation or till space, as it is usual for example
+   * in command line arguments, or also for configuration values. 
+   * The quotation can be dismissed if the string is bundled up to the space character 
+   * 
+   * @param sQuotationStartEnd Two chars String for the quotation, usual "\"\"" or for example "<>"
+   * @param escapeChar that character which subscribes the end quotation char itself, usual the backslash
+   * @return String between quotation or the current part.
+   */
+  public final String contentTillSpaceEndOrQuotation (String sQuotationStartEnd, char escapeChar) {
+    final String ret;
+    if(getCurrentChar()==sQuotationStartEnd.charAt(0)) {
+      seekPos(1).lentoPos(indexEndOfQuotation(sQuotationStartEnd.charAt(1), escapeChar, 0, 9999));
+      ret = getCurrentPart().toString();
+      seekPos(1);
+    } else {
+      lento(" ").len0end();
+      ret = getCurrentPart().toString();
+    }
+    return ret;
+  }
+  
+  
+  
 
   /** Sets the len to the first position of any given char, but not if the char is escaped.
    *  'Escaped' means, a \ is disposed before the char.

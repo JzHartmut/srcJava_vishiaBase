@@ -20,6 +20,7 @@ import java.util.zip.ZipFile;
 import org.vishia.util.CheckVs;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
+import org.vishia.util.ExcUtil;
 import org.vishia.util.FileSystem;
 //import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
@@ -437,13 +438,11 @@ public class XmlJzReader
       throw new IllegalArgumentException("tag name expected");
     }
     //
-    //The tag name of the element:
+    //--------------------------------------------- The tag name of the element:
     String sTag = inp.getLastScannedString().toString();
     if(this.debugTag !=null && sTag.equals(this.debugTag)) {
       Debugutil.stop();
     }
-    
-    
     if(this.xmlTestWriter !=null) {
       this.xmlTestWriter.writeElement(sTag);
     }
@@ -454,14 +453,14 @@ public class XmlJzReader
       Debugutil.stop();
     //TODO replace alias.
     //
-    //search the tag name in the cfg:
+    //--------------------------------------------- Search the tag name in the cfg:
     //
     Object subOutput = null;
     XmlCfg.XmlCfgNode subCfgNode;
-    if(cfgNode == null) {   //check whether this element should be regarded:
+    if(cfgNode == null) {   //check whether the parent element should be regarded:
       subOutput = null;     //this element should not be evaluated.
       subCfgNode = null;
-    } else {
+    } else {  //----------------------------------- The parent element is expected, content should be stored
       if(output ==null) {
         Debugutil.stop();
       }
@@ -470,9 +469,9 @@ public class XmlJzReader
         Debugutil.stop();
       if(sTag.toString().startsWith("Object@"))
         Debugutil.stop();
-      if(cfgNode.subnodes == null) {
+      if(cfgNode.subnodes == null) {             // inner content, it is this element should not be stored.
         subCfgNode = null; //don't read inner content
-      } else {
+      } else {  
         subCfgNode = cfgNode.subnodes.get(sTag);  //search the proper cfgNode for this <tag
         if(subCfgNode == null) {
           subCfgNode = cfgNode.subnodes.get("?");  //check whether it is a node with any unspecified tag name possible. 
@@ -494,6 +493,7 @@ public class XmlJzReader
 //        subOutput = null; //don't store output. 
 //      }
     }
+    //--------------------------------------------- The subCfgNode for the element is either null or found.
     //
     @SuppressWarnings("unchecked")
     Map<String, DataAccess.IntegerIx>[] attribNames = new Map[1];
@@ -644,6 +644,19 @@ public class XmlJzReader
    * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
    * @throws Exception
    */
+  /**
+   * @param inp
+   * @param tag
+   * @param cfgNode
+   * @param attribsToStore [0] maybe given or may be created. If an attribute is found 
+   *          which's {@link XmlCfg.AttribDstCheck#daccess} is set, then the attribute with the daccess is stored in [0]
+   *          to write it in the new created node if this was created after this operation.
+   * @param namespacesToStore
+   * @param attribNames
+   * @param attribValues
+   * @return
+   * @throws Exception
+   */
   private CharSequence parseAttributes(StringPartScan inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
       , List<AttribToStore>[] attribsToStore, List<AttribToStore>[] namespacesToStore
       , Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
@@ -703,6 +716,7 @@ public class XmlJzReader
           sAttrNsName = sAttrNsNameRaw;
           
         }
+        //----------------------------------------- sAttrNsName is the attribute inclusively the full namespace
         if(sAttrNsName !=null) {
           XmlCfg.AttribDstCheck cfgAttrib = null;
           if(cfgNode.attribs != null) { 
@@ -965,7 +979,8 @@ public class XmlJzReader
           DataAccess.storeValue(dstPath, output, buffer, true);
         }
       } catch(Exception exc) {
-        System.err.println("error storeContent: " + exc.getMessage());
+        CharSequence sExc = ExcUtil.exceptionInfo("error XmlKzReader storeContent: ", exc, 0, 10);
+        System.err.println(sExc);
       }
     }
   }

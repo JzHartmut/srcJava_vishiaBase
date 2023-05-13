@@ -23,6 +23,7 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-04-30 Hartmut bugfix {@link #startsWith(CharSequence, CharSequence)}: was faulty if number of chars to compare is equal the length. 
    * <li>2023-04-02 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: 
    *   If any String is longer than nrofChars but the rest is equal, now returns 0. (Before, returns a value > nrofChars).  
    * <li>2022-05-09 Hartmut new {@link #startsWithAfterAnyChar(CharSequence, CharSequence, String)}, new {@link #indexAfterAnyChar(CharSequence, int, int, CharSequence)}
@@ -619,7 +620,7 @@ public class StringFunctions {
   public static boolean startsWith(CharSequence sq, int from, int endMax, CharSequence start){
     int zstart = start.length();
     int zsq = sq.length();
-    int max = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) - zstart ;  //max is negative if to is left from fromIndex
+    int max = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //max is negative if to is left from fromIndex
     if((max - from) < zstart) return false;
     return compare(sq, from, start, 0, zstart) == 0;
   }

@@ -15,7 +15,7 @@ import java.util.List;
  * For all deeper levels the files should not start or end with an <code>#</code>.
  * Hence all source files are gathered, but not commented files with <code>#</code>.  
  */
-public class FilepathFilterM extends ObjectVishia {
+public class FilepathFilterM implements ToStringBuilder {
 
 //  * Note: The {@link java.io.FilenameFilter} is better as the {@link java.io.FileFilter}
 //  *   because the {@link java.io.File#list(FilenameFilter)} builds a File instance only if the name is tested positively.
@@ -621,7 +621,7 @@ public class FilepathFilterM extends ObjectVishia {
   
   
   
-  @Override public Appendable toString(Appendable app, String ... cond) throws IOException {
+  @Override public StringBuilder toString(StringBuilder app, String ... cond) {
     if(this.bNotBegin) {
       app.append('~');
     }
@@ -675,8 +675,7 @@ public class FilepathFilterM extends ObjectVishia {
   
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    try { toString(sb);} catch(IOException exc) {}
-    return sb.toString();
+    return toString(sb).toString();
   }
   
 
