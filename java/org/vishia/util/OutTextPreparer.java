@@ -37,6 +37,7 @@ import java.util.TreeMap;
  *  + "");
  * </pre>
  * Instead a given pattern in Java code it is possible to read the pattern from a file. 
+ * See {@link #readTemplate(InputStream, String)}
  * <br><br>
  * More specials
  * <ul>
@@ -110,7 +111,10 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-05-12: new  {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} 
+   *   now works completely with a String file given script.
    * <li>2022-04-17: new {@link #readTemplate(InputStream, String)} to support texts from file. Used firstly for {@link org.vishia.java2Vhdl.Java2Vhdl}
+   *   This is 2023-05-12 deprecated because {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} does all and replaces it.
    * <li>2022-02-11: little bit improved error message, hint to error position
    * <li>2019-11-13: ## Comment in a line
    * <li>2019-10-20: &lt;: > capability 
@@ -270,8 +274,13 @@ public class OutTextPreparer
       this.cmd = what;
     }
     
-    public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData) throws Exception { 
-      super( textOrDatapath, outer.nameVariables, reflData);
+    public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
+      super( textOrDatapath, outer.nameVariables, reflData, idxConstData);
+      this.cmd = what;
+    }
+    
+    public Cmd(OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
+      super( textOrDatapath, outer.nameVariables, reflData, idxConstData, true);
       this.cmd = what;
     }
     
@@ -303,7 +312,7 @@ public class OutTextPreparer
     }
 
     public ForCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.forCtrl, sDatapath, reflData);
+      super(outer, ECmd.forCtrl, sDatapath, reflData, null);
     }
   }
   
@@ -319,7 +328,7 @@ public class OutTextPreparer
     }
 
     public SetCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.setVar, sDatapath, reflData);
+      super(outer, ECmd.setVar, sDatapath, reflData, null);
     }
   }
   
@@ -346,7 +355,7 @@ public class OutTextPreparer
 
     
     public IfCmd(OutTextPreparer outer, ECmd cmd, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, cmd, sDatapath, reflData);
+      super(outer, cmd, sDatapath, reflData, null);
     }
   }
   
@@ -360,12 +369,12 @@ public class OutTextPreparer
     public List<Argument> args;
     
     public CallCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception 
-    { super(outer, ECmd.call, spDatapath, reflData); 
+    { super(outer, ECmd.call, spDatapath, reflData, outer.idxConstData); 
     }
  
-    public CallCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception 
-    { super(outer, ECmd.call, sDatapath, reflData); 
-    }
+    public CallCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception { 
+      super(outer, ECmd.call, sDatapath, reflData, outer.idxConstData); 
+    }                                              // search the call object also in callScripts
   }
   
   
@@ -380,7 +389,7 @@ public class OutTextPreparer
     }
     
     public ExecCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception 
-    { super(outer, ECmd.exec, sDatapath, reflData); 
+    { super(outer, ECmd.exec, sDatapath, reflData, outer.idxConstData); 
     }
   }
   
@@ -394,7 +403,7 @@ public class OutTextPreparer
     }
 
     public DebugCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.debug, sDatapath, reflData);
+      super(outer, ECmd.debug, sDatapath, reflData, outer.idxConstData);
     }
   }
   
@@ -432,7 +441,7 @@ public class OutTextPreparer
     public final int ixDst;
     
     public Argument(OutTextPreparer outer, String name, int ixCalledArg, String sTextOrDatapath, Class<?> reflData) throws Exception {
-      super(sTextOrDatapath, outer.nameVariables, reflData);
+      super(sTextOrDatapath, outer.nameVariables, reflData, outer.idxConstData);
       this.name = name;
       this.ixDst = ixCalledArg;
     }
@@ -449,6 +458,10 @@ public class OutTextPreparer
   /**All argument variables and internal variables sorted. */
   private Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>();
   
+  /**Container with some const data given before parsing the scripts,
+   * also used to store parsed scripts which can be used to call on <:call:script:args>
+   */
+  protected final Map<String, Object> idxConstData;
   
   /**The source of the generation script, argument of {@link #parse(Class, String)} only for debug. */
   public final String pattern;
@@ -477,6 +490,7 @@ public class OutTextPreparer
     this.pattern = pattern;
     this.clazzPattern = reflData;
     this.parse(reflData, pattern);
+    this.idxConstData = null;
   }
   
   /**Constructs the text generation control data for the specific pattern. 
@@ -489,9 +503,27 @@ public class OutTextPreparer
    *   On faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> reflData, String variables, String pattern) {
+    this(ident, reflData, variables, pattern, null);
+  }
+
+  
+  
+  /**Constructs the text generation control data for the specific pattern and given sub pattern.
+   * This is the preferred ctor for all capabilities.
+   * @param ident Any identification not used for the generated text.
+   * @param reflData If the access via reflection should be done, null possible
+   * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
+   * @param pattern The pattern in string given form. 
+   *   This pattern will be parsed and divided in parts for a fast text generation.
+   * @param otxScripts Container for call able scripts, maybe contain all scripts
+   * @throws never because the instantiation is possible especially for static variables.
+   *   On faulty pattern the prepared cmd for output contains the error message. 
+   */
+  public OutTextPreparer(String ident, Class<?> reflData, String variables, String pattern, Map<String, Object> otxScripts) {
     this.sIdent = ident;
     this.pattern = pattern;
     this.clazzPattern = reflData;
+    this.idxConstData = otxScripts;
     this.parseVariables(variables);
     this.parse(reflData, pattern);
   }
@@ -507,11 +539,14 @@ public class OutTextPreparer
     this.clazzPattern = reflData;
     this.setVariables(variables);
     this.parse(reflData, pattern);
+    this.idxConstData = null;
   }
   
   
   
-  /**Reads a given template which may contain the pattern for several OutTextPreparer.
+  /**Reads a given template which may contain the pattern for several separated OutTextPreparer.
+   * See also {@link #readTemplateList(InputStream, String)}
+   * <br>
    * The file can contain different patterns in segments: <pre>
    * === patternName
    * content <&withVariables>
@@ -520,12 +555,24 @@ public class OutTextPreparer
    * === nextPatternName
    *   etc.
    * </pre>
+   * With this template Strings several OutTextPreparer can be created due to the schema (Example for Java2Vhdl)<pre>
+    InputStream inTpl = Java2Vhdl.class.getResourceAsStream("VhdlTemplate.txt");  //pathInJar with slash: from root.
+    Map<String, String> tplTexts = OutTextPreparer.readTemplate(inTpl, "===");
+    inTpl.close();
+    this.vhdlHead = new OutTextPreparer("vhdlHead", null, "fpgaName", tplTexts.get("vhdlHead"));
+    this.vhdlAfterPort = new OutTextPreparer("vhdlAfterPort", null, "fpgaName", tplTexts.get("vhdlAfterPort"));
+    this.vhdlConst = new OutTextPreparer("vhdlConst", null, "name, type, value", tplTexts.get("vhdlConst"));
+    this.vhdlCmpnDef = new OutTextPreparer("vhdlCmpnDef", null, "name, vars", tplTexts.get("vhdlCmpnDef"));
+    this.vhdlCmpnCall = new OutTextPreparer("vhdlCmpnCall", null, "name, typeVhdl, preAssignments, vars", tplTexts.get("vhdlCmpnCall"));
+    </pre>
+   * 
    * @param inp The open input to read, can also a resource in jar, then use {@link Class#getResourceAsStream(String)} to open
    * @param lineStart String which marks a new pattern segment, for the exmaple it should be "=== " 
    * @return Map contains patternName and pattern String, without empty trailing lines.
    * @throws IOException
+   * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} for all.
    */
-  public static Map<String, String> readTemplate ( InputStream inp, String lineStart) throws IOException {
+  @Deprecated public static Map<String, String> readTemplate ( InputStream inp, String lineStart) throws IOException {
     Map<String, String> ret = new TreeMap<String, String>();
     InputStreamReader reader = new InputStreamReader(inp, "UTF-8");
     BufferedReader rd = new BufferedReader(reader);
@@ -534,20 +581,30 @@ public class OutTextPreparer
     StringBuilder buf = null;
     int posEnd = 0;
     while( (line = rd.readLine()) !=null) {
-      if(line.startsWith(lineStart)) {
-        if(name !=null) {
-          buf.setLength(posEnd);  //without trailing newlines.
-          ret.put(name, buf.toString());
+      if(line.startsWith(lineStart)) {           // a new sub template starts here 
+        if(name !=null) {                        // ends the sub template before if not done yet.
+          buf.setLength(posEnd);                 // without trailing newlines.
+          ret.put(name, buf.toString());         // store the template before.
         }
-        name = line.substring(lineStart.length()).trim();
+        final boolean bHasArgs;
+        int posArgs = line.indexOf('(');
+        bHasArgs = posArgs >0;
+        if(!bHasArgs) { posArgs = line.length(); } // only the name on this line, compatible to before 2023-05
+        name = line.substring(lineStart.length(), posArgs).trim();
         buf = new StringBuilder(200);
+        if(bHasArgs) {
+          buf.append(line.substring(posArgs)).append('\n');  // first line with args starting with "("
+        }
         posEnd = 0;
       }
-      else {
+      else if(buf !=null) {
         buf.append(line).append("\n");
         if(line.length() >0) {
           posEnd = buf.length();
         }
+      }
+      else {
+        // ignore lines before the first start.
       }
     }
     if(name !=null) {
@@ -555,6 +612,80 @@ public class OutTextPreparer
       ret.put(name, buf.toString());
     }
     return ret;
+  }
+  
+  
+  
+  /**Reads a given template which may contain the pattern for some associated OutTextPreparer also for call operations
+   * @since 2023-05. See also {@link #readTemplateCreatePreparer(InputStream, String, Class)}
+   * <br>
+   * The file can contain different patterns in segments: <pre>
+   * === patternName ( variables )  ##comment
+   * content with <&ariables>       ##comment
+   * more lines<.end>
+   * 
+   * free text between pattern
+   * 
+   * === nextPatternName
+   *   etc.
+   * </pre>
+   */ 
+  public static List<String> readTemplateList ( InputStream inp, String lineStart) throws IOException {
+    List<String> ret = new LinkedList<String>();
+    InputStreamReader reader = new InputStreamReader(inp, "UTF-8");
+    BufferedReader rd = new BufferedReader(reader);
+    String line;
+    StringBuilder buf = new StringBuilder(500);
+    boolean bActiveScript = false;
+    while( (line = rd.readLine()) !=null) {
+      
+      int posComment = line.indexOf("##");
+      if(posComment >=0) { line = line.substring(0, posComment); }
+      if(!bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
+        buf.append(line.substring(lineStart.length())).append('\n');  // first line with args starting with "("
+        bActiveScript = true;
+      }
+      else if(bActiveScript) {
+        int posEndScript = line.indexOf("<.end>");
+        if(posEndScript >=0) {
+          buf.append(line.substring(0, posEndScript));
+          ret.add(buf.toString());
+          buf.setLength(0);
+          bActiveScript = false;
+        } else {
+          buf.append(line).append("\n");
+        }
+      }
+      else {
+        // ignore lines outside active script.
+      }
+    }
+    if(bActiveScript) {
+      ret.add(buf.toString());
+    }
+    return ret;
+  }
+  
+  
+  
+  public static OutTextPreparer readTemplateCreatePreparer 
+  ( InputStream inp, String lineStart, Class<?> staticClassAccess
+  , Map<String, Object> idxConstData, String sMainScript 
+  ) throws IOException, ParseException{
+    List<String> tplTexts = null;
+    tplTexts = OutTextPreparer.readTemplateList(inp, lineStart);
+    for(String text : tplTexts) {
+      int posArgs = text.indexOf('(');
+      int posEndArgs = text.indexOf(')');
+      int posNewline = text.indexOf('\n');
+      if(! ( posArgs >0 && posEndArgs > posArgs && posNewline > posEndArgs)) throw new ParseException("first line must contain ( args ,...)", 0);
+      String name = text.substring(0, posArgs).trim();
+      String args = text.substring(posArgs+1, posEndArgs);
+      String script = text.substring(posNewline+1);
+      OutTextPreparer otxScript = new OutTextPreparer(name, staticClassAccess, args, script, idxConstData);
+      idxConstData.put(name, otxScript);
+    }
+    return sMainScript == null ? null : (OutTextPreparer)idxConstData.get(sMainScript);
   }
   
   
@@ -975,7 +1106,7 @@ public class OutTextPreparer
           case setVar: cmd = new SetCmd(this, sDatapath, data); break;
           case debug: cmd = new DebugCmd(this, sDatapath, data); break;
           case addString: cmd = new CmdString(sDatapath); break;
-          default: cmd = new Cmd(this, ecmd, sDatapath, data); break;
+          default: cmd = new Cmd(this, ecmd, sDatapath, data, null); break;
         }
       } catch(Exception exc) {
         throw new IllegalArgumentException("OutTextPreparer " + sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());

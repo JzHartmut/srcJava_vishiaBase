@@ -618,7 +618,9 @@ public class DataShow extends ObjectId
               Object item = entry.getValue();
               Object key = entry.getKey();
               String sKey = toStringNoHash(key);
-              outField(sKey, item, item.getClass(), null, out, recursiveCount+1);
+              if(item !=null) {
+                outField(sKey, item, item.getClass(), null, out, recursiveCount+1);
+              }
               /*  
               out.append("\n        <li>");
               if(item ==null) {

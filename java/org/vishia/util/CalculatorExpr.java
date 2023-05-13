@@ -46,6 +46,18 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-05-13: TODO using String or StringPartScan for {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} etc. :
+   *   If the expression is simple, only an identifier, then a String is sufficient and a StringPartScan needs waste memory.
+   *   From calling level it may be known that the argument is only simple. But the simplicity can be used only in a deeper level of nesting.
+   *   To optimize it may be sufficient to provide both as argument, whereby the StringPartScan argument may be null.
+   *   It should be null if the simplicity is known from calling level. Then the simple String is used as input for the expression.
+   *   <br>The advantage: No two versions of {@link #setExpr(String)} and {@link #setExpr(StringPartScan, Class, boolean)}
+   *   as it would be necessary for all deeper levels to optimize.
+   *   <br>Disadvantage: One argument more for all calls. But this one argument more may be lesser effort as extra memory space. 
+   * <li>2023-05-13: {@link Operand#Operand(String, Map, Class, Map)} with given dataConst possible for the operand.
+   *   It is used in {@link OutTextPreparer} especially for the String which refers to s called sub-OutTextPreparer
+   *   which is an Operand. But it is usable for also other situations where as a Map may be given to select with a dataPath
+   *   and where it is not pre-defined that this is part of the Map or another dataPath.
    * <li>2022-03-14: Hartmut some refactoring, also for better docu, all ExprTypes in a sub class
    * <li>2022-03-14: Hartmut {@link #calcDataAccess(Map, Object...)}: Now multidim array for Object possible.
    * <li>2022-03-14: Hartmut {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} now regard precedence of && higher as ||,
@@ -1485,15 +1497,33 @@ public class CalculatorExpr
       this.expr = null;
     }
     
-    /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
+    /**Creates an Operand from the textual given datapath and the given enviromments.
+     * <ul><li>If idxConstData is given and the full sDatapath as key finds a content,
+     *   this is stored in {@link #dataConst} as value of the operand. All other are null.
+     * <li>If the sDatapath describes a simple access to one of the variables, 
+     *   the index to the variables will be set to {@link #ixValue}, the rest describes the access operation. 
+     *   {@link #expr} as expression to execute is null.
+     * <li>If sDatapath describes a more complex expression, then the parsed expression is stored
+     *   in {@link #expr}. The fields {@link #dataConst} and {@link #dataAccess} remains null.
+     * </ul>  
      * @param sDatapath textual given value. It is either a literal, a simple variable ...TODO docu
      * @param variables Container with some variable names associated to indices in a value array.
      * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
+     * @param idxConstData If this is not null, then it is first used to find {@link #dataConst} with sDatapath as key.
      * @throws Exception 
      * @deprecated it should be possible to use {@link Operand#Operand(StringPartScan, Map, Class)} in all cases.
+     * @since 2023-05 with givenData and as call of {@link Operand#Operand(Object, StringPartScan, Map, Class, boolean)}
      */
-    public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData) throws Exception {
-      if(sDatapath !=null){
+    public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
+      Object constData = idxConstData ==null ? null : idxConstData.get(sDatapath);
+      if(constData !=null) {
+        this.ixValue = -1;
+        this.dataAccess = null;
+        this.dataConst = constData;
+        this.expr = null;
+        this.textOrVar = null;
+      }
+      else if(sDatapath !=null){
 //      if(sDatapath.startsWith("&("))
 //      Debugutil.stop();
         if(sDatapath.contains("("))
@@ -1528,16 +1558,44 @@ public class CalculatorExpr
     }
 
     
-    /**Either a value access with given data (base of {@link Argument}, or a Command with value access, base of {@link Cmd}
-     * @param sDatapath textual given value. It is either a literal, a simple variable ...TODO docu
-     * @param variables Container with some variable names associated to indices in a value array.
-     *         see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
-     * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
-     * @throws Exception 
+    /**See {@link Operand#Operand(StringPartScan, Map, Class, Map, boolean)}
+     * but without the idxConstData
+     * @param sDatapath
+     * @param variables
+     * @param reflData
+     * @param bSpecialSyntax
+     * @throws ParseException
      */
     public Operand(StringPartScan sDatapath, Map<String, DataAccess.IntegerIx> variables
     , Class<?> reflData, boolean bSpecialSyntax) throws ParseException {
-      if(sDatapath !=null){
+      this(sDatapath, variables, reflData, null, bSpecialSyntax);
+    }
+      
+      
+      
+      
+      
+      
+    /**See {@link Operand#Operand(String, Map, Class, Map)} but with {@link StringPartScan} for the sDatapath
+     * 
+     * @param sDatapath
+     * @param variables
+     * @param reflData
+     * @param idxConstData
+     * @param bSpecialSyntax
+     * @throws ParseException
+     */
+    public Operand(StringPartScan sDatapath, Map<String, DataAccess.IntegerIx> variables
+    , Class<?> reflData, Map<String, Object> idxConstData, boolean bSpecialSyntax) throws ParseException {
+      Object constData = idxConstData ==null ? null : idxConstData.get(sDatapath.getCurrent().toString());
+      if(constData !=null) {
+        this.ixValue = -1;
+        this.dataAccess = null;
+        this.dataConst = constData;
+        this.expr = null;
+        this.textOrVar = null;
+      }
+      else if(sDatapath !=null){
         //====>
         CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData, bSpecialSyntax);
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
