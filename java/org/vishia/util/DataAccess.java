@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -87,6 +88,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2023-05-05: Hartmut improved error message on method not found / argument mismatch, in {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} 
    * <li>2021-12-30: Hartmut: {@link #access(CharSequence, Object, boolean, boolean, boolean, Dst)} now regards a "%..." path for static access.
    * <li>2019-08-20: some operations throws {@link ParseException} on syntax errors.
    * <li>2019-08-23 Hartmut new: Supports now &(path) as indirect access, access to variable with gotten name in path.
@@ -1326,7 +1328,7 @@ public class DataAccess {
    * @throws NoSuchMethodException
    * @throws Exception
    */
-  public static Object invokeMethod(      
+  public static Object invokeMethod(
     DatapathElement element
   , Class<?> clazz  
   , Object obj
@@ -1337,8 +1339,8 @@ public class DataAccess {
     Object data1 = null;
     Class<?> clazz1 = clazz == null ? obj.getClass() : clazz;
     Class<?> clazzcheck = clazz1;   //in loop superclass checked etc.
-    if(element.ident.equals("execX"))
-      Assert.stop();
+    if(element.ident.equals("new_draw_polygon"))
+      Debugutil.stop();
     boolean bOk = false;
     boolean methodFound = false;
     do{
@@ -1384,30 +1386,50 @@ public class DataAccess {
     if(!bOk && !bNoExceptionifNotFound) {
       StringBuilder msg = new StringBuilder(1000);
       if(methodFound){
-        msg.append("DataAccess - method parameters don't match, found:\n  ");
+        msg.append("DataAccess - method parameters don't match, found:\n");
+        clazzcheck = clazz1;   //in loop superclass checked etc.
+        do {
+          if(accessPrivate || (clazzcheck.getModifiers() & Modifier.PUBLIC) !=0){
+            Method[] methods = accessPrivate ? clazzcheck.getDeclaredMethods() : clazzcheck.getMethods();
+            for(Method method: methods){
+              bOk = false;
+              if(method.getName().equals(element.ident)){
+                Parameter[] paramTypes = method.getParameters();
+                msg.append("  ").append(clazzcheck.getName()).append(".") .append(element.ident) .append("(");
+                boolean bNext = false;
+                for(Parameter par: paramTypes) {
+                  if(bNext) { msg.append(", "); }
+                  else { bNext = true; }
+                  msg.append(par.getType().getName()); //.append(' ').append(par.getName());
+                }
+                msg.append(")\n");
+          } } }
+        } while(!bOk && (clazzcheck = clazzcheck.getSuperclass()) !=null);
       } else {
         msg.append("DataAccess - method not found, searched:\n  ");
-      }
-      msg.append(clazz1.getName()).append(".") .append(element.ident) .append("(");
-      boolean bNext = false;
-      if(args !=null) {
-        for(Object arg: args) {
-          if(bNext) { msg.append(", "); }
-          bNext = true;
-          if(arg !=null) {
-            msg.append(arg.getClass());
+        msg.append(clazz1.getName()).append(".") .append(element.ident) .append("(");
+        boolean bNext = false;
+        if(args !=null) {
+          for(Object arg: args) {
+            if(bNext) { msg.append(", "); }
+            else { bNext = true; }
+            if(arg !=null) {
+              msg.append(arg.getClass());
+            }
           }
         }
+        msg.append(")\n");
       }
-      msg.append(")\n ...given arg names:");
-      bNext = false;
+      msg.append("  ... given arg names: ");
+      boolean bNext = false;
       if(element.args !=null) {
         for(CalculatorExpr.Operand arg: element.args) {
           if(bNext) { msg.append(", "); }
+          else { bNext = true; }
           msg.append(arg.textOrVar);
         }
       }
-      msg.append("<<;\n ... stackInfo: ");
+      msg.append("<<;\n  ... stackInfo: ");
       CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
       if(debugMethod !=null && debugMethod.equals("")){
         debug();
