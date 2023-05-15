@@ -111,6 +111,7 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-05-15: new Features <:? > as better syntax for skip spaces, <:?nl> skip after newline. 
    * <li>2023-05-12: new  {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} 
    *   now works completely with a String file given script.
    * <li>2022-04-17: new {@link #readTemplate(InputStream, String)} to support texts from file. Used firstly for {@link org.vishia.java2Vhdl.Java2Vhdl}
@@ -728,15 +729,15 @@ public class OutTextPreparer
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
     int ixixCmd = -1;
     StringPartScan sp = new StringPartScan(pattern);
-    sp.setIgnoreWhitespaces(true);
+    sp.setIgnoreWhitespaces(true);  // it is valid inside the syntactical relevant parts <...>
     int nLastWasSkipOverWhitespace = 0;
     while(sp.length() >0) {
       nLastWasSkipOverWhitespace +=1;
-      if(sp.scanStart().scan("##").scanOk()) {
-        sp.seek("\n").seekPos(1);  //skip all till newline
+      if(sp.scanStart().scan("##").scanOk()) {             // if a ## was found, seek till newline.
+        sp.seek("\n").seekPos(1);                          // skip all till newline
         pos0 = (int)sp.getCurrentPosition();
-      }
-      sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);
+      }                                                    // Note: spaces are detected because of content till <
+      sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);  // < is always start of a special output
       if(sp.found()) {
         
         pos1 = (int)sp.getCurrentPosition() -1; //before <
@@ -750,13 +751,19 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(  nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
-               && (sp.scan(": >").scanOk() || sp.scan(":+>").scanOk())){ 
-          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);  //adds the text before <:+>
-          sp.scanSkipSpace();
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-          nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
+            && (sp.scan(": >").scanOk() || sp.scan(":+>").scanOk() || sp.scan(":? >").scanOk())){ 
+         addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);  //adds the text before <:+>
+         sp.scanSkipSpace();
+         pos0 = (int)sp.getCurrentPosition();  //after '>'
+         nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
+        }  
+        else if( sp.scan(":?nl>").scanOk()){ 
+         addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);  //adds the text before <:+>
+         sp.seekAfterNewline();
+         pos0 = (int)sp.getCurrentPosition();  //after newline
         }
         else if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
+          //------------------------------------------------- <&dataPath>
           final String sDatapath = sp.getLastScannedString();
 //          if(sDatapath.startsWith("&("))
 //            Debugutil.stop();
@@ -869,17 +876,18 @@ public class OutTextPreparer
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
+          // ------------------------------------------------ <:text> or <:n> <:r> <:t> <:s>
           final int posend = (int)sp.getCurrentPosition();
           final String sText = pattern.substring(pos1+2, posend-1);
           //Note: do not use sp.getLastScannedString().toString(); because scanToAnyChar skips over whitespaces
           final int what;
           if(sText.length() == 1) {
-            what = "nrt".indexOf(sText.charAt(0));
+            what = "nrts".indexOf(sText.charAt(0));
           } else {
             what = -1; 
           }
           if(what >=0) {
-            String[] specials = { "\n", "\r", "\t"};
+            String[] specials = { "\n", "\r", "\t", " "};
             addCmd(pattern, pos0, pos1, ECmd.addString, specials[what], null);
           } else {
             addCmd(pattern, pos0, pos1, ECmd.addString, sText, null); //add the <:sText>

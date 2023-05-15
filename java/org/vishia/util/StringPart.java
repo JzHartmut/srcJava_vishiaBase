@@ -343,6 +343,12 @@ abcdefghijklmnopqrstuvwxyz  Sample of the whole associated String
    */
   protected static final int mSkipOverCommentToEol_mode = 0x4;
 
+  protected static final String sCheckWhitespaces = " \t\r\n\f";
+
+  protected static final String sCheckNewline = "\r\n";
+
+  
+  
   /**Bit in mode. Only if this bit is set, the method {@link #getCurrentColumn()} calculates the column.
    * If the bit is not set, that method returns -1 if it is called. For save calculation time.
    */
@@ -604,7 +610,7 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    * On scan, the current position is set first after a comment if the current position began with a comment.
    * This mode may or should be combinded with setIgnoreWhitespace.<br/> 
    * The chars accepted as whitespace are setted by calling 
-   * setWhiteSpaceCharacters(). The default value is " \t\r\n\f" like in java-programming.
+   * setWhiteSpaceCharacters(). The default value is sCheckWhitespaces like in java-programming.
    * @param bSet If true than ignore, if false than comments are normal input to parse.
    * @return The last definition of this feature.
    */
@@ -1279,12 +1285,28 @@ abcdefghijklmnopqrstuvwxyz  The associated String
    */
 public final StringPart seekNoWhitespace()
 { this.beginLast = this.begin;
-  while( this.begin < this.end && " \t\r\n\f".indexOf(this.content.charAt(this.begin)) >=0 )
+  while( this.begin < this.end && sCheckWhitespaces.indexOf(this.content.charAt(this.begin)) >=0 )
   { this.begin +=1;
   }
   this.bFound = (this.begin > this.beginLast);
   return this;
 }
+
+
+public final StringPart seekAfterNewline() { 
+  this.beginLast = this.begin;
+  String sCheck = sCheckWhitespaces;
+  char cc;
+  while( this.begin < this.end && sCheck.indexOf(cc=this.content.charAt(this.begin)) >=0 )
+  { if(sCheckNewline.indexOf(cc)>=0) { 
+      sCheck = sCheckNewline;   // on first newline char found, check only newline.
+    }
+    this.begin +=1;
+  }
+  this.bFound = (this.begin > this.beginLast);
+  return this;
+}
+
 
 
 /*=================================================================================================================*/
@@ -2313,14 +2335,14 @@ public final StringPart lentoLineEnd(){ return lentoAnyChar("\n\r\f"); }
  * and decrements the end of the current part over maybe found whitespaces.
  * The {@link #found()} returns false if the current part has no content.
  * The {@link #getCurrentPart()} returns an empty String if the current part has no content
- * The method invokes {@link #seekNoWhitespace()} and {@link #lenBacktoNoChar(CharSequence)} with " \t\r\n\f".
+ * The method invokes {@link #seekNoWhitespace()} and {@link #lenBacktoNoChar(CharSequence)} with sCheckWhitespaces.
  * @java2c=return-this.
  * @return this to concatenate.
  */
 @Java4C.Retinline
 public final StringPart trimWhiteSpaces() {
   seekNoWhitespace();
-  lenBacktoNoChar(" \t\r\n\f");
+  lenBacktoNoChar(sCheckWhitespaces);
   return this;
 }
 

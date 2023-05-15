@@ -292,7 +292,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2023-05-13 14:41:15  x     OutTextPreparer.java                     ::         61.891 -1008713682 
+2023-05-15 23:11:49  x     OutTextPreparer.java                     ::         62.719 -1393060921 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -319,7 +319,7 @@
 2023-05-01 18:24:30  x     StringFunctions.java                     ::         66.763 -0368032688 
 2023-02-05 22:17:06  x     StringFunctions_B.java                   ::         18.615 -0708190660 
 2023-01-28 11:17:22  x     StringFunctions_C.java                   ::         27.486 -0583475873 
-2023-05-01 18:25:48  x     StringPart.java                          ::        138.781 -0483774438 
+2023-05-15 21:34:01  x     StringPart.java                          ::        139.371  0145741728 
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2022-09-26 07:41:36  x     StringPartFromFileLines.java             ::         29.023 -0061894436 
