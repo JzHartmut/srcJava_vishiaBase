@@ -1489,7 +1489,14 @@ public class CalculatorExpr
     
 
     
-    public Operand(Value value) {
+    /**Creates an operator which is a single data instance. 
+     * Especially value can be an instanceof {@link Value}, for numeric values.
+     * This is checked on evaluation of the data. Then numeric operations are possible.
+     * But value can be any Object, evaluated often with {@link Object#toString()} to get the string content
+     * or also evaluated with a DataAccess expression.
+     * @param value
+     */
+    public Operand(Object value) {
       this.ixValue = -1;
       this.dataAccess = null;
       this.dataConst = value;

@@ -103,5 +103,5 @@ public class Writer_Appendable extends Writer
   
   
   /**toString() should present the Appendable-content, if it is a StringBuilder, it's very proper. */
-  @Override public String toString() { return this.app.toString(); }
+  @Override public String toString() { return this.app == null ? "null" : this.app.toString(); }
 }

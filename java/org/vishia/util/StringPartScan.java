@@ -54,6 +54,10 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-05-16 Hartmut chg some overengineered ParseExceptions changed to {@link IllegalStateException}
+   *   which should not be caught on user level. This is especially only for software errors 
+   *   such as programmed too many {@link #scanInteger()} in the user software without the appropriate
+   *   {@link #getLastScannedIntegerNumber()}. Not all possible yet. It prevents unnecessary effort on using. 
    * <li>2022-11-12 Hartmut chg now {@link #scanAnyChar(String)} writes its result also to {@link #getLastScannedString()}.
    * <li>2022-04-28 Hartmut new scan of numeric values with a side output for the parsed String:
    *   Sometimes not the number itself but also the given source writing style is the point of interest. 
@@ -123,7 +127,7 @@ public class StringPartScan extends StringPart
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2022-11-12"; 
+  public final static String sVersion = "2023-05-16"; 
 
   
   /**Position of scanStart() or after scanOk() as begin of next scan operations. */
@@ -501,7 +505,7 @@ public class StringPartScan extends StringPart
    * @throws ParseException 
    * @since 2022-04-28
    */
-  public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars, String[] scannedString) throws ParseException {
+  public final StringPartScan scanDigits(int radix, int maxNrofChars, String separatorChars, String[] scannedString) {
     if(scanEntry()) {
       int max = (end - begin);
       if(maxNrofChars >=0 && maxNrofChars < max) { max = maxNrofChars; }
@@ -515,8 +519,8 @@ public class StringPartScan extends StringPart
         if(ixLastIntegerNumber < nLastIntegerNumber.length -2)
         { nLastIntegerNumber[++ixLastIntegerNumber] = number;
           nLastIntegerSign[ixLastIntegerNumber] = false;
-        }
-        else throw new ParseException("to much scanned integers",0);
+        }                                                  // it is a non reparable exception on user level
+        else throw new IllegalStateException("to much scanned integers");  // hence a software mistake.
       } else {
         bCurrentOk = false;  //canning failed
       }
@@ -820,7 +824,7 @@ public class StringPartScan extends StringPart
    * @throws ParseException if the buffer is not free to hold an integer number.
    * @java2c=return-this.
    */
-  public final StringPartScan scanHex(int maxNrofChars) throws ParseException  //::TODO:: scanLong(String sPicture)
+  public final StringPartScan scanHex(int maxNrofChars)  //::TODO:: scanLong(String sPicture)
   { return scanDigits(16, maxNrofChars, null, null);
   }
 
@@ -943,11 +947,11 @@ public class StringPartScan extends StringPart
    * @return The number in long format. A cast to int, short etc. may be necessary depending on the expectable values.
    * @throws ParseException if called though no scan routine was called. 
    */
-  public final long getLastScannedIntegerNumber() throws ParseException
+  public final long getLastScannedIntegerNumber()
   { if(ixLastIntegerNumber >= 0)
     { return nLastIntegerNumber [ixLastIntegerNumber--];
     }
-    else throw new ParseException("no integer number scanned.", 0);
+    else throw new IllegalStateException("no integer number scanned.");
   }
   
   

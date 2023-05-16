@@ -246,7 +246,7 @@
 2023-03-18 09:21:43  x     Arguments.java                           ::         28.504  0895817347 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
-2023-05-13 14:00:29  x     CalculatorExpr.java                      ::        154.411 -1987674144 
+2023-05-16 17:12:16  x     CalculatorExpr.java                      ::        154.833 -1612373657 
 2022-10-01 20:48:49  x     CheckVs.java                             ::          1.055 -0027567892 
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
 2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
@@ -292,7 +292,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2023-05-15 23:11:49  x     OutTextPreparer.java                     ::         62.719 -1393060921 
+2023-05-16 19:11:45  x     OutTextPreparer.java                     ::         75.763 -0610663669 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -323,7 +323,7 @@
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2022-09-26 07:41:36  x     StringPartFromFileLines.java             ::         29.023 -0061894436 
-2022-11-12 23:09:47  x     StringPartScan.java                      ::         54.503  0730191856 
+2023-05-16 18:59:33  x     StringPartScan.java                      ::         54.991  0774237218 
 2021-10-04 14:29:58  x     StringSeq.java                           ::          6.443  1891375723 
 2023-02-01 21:59:22  x     TestOrg.java                             ::         13.491 -0885071798 
 2021-10-04 14:29:51  x     ThreadContext.java                       ::          2.293  1218907235 
@@ -339,7 +339,7 @@
 2017-08-31 08:44:51  x     TreeNode_ifc.java                        ::          3.804  1798566168 
 2023-02-12 19:42:04  x     TreeWalkerPathCheck.java                 ::          5.124 -2080069118 
 2013-01-06 16:24:48  x     UnexpectedException.java                 ::           .984 -0050084027 
-2023-05-13 09:26:47  x     Writer_Appendable.java                   ::          2.940 -1120061301 
+2023-05-16 17:46:12  x     Writer_Appendable.java                   ::          2.968  1306463211 
 2013-05-25 22:37:51  x     package-info.java                        ::           .474 -0681213086 
 
 ============================== java/org/vishia/xmlReader/ ==========================================
