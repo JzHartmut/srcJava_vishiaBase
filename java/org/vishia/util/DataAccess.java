@@ -88,6 +88,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2023-05-21: {@link #istypeof(Object, Class)} now also can detect the class Object itself. More universal. 
    * <li>2023-05-05: Hartmut improved error message on method not found / argument mismatch, in {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} 
    * <li>2021-12-30: Hartmut: {@link #access(CharSequence, Object, boolean, boolean, boolean, Dst)} now regards a "%..." path for static access.
    * <li>2019-08-20: some operations throws {@link ParseException} on syntax errors.
@@ -248,7 +249,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2019-08-23";
+  static final public String sVersion = "2023-05-21";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#varValues}. 
@@ -1842,7 +1843,7 @@ public class DataAccess {
         if(objClazz == type) return true;
         objClazz = objClazz.getSuperclass();
         //TODO check interfaces
-      } while(objClazz != Object.class);
+      } while(objClazz != null); //Object.class);
       return false;
     }
   }

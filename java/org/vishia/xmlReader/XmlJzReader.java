@@ -24,6 +24,7 @@ import org.vishia.util.ExcUtil;
 import org.vishia.util.FileSystem;
 //import org.vishia.util.IndexMultiTable;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringFunctions_B;
 import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 import org.vishia.xmlSimple.XmlSequWriter;
@@ -69,6 +70,10 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2023-05-23: Now all text content parts are stored immediately after its parsing, and NOT as a whole. 
+   *   The last one is faulty if the text is mixed with some more order relevant content. Especially formatted text.
+   *   This is detected and used while parsing Libre Office files (odg). 
+   * <li>2023-05-23: same as newline characters now also in {@link #parseContent(StringPartScan, StringBuilder)} 
    * <li>2023-05-02: chg: newline characters after and before text: Then all white spaces after and before text are removed.
    *   If a newline char does not appear, nothing is removed. spaces on start or end are admissible.
    *   Then the XML file should not do beautification and should not contain newline characters there.
@@ -139,7 +144,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2022-06-06";
+  public static final String version = "2023-05-23";
   
   
   /**To store the last used configuration, for parsing with the same config. */
@@ -566,7 +571,6 @@ public class XmlJzReader
       if(this.xmlTestWriter !=null) {
         this.xmlTestWriter.writeElementHeadEnd(false);
       }
-      StringBuilder contentBuffer = null;
       //
       //loop to parse <tag ...> THE CONTENT </tag>
       while( ! inp.scan().scan("<").scan("/").scanOk()) { //check </ as end of node
@@ -576,7 +580,7 @@ public class XmlJzReader
             inp.seekEnd("-->");
           }
           else if(inp.scan("![CDATA[").scanOk()) {
-            if(contentBuffer == null) { contentBuffer = new StringBuilder(500); }
+            StringBuilder contentBuffer = new StringBuilder(500);
             boolean bEndFound;
             do { inp.lento("]]>");
               bEndFound = inp.found();
@@ -591,13 +595,29 @@ public class XmlJzReader
               }
             } while(!bEndFound || inp.length() == 0);  //should be abort if no "]]>" found in the whole XML
             inp.seekPos(3); //skip over the "]]>"
+            if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
+              if(contentBuffer !=null) {
+                assert(attribNames[0] !=null);
+                DataAccess.IntegerIx ixO = attribNames[0].get("text");
+                if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
+              }
+              storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
+            }
           }
           else {
             parseElement(inp, subOutput, subCfgNode);      // nested element.
           }
         } else {
-          if(contentBuffer == null && subOutput !=null) { contentBuffer = new StringBuilder(500); }
+          StringBuilder contentBuffer = new StringBuilder(100);
           parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
+          if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
+            if(contentBuffer !=null) {
+              assert(attribNames[0] !=null);
+              DataAccess.IntegerIx ixO = attribNames[0].get("text");
+              if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
+            }
+            storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
+          }
         }                                                  // call the storeContent(..) operation on end of the node.
       }
       //
@@ -606,14 +626,6 @@ public class XmlJzReader
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
-      if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
-        if(contentBuffer !=null) {
-          assert(attribNames[0] !=null);
-          DataAccess.IntegerIx ixO = attribNames[0].get("text");
-          if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
-        }
-        storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
-      }
       if(subOutput !=null) {
         finishElement(output, subOutput, subCfgNode.elementFinishPath);  // "xmlinput:finish"
       }
@@ -927,15 +939,15 @@ public class XmlJzReader
           throw new IllegalArgumentException("Format error in XML file, missing \"<\", file: " + inp.getInputfile());
         }
         inp.setLengthMax();
-      } else {
-        inp.lenBacktoNoWhiteSpaces();
+//      } else {
+//        inp.lenBacktoNoWhiteSpaces();   // Note: if no LF is contained, do not remove spaces
       }
       CharSequence csText = inp.getCurrentPart();
       if(csText.charAt(0)== ' ')
         Debugutil.stop();
       int posLf = StringFunctions.indexOf(csText, '\n');
-      if(posLf>0) {
-        Debugutil.stop();
+      if(posLf>0) {                                        // The read text contains \n, then spaces should be removed
+        csText = StringFunctions_B.removeIndentReplaceNewline(csText, 999, " \t", 8, "\r\n", false);
       }
       CharSequence content2 = replaceSpecialCharsInText(csText);
       if(this.xmlTestWriter !=null) {

@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.ParseException;
@@ -33,25 +31,30 @@ import java.util.TreeMap;
  * An instance of this class is used as formatter for an output text. 
  * The pattern to format can be given as String for the constructor or also as text file 
  * using {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
- * in the following forms (examples): <pre>
+ * in the following forms (example, text file via readTemplate...(): 
+ * <pre>
+ * 
+ * === otxExample ( data, placeholder )
  * Output plain text with <&placeholder.value>
  * <:if:data.cond>conditional output<:else>other variant<.if>
  * <:for:var:data.container>element = <&var><.for>
  * <:call:subtext:arg=data.var>
- * <:exec:operation:arg>
+ * <:exec:operation:data>
  * </pre>
  * To execute this script you should call (see {@link #createArgumentDataObj()} and {@link #exec(Appendable, DataTextPreparer)}: 
  * <pre>
-   Writer_Appendable sb = new Writer_Appendable(new StringBuilder(500));
-    try {
-      OutTextPreparer.DataTextPreparer vars = mainOtx.createArgumentDataObj();
-      vars.setArgument("dataColor", data);        //The data class for access.
-      vars.setArgument("text1", "any test text");
-      mainOtx.exec(sb, vars);                     // execute the outText script 
-    } catch(Exception exc) {
-      CharSequence sExc = org.vishia.util.ExcUtil.exceptionInfo("unexpected", exc, 0, 10);
-      System.err.println(sExc);
-    }    
+
+StringBuilder sb = new StringBuilder(500);    // for the output text
+try {
+  OutTextPreparer.DataTextPreparer args = mainOtx.createArgumentDataObj();
+  args.setArgument("data", myData);           // The data class for access.
+  args.setArgument("placeholder", "any test text");
+  args.setExecObj(myExecObj)                  // for <:exec...>
+  mainOtx.exec(sb, args);                     // execute the outText script 
+} catch(Exception exc) {                      // unexpected exceptions can be occurred, catch it!
+  CharSequence sExc = org.vishia.util.ExcUtil.exceptionInfo("unexpected", exc, 0, 10);
+  System.err.println(sExc);
+}    
  * </pre>
  * <b>Arguments</b><br>
  * The arguments are simple identifier in the 3th argument of the constructor or in the given argument list
@@ -90,18 +93,27 @@ import java.util.TreeMap;
  * <li><code>&lt;.</code> end of controling statements till <code> ... ></code>
  * </ul>
  * To output exact this character sequences (for example to produce another OutTextPreparer script)
- * you should use the capapbility <code>&lt;:SPECIAL TEXT></code> for example <code>&lt;:&lt;<&></code>
+ * you should use the capapbility <code>&lt;:SPECIAL TEXT></code> for example <code>&lt;:&lt;&></code>
  * to output a <code>&lt;&</code> itself. See next list.
  * <ul> 
- * <li><code>&lt;:CHARS> CHARS</code> may be any special character sequences, they will be outputt as given, for example:
- * <li><code> &lt;:&lt;&var>></code> produces the text <code>&lt;&var></code> for generate a OutTextPreparer-Script itself.
- * <li><code> &lt;:&lt;&>var></code> produces the same <code>&lt;&var></code>, other writing style.
- * <li><code> &lt;:&lt;&>&lt;&var>></code> produces the text <code>&lt;&CONTENT></code> 
+ * <li><code>&lt;: ></code> skips over all white spaces till the next placeholder 
+ * <li><code>&lt;: ></code> second time after a <code>&lt;: ></code> stops skipping withspaces but outputs a space. 
+ * <li><code>&lt;:?nl></code> skips till the next line (skips over the newline character in the script) (since 2023-05)
+ * <li><code>&lt;:? ></code>  skips over all white spaces till the next placeholder (since 2023-05)
+ * <li><code>&lt;:s></code> outputs a space (since 2023-05, alternatively usable to a second <code>&lt;: ></code> )
+ * <li><code>&lt;:n></code> outputs a newline as 0x0a
+ * <li><code>&lt;:r></code> outputs a newline as 0x0d
+ * <li><code>&lt;:t></code> outputs a tabulator as 0x09
+ * <li><code>&lt;:x1234></code> outputs the UTF16 character with the given hexa code, here 1234 
+ * <li><code>&lt;:CHARS> CHARS</code> may be any special character sequences, they will be output as given, for example:
+ * <li><code>&lt;:&lt;&var>></code> produces the text <code>&lt;&var></code> for generate a OutTextPreparer-Script itself.
+ * <li><code>&lt;:&lt;&>var></code> produces the same <code>&lt;&var></code>, other writing style.
+ * <li><code>&lt;:&lt;&>&lt;&var>></code> produces the text <code>&lt;&CONTENT></code> 
  *   whereby <code>CONTENT</code> is the content of <code>var</code>.
  *   The truth is: <code> &lt;:&lt;&></code> procuces the <code> &lt;&</code>. 
  *   Then <code>&lt;&var></code> generates the content of the variable, then a simple <code>></code> follows in the text.
  * </ul>
- * Generally, the plain text between given outside the placeholder syntax  is read without skipping white spaces,
+ * Generally, the plain text outside the placeholder syntax  is read without skipping white spaces,
  * hence this special features helps to structure this parts also with white spaces and line breaks.
  * The syntax inside <code>&lt;&...></code> and <code>&lt;:...></code> is white space compliant. 
  * <br>
@@ -123,25 +135,12 @@ import java.util.TreeMap;
  * <: >    <&element.data> written with an indentation
  * <.for><: >
  * </pre>
- * Here the second <code>&lt;: ></code> ends the whitespace skipping on start of the next line and produces one space.
- * <ul>
- * <li><code>&lt;:?nl></code> skips till after the newline character in the (usual textual given) script.
- * <li><code>&lt;: ></code> or <code>&lt;:? ></code> skips all white spaces, of a constant text part
- * <li>But <code>&lt;: ></code> one time after a <code>&lt;: ></code> outputs a simple space.
- * </ul>
- * To output some more specific characters you can use:
- * <li><code>&lt;:s></code> outputs a space (since 2023-05)
- * <li><code>&lt;:n></code> outputs a newline as 0x0a
- * <li><code>&lt;:r></code> outputs a newline as 0x0d
- * <li><code>&lt;:t></code> outputs a tabulator as 0x09
- * <li><code>&lt;:x1234></code> outputs the UTF16 character with the given hexa code, here 1234 
- * </ul>
  * 
  * <br>
  * <br>
  * <b>Placeholder values and expression evaluation via reflection</b><br>
  * A simple value is immediately gotten from the argument as set via {@link DataTextPreparer#setArgument(int, Object)}.
- * or also as constant argument given in the 'staticClassAccess' or 'idxConstData' given on construction. 
+ * or also as constant argument given in the 'execClass' or 'idxConstData' given on construction. 
  * This is a fast access, only to an container {@link TreeMap} or via indexed array access to the arguments.
  * <br><br>
  * If the <code>&lt;&data.element></code> is a more complex access expression 
@@ -155,7 +154,7 @@ import java.util.TreeMap;
  * with an interpreted approach. 
  * It means the calculation needs a longer time then executed in the Java-VM per bytecode/JIT machine code. 
  * But you can also prepare complex expressions by Java programming and call this expressions or operations.
- * For that the 'staticClassAccess' class can be used which may contain prepared operations for your own. 
+ * For that the 'execClass' class can be used which may contain prepared operations for your own. 
  * Hence you can decide writing simple expressions or also more complex as script or just as Java operations.
  * <br>
  * <br>
@@ -164,29 +163,34 @@ import java.util.TreeMap;
  * and also from some container classes.
  * <ul> 
  * <li><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;:else>else-Text&lt;.if></code>
- * </ul>
  * The condition is an expression built with the TODO
  * <li><code>&lt;for:variable:container>text for any element &lt;&variable.element> in loop &lt;:if:variable_next>, &lt;.if>&lt;.for></code><br>
  *   ##The next variable is also present, here to test whether a separator character should be output. 
- * <li><code>&lt: ></code> skips over whitespaces till next text, does not output the whitespaces, 
- *   able to use for example to write a simple sequence in more as one line for better readability of the script.
- * <li><code>&lt: >   &lt: ></code> A second <code>&lt: ></code> after skipped whitespaces produces one space 
- *   because it is not recognized as 'skip again' but as special character, here a space.   
- * <li><code>## Comment till end of line</code> it is important for texts from a textual file.
  * </ul>
+ * <br>
+ * <br>
+ * <b>Call operations <code><:call:otxSubScript:arg=value:arg2=value,...></code></b><br>
+ * The call operation invokes another script to output. The script is present with its own instance of {@link OutTextPreparer},
+ * either manually programmed by the constructor or as part of the whole script see {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}.
+ * <br>
+ * The name of the 'otxScript' should be either found in the 'idxConstData' on construction or call of readTemplate...
  * <pre>
- * <:args:var, var2><: >
- * <: >anyText after one space as indention
- *   &lt;tag attrib="&lt;&var>" >any xml output&lt;/tag> 
- *    <:<&var>>
+ * === otxSubScript ( arg1, arg2)
+ * Any script pattern<.end>
  * </pre>
- * It is proper for XML output generation. 
- * The last constructs a text containing "<&var>", it is to produce a OutTextPreparer pattern with OutTextPreparer itself.
- * A "<: >" or "<:+>" skips over whiteSpaces, especially line feed, but immediately following "<: >" inserts one space. 
+ * or it should be found as static instance of a programmed OutTextPreparer in the 'execClass' given on construction:
+ * <pre>
+ * 
+  static final OutTextPreparer otxListColors = new OutTextPreparer("otxListColors"
+  , null            //no static data on construction
+  , "colors, text"  //arguments need and used
+  , "<&text>: <:for:color:colors><&color><:if:color_next>, <.if><.for>");  //The pattern.
+ * </pre>
+ * The association of arguments to the subscript argument variables is done on call from given values.
  * <br>
  * <br>
- * <b>Execute static operations in one given class</b><br>
- * The 'staticClassAccess' as second argument of the constructor or the 3th argument of {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
+ * <b>Execute operations in one given class</b><br>
+ * The 'execClass' as second argument of the constructor or the 3th argument of {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
  * gives the possibility to have some static operations to call immediately maybe related to the script.
  * The operations should be static because there are given in the script persistent without data.
  * But they can have data arguments of course. That is powerful because you can use specific parts programmed in Java
@@ -194,7 +198,7 @@ import java.util.TreeMap;
  * <br>
  * Call that operations with <code><:exec:operation:arg1:arg...></code>. 
  * <br>It is similar to a data access written as <code><&path.to.StaticClass.operation(arg1,arg...)</code> 
- * but it is faster parsed and executed due to the immediately given 'staticClassAccess'.
+ * but it is faster parsed and executed due to the immediately given 'execClass'.
  * <br><br>
  * <b><code>&lt;:exec:operation:arg></code></b>:<br>
  * The <code>:arg</code> is optional. The <code>operation</code> will be searched in the given reflection class (ctor argument).
@@ -215,8 +219,8 @@ public class OutTextPreparer
    *   in {@link #addCmdSimpleVar(String, int, int, ECmd, String, Class)}. 
    *   This allows now also using the 'idxConstValues' for const texts.
    * <li>2023-05-16: capability of <:x1234> any UTF16 char, not tested yet, should run
-   * <li>2023-05-16: some documentation and renaming: 'staticClassAccess' instead 'reflData',
-   *   {@link #staticClassAccess} instead 'clazzPattern'   
+   * <li>2023-05-16: some documentation and renaming: 'execClass' instead 'reflData',
+   *   {@link #execClass} instead 'clazzPattern'   
    * <li>2023-05-15: new Features <:? > as better syntax for skip spaces, <:?nl> skip after newline. 
    * <li>2023-05-12: new  {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} 
    *   now works completely with a String file given script.
@@ -320,11 +324,16 @@ public class OutTextPreparer
      * @param value any value for this argument.
      * */
     public void setArgument(int ixArg, Object value) {
-      args[ixArg] = value;
+      this.args[ixArg] = value;
     }
     
     
-    public void setExecObj(Object data) { execObj = data; }
+    /**Sets an instance due to the given 'execClass' for the script.
+     * @param data The instance must be proper to the 'execClass' argument of the constructors
+     *   respectively to the {@link OutTextPreparer#readTemplateCreatePreparer(InputStream, String, Class, Map, String).}
+     *   If it does not match, an exception is thrown while processing a non static <code><:exec:operation:...></code>
+     */
+    public void setExecObj(Object data) { this.execObj = data; }
   
     
     
@@ -587,10 +596,10 @@ public class OutTextPreparer
   public final String pattern;
   
   /**This is only stored as info, not used in this class.
-   * It is the argument staticClassAccess from the user, 
+   * It is the argument execClass from the user, 
    * which is immediately evaluated in the {@link #parse(Class, String)} operations while construction.
    */
-  @SuppressWarnings("unused") private final Class<?> staticClassAccess;
+  @SuppressWarnings("unused") private final Class<?> execClass;
   
   
   /**Via script given arguments for the outText. It does not contain the internal created variables. */
@@ -609,25 +618,25 @@ public class OutTextPreparer
    * The variables are gotten from the pattern. For this case the order of variable depends on the order in the pattern.
    * It is essential for access to data via index or via name. ...TODO see where
    */
-  public OutTextPreparer(String ident, Class<?> staticClassAccess, String pattern) {
+  public OutTextPreparer(String ident, Class<?> execClass, String pattern) {
     this.sIdent = ident;
     this.pattern = pattern;
-    this.staticClassAccess = staticClassAccess;
-    this.parse(staticClassAccess, pattern);
+    this.execClass = execClass;
+    this.parse(execClass, pattern);
     this.idxConstData = null;
   }
   
   /**Constructs the text generation control data for the specific pattern. 
    * @param ident Any identification not used for the generated text.
-   * @param staticClassAccess If the access via reflection should be done, null possible
+   * @param execClass If the access via reflection should be done, null possible
    * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
    * @param pattern The pattern in string given form. 
    *   This pattern will be parsed and divided in parts for a fast text generation.
    * @throws never because the instantiation is possible especially for static variables.
    *   On faulty pattern the prepared cmd for output contains the error message. 
    */
-  public OutTextPreparer(String ident, Class<?> staticClassAccess, String variables, String pattern) {
-    this(ident, staticClassAccess, variables, pattern, null);
+  public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern) {
+    this(ident, execClass, variables, pattern, null);
   }
 
   
@@ -647,21 +656,21 @@ public class OutTextPreparer
    *  + "<:exec:operation:arg1> : call of any static operation in the given reflection class maybe with args"
    *  ;</pre>
    * @param ident Any identification not used for the generated text.
-   * @param staticClassAccess If the access via reflection should be done, null possible
+   * @param execClass If the access via reflection should be done, null possible
    * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
    * @param pattern The pattern in string given form. 
    *   This pattern will be parsed and divided in parts for a fast text generation.
-   * @param otxScripts Container for call able scripts, maybe contain all scripts
+   * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
    * @throws never because the instantiation is possible especially for static variables.
    *   On faulty pattern the prepared cmd for output contains the error message. 
    */
-  public OutTextPreparer(String ident, Class<?> staticClassAccess, String variables, String pattern, Map<String, Object> otxScripts) {
+  public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern, Map<String, Object> idxConstData) {
     this.sIdent = ident;
     this.pattern = pattern;
-    this.staticClassAccess = staticClassAccess;
-    this.idxConstData = otxScripts;
+    this.execClass = execClass;
+    this.idxConstData = idxConstData;
     this.parseVariables(variables);
-    this.parse(staticClassAccess, pattern);
+    this.parse(execClass, pattern);
   }
   
   /**Instantiates for a given pattern. See {@link #OutTextPreparer(String, Class, String, String)}
@@ -669,12 +678,12 @@ public class OutTextPreparer
    *        Able to use if the variable idents are anyway given in a list.
    * 
    */
-  public OutTextPreparer(String ident, Class<?> staticClassAccess, List<String> variables, String pattern) {
+  public OutTextPreparer(String ident, Class<?> execClass, List<String> variables, String pattern) {
     this.sIdent = ident;
     this.pattern = pattern;
-    this.staticClassAccess = staticClassAccess;
+    this.execClass = execClass;
     this.setVariables(variables);
-    this.parse(staticClassAccess, pattern);
+    this.parse(execClass, pattern);
     this.idxConstData = null;
   }
   
@@ -810,20 +819,22 @@ public class OutTextPreparer
    * <br>
    * The file can contain different patterns in segments: <pre>
    * === patternName ( variables )  ##comment
-   * content with <&ariables>       ##comment
+   * content with <&variables>      ##comment
    * more lines<.end>
    * 
    * free text between pattern
    * 
-   * === nextPatternName
+   * === nextPatternName (args)
+   * <:call:patternName:variables = args> --- more text
+   * <.end>
    *   etc.
    * </pre>
    * @param inp An opened input stream, which can be for example also part of a zip file content
    *   or gotten via {@link Class#getResourceAsStream(String)} from a jar file, 
    *   or also of course via {@link java.io.FileReader#FileReader(java.io.File)}
    *   or via {@link InputStreamReader#InputStreamReader(InputStream, String)} to read a file with specific encoding.
-   * @param lineStart The pattern which marks the start of a output text
-   * @param staticClassAccess a given class which's content is accessed as persistent data.
+   * @param lineStart The pattern which marks the start of a output text. It is "===" in this examples.
+   * @param execClass a given class which's content is accessed as persistent data.
    * @param idxConstData An index to access const persistent data, 
    *   and also to store all created OutTextPreparer instances. This is important for <:call:otx...>
    * @param sMainScript name of the main script to return, or null.
@@ -833,7 +844,7 @@ public class OutTextPreparer
    * @throws ParseException on parsing error of the script.
    */
   public static OutTextPreparer readTemplateCreatePreparer 
-  ( InputStream inp, String lineStart, Class<?> staticClassAccess
+  ( InputStream inp, String lineStart, Class<?> execClass
   , Map<String, Object> idxConstData, String sMainScript 
   ) throws IOException, ParseException {
     List<String> tplTexts = null;
@@ -846,7 +857,7 @@ public class OutTextPreparer
       String name = text.substring(0, posArgs).trim();
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
-      OutTextPreparer otxScript = new OutTextPreparer(name, staticClassAccess, args, script, idxConstData);
+      OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData);
       idxConstData.put(name, otxScript);
     }
     return sMainScript == null ? null : (OutTextPreparer)idxConstData.get(sMainScript);
@@ -886,7 +897,7 @@ public class OutTextPreparer
    *   It can be null.
    * @throws ParseException 
    */ 
-  private void parse(Class<?> staticClassAccess, String pattern) {
+  private void parse(Class<?> execClass, String pattern) {
     int pos0 = 0; //start of current position after special cmd
     int pos1 = 0; //end before the next special command
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
@@ -927,7 +938,7 @@ public class OutTextPreparer
         }
         else if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
           String sName = sp.getLastScannedString();
-          addCmdSimpleVar(pattern, pos0, pos1, ECmd.addVar, sName, staticClassAccess);
+          addCmdSimpleVar(pattern, pos0, pos1, ECmd.addVar, sName, execClass);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
@@ -936,19 +947,19 @@ public class OutTextPreparer
 //          if(sDatapath.startsWith("&("))
 //            Debugutil.stop();
           //====> ////
-          addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, staticClassAccess);
+          addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, execClass);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           //====>
-          parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, staticClassAccess);
+          parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, execClass);
           ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current if
           pos0 = (int)sp.getCurrentPosition();  //after '>'
           
         }
         else if(sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           //====>
-          parseIf( pattern, pos0, pos1, ECmd.elsifCtrl, sp, staticClassAccess);
+          parseIf( pattern, pos0, pos1, ECmd.elsifCtrl, sp, execClass);
           Cmd ifCmdLast;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
@@ -986,7 +997,7 @@ public class OutTextPreparer
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
           //====>
-          ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, staticClassAccess);
+          ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, execClass);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1006,7 +1017,7 @@ public class OutTextPreparer
         else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
-          SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, staticClassAccess);
+          SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, execClass);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1017,19 +1028,19 @@ public class OutTextPreparer
         }
         else if(sp.scan(":exec:").scanIdentifier().scanOk()) {
           //====>
-          parseExec(pattern, pos0, pos1, sp, staticClassAccess);
+          parseExec(pattern, pos0, pos1, sp, execClass);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":call:").scanIdentifier().scanOk()) {
           //====>
-          parseCall(pattern, pos0, pos1, sp, staticClassAccess);
+          parseCall(pattern, pos0, pos1, sp, execClass);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String cmpString = sp.getLastScannedString().toString();
           String debugVar = sp.getLastScannedString().toString();
           //====>
-          DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, debugVar, staticClassAccess);
+          DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, debugVar, execClass);
           cmd.cmpString = cmpString;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }  
@@ -1070,7 +1081,7 @@ public class OutTextPreparer
         }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd cmd = null;
-          addCmd(pattern, pos0, pos1, ECmd.nothing, null, staticClassAccess);  //The last text before <.if>
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, execClass);  //The last text before <.if>
           while(  ixixCmd >=0 
             && ( (cmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
               || cmd.cmd == ECmd.elsifCtrl
@@ -1114,7 +1125,7 @@ public class OutTextPreparer
       }
       else { //no more '<' found:
         sp.len0end();
-        addCmd(pattern, pos0, pos0 + sp.length(), ECmd.nothing, null, staticClassAccess);
+        addCmd(pattern, pos0, pos0 + sp.length(), ECmd.nothing, null, execClass);
         sp.fromEnd();  //length is null then.
       }
     } //while
@@ -1267,7 +1278,7 @@ public class OutTextPreparer
   
   /**Called if a simple <code>&lt;&name></code> is detected.
    * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
-   * and at least in the staticClassAccess via Datapath access.
+   * and at least in the execClass via Datapath access.
    * If not found then <code><??sName??></code> is output on runtime.
    * It adds the plain text if necessary and the data access as {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
    * to the list of commands.
@@ -1277,9 +1288,9 @@ public class OutTextPreparer
    * @param to to > from, then output the plain text
    * @param eCmd The {@link ECmd} for the Cmd 
    * @param sName name of the argument or variable or field.
-   * @param staticClassAccess to search in a data field.
+   * @param execClass to search in a data field.
    */
-  private void addCmdSimpleVar ( String src, int from, int to, ECmd eCmd, String sName, Class<?> staticClassAccess) {
+  private void addCmdSimpleVar ( String src, int from, int to, ECmd eCmd, String sName, Class<?> execClass) {
     if(to > from) {
       this.cmds.add(new CmdString(src.substring(from, to)));
     }
@@ -1292,7 +1303,7 @@ public class OutTextPreparer
         this.cmds.add(new Cmd(eCmd, ix.ix, null, null, sName));
       } else {
         try {
-          data = DataAccess.access(sName, staticClassAccess, true, false, false, null);
+          data = DataAccess.access(sName, execClass, true, false, false, null);
           this.cmds.add(new Cmd(eCmd, -1, null, data, sName));
         } catch (Exception exc) {
           addError(sName);                                 // inserts <??sName??> in the text
