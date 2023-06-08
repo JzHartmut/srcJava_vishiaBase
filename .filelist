@@ -1,7 +1,7 @@
 2023-04-13 11:07:03  x     #.git#save#                              ::           . 72 -1237754712 
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2023-05-23 22:00:20  x     .gitCommit                               ::           .365 -1308014975 
+2023-06-08 19:58:36  x     .gitCommit                               ::           .137  1094839329 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -251,7 +251,7 @@
 2023-03-18 09:21:43  x     Arguments.java                           ::         28.504  0895817347 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
-2023-05-16 17:12:16  x     CalculatorExpr.java                      ::        154.833 -1612373657 
+2023-06-08 20:03:09  x     CalculatorExpr.java                      ::        158.244  1239566485 
 2022-10-01 20:48:49  x     CheckVs.java                             ::          1.055 -0027567892 
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
 2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
@@ -297,7 +297,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2023-05-17 16:14:07  x     OutTextPreparer.java                     ::         76.192 -1220495343 
+2023-06-08 19:03:52  x     OutTextPreparer.java                     ::         76.591  1789116577 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -321,10 +321,10 @@
 2023-04-21 09:36:23  x     StringArray.java                         ::           .570  1268918082 
 2020-03-22 19:48:19  x     StringCmp.java                           ::          5.062  0434603964 
 2023-01-28 22:17:16  x     StringFormatter.java                     ::         51.459 -1023273497 
-2023-05-01 18:24:30  x     StringFunctions.java                     ::         66.763 -0368032688 
+2023-06-08 19:54:51  x     StringFunctions.java                     ::         68.459  1140599230 
 2023-02-05 22:17:06  x     StringFunctions_B.java                   ::         18.615 -0708190660 
 2023-01-28 11:17:22  x     StringFunctions_C.java                   ::         27.486 -0583475873 
-2023-05-15 21:34:01  x     StringPart.java                          ::        139.371  0145741728 
+2023-06-04 19:04:44  x     StringPart.java                          ::        139.371  0145741728 
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 
 2022-09-26 07:41:36  x     StringPartFromFileLines.java             ::         29.023 -0061894436 

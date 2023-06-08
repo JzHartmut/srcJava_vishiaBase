@@ -46,6 +46,7 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-06-08: {@link #parseCmpExpr(StringPartScan, Map, Class, String, boolean, int)} now regards also ?lt etc. 
    * <li>2023-05-13: TODO using String or StringPartScan for {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} etc. :
    *   If the expression is simple, only an identifier, then a String is sufficient and a StringPartScan needs waste memory.
    *   From calling level it may be known that the argument is only simple. But the simplicity can be used only in a deeper level of nesting.
@@ -178,7 +179,7 @@ public class CalculatorExpr
    * 
    */
   //@SuppressWarnings("hiding")
-  public final static String version = "2022-03-14";
+  public final static String version = "2023-06-08";
   
    
   /**It is the data instance for the caluclation.
@@ -2461,7 +2462,7 @@ public class CalculatorExpr
   protected static Map<String, Operator> operators;
   
   protected static Map<String, Operator> unaryOperators = new TreeMap<String, Operator>();
-  {
+  static {
     unaryOperators.put("!",  Operators.boolNotOperation); 
     unaryOperators.put("~",  Operators.bitNotOperation);  
     unaryOperators.put("-",  Operators.negOperation);  
@@ -2666,6 +2667,17 @@ public class CalculatorExpr
   
   //tag::setExpr[]
   /**Converts the given expression in a stack operable form (Reverse Polish Notation) to execute.
+   * <ul> 
+   * <li>It calls {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} for OR expression parts 
+   * <li>which calls {@link #parseAndExpr(StringPartScan, Map, Class, String, boolean, int)} for AND expression parts
+   * <li>which calls {@link #parseCmpExpr(StringPartScan, Map, Class, String, boolean, int)} for comparison expression parts
+   * <li>which calls {@link #parseAddExpr(StringPartScan, Map, Class, String, int)} for summation expression parts
+   * <li>which calls {@link #parseMultExpr(StringPartScan, Map, Class, String, int)} for multiplication / division expression parts
+   * <li>which calls {@link #parseArgument(StringPartScan, Map, Class, String, int)} for the arguments.
+   * </ul>
+   * This nested calls evaluates the expression due to the common known preference rules.
+   * See the specific parts of expression for further explanation. 
+   * 
    * @param spExpr given textual expression
    * @param nameVariables An operand can be given as name of a variable from this index.
    *   Then for execution an array should be given as last argument of {@link #calcDataAccess(Map, Object...)}.
@@ -2693,6 +2705,7 @@ public class CalculatorExpr
   
   /**Converts the given expression in a stack operable form. One variable with name "X" will be created.
    * It means the expression can use "X" as variable.
+   * See {@link #setExpr(StringPartScan, Map, Class, boolean)}
    * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
    * @see #setExpr(String, String[])
    */
@@ -2714,8 +2727,17 @@ public class CalculatorExpr
   
 
   
-  /**Converts the given expression in a stack operable form. One variable with name "X" will be created.
-   * It means the expression can use "X" as variable.
+  /**Converts the given expression in a stack operable form. 
+   * <ul> 
+   * <li>It calls {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} for OR expression parts 
+   * <li>which calls {@link #parseAndExpr(StringPartScan, Map, Class, String, boolean, int)} for AND expression parts
+   * <li>which calls {@link #parseCmpExpr(StringPartScan, Map, Class, String, boolean, int)} for comparison expression parts
+   * <li>which calls {@link #parseAddExpr(StringPartScan, Map, Class, String, int)} for summation expression parts
+   * <li>which calls {@link #parseMultExpr(StringPartScan, Map, Class, String, int)} for multiplication / division expression parts
+   * <li>which calls {@link #parseArgument(StringPartScan, Map, Class, String, int)} for the arguments.
+   * </ul>
+   * This nested calls evaluates the expression due to the common known preference rules.
+   * See the specific parts of expression for further explanation. 
    * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
    * @see #setExpr(String, String[])
    */
@@ -2787,7 +2809,25 @@ public class CalculatorExpr
   
   /**The expression is an compare expression.
    * call recursively for any number of operands.
-   * call {@link #multExpr(StringPartScan, char)} to get the argument values.
+   * call {@link #parseAddExpr(StringPartScan, Map, Class, String, int)} to get the argument values.
+   * <br>
+   * The following operators are possible:
+   * <ul>
+   * <li><code>==</code> : 
+   * <li><code>!=</code> : 
+   * <li><code>>=</code> : 
+   * <li><code><=</code> : 
+   * <li><code>></code> : 
+   * <li><code><</code> : 
+   * <li><code>?ge</code> : "greater or equal" used instead <code>>=</code> if <code>></code> is not possible in the environment.
+   * <li><code>?le</code> : "less or equal" used instead <code><=</code> if <code><</code> is not possible in the environment.
+   * <li><code>?gt</code> : "greater than" used instead <code>></code> if <code>></code> is not possible in the environment.
+   * <li><code>?lt</code> : "lesser than" used instead <code><</code> if <code><</code> is not possible in the environment.
+   * <li><code>?instanceof</code> :left operand: any object, right operand: object of type class, true if left operand is or inherits the class 
+   * <li><code>?contains</code> : check whether the left string operand contains the right string 
+   * <li><code>?starts</code> : check whether the left string operand starts with the right string 
+   * <li><code>?ends</code> : check whether the left string operand ends with the right string
+   * </ul>
    * @param spExpr
    * @param operation The first operation. On start operand it is "!" for set.
    * @return this
@@ -2800,7 +2840,7 @@ public class CalculatorExpr
     parseAddExpr(spExpr, nameVariables, reflData, op, recursion +1);
     if(spExpr.scanSkipSpace().scanOk()){
       char cc = spExpr.getCurrentChar();
-      if("=!><?".indexOf(cc)>=0){
+      if("=!><?".indexOf(cc)>=0){                          // check the first character
         op = null;
         if(spExpr.scan("==").scanOk()) {
           op = "==";
@@ -2808,10 +2848,18 @@ public class CalculatorExpr
           op = "!=";
         } else if(spExpr.scan(">=").scanOk()) {
           op = ">=";
+        } else if(spExpr.scan("?ge").scanOk()) {
+          op = ">=";
+        } else if(spExpr.scan("?gt").scanOk()) {
+          op = ">";
         } else if(!bSpecialSyntax && spExpr.scan(">").scanOk()) {
           op = ">";
+        } else if(spExpr.scan("?le").scanOk()) {
+          op = "<=";
         } else if(spExpr.scan("<=").scanOk()) {
           op = "<=";
+        } else if(spExpr.scan("?lt").scanOk()) {
+          op = "<";
         } else if(spExpr.scan("<").scanOk()) {
           op = "<";
         } else if(spExpr.scan("?instanceof").scanOk()) {

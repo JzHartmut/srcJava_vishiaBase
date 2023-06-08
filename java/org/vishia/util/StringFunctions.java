@@ -23,6 +23,9 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-06-08 Hartmut bugfix/chg: Now {@link #indexAfterIdentifier(CharSequence, int, int, String)} returns 0 if the position starts with a number.
+   *   That is proper also for test whether currently it is an identifier and it is consequent.
+   *   The old behavior of this operation is now available in {@link #indexAfterIdentifierOld(CharSequence, int, int, String)}.
    * <li>2023-04-30 Hartmut bugfix {@link #startsWith(CharSequence, CharSequence)}: was faulty if number of chars to compare is equal the length. 
    * <li>2023-04-02 Hartmut bugfix {@link #comparePos(CharSequence, int, CharSequence, int, int)}: 
    *   If any String is longer than nrofChars but the rest is equal, now returns 0. (Before, returns a value > nrofChars).  
@@ -194,7 +197,7 @@ public class StringFunctions {
    * @param additionalChars maybe null, some chars as additional chars of an identifier, inside and as start.
    * @return 0 if src[start] doesn't match to an identifier character, number of found identifier chars after src until end.
    */
-  public static int indexAfterIdentifier(CharSequence src, int start, int endMax, String additionalChars){
+  @Deprecated public static int indexAfterIdentifierOld(CharSequence src, int start, int endMax, String additionalChars) {
     int pos = start;
     int zsq = src.length();
     int end = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //end is <pos if endMax is left from start
@@ -212,6 +215,32 @@ public class StringFunctions {
     return pos;
   }
   
+  
+  
+  /**Returns the position after the end of an identifier.
+   * @param src If the first char on [start] is 0..9 it returns 0, it is not an identifier.
+   * @param start from this position
+   * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param additionalChars maybe null, some chars as additional chars of an identifier, inside and as start.
+   * @return 0 if it is not start with an identifier start character. '0'..'9' is not an identifier start.
+   *         elsewhere the number of chars which are identifier characters A..Z, a..z, _, 0..9 and the additionalChars  
+   */
+  public static int indexAfterIdentifier(CharSequence src, int start, int endMax, String additionalChars){
+    int pos = start;
+    int zsq = src.length();
+    int end = (endMax < 0 ? zsq + endMax +1 : (endMax >= zsq ? zsq : endMax)) ;  //end is <pos if endMax is left from start
+    char cc;
+    while(  pos < end 
+           && (  (cc = src.charAt(pos)) == '_' 
+              || (cc >= '0' && cc <='9' && pos > start) 
+              || (cc >= 'A' && cc <='Z') 
+              || (cc >= 'a' && cc <='z') 
+              || (additionalChars != null && additionalChars.indexOf(cc)>=0)
+           )  ) {
+      pos +=1; 
+    }
+    return pos;
+  }
 
   /**Returns the position of the end of an identifier.
    * @param src The input string

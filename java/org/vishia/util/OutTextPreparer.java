@@ -163,7 +163,11 @@ try {
  * and also from some container classes.
  * <ul> 
  * <li><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;:else>else-Text&lt;.if></code>
- * The condition is an expression built with the TODO
+ * The condition is an expression built with the {@link CalculatorExpr#setExpr(StringPartScan, Map, Class, boolean)}
+ * <br>
+ * for example also a type check is possible: <code><:if:obj ?instanceof classXyz></code>
+ * whereas the <code>classXyz</code> can be given in the static reflection class as static variable as
+ * <code>public static Class<?> classXyz = MyClassXyz.class; </code> 
  * <li><code>&lt;for:variable:container>text for any element &lt;&variable.element> in loop &lt;:if:variable_next>, &lt;.if>&lt;.for></code><br>
  *   ##The next variable is also present, here to test whether a separator character should be output. 
  * </ul>
@@ -1150,6 +1154,8 @@ public class OutTextPreparer
   
   private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp, Class<?> reflData) {
     String cond = sp.getLastScannedString().toString();
+//    if(cond.contains("?instanceof"))
+//      Debugutil.stop();
     //====>
     IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, cond, reflData);
     ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
