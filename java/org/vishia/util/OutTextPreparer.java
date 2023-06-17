@@ -34,7 +34,7 @@ import java.util.TreeMap;
  * in the following forms (example, text file via readTemplate...(): 
  * <pre>
  * 
- * === otxExample ( data, placeholder )
+ * <:otx: otxExample : data: placeholder >
  * Output plain text with <&placeholder.value>
  * <:if:data.cond>conditional output<:else>other variant<.if>
  * <:for:var:data.container>element = <&var><.for>
@@ -179,7 +179,7 @@ try {
  * <br>
  * The name of the 'otxScript' should be either found in the 'idxConstData' on construction or call of readTemplate...
  * <pre>
- * === otxSubScript ( arg1, arg2)
+ * <:otx: otxSubScript : arg1: arg2>
  * Any script pattern<.end>
  * </pre>
  * or it should be found as static instance of a programmed OutTextPreparer in the 'execClass' given on construction:
@@ -219,6 +219,9 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-06-18: frame of operation now <:otx:args>...<.otx>. The <.end> is no more supported, change it to <.otx>
+   *   Usage of "=== name ( args) " is deprecated but yet still possible. 
+   * <li>2023-06-18: bugfix on nested <:if>...<.if> 
    * <li>2023-05-16: the evaluation of a simple variable is now more simple organized 
    *   in {@link #addCmdSimpleVar(String, int, int, ECmd, String, Class)}. 
    *   This allows now also using the 'idxConstValues' for const texts.
@@ -262,7 +265,7 @@ public class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2022-02-11";
+  public static final String version = "2023-06-18";
   
   
   /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
@@ -669,7 +672,7 @@ public class OutTextPreparer
    *   On faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern, Map<String, Object> idxConstData) {
-    this.sIdent = ident;
+    this.sIdent = ident.trim();
     this.pattern = pattern;
     this.execClass = execClass;
     this.idxConstData = idxConstData;
@@ -769,13 +772,13 @@ public class OutTextPreparer
    * @since 2023-05. See also {@link #readTemplateCreatePreparer(InputStream, String, Class)}
    * <br>
    * The file can contain different patterns in segments: <pre>
-   * === patternName ( variables )  ##comment
+   * <:otx: patternName : variable : var2 >  ##comment
    * content with <&ariables>       ##comment
-   * more lines<.end>
+   * more lines<.otx>
    * 
    * free text between pattern
    * 
-   * === nextPatternName
+   * <:otx: nextPatternName ...
    *   etc.
    * </pre>
    */ 
@@ -790,12 +793,16 @@ public class OutTextPreparer
       
       int posComment = line.indexOf("##");
       if(posComment >=0) { line = line.substring(0, posComment); }
-      if(!bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
+      if(!bActiveScript && line.startsWith("<:otx:")) {           // a new sub template starts here 
+        buf.append(line).append('\n');  // first line with args starting with "("
+        bActiveScript = true;
+      }
+      else if(!bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
         buf.append(line.substring(lineStart.length())).append('\n');  // first line with args starting with "("
         bActiveScript = true;
       }
       else if(bActiveScript) {
-        int posEndScript = line.indexOf("<.end>");
+        int posEndScript = line.indexOf("<.otx>");
         if(posEndScript >=0) {
           buf.append(line.substring(0, posEndScript));
           ret.add(buf.toString());
@@ -822,22 +829,22 @@ public class OutTextPreparer
    * @since 2023-05. 
    * <br>
    * The file can contain different patterns in segments: <pre>
-   * === patternName ( variables )  ##comment
+   * <:otx: patternName : variable : variable2 >  ##comment
    * content with <&variables>      ##comment
-   * more lines<.end>
+   * more lines<.otx>
    * 
    * free text between pattern
    * 
-   * === nextPatternName (args)
+   * <:otx: nextPatternName :args>
    * <:call:patternName:variables = args> --- more text
-   * <.end>
+   * <.otx>
    *   etc.
    * </pre>
    * @param inp An opened input stream, which can be for example also part of a zip file content
    *   or gotten via {@link Class#getResourceAsStream(String)} from a jar file, 
    *   or also of course via {@link java.io.FileReader#FileReader(java.io.File)}
    *   or via {@link InputStreamReader#InputStreamReader(InputStream, String)} to read a file with specific encoding.
-   * @param lineStart The pattern which marks the start of a output text. It is "===" in this examples.
+   * @param lineStart The pattern which marks the start of a output text. It was "===" in examples, now deprecated.
    * @param execClass a given class which's content is accessed as persistent data.
    * @param idxConstData An index to access const persistent data, 
    *   and also to store all created OutTextPreparer instances. This is important for <:call:otx...>
@@ -854,11 +861,22 @@ public class OutTextPreparer
     List<String> tplTexts = null;
     tplTexts = OutTextPreparer.readTemplateList(inp, lineStart);
     for(String text : tplTexts) {
-      int posArgs = text.indexOf('(');
-      int posEndArgs = text.indexOf(')');
+      int posName;
+      int posArgs;
+      int posEndArgs;
       int posNewline = text.indexOf('\n');
+      if(text.startsWith("<:otx:")) {
+        posName = 6;
+        posArgs=text.indexOf(':', 6);
+        posEndArgs = text.indexOf('>');
+      }
+      else {
+        posName = 0;
+        posArgs = text.indexOf('(');
+        posEndArgs = text.indexOf(')');
+      }
       if(! ( posArgs >0 && posEndArgs > posArgs && posNewline > posEndArgs)) throw new ParseException("first line must contain ( args ,...)", 0);
-      String name = text.substring(0, posArgs).trim();
+      String name = text.substring(posName, posArgs).trim();
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
       OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData);
@@ -876,7 +894,7 @@ public class OutTextPreparer
     while(sp.scanStart().scanIdentifier().scanOk()) {
       String sVariable = sp.getLastScannedString();
       listvarValues.add(sVariable);
-      if(!sp.scan(",").scanOk()) {
+      if(!sp.scan(",").scanOk() && !sp.scan(":").scanOk()) {
         break; //, as separator
       }
     }
@@ -1096,10 +1114,13 @@ public class OutTextPreparer
             if(cmd.cmd != ECmd.elseCtrl && (ifcmd = (IfCmd)cmd).offsElsif <0) {
               ifcmd.offsElsif = ifcmd.offsEndCtrl; //without <:else>, go after <.if>
             }
-            if(cmd.cmd != ECmd.ifCtrl) {
-              cmd = null; //at least <:if> necessary.
-            }
+            ixCtrlCmd[ixixCmd] = 0;    // no more necessary.
             ixixCmd -=1;
+            if(cmd.cmd == ECmd.ifCtrl) {
+              break;
+            } else {
+              cmd = null;    //remain ifCtrl to check: at least <:if> necessary.
+            }
           } 
           if(cmd == null) {  //nothing found or <:if not found: 
             String sError = sp.getCurrent(30).toString();
