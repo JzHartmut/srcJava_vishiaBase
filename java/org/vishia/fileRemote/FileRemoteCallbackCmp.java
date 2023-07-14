@@ -125,7 +125,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
+  public FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
     this.evBack = evBack;

@@ -42,11 +42,13 @@ import org.vishia.fileRemote.FileCluster;
 import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteAccessor;
+import org.vishia.fileRemote.FileRemoteCallbackCmp;
 import org.vishia.fileRemote.FileRemoteCallbackCopy;
 import org.vishia.fileRemote.FileRemote.Cmd;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.XXXFileRemoteWalkerEvent;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
+import org.vishia.fileRemote.FileRemoteTestCallback;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
@@ -66,7 +68,7 @@ import org.vishia.util.TreeWalkerPathCheck;
  *
  */
 @SuppressWarnings("synthetic-access") 
-public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements Closeable {
+public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
@@ -669,13 +671,19 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
   }
   
   
-  String execCmd ( FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  /**This is called in the {@link WalkerThread} or immediately from {@link #cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+   * if first argument is true.
+   * @param co
+   * @param evBack
+   * @return
+   */
+  protected String execCmd ( FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String ret = null;
     switch(co.cmd){
-    case check: //copy.checkCopy(commission); break;
-    case abortAll:     //should abort the state machine!
-    case delChecked:
-    case moveChecked:
+    case check: break; //copy.checkCopy(commission); break;
+    case abortAll: break;      //should abort the state machine!
+    case delChecked: break; 
+    case moveChecked: break; 
 //    case copyChecked: 
 //      ret = this.states.statesCopy.processEvent(commission); break;
 //    case move: ret = 0; this.states.execMove(commission); break;  //TODO this was never run.
@@ -688,14 +696,23 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     case copyFile: copyFile(co, evBack); break;
     case moveFile: moveFile(co, evBack); break;
     case walkSelectMark: //also refreshs with selection, and mark functionality.
-      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, null, evBack , false); 
+      assert(co.callback == null);
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
       break;
     case walkCopyDirTree:
-      FileRemoteCallbackCopy mission = new FileRemoteCallbackCopy(co.filedst, null, evBack);  //evCallback);
-      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, mission, evBack , false); 
+      assert(co.callback == null);
+      co.callback = new FileRemoteCallbackCopy(co.filedst, null, evBack);  //evCallback);
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
       break;
     case walkCompare:
-      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, null, evBack , false); 
+      assert(co.callback == null);
+      co.callback = new FileRemoteCallbackCmp(co.filesrc, co.filedst, null, evBack);
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
+      break;
+    case walkTest:
+      assert(co.callback == null);
+      co.callback = new FileRemoteTestCallback();
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
       break;
     default:
     }//switch
@@ -714,9 +731,14 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     } else {
       String ret = "no thread free";
       for(WalkerThread th : this.walkerThread) {
-        if(th.isFree() && th.setOrder(co, evBack)) {
-          ret = null;
-          break;
+        if(th.isFree()) {       
+          //======>>>>    thread found, set break point in operation above!
+          if(! th.setOrder(co, evBack)) {                 // set the order
+            ret = "cannot set order, evBack is null";
+          } else {
+            ret = null;                                    // and it's all done in this thread
+          }
+          break;                                           // the order is executed
         }
       }
       return ret;
@@ -1018,7 +1040,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
    * defined in {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)} 
    */
   //tag::walkFileTree[]
-  @Override public void walkFileTree(FileRemote startDir, final boolean bWait, boolean bRefreshChildren
+  @Deprecated @Override public void walkFileTree(FileRemote startDir, final boolean bWait, boolean bRefreshChildren
       , int markSet, int markSetDir
       , String sMask, long bMarkCheck
       , int depth, FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut)
@@ -1057,25 +1079,18 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
 
   
   
-  /**See {@link #walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}, inner routine.
-   * @param startDir
-   * @param bRefreshChildren if true than gets all files in a directory and builds the {@link FileRemote#children()} newly.
-   * @param resetMark true than removes all mark bits in {@link FileRemote#mark}
-   * @param sMask selection mask.
-   * @param markMask Bit to be set to mark a file in its 
-   * @param depth Depth of walking through the directory tree. If <=0 then walk through all levels. >0 limited walk.
-   *   if <0 then only marked files and directories with {@link FileMark#select} or {@link FileMark#selectSomeInDir} 
-   *   in the first sub directory level are processed and checked. This is to handle pre-selected files of one level.
-   * @param callback invoked for any directory entry and finsih and for any file.
-   */
   //tag::walkFileTreeExecInThisThread[]
+  /**Executes walk file tree. Usual called in the {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+   * either in one of the {@link WalkerThread} or immediately in the caller thread.  
+   * @param co data what should be done, especially {@link FileRemote.CmdEvent#callback} describes what should be done with a file.
+   * @param bRefreshChildren true then reads the properties of all children from the original file system.
+   * @param evBack a progress event, also usable for quests with answer via the {@link EventWithDst#getOpponent()} prepared before call.
+   * @param debugOut
+   */
   protected void walkFileTreeExecInThisThread(
       FileRemote.CmdEvent co
-      //FileRemote startDir 
       , boolean bRefreshChildren
-//      , int markSet, int markSetDir
-//      , String sMask, long bMarkCheck, int depth
-      , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData, ?> evBack
+      , EventWithDst<FileRemoteProgressEvData, ?> evBack
       , boolean debugOut)
   {
     int progressFinish = EventConsumer.mEventConsumFinished;
@@ -1084,9 +1099,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
 //      if(evWalker.progress !=null && evWalker.progress.timeOrder !=null) {
 //        evWalker.progress.timeOrder.activateCyclic();     // timeOrder back event to inform
 //      }
-      if(callback !=null) { callback.start(co.filesrc); }
-      else if(co.callback !=null) { co.callback.start(co.filesrc); }
-      if(bRefreshChildren) {                     // refreshChildren is for children in FileRemote instance
+      if(co.callback !=null) { co.callback.start(co.filesrc); }
+      if(bRefreshChildren) {                               // refreshChildren is for children in FileRemote instance
         co.filesrc.internalAccess().newChildren(); 
       }
       int depth1;
@@ -1100,17 +1114,18 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         
       }
       WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(co.filesrc.itsCluster, bRefreshChildren
-          , co, callback, evBack, debugOut);
+          , co, evBack, debugOut);
       Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
       //======>>>>                ----------------- call of the java.nio-walker
+      //==========                ----------------- set breakpoints in visitFile etc. in the following class
       java.nio.file.Files.walkFileTree(co.filesrc.path(), options, depth1, visitor);  
       if(visitor.timeOrderProgress !=null ) { visitor.timeOrderProgress.deactivate(); }
     } catch(IOException exc){
       sError = org.vishia.util.ExcUtil.exceptionInfo("FileAccessorLocalJava7.walkFileTree - unexpected Exception; ", exc, 0, 20).toString();
       progressFinish = EventConsumer.mEventConsumerException;
     }
-    if(callback !=null) { 
-      callback.finished(co.filesrc);               // callback for finish 
+    if(co.callback !=null) { 
+      co.callback.finished(co.filesrc);               // callback for finish 
     }
     if(evBack !=null ) {                       // back event for finish
       FileRemoteProgressEvData progress = evBack.data();
@@ -1249,26 +1264,13 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
     /**Constructs the instance.
      * @param fileCluster The cluster where all FileRemote are able to found by its path.
      * @param refreshChildren true then refreshes the FileRemote which are processed 
-     * @param resetMark true then resets a {@link FileRemote#resetMarked(int)} of any processed file and directory.
-     * @param sMask A mask "path/ ** /subdir/pre*post"
-     * @param bMarkCheck Bits 31..0 to select marked files, Bits 63..32: Number of levels to process this check, 
-     *   especially 2 (0x200000000L) if marked files in a directory should be checked.
-     * @param levelProcessMarked
-     * @param markCheck
-     * @param callback Callback interface to the user.
+     * @param co data for the commission especially also the callback for each dir and file
+     * @param evBack given event to be used for messages to the caller, free for use 
+     * @param bDbg
      */
-//    public WalkFileTreeVisitor(FileCluster fileCluster, boolean refreshChildren
-//        , int markSet, int markSetDir 
-//        , String sMask , long bMarkCheck
-//        , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvent, ?> evBack, FileRemoteWalkerEvent ev) {
-//      this(fileCluster, refreshChildren, markSet, markSetDir, sMask, bMarkCheck, callback, evBack, ev, false);
-//    }
-
     public WalkFileTreeVisitor(FileCluster fileCluster, boolean refreshChildren
         , FileRemote.CmdEvent co
-//        , int markSet, int markSetDir 
-//        , String sMask , long bMarkCheck
-        , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData, ?> evBack, boolean bDbg) {
+        , EventWithDst<FileRemoteProgressEvData, ?> evBack, boolean bDbg) {
       this.debugOut = bDbg;
       this.fileCluster = fileCluster;
       this.bRefresh = refreshChildren;
@@ -1277,7 +1279,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       //this.markSetDir = markSetDir;
       this.fileFilter = co.selectFilter == null ? null : FilepathFilterM.createWildcardFilter(co.selectFilter);
       //this.markCheck = (int)(bMarkCheck & 0xffffffff);
-      this.callback = callback == null ? co.callback : callback;
+      this.callback = co.callback;
       //this.ev = ev;
       this.evBack = evBack;
       this.progress = evBack == null ? null : evBack.data();
@@ -1285,7 +1287,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
       this.curr.levelProcessMarked = 0; //(int)(bMarkCheck >>32); // levelProcessMarked;
       this.startTime = System.currentTimeMillis();
       //this.lastTimeProgress = this.startTime - evProgress.delay;
-      if(co.cycleCallback >0) {                  // progress only in cycles
+      if(co.cycleProgress >0) {                  // progress only in cycles
         @SuppressWarnings("resource") EventThread_ifc timer = this.evBack.getDstThread();
         assert(timer instanceof EventTimerThread_ifc); //should refer a timer
         this.timeOrderProgress = new TimeOrder("progress", (EventTimerThread_ifc)timer, this.evBack);
@@ -1389,10 +1391,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
           this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPre;
           this.progress.nrDirProcessed +=1;
           this.progress.currDir = dir1;          // all information about the FileRemote will be proper serialized if remote
-          if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
+          if(this.co.cycleProgress ==0) {        // send back event on any file or dir entry:
             this.evBack.sendEvent(this);             // evBack is associated to the progress
           } else {                               // send cyclically only informations about progress
-            long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
+            long timeEvent = System.currentTimeMillis() + this.co.cycleProgress;
             this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
             //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
             //this.progress.nrFilesProcessed += this.curr.dir.children().size();
@@ -1445,10 +1447,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
         this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshDirPost;
         this.progress.currFile = this.curr.dir;          // all information about the FileRemote will be proper serialized if remote
-        if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
+        if(this.co.cycleProgress ==0) {        // send back event on any file or dir entry:
           this.evBack.sendEvent(this);             // evBack is associated to the progress
         } else {                               // send cyclically only informations about progress
-          long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
+          long timeEvent = System.currentTimeMillis() + this.co.cycleProgress;
           this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
           //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
           //this.progress.nrFilesProcessed += this.curr.dir.children().size();
@@ -1553,10 +1555,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
           this.progress.nrofFilesSelected +=1;
           this.progress.nrofBytesAll += size;
           this.progress.currFile = fileRemote;          // all information about the FileRemote will be proper serialized if remote
-          if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
+          if(this.co.cycleProgress ==0) {        // send back event on any file or dir entry:
             this.evBack.sendEvent(this);             // evBack is associated to the progress
           } else {                               // send cyclically only informations about progress
-            long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
+            long timeEvent = System.currentTimeMillis() + this.co.cycleProgress;
             this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
             //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
             //this.progress.nrFilesProcessed += this.curr.dir.children().size();
@@ -1595,10 +1597,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor implements 
         //--------------------------------------- creates or updates a time order for the state. 
         if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
         this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshFileFaulty;
-        if(this.co.cycleCallback ==0) {        // send back event on any file or dir entry:
+        if(this.co.cycleProgress ==0) {        // send back event on any file or dir entry:
           this.evBack.sendEvent(this);             // evBack is associated to the progress
         } else {                               // send cyclically only informations about progress
-          long timeEvent = System.currentTimeMillis() + this.co.cycleCallback;
+          long timeEvent = System.currentTimeMillis() + this.co.cycleProgress;
           this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
           //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
           //this.progress.nrFilesProcessed += this.curr.dir.children().size();

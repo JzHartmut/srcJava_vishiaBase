@@ -855,194 +855,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return getFile(clusterOfApplication, dir, name); 
   }  
  
-  /**Compare all files in the 2 directory trees. The files are compared only till the first difference, this routine is not intent
-   * to report all differences in the files. The result is <code>null</code> if both directories contains the identically files.
-   * The return string contains a more or less comprehensive report about difference files controlled by the argument modeLog: 
-   *   <ul>
-   *   <li>{@link #modeCmprLogNotEqualFiles} ={@value #modeCmprLogNotEqualFiles}: 
-   *     One line per different files starting with <code>"not equal:   "</code> and the file path. 
-   *   <li>{@link #modeCmprLogMissing2File} ={@value #modeCmprLogMissing2File}
-   *     One line per file which is found in dir1 and not found in dir2 starting with <code>"alone-1:    "</code> and the file path. 
-   *   <li>{@link #modeCmprLogMissing1File} ={@value #modeCmprLogMissing1File}
-   *     One line per file which is found in dir2 and not found in dir1 starting with <code>"alone-2:    "</code> and the file path. 
-   *   <li>{@link #modeCmprLogComparedFiles} = {@value #modeCmprLogComparedFiles}
-   *     Generally one line per tested file. Files which are equal: <code>"equal:    "</code> and the file path. 
-   *   </ul> 
-   * If the adequate bit is not set a summary is given in the return string for not equal and missing files.      
-   * @param modeLog One or more of the bits modeCmprLog... See above. 
-   * @param dir1 The first directory to compare
-   * @param dir2 The second directory to compare
-   * @param mask If null, compare all files. If given, compare only files with that mask.
-   * @param ignoreInContent If null, compare the whole content of files. If given, exclude some parts of textual files.
-   * @return A report text to see what is happen. This CharSequence (a StringBuilder instance) is not referenced anywhere else.
-   *   If null then no difference is found. 
-   */
-  public static CharSequence cmprDirs(int modeLog, File dir1, File dir2, String mask, List<String> ignoreInContentc, EventWithDst<FileRemoteProgressEvData,?> evBack)
-  { FileRemote dir1a, dir2a;
-    dir1a = fromFile(dir1); 
-    dir2a = fromFile(dir2);
-    if(dir1a.device == null){
-      dir1a.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir1a.getAbsolutePath());
-    }
-    CallbackCmpDirs callbackCmpDirs = new CallbackCmpDirs(modeLog);  //instance for this invocation.  
-    FileRemoteCallbackCmp callbackCmp = new FileRemoteCallbackCmp(dir1a, dir2a, callbackCmpDirs, null);  //evCallback);
-    dir1a.device.walkFileTree(dir1a,  true, true, 0, 0, mask, 0,  0,  callbackCmp, evBack, false);  //should work in an extra thread.
-    //dir1a.refreshAndCompare(dir2a, -1, mask, 0, callbackCmpDirs, null);
-    if( (modeLog & modeCmprLogNotEqualFiles) ==0 && callbackCmpDirs.bNotEqual) {
-      if(callbackCmpDirs.ret == null){ callbackCmpDirs.ret = new StringBuilder(); }
-      callbackCmpDirs.ret.append("not equal");
-      
-    }
-    return callbackCmpDirs.ret;
-  }
   
   
-  
-  static class CallbackCmpDirs implements FileRemoteWalkerCallback
-  {
-    final int modeLog;
-    
-    StringBuilder ret;
-    
-    boolean bNotEqual;
-    
-    boolean bMissing2Files;
-
-    boolean bSomeEqual;
-    
-    CallbackCmpDirs(int modeLog) {
-      this.modeLog = modeLog;
-    }
-    
-    @Override public void start(FileRemote startNode)
-    {
-      // TODO Auto-generated method stub
-      
-    }
-
-    @Override public org.vishia.util.SortedTreeWalkerCallback.Result offerParentNode(FileRemote parentNode)
-    {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override public org.vishia.util.SortedTreeWalkerCallback.Result finishedParentNode(
-        FileRemote parentNode)
-    {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override public org.vishia.util.SortedTreeWalkerCallback.Result offerLeafNode(FileRemote leafNode, Object info)
-    {
-      int cmprResult = ((Integer)info).intValue();
-      if( (cmprResult & FileMark.cmpContentNotEqual)!=0) {
-        if( (modeLog & modeCmprLogNotEqualFiles) !=0) {
-          appendFilepath("not equal", leafNode);
-        }
-        else {
-          //no log for non equal files, only a simple statement on differences:
-          bNotEqual = true;
-        }
-      }
-      else if( (cmprResult & FileMark.cmpAlone)!=0) {
-        if( (modeLog & modeCmprLogMissing2File) !=0) {
-          appendFilepath("alone    ", leafNode);
-        }
-        else {
-          //no log for non equal files, only a simple statement on differences:
-          bMissing2Files = true;
-        }
-      }
-      else if( (cmprResult & FileMark.cmpContentEqual)!=0) {
-        if( (modeLog & modeCmprLogComparedFiles) !=0) {
-          appendFilepath("ok       ", leafNode);
-        }
-        else {
-          //no log for non equal files, only a simple statement on differences:
-          bSomeEqual = true;
-        }
-      }
-      return Result.cont;
-    }
-    
-    
-    void appendFilepath(String text, FileRemote file) {
-      if(ret == null) { ret = new StringBuilder(1000); }
-      ret.append(text).append(": ").append(file.sCanonicalPath).append('\n');
-    }
-    
-
-    @Override public void finished(FileRemote startNode)
-    {
-      // TODO Auto-generated method stub
-      
-    }
-
-    @Override public boolean shouldAborted()
-    {
-      // TODO Auto-generated method stub
-      return false;
-    }
-    
-    
-  };
-  
-  /**Analyzes a given destination path:
-   * <ul>
-   * <li>"/path/to/dst": returns this path as file or directory, as found, sFileMaskRet[0] = null; 
-   * <li>"/path/to/dst/": returns this path as directory, sFileMaskRet[0] = null; 
-   * <li>"/path/to/dst/*": returns this /path/to/dst/ as directory, sFileMaskRet[0] = "*"; 
-   * <li>"/path/to/dst/name*ext": returns this /path/to/dst/ as directory, sFileMaskRet[0] = "name*ext";
-   * <li>"/path/t*o/dst/": if the asterisk is in mid of the path, returns null. It is invalid.; 
-   * <li>"subdir/name*ext": If not absolute path is given, returns subdir of srcDir,
-   * <li>"subdir/file.ext": If not absolute path is given, returns file of srcDir maybe a directory,
-   * <li>"subdir/": ... or also create a subdir of srcDir´if not found.
-   * </ul>
-   * @param sDst An input string from a field, backslash instead / is accepted.
-   * @param srcDir a given existing source directory only used if sDst is not an absolute path.
-   * @param sFileMaskRet can be null, if not null at least String[1]
-   * @return File or directopry as given in sDst
-   */
-  public static FileRemote getDirFileDst ( String sDst, FileRemote srcDir, String[] sFileMaskRet) {
-    int posSep = sDst.lastIndexOf('/');
-    int posSep2 = sDst.lastIndexOf('\\');
-    if(posSep2 >=0 && posSep2 > posSep){ posSep = posSep2; }
-    int posWildcard = sDst.indexOf('*');
-    String sDstDir;
-    final String sFileMask;
-    FileRemote fileDst;
-    if(posWildcard == -1 || posWildcard > posSep){
-      if(posWildcard == -1) {
-        sDstDir = sDst;
-        sFileMask = null;
-      } else {
-        sDstDir = sDst.substring(0, posSep+1);
-        sFileMask = posSep == sDst.length()-1? "*" : sDst.substring(posSep+1);
-      }
-      if(FileFunctions.isAbsolutePathOrDrive(sDstDir)) {
-        fileDst = FileRemote.getDir(sDstDir);  //maybe a file or directory
-      } else {
-        fileDst = srcDir.child(sDstDir);  //relative to source
-      }
-    } else {
-      //no asterisk, either it is one file or it is the destination dir:
-      fileDst = null;
-      sFileMask = null;
-    }
-    if(sFileMaskRet !=null) {
-      sFileMaskRet[0] = sFileMask;
-    }
-    return fileDst;
-  }
-
-
-  
-  
-  //FileRemoteProgressTimeOrder progressCmdDirs = new FileRemoteProgressTimeOrder()
-  //{
-    
-  //};
   
   
   
@@ -1279,7 +1093,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.cmd = Cmd.walkSelectMark;
     co.depthWalk = 1;
     co.filesrc = this;
-    co.cycleCallback = 0;                        //calback on any file and dir
+    co.cycleProgress = 0;                        //calback on any file and dir
     this.device.cmd(bWait, co, evBack);
     //device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, evBack, false);  //should work in an extra thread.
   }
@@ -1321,7 +1135,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.markSetDir = setMarkDir;
     co.selectFilter = sMaskSelection;
     co.selectMask = (int)markSelection;
-    co.cycleCallback = 0;                        //calback on any file and dir
+    co.cycleProgress = 0;                        //calback on any file and dir
     this.device.cmd(bWait, co, evBack);
 //    boolean bWait = (evBack ==null);
 //    this.device.walkFileTree(this,  bWait, true, setMark, setMarkDir
@@ -1383,19 +1197,17 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.markSetDir = 0;
     co.selectFilter = mask;
     co.selectMask = selectMark;
-    co.cycleCallback = 100;                        //calback on any file and dir
+    co.cycleProgress = 100;                        //calback on any file and dir
     this.device.cmd(bWait, co, evBack);
   }
   
   
   
   public void copyDirTreeTo(boolean bWait, FileRemote dirDst, int depth, int setMark, int setMarkDir, String mask, int mark
-      , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack) { 
+      , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    if(callback !=null)
-      Debugutil.stop();
     CmdEvent co = new CmdEvent();
     co.cmd = Cmd.walkCopyDirTree;
     co.depthWalk = 0;                            // walk through all levels.
@@ -1406,13 +1218,51 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.markSetDir = setMarkDir;
     co.selectFilter = mask;
     co.selectMask = (int)mark;
-    co.cycleCallback = 100;                        //calback on any file and dir
+    co.cycleProgress = 100;                        //calback on any file and dir
     this.device.cmd(bWait, co, evBack);
 //    boolean bWait = evBack ==null;    //wait if there is not a callback possibility.
 //    boolean bRefreshChildren = false;
 //    //======>>>>                                 // walkFileTreeCheck is a common operation from the device, mission describes what to do  
 //    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMarkDir
 //        , mask, mark,  depth,  mission, evBack, false);  //should work in an extra thread.
+  }
+  
+  
+  
+  /**Test operations for the walk file tree concept which is implemented in {@link FileAccessorLocalJava7}
+   * or maybe other file access for embedded control.
+   * All arguments are set to an instance of {@link CmdEvent}, 
+   * with them {@link #device} {@link FileRemoteAccessor#cmd(boolean, CmdEvent, EventWithDst)} is called. 
+   * @param bWait true then executes the walker in this thread, false then use an extra thread.
+   * @param dirDst can be used by the callback
+   * @param depth depth to walk,
+   * @param markSet Bits to mark files while walking through
+   * @param markSetDir  Bits to mark directories while walking through
+   * @param selectFilter Wildcard mask to select source files. Maybe empty or null, then all files are used.
+   * @param selectMark Bits to select from mark maybe manually set before or via other algorithm
+   *        It can use some specific bits: {@link FileMark#orWithSelectString}, {@link FileMark#ignoreSymbolicLinks}
+   * @param callback null possible. A callback operation set for each file and dir. This defines what to do with the files.
+   * @param cycleProgress cycle for progress in ms, 0 means progress for any file.
+   * @param evProgress for progress. If bWait is false and evBack is null, no answer is given. 
+   */
+  public void testWalker(boolean bWait, FileRemote dirDst, int depth, int markSet, int markSetDir, String selectFilter, int selectMark
+    , FileRemoteWalkerCallback callback, int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> evProgress) { 
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    CmdEvent co = new CmdEvent();
+    co.cmd = Cmd.walkTest;
+    co.depthWalk = 0;                            // walk through all levels.
+    co.filesrc = this;
+    co.filedst = dirDst;
+    co.depthWalk = depth;
+    co.markSet = markSet;
+    co.markSetDir = markSetDir;
+    co.selectFilter = selectFilter;
+    co.selectMask = selectMark;
+    co.cycleProgress = cycleProgress;                        //
+    co.callback = callback;
+    this.device.cmd(bWait, co, evProgress);
   }
   
   
@@ -1432,7 +1282,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.markSetDir = 0;
     co.selectFilter = null;
     co.selectMask = 0;
-    co.cycleCallback = 100;                        //calback on any file and dir
+    co.cycleProgress = 100;                        //calback on any file and dir
     return this.device.cmd(evBack ==null, co, evBack);
     //this.device.copyFile(this, dst, evBack);    
   }
@@ -1455,7 +1305,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.markSetDir = 0;
     co.selectFilter = null;
     co.selectMask = 0;
-    co.cycleCallback = 100;                        //calback on any file and dir
+    co.cycleProgress = 100;                        //calback on any file and dir
     return this.device.cmd(evBack ==null, co, evBack);
   }
   
@@ -2305,7 +2155,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param mark
    * @return true if marked and successfully deleteted, false if not marked or delete error.
    */
-  private static boolean checkAndDelete(FileRemote file2, Iterator<Map.Entry<String, FileRemote>> iter, int mark )
+  @Deprecated private static boolean checkAndDelete(FileRemote file2, Iterator<Map.Entry<String, FileRemote>> iter, int mark )
   { final boolean bDelete;
     int markFile = file2.getMark();
     boolean isDeleted;
@@ -2876,6 +2726,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**Error on mkdir call */
     mkDirError,
     mkDirs,
+    walkTest,
+    walkDelete,
     /**walk through the file tree with given select masks, set or reset mark bits.*/
     walkSelectMark,
     walkCopyDirTree,
@@ -2918,10 +2770,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**The command to execute with this cmd event payload. */
     public FileRemote.Cmd cmd;
 
-    /**Milliseconds for callback cycle or specific determinded callback:
-     * <br>0= callback for any file and directory entry. It is especially for refresh.
+    /**Milliseconds for cycle or specific determined progress event:
+     * <br>0= progress event for any file and directory entry. It is especially for refresh.
      */
-    public int cycleCallback;
+    public int cycleProgress;
     
     /**Source and destination files for copy, rename, move or the only one filesrc. filedst may remain null then. */
     public FileRemote filesrc, filedst;
@@ -2964,7 +2816,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**For {@link Cmd#chgProps}: A new time stamp. */
     long newDate;
     
-    public FileRemoteWalkerCallback callback;
+    public FileRemoteWalkerCallback callback;  //it may be implementation specific
     
     
     /**Creates the payload of a command event

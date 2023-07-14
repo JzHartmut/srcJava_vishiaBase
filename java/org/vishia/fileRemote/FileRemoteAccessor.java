@@ -204,8 +204,11 @@ public abstract class FileRemoteAccessor implements EventConsumer
    * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
    * @param progress event for callback.
    * @param debugOut true then prints some progress to System.out
+   * @deprecated use {@link #cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+   *   which calls walking on several commands.
+   *   The walker itself should not be preconditioned, it is a decision in implementation level.
    */
-  public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
+  @Deprecated public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
       , int setMark, int setMarkDir
       , String sMaskSelection, long markSelection, int depth
       , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut);

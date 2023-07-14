@@ -1,7 +1,5 @@
 package org.vishia.fileRemote;
 
-import java.io.FileFilter;
-
 import org.vishia.util.SortedTreeWalkerCallback;
 
 

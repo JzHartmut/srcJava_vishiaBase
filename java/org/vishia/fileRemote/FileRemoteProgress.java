@@ -10,7 +10,9 @@ import org.vishia.event.EventWithDst;
  * It is an {@link org.vishia.event.EventConsumer} and hence immediately usable
  * for a {@link org.vishia.event.EventWithDst} with {@link FileRemoteProgressEvData} as payload.
  * <br>
- *  
+ * An implementor overrides the {@link #processEvent(FileRemoteProgressEvData, EventWithDst)}
+ * to evaluate the progress information given in {@link FileRemoteProgressEvData}.
+ * It includes the {@link FileRemoteProgressEvData#bDone} to inform all is done and more.
  * 
  * @author Hartmut Schorrig
  *
@@ -31,7 +33,11 @@ public abstract class FileRemoteProgress extends EventConsumerAwait {
   
   
   
-  public FileRemoteProgress(String name, EventThread_ifc evThread) {
+  /**Constructs as super class
+   * @param name A name
+   * @param evThread The thread where {@link EventThread_ifc#storeEvent(EventObject)} is called to store the event if it is used.
+   */
+  protected FileRemoteProgress(String name, EventThread_ifc evThread) {
     super(evThread);
     this.name = name;
   }
@@ -57,9 +63,19 @@ public abstract class FileRemoteProgress extends EventConsumerAwait {
     this.nrofBytesAllAvail = ev.nrofBytesAll;
   }
   
+  /**This operation does the stuff for the application. 
+   * @param progress progress data to inform
+   * @param evCmd The command event may be given as opponent of the progress event for feedback,
+   *   for example if a quest is given ("skip/override" etc.)
+   * @return 
+   */
   protected abstract int processEvent(FileRemoteProgressEvData progress, EventWithDst<FileRemote.CmdEvent, ?> evCmd);
   
   
+  /**This operation is called from {@link EventWithDst#sendEvent(Object)} or from {@link org.vishia.event.EventTimerThread#stepThread()}
+   * as overridden. It prepares and calls {@link #processEvent(FileRemoteProgressEvData, EventWithDst)
+   * which is overridden by the application.
+   */
   @Override public final int processEvent(EventObject evRaw) {
     EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEvent> ev = (EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEvent>) evRaw;
     EventWithDst<FileRemote.CmdEvent, FileRemoteProgressEvData> evCmd = ev.getOpponent();

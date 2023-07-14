@@ -89,6 +89,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
   
   /**Version, license and history.
    * <ul>
+   * <li>2023-07-14 chg: timeSleep from 10 s to 1 s, elsewhere too much for wait of end. 
    * <li>2023-02-09 new: regard {@link TimeOrder#bHoldTimeorder} to change data in time order, prevent processing.
    * <li>2023-02-09 Operations with TimeOrder now synchronized, some fine refactoring.  
    * <li>2023-02-06 An inheritance of this class is used for {@link org.vishia.gral.base.GralMng} as graphic thread.
@@ -173,7 +174,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
    * It is a proper time also for debugging to see what's happen. 
    * Can modified, maybe also 1000 ms
    */
-  private int delayMax = 10000;
+  private int delayMax = 1000;
   
   /**timestamp for a new time entry. It is set in synchronized operation between {@link #addTimeOrder(TimeEvent, long)}
    * and the wait in the {@link #run()} operation.
@@ -536,7 +537,7 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
       stateThreadTimer = 'c';
       //----------------------------------------------------- check all time order, timeWait is the minimal time for next call.
       timeSleep = System.currentTimeMillis();
-      timeWait = (int)(this.timeCheckNew - timeSleep);     // use timeCheckNew for decision look in all time orders.
+      timeWait = (int)(this.timeCheckNew - this.timeSleep);     // use timeCheckNew for decision look in all time orders.
       if(timeWait < 0){                                    // check all time orders only if at least one of them is expired.
         timeWait = checkTimeOrders();                      // execute expired events, calculate new waiting time
       }

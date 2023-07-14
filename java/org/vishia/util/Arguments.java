@@ -123,6 +123,7 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-07-14 Hartmut new in {@link #replaceEnv(String)}: If it starts with "/tmp/" it substitutes the TMP on windows.  
    * <li>2023-03-17 Hartmut new {@link #readArguments(String[])} as ready to usable in main().
    * <li>2023-01-27 Hartmut new in sArg in a argument file: "$=" is the directory of the argument file.
    *   With this designation all arguments can be related to the argfile's directory
@@ -166,7 +167,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2023-03-17";
+  public final static String sVersion = "2023-07-14";
 
   
   /**Interface for implementation of setting arguments.
@@ -289,6 +290,7 @@ public abstract class Arguments {
   
   
   /**Replaces expressions "...$name... or $(name)... or $$name$ with the content of the named environment variable.
+   * if starts with "/tmp/" for Windows, replaces "/tmp" with the PATH stored in TMP or TEMP
    * <ul>
    * <li>$name: A java-identifier format is used as name. Since 2022-01,
    * <li>$(name): should be used if after them other Java-identifier are following, as in shell scripts
@@ -302,6 +304,16 @@ public abstract class Arguments {
   public static String replaceEnv(String argval) {
     int posEnv;
     String argvalRet = argval;
+    if(argval.startsWith("/tmp/")){                        // this is ok for linux
+      String os = System.getenv("OS");
+      if(os.startsWith("Windows")) {                       // for Windows replace with TMP path
+        String sTmp = System.getenv("TMP");
+        if(sTmp == null) { sTmp = System.getenv("TEMP"); }
+        if(sTmp !=null) {
+          argvalRet = sTmp + argval.substring(4);
+        }
+      }
+    }
     while( (posEnv=argvalRet.indexOf("$$")) >=0) {
       int posEnvEnd = argvalRet.indexOf('$', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
