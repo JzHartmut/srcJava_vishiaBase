@@ -769,7 +769,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
-  static FileRemoteAccessorSelector getAccessorSelector(){
+  public static FileRemoteAccessorSelector getAccessorSelector(){
     if(accessorSelector == null){
       //accessorSelector = FileAccessorLocalJava6.selectLocalFileAlways;
       accessorSelector = FileAccessorLocalJava7.selectLocalFileAlways;
@@ -972,7 +972,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Gets the {@link FileMark} for this file or null if not marked in any kind.
    * @return
    */
-  public FileMark mark () { return mark; }
+  public FileMark mark () { return this.mark; }
   
   
   /**Returns the mark of a {@link #mark} or 0 if it is not present.
@@ -1172,6 +1172,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(this.getAbsolutePath());
+    }
+    if(dir2.device == null){
+      dir2.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir2.getAbsolutePath());
     }
     CmdEventData co = new CmdEventData();
     //co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);

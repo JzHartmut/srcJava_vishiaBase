@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.vishia.event.EventWithDst;
-import org.vishia.fileRemote.FileRemoteCallbackCmp.CompareCtrl;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.SortedTreeWalkerCallback;

@@ -1,25 +1,21 @@
-package org.vishia.fileRemote;
+package org.vishia.fileLocalAccessor;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.nio.file.CopyOption;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.LinkedList;
-import java.util.List;
 
 import org.vishia.event.EventWithDst;
-import org.vishia.util.Debugutil;
-import org.vishia.util.FileSystem;
-import org.vishia.util.SortedTreeWalkerCallback;
-import org.vishia.util.StringFunctions;
+import org.vishia.fileRemote.FileRemote;
+import org.vishia.fileRemote.FileRemoteAccessor;
+import org.vishia.fileRemote.FileRemoteProgressEvData;
+import org.vishia.fileRemote.FileRemoteWalkerCallback;
+import org.vishia.fileRemote.FileRemote.CmdEventData;
 
 
 /**This class contains the callback operations used for 
@@ -29,7 +25,7 @@ import org.vishia.util.StringFunctions;
  * @author Hartmut Schorrig
  *
  */
-public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
+public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
 {
   /**Version, history and license.
    * <ul>
@@ -95,7 +91,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
    * @param dirDst
    * @param evCallback maybe null, if given, this event will be sent to show the progression of the comparison
    */
-  public FileRemoteCallbackCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
+  public FileCallbackLocalCopy(FileRemote dirDstStart, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     this.evBack = evBack;
     this.progress = evBack.data();

@@ -42,8 +42,6 @@ import org.vishia.fileRemote.FileCluster;
 import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteAccessor;
-import org.vishia.fileRemote.FileRemoteCallbackCmp;
-import org.vishia.fileRemote.FileRemoteCallbackCopy;
 import org.vishia.fileRemote.FileRemote.Cmd;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.XXXFileRemoteWalkerEvent;
@@ -82,7 +80,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    *   Yet wait(10) after each directory in {@link WalkFileTreeVisitor#postVisitDirectory(Path, IOException)}
    *   to allow the graphic thread working. 
    * <li>2023-02-03 Hartmut chg: the  {@link #walkFileTreeExecInThisThread(FileRemote, boolean, boolean, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvData)}
-   *   is called recursively by {@link org.vishia.fileRemote.FileRemoteCallbackCmp#offerParentNode(FileRemote)}.
+   *   is called recursively by {@link org.vishia.fileLocalAccessor.FileCallbackLocalCmp#offerParentNode(FileRemote)}.
    *   Hence it is bad to set <code>progress.bDone = true;</code> in this operation, it kills the progress visibility
    *   because it sets to bDone after a sub directory. It is shifted to {@link #walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvData)}
    *   done after really finished. 
@@ -701,7 +699,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       break;
     case walkCopyDirTree:
       assert(co.callback == null);
-      co.callback = new FileRemoteCallbackCopy(co.filedst, null, evBack);  //evCallback);
+      co.callback = new FileCallbackLocalCopy(co.filedst, null, evBack);  //evCallback);
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
       break;
     case walkDelete:
@@ -711,7 +709,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       break;
     case walkCompare:
       assert(co.callback == null);
-      co.callback = new FileRemoteCallbackCmp(co.filesrc, co.filedst, null, evBack);
+      co.callback = new FileCallbackLocalCmp(co.filesrc, co.filedst, null, evBack);
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
       break;
     case walkTest:

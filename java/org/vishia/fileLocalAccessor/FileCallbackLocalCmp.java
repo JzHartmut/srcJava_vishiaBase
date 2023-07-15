@@ -1,4 +1,4 @@
-package org.vishia.fileRemote;
+package org.vishia.fileLocalAccessor;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -8,6 +8,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.vishia.event.EventWithDst;
+import org.vishia.fileRemote.FileMark;
+import org.vishia.fileRemote.FileRemote;
+import org.vishia.fileRemote.FileRemoteProgressEvData;
+import org.vishia.fileRemote.FileRemoteWalkerCallback;
+import org.vishia.fileRemote.FileRemote.CmdEventData;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -18,7 +23,7 @@ import org.vishia.util.StringFunctions;
  * @author Hartmut Schorrig
  *
  */
-public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
+public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
 {
   
   /**Version, history and license.
@@ -126,7 +131,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
    *   The timeOrder is set with data
    */
-  public FileRemoteCallbackCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
+  public FileCallbackLocalCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
     this.evBack = evBack;
@@ -156,12 +161,6 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    */
   @Override public void start(FileRemote startDir, FileRemote.CmdEventData co)
   {
-    if(dir1.device == null){
-      dir1.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir1.getAbsolutePath());
-    }
-    if(dir2.device == null){
-      dir2.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir2.getAbsolutePath());
-    }
     dir2.refreshPropertiesAndChildren(true, null);  //do it in this thread      
     
     //try{ 
@@ -195,7 +194,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
       }
       if(!dir2sub.exists()){
         dir.setMarked(FileMark.cmpAlone);
-        dir.mark.setMarkParent(FileMark.cmpMissingFiles, false);
+        dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
         System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
@@ -234,7 +233,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
         callbackUser.offerLeafNode(file, new Integer(FileMark.cmpAlone));  ////
       }
       file.setMarked(FileMark.cmpAlone);   //mark the file1, all file2 which maybe alone are marked already in callbackMarkSecondAlone.
-      file.mark.setMarkParent(FileMark.cmpMissingFiles, false);
+      file.mark().setMarkParent(FileMark.cmpMissingFiles, false);
       return Result.cont;    
     } else {
       file2.resetMarked(FileMark.cmpAlone);
@@ -242,8 +241,8 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
       file.setMarked(cmprBits);
       file2.setMarked(cmprBits);
       if( (cmprBits & FileMark.cmpContentNotEqual) !=0) {
-        file.mark.setMarkParent(FileMark.cmpFileDifferences, false);
-        file2.mark.setMarkParent(FileMark.cmpFileDifferences, false);
+        file.mark().setMarkParent(FileMark.cmpFileDifferences, false);
+        file2.mark().setMarkParent(FileMark.cmpFileDifferences, false);
       }
       if(callbackUser !=null) {
         callbackUser.offerLeafNode(file, new Integer(cmprBits));  ////
@@ -452,7 +451,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   @Override public void finished(FileRemote startDir)
   {
     if(this.evBack !=null) {
-      progress.bDone = true; 
+      this.progress.done(null, null); 
       //progress.show(FileRemote.CallbackCmd.done, null);
     }
     /*
