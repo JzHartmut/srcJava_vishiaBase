@@ -69,7 +69,7 @@ public abstract class FileRemoteProgress extends EventConsumerAwait {
    *   for example if a quest is given ("skip/override" etc.)
    * @return 
    */
-  protected abstract int processEvent(FileRemoteProgressEvData progress, EventWithDst<FileRemote.CmdEvent, ?> evCmd);
+  protected abstract int processEvent(FileRemoteProgressEvData progress, EventWithDst<FileRemote.CmdEventData, ?> evCmd);
   
   
   /**This operation is called from {@link EventWithDst#sendEvent(Object)} or from {@link org.vishia.event.EventTimerThread#stepThread()}
@@ -77,8 +77,8 @@ public abstract class FileRemoteProgress extends EventConsumerAwait {
    * which is overridden by the application.
    */
   @Override public final int processEvent(EventObject evRaw) {
-    EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEvent> ev = (EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEvent>) evRaw;
-    EventWithDst<FileRemote.CmdEvent, FileRemoteProgressEvData> evCmd = ev.getOpponent();
+    EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEventData> ev = (EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEventData>) evRaw;
+    EventWithDst<FileRemote.CmdEventData, FileRemoteProgressEvData> evCmd = ev.getOpponent();
     FileRemoteProgressEvData progress = ev.data();
     return processEvent(progress, evCmd);
   }

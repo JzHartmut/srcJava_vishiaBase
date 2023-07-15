@@ -154,7 +154,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * Only do it for the given files. It are lesser. The other FileRemote instances are not known till now.
    * This is a fast operation because it does not access the file system. 
    */
-  @Override public void start(FileRemote startDir, FileRemote.CmdEvent co)
+  @Override public void start(FileRemote startDir, FileRemote.CmdEventData co)
   {
     if(dir1.device == null){
       dir1.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir1.getAbsolutePath());
@@ -494,7 +494,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
     }
 
     @Override
-    public void start(FileRemote startDir, FileRemote.CmdEvent co)
+    public void start(FileRemote startDir, FileRemote.CmdEventData co)
     { }
     
     @Override public boolean shouldAborted(){

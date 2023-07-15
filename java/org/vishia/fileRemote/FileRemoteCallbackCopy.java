@@ -106,7 +106,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
   
   
   
-  @Override public void start ( FileRemote startDir, FileRemote.CmdEvent co) {  }
+  @Override public void start ( FileRemote startDir, FileRemote.CmdEventData co) {  }
   
   
   

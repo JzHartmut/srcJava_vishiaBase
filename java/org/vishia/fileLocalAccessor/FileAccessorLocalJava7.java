@@ -72,7 +72,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
-   * <li>2023-04-06 Hartmut new: chg: {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)} now also with copyFile, moveFile
+   * <li>2023-04-06 Hartmut new: chg: {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEventData, EventWithDst)} now also with copyFile, moveFile
    * <li>2023-02-21 some fine tuning 
    * <li>2023-02-13 Hartmut new: {@link WalkFileTreeVisitor#debugOut } as helper.
    * <li>2023-02-12 {@link #walkFileTree(FileRemote, boolean, boolean, int, int, String, long, int, FileRemoteWalkerCallback, FileRemoteProgressEvData)}
@@ -182,7 +182,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 //        return FileAccessorLocalJava7.this.states.statesCopy.processEvent(ev);
 //      } else 
       if(ev instanceof EventWithDst){  //event from extern
-        return execCommission((EventWithDst<FileRemote.CmdEvent, FileRemoteProgressEvData>)ev);
+        return execCommission((EventWithDst<FileRemote.CmdEventData, FileRemoteProgressEvData>)ev);
       } else {
         return 0;
       }
@@ -558,7 +558,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   
-  protected static String copyFile(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  protected static String copyFile(FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String sError = null;
     try {
       Files.copy(co.filesrc.path(), co.filedst.path(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
@@ -574,7 +574,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
 
   
-  protected static String moveFile(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  protected static String moveFile(FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String sError = null;
     try {
       Files.move(co.filesrc.path(), co.filedst.path(), StandardCopyOption.REPLACE_EXISTING);
@@ -647,9 +647,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    *   The last one is identically with  {@link EventConsumer.mEventDonotRelinquish}
    *   and is set, if this event is forwarded to the #theThreaad of this state machine.    
    */
-  int execCommission(EventWithDst<FileRemote.CmdEvent, FileRemoteProgressEvData> commission){
+  int execCommission(EventWithDst<FileRemote.CmdEventData, FileRemoteProgressEvData> commission){
     int ret = 0;
-    FileRemote.CmdEvent cmdData = commission.data();
+    FileRemote.CmdEventData cmdData = commission.data();
     FileRemote.Cmd cmd = cmdData.cmd;
     EventWithDst<FileRemoteProgressEvData, ?> evBack = commission.getOpponent();    // the back event should be occupied already.
     switch(cmd){
@@ -671,13 +671,13 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
   
   
-  /**This is called in the {@link WalkerThread} or immediately from {@link #cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+  /**This is called in the {@link WalkerThread} or immediately from {@link #cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEventData, EventWithDst)}
    * if first argument is true.
    * @param co
    * @param evBack
    * @return
    */
-  protected String execCmd ( FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  protected String execCmd ( FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String ret = null;
     switch(co.cmd){
     case check: break; //copy.checkCopy(commission); break;
@@ -726,11 +726,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   
-  /**See {@link FileRemoteAccessor#cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}.
-   * Hint: Set breakpoint to {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+  /**See {@link FileRemoteAccessor#cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEventData, EventWithDst)}.
+   * Hint: Set breakpoint to {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEventData, EventWithDst)}
    * to stop in the execution thread.
    */
-  @Override public String cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  @Override public String cmd(boolean bWait, FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(bWait) {
       return execCmd(co, evBack);                       // execute in this thread.
     } else {
@@ -752,7 +752,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 
 
   
-  private void execChgProps(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
+  private void execChgProps(FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     FileRemote dst;
     //FileRemote.FileRemoteEvent callBack = co;  //access only 1 time, check callBack. co may be changed from another thread.
     boolean ok = co !=null;
@@ -786,7 +786,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
   
   
-  private void execChgPropsRecurs(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
+  private void execChgPropsRecurs(FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     FileRemote dst;
     boolean ok = co !=null;
     if(co.newName() !=null && ! co.newName().equals(co.filesrc.getName())){
@@ -863,7 +863,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   
-  private void execCountLength(FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
+  private void execCountLength(FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     long length = countLengthDir(co.filesrc, 0, 0);    
     FileRemoteProgressEvData.ProgressCmd cmd;
     FileRemoteProgressEvData progress = evBack.data();
@@ -902,7 +902,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   
-  void execDel(FileRemote.CmdEvent co){
+  void execDel(FileRemote.CmdEventData co){
     System.err.println("FileRemoteLocal - execDel not implemented yet.");
   }
 
@@ -972,15 +972,15 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   //tag::walkFileTreeExecInThisThread[]
-  /**Executes walk file tree. Usual called in the {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+  /**Executes walk file tree. Usual called in the {@link #execCmd(org.vishia.fileRemote.FileRemote.CmdEventData, EventWithDst)}
    * either in one of the {@link WalkerThread} or immediately in the caller thread.  
-   * @param co data what should be done, especially {@link FileRemote.CmdEvent#callback} describes what should be done with a file.
+   * @param co data what should be done, especially {@link FileRemote.CmdEventData#callback} describes what should be done with a file.
    * @param bRefreshChildren true then reads the properties of all children from the original file system.
    * @param evBack a progress event, also usable for quests with answer via the {@link EventWithDst#getOpponent()} prepared before call.
    * @param debugOut
    */
   protected void walkFileTreeExecInThisThread(
-      FileRemote.CmdEvent co
+      FileRemote.CmdEventData co
       , boolean bRefreshChildren
       , EventWithDst<FileRemoteProgressEvData, ?> evBack
       , boolean debugOut)
@@ -1106,7 +1106,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     final FileCluster fileCluster;
     final boolean bRefresh; //, bResetMark;
     
-    final FileRemote.CmdEvent co;
+    final FileRemote.CmdEventData co;
     
     final FileRemoteWalkerCallback callback;
     
@@ -1161,7 +1161,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
      * @param bDbg
      */
     public WalkFileTreeVisitor(FileCluster fileCluster, boolean refreshChildren
-        , FileRemote.CmdEvent co
+        , FileRemote.CmdEventData co
         , EventWithDst<FileRemoteProgressEvData, ?> evBack, boolean bDbg) {
       this.debugOut = bDbg;
       this.fileCluster = fileCluster;
@@ -1516,7 +1516,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     
     //FileRemoteWalkerEvent ev = new FileRemoteWalkerEvent("walker", FileAccessorLocalJava7.this, null, null, 0);
     
-    FileRemote.CmdEvent co;
+    FileRemote.CmdEventData co;
     
     void start() {
       if(this.thread ==null) {
@@ -1556,7 +1556,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
     } //run
   
-    synchronized boolean setOrder( FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+    synchronized boolean setOrder( FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
       if(this.evBack !=null) return false;  //not usable
       else {
         this.co = co;
@@ -1567,7 +1567,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     }
     
     /**Check without mutex, search free order.
-     * if free then return of {@link #setOrder(org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
+     * if free then return of {@link #setOrder(org.vishia.fileRemote.FileRemote.CmdEventData, EventWithDst)}
      * should be checked also.
      * @return true if free.
      */

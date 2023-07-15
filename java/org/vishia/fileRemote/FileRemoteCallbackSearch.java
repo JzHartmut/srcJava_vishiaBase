@@ -108,7 +108,7 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   
   
   
-  @Override public void start(FileRemote startDir, FileRemote.CmdEvent co)
+  @Override public void start(FileRemote startDir, FileRemote.CmdEventData co)
   {
     if(dir1.device == null){
       dir1.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir1.getAbsolutePath());

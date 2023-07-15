@@ -263,7 +263,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * <li>2013-04-07 Hartmut chg: {@link CallbackEvent} contains all the methods to do something with currently copying files,
    *   for example {@link CallbackEvent#copyOverwriteFile(int)} etc.
    * <li>2013-03-31 Hartmut chg: Event<Type>
-   * <li>2012-11-16 Hartmut chg: Usage of {@link CmdEvent#filesrc} and filedst and {@link CallbackEvent#filedst} and dst
+   * <li>2012-11-16 Hartmut chg: Usage of {@link CmdEventData#filesrc} and filedst and {@link CallbackEvent#filedst} and dst
    *   instead {@link EventCmdtypeWithBackEvent#getRefData()}.
    * <li>2012-11-11 Hartmut chg: The flag bit {@link #mDirectory} should be set always, especially also though {@link #mTested} is false.
    *   That should be assured by the {@link FileRemoteAccessor} implementation.
@@ -1078,7 +1078,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.cmd = Cmd.walkSelectMark;
     co.depthWalk = 1;
     co.filesrc = this;
@@ -1116,7 +1116,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     if(callbackUser !=null)
       Debugutil.stop();
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.cmd = Cmd.walkSelectMark;
     co.filesrc = this;
     co.depthWalk = depth;
@@ -1173,7 +1173,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     //co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);
     co.cmd = Cmd.walkCompare;
     co.depthWalk = 0;                            // walk through all levels.
@@ -1195,7 +1195,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.cmd = Cmd.walkCopyDirTree;
     co.depthWalk = 0;                            // walk through all levels.
     co.filesrc = this;
@@ -1216,7 +1216,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.cmd = Cmd.walkDelete;
     co.depthWalk = 0;                            // walk through all levels.
     co.filesrc = this;
@@ -1234,8 +1234,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   /**walk file tree with specified callback adequate the concept which is implemented in {@link FileAccessorLocalJava7}
    * or maybe other file access for embedded control.
-   * All arguments are set to an instance of {@link CmdEvent}, 
-   * with them {@link #device} {@link FileRemoteAccessor#cmd(boolean, CmdEvent, EventWithDst)} is called. 
+   * All arguments are set to an instance of {@link CmdEventData}, 
+   * with them {@link #device} {@link FileRemoteAccessor#cmd(boolean, CmdEventData, EventWithDst)} is called. 
    * @param bWait true then executes the walker in this thread, false then use an extra thread.
    * @param dirDst can be used by the callback
    * @param depth depth to walk,
@@ -1253,7 +1253,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.cmd = Cmd.walkTest;
     co.depthWalk = 0;                            // walk through all levels.
     co.filesrc = this;
@@ -1274,7 +1274,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.callback = null;  //evCallback);
     co.cmd = Cmd.copyFile;
     co.depthWalk = 0;                            // walk through all levels.
@@ -1297,7 +1297,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.callback = null;  //evCallback);
     co.cmd = Cmd.moveFile;
     co.depthWalk = 0;                            // walk through all levels.
@@ -2241,7 +2241,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param sFiles Maybe null or empty. If given, some file names separated with ':' or " : " should be used
    *   in this directory to check and select.
    * @param sWildcardSelection Maybe null or empty. If given, it is the select mask for files in directories.
-   * @param evback The event instance for success. It can be contain a ready-to-use {@link CmdEvent}
+   * @param evback The event instance for success. It can be contain a ready-to-use {@link CmdEventData}
    *   as its opponent. then that is used.
    */
   @Deprecated public void check(String sFiles, String sWildcardSelection, FileRemoteProgressEvData evback){
@@ -2387,12 +2387,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *   </ul>
    * </ul>  
    * <br><br>
-   * This routine sends a {@link CmdEvent} with {@link Cmd#copyChecked} to the destination. Before that the destination 
+   * This routine sends a {@link CmdEventData} with {@link Cmd#copyChecked} to the destination. Before that the destination 
    * for the event is set with calling of {@link FileRemoteAccessor#prepareCmdEvent(CallbackEvent)}. 
-   * That completes the given {@link CallbackEvent} with the necessary {@link CmdEvent} and its correct destination {@link EventConsumer}.
+   * That completes the given {@link CallbackEvent} with the necessary {@link CmdEventData} and its correct destination {@link EventConsumer}.
    * <br><br>
    * Some status messages and the success is notified from the other thread or remote device with invocation of the 
-   * given {@link CallbackEvent}. After any status message was received the {@link CmdEvent} gotten as {@link EventCmdPingPongType#getOpponent()}
+   * given {@link CallbackEvent}. After any status message was received the {@link CmdEventData} gotten as {@link EventCmdPingPongType#getOpponent()}
    * from the received {@link CallbackEvent} can be used to influence the copy process:
    * The commands of the callback are:
    * <ul>
@@ -2538,7 +2538,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * because the calling thread should not be waiting for success. 
    * The success is notified with invocation of the evback.
    * The command itself uses the {@link EventCmdtypeWithBackEvent#opponent}
-   * which is type of {@link CmdEvent} to send the request.
+   * which is type of {@link CmdEventData} to send the request.
    * 
    * @param newName A new name for the file. This parameter may be null, then the old name remain.
    * @param maskFlags mask which flags should be changed
@@ -2547,7 +2547,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param evback The event for success, containing the cmd event as opponent.
    */
   public void chgProps ( boolean bWait, String newName, int maskFlags, int newFlags, long newDate, EventWithDst<FileRemoteProgressEvData,?> evBack){
-    CmdEvent co = new CmdEvent();
+    CmdEventData co = new CmdEventData();
     co.cmd = Cmd.chgProps;
     co.newName = newName;
     co.filesrc = this;
@@ -2763,10 +2763,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
 
   
-  /**Event object for all commands to a remote device or other thread for file operations. It should be used for implementations
+  /**Payload of event object for all commands to a remote device or other thread for file operations. It should be used for implementations
    * of {@link FileRemoteAccessor}.
    */
-  public static class CmdEvent implements Payload { //extends EventCmdtypeWithBackEvent<FileRemote.Cmd, FileRemote.CallbackEvent>
+  public static class CmdEventData implements Payload { //extends EventCmdtypeWithBackEvent<FileRemote.Cmd, FileRemote.CallbackEvent>
   
     private static final long serialVersionUID = 1L;
 
@@ -2824,7 +2824,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     /**Creates the payload of a command event
      */
-    public CmdEvent(){ 
+    public CmdEventData(){ 
     }
     
 
@@ -2889,19 +2889,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   /**Type for callback notification for any action with remote files.
-   * The callback type contains an opponent {@link CmdEvent} object which is not occupied initially
+   * The callback type contains an opponent {@link CmdEventData} object which is not occupied initially
    * to use for forward notification of the action. But the application need not know anything about it,
    * the application should only concern with this object. 
    * See {@link CallbackEvent#CallbackEvent(Object, EventConsumer, EventTimerThread)}.
    */
   public static class CallbackEvent {
-    public final EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEvent> ev;
+    public final EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEventData> ev;
     public final FileRemoteProgressEvData progress;
     
     public CallbackEvent ( String name, EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd) {
       assert(dst instanceof FileRemoteProgress);
       this.progress = new FileRemoteProgressEvData();
-      this.ev = new EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEvent>(name, null, (FileRemoteProgress)dst, thread, this.progress);
+      this.ev = new EventWithDst<FileRemoteProgressEvData, FileRemote.CmdEventData>(name, null, (FileRemoteProgress)dst, thread, this.progress);
     }
   }
   
@@ -3511,7 +3511,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     
     
-    @Override public void start(FileRemote startDir, FileRemote.CmdEvent co) { 
+    @Override public void start(FileRemote startDir, FileRemote.CmdEventData co) { 
       this.startDir = startDir;
       //startDir.setMarked(FileMark.selectRoot);
     }
