@@ -704,6 +704,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       co.callback = new FileRemoteCallbackCopy(co.filedst, null, evBack);  //evCallback);
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
       break;
+    case walkDelete:
+      assert(co.callback == null);
+      co.callback = new FileCallbackLocalDelete(evBack);  //evCallback);
+      FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, false, evBack , false); 
+      break;
     case walkCompare:
       assert(co.callback == null);
       co.callback = new FileRemoteCallbackCmp(co.filesrc, co.filedst, null, evBack);
@@ -958,123 +963,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     
   }
   
-  
-  /**A thread which gets all file properties inclusive children independent of a caller of the #re
-   */
-//  private class RunRefreshWithChildren implements Runnable{
-//    long time;
-//    
-//    final FileRemote fileRemote;
-//    
-//    final FileRemoteProgressEvent callback;
-//    
-//    RunRefreshWithChildren(final FileRemote fileRemote, final FileRemoteProgressEvent callback){
-//      this.fileRemote= fileRemote;
-//      this.callback = callback;
-//    }
-//    
-//    public void run(){  ////
-//      try{
-//        time = System.currentTimeMillis();
-//        refreshFileProperties(fileRemote, null);
-//        File fileLocal = getLocalFile(fileRemote);
-//        //fileRemote.flags |= FileRemote.mChildrenGotten;
-//        if(fileLocal.exists()){
-//          long time1 = System.currentTimeMillis();
-//          //if(debugOut) System.out.println("FileAccessorLocalJava7.refreshFilePropertiesAndChildren - start listFiles; dt=" + (time1 - time));
-//          
-//          File[] files = fileLocal.listFiles();
-//          time1 = System.currentTimeMillis();
-//          //if(debugOut) System.out.println("FileAccessorLocalJava7.refreshFilePropertiesAndChildren - ok listFiles; dt=" + (time1 - time));
-//          if(files !=null){
-//            if(useFileChildren){
-//              //fileRemote.children = files;
-//            } else {
-//              //re-use given children because they may have additional designation in flags.
-//              Map<String, FileRemote> oldChildren = fileRemote.children();
-//              //but create a new list to prevent keeping old files.
-//              fileRemote.internalAccess().newChildren();
-//              int iFile = -1;
-//              for(File file1: files){
-//                String name1 = file1.getName();
-//                FileRemote child = null;   
-//                if(oldChildren !=null){ child = oldChildren.remove(name1); }
-//                if(child == null){ 
-//                  int flags = file1.isDirectory() ? FileRemote.mDirectory : 0;
-//                  child = fileRemote.internalAccess().newChild(name1, 0, 0,0,0, flags, file1); 
-//                  //child.refreshProperties(null);    //should show all sub files with its properties, but not files in sub directories.
-//                } else {
-//                  if(!child.isTested(time - 1000)){
-//                    //child.refreshProperties(null);    //should show all sub files with its properties, but not files in sub directories.
-//                  }
-//                }
-//                fileRemote.internalAccess().putNewChild(child);
-//              }
-//              //oldChildren contains yet removed files.
-//              //if(debugOut) System.out.println("FileAccessorLocalJava7.refreshFilePropertiesAndChildren - ok refresh; " + files.length + " files; dt=" + (System.currentTimeMillis() - time));
-//            }
-//          }
-//        }
-//        fileRemote.timeChildren = System.currentTimeMillis();
-//        if(callback !=null){
-//          callback.occupy(evSrc, true);
-//          long time1 = System.currentTimeMillis();
-//          //if(debugOut) System.out.println("FileAccessorLocalJava7.refreshFilePropertiesAndChildren - callback listFiles; dt=" + (time1 - time));
-//          callback.sendEvent(FileRemote.CallbackCmd.done);
-//          time1 = System.currentTimeMillis();
-//          //if(debugOut) System.out.println("FileAccessorLocalJava7.refreshFilePropertiesAndChildren - finish listFiles; dt=" + (time1 - time));
-//        }
-//        fileRemote.internalAccess().clrFlagBit(FileRemote.mThreadIsRunning);
-//      }
-//      catch(Exception exc){
-//        System.err.println("FileAccessorLocalJava7.refreshFilePropertiesAndChildren - Thread Excpetion;" + exc.getMessage());
-//      }
-//    }
-//  }
     
 
   
   
-  /**Routine for walk through all really files of the file system for PC file systems and Java7 or higher. 
-   * It calls {@link Files#walkFileTree(Path, Set, int, FileVisitor)} in an extra thread.
-   * defined in {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)} 
-   */
-  //tag::walkFileTree[]
-  @Deprecated @Override public void walkFileTree(FileRemote startDir, final boolean bWait, boolean bRefreshChildren
-      , int markSet, int markSetDir
-      , String sMask, long bMarkCheck
-      , int depth, FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut)
-  { if(bWait){
-      // execute it in this thread, therewith wait for success.
-//      walkFileTreeExecInThisThread(startDir, bRefreshChildren, markSet, markSetDir
-//          , sMask, bMarkCheck, depth, callback, evBack, null, debugOut);
-    } else {
-      for(WalkerThread wth : this.walkerThread) {
-        if(wth.isFree()) {
-          if(wth.setOrder(null, evBack)) {
-//            wth.ev.setEventData(FileRemoteWalkerEvent.Cmd.refreshAndMark, startDir, bRefreshChildren, depth, markSet, markSetDir, sMask, bMarkCheck, callback, debugOut);
-//            wth.evBack = evBack;
-//            wth.start();
-            break;
-          }
-        }
-      }
-
-      // creates a new Thread with instance of FileWalkerThread for the run routine and the arguments saving:
-      
-//      FileRemoteAccessor.FileWalkerThread thread = new FileRemoteAccessor.FileWalkerThread(startDir, bRefreshChildren, depth, markSet, markSetDir
-//          , sMask, bMarkCheck, callback, debugOut) {
-//        @Override public void run() {
-//          FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(this.startDir, this.bRefresh, this.co.markSet, this.co.markSetDir
-//                , this.sMask, this.bMarkCheck, this.depth, this.callback, ev, debugOut);
-//        }
-//      };
-//      //
-//      thread.setPriority(Thread.MIN_PRIORITY +1);
-//      thread.start();
-    }
-  }
-  //end::walkFileTree[]
 
 
   
@@ -1099,7 +991,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 //      if(evWalker.progress !=null && evWalker.progress.timeOrder !=null) {
 //        evWalker.progress.timeOrder.activateCyclic();     // timeOrder back event to inform
 //      }
-      if(co.callback !=null) { co.callback.start(co.filesrc); }
+      if(co.callback !=null) { co.callback.start(co.filesrc, co); }
       if(bRefreshChildren) {                               // refreshChildren is for children in FileRemote instance
         co.filesrc.internalAccess().newChildren(); 
       }
@@ -1400,7 +1292,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
             //this.progress.nrFilesProcessed += this.curr.dir.children().size();
           }
         }
-        result = (this.callback !=null) ? this.callback.offerParentNode(dir1) : SortedTreeWalkerCallback.Result.cont;
+        result = (this.callback !=null) ? this.callback.offerParentNode(dir1, dir) : SortedTreeWalkerCallback.Result.cont;
         if(result == SortedTreeWalkerCallback.Result.cont){
           this.curr = new CurrDirChildren(dir1, this.curr, childFilter);
           if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - pre dir; " + this.curr.dir.getAbsolutePath());
@@ -1440,7 +1332,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       synchronized(this) { try{ wait(10);} catch(InterruptedException exc1) {}}
 
       FileRemoteWalkerCallback.Result result = (this.callback !=null) ? 
-                                         this.callback.finishedParentNode(this.curr.dir) 
+                                         this.callback.finishedParentNode(this.curr.dir, dir) 
                                        : SortedTreeWalkerCallback.Result.cont;
       if(this.progress !=null) {                         
         //--------------------------------------- creates or updates a time order for the state. 
@@ -1577,6 +1469,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     
           }
           if(this.callback !=null) {
+            if(bDirectory)
+              Debugutil.stop();
             //check mask:
             result = this.callback.offerLeafNode(fileRemote, null);
           } else { 

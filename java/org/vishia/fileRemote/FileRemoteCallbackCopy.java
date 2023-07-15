@@ -65,7 +65,7 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2014-12-14";
+  static final public String sVersion = "2023-07-14";
   
   
 
@@ -106,13 +106,11 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
   
   
   
-  @Override public void start(FileRemote startDir)
-  {
-  }
+  @Override public void start ( FileRemote startDir, FileRemote.CmdEvent co) {  }
   
   
   
-  @Override public Result offerParentNode(FileRemote dir){
+  @Override public Result offerParentNode ( FileRemote dir, Object oPath) {
     if(this.first){
       this.first = false;  //first level: don't change dirDst. It matches to the first source dir.
     } else {
@@ -124,12 +122,11 @@ public class FileRemoteCallbackCopy implements FileRemoteWalkerCallback
       }
     }
     return Result.cont;
-    
   }
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file){
+  @Override public Result finishedParentNode(FileRemote file, Object oPath){
     dirDst = dirDst.getParentFile();
     return Result.cont;      
   }

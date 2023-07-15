@@ -23,6 +23,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-14 Hartmut adapted because cleanup of FileRemote 
    * <li>2023-02-10 Hartmut new concept with the {@link FileRemoteProgressEvData}: remove <code>progress.show(...)</code>
    *   because it is called in the timer thread instead. Independent of continue the process here. 
    * <li>2016-12-20 Hartmut bugfix: {@link #readIgnoreComment(BufferedReader)}: The second line after //line is ignored too. In a rarely case
@@ -153,7 +154,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * Only do it for the given files. It are lesser. The other FileRemote instances are not known till now.
    * This is a fast operation because it does not access the file system. 
    */
-  @Override public void start(FileRemote startDir)
+  @Override public void start(FileRemote startDir, FileRemote.CmdEvent co)
   {
     if(dir1.device == null){
       dir1.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir1.getAbsolutePath());
@@ -174,7 +175,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   
   
-  @Override public Result offerParentNode(FileRemote dir){
+  @Override public Result offerParentNode(FileRemote dir, Object oPath){
     //if(dir == this.dir1){ return Result.cont; } //the first entry
     //else {
     FileRemote dir2sub;
@@ -198,8 +199,12 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
         System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
-        dir2sub.resetMarked(FileMark.cmpAlone);
-        dir2sub.device.walkFileTree(dir2sub, true, true, 0, 0, null, 0, 1, callbackMarkSecondAlone, null, false);
+        //--------------------------------------------------- directory found, but yet not clarified whether all sub file/dir
+        FileMark mark2 = dir2sub.mark();
+        if( mark2==null || (mark2.getMark() & FileMark.cmpAlone) ==0) {  //mark only with cmpAlone if not marked already with.
+          dir2sub.walker(true, null, 0, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, null, 0, null);
+        }
+        dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
         //waitfor
         //dir2sub.refreshPropertiesAndChildren(null);        
@@ -210,7 +215,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file){
+  @Override public Result finishedParentNode(FileRemote file, Object data){
     
     return Result.cont;      
   }
@@ -465,7 +470,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
    * in the dir1. A new dir is searched in the dir2 tree, then the children in 1 level are marked. 
    * 
    */
-  final FileRemoteWalkerCallback callbackMarkSecondAlone = new FileRemoteWalkerCallback()
+  final FileRemoteWalkerCallback XXXcallbackMarkSecondAlone = new FileRemoteWalkerCallback()
   {
 
     @Override
@@ -473,11 +478,11 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
     { }
 
     @Override
-    public Result finishedParentNode(FileRemote file)
+    public Result finishedParentNode(FileRemote file, Object data)
     { return Result.cont; }
 
     @Override
-    public Result offerParentNode(FileRemote file)
+    public Result offerParentNode(FileRemote file, Object data)
     { return Result.cont; }
 
     @Override
@@ -489,7 +494,7 @@ public class FileRemoteCallbackCmp implements FileRemoteWalkerCallback
     }
 
     @Override
-    public void start(FileRemote startDir)
+    public void start(FileRemote startDir, FileRemote.CmdEvent co)
     { }
     
     @Override public boolean shouldAborted(){

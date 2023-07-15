@@ -6,13 +6,16 @@ package org.vishia.util;
  * but with a more universal approach and concept.
  * @author Hartmut Schorrig
  *
- * @param <Type> The type of a node which may have children or it is a leaf.
+ * @param <TypeNode> The type of a node which may have children or it is a leaf.
+ * @param <TypeStartInfo> this is a specific type of data which describes the condition of walking 
  */
-public interface SortedTreeWalkerCallback<Type>
+public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
 {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-15 Hartmut enhanced with TypeStartInfo and Object data for {@link #offerLeafNode(Object, Object)} etc.
+   *   It is used for {@link org.vishia.fileRemote.FileRemoteWalkerCallback} to inform about the implementation data java.nio.file.Path
    * <li>2014-12-24 Hartmut created from the more special interface {@link org.vishia.fileRemote.FileRemoteWalkerCallback}.                  
    * </ul>
    * <br><br>
@@ -75,34 +78,34 @@ public interface SortedTreeWalkerCallback<Type>
   
   /**Invoked before start of a walk through the tree.
    */
-  void start(Type startNode);
+  void start(TypeNode startNode, TypeStartInfo startInfo);
   
   /**Invoked on start on walking through a parent node which have children. It may be a directory inside a file tree. 
-   * If this method is invoked for a node, the {@link #offerLeafNode(Type)} is not invoked.
+   * If this method is invoked for a node, the {@link #offerLeafNode(TypeNode)} is not invoked.
    * @param parentNode
+   * @param data Specific data presentation of the node
    * @return information to abort, maybe boolean.
    */
-  Result offerParentNode(Type parentNode);
+  Result offerParentNode(TypeNode parentNode, Object data);
   
   /**Invoked on end of walking through a parent node.
    * @param parentNode the node which was walked through
-   * @param cnt If the {@link Counters#nrofLeafss} == {@link Counters#nrofLeafSelected} 
-   *   and {@link Counters#nrofParents} == {@link Counters#nrofParentSelected}
-   *   then all children are selected.
+   * @param data Specific data presentation of the node
    */
-  Result finishedParentNode(Type parentNode);
+  Result finishedParentNode(TypeNode parentNode, Object data);
   
   /**Invoked for any node which has no children or which is not processed because the depth of walking through the tree is reached.
    * It is called in opposite to {@link #offerLeafNode(Object)}, only one of both is called for a node.
-   * For example it is invoked for a sub directory only if the depth is reached and {@link #offerParentNode(Type)} is not called.
+   * For example it is invoked for a sub directory only if the depth is reached and {@link #offerParentNode(TypeNode)} is not called.
    * @param leafNode
+   * @param data Specific data presentation of the node
    * @return information to abort or continue.
    */
-  Result offerLeafNode(Type leafNode, Object info);
+  Result offerLeafNode(TypeNode leafNode, Object leafNodeData);
   
   /**Invoked after finishing the walking through.
    */
-  void finished(Type startNode);
+  void finished(TypeNode startNode);
   
   
   /**Returns true if the tree walking should be terminated respectively aborted.
@@ -115,17 +118,21 @@ public interface SortedTreeWalkerCallback<Type>
   
   
   /**Use this as template for anonymous implementation. Frequently without 'static'.*/
-  static SortedTreeWalkerCallback<Object> callbackTemplate = new SortedTreeWalkerCallback<Object>()
+  static SortedTreeWalkerCallback<Object, Object> callbackTemplate = new SortedTreeWalkerCallback<Object, Object>()
   {
 
-    @Override public void start(Object startDir) {  }
+    /**It is called on start of walking. 
+     *
+     */
+    @Override public void start(Object startDir, Object info) {  }
+    
     @Override public void finished(Object parentNode) {  }
 
-    @Override public Result offerParentNode(Object file) {
+    @Override public Result offerParentNode(Object file, Object oPath) {
       return Result.cont;      
     }
     
-    @Override public Result finishedParentNode(Object file) {
+    @Override public Result finishedParentNode(Object file, Object oPath) {
       return Result.cont;      
     }
     

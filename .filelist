@@ -1,7 +1,7 @@
 2023-04-13 11:07:03  x     #.git#save#                              ::           . 72 -1237754712 
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2023-07-14 23:37:26  x     .gitCommit                               ::           .319  1565172057 
+2023-07-15 10:55:25  x     .gitCommit                               ::           .791 -1857296136 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -135,27 +135,28 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2023-07-14 23:19:17  x     FileAccessorLocalJava7.java              ::         74.170  0357553046 
+2023-07-15 10:27:40  x     FileAccessorLocalJava7.java              ::         68.638 -0350747978 
+2023-07-15 10:28:00  x     FileCallbackLocalDelete.java             ::          2.988 -1260641143 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2023-04-06 21:09:28  x     FileAccessZip.java                       ::         18.022 -0322229997 
+2023-07-14 23:48:06  x     FileAccessZip.java                       ::         17.680 -1036943945 
 2023-04-08 08:57:38  x     FileCluster.java                         ::         18.326 -0054036912 
 2023-03-12 14:35:13  x     FileMark.java                            ::         10.765 -0673201036 
-2023-07-14 23:26:22  x     FileRemote.java                          ::        161.611  1861303714 
-2023-07-14 21:53:23  x     FileRemoteAccessor.java                  ::         17.785 -2082895043 
-2023-07-13 23:44:14  x     FileRemoteCallbackCmp.java               ::         18.731 -1333351406 
-2023-04-12 19:04:01  x     FileRemoteCallbackCopy.java              ::          7.502 -1588859808 
-2023-03-12 15:36:15  x     FileRemoteCallbackSearch.java            ::         10.603  1804195436 
+2023-07-15 10:54:26  x     FileRemote.java                          ::        161.144  1563373660 
+2023-07-14 23:47:48  x     FileRemoteAccessor.java                  ::         12.948 -1576866786 
+2023-07-15 10:50:00  x     FileRemoteCallbackCmp.java               ::         19.270 -1602294611 
+2023-07-15 10:31:47  x     FileRemoteCallbackCopy.java              ::          7.551 -1902800787 
+2023-07-15 10:32:07  x     FileRemoteCallbackSearch.java            ::         10.655 -0109258319 
 2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
 2023-07-14 21:06:07  x     FileRemoteProgress.java                  ::          3.012 -0323372608 
 2023-04-06 21:41:34  x     FileRemoteProgressEvData.java            ::         14.057 -1148092246 
-2023-07-14 00:24:58  x     FileRemoteTestCallback.java              ::          1.038  0386131604 
-2023-07-14 00:21:03  x     FileRemoteWalkerCallback.java            ::           .573 -1117430499 
-2023-02-21 15:13:50  x     FileRemoteWalkerCallbackLog.java         ::          2.466  0836540270 
+2023-07-15 10:32:29  x     FileRemoteTestCallback.java              ::          1.090 -0217332453 
+2023-07-15 10:17:34  x     FileRemoteWalkerCallback.java            ::           .622  0881283954 
+2023-07-15 10:32:43  x     FileRemoteWalkerCallbackLog.java         ::          2.518 -1288798203 
 2023-03-14 23:45:12  x     FileZip.java                             ::          5.640  1234857640 
 2023-03-12 21:04:59  x     XXXFileRemoteWalkerEvent.java            ::          2.686  1910227989 
 
@@ -315,7 +316,7 @@
 2021-10-04 14:29:49  x     SortedStringList.java                    ::          3.388 -0917403468 
 2021-10-04 14:29:48  x     SortedTree.java                          ::          3.706 -1255774842 
 2021-10-04 14:29:49  x     SortedTreeNode.java                      ::          5.702 -1009691353 
-2023-02-04 11:03:38  x     SortedTreeWalkerCallback.java            ::          5.252 -0633832758 
+2023-07-15 10:41:56  x     SortedTreeWalkerCallback.java            ::          5.798 -1888141359 
 2021-10-04 14:29:51  x     SpecialCharStrings.java                  ::          5.298  0013480220 
 2021-10-04 14:29:49  x     StdHexFormatWriter.java                  ::          4.239  0384535192 
 2019-04-09 23:04:58  x     StringAdd.java                           ::          1.871  1585552295 
@@ -343,7 +344,7 @@
 2021-10-04 14:29:52  x     TreeNodeNamed_ifc.java                   ::           . 85  1747010936 
 2012-11-05 22:07:50  x     TreeNodeUniqueKey.java                   ::          2.003  0862351950 
 2017-08-31 08:44:51  x     TreeNode_ifc.java                        ::          3.804  1798566168 
-2023-02-12 19:42:04  x     TreeWalkerPathCheck.java                 ::          5.124 -2080069118 
+2023-07-15 10:46:27  x     TreeWalkerPathCheck.java                 ::          5.236 -0852258289 
 2013-01-06 16:24:48  x     UnexpectedException.java                 ::           .984 -0050084027 
 2023-05-16 17:46:12  x     Writer_Appendable.java                   ::          2.968  1306463211 
 2013-05-25 22:37:51  x     package-info.java                        ::           .474 -0681213086 

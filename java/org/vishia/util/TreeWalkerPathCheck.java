@@ -5,10 +5,11 @@ package org.vishia.util;
  *
  * @param <Type>
  */
-public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
+public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String, Object>
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-15 adapted to changed SortedTreeWalkerCallback
    * <li>2015-05-25 Hartmut created for walking through a file tree but with universal approach.                  
    * </ul>
    * <br><br>
@@ -86,9 +87,9 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
     this.check = new PathCheck(sPathCheck);
   }
   
-  public void start(String startNode){ } //callback.start(startNode); }
+  public void start(String startNode, Object info){ } //callback.start(startNode); }
 
-  public SortedTreeWalkerCallback.Result offerParentNode(String sName)
+  public SortedTreeWalkerCallback.Result offerParentNode(String sName, Object data)
   {
     //String sName = node instanceof TreeNodeNamed_ifc ? ((TreeNodeNamed_ifc)node).getName() : node.toString();
     PathCheck use;
@@ -104,7 +105,7 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String>
 
   
   
-  @Override public SortedTreeWalkerCallback.Result finishedParentNode(String parentNode)
+  @Override public SortedTreeWalkerCallback.Result finishedParentNode(String parentNode, Object oPath)
   {
     //checkRet[0] = check.bAllTree ? check : check.parent;
     curr = curr.parent;

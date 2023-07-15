@@ -506,10 +506,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   FileRemote parent;
   
   /**The content of a directory. It contains all files, proper for return {@link #listFiles()} without filter. 
-   * The content is valid at the time of calling {@link #refreshPropertiesAndChildren(FileRemoteWalkerCallback, boolean)} or its adequate.
+   * The content is valid at the time of calling {@link #refreshPropertiesAndChildren(boolean, EventWithDst)} or its adequate.
    * It is possible that the content of the physical directory is changed meanwhile.
    * If this field should be returned without null, especially on {@link #listFiles()} and the file is a directory, 
-   * the {@link #refreshPropertiesAndChildren()} will be called.  
+   * the {@link #refreshPropertiesAndChildren(boolean, EventWithDst)
    * */
   private Map<String,FileRemote> children;
   
@@ -1063,17 +1063,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     refreshProperties(null);
   }
   
-  /**Gets the properties of the file from the physical file.
-   * @param callback
-   */
-  public void refreshPropertiesAndChildren(FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack) {  //CallbackEvent callback){
-    if(this.device == null){
-      this.device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
-    }
-    final boolean bWait = callback ==null;                 // then execute it in this thread.
-    this.device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, evBack, false); 
-  }
-  
   
   
   /**Refreshes the properties of this file and gets all children in an extra thread with user-callback for any file.
@@ -1163,9 +1152,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    FileRemoteCallbackSearch callbackSearch = new FileRemoteCallbackSearch(this, search, callbackUser, evBack);  //evCallback);
-    this.device.walkFileTree(this,  false, true, FileMark.select, FileMark.selectSomeInDir
-        , mask, mark,  depth,  callbackSearch, evBack, false);  //should work in an extra thread.
+    //TODO implement with cmd
   }
   
   
@@ -1187,7 +1174,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     CmdEvent co = new CmdEvent();
-    co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);
+    //co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);
     co.cmd = Cmd.walkCompare;
     co.depthWalk = 0;                            // walk through all levels.
     co.filesrc = this;
@@ -1220,16 +1207,32 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     co.selectMask = (int)mark;
     co.cycleProgress = 100;                        //calback on any file and dir
     this.device.cmd(bWait, co, evBack);
-//    boolean bWait = evBack ==null;    //wait if there is not a callback possibility.
-//    boolean bRefreshChildren = false;
-//    //======>>>>                                 // walkFileTreeCheck is a common operation from the device, mission describes what to do  
-//    this.device.walkFileTree(this,  bWait, bRefreshChildren, setMark, setMarkDir
-//        , mask, mark,  depth,  mission, evBack, false);  //should work in an extra thread.
   }
   
   
   
-  /**Test operations for the walk file tree concept which is implemented in {@link FileAccessorLocalJava7}
+  public void deleteFilesDirTree(boolean bWait, int depth, String mask, int selectMask
+      , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    CmdEvent co = new CmdEvent();
+    co.cmd = Cmd.walkDelete;
+    co.depthWalk = 0;                            // walk through all levels.
+    co.filesrc = this;
+    co.filedst = null;
+    co.depthWalk = depth;
+    co.markSet = 0;
+    co.markSetDir = 0;
+    co.selectFilter = mask;
+    co.selectMask = selectMask;
+    co.cycleProgress = 100;                        //calback on any file and dir
+    this.device.cmd(bWait, co, evBack);
+  }
+  
+  
+  
+  /**walk file tree with specified callback adequate the concept which is implemented in {@link FileAccessorLocalJava7}
    * or maybe other file access for embedded control.
    * All arguments are set to an instance of {@link CmdEvent}, 
    * with them {@link #device} {@link FileRemoteAccessor#cmd(boolean, CmdEvent, EventWithDst)} is called. 
@@ -1245,7 +1248,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param cycleProgress cycle for progress in ms, 0 means progress for any file.
    * @param evProgress for progress. If bWait is false and evBack is null, no answer is given. 
    */
-  public void testWalker(boolean bWait, FileRemote dirDst, int depth, int markSet, int markSetDir, String selectFilter, int selectMark
+  public void walker(boolean bWait, FileRemote dirDst, int depth, int markSet, int markSetDir, String selectFilter, int selectMark
     , FileRemoteWalkerCallback callback, int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> evProgress) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -2064,7 +2067,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    */
   @Deprecated public void deleteMarked(int mark, FileRemoteWalkerCallback callback, FileRemoteProgressEvData progress)
   {
-    if(callback != null) { callback.start(this); }
+    if(callback != null) { callback.start(this, null); }
     if(deleteMarkedSub(mark, this, 10000, callback, progress)) {
       delete(); //delete the directory or file.
     }
@@ -2090,7 +2093,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(file.isDirectory() && (children = file.children()) !=null)
     {
       System.out.println("FileRemote.deleteMarkedSub - offerDir; " + file.getAbsolutePath());
-      result = callback.offerParentNode(file);
+      result = callback.offerParentNode(file, null);
       if(result == FileRemoteWalkerCallback.Result.cont) { //only walk through subdir if cont
         Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
         while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
@@ -2132,7 +2135,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         }//while
         if(result != FileRemoteWalkerCallback.Result.terminate){
           //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-          result = callback.finishedParentNode(file); //FileRemoteWalkerCallback.Result.cont;
+          result = callback.finishedParentNode(file, null); //FileRemoteWalkerCallback.Result.cont;
         }
       }//cont = openDir(...) 
       // else: not cont, do nothing
@@ -2596,7 +2599,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    */
   @Deprecated public void walkFileTree(int depth, FileRemoteWalkerCallback callback)
   {
-    callback.start(this);
+    callback.start(this, null);
     walkSubTree(this, depth <=0 ? Integer.MAX_VALUE: depth, callback);
     callback.finished(this);
   }
@@ -2628,7 +2631,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     Map<String, FileRemote> children = dir.children();
     FileRemoteWalkerCallback.Result result = FileRemoteWalkerCallback.Result.cont;
-    result = callback.offerParentNode(dir);
+    result = callback.offerParentNode(dir, null);
     if(result == FileRemoteWalkerCallback.Result.cont && children !=null){ //only walk through subdir if cont
       Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
       while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
@@ -2653,7 +2656,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     } 
     if(result != FileRemoteWalkerCallback.Result.terminate){
       //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-      result = callback.finishedParentNode(dir); //FileRemoteWalkerCallback.Result.cont;
+      result = callback.finishedParentNode(dir, null); //FileRemoteWalkerCallback.Result.cont;
     }
     return result;  //maybe terminate
   }
@@ -3508,7 +3511,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     
     
-    @Override public void start(FileRemote startDir) { 
+    @Override public void start(FileRemote startDir, FileRemote.CmdEvent co) { 
       this.startDir = startDir;
       //startDir.setMarked(FileMark.selectRoot);
     }
@@ -3517,13 +3520,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       if(callbackUser !=null){ callbackUser.finished(startDir); }
     }
 
-    @Override public Result offerParentNode(FileRemote file) {
+    @Override public Result offerParentNode(FileRemote file, Object data) {
       //markAllInDirectory = true; markOneInDirectory = false;
-      if(callbackUser !=null) return callbackUser.offerParentNode(file); 
+      if(callbackUser !=null) return callbackUser.offerParentNode(file, data); 
       else return Result.cont;      
     }
     
-    @Override public Result finishedParentNode(FileRemote dir) {
+    @Override public Result finishedParentNode(FileRemote dir, Object data) {
       boolean bSomeSelect = true;
       if(dir.isSymbolicLink()) {
         bSomeSelect = false;  //do not select, do not handle a symbolic link
@@ -3547,7 +3550,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           else { parent = null; } //finish while
         }
       }
-      if(callbackUser !=null) return callbackUser.finishedParentNode(dir); 
+      if(callbackUser !=null) return callbackUser.finishedParentNode(dir, null); 
       else return Result.cont;      
     }
     

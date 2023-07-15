@@ -108,7 +108,7 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   
   
   
-  @Override public void start(FileRemote startDir)
+  @Override public void start(FileRemote startDir, FileRemote.CmdEvent co)
   {
     if(dir1.device == null){
       dir1.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dir1.getAbsolutePath());
@@ -123,14 +123,14 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   
   
   
-  @Override public Result offerParentNode(FileRemote dir){
+  @Override public Result offerParentNode(FileRemote dir, Object oPath){
     this.dirCurr = dir;
     return Result.cont;
   }
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file){
+  @Override public Result finishedParentNode(FileRemote file, Object oPath){
     
     return Result.cont;      
   }

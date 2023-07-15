@@ -464,16 +464,6 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
     return false;
   }
 
-  @Override
-  public void walkFileTree(FileRemote file, boolean bWait, boolean bRefreshChildren, int markSet, int markSetDir
-      , String sMask, long bMarkCheck
-      , int depth, FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut)
-  {
-    // TODO Auto-generated method stub
-    
-  }
-  
-  
 
 
 

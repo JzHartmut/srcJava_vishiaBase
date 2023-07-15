@@ -141,28 +141,6 @@ public abstract class FileRemoteAccessor implements EventConsumer
   public abstract String cmd(boolean bWait, FileRemote.CmdEvent co, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   
-  /**Gets the properties and the children of the file from the physical file.
-   * <br><br>
-   * The properties of the children are not gotten for the Standard-PC-Filesystem using Java-6. 
-   * It may use too many calculation time.
-   * Use {@link #refreshFileProperties(FileRemote, org.vishia.fileRemote.FileRemote.CallbackEvent)}
-   * in a loop for any file only if it is necessary. Check the {@link FileRemote#isTested(long)} therefore.
-   * <br><br>
-   * For Java-7 the main properties of all children are gotten too, because the system call deliver it.
-   * To document that, the {@link FileRemote#timeRefresh} is set to the new time.
-   * For other remote file systems it should be also do so. Usual the main properties of the children
-   * should be present if the name of the children is gotten. The main properties are length, 
-   * timestamp last modified, read or write able.
-   * 
-   * @param file the destination file object.
-   * @param callback If null then the method waits for response from the maybe remote file system
-   *   with a suitable timeout. 
-   *   If not null then the method may return immediately without any waiting
-   *   and the callback method in the {@link EventCmdPingPongType#callback()} is invoked maybe in another thread
-   *   if the answer is gotten. 
-   */
-  public void XXXrefreshFilePropertiesAndChildren() {}
-  //public abstract void refreshFilePropertiesAndChildren(FileRemote file, FileRemote.CallbackEvent callback);
 
   
   /**Gets files and sub directories of a directory. This method uses the {@link java.io.File} access methods to get the children of this file.
@@ -172,46 +150,6 @@ public abstract class FileRemoteAccessor implements EventConsumer
    */
   public abstract List<File> getChildren(FileRemote file, FileFilter filter);
   
-  /**Walks through all children with the given file with given filter on the storage medium, maybe refreshes the files 
-   * and inform the user on any directory entry and and file or directory via callback.
-   * The callback may be done in another thread, because it may be a result of communication.
-   * This routine may return immediately. It does not block if a communication is necessary.
-   * <ul>
-   * <li>{@link CallbackFile#start()} is called firstly. 
-   * <li>{@link CallbackFile#offerParentNode(FileRemote)} is called on a new directory which is entered.
-   * <li>{@link CallbackFile#offerLeafNode(FileRemote)} is called for any found entry in a directory. It may be a file or sub directory.
-   * <li>{@link CallbackFile#finished()} is the last action of that.
-   * </ul> 
-   *  
-   * @param startDir The start directory.
-   * @param bWait true then waits for success. On return the walk through is finished and all callback routines are invoked already.
-   *   false then this method may return immediately. The callback routines are not invoked. The walk is done in another thread.
-   *   Note: Whether or not another thread is used for communication it is not defined with them. It is possible to start another thread
-   *   and wait for success, for example if communication with a remote device is necessary. 
-   * @param bRefreshChildren if true then refreshes all entries in file and maybe found children. If false then let file unchanged.
-   *   If filter is not null, only the filtered children will be updated,
-   *   all other children remain unchanged. It means it is possible that non exists files are remain as children.
-   * @param depth deepness to entry in the directory tree. Use 0 if all levels should enter.
-   * @param setMark bits to set in the {@link #mark()} {@link FileMark#selectMask} for the selected files
-   *   If {@link FileMark#resetMark} is set, the bits given in this field will be set to 0.
-   * @param setMarkDir bits to set in the {@link #mark()} for the directories containing selected files
-   *   If {@link FileMark#resetMark} is set, the bits given in this field will be set to 0.
-   * @param sMaskSelection Any filter which files will be accepted.
-   * @param markSelection Bits to select with mark bits. 
-   *   If {@link FileMark#orWithSelectString} is set, this is a OR relation, elsewhere AND with the select string.
-   *   OR relation means, a file is selected either with the sMaskSelection or with one of this bits.
-   *   AND relation means, one of this bits should be set, and the sMaskSelection should be matching.  
-   * @param callbackUser a user instance which will be informed on start, any file, any directory and the finish.
-   * @param progress event for callback.
-   * @param debugOut true then prints some progress to System.out
-   * @deprecated use {@link #cmd(boolean, org.vishia.fileRemote.FileRemote.CmdEvent, EventWithDst)}
-   *   which calls walking on several commands.
-   *   The walker itself should not be preconditioned, it is a decision in implementation level.
-   */
-  @Deprecated public abstract void walkFileTree(FileRemote startDir, boolean bWait, boolean bRefreshChildren
-      , int setMark, int setMarkDir
-      , String sMaskSelection, long markSelection, int depth
-      , FileRemoteWalkerCallback callback, EventWithDst<FileRemoteProgressEvData,?> evBack, boolean debugOut);
   
   
   protected abstract boolean setLastModified(FileRemote file, long time);
