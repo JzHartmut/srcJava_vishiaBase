@@ -44,12 +44,12 @@ public class FileRemoteWalkerCallbackLog implements FileRemoteWalkerCallback {
     this.logout.sendMsg(1, "start: %s", startNode.getAbsolutePath());
   }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object oPath ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object oPath, Object walkInfo ) {
     this.logout.sendMsg(1, "start: %s", parentNode.getAbsolutePath());
     return SortedTreeWalkerCallback.Result.cont;
   }
 
-  @Override public Result finishedParentNode ( FileRemote parentNode, Object oPath ) {
+  @Override public Result finishedParentNode ( FileRemote parentNode, Object oPath, Object oWalkInfo ) {
     this.logout.sendMsg(1, "finish: %s", parentNode.getAbsolutePath());
     return SortedTreeWalkerCallback.Result.cont;
   }

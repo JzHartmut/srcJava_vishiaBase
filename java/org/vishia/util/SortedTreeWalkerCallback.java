@@ -43,7 +43,7 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2014-12-24";
+  public static final String sVersion = "2023-07-15";
 
   
   /**It is similar {@link java.nio.file.FileVisitResult}.
@@ -84,15 +84,17 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
    * If this method is invoked for a node, the {@link #offerLeafNode(TypeNode)} is not invoked.
    * @param parentNode
    * @param data Specific data presentation of the node
+   * @param oWalkInfo internal possible information about walking, depending on usage.
    * @return information to abort, maybe boolean.
    */
-  Result offerParentNode(TypeNode parentNode, Object data);
+  Result offerParentNode(TypeNode parentNode, Object data, Object oWalkInfo);
   
   /**Invoked on end of walking through a parent node.
    * @param parentNode the node which was walked through
    * @param data Specific data presentation of the node
+   * @param oWalkInfo internal possible information about walking, depending on usage.
    */
-  Result finishedParentNode(TypeNode parentNode, Object data);
+  Result finishedParentNode(TypeNode parentNode, Object data, Object oWalkInfo);
   
   /**Invoked for any node which has no children or which is not processed because the depth of walking through the tree is reached.
    * It is called in opposite to {@link #offerLeafNode(Object)}, only one of both is called for a node.
@@ -128,11 +130,11 @@ public interface SortedTreeWalkerCallback<TypeNode, TypeStartInfo>
     
     @Override public void finished(Object parentNode) {  }
 
-    @Override public Result offerParentNode(Object file, Object oPath) {
+    @Override public Result offerParentNode(Object file, Object oPath, Object filter) {
       return Result.cont;      
     }
     
-    @Override public Result finishedParentNode(Object file, Object oPath) {
+    @Override public Result finishedParentNode(Object file, Object oData, Object oInfo) {
       return Result.cont;      
     }
     

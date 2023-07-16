@@ -6,12 +6,12 @@ public class FileRemoteTestCallback  implements FileRemoteWalkerCallback {
     System.out.println("start callback test: " + startNode.toString());
   }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object oPath ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object oPath, Object oWalkInfo ) {
     System.out.println("callback test: dir = " + parentNode.toString());
     return Result.cont;
   }
 
-  @Override public Result finishedParentNode ( FileRemote parentNode, Object oPath ) {
+  @Override public Result finishedParentNode ( FileRemote parentNode, Object oPath, Object oWalkInfo ) {
     System.out.println("callback test finishDir: " + parentNode.toString());
     return Result.cont;
   }

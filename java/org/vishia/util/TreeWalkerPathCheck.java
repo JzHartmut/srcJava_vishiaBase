@@ -70,7 +70,7 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String, Obj
       this.levelProcessMarked = (parent == null) ? 0: parent.levelProcessMarked -1;
     }
     
-    @Override public String toString(){ return dir + ": " + pathCheck; }
+    @Override public String toString(){ return this.dir + ": " + this.pathCheck; }
   }
 
   
@@ -87,36 +87,36 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String, Obj
     this.check = new PathCheck(sPathCheck);
   }
   
-  public void start(String startNode, Object info){ } //callback.start(startNode); }
+  @Override public void start(String startNode, Object info){ } //callback.start(startNode); }
 
-  public SortedTreeWalkerCallback.Result offerParentNode(String sName, Object data)
+  @Override public SortedTreeWalkerCallback.Result offerParentNode(String sName, Object data, Object walkInfo)
   {
     //String sName = node instanceof TreeNodeNamed_ifc ? ((TreeNodeNamed_ifc)node).getName() : node.toString();
     PathCheck use;
-    if(curr != null){ use = curr.pathCheck; }
+    if(this.curr != null){ use = this.curr.pathCheck; }
     else { use = this.check; }  //the first level.
     PathCheck ret = use.check(sName, true);
     if(ret == null){ return Result.skipSubtree; }
     else {
-      curr = new CurrDirChildren(sName, ret, curr);
+      this.curr = new CurrDirChildren(sName, ret, this.curr);
       return Result.cont; //callback.offerParentNode(node);
     }
   }
 
   
   
-  @Override public SortedTreeWalkerCallback.Result finishedParentNode(String parentNode, Object oPath)
+  @Override public SortedTreeWalkerCallback.Result finishedParentNode(String parentNode, Object oPath, Object oWalkInfo)
   {
     //checkRet[0] = check.bAllTree ? check : check.parent;
-    curr = curr.parent;
+    this.curr = this.curr.parent;
     return Result.cont; //callback.finishedParentNode(parentNode, cnt);
   }
 
-  public SortedTreeWalkerCallback.Result offerLeafNode(String sName, Object info) {
-    if(curr ==null)
+  @Override public SortedTreeWalkerCallback.Result offerLeafNode(String sName, Object info) {
+    if(this.curr ==null)
       Debugutil.stop();
-    assert(curr !=null);  //it is set in offerParentNode
-    PathCheck use =  curr.pathCheck;
+    assert(this.curr !=null);  //it is set in offerParentNode
+    PathCheck use =  this.curr.pathCheck;
     PathCheck ret = use.next !=null ? null : use.check(sName, false); //it should be the last.
     if(ret == null){ return Result.skipSubtree; }
     else return Result.cont; //callback.offerLeafNode(leafNode);
@@ -128,7 +128,7 @@ public class TreeWalkerPathCheck implements SortedTreeWalkerCallback<String, Obj
     
   }
 
-  public boolean shouldAborted()
+  @Override public boolean shouldAborted()
   {
     return false;
     //return callback.shouldAborted();

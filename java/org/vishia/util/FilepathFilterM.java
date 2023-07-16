@@ -26,6 +26,9 @@ public class FilepathFilterM implements ToStringBuilder {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-07-16 Hartmut new {@link #selAllFilesInDir()}, {@link #selAllDirEntries()}. {@link #selAllEntries()}
+   *   It is used for quest delete a directory entry, only if the first two conditions are met.
+   *   It checks the given mask.
    * <li>2023-02-14 Hartmut improved: better usable operation {@link #check(String, boolean)}, test is done. 
    *   Adaption in application necessary (since 2 weeks...)  
    * <li>2023-01-26 Hartmut created: This class is an enhancement of {@link FilepathFilter} with the multi selection. 
@@ -58,7 +61,7 @@ public class FilepathFilterM implements ToStringBuilder {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2023-01-26";
+  public final static String sVersion = "2023-07-16";
 
   /**This is the next part in the original path between /child/*/
   public final FilepathFilterM aFilterChild;
@@ -460,11 +463,11 @@ public class FilepathFilterM implements ToStringBuilder {
     FilepathFilterM nextf;
     if( this.bAllTree && this.aFilterChild !=null 
      && ( bDir && this.aFilterChild.aFilterChild !=null    // only check the child for bDir if it is not the last child 
-       || !bDir && this.aFilterChild.aFilterChild ==null   // the entry after "**/aFilterChild" has not a child
+       || !bDir && this.aFilterChild.aFilterChild ==null   // or the entry after "**/aFilterChild" has not a child
       ) ) {
-      nextf = this.aFilterChild.check(name, bDir);
-      if( nextf !=null ) {                                 // the next filter accepts the entry,
-        return nextf;                                      // then continue with it. 
+      nextf = this.aFilterChild.check(name, bDir);         // then use the child filter to check the entry 
+      if( nextf !=null ) {                                 // if the child filter accepts the entry,
+        return nextf;                                      // then continue with it. On a file as especially also on a directory 
       } else if(!bDir) {
         return null;                                       // the next entry must accept the name, if it is the last (!bDir)
       } else {
@@ -520,6 +523,40 @@ public class FilepathFilterM implements ToStringBuilder {
       }
     }
     return nextf;                                         // all has matched
+  }
+  
+  
+  
+  /**returns true if this filter will select all files asked from a dir level. It is adequate to the file filter "xx/*".
+   * It tests the last file level, not the directory level (it means #aFilterChild).
+   * The directory level should be given but as the last. Means "dirLevel/*"
+   * @return false if a child filter condition is given which may exclude files.
+   */
+  public boolean selAllFilesInDir ( ) {
+    return this.aFilterChild !=null                        // it is an dir entry
+        && this.aFilterChild.aFilterChild == null          // it is the last dir entry
+        && this.aFilterChild.selAllEntries();              // all files in child are selected
+  }
+  
+  
+  /**Returns true if this filter selects all sub directories till end of tree.
+   * @return false also if there may be a sub tree which is not selected. true if "** /fileFilter"
+   */
+  public boolean selAllDirEntries ( ) {
+    return this.aFilterChild !=null                  // it is a dir entry, has a child filter 
+        && this.aFilterChild.aFilterChild == null    // it is the last dir entry
+        && this.selAllEntries();                     // all dir entries are selected.
+  }
+  
+  /**returns true if this filter will select all entries of this level. 
+   * It is adequate "*" whereby more levels can follow, means "* /moreLevels"
+   * Also "**" is included, because the second '*' means {@link #bAllTree}.
+   * @return false if a filter condition is given which may exclude files.
+   */
+  public boolean selAllEntries ( ) {
+    return (this.sBegin == null || this.sBegin.length()==0) 
+        && (this.sEnd ==null || this.sEnd.length()==0) && this.sContain ==null
+        && this.variantsBegin ==null && this.variantsEnd ==null;
   }
   
   
@@ -648,7 +685,7 @@ public class FilepathFilterM implements ToStringBuilder {
         app.append('*');                                 // "before**" or only "**"
       }
     }
-    if(this.sContain !=null) { app.append('*').append(this.sContain); }  // maybe also only "...*" if sBehing ==""
+    if(this.sContain !=null) { app.append('*').append(this.sContain); }  // maybe also only "...*" if sBehind ==""
     //
     if(this.sEnd !=null) { 
       app.append('*').append(sEnd); 

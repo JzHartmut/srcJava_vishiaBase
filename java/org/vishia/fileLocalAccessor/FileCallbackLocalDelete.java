@@ -1,9 +1,14 @@
 package org.vishia.fileLocalAccessor;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
+import org.vishia.util.FilepathFilterM;
 
 public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
 
@@ -53,15 +58,49 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
 
   @Override public void start ( FileRemote startNode, FileRemote.CmdEventData co ) { }
 
-  @Override public Result offerParentNode ( FileRemote parentNode, Object data ) {
+  @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
     return Result.cont;
   }
 
-  @Override public Result finishedParentNode ( FileRemote parentNode, Object data ) {
+  @Override public Result offerLeafNode ( FileRemote fileRemote, Object oPath ) {
+    try{ 
+      Path path = (Path)oPath;                               // The FileLocalAccessor offers the java.nio.file.Path
+      Files.delete(path);
+      fileRemote.internalAccess().setDeleted(); 
+    }
+    catch(IOException exc) {
+      if(this.evBack !=null) {
+        FileRemoteProgressEvData data = this.evBack.data();
+        //data.answerToCmd
+        data.currFile = fileRemote;
+        data.sError = exc.getMessage();
+        data.progressCmd = FileRemoteProgressEvData.ProgressCmd.error;
+        this.evBack.sendEvent(this);
+      }
+    }
     return Result.cont;
   }
 
-  @Override public Result offerLeafNode ( FileRemote leafNode, Object info ) {
+  @Override public Result finishedParentNode ( FileRemote dirRemote, Object oPath, Object oWalkInfo ) {
+    FileAccessorLocalJava7.CurrDirChildren walkInfo = (FileAccessorLocalJava7.CurrDirChildren) oWalkInfo;
+    FilepathFilterM filter = walkInfo.fileFilter;
+    if(filter.selAllDirEntries() && filter.selAllFilesInDir()) {
+      try{ 
+        Path path = (Path)oPath;                           // The FileLocalAccessor offers the java.nio.file.Path
+        Files.delete(path); 
+        dirRemote.internalAccess().setDeleted(); 
+      }
+      catch(IOException exc) {                             // especially if the dir is not empty.
+        if(this.evBack !=null) {
+          FileRemoteProgressEvData data = this.evBack.data();
+          //data.answerToCmd
+          data.currFile = dirRemote;
+          data.sError = exc.getMessage();
+          data.progressCmd = FileRemoteProgressEvData.ProgressCmd.error;
+          this.evBack.sendEvent(this);
+        }
+      }
+    }
     return Result.cont;
   }
 

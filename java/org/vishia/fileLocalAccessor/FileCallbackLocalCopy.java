@@ -15,7 +15,6 @@ import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteAccessor;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
-import org.vishia.fileRemote.FileRemote.CmdEventData;
 
 
 /**This class contains the callback operations used for 
@@ -29,6 +28,11 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-15 The exclusion of the first directory level with 'bFirst' is now no more necessary
+   *   due to change in {@link FileAccessorLocalJava7.WalkFileTreeVisitor#preVisitDirectory(Path, java.nio.file.attribute.BasicFileAttributes)}.
+   *   There the first level does not call the {@link #offerParentNode(FileRemote, Object, Object)} as general solution. 
+   *   It was obviously while working on delete, should not delete the src directory itself,
+   *   then the bFirst was removed here (as another, but now seen as scratch, solution).  
    * <li>2023-04-09 improve: #offerLeafNode: Use {@link Files#copy(Path, Path, CopyOption...) if possible.
    *   It is faster if both files are in network on the same drive. No network data transmission clarified by OS level. 
    * <li>2014-12-12 Hartmut new: {@link CompareCtrl}: Comparison with suppressed parts especially comments. 
@@ -67,7 +71,7 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
 
   private FileRemote dirDst;
   
-  private boolean first;
+//  private boolean first;
   
   //private final String basepath1;
   //private final int zBasePath1;
@@ -97,7 +101,7 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
     this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dirDst = dirDstStart;
-    this.first = true; //true;   //depends on input line...
+    //this.first = true; //true;   //depends on input line...
   }
   
   
@@ -106,24 +110,24 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   
   
-  @Override public Result offerParentNode ( FileRemote dir, Object oPath) {
-    if(this.first){
-      this.first = false;  //first level: don't change dirDst. It matches to the first source dir.
-    } else {
+  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object filter) {
+//    if(this.first){
+//      this.first = false;  //first level: don't change dirDst. It matches to the first source dir.
+//    } else {
       String name = dir.getName();
-      this.dirDst = FileRemote.getDir(dirDst.getPathChars() + "/" + name);
+      this.dirDst = FileRemote.getDir(this.dirDst.getPathChars() + "/" + name);
       this.dirDst.mkdir();
       if(this.progress !=null) {
         this.progress.currDir = dir;
       }
-    }
+//    }
     return Result.cont;
   }
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, Object oPath){
-    dirDst = dirDst.getParentFile();
+  @Override public Result finishedParentNode(FileRemote file, Object oPath, Object oWalkInfo){
+    this.dirDst = this.dirDst.getParentFile();
     return Result.cont;      
   }
   
@@ -133,17 +137,17 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
    * @see org.vishia.util.SortedTreeWalkerCallback#offerLeafNode(java.lang.Object)
    */
   @Override public Result offerLeafNode(FileRemote file, Object info) {
-    int repeat = 5;
-    FileRemote fileDst = dirDst.child(file.getName());
+//    int repeat = 5;
+    FileRemote fileDst = this.dirDst.child(file.getName());
     Path pathSrc = file.path();
     Path pathDst = fileDst.path();
     InputStream inp = null;
     OutputStream wr = null;
     try{
-      FileStore fstoreSrc = Files.getFileStore(pathSrc);
-      FileStore fstoreDst = Files.getFileStore(pathDst.getParent());
-      FileSystemProvider provSrc = pathSrc.getFileSystem().provider();
-      FileSystemProvider provDst = pathDst.getParent().getFileSystem().provider();
+//      FileStore fstoreSrc = Files.getFileStore(pathSrc);
+//      FileStore fstoreDst = Files.getFileStore(pathDst.getParent());
+      @SuppressWarnings("resource") FileSystemProvider provSrc = pathSrc.getFileSystem().provider();
+      @SuppressWarnings("resource") FileSystemProvider provDst = pathDst.getParent().getFileSystem().provider();
       if(this.progress !=null) {
         this.progress.nrofBytesFile = file.length();
       }
@@ -194,7 +198,7 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   
   @Override public boolean shouldAborted(){
-    return aborted;
+    return this.aborted;
   }
 
   

@@ -570,6 +570,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       , Object oFileP, boolean OnlySpecialCall) {
     //super("??"); //sDirP + (sName ==null ? "" : ("/" + sName)));  //it is correct if it is a local file. 
     super(parent == null ? sPath.toString() : parent.getPath() + "/" + sPath);  //it is correct if it is a local file. 
+//    if(StringFunctions.contains(sPath, "testCopyDirTree"))
+//      Debugutil.stop();
     if(parent !=null){
       this.parent = parent;
       this.sDir = parent.getAbsolutePath();
@@ -697,19 +699,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           //maybe the child directory is registered already, take it.
           child = itsCluster.getFile(uPath, null, false);  //try to get the child from the cluster.
         } 
-        else { //if(child == null){ //not found, not a pathchild/name 
-//          if((flags & mDirectory)!=0){
-//            child = itsCluster.getFile(uPath, null, false);  //create the instance.
-//            child.length = length;
-//            child.date = dateLastModified;
-//            child.dateLastAccess = dateLastAccess;
-//            child.dateCreation = dateCreation;
-//            child.flags = flagNewFile;
-//          } else {
-            //it is a file, not a directory not found as child up to now, create a new instance:
-            child = new FileRemote(itsCluster, device, dir1, pathchild1, length
+        else {             
+          child = new FileRemote(itsCluster, device, dir1, pathchild1, length
                 , dateLastModified,dateCreation,dateLastAccess, flags, null, true);
-//          }
+          dir1.putNewChild(child);                       
         }
       } else {
         if(StringFunctions.compare(child.sFile, pathchild1)!=0) {
@@ -1566,9 +1559,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           ret.append('/'); 
         }
       }
-      ret.append(sFile);
-      if(this.isDirectory()){
-        ret.append('/');
+      if(zFile==1 && sFile.charAt(0) == '/') {
+        // it is a root dir, do nothing
+      } else {
+        ret.append(sFile);
+        if(this.isDirectory()){
+          ret.append('/');
+        }
       }
       return ret;
     } else {
@@ -1973,26 +1970,16 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * because the calling thread should not be waiting for success.
    * The success is notified with invocation of the 
    * {@link EventCmdPingPongType#callback}.{@link EventConsumer#processEvent(EventCmdPingPongType)} method. 
-   * @param backEvent The event for success.
+   * @param backEvent The event for success. If null, delete in the same thread in the local file system. 
    */
   public void delete(EventWithDst<FileRemoteProgressEvData,?> evBack){
     if(device == null){
       device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    device.delete(this, evBack);
-    if(false && device.isLocalFileSystem()){
-      boolean bOk;
-      if(isDirectory()){
-        bOk = FileSystem.rmdir(this);
-      } else {
-        bOk = ((File)oFile).delete();
-      }
-//      backEvent.successCode = bOk? 0 : -1;
-//      backEvent.occupy(evSrc, true);
-//      backEvent.sendEvent(FileRemote.CallbackCmd.done);
-    } else {
-      //TODO
-    }
+    CmdEventData co = new CmdEventData();
+    co.cmd = Cmd.delete;
+    co.filesrc = this;
+    this.device.cmd(evBack ==null, co, evBack);
   }
   
   
@@ -2099,7 +2086,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(file.isDirectory() && (children = file.children()) !=null)
     {
       System.out.println("FileRemote.deleteMarkedSub - offerDir; " + file.getAbsolutePath());
-      result = callback.offerParentNode(file, null);
+      result = callback.offerParentNode(file, null, null);
       if(result == FileRemoteWalkerCallback.Result.cont) { //only walk through subdir if cont
         Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
         while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
@@ -2141,7 +2128,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
         }//while
         if(result != FileRemoteWalkerCallback.Result.terminate){
           //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-          result = callback.finishedParentNode(file, null); //FileRemoteWalkerCallback.Result.cont;
+          result = callback.finishedParentNode(file, null, null); //FileRemoteWalkerCallback.Result.cont;
         }
       }//cont = openDir(...) 
       // else: not cont, do nothing
@@ -2637,7 +2624,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     Map<String, FileRemote> children = dir.children();
     FileRemoteWalkerCallback.Result result = FileRemoteWalkerCallback.Result.cont;
-    result = callback.offerParentNode(dir, null);
+    result = callback.offerParentNode(dir, null, null);
     if(result == FileRemoteWalkerCallback.Result.cont && children !=null){ //only walk through subdir if cont
       Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
       while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
@@ -2662,7 +2649,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     } 
     if(result != FileRemoteWalkerCallback.Result.terminate){
       //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-      result = callback.finishedParentNode(dir, null); //FileRemoteWalkerCallback.Result.cont;
+      result = callback.finishedParentNode(dir, null, null); //FileRemoteWalkerCallback.Result.cont;
     }
     return result;  //maybe terminate
   }
@@ -2705,12 +2692,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   /**Returns the state of the device statemachine, to detect whether it is active or ready.
    * @return a String for debugging and show.
    */
-  public CharSequence getStateDevice(){ return (device == null) ? "no-device" : device.getStateInfo(); }
+  public CharSequence getStateDevice ( ){ return (device == null) ? "no-device" : device.getStateInfo(); }
   
   public int ident(){ return _ident; }
   
   
-  @Override public String toString(){ return super.toString(); } //sDir + sFile + " @" + ident; }
+  @Override public String toString ( ){ return super.toString(); } //sDir + sFile + " @" + ident; }
   
   public enum Cmd {
     /**Ordinary value=0. */
@@ -3295,6 +3282,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     
     public void putNewChild(FileRemote child){ FileRemote.this.putNewChild(child); }
 
+    /**Sets this FileRemote to the delete state because the underlying file was deleted. 
+     * This FileRemote itself will be marked with 0 in all length, flags and date.
+     * This FileRemote will be removed from the parent's children list.
+     * */
+    public boolean setDeleted() {
+      setFlagBits(0xffffffff, 0); //clean all
+      setLengthAndDate(0, 0,0,0);
+      String key = FileRemote.this.sDir.length()>=3 && FileRemote.this.sDir.charAt(1)== ':' 
+          ? sFile.toUpperCase() : sFile;                   // Windows: keys in upper case
+      FileRemote fdel = FileRemote.this.parent.children.remove(key);
+      return fdel == FileRemote.this;
+    }
+    
     
   }
   
@@ -3526,13 +3526,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       if(callbackUser !=null){ callbackUser.finished(startDir); }
     }
 
-    @Override public Result offerParentNode(FileRemote file, Object data) {
+    @Override public Result offerParentNode(FileRemote file, Object data, Object filter) {
       //markAllInDirectory = true; markOneInDirectory = false;
-      if(callbackUser !=null) return callbackUser.offerParentNode(file, data); 
+      if(callbackUser !=null) return callbackUser.offerParentNode(file, data, filter); 
       else return Result.cont;      
     }
     
-    @Override public Result finishedParentNode(FileRemote dir, Object data) {
+    @Override public Result finishedParentNode(FileRemote dir, Object data, Object oWalkInfo) {
       boolean bSomeSelect = true;
       if(dir.isSymbolicLink()) {
         bSomeSelect = false;  //do not select, do not handle a symbolic link
@@ -3556,7 +3556,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
           else { parent = null; } //finish while
         }
       }
-      if(callbackUser !=null) return callbackUser.finishedParentNode(dir, null); 
+      if(callbackUser !=null) return callbackUser.finishedParentNode(dir, null, null); 
       else return Result.cont;      
     }
     

@@ -174,7 +174,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   
   
   
-  @Override public Result offerParentNode(FileRemote dir, Object oPath){
+  @Override public Result offerParentNode(FileRemote dir, Object oPath, Object oWalkInfo){
     //if(dir == this.dir1){ return Result.cont; } //the first entry
     //else {
     FileRemote dir2sub;
@@ -214,7 +214,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, Object data){
+  @Override public Result finishedParentNode(FileRemote file, Object data, Object oWalkInfo){
     
     return Result.cont;      
   }
@@ -477,11 +477,11 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     { }
 
     @Override
-    public Result finishedParentNode(FileRemote file, Object data)
+    public Result finishedParentNode(FileRemote file, Object data, Object oWalkInfo)
     { return Result.cont; }
 
     @Override
-    public Result offerParentNode(FileRemote file, Object data)
+    public Result offerParentNode(FileRemote file, Object data, Object filter)
     { return Result.cont; }
 
     @Override

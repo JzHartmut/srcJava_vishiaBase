@@ -1,6 +1,8 @@
 package org.vishia.util;
 
 import java.io.IOException;
+import java.util.Formatter;
+import java.util.Locale;
 
 /**This class supports testing. It may be seen as an alternative concept to the known Unit test concept (org.junit.Assert).
  * But it is more simple and obviously because the test case is shown, all successfully tests can be shown.
@@ -79,6 +81,42 @@ import java.io.IOException;
  */
 public class TestOrg {
 
+  /**Version, history and license.
+   * <ul>
+   * <li>2023-07-15 Hartmut using Locale.ENGLISH for formatted output, elsewhere a goofy 12,34 comes in German numbers instead 12.34
+   * <li>2023-02-02 Hartmut {@link #expect(boolean, int, String, Object...)}, {@link #out(CharSequence, Object...)} now with arguemnts  
+   * <li>2022-09-13 Hartmut {@link #expect(CharSequence, CharSequence, int, String)} now returns the position of difference for evaluation.  
+   * <li>2021-10-06 Hartmut {@link #expect(CharSequence, CharSequence, int, String)} enhanced with showing positions of difference
+   * <li>2020-06-21 Hartmut created as new feature for test organization.                  
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String sVersion = "2023-07-15";
+
+  
   
   private boolean bOk = true;
   
@@ -87,6 +125,10 @@ public class TestOrg {
   private boolean bTitleShown = false;
   
   private final int nTestVerboseLevel;
+  
+  private final StringBuilder sbTxt = new StringBuilder(200);
+  
+  private final Formatter formatter = new Formatter(this.sbTxt, Locale.ENGLISH);
   
   private final int nVerboseTitle;
   
@@ -302,8 +344,10 @@ public class TestOrg {
   public void out(CharSequence txt, Object ... args) {
     try{
       CharSequence txt2;
-      if(args.length >0) {
-        txt2 = String.format(txt.toString(), args);
+      if(args.length >0) {    // Note: The Appendable of the Formatter is a StringBuilder, that is a CharSequence 
+        this.sbTxt.setLength(0);
+        this.formatter.format(txt.toString(), args);
+        txt2 = this.sbTxt;
       } else { txt2 = txt; }
       this.out.append(txt2);
     } catch(IOException exc) {

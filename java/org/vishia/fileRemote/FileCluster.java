@@ -6,21 +6,24 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringFunctions_B;
-import org.vishia.util.StringFunctions_C;
-import org.vishia.util.StringPart;
 
-/**This class combines some {@link FileRemote} instances for common usage.
- * It ensures that the same FileRemote object is used for the same string given path.
- * It means the properties of a file of the operation system are known only one time for one Java application.
- * Difference to the operation system's file handling: There are more properties for a file especially mark. They are able to test
- * without operation system access. But the operation system's file properties should be synchronized with the FileRemote properties
- * if necessary.
+/**This class ensures that the same {@link FileRemote} instances is used for the same string given path.
+ * Different parts of the application can set some attributes in FileRemote, especially masks,
+ * it is ensured that all usages get the same instance for the same path.   
+ * It means also that the properties of a file of the operation system should be read only one time for one Java application.
+ * The access to the os file system is reduced. That is usefull especially for a remote file system.
+ * But of course synchronizations due to changes of the file system's content is a topic.
+ * The operation system's file properties should be synchronized with the FileRemote properties if necessary.
+ * <br>
+ * One difference between FileRemote and the operation system's file handling is: 
+ * FileRemote knows more properties for a file especially mark bits. They should be stored also unique as properties of the file.
+ * That is the first reason for this solution.
+ * 
  * @author Hartmut Schorrig
  *
  */
@@ -28,6 +31,8 @@ public class FileCluster
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-15 Hartmut chg: Some errors were obviously caused on non uppercase in windows and non found path from the first level
+   *   if the FileRemote was also created, but only as child from the root level. fixed.
    * <li>2023-04-02 Hartmut chg: Now uses the TreeMap instead of IndexMultiTable, it's better for debugging. 
    *   But the functionality have a Iterator for a dedicated range (key start with given string) is not supported by TreeMap.
    *   To fulfill it, now the {@link ListSubdirs} iterator was built for unchanged {@link #listSubdirs(String)}.
@@ -92,7 +97,7 @@ public class FileCluster
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2023-02-03";
+  public static final String version = "2023-07-15";
   
   /**This index contains the association between paths and its FileRemote instances for all known directories.
    * It are the used directories in the application, not all of the file system. 
@@ -168,12 +173,12 @@ public class FileCluster
     //Sets the iterator after the exact found position or between a possible position:
     final String sDirKey = bWindowsPath ? sDir2.toUpperCase() : sDir2;
     FileRemote dirCheck; // = idxPaths.search(sDir.toString());
-    int flagDir = sName == null ? FileRemote.mDirectory : 0;  //if name is not given, it is a directory. Elsewhere a file.
+//    int flagDir = sName == null ? FileRemote.mDirectory : 0;  //if name is not given, it is a directory. Elsewhere a file.
     dirCheck = this.idxPaths.get(sDirKey);
     if(dirCheck == null) { //nothing found, a path lesser then all other. for example first time if "C:/path" is searched whereby any "D:/path" are registered already.
       dirCheck = searchOrCreateDir(sDir2);
       //dirCheck = new FileRemote(this, null, null, sDir, 0, 0, 0, 0, flagDir, null, true);
-      //idxPaths.put(sDir, dirCheck);
+      //idxPathsput(sDir, dirCheck);
     } else {
       CharSequence sDirCheck = dirCheck.getPathChars();    // this ends with /
       int zDirCheck = sDirCheck.length();
@@ -196,7 +201,7 @@ public class FileCluster
       } else { //other directory name, maybe shorter for ex. "path" vs. "path2" or "path1" vs. "path2".
         dirCheck = searchOrCreateDir(sDir2);
         //dirCheck = new FileRemote(this, null, null, sDir, 0, 0, 0, 0, flagDir, null, true);
-        //idxPaths.put(sDir, dirCheck);  //Note: parents of the new FileRemote are recognized.
+        //idxPathsput(sDir, dirCheck);  //Note: parents of the new FileRemote are recognized.
       }
     }
     //builds or stores the requested file:
@@ -217,27 +222,30 @@ public class FileCluster
         int zPath = path.length();
         int pos1 = StringFunctions.lastIndexOf(path, 0, zPath-1, '/');
         int pos2 = StringFunctions.indexOf(path, '/', 0);
-        final CharSequence sGrandParent; 
+        String sGrandParent; 
         final int flags;
         if(pos1 == pos2){
           //root path
-          sGrandParent = path.subSequence(0, pos1+1);  //with ending /
+          sGrandParent = path.subSequence(0, pos1+1).toString();  //with ending /
           flags = FileRemote.mDirectory | FileRemote.mRoot;
         } else {
-          sGrandParent = path.subSequence(0, pos1);  //without ending /
+          sGrandParent = path.subSequence(0, pos1).toString();  //without ending /
           flags = FileRemote.mDirectory; // | FileRemote
         }
-        parentdirCheck = idxPaths.get(sGrandParent);
+        if(bWindowsPath) { sGrandParent = sGrandParent.toUpperCase(); }
+        parentdirCheck = this.idxPaths.get(sGrandParent);
         if(parentdirCheck == null) {
           parentdirCheck = new FileRemote(this, dirCheck.device, null, sGrandParent, 0, 0, 0, 0, flags, null, true);
-          idxPaths.put(sGrandParent.toString(), parentdirCheck);
+          idxPathsput(sGrandParent.toString(), parentdirCheck);
         }
         dirCheck.parent = parentdirCheck;
       }
       //check if the child is known in the parent:
       Map<String,FileRemote> children = parentdirCheck.children();
-      if(children == null || children.get(dirCheck.getName()) ==null) {
-        parentdirCheck.putNewChild(dirCheck);
+      String sChildKey = dirCheck.getName();
+      if(bWindowsPath) { sChildKey = sChildKey.toUpperCase(); }
+      if(children == null || children.get(sChildKey) ==null) {
+        parentdirCheck.putNewChild(dirCheck);              // put to parent if not done yet.
       }
       dirCheck = parentdirCheck;
     } //while
@@ -245,6 +253,14 @@ public class FileCluster
   }
 
 
+  
+  private void idxPathsput(String key, FileRemote value) {
+//    if(Character.isLowerCase(key.charAt(0))) {
+//      Debugutil.stop();
+//    }
+    this.idxPaths.put(key, value);
+  }
+  
 
 
   /**Searches a directory due to the given path. 
@@ -262,16 +278,27 @@ public class FileCluster
     FileRemote ret;
     boolean bWindows = sPath.length()>=2 && sPath.charAt(1)==':';
     String sPathKey = bWindows ? sPath.toUpperCase(): sPath;
+    int zPath = sPath.length();
+    assert(!sPath.endsWith("/") || zPath==3 || zPath==1);
     int pos9 = sPath.lastIndexOf('/');
     assert(pos9 >=0);  //because it is an absolute path.
-    if(pos9 == 0 || pos9 ==2 && sPath.charAt(1)==':') {
+    if(pos9 == zPath-1 && (pos9 == 0 || pos9 ==2 && sPath.charAt(1)==':')) {
+      
       //the root
       //It is a root drive, because not found '/'
-      ret = new FileRemote(this, null, null, sPath , 0, 0, 0, 0, FileRemote.mDirectory, null, true);
-      this.idxPaths.put(sPathKey, ret);  //Note: parents of the new FileRemote are recognized.
+      ret = this.idxPaths.get(sPathKey);
+      if(ret == null) {
+        ret = new FileRemote(this, null, null, sPath , 0, 0, 0, 0, FileRemote.mDirectory, null, true);
+        this.idxPathsput(sPathKey, ret);  //Note: parents of the new FileRemote are recognized.
+      }
     } 
     else {
-      String sParent = sPath.substring(0, pos9);
+      final String sParent;
+      if(pos9 == 0 || pos9 == 2 && sPath.charAt(1)==':') {
+        sParent = sPath.substring(0, pos9+1);              // the root
+      } else {
+        sParent = sPath.substring(0, pos9);
+      }
       FileRemote parent = getFile(sParent, null, true);
       if(parent ==null) {
         parent = searchOrCreateDir(sParent);  //recursively
@@ -279,10 +306,10 @@ public class FileCluster
       if(parent == null) {
         parent = new FileRemote(this, null, null, sParent, 0, 0, 0, 0, FileRemote.mDirectory, null, true);
         String sParentKey = bWindows ? sParent.toUpperCase() : sParent;
-        this.idxPaths.put(sParentKey, parent);  //Note: parents of the new FileRemote are recognized.
+        this.idxPathsput(sParentKey, parent);  //Note: parents of the new FileRemote are recognized.
       }
       ret = parent.subdir(sPath.substring(pos9+1));  //creates the child if not found, or found the existing instance.
-      this.idxPaths.put(sPathKey, ret);  //Note: parents of the new FileRemote are recognized.
+      this.idxPathsput(sPathKey, ret);  //Note: parents of the new FileRemote are recognized.
     }
     return ret;
   }

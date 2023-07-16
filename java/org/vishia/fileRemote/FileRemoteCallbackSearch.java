@@ -122,14 +122,14 @@ public class FileRemoteCallbackSearch implements FileRemoteWalkerCallback {
   
   
   
-  @Override public Result offerParentNode(FileRemote dir, Object oPath){
+  @Override public Result offerParentNode ( FileRemote dir, Object oPath, Object oWalkInfo){
     this.dirCurr = dir;
     return Result.cont;
   }
   
   /**Checks whether all files are compared or whether there are alone files.
    */
-  @Override public Result finishedParentNode(FileRemote file, Object oPath){
+  @Override public Result finishedParentNode(FileRemote file, Object oPath, Object oWalkInfo){
     
     return Result.cont;      
   }
