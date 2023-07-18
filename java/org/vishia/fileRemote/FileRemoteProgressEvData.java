@@ -211,7 +211,7 @@ public class FileRemoteProgressEvData implements Serializable, Payload
 
 
   
-  @Override public void clean () {
+  @Override public FileRemoteProgressEvData clean () {
   this.currFile = null;
   this.currDir = null;
   this.sError = null;
@@ -233,7 +233,7 @@ public class FileRemoteProgressEvData implements Serializable, Payload
   this.bOverwrite = false;
   this.bOverwriteAll = false;
   this.bMkdirAll = false;
-
+  return this;
 }
 
 

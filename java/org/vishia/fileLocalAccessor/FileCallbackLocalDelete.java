@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
+import org.vishia.fileRemote.FileRemoteWalker;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.util.FilepathFilterM;
 
@@ -82,7 +83,7 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
   }
 
   @Override public Result finishedParentNode ( FileRemote dirRemote, Object oPath, Object oWalkInfo ) {
-    FileAccessorLocalJava7.CurrDirChildren walkInfo = (FileAccessorLocalJava7.CurrDirChildren) oWalkInfo;
+    FileRemoteWalker.WalkInfo walkInfo = (FileRemoteWalker.WalkInfo) oWalkInfo;
     FilepathFilterM filter = walkInfo.fileFilter;
     if(filter.selAllDirEntries() && filter.selAllFilesInDir()) {
       try{ 

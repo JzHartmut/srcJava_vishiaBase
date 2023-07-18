@@ -121,7 +121,7 @@ public abstract class EventConsumerAwait implements EventConsumer{
    * It should be called on initializing the event, 
    * in any case before {@link #awaitExecution(long, boolean)} was called.
    */
-  public void clean ( ) {
+  public EventConsumerAwait clean ( ) {
     this.bDone = false;
     this.sError = null;
     if(this.bWait) {                   // any thread is waiting
@@ -130,6 +130,7 @@ public abstract class EventConsumerAwait implements EventConsumer{
       }
       this.bWait = false;              // set bWait anytime to false, clean an unexpected situation. 
     }
+    return this;
   }
 
 }

@@ -32,6 +32,8 @@ import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
+import org.vishia.util.FilepathFilter;
+import org.vishia.util.FilepathFilterM;
 import org.vishia.util.IndexMultiTable;
 import org.vishia.util.MarkMask_ifc;
 import org.vishia.util.SortedTreeWalkerCallback;
@@ -191,6 +193,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-18 rename {@link Cmd#walkRefresh} from Cmd.walkSelectMark, the name is more concise. 
+   * <li>2023-07-18 new {@link #walkLocal(Cmd, FileRemote, int, int, String, int, int, FileRemoteWalkerCallback, CmdEventData, int, EventWithDst)}
+   *   it uses the moved and renewed {@link FileRemoteWalker}. 
    * <li>2023-07-17 remove some old stuff for delete, cleanup
    * <li>2023-07-17 {@link CmdEventData} has now private members and getter. It should be used consequently as payload for a remote access.
    *   Yet it is obfuscated, it is necessary to know the FileRemote instance while working with. But this is not possible if it is really remote.
@@ -1057,16 +1062,45 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * either on another device or in another thread, depending on its {@link #device()}.
    * It uses the {@link FileRemoteAccessor#cmd(boolean, CmdEventData, EventWithDst)} for access, it's only a wrapper.
    * But the {@link #device()} is clarified before.
-   * @param cmdData data for the command, see elaborately description of the data class.
-   *   This data are used as payload for a message to a remote device. 
-   * @param progressEv back information (back event) to inform about progress and success.
+   * @param cmd one of the admissible commands for this argument set, all commands which should be executable in a remote device.
+   * @param dstdir if necessary a destination, null if cmd does not need a destination
+   * @param selectFilter to select files and dirs per name.
+   * @param cycleProgress 0 = progressEv for any file action, else time in ms for progress feedback
+   * @param depthWalk 0 any deepness, 1 = one child level
+   * @param cmdDataArg If null then create temporary instance internally, else reuse it
+   * @param progressEv event for back information to inform about progress and success. 
+   *    null then execution is done in the own thread if possible in the own device (local file system).
+   *    If it should be executed really on a remote device, then null = no feedback.
+   *    Else use of this event instance for feedback and done.
+   *    Use {@link EventConsumerAwait#awaitExecution(long, boolean)} for done information.
+   *    The {@link EventConsumer} is the instance used as destination for {@link EventWithDst#EventWithDst(String, EventSource, EventConsumer, org.vishia.event.EventThread_ifc, Payload)}. 
+   *    The instances for the progressEv and its consumer can be created and used persistently.
+   *    Note that {@link EventWithDst#cleanData()} should be invoked before call this operation.
    */
-  public void remoteCmd ( CmdEventData cmdData, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
+  public void cmdRemote ( Cmd cmd, FileRemote dstdir, String selectFilter, int cycleProgress, int depthWalk
+      , CmdEventData cmdDataArg, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    this.device.cmd(false, cmdData, progressEv);
-    
+    CmdEventData cmdData = cmdDataArg == null ? new CmdEventData() : cmdDataArg.clean();
+    cmdData.setCmdWalkRemote(this, cmd, dstdir, selectFilter, cycleProgress, depthWalk);
+    this.device.cmd(progressEv ==null, cmdData, progressEv);
+  }
+  
+  
+  public void walkLocal ( Cmd cmd, FileRemote dstdir, int markSet, int markSetDir, String selectFilter, int selectMask, int depthWalk
+      , FileRemoteWalkerCallback callback
+      , CmdEventData cmdDataArg, int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    CmdEventData cmdData = cmdDataArg == null ? new CmdEventData() : cmdDataArg;
+    cmdData.setCmdWalkLocal(this, cmd, dstdir, markSet, markSetDir, selectFilter, selectMask, depthWalk, callback, cycleProgress);
+    if(progressEv == null || cycleProgress <0) {
+      FileRemoteWalker.walkFileTree(cmdData, progressEv);
+    } else {
+      FileRemoteWalker.walkFileTreeThread(cmdData, progressEv);
+    }
   }
   
   
@@ -1091,7 +1125,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     CmdEventData co = new CmdEventData();
-    co.cmd = Cmd.walkSelectMark;
+    co.cmd = Cmd.walkRefresh;
     co.depthWalk = 1;
     co.filesrc = this;
     co.cycleProgress = 0;                        //calback on any file and dir
@@ -1129,7 +1163,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(callbackUser !=null)
       Debugutil.stop();
     CmdEventData co = new CmdEventData();
-    co.cmd = Cmd.walkSelectMark;
+    co.cmd = Cmd.walkRefresh;
     co.filesrc = this;
     co.depthWalk = depth;
     co.markSet = setMark;
@@ -2406,87 +2440,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
-   * To run this routine in an extra Thread use {@link #walkFileTreeThread(int, FileRemoteWalkerCallback)}.
-   * This operation is not intent to use working with the real file system.
-   * For example {@link #copyDirTreeTo(FileRemote, int, String, int, FileRemoteProgressEvData)}
-   * calls internally {@link FileRemoteAccessor#walkFileTree(FileRemote, boolean, boolean, boolean, String, long, int, FileRemoteWalkerCallback)}
-   * which is implemented in the device, for example using java.nio.file.Files operations.
-   * This operation iterates only over the children and sub children in the FileRemote directory tree.
-   * Whether the FileRemote instances are synchronized with the file device or not, should be clarified in the callback.
-   * 
-   * Note: it should not change the children list, because it uses an iterator.
-   * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
-   * @param callback contains the quest and operations due to the files.
-   */
-  @Deprecated public void walkFileTree(int depth, FileRemoteWalkerCallback callback)
-  {
-    callback.start(this, null);
-    walkSubTree(this, depth <=0 ? Integer.MAX_VALUE: depth, callback);
-    callback.finished(this);
-  }
-    
-  
-  
-  
-  /**Walks to the tree of children with given files, <b>without</b> synchronization with the device.
-   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteWalkerCallback)} in that thread.
-   * The user is informed about progress and results via the callback instance.
-   * Note: The file tree should not be changed outside or inside the callback methods because the walk method uses an iterators.
-   * If the children lists are changed concurrently, then the walking procedure may be aborted because an {@link ConcurrentModificationException}
-   * is thrown.
-   * @param depth at least 1. Use 0 to enter all levels.
-   * @param callback
-   */
-  @Deprecated public void walkFileTreeThread(int depth, FileRemoteWalkerCallback callback)
-  {
-//    WalkThread thread1 = new WalkThread(this, depth, callback);
-//    thread1.start();
-  }
-  
-  
-  
-  /**See {@link #walkFileTree(int, FileRemoteWalkerCallback)}, invoked internally recursively.
-   */
-  @Deprecated private static FileRemoteWalkerCallback.Result walkSubTree(FileRemote dir, int depth, FileRemoteWalkerCallback callback)
-  {
-    
-    Map<String, FileRemote> children = dir.children();
-    FileRemoteWalkerCallback.Result result = FileRemoteWalkerCallback.Result.cont;
-    result = callback.offerParentNode(dir, null, null);
-    if(result == FileRemoteWalkerCallback.Result.cont && children !=null){ //only walk through subdir if cont
-      Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
-      while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
-        try{
-          Map.Entry<String, FileRemote> file1 = iter.next();
-          FileRemote file2 = file1.getValue();
-          if(file2.isDirectory()){
-//            cnt.nrofParents +=1;
-            if(depth >1){
-              //invokes offerDir for file2
-              result = walkSubTree(file2, depth-1, callback);  
-            } else {
-              //because the depth is reached, offerFile is called.
-              result = callback.offerLeafNode(file2, null);  //show it as file instead walk through tree
-            }
-          } else {
-//            cnt.nrofLeafss +=1;
-            result = callback.offerLeafNode(file2, null);  //a regular file.
-          }
-        }catch(Exception exc){ System.err.println(Assert.exceptionInfo("FileRemote unexpected - walkSubtree", exc, 0, 20, true)); }
-      }
-    } 
-    if(result != FileRemoteWalkerCallback.Result.terminate){
-      //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-      result = callback.finishedParentNode(dir, null, null); //FileRemoteWalkerCallback.Result.cont;
-    }
-    return result;  //maybe terminate
-  }
-
-
-  
-  
-  
   
   /**Count the sum of length of all files in this directory tree.
    * <br><br>
@@ -2528,6 +2481,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   @Override public String toString ( ){ return super.toString(); } //sDir + sFile + " @" + ident; }
   
+  
+  
+  
+
+  
   public enum Cmd {
     /**Ordinary value=0. */
     noCmd ,
@@ -2553,8 +2511,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     mkDirs,
     walkTest,
     walkDelete,
-    /**walk through the file tree with given select masks, set or reset mark bits.*/
-    walkSelectMark,
+    /**walk through the file tree for refreshing the selected files with really file system information.
+     * For a remote device it presumes that the back event is given and received for any file.*/
+    walkRefresh,
     walkCopyDirTree,
     /**walk through two file trees with given select masks, compare the files and mark due to comparison result.*/
     walkCompare,
@@ -2659,7 +2618,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param cycleProgress for the callback event to inform about progress
      * @param depthWalk
      */
-    public void setCmdWalkRemote ( FileRemote srcdir, Cmd cmd, FileRemote dstdir, String selectFilter, int cycleProgress, int depthWalk) {
+    public void setCmdWalkRemote ( FileRemote srcdir, Cmd cmd, FileRemote dstdir
+        , String selectFilter, int cycleProgress, int depthWalk) {
+      clean();
       this.filesrc = srcdir;
       this.filedst = dstdir;
       this.cmd = cmd; this.cycleProgress = cycleProgress;
@@ -2675,6 +2636,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * @param cmd
      */
     public void setCmdChgFileRemote ( FileRemote file, Cmd cmd, FileRemote fileDst, String nameNew, long dateNew  ) {
+      clean();
       this.filesrc = file;
       this.filedst = fileDst;
       this.cmd = cmd; 
@@ -2692,16 +2654,19 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
      * The access can be run in the same thread or in another thread.
      * @param srcdir
      * @param cmd
-     * @param callback It can be given if the cmd has not an own callback.
      * @param dstdir
      * @param markSet
      * @param markSetDir
      * @param selectFilter
      * @param selectMask
-     * @param cycleProgress
      * @param depthWalk
+     * @param callback It can be given if the cmd has not an own callback.
+     * @param cycleProgress determines the time of sending the progress event. -1 = never, 0=on any file, >0 is milliseconds.
      */
-    public void setCmdWalkLocal ( FileRemote srcdir, Cmd cmd, FileRemote dstdir, int markSet, int markSetDir, String selectFilter, int selectMask, int cycleProgress, int depthWalk) {
+    public void setCmdWalkLocal ( FileRemote srcdir, Cmd cmd, FileRemote dstdir, int markSet, int markSetDir
+        , String selectFilter, int selectMask, int depthWalk
+        , FileRemoteWalkerCallback callback, int cycleProgress) {
+      clean();
       this.filesrc = srcdir;
       this.filedst = dstdir;
       this.markSetDir = markSetDir;
@@ -2709,6 +2674,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.cmd = cmd; this.cycleProgress = cycleProgress;
       this.selectFilter = selectFilter; this.selectMask = selectMask;
       this.depthWalk = depthWalk;
+      this.callback = callback;
     }
     
     public Cmd cmd ( ) { return cmd; }
@@ -2766,9 +2732,24 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
 
 
-    @Override public void clean () {
-      // TODO Auto-generated method stub
-      
+    @Override public CmdEventData clean () {
+      this.cmd = Cmd.noCmd;
+      this.cycleProgress = 0;
+      this.filesrc = null;
+      this.filedst = null;
+      this.namesSrc = null;
+      this.markSet = 0;
+      this.markSetDir = 0;
+      this.selectFilter = null;
+      this.depthWalk = 0;        //means any deepness
+      this.nameDst = null;
+      this.modeCopyOper = 0;
+      this.newName = null;
+      this.maskFlags = 0;
+      this.newFlags = 0;
+      this.newDate = 0;
+      this.callback = null;
+      return this;
     }
 
 
@@ -3500,40 +3481,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Class to build a Thread instance to execute {@link FileRemote#walkFileTree(int, FileRemoteWalkerCallback)} in an extra thread.
-   * This instance is created while calling {@link FileRemote#walkFileTreeThread(int, FileRemoteWalkerCallback)}.
-   * The thread should be started from outside via {@link #start()}. The thread is destroyed on finishing the walking.
-   * 
-   * The user is informed about the progress via the callback interface, see ctor. 
-   */
-  @Deprecated static class WalkThread extends Thread 
-  { 
-    final int depth; 
-    final FileRemoteWalkerCallback callback;
-    final FileRemote startdir;
-    
-    /**Constructs with given file and callback.
-     * @param startdir
-     * @param depth
-     * @param callback
-     */
-    WalkThread(FileRemote startdir, int depth, FileRemoteWalkerCallback callback) {
-      super("walkFileTreeThread");
-      this.depth = depth;
-      this.callback = callback;
-      this.startdir = startdir;
-    }
-    
-    
-    @Override public void run(){
-      try{
-        startdir.walkFileTree(depth, callback);
-      } catch( Exception exc){
-        System.out.println("FileRemote - walkFileTreeThread");
-      }
-    }
-  }
-
   
 }  
   

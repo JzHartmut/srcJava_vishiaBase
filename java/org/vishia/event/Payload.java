@@ -4,7 +4,7 @@ public interface Payload {
 
   
   /**Common operation to clean the content. */
-  void clean();
+  Payload clean();
   
   /**Converts to dedicated bytes which presents the content.
    * The kind of serialization is programmed manually to regard specific conditions

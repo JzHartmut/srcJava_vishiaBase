@@ -176,7 +176,7 @@ public class FileCluster
 //    int flagDir = sName == null ? FileRemote.mDirectory : 0;  //if name is not given, it is a directory. Elsewhere a file.
     dirCheck = this.idxPaths.get(sDirKey);
     if(dirCheck == null) { //nothing found, a path lesser then all other. for example first time if "C:/path" is searched whereby any "D:/path" are registered already.
-      dirCheck = searchOrCreateDir(sDir2);
+      dirCheck = searchOrCreateDir(sDir2);                 // returns the parent dir, recursively down to root if necessary
       //dirCheck = new FileRemote(this, null, null, sDir, 0, 0, 0, 0, flagDir, null, true);
       //idxPathsput(sDir, dirCheck);
     } else {
