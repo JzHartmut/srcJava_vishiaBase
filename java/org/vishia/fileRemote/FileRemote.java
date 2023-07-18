@@ -191,6 +191,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-17 remove some old stuff for delete, cleanup
+   * <li>2023-07-17 {@link CmdEventData} has now private members and getter. It should be used consequently as payload for a remote access.
+   *   Yet it is obfuscated, it is necessary to know the FileRemote instance while working with. But this is not possible if it is really remote.
    * <li>2023-04-06 Hartmut chg: {@link #copyTo(FileRemote, EventWithDst)} and {@link #moveTo(String, FileRemote, FileRemoteProgressEvData)}
    *   now via device.cmd(), the new approach. Used in The.file.Commander  
    * <li>2023-04-02 Hartmut chg: {@link #getPathChars()} now returns dir path ends with slash. 
@@ -373,7 +376,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20230213;
+  public static final String version = "2023-06-17";
 
   public final static int modeCopyReadOnlyMask = 0x00f
   , modeCopyReadOnlyNever = 0x1, modeCopyReadOnlyOverwrite = 0x3, modeCopyReadOnlyAks = 0;
@@ -1050,6 +1053,22 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
+  /**This is the basic operation to force execution with this file or dir
+   * either on another device or in another thread, depending on its {@link #device()}.
+   * It uses the {@link FileRemoteAccessor#cmd(boolean, CmdEventData, EventWithDst)} for access, it's only a wrapper.
+   * But the {@link #device()} is clarified before.
+   * @param cmdData data for the command, see elaborately description of the data class.
+   *   This data are used as payload for a message to a remote device. 
+   * @param progressEv back information (back event) to inform about progress and success.
+   */
+  public void remoteCmd ( CmdEventData cmdData, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    this.device.cmd(false, cmdData, progressEv);
+    
+  }
+  
   
   /**Gets the properties of the file from the physical file immediately in this thread.*/
   public void refreshProperties ( ) {
@@ -1210,22 +1229,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  public void deleteFilesDirTree(boolean bWait, int depth, String mask, int selectMask
+  public void deleteFilesDirTree(boolean bWait, int depth, String mask
       , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     CmdEventData co = new CmdEventData();
-    co.cmd = Cmd.walkDelete;
-    co.depthWalk = 0;                            // walk through all levels.
-    co.filesrc = this;
-    co.filedst = null;
-    co.depthWalk = depth;
-    co.markSet = 0;
-    co.markSetDir = 0;
-    co.selectFilter = mask;
-    co.selectMask = selectMask;
-    co.cycleProgress = 100;                        //calback on any file and dir
+    co.setCmdWalkRemote(this, Cmd.walkDelete, null, mask, 100, depth);
     this.device.cmd(bWait, co, evBack);
   }
   
@@ -1534,10 +1544,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   @Override public String getPath(){ 
     CharSequence csPath = getPathChars();
     int zcs = csPath.length();
-    if(csPath.charAt(zcs-1) == '/') {
-      return csPath.subSequence(0, zcs-1).toString();
+    if(csPath.charAt(zcs-1) != '/' || zcs ==1 ||  zcs==3 && csPath.charAt(1) == ':') {
+      return csPath.toString();     // do not remove '/' on end if it is a root path         
     } else {
-      return csPath.toString(); 
+      return csPath.subSequence(0, zcs-1).toString();      // remove the '/' on end to make it compatible with File.getPath()
     }
   } 
   
@@ -1984,197 +1994,16 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  /**Deletes all checked and marked files in any level of this directory.
-   * @param evback This event have to be processed and returned from calling 
-   *   {@link #check(String, String, CallbackEvent)}.
-   * @param mode
-   */
-  public void deleteChecked(FileRemoteProgressEvData evback, int mode){ 
-//    CmdEvent ev = evback.getOpponent();
-//    if(ev.occupy(evSrc, true)){
-//      ev.filesrc = this;
-//      ev.filedst = null;
-//      ev.modeCopyOper = mode;
-//      ev.sendEvent(Cmd.delChecked);
-//    }
-  }
-
-  
-  
-  
-  /**Deletes a files given by path maybe in a remote device. This is a send-only routine without feedback,
-   * because the calling thread should not be waiting for success.
-   * The success is notified with invocation of the 
-   * {@link EventCmdPingPongType#callback}.{@link EventConsumer#processEvent(EventCmdPingPongType)} method. 
-   * @param backEvent The event for success.
-   */
-  public void delete(String sPath, boolean deleteReadOnly, FileRemoteProgressEvData backEvent){
-    boolean bOk;
-    List<File> listFiles = new LinkedList<File>();
-    try{
-      bOk =FileSystem.addFileToList(this, sPath, listFiles);
-      for(File file: listFiles){
-        if(file.isDirectory()){
-          if(!FileSystem.rmdir(file)){ bOk = false; };
-        } else {
-          if(!file.canWrite()){
-            file.setWritable(true);
-          }
-          if(!file.delete()){ bOk = false; };
-        }
-      }
-    } catch(Exception exc){
-      bOk = false;
-    }
-    if(backEvent !=null){
-//      backEvent.occupy(evSrc, true);
-//      backEvent.successCode = bOk? 0 : -1;
-//      backEvent.sendEvent(FileRemote.CallbackCmd.done);
-    }
-  }
   
   
   
   
   
-  /**Walks to the tree of children with given files, without synchronization with the device.
-   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteWalkerCallback)} in that thread.
-   * The user is informed about progress and results via the callback instance.
-   * Note: it should not change the children list, because it uses an iterator.
-   * @param depth at least 1, 0 to enter all levels.
-   * @param callback
-   */
-  public void deleteMarkedInThread(int mark, FileRemoteWalkerCallback callback, FileRemoteProgressEvData progress)
-  {
-//    DeleteThread thread1 = new DeleteThread(mark, this, callback, progress);
-//    thread1.start();
-  }
   
   
-  /**Walks to the tree of children with given files, without synchronization with the device.
-   * This routine creates and starts a {@link WalkThread} and runs {@link #walkFileTree(int, FileRemoteWalkerCallback)} in that thread.
-   * The user is informed about progress and results via the callback instance.
-   * Note: it should not change the children list, because it uses an iterator.
-   * @param depth at least 1, 0 to enter all levels.
-   * @param callback
-   */
-  @Deprecated public void deleteMarked(int mark, FileRemoteWalkerCallback callback, FileRemoteProgressEvData progress)
-  {
-    if(callback != null) { callback.start(this, null); }
-    if(deleteMarkedSub(mark, this, 10000, callback, progress)) {
-      delete(); //delete the directory or file.
-    }
-    if(callback != null) { callback.finished(this); }
-    
-  }
-  
-  
-  
-  /**Deletes a subdirectory. This routine is invoked from {@link #deleteMarked(int, FileRemoteWalkerCallback)} and recursively in this routine
-   * for sub directories.
-   * @param mark
-   * @param file The directory
-   * @param depth
-   * @param callback
-   * @return true if the directory is empty or it is a file.
-   */
-  @Deprecated private static boolean deleteMarkedSub( int mark, FileRemote file, int depth, FileRemoteWalkerCallback callback, FileRemoteProgressEvData progress)
-  {
-    boolean bDeleteParent = true;
-    Map<String, FileRemote> children;
-    FileRemoteWalkerCallback.Result result;
-    if(file.isDirectory() && (children = file.children()) !=null)
-    {
-      System.out.println("FileRemote.deleteMarkedSub - offerDir; " + file.getAbsolutePath());
-      result = callback.offerParentNode(file, null, null);
-      if(result == FileRemoteWalkerCallback.Result.cont) { //only walk through subdir if cont
-        Iterator<Map.Entry<String, FileRemote>> iter = children.entrySet().iterator();
-        while(result == FileRemoteWalkerCallback.Result.cont && iter.hasNext()) {
-          try {
-            Map.Entry<String, FileRemote> file1 = iter.next();
-            FileRemote file2 = file1.getValue();
-            boolean bCheckDelete;
-            if(file2.isDirectory()){
-              if(depth >1){
-                //invokes offerDir for file2
-                bCheckDelete = deleteMarkedSub(mark, file2, depth-1, callback, progress);  //directory is not delete completely.
-              } else {
-                //because the depth is reached, offerFile is called.
-                System.out.println("FileRemote.deleteMarkedSub - offer empty dir; " + file2.getName());
-                result = callback !=null ? callback.offerLeafNode(file2, null) : Result.cont;  //show it as file instead walk through tree
-                bCheckDelete = result == Result.skipSubtree;
-              }
-            } else {
-              //a file:
-              result = callback !=null ? callback.offerLeafNode(file2, null) : Result.cont;  //show it as file instead walk through tree
-              bCheckDelete = result == Result.cont;
-            }
-            //Check whether a file or directory should be deleted:
-            if(bCheckDelete) {
-              //delete the file or the directory which's content is successfully removed.
-              if(checkAndDelete(file2, iter, mark)) {
-//                cnt.nrofLeafSelected +=1;
-//                cntAll.nrofLeafSelected +=1;
-              } else {
-                bDeleteParent = false;
-              }
-            } else {
-              bDeleteParent = false;  //subDir not empty or callback forces skip.
-            }
-          }
-          catch(Exception exc){  //for one file in loop: 
-            System.err.println(Assert.exceptionInfo("FileRemote unexpected - deleteMarkedSub", exc, 0, 20, true)); 
-          }
-        }//while
-        if(result != FileRemoteWalkerCallback.Result.terminate){
-          //continue with parent. Also if offerDir returns skipSubdir or any file returns skipSiblings.
-          result = callback.finishedParentNode(file, null, null); //FileRemoteWalkerCallback.Result.cont;
-        }
-      }//cont = openDir(...) 
-      // else: not cont, do nothing
-    } 
-    else { //a file or empty directory:
-      result = callback.offerLeafNode(file, null);
-      if(result != Result.cont) {
-        bDeleteParent = false;  //don't delete 
-      }
-    }
-    return bDeleteParent;
-  }
 
 
   
-  
-  /**Checks whether the file is marked, delete it if marked
-   * @param file2
-   * @param iter
-   * @param mark
-   * @return true if marked and successfully deleteted, false if not marked or delete error.
-   */
-  @Deprecated private static boolean checkAndDelete(FileRemote file2, Iterator<Map.Entry<String, FileRemote>> iter, int mark )
-  { final boolean bDelete;
-    int markFile = file2.getMark();
-    boolean isDeleted;
-    if( (markFile & mark) !=0)
-    { if(file2.device == null){
-        file2.device = getAccessorSelector().selectFileRemoteAccessor(file2.getAbsolutePath());
-      }
-      //NOTE: Don't call file2.delete() because it changes the iterated Map.
-      System.out.println("FileRemote.deleteMarkedSub - delete File, " + file2.getName());
-      isDeleted = file2.device.delete(file2, null);  //delete on file system with waiting on success.
-      if(isDeleted){
-        iter.remove();  //from children list of the parent.
-        bDelete = true;
-      } else {
-        System.err.println("FileRemote.delete - can't delete, >>>" + file2.getAbsolutePath()+ "<<<");
-        bDelete = false;  //delete fails
-      }
-    } else {
-      System.out.println("FileRemote.deleteMarkedSub - offer file not marked, " + file2.getName());
-      bDelete = false;  //not marked
-    }
-    return bDelete;
-  }
   
   
 
@@ -2764,43 +2593,43 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     private static final long serialVersionUID = 1L;
 
     /**The command to execute with this cmd event payload. */
-    public FileRemote.Cmd cmd;
+    private FileRemote.Cmd cmd;
 
     /**Milliseconds for cycle or specific determined progress event:
      * <br>0= progress event for any file and directory entry. It is especially for refresh.
      */
-    public int cycleProgress;
+    private int cycleProgress;
     
     /**Source and destination files for copy, rename, move or the only one filesrc. filedst may remain null then. */
-    public FileRemote filesrc, filedst;
+    private FileRemote filesrc, filedst;
 
     /**List of names separated with ':' or " : " or empty. If not empty, filesrc is the directory of this files. */
-    public String namesSrc;
+    private String namesSrc;
     
     /**Bits to mark files while walking through. */
-    public int markSet, markSetDir;
+    private int markSet, markSetDir;
     
     /**Wildcard mask to select source files. 
      * Maybe empty or null, then all files are used.*/
-    public String selectFilter;
+    private String selectFilter;
     
     /**Bits to select from mark. 
      * If files are marked before by comparison, als manually, this can be used.
      * It can use some specific bits: {@link FileMark#orWithSelectString}, {@link FileMark#ignoreSymbolicLinks}
      */
-    public int selectMask;
+    private int selectMask;
     
     /**Depths to walk in dir tree, 0: all. */
-    public int depthWalk;
+    private int depthWalk;
     
     /**Designation of destination file names maybe wildcard mask. */
-    public String nameDst;
+    private String nameDst;
     
     /**A order number for the handled file which is gotten from the callback event to ensure thats the right file. */
-    //public int orderFile;
+    //private int orderFile;
     
     /**Mode of operation, see {@link FileRemote#modeCopyCreateAsk} etc. */
-    public int modeCopyOper;
+    private int modeCopyOper;
     
     /**For {@link Cmd#chgProps}: a new name. */
     String newName;
@@ -2812,15 +2641,78 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     /**For {@link Cmd#chgProps}: A new time stamp. */
     long newDate;
     
-    public FileRemoteWalkerCallback callback;  //it may be implementation specific
+    private FileRemoteWalkerCallback callback;  //it may be implementation specific
     
     
     /**Creates the payload of a command event
      */
-    public CmdEventData(){ 
-    }
+    public CmdEventData(){     }
     
 
+    /**Sets the command and data for walk through the file system for remote access.
+     * It is complete for a walking. Note: The {@link #callback} cannot be given here, it should be organized in the remote device.
+     * It is consequently to do so also if it is executed only in another thread on the same device.
+     * @param srcdir the directory which is used for walk through as base or start directory.
+     * @param cmd command to execute. It determines what is done with the file. Only specific commands are admissible.
+     * @param dstdir the directory which is used as destination due to the cmd.
+     * @param selectFilter A filter for the sub dir and files
+     * @param cycleProgress for the callback event to inform about progress
+     * @param depthWalk
+     */
+    public void setCmdWalkRemote ( FileRemote srcdir, Cmd cmd, FileRemote dstdir, String selectFilter, int cycleProgress, int depthWalk) {
+      this.filesrc = srcdir;
+      this.filedst = dstdir;
+      this.cmd = cmd; this.cycleProgress = cycleProgress;
+      this.selectFilter = selectFilter; 
+      this.depthWalk = depthWalk;
+    }
+    
+    
+    
+    /**Sets the command and data for changing a file in a remote file system. All data for change are in the payload.
+     * It is also for delete the file or get data from the file, or also copy one file.
+     * @param file
+     * @param cmd
+     */
+    public void setCmdChgFileRemote ( FileRemote file, Cmd cmd, FileRemote fileDst, String nameNew, long dateNew  ) {
+      this.filesrc = file;
+      this.filedst = fileDst;
+      this.cmd = cmd; 
+      this.newName = nameNew;
+      this.newDate = dateNew;
+      this.cycleProgress = 0;
+      this.selectFilter = null; 
+      this.depthWalk = 0;
+    }
+    
+    
+    
+    /**Sets the command and data for walk through the file system on a local device in the same data space. 
+     * It means the FileRemote instances are available. It is for the PC Operation system files on the same PC or in the PCs network access.
+     * The access can be run in the same thread or in another thread.
+     * @param srcdir
+     * @param cmd
+     * @param callback It can be given if the cmd has not an own callback.
+     * @param dstdir
+     * @param markSet
+     * @param markSetDir
+     * @param selectFilter
+     * @param selectMask
+     * @param cycleProgress
+     * @param depthWalk
+     */
+    public void setCmdWalkLocal ( FileRemote srcdir, Cmd cmd, FileRemote dstdir, int markSet, int markSetDir, String selectFilter, int selectMask, int cycleProgress, int depthWalk) {
+      this.filesrc = srcdir;
+      this.filedst = dstdir;
+      this.markSetDir = markSetDir;
+      this.markSet = markSet;
+      this.cmd = cmd; this.cycleProgress = cycleProgress;
+      this.selectFilter = selectFilter; this.selectMask = selectMask;
+      this.depthWalk = depthWalk;
+    }
+    
+    public Cmd cmd ( ) { return cmd; }
+    
     public final FileRemote filesrc()
     {
       return filesrc;
@@ -2828,32 +2720,49 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
     public final FileRemote filedst()
     {
-      return filedst;
+      return this.filedst;
     }
 
+    public FileRemoteWalkerCallback callback () { return this.callback; }
+    
+    public void setCallback (FileRemoteWalkerCallback callback) { this.callback = callback; }
+    
+    public int markSet () { return this.markSet; }
+    
+    public int markSetDir () { return this.markSetDir; }
+    
+    public String selectFilter () { return this.selectFilter; }
+    
+    public int selectMask () { return this.selectMask; }
+    
+    public int cycleProgress () { return this.cycleProgress; }
+    
+    public int depthWalk () { return this.depthWalk; }
+    
+    
     public final int modeCopyOper()
     {
-      return modeCopyOper;
+      return this.modeCopyOper;
     }
 
     public final String newName()
     {
-      return newName;
+      return this.newName;
     }
 
     public final int maskFlags()
     {
-      return maskFlags;
+      return this.maskFlags;
     }
 
     public final int newFlags()
     {
-      return newFlags;
+      return this.newFlags;
     }
 
     public final long newDate()
     {
-      return newDate;
+      return this.newDate;
     }
 
 
@@ -3626,48 +3535,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
 
   
+}  
   
   
   
-  
-  /**Class to build a Thread instance to execute {@link FileRemote#walkFileTree(int, FileRemoteWalkerCallback)} in an extra thread.
-   * This instance is created while calling {@link FileRemote#walkFileTreeThread(int, FileRemoteWalkerCallback)}.
-   * The thread should be started from outside via {@link #start()}. The thread is destroyed on finishing the walking.
-   * 
-   * The user is informed about the progress via the callback interface, see ctor. 
-   */
-  static class DeleteThread extends Thread 
-  { 
-    final int mark;
-    final FileRemoteWalkerCallback callback;
-    final FileRemoteProgressEvData progress;
-    final FileRemote startdir;
-    
-    /**Constructs with given file and callback.
-     * @param startdir
-     * @param depth
-     * @param callback
-     */
-    DeleteThread(int mark, FileRemote startdir
-        , FileRemoteWalkerCallback callback, FileRemoteProgressEvData progress) {
-      super("walkFileTreeThread");
-      this.mark = mark;
-      this.callback = callback;
-      this.progress = progress;
-      this.startdir = startdir;
-    }
-    
-    
-    @Override public void run(){
-      try{
-        startdir.deleteMarked(mark, callback, this.progress);
-      } catch( Exception exc){
-        System.out.println("FileRemote - walkFileTreeThread");
-      }
-    }
-  };
-
-
-  
-  
-}
