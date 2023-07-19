@@ -2,7 +2,7 @@ package org.vishia.fileRemote;
 
 public class FileRemoteTestCallback  implements FileRemoteWalkerCallback {
 
-  @Override public void start ( FileRemote startNode, FileRemote.CmdEventData co ) {
+  @Override public void start ( FileRemote startNode, FileRemoteCmdEventData co ) {
     System.out.println("start callback test: " + startNode.toString());
   }
 

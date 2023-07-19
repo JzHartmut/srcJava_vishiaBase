@@ -13,6 +13,7 @@ import java.nio.file.spi.FileSystemProvider;
 import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteAccessor;
+import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
 
@@ -106,7 +107,7 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
   
   
   
-  @Override public void start ( FileRemote startDir, FileRemote.CmdEventData co) {  }
+  @Override public void start ( FileRemote startDir, FileRemoteCmdEventData co) {  }
   
   
   

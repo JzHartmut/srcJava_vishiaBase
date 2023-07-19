@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.vishia.event.EventWithDst;
-import org.vishia.fileRemote.FileRemote.CmdEventData;
 import org.vishia.util.ExcUtil;
 import org.vishia.util.FilepathFilterM;
 import org.vishia.util.SortedTreeWalkerCallback;
@@ -57,7 +56,7 @@ public class FileRemoteWalker {
   
   private WalkInfo walkInfo;
   
-  final CmdEventData co;
+  final FileRemoteCmdEventData co;
   
   final FileRemoteWalkerCallback callback;
   
@@ -77,7 +76,7 @@ public class FileRemoteWalker {
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should enter.
    * @param callback contains the quest and operations due to the files.
    */
-  public static void walkFileTree(CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack)
+  public static void walkFileTree(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack)
   {
     FileRemoteWalker thiz = new FileRemoteWalker(co, evBack);
     thiz.walkFileTree();
@@ -95,7 +94,7 @@ public class FileRemoteWalker {
    * @param depth at least 1. Use 0 to enter all levels.
    * @param callback
    */
-  public static void walkFileTreeThread(CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack)
+  public static void walkFileTreeThread(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack)
   {
     FileRemoteWalker thiz = new FileRemoteWalker(co, evBack);
     WalkThread thread1 = thiz.new WalkThread();
@@ -109,7 +108,7 @@ public class FileRemoteWalker {
   
   
   
-  public FileRemoteWalker(CmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack) {
+  public FileRemoteWalker(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack) {
     super();
     this.co = co;
     this.callback = co.callback();
@@ -307,7 +306,7 @@ public class FileRemoteWalker {
   
   
   /**Data used for walk. It is chained from a first parent to deepness of dir tree for each level.
-   * This data are created while {@link FileRemote#walkFileTree(int, CmdEventData, FileRemoteWalkerCallback)} 
+   * This data are created while {@link FileRemote#walkFileTree(int, FileRemoteCmdEventData, FileRemoteWalkerCallback)} 
    * or also  {@link FileAccessorLocalJava7#walkFileTree(FileRemote, FileFilter, int, FileRemoteWalkerCallback)} runs.
    */
   public static class WalkInfo{

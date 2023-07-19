@@ -138,7 +138,7 @@ public abstract class FileRemoteAccessor implements EventConsumer
    * @since 2023-03, the new concept.
    *   
    */
-  public abstract String cmd(boolean bWait, FileRemote.CmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack);
+  public abstract String cmd(boolean bWait, FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
   
 

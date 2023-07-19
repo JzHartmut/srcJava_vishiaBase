@@ -12,7 +12,7 @@ import org.vishia.fileRemote.FileMark;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
-import org.vishia.fileRemote.FileRemote.CmdEventData;
+import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileSystem;
@@ -159,7 +159,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
    * Only do it for the given files. It are lesser. The other FileRemote instances are not known till now.
    * This is a fast operation because it does not access the file system. 
    */
-  @Override public void start(FileRemote startDir, FileRemote.CmdEventData co)
+  @Override public void start(FileRemote startDir, FileRemoteCmdEventData co)
   {
     dir2.refreshPropertiesAndChildren(true, null);  //do it in this thread      
     
@@ -201,7 +201,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         //--------------------------------------------------- directory found, but yet not clarified whether all sub file/dir
         FileMark mark2 = dir2sub.mark();
         if( mark2==null || (mark2.getMark() & FileMark.cmpAlone) ==0) {  //mark only with cmpAlone if not marked already with.
-          dir2sub.walker(true, null, 0, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, null, 0, null);
+          dir2sub.walkLocal(FileRemoteCmdEventData.Cmd.noCmd, null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
         }
         dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
@@ -493,7 +493,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     }
 
     @Override
-    public void start(FileRemote startDir, FileRemote.CmdEventData co)
+    public void start(FileRemote startDir, FileRemoteCmdEventData co)
     { }
     
     @Override public boolean shouldAborted(){

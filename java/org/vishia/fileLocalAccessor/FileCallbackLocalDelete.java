@@ -6,6 +6,7 @@ import java.nio.file.Path;
 
 import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemote;
+import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
 import org.vishia.fileRemote.FileRemoteWalker;
 import org.vishia.fileRemote.FileRemoteWalkerCallback;
@@ -57,7 +58,7 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
     this.evBack = evBack;
   }
 
-  @Override public void start ( FileRemote startNode, FileRemote.CmdEventData co ) { }
+  @Override public void start ( FileRemote startNode, FileRemoteCmdEventData co ) { }
 
   @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
     return Result.cont;

@@ -40,7 +40,7 @@ public class FileRemoteWalkerCallbackLog implements FileRemoteWalkerCallback {
   }
   
   
-  @Override public void start ( FileRemote startNode, FileRemote.CmdEventData co ) {
+  @Override public void start ( FileRemote startNode, FileRemoteCmdEventData co ) {
     this.logout.sendMsg(1, "start: %s", startNode.getAbsolutePath());
   }
 

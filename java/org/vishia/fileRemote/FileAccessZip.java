@@ -24,8 +24,7 @@ import org.vishia.event.EventSource;
 import org.vishia.event.EventThread_ifc;
 import org.vishia.event.EventWithDst;
 import org.vishia.fileRemote.FileRemoteProgressEvData;
-import org.vishia.fileRemote.FileRemote.Cmd;
-import org.vishia.fileRemote.FileRemote.CmdEventData;
+import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.util.Assert;
 import org.vishia.util.TreeNodeBase;
 import org.vishia.util.UnexpectedException;
@@ -504,7 +503,7 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
 
-  @Override public String cmd ( boolean bWait,  CmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack ) {
+  @Override public String cmd ( boolean bWait,  FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack ) {
     // TODO Auto-generated method stub
     return "not implemented";
   }

@@ -1,7 +1,7 @@
 2023-04-13 11:07:03  x     #.git#save#                              ::           . 72 -1237754712 
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2023-07-18 23:58:48  x     .gitCommit                               ::           .286  1037054005 
+2023-07-19 14:19:19  x     .gitCommit                               ::           . 81 -0628327809 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -135,29 +135,30 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2023-07-18 23:54:05  x     FileAccessorLocalJava7.java              ::         70.802  0985592019 
-2023-07-16 20:53:10  x     FileCallbackLocalCmp.java                ::         19.337 -1685279614 
-2023-07-16 20:52:34  x     FileCallbackLocalCopy.java               ::          8.119  1706425866 
-2023-07-18 23:47:57  x     FileCallbackLocalDelete.java             ::          4.599  0632719492 
+2023-07-19 13:22:44  x     FileAccessorLocalJava7.java              ::         70.900  1723451812 
+2023-07-19 10:50:43  x     FileCallbackLocalCmp.java                ::         19.371 -0396144480 
+2023-07-19 10:33:07  x     FileCallbackLocalCopy.java               ::          8.171  1972774570 
+2023-07-19 10:33:19  x     FileCallbackLocalDelete.java             ::          4.651 -0427633070 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
 
 ============================== java/org/vishia/fileLocalAccessor/test/ =============================
 2021-10-04 14:29:58  x     TestJava7Files.java                      ::          1.684 -1422375057 
 
 ============================== java/org/vishia/fileRemote/ =========================================
-2023-07-15 10:56:48  x     FileAccessZip.java                       ::         17.688  0241779451 
+2023-07-19 10:50:16  x     FileAccessZip.java                       ::         17.652  1907856793 
 2023-07-18 20:05:36  x     FileCluster.java                         ::         19.734  2045609325 
 2023-03-12 14:35:13  x     FileMark.java                            ::         10.765 -0673201036 
-2023-07-18 23:57:52  x     FileRemote.java                          ::        155.300 -0766102949 
-2023-07-15 10:56:48  x     FileRemoteAccessor.java                  ::         12.952  0994690907 
-2023-07-16 20:21:57  x     FileRemoteCallbackSearch.java            ::         10.633  1493586457 
-2021-10-04 14:29:51  x     FileRemoteCopyOrder.java                 ::           .756 -0248407899 
-2023-07-15 10:56:49  x     FileRemoteProgress.java                  ::          3.028  1157538498 
-2023-07-18 20:06:32  x     FileRemoteProgressEvData.java            ::         14.091 -1138282865 
-2023-07-16 20:21:35  x     FileRemoteTestCallback.java              ::          1.130 -1862114743 
-2023-07-18 23:48:14  x     FileRemoteWalker.java                    ::         16.835 -0142981190 
-2023-07-15 10:56:49  x     FileRemoteWalkerCallback.java            ::           .626  1790826228 
-2023-07-16 20:21:13  x     FileRemoteWalkerCallbackLog.java         ::          2.557 -1592954620 
+2023-07-19 14:17:09  x     FileRemote.java                          ::        136.519  1678035134 
+2023-07-19 09:41:37  x     FileRemoteAccessor.java                  ::         12.951  1701384520 
+2023-07-19 09:42:23  x     FileRemoteCallbackCopyDispersedFiles.java ::          2.957 -0268023324 
+2023-07-19 09:47:52  x     FileRemoteCallbackSearch.java            ::         10.632  0519511827 
+2023-07-19 10:45:45  x     FileRemoteCmdEventData.java              ::          8.203 -0000894650 
+2023-07-19 09:47:29  x     FileRemoteProgress.java                  ::          3.024  1654788352 
+2023-07-19 10:51:50  x     FileRemoteProgressEvData.java            ::         14.115 -1554268836 
+2023-07-19 09:47:08  x     FileRemoteTestCallback.java              ::          1.129  1768663812 
+2023-07-19 09:46:50  x     FileRemoteWalker.java                    ::         16.831 -1257522272 
+2023-07-19 09:45:57  x     FileRemoteWalkerCallback.java            ::           .625  0311367713 
+2023-07-19 09:46:10  x     FileRemoteWalkerCallbackLog.java         ::          2.556 -1786771115 
 2023-03-14 23:45:12  x     FileZip.java                             ::          5.640  1234857640 
 2023-03-12 21:04:59  x     XXXFileRemoteWalkerEvent.java            ::          2.686  1910227989 
 

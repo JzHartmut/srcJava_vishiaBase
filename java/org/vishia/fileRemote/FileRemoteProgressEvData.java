@@ -139,7 +139,7 @@ public class FileRemoteProgressEvData implements Serializable, Payload
   public ProgressCmd progressCmd;
 
   /**The original command which this is answer to. */
-  public FileRemote.Cmd answerToCmd;
+  public FileRemoteCmdEventData.Cmd answerToCmd;
 
   /**Current processed file. */
   public FileRemote currFile, currDir;
@@ -241,7 +241,7 @@ public class FileRemoteProgressEvData implements Serializable, Payload
    * @param infoUnusedFinish Either {@link EventConsumer#mEventConsumerException} or {@link EventConsumer#mEventConsumFinished}
    * @param sError a message if any what was unexpected. Especially on unexpected exception. 
    */
-  public void done(FileRemote.Cmd answer, String sError) {
+  public void done(FileRemoteCmdEventData.Cmd answer, String sError) {
     this.sError = sError;
     this.answerToCmd = answer;
 //    if(this.timeOrder !=null) {
