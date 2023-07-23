@@ -67,6 +67,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-22 ctor is private, should never called directly, only singleton. 
+   * <li>2023-07-22 experience with mkdir, refactored. 
    * <li>2023-07-18 rename and using {@link FileRemoteWalker.WalkInfo} instead CurrDirChildren, the content is the same.
    * <li>2023-07-16 change of {@link #delete(FileRemote, EventWithDst)} but this is now obsolete. 
    *   Improve {@link #execDel(org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}. 
@@ -212,7 +214,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   private FileRemote workingDir;
   
-  public FileAccessorLocalJava7() {
+  /**Use {@link #getInstance()} to get the singleton instance.
+   * 
+   */
+  private FileAccessorLocalJava7() {
     //super("FileAccessorLoacalJava7", null, null, null);
     //singleThreadForCommission.startThread();
     this.systemAttribtype = DosFileAttributes.class;
@@ -222,6 +227,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       this.walkerThread[ix] = new WalkerThread();
       //new Thread(this.walkerThread[ix], "walkerThread" + ix);
     }
+  }
+  
+  
+  @Override public void finalize ( ) {    //does not been called because #instance
+    this.close();
   }
   
   public void activate() {
@@ -477,36 +487,26 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 
   
   @Override public boolean mkdir(FileRemote dir, boolean subdirs, EventWithDst<FileRemoteProgressEvData,?> evBack){
-    return mkdir(dir, evBack, 0);
-  }
-  
-  public boolean mkdir(FileRemote dir, EventWithDst<FileRemoteProgressEvData,?> evBack, int recursive){
-    File file1 = (File)dir.oFile();
-    if(file1 == null){ 
-      file1 = new File(dir.getAbsolutePath());
-      dir.setFileObject(file1);
+    String sDir = dir.getAbsolutePath();
+    Path pathdir = Paths.get(sDir);
+    String sError;
+    try {
+      if(subdirs) {
+        Files.createDirectories(pathdir);
+      } else {
+        Files.createDirectory(pathdir);
+      }
+      sError = null;
+    } catch (IOException e) {
+      sError = e.getMessage();
     }
-    FileRemote parent = dir.getParentFile();
-    if(!parent.exists()) {
-      mkdir(parent, evBack, recursive +1);  //call recursively for all parents.
-    }
-    boolean bOk = file1.mkdir();
     if(evBack != null){ 
       FileRemoteProgressEvData progress = evBack.data();
       //FileRemote.CmdEvent ev = prepareCmdEvent(500, evBack);
-      progress.clean();
-      progress.answerToCmd = FileRemoteCmdEventData.Cmd.mkDir;
-      progress.currFile = dir;
-      progress.currDir = parent;
-      progress.dateLastAccess = file1.lastModified();
-      //file1.
-      progress.setAnswer(bOk ? FileRemoteProgressEvData.ProgressCmd.done: FileRemoteProgressEvData.ProgressCmd.error);
-      if(recursive ==0) {
-        progress.done(FileRemoteCmdEventData.Cmd.mkDir, null);
-      }
+      progress.done(FileRemoteCmdEventData.Cmd.mkDir, sError);
       evBack.sendEvent("mkdir");
     }
-    return bOk;
+    return sError == null;
   }
 
   
@@ -752,8 +752,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       return ret;
     }
   }
-
-
+  
   
   private void execChgProps(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     FileRemote dst;

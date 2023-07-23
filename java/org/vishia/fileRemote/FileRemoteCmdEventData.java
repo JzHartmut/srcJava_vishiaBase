@@ -2,7 +2,7 @@ package org.vishia.fileRemote;
 
 import org.vishia.event.Payload;
 
-public class FileRemoteCmdEventData  implements Payload { //extends EventCmdtypeWithBackEvent<Cmd, FileRemote.CallbackEvent>
+public class FileRemoteCmdEventData  implements Payload { 
   
   private static final long serialVersionUID = 1L;
 

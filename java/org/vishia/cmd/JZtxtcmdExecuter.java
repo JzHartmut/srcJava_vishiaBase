@@ -85,6 +85,7 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-21 rarely bug fixed in 'exec_Subroutine(...)': if argument is null, should not throw. null should be admissible.
    * <li>2022-11-13 Hartmut meaningful change: {@link ExecuteLevel#changeCurrDir(CharSequence)} now sets the "user.dir" Java system's property.
    *   With them it is possible generally in Java to open a file via FileFunctions.newFile(System.getProperty("user.dir"), sRelativePath),
    *   then this is effective. It does not effect the operation system's PWD, but usable via this property.
@@ -352,7 +353,7 @@ public class JZtxtcmdExecuter {
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String version = "2022-11-13";
+  static final public String version = "2023-07-21";
 
   /**This class is the jzcmd main level from a script.
    * @author Hartmut Schorrig
@@ -2641,7 +2642,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
           Object ref = this.jzcmdMain.scriptLevel.evalObject(arg, false);
           String name = arg.getVariableIdent();
           char cType = arg.elementType();
-          if(cType == 'F' && !(ref instanceof JZtxtcmdFilepath) ){
+          if(ref !=null && cType == 'F' && !(ref instanceof JZtxtcmdFilepath) ){
             ref = new JZtxtcmdFilepath(this, ref.toString());
           }
           //creates the argument variable with given default value and the requested type.

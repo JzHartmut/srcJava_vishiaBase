@@ -1,6 +1,5 @@
 package org.vishia.fileRemote;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -12,9 +11,6 @@ import java.util.List;
 
 //import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventConsumer;
-import org.vishia.event.EventConsumerAwait;
-import org.vishia.event.EventSource;
-import org.vishia.event.EventThread_ifc;
 import org.vishia.event.EventWithDst;
 
 /**Interface for instances, which organizes a remote access to files.
@@ -29,6 +25,8 @@ public abstract class FileRemoteAccessor implements EventConsumer
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-22 Hartmut new: {@link #cmdFile(FileRemote, org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, long, EventWithDst)}.
+   *   as common solution for all Accessor, uses {@link #cmd(boolean, FileRemoteCmdEventData, EventWithDst)} for execution.
    * <li>2023-03-15 Hartmut chg: no more derived from Closeable, instead {@link #close()} defined here,
    *   because there are anytime again unnecessary warnings "resource" on access to this instance.  
    * <li>2012-05-30 Hartmut new: {@link #openOutputStream(FileRemote, long)}
@@ -82,7 +80,7 @@ public abstract class FileRemoteAccessor implements EventConsumer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120310;
+  public static final String version = "2023-07-22";
   
   //public final static int kOperation = 0xd00000, kFinishOk = 0xf10000, kFinishNok = 0xf10001
   //, kFinishError = 0xf1e3303, kNrofFilesAndBytes = 0xd00001, kCopyDir = 0xd0cd13;
@@ -134,12 +132,41 @@ public abstract class FileRemoteAccessor implements EventConsumer
    *   and if the caller can check what is happen. 
    *   Hint: Usual an instance of {@link FileRemoteProgress} can be used to execute the event, 
    *   and also to wait for success on user level.
-   * @return null if executed in another thread (bWait = false), else return null if no error.
+   * @return null if executed successfully in another thread (bWait = false), else return null if no error.
    * @since 2023-03, the new concept.
    *   
    */
   public abstract String cmd(boolean bWait, FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack);
   
+  
+  
+  
+  /**Command to handle one single file and maybe a destination file for example for rename, copy, mkdir etc.
+   * It is implemented here, calls {@link #cmd(boolean, FileRemoteCmdEventData, EventWithDst)}
+   * with prepared FileRemoteCmdEventData gotten from a given evBack . {@link EventWithDst#getOpponent()}
+   * or if that is not given from a temporary instance for 'FileRemoteCmdEventData'.
+   * @param file The file to handle
+   * @param cmd command what to do
+   * @param fileDst null or maybe a destination path due to cmd
+   * @param nameNew null or maybe a new name due to cmd (for rename)
+   * @param dateNew null or maybe a timestamp due to cmd.
+   * @param evBack back event and the command event usable given as {@link EventWithDst#getOpponent()}.
+   *   If the opponent is not given, the command will be executed in the own thread.
+   * @return return value from {@link #cmd(boolean, FileRemoteCmdEventData, EventWithDst)}.
+   *   null if successfully or no error known. The complete success will be notified by evBack.
+   *   If evBack is not given, null is a hint that all is done successfully. 
+   */
+  public String cmdFile( FileRemote file, FileRemoteCmdEventData.Cmd cmd, FileRemote fileDst, String nameNew, long dateNew
+      , EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData> evBack) {
+    EventWithDst<FileRemoteCmdEventData, FileRemoteProgressEvData> evCmd = evBack!=null ? evBack.getOpponent(): null;
+    FileRemoteCmdEventData co = evCmd !=null ? evCmd.data() : new FileRemoteCmdEventData();
+    co.setCmdChgFileRemote(file, cmd, fileDst, nameNew, dateNew);
+    boolean bWait = evCmd ==null;
+    return cmd(bWait, co, evBack);
+  }
+  
+
+
   
 
   

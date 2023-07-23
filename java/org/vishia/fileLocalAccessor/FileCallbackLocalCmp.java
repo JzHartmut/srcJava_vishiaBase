@@ -201,7 +201,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         //--------------------------------------------------- directory found, but yet not clarified whether all sub file/dir
         FileMark mark2 = dir2sub.mark();
         if( mark2==null || (mark2.getMark() & FileMark.cmpAlone) ==0) {  //mark only with cmpAlone if not marked already with.
-          dir2sub.walkLocal(FileRemoteCmdEventData.Cmd.noCmd, null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
+          dir2sub.walkLocal(null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
         }
         dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
         System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());

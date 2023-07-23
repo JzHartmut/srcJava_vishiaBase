@@ -4,8 +4,12 @@ package org.vishia.event;
 /**Base class for all event consumer, same as implementation of the simple {@link EventConsumer} interface,
  * but the {@link EventConsumer#awaitExecution(long)} is already implemented here.
  * The {@link EventConsumer#processEvent(java.util.EventObject)} implementation
- * must set call {@link #setDone(String)} on receive and execute an event
+ * should  call {@link #setDone(String)} on receive and execute an event
  * if the event succeeds the execution or succeeds with exception or error.
+ * <br><br>
+ * How the 'done' information may be gotten from the event is not able to clarify from this universal base class,
+ * the Payload of the event for {@link EventConsumer#processEvent(java.util.EventObject)} is not defined here.
+ * Hence the implementation of 'processEvent(...)' should be done in the specific kind in the inherit class.
  * 
  * @author Hartmut Schorrig
  *
@@ -14,6 +18,9 @@ public abstract class EventConsumerAwait implements EventConsumer{
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-22 possible bug fixed: {@link #awaitExecution(long, boolean)}: If the event was cleaned
+   *   without success this operation should be left. It is done via {@link #bWait} = false test.
+   *   The adequate notifyAll in {@link #clean()} wakes up the 'await...'.  
    * <li>2023-02-12 Hartmut created, because universal approach to wait till done
    * </ul>
    * <br><br>
@@ -55,15 +62,22 @@ public abstract class EventConsumerAwait implements EventConsumer{
   protected String sError;
 
   
+  /**This reference should be used if the Consumer implementor (the inherit class) should offer a specific thread
+   * where the events are intermediately stored before execution in this consumer.  
+   * It should be set on construction of the inherit consumer instance or set to null if not used.
+   */
   protected final EventThread_ifc evThread;
   
 
-  public EventConsumerAwait ( EventThread_ifc evThread) {
+  /**Called from the inherit class.
+   * @param evThread maybe null if not used here.
+   */
+  protected EventConsumerAwait ( EventThread_ifc evThread) {
     this.evThread = evThread;  
   }
 
-  /**
-   * Can be overridden if the 
+  /**If the inherit consumer defines a specific thread, get it here.
+   * Else returns null.
    */
   @Override public EventThread_ifc evThread () {
     return this.evThread;
@@ -95,7 +109,7 @@ public abstract class EventConsumerAwait implements EventConsumer{
    * or more exact, till {@link #setDone(String)} was called. 
    * @param timeout milliseconds timeout
    * @param clearDone clear the done flag again before return (not on entry!). Use {@link #clean()} to clean done before entry.
-   * @return true if done was detected, false on timeout. 
+   * @return true if done was detected, false on timeout or if the event was cleaned. 
    */
   @Override public final boolean awaitExecution(long timeout, boolean clearDone) { 
     long timeEnd = System.currentTimeMillis() + timeout; 
@@ -107,6 +121,7 @@ public abstract class EventConsumerAwait implements EventConsumer{
         if(waitingTime > 0 || timeout == 0 ) { //should wait, or special: wait till end of routine.
           this.bWait = true;
           try{ wait(waitingTime); } catch(InterruptedException exc){}
+          if(!this.bWait) break;                 // break the while loop especially if clean() was called
           this.bWait = false;
         } 
       };                                         // clear bDone if clearDone.
@@ -115,6 +130,7 @@ public abstract class EventConsumerAwait implements EventConsumer{
     }
     return(ret);
   }
+
 
   
   /**Cleans {@link #bDone} and also {@link #sError}.
@@ -126,9 +142,9 @@ public abstract class EventConsumerAwait implements EventConsumer{
     this.sError = null;
     if(this.bWait) {                   // any thread is waiting
       synchronized(this) {
-        notify();
+        this.bWait = false;            // set bWait anytime to false, clean an unexpected situation. 
+        notifyAll();                   // if awaitExecution was called it ends with the bWait=false information.
       }
-      this.bWait = false;              // set bWait anytime to false, clean an unexpected situation. 
     }
     return this;
   }

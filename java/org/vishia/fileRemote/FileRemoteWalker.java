@@ -19,6 +19,7 @@ public class FileRemoteWalker {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-07-22 improved while test. 
    * <li>2023-07-18 Hartmut created with a new class, does only work with FileRemote instances.
    * <li>201x Hartmut created as part of FileRemote. But the concept of separation of a remote file system in a device
    *   and the mapping to FileRemote instances was never consequently developed. 
@@ -51,7 +52,7 @@ public class FileRemoteWalker {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2023-07-16";
+  public final static String sVersion = "2023-07-22";
 
   
   private WalkInfo walkInfo;
@@ -163,7 +164,9 @@ public class FileRemoteWalker {
         }
       }
       result = postVisitDirectory(dir);
-    } 
+    } else if(result == FileRemoteWalkerCallback.Result.skipSubtree) { //this was related to the own tree
+      result = FileRemoteWalkerCallback.Result.cont;       // continue in the parent tree
+    }
     return result;  //maybe terminate
   }
 
@@ -184,20 +187,23 @@ public class FileRemoteWalker {
       selected = true;                                     // is always selected (elsewhere the operation will no t be called)
       childFilter = this.walkInfo.fileFilter;                   // the fileFilter is effective from the next level
     } else { 
-      if((this.co.selectMask() & FileMark.ignoreSymbolicLinks) !=0 &&  (dir.flags & FileRemote.mSymLinkedPath) !=0) {
+      int selectMask = this.co.selectMask();
+      if((selectMask & FileMark.ignoreSymbolicLinks) !=0 &&  (dir.flags & FileRemote.mSymLinkedPath) !=0) {
         selected = false;                                  // skip a directory which is a symbolic link if desired
         childFilter = null;
       } else if(this.walkInfo.fileFilter == null) {             // do not skip if no fileFilter given, because files may be marked
-        selected = true; result = SortedTreeWalkerCallback.Result.cont;
+        selected = (selectMask & FileMark.orWithSelectString) ==0;  //the selectMask bits should be valid anyway.
+        result = SortedTreeWalkerCallback.Result.cont;
         childFilter = null;
       } else {                                             // evaluate fileFilter, skip if no file is selected.
         String name = dir.getName();
         childFilter = this.walkInfo.fileFilter.check(name, true); 
         selected = (childFilter != null); 
       }
-      if((this.co.selectMask() & FileMark.mSelectMarkBits) !=0) { //- evaluate selectMark bits with the given dir
-        boolean bMarkSelect = (dir.getMark() & FileMark.mSelectMarkBits & this.co.selectMask()) !=0;
-        if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
+      if((selectMask & FileMark.mSelectMarkBits) !=0) { //- evaluate selectMark bits with the given dir
+        int mark = dir.getMark();
+        boolean bMarkSelect = (mark & FileMark.mSelectMarkBits & selectMask) !=0;
+        if( (selectMask & FileMark.orWithSelectString) !=0) {
           selected |= bMarkSelect;                         // modify selected with or bits
         } else {
           selected &= bMarkSelect;                         // exclusive selected with AND bits
@@ -269,15 +275,16 @@ public class FileRemoteWalker {
       }
     }
     //
+    int selectMask = this.co.selectMask();
     if(this.walkInfo.fileFilter == null) {             // do not skip if no fileFilter given, because files may be marked
-      selected = true;
+      selected = (selectMask & FileMark.orWithSelectString) ==0;  //the selectMask bits should be valid anyway.
     } else {                                             // evaluate fileFilter, skip if no file is selected.
       String name = file.getName();
       selected = this.walkInfo.fileFilter.check(name, bDirectory) !=null; 
     }
     if((this.co.selectMask() & FileMark.mSelectMarkBits) !=0) { //- evaluate selectMark bits with the given dir
       boolean bMarkSelect = (file.getMark() & FileMark.mSelectMarkBits & this.co.selectMask()) !=0;
-      if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
+      if( (selectMask & FileMark.orWithSelectString) !=0) {
         selected |= bMarkSelect;                         // modify selected with or bits
       } else {
         selected &= bMarkSelect;                         // exclusive selected with AND bits

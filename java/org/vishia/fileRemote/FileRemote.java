@@ -140,8 +140,14 @@ import org.vishia.util.TreeNodeNamed_ifc;
  *   without knowledge about the FileRemote concept in a part of its software. Only the refreshing
  *   should be regulated in the proper part of the application. 
  * </ul>
- * <br><br>
+ * <br>
+ * <br>
  * <b>Concepts of callback</b>: <br>
+ * A callback is an instance of the {@link FileRemoteWalkerCallback} which is given either by the application 
+ * or given for specific commands in the implementation in the device. 
+ * It is used to do actions with any (selected) file or directory.
+ * 
+ * <br>
  * This class offers some methods to deal with directory trees:
  * <ul>
  * <li>{@link #refreshAndMark(int, boolean, String, int, int, FileRemoteWalkerCallback)} marks files for copy, move or delete.
@@ -161,6 +167,50 @@ import org.vishia.util.TreeNodeNamed_ifc;
  * The user can provide one of that, both or no instance for showing. 
  * Handling of a event driven communication need one event per file. It is too much effort if the file system is fast.
  * That is tested in the past but not supported furthermore.
+ * <br>
+ * <br>
+ * <b>Concepts of feedback with events</b>:<br>
+ * There are three concepts generally in software how to deal with feedback:
+ * <ul><li>a) offer a return value which contains feedback information
+ * <li>b) throw an exception if any stuff is wrong, if all is ok, then no further feedback is given. All is ok.
+ * <li>c) send an event
+ * </ul>
+ * All three possibilities are usual in Java programming and especially for file handling:
+ * <ul><li>a) is used for example for {@link File#mkdir()} or {@link File#delete()}. 
+ *   This operations are the first in the Java of the 1990th presuming a simple file system. 
+ * <li>b) Exception handling becomes very familiar for Java programming, used overall. For example {@link java.io.FileReader#read(char[])}
+ *   does not return a negative number on reading error which may be possible, instead throws.
+ *   An FileReader.open() which may return an information does not exist, instead the constructor is used for open, 
+ *   which throws an exception if the file does not exist.
+ *   This means effort for exception handling though the situation of a non existing file is expectable.
+ *   Exception handling should be intrinsically only done on real faulty situations.
+ * <li>c) Event handling is a little bit unusual in Java programming, else for graphic applications.
+ * </ul>
+ * Because the operations of this class are frequently used also in graphic applications, the event handling should be the first choice.
+ * But some operations compatible to {@link File} needs a). Exception handling is done only on really exceptions. 
+ * <br><br>
+ * The second question is: Execute the file handling in an extra thread.
+ * <br><br>
+ * The solution is the following:
+ * <ul><li>All operations can be called via a given back or progress event instance. 
+ *   The type of the back event is {@link EventWithDst} with {@link FileRemoteProgressEvData} as data type.
+ *   The back or progress event can be used also to get information about the progress of a longer operation, 
+ *   for example copy long files. But it is also used for the success or error information. 
+ * <li>Operations which can be executed in the same thread returns a String information if something is wrong but expectable.
+ *   exception throwing is used only on really exceptions or it comes from the implementation level.
+ *   The return String is null if all is ok. 
+ * <li>On access to a really remote file system using the same thread is not possible because communication is necessary.
+ *   Hence general using the back event is recommended if the file system may be remote.
+ *   The return value can only present whether or not the communication was initiated.
+ * <li>The decision using the same thread (the operation may be need a longer time for example on access via network)
+ *   or using an extra (given, prepared) thread if it is possible to do the action in the same thread
+ *   depends on the offering the back event. If it is given, the action is executed in an extra thread.
+ * <li>But for some test cases or application specific the back event can be given as information destination,
+ *   and nevertheless the same thread should be used.
+ *   This decision is set as information in the      
+ * <li>The back event can be absent. Then detail information about the progress are not possible. 
+ *   If the    
+ * </ul>     
  * 
  * @author Hartmut Schorrig
  *
@@ -1084,14 +1134,31 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
-  public void walkLocal ( FileRemoteCmdEventData.Cmd cmd, FileRemote dstdir, int markSet, int markSetDir, String selectFilter, int selectMask, int depthWalk
+  /**Walks local only through the FileRemote instances without touch the underlying files on a device.
+   * It may be that the FileRemote tree is updated (synchronized with the File system) or not. 
+   * It deals with the current state.
+   * For the selected files and dirs the callback is executed. The callback can deal especially with the underlying file system. 
+   * @param dstdir a possible destination FileRemote instance, maybe used in callback.
+   * @param markSet this bits are set or reset to all selected files. Note: {@link FileMark#resetMark} determines set or reset.
+   * @param markSetDir this bits are set or reset to all selected directories. Note: {@link FileMark#resetMark} determines set or reset.
+   * @param selectFilter given file filter due to {@link org.vishia.util.FilepathFilterM}
+   * @param selectMask mask for selection dir or files. Note: it is possible to reset exact this bits with markSet and markSetDir
+   * @param depthWalk 0: walk through full deepness, 1: only the first level after this src directory.
+   * @param callback execute the callback for any selected dir or file.
+   * @param cmdDataArg if not null then this instance is reused as data for walking. 
+   * @param cycleProgress <0 then do not use an extra thread. 1: event for any selected file and dir for feedback. 
+   *   >1: time in ms for feedback in a suitable time. 
+   * @param progressEv if not null then this event is processed for any file or dir or after cycleProcess ms.
+   *   For any file and dir the number of files and the sum of bytes are count. 
+   */
+  public void walkLocal ( FileRemote dstdir, int markSet, int markSetDir, String selectFilter, int selectMask, int depthWalk
       , FileRemoteWalkerCallback callback
       , FileRemoteCmdEventData cmdDataArg, int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData cmdData = cmdDataArg == null ? new FileRemoteCmdEventData() : cmdDataArg;
-    cmdData.setCmdWalkLocal(this, cmd, dstdir, markSet, markSetDir, selectFilter, selectMask, depthWalk, callback, cycleProgress);
+    cmdData.setCmdWalkLocal(this, FileRemoteCmdEventData.Cmd.noCmd, dstdir, markSet, markSetDir, selectFilter, selectMask, depthWalk, callback, cycleProgress);
     if(progressEv == null || cycleProgress <0) {
       FileRemoteWalker.walkFileTree(cmdData, progressEv);
     } else {
@@ -1100,6 +1167,33 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   
+  /**walk file tree with specified callback adequate the concept which is implemented in {@link FileAccessorLocalJava7}
+   * or maybe other file access for embedded control.
+   * All arguments are set to an instance of {@link FileRemoteCmdEventData}, 
+   * with them {@link #device} {@link FileRemoteAccessor#cmd(boolean, FileRemoteCmdEventData, EventWithDst)} is called. 
+   * @param bWait true then executes the walker in this thread, false then use an extra thread.
+   * @param dirDst can be used by the callback
+   * @param depth depth to walk,
+   * @param markSet Bits to mark files while walking through
+   * @param markSetDir  Bits to mark directories while walking through
+   * @param selectFilter Wildcard mask to select source files. Maybe empty or null, then all files are used.
+   * @param selectMark Bits to select from mark maybe manually set before or via other algorithm
+   *        It can use some specific bits: {@link FileMark#orWithSelectString}, {@link FileMark#ignoreSymbolicLinks}
+   * @param callback null possible. A callback operation set for each file and dir. This defines what to do with the files.
+   * @param cycleProgress cycle for progress in ms, 0 means progress for any file.
+   * @param evProgress for progress. If bWait is false and evBack is null, no answer is given. 
+   */
+  public void walkRemote ( boolean bWait, FileRemote dirDst, int depth, String selectFilter
+    , int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> evProgress) { 
+    if(this.device == null){
+      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
+    }
+    FileRemoteCmdEventData co = new FileRemoteCmdEventData();
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkTest, dirDst, selectFilter, cycleProgress, depth);
+    this.device.cmd(bWait, co, evProgress);
+  }
+
+
   /**Gets the properties of the file from the physical file immediately in this thread.*/
   public void refreshProperties ( ) {
     refreshProperties(null);
@@ -1257,39 +1351,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
     co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkDelete, null, mask, 100, depth);
     this.device.cmd(bWait, co, evBack);
-  }
-  
-  
-  
-  /**walk file tree with specified callback adequate the concept which is implemented in {@link FileAccessorLocalJava7}
-   * or maybe other file access for embedded control.
-   * All arguments are set to an instance of {@link FileRemoteCmdEventData}, 
-   * with them {@link #device} {@link FileRemoteAccessor#cmd(boolean, FileRemoteCmdEventData, EventWithDst)} is called. 
-   * @param bWait true then executes the walker in this thread, false then use an extra thread.
-   * @param dirDst can be used by the callback
-   * @param depth depth to walk,
-   * @param markSet Bits to mark files while walking through
-   * @param markSetDir  Bits to mark directories while walking through
-   * @param selectFilter Wildcard mask to select source files. Maybe empty or null, then all files are used.
-   * @param selectMark Bits to select from mark maybe manually set before or via other algorithm
-   *        It can use some specific bits: {@link FileMark#orWithSelectString}, {@link FileMark#ignoreSymbolicLinks}
-   * @param callback null possible. A callback operation set for each file and dir. This defines what to do with the files.
-   * @param cycleProgress cycle for progress in ms, 0 means progress for any file.
-   * @param evProgress for progress. If bWait is false and evBack is null, no answer is given. 
-   */
-  public void walkRemote ( boolean bWait, FileRemote dirDst, int depth, String selectFilter
-    , int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> evProgress) { 
-    if(this.device == null){
-      this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
-    }
-    FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkTest, dirDst, selectFilter, cycleProgress, depth);
-    
-//    co.markSet = markSet;
-//    co.markSetDir = markSetDir;
-    //co.selectMask = selectMark;
-    //co.callback = callback;
-    this.device.cmd(bWait, co, evProgress);
   }
   
   
@@ -2008,7 +2069,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @return true if this operation was successfully. False if not.
    */
   @Override public boolean mkdir(){
-    return mkdir(false, null);
+    String sError = mkdir(false, null);
+    return sError == null;
   }
   
   
@@ -2022,7 +2084,8 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @return true if this operation was successfully. False if not.
    */
   @Override public boolean mkdirs(){
-    return mkdir(true, null);
+    mkdir(true, null);
+    return true;
   }
   
   
@@ -2036,11 +2099,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *  If not given this routine waits till execution, see {@link #mkdir()}
    * @return false if unsuccessfully, true if evback !=null or successfully. 
    */
-  public boolean mkdir(boolean recursively, EventWithDst<FileRemoteProgressEvData,?> evBack) {
+  public String mkdir(boolean recursively, EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData> evBack) {
     if(device == null){
       device = getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
-    return device.mkdir(this, recursively, evBack);
+    return device.cmdFile(this, FileRemoteCmdEventData.Cmd.mkDir, null, null, 0, evBack);
   }
 
   

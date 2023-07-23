@@ -1,0 +1,5 @@
+
+
+main(){
+  java org.vishia.fileRemote.test.TestFileRemote.test();
+}

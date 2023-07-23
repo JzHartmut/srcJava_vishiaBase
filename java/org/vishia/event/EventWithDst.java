@@ -9,32 +9,79 @@ import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DateOrder;
 import org.vishia.util.ExcUtil;
 
-/**This class is the basic class for all events of this package. It is derived from the Java standard
- * {@link EventObject}. It contains a reference to its destination, which should execute this event,
- * and to an instance which queues and forces the execution of the event (delegates to the destination).
- * The super class from java standard EventObject does only contain the source. 
+/**This class is a universal basic for all events in the vishia Java source suite. 
+ * It is derived from the Java standard {@link EventObject}. 
+ * It contains a reference to its destination, which should execute this event,
+ * and optional to an instance of {@link EventThread_ifc} which is used as first destination to queue the events
+ * and forces the execution (delegates to the destination).
+ * The super class from java standard EventObject does only contain the reference to the source. 
  * <pre>
- * Object <--source-+                   +---<>Payload
- *         EventObject <|-+             |        |
- *                        |             |     -more_Data
- *                     EventWithDst ----+
+ * Object <--source-+                   +---->{@link Payload}<|--T_Payload
+ *         EventObject <|-+             |                  |
+ *                        |             |                -more_Data
+ *                     EventWithDst -d--+
  *                        |
  *                        |-------evDstThread--->{@link EventTimerThread_ifc}
  *                        |
- *                        |-------------evDst--->{@link EventConsumer}
+ *                        |-------evDst--------->{@link EventConsumer}
  *                        |
- *                 -name
- *                 -dateCreation 
- *                 -dateOrder
- *                 -stateOfEvent
- *                 -ctConsumed
- *                 -orderId 
+ *                        |-------evOpp--------->{@link EventWithDst}
+ *                     -name
+ *                     -dateCreation 
+ *                     -dateOrder
+ *                     -stateOfEvent
+ *                     -ctConsumed
+ *                     -orderId 
  * </pre>
  * UML Presentation see {@link org.vishia.util.Docu_UML_simpleNotation}
+ * <br><br>
+ * <b>Usage of the event</b><br>
+ * First the event is the receiver for message data, the instance for queueing and the trigger instance for execution.
+ * It is used for trigger an action or for receive a feedback from an action.
  * <br>
- * Note: A derived class in this package is {@link EventCmdtype}.
  * <br>
- * Note: If the event was transferred via for example socket connection, 
+ * <b>Simple form, using only for trigger:</b>
+ * <pre>
+ * Application                    evDst instance of EventConsumer
+ *   +-->set any data               |
+ *   |   to thisEvent payload       |
+ *   +-->sendEvent(thisEvent)------>|
+ *                                  +--processEvent()
+ * </pre>
+ * <ul>
+ * <li>{@link #sendEvent(Object)}: emit the event to the dedicated {@link #evDst()} instance (given by construction or {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}
+ * <li>{@link #processEvent()} is called immediately in the same thread, it calls in the evDst instance: {@link EventConsumer#processEvent(EventObject)}.
+ *   This can evaluate the data of the event.
+ * </ul>
+ * Here no thread change is done. The event is only used to transport the immediately call.
+ * Examples for this usage are some operations of FileRemote such as {@link org.vishia.fileRemote.FileRemote#mkdir(boolean, EventWithDst)}.
+ * If the 'make dir' operation is executed in the same thread because it is a cheap operation on the local file system, 
+ * the 'Application' of the above sequence diagram is the 'mkdir' operation.
+ * The {@link EventConsumer} should be given with the event. It is only an instance, not related to another thread.
+ * <br><br>
+ * The application should call:
+ * <pre>
+ * EventConsumer 
+ * <br>
+ * <br>
+ * <b>More simple form, only using the payload:</b>
+ * <pre>
+ * Application
+ *   +-->do any which uses the event 
+ *              +-->set any data
+ *   +<---------+   to thisEvent payload
+ *   +<--read data
+ *   |   from the events payload
+ * </pre>
+ * In this also sensible case the event is only used to store some data. 
+ * The called operation which uses the event fills some feedback data but don't send the event.
+ * The event instance is only used as data transporter. 
+ * This is for example done if some operations of FileRemote such as {@link org.vishia.fileRemote.FileRemote#mkdir(boolean, EventWithDst)}
+ * and the operation is executed in the same 
+ * <br>
+ * ... no the using operation should call anyway sendEvent and a #evDst should be available.
+ * <br>
+ * Note: If the message for this event was transferred via for example socket connection, 
  *   its data of the derived "UserEvent" should be received as payload and reconstructed.
  *   The aggregated data {@link #evDstThread} and {@link #evDst()} are set by initialization
  *   in the received environment.
@@ -49,6 +96,7 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-22 Hartmut enhancement: More ctor versions. The {@link #evOpp} was not used till now. 
    * <li>2023-03-20 Hartmut The payload {@link #d} is now typed with the new interface {@link Payload}.
    *   For serialize of the payload some thinking should be done. 
    * <li>2023-03-20 Hartmut chg the role of {@link EventObject#source}: originally it should be the creator of the event. 
@@ -142,7 +190,7 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2023-03-20";
+  public static final String version = "2023-07-22";
 
   
   /**The current owner of the event. It is that instance, which has gotten the event instance.
@@ -175,7 +223,7 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
    * Often a pair of events for back communication is necessary.
    * It is null if unused.
    */
-  EventWithDst<T_PayloadOpp, T_Payload> evOpp;
+  final EventWithDst<T_PayloadOpp, T_Payload> evOpp;
   
   /**State of the event: 
    * <ul>
@@ -223,10 +271,20 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
     this(name, EventSource.nullSource, data);
   }
   
-  public EventWithDst(String name, Object source, T_Payload data)
+  public EventWithDst(String name, T_Payload data, EventWithDst<T_PayloadOpp, T_Payload> evOpp) {
+    this(name, EventSource.nullSource, data, evOpp);
+  }
+
+  
+  public EventWithDst(String name, Object source, T_Payload data) {
+    this(name, source,  data, null);
+  }
+  
+  public EventWithDst(String name, Object source, T_Payload data, EventWithDst<T_PayloadOpp, T_Payload> evOpp)
   { super(source);
     this.d = data;
     this.name = name;
+    this.evOpp = evOpp;
   }
 
 
@@ -240,6 +298,8 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
    *   If null but the {@link EventConsumer#evThread()} returns not null, it is used.
    *   It means the {@link EventConsumer} can decide about the event thread.
    *   But this argument is used if given.
+   * @param d the instance for the payload for this event. If the event is transmitted via a medium,
+   *   the payload will be serialized.  
    */
   public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, T_Payload d){
     super("free");                                 // the source will be set on sent
@@ -250,6 +310,96 @@ public final class EventWithDst<T_Payload extends Payload, T_PayloadOpp extends 
     EventThread_ifc thread = (consumer == null ? null : consumer.evThread());
     this.evDstThread = evThread != null ? evThread : thread;                           //maybe null
     this.d = d;
+    this.evOpp = null;
+  }
+  
+
+  /**Creates an event as static or dynamic object for usage with its opponent event.  
+   * The opponent event is created without a specified {@link EventConsumer} and without a specified event thread.
+   * It means the opponent event can be used in a specific kind (for example to transmit the data)
+   * or this information should be given using {@link #occupy(EventSource, EventConsumer, EventThread_ifc, boolean)}.
+   * But the payload for the opponent is referenced if the dOpp argument is not null.
+   * @param name of the event used only for debug. The opponent gets the name + "~".
+   * @param source Source of the event. Can be null, then a default source is used, or can be also a string literal.
+   * @param consumer If null then the event should be occupied before usage.
+   *   If given {@link #occupy(EventSource, boolean)} is not necessary for usage but possible.
+   * @param thread an optional thread to store the event in an event queue, maybe null.
+   *   If null but the {@link EventConsumer#evThread()} returns not null, it is used.
+   *   It means the {@link EventConsumer} can decide about the event thread.
+   *   But this argument is used if given.
+   * @param d the instance for the payload for this event. If the event is transmitted via a medium,
+   *   the payload will be serialized.  
+   * @param dOpp the instance for the payload for the opponent of the event. If the event is transmitted via a medium,
+   *   the payload will be serialized. This instance is then used as destination for deserialize.  
+   */
+  public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, T_Payload d, T_PayloadOpp dOpp){
+    super("free");                                 // the source will be set on sent
+    this.evOwner = source == null ? EventSource.nullSource : source;   //EventObject does not allow null pointer.
+    this.name = name;
+    this.evDst = consumer;                                 //maybe null if occupy is intent to call.  
+    @SuppressWarnings("resource") 
+    EventThread_ifc thread = (consumer == null ? null : consumer.evThread());
+    this.evDstThread = evThread != null ? evThread : thread;                           //maybe null
+    this.d = d;
+    this.evOpp = new EventWithDst<T_PayloadOpp, T_Payload>(name + "~", dOpp, this);
+  }
+  
+
+  /**Only used in {@link EventWithDst#EventWithDst(String, EventSource, EventConsumer, EventThread_ifc, Payload, String, EventSource, EventConsumer, EventThread_ifc, Payload)}
+   * to create the opponent itself with this as reference.
+   * If this class would be used in an application the opponent would not refer its mutual opponent.
+   * Hence it is private. 
+   * @param name fed with the nameOpp
+   * @param source 
+   * @param consumer
+   * @param evThread
+   * @param d
+   * @param evOpp this
+   */
+  private EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, T_Payload d
+      , EventWithDst<T_PayloadOpp, T_Payload> evOpp){
+    super("free");                                 // the source will be set on sent
+    this.evOwner = source == null ? EventSource.nullSource : source;   //EventObject does not allow null pointer.
+    this.name = name;
+    this.evDst = consumer;                                 //maybe null if occupy is intent to call.  
+    @SuppressWarnings("resource") 
+    EventThread_ifc thread = (consumer == null ? null : consumer.evThread());
+    this.evDstThread = evThread != null ? evThread : thread;                           //maybe null
+    this.d = d;
+    this.evOpp = evOpp;
+  }
+  
+
+  
+  /**Creates an event as static or dynamic object for usage with its opponent event  
+   * with a given opponent event. The opponent event should be created without this as opponent of course.
+   * But this event is referenced in the opponent also as opponent by this constructor.
+   * The opponent can be created with a specific {@link EventConsumer}, {@link EventThread_ifc} and {@link Payload}.
+   * The implementation type of Payload should match the T_PayloadOpp in this class and vice versa.
+   * @param name of the event used only for debug. The opponent gets the name + "~".
+   * @param source Source of the event. Can be null, then a default source is used, or can be also a string literal.
+   * @param consumer If null then the event should be occupied before usage.
+   *   If given {@link #occupy(EventSource, boolean)} is not necessary for usage but possible.
+   * @param thread an optional thread to store the event in an event queue, maybe null.
+   *   If null but the {@link EventConsumer#evThread()} returns not null, it is used.
+   *   It means the {@link EventConsumer} can decide about the event thread.
+   *   But this argument is used if given.
+   * @param d the instance for the payload for this event. If the event is transmitted via a medium,
+   *   the payload will be serialized.  
+   * @param opponent Already created opponent first as event without opponent. 
+   *   The type of {@link Payload} (generic types of this class) should match.   
+   */
+  public EventWithDst(String name, EventSource source, EventConsumer consumer, EventThread_ifc evThread, T_Payload d
+      , String nameOpp, EventSource sourceOpp, EventConsumer consumerOpp, EventThread_ifc evThreadOpp, T_PayloadOpp dOpp){
+    super("free");                                 // the source will be set on sent
+    this.evOwner = source == null ? EventSource.nullSource : source;   //EventObject does not allow null pointer.
+    this.name = name;
+    this.evDst = consumer;                                 //maybe null if occupy is intent to call.  
+    @SuppressWarnings("resource") 
+    EventThread_ifc thread = (consumer == null ? null : consumer.evThread());
+    this.evDstThread = evThread != null ? evThread : thread;                           //maybe null
+    this.d = d;
+    this.evOpp = new EventWithDst<T_PayloadOpp, T_Payload>(nameOpp, sourceOpp, consumerOpp, evThreadOpp, dOpp, this);
   }
   
 
