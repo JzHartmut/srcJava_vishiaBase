@@ -496,10 +496,6 @@ public class FileAccessZip extends FileRemoteAccessor // extends FileRemoteAcces
 
 
 
-  @Override public boolean awaitExecution ( long timeout, boolean clearDone ) {
-    // TODO Auto-generated method stub
-    return false;
-  }
 
 
 

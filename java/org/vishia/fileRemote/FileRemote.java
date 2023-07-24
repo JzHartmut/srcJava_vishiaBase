@@ -9,7 +9,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.EventObject;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -235,6 +234,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-24 the CallbackWait was no more used, removed (cleanup), the concept is adequate {@link FileRemoteProgressEventConsumer}. 
    * <li>2023-07-19 move and create {@link FileRemoteCmdEventData} from the inner class CmdEventData. 
    *   That causes using {@link FileRemoteCmdEventData#setCmdWalkRemote(FileRemote, org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, int, int)}
    *   etc. instead immediately writing to its variables. Its better to obvious the software goal!
@@ -2538,9 +2538,9 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     public final FileRemoteProgressEvData progress;
     
     public CallbackEvent ( String name, EventConsumer dst, EventTimerThread thread, EventSource evSrcCmd) {
-      assert(dst instanceof FileRemoteProgress);
+      assert(dst instanceof FileRemoteProgressEventConsumer);
       this.progress = new FileRemoteProgressEvData();
-      this.ev = new EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData>(name, null, (FileRemoteProgress)dst, thread, this.progress);
+      this.ev = new EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData>(name, null, (FileRemoteProgressEventConsumer)dst, thread, this.progress);
     }
   }
   
@@ -2791,22 +2791,6 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     last
   }
 
-  
-  protected class CallbackWait extends EventConsumerAwait{
-    public CallbackWait(){ super(null); }
-
-    @Override public int processEvent(EventObject ev)
-    {
-      synchronized(FileRemote.this){
-        FileRemote.this.notify();
-        setDone(null);
-      }
-      return 1;
-    }
-    
-    
-    
-  }
   
   
   

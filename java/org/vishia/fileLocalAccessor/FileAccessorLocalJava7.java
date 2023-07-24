@@ -193,7 +193,6 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
     }
     
-    @Override public boolean awaitExecution ( long timeout, boolean cleanDone ) { return false; }
 
     @Override public String toString(){ return "FileRemoteAccessorLocal - executerCommision"; }
 
@@ -593,18 +592,6 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
 
   
-  EventConsumer execCopyFile = new EventConsumerAwait(null) {
-    @Override public int processEvent ( EventObject evP ) {
-//      FileRemote.CmdEvent ev = (FileRemote.CmdEvent)evP;
-//      String sError = copyFile(ev.filesrc, ev.filedst, null);  // action and back event.    
-//      FileRemoteProgressEvent callback = ev.getOpponent();
-//      callback.errorMsg = sError;
-//      callback.sendEvent(sError == null? FileRemote.CallbackCmd.done : FileRemote.CallbackCmd.error);
-      return mEventConsumed;
-    }
-
-    
-  };
   
 
   
@@ -1609,11 +1596,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     return 0;
   }
 
-  @Override public boolean awaitExecution ( long timeout, boolean clearDone ) {
-    // TODO Auto-generated method stub
-    return false;
-  }
-
+ 
 
   
 }

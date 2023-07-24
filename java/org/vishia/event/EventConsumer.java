@@ -14,6 +14,8 @@ public interface EventConsumer
 {
   /**Version, history and license
    * <ul>
+   * <li>2023-07-24 Hartmut remove: The 'awaitExecution(...)' is no longer member of. 
+   *   It is specific defined in {@link EventConsumerAwait}, not general for all consumer, not used in vishia Software and not sense. 
    * <li>2023-03-10 Hartmut new: {@link #evThread()} 
    * <li>2023-02-21 Hartmut new: {@link #awaitExecution(long)}
    * <li>2015-01-04 Hartmut chg: It is an abstract class instead an interface yet for new data, less effort for adaption.
@@ -57,7 +59,7 @@ public interface EventConsumer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2023-03-10";
+  public static final String version = "2023-07-24";
 
   
   /**This operation should return that thread, which is associated to this consumer.
@@ -94,25 +96,6 @@ public interface EventConsumer
   int processEvent(EventObject ev); 
   
   
-  
-  /**Awaits for specific execution in any other thread.
-   * This operation may be implemented per default with only { return false; } it it is not desired.
-   * If it is desired it is possible to wait in any thread for succeed the event. 
-   * <br>
-   * Hint: The implementor of this interface may be inherited from {@link EventConsumerAwait}.
-   * This abstract class implements this operation in a standard way. 
-   * Then only {@link #processEvent(EventObject)} should be overridden
-   * and should call {@link EventConsumerAwait#setDone(String)} if the event is succeed.
-   * <br>
-   * Second hint: Succeed does not need to receive any event. 
-   * It can mean that a special event with special data is received.
-   * That is evaluated in the {@link #processEvent(EventObject)} implementation. 
-   * 
-   * @param timeout comes back unconditionally in the timeout time.
-   * @param clearDone if true then clear the done flag in mutex if it is waiting and done was set.
-   * @return true if the execution was done, false on timeout or default implementation. 
-   */
-  boolean awaitExecution ( long timeout, boolean clearDone);
   
   
   /**Bit in return value of the {@link #processEvent(EventObject)}

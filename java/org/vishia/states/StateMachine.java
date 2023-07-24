@@ -401,8 +401,6 @@ public class StateMachine implements EventConsumer, InfoAppend, Closeable
   }
   
     
-  @Override public boolean awaitExecution ( long timeout, boolean cleanDone ) { return false; }
-
   
   @Override public CharSequence infoAppend(StringBuilder u){
     if(u == null){ u = new StringBuilder(200); }

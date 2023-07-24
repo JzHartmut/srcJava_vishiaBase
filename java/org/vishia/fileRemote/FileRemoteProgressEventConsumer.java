@@ -18,15 +18,17 @@ import org.vishia.event.Payload;
  * @author Hartmut Schorrig
  *
  */
-public class FileRemoteProgress extends EventConsumerAwait {
+public class FileRemoteProgressEventConsumer extends EventConsumerAwait<FileRemoteProgressEvData, FileRemoteCmdEventData> {
 
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-07-24 refactored: renamed from FileRemoteProgress because the name has not show, it is a consumer.
+   *   Some features are now contained in {@link EventConsumerAwait} in a common kind instead here.  
    * <li>2023-07-22 Hartmut new: now contains also the progressData and cmdData as reference and the event itself.
+   *   but with change on 2023-07-24 consequently in the {@link EventConsumerAwait} super class.
    *   Hence it is a complete usable class for one event handling. 
-   *   TODO idea just now: the universal approach may be assemble it all with generics in the {@link EventConsumerAwait} class,
-   *   this class is then only a concretion with non generics.
+   *   This class is then only a concretion with non generics.
    * <li>2023-03-12 Hartmut created as common solution for all FileRemote oriented event consumer. 
    * </ul>
    * <br><br>
@@ -59,24 +61,6 @@ public class FileRemoteProgress extends EventConsumerAwait {
   
   
   
-  /**This cmdData are used and reused for calling commands to the {@link FileRemote#device()} during walking. 
-   * It are referenced from evBack.
-   */
-  final FileRemoteCmdEventData cmdData = new FileRemoteCmdEventData();
-  
-  /**Data for the progress and success back event used and reused for all back event calling, referenced from {@link #evBack}   */
-  final FileRemoteProgressEvData progressData = new FileRemoteProgressEvData();
-
-  /**Back event with the evCmd as opponent. Because the opponent has no thread and no Consumer as event destination, 
-   * only its payload is used as {@link FileRemoteCmdEventData} for internal commands which are executed if possible in the same thread. 
-   * The back event is used for check success, and also necessary if the device uses communication and/or an own thread.
-   * The EventConsumer for this evBack is this own class. 
-   * It offers {@link #awaitExecution(long, boolean)} in its base class {@link FileRemoteProgress}. 
-   */
-  public final EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData> evBack;
-
-  public final String name;
-  
   /**Number of available directories and files, filled on check. */
   public int nrDirAvail, nrFilesAvail;
   
@@ -91,16 +75,13 @@ public class FileRemoteProgress extends EventConsumerAwait {
    * @param cmdThread if given the using command is executed in this thread.
    *   If null then the command is executed in the own thread which calls the command. 
    */
-  public FileRemoteProgress(String name, EventThread_ifc progressThread, EventThread_ifc cmdThread) {
-    super(progressThread);
-    this.evBack = new EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData> (
-      "ev" + name, null, this, progressThread, this.progressData, "evCmd" + name, null, null, cmdThread, this.cmdData);
-    this.name = name;
+  public FileRemoteProgressEventConsumer(String name, EventThread_ifc progressThread, EventThread_ifc cmdThread) {
+    super(name, new FileRemoteProgressEvData(), progressThread, new FileRemoteCmdEventData(), cmdThread);
   }
 
 
 
-  @Override public FileRemoteProgress clean( ) {
+  @Override public FileRemoteProgressEventConsumer clean( ) {
     this.nrDirAvail = 0;
     this.nrFilesAvail = 0;
     this.nrofBytesAllAvail = 0;
@@ -123,36 +104,7 @@ public class FileRemoteProgress extends EventConsumerAwait {
     this.nrofBytesAllAvail = ev.nrofBytesAll;
   }
   
-  /**This operation should be overridden and called as super.processEvent()
-   * if more should be done with the progress event.
-   * It is sufficient if only success or error is expected. 
-   * @param progress progress data to inform
-   * @param evCmd The command event may be given as opponent of the progress event for feedback,
-   *   for example if a quest is given ("skip/override" etc.)
-   *   This can be used in the overridden operations. 
-   * @return 
-   */
-  protected int processEvent(FileRemoteProgressEvData progress, EventWithDst<FileRemoteCmdEventData, FileRemoteProgressEvData> evCmd) {
-    if(progress.done()) {                                // check whether done() is given, all other is not interest.
-      this.setDone(progress.sError);                     // setDone awakes a waiting thread which has called await
-    }
-    return mEventDonotRelinquish;      // will be relinquished after wait
-  }
   
   
-  
-  /**This operation is called from {@link EventWithDst#sendEvent(Object)} or from {@link org.vishia.event.EventTimerThread#stepThread()}
-   * as overridden. It prepares and calls {@link #processEvent(FileRemoteProgressEvData, EventWithDst)
-   * which is overridden by the application.
-   */
-  @Override public int processEvent(EventObject evRaw) {
-    assert(evRaw instanceof EventWithDst);                 // an EventWithDst is expected
-    @SuppressWarnings("unchecked") EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData> ev = 
-        (EventWithDst<FileRemoteProgressEvData, FileRemoteCmdEventData>) evRaw;  // cast it to the basic type
-    FileRemoteProgressEvData progress = ev.data();                         // get and test type of the data
-    EventWithDst<FileRemoteCmdEventData, FileRemoteProgressEvData> evCmd = ev.getOpponent();
-    return processEvent(progress, evCmd);
-  }
-
 
 }

@@ -3,7 +3,7 @@ package org.vishia.event;
 public interface Payload {
 
   
-  /**Common operation to clean the content. */
+  /**Common operation to clean the content. Before usage the payload it should be cleaned*/
   Payload clean();
   
   /**Converts to dedicated bytes which presents the content.

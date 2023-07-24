@@ -12,7 +12,7 @@ import org.vishia.event.Payload;
  * @author hartmut
  *
  */
-public class FileRemoteWalkerCallbackCopy  extends FileRemoteProgress implements FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackCopy  extends FileRemoteProgressEventConsumer implements FileRemoteWalkerCallback {
 
   
   

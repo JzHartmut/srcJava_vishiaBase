@@ -9,16 +9,18 @@ import org.vishia.event.TimeOrder;
 import org.vishia.fileRemote.FileRemote;
 import org.vishia.event.EventWithDst;
 import org.vishia.event.Payload;
+import org.vishia.event.PayloadBack;
 
 /**This are the data for an {@link EventWithDst} for FileRemote actions.
  * Hint: the {@link EventConsumer} evaluating this data repectively for the evBack of file operations should be
- * an derived instance of {@link FileRemoteProgress}.
+ * an derived instance of {@link FileRemoteProgressEventConsumer}.
  */
-public class FileRemoteProgressEvData implements Serializable, Payload
+public class FileRemoteProgressEvData extends PayloadBack implements Serializable, Payload
 {
 
   /**Version, license and history.
    * <ul>
+   * <li>2023-07-24 now inherits from {@link PayloadBack} which contains bDone and sError.  
    * <li>2023-03-26 {@link ProgressCmd} now contains all cmd for ask, yet in progress. 
    * <li>2023-02-21 new implements Payload and hence {@link #clean()}
    * <li>2023-02-21 chg {@link #progressCmd} is of type {@link ProgressCmd}, separated now from {@link FileRemote.Cmd}
@@ -58,7 +60,7 @@ public class FileRemoteProgressEvData implements Serializable, Payload
    * 
    * 
    */
-  public final static String version = "2023-02-05";
+  public final static String version = "2023-07-24";
 
   
   
@@ -159,11 +161,6 @@ public class FileRemoteProgressEvData implements Serializable, Payload
   /**Number of Files which are marked while walking and processing. */
   public int nrofFilesMarked;
   
-  /**Set to not null if 
-   * 
-   */
-  public String sError;
-  
   
   
   
@@ -172,9 +169,6 @@ public class FileRemoteProgressEvData implements Serializable, Payload
   /**Mode of operation, see {@link FileRemote#modeCopyCreateAsk} etc. */
   public int modeCopyOper;
     
-  /**Set on success.*/
-  protected boolean bDone;
-
   
   /**True then the service has stopped execution (thread is in wait) for an answer.
    * After set the answer bits call notify().
@@ -212,9 +206,9 @@ public class FileRemoteProgressEvData implements Serializable, Payload
 
   
   @Override public FileRemoteProgressEvData clean () {
+    super.clean();
   this.currFile = null;
   this.currDir = null;
-  this.sError = null;
   this.progressCmd = FileRemoteProgressEvData.ProgressCmd.noCmd;
   this.dateCreate = 0;
   this.dateLastAccess = 0;
@@ -226,7 +220,6 @@ public class FileRemoteProgressEvData implements Serializable, Payload
   this.nrofBytesAll = 0;
   this.nrofBytesFile = 0;
   this.nrofBytesFileCopied = 0;
-  this.bDone = false;
   this.bQuest = false;
   this.bPause = false;
   this.bAbort = false;

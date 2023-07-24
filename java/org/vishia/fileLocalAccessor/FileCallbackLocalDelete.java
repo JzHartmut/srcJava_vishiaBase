@@ -75,7 +75,7 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
         FileRemoteProgressEvData data = this.evBack.data();
         //data.answerToCmd
         data.currFile = fileRemote;
-        data.sError = exc.getMessage();
+        data.setDone(false, exc.getMessage());
         data.progressCmd = FileRemoteProgressEvData.ProgressCmd.error;
         this.evBack.sendEvent(this);
       }
@@ -97,7 +97,7 @@ public class FileCallbackLocalDelete implements FileRemoteWalkerCallback{
           FileRemoteProgressEvData data = this.evBack.data();
           //data.answerToCmd
           data.currFile = dirRemote;
-          data.sError = exc.getMessage();
+          data.setDone(false, exc.getMessage());
           data.progressCmd = FileRemoteProgressEvData.ProgressCmd.error;
           this.evBack.sendEvent(this);
         }

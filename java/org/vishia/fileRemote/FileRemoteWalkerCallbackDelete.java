@@ -13,7 +13,7 @@ import org.vishia.event.Payload;
  * @author hartmut
  *
  */
-public class FileRemoteWalkerCallbackDelete extends FileRemoteProgress implements FileRemoteWalkerCallback {
+public class FileRemoteWalkerCallbackDelete extends FileRemoteProgressEventConsumer implements FileRemoteWalkerCallback {
 
   
   protected FileRemoteWalkerCallbackDelete() {

@@ -130,7 +130,7 @@ public abstract class FileRemoteAccessor implements EventConsumer
    *   The event knows a destination where the back event is processed. 
    *   If this argument is null, no back information will be sent. This is sensible if bWait is true,
    *   and if the caller can check what is happen. 
-   *   Hint: Usual an instance of {@link FileRemoteProgress} can be used to execute the event, 
+   *   Hint: Usual an instance of {@link FileRemoteProgressEventConsumer} can be used to execute the event, 
    *   and also to wait for success on user level.
    * @return null if executed successfully in another thread (bWait = false), else return null if no error.
    * @since 2023-03, the new concept.
