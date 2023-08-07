@@ -50,6 +50,9 @@ public class FileFunctions {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-03-15 Hartmut bugfix {@link #addFilesWithBasePath(File, String, List)} used in {@link org.vishia.cmd.JZtxtcmdFileset}:
+   *   If the basepath is given with 'basepath/:' or especially './:' then this should be admissible. Without fix, the first character of local path was missing. 
+   *   It was obviously in {@link org.vishia.header2Reflection.Header2Reflection} generation.
    * <li>2023-03-15 Hartmut enhancements on {@link #absolutePath(String, File)}. 
    * <li>2023-01-25 Hartmut new {@link WildcardFilter} now in test, was never used before.  
    * <li>2022-01-18 Hartmut new {@link #newFile(String)} regards System.getProperty("user.dir") set by change dir in {@link org.vishia.jztxtcmd.JZtxtcmd}.
@@ -157,7 +160,7 @@ public class FileFunctions {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2023-01-25";
+  public final static String sVersion = "2023-08-07";
 
   public interface AddFileToList
   {
@@ -281,28 +284,19 @@ public class FileFunctions {
     }
     final String sPathLocal;
     final CharSequence sAbsDir;
-    if(posBase >=0)
-    { sPathBase = (sPath.substring(0, posBase) + "/");
-      sPathLocal = sPath.substring(posBase +1);
-      posLocalPath = sPathBase.length();
-      //      String sAbsDirNonNormalized = baseDir !=null ? baseDir.getAbsolutePath() + "/" + sPathBase : sPathBase;
-//      sAbsDir = normalizePath(sAbsDirNonNormalized);
-//      posLocalPath = sAbsDir.length();
-//      dir = new File(sAbsDir.toString()); //baseDir, sPathBase);
+    if(posBase >=0) { 
+      if(sPath.charAt(posBase -1 ) == '/') {               // if it is written path/:localpath:
+        sPathBase = (sPath.substring(0, posBase));         // posBase ends with '/'
+      } else {                                             // @since 2023-08-07 before, this situation may be never detect ...?
+        sPathBase = (sPath.substring(0, posBase) + "/");   // if it is written path:localpath, add the '/' to sPathBase.
+      }
+      posLocalPath = sPathBase.length();                   // this is used for all files to detect the local path
+      sPathLocal = sPath.substring(posBase +1);            // after the ':'
     }
-    else 
-    { //sPathBase = "";
-//      String sBaseDir = baseDir.getAbsolutePath();
-//      sAbsDir = normalizePath(sBaseDir);
-//      if(sBaseDir.length() != sAbsDir.length()){
-//        dir = new File(sAbsDir.toString());
-//      } else {
-//        dir = baseDir;  //use same instance, the path is correct
-//      }
+    else {
       sPathLocal = sPath.replace('\\', '/');
       sPathBase = "/";
       posLocalPath = 0;
-//      posLocalPath = sAbsDir.length();
     }
     dir = new File(sPathBase);
     //The wrapper is created temporary to hold the informations about basepath

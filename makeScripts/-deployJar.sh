@@ -32,17 +32,19 @@ else                                                       ##compilation not suc
       ##
     fi  
     ##
-    ##The next script copies to the maybe given deploy directory.
-    if test -d ../../Java/deploy; then export DEPLOYDIR="../../Java/deploy";
-    elif test -d deploy; then export DEPLOYDIR="deploy";
-    else echo deploy directory not given, create it.
-    fi  
-    if test -v DEPLOYDIR; then
-      echo == Deploy:
-      echo copy to $DEPLOYDIR
-      cp $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* $DEPLOYDIR
-      ls $DEPLOYDIR/$DSTNAME-$VERSIONSTAMP*
-    fi  
+    ##The next script copies to the maybe given deploy directory. 
+    ## 2023-08-07 do not copy to deploy especially faulty if a new version with the older time stamp was created.
+    ## copy this last stuff manually with carefully look on the deploy.
+    ##  if test -d ../../Java/deploy; then export DEPLOYDIR="../../Java/deploy";
+    ##  elif test -d deploy; then export DEPLOYDIR="deploy";
+    ##  else echo deploy directory not given, create it.
+    ##  fi  
+    ##  if test -v DEPLOYDIR; then
+    ##    echo == Deploy:
+    ##    echo copy to $DEPLOYDIR
+    ##    cp $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP* $DEPLOYDIR
+    ##    ls $DEPLOYDIR/$DSTNAME-$VERSIONSTAMP*
+    ##  fi  
     echo ======= success ==========================================================
   fi  
 fi  
