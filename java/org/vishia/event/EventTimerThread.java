@@ -558,6 +558,12 @@ public class EventTimerThread implements EventTimerThread_ifc, Closeable, InfoAp
     if(timeWait <2){
       timeWait = 2;  //should not 0  
     }
+    if(timeWait > 120) {
+      Debugutil.stop();
+      //System.out.println("timeWait = " + timeWait);
+    } else {
+      //System.out.print(":");
+    }
     return timeWait;
   }
   

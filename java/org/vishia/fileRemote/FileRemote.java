@@ -862,8 +862,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   }
   
   /**Returns the instance which is associated to the given directory.
-   * @param path The directory path where the file is located, given absolute.
+   * @param cluster the cluster where the dir should be searched
+   * @param dirPath The directory path where the file is located, given absolute.
    * @return A existing or new instance.
+   * @apiNote usual the {@link #clusterOfApplication} should be used. For that use {@link #getDir(CharSequence)}.
    */
   public static FileRemote getDir(FileCluster cluster, CharSequence dirPath){ 
     FileRemoteAccessor device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(dirPath);
@@ -874,7 +876,11 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     return cluster.getFile(sfPath, null);
   }  
   
-  public static FileRemote getDir(String dirPath ) {
+  /**Returns the instance which is associated to the given directory.
+   * @param dirPath The directory path where the file is located, given absolute.
+   * @return A existing or new instance.
+   */
+  public static FileRemote getDir(CharSequence dirPath ) {
     return getDir(clusterOfApplication, dirPath);
   }
   
