@@ -85,6 +85,9 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-08-14 new {@link #getScript()}, 
+   *   {@link #newExecuteLevel(JZtxtcmdThreadData)}, {@link ExecuteLevel#exec_Subroutine(Subroutine, List, StringFormatter, int)}
+   *   Used for {@link org.vishia.gral.cfg.GuiCfg} in srcJava_vishiaGui component. 
    * <li>2023-07-21 rarely bug fixed in 'exec_Subroutine(...)': if argument is null, should not throw. null should be admissible.
    * <li>2022-11-13 Hartmut meaningful change: {@link ExecuteLevel#changeCurrDir(CharSequence)} now sets the "user.dir" Java system's property.
    *   With them it is possible generally in Java to open a file via FileFunctions.newFile(System.getProperty("user.dir"), sRelativePath),
@@ -540,6 +543,9 @@ public class JZtxtcmdExecuter {
   
   
   
+  /**The usable instance of the JZtxtcmdExecuter for some managements.
+   * It is private because only internally to use.
+   */
   private final JzTcMain acc;
   
   /**Variable for any exception while accessing any java resources. It is the $error variable of the script. */
@@ -870,6 +876,14 @@ throws ScriptException //, IllegalAccessException
   //return scriptLevel.localVariables;
 }
 
+
+
+/**Returns the currently assigned script, maybe null on start.
+ */
+public final JZtxtcmdScript getScript() { return this.acc.jzcmdScript; }
+
+
+
   
   
 /**Stores the script and executes the script level to generate the script level variables, especially the script variables were calculated yet. 
@@ -947,6 +961,18 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
   return level;
 }
   
+
+
+/**Creates a ExecuteLevel for the script which can be used to execute some sub routines (not only main)
+ * in the given thread on demand. 
+ * @param threadData environment for the specific JzTxtCmd thread
+ * @return a new ExecuteLevel.
+ */
+public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
+  return new ExecuteLevel(this.acc, null, null, threadData, this.acc.scriptLevel, null);
+}
+
+
   /**Returns the association to all script variables. The script variables can be changed
    * via this association. Note that change of script variables is a global action, which should not
    * be done for special requests in any subroutine.
@@ -2494,9 +2520,7 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
     
     /**Executes a subroutine invoked from user space, with given {@link ExecuteLevel} as this.
      * This routine should be used if args are given as Map of Variable.
-     * The routine creates an own level to execute the sub routine unless the subroutine is marked with {@link JZtxtcmdScript.Subroutine#useLocals}.
-     * It calls {@link #levelForSubroutine(org.vishia.cmd.JZtxtcmdScript.Subroutine)} therefore.
-     * Internally the private {@link #exec_Subroutine(org.vishia.cmd.JZtxtcmdScript.Subroutine, ExecuteLevel, List, List, StringFormatter, int, int)} is called.
+     * Internally the {@link #exec_Subroutine(Subroutine, List, StringFormatter, int)} is called.
      * @param substatement Statement of the subroutine
      * @param args Any given arguments in form of a map. It is proper to build a Map with JZcmd script features better than a list.
      *   The execution needs a List of Variables, the Variables of the map are copied to a temporary List instance.
@@ -2519,10 +2543,33 @@ public ExecuteLevel execute_Scriptclass(JZtxtcmdScript.JZcmdClass clazz) throws 
       } else {
         arglist = null;
       }
+      return exec_Subroutine(subroutine, arglist, out, indentOut);
+    }
+    
+    
+    
+    /**Executes a subroutine invoked from user space, with given {@link ExecuteLevel} as this.
+     * This routine should be used if args are given as List of Variable.
+     * The routine creates an own level to execute the sub routine unless the subroutine is marked with {@link JZtxtcmdScript.Subroutine#useLocals}.
+     * It calls {@link #levelForSubroutine(org.vishia.cmd.JZtxtcmdScript.Subroutine)} therefore.
+     * Internally the private {@link #exec_Subroutine(org.vishia.cmd.JZtxtcmdScript.Subroutine, ExecuteLevel, List, List, StringFormatter, int, int)} is called.
+     * @param substatement Statement of the subroutine
+     * @param args Any given arguments in form of a List. It is proper for user calling.
+     * @param out output
+     * @param indentOut
+     * @return null on success, an error message on parameter error
+     * @throws Exception
+     * @since 2023-08, before only the {@link #exec_Subroutine(Subroutine, Map, StringFormatter, int)} was existing and contains this content. 
+     */
+    public short exec_Subroutine(JZtxtcmdScript.Subroutine subroutine
+        , List<DataAccess.Variable<Object>> args
+        , StringFormatter out, int indentOut
+    )  
+    {
       short success;
       final ExecuteLevel sublevel = levelForSubroutine(subroutine);
       try{
-        success = exec_Subroutine(subroutine, sublevel, null, arglist, out, indentOut, -1);
+        success = exec_Subroutine(subroutine, sublevel, null, args, out, indentOut, -1);
       } catch(Exception exc){
         success = kException;
       }

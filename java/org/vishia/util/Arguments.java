@@ -1,6 +1,7 @@
 package org.vishia.util;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -67,24 +68,12 @@ import java.util.List;
  * </pre>
  * In the main you should call:<pre>
   public static void main(String[] cmdArgs) {
-    Args args = new Args();
-    try {
-      if(cmdArgs.length ==0) {
-        args.showHelp(System.out);
-        System.exit(1);                      // no arguments, help is shown.
-      }
-      if( ! args.parseArgs(cmdArgs, System.err)
-       || ! args.testConsistence(System.err)
-        ) { 
-        System.exit(args.exitCodeArgError);  // argument error
-      }
+    Args args = new Args();                  // an inherit class of Arguments
+    if(  args.parseArgs(cmdArgs, System.err) // returns true if no argument error
+      && args.testConsistence(System.err)    // returns true if all arguments are proper
+      ) {                                    // then execute:
+      smain(args);                           // internal smain with prepared Args
     }
-    catch(Exception exc) {
-      System.err.println("Unexpected Exception: " + exc.getMessage());
-      exc.printStackTrace();
-    }
-    smain(args);                       // internal smain with prepared Args
-    System.exit(1); 
   }
  * </pre>
  * Now the <code>smain(args)</code> is also usable inside another Java program, with given Args:<pre>
@@ -123,6 +112,11 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-08-09 Hartmut new: supports --help and --version
+   * <li>2023-08-09 Hartmut new: An exception in evaluation of the argument creates a proper message, which is output or thrown.
+   *   {@link #parseArgs(String[], Appendable)} is now exception free, more simple in handling.
+   *   If the {@link #helpInfo} starts with "!" then it will be written on emtpy arguments.
+   *   With that changes the usage is more simple, see example in javadoc to the class.
    * <li>2023-07-14 Hartmut new in {@link #replaceEnv(String)}: If it starts with "/tmp/" it substitutes the TMP on windows.  
    * <li>2023-03-17 Hartmut new {@link #readArguments(String[])} as ready to usable in main().
    * <li>2023-01-27 Hartmut new in sArg in a argument file: "$=" is the directory of the argument file.
@@ -282,6 +276,8 @@ public abstract class Arguments {
   
   String sLogLevel;
   
+  Appendable outMsg;
+  
   protected final void addArg(Argument arg) {
     if(this.argList == null) { this.argList = new LinkedList<Argument>(); }
     this.argList.add(arg);
@@ -353,6 +349,13 @@ public abstract class Arguments {
   
 
   /**This operation tests one argument maybe from a container as String[].
+   * It can be overridden by the inherit Arguments class but should unconditionally also call
+   * <pre>
+   *   super.textArgument(argc, nArg);
+   * </pre>
+   * This operation is only called in {@link #tryTestArgument(String, int, Appendable, Closeable)},
+   * which is called in {@link #parseArgs(String[], Appendable)} and nothing else.
+   * It is protected to prevent faulty calling.  
    * <ul>
    * <li> --- The argument is ignored
    * <li> --report:value sets {@link #sLogPath}
@@ -362,8 +365,9 @@ public abstract class Arguments {
    * @param argc The given argument
    * @param nArg position of the argument in the container, counted from 0
    * @return true if argument is accepted, false if not found in the {@link #argList} given on ctor
+   * @throws IOException 
    */
-  protected boolean testArgument(String argc, int nArg) {
+  protected boolean testArgument ( String argc, int nArg) {
     String value;
     boolean bOk = true;
     if((value = checkArgVal("--report", argc)) !=null) 
@@ -372,13 +376,22 @@ public abstract class Arguments {
     else if((value = checkArgVal("--rlevel", argc)) !=null) 
     { this.sLogLevel = value;   //an example for default output
     }
-    else if((value = checkArgVal("--help", argc)) !=null) 
-    { //TODO    should write the help info, may be to an destination file.
+    else if((value = checkArgVal("--help", argc)) !=null) { 
+      if(this.helpInfo !=null) { showHelp(this.outMsg); }
+    }
+    else if((value = checkArgVal("--version", argc)) !=null) { 
+      if(this.aboutInfo !=null) { 
+        try { 
+          this.outMsg.append(this.aboutInfo).append('\n'); 
+        } catch(IOException exc) {
+          throw new RuntimeException("unexpected IOException: ", exc);
+        }
+      }
     }
     else if(argc.startsWith("---")) 
     { //accept but ignore it. Commented calling arguments.
     }
-    else if(this.argList !=null){
+    else if(this.argList !=null) {                         // search the argument in the given arglist
       Argument emptyArg = null;
       Argument argFound = null;
       int argLenFound = 0;
@@ -422,20 +435,22 @@ public abstract class Arguments {
       } 
       else if(emptyArg !=null){ //argument start string not found but an empty choice possible:
         //set the empty arg.
-        return emptyArg.set.setArgument(argc);
+        bOk = emptyArg.set.setArgument(argc);
       } 
       else {
         //argument not found (not returned in for-loop):
-        return false;
+        bOk = false;
       }
     }
     else { 
-      return bOk = false;
+      bOk = false;
     }
     return bOk;
   }
   
-  /**Checks whether an option arg is given, the arg should be identically with check
+  /**Checks whether an option arg is given without argument value.
+   * It is an alternative to {@link #checkArgVal(String, String)}.
+   * The arg should be identically with check
    * @param check
    * @param arg
    * @return
@@ -504,20 +519,25 @@ public abstract class Arguments {
   /**This is the user operation to process all arguments from a container as String[].
    * It is especially for  <code>main(String[] args)</code>
    * @param args The argument string array.
-   * @param errMsg if given then all arguments will be parsed. Errors will be outputed here.
+   *   If the {@link #helpInfo} starts with "!" the help info is shown on empty arguments.
+   * @param errMsg if given then all arguments will be parsed. Errors will be output here.
    * @throws IOException only on unexpected errors writing errMsg 
    * @throws IllegalArgumentException on argument error only if errMsg == null
    * @return true if all ok, but the user should call {@link #testConsistence(Appendable)} afterwards.
    *         false argument error, the application may be used though if {@link #testConsistence(Appendable)} returns true.
    */
-  public final boolean parseArgs(String[] args, Appendable errMsg) throws IOException {
+  public final boolean parseArgs(String[] args, Appendable errMsg) {
     boolean bOk = true;
     int nArg = -1;
     String arg = null;
     BufferedReader farg = null;
     File argFile = null;
     String sDirArgFile = null;
+    this.outMsg = errMsg !=null ? errMsg: System.out;
     try {
+      if(args.length ==0 && this.helpInfo !=null && this.helpInfo.startsWith("!")) {
+        showHelp(this.outMsg);
+      }
       for(String arg1: args) {
         arg = arg1;
         if(arg.startsWith("--@")) { //======================= Read args from a file
@@ -525,118 +545,158 @@ public abstract class Arguments {
           final String sFile, sLabel;
           if(posLabel >0) {
             sFile = arg.substring(3, posLabel);
-            sLabel = arg.substring(posLabel+1);
+            sLabel = arg.substring(posLabel+1);            // A label after file path is given, in form: --@D:/path/to/file.ext:Label
           } else {
             sFile = arg.substring(3);
             sLabel = null;
           }
-          argFile = FileFunctions.newFile(sFile);          // accept a changed directory, elsewhere uses the originally OS PWD
-          farg = new BufferedReader(new FileReader(argFile));
-          sDirArgFile = argFile.getParent();
-          int posArg;                                      // position of the argument in the line may be >0
-          final String sStartLineArg;                      // then all lines should start with this text before posArg.
-          final String sCommentEndline;
-          final boolean bTrimTrailingSpaces;
-          if(sLabel !=null) {                              // posLabel >0, search first line with this label, after this line args starts.
-            int zCheck = sLabel.length()+5;
-            posArg = -1;
-            String sCheckLine = "";
-            while( posArg <0 && (sCheckLine = farg.readLine()) !=null) {
-              posArg = StringFunctions.indexOf(sCheckLine, 0, zCheck, sLabel);  //check whether sLabel is found in range 0...4 in the line
+          argFile = FileFunctions.newFile(sFile);          // File in the maybe changed current directory, not only in the originally OS PWD
+          try { farg = new BufferedReader(new FileReader(argFile)); }
+          catch(IOException exc) {
+            if(errMsg !=null) {
+              errMsg.append("  ERROR not found: --@" + argFile.getAbsolutePath()); 
+            } else {
+              throw new IOException(exc);
             }
-            if(posArg <0) {
-              errMsg.append("  ERROR: label not found in ").append(arg).append('\n');
+          }
+          if(farg !=null) {    //---------------------------- The --@file was found and opened:
+            sDirArgFile = argFile.getParent();
+            int posArg;                                    // position of the argument in the line may be >0
+            final String sStartLineArg;                    // then all lines should start with this text before posArg.
+            final String sCommentEndline;
+            final boolean bTrimTrailingSpaces;
+            if(sLabel !=null) {                            // if posLabel >0, then search the first line with this label, after this line args starts.
+              int zCheck = sLabel.length()+5;
+              posArg = -1;
+              String sCheckLine = "";
+              while( posArg <0 && (sCheckLine = farg.readLine()) !=null) {
+                posArg = StringFunctions.indexOf(sCheckLine, 0, zCheck, sLabel);  //check whether sLabel is found in range 0...4 in the line
+              }
+              if(posArg <0) {
+                errMsg.append("  ERROR: label not found in ").append(arg).append('\n');
+                posArg = 0;
+                sStartLineArg = null;
+                sCommentEndline = null;
+                bTrimTrailingSpaces = false;
+              } else { //------------------------------------ the requested '   Label' was found in this line, defines the:
+                sStartLineArg = sCheckLine.substring(0, posArg); // start of the line before the label, for example '::Label'
+                int zLabelEnd = posArg + sLabel.length();        // All lines with arguments should then start with sStartLineArgs
+                if(sCheckLine.length() > zLabelEnd) {
+                  sCommentEndline = sCheckLine.substring(zLabelEnd).trim();  // Also a comment string can be defined there
+                  bTrimTrailingSpaces = sCheckLine.charAt(zLabelEnd) == ' '; // comment string after spaces, then trim the argument till comment
+                } else {
+                  sCommentEndline = null;                  // comment in arguments only possible with a label
+                  bTrimTrailingSpaces = false;
+                }
+              }
+            } else {
               posArg = 0;
               sStartLineArg = null;
               sCommentEndline = null;
               bTrimTrailingSpaces = false;
-            } else {
-              sStartLineArg = sCheckLine.substring(0, posArg); //label found, posArg and sStartLineArg set, posArg ==0 possible
-              int zLabelEnd = posArg + sLabel.length();
-              if(sCheckLine.length() > zLabelEnd) {
-                sCommentEndline = sCheckLine.substring(zLabelEnd).trim();
-                bTrimTrailingSpaces = sCheckLine.charAt(zLabelEnd) == ' ';
-              } else {
-                sCommentEndline = null;
-                bTrimTrailingSpaces = false;
+            }
+            // =============================================== Now reads the line of the file for arguments
+            while( (arg = farg.readLine()) !=null) {
+              if(posArg >0 && !arg.startsWith(sStartLineArg)) { // label mode: break of arguments lines if no more lines with the start line found
+                break;
+              }
+              String sArg = arg.substring(posArg);         // The argument itself from 0 or from the posArg
+              int posEnd = sCommentEndline == null ? -1 : sArg.indexOf(sCommentEndline);
+              if(posEnd <0 && bTrimTrailingSpaces) {
+                posEnd = sArg.length();                    //to trim trailing spaces on non commented line.
+              }
+              if(posEnd >0) {                              // trim trailing white spaces always on comment or if desired.
+                while(posEnd >0 && sArg.charAt(posEnd-1)==' ') { posEnd -=1;}
+                sArg = sArg.substring(0, posEnd);
+              }
+              sArg = sArg.replace("$=", sDirArgFile);      // $= replaces the absolute directory of the own argument file.
+              //
+              if(  sArg.length() >0) {                     // don't test an empty line in the file
+                if(!tryTestArgument(sArg, ++nArg, errMsg, farg)) {
+                  bOk = false;
+                }
               }
             }
-          } else {
-            posArg = 0;
-            sStartLineArg = null;
-            sCommentEndline = null;
-            bTrimTrailingSpaces = false;
+            farg.close();
+            farg = null;
+            argFile = null;
           }
-          
-          while( (arg = farg.readLine()) !=null) {
-            if(posArg >0 && !arg.startsWith(sStartLineArg)) { // break of arguments lines if other start
-              break;
-            }
-            String sArg = arg.substring(posArg);
-            int posEnd = sCommentEndline == null ? -1 : sArg.indexOf(sCommentEndline);
-            if(posEnd <0 && bTrimTrailingSpaces) {
-              posEnd = sArg.length();                      //to trim trailing spaces on non commented line.
-            }
-            if(posEnd >0) {                                // trim trailing white spaces always on comment or if desired.
-              while(posEnd >0 && sArg.charAt(posEnd-1)==' ') { posEnd -=1;}
-              sArg = sArg.substring(0, posEnd);
-            }
-            sArg = sArg.replace("$=", sDirArgFile);              // $= replaces the absolute directory of the own argument file.
-            if(  sArg.length() >0                          // don't test an empty line in the file
-              && !testArgument(sArg, ++nArg)) {            // testArg is faulty:
-              if(errMsg !=null) {
-                errMsg.append("  ERROR: ").append(arg).append('\n');
-                bOk = false;
-              } else {
-                farg.close();
-                throw new IllegalArgumentException( arg);
-              }
-            }
-          }
-          farg.close();
-          farg = null;
         } 
-        else {
-          if(!testArgument(arg, ++nArg)) {
-            if(errMsg !=null) {
-              errMsg.append("  ERROR: ").append(arg).append('\n');
-              bOk = false;
-            } else {
-              throw new IllegalArgumentException( arg);
-            }
+        else {                                             // other argument than --@ in command line
+          if(!tryTestArgument(arg, ++nArg, errMsg, null)) {
+            bOk = false;
           }
         }
       }
     } 
-    catch(IOException exc) {
-      if(errMsg !=null) {
-        if(farg == null) { errMsg.append("  ERROR: File not found: "); }
-        else {
-          errMsg.append("  ERROR: unexpected File IO-error: ");
-          farg.close();
-          farg = null;
-        }
-        errMsg.append(arg).append('\n');
-        bOk = false;
-      } else {
+    catch(IOException exc) {  // it is only on file error and maybe not expectable for errMsg.append(...)
+      try {
         if(farg !=null) { farg.close(); }
-        throw new IllegalArgumentException("File not found or IO-error: " + arg + " File=" + argFile.getAbsolutePath());  //it is faulty
-        //throw new IllegalArgumentException( arg);
+        String sMsg = arg + "  ERROR: " + ( argFile !=null ? " File=" + argFile.getAbsolutePath() : "" )
+                        + exc.getMessage();
+        if(errMsg !=null) {
+          errMsg.append(sMsg).append('\n');
+          bOk = false;
+        } else {
+          throw new IllegalArgumentException(sMsg);  //it is faulty
+        }
+      } catch(IOException exc2) {
+        throw new RuntimeException(exc2);  // not possible to handle, it is IOException on errMsg.append(...) and farg.close()
       }
     }
     return bOk;
   }
   
   
+  
+  /**Wraps {@link #testArgument(String, int)} in try-catch to catch a user Exception while evaluating argument strings.
+   * @param argc
+   * @param nArg
+   * @param errMsg if given, outputs the error
+   * @param farg if given, close it on error if error is not given, before an {@link IllegalArgumentException} is thrown
+   * @return true if all is ok, false if the argument is faulty and errM(sg is given. never if errMsg==null then throws
+   * @throws IOException only on formally IO error on errMsg
+   * @throws IllegalArgumentException if errMsg==null and the argument is faulty.
+   */
+  private final boolean tryTestArgument(String argc, int nArg, Appendable errMsg, Closeable farg) throws IOException {
+    boolean bOkArg;
+    CharSequence sError = "";
+    try {
+      bOkArg = testArgument(argc, ++nArg);                 // this operation may be overridden, but should call super.testArguments(...)
+    } catch(Exception exc) {                               // an exception comes if testArgument causes it in user level.
+      sError = ExcUtil.exceptionInfo(" argument eval error: ", exc, 1, 20);  //prepare a proper info with stack trace
+      bOkArg = false;
+    }
+    if(!bOkArg) {                 // test it, overridden
+      if(errMsg !=null) {
+        errMsg.append("  ERROR: ").append(argc).append(sError).append('\n');
+      } else {
+        if(farg !=null) {
+          farg.close();
+        }
+        throw new IllegalArgumentException( argc + sError);
+      }
+    }
+    return bOkArg;
+  }
+  
+  
+  
+  
   /**Writes all arguments with {@link Argument#arg} {@link Argument#help} in its order in one in a line.
    * @param out Any output channel
    * @throws IOException only on unexpected problems with out
    */
-  public void showHelp(Appendable out) throws IOException {
-    out.append(this.aboutInfo).append('\n');
-    out.append(this.helpInfo).append('\n');
-    for(Argument arg: this.argList) {
-      out.append(arg.toString());  //note: toString ends with \n already.
+  public void showHelp(Appendable out) {
+    try {
+      if(this.aboutInfo !=null) { out.append(this.aboutInfo).append('\n'); }
+      int pos0 = this.helpInfo.startsWith("!")? 1 :0;
+      out.append(this.helpInfo.substring(pos0)).append('\n');
+      for(Argument arg: this.argList) {
+        out.append(arg.toString());  //note: toString ends with \n already.
+      }
+    } catch(IOException exc) {
+      throw new RuntimeException("unexpected IOException:", exc);
     }
   }
   
@@ -658,7 +718,9 @@ public abstract class Arguments {
   
   
   
-  /**Read arguments from given command line arguments. Can be used immediately in main()
+  /**Read arguments from given command line arguments. Can be used immediately in main().
+   * This operation calls System.exit if arguments are wrong. 
+   * Alternatively use {@link #parseArgs(String[], Appendable)} and {@link #testConsistence(Appendable)}
    * @param cmdArgs
    */
   public void readArguments(String[] cmdArgs) {
@@ -676,6 +738,7 @@ public abstract class Arguments {
     catch(Exception exc) {
       System.err.println("Unexpected Exception: " + exc.getMessage());
       exc.printStackTrace();
+      System.exit(255);
     }
   }
   

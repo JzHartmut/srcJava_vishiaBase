@@ -42,6 +42,7 @@ import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
+import org.vishia.util.ExcUtil;
 import org.vishia.util.FileSystem;
 import org.vishia.util.GetTypeToUse;
 import org.vishia.util.SetLineColumn_ifc;
@@ -171,6 +172,7 @@ public final class ZbnfJavaOutput
 {
   /**Version, history and license.
    * <ul>
+   * <li>2023-08-02 Hartmut ExceptionMessage improved in searchAddMethodAndInvoke(...)
    * <li>2022-04-28 Hartmut in {@link #writeZbnfResult(DstInstanceAndClass, ZbnfParseResultItem, Class, int)}: 
    *   Store source of parsing if {@link SetSrcInfo_ifc} is given on a destination class.
    * <li>2022-02-28 Hartmut in {@link #searchCreateNew(Class, Object, String, DstInstanceAndClass, ZbnfParseResultItem)}:
@@ -827,9 +829,10 @@ public final class ZbnfJavaOutput
           argMethod[0] = componentsDestination.instance;
           try{ method.invoke(component.instance, argMethod); }
           catch(InvocationTargetException exc)
-          { String sMsg = "The called method " +method.toGenericString() + " throws an Exception: " + exc.getTargetException(); // + ", msg: " + exc.getTargetException().getMessage();
-            if(report!=null){ report.writeWarning(sMsg); }
-            throw new IllegalAccessException( sMsg );
+          { String sMsg = "The called method " +method.toGenericString() + " throws an Exception: "; // + exc.getTargetException(); // + ", msg: " + exc.getTargetException().getMessage();
+            CharSequence sMsg2 = ExcUtil.exceptionInfo(sMsg, exc.getTargetException(), 0, 20);
+            if(report!=null){ report.writeWarning(sMsg2); }
+            throw new IllegalAccessException( sMsg2.toString() );
           }
           catch(Exception exc)
           { throw new IllegalAccessException("can not access: " + inClazz.getCanonicalName()  + ".add_" + semantic + "(...) or .set..."); 

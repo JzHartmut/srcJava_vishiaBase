@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.script.CompiledScript;
@@ -54,7 +55,10 @@ public class JZtxtcmdScript extends CompiledScript
 {
   /**Version, history and license.
    * 
-   * <ul>2023-01-28 Hartmut chg {@link JZcmditem#writeStructLine(Appendable)} starts now with "JZtxtcmdScript: " 
+   * <ul>
+   * <li>2023-01-28 Hartmut new: {@link #iterSubroutines()} necessary to search all sub routines with a specified name pattern,
+   *   Used for {@link org.vishia.gral.cfg.GuiCfg} in srcJava_vishiaGui component. 
+   * <li>2023-01-28 Hartmut chg {@link JZcmditem#writeStructLine(Appendable)} starts now with "JZtxtcmdScript: " 
    *   because elsewhere its output cannot be associated "what is it" in applications. Only console output.
    * <li>2022-02-22 Hartmut writes a text instead checkXmlOutput, it is better obviously.
    * <li>2022-01-31 Hartmut some fixes: close() missing. this. qualified
@@ -450,7 +454,8 @@ public class JZtxtcmdScript extends CompiledScript
       JZtxtcmdExecuter.ExecuteLevel level = (JZtxtcmdExecuter.ExecuteLevel) context;
       try{ 
         Subroutine main = getMain();
-        level.exec_Subroutine(main, null, null, 0);
+        List<DataAccess.Variable<Object>> args = null;
+        level.exec_Subroutine(main, args, null, 0);
       } catch(Throwable exc){ 
         if(exc instanceof Exception){
           throw new ScriptException((Exception)exc); 
@@ -478,6 +483,12 @@ public class JZtxtcmdScript extends CompiledScript
   
   
   public final Subroutine getMain(){ return this.mainRoutine; }
+  
+  
+  /**Allows to iterate over all given subroutines. 
+   * @return entry set of all subroutines
+   */
+  public Set<Map.Entry<String, Subroutine>> iterSubroutines () { return this.subroutinesAll.entrySet(); }
   
   
   public Subroutine getSubroutine(CharSequence name){ return this.subroutinesAll.get(name.toString()); }

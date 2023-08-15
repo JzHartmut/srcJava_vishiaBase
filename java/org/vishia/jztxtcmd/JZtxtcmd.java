@@ -132,6 +132,8 @@ public class JZtxtcmd implements JZtxtcmdEngine, Compilable
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-08-12 Hartmut now ctor {@link #JZtxtcmd(LogMessage)} is specific exception free. The exception was nevertheless not expected 
+   *   because the used syntax does not depend from user. If there is really an error, an IllegalArgumentException is thrown. 
    * <li>2021-12-30 Hartmut cleanup, some deprecated removed. Because of change in 
    *     {@link JZtxtcmdScript#createScriptFromString(StringPartScan, LogMessage, File, File)}
    *     for includes, not twice refactored. Better remove old stuff.
@@ -372,22 +374,24 @@ INPUT          pathTo JZcmd-File to execute
    * It invokes {@link #JZcmd(LogMessage)} with null as argument.
    * @throws ScriptException
    */
-  public JZtxtcmd() throws ScriptException{
+  public JZtxtcmd ( ) {
     this(null);    
   }
 
 
   /**Instantiates with maybe given MainCmd logging.
    * @param log if null then the {@link MainCmdLoggingStream} is used with System.out.
-   * @throws ScriptException
+   * @throws IllegalArgumentException only if the internal syntax has a problem. 
    */
-  public JZtxtcmd(LogMessage log) throws ScriptException{
+  public JZtxtcmd ( LogMessage log) {
     if(log == null){
       this.log = new MainCmdLoggingStream(System.out);
     } else { this.log = log; }
-    parserGenCtrl = new ZbnfParser(this.log); //console);
-    try{ parserGenCtrl.setSyntax(JZtxtcmdSyntax.syntax);
-    } catch(ParseException exc){ throw new ScriptException("JZcmd.ctor - internal syntax error; " + exc.getMessage()); }
+    this.parserGenCtrl = new ZbnfParser(this.log); //console);
+    try{ this.parserGenCtrl.setSyntax(JZtxtcmdSyntax.syntax);
+    } catch(ParseException exc){ 
+      throw new IllegalArgumentException("JZtxtcmd.ctor - internal syntax error; " + exc.getMessage()); 
+    }
   }
 
 

@@ -1,6 +1,11 @@
 package org.vishia.cmd;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.vishia.cmd.JZtxtcmdScript.Subroutine;
+import org.vishia.util.DataAccess;
+import org.vishia.util.DataAccess.Variable;
 
 
 /**This class builds a queue to run sub routines in an separated Thread of JZtxtcmd execution.
@@ -15,6 +20,8 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
 {
   /**The version, history and license.
    * <ul>
+   * <li>2023-08-14 subroutine able to call with arguments. More capabilities. 
+   *   Used for {@link org.vishia.gral.cfg.GuiCfg} in srcJava_vishiaGui component. 
    * <li>2018-09-17 created 
    * </ul>
    * 
@@ -43,9 +50,22 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
    * 
    * 
    */
-  public final static String version = "2018-09-17";
+  public final static String version = "2023-08-14";
 
-  ConcurrentLinkedQueue<JZtxtcmdScript.Subroutine> queue = new ConcurrentLinkedQueue<JZtxtcmdScript.Subroutine>();
+  
+  class SubArg {
+    JZtxtcmdScript.Subroutine sub;
+    List<DataAccess.Variable<Object>> args;
+    
+    public SubArg(Subroutine sub, List<Variable<Object>> args) {
+      this.sub = sub;
+      this.args = args;
+    }
+    
+  }
+  
+  
+  ConcurrentLinkedQueue<SubArg> queue = new ConcurrentLinkedQueue<SubArg>();
   
   /**Used for execution all queued subroutines. */
   private JZtxtcmdExecuter.ExecuteLevel executeLevel;
@@ -59,9 +79,9 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
    * @param name of the thread
    * @param jzTc to build an execute level.
    */
-  public JZtxtcmdThreadQueue(String name, JZtxtcmdExecuter.JzTcMain jzTc) {
+  public JZtxtcmdThreadQueue(String name, JZtxtcmdExecuter jzTcExec) {
     //An own executeLevel based on the scriptLevel, independent of the calling level
-    this.executeLevel = new JZtxtcmdExecuter.ExecuteLevel(jzTc, null, null, this, jzTc.scriptLevel, null);
+    this.executeLevel = jzTcExec.newExecuteLevel(this);
         
         //(startLevel.jzcmdMain, startLevel.jzClass, startLevel.jzcmdMain.scriptLevel, this, startLevel.localVariables);
     Thread threadmng = new Thread(this, name);
@@ -71,10 +91,11 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
 
   
   /**Add a subroutine to the queue.
-   * @param sub
+   * @param sub The sub routine from the JZtxtcmdScript
+   * @param actual named arguments, can be null.
    */
-  public void add(JZtxtcmdScript.Subroutine sub) {
-    queue.offer(sub);
+  public void add(JZtxtcmdScript.Subroutine sub, List<DataAccess.Variable<Object>> args) {
+    queue.offer(new SubArg(sub, args));
   }
   
   /**Only internally as thread run. It executes all sub routines in the queue. 
@@ -83,11 +104,11 @@ public class JZtxtcmdThreadQueue extends JZtxtcmdThreadData implements Runnable
   @Override public void run()
   {
     while(bRun) {
-      JZtxtcmdScript.Subroutine sub = queue.poll();
+      SubArg sub = this.queue.poll();
       if(sub == null) { 
         try{ Thread.sleep(100);} catch(InterruptedException exc) {}
       } else {
-        executeLevel.exec_Subroutine(sub, null, executeLevel.jzcmdMain.textline, 0);
+        this.executeLevel.exec_Subroutine(sub.sub, sub.args, this.executeLevel.jzcmdMain.textline, 0);
       }
     }
     
