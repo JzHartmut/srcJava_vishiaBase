@@ -1,7 +1,7 @@
 2023-04-13 11:07:03  x     #.git#save#                              ::           . 72 -1237754712 
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2023-08-15 18:29:44  x     .gitCommit                               ::           .858 -0183879995 
+2023-09-21 14:17:43  x     .gitCommit                               ::           .456  1300954523 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -37,7 +37,7 @@
 2021-10-04 14:29:49  x     ByteDataAccessOld.java                   ::         75.823 -1493816587 
 2022-10-25 00:07:02  x     ByteDataAccessSimple.java                ::          5.792 -1822930907 
 2022-10-27 11:10:11  x     ByteDataSymbolicAccess.java              ::         31.461 -1590403540 
-2022-11-19 21:08:45  x     ByteDataSymbolicAccessReadConfig.java    ::          4.590  0614878915 
+2023-09-21 13:11:57  x     ByteDataSymbolicAccessReadConfig.java    ::          4.686 -0083591899 
 2018-09-19 11:39:44  x     ByteDataVariable.java                    ::          8.522 -0284685645 
 2020-12-20 20:45:37  x     Class_Jc.java                            ::          9.274 -1758001948 
 2018-12-27 19:09:07  x     Field_Jc.java                            ::         15.680 -1928813301 
@@ -68,14 +68,14 @@
 2017-07-29 11:17:07  x     CfgData.java                             ::          3.560 -0509839928 
 2022-11-19 21:10:14  x     CheckAllDepFile.java                     ::          6.203 -1215854895 
 2012-12-25 17:01:12  x     CheckData.java                           ::          4.951  0627506369 
-2022-11-19 21:11:40  x     CheckDependencyFile.java                 ::         48.413 -2051062432 
-2023-03-17 09:38:48  x     CheckDeps.java                           ::          7.535 -2019813555 
-2020-07-23 18:57:23  x     CheckDeps_Old.java                       ::         12.395  0108102733 
+2023-09-21 13:14:28  x     CheckDependencyFile.java                 ::         48.796  1842766089 
+2023-09-21 13:13:03  x     CheckDeps.java                           ::          7.631  1418934012 
+2023-09-21 13:15:01  x     CheckDeps_Old.java                       ::         12.624  0783667633 
 2012-12-25 15:33:10  x     DateTime.java                            ::          1.823  2018610045 
 2022-11-19 21:13:16  x     InfoFileDependencies.java                ::         19.051 -1524932443 
 2014-05-04 22:56:29  x     InputSrc.java                            ::          4.196  1587914190 
-2022-11-19 21:13:52  x     ObjectFileDeps.java                      ::          7.155 -1917452981 
-2022-11-19 21:15:05  x     ParserConfigFile.java                    ::          7.296 -1932346698 
+2023-09-21 13:13:39  x     ObjectFileDeps.java                      ::          7.258  1698708741 
+2023-09-21 13:13:43  x     ParserConfigFile.java                    ::          7.399 -1698340084 
 2020-07-23 18:57:23  x     package-info.java                        ::           .399  1943722203 
 
 ============================== java/org/vishia/cmd/ ================================================
@@ -87,10 +87,10 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2023-08-15 18:29:20  x     JZtxtcmdExecuter.java                    ::        198.830  1373647608 
+2023-09-21 14:10:16  x     JZtxtcmdExecuter.java                    ::        199.033 -0466905500 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2023-08-15 18:23:23  x     JZtxtcmdScript.java                      ::        124.354 -1320665951 
+2023-09-21 13:33:18  x     JZtxtcmdScript.java                      ::        124.539  0618332365 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -189,7 +189,7 @@
 
 ============================== java/org/vishia/mainCmd/ ============================================
 2021-10-04 14:29:51  x     FileWrite.java                           ::          2.095  0880975541 
-2022-12-25 13:47:52  x     MainCmd.java                             ::         93.287  0623110350 
+2023-09-21 13:38:38  x     MainCmd.java                             ::         93.532  0739083284 
 2022-12-25 13:48:50  x     MainCmdLoggingStream.java                ::         10.527 -0276340602 
 2022-11-13 17:50:14  x     MainCmdLogging_ifc.java                  ::          4.714  0894393979 
 2014-05-29 14:56:39  x     MainCmd_ifc.java                         ::          9.334  0930852519 
@@ -254,7 +254,7 @@
 ============================== java/org/vishia/util/ ===============================================
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
 2023-04-28 18:51:54  x     ApplMain.java                            ::          2.570  1317011550 
-2023-08-15 15:29:02  x     Arguments.java                           ::         33.412 -0197339063 
+2023-09-21 14:15:29  x     Arguments.java                           ::         33.859  1543319372 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
 2023-06-08 20:03:09  x     CalculatorExpr.java                      ::        158.244  1239566485 
@@ -271,7 +271,7 @@
 2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
 2021-10-04 14:29:49  x     FileCompare.java                         ::         14.078  0813352070 
 2021-07-05 10:51:32  x     FileFunction.java                        ::          5.958  0063748389 
-2023-08-08 00:30:14  x     FileFunctions.java                       ::         87.901 -1576484100 
+2023-09-21 13:44:01  x     FileFunctions.java                       ::         88.098 -0506344718 
 2023-03-17 09:34:57  x     FileList.java                            ::         23.371  0742653671 
 2021-10-04 14:29:49  x     FilePath.java                            ::         87.603 -0641162706 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
@@ -303,7 +303,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2023-06-18 00:38:39  x     OutTextPreparer.java                     ::         77.527  1959673486 
+2023-09-21 14:05:50  x     OutTextPreparer.java                     ::         81.902 -2142938019 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -357,7 +357,7 @@
 2023-04-28 17:51:39  x     GenXmlCfgJavaData.java                   ::         16.410  0614327134 
 2023-04-30 19:07:24  x     XmlCfg.java                              ::         33.658 -0640661820 
 2023-04-29 22:34:01  x     XmlJzCfgAnalyzer.java                    ::         38.691 -0118411386 
-2023-05-23 21:55:39  x     XmlJzReader.java                         ::         55.665 -1957631551 
+2023-09-21 14:17:30  x     XmlJzReader.java                         ::         55.708 -1147483905 
 2022-06-08 21:14:43  x     XmlNodeSimpleReader.java                 ::          2.313  0733459123 
 2023-04-29 23:14:00  x     ZmlReader.java                           ::          6.365 -0591413995 
 

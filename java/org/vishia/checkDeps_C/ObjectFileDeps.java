@@ -1,6 +1,7 @@
 package org.vishia.checkDeps_C;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -110,8 +111,9 @@ class ObjectFileDeps
    *   The object-file(s) are build with replacement of "*" with the sLocalPath without extension
    * @param sLocalPath The file path and name.ext of the source file as local path. 
    *   It is used as object path, without the extension.
+   * @throws FileNotFoundException 
    */
-  ObjectFileDeps(List<String> dirObjRoots, String sLocalPath){
+  ObjectFileDeps(List<String> dirObjRoots, String sLocalPath) throws FileNotFoundException{
     int posExt = sLocalPath.lastIndexOf('.');
     for(String sDirObjRoot: dirObjRoots){
       StringBuilder uDirObj = new StringBuilder(sDirObjRoot);

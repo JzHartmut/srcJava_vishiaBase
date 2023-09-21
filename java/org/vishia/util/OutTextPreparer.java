@@ -1,9 +1,13 @@
 package org.vishia.util;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.ParseException;
@@ -40,6 +44,7 @@ import java.util.TreeMap;
  * <:for:var:data.container>element = <&var><.for>
  * <:call:subtext:arg=data.var>
  * <:exec:operation:data>
+ * <.otx>
  * </pre>
  * To execute this script you should call (see {@link #createArgumentDataObj()} and {@link #exec(Appendable, DataTextPreparer)}: 
  * <pre>
@@ -219,6 +224,7 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-08 up to now history to the operations 
    * <li>2023-06-18: frame of operation now <:otx:args>...<.otx>. The <.end> is no more supported, change it to <.otx>
    *   Usage of "=== name ( args) " is deprecated but yet still possible. 
    * <li>2023-06-18: bugfix on nested <:if>...<.if> 
@@ -858,6 +864,27 @@ public class OutTextPreparer
   ( InputStream inp, String lineStart, Class<?> execClass
   , Map<String, Object> idxConstData, String sMainScript 
   ) throws IOException, ParseException {
+    readTemplateCreatePreparerPriv(inp, lineStart, execClass, idxConstData, null);
+    return sMainScript == null ? null : (OutTextPreparer)idxConstData.get(sMainScript);
+  } 
+    
+    
+  /**internal implementation, see {@link #readTemplateCreatePreparer(InputStream, Class)}
+   * @since 2023-08 separated from {@link #readTemplateCreatePreparerPriv(InputStream, String, Class, Map, Map)}
+   *   which has only returned the main script.
+   * @param inp
+   * @param lineStart
+   * @param execClass
+   * @param idxConstData
+   * @param idxScript
+   * @throws IOException
+   * @throws ParseException
+   */
+  private static void readTemplateCreatePreparerPriv 
+  ( InputStream inp, String lineStart, Class<?> execClass
+  , Map<String, Object> idxConstData 
+  , Map<String, OutTextPreparer> idxScript
+  ) throws IOException, ParseException {
     List<String> tplTexts = null;
     tplTexts = OutTextPreparer.readTemplateList(inp, lineStart);
     for(String text : tplTexts) {
@@ -880,11 +907,72 @@ public class OutTextPreparer
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
       OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData);
-      idxConstData.put(name, otxScript);
+      if(idxScript !=null) { idxScript.put(name, otxScript); }
+      else { idxConstData.put(name, otxScript); }
     }
-    return sMainScript == null ? null : (OutTextPreparer)idxConstData.get(sMainScript);
   }
   
+  
+  /**You can use this variant instead {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
+   * if you have not specific const Data for parsing the script.
+   * @param inp An opened input stream, which can be for example also part of a zip file content
+   *   or gotten via {@link Class#getResourceAsStream(String)} from a jar file, 
+   *   or also of course via {@link java.io.FileReader#FileReader(java.io.File)}
+   *   or via {@link InputStreamReader#InputStreamReader(InputStream, String)} to read a file with specific encoding.
+   * @param execClass a given class which's content is accessed as persistent data.
+   * @return Map which contains all script operations.
+   *   access to the desired script via get(name).
+   * @throws IOException
+   * @throws ParseException
+   * @since 2023-08 as common usable operation for some OutText templates in one file. 
+   *   The constData processed in {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} 
+   *   are usual not necessary for that approach, because it was the older concept to define some const data in the Map,
+   *   and the Map is completed with the found scripts. 
+   *   Here now it is simpler, the operation returns the new Map filled with the content of the read script. 
+   */
+  public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( InputStream inp, Class<?> execClass) 
+    throws IOException, ParseException {
+    //
+    Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
+    readTemplateCreatePreparerPriv(inp, null, execClass, null, idxScript);
+    return idxScript;
+  }
+  
+  /**Standard operation to write an output text from given data with a given template.
+   * @param fout The file to write
+   * @param data Data for the output with the script, only one is possible.
+   * @param inTpl opened input stream which offers the otx-template to read.
+   *   This inTpl is closed here after read.
+   * @param execClass a given class which's content is accessed as persistent data.
+   * @param sMain Name of the start or main template in the read script.
+   * @throws IOException
+   * @since 2023-08, but it is limited for only one data. Hence it may be used only as template.
+   */
+  public static void writeOtx(File fout, Object data, InputStream inTpl, Class<?> execClass, String sMain) throws IOException {
+    OutTextPreparer otxt = null;
+    try {
+      Map<String, Object> idxOtxt = new TreeMap<String, Object>();
+      otxt = OutTextPreparer.readTemplateCreatePreparer(inTpl, "===", execClass, idxOtxt, sMain);
+      inTpl.close();
+      Writer wr = new OutputStreamWriter(new FileOutputStream(fout), "UTF-8");
+      //Appendable wr = new StringBuilder();
+      OutTextPreparer.DataTextPreparer dp;
+      dp = otxt.createArgumentDataObj();
+      dp.setArgument("data", data);                        // here more flexibility is necessary,
+      //                                                   // hence write an own script with more possible data 
+      otxt.exec(wr, dp);                                   
+      //
+      wr.close();
+    } catch(IOException exc) {
+      System.err.println("File Exception: " + exc.getMessage());
+    } catch(ParseException exc) {
+      CharSequence sExc = ExcUtil.exceptionInfo("Exception", exc, 0, 20);
+      System.err.println(sExc);
+    }
+    
+    return;
+  }
+
   
   
   private void parseVariables(String variables) {

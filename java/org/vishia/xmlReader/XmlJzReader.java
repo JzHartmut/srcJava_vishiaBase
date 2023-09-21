@@ -531,7 +531,7 @@ public class XmlJzReader
     //
     if(keyResearch.length() > sTag.length()) {
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
-      subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag
+      subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch.toString());  //search the proper cfgNode for this <tag //bugfix .toString() 2023-09-18
     }
     if(subCfgNode ==null) {
       Debugutil.stop();

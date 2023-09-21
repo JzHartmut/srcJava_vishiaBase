@@ -292,7 +292,7 @@ public abstract class MainCmd implements MainCmd_ifc
    * to designate that the value is not valid. For example the existence of a file can be checked.
    */
   public interface SetArgument{ 
-    boolean setArgument(String val); 
+    boolean setArgument(String val) throws FileNotFoundException; 
   }
   
   /**Class to describe one argument. One can be create static instances with constant content. Example:
@@ -737,12 +737,14 @@ public abstract class MainCmd implements MainCmd_ifc
         else if(cmdLineArgs[iArgs].startsWith("--msgcfg:")) { addMsgConfig(cmdLineArgs[iArgs].substring(9)); }
         else if(cmdLineArgs[iArgs].startsWith("--msgcfg=")) { addMsgConfig(cmdLineArgs[iArgs].substring(9)); }
         else if(cmdLineArgs[iArgs].startsWith("---")) { /*ignore it*/ }
-        else
-        { hasArguments = main.testArgument(cmdLineArgs[iArgs], iArgs); //formal style guide: Use extra statement to assign
-          if( !  hasArguments ) { 
-            main.writeError("failed argument: " + cmdLineArgs[iArgs]);
-            throw new ParseException("failed argument:" + cmdLineArgs[iArgs], iArgs);  //ParseException used from java.text
-          }
+        else { 
+          try {
+            hasArguments = main.testArgument(cmdLineArgs[iArgs], iArgs); //formal style guide: Use extra statement to assign
+            if( !  hasArguments ) { 
+              main.writeError("failed argument: " + cmdLineArgs[iArgs]);
+              throw new ParseException("failed argument:" + cmdLineArgs[iArgs], iArgs);  //ParseException used from java.text
+            }
+          } catch(FileNotFoundException exc) { throw new ParseException("directory path error " + exc.getMessage(), 0); }
         }
         iArgs +=1;
       }
@@ -851,10 +853,11 @@ public abstract class MainCmd implements MainCmd_ifc
       @return false, if the argument doesn't match, true if ok.
               if the method returns false, an exception in parseArgument is thrown to abort the argument test
               or to abort the program. @see <a href="#parseArguments()">parseArgument()</a>.<br/>
+   * @throws FileNotFoundException 
 
       @exception ParseException The method may thrown this exception if a conversion error or such other is thrown.
   */
-  protected boolean testArgument(String argc, int nArg)
+  protected boolean testArgument(String argc, int nArg) throws FileNotFoundException
   {
     if(argList !=null){
       Argument emptyArg = null;

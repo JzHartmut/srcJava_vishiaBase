@@ -351,15 +351,15 @@ public class FileFunctions {
    * If the sPath is relative, it uses the <code>System.getProperty("user.dir")</code>
    * as base directory, and not the given operation system's current directory.
    * The first one can be changed with Java capabilities before, the last one cannot be changed inside the JRE.   
-   * @param sPath relative or absolute path
-   * @return File object. Whether or not the path is correct (file exists), is not tested.
+   * @param sPath relative or absolute path maybe with environment variables or starts with "/tmp/", see {@link #absolutePath(String, File)}
+   * @return File object.
+   * @throws FileNotFoundException if the sPath is faulty
+   * @since 2023-09-21 recognizes also environment variables in sPath, creates necessary directory levels
    */
-  public static File newFile(String sPath) {
-    if(isAbsolutePath(sPath)) {
-      return new File(sPath);
-    } else {
-      return new File(System.getProperty("user.dir"), sPath);
-    }
+  public static File newFile(String sPath) throws FileNotFoundException {
+    String sAbsPath = absolutePath(sPath, null);
+    mkDirPath(sAbsPath);
+    return new File(sAbsPath);
   }
   
   /**Reads the content of a whole file into a String.
@@ -1131,7 +1131,7 @@ public class FileFunctions {
    * The resulting path is cleaned using {@link #normalizePath(CharSequence)}.
    * It means, it contains only "/", no "\\" and no artifacts of "/../" and "/./"
    * 
-   * @param sFilePath filename. It may contain "\\". "\\" are converted to "/" firstly. 
+   * @param sFilePath given path/to/file. It may contain "\\". "\\" are converted to "/" firstly. 
    * @param currDir The current dir or null. If null then a necessary current dir for a relative given path
    *   is gotten calling <code>System.getProperty("user.dir")</code>
    * @return The path as absolute path. It is not tested whether it is a valid path. 

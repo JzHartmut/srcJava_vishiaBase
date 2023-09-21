@@ -23,6 +23,7 @@
 package org.vishia.byteData;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -91,7 +92,7 @@ public class ByteDataSymbolicAccessReadConfig {
 
   
   
-  public int readVariableCfg(String sFileCfg)
+  public int readVariableCfg(String sFileCfg) throws FileNotFoundException
   {
     return readVariableCfg("", sFileCfg); 
   }
@@ -99,7 +100,7 @@ public class ByteDataSymbolicAccessReadConfig {
   
   
   
-  public int readVariableCfg(String preName, String sFileCfg)
+  public int readVariableCfg(String preName, String sFileCfg) throws FileNotFoundException
   {
 		ZbnfJavaOutput parser = new ZbnfJavaOutput();
 		ZbnfResult rootParseResult = new ZbnfResult();

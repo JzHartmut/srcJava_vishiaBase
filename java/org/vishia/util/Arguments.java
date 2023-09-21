@@ -3,6 +3,7 @@ package org.vishia.util;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Iterator;
@@ -168,8 +169,8 @@ public abstract class Arguments {
    * The implementation can be written with an anonymous implementation with the simple form:
    * <pre>
    * MainCmd.SetArgument setArgxy = new MainCmd.SetArgument(){
-   *   @Override public boolean setArgument(String val){
-   *     args.argxy = val;
+   *   @Override public boolean setArgument(String val) throws FileNotFoundException{
+   *     args.argxy = val;    // can also uses conversion, may be throwing the FileNotFoundException
    *     return true;
    * } }
    * <pre>
@@ -178,9 +179,10 @@ public abstract class Arguments {
    * <br><br>
    * The implementation method can test the admissibility of the argument's value. It can return false
    * to designate that the value is not valid. For example the existence of a file can be checked.
+   * @since 2023-09-21 with possible {@link FileNotFoundException}
    */
   public interface SetArgument{ 
-    boolean setArgument(String val); 
+    boolean setArgument(String val) throws FileNotFoundException; 
   }
   
   
@@ -365,9 +367,10 @@ public abstract class Arguments {
    * @param argc The given argument
    * @param nArg position of the argument in the container, counted from 0
    * @return true if argument is accepted, false if not found in the {@link #argList} given on ctor
-   * @throws IOException 
+   * @throws FileNotFoundException If the argument is formally accepted but evaluation cause an exception
+   * @since 2023-09-21 with possible {@link FileNotFoundException} accepted by user implementations.
    */
-  protected boolean testArgument ( String argc, int nArg) {
+  protected boolean testArgument ( String argc, int nArg) throws FileNotFoundException {
     String value;
     boolean bOk = true;
     if((value = checkArgVal("--report", argc)) !=null) 

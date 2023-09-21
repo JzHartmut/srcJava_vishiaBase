@@ -349,8 +349,9 @@ public class CheckDependencyFile
    * @param sObjExt extension of the object file
    * @return An ample information about dependencies. This information is used to produce
    *  the {@link #writeDependencies(String)} line for this file.
+   * @throws FileNotFoundException 
    */
-  public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName) 
+  public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName) throws FileNotFoundException 
   {
     final ObjectFileDeps objDeps;
     
@@ -378,7 +379,7 @@ public class CheckDependencyFile
 
   
   
-  public InfoFileDependencies processSrcfile(String src)  {
+  public InfoFileDependencies processSrcfile(String src) throws FileNotFoundException  {
     int posSep = src.indexOf(':', 2);
     final File fileSrc;
     final String sLocalSrc;
@@ -395,9 +396,10 @@ public class CheckDependencyFile
   
   /**See {@link #processSrcfile(File, String)}
    * @param sObjExt This attribute is unnecessary
+   * @throws FileNotFoundException 
    * @deprecated: Use {@link #processSrcfile(File, String, String)}
    */
-  @Deprecated public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt) 
+  @Deprecated public InfoFileDependencies processSrcfile(File fileSrc, String sLocalPathName, String sObjExt) throws FileNotFoundException 
   {
     return processSrcfile(fileSrc, sLocalPathName);
   }
@@ -452,7 +454,7 @@ public class CheckDependencyFile
   }
   
   
-  InfoFileDependencies checkDependenciesInputDepFile(String sPathSrcCanonical, ObjectFileDeps objDeps, int nRecursion, Map<String, String> idxOnce)
+  InfoFileDependencies checkDependenciesInputDepFile(String sPathSrcCanonical, ObjectFileDeps objDeps, int nRecursion, Map<String, String> idxOnce) throws FileNotFoundException
   {
     if(nRecursion > 99){
       throw new IllegalArgumentException("CheckDeps - recursion to deep;" + sPathSrcCanonical);
@@ -531,12 +533,13 @@ public class CheckDependencyFile
    * @param checkedFiles List of all checked included files to prevent checking twice.
    * @param recursion recursion counter.
    * @return true if any of a include file is changed in respect to the last taken build files.
+   * @throws FileNotFoundException 
    */
   InfoFileDependencies checkSource(File fileSrcGen, String sFileSrgGenAbs
       , File fileSrcMirror
       , TreeMap<String, File> checkedFiles
        , ObjectFileDeps objDeps
-       , int recursion, Map<String, String> idxOnce){
+       , int recursion, Map<String, String> idxOnce) throws FileNotFoundException{
     int nEqual;
     long timestampSrcNewest = 0;
     final String sFileSrcGenName = fileSrcGen.getName();
@@ -816,10 +819,11 @@ public class CheckDependencyFile
    * @param includeFromCurrent true if it is a #include "file.h"-statement. false if it is a #include <file.h>-statement.
    * @param typeInclude Return char
    * @return The found include file in the include path or null.
+   * @throws FileNotFoundException 
    */
   File searchInclFileInIncludePath(String sPathInIncludeLine 
     , String sDirCurrentFile, boolean includeFromCurrent, char[] typeInclude
-  ){
+  ) throws FileNotFoundException{
     //boolean isSystemFile = false;
     File fileIncl = null;
     //first search starting in the current file if it is an ""-include
@@ -868,8 +872,9 @@ public class CheckDependencyFile
   /**Copies the original source file to the build box, saves the last file if such parameters are given.
    * @param fileSrcGen The original
    * @param fileSrcMirror The copy
+   * @throws FileNotFoundException 
    */
-  void copyToMirror(File fileSrcGen, File fileSrcMirror, String sTest)
+  void copyToMirror(File fileSrcGen, File fileSrcMirror, String sTest) throws FileNotFoundException
   {
     if(fileSrcMirror.exists()){
       //rename the existing file, so a comparison may be done afterward.

@@ -1,6 +1,7 @@
 package org.vishia.cmd;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -305,7 +306,9 @@ public class JZtxtcmdScript extends CompiledScript
     JZtxtcmdScript thiz = new JZtxtcmdScript(log, fileScript, null);
     File dirIncludeBase = fileScript==null ? null : FileFunctions.getDir(fileScript);
     JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript = new JZtxtcmdScript.ZbnfJZcmdScript(thiz);
-    thiz.setScriptFromString(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
+    try { 
+      thiz.setScriptFromString(sourceScript, zbnfDstScript, dirIncludeBase, checkXmlOutput);
+    } catch(FileNotFoundException exc) { throw new ScriptException(exc); }
     return thiz;
   }
 
@@ -313,12 +316,13 @@ public class JZtxtcmdScript extends CompiledScript
   
   
   /**Translates, internally and recursively for included scripts
+   * @throws FileNotFoundException 
    */
   private void setScriptFromString(StringPartScan sourceScript, JZtxtcmdScript.ZbnfJZcmdScript zbnfDstScript
       , File dirIncludeBase 
       , File checkXmlOutput) 
   //throws ParseException, IllegalArgumentException, IllegalAccessException, InstantiationException, FileNotFoundException, IOException 
-  throws ScriptException
+  throws ScriptException, FileNotFoundException
   { boolean bOk;
     final ZbnfParser parserGenCtrl = new ZbnfParser(this.console);
     try{ 

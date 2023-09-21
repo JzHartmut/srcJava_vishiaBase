@@ -1,6 +1,7 @@
 package org.vishia.checkDeps_C;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -24,7 +25,7 @@ public class CheckDeps {
   
   
   
-  int exec(Args args) {
+  int exec(Args args) throws FileNotFoundException {
     for(String sObjExt: args.listRootObjExt) {
       this.checkDepfile.setDirObj(sObjExt);
     }
@@ -123,7 +124,7 @@ public class CheckDeps {
 
     
     
-    Arguments.SetArgument setCurrdir = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+    Arguments.SetArgument setCurrdir = new Arguments.SetArgument(){ @Override public boolean setArgument(String val) throws FileNotFoundException{ 
       final boolean bOk;
       CheckDeps.Args.this.currdir = FileFunctions.newFile(val).getAbsoluteFile();
       bOk = CheckDeps.Args.this.currdir.exists();

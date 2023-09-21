@@ -2,6 +2,7 @@ package org.vishia.checkDeps_C;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
@@ -139,8 +140,9 @@ public class ParserConfigFile
    * <br><br>
    * Syntax::= -i= <*\ \n?path>.
    * @param sLine
+   * @throws FileNotFoundException 
    */
-  private void parseCfgIncludeLine(String sLine, char cWhat){
+  private void parseCfgIncludeLine(String sLine, char cWhat) throws FileNotFoundException{
     StringBuilder uInclPath = new StringBuilder(sLine.substring(3));
     //String sInclPath;
     int posVariable;

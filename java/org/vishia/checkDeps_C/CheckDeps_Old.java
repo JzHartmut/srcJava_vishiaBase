@@ -1,6 +1,7 @@
 package org.vishia.checkDeps_C;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -234,7 +235,12 @@ public class CheckDeps_Old
       int nrofFiles = gatherSrcFiles(srcDir);
       console.reportln(Report.info, "source file path; " + srcDir.sCanonicalPathSrc + "; nrof files=" + nrofFiles);
     }
-    processSrcTree();
+    try {
+      processSrcTree();
+    } catch (FileNotFoundException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
     
     InfoFileDependencies.writeAllBackDeps(args.sFileDep, checkData.indexAllInclFilesAbsPath);
 
@@ -291,8 +297,9 @@ public class CheckDeps_Old
    * That method will be called recursively depending on the include-lines in a changed and tested
    * source file or depending on the content of the *.dep-file if the source file isn't newer
    * as the object. It may happen that a included file is newer.
+   * @throws FileNotFoundException 
    */
-  private void processSrcTree()
+  private void processSrcTree() throws FileNotFoundException
   {
     //process all source files:
     //The source files maybe generated from a tool as secondary sources: 

@@ -902,7 +902,7 @@ public void  executeScriptLevel(JZtxtcmdScript script, CharSequence sCurrdir) th
 { boolean bscriptInitialized = checkInitialize(script, true, sCurrdir);
   if(!bscriptInitialized && sCurrdir !=null) {
     try{ this.acc.scriptLevel.changeCurrDir(sCurrdir);
-    } catch(IllegalAccessException exc) { throw new JzScriptException(exc); }
+    } catch(Exception exc) { throw new JzScriptException(exc); }
   }
 
   short ret = this.acc.scriptLevel.execute(script.scriptClass, this.acc.textline, 0, this.acc.scriptLevel.localVariables, -1);
@@ -1176,8 +1176,8 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
       
     }
     if(!bscriptInitialized && sCurrdir !=null) {
-      try {acc.scriptLevel.changeCurrDir(sCurrdir);
-      } catch(IllegalAccessException exc) { throw new JzScriptException(exc); }
+      try {this.acc.scriptLevel.changeCurrDir(sCurrdir);
+      } catch(Exception exc) { throw new JzScriptException(exc); }
     }
     
     
@@ -1210,12 +1210,14 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
       } catch (Exception exc) { throw new JzScriptException("JZcmd.execute - String eval error on checkJZcmd; "
           , this.acc.jzcmdScript.checkJZcmdFile.srcFile, this.acc.jzcmdScript.checkJZcmdFile.srcLine, this.acc.jzcmdScript.checkJZcmdFile.srcColumn ); 
       }
-      File filecheck = FileFunctions.newFile(sFilecheck.toString());
+      String sPath = sFilecheck.toString();
       try{
+        File filecheck = FileFunctions.newFile(sPath);
+        sPath = filecheck.getAbsolutePath(); 
         Writer writer = new FileWriter(filecheck);
         this.acc.jzcmdScript.writeStruct(writer);
         writer.close();
-      } catch(IOException exc){ throw new JzScriptException("JZcmd.execute - File error on checkJZcmd; " + filecheck.getAbsolutePath()); }
+      } catch(IOException exc){ throw new JzScriptException("JZcmd.execute - File error on checkJZcmd; " + sPath); }
     }
     //return execute(execFile, contentScript, true);
     this.acc.startmilli = System.currentTimeMillis();
@@ -1358,7 +1360,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
     }
     if(!bscriptInitialized && currdir !=null){
       try { level.changeCurrDir(currdir.getPath());
-      } catch(IllegalAccessException exc) { throw new JzScriptException(exc); }
+      } catch(Exception exc) { throw new JzScriptException(exc); }
     }
     //Executes the statements of the sub routine:
     this.acc.startmilli = System.currentTimeMillis();
@@ -1518,16 +1520,18 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
           DataAccess.Variable<Object> var = e.getValue();
           String key = e.getKey();
           if(key.equals("scriptdir")){           //scriptfile either from subroutine if given, or ...
-            File scriptFile = subRoutine !=null ? FileFunctions.newFile(subRoutine.srcFile) : 
-                              jzClass !=null ? FileFunctions.newFile(jzClass.srcFile) : acc.jzcmdScript.fileScript ;
-            CharSequence scriptdir = FileFunctions.normalizePath(FileFunctions.getDir(scriptFile));
-            //create a new scriptdir and scriptfile variable
-            DataAccess.Variable<Object> var2 = new DataAccess.Variable<Object>('S', "scriptdir", scriptdir, true);
-            this.localVariables.put("scriptdir", var2);
-            //
-            String scriptname = scriptFile.getName();
-            DataAccess.Variable<Object> varFile = new DataAccess.Variable<Object>('S', "scriptfile", scriptname, true);
-            this.localVariables.put("scriptfile", varFile);
+            try {
+              File scriptFile = subRoutine !=null ? FileFunctions.newFile(subRoutine.srcFile) : 
+                                jzClass !=null ? FileFunctions.newFile(jzClass.srcFile) : acc.jzcmdScript.fileScript ;
+              CharSequence scriptdir = FileFunctions.normalizePath(FileFunctions.getDir(scriptFile));
+              //create a new scriptdir and scriptfile variable
+              DataAccess.Variable<Object> var2 = new DataAccess.Variable<Object>('S', "scriptdir", scriptdir, true);
+              this.localVariables.put("scriptdir", var2);
+              //
+              String scriptname = scriptFile.getName();
+              DataAccess.Variable<Object> varFile = new DataAccess.Variable<Object>('S', "scriptfile", scriptname, true);
+              this.localVariables.put("scriptfile", varFile);
+            } catch(FileNotFoundException exc) { throw new RuntimeException(exc); }
           }
           else if(key.equals("scriptfile")){
             //do nothing, already done with scriptdir handling
@@ -3021,8 +3025,9 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
     /**Executes the cd command: changes the directory in this execution level.
      * @param arg maybe a relative path. If it is a StringBuilder, it will be changed on normalizePath.
      * @throws IllegalAccessException 
+     * @throws FileNotFoundException 
      */
-    protected void changeCurrDir(CharSequence arg) throws IllegalAccessException 
+    protected void changeCurrDir(CharSequence arg) throws IllegalAccessException, FileNotFoundException 
     {
       final CharSequence arg1;
       boolean absPath = FileFunctions.isAbsolutePathOrDrive(arg);
