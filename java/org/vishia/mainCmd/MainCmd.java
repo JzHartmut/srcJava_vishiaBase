@@ -23,7 +23,6 @@
 
 package org.vishia.mainCmd;
 
-//import org.jdom;
 import java.io.*;
 import java.util.*;  //List
 import java.text.*;  //ParseException
@@ -39,7 +38,18 @@ import org.vishia.msgDispatch.MsgDispatcher;
 import org.vishia.msgDispatch.MsgRedirectConsole;
 
 
-/**This is an abstract superclass to support cmd line applications. The class contains the following features:
+/**This is an abstract superclass to support cmd line applications. 
+ * It was on of the first classes created in srcJava_vishiaBase (in 2004), 
+ * meanwhile deprecated because over engineered with too much determination. 
+ * <ul>
+ * <li>The classes {@link org.vishia.util.Arguments} are used since 2020-03 for more powerful and simple command line argument parsing.
+ * <li>The class {@link org.vishia.msgDispatch.LogMessage} is used as interface for outputs.
+ * <li>The implementation {@link org.vishia.msgDispatch.LogMessageStream} supports proper also output to console and files.
+ * </ul>
+ * Hence the necessity of this class is no more given. It is existing for older software.  
+ * <br><br>
+ * Original documentation:<br> 
+ * The class contains the following features:
     <ul><li>Support parsing of command line arguments. </li>
         <li>Management of the system output</li>
         <li>Provides an interface for reporting to a file.</li>
@@ -204,9 +214,12 @@ import org.vishia.msgDispatch.MsgRedirectConsole;
     but in the UserClass and the underlying classes. The functionality should be separated from the command line invoke,
     because this application's functionality can be invoked also from a comprising application, at example by a GUI
     (Graphical Users Interface).
+ * @Deprecated. Meanwhile {@link org.vishia.util.Arguments} are usable for the arguments, 
+ * {@link LogMessage} and {@link org.vishia.msgDispatch.LogMessageStream} are usable for log,
+ * and the rest should be organized more simple manually specifically without this specific framework.  
  */
 
-public abstract class MainCmd implements MainCmd_ifc
+@Deprecated public abstract class MainCmd implements MainCmd_ifc
 {
 
   /**Version, history and license.
@@ -290,8 +303,9 @@ public abstract class MainCmd implements MainCmd_ifc
    * <br><br>
    * The implementation method can test the admissibility of the argument's value. It can return false
    * to designate that the value is not valid. For example the existence of a file can be checked.
+   * @deprecated the newer form is {@link org.vishia.util.Arguments.SetArgument}, use this for new development.
    */
-  public interface SetArgument{ 
+  @Deprecated public interface SetArgument{ 
     boolean setArgument(String val) throws FileNotFoundException; 
   }
   
@@ -319,8 +333,9 @@ public abstract class MainCmd implements MainCmd_ifc
    *   should be done at user level. For example it may be usual to write "key value key2 value".  
    * </ul>    
    *
+   * @deprecated the newer form is {@link org.vishia.util.Arguments}, use this for new development.
    */
-  public static class Argument{ 
+  @Deprecated public static class Argument{ 
     final String arg; 
     final String help; 
     final SetArgument set;
