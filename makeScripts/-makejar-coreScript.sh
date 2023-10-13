@@ -8,6 +8,8 @@
 #It can be removed too, then always create newly
 echo
 echo ====== -makejar-coreScript.sh =====================================================
+echo  ... execute  $0
+echo  ... compile java and generate jar with binary-compatible content. 
 echo PWD=$PWD
 if test "$BUILD_TMP" = ""; then                                                      ## check whether a build exists:
   if test -d build; then export BUILD_TMP="build"                ## beside the components sources
@@ -17,7 +19,6 @@ if test "$BUILD_TMP" = ""; then                                                 
     if ! test -d $BUILD_TMP; then mkdir -p $BUILD_TMP; fi
   fi
 fi  
-echo BUILD_TMP = $BUILD_TMP
 
 # clean the build dir because maybe old faulty content: 
 # note there was a problem detected on link folders (JUNCTION) in Windows file system, 
@@ -25,66 +26,73 @@ echo BUILD_TMP = $BUILD_TMP
 # therefore change temporary to the $BUILD_TMP to use mkdir
 export PWDD="$PWD"
 cd $BUILD_TMP
-echo PWD=$PWD
 if test -d javac_$DSTNAME; then rm -f -r -d javac_$DSTNAME; fi
 mkdir -p javac_$DSTNAME/binjar   
 mkdir javac_$DSTNAME/result
 if ! test -d deploy; then mkdir deploy; fi;
 cd $PWDD
-echo PWD=$PWD
 export TMPJAVAC="$BUILD_TMP/javac_$DSTNAME"
+
+
+## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
+## This determines the names of the results, but not the content and not the MD5 check sum.
+## See $TIMEinJAR_VISHIABASE in next block.
+if test "$VERSIONSTAMP" = ""; then export VERSIONSTAMP=$(date -I); fi   ## writes current date
+if test "$TIMEinJAR" = ""; then export TIMEinJAR=$VERSIONSTAMP+00:00;  fi
 
 #determine out file names from VERSIONSTAMP
 if test "$JARFILE" = ""; then export JARFILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar"; fi
 if test "$MD5FILE" = ""; then export MD5FILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar.MD5.txt"; fi
+if test "$SRCZIPFILE" = ""; then export SRCZIPFILE="$DSTNAME-$VERSIONSTAMP-source.zip"; fi #The SRCZIPFILE name will be written in MD5 file also for vishiaMiniSys.
 
-if test "$TIMEinJAR" = ""; then export TIMEinJAR=$VERSIONSTAMP+00:00;  fi
 
 ##specific condition, use the yet compiled class files to zip:
-if test "$JAR_zipjar" = "__vishiaBase_CLASSfiles__"; then export JAR_zipjar=$TMPJAVAC/binjar;
-elif test "$JAR_zipjar" = ""; then
-  if test -f tools/vishiaBase.jar; then export JAR_zipjar="tools/vishiaBase.jar"
-  elif test -f jars/vishiaBase.jar; then export JAR_zipjar="jars/vishiaBase.jar"
-  elif test -f ../jars/vishiaBase.jar; then export JAR_zipjar="../jars/vishiaBase.jar"
-  elif test -f ../tools/vishiaBase.jar; then export JAR_zipjar="../tools/vishiaBase.jar"
-  elif test -f ../../Java/tools/vishiaBase.jar; then export JAR_zipjar="../../Java/tools/vishiaBase.jar"
-  else echo ERROR vishiaBase.jar not able to found.
+if test "$DSTNAME" = "vishiaBase"; then export Classpath_vishiaBase=$TMPJAVAC/binjar;
+elif test "$Classpath_vishiaBase" = ""; then
+  if test -f tools/vishiaBase.jar; then export Classpath_vishiaBase="tools/vishiaBase.jar"
+  elif test -f jars/vishiaBase.jar; then export Classpath_vishiaBase="jars/vishiaBase.jar"
+#  elif test -f ../jars/vishiaBase.jar; then export Classpath_vishiaBase="../jars/vishiaBase.jar"
+  elif test -f ../tools/vishiaBase.jar; then export Classpath_vishiaBase="../tools/vishiaBase.jar"                 
+  elif test -f ../../Java/tools/vishiaBase.jar; then export Classpath_vishiaBase="../../Java/tools/vishiaBase.jar" ##necessary for compilation from other directory
+  else echo ERROR vishiaBase.jar not able to found.; exit 5
   fi
 fi
-if test "$JAR_vishiaBase" = ""; then export JAR_vishiaBase=$JAR_zipjar; fi
 
 if test "$OS" = "Windows_NT"; then export sepPath=";"; else export sepPath=":"; fi
 
-if ! test -v SRCPATH; then
-  if test -v SRC_ALL2; then export SRCPATH="$SRC_ALL$sepPath$SRC_ALL2"
+if test "$SRCPATH" == ""; then
+  if ! test "$SRC_ALL2" = ""; then export SRCPATH="$SRC_ALL$sepPath$SRC_ALL2"
   else export SRCPATH="$SRC_ALL"
   fi
-  echo set SRCPATH=$SRCPATH
 fi  
 
+##determine the destination directory for the ready to use jar file after build.
+##It is either tools, or jars, or ../tools
+if ! test "$DSTJARDIR" = ""; then echo DSTJARDIR is set by calling script.
+elif test -d tools; then export DSTJARDIR="tools"
+elif test -d jars; then export DSTJARDIR="jars"
+elif test -d ../tools; then export DSTJARDIR="../tools"
+else mkdir jars; export DSTJARDIR="jars"
+fi
 
 
-echo
-echo ====== javac ================================================
-echo execute  $0
 echo pwd=$(PWD)
-echo  ... compile java and generate jar with binary-compatible content. 
-echo DSTNAME = $DSTNAME  ## output file names
-echo BUILD_TMP = $BUILD_TMP  ## root for all temporary outputs
 echo VERSIONSTAMP = $VERSIONSTAMP  ## determine suffix of output file names
 echo TIMEinJAR = $TIMEinJAR  ## determine timestamp in jar
+echo DSTNAME = $DSTNAME  ## output file names
+echo BUILD_TMP = $BUILD_TMP  ## root for all temporary outputs
 echo SRC_ALL = $SRC_ALL      ## gather all *.java there
 echo SRC_ALL2 = $SRC_ALL2  ## gather all *.java there - optional
+echo SRCPATH = $SRCPATH  - search path sources for javac
 echo FILE1SRC = $FILE1SRC  ## alternatively: argument files for javac
 echo RESOURCEFILES = $RESOURCEFILES  ## additional files in jar
-echo SRCPATH = $SRCPATH  - search path sources for javac
 echo CLASSPATH = $CLASSPATH - search path jars for javac
-echo JAR_zipjar = $JAR_zipjar  - jar file for jar/zip generation
+echo Classpath_vishiaBase = $Classpath_vishiaBase  - jar file for jar/zip generation
 echo TMPJAVAC =  $TMPJAVAC  - temporary files while compilation
 echo JARFILE = $JARFILE  - generated jar    
 echo MD5FILE = $MD5FILE  - generated MD5 text file
 echo SRCZIPFILE = $SRCZIPFILE - generated sozrce.zip file
-
+echo DSTJARDIR = $DSTJARDIR
 
 if test "$JAVAC_HOME" = ""; then
   export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
@@ -92,9 +100,9 @@ fi
 echo JAVAC_HOME = $JAVAC_HOME
 ##regards an empty JAVAC_HOME, then javac should be able as command in the path:
 if test "$JAVAC_HOME" = ""; then export JAVAC="javac"; else export JAVAC="$JAVAC_HOME/bin/javac"; fi
-echo JAVAC = $JAVAC                                                                                       
-echo Output to: $JARFILE
-echo ====== gen src.zip ================================================================
+#xx echo JAVAC = $JAVAC                                                                                       
+#xx echo Output to: $JARFILE
+#xx echo ====== gen src.zip ================================================================
 
 ##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
 ##SRC_ALL refers to the java package path root directory,
@@ -112,70 +120,73 @@ if ! test "$SRC_ALL2" = ""; then
   export FILE1SRC=@$TMPJAVAC/sources.txt
   export SRCZIP="$SRCZIP .:$SRC_ALL2/**/*"                         
 fi  
-if test -v SRC_MAKE; then 
+if test "$SRC_MAKE" = ""; then 
   export SRCZIP="$SRCZIP .:$SRC_MAKE/**/*"                         
 fi  
 
-echo compile javac
-echo pwd=$(pwd)
+#xx echo compile javac
+#xx echo pwd=$(pwd)
 ##echo ls /tmp
 ##ls /tmp
+echo
+echo ====== javac ================================================
 echo $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
-###$JAVAC_HOME/bin/
 $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
-if test ! $? == 0; then
+if test ! $? = 0; then
   echo ERROR javac --?????????????????????????????????????????--
   if test -f $JARFILE; then rm $JARFILE; fi    ##prevent usage of an older version here.  
   exit 5
 fi  
-echo build jar
+#xx echo build jar
 ##do not use: $JAVAC_HOME/bin/jar -n0cvfM $JARFILE -C $TMPJAVAC/binjar . > $TMPJAVAC/jar.txt
-echo pwd=$(pwd)
-echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
-java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+#xx echo pwd=$(pwd)
+echo
+echo ====== zip-jar ================================================
+echo java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIMEinJAR  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
 if ! test "$MD5FILE" = ""; then echo output MD5 checksum
+  echo
+  echo ====== output MD5 checksum ==================================
+  echo md5sum -b $JARFILE
   md5sum -b $JARFILE > $MD5FILE
   echo "  srcFiles: $SRCZIPFILE" >> $MD5FILE
+  cat $MD5FILE
 fi  
 
-if test ! "$SRCZIPFILE" = ""; then  ##not produced if $SRC_ALL is empty instead $FILE1SRC is given from outside.
+if test ! "$SRC_ALL" = ""; then  ## do not zip sources if $SRC_ALL is empty ( instead $FILE1SRC is given from outside)
+  echo
+  echo ====== zip-sources ================================================
   pwd
-  echo java -cp $JAR_zipjar org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
-  java -cp $JAR_zipjar org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  echo java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
+  java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
   if test -f $BUILD_TMP/deploy/$SRCZIPFILE; then echo ok $BUILD_TMP/deploy/$SRCZIPFILE; else echo ERROR src.zip $BUILD_TMP/deploy/$SRCZIPFILE; fi
 fi  
 
-echo ===================================================================================
+## ====== copy to  ================================================
 if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
 
-if test -v DSTJARDIR; then echo DSTJARDIR is set by calling script.
-elif test -d tools; then export DSTJARDIR="tools"
-elif test -d jars; then export DSTJARDIR="jars"
-elif test -d ../tools; then export DSTJARDIR="../tools"
-else mkdir jars; export DSTJARDIR="jars"
-fi
-echo ====== deploy to DSTJARDIR=$DSTJARDIR ==============================================================
+#xx echo ====== copy to DSTJARDIR=$DSTJARDIR ==============================================================
 ##REM: It should be assumed that the file is correct. 
 ##REM It replaces the given in $DSTJARDIR to support more tests with the new jar without more effort.
 ##REM Only the jar file is copied. The rest is done by the deploy script.
 ##echo cp $BUILD_TMP/deploy/* $DSTJARDIR
 ##cp $BUILD_TMP/deploy/* $DSTJARDIR
-echo "current dir =$PWD"
-echo "JARFILE=$JARFILE"
+#xx echo "current dir =$PWD"
+echo
+echo ====== copy to $DSTJARDIR ================================================
 echo "cp $JARFILE $DSTJARDIR/$DSTNAME.jar"
-cp $JARFILE $DSTJARDIR/$DSTNAME.jar
+cp $JARFILE $DSTJARDIR/$DSTNAME.jar          ## copy jar without timestamp
+echo "cp $JARFILE $DSTJARDIR"
+cp $JARFILE $DSTJARDIR                       ## copy jar with timestamp, the original
 echo "cp $MD5FILE $DSTJARDIR"
-cp $MD5FILE $DSTJARDIR
+cp $MD5FILE $DSTJARDIR                       ## copy md5 
 echo "cp $BUILD_TMP/deploy/$SRCZIPFILE $DSTJARDIR"
-cp $BUILD_TMP/deploy/$SRCZIPFILE $DSTJARDIR 
-echo === $DSTJARDIR content:
-ls -all $DSTJARDIR
+cp $BUILD_TMP/deploy/$SRCZIPFILE $DSTJARDIR  ## copy zipped sources
+#xx echo === $DSTJARDIR content:
+#xx ls -all $DSTJARDIR
 
-echo                                 
-echo ====== deploy script ==============================================================
-echo DEPLOYSCRIPT=$DEPLOYSCRIPT
+#xx echo                                 
+#xx echo ====== deploy script ==============================================================
+#xx echo DEPLOYSCRIPT=$DEPLOYSCRIPT
 
-if test -v DEPLOYSCRIPT 
-then $DEPLOYSCRIPT
-fi
 
