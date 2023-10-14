@@ -1,0 +1,452 @@
+= CalculatorExpr / Meaning of Revers Polish Notation
+:toc:
+:toclevels: 5
+:sectnums:
+:sectlinks:
+:max-width: 52em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+
+
+== Approach
+
+The class link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.html[org.vishia.util.CalculatorExpr]
+was firstly created and used for a graphical user interface (Inspector)
+to show values after calculation, for example with specific scaling. 
+For that only add/sub and multiplication was necessary (scaling, offset) and a simple solution was created.
+But later, with the link:RWTrans.html#_jztxtcmd[JZtxtcmd] calculation using also Strings (contains etc.)
+become necessary and the `CalculatorExpr` class was enhanced.
+
+Of course `CalculatorExpr` uses the link:https://en.wikipedia.org/wiki/Reverse_Polish_notation[] for internal work.
+
+Parsing expressions in a language should be resolve precedences of operators. 
+For generating another language from parsing, or executing, also the RPN can be used.
+It is interesting that transformation of a parse result expression to RPN allows generating
+the same expression with other precedense rules for another language. 
+The back converting of RPN to a normal expression with specific precedences is possible and not complicated.
+
+
+== RPN 
+
+The https://de.wikipedia.org/wiki/Umgekehrte_polnische_Notation (RPN) should be known. 
+It is important that a 'normal' notation with precedence rules of operators and parentheses can be transformed 
+unambiguously into the RPN by the parsing process, 
+but also the back transformation into the 'normal' notation, 
+which generates the necessary parentheses, is possible. 
+Thus an expression can be used not only for execution, which can be realized quickly in RPN notation, 
+but also for storing an expression for later code generation.
+
+A storage in a tree of binary expressions as recognized by the parser (Xtext) assumes 
+that the tree delivered by the parser also corresponds to the target language in the precedence rules of the operators. 
+However, this is not always the case. 
+In the RPN the precedence rules of the parsed source are already processed accordingly, 
+the RPN has no precedence rules but only a processing order. 
+The precedence rules can be set differently when generating a 'normal' expression from the RPN 
+than in the syntax of the source parser. 
+By 'normal' expression is meant the notation in the common programming languages.
+
+=== Notation form
+
+The classic notation form for RPN follows the rules to enter an RPN expression to a RPN calculator:
+
+ 5 8 4 / +
+ 
+or
+ 
+ 5 ENTER 8 ENTER 4 ENTER / +
+ 
+stands for
+
+ 5 + 8 / 4
+ 
+in normal writing style. The operator comes after the operand always. 
+
+For representation outside of the calculator's key pressing it is better to do the following:
+
+* Always join the operand with the operator. Any operand has its operator.
+* Also an unary operation can be assembled with the operand.
+* The operand can be of course also a variable, not only a number.
+* The current stack level is designated as __accumulator__ or __accu__, because it is used for the current calculation. 
+Hence the mnemonically symbol `@` is used for that.
+* `@` as operand (left side) means "__store in accu__". 
+* `@` as operator (right side) means "__use the accu as value__".
+* Multiple Storing to `@` stores the current __accu__ of course in the stack. 
+Usage of the __accu__ value for operation pops the next value from stack to the __accu__ for next usage. 
+The __accu__ is the current presentation of stack level. All deeper stack levels are never used immediately. 
+* If functions are called, their operands comes from __accu__ and stack in order of the arguments, as usual in RPN.  
+
+Regarding this, the writing style for RPN can be better defined in the form:
+
+ @ 5, @ 8, / 4, + @
+ 
+* The operator is left, the operand is right. An unary operator (not shown here) is left of the operand. 
+The advantage is, seen for non-swapable operands, it is better seen with the eyes of knowledge non RPN formulas, 
+which is left and right side. Here is is obviously that the `4` is the divisor, not the divident.
+* The `@` presents the stack. Left side as operator it means "push" or "store" or "ENTRER".
+Right side as operand it means "pop" or use the last stack level, with pop as operand. 
+
+More complex example with parenthesis and unary operation:
+
+In a Java source it is written:
+
+  w = a + b * -(c + f) / (a+b) - e + (d * g) / e;
+
+Parsing this and transform to RPN using link:../../docuSrcJava_vishiaBase/org/vishia/parseJava/JavaParser.html[org.vishia.parseJava.JavaParser]
+produces:
+
+ @ w; @ a; @ b; @ c; + f; @ a; + b; / @; * - @; + @; - e; @ d; * g; / e; + @; = @; 
+
+This expression can be used also as textual input for the operation `setRpnExpr(expr, log)` in
+link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.html#setRpnExpr-java.lang.CharSequence-java.util.Map-java.lang.Class-[org.vishia.util.CalculatorExpr+setPrnExpr(...)].
+
+To present which result in stack is associated to which stack operand see:
+
+      +---------------------------------------->|
+      |    +---------------------------->+      |       +--------------->+
+      |    |    ++++++++----------->+    |      |       |                |
+ @ w; @ a; @ b; @ c; + f; @ a; + b; / @; * - @; + @; - e; @ d; * g; / e; + @; = @; 
+                          ++++++++--->++---->++-->+       ++++++++++++++-->+
+     
+=== Algorithm to produces RPN
+
+In the link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.html[org.vishia.util.CalculatorExpr]
+in operation `setExpr(String)` there is used a recursively approach:
+
+* Firstly an expression is parsed calling `parseAndExpr()` for the operand and checks the `||` as operation.
+* Recursively in `parseAndExpr()` the `&&` is accepted as operator and `parseCmpExpr()` is called.
+* In `parseCmpExpr()` the possible operators are the comparison operators, and `parseAddExpr()` is called as operand.
+* In `parseAddExpr()` `+` and `-` are accepted and `parseMultExpr()` is called.
+* In `parseMultExpr()` `*` and `/` are accepted and now `parseArgument()` is called as operand.
+* In `parseArgument()` also a whole expression in parenthesis is accepted, which is evaluated again with `parseExpr()` with this whole tree.
+* Also the unary operator is accepted in `parseArgument()`.
+* Last not least this is a recursively call maybe with more recursions because nested parenthesis
+which produces a tree of expression parts with the correct precedence.
+* Storing the parts of the expressions is done in `parseArgument()`. That produces the correct RPN order.
+
+In link:../../docuSrcJava_vishiaBase/org/vishia/parseJava/JavaSrc.html[org.vishia.parseJava.JavaSrc]
+which is called in link:../../docuSrcJava_vishiaBase/org/vishia/parseJava/JavaParser.html[org.vishia.parseJava.JavaParser]
+another algorithm is implemented:
+
+* The ZBNF parser itself stores an expression without precedence, in writing order. The ZBNF parser may be able to evaluate an expression
+exactly in the above shown form, firstly parse an OR-Expression  then AND-Level etc. But this needs a longer time for the parsing
+because the parser should test all levels in recursion. Instead the parser does not test the precedense, 
+a post preparation does it, in link:../../docuSrcJava_vishiaBase/org/vishia/parseJava/JavaSrc.html[org.vishia.parseJava.JavaSrc]
+
+* The precedence of the currently found operator for the next operationis determined by a table.
+* If the next operation has a higher precedence, then the current Operand is registered to store in stack, 
+to perform the following operation.
+* If the next operation has not a higher precedence, means equal or lower,
+then the stack is checked whether it contains a lower or equal precedence. It is popped.
+* If the precedence in stack is lower then the precedence of the current operand, 
+then firstly the current operand is added to the RPN expression.
+* If the precedence in stack is equal or higher of the current operand, then firstly that operands are added yet. 
+* Further operands from stack with lower or equal precedences as the next one are added after them. 
+
+This sorts the operation. The advantage is: The precedence is only regarded by a defined table for pecedenses to the operators,
+and not by recursively called special evaluation operations.
+
+* If an nested expression is detected, then the operator and precedence, also an unary operator for the nested expression
+is stored in stack, which presents the result of the nested expression. 
+* The nested expression is evaluated in line with all other operations, but with recursively call of this preparing operation. 
+
+=== Algorithm to produce a infix (normal) expression from RPN
+
+This is done for example for the link:link:../../docuSrcJava_vishiaBase/org/vishia/fpga/VhdlConv.html[org.vishia.fpga.VhdlConv]:
+
+The RPN expression contains the operands in the given order as also for the infix expression. See simple example:
+
+
+ x =    a +  b  * c;     //infix
+ @ x; @ a; @ b; * c; + @; = @; //RPN  
+    
+Only the operators are in another order, using pushed and popped values.
+
+Hence, the RPN can be evaluated from left to right to get the same operands. 
+One continues expression term (consist of some parts) is also continues in RPN:
+
+ @ x; @ a; @ b; * c; + @; = @; //RPN  
+             b  * c
+             
+After that with `+ @` the "__accu__" will be added. 
+The __accu__ is the last expression term itself, yet even calculated. 
+The continues expression now starts with the last calculated, which is here only the variable `a` in stack:
+
+++++
+<pre>
+ @ x; @ a; <s>@ b; * c;</s> + @;         = @; //RPN  
+        a            + b  * c
+</pre>
+++++
+
+That will repeated, now the `= @` will assign the accu (the current expression) to the next stack expression, means:
+
+++++
+<pre>
+ @ x; <s>@ a; @ b; * c; + @;</s> = @; //RPN  
+   x                      = a + b  * c
+</pre>
+++++
+
+But what about:
+
+ @ y; @ a; + b; * c; = @;         //RPN
+        a  + b  * c               //faulty!!
+        
+That will be faulty. Because: In RPN firstly `a + b` is calculated, then multiply with `c`.
+
+If an expression is continued with a higher precedence operation, the part before must be set in parenthesis, to bind it.
+
+ @ y; @ a; + b; * c; = @;         //RPN
+       (a  + b) * c               //correct
+
+Example with two terms:
+
+ @ z; @ a; + b; @ c; + d; * @; = @; //RPN
+   z,   a  + b,   c  + d
+
+First three terms are built and stored in stack: `z`, `a+b` and `c+d`.
+Then the __accu__ should be multiplied, e.g. the last term. This results in
+
+++++
+<pre>
+ @ z; @ a; + b; <s>@ c; + d;</s> * @;          = @; //RPN
+   z,  (a  + b)           * (c  + d)
+</pre>
+++++
+
+Same approach. But the terms, first the __accu__ term must be set in parenthesis because the connection operator has a higher precedence.
+As shown above the now current left expression should also set in parenthesis because a higher precedence operator follows.
+
+A specialism:
+
+ @ m; @ a; @ b; + c; + @; = @;           //RPN
+        a,   b  + c
+        a            + (b + c)
+        
+Why it is not notated as 
+
+ @ m; @ a; + b; + c; = @;           //RPN
+
+Because it comes from an expression `m = a + (b + c);` in the Java original. 
+Why parenthesis around `b+c`? May be it is a special condition, prevent overflow fro integer arithmetic or such one. 
+It is the decision of the user. The user want to add `(b+c)` prior. Exact that is mapped to the RPN.
+
+The back conversion from RPN to infix should set parenthesis also if the operator for the __accu__ has an equal precedence.
+Only if all the operator in the right __accu__ expression has higher precedences (or the lowest precedence of this expression is higher),
+then the parenthesis can be omitted. Because: The precedence ensures first calculation by itself.  
+
+That are the basic rules for back conversion from RPN to infix. 
+
+
+
+== CalculatorExpr
+
+This java class link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.html[org.vishia.util.CalculatorExpr]
+was firstly written in a simple form for scaling variable values to show in scaled and/or offset cleaned form in a GUI.
+That was a simple approach. 
+It seems to be stupid to use a manual written calculator where the Java Runtime Environment can caculate expressions very more faster
+using the byte code of Java. That may be one point of view.
+But the other point is: If the expression is given only in runtime, or given as simple text without possible use of the Java compiler,
+and secondly the calculation time is not important (in ranges of some µs till ms in comparison to ns and µs), 
+then an interpreted calculation is also sensible. 
+It is similar to access to Java data via reflection (it is interpreting) instead compile a program.
+
+The link:RWTrans.html#_jztxtcmd[JZtxtcmd] is one of interpretation tool working with Java data. 
+In JZtxtcmd the user can mix hard compiled Java classes with textual given access. 
+So a decision can be done, which parts are flexible changeable only in text without Java compiler, 
+and which parts are compiled and not changeable for example by a user which can/should only deal with the scripts. 
+So the CalculatorExpr class takes place in the JZtxtcmd also (as in the inspector GUI) for such flexible calculations.
+
+=== Operation 
+
+The inner class link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.Operation.html[CalculatorExpr.Operation]
+has exact the described property of a RPN expression part, 
+it contains the operator, an unary operator and the operand. 
+Following the
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/util/CalculatorExpr.java[tag=RPNexpr]
+---- 
+
+as only one field in `CalculatorExpr` contains the expression in working order, and this is __Revers Polish Notation__.
+
+
+=== Operand
+
+The inner class link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.Operand.html[CalculatorExpr.Operand]
+describes what can be an operand. 
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/util/CalculatorExpr.java[tag=Operand]
+---- 
+
+
+=== Operator
+
+The inner class link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.Operator.html[CalculatorExpr.Operator]
+is only a base class as interface to given operators. 
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/util/CalculatorExpr.java[tag=Operator]
+---- 
+
+The Operators itself are defined in link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.Operators.html[CalculatorExpr.Operators]
+
+Any Operator class contain the required methods from Operator to execute the specific operation. 
+The operations should be executed with the different given types:
+
+* All numeric types
+* boolean
+* Object types for instance check and also conversion to numeric
+* String types also for String operations.
+
+Type conversion as preparation for the core operation is also a necessary part.
+For that the interface link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.ExprType.html[CalculatorExpr.ExprType] is given:
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/util/CalculatorExpr.java[tag=ExprType]
+---- 
+
+The expression types itself with the converting routines are defined in 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.ExprTypes.html[CalculatorExpr.ExprTypes]
+
+All operations see link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.Operators.html[CalculatorExpr.Operators]
+
+
+
+
+
+
+=== Set the expression
+
+The inner but public static class 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/CalculatorExpr.SetExprBase.SetExpr.html[CalculatorExpr.SetExprBase.SetExpr]
+is used to set an expression immediately from the ZBNFparser's parse result 
+which also can sort the expression parts and terms to the RPN order by the syntax definition. This is used to translate a JZtxtcmd Script. 
+
+Else this list is able to fill with some operations from any textual form:
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/util/CalculatorExpr.java[tag=setExpr]
+---- 
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/util/CalculatorExpr.java[tag=RPNexpr]
+---- 
+
+
+== JavaParser
+
+The class link:../../docuSrcJava_vishiaBase/org/vishia/parseJava/JavaParser.html[org.vishia.parseJava.JavaParser]
+respectively the package contains a syntax definition in ZBNF format and also a RPN preparation:
+
+link:../../docuSrcJava_vishiaBase/org/vishia/parseJava/JavaSrc.Expression.html#prep-java.lang.Appendable-[JavaSrc.Expression#prep(log)]
+
+The approach of this class is not a alternative to a JDK for byte code. No. It is to parse Java sources for converting to other languages.
+The first usage of that was a Java2C idea, which produces C language code from Java sources. The translator itself is no  more used curently,
+but the translated sources are part of the link:../../../emc/index.html[emC] concept. 
+
+Currently this parser is used to produce VHDL (for FPGA designs).
+
+== Tests
+
+The test class `org.vishia.parseJava.test.TestParseJava` organize tests firstly for Java parsing
+but secondly especially to test the RPN conversion.
+For that the class `org.vishia.parseJava.test.ParseExample` contains some expressions which are parsed,
+but also calculated in Java: 
+
+----
+include::../../../test/java/org/vishia/parseJava/test/ParseExample.java[tag=exmplOperation]
+---- 
+
+The parsing looks like:
+
+----
+  this.parser = new ZbnfParser(this.console, 10);
+  this.parser.setSyntaxFromJar(JavaSrc.class, "JavaSyntax.zbnf");
+  .....
+  public JavaSrc parseJava(File fileIn) throws .....
+    bOk = this.parser.parseFile(fileIn); 
+  ....
+      JavaSrc_Zbnf result = new JavaSrc_Zbnf();
+      ZbnfParseResultItem resultItem = this.parser.getFirstParseResult();
+      try{ ZbnfJavaOutput.setOutputStrictNewFromType(result, resultItem, this.console); }
+----
+
+The parse result is after parsing stored in the given JavaSrc result class. 
+
+The syntax of an expression in the syntax.zbnf script is simple: 
+
+----
+include::../../../main/java/srcJava_vishiaBase/org/vishia/parseJava/JavaSyntax.zbnf[tag=Expression]
+---- 
+
+As you can see the operators are not sorted by parsing, the result contains the given writing order.
+
+After parsing each used expression is post-prepared for RPN presentation:
+
+
+----
+include::../../../test/java/org/vishia/parseJava/test/TestParseJava.java[tag=testExpression]
+---- 
+
+All found expressions are stored in the last three arrays, as
+
+* `expr`: The expression itself to view via `.toString()`
+* `results`: As shown following the expression is executed with `CalculatorExpr`. Store the result.
+* `backExpr`: The RPN expression is converted back to the infix form, which should be compared to the Java original.
+
+After that the results are compared with the expected values. 
+The `results` are compared in calculated values with the original Java result, stored in :
+
+
+----
+include::../../../test/java/org/vishia/parseJava/test/TestParseJava.java[tag=testValues]
+---- 
+
+This part of software should be adapted if the `ParseExample.java` is changed. 
+The value `Float.NaN` is used to mark that the result for `boolean` should be used.
+
+The calculation from the RPN format is done with:
+
+----
+include::../../../test/java/org/vishia/parseJava/test/TestParseJava.java[tag=executeRpnExpr]
+---- 
+
+
+The proper test result looks like:
+
+----
+Test JavaParser, RPN expressions
+test Expressions in ParseExample
+  ok: result: 7.0 == 7.0  Expr:  x =  a +  b * c   :
+  ok: result: 9.0 == 9.0  Expr:  y =  ( a + b ) * c  :
+  ok: result: 21.0 == 21.0  Expr:  z =  ( a + b ) *  ( c + d )   :
+  ok: result: 6.0 == 6.0  Expr:  m =  a +  ( b + c )   :
+  ok: result: true == true  Expr:  q6 =  q1 ||  q2 && q4   :
+  ok: result: true == true  Expr:  q7 =  c < d ||  b > a &&  c > b    :
+  ok: result: 5.0 == 5.0  Expr:  u =  ( a + b ) * c - d  :
+  ok: result: 0.79999995 == 0.79999995  Expr:  v =  a * - ( d + g )  / e +  ( a + b )   :
+  ok: result: -4.4 == -4.4  Expr:  w =  a +  b * - ( ( c + f ) /  ( a + b )  )   - e +  d * g / e   :
+  ok:  RPN , "@ x; @ a; @ b; * c; + @; = @; "
+  ok:  back, " x =  a +  b * c   "
+  ok:  RPN , "@ y; @ a; + b; * c; = @; "
+  ok:  back, " y =  ( a + b ) * c  "
+  ok:  RPN , "@ z; @ a; + b; @ c; + d; * @; = @; "
+  ok:  back, " z =  ( a + b ) *  ( c + d )   "
+  ok:  RPN , "@ m; @ a; @ b; + c; + @; = @; "
+  ok:  back, " m =  a +  ( b + c )   "
+  ok:  RPN , "@ q6; @ q1; @ q2; && q4; || @; = @; "
+  ok:  back, " q6 =  q1 ||  q2 && q4   "
+  ok:  RPN , "@ q7; @ c; < d; @ b; > a; @ c; > b; && @; || @; = @; "
+  ok:  back, " q7 =  c < d ||  b > a &&  c > b    "
+  ok:  RPN , "@ u; @ a; + b; * c; - d; = @; "
+  ok:  back, " u =  ( a + b ) * c - d  "
+  ok:  RPN , "@ v; @ a; @ d; + g; * - @; / e; @ a; + b; + @; = @; "
+  ok:  back, " v =  a * - ( d + g )  / e +  ( a + b )   "
+  ok:  RPN , "@ w; @ a; @ b; @ c; + f; @ a; + b; / @; * - @; + @; - e; @ d; * g; / e; + @; = @; "
+  ok:  back, " w =  a +  b * - ( ( c + f ) /  ( a + b )  )   - e +  d * g / e   "
+----
+
+Here some expressions are converted and tested..

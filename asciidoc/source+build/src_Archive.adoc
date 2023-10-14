@@ -1,0 +1,720 @@
+= Archive of Java jar and sources, re-compile
+:toc: left
+:toclevels: 5
+:sectnums:
+:sectlinks:
+:max-width: 60em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+:ss: **
+:stylesheet: ../CppJava.css
+
+
+* see also link:buildtestVishiaJava.html[]
+* link:../../index.html[]
+
+Dr. Hartmut Schorrig, Germany in Europa, link:https://vishia.org[www.vishia.org]
+
+== Problem of loading necessary jar or librarie files from internet
+
+
+If you take a critical look at the common practice of loading libraries, binaries 
+and other tool files, it looks like this:
+
+* The tool has any internal list which files are necessary. 
+* There are big archives, where to find the files (`mavenCentral()` or such)
+* The files are downloaded in a universal location. Often this is the home location for the user, but often sometimes hidden (not obviously).
+
+Then if an internet connection is missing, the question may pop up: 
+"The tool does not run" - maybe because of another user login,
+or because a function is used the first time, or an update request was stored
+but not executed. 
+
+This approach has the following disadvantages:
+
+* 1) The list which files are used in which version, it is an internal list. 
+* 2) Often the dependencies are complex. One file needs another file, loads it 
+from internet, and ready & run. It means there is not a central list with all 
+necessary files, the loading lists are dispersed. 
+* 3) The location to which the files are downloaded is a system decision. 
+Because the system cannot decide, it is stored in the user's private tree, 
+there often in not obviously sub directories. 
+* 4) Because the whole process of getting files is not obviously, 
+there are many files in the user's location, unknown whether they are necessary 
+for which tool. 
+* 5) Only because space on a hard disk is usual enough the problem of "__my disk is full__" 
+does not occur. 
+* 6) Tools need an internet connection to run, any time it is possible that a missing file 
+should be gotten from internet. It is not sure that the computer can run without internet. 
+The slogan "__A computer needs an Internet connection at all times__" is not kosher!
+
+An article:
+
+link:https://softwareengineering.stackexchange.com/questions/331817/self-contained-projects-gradle-maven-dependencies-offline[]
+
+describes some difficulties.
+
+There is an interesting article from a german jounal:
+
+link:https://www.embedded-software-engineering.de/risiken-bei-open-source-software-warum-eine-bill-of-materials-sinnvoll-ist-a-709931[]
+
+It describes a similar situation. From this article I'm inspired to work precisely with a BOM.
+
+The other approach is: The content of the downloaded and used material should be disclosed.
+It means, the sources should be available, AND: translation of the sources should produce
+the same content as given in the binary files. Only then it is obviously that the sources
+are adequate the used binaries. This is the approach of 
+link:reproducibleJar.html[]. The reproducible build is a very important approach, 
+but often neglected. See chapter link:#rebuild[Source integrity, regenerate jar-files]
+
+
+== Solution: The Bill of material file to load components 
+
+
+[#fileTree]
+=== File tree organization for sources and components
+
+See link:../../SwEng/html/srcFileTree.html[vishia.org/SwEng/html/srcFileTree.html]
+
+The working tree should contain
+
+.Filetree: working tree principle
+[source,Filetree]
+----
+working tree
+ |
+ +-build     temporary stuff while build
+ +-tools     tools load from internet
+ +-jars      jars load from internet, alternatively in tools
+ +-libs      some libraries load from internet of necessary
+ +-src
+    +-load_tools  source (srcipt) to load the tools, jars, libs
+    +-cmpnXYZ     some software components (with version archives)
+----
+
+If you get a zip file with examples etc, for example 
+link:../../Fpga/deploy/J2Vhdl_Workbox-2023-10-16.zip[vishia.org/Fpga/deploy/J2Vhdl_Workbox-2023-10-16.zip]
+, you get only the src directory. More is not necessary.
+
+* The `tools` directory is created while executing `src/load_tools`, see next chapter.
+* The `jars` directory is automatically created on compilation
+* The `libs` directory maybe also created on `src/load_tools`, more for {cp} applications.
+* The `build` directory is temporary while compiling, see chapter <<#build>> 
+
+
+
+[#loadTools]
+=== First time loading tools (jar files) from internet
+
+The `src/load_tools` contains:
+
+.Filetree: working tree load tools
+[source,Filetree]
+----
+ src/load_tools
+      +-tools.bom               This is the tools.bom
+      +-+checkAndLoadTools.bat  Windows batch to load the tools 
+      +-+checkAndLoadTools.sh   Linux/UNIX shell script to load the tools 
+      +-vishiaMinisys.jar       minimalist jar file to support load the tools
+----   
+
+The `tools.bom` contains all necessary information to load the tools from internet:
+
+.Script: `tools.bom`
+[source,Script]
+----
+#Format: filename.jar@URL ?!MD5=checksum
+
+#The minisys is part of the git archive because it is need to load the other jars, MD5 check
+vishiaMinisys.jar@https://www.vishia.org/Java/deploy/vishiaMinisys-2023-04-12.jar  ?!MD5=3b46188b422011ef6054d5c27fc0c19e;
+
+#It is need for the organization of the generation.
+vishiaBase.jar@https://www.vishia.org/Java/deploy/vishiaBase-2023-04-12.jar  ?!MD5=9086c5f67522b061ba3949bcd3d2f87f;
+
+##Special tool for Java2Vhdl
+vishiaVhdlConv.jar@https://www.vishia.org/Java/deploy/vishiaVhdlConv-2023-04-12.jar  ?!MD5=4c1ad07a090ec5627b6977509fbde71a;
+----
+
+
+The script for MS-Windows looks like:
+
+.Script: load the tools, `+checkAndLoadTools.bat` 
+[source,Script]
+----
+set SCRIPTDIR=%~d0%~p0
+if not exist ..\..\tools mkdir ..\..\tools
+java -cp %SCRIPTDIR%/vishiaMinisys.jar org.vishia.minisys.GetWebfile @%SCRIPTDIR%/tools.bom ../../tools/
+pause
+----
+
+And similar the linux shell script:
+
+.Script: load the tools, `+checkAndLoadTools.sh` 
+[source,Script]
+----
+export SCRIPTDIR=$(dirname $0)
+if ! test -d ../../tools; then mkdir ../../tools; fi
+java -cp $SCRIPTDIR/vishiaMinisys.jar org.vishia.minisys.GetWebfile @$SCRIPTDIR/tools.bom ../../tools/
+read -n1 -r -p "Press any key to continue..."
+----
+
+The used function to load or only check is written in Java and contained in the `vishiaMinisys.jar`. 
+Only this file, approximately with 100 kByte, should be a part of the tools or source download package 
+beside some textual files etc. of the tool or source files beside a example of specific solution. 
+All other executable, jar and libs can be downloaded one time from internet.
+
+=== Check correctness of tools (jar-files)
+
+If you have downloaded the file there are stored in the given location, and the software run without internet connection. 
+A second call of the script in `src/load_tools` checks only the correctness of the MD5 check sum 
+given in the `tools.bom` with the given files. You do not need internet connection.
+
+One advantage of the `tools/...` directory beside the `src/...` is: 
+This is your necessary tool, jar or lib file for your application. 
+For further usage you can also store your application sources with the tools to be independent of the internet.
+Think about long time support.
+
+
+
+
+== Getting sources for the jar files and reproducible build
+
+=== Reproducible build approach
+
+Now the essential question is: What does the tools? What is contained in the jars?
+The Open Source approach says: You can inform yourself. 
+You can change your tools in your responsibility. You can contribute.
+
+For that firstly it is necessary to get the sources and build the tool (jar) files again,
+check whether the gotten sources are really the sources for your used tool / jar.
+Only if yes, you can simple study, change, contribute. That's why reproducible build is given. 
+See also
+link:reproducibleJar.html[] and 
+link:https://reproducible-builds.org[]
+
+The version archive at link:https://www.vishia.org/Java/deploy[https://www.vishia.org/Java/deploy]
+contains per version the jar-Files as run able libraries and their sources. 
+Additionally an MD5.txt-file is given. For example:
+
+.Filetree: deploy directory content snippet
+[source,Filetree]
+----
+vishiaBase-2021-06-21-source.zip	2021-06-22 10:41	1.4M	 
+vishiaBase-2021-06-21.jar	        2021-06-22 10:41	1.4M	 
+vishiaBase-2021-06-21.jar.MD5.txt	2021-06-22 10:41	138	 
+vishiaGui-2021-06-21-source.zip	    2021-06-22 10:41	707K	 
+vishiaGui-2021-06-21.jar	        2021-06-22 10:41	938K	 
+vishiaGui-2021-06-21.jar.MD5.txt	2021-06-22 10:41	135	 
+----
+
+The used `*.jar` file is given in the bill of material, see previous chapter. 
+Beside you find the sources. From the sources the binaries (here jars) are newly able to build. 
+
+You can decide by yourself to use newer versions as in the currently build of materials preferred.
+That is your experience. Maybe you need newer features of a tool, they are contained
+in the newer jars, but the currently deployment of the tool use yet only the older sources
+in its bill of material. Usual newer versions should be compatible to older ones. 
+It means you can use the newer version. But nobody guarantees that is really proper.
+You need existing new features, you can try by yourself. You can compare the sources 
+which changes are really done. You can try usage, report found errors, all that helps
+to improve. 
+
+Last not least you can fix found errors by yourself, maybe (should be ) with adequate feedback. 
+
+[#shell]
+=== Necessary tools on your computer for build jar files
+
+The build scripts for all vishia jar files are shell scripts. They can be executed in Linux,
+but also in Windows using for example MinGW. MinGW is contained in a standard *git* environment. 
+*git* contains a MinGW Linux environment, because git runs originally under Linux.
+The same can be done with any gcc (GNU compiler) collections. 
+In other words, a shell execution environment should be available to everybody
+who is trying to compile something.
+
+On my Windows PC I have combined the extension `.sh` with a batch file, `git-script.bat` 
+which contains
+
+.Script: `git-script.bat` to execute shell scripts on MS-Windows 
+[source,Script]
+----
+@echo off
+REM often used in shell scripts, set it:
+set JAVAC_HOME=C:/Programs/Java/jdk1.8.0_241
+set JAVA_HOME=C:/Programs/Java/jre1.8.0_241
+set PATH=C:\Program Files\git\mingw64\bin;%JAVA_HOME%\bin;%PATH%
+::set PATH=%JAVA_HOME%\bin;%PATH%
+
+REM sh.exe needs an home directory:
+set HOMEPATH=\vishia\HOME
+set HOMEDRIVE=D:
+
+REM possible other working dir as second argument
+if not "" == "%2" cd "%2" 
+
+REM %1 contains the whole path, with backslash, sh.exe needs slash
+REM Preparation of the scriptpath, change backslash to slash,
+set SCRIPTPATHB=%1
+set "SCRIPTPATH=%SCRIPTPATHB:\=/%"
+echo %SCRIPTPATH%
+echo on
+"C:\Program Files\git\bin\sh.exe" -c "%SCRIPTPATH%"
+
+REM to view problems let it open till key pressed.
+pause
+----
+
+There are some more necessities especially conversion the backslash from the command line file argument on double click
+to the slash.
+The home path can contain some information also used for git, not for this scripts.
+
+
+The second necessary one is a JDK, Java Developer Kit, of course. 
+It is not necessary to have it installed, it is sufficient that it is present 
+on the PC platform. You can have several versions of JDK at the same time, 
+from Oracle, or OpenJDK. 
+
+Therefore the environment variable `JAVAC_HOME`  should be set to that directory,
+which contains a `bin/javac`. This environment variable can be set by the system,
+if a JDK is preferred. If it is not set then the file 
+
+ .../makeScripts/JAVAC_HOME.sh
+ 
+is called. This file can/should be adapted by the user to select the correct location 
+of the JDK. For Linux compilation sometime `JAVAC_HOME` is not present but `javac` 
+is possible as command because the JDK/bin is in the systems's PATH. 
+That is proper and regarded in the script. 
+
+     
+     
+[#rebuild]     
+=== (Re-) generate jar-files from the sources
+
+It is possible to re-generate the jar file with the exact same content,
+hence the same MD5 check code, using the `...source.zip` archive. 
+
+[#loadSrcCmpn]
+==== load sources of the components
+
+To compile vishia Java source you need firstly always the proper `vishiaBase-VERSION-source.zip`.
+To build other components intrinsic only the internal directory `src/makeScripts` is necessary,
+because the sources are pre-compiled used in the `vishiaBase.jar`.
+
+The principle is: Unpack the content of the `....soruce.zip` in your working tree. 
+The `...source.zip` contains the necessary internal directory tree structure starting from `src`
+and in `src` only the dedicated component. 
+
+.Filetree: content in `vishiaBase-VERSION-source.zip`
+[source,Filetree]
+----
+...source.zip
+ +-src
+   +-srcJava_vishiaBase
+     +-java/...                    not necessary to build another component
+     +-makeScripts
+       +- -makejar-coreScript.sh   this script is called inside build
+       +- -genjavadocbase.sh       this script is called inside gen java doc
+----
+        
+Secondly you need the `...source.zip` for your component to re-generate. 
+For example follow the `vishiaVhdlConv.jar` (see link:../../../Fpga/index.html[vishia.org/Fpga.index.html]).
+Get the `vishiaVhdlConv-VERSION-source.zip` from the internet beside the `vishiaVhdlConv-VERSION.jar`
+and unpack it in your working tree. Then you get 
+
+.Filetree: content in a `vishiaVhdlConv-VERSION-source.zip`
+[source,Filetree]
+----
+...source.zip
+ +-src
+   +-vishiaFpga                        maybe already existing in your working tree, same content
+     +-java/...                          sources of the Java for own Java-FPGA designs
+   +-vishiaJ2Vhdl                      component of java sources
+     +-java/...                          sources of the Java to VHDL converter
+     +-makeScripts
+       +- +makejar_vishiaVhdlConv.sh     this script should be called to build
+       +- +genjavadoc_vishiaVhdlConv.sh  this script should be called for gen java doc
+----
+
+It means the whole working tree contains then after loading the tools, create the `build` 
+(see chapter <<#build>> and unzip all source files:
+
+
+.Filetree: working tree after loading all
+[source,Filetree]
+----
+working tree
+ |
+ +-build     temporary stuff while build
+ +-tools     tools load from internet
+ +-jars      jars load from internet, alternatively in tools
+ +-libs      some libraries load from internet of necessary
+ +-src
+   +-load_tools                        source (srcipt) to load the tools, jars, libs
+   +-theOwnComponent
+   +-srcJava_vishiaBase
+   | +-java/...                    not necessary to build another component
+   | +-makeScripts
+   |   +- -makejar-coreScript.sh   this script is called inside build
+   |   +- -genjavadocbase.sh       this script is called inside gen java doc
+   +-vishiaFpga                        maybe already existing in your working tree, same content
+   | +-java/...                          sources of the Java for own Java-FPGA designs
+   +-vishiaJ2Vhdl                      component of java sources
+   | +-java/...                          sources of the Java to VHDL converter
+   | +-makeScripts
+   |   +- +makejar_vishiaVhdlConv.sh     this script should be called to build
+   |   +- +genjavadoc_vishiaVhdlConv.sh  this script should be called for gen java doc
+----
+
+To re-generate you should only call this `+makejar...sh` script in its current directory,
+maybe original in linux or using a MinGW (or also Cygwin or other) Linux shell script adaption. 
+
+[#tools]
+==== What about tools directory
+
+The `tools` directory is explained in chapter <<#loadTools>>
+Usual the `tools` contain `vishiaBase.jar` and other jar files 
+which are necessary for the one component to rebuild. 
+That is proper.
+
+The second approach for tools is: It is the destination directory for the rebuild component. 
+
+For the first comparison using the reproducible build approach you may load the sources
+in another location on your hard disk, not inside the currently used working tree.
+Then you can copy necessary components (`tools/vishiaBase.jar`) to the build working tree,
+or just build also `vishiaBase.jar` newly and compare it. 
+If you don't create a `tools` directory, build only with all sources starting with `vishiaBase-VERSION-source.zip`
+using only the `src` sub folder, a `jars` folder will be automatically created instead `tools` where the jar files are placed into.
+  
+
+For elaborately working on the sources by yourself you can/may use the same working tree location
+for build and work. Then you can use the feature, that the newly build jar file replaces the jar file in `tools`,
+so it is immediately usable for tests.  
+
+If you use an IDE, for example Eclipse to edit and debug the sources, the source location are here,
+used a linked folder in Eclipse (new Folder - advanced). 
+But the project folder and the temporaries should be located anywhere other. 
+Then you can independently test your sources in the IDE, and then fastly build the jar and work outside the IDE. 
+
+Hint: You should rename the originally loaded jar file from internet with `...VERSION.jar`, 
+with `VERSION` as determined in the tools.bom, as it is also existing in the internet location
+
+[#build]
+==== The build directory
+
+You can create an emtpy build directory for temporaries. 
+In this `build` the compiled class files are written into, and also `build/deploy` with the jar and `...source.zip` files.
+
+I use a RAM disk which is mounted to the `TMP` directory in my Windows PC. 
+I do not save its content on switch-off, it works. On booting the `TMP` folder is empty 
+or filled from the first files from starting windows. There was never a loss of data. 
+The RAM disk especially for the amount of temporary stuff while compilation (also for {cp} development)
+is a good idea to speed up. There are two batch files in each working tree:
+
+
+.Script: `clean.bat`
+[source,Script]
+----
+echo off
+REM cleans and remove build directory
+
+echo called: %0
+
+REM remove first the content of build because build may be a linked location
+if exist build del /S/Q/F build\* > NUL
+
+REM remove all inclusively build itself.
+REM Note: rmdir /S does not remove files in a linked folder. ...?
+if exist build rmdir /S /Q build
+
+REM now remove build itself, maybe as linked folder.
+if exist build rmdir build
+
+if not "%1"=="nopause" pause
+exit /b
+----
+
+This script removes the content of `build` in a linked location and also the `build` itself,
+proper for cleanup the working tree from temporaries. 
+
+The next script cleans and makes a JUNCTION to a location in the TMP directory 
+(independent of whether it is in a RAM disk as recommended by me or in another location).
+
+.Script: `+clean_mkLinkBuild.bat`
+[source,Script]
+----
+echo off
+echo called: %0
+REM cleans and creates a directory in %TMP% for temporary stuff.
+REM recommended: Use a RAM disk for such if you have enough RAM istalled (0.5..1 GByte is usual really sufficient for the RAM disk)
+REM a build directory will be created as symbolic link (JUNCTION in MS-Windows) to this temporary folder.
+REM The used temporary for the link build
+set TD=%TMP%\Example1_BlinkingLed_VHDL_build
+
+call .\+clean.bat nopause
+
+REM TMP should be set in windows, it may refer a RAM disk
+REM only emergency if TMP is not set:
+if not "%TMP%"=="" goto :tmpOk 
+  REM Windows-batch-bug: set inside a if ...(...) does not work!
+  echo set TMP=c:\tmp
+  set TMP=c:\tmp
+  mkdir c:\tmp
+:tmpOk
+echo TMP=%tmp%
+
+REM clean content if build is not existing, and link
+if not exist build (
+  REM Note: rmdir /S/Q cleans all, del /S/Q/F does not clean the directory tree
+  if exist %TD% rmdir /S/Q %TD% 
+  mkdir %TD%
+  mklink /J build %TD%
+  echo build new created > build/readme.txt
+) 
+
+if not "%1"=="nopause" pause
+exit /b
+----
+
+The used location in `TMP` is determined by the `TD` variable on start of the script. 
+It should be proper to your working directory, to avoid clashes.
+
+The possibility that you have not a `TMP` environment variable may be given, 
+some systems have only `TEMP`. The workaround to create `C:\tmp` may be proper then.
+If you use a RAM disk you should anyway mount `TMP` to it.  
+
+If the `build` was not cleaned then `clean.bat` does not work. Maybe because of locked content.
+The `mklink /J` is a proper Windows feature for symbolic linked directories, 
+introduced approximately with Windows-XP, but sometimes not well known.
+
+Instead using this scripts you can also create manually the build.
+
+If you do not have a `build` directory, the make scripts use an own location inside `TMP`.
+
+==== Binary comparison of the result files
+
+The content of the jar and the MD5 check sum can be compared with older (pre- or given) versions.
+That is the essential result of the reproduced build. 
+That can be done by binary comparison or by comparison of the generated MD5 checksum
+with an existing version, especially with the last versions 
+with the other version (date-) identifier on the file names. 
+If the sources are unchanged the binaries and the MD5 should be the same.
+Then you can ignore the new version with the current date and use the given versions.
+
+If you expect "nothing should be changed" but you see binary differences,
+then you can compare the content of the generated jar file with the older given jar file 
+for all class files. 
+A jar file is really a zip file. You can add the `.zip` extension additional to the 
+jar extension  (results in `.jar.zip`) to open as zip and compare with any file comparer tool.
+I recommended using the Total Commander (link:https://www.ghisler.com[]). It enables too
+opening a `...jar` immediately as zip without additional effort. 
+Maybe you should firstly dissolve the `.jar` connection in Windows to execute as java, often not necessary.
+With the Total Commander you can use the function "Synchronize Dirs". 
+After file comparison in the jar or jar.zip you see which files are changed, 
+in conclusion you can see which sources are changed. 
+A maybe unnecessary change can be improved, for example writing a changed comment
+in the same line instead using an additional one, recompile and compare. 
+It is possible to have new sources especially with improved comments
+with unchanged compiling result, a good feature for maintaining the sources.
+
+Changes in software may influence the binaries of `vishiaBase.jar` but left unchanged
+binaries of `vishiaMinisys.jar` if that used sources are unchanged.  
+
+== Details of generation scripts
+
+The generation scripts calls the `javac` compiler due to the installed JDK to get class files.
+The class files are then assembled to a jar file using an own algorithm based on the zip facilities of Java.
+The `jar` command is not used because it does not produce a reproducible result. 
+The reasons for that are discussed in link:reproducibleJar.html[].
+
+There is a central script:
+
+ src/srcJava_vishiaBase/makeScripts/-makejar-coreScript.sh
+ 
+This script does the work, calls the compiler, builds the jar, zips the sources 
+and copies the result files to the `tools` or `jars` directory ready to use. 
+
+The core script is started from a specific script for the component
+which sets some environment variables used by the core script.
+The environment variables are well documented in this scripts. But follow some following explanations.
+
+For example to build the `vishiaBase.jar` it is 
+
+ src/srcJava_vishiaBase/makeScripts/+makejar-vishiaBase.sh
+
+Or for another component which uses `vishiaBase.jar` it is for example
+
+ src/vishiaJ2Vhdl/makeScripts/+makejar_vishiaVhdlConv.sh
+ 
+which can be located in another file tree. 
+But the `src/srcJava_vishiaBase/makeScripts/+makejar-vishiaBase.sh`
+and also the necessary jar files as depending ones should be present there, see chapter <<#loadSrcCmpn>>
+
+=== Current directory is the directory where src, tools, jars, build is present
+
+The first statements in a `makejar_Component.sh` checks and changes the current directory:
+
+.Script: `+makejar....bat` change current directory
+[source,Script]
+----
+cd $(dirname $0)/../../..
+echo currdir $PWD
+----
+
+It works correct also if the directory on call is arbitrary because it uses the script calling path in `$0`.
+
+The `build` and `tools` should be already present there, as described in chapter <<#tools>> and <<#build>>
+
+=== Quest of time stamp in the jar file
+
+
+For the reproducible build the time stamp of the files in the jar is essential. 
+This timestamp may be also for example 1970-01-01, but it is better to have a real time stamp.
+This timestamp is determined by 
+
+.Script: `+makejar....bat` set time stamps
+[source,Script]
+----
+export VERSIONSTAMP=""
+export TIMEinJAR="2023-10-12+00:00"
+----
+
+The `VERSIONSTAMP` determines the names of the created files. If it is left empty as here,
+the current date will be used. That is usual proper because it does only influence the file name,
+not internal content. 
+
+The `TIMEinJAR` is the time stamp of all files which are packed into the jar file. 
+Here the file time is essential for the check sum of the file. Hence you must not change this value
+for a reproduced build. 
+But if some things in the sources are changed, you should set a proper time stamp value
+in the new version of the `makejar...sh` file. 
+
+It may be possible to read the `sVersion` variable from the source files, usual or often contained there,
+and build the time stamp of the class file with it. 
+This is an interesting feature because then the version of each file is documented in the jar file on the file time.
+But this feature presumes that all files have such a version string, (or use `1970-01-01+00:00` is not found),
+and it is an effort. It may be done in future. 
+
+
+=== What to compile, destination name
+
+Some varibales determine the output file names and the files to compile.
+
+.Script: `+makejar....bat` variable determines the result jar file name
+[source,Script]
+----
+export DSTNAME="vishiaVhdlConv"
+----
+
+This name is used for the output files.
+
+.Script: `+makejar....bat` files to compile
+[source,Script]
+----
+SRCDIRNAME="src/vishiaJ2Vhdl"
+export SRC_ALL="$SRCDIRNAME/java"            ## use all sources from here
+export SRC_ALL2="src/vishiaFpga/java"        ## use all sources also from here
+export SRCPATH="";                           ## search path for depending sources if FILE1SRC is given
+export FILE1SRC=""                           ## use a specific source file (with depending ones)
+----
+
+Either the `SRC_ALL` and optional also `SRC_ALL2` is set with a path. Then all `*.java` files 
+in that path(s) are used to compile.
+There is no exclusion possible. In this case two locations with java files are given. 
+This is the proper variant to get a jar file as library from the whole component.
+Then also the `SRCPATH` is determined by this `SRC_ALL`.
+
+Or the other variant, one or some top level files are given to compile, 
+whereby depending files are automatically located whether they are available in a given jar file as library
+(see `CLASSPATH` in next chapter), or there should be able to find in the `SRCPATH`.
+The files given as `package/to/name.java` can be contained also in a list file. 
+This is done for example on build of the `vishiaMinisys.jar`. It looks like (see `makejar_vishiaBase.sh`):
+
+.Script: `+makejar....bat` files to compile with dedicated files
+[source,Script]
+----
+SRCDIRNAME="src/srcJava_vishiaBase"
+export SRC_ALL=""                            ## use all sources from here
+export SRC_ALL2=""                           ## use all sources also from here
+export FILE1SRC="@$SRCDIRNAME/makeScripts/minisys.files" #files to compile contained in this file
+export SRCPATH="$SRCDIRNAME/java";           ## search path for depending sources if FILE1SRC is given
+----
+ 
+Then the `SRCPATH` should be given where these files are located.
+
+=== MANIFEST, CLASSPATH and resource files
+
+The `CLASSPATH` variable describes the path where already compiled `*.class` files, usual in jar libraries are able to find.
+If there is no `CLASSPATH` necessary left it empty or `unset` it.
+
+
+.Script: `+makejar....bat` CLASSPATH
+[source,Script]
+----
+if test -f tools/vishiaBase.jar; then export JARS="tools"
+elif test -f jars/vishiaBase.jar; then export JARS="jars"
+else echo necessary tools or jars not found, abort; exit; fi
+if test "$OS" = "Windows_NT"; then export sepPath=";"; else export sepPath=":"; fi
+export CLASSPATH="-cp $JARS/vishiaBase.jar"
+----
+
+It may be different in the working tree whether a `tools` or a `jars` sub directory may be used.
+See chapter <<#fileTree>>. Hence it is checked, here with existing check of the necessary jar file.
+
+The next problem is: The path separator in a `javac` command line argument is unfortunately different 
+between MS-Windows and Linux. Hence the OS should be testet. 
+All Windows-OS (testet till Windows-10) contains this checked environment variable. 
+If not, set it in the shell script batch organization, see chapter <<#shell>>
+In this example the separator is not necessary, but it is given as pattern here.
+
+The `CLASSPATH` variable should be contain the `-cp ` option as shown.
+
+The `MANIFEST` variable describes the `*.manifest` file necessary in jar files:
+
+.Script: `+makejar....bat` manifest and resource file
+[source,Script]
+----
+export MANIFEST="$SRCDIRNAME/makeScripts/$DSTNAME.manifest"
+
+# Determines resource files to store in the jar
+export RESOURCEFILES="$SRC_ALL:**/*.zbnf $SRC_ALL:**/*.txt $SRC_ALL:**/*.xml $SRC_ALL:**/*.png"
+----
+
+The `RESOURCEFILES` variable contains the path(s) separated with space to some more files 
+which should be stored in the jar. They are taken originally from the `src/component/...` location
+containing between the `*.java` sources. 
+
+The colon `:` in this path (as also in `SRCADD_ZIP`) is essential: 
+It separates the base path (used for access, but not stored in zip and jar) 
+from the local path (starting after `:`) which is part in the zip archive. 
+In this example the `SRC_ALL` is reused to address the source files, `{ss}` means, all sub trees,
+then `{ss}/*.ext` addresses the file with the given extension. 
+This writing style is a feature of link:../../docuSrcJava_vishiaBase/org/vishia/util/FileFunctions.html#addFilesWithBasePath-java.io.File-java.lang.String-java.util.List-[org.vishia.util.FileFunctions.addFilesWithBasePath(...)]
+used for the zip algorithm, it is amazing proper. 
+
+
+=== Build the ...source.zip
+
+If a `SRCADD_ZIP` variable is existing (exported), only then a `...source.zip` is created.
+
+.Script: `+makejar....bat` SRCADD_ZIP
+[source,Script]
+----
+## add paths to the source.zip, should be a relative path from current dir unset it if no source.zip is desired.
+export SRCADD_ZIP=".:$SRCDIRNAME/makeScripts/*"
+----
+
+Here this variable contains the path to the `makeScripts` files. 
+The paths in `SRC_ALL` and `SRC_ALL2` are added also to the `...source.zip` file. 
+But if `FILE1SRC` and also `SRCPATH` is only given, no source files are added because of them. 
+Then the `SRCADD_ZIP` should contain all file paths. 
+
+Other than in the jar zip file the local paths in the `...source.zip` starts from the working directory,
+always should start with the `src/...`. This assures that the `...source.zip` is consistently
+to the working tree structure. 
+**The `.:` on start is necessary** because elsewhere the local path containing in the zip is not detected.
+'`.`' means the current directory. '`:`' determines the local directory start after the colon. 
+You can add any other location also, writing before the '`:`' if necessary.
+
+More paths should be separated by a space. 
+   
+

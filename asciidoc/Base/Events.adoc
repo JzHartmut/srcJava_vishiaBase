@@ -1,0 +1,196 @@
+= Events in vishiaBase
+:toc:
+:toclevels: 5
+:sectnums:
+:sectlinks:
+:max-width: 52em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+:stylesheet: ../my.css
+
+See also link:FileRemote.html[]
+
+
+
+== Approach
+
+Hint: This article is not ready yet, the event system is refactored. Wait for new information (2023-03) 
+
+=== Events in vishia-Java
+
+Events are used on some positions in the Java sources of vishia especially
+
+* Graphical User Interface: link:../Gral/VishiaGui_Gral.html[]
+* link:FileRemote.html[] because file handling is used in graphic
+* State machines (docu todo)
+
+The events are based on Java's standard [Java]`java.util.EventObject`.
+This gives the possibility to store events in a unique typed queue.
+
+From this super class some Event classes are derived, see next chapter.
+
+== Event classes and its inheritance
+
+
+----
+java.util.EventObject 
+  A           +--source---------->Object 
+  |
+  |
+EventWithDst -+--evDstThread----->EventThread_ifc 
+  A           +--evDst----------->EventConsumer
+  |           +--timeOrder---------------->TimeOrder
+  |           +-stateOfEvent: char           +-timeExecution: long
+  |           +-bAwaitReserve: boolean       + timeExcecutionlatest: long
+  |           +-ctConsumed: int              +-bAwaiting: boolean
+  |           +-orderId: long                +-bNotifyAlsoOnException: boolean
+  |           +-dateCreation: AtomicLong     +-bTimeElapsed: boolean
+  |           +-dateOrder: int               +-bEventException: boolean
+  |                                          +-bEventExecuted: boolean
+  |                                          +-bDone: boolean                         
+  |                                          +-timerThread-->EventTimerThread_ic
+  |<----------------------------------event--+
+  |
+EventCmdtype<CmdEnum extends Enum<CmdEnum>>
+  A           +-cmde: CmdEnum
+  |
+EventCmdtypeWithBackEvent
+  A           +--opponent-------->EventWithDstA    |
+... User event deviations 
+----
+
+=== EventWithDst
+
+The link:../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html[org.vishia.event.EventWithDst] 
+is the base form of all vishia event classes. The importance are the elements  
+
+* - link:../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html#evDst[evDst] which is a
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventConsumer.html[org.vishia.event.EventConsumer] 
+to execute the event with
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventConsumer.html#processEvent-java.util.EventObject-[EventConsumer#processEvent(EventObject ev)].
+* - link:../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html#evDstThread[evDstThread] which is a
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventThread_ifc.html[org.vishia.event.EventThread_ifc]. 
+If this thread is given, the operation
+link: ../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html#evDstThread[EventWithDst#evDstThread]
+which is a interface to a thread to handle the event:
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventThread_ifc.html[org.vishia.event.EventThread_ifc].
+A probate implementation of the Thread is
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimerThread.html[org.vishia.event.EventTimerThread]
+which also can handle timeouts and time order, see chapter <<#EventTimerThread>>.
+
+
+=== EventCmdtype
+
+The link:../../docuSrcJava_vishiaBase/org/vishia/event/EventCmdtype.html[org.vishia.event.EventCmdtype]
+is a basically simple enhancement of the 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html[EventWithDst],
+only some specified command values stored in 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventCmdtype.html#cmde[cmde] are added.
+But because the event is oriented to specified command, not any desired numeric value used as command designation,
+but a enum, this event is typed with the enum type derived from an ordinary enum:
+
+----
+  public enum Answer{
+    noCmd, cont, overwrite, skip, abortFile, abortDir, abortAll
+  }
+  
+  public final class EventCopyCtrl extends EventCmdtype<Answer> {
+    // a derived class
+----
+
+* You can call
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventCmdtype.html#sendEvent-CmdEnum-[sendEvent(cmd)]
+with one of the specified enum values, not with any other. This helps get overview and avoid programming errors.
+
+
+=== EventCmdtypeWithBackEvent
+
+The link:../../docuSrcJava_vishiaBase/org/vishia/event/EventCmdtypeWithBackEvent.html[org.vishia.event.EventCmdtypeWithBackEvent]
+enhances the 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventCmdtype.html[EventCmdtype]
+with the capability to have a second event for the reverse direction. 
+This is a possible case: One sends an event, and expect an answer. This can be done also with state machines. 
+The received event switches a state, and the transistion can use the event, take the back event
+which is already prepared for back information to switch another state machine maybe in a remote hardware synchronously. 
+Or also, there is a command to execute via event in another thread, and an answer is expected, the back message is already prepared.
+
+You know it, you get a letter from any society or warehouse, and inside the letter is a prepared letter to send back,
+you should only mark somewhat, subscribe, ready. Less effort.
+
+  
+
+[#TimeOrder]
+=== TimeOrder
+
+A link:../../docuSrcJava_vishiaBase/org/vishia/event/TimeOrder.html[org.vishia.event.TimeOrder]
+can be used for any of this events aggregated in 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html[EventWithDst].
+The usage can have two aspects:
+
+* a) The event should be created after a defined time. This is especially for a timeout in a state machine: 
+The timeout event is planned but not executed immediately. Important: The timeout should be reseted on a state switch.
+* b) The activity in any other thread should be watched, 
+the other thread should send some interim information about its state. 
+This can be used for example for file access operations (copy) 
+with a whole file tree with maybe long files in a remote network location.
+Such copy actions may need more as some seconds. Secondary questions can be occur.
+For this aspect the event is used to activate the watch operation in any specific thread
+whereby the file operation is done in a working thread, also maybe a specific created thread for that. 
+The file operation can usual be done with the java.nio.file approach.
++
+The [Java]`TimeOrder` in this context is used to organize a repeated cyclically call of the event sending process
+independent of the executed activity. The activity should only write some informations in the event. 
+Whether or not they are immediately sent as event, or later cyclically, is clarified by the [Java]`TimeOrder`.
+The [Java]`TimeOrder` is initiated by the executed activity, and repeatedly initiated. 
+The event itself is used as last action on finishing the activity.
++
+The activity itself can be initiated by an event too, or by any call.
+
+
+The [Java]`TimeOrder` refers the event, The [Java]`TimeOrder` contains the informations about the time
+and time organization. The [Java]`TimeOrder` does not contain any information about the event itself,
+because this informations should not be transferred with the event. 
+
+That are different aspects, but solved with the same approach. 
+
+* The 
+
+
+
+
+* - link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimeout.html#timeExecution[-timeExecution] 
+as absolute time stamp.
+* - link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimeout.html#timerThread[-timerThread]
+which is a  
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimerThread_ifc.html[org.vishia.event.EventTimerThread_ifc].
+The difference to the 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventWithDst.html#evDstThread[evDstThread] 
+is the following:
+** Both threads can be the same. Then the 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimerThread.html[EventTimerThread]
+can be used for both. The event can be used as timeout as well as also as normal event,
+respectively the instance is used after expiring the time as an event for this thread.
+** Both threads can be different. This gives the opportunity to have one timer thread and more execution threads,
+for example for state machines in different priorities.
+** The evDstThread can be given as null, then the event is executed in the timerThread immediately with expiration.
+The small difference in comparison to give both the same thread is: If a evDstThread is given with the same 
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimerThread.html[EventTimerThread], 
+the EventTimout is enqueued firstly in the event queue of this thread. 
+If other events are enqueued before, then firstly the other events are executed. 
+The difference is only slightly, if the timeout comes in the same step cycle as the switching event.
+But in this particular case it influences the behavior for the state machine. 
+It is not an important difference for practical use, but for test cases.   
+
+
+
+
+
+[#EventTimerThread]
+== EventTimerThread
+
+xxx
+
+link:../../docuSrcJava_vishiaBase/org/vishia/event/EventTimerThread.html[org.vishia.event.EventTimerThread]
+
+ 

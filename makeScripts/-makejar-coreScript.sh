@@ -107,21 +107,15 @@ if test "$JAVAC_HOME" = ""; then export JAVAC="javac"; else export JAVAC="$JAVAC
 ##Automatic build a zip file if SRC_ALL and maybe additionally SRC_ALL2 is given.
 ##SRC_ALL refers to the java package path root directory,
 ##but the source.zip should contain the parent folder which is srcJava_xyz/org/... 
-export SRCZIP=""
 if ! test "$SRC_ALL" = ""; then
   echo source-set all files = $SRC_ALL
   find $SRC_ALL -name "*.java" > $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
-  export SRCZIP=.:$SRC_ALL/**/*  ## with the srcJava_... dir
 fi                                                                                        
 if ! test "$SRC_ALL2" = ""; then 
   echo source-set all files = $SRC_ALL2
   find $SRC_ALL2 -name "*.java" >> $TMPJAVAC/sources.txt
   export FILE1SRC=@$TMPJAVAC/sources.txt
-  export SRCZIP="$SRCZIP .:$SRC_ALL2/**/*"                         
-fi  
-if test "$SRC_MAKE" = ""; then 
-  export SRCZIP="$SRCZIP .:$SRC_MAKE/**/*"                         
 fi  
 
 #xx echo compile javac
@@ -130,8 +124,8 @@ fi
 ##ls /tmp
 echo
 echo ====== javac ================================================
-echo $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
-$JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+echo $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+$JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 if test ! $? = 0; then
   echo ERROR javac --?????????????????????????????????????????--
   if test -f $JARFILE; then rm $JARFILE; fi    ##prevent usage of an older version here.  
@@ -153,10 +147,19 @@ if ! test "$MD5FILE" = ""; then echo output MD5 checksum
   cat $MD5FILE
 fi  
 
-if test ! "$SRC_ALL" = ""; then  ## do not zip sources if $SRC_ALL is empty ( instead $FILE1SRC is given from outside)
+if test -v SRCADD_ZIP; then  ## do not zip sources if $SRCADD_ZIP is non existing, but build zip if it is empty.
   echo
   echo ====== zip-sources ================================================
   pwd
+  SRCZIP=""
+  if ! test "$SRC_ALL" = ""; then
+    SRCZIP=".:$SRC_ALL/**/*"  ## with the srcJava_... dir
+  fi                                                                                        
+  if ! test "$SRC_ALL2" = ""; then 
+    SRCZIP="$SRCZIP .:$SRC_ALL2/**/*"                         
+  fi  
+  SRCZIP="$SRCZIP $SRCADD_ZIP"      ## note: adds only a space if $SRCADD_ZIP is empty                   
+  ## $SRCZIP is a list of wildcard path arguments (separated with space) to add in zip
   echo java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
   java -cp $Classpath_vishiaBase org.vishia.zip.Zip -o:$BUILD_TMP/deploy/$SRCZIPFILE -sort $SRCZIP
   if test -f $BUILD_TMP/deploy/$SRCZIPFILE; then echo ok $BUILD_TMP/deploy/$SRCZIPFILE; else echo ERROR src.zip $BUILD_TMP/deploy/$SRCZIPFILE; fi

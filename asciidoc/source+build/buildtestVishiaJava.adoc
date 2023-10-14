@@ -1,0 +1,650 @@
+= cmpnJava_vishia... component build and test
+:toc:
+:sectnums:
+:sectlinks:
+
+:cpp: C++
+:cp: C/++
+
+* see also link:src_Archive.html[]
+* link:../../index.html[]
+
+
+Dr. Hartmut Schorrig, Germany in Europa, link:https://vishia.org[www.vishia.org]
+
+This documentation is valid before 2022-07.
+Meanwhile the structure of the src tree is changed, see
+link:../../../SwEng/html/srcFileTree.html[].
+
+This documentation will be changed in the next future.
+Some notes are written here with the designation
+
+##new:## as extra paragraph below the old text. 
+
+== The mission
+
+The summary of Java sources as component "__srcJava_vishiaBase__" contains 
+a lot of Java classes for different approaches. 
+Some of them build a system. Especially the 
+link:../../../JZtxtcmd/html/JZtxtcmd.html[JZtxtcmd] tool can be used 
+as stand alone tool or as ad-one for special tooling for several text conversion approaches. 
+The JZtxtcmd can be tested as tool in sum, but a unit test for all the details is necessary.
+
+The build of the jar file for the _srcJava_vishiaBase_ component is done 
+regarding the link:reproducibleJar.html[vishia...reproducibleJar] approach. 
+Hence it is build with a simple shell script delivered in a zip file with the sources. 
+No other tooling is necessary except a JDK for compilation. 
+
+There was some experience with gradle and Junit-test, but summary 
+using gradle is a complex approach which is unecessary for this component.
+
+The unit-test for all classes is a widespread problem. 
+Hence the tests are written for determined classes in specialized main routines. 
+One main routine: org.vishia.testbase.Test#main is used for the testall (build test).
+
+Yet, 2021-06, only a few classes are included in this test. 
+In the past the test was done usual as usage-test (on usage a tool with this sources) 
+or with different special test routines only for special cases. 
+Test was not in the main focus. It will be improved up to now for future.
+
+== Getting jar and sources from deploy archive
+
+For applications only the jar files of the main sources are necessary. That can be gotten
+with a "bill of material" approach.
+
+See link:src_Archive.html[]. 
+
+The sources are beside the jar files. Newer jars and sources are stored in
+
+link:../../deploy[vishia.org/Java/deploy].
+
+[#gitarchive]
+== The git archives and the file tree
+
+=== Github
+
+You find git archives of the sources also in github, helpful to see the version history: 
+
+link:https://github.com/JzHartmut/[]:
+
+* link:https://github.com/JzHartmut/srcJava_vishiaBase[]: The sources to the `vishiaBase.jar` 
+* link:https://github.com/JzHartmut/testJava_vishiaBase[]: It is the cmpnJava_vishiaBase
+including all tests and also the documentation. 
+It refers `srcJava_vishiaBase` as subproject in an own directory `src/main/Java`. 
+* link:https://github.com/JzHartmut/srcJava_vishiaRun[]: 
+The sources are also used in `vishiaGui.jar` 
+* link:https://github.com/JzHartmut/srcJava_vishiaGui[]: 
+The sources to the `vishiaGui.jar` 
+* link:https://github.com/JzHartmut/testJava_vishiaGui[]: It is the cmpnJava_vishiaGui
+including all tests and also the documentation. 
+It refers `srcJava_vishiaGui` as subproject in an own directory `src/main/Java`. 
+
+To clone from github you can use the following command for git:
+
+ git clone -b master https://github.com/JzHartmut/TestJava_vishiaBase.git
+ 
+adequate for `vishiaGui`.
+
+It creates a pulled workingtree with .git archive into the sub directory `TestJava_vishiaBase`. 
+Alternatively you can get a zip archive from the sources from github.
+
+The second git archive, for `srcJava_vishisBase` is cloned 
+if `build.bat` or `build.sh` was executed in the `src/buildscripts` 
+by invocation of the existing `src/main/java/+gitclone_srcJava_vishiaBase.sh` 
+if the sources are not found. 
+Alternatively you can manually unzip the zip file of sources in `src/main/java`, 
+creating the `src/main/java/srcJava_vishiaBase`. Adequate is done for `vishiaGui`.
+
+=== The file tree
+
+The file tree is a gradle-like file tree:
+
+##new:## see link:../../../SwEng/html/srcFileTree.html[]
+This is yet the old one:
+
+----
+ The_SBOX_for_TestJava_vishiaBase
+ +-.git (optional, not in Zip-files, it is TestJava_vishiaBase)
+ +-libs (downloaded external components)
+ +-build (it should be a symbolic link, JUNCION for windows, to tmp
+ + src
+   +-main    
+   | +-java
+   |   +-srcJava_vishiaBase  
+   |     +-.git     (for the srcJava_visiaBase component)
+   |     +-_make
+   |     +-org.vihia...*.java  (The package tree of sources
+   +-test
+   | +-EclipsePj  (it is able to import)
+   | +-files      (some files as test input) 
+   | +-testResult_Ref  (some files as test output for comparison) 
+   | +-java 
+   |   +-_make          (make for test)
+   |   +-org....*.java  (package tree for test Java sources)
+   +-docs
+   | +-asciidoc
+   |   +-... documentation of the srcJava_vishiaBase-component
+   +-buildScripts
+----
+       
+
+
+=== Save versions in zip and using a mirror git location
+
+In the beginning of git it was the modern hype that the git archive files are
+in the same working tree as the real working files. 
+That was the _new concept_ compared to older systems, 
+where the version management was in a special, mostly network location. 
+
+Later, git has introduced a calling argument 
+
+ git '--git-dir=D:/path/to/.git'
+
+This argument can/should be given on any command line git invocation. 
+That is not problematic if this calls are done inside a GUI.
+
+Using for example Tortoise-Git as GUI works with a file with the name `.git` 
+and the following content:
+
+ gitdir: D:/path/to/.git
+ 
+Hence it is possible to use another location for the git archive than the working tree.
+
+What has that for advantage:
+
+* The `.git` archive location has also a working tree. 
+But this working tree is the content or representation of the archive for one version.
+You can change the version with `git checkout` or such 
+and compare the really used working tree with different versions. 
+Any operation on the git archive does not influence the files on your really working tree.
+For the approach `.git` archive immediately beside the working tree 
+you should save any working versions as 'scratch commit' inside the archive
+if you want to checkout another one to compare somewhat outside a git GUI. 
+That effort is unnecessary. It is more simple and more obviously to have two locations,
+your really working files and the current content of the git archive for selected versions.  
+
+* Independent of the content in the '_mirror_' working tree beside the `.git` repository
+you have your really used files in your specific working location. 
+But you can always compare or reconcile it with the Git archive, 
+using the `--git-dir=D:/path/to/.git` possibility or the small `.git` file 
+with `gitdir: D:/path/to/.git` content in the same kind as the `.git` archive 
+is immediately beside. 
+If you checkout another version in the Git archive tree, 
+the files in the archive (mirror) location are changed, but you don't need them. 
+You see the difference to that version immediately from your working tree. 
+Additionally you can compare immediately the files on both locations, or for example
+search (text search) a comment, identifier or such one in all files. 
+
+* It is not possible to destroy your work content by an uncontrolled action
+on the Git archive. 
+
+* Last but not least: You can simple zip your working content to get a safety copy
+independent of working with Git. If you have `.git` in your working tree,
+you should exlude the `.git` dir which is effort, or you get the whole archive 
+(a lot of Megabytes and maybe internal information) in a zip. 
+...But the zip of a working tree has a second problem: Many temporary files.
+This problem is also possible to solve by a `cleanAll.bat` concept. 
+Temporaries can be cleaned. The Git archive cannot be cleaned. Thats why it is better
+it is outside. 
+
+* A further possibility is given: You can have more as one working tree 
+related to the same Git version archive. For example you can make some experiences, 
+Think about commit or not, think about a side branch, but you can do it one after another.
+You need not manage (merge) more archives. 
+More as one Git archive and the merge capability is a nice feature for teamwork,
+but if it is necessary though you don't want to do so it is an additional effort.
+If you have more as one Git archive for a simple thing, 
+you may confused by too much side branches, squash merges etc. 
+It is more simple to have some working trees, not commit any little change,
+and think about side branches and variants on file level, not on merging effort. 
+You may want to avoid too many variants.
+
+Using a mirror location is similar the older approach to version management,
+but it is not a worse approach.  
+
+How to uses this approach:
+
+* Clone the repository to a prominent location on your hard drive, 
+on my PC this is `D:\GitArchive\D\vishia\Java_Archives`
+
+ git clone -b master https://github.com/JzHartmut/testJava_vishiaBase.git
+
+* Create shell script files for pull (get the newest version) and push (commit your stuff)
+inside the `testJava_vishiaBase` folder:
+
+* `D:\GitArchive\D\vishia\Java_Archives\testJava_vishiaBase\_pushGithub.sh` on my PC.
+The commented line is to remove a tag to shift it. 
+Shifting a tag is an important approach if the binary result is not changed 
+(the tag refers to a ready to use, it is the binary) 
+and improvement of some comments, build scripts, documentation and such one:
+
+----
+eval $(ssh-agent -s)
+ssh-add ~/.ssh/github.key
+## comment/uncomment TAGNEW and TAGDEL if necessary
+TAGNEW="2021-07-01"
+TAGTXT="build bom"
+##TAGDEL=$TAGNEW
+if test -v TAGDEL; then
+  git tag -d $TAGDEL
+  git tag
+  #Note:   --tags :tag   means, remove the tag
+  git push 'git@github.com:JzHartmut/srcJava_vishiaBase' master --tags :$TAGDEL
+fi
+if test -v TAGNEW; then
+  git tag -a $TAGNEW -m "$TAGTXT"
+  echo ----------------
+  git tag
+fi  
+git push 'git@github.com:JzHartmut/testJava_vishiaBase' master --tags
+----
+
+* To push of course you should have access rights. You can use this approach as pattern 
+also for your own repositories.
+
+* Pull is adequate, see git documentations.
+
+* Clone independently the other repository. It does not (should not) need 
+inside the tree (than in the original), it is beside, on my PC. 
+See the snapshot:
+
+** all archive folder are parallel, simple to maintenance.
+
+----
+ Verzeichnis von D:\GitArchive\D\vishia\Java_Archives
+
+2021-07-06  09:30    <DIR>          .
+2021-07-06  09:30    <DIR>          ..
+2021-07-06  00:16    <DIR>          srcJava_vishiaBase
+2020-02-15  14:53    <DIR>          srcJava_vishiaBase2019-08b
+2021-07-05  20:10    <DIR>          srcJava_vishiaGui
+2021-06-17  22:32    <DIR>          srcJava_vishiaRun
+2021-07-05  22:02    <DIR>          testJava_vishiaBase
+2021-06-21  17:39    <DIR>          testJava_vishiaGui
+----
+
+
+* write the `.git` files inside your working tree:
+
+** On my PC on `D:\vishia\Java\cmpnJava_vishiaBase\.git`:
+
+ gitdir: D:/GitArchive/D/vishia/Java_Archives/testJava_vishiaBase/.git
+ 
+** And the nested repository link on `D:\vishia\Java\cmpnJava_vishiaBase\src\main\java\srcJava_vishiaBase\.git`:
+
+ gitdir: D:/GitArchive/D/vishia/Java_Archives/srcJava_vishiaBase/.git 
+
+You see a living snapshot which may help on your own work.
+
+== Build and Test
+
+=== Only build the vishiaBase.jar and vishiaGui.jar
+
+Build of only the `vishiaBase.jar` and `vishiaGui.jar` files is possible 
+only with a version from the srcJava_... archives or from the `...source.zip` file 
+in the link:../../deploy[].  
+beside the `vishiaBase-....jar`.
+That approach is described in link:src_Archive.html[].
+
+
+=== Get sources for test, Using IDE
+
+The sources as in chapter above link:#gitarchive[] described can be gotten 
+either with the git archive from github or as zip from github. 
+Presumed it is gotten as zip, as also available from link:../../deploy[],
+and there `cmpnJava...source.zip`.
+
+The zip of the `testJava_vishiaBase` should be unziped. In its root is contained
+
+ build.sh
+ build.bat
+ 
+Starting this gets the sources for `srcJava_vishiaBase` from github 
+and starts the build process. But it may be better to get the sources manually 
+(from github, from  link:../../deploy[], via zip) and place them to
+
+ src/main/java/srcJava_vishiaBase
+ 
+The maybe necessary git archives can be assigned later too. 
+I recommend using a mirror location for the archive, using a `.git` file, see chapter above.
+
+You find an *Eclipse IDE project* in 
+
+ src/test/EclipsePj
+ 
+Using this you can study the sources with all details, compiling and test.
+
+If you have copied and unziped the `src/main/java/srcJava_vishiaBase` calling
+
+ build.bat
+ build.sh
+ 
+compiles, tests via shell script, shows the results on output. 
+It creates the `vishiaBase.jar` in the build directory.  
+The both shown scripts calls
+
+ src/buildScripts/build.*
+ 
+which contains the real stuff.  
+
+=== build folder as temporary
+
+You should start `build.bat` in Windows. It calls 
+
+ +clean_mkLinkBuild.bat
+ 
+This file deletes an existing `build` folder and creates a so named '_Junction_' 
+in windows to the `%TMP%\Test_vishiaBase\build` location. 
+The `TMP` environment variable is usual given, but it will be created if not given. 
+It should refer a location in the file system for temporaries, 
+the same as in the `/tmp/...` folder in Unix (Linux) systems. 
+It may be recommended to install a RAM disk and redirect the `TMP` environment variable 
+to the RAM disk on Windows. 
+The build process is faster. 
+Your SSD hard disk will be treat with care. 
+This is true for all build and temporary saved files.
+I uses this approach and clean the `TMP` folder on any reboot of the PC since some years.
+There was never a problem with lost or 'important' data for the Windows OS
+though this folder might contain important thinks (look like important). 
+
+But you can work with a normal tmp folder on your hard disk too.
+ 
+If you are on Linux, `build.sh` does adequate. 
+It calls `src/buildScripts/+mkLinkBuild.sh` and this script removes an existing `build` folder 
+and creates a symbolic link to `$TMP/BuildJava_vishiaBase` where a non existing `TMP`
+is set to `/tmp`. 
+
+
+=== build.sh, using shell scripts, Java-JDK
+
+`build.bat` then invokes `build.sh` via `sh.exe` invocation. 
+This `sh.exe` should be found in `PATH` if git is installed (via MinGW). 
+All scripts are linux-shell scripts. 
+You need an installation for a minimal linux environment on windows, 
+which is already given if you use git. 
+The same can be done with any gcc (GNU compiler) collections, for example Cygwin. 
+In other words, a shell execution environment should be available to everybody 
+who is trying to compile something.
+
+The decision writing the core generating scripts in a Linux shell instead Windows-batch
+offers the compatibility to Linux. It is familiar to use shell scripts also in Windows
+for development. 
+
+The second necessary one is a JDK, Java Developer Kit, of course. 
+It is not necessary to have it installed, it is sufficient that it is present 
+on the PC platform. You can have several versions of JDK at the same time, from Oracle, 
+or OpenJDK.
+
+=== Compile srcJava_vishiaBase to vishiaBase.jar
+
+`build.sh` invokes 
+
+----
+## (Re-)Compile the vishiaBase.jar to .../build
+cd src/main/java/srcJava_vishiaBase/_make
+find -name '*.sh' -exec chmod 777 {} \;  # again after clone the srcJava_vishiaBase
+export VERSIONSTAMP=$(date -I)           # It determines the name of the files.
+export BUILD_TMP="../../../../../build"  # relative to src/.../_make
+./+makejar_vishiaBase.sh 
+cd ../../../../..
+----
+
+That is the same as the immediately invocation of `./+makejar_vishiaBase.sh`
+only with the `srcJava_vishiaBase` source tree, 
+but with two outside set environment variables. 
+
+* `BUILD_TMP` determines `build` as destination. 
+In stand alone calling this is set to a proper TMP location if it is not set on call.
+
+* `VERSIONSTAMP` is the suffix for the file names. 
+The definition with the current date allows generation of daily files. 
+Independent of this definition, the `VERSIONinJAR` time stamp in the jar files 
+is used as given in the versioned `+makejar_vishiaBase.sh` compiling script.
+It means the files will be re-generated with the same binary content,
+see link:src_Archive.html#rebuild[].
+
+The generated jar is stored in and used from
+
+ build/deploy/vishiaBase-2021-07-05.jar
+ 
+with the daily time stamp. 
+
+
+
+=== Build test files
+
+The test java sources for the srcJava_vishiaBase are stored in the file tree
+
+ src/test/java/org/vishia/....
+ 
+It is linked as folder also in the Eclipse project, beside `src/main/java/srcJava_vishiaBase/org/vishia`
+
+The `build.sh` uses the same 
+
+ src/main/java/srcJava_vishiaBase/_make/-makejar-coreScript.sh
+ 
+to compile this sources to an extra jar:
+
+ build/deploy/vishiaTestBase-2021-07-05.jar 
+
+To do so, some environment variable are set adequate the approach in 
+`+makejar_vishiaBase.sh`:
+
+----
+export VishiaBaseJAR=build/deploy/vishiaBase-$VERSIONSTAMP.jar
+export CLASSPATH=$VishiaBaseJAR
+# located from this workingdir as currdir for shell execution:
+export SRCPATH="src/test/java"
+echo $SRCPATH
+export MANIFEST=src/test/java/_make/TestvishiaBase.manifest
+export SRC_ALL="src/test/java/org/vishia/testBase"                                                                                                               
+export SRC_ALL2=""
+export FILE1SRC=""
+
+export TMPJAVAC="build/Test_vishiaBase"
+export DSTNAME="vishiaTestBase"
+export JAR_zipjar=$VishiaBaseJAR
+export BUILD_TMP="build"
+export TIMEinJAR="2021-07-01+00:00"
+
+#now run the compilation of the tests:
+src/main/java/srcJava_vishiaBase/_make/-makejar-coreScript.sh
+----
+
+=== Execute the test
+
+The first and second test is, whether the sources are compiled error-free. 
+Both for srcJava_vishiaBase and the test classes. 
+
+After them the `build.sh` script executes the main routine of
+
+----
+  java -cp $BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar$sepPath$VishiaBaseJAR 
+  org.vishia.testBase.TestJava_vishiaBase 
+  1> build/testResult/Test.txt 2> build/testResult/Test.err
+----
+
+This is one line of course. The test results are written in the shown files.
+This files are shown in the command window:
+
+----
+  echo Test output:
+  cat build/testResult/Test.err
+  cat build/testResult/Test.txt
+----
+
+But also stored for evaluation. 
+
+
+== Test concept
+
+ org.vishia.testBase.Test
+ 
+to execute all programmed tests. The result of test is written to 
+
+ build/testResult
+            +-Test.txt
+            +-Test.err
+
+  ... yet TODO
+
+== Generate Javadoc
+
+For javadoc also the given generation base of a JDK is used. It is sufficient. Such as gradle is not necessary.
+
+The Javadoc generation is started in any Java source tree calling 
+
+ _make/+genjavadoc.sh
+ 
+Of course on windows this shouls be called with 
+
+ sh.exe -c '+genjavadoc.sh'
+ 
+This script invokes `-genjavadocbase.sh` which should be found in the environment. It invokes as core statements:
+
+ export ARGS="-Xdoclint:none -d $DSTDIR$DST -private -notimestamp ...
+    ... $LINKPATH -classpath $CLASSPATH -sourcepath $SRCPATH $SRC"
+ echo javadoc $ARGS
+ $JAVAC_HOME/bin/javadoc.exe $ARGS 1> $DSTDIR$DST/javadoc.rpt 2> $DSTDIR$DST/javadoc.err                                                       
+
+The `$DSTDIR` is set to the `$TMP/_javadoc` location (possible on RAM disk) because the generated documentation may be compared with the existing one (it is reproducible, the same sources generates the same doc). With the comparison it is possible to detect which is changed, for example to offer the changes in discussions, in a special revision description etc. if necessary. Of course the git archive contains the version history. But it may be possible that a bugfix do not change the javadoc, hence it should not be need to renewed. The generated javadoc contains explicitely cross references on interfaces (implementing classes) in text format, which elsewhere are only possible to detect by an database on an IDE (Eclipse - show cross references). Hence the comparison may be a point of interest. 
+An advantage of generation on RAM disk, comparison and copy only changed files is: There are a lot of files. If all are unnecessary written new (with same content), the SSD hard disk is burdened with more writing operations. It is better to generate to RAM, comparing and renewing only changed files.  
+
+It is possible to zip the whole javadoc. Hence it is more simple to upload it to a server and unzip there:
+
+ export cmpn=vishiaBase
+ echo docuSrcJava_$cmpn.zip
+ if test -f docuSrcJava_$cmpn.zip; then
+   rm -r docuSrcJava_$cmpn
+   rm -r docuSrcJavaPriv_$cmpn
+   unzip docuSrcJava_$cmpn.zip
+   rm docuSrcJava_$cmpn.zip
+ fi  
+
+The same lines exists for all other possible `cmpn` to replace the unpacked files on the server with the zip content. 
+
+
+== Test with modifications in an IDE (Eclipse)
+
+The test can be repeatedly executed respectively there sources can be integrated in an IDE (such as Eclipse) to study and modify test cases. The 
+
+ TestJava_vishiaBase/src/test/EclipsePj
+ 
+contains an Eclipse project which can be imported to any eclipse workspace. This can be used for tests of srcJava_vishiaBase. Adequate an Eclipse Project is contained in
+
+ TestJava_vishiaGui/src/test/EclipsePj
+
+which contains this sources, but the other sources too.
+
+
+=== Test organization and test outputs
+
+After some experience with Junit a more simple and effective system was found for tests. The class link:../../../Java/docuSrcJava_vishiaBase/org/vishia/util/TestOrg.html[org.vishia.util.TestOrg] contains the infrastructure. An real application example is:
+
+  void check_DriveAbsBaseLocalNameExt(TestOrg parent) {
+    String testPath = "d:/base/path:local/path/name.ext";
+    TestOrg test = new TestOrg("check getting all components from a path " + testPath, parent);
+    FilePath fp = new FilePath(testPath);   
+    try {
+      test.expect(fp.localdir(null), "local/pathxx", 7, "localdir()");
+      test.expect(fp.absbasepath(null), "d:/base/path", 7, "absbasepath()");
+      test.expect(fp.localnameW(null), "local\\path\\name", 7, "localnameW()");
+      test.expect(fp.localname(null), "local/path/name", 7, "localname()");
+      test.expect(fp.localfile(null), "local/path/name.ext", 7, "localfile()");
+    } catch(NoSuchFieldException exc) {
+      test.exception(exc);
+    }
+    test.finish();
+  }
+
+
+It tests whether the routines to select parts of a path works. 
+
+* An instance of `TestOrg` named `test` is created locally, This instance stores whether all tests are okay or at least one test failes. The given text description is outputted either one time before output a message from expect or only on finish(). It produces only one line for any test routine if desired.
+
+* The routine link:../../../Java/docuSrcJava_vishiaBase/org/vishia/util/TestOrg.html#expect-boolean-int-java.lang.String-[expect(condition, nVerbose, txt)] writes to the standard output (`System.out`) either:
+
+** ok: txt - The txt as message about the succesfully executed test (`condition == true`) if 'nVerbose` is <= the requested verbose level.  
+** Nothing is outputted if no error has occured and `condition == true`, and `nVerbose` is > the expected verbose level, it is the silent mode.
+
+** ERROR: txt @ package.path.Class.method(args); package.path ...
+** ... on error the txt message is outputted, but the exact position
+of the error in the sources files are supplemented.
+
+* The routine link:../../../Java/docuSrcJava_vishiaBase/org/vishia/util/TestOrg.html#expect-java.lang.CharSequence-java.lang.CharSequence-boolean-java.lang.String-[expect(s1, s2, ...)] compares the two CharSequences (often String) and writes additional the position of the difference on error, it can help to detect the problem without debugging. Often the problem is trivial. 
+
+* `test.finish()` writes a last "ok" or "ERROR" if all tests are ok or at least one has an error. 
+
+The title given on construction is only written before a test message is outputted. Elsewhere the title is shown only with 
+
+ ok: title
+ 
+on `test.finish()`.
+
+
+A nesting of test routines is supported: In the example above the `TestOrg` is instantiated with its `parent`. Then the title of all parents is written only if a test message is shown. Only on the last finish the first parent shows its message if all other is silent.
+
+With this system A lot of nested test routines can be executed. With invocation of this tests the user determines
+
+* whether only each main routine produces one line if all is okay (the protocoll what is tested)
+
+* Or some or any tests produce a line with its test case description.
+
+It is verbose or silent, according to the requirements of the user. 
+
+
+
+
+== The compilation tools and reproducible build
+
+
+To get a deployment (here a jar file) three things are needed:
+
+* The sources
+* The tools to build
+* An operation platform
+
+The last one is usually a Windows- or Linux PC, or a Mac. 
+
+The tools to build are in this case only Java-JDK. There are several possibilities:
+
+* Versions of the tool from the same Vendor
+* The tool from other vendor.
+
+In this case usually Oracle-Java is one of the vendors, and OpenJdk. 
+
+It is tested: Tools from the same vendor with the same version, which runs on different platforms (Windows, Unix) produces a reproduces binary. It is a good message. Especially the details of the operation system are not influencing. 
+
+It can be also true: Tools with different versions of a main version produces the same reproduced binary, if the changes inside the tool version do not affect the functionality of the sources. Often only details are improved in new versions. 
+
+But it should be tested, whether another version affects the built binary. Hence it is neccessary that (usual on the same platform) different versions of a tool are installed, for example Oracle-JDK in some versions, Open-JDK etc. This is often possible, but not supported in the way of thinking "__The tool should be installed__".  It it is installed, it supplants another installation. Only one `javac` is found in the `PATH` if it is immediately called as command.
+
+Often tools can be present on the platform without installation. A delivering as zip-Archiv is available, expanding manually and copy to any location on the file system is possible. Then the `javac` can be called with its specific path. This is true for the Oracle-JDK. Some other tools are only delivered with an installer, but can be in fact copied after installation to another machine. 
+
+With this approach more as one version of the same tool can be present on one platform (the developer's PC).
+
+For the `javac` command on Oracles JDK it is true that the command call with path finds other files in its environment only with the calling path of the command itself. For other tools sometimes the system's `PATH` should be set temporary (in a script) to the tool location. 
+
+For compiling the srcJava_vishia... components a shell script `JAVAC_CMD.sh` is given in the sources. It checks and returns a command invocation line with full path for the `javac` command. This script can be enhanced and adapted for special approaches. If no special `javac` was found on dedicated paths this script returns only `javac`. It means 
+
+ export JAVAC="$($(dirname $0)/JAVAC_CMD.sh)"
+
+sets only with `javac` to `$JAVAC`, `javac` as command should be found in the system's `PATH` because of the correct installation of the only one tool. 
+
+As conclusion, with an installed JDK the compilation should find this `javac` command. But using an abbreviating existing JDK is possible. 
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+

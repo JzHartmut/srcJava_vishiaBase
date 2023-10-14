@@ -1,0 +1,124 @@
+= Data exchange between Java and C/C++
+:toc:
+:sectnums:
+:sectlinks:
+:cpp: C++
+:cp: C/++
+
+* link:../../index.html[Parent page]
+
+Dr. Hartmut Schorrig, Germany in Europa, link:https://vishia.org[www.vishia.org]
+
+== Java and C/++ - two different worlds?
+
+Java has its own rationale
+Java programs are proper in source code (software technological)
+and run optimal after byte code translation on several platforms. 
+
+C and {cpp} are a settled world, also rational. 
+Both worlds seems to be not related, except both can run on the same processors.
+A bridge between Java and {Cp} is the Java Native Interface link:https://en.wikipedia.org/wiki/Java_Native_Interface[]
+or also the Java Native Access link:https://en.wikipedia.org/wiki/Java_Native_Access[].
+Both concepts enables combination between Java and {Cp} programming 
+on the same processor / in the same process. 
+
+But often Java and {Cp} can be well separated. 
+This has some advantages, on the one hand an independence between both platforms,
+on the other hand an independence in terms of dependencies and developers.
+If it is separated, both runs in independent processes (on an Operation System, on PC)
+or maybe in different compilation units or software blocks.
+
+The question is: Data exchange. With the focus on data exchange it is very more simple:
+
+* Java has its own infrastructure, reads data from {Cp} parts and produces data for {Cp}.
+* {Cp} has also its own infrastructure, with data exchange to Java parts.
+
+But how data exchange is organized?
+
+There are some very simple approaches:
+
+* Data exchange via Socket telegrams or adequate channels
+* Data exchange in a common RAM
+* Data exchange as content of files. 
+
+== Same data structures for C/++ and Java
+
+In C usual data structures can be defined via a `struct`. 
+To make it compatible some rules should be regarded.
+But that rules should be known and are the same topics as data exchange 
+between different {Cp} parts. 
+See for example link:../../../emc/html/Base/int_pack_endian.html[].
+In other world: A proper data image is clarified for {Cp}.
+
+In Java a compatible data image can be offered using the `byte[]` type. 
+The only one problem is: How to read and write data from a `byte[]` field 
+without primitive (low level) access and conversion. 
+
+An answer is the class link:../../docuSrcJava_vishiaBase/org/vishia/byteData/ByteDataAccessBase.html[org.vishia.byteData/ByteDataAccessBase.java]. 
+
+Another answer may be usage of the features of `java.nio.ByteBuffer`
+
+== org.vishia.bytedata.ByteDataAccessBase - a short history
+
+This class was one of the first Java programs which I have written on exploration good features
+in Java, coming from width knowledge of {Cp} programming, in the first years of the 2000^th^,
+written with knowledge of deal with data (from {Cp} experience). 
+Studying the Java functions later I found that there is another approach
+to access float etc. in a `byte[]` buffer, for example the `java.nio.ByteBuffer#getFloat()`.
+It seems to be more better and especially a standard. 
+But a calculation time comparison has shown, that my own functions, which are written
+at low level byte access with conversion routines, were not slower, 
+partially there were faster than the `java.nio...` routines.
+Why is it so? The Java Bytecode Compiler (JIT) generates access code to the bytes
+which is so fast as C access. 
+Simple shift and or operations are optimized as also in C compiling.
+The standard routines in `java.nio` should regard some system settings too, 
+in the end they are not faster. 
+Because the `org.vishia.bytedata.ByteDataAccessBase` have some interesting special features,
+I have improved this class by using and used furthermore.
+
+The principle is: `org.vishia.bytedata.ByteDataAccessBase` is a base class
+which contains access and build of primitive Java data on any position in the buffer.
+Which position is used, it is determined by the implementing class, 
+which should be present user data structures. 
+The positions can be constant, mapping a struct definition from C language.
+But they can be also dynamic. 
+Especially for evaluating payloads of communication telegrams starting from the beginning
+there was a tree structure: The data mapping can depend from given data before. 
+The idea in the beginning was: Data can be also present in an XML tree. 
+Thats why older docs talk about '_XmlBinCoding_'. 
+But 'presentation in XML' is an independent thing. 
+It is possible, of course, but not necessary to do so.
+
+
+
+== Mapping of a given data struct in a derived class
+
+The derived class should only contain final routines for access, for example:
+
+----
+public final int nrofBytes() { return getInt16(k_nrofBytes); }
+----
+
+whereas `k_nrofBytes` is a const definition in an extra part to have overview. 
+The called `getInt16(...)` routine is also `protected final`, 
+hence the JIT compiler can optimize the machine code.
+
+A derived class for a given data C-`struct` or fix mapping can/should be generated, 
+not written manually. It reduce effort if many similar structs are necessary.
+
+You need know two things:
+
+* The data are stored anyway in a `byte[]` array. This is used for data exchange.
+* An derived instance of ByteDataAccessBase is only an accessor. 
+The Accessor and the data are joined with the assign operation.
+
+== Tree of different data parts
+
+This is offered in link:../../../Jc/html/ByteDataAccess.html[]. 
+
+The documentation in link:../../docuSrcJava_vishiaBase/org/vishia/byteData/ByteDataAccessBase.html[org.vishia.byteData/ByteDataAccessBase.java]
+should explain the usage. Last but not least there are some test examples in
+
+
+

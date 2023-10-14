@@ -1,0 +1,737 @@
+= Java compiling with reproducible jar
+:toc:
+:sectnums:
+:sectlinks:
+:cpp: C++
+
+
+Dr. Hartmut Schorrig, Germany in Europa, link:https://vishia.org[www.vishia.org]
+
+date: 2020-03-20
+
+== The mission
+
+=== Why reproducible jar or reproducible binaries 
+
+
+Software runs with binaries. The binaries are the primary objects of interest.
+If the software run, the user is satisfied.
+
+That is until questions are asked:
+
+* There may be some mistakes, please clarify!
+* Is the software non-vulnerable for hacker attacks?
+* What is expected in special situations?
+
+Now the sources of the software are in focus. But the question is: 
+Are the sources correct?
+If a new generation produces abbreviating binaries, 
+the question of correctness cannot be answered with the new generation.
+The correctness is only a guess or assertion, errors in the saving may have occurred 
+or environmental conditions may not have been fully recorded.
+
+The proven binaries should be used furthermore.
+It is often not desirable to use new and untested binaries.
+
+An adequate situation is, some bugs should be fixed, based on the given sources.
+If the given sources produce exact the same binary, than one can assume, 
+that a change of a little detail in the sources changes only the expected behavior.
+Furthermore some report files (listings, maps) allow to check 
+which details in the binary are changed.
+
+But if the given sources do not produce the same binary, and it is not 
+possible simply to check which changes are done in the binary, then the binary should be tested
+in all details. Nothing can be assumed to be safe. This is a high effort for time and money.
+
+*Another approach for reproducible build is the documentation:*
+
+Often the software is released in a less time, not sufficient time for a good documentation.
+Hence the documentation is in a state before software is ready, maybe with some fixes
+during the software development process, and the documentation is not the ideal case.
+
+But after delivering the software there may be some time for documentation,
+before the next order is coming in. But: The software is compiled. 
+If sources are changed in comments it are not the original sources.
+
+If a reproducible build is possible and supported, 
+the software can even be improved with regard to variable identifier, not only comments.
+The variable identifier may not change the binary code (without debugging informations,
+the delivery form). This is the challenge especially for embedded control. 
+
+=== Importance of the mission for device and plant software (embedded control)
+
+This article contemplates only jar files for Java software usual running on PC. 
+But such software is often use to produce C/++ code from graphical programming.
+Hence it is also in focus for devices and plants which are often programmed with C or {cpp}.
+
+The second approach: Some considerations made for jar files may also true for C/++-compilation.
+
+
+
+=== Reproducible jar files only with standard equipment (only with a JDK)  
+
+The goal is: Regenerate a jar file with given sources, which are beside the jar 
+in an software repository. Proofing the correctness of the sources should be able
+without additional effort. The least premise is only a `javac` compiler and a jar builder, no more.
+Any complex system (for example some additional gradle packages) for that approach
+are an additional effort with maybe newly challenges. 
+
+
+== Reproducible binaries with different JDK versions on different Operation Systems
+
+Yet it is checked that the Oracle JDK jdk1.8.0_211 and jdk1.8.0_241 produce 
+the same binaries with the given sources under MS-Windows, and jdk1.8.0_241 under Linux 
+produces the same too. It means for common sources it does not depend on minor versions. 
+
+That is a meaningful advantage: If there are new versions of system tools because of
+detected vulnerability, one can check whether the new version produce the same binary. 
+In this case you do not need to update your own binaries, only the basic system 
+(that is the JRE, _Java Runtime Environment_) should be updated. It safes effort.
+
+The second advantage: You can deliver the same binaries for different operation systems,
+if you have checked that the generation with the operation system - native tool 
+produces the same content. That is less effort too!
+
+=== It is an advantage of Java technology
+
+Of course, the reproducible of binaries for different platforms cannot be assigned 
+to embedded software. But if the target platform is similar, 
+or the binaries codes are not immediate machine codes, this principle can be reused.
+
+In Java the binary in jar files are byte code, which determine the running sequences and data,
+but it is translated to real machine code from the Java Runtime Environment (JRE). 
+The JRE is usage-invariant, but specific for the target platform. 
+The program in Java-Bytecode is usage-relevant, but platform-invariant. 
+That are the two characteristics of the Java technology for this approach.
+
+
+=== Avoid unnecessary differences  
+
+On MS-Windows traditionally the character set is ISO-8859-1 for German etc. 
+Linux is usual forward-locking, often UTF-8 as universal character set is used.
+The `javac` compiler can use any character set with the option 
+
+ javac -encoding UTF-8 
+ 
+you can set a special encoding, here UTF-8. Without this option the `javac`  uses the 
+"_systems encoding_" what ever it is. 
+Usage any system settings forces unnecessary differences. 
+One should use always dedicated settings. Elsewhere the results depend on randomness.
+If the sources is well compiled, but another part is compiled on the PC of the counterpart,
+which uses for himself another character set by default, it is random.
+
+Hence the encoding should be unconditionally determine by `javac` invocation. 
+The encoding should be determine by the software development process because
+compilation with a determined encoding with random encodings in the sources 
+may force problems. Because of most of texts are US-ASCII and a faulty encoding in comments
+is lesser important, this problem isn't often in focus.
+
+Another adequate problem, but not true for reproducibility is the usage of the line feed
+characters. It is simply unnecessary to differ between Windows (using 0d0a), 
+Unix (using only oa) and Mac (using only 0d). One should use an unique linefeed character
+independent of the Operation System. That is not 0d0a (2 characters necessary); 
+it should be only 0a. All transfer mechanism (DOS2UNIX, Text modus for printf in C, etc.)
+may be seen as stupid.
+
+The `javac` compilation on different systems with slightly different versions, 
+but with the same encoding settings (!) deliver the same binary codes for the class files.
+That is a proper message.     
+
+
+=== Same generating scripts independent of the operation system
+
+Java is operation system independent (Windows, Linux, Mac, some other platforms). 
+But Java has not the capability of simple command execution scripts. 
+
+The UNIX-like shell scripts are available on a MS-Windows platform even if git is used
+as version management systems. For developer for C/++ often MinGW or Cygwin is familiar.
+If that tools are present, the
+
+ sh -c "path/to/mayscript.sh"
+ 
+runs shell scripts. `sh` is `sh.exe` on MS-Windows, a part of MinGW, present if *git* 
+is present. 
+
+In conclusion all scripts can be written (should be written) as shell scripts
+executable by a linux shell or by `sh.exe`.
+
+Inside a shell script java can be invoked both for MS-Windows as for Linux. 
+The only one stupid difference in a Java call is: On windows the `;` should be used
+as path separator, on Linux `:` is necessary. For that an script variable:
+
+ sepPath=":"
+ if test "$OS" = "Windows_NT"; then sepPath=";"; fi
+  
+is set. The environment variable `OS` is set to `Windows_NT` for all windows versions.
+
+
+== The jar command delivers different binaries
+
+The `javac` command is reproducibility-friendly. But the `jar` command do not so. Why?
+
+A jar file is a zip-adequate container for all class files. Because of the binary changes
+of the packing algorithm slightly differences, for example a faulty character because encoding,
+changes the whole file. Nothing is recognizable.
+
+The next problem is: The order of the files in the jar-archive are not important. 
+The `jar` command does not define a pre-ordering. Hence the order may be not the same
+from one to another generation. The jar tool does not take care of the order. 
+
+The third problem is: The time stamps on the class file are created on time of compilation.
+The time stamps depends on the randomness of time when compilation is done.  
+The time stamps of the class files are unnecessarily stored in the jar archive.
+
+The last of the problems is: If you touch all class file time stamps, the `MANIFES.MF`
+file in the jar-Archive is generated on the fly with the execution time of the `jar`-command.
+    
+That's too much. The `jar`-command cannot really be used. 
+But it is the most simple tool chain member and can be replaces:
+
+== The solution: Jar capability inside JRE
+
+The _Java Runtime Environment_ has full capabilities to build the jar files well:
+
+ import java.util.jar.Attributes;
+ import java.util.jar.JarEntry;
+ import java.util.jar.JarFile;
+ import java.util.jar.JarOutputStream;
+ import java.util.jar.Manifest;
+ import java.util.zip.ZipEntry;
+ import java.util.zip.ZipOutputStream;
+
+=== org.vishia.util.Zip uses Jar capability
+
+*algorithm for reproducible jar*
+
+In my Java applications a basic component 
+link:https://github.com/JzHartmut/srcJava_vishiaBase[github:srcJava_vishiaBase] 
+is always used. The class `org.vishia.util.Zip` contains the capability to build a jar file.
+
+*Calling command:*
+
+ java -cp $JAR_zipjar org.vishia.util.Zip 
+   -o:$JARFILE -manifest:$MANIFEST -sort -time:$TIME  
+   $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+   
+This is the command line to build the jar file inside all scripts. 
+The settings of the script variables define what is to do. See next chapter.
+
+The input files for the jar are given with a wildcard path with '`:`' as separator
+between the base path and the local path for the jar archive. 
+That are the compiled class files which are stored in `.../binjar`, but also
+some additional _resource_ files inside the jar. The script variable `RESOURCEFILES`
+is set for example with 
+
+ export RESOURCEFILES="$SRCPATH:**/*.zbnf $SRCPATH:**/*.xml"
+ 
+to add all files with the given extension inside the `SRCPATH`. 
+It should be nice to determine "_all files exclude *.java_", that capability may be add
+to the routine `FileSystem.addFilesWithBasePath (...)` in future.
+
+Note, there is a space inside the `RESOURCEFILES` for this example. 
+It is possible to give any number of arguments for file selection for the Zip routine.   
+
+
+*Algorithm details:* 
+
+Next the essential statements are shown:
+
+ /**Executes the creation of zip or jar with the given source files to a dst file.
+  * ..... */
+ public String exec(File fileZip, int compressionLevel, String comment, long timestamp)
+ throws IOException
+ {    
+ 
+That is the core routine after commandline parsing. The timestamp is converted 
+via `java.text.SimpleDateFormat` from a human readable command line argument to the 
+long value. The files are contained as class instance variable, see following:
+
+  ZipOutputStream outZip = null;
+  FileOutputStream outstream = null
+  try {
+    outstream = new FileOutputStream(fileZip);
+    if(this.manifest != null){
+      if(timestamp !=0) {
+        //jar without manifest
+        outZip = new JarOutputStream(outstream);
+        //but add the manifest here, with given timestamp:
+        ZipEntry e = new ZipEntry(JarFile.MANIFEST_NAME);
+        e.setTime(timestamp);
+        outZip.putNextEntry(e);
+        this.manifest.write(new BufferedOutputStream(outZip));
+        outZip.closeEntry();
+        System.out.println("jar-file with timestamp ");
+      } else {
+        outZip = new JarOutputStream(outstream, manifest);
+        System.out.println("jar-file with current file time ");
+      }
+    } else {
+      outZip = new ZipOutputStream(outstream);  
+    }
+  
+The operation can create both, a normal zip file or a jar file. If the `timestamp` is set,
+the manifest zip entry is written with the shown algorithm. It is the same as 
+in the constructor `java.util.jar.JarOutputStream#JarOutputStream(..., manifest)`,
+but the `e.setTime(timestamp);` is the special extra statement. Hence the Manifest entry
+gets the given timestamp.
+
+          FileSystem.addFilesWithBasePath (src.dir, path, listFiles);
+  
+It is an non-complex algorithm from `org.vishia.util.FileSystem` which detects
+the `:` separator char (see command line call example) and fills the `listFiles`
+with all found files (the class files).
+
+      if(this.bsort) {
+        Map<String, FileSystem.FileAndBasePath> idxSrc = new TreeMap<...>();
+        for(FileSystem.FileAndBasePath src: listFiles) {
+          idxSrc.put(src.localPath, src);
+        }
+        listFiles.clear();
+        for(Map.Entry<String, FileSystem.FileAndBasePath> e: idxSrc.entrySet()) {
+          listFiles.add(e.getValue());
+        }
+      }
+      
+That are the essential file sorting statements. The `TreeMap idxSrc` sorts all 
+to their local path names, so the order is defined. For compatibility sort or non sort
+the sorting files are re-written to the `listFiles`.
+
+      for(FileSystem.FileAndBasePath filentry: listFiles){
+        ....
+        if(filentry.file.isFile()){
+          ZipEntry zipEntry = null;
+          InputStream in = null;
+          String sPath = filentry.localPath;
+          try{
+            if(manifest !=null){
+              zipEntry = new JarEntry(sPath);
+            } else {
+              zipEntry = new ZipEntry(sPath);
+            }
+            zipEntry.setTime(timestamp == 0 ? filentry.file.lastModified(): timestamp);
+
+That is the algorithm to build the zip file. Depending on `manifest` either a `JarEntry`
+or a `ZipEntry` is created. The last statement of this group sets either the given
+time stamp or that of the file. Because for jar building the calling command line
+contains  
+
+ java ..... -time:$TIME ....
+ 
+All files gets the given time stamp. The user readable form in the script is set:
+
+ export TIME="2020-03-20+06:11"
+ 
+This is part of the script inside 
+
+ vishisBase_2020-03-20.source.zip:
+   +- _make
+       +- makejar.sh
+       
+This file should be updated only in this line on any new version, it is executed
+both on a gradle build as for a manual started build from the `...source.zip` unpacked files.
+Hence all files inside the jar have this time stamp, and the jar is the same binary
+independent on the real build date. The time stamp is determined from the stored sources,
+not from the random build action.
+
+The rest of the algorithm in `org.vishia.util.Zip` is standard, see the sources on github
+or on a possible download from the repository 
+link:https://www.vishia.org/Java/Download/versionArchive[www.vishia.org/...Java download].        
+
+=== The script to invoke javac and jar
+
+The file `_make/makejar.sh` for this jar component contains (snippets):
+
+ ##Both variables should be corrected for any new version, 
+ ##if is used for gradle build and for shell build!
+ if test "$VERSION" == ""; then export VERSION="2020-04-04"; fi
+ if test "$TIME" == ""; then export TIME="2020-04-04+02:03"; fi
+ 
+The `VERSION` can be set outside if desired, it affects only the file names. 
+The `TIME` can be set outside if desired too, but it affects the content of jar
+and hence the MD5 code because it determines the time stamps in the jar file. 
+
+Both script variables `VERSION` and `TIME` can be set outside because this script
+maybe called for some different jar files. The value set inside should be valid
+for the main jar file. See next chapters for invoke this script.
+
+The `TIME` is used as UTC-Time. This is important because daylight saving time switching
+in local times are disrupting (this effect was detected after re-check the algorithm 
+on 2020-04-04 after the spring daylight saving time switch in Europe).
+ 
+ #determine out file names from VERSION
+ export JARFILE=$DEPLOY$VERSION.jar
+ export MD5FILE=$DEPLOY$VERSION.jar.MD5.txt
+ 
+Outside an variable `DEPLOY` is given for the output directory and start of this file names.
+
+ # clean the binjar because maybe old faulty content:
+ if test -d $TMPJAVAC/binjar; then rm -f -r -d $TMPJAVAC/binjar; fi
+ mkdir -p $TMPJAVAC/binjar
+ 
+The cleanup is necessary because all files in `binjar` are files in the jar Archive.
+
+ if ! test "$SRC_ALL" = ""; then
+   echo gather all sources, at $SRC_ALL
+   find $SRC_ALL -name "*.java" > $TMPJAVAC/sources.txt
+   export FILE1SRC=@$TMPJAVAC/sources.txt
+ fi  
+ 
+For different approaches either all files in the given `SRCALL` should be compiled,
+or only a few files are the primary files given in `FILE1SRC` 
+
+ echo compile javac
+ $JAVAC_HOME/bin/javac -encoding UTF-8 -d $TMPJAVAC/binjar 
+   -cp $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+ 
+This is the `javac` command line. `JAVAC_HOME` should refer the dedicated path to
+the JDK. Hence it is possible to use different JDK (maybe Java-8, Java-11 etc) for different
+compilation activities. It is not a system property which JDK is used, it is a property
+of this file. Of course the `JAVAC_HOME` variable should be set outside, and the JDK
+should be present on the PC.
+
+The `CLASSPATH` and `SRCPATH` are set outside because this script is more universal.
+
+ echo build jar
+ java -cp $JAR_zipjar org.vishia.zip.Zip -o:$JARFILE -manifest:$MANIFEST 
+   -sort -time:$TIME  $TMPJAVAC/binjar:**/*.class $RESOURCEFILES
+ 
+This line is explained already above. The script variable `JAR_vishiaBase` should refer
+either to a already existing `vishiaBase-VERSION.jar` 
+or it can refer to the yet compiled class file tree, to build the `vishiaBase...jar`
+file itself.
+
+
+=== Organization of gradle build
+           
+
+*`vishiaZipJar-VERSION.jar` and `vishiaMinisys-VERSION.jar` - some specials*
+
+From gradle the manual build shell script is called. The gradle java compile capabilities
+are not used. The `build.gradle` file contains the following block to generate
+a `vishiaZipJar-VERSION.jar`-file:
+
+ task jcc_zipjar(type: Exec) {
+  workingDir 'src/main/java/_make'
+  
+  environment('TMPJAVAC', '../../../../build/javac_zipjar')
+  environment('VERSION', version)
+  environment('TIME', "2020-04-04+02:03")  //generates reproducible with this timestamp
+  environment('DEPLOY', '../../../../deploy/vishiaZipJar-')
+  //use the yet compiled class to generate jar:
+  environment('JAR_zipjar', '../../../../build/javac_zipjar/binjar')  
+  environment('CLASSPATH', 'xx')
+  environment('SRCPATH', '..')                 //located in the workingDir  
+  environment('MANIFEST', 'zipjar.manifest')  //located in the workingDir
+  environment('FILE1SRC', '../org/vishia/zip/Zip.java')    //located in the workingDir
+  
+  executable 'sh'
+  args '-c', './makejar.sh'
+ }
+
+Because of the source files are arranged in `src/main/java` this is the working dir 
+(more exact: `_make` inside the source tree). 
+It is the same working dir as used for manual build.
+
+The temporary directories inside `build` and the deployment directory `deploy`
+should have the correct number of `../` as relative path from `...src/_make`.
+
+The `CLASSPATH` is `xx` because the argument should be existing. It is not used here.
+
+The `SOURCEPATH` is `..` relative from `_make`. `SRC_ALL` is set, adequate of gradle
+all java files in this directory are compiled. 
+
+The `VERSION` is gotten from the gradle build script variable. 
+It determines only the name of the deployment only.
+
+The `TIME` value should only be changed if a new jar content is expected or created.
+The following rule is recommended:
+
+* Do not change the `TIME`
+* Compile newly
+* Check whether the MD5 respectively the binary code of the jar is change. If it is changed, 
+then set a new value for the `TIME` because the real source time should be able
+to recognize in the jar file. The source time may be present by month and day,
+whereby hour and minutes can be used for a version number. 
+
+It is possible that some sources are changed, but a certain jar file is not really changed 
+because the sources for this jar file are not affected. Another situation is,
+that sources from a used jar file (in `-classpath` of the `javac` call) are changed,
+but the compiled jar file is not affected because the call conditions of that used
+class files are unchanged. With manual comparison of the generated MD5 code 
+(adequate comparison of binary result of the jar) it is able to recognize 
+whether the jar file should be newly deployed. 
+
+The `FILE1SRC` is the last argument of the `javac`-call, the files to compile. 
+In this case the jar should contain the `org.vishia.zip.Zip` as only one class,
+but it needs some dependent classes. All depending classes are part of the source tree,
+they are referenced with the `SRCPATH`. The `javac`-compiler tool searches the depending
+classes by itself in the `srcpath` and in the `classpath` and compiles all classes
+which are found in the `srcpath`, non only the given primary one (`FILE1SRC`).
+It means the generated jar file contains some more classes, but less ones.
+
+
+With the same sources te `vishiaMinisys_VERSION.jar` is built. The difference is:
+This mini jar file contains only the algorithm to get a file from internet with MD5 check,
+adequate to the `wget` linux command. But `wget` is not available in any sh.exe environment. 
+Secondly the MD5-check is integrated (other then in `wget`, TODO SHA-256-check). 
+That is the second jar file from this source set, possible independently able to use.
+
+
+*`vishiaBase-VERSION.jar` - the jar to the whole component*
+
+The third `jcc`-Block is the compilation and generation of the whole 
+`vishiaBase-VERSION.jar` with the following task:
+
+ task jcc_main(type: Exec) {
+  dependsOn jcc_zipjar
+  workingDir 'src/main/java/_make'
+  
+  environment('TMPJAVAC', '../../../../build/javac')
+  environment('VERSION', version)
+  environment('TIME', version + "+" + versionNumber)
+  //use the before built jar:
+  environment('JAR_zipjar', '../../../../deploy/vishiaZipJar-'+version+'.jar')  
+  environment('CLASSPATH', 'xx')
+  environment('DEPLOY', '../../../../deploy/vishiaBase-')
+  environment('SRCPATH', '..')            //relative from workingDir  
+  environment('MANIFEST', 'vishiaBase.manifest')  //located in the workingDir
+  environment('SRC_ALL', '..')            //relative from workingDir
+  
+  executable 'sh'
+  args '-c', './makejar.sh'
+ }
+
+The task depends on `jcc_zipjar`, it means the `vishiaZipJar-'+version+'.jar'` 
+is generated already before this task runs. Hence this file can be used as
+jar file to build jar, set into the environment variable `JAR_zipjar`  
+
+The `makejar.sh` is the same script as used for vishiaBase.
+
+The `TIME` is build with the `versionNumber` which should (need to) be written as
+valid `hh:mm` format (`def versionNumber='02:03'`) to build a valid time stamp.
+So the `hh:mm` value inside the jar is used as version number. The date should be
+present the date of the last source.  
+
+Here `FILE1SRC` is not set, instead  `SRC_ALL` is given. Therefore all sources
+of this path are gathered als sources to compile. That is like the normal approach 
+of gradle - compile all given. 
+
+*`vishiaGui-VERSION.jar` - another component with dependencies*
+
+The next example shows how a more complex jar file is generate:
+
+ task jcc_main(type: Exec) {
+  workingDir 'src/main/java/_make'
+  environment('TMPJAVAC', '../../../../build/javac')
+  def JAR_vishiaBase = '../../../../../cmpnJava_vishiaBase/deploy/vishiaBase-' + 
+                       version_vishiaBase + '.jar'
+  environment('JAR_zipjar', JAR_vishiaBase)
+  environment('VERSION', version)         
+  environment('TIME', "")                //use timestamp from makejar.sh
+  environment('DEPLOY', '../../../../deploy/vishiaGui-')
+  environment('CLASSPATH', 
+    '../../../../libs/org.eclipse.swt.win32.win32.x86_64_3.110.0.v20190305-0602.jar'
+    + pathSep + JAR_vishiaBase)
+  environment('RESOURCEFILES', '..:**/*.zbnf ..:**/*.xml')  
+  environment('SRCPATH', '..;../../../../../cmpnJava_vishiaRun/src/main/java')  
+  environment('MANIFEST', 'vishiaGui.manifest')  //located in the workingDir
+  environment('SRC_ALL', '..')  //located in the workingDir
+  //Note: 2 source-sets
+  environment('SRC_ALL2', '../../../../../cmpnJava_vishiaRun/src/main/java')
+  executable 'sh'
+  args '-c', './makejar.sh'
+ }
+
+This complete example shows the generation of the `vishiaGui-VERSION.jar` 
+which uses the Eclipse-`swt...jar` and the `vishiaBase-VERSION.jar` 
+with `version_vishiaBase` as library.
+Both are set to the `CLASSPATH` variable because the compiler should know the
+signatures of called routines. Because the same `vishiaGui-VERSION.jar` is used 
+as tool to build the jar, its path is stored in the internal gradle (groovy-) variable 
+`JAR_vishiaBase`. It is used twice. The path to that jar file is to a depending component
+which is located beside the own working tree. It comes from different git archives:
+link:https://github.com/JzHartmut/testJava_vishiaBase[github:testJava_vishiaBase] and
+link:https://github.com/JzHartmut/testJava_vishiaGui[github:testJava_vishiaGui]. 
+The first one depends on the last one. But both are not organized as sub modules
+inside git, they should be cloned for example one beside the other 
+in the user's working space. The user should generally decide by itself 
+about the directories on its own hard disk. 
+But the script presumes, they are side by side.  
+
+This `makejar.sh` invocation uses a second `SRC_ALL2` because there is a third
+sub project which contains some more sources, side by side too,
+which's sources are given with 
+link:https://github.com/JzHartmut/srcJava_vishiaRun[github:testJava_vishiaRun]. 
+But the sources of both components are ziped into the same: 
+`vishiaGui-VERSION-source.zip` file:
+
+ task srcZip(type: Zip) {
+  dependsOn jcc_main
+    archiveFileName = 'vishiaGui-'+version+'-source.zip'
+    destinationDirectory = file("deploy")
+    from "src/main/java"
+    from "../cmpnJava_vishiaRun/src/main/java"
+    include "_make/*"
+    include "org/**/*"
+ }
+
+The jar and the source.zip should contain the adequate files. It is possible to use
+the `...-source.zip` in generally to reproducible re-generate the jar. 
+
+
+
+=== Manual build from the given source archive
+
+Instead using gradle it is possible to build the `vishiaBase-VERSION.jar` only with the
+given sources. Beside the jar in  
+link:https://www.vishia.org/Java/Download/versionArchive[www.vishia.org/...Java download]
+there is a `vishiaBase-VERSION-source.zip`. It does not contain all gradle sources
+inclusively tests, it does only contain that sources which are part of the jar,
+but inclusively the `_make` directory:
+
+ vishiaBase-VERSION-source.zip:
+ +- makejar.sh
+      +- makejar_vishiaBase.sh
+      +- minisys.files
+      +- minisys.manifest
+      +- zipjar.manifest
+      +- vishiaBase.manifest
+  +- org
+      +- ....
+
+The `makejar_vishiaBase.sh` sets the script variables to build the jar manually:
+
+ #export JAVAC_HOME=c:/Programs/Java/jdk1.8.0_211
+ #export JAVAC_HOME=c:/Programs/Java/jdk1.8.0_241
+ export JAVAC_HOME=/usr/share/JDK/jdk1.8.0_241
+
+One of the `JAVAC_HOME` line is uncommented. The lines show which jdk was used for test. 
+
+
+ export CLASSPATH=xx
+ # located from this workingdir as currdir for shell execution:
+ export SRCPATH=..
+
+This both variables are differently set from manual build and from gradle build
+if this paths are more complex. In this case they are simple, but used for all three
+following `makejar.sh` calls.
+
+ ##build zipjar:
+ export VERSIONZIPJAR="2020-03-23"
+ export VERSION="$VERSIONZIPJAR"            #generate exact this version   
+ export TMPJAVAC=/tmp/javac_vishiaZipJar/build/javac
+ export DEPLOY=../vishiaZipJar-
+
+It is the first block to build `vishiaZipJar-VERSION.jar`.
+Because of the version should be known in this context it is set to the 
+`VERSIONZIPJAR`-variable here and to the `VERSION` which determines the jar file name.
+
+The user should decide where the temporary build is stored. The `/tmp` directory
+is set with the `TMP` variable content of the Operation System in MS-Windows. 
+In my case it is a RAM-disk which safes the SSD write cycles and is faster. 
+It is not necessary to use `$TMP` instead in the script on Windows.
+
+The `DEPLOY` determines where the output files are written to and how is the start of name.
+The rest of the name is determined in the core script.
+
+ #use the built before jar to generate jar
+ export JAR_zipjar=$TMPJAVAC/binjar
+
+Adequate to the approach in gradle, the yet even compiled class files are used
+to build the jar. It is okay if the sources are ok. If the sources are faulty,
+then the generation is aborted. 
+
+ # located from this workingdir as currdir for shell execution:
+ export MANIFEST=zipjar.manifest
+ export FILE1SRC=../org/vishia/zip/Zip.java
+ export SRC_ALL=""
+
+ #now run the common script:
+ chmod 777 makejar.sh
+ ./makejar.sh
+
+This lines should be unchanged. Note the `chmod` command, it is for Linux.
+
+The following block organizes the build of the other jar files. Because the 
+`vishiaJar-VERSION.jar` is even generated, it is used at once:
+
+ #use the built before jar to generate jar
+ export JAR_zipjar=../vishiaZipJar-$VERSIONZIPJAR.jar
+
+To generate the jar file with dependencies, see `vishiaGui-VERSION-source.zip' from 
+link:https://www.vishia.org/Java/Download/versionArchive[www.vishia.org/...Java download].
+The procedure is the following:
+
+* The depending jars should be manually copied to a `libs`-directory beside
+the unpacked sources:
+
+ Generation working tree
+   +- _make    ... from -source.zip
+   +- org/...  ... from -source.zip
+   +- libs
+       +- vishiaBase-VERSION.jar
+       +- eclipse...swt...jar
+       
+Alternatively the path can be changed in the `makejar_vishiaGui.sh` script.
+Then the generation is proper.
+
+It is possible that the generated jar has the same content though the depending jars
+have different versions. It should be evaluated.
+
+
+
+
+== Dependencies, components, Sources and Binaries
+
+The jar file which can be used to generate reproducible jars is generated
+from some sources of a *srcJava_vishiaBase* component, see chapter above.
+
+But the sources of this component are some more comprehensive. It is the work of 
+several years. Not all is tested very well, because it is grown in the time.
+Usual open source software is marked with _absolute no warranty_ because the possibility 
+of minor or major errors are given.  
+
+If one uses this sources for a simple and nice graphic application, 
+a possible error is only manifested in misconduct. 
+But if the sources are used for a safety critical application, 
+the user is responsible to the fact that the sources are suitable.
+
+If all sources of the component are translated and bundled to the application, 
+but not all binary parts (class files in jar) are used, the user cannot different
+between used and not used binaries, all of them are part of the application.
+
+To solve this dilemma, the user should only get that sources from the component,
+which are really used. Only for that sources one should be responsible to, 
+not for the whole given component. 
+
+The automatic dependency recognizing of `javac`, the Java compile command, helps. 
+
+But it is possible that the sources contain unnecessary dependencies. 
+A not necessary source line
+ 
+ import somewhat.from.*
+ 
+forces the import, forces the dependency, which is unnecessary and forces, that 
+the depending sources should be checked too.
+
+Hence it is important to clean dependencies. Remove all suspect imports, 
+the compiler says whether they are yet necessary. That is a worthwhile work,  
+stupid in the time when it is done, but proper for future. 
+
+If some sources in the component are changed, a new checkpoint in the source version
+archive is given, one can check whether the own application is affected. 
+It is possible that the regeneration of the own jar with less dependencies which are
+not changed, produce the same binary.
+
+
+The conclusion is
+
+* small sources, not too much per class.
+* strong dependency care.  
+
+The components of sources are bundled independently of applications.
+
+ *****
+ 
+
+  

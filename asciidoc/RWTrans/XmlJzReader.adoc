@@ -1,0 +1,681 @@
+= XmlJzReader - input of XML files with filter, save as Java data
+:toc:
+:toclevels: 4
+:sectnums:
+:sectlinks:
+:max-width: 70em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+:wildcard: *
+
+* link:../../RWtransl.html[Parent page]
+* link:RWTrans.adoc[]
+
+== Approach
+
+Reading an XML file from texts is a simple process. 
+The basics for that in my Java classes (vishiaBase.jar) contains all necessaries,
+especially the 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[org.vishia.util.StringPartScan]
+with its extension 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartFromFileLines.html[org.vishia.util.StringPartFromFileLines]
+
+Of course some special transliterations like `\&lt;` for `<` should be known, and the principle of name spaces.
+
+The essential reason for writing an own XML reader was: 
+Selection of content from a given XML file. Some XML files, for example from Word & co
+but also Simulink (slx) contain too much stuff in there XML data. 
+If only essential data should be read, the selection of the data should be done 
+so early as possible.
+
+The link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vishia.xmlReader.XmlJzReader]
+selects the input data from a given XML file with a template, which as very similar
+to the given XML files. And this file contains also the destinations for the data,
+which are addressed by reflection.
+
+This reader was written firstly in 2017/18, for using for Simulink slx files. 
+But meanwhile it was using also for some professional projects and other XML files. 
+
+
+
+== Principle
+
+[#ReadText]
+=== Read the text
+
+A XML file is firstly a textual file. 
+To get the information the frame syntax should be detected. 
+This is `<name>...</name>` for an xml element (may contain sub structures),
+`<name attrib="value"....` etc. as known. 
+It means the start and end tag should be detected and the content between should be stored.
+
+A XML specific problem is the replacement of specific characters. 
+You cannot use a `<` in a text content of a XML node, because the `<` means start of an inner node.
+You cannot use `"` in attributes, it is the delimiter.
+But also special character of Coding should be replaced. 
+The encoding of the whole XML textual file can be varied. 
+UTF-8 is a standard, but also such as ISO-8859-x or US-ASCII with the advantage of exact one byte per character. 
+Special character can be any time written as `\&#x4567;` with its known code, also decimal, here hexadecimal. 
+This needs a translation. 
+This is not a problem of reading the file, on reading a correct XML such characters are not faulty used.
+It is a problem on storing the data: Instead `\&lt;` a `<` should be stored. ...etc
+
+[#NodeAttrCfg]
+=== Select node and attribute types in config.xml
+
+If a node is detected after `<` the name of the node is read.
+Then this node name is checked whether it is specified in the given configuration file.
+If it isn't so, this node and all sub nodes are ignored. 
+The node structure from the sub nodes are detected, of course, but no data are stored for all.
+
+Only for nodes which are specified in the config.xml file data are stored.
+This has the advantage that sophisticated XML files can be analyzed firstly in its essential data,
+secondly than enhanced with more interesting data.
+This approach accepts that the data from the XML file should be evaluated knowing its meaning, not only stored.
+That is a process of getting to know the meaning of the XML data. 
+
+Sometimes till often not all data should be used, and this data should not be stored. 
+
+Traditional the DOM and SAX model is familiar on reading XML. 
+With DOM the whole XML file is stored in internal data,
+whereas SAX has a selection algorithm which data are stored how.
+This algorithm for SAX may be complex, hence often DOM will be used firstly.
+But with DOM the amount and selection of data is the problem.
+
+The XmlJzReader can be seen as a SAX implementation. 
+But the algorithm to proceed the data are not to write manually,
+they are a result of the config file. 
+The user should only prepare a proper config file. 
+
+[#storeData]
+=== How to store the data
+
+The path to store the data is given too in the config.xml file.
+It is given as textual path which is evaluated by the reflection capability of Java.
+It means it is not compiled, it is interpreted.
+
+This has two disadvantages:
+
+* Calculation time: Reflection access is a search algorithm and need time for any storing process.
+But, of course, evaluating the text given path via reflection is done only on the first access
+to the given element. All following accesses uses the stored access path as reference
+respectively the found Reflection Method for immediately call with the given reference.
+
+* No checking of the expression while compile time. Errors in the expression are detected
+firstly on run time, as error "'Reflection ... expression not found'". 
+But this is a problem only on changing the config.xml file. The changes should be carefully done,
+including a test. 
+
+[#xmlns]
+=== Name spaces
+
+This is very simple. The namespace short designation should be replaced by the declared long designation.
+Only the long namespace should be used to determine elements and attributes.
+The short namespace designation is anytime valid only locally in a given XML file, 
+though it seems to be the same for all.
+
+It is a quest of simple replacement with a map. 
+  
+  
+[#encoding]
+=== Encoding
+
+The encoding is written always in the head of a XML file. 
+The head is firstly read with US-ASCII with only ~256 byte,
+search a encoding designation, and then read again completely with the given namespace.
+
+But that is also a property of the 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartFromFileLines.html[org.vishia.util.StringPartFromFileLines]
+.
+
+[#ReadZip]
+=== Reading xml content in zip archives
+
+Often files are stored as zip, and the zip contains some XML and more files. 
+This is true for most of file types with extension '.*x', 
+for example '.docx', '.slx'. 
+
+The unzip capabilities of Java ('java.util.zip.*') is combined with the 'XmlJzReader', that's all.
+The 
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readZipXml-java.io.File-java.lang.String-java.lang.Object-[XmlJzReader.readZipXml(...)]  
+do so.
+Also an opened zip can be evaluated with 
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.InputStream-java.lang.String-java.lang.Object-[XmlJzReader.readXml(InputStream, ...)]  
+
+
+
+[#ExmplConfigXml]
+== Example for config.xml file, how to get
+
+Look on a simple given XML file, `src/test/files/xmlReader/bom_exmpl.xml`:
+
+----
+include::../../../../src/test/files/xmlReader/bom_exmpl.xml[]
+----
+
+You can have also a complicated XML content. In all cases you can analyze this file:
+
+----
+//from source: src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java
+include::../../../..//src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java[tag=analyzeXmlCfg_BomExmpl]
+----
+
+The `analyzer.readXmlStruct(fXmlIn)` is the essential one. 
+It reads the XML file, looks which elements are contained,
+detects elements which are contained more as one and sum all inner elements,
+then write the extracted content. It is stored in `src/test/files/xmlReader/bom_cfg.xml`:
+
+----
+include::../../../../src/test/files/xmlReader/bom_cfg.xml[]
+----
+
+As you see it is similar the input file. 
+Elements which occur more as one are written here one time, but with the hint, 
+use a list: `xmlinput:list=""` (scroll right above to see it).
+
+* All elements with the name space of `xmlinput` are hints how elememts should be processed.
+* Instead the values there are hints how to store the data.
+For example `bom:count="!@bom_count"` determines that the value of this attribute
+is stored in a temporary `bom_count` variable which is then used to create the element
+with 
+
+----
+ xmlinput:data="!new_bom_entry(bom_count,bom_footprint,bom_ordernumber,bom_part,bom_value)"  xmlinput:class="bom_entry" 
+----
+
+It means in the current storage class an operation `new_bom_entry` should be existing 
+which is used to create the instance for an entry and store it in the given list.
+The `XmlJzReader` evaluates this information using Reflection in Java. 
+
+The text of the entry is stored calling `set_text(text)` 
+which should be given as an operation of the created data (output of `new_bom_entry`).
+
+This is the template to process any XML file with this structure. 
+
+You can change this gotten config.xml for your own, use other operations to store,
+and especially remove elements or attributes which are not needed. 
+If the XmlJzReader finds data which are not contained in the config, it skipped over it.
+
+Important: The `analyzer.readXmlStruct(fXmlIn)` should not be seen as 'Code generator'
+from given XML files to the config file, without change of the generated code
+and with currently re-generation.
+Instead, it should be seen as generation of a first start config.xml with following
+manual adaption, and maybe regeneration on changed situations with merging
+the new result with the old one.  
+
+The config file is similar a schema about the content of an XML file. 
+But it does not follow the Xschema strategy. 
+If you create the config file from one example of a user's file
+and this file does not contain all possibilities, which you may need,
+you should use another file too and merge all. 
+
+Now you need only destination class definitions to store the data ....
+
+ 
+[#ExmplJavaData]
+== Example storage class for data, how to get
+ 
+As well as from given XML input files the config.xml can be generated,
+from a given config.xml the proper Java Class can be generated 
+which stores all data and support all operations which are listed in the config.xml file.
+
+As also for generation config.xml from given XML data, this can be seen 
+as generation of the first version of the Java Class which is furthermore manually 
+maintained, maybe with re-generation and merge. 
+But it is more near to the config.xml file, therefore, manual maintenance is not so obvious but possible.
+
+The problem of generation and maintenance is: 
+There may be requests to process the data immediately in the calling (generated) operations
+which are not substantiated in the config.xml file itself.
+
+Look on the example for `bom_cfg.xml` from chapter above. 
+The following statements create a proper Java class: 
+
+----
+//from source: src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java
+include::../../../../src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java[tag=genJavaClass_BomExmpl]
+----
+
+This is the same as `java.exe` invocation from command line.
+The arguments are explained on empty call of this main:
+
+* `-cfg:` determines any valid config file, automatic created and/or manually changed.
+* `-dirJava:` is the output directory for the generation. 
+Usual you should not override your pre-generated and maybe manually changed Java classes,
+instead you should generate to a temporary directory as here shown,
+and then compare and merge it.
+* `-pkg:` and `-class:` are the package path and class name.
+
+The generation looks like (only excerp, the full classes are part of the test environment
+on `src/test/java` in the cmpnJava_vishiaBase githul archive and downloads):
+
+----
+/**This file is generated by genJavaOut.jzTc script. */
+public class ClassForBom {
+    protected BillOfMaterial billOfMaterial;
+    /**Access to parse result.*/
+    public BillOfMaterial get_BillOfMaterial() { return billOfMaterial; }
+
+  /**Class for Component BillOfMaterial. */
+  public static class BillOfMaterial {
+    protected List<Bom_entry> bom_entry;
+    /**Access to parse result, get the elements of the container bom_entry*/
+    public Iterable<Bom_entry> get_bom_entry() { return bom_entry; }
+    /**Access to parse result, get the size of the container bom_entry.*/
+    public int getSize_bom_entry() { return bom_entry ==null ? 0 : bom_entry.size(); }
+  }
+
+  /**Class for Component Bom_entry. */
+  public static class Bom_entry {
+    protected String bom_count;
+    protected String bom_footprint;
+  .....
+    /**Access to parse result.*/
+    public String get_bom_count() { return bom_count; }
+    /**Access to parse result.*/
+    public String get_bom_footprint() { return bom_footprint; }
+  .....
+  }
+----
+
+Additionally a derived class is generated which contains only write operations:
+
+----
+/**This file is generated by genJavaOut.jzTc script. 
+ * It is the derived class to write Zbnf result. */
+public class ClassForBom_Zbnf extends ClassForBom{
+  .....
+  /**Class for Component BillOfMaterial.*/
+  public static class BillOfMaterial_Zbnf extends ClassForBom.BillOfMaterial {
+  
+    /**create and add routine for the list component <Bom_entry?bom_entry>. */
+    public Bom_entry_Zbnf new_bom_entry() { 
+      Bom_entry_Zbnf val = new Bom_entry_Zbnf(); 
+      if(super.bom_entry==null) { super.bom_entry = new LinkedList<Bom_entry>(); }
+      super.bom_entry.add(val); 
+      return val; 
+    }
+    
+    /**Creates an instance for the Xml data storage with default attibutes. &lt;Bom_entry?bom_entry&gt;  */
+    public Bom_entry_Zbnf new_bom_entry(String bom_count, String bom_footprint, String bom_ordernumber, String bom_part, String bom_value ) { 
+      Bom_entry_Zbnf val = new Bom_entry_Zbnf();
+      val.bom_count = bom_count;
+      val.bom_footprint = bom_footprint;
+      val.bom_ordernumber = bom_ordernumber;
+      val.bom_part = bom_part;
+      val.bom_value = bom_value;
+      //
+      if(super.bom_entry==null) { super.bom_entry = new LinkedList<Bom_entry>(); }
+      super.bom_entry.add(val);
+      return val; //Note: needs the derived Zbnf-Type.
+    }
+  .....  
+----
+
+Both classes can also be used if the data come from the link:Zbnf_Parser.html[].
+Because the Zbnf parser was the first one which uses the concept, 
+the writer classes have the `_Zbnf` suffix. 
+
+This class offers an example where a manually change may be sensible:
+The element `bom_count` is a number. 
+It may be stored in the data better as `int` value than as String. 
+The conversion from the read text value (from XML, also from ZBNF)
+can be done immediately in this shown constructor. 
+The user receives immediately this `count` as expected in integer.
+Also the names can/may be changed. The prefix `bom_` comes from the name space
+in XML. The formal generation should regard it, but the user data do not need it. 
+The names can be changed both in the confix.xml as also in the Java operations and data.
+It is better for the application to understand. 
+The both worlds: gather and store data, and evaluate data, comes together here,
+it is the interface or border of both and can be proper adapted.
+
+[#ExmplReadXml]
+== Example for parsing with config.xml and storage class
+
+The example is contained in 
+
+----
+//from source: src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java
+include::../../../../src/test/java/org/vishia/xmlReader/test/Test_XmlJzReaderSimpleExmpl.java[tag=readXml_BomExmpl]
+----
+
+With one given instance of `XmlJzReader` it is possible to read more as one file,
+but with the given 
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readCfg-java.io.File-[XmlJzReader.readCfg(...)] operation. 
+or also with link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readCfgFromJar-java.lang.Class-java.lang.String-[XmlJzReader.readCfgFromJar(...)]. 
+The last one is a typical operation because the config.xml file is often stored with given content inside a jar.
+
+The Output data class `data` for the read XML data should be proper to the cfg.xml file, see chapter above.
+Here it is the generated class from the config.xml, as shown in chapter above.
+But the class can be tuned with more capability, so long as it matches to the config.xml.
+This class is associated to the root element of the read xml file,
+and, depending on the config.xml, also for further content. 
+But usual referred sub instances are created for child nodes.
+
+The link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.File-java.lang.Object-[XmlJzReader.readXml(file, dataOut)] 
+operation reads a XML file with the given config.xml and stores the result to `dataOut`.
+This is the usual used operation for XML files. 
+Some more variants are given, read from a opened `java.io.InputStream`, from a `java.io.Reader`, 
+from a zip file or some more, see chapter <<#readXml>>
+  
+
+[#configXml]
+== Detail explanation of config.xml
+
+The config.xml file has the key position of the XmlJzReader
+both for interpretation of the XML file content and for storing the data.
+
+All identifier in upper case are placeholder for user identification.
+
+It starts always with the root node:
+
+----
+<?xml version="1.0" encoding="utf-8"?>
+<xmlinput:root xmlns:xmlinput="www.vishia.org/XmlReader-xmlinput">
+----
+
+
+
+[#cfg_subtree]
+=== subtree (similar as a sub routine)
+
+The root node can contain some:
+----
+  <xmlinput:subtree xmlinput:name="SUBTREE_NAME">
+----
+
+This sub tree can contain the configuration of any part of an XML file
+which is inserted with:
+
+----
+  <ANY_TAG xmlinput:subtree="SUBTREE_NAME" xmlinput:data="!OPER_FOR_DATA()"/>
+----
+
+Subtrees can be used similar a subroutine call in a programming language
+either if a long nested structure should be broken in parts, or especially
+if the same XML tree structure is used on different positions. 
+
+The operation to create the data is associated on the subtree invocation.
+So on different positions different data can be created (which are of course
+similar because the sub tree internal data should match). - 
+Usual using derived classes for the instances or usual really the same classes.
+But also the calling environment may be different, so differet creation routines are necessary.
+
+[#cfg_NodeMain]
+=== The xmlinput:cfg node as main
+
+----
+  <xmlinput:cfg>
+---- 
+
+is below the `<xmlinput:root` and beside the `<xmlinput:subtree`.
+It contains as sub nodes the expected nodes (tag names) of the XML files to read.
+
+From the example above:
+
+----
+<xmlinput:root xmlns:xmlinput="www.vishia.org/XmlReader-xmlinput" >
+  <xmlinput:cfg xmlinput:data="!new_root()"  xmlinput:class="root" >
+    <BillOfMaterial xmlinput:data="!new_BillOfMaterial()"  xmlinput:class="BillOfMaterial"  xmlns:bom="www.vishia.org/XmlSeqWriter/ExampleBom" >
+      <bom:entry bom:count="!@bom_count"  bom:footprint="!@bom_footprint"  bom:ordernumber="!@bom_ordernumber"  bom:part="!@bom_part"  bom:value="!@bom_value"  xmlinput:list=""  xmlinput:data="!new_bom_entry(bom_count,bom_footprint,bom_ordernumber,bom_part,bom_value)"  xmlinput:class="bom_entry" >!set_text(text)</bom:entry>
+----
+
+matches to a XML file:
+
+----
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<BillOfMaterial xmlns:bom="www.vishia.org/XmlSeqWriter/ExampleBom">
+  <bom:entry bom:part="R" bom:value="3k3" bom:footprint="1206" bom:ordernumber="123456-789" bom:count="23">some resistors</bom:entry>
+---- 
+
+[#cfg_subnodes]
+=== Sub nodes and attributes
+
+The root node below `<xmlinput:cfg>` and any other node can contain sub nodes
+with given tag name. Then the occurrence of a node with this tag is accepted
+in the read XML file. The sub node definiton in the xmlCfg should contain
+a proper `xmlinput:data="!..."` or ommit this as special case, see the next chapter.
+
+Compare with the <<#ExmplConfigXml>>
+
+All attribute values which are defined in the XmlCfg are used. 
+Non defined attributes are ignored. 
+See chapter <<#cfg_attrValue>>.
+
+[#cfg_subnodes]
+=== Sub nodes, decision using with specific attribute values
+
+Sometimes nodes in an XML file have the same tag name but there are really different
+in the meaning of the data. Then often specific key attributes should control
+the usage of the data. This is also supported by the `XmlJzReader`:
+
+Firstly you should define which attributes are used to check:
+
+----
+  <TAG ATTR1="!CHECK" />
+----
+
+Now this attribute type is used for checking. After them you can define some sub nodes 
+with a specific value in the checked attributes:
+
+----
+  <TAG ATTR1="VALUE1" ..... > ..... </TAG>
+  <TAG ATTR1="VALUE2" ..... > ..... </TAG>
+----
+
+Now you have two sub node variants for the configuration. Both sub node variants
+refer to the same `TAG` but they are independent. 
+From the read XML file that sub node definition is used, which's attribute value matches.
+If no attribute value is matching, this node is ignored by the XmlJzReader.
+
+As example the configuration to read a part of a Simulink ( (C) Mathworks) slx file
+should be presented:
+
+----
+      <Line xmlinput:data="!addLine()">
+        <P Name="!CHECK"/>
+        <P Name="Name">!name</P>
+        <P Name="ZOrder">!zorder</P>
+        <P Name="Labels">!labels</P>
+        <P Name="Src">!src</P>
+        <P Name="Dst">!add_dst(text)</P>
+        <Branch xmlinput:subtree="Branch" />
+      </Line>
+----
+
+Here the properties of a `line` a not stored in attributes which may be expectable,
+instead, maybe for some reason, sub XML nodes all with the name `<P` are used.
+There is an association between name and value, the name determines the usage of the value.
+To evaluate this, the name sensitiveness is used here.  
+
+
+[#cfg_newNode]
+=== Data for a node
+
+As already displayed above:
+
+----
+    xmlinput:data="!EXPRESSION"
+----
+
+contains a reflection-evaluable expression (more exact evaluating by 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/DataAccess.html[org.vishia.util.DataAccess]
+used in the constructor 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/DataAccess.DatapathElement.html#DatapathElement-org.vishia.util.StringPartScan-java.util.Map-java.lang.Class-[DataPathElement("EXPRESSION", variables, null)].
+
+This `EXPRESSION` is executed in the data of the current (parent) node via reflection mechanism. 
+For the root node the data instance is given from outside with invocation
+
+ xmljzReader.readXml( ..., data, ...);
+
+The result of the `EXPRESSION` (value of a field, return value of an operation)
+is used as data for this node.
+
+**Same data from parent also for a sub node:**
+
+If you write `xmlinput:data="!this"` then the same instance is used for a sub node
+as for the parent node. This is sensible if a sub node can exists only one time
+and you will prevent a too much data nesting. 
+But in this case you can omit this entry, it is the same 
+(it means a child node, but not another instance for the data).
+
+**Access existing data via reference:**
+
+Similar as `this` you can have a referred instance (already existing) for a sub node
+writing `xmlinput:data="!REF"` with this public field `REF`.
+
+**Calling an opertion with arguments for data creation or access:**
+
+Usual it is proper to invoke an operation because the operation can programmatically
+create, check etc. for example to create a container for the first occurrence of an element
+with further adding, or check somewhat other information.
+The operation can have parameter. That is `tag` for the tag name of this XML node
+and the content of special named attributes of this XML node. 
+All attributes are gathered firstly before calling the `xmlinput:data="!CREATE_OPER(ARG1, ARG2)"`
+according the following schema:
+
+----
+ <TAG ATTR="!@ARG1" ATTR2="!@ARG2" xmlinput:data="!CREATE_OPER(ARG1, ARG2)" .....
+----
+
+For the argument variable the identifier after `"!@` is relevant, not the attribute name. 
+But usual both may be exact the same or similar.
+
+The advantage of giving attribute values to the operation is: 
+The operation can decide with this attribute values what to do. 
+A second one: If a constructor is called (often so), then the attribute values
+can be stored as `final` values in the class. 
+Using `final` designation has an advantage for software engineering. 
+And last but not least: It can be checked the attribute values in their interrelations,
+can be calculate resulting values, and if necessary stored as `private`. 
+An operation with values has more flexibility.
+
+
+[#cfg_attrValue]
+=== Store data of attributes
+
+The attribute values can be either gather as argument values as shown above.
+Or it can be also written with an expression or operations to the data which are associated 
+to the new node. 
+This is of course the returned data from the `xmlinput:data="!...."` access.
+
+----
+ <TAG ATTR="!EXPRESSION" ATTR2="!OPERATION(name, tag, value)" xmlinput:data="!...." .....
+----
+
+The `EXPRESSION` presents the reference, where to store the value of the read attribute.
+`EXPRESSION` can refer to a field as also can be an operation of the destination class.
+If it is an operation it may be return a value of type `java.lang.reflect.Field`.
+This reference is evaluated via Reflection. It means it presents a `java.lang.reflect.Field`.
+If an operation is used and it does not return a `java.lang.reflect.Field`
+then it is not used as expression for the destination value. See next:
+
+If the `EXPRESSION` is an `OPERATION(name, tag, value)` as shown for `ATTR2`,
+then it is possible to store the value of the read attribute also as argument of this operation. 
+Then the `OPERATION(name, tag, value)` does not need to return a `java.lang.reflect.Field`.
+The return can be `void`.
+
+* The `name` argument is the name of the attribute given as written
+(with name space short form). 
+* The `tag` can be used as argument. It is the tag name of the XML node where the read attribute is member of.
+* The 'value' is the read value of the attribute.
+* All attributes are optional.  
+* The type of this arguments in the `OPERATION(...)` argument list should be `String`. 
+
+[#cfg_text]
+=== Store a text inside a XML node
+
+Inside a XML node there can be sub nodes or free texts. They can be more as one text
+between some sub nodes. That order may be semantically important, 
+but an order of the texts with sub nodes cannot be regarded formally in the config.xml.
+
+Storing a text inside a node us describes similar as storing of values of attributes as:
+
+----
+ <TAG ... xmlinput:data="!...." >!EXPRESSION<SUBNODE...></TAG>
+ <TAG ... xmlinput:data="!...." >!OPERATION(tag, text)<SUBNODE...></TAG>
+----
+
+It means the `EXPRESSION` or `OPERATION(...)` is written in the config.xml
+as value inside the node (instead the expected text of a read xml).
+
+This `EXPRESSION` or `OPERATION(...)` is used for any text in the read xml
+and it is invoked in order of the read xml together with the order of sub nodes.
+It means, especially if an `OPERATION(...)` is used, the operation can sort in
+the texts in the context also of the other sub nodes. 
+
+The argument `text` contains the text in this sub range (between the maybe existing sub nodes,
+not as a whole).
+   
+
+
+[#readXml]
+== All operation variants to read XML data
+
+There are some operations with and without immediately given configuration (XmlCfg)
+reading from a File, opened ressource and from a zip archive.
+
+[#readCfg]
+=== Reading with given XmlCfg
+
+You need anyway an instance of link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vishia.xmlReader.XmlJzReader]
+
+* myXmlJzReader = link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#xmlJzReader--[new XmlJzReader()];
+
+An instance of 
+The link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlCfg.html[org.vishia.xmlReader.XmlCfg]
+can be gotten with calling:
+
+* XmlCfg myCfg = link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readCfg-java.io.File-[myXmlJzReader.readCfg(fromFile)]
+
+* XmlCfg myCfg = link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readCfgFromJar-java.lang.Class-java.lang.String-[myXmlJzReader.readCfgFromJar(class, pathFromClass)]
+
+Both routines uses XML files, but one as really file, one as file in a jar. 
+The result is a `XmlCfg` instance, which is also referenced in the `XmlJzReader`
+to use the reader with extra given cfg. 
+But the reference as return value can also be stored as reference for your own.
+
+Now you can invoke a `XmlJzReader` on demand with the different gotten configurations:
+
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.File-java.lang.Object-org.vishia.xmlReader.XmlCfg-[myXmlJzReader.readXml(fromFile, data, cfg)]
+reads from a file.
+
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.InputStream-java.lang.String-java.lang.Object-org.vishia.xmlReader.XmlCfg-[myXmlJzReader.readXml(inputStream, sFilepath, data, cfg)]
+reads from any opened `java.io.Inputstream`, an opened file or such. 
+The `sFilepath` is only a String for log and error report. It should present the source of the InputStream.
+
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.Reader-java.lang.String-java.lang.Object-org.vishia.xmlReader.XmlCfg-[myXmlJzReader.readXml(reader, sFilepath, data, cfg)]:
+It as the same as from InputStream, but a Reader reads characters, the source can be a String or a UTF-8 file.
+ 
+ 
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-org.vishia.util.StringPartScan-java.lang.Object-org.vishia.xmlReader.XmlCfg-[myXmlJzReader.readXml(stringpartScan, data, cfg)]
+This is the core routine for parsing, but can be used globally too. 
+An opened file is mapped to the necessary `StringPartScan` using the constructor
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartFromFileLines.html#StringPartFromFileLines-java.io.File-int-java.lang.String-java.nio.charset.Charset-[org.vishia.util.StringPartFromFileLines(file, buffersize, encodingString, Charset)]
+The file name is stored in this instance for error reports.
+
+
+[#readCfgOne]
+=== Reading with one time defined XmlCfg
+
+The routines to define the configuration for the `XmlJzReader` instance are the same as to get a `XmlCfg`
+because the gotten configuration is referenced in the `XmlJzReader` instance.
+
+Then you can invoke
+
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.File-java.lang.Object-[myXmlJzReader.readXml(fromFile, data)]
+reads from a file.
+
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.InputStream-java.lang.String-java.lang.Object-[myXmlJzReader.readXml(inputStream, sFilepath, data, cfg)]
+reads from any opened `java.io.Inputstream`, an opened file or such. 
+The `sFilepath` is only a String for log and error report. It should present the source of the InputStream.
+
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-java.io.Reader-java.lang.String-java.lang.Object-[myXmlJzReader.readXml(reader, sFilepath, data, cfg)]:
+It as the same as from InputStream, but a Reader reads characters, the source can be a String or a UTF-8 file.
+ 
+ 
+* link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html#readXml-org.vishia.util.StringPartScan-java.lang.Object-[myXmlJzReader.readXml(stringpartScan, data, cfg)]
+
+That are the same operations as with given xmlCfg, only this argument is missed -
+because it is used from the internal stored last usage.

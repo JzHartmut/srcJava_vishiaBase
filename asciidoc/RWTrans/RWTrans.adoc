@@ -1,0 +1,192 @@
+= Read, write, translation and generation, a history outline
+:toc:
+:sectnums:
+:sectlinks:
+:cpp: C++
+:cp: C/++
+
+* link:../../RWtransl.html[Parent page]
+* link:XmlJzReader.html[]
+
+== Approach
+
+This is a personality presentation.
+
+I have firstly used microprocessors from 1978, in may master thesis. 
+That was programmed in assembly with the Z80 processor. 
+The microprocessor technology was very newly. 
+Firstly I have written some programs to show and change RAM content and such ones.
+
+But then I have realized that my Microcomputer (named "_Microcombi_" 
+on the Technical University in Ilmenau, Germany, Thuringia) should have
+the capability of translating and editing assembly language. 
+I have written a assembly editor based on immediately deal with the machine code,
+reassemble the machine codes, assembly changes but also insert statements
+with adjustment of jump addresses. 
+This was newly and unfortunately not documented in a publication.
+But it was used from many people. 
+
+Later, from 1982 till 1985, Basic language becomes familiar and I have written
+a system with Basic, also possible to edit on the fly storing a meta machine code.
+It may be seen as similar to a byte code as in Java. 
+
+[#Zbnf]
+== Zbnf Parser
+
+In that time I want to write a complete and complex parser
+using the idea of graphical syntax diagrams link:https://en.wikipedia.org/wiki/Syntax_diagram[].
+But unfortunately in this time I have had only assembly language. 
+
+I the 1990th using C/++ language I have tried to write this parser,
+but on the first hand I have not the necessary time, and second hand
+the C/++ language and my development environment and knowldege 
+was not enough powerful to do so.
+
+Only when I used Java, the idea of a parser working on the principles of
+syntax graphs was successfully. 
+I have written the first version of the parser on only one week end.
+Java which its capabilities for container and the before written class
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[org.vishia.util.StringPartScan]
+which has had its precursor in some C++ classes has enabled this work.  
+
+The result was 
+link:../../docuSrcJava_vishiaBase/org/vishia/zbnf/ZbnfParser.html[org.vishia.zbnf.ZbnfParser]
+This was in the year 2007, ~20 years after the first ideas.
+
+This link:ZbnfParser.html[] was used firstly for parsing C language header and C files
+to translate to Java code: link:../../../Java2C/index.html[]. 
+Secondly I have used reflection for C/++ programming. To create the code
+of the reflection file, the parser was used with the same syntax as for Java2C translation. 
+See ../../../Inspc/html/Reflect.html[].
+
+Later all texts which I have parsed uses this parser.
+
+The parser was written independently of other known parser principles.
+It works with a textual given syntax and does not need deep depending packages.
+Only some Java files all contained in the 1.4 MByte vishiaBase.jar package
+are necessary. Though the parser is fast enough for all practical approaches.
+The textual given syntax is firstly translated in internal pre prepared data, 
+then it is used.
+
+The parser is used also in some professional projects.
+
+[#JZtxtcmd]
+== JZtxtcmd
+
+JZtxtcmd is a script language with its interpreter to generate texts from Java data
+and also to invoke Java routines.
+
+The basics for this script language idea come of course from the mail merge function
+from Word & co, but also from a generator which I have had written in about 1992 
+for dBase data. Ok, familiar concepts. For Java outputs I have firstly used
+the _printf_ concept (in Java System.out.printf(...)) in cohesion with text building
+capabilities of Java. 
+
+The idea to use a specific script language comes in the 2010th years. 
+It was necessary that a customer may be change the textual output in details. 
+And for that a script language is the best.
+
+I have had also some experience for text or also XML generation with XSLT. 
+But XSLT seems always to be to much complicated, not really nice.
+
+The basic idea was only, write `<&javaAccess>` for the placeholder. 
+And for the access to Java class members and also operations I have had some experience
+using Reflection in Java, and the important access class 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/DataAccess.html[org.vishia.util.DataAccess]
+was already written. 
+
+On using this pre-version of 
+link:../../docuSrcJava_vishiaBase/org/vishia/jztxtcmd/JZtxtcmd.html[org.vishia.jztxtcmd.JZtxtcmd]
+the idea was established, that also execution can be organized with this script,
+not only text generation. So the '_cmd_' becomes a part of '_JZtxtcmd_'
+
+Of course, the link:ZbnfParser.html[] was used from beginning. 
+Some ideas were introduces for text presentation, indentation, special character
+and some other detail.  
+
+[#OutTextPreparer]
+== OutTextPreparer
+
+The 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/OutTextPreparer.html[org.vishia.util.OutTextPreparer]
+can be seen as a light version of the _JZtxtcmd_. It was firstly created 
+to have a similar capability for text creation in the C# language. 
+For me the JZtxtcmd establishing for C# was a too high effort, but I want to have
+this similar approach. 
+
+The OutTextPreparer is a simple class which can be used to output texts
+which are generated from given templates. The templates can be simple influenced
+from user decisions. It is more simple as a complex JZtxtcmd script. 
+
+[#XmlWr]
+== XML Writing, SimpleXMLOutputter
+
+Firstly I have used link:https://en.wikipedia.org/wiki/JDOM[], see also 
+link:http://jdom.org/[] for building and output of XML data. 
+The other choice was XSLT, used from SAXON.
+
+But, the first decision to use an own XML outputter was: The ZBNF parser should output XML:
+The license situation from JDOM was not clarified in about 2008. 
+All in all output a simple XML information was simple. The necessary outputter
+was written on one afternoon, after decision that ZBNF should not depend on JDOM. 
+This solution uses a node structure. The nodes thinking is basically for XML. 
+But such a node structure is not complicated. 
+The XML content is filled in that nodes. The class to write the node content to XML
+is:
+
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlSimple/SimpleXmlOutputter.html[org.vishia.xmlSimple.SimpleXmlOutputter]
+
+Later, I have had data but not in nodes, the data may be sequential. 
+They should not converted into nodes to output as XML. Writing XML is not complicated.
+The second form of the XML outputter is: 
+
+link:../../docuSrcJava_vishiaBase/org/vishia/xmlSimple/XmlSequWriter.html[org.vishia.xmlSimple.XmlSequWriter]
+
+This class writes the XML content from simple data. 
+The user should regard the sequence in the XML file. The difference is: 
+The data are not stored before output in a XML-proper node structure.
+The data can present in any structure, independent of XML.
+The `XmlSeqWriter` writes XML content step by step with given data.
+
+[#XmlRead]
+== XML Reading
+
+First I have used a library from Xerxes to read XML files. But it was sometimes
+to complicated and with too much dependencies.
+
+On the other hand for simple {cp} usage some XML reader was familiar which are really simple
+and a little bit stupid, only for reading application-specific XML inputs.
+
+Reading an XML file from texts is also a simple process. 
+The basics for that in my Java classes (vishiaBase.jar) contains all necessaries,
+especially the 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[org.vishia.util.StringPartScan]
+with its extension 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartFromFileLines.html[org.vishia.util.StringPartFromFileLines]
+
+Of course some special paraphrases like `\&lt;` for '<' should be known, and the principle of name spaces.
+
+The essential reason for writing an own XML reader was: 
+Selection of content from a given XML file. Some XML files, for example from Word & co
+but also Simulink (slx) contains too much stuff in there XML data. 
+If only essential data should be read, the selection of the data should be done 
+so early as possible.
+
+The link:../../docuSrcJava_vishiaBase/org/vishia/xmlReader/XmlJzReader.html[org.vishia.xmlReader.XmlJzReader]
+selects the input data from a given XML file with a template, which as very similar
+to the given XML files. And this file contains also the destinations for the data,
+which are addressed by reflection.
+
+This reader was written firstly in 2017/18, for using for Simulink slx files. 
+But meanwhile it was using also for some professional projects and other XML files. 
+
+
+== Conclusion
+
+With parsing and generating texts and reading and writing XML the most important
+inputs and outputs are available in simple forms (only in a 1.4 MByte jar file `vishiaBase.jar`,
+see link:../../deploy[vishia/Java/deploy]
+without other dependencies.
+
+This four capabilities are used in some of vishia converters.
+ 

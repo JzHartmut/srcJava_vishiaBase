@@ -1,0 +1,279 @@
+= Zbnf Parser 
+:toc:
+:toclevels: 4
+:sectnums:
+:sectlinks:
+:max-width: 70em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+:wildcard: *
+
+
+== Article structure
+
+[cols="1,1,1"]
+|===
+|linked from (parent) |similar files in same level |important links in this
+
+|link:../../../Java/RWtransl.html[Overview Java Text XML conversion] ->
+|-> This page ->
+|-> link:../../../docuZBNF/sfZbnfMain_en.html[ZBNF syntax description]
+
+|===
+
+== History
+
+This is a personality presentation.
+
+I have firstly used microprocessors from 1978, in may master thesis. 
+That was programmed in assembly with the Z80 processor. 
+The microprocessor technology was very newly. 
+Firstly I have written some programs to show and change RAM content and such ones.
+
+Later, from 1982 till 1985, Basic language becomes familiar and I have written
+a system with Basic, also possible to edit on the fly storing a meta machine code.
+It may be seen as similar to a byte code as in Java. 
+
+In that time I want to write a complete and complex parser
+using the idea of graphical syntax diagrams link:https://en.wikipedia.org/wiki/Syntax_diagram[].
+But unfortunately I have had only assembly language. 
+
+In the 1990th using {cp} language I have tried to write this parser,
+but on the first hand I havn't had the necessary time, and second hand
+the {cp} language and my development environment and knowledge 
+was not enough powerful to do so.
+
+Only when I used Java, the idea of a parser which works on the principles of
+syntax graphs was successfully. 
+I have written the first version of the parser on only one week end.
+Java which its capabilities for container and the before written class
+link:../../docuSrcJava_vishiaBase/org/vishia/util/StringPartScan.html[org.vishia.util.StringPartScan]
+which has had its precursor in some {cpp} classes has enabled this work.  
+
+The result was 
+link:../../docuSrcJava_vishiaBase/org/vishia/zbnf/ZbnfParser.html[org.vishia.zbnf.ZbnfParser]
+This was in the year 2007, ~20 years after the first ideas.
+
+== Approach
+
+ZBNF is firstly a syntax description which can be used also outside of the parser.
+It is similar or can be seen as enhancement of EBNF (link:https://en.wikipedia.org/wiki/Extended_Backus–Naur_form[]) 
+from Prof. Niklaus Wirth.
+The EBNF idea bases on the BNF which is the "''Backus Naur Format''" 
+(link:https://en.wikipedia.org/wiki/Backus–Naur_form[])
+which was used to described the syntax of programming language
+in the 50th and 60th, especially for Algol.
+
+The ZBNF has the semantic aspect in the formal syntax definition. The 'Z' is a reverse 'S' for "__Semantic__".
+With that it is possible to immediately store the parsed data in Java instances without additional effort.
+That is done by the 
+link:../../docuSrcJava_vishiaBase/org/vishia/zbnf/ZbnfParser.html[org.vishia.zbnf.ZbnfParser].
+
+The ``org,vishia.zbnf.ZbnfParser` works with the textual syntax script. 
+It reads the script, stores it as Java data for faster running. 
+
+The ZBNF syntax script can also be used to generate proper data storage classes, 
+see <<#ExmplJavaData>>
+
+== Working principle
+
+The parser itself tests the source code similar as the Syntax Diagram
+(see link:https://en.wikipedia.org/wiki/Syntax_diagram[] or
+link:https://en.wikipedia.org/wiki/Wirth_syntax_notation[] (both articles are similar).
+
+It tests all possibilities, go back to the previous fork point if nothing matches
+and hence search the correct path. This is not the fastest way to parse, 
+but it works proper with all necessities of parsing approaches.
+The speed to parse is not the first question in the century of fast processors. 
+It was an important question in the 1980th and 1990th if processor power was lesser. 
+
+
+
+
+== Usages
+
+
+This link:ZbnfParser.html[] was used firstly for parsing Java language files
+to translate to C code: link:../../../Java2C/index.html[]. 
+Secondly I have used it for parsing C/++ header files to generate reflection for C/++ programming. 
+See ../../../Inspc/html/Reflect.html[].
+
+Later all texts which I have parsed uses this parser 
+Especially also the link:RWtrans.html#JZtxtcmd[] work also with this parser.
+
+The parser was written independently of other known parser principles.
+It works with a textual given syntax and does not need deep depending packages.
+Only some Java files all contained in the 1.4 MByte vishiaBase.jar package
+are necessary. Though the parser is fast enough for all practical approaches.
+The textual given syntax is firstly translated in internal pre prepared data, 
+then it is used.
+
+The parser is used also in some professional projects.
+
+
+[#ExmplSyntax]
+== Example for a ZBNF syntax file, how to get
+
+You can write the syntax for any syntactically evaluable text simply manually
+by viewing and thinking about the text syntax.  
+But sometime some experience or study of given patterns are usefull.
+
+=== Example Bill of material
+
+
+As example a bill of material should be used. This may be given in any special format,
+in this case in a simple list maybe from older tools.
+
+----
+include::../../../../src/test/files/zbnfParser/billOfMaterial.txt[]
+----
+
+The file format is not very well for parsing. Unified delimiters between rows are missing. 
+It seems to be that spaces are delimiters. 
+But in the last column spaces are parts of the text.
+The description should be only 16 characters, so the specific rule (for the example).
+It is a print out format. But nevertheless it can be parsed: 
+
+
+----
+include::../../../../src/test/files/zbnfParser/billOfMaterial.zbnf[tag=start]
+----
+
+The first line is only used to inform about the encoding of the syntax file. 
+But this information can be omitted if for example the syntax is given as Java String. 
+It is more formally.
+
+The `$setLinemode.` is an option. It defines that newline characters
+(`0x0d` and also `0x0a`, any combination) is not used as white spaces.
+The line structure should be regarded.
+
+The `BillofMaterial::= ...` is the top level parsing component which presents
+the whole input file. 
+
+As explained also in the comment, the User script should start with the text 
+`order-number`. All before is skipped. 
+With the `<*|TEXT?>` item the parser gets the information "__skip all till this text__"
+or "__search this text__". This is more a statement as syntax description, 
+but exactly this possibility can be seen as one of the advantages. 
+From view of syntax description it is "__get all content till TEXT__".
+Hence it can be stored as semantic after the question mark, here left empty.
+
+The text `order-number` itself is not handled by the syntax item before. 
+It is a constant text, named __terminal__ in BNF and EBNF. 
+But rather than there the terminals are not written in quotation marks
+(not `"order-number"` here). That is an important difference or new value,
+without quotation mark the syntax is better readable. 
+
+The next syntax forces reading numbers (`<#...`) and a specific syntax for `<date>`
+which's defintion follows. This is a syntax component, 
+sometimes in BNF named __meta morphem__ or __non terminal__
+
+----
+include::../../../../src/test/files/zbnfParser/billOfMaterial.zbnf[tag=mid]
+----
+
+The continuation (above) starts with searching the `-------` line, 
+where at least three `-` are checked. Then the rest till a newline 
+is skipped. It means the whole line is skipped. `\n` designates a line delimiter.
+This can be also `\r\n` or a single `\r`, depending on some natives of operation systems. 
+It is not distinguished here.  
+
+Then the __positions__ are parsed, one per line, see below.
+
+At end also a `---------` line is expected. 
+After them all following lines are skipped.
+The `\e` is "__end of text__" and checks whether the input is really finished.
+Elsewhere errors in the following text are not detected because it is not checked.
+
+The end of a syntax component, here the main or root, is marked with a dot. 
+This is same as older EBNF formats, newer uses also the `;`, but ZBNF only uses the `.`. 
+
+----
+include::../../../../src/test/files/zbnfParser/billOfMaterial.zbnf[tag=rest]
+----
+  
+Now above definition of syntax components.
+
+Ones you can see some maybe helpfully comments. 
+Then the definition of a `<position>´ follows.
+
+The `#?` means, "__parse a number__".
+After the question mark the semantic, the meaning of the number is written.
+Here the first number is designated as `amount` which can be refer 
+in any verbal explaining text. But it is also used as name of a variable 
+where the number should be stored in the current data element.  
+
+The `description` is expected with any character (`<*?...`) but exact 16 character.
+This helps to parse print formats without other designation.
+The description must not be empty, the first position of the 16 character starts
+at the first character after white spaces. Note that a white space in the syntax 
+forces skip over white spaces in the parsed input, so long as `<$NoWhiteSpaces>`
+is not given.
+
+The rest till one of the newline characters is stored as value, but without leading spaces.
+
+The syntax component for `<date>` is very simple, it parses only all till newline.
+It's only an example.
+
+
+=== Example variable declaration in C/++ or Java
+
+Also in C and {cpp} as in Java the variable declarations can be written in form
+
+ int a,b,c;
+ 
+This are three variable, three parse results, all variable are from type `int`.
+The type is of course semantically part of the variable. 
+The definition line itself is not interesting, the variable definition by its own is it.
+The variable definition is semantically exact the same as:
+
+ int a;
+ int b;
+ int c;
+ 
+The application must not make a difference between both writing forms.
+
+The syntax definition as part of ...TODO
+
+
+
+
+[#ExmplJavaData]
+== Example storage class for data, how to get
+
+
+----
+//in file: src/test/java/org/vishia/zbnf/test/Test_Bom_Zbnf.java
+include::../../../../src/test/java/org/vishia/zbnf/test/Test_Bom_Zbnf.java[tag=genDstClassForBom]
+----
+
+This operation shows how generation of destination classes can be invoked
+from Java, and also as command line with Java. The arguments of `main(String[] args)`
+are identically. 
+
+The functionality reads the syntax file using
+
+ parser.setSyntax(syntaxFile);
+ 
+After them the parser contains a data structure of 
+
+ ZbnfSyntaxPrescript mainScript = parser.mainScript();
+
+as tree of link:../../docuSrcJava_vishiaBase/org/vishia/zbnf/ZbnfSyntaxPrescript.html[org.vishia.zbnf.ZbnfSyntaxPrescript].
+
+This tree contains the syntax description with the semantic aspects.
+Any node in this tree can be used to create a data class:
+
+ evaluateSyntax(mainScript);
+
+
+
+
+
+
+[#ExmplParsing]
+== Example for parsing with ZBNF syntax and storage class
+
+The example is contained in 
+

@@ -1,0 +1,540 @@
+= FileRemote - file access decoupled with second thread
+:sectnums:
+:sectlinks:
+:max-width: 52em
+:prewrap!:
+:cpp: C++
+:cp: C/++
+:stylesheet: ../my.css
+
+
+
+:toc:
+:toclevels: 5
+
+== Approach
+
+Java knows two approaches of file access:
+
+* The traditional `java.io.File`
+* The newer `java.nio.file.*` with some enhancements and benefits.
+
+See also the link link:https://blogs.oracle.com/javamagazine/post/path-files-input-output[]
+
+The second one does better separate the file handling from the underlying operation system,
+gives more flexibility. But the same problem is given:
+
+Accessing a file may need a while till the access is finished. 
+If this access runs in a graphical event thread, then the graphic my hang if the file access needs more time
+for example because of access in network or longer file operations. 
+Then the user cannot press an 'abort' button or such one. 
+Hence, it is better to delegate the handling with the underlying file system in another thread and works with callback operations.
+
+The second approach is: What about a quasi file access to embedded hardware, 
+with a small file system non standard accessible, for example only via special serial interface access?
+It is too complicated to write the proper driver using the `java.nio.file.*` system.
+As alternative the interface 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemoteAccessor.html[org.vishia.fileRemote.FileRemoteAccessor] is offered to implement, with lesser but maybe sufficient operations. 
+
+
+== One FileRemote instance per physical file as twin for access in the application.
+
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html[org.vishia.fileRemote.FileRemote]
+
+is inherited from `java.io.File`. The basic idea behind this is, offer the same operation 
+as the familiar `File` instance. 
+But the implementation does not follow `java.io.File` (this was the first idea), 
+instead the newer `java.nio.files` package is used, 
+for the implementation to the local file system of a PC platform.
+This is implemented in 
+
+link:../../docuSrcJava_vishiaBase/org/vishia/fileLocalAccessor/FileAccessorLocalJava7.html[org.vishia.fileLocalAccessor.FileAccessorLocalJava7]. 
+
+=== FileCluster
+
+The relation between a FileRemote instance and the physical file in the whole application should be unique.
+That prevents too much file system accesses for refresh 
+(which may be important with slow network access to an embedded hardware).
+And also some marking operations on file can be done which should be unique. 
+The file is presented by its path, and this path is associated to one FileRemote instance.
+
+To fulfill this approach, an only one instance of 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileCluster.html[org.vishia.fileRemote.Cluster]
+for the whole application contains all used directory paths with a list of members 
+and the associated FileRemote instance. Getting a FileRemote instance is only possible using the cluster.
+For that the association `FileRemote.clusterOfApplication` refers the singleton instance.
+
+=== FileRemoteAccessor
+
+The interface
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemoteAccessor.html[org.vishia.fileRemote.FileRemoteAccessor]
+is referred by any FileRemote instance in `FileRemote.device`. 
+All FileRemote instances of the same root path have the same device, but any refers it for itself.
+They may specific pathes which refers another device, especially for embedded hardware.
+
+The implementation of the `FileRemoteAccessor` for the standard platform of Java uses the 
+
+link:../../docuSrcJava_vishiaBase/org/vishia/fileLocalAccessor/FileAccessorLocalJava7.html[org.vishia.fileLocalAccessor.FileAccessorLocalJava7]
+
+which uses most of features of the [J]`java.nio.files`.
+
+
+=== Create or get a FileRemote instance
+
+The constructor of this class is protected, hence only internally accessible. 
+A FileRemote instance can only exist with and in its FileCluster.
+But the FileCluster is a singleton, for your application:
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#clusterOfApplication[FileRemote#clusterOfApplication].
+Hence it is simple to handle.
+
+.Java: Create or get a FileRemote.get(path)   
+[source,Java]
+----
+  FileRemote fX       = FileRemote.get("D:/path/to/file.ext");
+  FileRemote dirX     = FileRemote.get("D:/path/to/dir/");
+  FileRemote dirY     = FileRemote.get("D:/path/to/existingDir");
+  FileRemote fLocal   = FileRemote.get("localPath/to/file");
+  FileRemote tempfile = FileRemote.get("/tmp/specificTmpPath/file.ext");
+  FileRemote homefile = FileRemote.get("~/pathInHome/file.ext");
+  FileRemote fY       = FileRemote.get("$ENV/path/$FILE.$EXT");
+----   
+
+See link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#get-java.lang.String-[FileRemote#get("path/to/file")]:
+
+* Backslashs are also possible, will be converted to slash
+* Non normalized paths such as [J]`"path/../paralleldir/file"` are possible, will be normalized.
+* A Slash on end creates an directory, if it is a new directory path.
+If a directory exists aready, the slash on end is not necessary but possible.
+* A relative path will be completed as absolute one by the content of [J]`System.getProperty("user.dir")` 
+and not of the content of the operation system's current dir. But this is the OS current dir, 
+if the [J]`System.setProperty("user.dir", newDir)` was not changed. 
+Changing the current dir should be possible as part of the application.
+* The [J]`"/tmp/"` comes original from Linux applications, it is mapped to Windows also using the `TMP` environment variable.
+* Also the [J]`"~/"` for the home directory can be used. 
+* Environment variables are replaced.
+
+Replacements of environment variables and non absolute or specific paths are processed by 
+link:../../docuSrcJava_vishiaBase/org/vishia/util/FileFunctions.html#absolutePath-java.lang.String-java.io.File-[]
+
+It is important that you get anyway the same instance of [J]`FileRemote` with the same (normalized) Path 
+in your application because it is all based on the [J]`FileCluster`. 
+This is important especially marking for marking. 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#setMarked-int-[FileRemote#setMarked(mask)]
+
+
+.Java: Create or get a FileRemote from File   
+[source,Java]
+----
+  File fileX = new File("D:/path/to/file");
+  FileRemote fX = FileRemote.fromFile(fileX);
+----   
+
+That is the compatibility bridge to the [J]'java.io.File' class. 
+But, from the [J]`File` only the [J]`getAbsolutePath()` is used and [J]`FileRemote.get(path)` is called.
+Using the absolute path means, the system's current dir is used on relative paths, as in [J]`java.io.File`.
+But because a [J]`FileRemoted` extends [J]'java.io.File', of course this itself is returned immediately
+if the given [J]'java.io.File' is a [J]`FileRemoted`.
+This simplifies using [J]'java.io.File' for [J]`FileRemoted` instances.
+
+.Java: Create or get a FileRemote as child from a given FileRemote   
+[source,Java]
+----
+  FileRemote fDir = givenDir;
+  FileRemote fChild = fDir.
+  
+----   
+
+
+
+
+
+To create a FileRemote instance you can use
+
+* {@link #fromFile(File)} if you have already given a java.io.File instance.
+* {@link #get(String)} with relative or absolute given path.
+* {@link #getDir(CharSequence)} explicitely get or create a directory
+* {@link #getFile(CharSequence, CharSequence)} in opposite to get(String) with dispersed directory path and name
+* {@link #child(CharSequence)} from a given FileRemote as directory
+* {@link #child(CharSequence, int, int, long, long, long)} to create a child with partially known properties
+* {@link #subdir(CharSequence)} to get or create definitely a directory inside a given FileRemote directory. 
+
+All these operations do not access the real file system. Instead they search in the {@link #clusterOfApplication}
+whether the file is already known and returns it, or they create and register the adequate FileRemote instance
+in the cluster. 
+The FileRemote instance should/can be synchronized with the real file instance by calling {@link #refreshProperties(CallbackEvent)}
+or for directory instances with {@link #refreshPropertiesAndChildren()}
+
+from the local file system you can call
+{@link #fromFile(File)}. This delegates working to {@link #fromFile(FileCluster, File)}
+with the static given {@link #clusterOfApplication} which looks whether the FileRemote instance 
+is existing already, or registeres it in the file cluster. 
+The implementor of the file system depends on the given path.
+
+You can create a child of an existing file by given FileRemote directory instance
+using {@link #child(CharSequence)}, {@link #subdir(CharSequence)}
+or {@link #child(CharSequence, int, int, long, long, long)}
+whereby the child can be a deeper one, the path is a relative path from the given parent. 
+This FileRemote instance describes a possible existing file or maybe a non existing one, 
+adequate like creation of instance  of {@link java.io.File}. 
+Note that on {@link #refreshPropertiesAndChildren(CallbackEvent)} this instance will be removed
+from the children list if it is not existing.
+
+You can get any FileRemote instance with any absolute path calling {@link FileCluster#getFile(CharSequence)}.
+This instance will be created if it is not existing, or it will be get from an existing instance
+of this RemoteFile inside the cluster. The instance won't be deleted if the physical file is not existing.
+For example you can create
+
+  FileRemote testFile = theFileCluster.getFile("X:/MyPath/file.ext");
+
+This instance is existing independent of the existence of such a physical file. But 
+
+  if(testFile.exists()){....
+
+may return false.   
+
+=== path in FileRemote
+
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#path[org.vishia.fileRemote.FileRemote#path]
+is the [J]`java.nio.file.Path` reference of the file. It is [J]`public final`, so you can access it immediately.
+This is new since 2023-01. It substantiates usage of [J]`java.nio.file`.
+
+The public variable [J]`path` hides the variable with the same name and usual the [J]`toString()` representation
+of the super class [J]`java.nio.File`. This is not a problem for usage, only a little bit confusing on debugging. 
+But the name [J]`path` is concisely recommended to use. 
+
+=== java.nio.file.FileSystem and FileStore, different devices
+
+You can simple ask whether your files are stored on the same physical device or get information about:
+
+.Java: Quest of physical device:   
+[source,Java]
+----
+include::../../../testJava_vishiaBase/java/test_vishiaBase/org/vishia/fileRemote/test/TestFileRemote.java[tag=getFileStore]
+----
+
+Here a network drive is used in the path, T: is a RamDisk. 
+
+The detection of the same or another file store or file device is used for 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html[FileRemote#copyTo(dst, ...)]: 
+On the same physical device the fast internal [J]`java.nio.file.Files.copyTo(...)` is used, 
+without the possibility to get messages about yet copied and still to copy bytes. 
+This is executed immediately on a device in the network. 
+Whereas if two files are on different devices, they should copied by elaborate read and write of byte streams anyway.
+Hence there are copied by OpenStream etc. with possibility of give feedback and abort on very long files. 
+See chapter <<#copyNet>>
+
+The [J]`java.nio.file.FileSystem` is the same for both files, because both are managed by the underlying Windows file system.
+Do not confuse the file system with the file device!
+
+.Java: Quest of physical device:   
+[source,Java]
+----
+include::../../../testJava_vishiaBase/java/test_vishiaBase/org/vishia/fileRemote/test/TestFileRemote.java[tag=getFileSystem]
+----
+
+The output lists the file stores on the file systems. Both are equal and shows associated network devices.
+
+look on the output for this test:
+
+----
+TestFileRemote
+test_checkPhysicalDevice
+  ok: different phyisical devices for q:/VIDEO... and T:/telgR...
+  ok: same file systems for q:/VIDEO... and T:/telgR...
+Windows (C:)
+Windows (D:)
+Windows (G:)
+Windows (P:)
+Data (Q:)
+RAMDisk (T:)
+Windows (U:)
+---- 
+
+
+== Some hints to copy and move of java.nio.file.Files
+
+That are hints not only for `FileRemote`, and partially not only for `java.nio.files`
+but generally effects.
+
+[#copyNet]
+=== Copy in a network location in the same device
+
+I have tested to copy a very long file (60 MByte) in a network location. 
+Copying this file to another location which needs transport of data via network needs ~ 10 seconds.
+This is true, of course, because my WLAN has maximal 56 MBit/s. 
+But if I copy this file with `java.nio.file.Files.copyTo(...)` for a remote location,
+but both files are in the same remote location, copying needs only less than one second for 60 MByte!
+This is surprising, isn't it? 
+It is not surprising! Because optimization is anytime and everywhere. 
+Developer of operation systems (in this case Windows-10) and system routines to use it think about optimization.
+The copy process is executed only on the remote computer, by the file drivers, using cache mechanism. 
+The `java.nio.file.Files.copyTo(...)` use this operation system capability.
+
+If you organizes the copy by yourself by opening the source file for read, 
+create or open the destination file for write, read and write bytes, then you transport the bytes
+via network because the access cannot be optimized. read and write are different actions.
+If you use the `java.nio.file.Files.copyTo(...)`, the implementation does the work.
+It can decide how to do.
+
+
+=== Access Locked files
+
+In older operation systems, sometimes you can open a file for read, and delete the just opened file.
+Then the opening process crashes, because the file is no more existing. 
+
+In newer operation systems (in Windows approximately since Win-XP) the OS-Process locks all used files.
+Then the delete fails, because the file is locked. 
+
+Similar it is on move. Moving a large directory tree on the same device is normally a cheap operation.
+Only the directory entry is changed, all file contents should not be attached,
+and also the directory entries on the children files of the moved directory are not attached.
+
+But if the directory is in use, or one of a children or is in use, then move is executed as 'copy'
+and afterwards try to delete. Whether or not the delete is successful, depends on the locked state of the files.
+
+This chapter needs more experience, because similar questions are also able to found on stackoverflow:
+
+Search string on ecosia.org: "__java.nio.file.Files.move copies stackoverflow__"
+
+link:https://stackoverflow.com/questions/34733765/java-nio-file-files-move-is-copying-instead-of-moving[]
+
+link:https://stackoverflow.com/questions/47768756/java-nio-file-files-movepath-source-path-target-copyoption-options-disapp[]
+
+link:https://stackoverflow.com/questions/22988210/java-nio-file-accessdeniedexception-while-using-files-move[]
+
+== Event coupling
+
+Assumed, a file should be copied. Then in a maybe graphic or other fast thread
+the copying is forced by calling with an callback event.
+The following test example shows the usage:
+
+
+.Java: copy forcing user thread
+[source,Java]
+----
+include::../../../testJava_vishiaBase/java/test_vishiaBase/org/vishia/fileRemote/test/TestFileRemote.java[tag=test_copyWithCallback]
+----
+
+Here for the test the result is expected with a wait operation to continue in the same thread. 
+In opposite, for typical graphic applications, the callback operation will be satisfying the approach,
+it can show results in result of the callback event. This callback operation looks adequate 
+as also in the test:
+
+    .Java: copy forcing user thread
+[source,Java]
+----
+include::../../../testJava_vishiaBase/java/test_vishiaBase/org/vishia/fileRemote/test/TestFileRemote.java[tag=callbackCopy]
+----
+
+This callback routine should normally also call the [J]`backEvent.relinquish();`
+after all information are gotten from. 
+
+The callback operation is here called in the thread which executes the copy, 
+this is the internal device thread for the 
+
+The ooutput for this test opeation looks like:
+
+----
+=========================================================================
+TestFileRemote
+test_copy
+  ok: copy operation returns 'done'
+  ok: time for call < 2 ms = 0,559
+  ok: time for execution > 10 ms = 826,532 ms
+timePrepare = 4,333100, timeCall = 0,558800 ms, timeRespond = 826,531700 ms
+----
+
+As you see, the organization of the copy needs ~ 0.5 ms. That is not fast, 
+but fast enough for handling in a graphic thread. If you should wait of copy only one file,
+in this example the file has only 2 MByte, but it is accessed via WLAN, then you should wait one second
+and your graphical user interface may block for this time. 
+If the file is longer, or the access is slower, or you want to copy a whole tree of files (a directory or such),
+then the waiting time is too long for graphic blocking. With the separate thread it is not a problem.
+
+=== Copy without callback
+
+is possible, if you do not give a callback instance. Then it is done in the same thread, 
+sensible for a non graphic thread, of course.
+
+=== Using only the FileRemote device thread, callback in this thread
+
+This is exactly the version shown in the test example. 
+But for graphical user interfacing it is not sufficient, because the access to graphical widgets
+can be done (on SWT graphic) only from one thread, the graphic thread. 
+
+
+=== Callback executed in a specific thread
+
+Then only the thread should be given for the callback event. This thread should have an event queue,
+which is true for the GRAL graphic (link:../Gral/vishiaGui_Gral.html[].
+Then it looks like (snippet from  
+
+
+== Walker
+
+The idea of using [J]`java.nio.file.Files.walkFileTree(pathdir, options, depth1, visitor)`
+comes with this new io package. On [J]`java.io.File` you can get a list of members of a directory with 
+
+.Java: old File, get content of directory   
+[source,Java]
+----
+  File dir = new File("C:/xyzDirPath");
+  File[] files = dir.listFiles();
+----
+
+One problem of this approach is: The file system is volatile. 
+If you have gotten a list of children in a directory, in the next moment the situation on the device can be changed.
+Another process, in a network, can access the same directory, create also new files.
+
+The next problem is: A directory can also contain a lot of files, and you may only search and handle
+one or a few specific files. If you get a list, it needs much space. 
+
+And the third problem, a directory tree may have a deepness.
+
+=== Principle of the walker in java.nio.file.Files
+
+For the reasons about, [J]`java.nio.files` has introduced a walker facility.
+
+The **walker** works in the following kind:
+
+* The [J]`java.nio.file.Files.walkFileTree(pathdir, options, depth, visitor)` is called with a visitor.
+* It iterates through each directory level, whereby the deepness can be limited by the argument [J]`depth`.
+Use [J]`1` to execute only the current level.
+* The operation [J]`FileVisitResult preVisitDirectory(T dir, BasicFileAttributes attrs)`
+is called on entry on each directory. Some operations can be processed with the given directory entry. 
+Now this operation can decide whether this entry should be evaluated or not by the return value.
+* The operation [J]`FileVisitResult visitFile(T dir, BasicFileAttributes attrs)` is called for each file.
+Also here some operations can be processed with the file, for example copy, get specific content or what else.
+* The operation [J]`FileVisitResult visitFileFaild(T dir, IOException exc)` is called for each file with problems.
+The situation is, a file may be contained in a directory list, but the access is faulty.
+* The operation [J]`FileVisitResult postVisitDirectory(T dir, IOException exc)` is called 
+if the directory is evaluated. In this operation the user can for example restore a filter for the parent level,
+because the next [J]`FileVisitResult preVisitDirectory(...)` or [J]`FileVisitResult visitFile(..)`
+is regarded to the parent level. Also a copy of a directory content can be done.
+
+The implementation of the [J]`java.nio.file.FileVisitor` interface can be done by any proper user implementation.
+
+
+=== Using this walker principle in FileRemote
+
+The [J]`java.nio.file.Files.walkFileTree(..., visitor)` is a basically approach. 
+Some more stuff may need to work, and some more stuff is done in the [J]`FileRemote` class.
+
+To explain how does it work you can follow the example and test routine in [J]`org.vishia.fileRemote.test.TestFileRemote.test_copyDirTreeWithCallback(...)`.
+There link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#refreshAndMark-int-int-int-java.lang.String-long-org.vishia.fileRemote.FileRemoteWalkerCallback-org.vishia.fileRemote.FileRemoteProgressEvent-[FileRemote#refreshAndMark(...)] is called.
+This operation marks firstly some files, which are ready to copy later. 
+This mark operation has the advantage, that the user can check which files are marked before copying, 
+for example sorted by time stamp, look whether all are proper described by the mask, or which are faulty marked,
+maybe also mark additionally manually some files. 
+This can be done especially by link:../../../Fcmd/index.html[the.File.commander] or any other tool.
+
+But also link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#copyDirTreeTo-org.vishia.fileRemote.FileRemote-int-int-int-java.lang.String-int-org.vishia.fileRemote.FileRemoteWalkerCallback-org.vishia.fileRemote.FileRemoteProgressEvent-[FileRemote#copyDirTreeTo(...)] 
+uses this same approach which is called after mark to copy, also possible to call without mark before.
+
+Lets have a look inside:
+
+.Java: Operation as example for FileRemoteAccessor.walkFileTree(...)  
+[source,Java]
+----
+include::../../../srcJava_vishiaBase/java/org/vishia/fileRemote/FileRemote.java[tag=refreshAndMark]
+----
+
+The walking is delegated to the device, to the operation
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemoteAccessor.html#walkFileTree-org.vishia.fileRemote.FileRemote-boolean-boolean-int-int-java.lang.String-long-int-org.vishia.fileRemote.FileRemoteWalkerCallback-org.vishia.fileRemote.FileRemoteProgressEvent-boolean-[FileRemoteAccessor#walkFileTree(...)]
+Generally, how the walker operates should be clarified by the kind of the file system. 
+For the normal PC file system [J]`java.nio.files` is used, of course.
+For flexibility the operation call is interfaced with the dynamic linked call.
+
+Most of the arguments are forwarded. The [J]`bWait` means, the caller should wait. 
+It is true if the [J]`progress` is not given. 
+Have a look to the called routine for the PC file system:
+
+.Java: Operation as example for FileAccessorLocalJava7.walkFileTree(...)  
+[source,Java]
+----
+include::../../../srcJava_vishiaBase/java/org/vishia/fileLocalAccessor/FileAccessorLocalJava7.java[tag=walkFileTree]
+----
+
+As you see here, if [J]`bWait==false` a new Thread is created and started which does the work. 
+That is a necessary feature if more elaborately work with the file system should be done in a graphic application.
+The graphic thread should not execute it, because elsewhere the graphic handling blocks for some seconds.
+This effect is unfortunately known by using some applications, 
+one faulty click and you should wait, cannot abort this operations by another click. 
+It is better that the longer work maybe with wait for access in network is done by another thread.
+
+But this is also complicated because of feedback and control. For that reason the [J]`progress` event instance is given. 
+This is more explained in the chapter <<#progress>>.
+
+What is done by walking? Look on the called routine:
+
+.Java: Operation as example for FileAccessorLocalJava7.walkFileTreeInThisThread(...)  
+[source,Java]
+----
+include::../../../srcJava_vishiaBase/java/org/vishia/fileLocalAccessor/FileAccessorLocalJava7.java[tag=walkFileTreeExecInThisThread]
+----
+
+Now finally the java.nio walker is called here. 
+But before the 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemoteProgressEvent.html[FileRemoteProgressEvent] 
+progress is activated.
+It should be cyclically inform its link:../../docuSrcJava_vishiaBase/org/vishia/event/EventConsumer.html[EventConsumer]
+as destination about the progress and at last about finishing. 
+The [J]`EventConsumer` referred from the [J]`progress` is prepared before, if necessary.
+It can be used for example to show a progress bar or the current copying file, interesting if it is a very long file.
+The progress event can be also used with its back event facility to control the actions what are doint in the walker.
+For example it is possible to abort copying a very long file by user handling, maybe hold the copy action, abort the whole walking or such. For working with events and the back event see link:Events.html[].
+
+
+
+
+For that reason firstly an more commonly interface [J]`FileRemoteWalkerCallback` is given, see next chapter. 
+
+
+
+
+
+
+This interface is used by the operation link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemoteWalkerCallback.html[org.vishia.fileRemote.FileRemote#walkFileTree[FileRemote#walkFileTree(deepness, callback)]. 
+But this is also a common approach. You can write what ever you want to use here.
+
+
+
+
+=== FileRemoteWalkerCallback and derived classes to work
+
+The interface
+link:../../docuSrcJava_vishiaBase/org/vishia/util/SortedTreeWalkerCallback.html[org.vishia.util.SortedTreeWalkerCallback]
+offers a walker interface with the adequate concept, but usable for all tree nodes, independent of the file system and NIO2.
+The concept is 'steeled' from [J]`java.nio.file.FileVisitor`, it is a good idea for a universal concept.
+
+The derived interface 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemoteWalkerCallback.html[org.vishia.fileRemote.FileRemoteWalkerCallback].
+does only contain the specification of the type [J]`FileRemote`, no more. 
+But from this interface implementations are given: 
+
+
+
+
+
+
+You can also walk to the [J]`FileRemote` directory tree, independent respectively uncoupled to the real file system.
+For example to count number of bytes or files. This is supported in 
+link:../../docuSrcJava_vishiaBase/org/vishia/fileRemote/FileRemote.html#walkFileTree-int-org.vishia.fileRemote.FileRemoteWalkerCallback-[org.vishia.fileRemote.FileRemote#walkFileTree(int depth, FileRemoteWalkerCallback callback)].
+
+[#progress]
+=== Progress handling and control on walking
+
+
+
+=== The specific walker in 
+
+Follow firstly what [J]`FileRemote`.
+
+
+== Some external links:
+
+link:https://blogs.oracle.com/javamagazine/post/path-files-input-output[]
+
+link:https://blogs.oracle.com/javamagazine/post/java-nio-nio2-buffers-channels-async-future-callback[]
+
+

@@ -33,15 +33,19 @@ export SRC_ALL="$SRCDIRNAME/java"            ## use all sources from here
 export SRC_ALL2=""                           ## use all sources also from here
 export SRCPATH="";                           ## search path for depending sources if FILE1SRC is given
 export FILE1SRC=""                           ## use a specific source file (with depending ones)
-export SRC_MAKE="$SRCDIRNAME/makeScripts"    ## add it to the source.zip 
-export MANIFEST="$SRCDIRNAME/makeScripts/$DSTNAME.manifest"
 
 # Determines search path for compiled sources (in jar) for this component. 
 # do not left empty because it is used as argument for javac
-export CLASSPATH="xx"
+set CLASSPATH=""
+
+## Determines the manifest file for the jar
+export MANIFEST="$SRCDIRNAME/makeScripts/$DSTNAME.manifest"
 
 # Determines resource files to store in the jar
 export RESOURCEFILES="$SRC_ALL:**/*.zbnf $SRC_ALL:**/*.txt $SRC_ALL:**/*.xml $SRC_ALL:**/*.png"
+
+## add paths to the source.zip, should be a relative path from current dir unset it if no source.zip is desired.
+export SRCADD_ZIP=".:$SRCDIRNAME/makeScripts/*"
 
 
 #now run the common script:
@@ -72,12 +76,15 @@ export SRC_ALL=""                            ## use all sources from here
 export SRC_ALL2=""                           ## use all sources also from here
 export FILE1SRC="@$SRCDIRNAME/makeScripts/minisys.files" #files to compile contained in this file
 export SRCPATH="$SRCDIRNAME/java";           ## search path for depending sources if FILE1SRC is given
-export SRC_MAKE="$SRCDIRNAME/makeScripts"    ## add it to the source.zip 
+
+## Determines the mainfist file for the jar
 export MANIFEST=$SRCDIRNAME/makeScripts/minisys.manifest
+
+unset SRCADD_ZIP   ## do not create as source.zip
 
 # Determines search path for compiled sources (in jar) for this component. 
 # do not left empty because it is used as argument for javac
-export CLASSPATH="xx"
+unset CLASSPATH
 
 # Determines resource files to store in the jar
 export RESOURCEFILES=""
