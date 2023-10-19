@@ -6,7 +6,7 @@ echo currdir $PWD
 
 ## Determines the name of some files marked with the date.
 ## If it not set, the current date will be used. This is usual proper, to prevent confusion.
-export VERSIONSTAMP=""
+export VERSIONSTAMP="$(date -I)"
 export VERSIONSTAMP_MINISYS=""
 
 ## Determines the timestamp of the files in the jar. The timestamp determines the MD5 check code. 
@@ -46,6 +46,8 @@ export RESOURCEFILES="$SRC_ALL:**/*.zbnf $SRC_ALL:**/*.txt $SRC_ALL:**/*.xml $SR
 
 ## add paths to the source.zip, should be a relative path from current dir unset it if no source.zip is desired.
 export SRCADD_ZIP=".:$SRCDIRNAME/makeScripts/* .:$SRCDIRNAME/asciidoc/**/*"
+
+export SRCZIPFILE="$DSTNAME-$VERSIONSTAMP-source.zip"  ## also used for Minisys, hence defined here. Note VERSIONSTAMP should be defined.
 
 
 #now run the common script:

@@ -16,6 +16,7 @@
 
 Dr. Hartmut Schorrig, Germany in Europa, link:https://vishia.org[www.vishia.org]
 
+[#loadLibsProblems]
 == Problem of loading necessary jar or librarie files from internet
 
 
@@ -68,7 +69,7 @@ are adequate the used binaries. This is the approach of
 link:reproducibleJar.html[]. The reproducible build is a very important approach, 
 but often neglected. See chapter link:#rebuild[Source integrity, regenerate jar-files]
 
-
+[#bom]
 == Solution: The Bill of material file to load components 
 
 
@@ -164,7 +165,8 @@ Only this file, approximately with 100 kByte, should be a part of the tools or s
 beside some textual files etc. of the tool or source files beside a example of specific solution. 
 All other executable, jar and libs can be downloaded one time from internet.
 
-=== Check correctness of tools (jar-files)
+[#checkToolsMd5]
+=== Check correctness of tools (jar-files) with stored MD5 check sum
 
 If you have downloaded the file there are stored in the given location, and the software run without internet connection. 
 A second call of the script in `src/load_tools` checks only the correctness of the MD5 check sum 
@@ -177,9 +179,10 @@ Think about long time support.
 
 
 
-
+[#source_zip]
 == Getting sources for the jar files and reproducible build
 
+[#reprodBuildApproach]
 === Reproducible build approach
 
 Now the essential question is: What does the tools? What is contained in the jars?
@@ -287,7 +290,7 @@ That is proper and regarded in the script.
 
      
      
-[#rebuild]     
+[#rebuild]
 === (Re-) generate jar-files from the sources
 
 It is possible to re-generate the jar file with the exact same content,
@@ -490,6 +493,7 @@ Instead using this scripts you can also create manually the build.
 
 If you do not have a `build` directory, the make scripts use an own location inside `TMP`.
 
+[#checkToolsBin]
 ==== Binary comparison of the result files
 
 The content of the jar and the MD5 check sum can be compared with older (pre- or given) versions.
@@ -519,6 +523,7 @@ with unchanged compiling result, a good feature for maintaining the sources.
 Changes in software may influence the binaries of `vishiaBase.jar` but left unchanged
 binaries of `vishiaMinisys.jar` if that used sources are unchanged.  
 
+[#makejar]
 == Details of generation scripts
 
 The generation scripts calls the `javac` compiler due to the installed JDK to get class files.
@@ -549,6 +554,7 @@ which can be located in another file tree.
 But the `src/srcJava_vishiaBase/makeScripts/+makejar-vishiaBase.sh`
 and also the necessary jar files as depending ones should be present there, see chapter <<#loadSrcCmpn>>
 
+[#currWorkingDir]
 === Current directory is the directory where src, tools, jars, build is present
 
 The first statements in a `makejar_Component.sh` checks and changes the current directory:
@@ -564,6 +570,7 @@ It works correct also if the directory on call is arbitrary because it uses the 
 
 The `build` and `tools` should be already present there, as described in chapter <<#tools>> and <<#build>>
 
+[#TIMEinJAR]
 === Quest of time stamp in the jar file
 
 
@@ -594,7 +601,7 @@ This is an interesting feature because then the version of each file is document
 But this feature presumes that all files have such a version string, (or use `1970-01-01+00:00` is not found),
 and it is an effort. It may be done in future. 
 
-
+[#FILE1SRC]
 === What to compile, destination name
 
 Some varibales determine the output file names and the files to compile.
@@ -641,7 +648,9 @@ export SRCPATH="$SRCDIRNAME/java";           ## search path for depending source
  
 Then the `SRCPATH` should be given where these files are located.
 
-=== MANIFEST, CLASSPATH and resource files
+
+[#CLASSPATH]
+=== CLASSPATH, MANIFEST and resource files
 
 The `CLASSPATH` variable describes the path where already compiled `*.class` files, usual in jar libraries are able to find.
 If there is no `CLASSPATH` necessary left it empty or `unset` it.
@@ -691,7 +700,7 @@ then `{ss}/*.ext` addresses the file with the given extension.
 This writing style is a feature of link:../../docuSrcJava_vishiaBase/org/vishia/util/FileFunctions.html#addFilesWithBasePath-java.io.File-java.lang.String-java.util.List-[org.vishia.util.FileFunctions.addFilesWithBasePath(...)]
 used for the zip algorithm, it is amazing proper. 
 
-
+[#SRCADD_ZIP]
 === Build the ...source.zip
 
 If a `SRCADD_ZIP` variable is existing (exported), only then a `...source.zip` is created.

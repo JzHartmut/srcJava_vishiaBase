@@ -43,5 +43,5 @@ public class Debugutil
     }
     else return false;
   }
-  
+    /**maybe called for unused references while development. *///NEW:  public static void unused(Object obj){   stop();  }
 }

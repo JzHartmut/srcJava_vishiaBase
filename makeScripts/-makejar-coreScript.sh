@@ -37,8 +37,8 @@ export TMPJAVAC="$BUILD_TMP/javac_$DSTNAME"
 ## The VERSIONSTAMP can come form calling script, elsewhere it is set with the current date.
 ## This determines the names of the results, but not the content and not the MD5 check sum.
 ## See $TIMEinJAR_VISHIABASE in next block.
-if test "$VERSIONSTAMP" = ""; then export VERSIONSTAMP=$(date -I); fi   ## writes current date
-if test "$TIMEinJAR" = ""; then export TIMEinJAR=$VERSIONSTAMP+00:00;  fi
+if test "$VERSIONSTAMP" = ""; then export VERSIONSTAMP="$(date -I)"; fi   ## writes current date
+if test "$TIMEinJAR" = ""; then export TIMEinJAR="$VERSIONSTAMP+00:00";  fi
 
 #determine out file names from VERSIONSTAMP
 if test "$JARFILE" = ""; then export JARFILE="$BUILD_TMP/deploy/$DSTNAME-$VERSIONSTAMP.jar"; fi

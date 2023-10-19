@@ -11,7 +11,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 /**This class is a container for some static routines and sub classes to deal with file content.
  * @author hartmut Schorrig, License LPGL
- *
+ * * @since 2019-09-04 {@link #getLinesFile(File, int, String, int, boolean, boolean, String, boolean, boolean)} * @since 2018 created
  */
 public class FileFunction
 {
@@ -94,8 +94,8 @@ public class FileFunction
    *        In this case the return text does not contain the indentation. Indentation should be written only with spaces or only with tabs. 
    * @param terminateString if not null then till a found String inclusively this string, usual a ";" or "}"
    * @param onStartIndent true then the terminateString is expected only on the same indent as the start.
-   * @param  
-   * @return The lines or instead a proper error message
+   * @param removeIndent true then output lines are shorten to the indent where the start line is found. 
+   * @return The lines or instead a proper error message   * @since 2019-04-14 used for JZtxtcmd
    */
   public static CharSequence getLinesFile(File file, int startLine, String startString
   , int nrofLines, boolean tillEmptyLine, boolean tillLesserIndent
