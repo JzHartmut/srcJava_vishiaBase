@@ -1522,7 +1522,11 @@ public class CalculatorExpr
      * @deprecated it should be possible to use {@link Operand#Operand(StringPartScan, Map, Class)} in all cases.
      * @since 2023-05 with givenData and as call of {@link Operand#Operand(Object, StringPartScan, Map, Class, boolean)}
      */
-    public Operand(String sDatapath, Map<String, DataAccess.IntegerIx> variables, Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
+    public Operand(String sDatapath
+        , Map<String, DataAccess.IntegerIx> variables, Class<?> reflData
+        , Map<String, Object> idxConstData
+    ) throws Exception 
+    {
       Object constData = idxConstData ==null ? null : idxConstData.get(sDatapath);
       if(constData !=null) {
         this.ixValue = -1;
@@ -1594,7 +1598,9 @@ public class CalculatorExpr
      * @throws ParseException
      */
     public Operand(StringPartScan sDatapath, Map<String, DataAccess.IntegerIx> variables
-    , Class<?> reflData, Map<String, Object> idxConstData, boolean bSpecialSyntax) throws ParseException {
+        , Class<?> reflData, Map<String, Object> idxConstData, boolean bSpecialSyntax) 
+            throws ParseException 
+    {
       Object constData = idxConstData ==null ? null : idxConstData.get(sDatapath.getCurrent().toString());
       if(constData !=null) {
         this.ixValue = -1;

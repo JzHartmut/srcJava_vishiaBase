@@ -224,6 +224,7 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-10-22 Using of {@link #idxScript}, new {@link #readTemplateCreatePreparer(InputStream, Class, Map)}. 
    * <li>2023-08 up to now history to the operations 
    * <li>2023-06-18: frame of operation now <:otx:args>...<.otx>. The <.end> is no more supported, change it to <.otx>
    *   Usage of "=== name ( args) " is deprecated but yet still possible. 
@@ -271,7 +272,7 @@ public class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2023-06-18";
+  public static final String version = "2023-10-22";
   
   
   /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
@@ -399,6 +400,12 @@ public class OutTextPreparer
     }
     
     
+    public Cmd(ECmd what, Object value)
+    { super( value);
+      this.cmd = what;
+    }
+    
+    
     /**A universal constructor for all which is not an Expression. 
      * @param what should be defined
      * @param ixValue -1 or index to arguments
@@ -411,17 +418,17 @@ public class OutTextPreparer
       this.cmd = what;
     }
     
-    public Cmd(OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData) throws Exception { 
+    public Cmd ( OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData) throws Exception { 
       super( checkVariable(outer, textOrDatapath), outer.nameVariables, reflData, true);
       this.cmd = what;
     }
     
-    public Cmd(OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
+    public Cmd ( OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
       super( textOrDatapath, outer.nameVariables, reflData, idxConstData);
       this.cmd = what;
     }
     
-    public Cmd(OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
+    public Cmd ( OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
       super( textOrDatapath, outer.nameVariables, reflData, idxConstData, true);
       this.cmd = what;
     }
@@ -510,13 +517,17 @@ public class OutTextPreparer
     /**The data to get actual arguments for this call. */
     public List<Argument> args;
     
-    public CallCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception 
-    { super(outer, ECmd.call, spDatapath, reflData, outer.idxConstData); 
+    public CallCmd(OutTextPreparer otxSub) {
+      super(ECmd.call, otxSub);
     }
- 
-    public CallCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception { 
-      super(outer, ECmd.call, sDatapath, reflData, outer.idxConstData); 
-    }                                              // search the call object also in callScripts
+    
+//    public CallCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception 
+//    { super(outer, ECmd.call, spDatapath, reflData, outer.idxConstData); 
+//    }
+// 
+//    public CallCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception { 
+//      super(outer, ECmd.call, sDatapath, reflData, outer.idxConstData); 
+//    }                                              // search the call object also in callScripts
   }
   
   
@@ -605,6 +616,17 @@ public class OutTextPreparer
    */
   protected final Map<String, Object> idxConstData;
   
+  /**Container with {@link OutTextPreparer} instances which can be called as sub pattern. 
+   * Usual they are the patterns read from one textual file with several scripts (or a few files).
+   * One patter starts with &lt;:otx:NAME:ARGS&gt; and ends with &lt;.otx&gt; in a given text.
+   * Note that also #idxConstData can contain some {@link OutTextPreparer} scripts to call, usual given immediately as Java instances.
+   * @since 2023-10-22. Before the scripts are only contain in {@link #idxConstData}. 
+   *   There were a contradiction between meaning of the idxConstData and the Map of scripts.
+   *   In the past first call-able scripts were created in Java code, and stored in the #idxConstData.
+   *   Later more using textual scripts have stored there script parts firstly also in #idxConstData.  
+   */
+  protected final Map<String, OutTextPreparer> idxScript;
+  
   /**The source of the generation script, argument of {@link #parse(Class, String)} only for debug. */
   public final String pattern;
   
@@ -636,6 +658,7 @@ public class OutTextPreparer
     this.pattern = pattern;
     this.execClass = execClass;
     this.parse(execClass, pattern);
+    this.idxScript = null;
     this.idxConstData = null;
   }
   
@@ -654,9 +677,35 @@ public class OutTextPreparer
 
   
   
+  /**Creates the text generation control data for the specific pattern and given sub pattern.
+   * This is the preferred ctor if the scripts are read from a textual file,
+   * see also {@link #readTemplateCreatePreparer(InputStream, Class, Map)}
+   * @param ident Name of the sub pattern, used for error outputs.
+   * @param execClass If the access via reflection should be done, null possible
+   * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
+   * @param pattern The pattern in string given form. 
+   *   This pattern will be parsed and divided in parts for a fast text generation.
+   * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
+   * @throws never because the instantiation is possible especially for static variables.
+   *   On faulty pattern the prepared cmd for output contains the error message. 
+   */
+  public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern
+      , Map<String, Object> idxConstData, Map<String, OutTextPreparer> idxScript) {
+    this.sIdent = ident.trim();
+    this.pattern = pattern;
+    this.execClass = execClass;
+    this.idxScript = idxScript;
+    this.idxConstData = idxConstData;
+    this.parseVariables(variables);
+    this.parse(execClass, pattern);
+  }
+  
+  
+  
   /**Constructs the text generation control data for the specific pattern and given sub pattern.
-   * This is the preferred ctor for all capabilities.
-   * see also {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
+   * This is the preferred ctor if the scripts are all given in Java code
+   * and call-able scripts are contained in #idxConstData.
+   * <br><br>
    * A constructor is called as: (example):<pre>
    * static OutTextPreparer otxMyText = new OutTextPreparer (
    *   "otxMyText"                   // The name of the OutText usable for call
@@ -681,10 +730,13 @@ public class OutTextPreparer
     this.sIdent = ident.trim();
     this.pattern = pattern;
     this.execClass = execClass;
+    this.idxScript = null;
     this.idxConstData = idxConstData;
     this.parseVariables(variables);
     this.parse(execClass, pattern);
   }
+
+  
   
   /**Instantiates for a given pattern. See {@link #OutTextPreparer(String, Class, String, String)}
    * @param variables Identifier given as list, parsing is not necessary. 
@@ -697,6 +749,7 @@ public class OutTextPreparer
     this.execClass = execClass;
     this.setVariables(variables);
     this.parse(execClass, pattern);
+    this.idxScript = null;
     this.idxConstData = null;
   }
   
@@ -803,7 +856,7 @@ public class OutTextPreparer
         buf.append(line).append('\n');  // first line with args starting with "("
         bActiveScript = true;
       }
-      else if(!bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
+      else if(lineStart !=null && !bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
         buf.append(line.substring(lineStart.length())).append('\n');  // first line with args starting with "("
         bActiveScript = true;
       }
@@ -906,7 +959,7 @@ public class OutTextPreparer
       String name = text.substring(posName, posArgs).trim();
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
-      OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData);
+      OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData, idxScript);
       if(idxScript !=null) { idxScript.put(name, otxScript); }
       else { idxConstData.put(name, otxScript); }
     }
@@ -931,13 +984,39 @@ public class OutTextPreparer
    *   Here now it is simpler, the operation returns the new Map filled with the content of the read script. 
    */
   public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( InputStream inp, Class<?> execClass) 
-    throws IOException, ParseException {
+      throws IOException, ParseException {
+      //
+      Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
+      readTemplateCreatePreparerPriv(inp, null, execClass, null, idxScript);
+      return idxScript;
+    }
+
+  
+  
+  /**This is the recommended operation to read the template for some OutTextPreparer from a String given pattern..
+   * @param inp An opened input stream, which can be for example also part of a zip file content
+   *   or gotten via {@link Class#getResourceAsStream(String)} from a jar file, 
+   *   or also of course via {@link java.io.FileReader#FileReader(java.io.File)}
+   *   or via {@link InputStreamReader#InputStreamReader(InputStream, String)} to read a file with specific encoding.
+   * @param idxConstData
+   * @param execClass a given class which's content is accessed as persistent data.
+   * @return Map which contains all script operations.
+   *   access to the desired script via get(name).
+   * @return index of all OutTextPreparer instance, any can be used. For example the "main" script to start.
+   * @throws IOException
+   * @throws ParseException
+   * @since 2023-10-22 Used for LibreOffice / FBcl
+   */
+  public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( InputStream inp, Class<?> execClass, Map<String, Object> idxConstData) 
+      throws IOException, ParseException {
     //
     Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
-    readTemplateCreatePreparerPriv(inp, null, execClass, null, idxScript);
+    readTemplateCreatePreparerPriv(inp, null, execClass, idxConstData, idxScript);
     return idxScript;
   }
   
+  
+    
   /**Standard operation to write an output text from given data with a given template.
    * @param fout The file to write
    * @param data Data for the output with the script, only one is possible.
@@ -1012,7 +1091,7 @@ public class OutTextPreparer
     int pos1 = 0; //end before the next special command
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
     int ixixCmd = -1;
-    StringPartScan sp = new StringPartScan(pattern);
+    StringPartScan sp = new StringPartScan(pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
     sp.setIgnoreWhitespaces(true);  // it is valid inside the syntactical relevant parts <...>
     int nLastWasSkipOverWhitespace = 0;
     while(sp.length() >0) {
@@ -1250,6 +1329,8 @@ public class OutTextPreparer
   }
 
   
+
+  
   private void parseArgs(StringPartScan sp) {
     do {
       if(sp.scanIdentifier().scanOk()) {
@@ -1447,7 +1528,17 @@ public class OutTextPreparer
       try {
         switch(ecmd) {
           case ifCtrl: case elsifCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
-          case call: cmd = new CallCmd(this, sDatapath, data); break;
+          case call: 
+            Object oOtxSub = null;
+            String sNameSub = sDatapath;
+            if(this.idxScript !=null) { oOtxSub = this.idxScript.get(sNameSub); }
+            if(oOtxSub == null && this.idxConstData !=null) { oOtxSub = this.idxConstData.get(sNameSub); }
+            if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
+              throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": subroutine: " + sNameSub + " not found ");
+            }
+            cmd = new CallCmd((OutTextPreparer)oOtxSub); //this, sDatapath, data); 
+            //cmd = new CallCmd(this, sDatapath, data); 
+            break;
           case exec: cmd = new ExecCmd(this, sDatapath, data); break;
           case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
           case setVar: cmd = new SetCmd(this, sDatapath, data); break;
@@ -1466,6 +1557,8 @@ public class OutTextPreparer
   }
 
 
+
+
   /**Explore the sDatapath and adds the proper Cmd
    * @param src The pattern to get text contents
    * @param from start position for text content
@@ -1476,14 +1569,23 @@ public class OutTextPreparer
    */
   private Cmd addCmdSp(String src, int from, int to, ECmd ecmd, StringPartScan sDatapath, Class<?> data) {
     if(to > from) {
-      cmds.add(new CmdString(src.substring(from, to)));
+      this.cmds.add(new CmdString(src.substring(from, to)));
     }
     final Cmd cmd;
     if(ecmd !=ECmd.nothing) {
       try {
         switch(ecmd) {
           case ifCtrl: case elsifCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
-          case call: cmd = new CallCmd(this, sDatapath, data); break;
+          case call: 
+            Object oOtxSub = null;
+            String sNameSub = sDatapath.getCurrent().toString();
+            if(this.idxScript !=null) { oOtxSub = this.idxScript.get(sNameSub); }
+            if(oOtxSub == null && this.idxConstData !=null) { oOtxSub = this.idxConstData.get(sNameSub); }
+            if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
+              throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": subroutine: " + sNameSub + " not found ");
+            }
+            cmd = new CallCmd((OutTextPreparer)oOtxSub); //this, sDatapath, data); 
+            break;
           case exec: cmd = new ExecCmd(this, sDatapath, data); break;
           case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
           case setVar: cmd = new SetCmd(this, sDatapath, data); break;
