@@ -1494,7 +1494,7 @@ public class FileFunctions {
    *   myWriter = new FileWriter(...);  //opens
    *   ...
    *   myWriter.write(...)
-   *   myWriter.close();     //closes
+   *   myWriter.close();     //closes it does never reach close if write throws.
    * }
    * </pre>  
    * @param file any Closeable instance. If it is null, it is okay. Then no action is done.

@@ -1519,7 +1519,6 @@ public class CalculatorExpr
      * @param reflData type wich can contain a static member with the required name in sDatapath if the name is not found in variables 
      * @param idxConstData If this is not null, then it is first used to find {@link #dataConst} with sDatapath as key.
      * @throws Exception 
-     * @deprecated it should be possible to use {@link Operand#Operand(StringPartScan, Map, Class)} in all cases.
      * @since 2023-05 with givenData and as call of {@link Operand#Operand(Object, StringPartScan, Map, Class, boolean)}
      */
     public Operand(String sDatapath
@@ -2529,9 +2528,12 @@ public class CalculatorExpr
   
   
   /**Constructs an String given expression with some variables.
-   * @param sExpr
-   * @param nameVariables
-   * @deprecated it should be possible to use {@link #CalculatorExpr(StringPartScan, Map, Class)} in all cases.
+   * @param sExpr String given expression such as "X*(Y-1)+Z"
+   *   Note some times in a greater context the expression as a whole was parsed with {@link StringPartScan}.
+   *   But the fine parsing is done here with the resulting String.
+   *   To parse an extra StringPartScan is built internally.
+   * @param nameVariables given variables, select some by name in sExpr
+   * @param reflData data to access via reflection in the sExpr
    */
   public CalculatorExpr(String sExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData) {
     this();
@@ -2659,9 +2661,11 @@ public class CalculatorExpr
    * The parsing of sExpr starts with an adding expression.
    * Its operators are read as multExpression.
    * @param sExpr String given expression such as "X*(Y-1)+Z"
+   *   Note some times in a greater context the expression as a whole was parsed with {@link StringPartScan}.
+   *   But the fine parsing is done here with the resulting String.
+   *   To parse an extra StringPartScan is built internally.
    * @param sIdentifier List of identifiers for variables.
    * @return null if ok or an error description.
-   * @deprecated it should be possible to use {@link #setExpr(StringPartScan, Map, Class)} in all cases.
    */
   public String setExpr(String sExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData)
   { StringPartScan spExpr = new StringPartScan(sExpr);

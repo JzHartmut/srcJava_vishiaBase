@@ -1443,8 +1443,8 @@ public class OutTextPreparer
               arg = new Argument(sNameArg, ixCalledArg, sText, null, sText);
             }
             else if(sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
-              String sDataPath = sp.getLastScannedString().trim();
-              arg = new Argument(this, sNameArg, ixCalledArg, sDataPath, reflData);
+              String sDataPath = sp.getLastScannedString().trim();    //this may be a more complex expression.
+              arg = new Argument(this, sNameArg, ixCalledArg, sDataPath, reflData);   //maybe an expression to calculate the value or a simple access
             }
             else { 
               throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
