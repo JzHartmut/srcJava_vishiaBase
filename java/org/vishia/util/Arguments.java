@@ -113,6 +113,9 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2023-12-08 Hartmut new: now supports "--@:", then the next argument string is one line per argument. 
+   *   This is not for command line arguments, it is for java String given arguments 
+   *   for example while call with a JZtxtCmd script.  
    * <li>2023-08-09 Hartmut new: supports --help and --version
    * <li>2023-08-09 Hartmut new: An exception in evaluation of the argument creates a proper message, which is output or thrown.
    *   {@link #parseArgs(String[], Appendable)} is now exception free, more simple in handling.
@@ -278,7 +281,7 @@ public abstract class Arguments {
   
   String sLogLevel;
   
-  Appendable outMsg;
+  Appendable outMsg, errMsg;
   
   protected final void addArg(Argument arg) {
     if(this.argList == null) { this.argList = new LinkedList<Argument>(); }
@@ -531,33 +534,53 @@ public abstract class Arguments {
    */
   public final boolean parseArgs(String[] args, Appendable errMsg) {
     boolean bOk = true;
-    int nArg = -1;
-    String arg = null;
-    BufferedReader farg = null;
-    File argFile = null;
-    String sDirArgFile = null;
+    this.errMsg = errMsg;
     this.outMsg = errMsg !=null ? errMsg: System.out;
     try {
       if(args.length ==0 && this.helpInfo !=null && this.helpInfo.startsWith("!")) {
         showHelp(this.outMsg);
       }
-      for(String arg1: args) {
-        arg = arg1;
-        if(arg.startsWith("--@")) { //======================= Read args from a file
-          int posLabel = arg.indexOf(':', 6);    //search --@D:x:label after 6. position because on 4th position may be a drive separation
-          final String sFile, sLabel;
-          if(posLabel >0) {
-            sFile = arg.substring(3, posLabel);
-            sLabel = arg.substring(posLabel+1);            // A label after file path is given, in form: --@D:/path/to/file.ext:Label
-          } else {
-            sFile = arg.substring(3);
-            sLabel = null;
-          }
+      bOk = parseArgs(args, 0);
+    } 
+    catch(Exception exc) {  // it is only on file error and maybe not expectable for errMsg.append(...)
+      throw new RuntimeException(exc);  // not possible to handle, it is IOException on errMsg.append(...) and farg.close()
+    }
+    return bOk;
+  }
+  
+  
+  private final boolean parseArgs(String[] args, int recursive) throws IOException {
+    boolean bOk = true;
+    int nArg = -1;
+    boolean bPerLine = false;
+    for(String arg: args) {
+      if(bPerLine) {
+        String[] argLines = arg.split("\n");
+        parseArgs(argLines, recursive +1);  // <<<<<<<<<<<<<<<<<< call recursively with this lines.
+        bPerLine = false;
+      }
+      else if(arg.equals("--@:")) { //====================== Read args from the next arg String as line per line
+        bPerLine = true;
+      }
+      else if(arg.startsWith("--@")) { //======================= Read args from a file
+        int posLabel = arg.indexOf(':', 6);    //search --@D:x:label after 6. position because on 4th position may be a drive separation
+        final String sFile, sLabel;
+        if(posLabel >0) {
+          sFile = arg.substring(3, posLabel);
+          sLabel = arg.substring(posLabel+1);            // A label after file path is given, in form: --@D:/path/to/file.ext:Label
+        } else {
+          sFile = arg.substring(3);
+          sLabel = null;
+        }
+        BufferedReader farg = null;
+        File argFile = null;
+        String sDirArgFile = null;
+        try {
           argFile = FileFunctions.newFile(sFile);          // File in the maybe changed current directory, not only in the originally OS PWD
           try { farg = new BufferedReader(new FileReader(argFile)); }
           catch(IOException exc) {
-            if(errMsg !=null) {
-              errMsg.append("  ERROR not found: --@" + argFile.getAbsolutePath()); 
+            if(this.errMsg !=null) {
+              this.errMsg.append("  ERROR not found: --@" + argFile.getAbsolutePath()); 
             } else {
               throw new IOException(exc);
             }
@@ -624,27 +647,27 @@ public abstract class Arguments {
             farg = null;
             argFile = null;
           }
-        } 
-        else {                                             // other argument than --@ in command line
-          if(!tryTestArgument(arg, ++nArg, errMsg, null)) {
-            bOk = false;
-          }
         }
+        catch(IOException exc) {  // it is only on file error and maybe not expectable for errMsg.append(...)
+            try {
+              if(farg !=null) { farg.close(); }
+              String sMsg = arg + "  ERROR: " + ( argFile !=null ? " File=" + argFile.getAbsolutePath() : "" )
+                              + exc.getMessage();
+              if(errMsg !=null) {
+                errMsg.append(sMsg).append('\n');
+                bOk = false;
+              } else {
+                throw new IllegalArgumentException(sMsg);  //it is faulty
+              }
+            } catch(IOException exc2) {
+              throw new RuntimeException(exc2);  // not possible to handle, it is IOException on errMsg.append(...) and farg.close()
+            }
+          } 
       }
-    } 
-    catch(IOException exc) {  // it is only on file error and maybe not expectable for errMsg.append(...)
-      try {
-        if(farg !=null) { farg.close(); }
-        String sMsg = arg + "  ERROR: " + ( argFile !=null ? " File=" + argFile.getAbsolutePath() : "" )
-                        + exc.getMessage();
-        if(errMsg !=null) {
-          errMsg.append(sMsg).append('\n');
+      else {                                             // other argument than --@ in command line
+        if(!tryTestArgument(arg, ++nArg, errMsg, null)) {
           bOk = false;
-        } else {
-          throw new IllegalArgumentException(sMsg);  //it is faulty
         }
-      } catch(IOException exc2) {
-        throw new RuntimeException(exc2);  // not possible to handle, it is IOException on errMsg.append(...) and farg.close()
       }
     }
     return bOk;

@@ -1029,7 +1029,7 @@ public class JZtxtcmdScript extends CompiledScript
 
     public JZcmditem new_File(){ return new JZcmditem(null, 'A'); } 
     
-    public void set_File(JZcmditem val){ 
+    public void set_File(JZcmditem val) {            // syntax: File:"path" 
       JZcmdDatapathElementClass elem = new JZcmdDatapathElementClass();
       elem.set_Class(java.io.File.class);
       elem.set_whatisit("+");  //new File, add current dir

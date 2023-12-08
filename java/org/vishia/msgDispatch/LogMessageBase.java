@@ -25,25 +25,28 @@ public abstract class LogMessageBase implements LogMessage {
    */
   @Override public void writeError(CharSequence text) {
     try {
-      append("Error: ").append(text).append('\n');
+      append(text).append('\n');
     } catch(IOException exc) {
-      System.err.println("Error: " + text);
+      System.err.println(text);
     }
   }
 
+  /**Writes an information line to this or alternatively to System.out
+   * @since 2023-12-08 does not write "Info: " because it is on line end. 
+   */
   @Override public void writeInfoln ( CharSequence sInfo ) {
     try {
-      append("Info: ").append(sInfo).append('\n');
+      append(sInfo).append('\n');
     } catch(IOException exc) {
-      System.out.println("Info: " + sInfo);
+      System.out.println(sInfo);
     }
   }
 
   @Override public void writeInfo ( CharSequence sInfo ) {
     try {
-      append("Info: ").append(sInfo);
+      append(sInfo);
     } catch(IOException exc) {
-      System.out.append("Info: ").append(sInfo);
+      System.out.append(sInfo);
     }
   }
 

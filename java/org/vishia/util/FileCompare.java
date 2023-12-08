@@ -26,6 +26,8 @@ public class FileCompare
   
   /**Version and history
    * <ul>
+   * <li>2019-12-04 Hartmut new {@link #compareFileContent(File, File, String, String, String, int[])}
+   * as static public extra operation able to call forExmpl from a JzTxtCmd script to compare files.
    * <li>2019-12-04 Hartmut main now able to use with some more arguments.
    * <li>2013-06-27 Hartmut bugfix: close() after new BufferedReader()
    * <li>2012-02-04 Hartmut new: {@link Result#parent}, {@link Result#setToEqual()}
@@ -305,19 +307,49 @@ public class FileCompare
    */
   boolean compareFileContent(Result result)
   {
+    int res = compareFileContent(result.file1, result.file2, null, null, null, null);
+    result.equal = (res ==1);
+    result.readProblems = (res == -1);
+    
+    return result.equal;
+  }  
+  
+  
+  
+  /**Compare two files.
+   * @param file1
+   * @param file2
+   * @param endlineComment null or given, then comments and white spaces before are ignored by comparison
+   * @param commentStart null or given, then parts with this comments are ignored. Nested comments not allowed.
+   * @param commentEnd null or should be given with commentStart
+   * @param lineDiff null or int[1], if given, the line number of the first difference is written into.
+   * @return 1 equal, 0 not equal, -1 read problems (Exception)
+   * @since 2023-12-08 to use from outside
+   * @since 2023-12-08 endlineComment, commentStart, commentEnd does not work yet, TODO
+   */
+  @SuppressWarnings("resource") // it is closed by FileFunctions.close anyway 
+  public static int compareFileContent(File file1, File file2, String endlineComment, String commentStart, String commentEnd, int[] lineDiff)
+  {
+    int result = 1;  //equal
     boolean bEqu = true;
     BufferedReader r1 =null, r2 = null;
     try {
-      r1 = new BufferedReader(new FileReader(result.file1));
-      r2 = new BufferedReader(new FileReader(result.file2));
+      r1 = new BufferedReader(new FileReader(file1));
+      r2 = new BufferedReader(new FileReader(file2));
       String s1, s2;
+      int line = 0;
       while( bEqu && (s1 = r1.readLine()) !=null){
+        line +=1;
         s2 = r2.readLine();
-        if(s1.startsWith("xz1 :"))
-          Debugutil.stop();
+//        if(s1.startsWith("xz1 :"))
+//          Debugutil.stop();
         if(s2 ==null || !s1.equals(s2)){
           //check trimmed etc.
+          if(lineDiff !=null) {
+            lineDiff[0] = line;
+          }
           bEqu = false;
+          result = 0;
         }
       }
       bEqu = r2.readLine() == null; //THe second file should be ended too!
@@ -325,13 +357,14 @@ public class FileCompare
       r2.close();
       r1 = r2 = null;
     } catch( IOException exc){
-      result.readProblems = true; bEqu = false;
+      result = -1; bEqu = false;
     }
-    FileSystem.close(r1);
-    FileSystem.close(r2);
-    result.equal = bEqu;
-    return bEqu;
+    FileFunctions.close(r1);
+    FileFunctions.close(r2);
+    return result;
   }  
+
+  
   
   
   void reportResult(PrintStream out, List<Result> list, String supress)

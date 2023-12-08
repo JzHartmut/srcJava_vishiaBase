@@ -296,7 +296,7 @@ protected Runnable exit;
 
 /**This array contains all transitions to handle it commonly. 
  * The transitions are given as instances in the derived classes from {@link StateSimple} in a Java written state machine. 
- * The transitions may be given with {@link #addTransition(Trans)} instead in a State machine which is parsed and translated
+ * The transitions may be given with {@link #XXXaddTransition(Trans)} instead in a State machine which is parsed and translated
  * for another language.
  * 
  */
@@ -822,7 +822,7 @@ public StateSimple enclState(){ return enclState; }
   /**Sets the entry-action for this state. The entry-action can be implemented in any other class of the application as inner non static class
    * and can be accessed to the data to its environment class. That is the advantage in comparison to a overridden method {@link #entry(EventObject)}.
    * This action is used only if the method {@link #entry(EventObject)} is not overridden.
-   * @param action
+   * @param transition
    */
   public void setEntryAction(StateAction entry){ this.entry = entry; }
 
@@ -830,7 +830,7 @@ public StateSimple enclState(){ return enclState; }
   /**Sets the exit-action for this state. The exit-action can be implemented in any other class of the application as inner non static class
    * and can be accessed to the data to its environment class. That is the advantage in comparison to a overridden method {@link #exit()}.
    * This action is used only if the method {@link #exit()} is not overridden.
-   * @param action
+   * @param transition
    */
   public void setExitAction(Runnable exit){ this.exit = exit; }
 

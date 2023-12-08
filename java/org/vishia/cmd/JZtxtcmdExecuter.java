@@ -85,6 +85,11 @@ public class JZtxtcmdExecuter {
   
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-08 new {@link JzTcMain#new_int(int)} and {@link JzTcMain#new_String(int)} to get an int[] via script forexmpl: <code>Obj intArray = jztc.new_int(12);</code>
+   * <li>2023-12-08 {@link ExecuteLevel#evalObject(org.vishia.cmd.JZtxtcmdScript.JZcmditem, boolean)} whith conversion '~'
+   *   calls now {@link FileFunctions#absolutePath(String, File)} which also replaces /tmp/, ~/, $Env/ with the correct file path parts.
+   *   With them File:"/tmp/myPath" can be written to address the temporary directory also in windows via environment variable TMP.
+   *   It is a meaningful change for usage. 
    * <li>2023-08-14 new {@link #getScript()}, 
    *   {@link #newExecuteLevel(JZtxtcmdThreadData)}, {@link ExecuteLevel#exec_Subroutine(Subroutine, List, StringFormatter, int)}
    *   Used for {@link org.vishia.gral.cfg.GuiCfg} in srcJava_vishiaGui component. 
@@ -505,6 +510,20 @@ public class JZtxtcmdExecuter {
       //return new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
     }
 
+    /**Creates a int array with the given size, can be used in scripts.
+     * @param size
+     * @return
+     */
+    public static int[] new_int(int size) { return new int[size]; }
+    
+    /**Creates a String array with the given size, can be used in scripts.
+     * @param size
+     * @return
+     */
+    public static String[] new_String(int size) { return new String[size]; }
+    
+    
+    
   } //class JzTcMain
   
   
@@ -3689,9 +3708,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
       if(obj !=null && ret != kException && arg.conversion !=0){
         switch(arg.conversion){
           case '~': {
-            if(!FileFunctions.isAbsolutePath(obj.toString())) {
-              obj = currdir() + "/" + obj;
-            }
+            obj = FileFunctions.absolutePath(obj.toString(), currdir);  // replaces also /tmp/, ~/, $env/
           } break;
           case 'E': { //TODO not used:
             String value = obj.toString();

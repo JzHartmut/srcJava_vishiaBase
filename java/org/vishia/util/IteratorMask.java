@@ -3,6 +3,13 @@ package org.vishia.util;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**This class helps to iterate ove a given Iterable can be an array, list etc
+ * but with a given mask. All non mask elements are not returned.
+ * The mask has 64 bits. It means the size is delimited to 64.
+ * @author Hartmut Schorrig
+ *
+ * @param <T>
+ */
 public class IteratorMask <T> implements Iterator<T>, Iterable<T> {
 
   int ix = -1;
@@ -21,6 +28,11 @@ public class IteratorMask <T> implements Iterator<T>, Iterable<T> {
    */
   public IteratorMask(Iterator<T> iteratorSrc, long mask) {
     this.iterSrc = iteratorSrc;
+    this.mask = mask;
+  }
+
+  public IteratorMask(Iterable<T> iterSrc, long mask) {
+    this.iterSrc = iterSrc.iterator();
     this.mask = mask;
   }
 
@@ -53,4 +65,23 @@ public class IteratorMask <T> implements Iterator<T>, Iterable<T> {
   public Iterator<T> iterator() {
     return this;
   }
+  
+  /**Gets the next ix of a set bit in the mask starting from given
+   * For example if the mask is 0x21 then the first call getNextAssocIx(-1) returns 0,
+   * the next call getNextAssocIx(0) returns 5, and the last call getNextAssocIx(5) returns then -1.
+   * @param ix given ix, should start with -1 to detect 0 as first one
+   * @return 0..63 for given, or -1 if nothing more found. 
+   */
+  public static int getNextAssocIx (int ix, long mask) {
+    int ix1 = ix+1;
+    if( (mask & (-1L << ix1))==0) {
+      return -1;
+    } else {
+      while( ix1 < 64 && (mask & (1L<< ix1)) == 0 ) {
+        ix1 +=1;                 // return 64 only if any is faulty
+      }
+      return ix1;
+    }
+  }
+
 }

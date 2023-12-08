@@ -1,9 +1,9 @@
 package org.vishia.msgDispatch;
 /**@changes:
 ===2008-02-03 HScho===
-*new: method isOnline
+ *new: method isOnline
 
-*/
+ */
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -112,7 +112,7 @@ public interface LogMessage extends Appendable
   //@SuppressWarnings("hiding")
   static final public String sVersion = "2023-02-10";
 
-  
+
   /*---------------------------------------------------------------------------------------------------------*/
   /** report level to indicate the report should be written anytime and anyway. Useable especially for errors*/
   static final int error   =1;
@@ -134,14 +134,14 @@ public interface LogMessage extends Appendable
 
   /** Mask for the in fact reportlevel, other bits may have another meaning.*/
   static final int mReportLevel = 0x7;
-  
+
   /** Mask bit to indicate, do not write to display. This bit is used internally in MainCmd.
    * It is outside the mReportLevel-mask.
    * */
   static final int mNeverOutputToDisplay = 0x8;
-  
 
-  
+
+
   /**Sends a message. The timestamp of the message is build with the system time. 
    * All other parameter are identically see {@link #sendMsg(int, OS_TimeStamp, String, Object...)}.
    * @param identNumber of the message. If it is negative, it is the same message as positive number,
@@ -166,9 +166,9 @@ public interface LogMessage extends Appendable
    * @return true if the message will be dispatched, false if it is suppressed
    */
   public boolean sendMsgTime(int identNumber, OS_TimeStamp creationTime, CharSequence text, Object... args);
-  
 
-  
+
+
   /**Sends a message. The functionality and the calling parameters are identically 
    * with {@link #sendMsg(int, OS_TimeStamp, String, Object...)}, but the parameter args is varied:  
    * @param identNumber
@@ -200,7 +200,7 @@ public interface LogMessage extends Appendable
    */
   public abstract boolean sendMsgVaList(int identNumber, OS_TimeStamp creationTime, CharSequence text, Va_list args);
 
-  
+
   /** Writes an info line.
   This method should be used instead a directly write via System.out.println(...).
   The using of System.out writes the output directly on console window of the command line, but in general,
@@ -210,15 +210,15 @@ public interface LogMessage extends Appendable
   The implementation of this method writes the output in the conformed way to the application frame. <br/>
   Before output, the previous line is terminated by a newline, or a status line will be cleared.
   @param sInfo String to be written.
-*/
-public void writeInfoln(CharSequence sInfo);
+   */
+  public void writeInfoln(CharSequence sInfo);
 
-/** Appends an info to the end of the previous info, @see #writeInfoln.
+  /** Appends an info to the end of the previous info, @see {@link #writeInfoln(CharSequence)}.
   @param sInfo String to be written.
-*/
-public void writeInfo(CharSequence sInfo);
+   */
+  public void writeInfo(CharSequence sInfo);
 
-/** Writes an error line.
+  /** Writes an error line.
   This method should be used instead a directly write via System.err.println(...).
   The using of System.err writes the output directly on console window of the command line, but in general,
   the user mostly don't want to write to the console, he will give an information out. In a GUI-application,
@@ -229,10 +229,10 @@ public void writeInfo(CharSequence sInfo);
   @param sError The error text, it should be without such hot spot words line "!!!WARNING!!!",
          because the distinction in display should be done by the implementation of this method.
          A good sample is writeErrorln("file is empty: " + sFileName);
-*/
-public void writeWarning(CharSequence sError);
+   */
+  public void writeWarning(CharSequence sError);
 
-/** Writes an error line.
+  /** Writes an error line.
   This method should be used instead a directly write via System.err.println(...).
   The using of System.err writes the output directly on console window of the command line, but in general,
   the user mostly don't want to write to the console, he will give an information out. In a GUI-application,
@@ -243,11 +243,11 @@ public void writeWarning(CharSequence sError);
   @param sError The error text, it should be without such hot spot words line "!!!ERROR!!!",
          because the distinction in display should be done by the implementation of this method.
          A good sample is writeErrorln("cannot create file: " + sFileName);
-*/
-public void writeError(CharSequence sError);
+   */
+  public void writeError(CharSequence sError);
 
 
-/** Writes an error line caused by an exception.
+  /** Writes an error line caused by an exception.
   This method should be used instead a directly write via System.err.println(...) and by catching
   an exception.
   The using of System.err writes the output directly on console window of the command line, but in general,
@@ -261,106 +261,106 @@ public void writeError(CharSequence sError);
          A good sample is writeErrorln("cannot create file: " + sFileName);
   @param exception The catched Exception. The getMessage()-part of the exception is written after sError.
          The stacktrace of the exception is written to report.      
-*/
-public void writeError(String CharSequence, Throwable exception);
-  
-
-
-/** report inside a line*/
-void report(int nLevel, CharSequence string);
-//void report(String string);
-
-/** report begins at a new a line with left margin
-  * @param nLevel write the report only if the demand level is greater or equal.
-  * @param nLeftMargin determins a left margin. First a new line is outputted, followed by '*' and spaces.
-  * @param string String to write.
-*/
-void reportln(int nLevel, int nLeftMargin, CharSequence string);
-
-/** report begins at a new a line
-  * @param nLevel write the report only if the demand level is greater or equal.
-  * @param string String to write.
-*/
-void reportln(int nLevel, CharSequence string);
-
-/** report an error*/
-//void reportError(String string);
-/** report a waring*/
-//void reportWarning(String string);
-
-/** report of a excpetion (in a new line)*/
-void report(CharSequence startText, Throwable exception);
-
-/** access to the level of report. With the knowledge of the maximal reportlevel
- * the user can decide on some actions in context of report.
- * @return The report level, defined by user invoking.
- * */
-int getReportLevel();
-
-
-/**Writes the content in the physical medium.
- * The implementation of flush is in the best way as possible. It depends on the possibilities
- * of the output medium.
- */
-void flushReport();
-
-/**Sets a dedicated level number to the known output priorities.
- * This method helps to define several levels to dispatch it.
- * @param nLevel The number identifying a dedicated level. This number should be greater than
- *        the known priority levels, it means >= 10 or >=1000. 
- *        Use dedicated group of numbers for an application. 
- * @param nLevelActive Ones of the known priotity levels {@link Report.error} to {@link Report.fineDebug}.
- * <br>
- * Example of using:
- * <pre>
- *   class MyModule
- *   { /**Define module-specific numbers to identify a level. 
- *      * The numbers should be define regarding a band of numbers in the application.
- *      * /  
- *     static final int myReportLevel1 = 3500, myReportLevel2=3501; 
- *     
- *     void init()
- *     { setLevelActive(myReportLevel1, Report.info);  //This reports should be outputted always
- *       setLevelActive(myReportLevel2, Report.debug); //This reports are debug infos.
- *     }
- *     
- *     void processAnything()
- *     { report.reportln( myReportLevel1, "InfoText"); //It depends on the report level settings 
- *       report.reportln( myReportLevel2, "DebugText");//whether it is outputed or not. 
- *     }  
- * </pre>    
- * 
- */
-void setReportLevelToIdent(int ident, int nLevelActive);
+   */
+  public void writeError(String CharSequence, Throwable exception);
 
 
 
-/**Set another level inside programming. It is advisable to restore the old level
- * after the designated operation.
- * @param newLevel The level to be set, use one of the defines {@link LogMessage#info} to {@link LogMessage#fineDebug}
- * @return the current level, usefull to restore it.
- */
-int setReportLevel(int level);
+  /** report inside a line*/
+  void report(int nLevel, CharSequence string);
+  //void report(String string);
+
+  /** report begins at a new a line with left margin
+   * @param nLevel write the report only if the demand level is greater or equal.
+   * @param nLeftMargin determins a left margin. First a new line is outputted, followed by '*' and spaces.
+   * @param string String to write.
+   */
+  void reportln(int nLevel, int nLeftMargin, CharSequence string);
+
+  /** report begins at a new a line
+   * @param nLevel write the report only if the demand level is greater or equal.
+   * @param string String to write.
+   */
+  void reportln(int nLevel, CharSequence string);
+
+  /** report an error*/
+  //void reportError(String string);
+  /** report a waring*/
+  //void reportWarning(String string);
+
+  /** report of a excpetion (in a new line)*/
+  void report(CharSequence startText, Throwable exception);
+
+  /** access to the level of report. With the knowledge of the maximal reportlevel
+   * the user can decide on some actions in context of report.
+   * @return The report level, defined by user invoking.
+   * */
+  int getReportLevel();
+
+
+  /**Writes the content in the physical medium.
+   * The implementation of flush is in the best way as possible. It depends on the possibilities
+   * of the output medium.
+   */
+  void flushReport();
+
+  /**Sets a dedicated level number to the known output priorities.
+   * This method helps to define several levels to dispatch it.
+   * @param nLevel The number identifying a dedicated level. This number should be greater than
+   *        the known priority levels, it means >= 10 or >=1000. 
+   *        Use dedicated group of numbers for an application. 
+   * @param nLevelActive Ones of the known priotity levels {@link Report.error} to {@link Report.fineDebug}.
+   * <br>
+   * Example of using:
+   * <pre>
+   *   class MyModule
+   *   { /**Define module-specific numbers to identify a level. 
+   *      * The numbers should be define regarding a band of numbers in the application.
+   *      * /  
+   *     static final int myReportLevel1 = 3500, myReportLevel2=3501; 
+   *     
+   *     void init()
+   *     { setLevelActive(myReportLevel1, Report.info);  //This reports should be outputted always
+   *       setLevelActive(myReportLevel2, Report.debug); //This reports are debug infos.
+   *     }
+   *     
+   *     void processAnything()
+   *     { report.reportln( myReportLevel1, "InfoText"); //It depends on the report level settings 
+   *       report.reportln( myReportLevel2, "DebugText");//whether it is outputed or not. 
+   *     }  
+   * </pre>    
+   * 
+   */
+  void setReportLevelToIdent(int ident, int nLevelActive);
 
 
 
-/**gets the associated report level to a report identifier.
- * @param ident The identifier.
- * @return the level.
- */
-int getReportLevelFromIdent(int ident);
+  /**Set another level inside programming. It is advisable to restore the old level
+   * after the designated operation.
+   * @param newLevel The level to be set, use one of the defines {@link LogMessage#info} to {@link LogMessage#fineDebug}
+   * @return the current level, usefull to restore it.
+   */
+  int setReportLevel(int level);
+
+
+
+  /**gets the associated report level to a report identifier.
+   * @param ident The identifier.
+   * @return the level.
+   */
+  int getReportLevelFromIdent(int ident);
 
 
 
 
 
-/**Only preliminary, because Java2C doesn't support implementation of interfaces yet.
+  /**Only preliminary, because Java2C doesn't support implementation of interfaces yet.
    * This method is implemented in C in another kind.
    * @param src 
    * @return the src.
    */
   //public final static LogMessage convertFromMsgDispatcher(LogMessage src){ return src; }
-  
+
   /**A call of this method closes the devices, which processed the message. It is abstract. 
    * It depends from the kind of device, what <code>close</code> mean. 
    * If the device is a log file writer it should be clearly.
@@ -368,17 +368,17 @@ int getReportLevelFromIdent(int ident);
    * An <code>open</code> occurs automatically, if a new message is dispatched. 
    */
   public abstract void close();
-  
+
   /**A call of this method causes an activating of transmission of all messages since last flush. 
    * It is abstract. It depends from the kind of device, what <code>flush</code> mean. 
    * If the device is a log file writer it should be clearly.
    * <code>flush</code> may mean, the processing of messages is ready to transmit yet. 
    */
   public abstract void flush();
-  
+
   /**Checks whether the message output is available. */
   public abstract boolean isOnline();
-  
+
   /**It should be implemented especially for a File-Output to flush or close
    * the file in a raster of some seconds. 
    * This routine should be called only in the same thread like the queued output,
@@ -386,25 +386,25 @@ int getReportLevelFromIdent(int ident);
    * 
    */
   //public abstract void tickAndFlushOrClose();
-  
+
   final public static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd HH:mm:ss.SSS: ");
-  
+
   final public static SimpleDateFormat minSecondsFormat = new SimpleDateFormat("mm:ss.SSS: ");
-  
+
   /**This is a simple static output operation independent of the log system.
    * @param ms Milliseconds after 1970
    * @param msg
    * @return 
    */
   public static String timeMsg(long ms, String msg) { return dateFormat.format(new Date(ms)) + ": " + msg; } 
-  
+
   /**It prepares a message part with given mm:ss.SSS (till millisec accuracy) with a given absolute time. 
    * @param msg Text before, shold have the form "time=" or "at " or such.
    * @param ms absolute time for the millisec
    * @return It shows msg 13:45.124
    */
   public static String msgSec(String msg, long ms) { return msg + minSecondsFormat.format(new Date(ms)); } 
-  
+
   /**It prepares a message with the current time and a String after it.
    * @param msg any text.
    * @return String to log

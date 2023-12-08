@@ -242,12 +242,13 @@ public class StringFunctions_C
   }
   
   
-  /**
-   * @param src
-   * @param pos
-   * @param sizeP
-   * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
-   * @return
+  /**Parsed the given part of a a given charSequence to a float number with dot '.' as decimal point.
+   * See {@link #parseFloat(CharSequence, int, int, char, int[])}
+   * @param src given String
+   * @param pos left start positition
+   * @param sizeP -1 for whole string, max number of chars to use
+   * @param parsedChars number of chars which was used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
+   * @return float number
    */
   public static float parseFloat(CharSequence src, int pos, int sizeP, int[] parsedChars)
   { return parseFloat(src, pos, sizeP, '.', parsedChars);
