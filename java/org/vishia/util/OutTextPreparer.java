@@ -80,7 +80,8 @@ try {
  * The instance of the {@link DataTextPreparer} must be matching to the OutputTextPreparer
  * because internally only integer numbers are used for access.
  * <br> 
- * To assign data to the named arguments use the {@link DataTextPreparer#setArgument(int, Object)}.
+ * To assign data to the named arguments use the {@link DataTextPreparer#setArgument(String, Object)} 
+ * or also {@link DataTextPreparer#setArgument(int, Object)} with given numeric index of the arguments).
  * That are your user data which can be accessed via <code><&arg1....></code> in your pattern. 
  * Compare it with the arguments of a printf, but with the difference that the possibilities to use the arguments
  * are some more powerful, not only for numbers and date. 
@@ -155,7 +156,7 @@ try {
  * The access is completely controlled in the {@link DataAccess} class. For usage it is simple.
  * <br><br>
  * The <code>&lt;&data.operation(arg) + otherdata></code> can be also a complex expression for numeric calculation,
- * String concatenation and boolean evaluation. This expression is executed in {@link CalculatorExpr}
+ * String concatenation and boolean evaluation. This expression is executed in {@link }
  * with an interpreted approach. 
  * It means the calculation needs a longer time then executed in the Java-VM per bytecode/JIT machine code. 
  * But you can also prepare complex expressions by Java programming and call this expressions or operations.
@@ -200,13 +201,13 @@ try {
  * <br>
  * <b>Execute operations in one given class</b><br>
  * The 'execClass' as second argument of the constructor or the 3th argument of {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}
- * gives the possibility to have some static operations to call immediately maybe related to the script.
- * The operations should be static because there are given in the script persistent without data.
- * But they can have data arguments of course. That is powerful because you can use specific parts programmed in Java
- * in your script.
+ * gives the possibility to have some static or non static operations to call immediately maybe related to the script.
+ * For non static operations the necessary instance should be given in {@link DataTextPreparer#setExecObj(Object)}
+ * due to the execution call. 
+ * That is powerful because you can use specific parts programmed in Java in your script.
  * <br>
  * Call that operations with <code><:exec:operation:arg1:arg...></code>. 
- * <br>It is similar to a data access written as <code><&path.to.StaticClass.operation(arg1,arg...)</code> 
+ * <br>It is similar to a data access written as <code><&path.to.obj.operation(arg1,arg...)</code> 
  * but it is faster parsed and executed due to the immediately given 'execClass'.
  * <br><br>
  * <b><code>&lt;:exec:operation:arg></code></b>:<br>
@@ -224,6 +225,13 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-23 General two translate phases are necessary for recursively calls. 
+   *   It helps also to use sub scripts before definition in order in the script.  
+   *   For that the {@link OutTextPreparer#OutTextPreparer(String, String, String, Map)} do not parse,
+   *   call {@link #parse(Class, Map)} (now public) after definitoin of all otx. 
+   *   This is not implemented on the other ctor, they are held compatible. 
+   * <li>2023-12-23 in {@link #execCall(Appendable, CallCmd, DataTextPreparer, OutTextPreparer)}: 
+   *   bugfix for <:exec:...> in deeper <:call:...> level, the exec instance is given now.
    * <li>2023-10-22 Using of {@link #idxScript}, new {@link #readTemplateCreatePreparer(InputStream, Class, Map)}. 
    * <li>2023-08 up to now history to the operations 
    * <li>2023-06-18: frame of operation now <:otx:args>...<.otx>. The <.end> is no more supported, change it to <.otx>
@@ -322,7 +330,9 @@ public class OutTextPreparer
     
     /**User routine to set a named argument with a value.
      * If a faulty name is used, an Exception is thrown 
-     * @param name argument name of the {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
+     * @param name argument name of the argument list given in the constructor
+     *   {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
+     *   or also given in the textual script.
      * @param value any value for this argument.
      * */
     public void setArgument(String name, Object value) {
@@ -333,8 +343,8 @@ public class OutTextPreparer
     }
     
   
-    /**User routine to set a argument in order with a value.
-     * @param name argument name of the {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
+    /**User routine to set a argument with an index in order of the argument list with a value.
+     * @param ixArg index of the argument starting with 0 for the first argument in the list.
      * @param value any value for this argument.
      * */
     public void setArgument(int ixArg, Object value) {
@@ -625,7 +635,7 @@ public class OutTextPreparer
    *   In the past first call-able scripts were created in Java code, and stored in the #idxConstData.
    *   Later more using textual scripts have stored there script parts firstly also in #idxConstData.  
    */
-  protected final Map<String, OutTextPreparer> idxScript;
+  //protected final Map<String, OutTextPreparer> idxScript;
   
   /**The source of the generation script, argument of {@link #parse(Class, String)} only for debug. */
   public final String pattern;
@@ -634,7 +644,7 @@ public class OutTextPreparer
    * It is the argument execClass from the user, 
    * which is immediately evaluated in the {@link #parse(Class, String)} operations while construction.
    */
-  @SuppressWarnings("unused") private final Class<?> execClass;
+  //@SuppressWarnings("unused") private final Class<?> execClass;
   
   
   /**Via script given arguments for the outText. It does not contain the internal created variables. */
@@ -652,14 +662,25 @@ public class OutTextPreparer
   /**Instantiates for a given pattern. See {@link #OutTextPreparer(String, Class, String, String)}
    * The variables are gotten from the pattern. For this case the order of variable depends on the order in the pattern.
    * It is essential for access to data via index or via name. ...TODO see where
+   * @param ident
+   * @param execClass
+   * @param pattern
+   * @throws IllegalArgumentException if the pattern is faulty.
+   *   This exception do not need to be caught immediately on the calling level, do not spend effort.
+   *   Because the pattern should be given error-free, it is hard programmed.
+   *   If the pattern has an error then the application throws on higher level if the calling level class is instantiated,
+   *   and should be fixed in programming.
+   *   Note: On some faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> execClass, String pattern) {
     this.sIdent = ident;
     this.pattern = pattern;
-    this.execClass = execClass;
-    this.parse(execClass, pattern);
-    this.idxScript = null;
     this.idxConstData = null;
+    try {
+      this.parse(execClass, null);
+    } catch(ParseException exc) {
+      throw new IllegalArgumentException(exc);
+    }
   }
   
   /**Constructs the text generation control data for the specific pattern. 
@@ -668,8 +689,12 @@ public class OutTextPreparer
    * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
    * @param pattern The pattern in string given form. 
    *   This pattern will be parsed and divided in parts for a fast text generation.
-   * @throws never because the instantiation is possible especially for static variables.
-   *   On faulty pattern the prepared cmd for output contains the error message. 
+   * @throws IllegalArgumentException if the pattern is faulty.
+   *   This exception do not need to be caught immediately on the calling level, do not spend effort.
+   *   Because the pattern should be given error-free, it is hard programmed.
+   *   If the pattern has an error then the application throws on higher level if the calling level class is instantiated,
+   *   and should be fixed in programming.
+   *   Note: On some faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern) {
     this(ident, execClass, variables, pattern, null);
@@ -686,19 +711,77 @@ public class OutTextPreparer
    * @param pattern The pattern in string given form. 
    *   This pattern will be parsed and divided in parts for a fast text generation.
    * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
-   * @throws never because the instantiation is possible especially for static variables.
-   *   On faulty pattern the prepared cmd for output contains the error message. 
+   * @throws ParseException 
+   * @throws IllegalArgumentException if the pattern is faulty.
+   *   This exception do not need to be caught immediately on the calling level, do not spend effort.
+   *   Because the pattern should be given error-free, it is hard programmed.
+   *   If the pattern has an error then the application throws on higher level if the calling level class is instantiated,
+   *   and should be fixed in programming.
+   *   Note: On some faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern
       , Map<String, Object> idxConstData, Map<String, OutTextPreparer> idxScript) {
     this.sIdent = ident.trim();
     this.pattern = pattern;
-    this.execClass = execClass;
-    this.idxScript = idxScript;
     this.idxConstData = idxConstData;
     this.parseVariables(variables);
-    this.parse(execClass, pattern);
+    try {
+      this.parse(execClass, idxScript);
+    } catch(ParseException exc) {
+      throw new IllegalArgumentException(exc);
+    }
   }
+  
+  
+  /**Creates the text generation control data for the specific pattern and given sub pattern.
+   * This is the preferred ctor if the scripts are read from a textual file with two-phase translation.
+   * Using this sub scripts can be used before definiton. 
+   * There definitions are instantiated with this ctor.
+   * After this ctor {@link #parse(Class, Map)} have to be called as second phase for translate the scripts
+   * which can all use the definitons. 
+   * See also {@link #readTemplateCreatePreparer(InputStream, Class, Map)}, the principle is used there.
+   * @param ident Name of the sub pattern, used for error outputs.
+   * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
+   * @param pattern The pattern in string given form. 
+   *   This pattern will be parsed and divided in parts for a fast text generation.
+   * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
+   * @throws never. 
+   */
+  public OutTextPreparer(String ident
+      , String variables, String pattern
+      , Map<String, Object> idxConstData) {
+    this.sIdent = ident.trim();
+    this.pattern = pattern;
+    this.idxConstData = idxConstData;
+    this.parseVariables(variables);
+  }
+  
+  
+  /**Creates the text generation control data for the specific pattern and given sub pattern.
+   * This is the preferred ctor if the scripts are read from a textual file with two-phase translation.
+   * Using this sub scripts can be used before definiton. 
+   * There definitions are instantiated with this ctor.
+   * After this ctor {@link #parse(Class, Map)} have to be called as second phase for translate the scripts
+   * which can all use the definitons. 
+   * See also {@link #readTemplateCreatePreparer(InputStream, Class, Map)}, the principle is used there.
+   * @param ident Name of the sub pattern, used for error outputs.
+   * @param variables List of variable. 
+   * @param pattern The pattern in string given form. 
+   *   This pattern will be parsed and divided in parts for a fast text generation.
+   * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
+   * @throws never. 
+   */
+  public OutTextPreparer(String ident
+      , List<String> variables, String pattern
+      , Map<String, Object> idxConstData) {
+    this.sIdent = ident.trim();
+    this.pattern = pattern;
+    this.idxConstData = idxConstData;
+    this.setVariables(variables);
+  }
+  
+  
+  
   
   
   
@@ -723,17 +806,24 @@ public class OutTextPreparer
    * @param pattern The pattern in string given form. 
    *   This pattern will be parsed and divided in parts for a fast text generation.
    * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
-   * @throws never because the instantiation is possible especially for static variables.
-   *   On faulty pattern the prepared cmd for output contains the error message. 
+   * @throws ParseException 
+   * @throws IllegalArgumentException if the pattern is faulty.
+   *   This exception do not need to be caught immediately on the calling level, do not spend effort.
+   *   Because the pattern should be given error-free, it is hard programmed.
+   *   If the pattern has an error then the application throws on higher level if the calling level class is instantiated,
+   *   and should be fixed in programming.
+   *   Note: On some faulty pattern the prepared cmd for output contains the error message. 
    */
   public OutTextPreparer(String ident, Class<?> execClass, String variables, String pattern, Map<String, Object> idxConstData) {
     this.sIdent = ident.trim();
     this.pattern = pattern;
-    this.execClass = execClass;
-    this.idxScript = null;
     this.idxConstData = idxConstData;
     this.parseVariables(variables);
-    this.parse(execClass, pattern);
+    try {
+      this.parse(execClass, null);
+    } catch(ParseException exc) {
+      throw new IllegalArgumentException(exc);
+    }
   }
 
   
@@ -741,16 +831,24 @@ public class OutTextPreparer
   /**Instantiates for a given pattern. See {@link #OutTextPreparer(String, Class, String, String)}
    * @param variables Identifier given as list, parsing is not necessary. 
    *        Able to use if the variable idents are anyway given in a list.
+   * @throws IllegalArgumentException if the pattern is faulty.
+   *   This exception do not need to be caught immediately on the calling level, do not spend effort.
+   *   Because the pattern should be given error-free, it is hard programmed.
+   *   If the pattern has an error then the application throws on higher level if the calling level class is instantiated,
+   *   and should be fixed in programming.
+   *   Note: On some faulty pattern the prepared cmd for output contains the error message. 
    * 
    */
   public OutTextPreparer(String ident, Class<?> execClass, List<String> variables, String pattern) {
     this.sIdent = ident;
     this.pattern = pattern;
-    this.execClass = execClass;
     this.setVariables(variables);
-    this.parse(execClass, pattern);
-    this.idxScript = null;
     this.idxConstData = null;
+    try {
+      this.parse(execClass, null);
+    } catch(ParseException exc) {
+      throw new IllegalArgumentException(exc);
+    }
   }
   
   
@@ -959,9 +1057,20 @@ public class OutTextPreparer
       String name = text.substring(posName, posArgs).trim();
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
-      OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData, idxScript);
-      if(idxScript !=null) { idxScript.put(name, otxScript); }
-      else { idxConstData.put(name, otxScript); }
+      if(idxScript !=null) {
+        OutTextPreparer otxScript = new OutTextPreparer(name, args, script, idxConstData);
+        idxScript.put(name, otxScript); 
+      }
+      else { 
+        OutTextPreparer otxScript = new OutTextPreparer(name, execClass, args, script, idxConstData, idxScript);
+        idxConstData.put(name, otxScript); 
+      }
+    }
+    if(idxScript!=null) {
+      for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
+        OutTextPreparer otx = e.getValue();
+        otx.parse(execClass, idxScript);
+      }
     }
   }
   
@@ -998,8 +1107,8 @@ public class OutTextPreparer
    *   or gotten via {@link Class#getResourceAsStream(String)} from a jar file, 
    *   or also of course via {@link java.io.FileReader#FileReader(java.io.File)}
    *   or via {@link InputStreamReader#InputStreamReader(InputStream, String)} to read a file with specific encoding.
-   * @param idxConstData
    * @param execClass a given class which's content is accessed as persistent data.
+   * @param idxConstData
    * @return Map which contains all script operations.
    *   access to the desired script via get(name).
    * @return index of all OutTextPreparer instance, any can be used. For example the "main" script to start.
@@ -1007,7 +1116,8 @@ public class OutTextPreparer
    * @throws ParseException
    * @since 2023-10-22 Used for LibreOffice / FBcl
    */
-  public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( InputStream inp, Class<?> execClass, Map<String, Object> idxConstData) 
+  public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( 
+      InputStream inp, Class<?> execClass, Map<String, Object> idxConstData) 
       throws IOException, ParseException {
     //
     Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
@@ -1080,18 +1190,19 @@ public class OutTextPreparer
   
   
   
-  /**Parse the pattern. This routine will be called only from the constructor.
-   * @param ident data instance to get data in the construction phase via reflection. 
-   *   It is used for identifier in the pattern which is not found in the variables (parameter 'variables' of ctor).
-   *   It can be null.
+  /**Parse the pattern. This routine will be called from the constructor or in application
+   * or especially in {@link #readTemplateCreatePreparer(InputStream, Class, Map)}
+   * for two-phase-translation. 
+   * @param execClass used to parse &lt;:exec:...>, the class where the operation should be located.
+   * @param idxScript Map with all sub scripts to support &lt;:call:subscript..>
    * @throws ParseException 
    */ 
-  private void parse(Class<?> execClass, String pattern) {
+  public void parse(Class<?> execClass, Map<String, OutTextPreparer> idxScript) throws ParseException {
     int pos0 = 0; //start of current position after special cmd
     int pos1 = 0; //end before the next special command
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
     int ixixCmd = -1;
-    StringPartScan sp = new StringPartScan(pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
+    StringPartScan sp = new StringPartScan(this.pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
     sp.setIgnoreWhitespaces(true);  // it is valid inside the syntactical relevant parts <...>
     int nLastWasSkipOverWhitespace = 0;
     while(sp.length() >0) {
@@ -1115,13 +1226,13 @@ public class OutTextPreparer
         }
         else if(  nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
             && (sp.scan(": >").scanOk() || sp.scan(":+>").scanOk() || sp.scan(":? >").scanOk())){ 
-         addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);  //adds the text before <:+>
+         addCmd(pattern, pos0, pos1, ECmd.nothing, null, null, idxScript);  //adds the text before <:+>
          sp.scanSkipSpace();
          pos0 = (int)sp.getCurrentPosition();  //after '>'
          nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
         }  
         else if( sp.scan(":?nl>").scanOk()){ 
-         addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);  //adds the text before <:+>
+         addCmd(pattern, pos0, pos1, ECmd.nothing, null, null, idxScript);  //adds the text before <:+>
          sp.seekAfterNewline();
          pos0 = (int)sp.getCurrentPosition();  //after newline
         }
@@ -1136,19 +1247,19 @@ public class OutTextPreparer
 //          if(sDatapath.startsWith("&("))
 //            Debugutil.stop();
           //====> ////
-          addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, execClass);
+          addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, execClass, idxScript);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           //====>
-          parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, execClass);
+          parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, execClass, idxScript);
           ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current if
           pos0 = (int)sp.getCurrentPosition();  //after '>'
           
         }
         else if(sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           //====>
-          parseIf( pattern, pos0, pos1, ECmd.elsifCtrl, sp, execClass);
+          parseIf( pattern, pos0, pos1, ECmd.elsifCtrl, sp, execClass, idxScript);
           Cmd ifCmdLast;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
@@ -1166,7 +1277,7 @@ public class OutTextPreparer
         }
         else if(sp.scan(":else>").scanOk()) {
           //====>
-          addCmd(pattern, pos0, pos1, ECmd.elseCtrl, null, null);
+          addCmd(pattern, pos0, pos1, ECmd.elseCtrl, null, null, idxScript);
           Cmd ifCmd;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
@@ -1186,7 +1297,7 @@ public class OutTextPreparer
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
           //====>
-          ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, execClass);
+          ForCmd cmd = (ForCmd)addCmd(pattern, pos0, pos1, ECmd.forCtrl, container, execClass, idxScript);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1206,7 +1317,7 @@ public class OutTextPreparer
         else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
-          SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, execClass);
+          SetCmd cmd = (SetCmd)addCmd(pattern, pos0, pos1, ECmd.setVar, value, execClass, idxScript);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1217,19 +1328,19 @@ public class OutTextPreparer
         }
         else if(sp.scan(":exec:").scanIdentifier().scanOk()) {
           //====>
-          parseExec(pattern, pos0, pos1, sp, execClass);
+          parseExec(pattern, pos0, pos1, sp, execClass, idxScript);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":call:").scanIdentifier().scanOk()) {
           //====>
-          parseCall(pattern, pos0, pos1, sp, execClass);
+          parseCall(pattern, pos0, pos1, sp, execClass, idxScript);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           String cmpString = sp.getLastScannedString().toString();
           String debugVar = sp.getLastScannedString().toString();
           //====>
-          DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, debugVar, execClass);
+          DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, debugVar, execClass, idxScript);
           cmd.cmpString = cmpString;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }  
@@ -1240,14 +1351,14 @@ public class OutTextPreparer
         }
         else if(sp.scan(":--").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
           //it is commented
-          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null);
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, null, null);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":x").scanHex(4).scan(">").scanOk()) {
           char[] cText = new char[1];                      // <:x1234> a special UTF16 char
           cText[0] = (char)sp.getLastScannedIntegerNumber();
           String sTextSpecial = new String(cText);
-          addCmd(pattern, pos0, pos1, ECmd.addString, sTextSpecial, null);
+          addCmd(pattern, pos0, pos1, ECmd.addString, sTextSpecial, null, null);
         }
         else if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
           // ------------------------------------------------ <:text> or <:n> <:r> <:t> <:s>
@@ -1262,15 +1373,15 @@ public class OutTextPreparer
           }
           if(what >=0) {
             String[] specials = { "\n", "\r", "\t", " "};  // newline etc.
-            addCmd(pattern, pos0, pos1, ECmd.addString, specials[what], null);
+            addCmd(pattern, pos0, pos1, ECmd.addString, specials[what], null, null);
           } else {                                         // free text with especially special chars
-            addCmd(pattern, pos0, pos1, ECmd.addString, sText, null); //add the <:sText>
+            addCmd(pattern, pos0, pos1, ECmd.addString, sText, null, null); //add the <:sText>
           }
           pos0 = posend;  //after '>'
         }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd cmd = null;
-          addCmd(pattern, pos0, pos1, ECmd.nothing, null, execClass);  //The last text before <.if>
+          addCmd(pattern, pos0, pos1, ECmd.nothing, null, execClass, idxScript);  //The last text before <.if>
           while(  ixixCmd >=0 
             && ( (cmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
               || cmd.cmd == ECmd.elsifCtrl
@@ -1299,7 +1410,7 @@ public class OutTextPreparer
         else if(sp.scan(".for>").scanOk()) { //The end of an if
           Cmd forCmd;
           if(ixixCmd >=0 && (forCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
-            Cmd endLoop = addCmd(pattern, pos0, pos1, ECmd.endLoop, null, null);
+            Cmd endLoop = addCmd(pattern, pos0, pos1, ECmd.endLoop, null, null, null);
             endLoop.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;
             pos0 = (int)sp.getCurrentPosition();  //after '>'
             forCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
@@ -1317,7 +1428,7 @@ public class OutTextPreparer
       }
       else { //no more '<' found:
         sp.len0end();
-        addCmd(pattern, pos0, pos0 + sp.length(), ECmd.nothing, null, execClass);
+        addCmd(pattern, pos0, pos0 + sp.length(), ECmd.nothing, null, execClass, idxScript);
         sp.fromEnd();  //length is null then.
       }
     } //while
@@ -1342,12 +1453,13 @@ public class OutTextPreparer
     } while(sp.scan(",").scanOk());
   }
   
-  private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp, Class<?> reflData) {
+  private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp
+      , Class<?> reflData, final Map<String, OutTextPreparer> idxScript) {
     String cond = sp.getLastScannedString().toString();
 //    if(cond.contains("?instanceof"))
 //      Debugutil.stop();
     //====>
-    IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, cond, reflData);
+    IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, cond, reflData, idxScript);
     ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
     
   }
@@ -1355,7 +1467,8 @@ public class OutTextPreparer
   
   
 
-  private void parseExec(final String src, final int pos0, final int pos1, StringPartScan sp, Class<?> reflData) {
+  private void parseExec(final String src, final int pos0, final int pos1, StringPartScan sp
+      , Class<?> reflData, final Map<String, OutTextPreparer> idxScript) {
     String name = sp.getLastScannedString();
 //    if(name.equals("writeFBlocks"))
 //      Debugutil.stop();
@@ -1376,7 +1489,7 @@ public class OutTextPreparer
       spArg = null;
       argType = null;
     }
-    ExecCmd cmd = (ExecCmd)addCmdSp(src, pos0, pos1, ECmd.exec, spArg, reflData);
+    ExecCmd cmd = (ExecCmd)addCmdSp(src, pos0, pos1, ECmd.exec, spArg, reflData, idxScript);
     Method[] operations = reflData.getMethods();
     Class<?>[] argTypes = null;
     for(Method operation: operations) {
@@ -1395,11 +1508,12 @@ public class OutTextPreparer
   }
   
   
-  private void parseCall(final String src, final int pos0, final int pos1, final StringPartScan sp, Class<?> reflData) {
+  private void parseCall(final String src, final int pos0, final int pos1, final StringPartScan sp
+      , Class<?> reflData, final Map<String, OutTextPreparer> idxScript) {
     String sCallVar = sp.getLastScannedString();
     if(sCallVar.equals("otxIfColors"))
       debug();
-    CallCmd cmd = (CallCmd)addCmd(src, pos0, pos1, ECmd.call, sCallVar, reflData);
+    CallCmd cmd = (CallCmd)addCmd(src, pos0, pos1, ECmd.call, sCallVar, reflData, idxScript);
     final OutTextPreparer call;  
     if(cmd.dataConst !=null) { //given as const static:
       if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
@@ -1519,7 +1633,8 @@ public class OutTextPreparer
    * @param sDatapath null or a textual data path. It will be split to {@link Cmd#ixValue} and {@link Cmd#dataAccess}
    * @return the created Cmd for further parameters.
    */
-  private Cmd addCmd ( String src, int from, int to, ECmd ecmd, String sDatapath, Class<?> data) {
+  private Cmd addCmd ( String src, int from, int to, ECmd ecmd, String sDatapath
+      , Class<?> data, final Map<String, OutTextPreparer> idxScript) {
     if(to > from) {
       cmds.add(new CmdString(src.substring(from, to)));
     }
@@ -1531,7 +1646,7 @@ public class OutTextPreparer
           case call: 
             Object oOtxSub = null;
             String sNameSub = sDatapath;
-            if(this.idxScript !=null) { oOtxSub = this.idxScript.get(sNameSub); }
+            if(idxScript !=null) { oOtxSub = idxScript.get(sNameSub); }
             if(oOtxSub == null && this.idxConstData !=null) { oOtxSub = this.idxConstData.get(sNameSub); }
             if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
               throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": subroutine: " + sNameSub + " not found ");
@@ -1567,7 +1682,8 @@ public class OutTextPreparer
    * @param sDatapath null or a textual data path. It will be split to {@link Cmd#ixValue} and {@link Cmd#dataAccess}
    * @return the created Cmd for further parameters.
    */
-  private Cmd addCmdSp(String src, int from, int to, ECmd ecmd, StringPartScan sDatapath, Class<?> data) {
+  private Cmd addCmdSp(String src, int from, int to, ECmd ecmd, StringPartScan sDatapath
+      , Class<?> data, final Map<String, OutTextPreparer> idxScript) {
     if(to > from) {
       this.cmds.add(new CmdString(src.substring(from, to)));
     }
@@ -1579,7 +1695,7 @@ public class OutTextPreparer
           case call: 
             Object oOtxSub = null;
             String sNameSub = sDatapath.getCurrent().toString();
-            if(this.idxScript !=null) { oOtxSub = this.idxScript.get(sNameSub); }
+            if(idxScript !=null) { oOtxSub = idxScript.get(sNameSub); }
             if(oOtxSub == null && this.idxConstData !=null) { oOtxSub = this.idxConstData.get(sNameSub); }
             if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
               throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": subroutine: " + sNameSub + " not found ");
@@ -1685,7 +1801,7 @@ public class OutTextPreparer
             data = cmd.dataAccess.access(data, true, false, nameVariables, args.args);
           } catch (Exception e) {
             bDataOk = false;
-            wr.append("<??OutTextPreparer in script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< not found or access error: " + e.getMessage() + "??>");
+            wr.append("<??OutTextPreparer in script \"" + sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + e.getMessage() + "\" ??>");
           }
         }
       } 
@@ -1696,7 +1812,7 @@ public class OutTextPreparer
         } catch (Exception e) {
           bDataOk = false;
           data = "<??>";
-          wr.append("<??OutTextPreparer script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< not found or access error: " + e.getMessage() + "??>");
+          wr.append("<??OutTextPreparer in script \"" + sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + e.getMessage() + "\" ??>");
         }
         
       }
@@ -1891,11 +2007,14 @@ public class OutTextPreparer
         args.argSub[cmd.ixDataArg] = valSub = callVar1.createArgumentDataObj();  //create a data instance for arguments.
         valSub.debugIxCmd = args.debugIxCmd;
         valSub.debugOtx = args.debugOtx;
+        valSub.execObj = args.execObj;  //2023-12-23: bugfix for <:exec:...> in deeper <:call:...> level, the exec instance is given now.
       }
       for(Argument arg : cmd.args) {
         Object value = null;
         try{ value = arg.calc(null, args.args); }
-        catch(Exception exc) { wr.append("<??OutTextPreparer script " + this.sIdent + ": " + arg.textOrVar + " not found or access error: " + exc.getMessage() + "??>"); }
+        catch(Exception exc) { 
+          wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + exc.getMessage() + "\" ??>");
+        }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
         } else {
