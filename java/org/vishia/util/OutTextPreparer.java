@@ -3,15 +3,18 @@ package org.vishia.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -226,6 +229,7 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-26 Some improvements, especially &lt;&...;format> for formatted numeric values. 
    * <li>2023-12-23 General two translate phases are necessary for recursively calls. 
    *   It helps also to use sub scripts before definition in order in the script.  
    *   For that the {@link OutTextPreparer#OutTextPreparer(String, String, String)} does not parse.
@@ -313,6 +317,12 @@ public class OutTextPreparer
     public String debugOtx;
     
     public int debugIxCmd;
+    
+    
+    StringBuilder sbFormatted = new StringBuilder();
+    
+    /**Default use formatter for ENCLISH to be international. */
+    Formatter formatter = new Formatter(this.sbFormatted, Locale.ENGLISH);
     
     
     /**Package private constructor invoked only in {@link OutTextPreparer#createArgumentDataObj()}*/
@@ -438,6 +448,7 @@ public class OutTextPreparer
       super( textOrDatapath, outer.nameVariables, reflData, idxConstData);
       this.cmd = what;
     }
+    
     
     public Cmd ( OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
       super( textOrDatapath, outer.nameVariables, reflData, idxConstData, true);
@@ -571,6 +582,20 @@ public class OutTextPreparer
     }
   }
   
+  
+  
+  /**A cmd for a value can contain a format string.
+   */
+  static class ValueCmd extends Cmd {
+    final String sFormat;
+    
+    ValueCmd ( OutTextPreparer outer, String textOrDatapath, String sFormat
+        , Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
+      super(outer, ECmd.addVar, textOrDatapath, reflData, idxConstData);
+      this.sFormat = sFormat;
+    }
+  }
+
   
   
   static class CmdString extends Cmd {
@@ -1350,21 +1375,29 @@ public class OutTextPreparer
          pos0 = (int)sp.getCurrentPosition();  //after newline
         }
         else if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
+          //------------------------------------------------- <&varname> a simple access to a given value
           String sName = sp.getLastScannedString();
           addCmdSimpleVar(pattern, pos0, pos1, ECmd.addVar, sName, execClass, idxConstData);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
-        else if(sp.scan("&").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()){
-          //------------------------------------------------- <&dataPath>
+        else if(sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
+          //------------------------------------------------- <&data.path:format> more complex access to a given value
           final String sDatapath = sp.getLastScannedString();
 //          if(sDatapath.startsWith("&("))
 //            Debugutil.stop();
           //====> ////
-          addCmd(pattern, pos0, pos1, ECmd.addVar, sDatapath, execClass, idxConstData, idxScript);
+          final String sFormat;
+          if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scanOk()) {
+            sFormat = sp.getLastScannedString();           // <&...:format> is given
+          } else {
+            sFormat = null;
+          }
+          addCmdValueAccess(this.pattern, pos0, pos1, sDatapath, sFormat, execClass, idxConstData);
+          sp.seekPos(1);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          //====>
+          //====>  ------------------------------------------ <:if:...>
           parseIf( pattern, pos0, pos1, ECmd.ifCtrl, sp, execClass, idxConstData, idxScript);
           ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current if
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -1738,16 +1771,54 @@ public class OutTextPreparer
   
   
   
+  /**Called if a simple <code>&lt;&name></code> is detected.
+   * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
+   * and at least in the execClass via Datapath access.
+   * If not found then <code><??sName??></code> is output on runtime.
+   * It adds the plain text if necessary and the data access as {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
+   * to the list of commands.
+   * 
+   * @param src The text before to output the plain text before
+   * @param from range in src
+   * @param to to > from, then output the plain text
+   * @param eCmd The {@link ECmd} for the Cmd 
+   * @param sName name of the argument or variable or field.
+   * @param execClass to search in a data field.
+   */
+  private void addCmdValueAccess ( String src, int from, int to, String sDatapath
+      , String sFormat, Class<?> execClass, Map<String, Object> idxConstData) {
+    if(to > from) {
+      this.cmds.add(new CmdString(src.substring(from, to)));
+    }
+//    int posSep = sDatapath.indexOf('.');                 // commented, this is done in CalculatorExpr.Operand(...)
+//    if(posSep <0) { posSep = sDatapath.length(); }
+//    String startVariable = sDatapath.substring(0, posSep); // first expression part is start or only variable
+//    DataAccess.IntegerIx ixAccess = this.nameVariables.get(startVariable);  //access to variables (args)
+//    int ix = ixAccess == null ? -1 : ixAccess.ix;          // ix >0: access to variables, often used
+    try { 
+      Cmd cmd = new ValueCmd(OutTextPreparer.this, sDatapath, sFormat, execClass, idxConstData);
+      this.cmds.add(cmd);
+    } catch (Exception exc) {
+      addError(sDatapath);                                 // inserts <??sDatapath??> in the text
+    }
+  }
+  
+  
+  
+  
   /**Explore the sDatapath and adds the proper Cmd
    * @param src The pattern to get text contents
    * @param from start position for text content
    * @param to end position for text content, if <= from then no text content is stored (both = 0)
    * @param ecmd The cmd kind
    * @param sDatapath null or a textual data path. It will be split to {@link Cmd#ixValue} and {@link Cmd#dataAccess}
+   * @param reflData class to main data, usable for static operations, also otxScript for call
+   * @param idxConstData container of constant data for compile (parse) time
+   * @param idxScript can contain some other OutTextPreparer instances for call.
    * @return the created Cmd for further parameters.
    */
   private Cmd addCmd ( String src, int from, int to, ECmd ecmd, String sDatapath
-      , Class<?> data, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
+      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     if(to > from) {
       cmds.add(new CmdString(src.substring(from, to)));
     }
@@ -1755,27 +1826,33 @@ public class OutTextPreparer
     if(ecmd !=ECmd.nothing) {
       try {
         switch(ecmd) {
-          case ifCtrl: case elsifCtrl: cmd = new IfCmd(this, ecmd, sDatapath, data); break;
+          case ifCtrl: case elsifCtrl: cmd = new IfCmd(this, ecmd, sDatapath, reflData); break;
           case call: 
             Object oOtxSub = null;
             String sNameSub = sDatapath;
-            if(idxScript !=null) { oOtxSub = idxScript.get(sNameSub); }
-            if(oOtxSub == null && idxConstData !=null) { oOtxSub = idxConstData.get(sNameSub); }
+            //Field[] fields = data.getDeclaredFields();  // only debug
+            if(idxScript !=null) { oOtxSub = idxScript.get(sNameSub); }  // search the sub script
+            if(oOtxSub == null && idxConstData !=null) { oOtxSub = idxConstData.get(sNameSub); } //sub script given in const data
+            if(oOtxSub == null && reflData !=null) {       // sub script in the given class
+              Field otxField = reflData.getDeclaredField(sNameSub); // get also private fields.
+              otxField.setAccessible(true);                     // access the private field with get()
+              oOtxSub = otxField.get(null);                     // get the static field (null = without instance).
+            }
             if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
-              throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": subroutine: " + sNameSub + " not found ");
+              throw new IllegalArgumentException("subroutine: not found ");
             }
             cmd = new CallCmd((OutTextPreparer)oOtxSub); //this, sDatapath, data); 
             //cmd = new CallCmd(this, sDatapath, data); 
             break;
-          case exec: cmd = new ExecCmd(this, sDatapath, data, idxConstData); break;
-          case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
-          case setVar: cmd = new SetCmd(this, sDatapath, data); break;
-          case debug: cmd = new DebugCmd(this, sDatapath, data, idxConstData); break;
+          case exec: cmd = new ExecCmd(this, sDatapath, reflData, idxConstData); break;
+          case forCtrl: cmd = new ForCmd(this, sDatapath, reflData); break;
+          case setVar: cmd = new SetCmd(this, sDatapath, reflData); break;
+          case debug: cmd = new DebugCmd(this, sDatapath, reflData, idxConstData); break;
           case addString: cmd = new CmdString(sDatapath); break;
-          default: cmd = new Cmd(this, ecmd, sDatapath, data, null); break;
+          default: cmd = new Cmd(this, ecmd, sDatapath, reflData, null); break;
         }
       } catch(Exception exc) {
-        throw new IllegalArgumentException("OutTextPreparer " + sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
+        throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
       }
       cmds.add(cmd);
     } else {
@@ -1894,7 +1971,7 @@ public class OutTextPreparer
         debug();
       Cmd cmd = cmds.get(ixCmd++);
       boolean bDataOk = true;
-      Object data;
+      Object data;  //======================================= first gather the data
       if(cmd.expr !=null) {
         try { 
           //====>
@@ -1906,17 +1983,8 @@ public class OutTextPreparer
           wr.append("<??OutTextPreparer script >>" + sIdent + "<<: >>" + cmd.textOrVar + "<< execution error: " + e.getMessage() + "??>");
         }
       }
-      else if(cmd.ixValue >=0) { 
-        data = args.args[cmd.ixValue];
-        if(cmd.dataAccess !=null) {
-          try {
-            //====>
-            data = cmd.dataAccess.access(data, true, false, nameVariables, args.args);
-          } catch (Exception e) {
-          bDataOk = false;
-            wr.append("<??OutTextPreparer in script \"" + sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + e.getMessage() + "\" ??>");
-          }
-        }
+      else if(cmd.ixValue >=0) { //-------------------------- any index to the arguments or local arguments
+        data = execDataAccess(wr, cmd, args); 
       } 
       else if(cmd.dataAccess !=null) {
         try {
@@ -1935,12 +2003,12 @@ public class OutTextPreparer
       else {
         data = cmd.textOrVar; //maybe null
       }
-      if(bDataOk) {
+      if(bDataOk) {    //==================================== second execute the cmd with the data
         switch(cmd.cmd) {
           case addString: wr.append(cmd.textOrVar); break;
           case addVar: {                                   // the data are already prepared before switch
             //Integer ixVar = varValues.get(cmd.str);
-            if(data == null) { wr.append("<??null??>"); }
+            if(data == null) { wr.append("<null>"); }
             else { wr.append(data.toString()); }
           } break;
           case setVar: {
@@ -2000,6 +2068,55 @@ public class OutTextPreparer
   }
   
   
+  
+  /**Accesses the data
+   * @param wr only used on exception to write an elaborately info
+   * @param cmd contains {@link Cmd#ixValue} for first variable 
+   *  and possible {@link Cmd#dataAccess} for deeper values.
+   *  If it is instanceof {@link ValueCmd} then {@link ValueCmd#sFormat} is used to format numeric and time values if given
+   * @param args dynamic data for access
+   * @return The accessed object, maybe null.
+   * @throws IOException
+   */
+  private Object execDataAccess ( Appendable wr, Cmd cmd, DataTextPreparer args ) throws IOException {
+    Object data0 = cmd.ixValue <0 ? null: args.args[cmd.ixValue];
+    Object data;
+    if(cmd.dataAccess !=null) {
+//      String sDataAccess = cmd.dataAccess.toString();
+//      if(sDataAccess.contains("Dtype")) {
+//        Debugutil.stop();
+//      }
+      try {
+        //====>                     // base on a given variable as args or static
+        data = cmd.dataAccess.access(data0, true, false, this.nameVariables, args.args);
+        if(data == null) {          // data == null possible if any reference is null on access.
+          Debugutil.stop();
+        }
+      } catch (Exception e) {
+        data = null;
+        wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + e.getMessage() + "\" ??>");
+        if(wr instanceof Flushable) { 
+          ((Flushable)wr).flush(); 
+        }
+      }
+    } else {
+      data = data0;
+    }
+    if( data !=null && cmd instanceof ValueCmd) {          // check whether to format (@since 2023-12)
+      String sFormat = ((ValueCmd)cmd).sFormat;
+      if(sFormat !=null) {
+        try {
+          Object data1 = data;
+          args.sbFormatted.setLength(0);
+          args.formatter.format(sFormat, data1);
+          data = args.sbFormatted;
+        } catch(Exception exc) {
+          data += "??Format error "+ exc.getMessage() + "??";
+        }
+      }
+    }
+    return data;
+  }
   
   
   /**Executes a if branch

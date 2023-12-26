@@ -1532,20 +1532,20 @@ public class CalculatorExpr
         this.dataAccess = null;
         this.dataConst = constData;
         this.expr = null;
-        this.textOrVar = null;
+        this.textOrVar = sDatapath;
       }
       else if(sDatapath !=null){
 //      if(sDatapath.startsWith("&("))
 //      Debugutil.stop();
         if(sDatapath.contains("("))
           Debugutil.stop();
-        //====>
-        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);
+        //====>  ============================================
+        CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);     // use the full capability of expr though usual unnecessary
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
         CalculatorExpr.Operand exprOperand;
-        if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) {
+        if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) { // and then extract the only few information
           //The expr has exact 1 Operand, copy its content to this.
-          this.dataAccess = exprOperand.dataAccess;
+          this.dataAccess = exprOperand.dataAccess;        // the access on exec is fast. That's the advantage.
           this.dataConst = exprOperand.dataConst;
           this.ixValue = exprOperand.ixValue;
           this.expr = null;
@@ -1555,7 +1555,7 @@ public class CalculatorExpr
           this.dataAccess = null;
           this.dataConst = null;
           this.ixValue = -1;
-          this.expr = expr;
+          this.expr = expr;                                // or use a complex expression, also possible. More effort on access.
           this.textOrVar = sDatapath;
         }
       }

@@ -88,6 +88,9 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-25: {@link #access(DatapathElement, Object, boolean, boolean, Map, Object[], boolean, Dst)} one data==null test.
+   *   General: not proper documented, an reference ==null forces return = null without exception. 
+   *   Hence some more ==null tests may be necessary. 
    * <li>2023-05-21: {@link #istypeof(Object, Class)} now also can detect the class Object itself. More universal. 
    * <li>2023-05-05: Hartmut improved error message on method not found / argument mismatch, in {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} 
    * <li>2021-12-30: Hartmut: {@link #access(CharSequence, Object, boolean, boolean, boolean, Dst)} now regards a "%..." path for static access.
@@ -249,7 +252,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2023-05-21";
+  static final public String sVersion = "2023-12-25";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#varValues}. 
@@ -258,6 +261,7 @@ public class DataAccess {
   public static class IntegerIx {
     public final int ix;
     public IntegerIx(int value){ this.ix = value; }
+    @Override public String toString() { return Integer.toString(this.ix); }
   }
   
 
@@ -1120,7 +1124,7 @@ public class DataAccess {
         if(bStatic){
           data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
         } else {
-          if(data1 !=null){
+          if(data1 !=null){     // reference null because access before, remain null as return.
             //retain a Variable.
             data1 = getDataPriv(element.ident, data1, accessPrivate, bContainer, true /*bVariable*/, dst);
           }
@@ -1183,7 +1187,7 @@ public class DataAccess {
       }//default
 
     }//switch
-    if(element.indices !=null) { //since 2019-06: check indices on any access, not only default
+    if(data1 !=null && element.indices !=null) { //since 2019-06: check indices on any access, not only default
       data1 = getArrayElement(data1, element.indices);
     }
     return data1;
