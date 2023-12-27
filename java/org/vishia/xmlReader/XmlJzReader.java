@@ -813,6 +813,8 @@ public class XmlJzReader
         System.err.println(sError);
       }
     }
+//    if(subOutput == null)
+//      Debugutil.stop();
     return subOutput;
   }
 

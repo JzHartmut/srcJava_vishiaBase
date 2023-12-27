@@ -1411,17 +1411,18 @@ public class DataAccess {
   , Object[] args
   ) throws InvocationTargetException, NoSuchMethodException, Exception {
     Object data1 = null;
+    if(element.ident.equals("prcEvChain"))
+      Debugutil.stop();
     Method method = (Method) element.reflAccess;           // primary use given method, ==null if not given
-    Class<?> clazz1 = method !=null ? null : clazz == null ? obj.getClass() : clazz;
+    Class<?> clazz1 = method !=null ? method.getDeclaringClass() : clazz == null ? obj.getClass() : clazz;
     Class<?> clazzcheck = clazz1;   //in loop superclass checked etc.
+    Object[] givenArgs = args !=null ? args : element.fnArgs;
     if(element.ident.equals("new_draw_polygon"))
       Debugutil.stop();
-    boolean bOk = false;
     while( method == null && clazzcheck !=null ){          // search the method if not given
       if(accessPrivate || (clazzcheck.getModifiers() & Modifier.PUBLIC) !=0){
         Method[] methods = accessPrivate ? clazzcheck.getDeclaredMethods() : clazzcheck.getMethods();
-        for(Method methodCheck: methods){
-          bOk = false;
+        for(Method methodCheck: methods){                  // check all methods
           if(methodCheck.getName().equals(element.ident)){
             if(debugMethod !=null) {
               if(debugMethod.equals(element.ident) || debugMethod.equals("")){
@@ -1430,45 +1431,47 @@ public class DataAccess {
                   debugMethod = null; //only one time after set.
                 }
               }
+            }                                              // with correct name found, check argument types
+            Class<?>[] paramTypes = methodCheck.getParameterTypes();
+            Object[] actArgs = checkAndConvertArgTypes(givenArgs, paramTypes);
+            if(actArgs !=null){
+              method = methodCheck;                        // also the arguments are proper
+              break;
             }
-            method = methodCheck;
-            break;
           }
         }
       }
-      if(!bOk) {
-        clazzcheck = clazzcheck.getSuperclass();
+      if(method == null) {                                 // not found in this level
+        clazzcheck = clazzcheck.getSuperclass();           // go into super class
       }
     } // while
-  if(method !=null) {
+    boolean bOk = false;
+    CharSequence sError = "Method not found";
+    if(method !=null) {                                    // method found or given:
       if(element.reflAccess == null) {
-        //TODO: element.reflAccess = method;
-      }
+          //TODO: element.reflAccess = method;               // store if now found.
+        }
       method.setAccessible(accessPrivate);
-      Class<?>[] paramTypes = method.getParameterTypes();
-      Object[] givenArgs = args !=null ? args : element.fnArgs;
-      Object[] actArgs = checkAndConvertArgTypes(givenArgs, paramTypes);
-      if(actArgs !=null){
-        bOk = true;
+      Class<?>[] paramTypes = method.getParameterTypes();  // arguments from the method's signature
+      Object[] actArgs = checkAndConvertArgTypes(givenArgs, paramTypes); // tune it with actual arguments
+      if(actArgs !=null){                                  // check if actual argument types matches.
         try{ 
-          data1 = method.invoke(obj, actArgs);
-        } catch(IllegalAccessException exc){
-          CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
-          throw new NoSuchMethodException("DataAccess - method access problem: " 
-            + clazzcheck.getName() + "." + element.ident + "(...)" + stackInfo);
-        } catch(InvocationTargetException exc){
-          Assert.stop();
-          throw exc;
+          data1 = method.invoke(obj, actArgs);             // invoke
+          sError = null;                                      // bOk = true if no exception
         } catch(Exception exc){
-          throw exc;
+          sError = ExcUtil.stackInfo("DataAccess - method access problem: " 
+              + method.getClass().getCanonicalName() + method.getName() + "(...)", 3, 5);
+          if(!bNoExceptionifNotFound) { 
+            throw new InvocationTargetException(exc, sError.toString());
+          }
         }
         
       }
     }
-    if(!bOk && !bNoExceptionifNotFound) {
+    if(sError !=null) {  //================================== error handling
       StringBuilder msg = new StringBuilder(1000);
-      if(method!=null){
-        msg.append("DataAccess - method parameters don't match, found:\n");
+      msg.append(sError);
+      if(method !=null) {
         clazzcheck = clazz1;   //in loop superclass checked etc.
         do {
           if(accessPrivate || (clazzcheck.getModifiers() & Modifier.PUBLIC) !=0){
@@ -1476,10 +1479,10 @@ public class DataAccess {
             for(Method methodCheck: methods){
               bOk = false;
               if(method.getName().equals(element.ident)){
-                Parameter[] paramTypes = method.getParameters();
+                Parameter[] param = method.getParameters();
                 msg.append("  ").append(clazzcheck.getName()).append(".") .append(element.ident) .append("(");
                 boolean bNext = false;
-                for(Parameter par: paramTypes) {
+                for(Parameter par: param) {
                   if(bNext) { msg.append(", "); }
                   else { bNext = true; }
                   msg.append(par.getType().getName()); //.append(' ').append(par.getName());
@@ -1487,6 +1490,21 @@ public class DataAccess {
                 msg.append(")\n");
           } } }
         } while(!bOk && (clazzcheck = clazzcheck.getSuperclass()) !=null);
+        msg.append("  ... given arg names: ");
+        boolean bNext = false;
+        if(element.args !=null) {
+          for(CalculatorExpr.Operand arg: element.args) {
+            if(bNext) { msg.append(", "); }
+            else { bNext = true; }
+            msg.append(arg.textOrVar);
+          }
+        }
+        msg.append("<<;\n  ... stackInfo: ");
+        CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
+        if(debugMethod !=null && debugMethod.equals("")){
+          debug();
+          debugMethod = null; //only one time after set.
+        }
       } else {
         msg.append("DataAccess - method not found, searched:\n  ");
         msg.append(clazz1.getName()).append(".") .append(element.ident) .append("(");
@@ -1502,26 +1520,10 @@ public class DataAccess {
         }
         msg.append(")\n");
       }
-      msg.append("  ... given arg names: ");
-      boolean bNext = false;
-      if(element.args !=null) {
-        for(CalculatorExpr.Operand arg: element.args) {
-          if(bNext) { msg.append(", "); }
-          else { bNext = true; }
-          msg.append(arg.textOrVar);
-        }
+      if(!bNoExceptionifNotFound) {
+        throw new NoSuchMethodException(msg.toString());
       }
-      msg.append("<<;\n  ... stackInfo: ");
-      CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
-      if(debugMethod !=null && debugMethod.equals("")){
-        debug();
-        debugMethod = null; //only one time after set.
-      }
-      throw new NoSuchMethodException(stackInfo.toString());
     }
-    //Method method = clazz.getDeclaredMethod(element.ident);
-    //data1 = method.invoke(dataPool);
-    //} catch 
     return data1;    
   }
   
@@ -2934,7 +2936,7 @@ public class DataAccess {
       if(cStart == '&' ) { //-------------------------------- an indirect path
         this.whatisit = '&';
         if(path.scan("&(").scanOk()) {
-          this.args = new CalculatorExpr.Operand[1];
+          this.args = new CalculatorExpr.Operand[1];       // stores the path to the path
           this.args[0] = new CalculatorExpr.Operand(path, nameVariables, reflData, false);
           if(!path.scan(")").scanOk()) {
             throw new ParseException("&(<expression>) expected: , \")\" missing" + path.getCurrent(32), 0);
@@ -2991,7 +2993,7 @@ public class DataAccess {
         }
         Debugutil.stop();
       } // [...]
-      if(bFirst) {
+      if(bFirst && this.ident !=null) {
         if(nameVariables !=null) {
           IntegerIx ix1 = nameVariables.get(this.ident);
           if(ix1 !=null) {

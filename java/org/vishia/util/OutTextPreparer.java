@@ -1647,10 +1647,13 @@ public class OutTextPreparer
     int pos2 = (int)sp.getCurrentPosition();
     DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0');
     boolean bScanOk = sp.scan(")>").scanOk();
+    if(!bScanOk) {
+      bScanOk = sp.scan(">").scanOk();
+    }
     int pos3 = (int)sp.getCurrentPosition();
     String sOperation = src.substring(pos2, pos3-1);
     if(!bScanOk) {
-      throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
+      throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
     }
     cmd = new Cmd(ECmd.exec, -1, access, idxConstData, sOperation);
     return cmd;
@@ -2080,7 +2083,7 @@ public class OutTextPreparer
             //ExecCmd ecmd = (ExecCmd)cmd;
             DataAccess.DatapathElement dataAccess1 = cmd.dataAccess.dataPath1();
             try {
-              DataAccess.access(dataAccess1, null, true, false, null, args.args, false, null); 
+              DataAccess.access(dataAccess1, args.execObj, true, false, null, args.args, false, null); 
 //              Method execOperation = (Method)dataAccess1.reflAccess;
 //              Class<?>[] argTypes = execOperation.getParameterTypes();
 //              int zArgs = argTypes.length;
