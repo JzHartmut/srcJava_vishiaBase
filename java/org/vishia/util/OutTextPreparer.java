@@ -47,7 +47,7 @@ import java.util.TreeMap;
  * <:if:data.cond>conditional output<:else>other variant<.if>
  * <:for:var:data.container>element = <&var><.for>
  * <:call:subtext:arg=data.var>
- * <:exec:operation:data>
+ * <:exec:operation(arguments,...)>
  * <.otx>
  * </pre>
  * To execute this script you should call (see {@link #createArgumentDataObj()} and {@link #exec(Appendable, DataTextPreparer)}: 
@@ -210,11 +210,11 @@ try {
  * due to the execution call. 
  * That is powerful because you can use specific parts programmed in Java in your script.
  * <br>
- * Call that operations with <code><:exec:operation:arg1:arg...></code>. 
+ * Call that operations with <code><:exec:operation(arg1, arg, ...)></code>. 
  * <br>It is similar to a data access written as <code><&path.to.obj.operation(arg1,arg...)</code> 
  * but it is faster parsed and executed due to the immediately given 'execClass'.
  * <br><br>
- * <b><code>&lt;:exec:operation:arg></code></b>:<br>
+ * <b><code>&lt;:exec:operation(arg)></code></b>:<br>
  * The <code>:arg</code> is optional. The <code>operation</code> will be searched in the given reflection class (ctor argument).
  * The operation is stored as {@link Method} for usage, so this operation is fast. 
  * The optional argument is used from given arguments of call, it should be match to the operations argument type.
@@ -229,6 +229,15 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-27 {@link #parseExec(String, int, int, StringPartScan, Class, Map, Map)}:
+   *   Changed behavior for &lt;:exec:...> using the capability of {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
+   *   and then {@link DataAccess#access(org.vishia.util.DataAccess.DatapathElement, Object, boolean, boolean, Map, Object[], boolean, org.vishia.util.DataAccess.Dst)}
+   *   for execution. This supports more as one argument. Before, &lt;:exec:name(arg,...)> has only supported one element.
+   *   Syntax change: No colon after operation name, instead operation(args , ...)
+   * <li>2023-12-27 The reference to the writer is stored anyway as argument "OUT" in {@link DataTextPreparer#args}.
+   *   For that {@link #ixOUT} is stored as whose index in that array args.
+   *   The writer reference is stored automatically for each level in the associated data on start of {@link #execSub(Appendable, DataTextPreparer, int, int)}.
+   *   It can be used to recursively generate outputs in Java operations called via %lt;:exec:...>.
    * <li>2023-12-26 Some improvements, especially &lt;&...;format> for formatted numeric values. 
    * <li>2023-12-23 General two translate phases are necessary for recursively calls. 
    *   It helps also to use sub scripts before definition in order in the script.  
@@ -300,7 +309,7 @@ public class OutTextPreparer
     /**The associated const data for OutText preparation used for {@link #setArgument(String, Object)} by name. */
     final OutTextPreparer prep;
     
-    /**The instance where the &lt;:exec:operation...> are located. null if not necessary. */
+    /**The instance where the &lt;:exec:operation(...)> are located. null if not necessary. */
     Object execObj;
     
     /**Array of all arguments. It is sorted to the {@link OutTextPreparer#nameVariables} with its value {@link DataAccess.IntegerIx}. 
@@ -347,10 +356,10 @@ public class OutTextPreparer
      * @param value any value for this argument.
      * */
     public void setArgument(String name, Object value) {
-      DataAccess.IntegerIx ix0 = prep.nameVariables.get(name);
-      if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + prep.sIdent + ", argument: " + name + " not existing: ");
+      DataAccess.IntegerIx ix0 = this.prep.nameVariables.get(name);
+      if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + this.prep.sIdent + ", argument: " + name + " not existing: ");
       int ix = ix0.ix;
-      args[ix] = value;
+      this.args[ix] = value;
     }
     
   
@@ -366,7 +375,7 @@ public class OutTextPreparer
     /**Sets an instance due to the given 'execClass' for the script.
      * @param data The instance must be proper to the 'execClass' argument of the constructors
      *   respectively to the {@link OutTextPreparer#readTemplateCreatePreparer(InputStream, String, Class, Map, String).}
-     *   If it does not match, an exception is thrown while processing a non static <code><:exec:operation:...></code>
+     *   If it does not match, an exception is thrown while processing a non static <code><:exec:operation(...)></code>
      */
     public void setExecObj(Object data) { this.execObj = data; }
   
@@ -553,17 +562,17 @@ public class OutTextPreparer
   }
   
   
-  static class ExecCmd extends Cmd {
+  static class XXXXXXXExecCmd extends Cmd {
     
     /**Index for {@link DataTextPreparer#argSub} to get already existing data container. */
     public Method execOperation;
     
     
-    public ExecCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception 
+    public XXXXXXXExecCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception 
     { super(outer, ECmd.exec, spDatapath, reflData); 
     }
     
-    public ExecCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData, final Map<String, Object> idxConstData) throws Exception 
+    public XXXXXXXExecCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData, final Map<String, Object> idxConstData) throws Exception 
     { super(outer, ECmd.exec, sDatapath, reflData, idxConstData); 
     }
   }
@@ -645,7 +654,10 @@ public class OutTextPreparer
   
   
   /**All argument variables and internal variables sorted. */
-  private Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>();
+  protected Map<String, DataAccess.IntegerIx> nameVariables = new TreeMap<String, DataAccess.IntegerIx>();
+  
+  /**Index of the OUT element in variables */
+  int ixOUT;
   
   /**Container with {@link OutTextPreparer} instances which can be called as sub pattern. 
    * Usual they are the patterns read from one textual file with several scripts (or a few files).
@@ -841,8 +853,8 @@ public class OutTextPreparer
    *    "A simple text with newline: \n"  // The output text pattern
    *  + "<&arg1>: a variable value"
    *  + "<&arg1.operation(arg2)>: Invocation of any operation in arguments resulting in an text"  
-   *  + "<:call:otxSubText:arg1>: call of any sub text maybe with args"
-   *  + "<:exec:operation:arg1> : call of any static operation in the given reflection class maybe with args"
+   *  + "<:call:otxSubText:arg1:arg2:...>: call of any sub text maybe with args"
+   *  + "<:exec:operation(arg1, arg2, ....)> : call of any static operation in the given reflection class maybe with args"
    *  ;</pre>
    * @param ident Any identification not used for the generated text.
    * @param execClass If the access via reflection should be done, null possible
@@ -1302,6 +1314,12 @@ public class OutTextPreparer
 
   
   
+  /**Sets all variables from string, but at last "OUT".
+   * "OUT" is the opened output writer for generation (Type Appendable)
+   * It calls {@link #setVariables(List)}
+   * @param variables String with identifier names, separated with comma, white spaces admissible. 
+   *   first name in the String gets the index 0
+   */
   private void parseVariables(String variables) {
     List<String> listvarValues = new LinkedList<String>();
     StringPartScan sp = new StringPartScan(variables);
@@ -1319,11 +1337,19 @@ public class OutTextPreparer
   
   
   
+  /**Sets all variables from list, but at last "OUT".
+   * "OUT" is the opened output writer for generation (Type Appendable)
+   * 
+   * @param listArgs first argument in the list gets the index 0
+   */
   private void setVariables(List<String> listArgs) {
     this.listArgs = listArgs; 
     for(String var: listArgs) {
       this.nameVariables.put(var, new DataAccess.IntegerIx(this.nameVariables.size()));
     }
+    this.ixOUT = this.nameVariables.size();
+    this.nameVariables.put("OUT", new DataAccess.IntegerIx(this.ixOUT));
+    
   }
   
   
@@ -1472,9 +1498,10 @@ public class OutTextPreparer
           cmd.ixVariable = ixOentry.ix;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
-        else if(sp.scan(":exec:").scanIdentifier().scanOk()) {
+        else if(sp.scan(":exec:").scanOk()) { //scanIdentifier().scanOk()) {
           //====>
-          parseExec(pattern, pos0, pos1, sp, execClass, idxConstData, idxScript);
+          Cmd cmd = parseExec(pattern, pos0, pos1, sp, execClass, idxConstData, idxScript);
+          this.cmds.add(cmd);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":call:").scanIdentifier().scanOk()) {
@@ -1611,13 +1638,29 @@ public class OutTextPreparer
   }
   
   
-  
+  private Cmd parseExec(final String src, final int pos0, final int pos1, StringPartScan sp
+      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) throws ParseException {
+    if(pos1 > pos0) {
+      this.cmds.add(new CmdString(src.substring(pos0, pos1)));
+    }
+    final Cmd cmd;
+    int pos2 = (int)sp.getCurrentPosition();
+    DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0');
+    boolean bScanOk = sp.scan(")>").scanOk();
+    int pos3 = (int)sp.getCurrentPosition();
+    String sOperation = src.substring(pos2, pos3-1);
+    if(!bScanOk) {
+      throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
+    }
+    cmd = new Cmd(ECmd.exec, -1, access, idxConstData, sOperation);
+    return cmd;
+  }  
 
-  private void parseExec(final String src, final int pos0, final int pos1, StringPartScan sp
+  private void XXXparseExec(final String src, final int pos0, final int pos1, StringPartScan sp
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     String name = sp.getLastScannedString();
-//    if(name.equals("writeFBlocks"))
-//      Debugutil.stop();
+    if(name.equals("prcEvChain"))
+      Debugutil.stop();
     Class argType;
 //    String sArg;
 //    if(sp.scan(":").scanToAnyChar(">", '\\', '\'', '\'').scanOk()) {
@@ -1635,7 +1678,8 @@ public class OutTextPreparer
       spArg = null;
       argType = null;
     }
-    ExecCmd cmd = (ExecCmd)addCmdSp(src, pos0, pos1, ECmd.exec, spArg, reflData, idxConstData, idxScript);
+    
+    XXXXXXXExecCmd cmd = (XXXXXXXExecCmd)addCmdSp(src, pos0, pos1, ECmd.exec, spArg, reflData, idxConstData, idxScript);
     Method[] operations = reflData.getMethods();
     Class<?>[] argTypes = null;
     for(Method operation: operations) {
@@ -1649,7 +1693,7 @@ public class OutTextPreparer
     //catch(NoSuchMethodException exc) 
     if(cmd.execOperation == null){ throw new IllegalArgumentException("<:exec:" + name + "> not found in " + reflData.toString() + ". "); }
     if(!sp.scan(">").scanOk()) {
-      throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error \">\" expected in <:exec: " + name + "...>");
+      throw new IllegalArgumentException("OutTextPreparer "+ sIdent + ": syntax error \">\" expected in <:exec: " + name + "(...)>");
     }
   }
   
@@ -1844,7 +1888,10 @@ public class OutTextPreparer
             cmd = new CallCmd((OutTextPreparer)oOtxSub); //this, sDatapath, data); 
             //cmd = new CallCmd(this, sDatapath, data); 
             break;
-          case exec: cmd = new ExecCmd(this, sDatapath, reflData, idxConstData); break;
+          case exec: { //cmd = new ExecCmd(this, sDatapath, reflData, idxConstData); 
+            cmd = parseExec(src, from, to, new StringPartScan(sDatapath), reflData, idxConstData, idxScript);
+            break;
+          }
           case forCtrl: cmd = new ForCmd(this, sDatapath, reflData); break;
           case setVar: cmd = new SetCmd(this, sDatapath, reflData); break;
           case debug: cmd = new DebugCmd(this, sDatapath, reflData, idxConstData); break;
@@ -1854,7 +1901,7 @@ public class OutTextPreparer
       } catch(Exception exc) {
         throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
       }
-      cmds.add(cmd);
+      this.cmds.add(cmd);
     } else {
       cmd = null;
     }
@@ -1892,8 +1939,10 @@ public class OutTextPreparer
             }
             cmd = new CallCmd((OutTextPreparer)oOtxSub); //this, sDatapath, data); 
             break;
-          case exec: cmd = new ExecCmd(this, sDatapath, data); break;
-          case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
+          case exec: //cmd = new ExecCmd(this, sDatapath, data); break;
+            cmd = parseExec(src, from, to, new StringPartScan(sDatapath), data, idxConstData, idxScript);
+            break;
+         case forCtrl: cmd = new ForCmd(this, sDatapath, data); break;
           case setVar: cmd = new SetCmd(this, sDatapath, data); break;
           case debug: cmd = new DebugCmd(this, sDatapath, data); break;
           default: cmd = new Cmd(this, ecmd, sDatapath, data); break;
@@ -1901,7 +1950,7 @@ public class OutTextPreparer
       } catch(Exception exc) {
         throw new IllegalArgumentException("OutTextPreparer " + sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
       }
-      cmds.add(cmd);
+      if(cmd !=null) { this.cmds.add(cmd);}
     } else {
       cmd = null;
     }
@@ -1966,6 +2015,9 @@ public class OutTextPreparer
   private void execSub( Appendable wr, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
     int ixCmd = ixStart;
+    if(args.args[this.ixOUT] == null) {
+      args.args[this.ixOUT] = wr;                          // variable "OU" is the output writer
+    }
     while(ixCmd < ixEndExcl) {
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
         debug();
@@ -1986,7 +2038,7 @@ public class OutTextPreparer
       else if(cmd.ixValue >=0) { //-------------------------- any index to the arguments or local arguments
         data = execDataAccess(wr, cmd, args); 
       } 
-      else if(cmd.dataAccess !=null) {
+      else if(cmd.cmd != ECmd.exec && cmd.dataAccess !=null) {
         try {
           //====>
           data = cmd.dataAccess.access(null, true, false, nameVariables, args.args);
@@ -2025,20 +2077,23 @@ public class OutTextPreparer
             ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
           } break;
           case exec: {
-            ExecCmd ecmd = (ExecCmd)cmd;
-            Class<?>[] argTypes = ecmd.execOperation.getParameterTypes();
-            int zArgs = argTypes.length;
+            //ExecCmd ecmd = (ExecCmd)cmd;
+            DataAccess.DatapathElement dataAccess1 = cmd.dataAccess.dataPath1();
             try {
-              if(zArgs == 0) { //any argument:
-                ((ExecCmd)cmd).execOperation.invoke(args.execObj);  //without argument
-              } else {
-                if(DataAccess.istypeof(data, argTypes[0])) {
-                  ((ExecCmd)cmd).execOperation.invoke(args.execObj, data);
-                } else {
-                  wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": argument type error " + data.getClass() + "??>");
-                }
-              }
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException exc) {
+              DataAccess.access(dataAccess1, null, true, false, null, args.args, false, null); 
+//              Method execOperation = (Method)dataAccess1.reflAccess;
+//              Class<?>[] argTypes = execOperation.getParameterTypes();
+//              int zArgs = argTypes.length;
+//              if(zArgs == 0) { //any argument:
+//                execOperation.invoke(args.execObj);  //without argument
+//              } else {
+//                if(DataAccess.istypeof(data, argTypes[0])) {
+//                  execOperation.invoke(args.execObj, data);
+//                } else {
+//                  wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": argument type error " + data.getClass() + "??>");
+//                }
+//              }
+            } catch (Exception exc) {
               // TODO Auto-generated catch block
               wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
             } 

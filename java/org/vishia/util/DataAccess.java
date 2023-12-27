@@ -88,6 +88,16 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-27: new field {@link DatapathElement#ixData}
+   *   initial set in {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} for an element found in the variable list "nameVariables",
+   * <li>2023-12-27: new field {@link DatapathElement#reflAccess} 
+   *   initial set in {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} for an operation from first level,
+   *   Used for {@link OutTextPreparer} &lt;:exec:operation(...)> to get the operation from the given Class reflData
+   *   while invocation {@link DatapathElement#set(StringPartScan, Map, Class, boolean) for the first element}.
+   *   TODO planned: set on demand on first usage, check the type.
+   * <li>2023-12-27: {@link #listDatapath} renamed from "datapath" but additional {@link #oneDatapathElement}. It is faster.
+   *   If only one element is contained in DataAccess, no list organization. {@link #add_datapathElement(DatapathElement)} regards it.
+   *   {@link #datapath()} builds a List anyway, but {@link #dataPath1()} returns the only one element or null if more. 
    * <li>2023-12-25: {@link #access(DatapathElement, Object, boolean, boolean, Map, Object[], boolean, Dst)} one data==null test.
    *   General: not proper documented, an reference ==null forces return = null without exception. 
    *   Hence some more ==null tests may be necessary. 
@@ -188,7 +198,7 @@ public class DataAccess {
    *   in such an instance {@link Variable}, it is a low-cost effort. 
    * <li>2013-10-09 Hartmut new: {@link #storeValue(List, Map, Object, boolean)} put in a map, replaces the value.
    * <li>2013-09-14 Hartmut new: support of null as Argument.
-   * <li>2013-08-18 Hartmut new: This class now contains the List of {@link #datapath} as only one attribute.
+   * <li>2013-08-18 Hartmut new: This class now contains the List of {@link #listDatapath} as only one attribute.
    *   Now this class can be used instead a <code>List<DataAccess.DatapathElement></code> as bundled instance.
    * <li>2013-08-18 Hartmut new: {@link DataAccessSet} is moved from the {@link org.vishia.zbatch.ZbatchGenScript}
    *   because it is more universal.
@@ -252,7 +262,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2023-12-25";
+  static final public String sVersion = "2023-12-27";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#varValues}. 
@@ -535,8 +545,9 @@ public class DataAccess {
    * If it is used in {@link DataAccess}, its base class {@link DataAccess.DatapathElement} are used. The difference
    * are the handling of actual values for method calls. See {@link ZbnfDataPathElement#actualArguments}.
    */
-  protected List<DataAccess.DatapathElement> datapath;
+  protected List<DataAccess.DatapathElement> listDatapath;
   
+  protected DataAccess.DatapathElement oneDatapathElement;
   
   /**Creates a Datapath with given String.
    * The first character of an element determines the type, see {@link DatapathElement#set(String)}.
@@ -552,17 +563,16 @@ public class DataAccess {
    * @throws ParseException 
    */
   public DataAccess(String path) throws ParseException{
-    datapath = new ArrayList<DataAccess.DatapathElement>();
     if("$+%!".indexOf(path.charAt(0))>=0){
       //only one element, environment variable, new Instance, static method.
       DatapathElement element = new DatapathElement(path);
-      datapath.add(element);
+      add_datapathElement(element);
     } else {
       //First element starts with '@' then from datapool.
       String[] pathElements = path.split("\\.");
       for(String sElement: pathElements){
         DatapathElement element = new DatapathElement(sElement);
-        datapath.add(element);
+        add_datapathElement(element);
       }
     }
   }
@@ -584,13 +594,13 @@ public class DataAccess {
    * @throws ParseException 
    */
   public DataAccess(String path, char cTypeNewVariable) throws ParseException{
-    datapath = new ArrayList<DataAccess.DatapathElement>();
+    assert(this.listDatapath==null && this.oneDatapathElement == null);
     String[] pathElements = path.split("\\.");
     DatapathElement element = null;
     for(int ii=0; ii < pathElements.length; ++ii){
       String sElement = pathElements[ii];
       element = new DatapathElement(sElement);
-      datapath.add(element);
+      add_datapathElement(element);
     }
     if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
       element.whatisit = cTypeNewVariable;  //from the last element.
@@ -627,16 +637,17 @@ public class DataAccess {
    */
   public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
   , Class<?> reflData, char cTypeNewVariable) throws ParseException {
-    this.datapath = new ArrayList<DatapathElement>();
+    assert(this.listDatapath==null && this.oneDatapathElement == null);
+    boolean bFirst = true;
     do {
-      DatapathElement element = new DatapathElement(sp, nameVariables, reflData);
+      DatapathElement element = new DatapathElement(sp, nameVariables, reflData, bFirst);
       if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
         element.whatisit = cTypeNewVariable;  //from the last element.
       }
-      datapath.add(element);
+      add_datapathElement(element);
+      bFirst = false;
     } while(sp.scan(".").scanOk());
   }
-  
   
   
   
@@ -644,28 +655,52 @@ public class DataAccess {
   public DataAccess(){}
   
   
-  /**Returns the datapath of this access to check details. */
-  public final List<DataAccess.DatapathElement> datapath(){ return datapath; }
+  
+  /**Returns the datapath of this access to check details. 
+   * If only one element is stored, an independent List with this element is returned. */
+  public final List<DataAccess.DatapathElement> datapath(){ 
+    if(this.oneDatapathElement !=null) { 
+      List<DataAccess.DatapathElement> list = new LinkedList<>();
+      list.add(this.oneDatapathElement);
+      return list;
+    } else {
+      return this.listDatapath; // maybe null if empty
+    }
+  }
   
   
-  
+  /**Returns the only one element in the DataAccess path if it is only one.
+   * If there are more elements (deeper access) this returns null. 
+   * Then {@link #datapath()} should be used to iterate over all elements.
+   * @return
+   */
+  public final DataAccess.DatapathElement dataPath1 () {
+    return this.oneDatapathElement;
+  }
   
   /**Sets the datapath while adding one element after another.
    * More elements are necessary if the datapath has references.
+   * This operation is not thread safe. For multithreading use outer synchronize.
    * @param item
    * @see {@link DatapathElement}
    */
   public void add_datapathElement(DatapathElement item){ 
-    if(datapath == null){
-      datapath = new ArrayList<DataAccess.DatapathElement>();
+    if(this.listDatapath == null){
+      if(this.oneDatapathElement==null) {
+        this.oneDatapathElement = item;
+      } else {
+        this.listDatapath = new ArrayList<DataAccess.DatapathElement>();
+        this.listDatapath.add(this.oneDatapathElement);
+        this.oneDatapathElement = null;
+        this.listDatapath.add(item); 
+      }
     }
-    datapath.add(item); 
   }
 
 
   
 
-  /**Searches the Object maybe invoking some methods which is referred with this instances, {@link #datapath}. 
+  /**Searches the Object maybe invoking some methods which is referred with this instances, {@link #listDatapath}. 
    * @param dataRoot Either a Map<String, ?> or any other Object which is the root for access.
    *  it is the object where the path starts from. A Map<?,?> which's key is not a String is not admissible. 
    * @param bContainer true then returns a found container or build one.
@@ -677,7 +712,30 @@ public class DataAccess {
   public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer
   , Map<String, IntegerIx> nameVariables, Object[] varValues) 
   throws Exception{
-    return access(datapath, dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
+    if(this.oneDatapathElement!=null) {
+      boolean bVariable = false;
+      Object data1 = access(this.oneDatapathElement, dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
+      if(data1 instanceof Variable<?> && !bVariable){  //use the value of the variable.
+        @SuppressWarnings("unchecked") Variable<Object> var = (Variable<Object>)data1;
+        data1 = var.value;
+      }
+      if(data1 == null) return null;
+      else if(bContainer){
+        //should return a container
+        if(data1.getClass().isArray()) return data1;
+        if(data1 instanceof Iterable<?> || data1 instanceof Map<?,?>) return data1;
+        else {
+          //Build a container if only one element is addressed.
+          List<Object> list1 = new LinkedList<Object>();
+          list1.add(data1);
+          return list1;
+        }
+      }
+      else return data1;
+    }
+    else {
+      return access(listDatapath, dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
+    }
   }
 
   
@@ -780,7 +838,7 @@ public class DataAccess {
   public void storeValue( Object dataRoot, Object value, boolean bAccessPrivate) 
   throws Exception
   {
-    storeValue(datapath, dataRoot, value, bAccessPrivate);
+    storeValue(listDatapath, dataRoot, value, bAccessPrivate);
   }
   
   
@@ -1090,6 +1148,9 @@ public class DataAccess {
       , Dst dst
   ) throws Exception {
     boolean bStatic;
+    if(element.reflAccess !=null) {
+      Debugutil.stop();
+    }
     //                                 // Hint: data1 can be null, if the previous access has deliverd null
     if(data1 instanceof Class){
       bStatic = true;              //If a class type is given as argument, static accesses are supported.
@@ -1140,7 +1201,11 @@ public class DataAccess {
         }
         //else: let data1=null, return null
       } break;
-      case '%': { data1 = element.operation_ || element.args !=null || element.fnArgs !=null ? invokeStaticMethod(element) : getStaticValue(element); } break;
+      case '%': { 
+        data1 = element.operation_ || element.args !=null || element.fnArgs !=null 
+          ? data1 = invokeMethod(element, null, data1, accessPrivate, varValues, false)//invokeStaticMethod(element, varValues) 
+          : getStaticValue(element); 
+      } break;
       case '$': {
         if((data1 instanceof Map<?,?>)){  //should be Map<String, Variable>
           @SuppressWarnings("unchecked")
@@ -1284,9 +1349,10 @@ public class DataAccess {
    * @param accessPrivate true then uses private methods too
    * @param varValues maybe null or array of some variables which are sorted by parameter idxVariables 
    *   in {@link #DataAccess(StringPartScan, Map, Class, char)}
+   *   used to get the value due to {@link DatapathElement#args} as their DataPath (stored in {@link CalculatorExpr.Operand}
    * @param bNoExceptionifNotFound if the then does not a NochSuchMethodException if the method was not found.
    *   This is a special flag if the method is optional.
-   * @return the return value of the method
+   * @return the return value of the method, null if the method is void.
    * @throws InvocationTargetException 
    * @throws NoSuchMethodException 
    */
@@ -1311,7 +1377,7 @@ public class DataAccess {
         }
       }
     }
-     return invokeMethod(element, clazz, obj, accessPrivate, bNoExceptionifNotFound, args);
+     return invokeMethodWithGivenArgValues(element, clazz, obj, accessPrivate, bNoExceptionifNotFound, args);
   }  
   
   
@@ -1324,16 +1390,19 @@ public class DataAccess {
    *   elsewhere an exception is thrown.
    * @param obj The instance which is the instance of the method. The obj
    *   is used as first argument of {@link Method#invoke(Object, Object...)}.
-   *   For static methods obj is not used. It may be null. 
-   * @param accessPrivate
-   * @param bNoExceptionifNotFound
-   * @param args if not null then this arguments are used prior to element {@link DatapathElement#fnArgs}.
-   * @return see {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean)}
-   * @throws InvocationTargetException
-   * @throws NoSuchMethodException
+   *   For static methods obj is not used. It may be null. But then clazz should be given 
+   *   or the Method is given already in param element in {@link DatapathElement#reflAccess}.
+   * @param accessPrivate true then also access private and protected operations
+   * @param bNoExceptionifNotFound If true then an output text is returned instead throwing an exception
+   * @param args if not null then this arguments are used.
+   * @return the return value of the method, null if the method is void.
+   * @throws InvocationTargetException on exceptions in the operation
+   * @throws NoSuchMethodException if not found 
    * @throws Exception
+   * @since 2023-12-17 renamed from "invokeMethod" which is able to confuse with {@link #invokeMethod(DatapathElement, Class, Object, boolean, Object[], boolean)}.
+   * 
    */
-  public static Object invokeMethod(
+  public static Object invokeMethodWithGivenArgValues(
     DatapathElement element
   , Class<?> clazz  
   , Object obj
@@ -1342,18 +1411,18 @@ public class DataAccess {
   , Object[] args
   ) throws InvocationTargetException, NoSuchMethodException, Exception {
     Object data1 = null;
-    Class<?> clazz1 = clazz == null ? obj.getClass() : clazz;
+    Method method = (Method) element.reflAccess;           // primary use given method, ==null if not given
+    Class<?> clazz1 = method !=null ? null : clazz == null ? obj.getClass() : clazz;
     Class<?> clazzcheck = clazz1;   //in loop superclass checked etc.
     if(element.ident.equals("new_draw_polygon"))
       Debugutil.stop();
     boolean bOk = false;
-    boolean methodFound = false;
-    do{
+    while( method == null && clazzcheck !=null ){          // search the method if not given
       if(accessPrivate || (clazzcheck.getModifiers() & Modifier.PUBLIC) !=0){
         Method[] methods = accessPrivate ? clazzcheck.getDeclaredMethods() : clazzcheck.getMethods();
-        for(Method method: methods){
+        for(Method methodCheck: methods){
           bOk = false;
-          if(method.getName().equals(element.ident)){
+          if(methodCheck.getName().equals(element.ident)){
             if(debugMethod !=null) {
               if(debugMethod.equals(element.ident) || debugMethod.equals("")){
                 debug();
@@ -1362,41 +1431,49 @@ public class DataAccess {
                 }
               }
             }
-            methodFound = true;
-            method.setAccessible(accessPrivate);
-            Class<?>[] paramTypes = method.getParameterTypes();
-            Object[] givenArgs = args !=null ? args : element.fnArgs;
-            Object[] actArgs = checkAndConvertArgTypes(givenArgs, paramTypes);
-            if(actArgs !=null){
-              bOk = true;
-              try{ 
-                data1 = method.invoke(obj, actArgs);
-              } catch(IllegalAccessException exc){
-                CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
-                throw new NoSuchMethodException("DataAccess - method access problem: " 
-                  + clazzcheck.getName() + "." + element.ident + "(...)" + stackInfo);
-              } catch(InvocationTargetException exc){
-                Assert.stop();
-                throw exc;
-              } catch(Exception exc){
-                throw exc;
-              }
-              
-              break;  //method found.
-            }
+            method = methodCheck;
+            break;
           }
         }
       }
-    } while(!bOk && (clazzcheck = clazzcheck.getSuperclass()) !=null);
+      if(!bOk) {
+        clazzcheck = clazzcheck.getSuperclass();
+      }
+    } // while
+  if(method !=null) {
+      if(element.reflAccess == null) {
+        //TODO: element.reflAccess = method;
+      }
+      method.setAccessible(accessPrivate);
+      Class<?>[] paramTypes = method.getParameterTypes();
+      Object[] givenArgs = args !=null ? args : element.fnArgs;
+      Object[] actArgs = checkAndConvertArgTypes(givenArgs, paramTypes);
+      if(actArgs !=null){
+        bOk = true;
+        try{ 
+          data1 = method.invoke(obj, actArgs);
+        } catch(IllegalAccessException exc){
+          CharSequence stackInfo = Assert.stackInfo(" called ", 3, 5);
+          throw new NoSuchMethodException("DataAccess - method access problem: " 
+            + clazzcheck.getName() + "." + element.ident + "(...)" + stackInfo);
+        } catch(InvocationTargetException exc){
+          Assert.stop();
+          throw exc;
+        } catch(Exception exc){
+          throw exc;
+        }
+        
+      }
+    }
     if(!bOk && !bNoExceptionifNotFound) {
       StringBuilder msg = new StringBuilder(1000);
-      if(methodFound){
+      if(method!=null){
         msg.append("DataAccess - method parameters don't match, found:\n");
         clazzcheck = clazz1;   //in loop superclass checked etc.
         do {
           if(accessPrivate || (clazzcheck.getModifiers() & Modifier.PUBLIC) !=0){
             Method[] methods = accessPrivate ? clazzcheck.getDeclaredMethods() : clazzcheck.getMethods();
-            for(Method method: methods){
+            for(Method methodCheck: methods){
               bOk = false;
               if(method.getName().equals(element.ident)){
                 Parameter[] paramTypes = method.getParameters();
@@ -1451,12 +1528,13 @@ public class DataAccess {
   
   
   /**Invokes the static method which is described with the element.
+   * This operation is no more necessary, because {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} does the same.
    * @param element its {@link DatapathElement#whatisit} == '%'.
    *   The {@link DatapathElement#identArgJbat} should contain the full qualified "packagepath.Class.methodname" separated by dot.
    * @return the return value of the method
    * @throws Throwable 
    */
-  protected static Object invokeStaticMethod( DatapathElement element ) 
+  protected static Object XXXinvokeStaticMethod( DatapathElement element, Object[] args ) 
   throws Exception
   { final Class<?> clazz; 
     final String sMethod;
@@ -1487,7 +1565,7 @@ public class DataAccess {
         }
         Class<?>[] paramTypes = method.getParameterTypes();
         
-        Object[] actArgs = checkAndConvertArgTypes(element.fnArgs, paramTypes);
+        Object[] actArgs = checkAndConvertArgTypes(args !=null ? args: element.fnArgs, paramTypes);
         if(actArgs !=null){
           if((method.getModifiers() & Modifier.STATIC) ==0) { 
             throw new IllegalArgumentException("DataAccess - invokeStaticMethod on non static method, " + sMethod);
@@ -1509,10 +1587,11 @@ public class DataAccess {
       msg.append("DataAccess - static method not found: ")
       //.append(clazz.getName()).append(".") 
       .append(element.ident) .append("(");
-      if(element.fnArgs !=null) {
-        for(Object args: element.fnArgs) {
-          if(args == null) msg.append("null, ");
-          else msg.append(args.getClass()).append(", ");
+      Object[] args1 = args !=null ? args : element.fnArgs;
+      if(args1 !=null) {
+        for(Object arg: args1) {
+          if(arg == null) msg.append("null, ");
+          else msg.append(arg.getClass()).append(", ");
       } }
 //      else if(args !=null) {
 //        for(Object arg: args) {
@@ -2382,21 +2461,29 @@ public class DataAccess {
   /**Should be used only for debug to view what is it.
    * @see java.lang.Object#toString()
    */
-  @Override public String toString(){ return datapath !=null ? datapath.toString() : "emtpy DataAccess"; }
+  @Override public String toString(){ 
+    return this.oneDatapathElement !=null ? this.oneDatapathElement.toString() 
+         : this.listDatapath !=null ? this.listDatapath.toString() 
+         : "emtpy DataAccess";
+  }
   
   /**Returns a CharSequence with the idents of the path separated with "."
    * @return null if datapath is empty.
    */
   public CharSequence idents(){
-    int zDatapath = datapath == null ? 0 : datapath.size();
-    if(zDatapath == 0 ) return null;
-    else if(zDatapath == 1) return datapath.get(0).ident;
+    if(this.oneDatapathElement !=null) {
+      return this.oneDatapathElement.ident;
+    } 
     else {
-      StringBuilder u = new StringBuilder();
-      for(DataAccess.DatapathElement item : datapath){
-        u.append(item.ident).append(".");
+      int zDatapath = this.listDatapath == null ? 0 : this.listDatapath.size();
+      if(zDatapath == 0 ) return null;
+      else {
+        StringBuilder u = new StringBuilder();
+        for(DataAccess.DatapathElement item : this.listDatapath){
+          u.append(item.ident).append(".");
+        }
+        return u;
       }
-      return u;
     }
   }
   
@@ -2427,7 +2514,7 @@ public class DataAccess {
   
   public void writeStruct(Appendable out) throws IOException {
     String sep = "";
-    for(DatapathElement element: datapath){
+    for(DatapathElement element: listDatapath){
       out.append(sep);
       element.writeStruct(out);
       sep = ".";
@@ -2473,24 +2560,20 @@ public class DataAccess {
     
     
     public final void set_envVariable(String ident){
-      if(datapath == null){
-        datapath = new ArrayList<DataAccess.DatapathElement>();
-      }
+      assert(this.listDatapath==null && this.oneDatapathElement == null);
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
       element.whatisit = '$';
       element.ident = ident;
-      datapath.add(element); 
+      add_datapathElement(element); 
     }
     
 
     public final void set_startVariable(String ident){
-      if(datapath == null){
-        datapath = new ArrayList<DataAccess.DatapathElement>();
-      }
+      assert(this.listDatapath==null && this.oneDatapathElement == null);
       DataAccess.DatapathElement element = new DataAccess.DatapathElement();
       element.whatisit = '@';
       element.ident = ident;
-      datapath.add(element); 
+      add_datapathElement(element); 
     }
     
     
@@ -2519,10 +2602,15 @@ public class DataAccess {
 
     /**This routine have to be invoked as last one to set the type. */
     public final void setTypeToLastElement(char type){
-      int ix = datapath.size() -1;
-      if(ix >=0){
-        DatapathElement last = datapath.get(ix);
-        last.whatisit = type;
+      if(this.oneDatapathElement !=null) {
+        this.oneDatapathElement.whatisit = type;
+      }
+      else {
+        int ix = this.listDatapath.size() -1;
+        if(ix >=0){
+          DatapathElement last = this.listDatapath.get(ix);
+          last.whatisit = type;
+        }
       }
     }
     
@@ -2618,9 +2706,8 @@ public class DataAccess {
      */
     protected String ident;
     
-    /**Maybe a constant value, also a String. */
-    //public Object constValue;
 
+    
     /**Kind of element
      * <ul>
      * <li>'$': An environment variable.
@@ -2628,6 +2715,7 @@ public class DataAccess {
      * <li>'.': a field with ident as name.
      * <li>'+': new ident, creation of instance maybe with or without arguments in {@link #fnArgs}
      * <li>'%'; call of a static routine maybe with or without arguments in {@link #fnArgs}
+     * <li>'&'; indirect path
      * <li>'(': subroutine maybe with or without arguments in {@link #fnArgs}.
      * <li>'A': A new Appendable variable
      * <li>'C': A new Class variable
@@ -2656,6 +2744,13 @@ public class DataAccess {
     private CalculatorExpr.Operand[] args;
     
     
+    /**If set the source class is already . To access the value use it. */
+    java.lang.reflect.Member reflAccess;
+    
+    /**Idf >=0 then the data should be accessed simple from a given List or array with this index.
+     * Not using reflection. 
+     */
+    int ixData = -1;
     
     /**Numerical values to access elements of the given variable. More as one for multi-dimensional element. 
      * TODO replace it by using {@link #args} maybe with const values.*/
@@ -2678,6 +2773,15 @@ public class DataAccess {
     }
     
     
+    /**Creates a datapath element. see {@link #set(String)} also for details of the arguments. 
+     * @throws ParseException
+     */
+    public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
+    , Class<?> reflData, boolean bFirst) throws ParseException{
+      set(path, nameVariables, reflData, bFirst);
+    }
+    
+    
     /**Creates a datapath element. see {@link #set(String)}
      * @param path
      * @param nameVariables see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
@@ -2686,7 +2790,7 @@ public class DataAccess {
      */
     public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
     , Class<?> reflData) throws ParseException{
-      set(path, nameVariables, reflData);
+      set(path, nameVariables, reflData, false);
     }
     
     
@@ -2792,33 +2896,46 @@ public class DataAccess {
     }
 
     
-    /**Creates a datapath element, for general purpose.
+    /**Creates the first datapath element, which can also access to the variable pool and a reflData class
+     * or create further elements but supports the first element for operations arguments.
      * <ul>
      * <li>If the sp starts with the following special chars "$@%+", it is an element with that {@link #whatisit}.
-     * <li>if the sp contains a <code>operation(arg, ...)</code> then it is marked as Operation call. The args are yet only names,
-     * TODO it should be expression (including constants etc.).
+     * <li>if the sp contains a <code>operation(arg, ...)</code> then it is marked as Operation call. 
      * <li>If the sp contains <code>array[indices]</code> the index values are parsed with {@link CalculatorExpr#setExpr(StringPartScan)}.
      *   Usual they are only integer literal constants, then the value is stored immediately.  
      * </ul>
-     * @param path 
-     * @param nameVariables see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
-     * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
+     * @param path It is used to parse this one element from the whole datapath. 
+     *   After this operation the current position is the position after.
+     *   It means either a '.' for a next element of the following stuff after the path. 
+     * @param nameVariables If bFirst is set, it is primary checked whether the path element will be found there.
+     *   Then ixData is set to access the correct element in varValues, last argument of {@link DataAccess#access(Object, boolean, boolean, Map, Object[])}
+     *   see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
+     * @param reflData If bFirst is set, it is secondary checked whether the path element will be found there.
+     * @param bFirst ==true for the first element. It can be start with a member of nameVariables or in reflData.
+     *   if bFirst== false, nameVariables and refldata are not used for this element, 
+     *   but they are necessary for arguments of an operation call. 
      * @throws ParseException 
      */
-    public void set(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
-    , Class<?> reflData) throws ParseException{
-      char cStart = path.getCurrentChar();
-      if("$@+%".indexOf(cStart) >=0){
-        whatisit = cStart;
-        path.seekPos(1);
-      } else {
-        whatisit = '.';
+    public void set(StringPartScan path, Map<String
+    , DataAccess.IntegerIx> nameVariables
+    , Class<?> reflData
+    , boolean bFirst
+    ) throws ParseException {
+      char cStart = '?';
+      if(bFirst) {
+        cStart = path.getCurrentChar();
+        if("$@+%".indexOf(cStart) >=0){  // envVar, givenVar, new, static
+          this.whatisit = cStart;
+          path.seekPos(1);
+        } else {
+          this.whatisit = '.';                //default:  field with ident as name
+        }
       }
-      if(cStart == '&' ) { //an indirect path
-        whatisit = '&';
+      if(cStart == '&' ) { //-------------------------------- an indirect path
+        this.whatisit = '&';
         if(path.scan("&(").scanOk()) {
-          args = new CalculatorExpr.Operand[1];
-          args[0] = new CalculatorExpr.Operand(path, nameVariables, reflData, false);
+          this.args = new CalculatorExpr.Operand[1];
+          this.args[0] = new CalculatorExpr.Operand(path, nameVariables, reflData, false);
           if(!path.scan(")").scanOk()) {
             throw new ParseException("&(<expression>) expected: , \")\" missing" + path.getCurrent(32), 0);
           }
@@ -2831,7 +2948,7 @@ public class DataAccess {
         }
         this.ident = path.getLastScannedString();
         if(path.scan("(").scanOk()) { //Function
-          whatisit = whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
+          this.whatisit = this.whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
           this.operation_ = true;
           if(!path.scan(")").scanOk()) { 
             // ========>        
@@ -2873,6 +2990,30 @@ public class DataAccess {
           throw new IllegalArgumentException("indices, missing ]");
         }
         Debugutil.stop();
+      } // [...]
+      if(bFirst) {
+        if(nameVariables !=null) {
+          IntegerIx ix1 = nameVariables.get(this.ident);
+          if(ix1 !=null) {
+            this.ixData = ix1.ix;
+          }
+        } 
+        if(this.ixData <0 && reflData !=null) {
+          if("%(".indexOf(this.whatisit) >=0) {            // operation
+            Method[] operations = reflData.getMethods();
+            Class<?>[] argTypes = null;
+            for(Method operation: operations) {
+              if(operation.getName().equals(this.ident)) {
+                argTypes = operation.getParameterTypes();
+                this.reflAccess = operation;
+                this.whatisit = '%';   // only a static operation is possible
+                break;
+              }
+            }
+          } else {
+            //TODO try get field
+          }
+        }
       }
     }
 

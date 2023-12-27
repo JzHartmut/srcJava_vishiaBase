@@ -398,11 +398,10 @@ public class CalculatorExpr
 
     /**Converts the Value to the adequate Object representation, especially for the wrapped
      * primitive types. If the value contains an int, char, long, double, float, boolean,
-     * it is converted to the wrapped presentation of that. If the value contains an text, represented 
+     * it is converted to the wrapped presentation of that. If the value contains a text, represented 
      * by a reference to {@link java.lang.CharSequence}, this instance is returned. It may be a 
      * {@link java.lang.String} or a {@link java.lang.StringBuilder}.
-     * If the value contains a reference to an object because the expression consists of only one
-     * argument, a {@link Operation#datapath} of an {@link DataAccess}, this Object is returned.
+     * If the value contains a reference to an object, this Object is returned.
      * 
      * @return an Object which presents the value.
      */
