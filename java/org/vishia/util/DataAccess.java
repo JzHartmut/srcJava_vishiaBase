@@ -638,7 +638,7 @@ public class DataAccess {
   public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
   , Class<?> reflData, char cTypeNewVariable) throws ParseException {
     assert(this.listDatapath==null && this.oneDatapathElement == null);
-    boolean bFirst = true;
+    boolean bFirst = nameVariables !=null || reflData !=null;
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData, bFirst);
       if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
@@ -694,6 +694,8 @@ public class DataAccess {
         this.oneDatapathElement = null;
         this.listDatapath.add(item); 
       }
+    } else {
+      this.listDatapath.add(item); 
     }
   }
 

@@ -2990,8 +2990,8 @@ public class CalculatorExpr
       } else {
         ixVar = ixOvar.ix;
       }
-      if(spExpr.scan(".").scanOk()) { //variable.datapath
-        dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0');
+      if(spExpr.scan(".").scanOk()) {                      // variable.datapath...
+        dataAccess = new DataAccess(spExpr, null, null, '\0');  // the furthermore path, do not use nameVariables again
       }
       Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
       Operation oper = new Operation(operation, operand);

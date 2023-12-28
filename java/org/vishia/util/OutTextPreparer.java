@@ -1402,14 +1402,16 @@ public class OutTextPreparer
         }
         else if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
           //------------------------------------------------- <&varname> a simple access to a given value
-          String sName = sp.getLastScannedString();
-          addCmdSimpleVar(pattern, pos0, pos1, ECmd.addVar, sName, execClass, idxConstData);
+          String sName = sp.getLastScannedString();        // it adds a simple index in Cmd, not using DataAccess
+          addCmdSimpleVar(this.pattern, pos0, pos1, ECmd.addVar, sName, execClass, idxConstData);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
           //------------------------------------------------- <&data.path:format> more complex access to a given value
           final String sDatapath = sp.getLastScannedString();
 //          if(sDatapath.startsWith("&("))
+//            Debugutil.stop();
+//          if(sDatapath.contains("pin.pinDtype.dataType.dt.sTypeCpp"))
 //            Debugutil.stop();
           //====> ////
           final String sFormat;
@@ -1519,7 +1521,7 @@ public class OutTextPreparer
         }  
         else if(sp.scan(":debug>").scanOk()) {
           //====>
-          //DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, null, reflData);
+          DebugCmd cmd = (DebugCmd)addCmd(pattern, pos0, pos1, ECmd.debug, null, execClass, idxConstData, idxScript);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":--").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
@@ -1783,7 +1785,7 @@ public class OutTextPreparer
    * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
    * and at least in the execClass via Datapath access.
    * If not found then <code><??sName??></code> is output on runtime.
-   * It adds the plain text if necessary and the data access as {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
+   * It adds the plain text if necessary and the data access calling {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
    * to the list of commands.
    * 
    * @param src The text before to output the plain text before
@@ -1805,8 +1807,8 @@ public class OutTextPreparer
       if(ix !=null) {                                      // Index to the arguments
         this.cmds.add(new Cmd(eCmd, ix.ix, null, null, sName));
       } else {
-        try {
-          data = DataAccess.access(sName, execClass, true, false, false, null);
+        try {                                              // Only access the execClass is possible
+          data = DataAccess.access(sName, execClass, true, false, false, null);  //TODO variable data?
           this.cmds.add(new Cmd(eCmd, -1, null, data, sName));
         } catch (Exception exc) {
           addError(sName);                                 // inserts <??sName??> in the text
@@ -2044,6 +2046,8 @@ public class OutTextPreparer
       else if(cmd.cmd != ECmd.exec && cmd.dataAccess !=null) {
         try {
           //====>
+          if(cmd.dataAccess.datapath().size()>3)
+            Debugutil.stop();
           data = cmd.dataAccess.access(null, true, false, nameVariables, args.args);
         } catch (Exception e) {
           bDataOk = false;
