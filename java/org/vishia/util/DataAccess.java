@@ -88,6 +88,7 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
+   * <li>2023-12-28:  
    * <li>2023-12-27: new field {@link DatapathElement#ixData}
    *   initial set in {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} for an element found in the variable list "nameVariables",
    * <li>2023-12-27: new field {@link DatapathElement#reflAccess} 
@@ -1515,9 +1516,8 @@ public class DataAccess {
           for(Object arg: args) {
             if(bNext) { msg.append(", "); }
             else { bNext = true; }
-            if(arg !=null) {
-              msg.append(arg.getClass());
-            }
+            if(arg ==null) { msg.append("null"); }         // also an argument ==null matches
+            else {           msg.append(arg.getClass());}  // the class of actual value, can be an inherited one.
           }
         }
         msg.append(")\n");

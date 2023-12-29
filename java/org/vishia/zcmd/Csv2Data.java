@@ -347,7 +347,7 @@ public class Csv2Data
       try{
         if(cell.indexOf(',')<0)
           Assert.stop();
-        float val = StringFunctions_C.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
+        float val = StringFunctions_C.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null, null);
         return val;
       } catch(Exception exc){
         return 777777.7f;
@@ -361,7 +361,7 @@ public class Csv2Data
     try{
       if(cell.indexOf(',')<0)
         Assert.stop();
-      float val = StringFunctions_C.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null);
+      float val = StringFunctions_C.parseFloat(cell, 0, Integer.MAX_VALUE, cDecimalSep, null, null);
       return val;
     } catch(Exception exc){
       return 777777.7f;

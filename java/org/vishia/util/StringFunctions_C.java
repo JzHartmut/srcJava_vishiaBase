@@ -11,6 +11,14 @@ public class StringFunctions_C
 {
   /**Version, history and license.
    * <ul>
+   * <li>2022-12-28 bugfix {@link #parseIntRadix(CharSequence, int, int, int, int[], String)}: 
+   *   If the number is too long then an overflow has occurred. 
+   *   Now only the max number of characters are parsed without int 32 bit overflow.
+   *   If the digit is too long, some digits remain after parsing. 
+   *   This is used in {@link #parseFloat(CharSequence, int, int, char, int[])}.
+   *   Before it was fixed, a too long fractional part has caused undefined result. 
+   *   Now the fractional part is converted only with max 31 bit (only 24 are relevant), 
+   *   but possible with more digits for example to recognize "0.00000012345678".
    * <li>2022-03-29 Hartmut new: {@link #appendIntPict(Appendable, long, String)}, for that 
    *   the {@link #strPicture(long, String, String, char, PrepareBufferPos)} was moved and adapted from {@link StringFormatter} to here,
    *   the internal interface {@link PrepareBufferPos}  allows the adaption (it is simple).
@@ -63,22 +71,38 @@ public class StringFunctions_C
    * The String may start with a negative sign ('-') and should contain digits after them.
    * The digits for radix > 10 where built by the numbers 'A'..'Z' respectively 'a'..'z',
    * known as hexa numbers A..F or a..f. 
+   * <br>
+   * If the string contains "0x" or "0X" before digits then the number is read hexadecimal also if radix = 10.
+   * This allows accept hexa where decimal is expected.
+   * <br>
+   * The number of parsed digits is limited to the int size (32 bit).
+   * Whereby on radix==16 also till "0xffffffff" is parsed, but this represents -1, written without negative sign. 
+   * It is the same as "-0x1" or "-0x00000001".
+   * <br>
+   * If for example "3 000 000 000" is given, only "3 000 000 00" is parsed, one "0" remains. 
+   * If digit characters remain, there are not parsed and able to recognize after srcP.subSequence(parsedChars[0]).
+   * But the number of digits is not limited outside of sizeP, for example "0000002123456789" is correctly parsed as result 0x7E916115
+   * 
    * @param srcP The String, non 0-terminated, see ,,size,,.
    * @param pos The position in src to start.
    * @param sizeP The maximal number of chars to parse. If it is more as the length of the String, no error. 
    *   One can use {@link Integer#MAX_VALUE} to parse till the end of the String
-   * @param radix The radix of the number, typical 2, 10 or 16, max 36.
-   * @param parsedChars number of chars which is used to parse the integer. The pointer may be null if not necessary. @pjava2c=simpleVariableRef. 
+   * @param radixArg The radix of the number, typical 2, 10 or 16, max 36.
+   * @param parsedChars [0] number of chars which is used to parse the integer. 
+   *   [1] number of real used digits. Important if this is the fractional part of a float.
+   *   The pointer may be null if not necessary. @pjava2c=simpleVariableRef. 
    * @param spaceChars maybe null, some characters which are skipped by reading the digits. It is especially ". '" to skip over a dot, or spaces or '
    * @return the Number.
    * @throws never. All possible digits where scanned, the rest of non-scanable digits are returned.
    *  For example the String contains "-123.45" it returns -123, and the retSize is 3.
    */
-  public static int parseIntRadix(final CharSequence srcP, final int pos, final int sizeP, final int radix
+  public static int parseIntRadix(final CharSequence srcP, final int pos, final int sizeP, final int radixArg
       , final int[] parsedChars, final String spaceChars)
   { int val = 0;
+    int radix = radixArg;
     boolean bNegativ;
     int digit;
+    int usedDigits = 0;
     char cc;
     int ixSrc = pos;
     int size = srcP.length() - pos;
@@ -88,7 +112,8 @@ public class StringFunctions_C
       ixSrc+=1; size -=1; bNegativ = true; 
     }
     else { bNegativ = false; }
-    while(--size >= 0){
+    long valMax = radix == 16 ? 0xffffffffL : (bNegativ ? 0x080000000L : 0x7fffffff);
+    while(--size >= 0) {               // break in loop!
       cc = srcP.charAt(ixSrc);
       if(spaceChars !=null && spaceChars.indexOf(cc)>=0){
         ixSrc +=1;
@@ -96,9 +121,19 @@ public class StringFunctions_C
           && (  cc <= maxDigit 
               || (radix >10 && (  cc >= 'A' && (digit = (cc - 'A'+ 10)) <=radix
                                || cc >= 'a' && (digit = (cc - 'a'+ 10)) <=radix)
-           )  )                )
-      { val = radix * val + digit;
-        ixSrc+=1;
+           )  )                ) {
+        long val2 = radix * (long)val + digit;
+        if(val2 <= valMax) {
+          ixSrc+=1;                  // check to overflow
+          usedDigits +=1;
+          val = (int)val2;
+        } else {
+          break;                     // this digit cannot be added, overflow, break
+        }
+      } else if(cc == 'x' || cc == 'X' && val == 0) {
+        ixSrc+=1;                  // check to overflow
+        radix = 16; valMax = 0xffffffffL;  // parse a negative number as hex also. 
+        usedDigits = 0;                        // do not include "0x" as digits
       } else {
         break;
       }
@@ -106,13 +141,16 @@ public class StringFunctions_C
     if(bNegativ){ val = -val; }
     if(parsedChars !=null){
       parsedChars[0] = ixSrc - pos;
+      if(parsedChars.length >=2) {
+        parsedChars[1] = usedDigits;
+      }
     }
     return( val);
   }
   
 
   
-  /**
+  /**Parses an integer value. See {@link #parseIntRadix(CharSequence, int, int, int, int[], String)}
    * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
    * @return
    */
@@ -251,12 +289,13 @@ public class StringFunctions_C
    * @return float number
    */
   public static float parseFloat(CharSequence src, int pos, int sizeP, int[] parsedChars)
-  { return parseFloat(src, pos, sizeP, '.', parsedChars);
+  { return parseFloat(src, pos, sizeP, '.', parsedChars, null);
   }  
   
   
   /**Parses a given String and convert it to the float number.
    * An exponent is not regarded yet (TODO).
+   * The maximal number of fractional digits is not limited, for example to parse 0.00000000000000012345 as 1.2345e-16
    * @param src The String, see ,,size,,.
    * @param pos The position in src to start.
    * @param sizeP The number of chars to regard at maximum. A value of -1 means: use the whole String till end. 
@@ -264,13 +303,13 @@ public class StringFunctions_C
    *   that the number of characters to parse will be calculated outside, and 0 is a valid result. 
    *   If sizeP is > the length, then the whole String is used.
    *   You can set both sizeP = -1 or sizeP = Integer.MAXVALUE to deactivate this argument.
-   * @param decimalpoint it is possible to use a ',' for german numbers.
+   * @param decimalpoint preferred '.', it is possible to use a ',' for german numbers.
    * @return the Number.
-   * @param parsedCharsP number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
+   * @param parsedCharsP [0] number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
    * @return
    */
-  public static float parseFloat(CharSequence src, int pos, int sizeP, char decimalpoint, int[] parsedCharsP)
-  {
+  public static float parseFloat(CharSequence src, int pos, int sizeP, char decimalpoint, int[] parsedCharsP, String separationChars)
+  { 
     float ret;
     int poscurr = pos;
     int restlen = src.length() - pos;
@@ -282,15 +321,15 @@ public class StringFunctions_C
     else { 
       bNegative = false; 
     }
-    @Java4C.StackInstance @Java4C.SimpleArray int[] zParsed = new int[1];
-    ret = parseIntRadix(src, poscurr, restlen, 10, zParsed, null);  //parses only a positive number.
+    @Java4C.StackInstance @Java4C.SimpleArray int[] zParsed = new int[2];
+    ret = parseIntRadix(src, poscurr, restlen, 10, zParsed, separationChars);  //parses only a positive number.
     poscurr += zParsed[0];   //maybe 0 if .123 is written
     restlen -= zParsed[0];
     //if(poscurr < (restlen+pos) && src.charAt(poscurr)==decimalpoint){
     if(restlen >0 && src.charAt(poscurr)==decimalpoint){
-      float fracPart = parseIntRadix(src, poscurr +1, restlen-1, 10, zParsed);
-      if(zParsed[0] >0){
-        switch(zParsed[0]){
+      float fracPart = parseIntRadix(src, poscurr +1, restlen-1, 10, zParsed, separationChars);
+      if(zParsed[1] >0){                         // evaluate used digits for fractional part
+        switch(zParsed[1]){
         case 1: fracPart *= 0.1f; break;
         case 2: fracPart *= 0.01f; break;
         case 3: fracPart *= 0.001f; break;
@@ -300,11 +339,17 @@ public class StringFunctions_C
         case 7: fracPart *= 1.0e-7f; break;
         case 8: fracPart *= 1.0e-8f; break;
         case 9: fracPart *= 1.0e-9f; break;
-        case 10: fracPart *= 1.0e-10f; break;
+        case 10: fracPart *= 1.0e-10f; break;         // sensible if integer part is 0
+        default: fracPart *= Math.pow(10.0, -zParsed[1]);
         }
         ret += fracPart;
       }
       poscurr += zParsed[0]+1;  //don't forget the decimal point  
+      restlen -= zParsed[0];    // +1 -1 for pre decrement
+      char cc;
+      while( --restlen >0 && (cc = src.charAt(poscurr)) >='0' && cc <='9') { 
+        poscurr+=1;                              // skip over more digits after decimal point.
+      }
       //restlen -= zParsed[0]-1;
     }
     //TODO exponent

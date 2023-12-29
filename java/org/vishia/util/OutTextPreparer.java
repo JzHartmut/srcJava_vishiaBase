@@ -1728,7 +1728,7 @@ public class OutTextPreparer
     } else {
       call = null; //not possible to check arguments.
     }
-    if(sp.scan(":").scanOk()) {
+    if(sp.scan(":").scanOk()) {  //-------------------------- arg following
       do {
         cmd.ixDataArg = this.ctCall;
         this.ctCall +=1;
