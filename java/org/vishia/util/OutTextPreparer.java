@@ -224,6 +224,13 @@ try {
  * If the operation is not found, an exception with a detailed error message is thrown on ctor. 
  * If the operations argument is not proper, an exception is thrown on {@link #exec(Appendable, DataTextPreparer)}.
  * <br><br>
+ * <b>...more</b><br>
+ * <ul>
+ * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
+ * <li>&lt;:type:value:classpath>: checks the value whether it is of the type of the given class.
+ *   This is more for documentation and is used as assertion. Can be switched off for faster execution.
+ *   using {@link DataTextPreparer#setCheck(boolean)} for each script. 
+ * </ul>   
  * @author Hartmut Schorrig
  *
  */
@@ -232,6 +239,8 @@ public class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-01-15 new capability for type check: <code>&lt;:type:vaue:classPath></code>, 
+   *   able to switch off with {@link DataTextPreparer#setCheck(boolean)} 
    * <li>2024-01-15 {@link #readTemplateCreatePreparer(InputStream, String, Map, Object, Map)} and {@link #readTemplateList(InputStream, String, Object, Map)}:
    *    more arguments dataRoot, idxConstData, for compatibility provide null for both.
    *    With this on template level outside of scripts <code>&lt;:set:name=value></code> is supported now for constant data.
@@ -300,7 +309,7 @@ public class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2023-10-22";
+  public static final String version = "2024-01-15";
   
   
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
@@ -344,6 +353,7 @@ public class OutTextPreparer
     /**Default use formatter for ENCLISH to be international. */
     Formatter formatter = new Formatter(this.sbFormatted, Locale.ENGLISH);
     
+    boolean bChecks = true;
     
     /**Package private constructor invoked only in {@link OutTextPreparer#createArgumentDataObj()}*/
     DataTextPreparer(OutTextPreparer prep){
@@ -398,6 +408,12 @@ public class OutTextPreparer
      */
     public void setDebug(String patternName, int ixCmd) {this.debugOtx = patternName; this.debugIxCmd = ixCmd;} 
     
+    /**Switches check of some stuff on or off, especially &lt;:type: check
+     * @param bCheck true check on
+     *   Hint for user: Set in anyway from a one time set boolean variable.    
+     */
+    public void setCheck(boolean bChecks) { this.bChecks = bChecks; }
+    
   }
 
   enum ECmd{
@@ -409,6 +425,7 @@ public class OutTextPreparer
     elseCtrl('E', "else"),
     forCtrl('F', "for"),
     setVar('S', "set"),
+    typeCheck('T', "type"),
     endLoop('B', "endloop"),
     call('C', "call"),
     exec('E', "exec"),
@@ -613,6 +630,21 @@ public class OutTextPreparer
         , Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
       super(outer, ECmd.addVar, textOrDatapath, reflData, idxConstData);
       this.sFormat = sFormat;
+    }
+  }
+
+  
+  
+  /**A cmd for a type check of an instance.
+   */
+  static class TypeCmd extends Cmd {
+    /**The expected type. */
+    Class<?> type;
+    
+    TypeCmd ( OutTextPreparer outer, String textOrDatapath, Class<?> type
+        , Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
+      super(outer, ECmd.typeCheck, textOrDatapath, reflData, idxConstData);
+      this.type = type;
     }
   }
 
@@ -1185,7 +1217,7 @@ public class OutTextPreparer
   
   /**Recommended operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
    * To parse all read scripts call {@link #parseTemplates(Map, Class, Map)} afterwards.
-   * This assures that all sub scripts in all templates can be &lt:call...> independent of the definition order.
+   * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
    *  
    * @since 2023-12 new version due to pdf documentation.
    * @since 2024-01-15 more arguments dataRoot, idxConstData, for compatibility provide null for both.
@@ -1417,6 +1449,7 @@ public class OutTextPreparer
   /**Parse the pattern. This routine will be called from the constructor or in application
    * or especially in {@link #readTemplateCreatePreparer(InputStream, Class, Map)}
    * for two-phase-translation. 
+   * TODO may control whether an error message is written in the cmd or it should be aborted by a ParseException. Make it unify and document it.
    * @param execClass used to parse &lt;:exec:...>, the class where the operation should be located.
    * @param idxScript Map with all sub scripts to support &lt;:call:subscript..>
    * @throws ParseException 
@@ -1559,6 +1592,28 @@ public class OutTextPreparer
             this.nameVariables.put(variable, ixOentry);
           }
           cmd.ixVariable = ixOentry.ix;
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+        }
+        else if(sp.scan(":type:").scanToAnyChar(":", '\\', '\'', '\'').scan(":").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
+          String sType = sp.getLastScannedString().toString();
+          String sValue = sp.getLastScannedString().toString();
+          Class<?> type = null;;
+          try { type = Class.forName(sType);               // Class given as string found on parse time.
+          } catch (ClassNotFoundException e) {
+            String sError = "Class not found for <:type:"+ sValue + ":" + sType + ">";
+            addError(sError);                              // then ignore this cmd in execution. Write the error text.
+            //throw new ParseException(sError, 0);
+          }
+          if(type !=null) {
+            try { 
+              Cmd cmd = new TypeCmd(this, sValue, type, execClass, idxConstData);  //sValue builds an Operand with knowledge of nameVariables
+              addCmd(this.pattern, pos0, pos1, cmd);
+            } catch(Exception exc) {
+              String sError = "Problem with datapath <:type:"+ sValue + "...: " + exc.getMessage();
+              addError(sError);
+              //throw new ParseException(sError, 0);
+            }
+          }
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":exec:").scanOk()) { //scanIdentifier().scanOk()) {
@@ -1840,6 +1895,21 @@ public class OutTextPreparer
   }
  
   
+  
+  
+  /**Common addCmd with given Cmd instance (may be derived). Usable for all ...
+   * @param src the pattern
+   * @param from position of text before this cmd
+   * @param to position of start of this cmd
+   * @param cmd the Cmd instance.
+   */
+  private void addCmd ( String src, int from, int to, Cmd cmd) {
+    if(to > from) {
+      this.cmds.add(new CmdString(src.substring(from, to)));
+    }
+    this.cmds.add(cmd);
+  }
+
   
   
   /**Called if a simple <code>&lt;&name></code> is detected.
@@ -2135,6 +2205,14 @@ public class OutTextPreparer
             int ixVar = ((SetCmd)cmd).ixVariable;
             args.args[ ixVar ] = data;
           } break;
+          case typeCheck: if(args.bChecks){
+            TypeCmd cmdt = (TypeCmd)cmd;
+            boolean bOk = cmdt.type.isInstance(data);
+            if(!bOk) {
+              Class<?> typefound = data.getClass();
+              wr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
+            }
+          } break;
           case elsifCtrl:
           case ifCtrl: {
             ixCmd = execIf(wr, (IfCmd)cmd, ixCmd, data, args);
@@ -2149,18 +2227,6 @@ public class OutTextPreparer
             DataAccess.DatapathElement dataAccess1 = cmd.dataAccess.dataPath1();
             try {
               DataAccess.access(dataAccess1, args.execObj, true, false, null, args.args, false, null); 
-//              Method execOperation = (Method)dataAccess1.reflAccess;
-//              Class<?>[] argTypes = execOperation.getParameterTypes();
-//              int zArgs = argTypes.length;
-//              if(zArgs == 0) { //any argument:
-//                execOperation.invoke(args.execObj);  //without argument
-//              } else {
-//                if(DataAccess.istypeof(data, argTypes[0])) {
-//                  execOperation.invoke(args.execObj, data);
-//                } else {
-//                  wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": argument type error " + data.getClass() + "??>");
-//                }
-//              }
             } catch (Exception exc) {
               // TODO Auto-generated catch block
               wr.append("<?? OutTextPreparer script " + sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
