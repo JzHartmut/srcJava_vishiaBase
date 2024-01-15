@@ -23,7 +23,8 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
-   * <li>2023-06-08 Hartmut bugfix/chg: Now {@link #indexAfterIdentifier(CharSequence, int, int, String)} returns 0 if the position starts with a number.
+   * <li>2024-01-15 Hartmut  {@link #convertTransliteration(CharSequence, char)} now it's done at last conversion "\x0041" for example character 'A', also some comments improved.
+   * <li>2023-06-08 Hartmut bugfix/chg: Now {@link #indexAfterIdentifier(CharSequence, int, int, String)} returns 0   if the position starts with a number.
    *   That is proper also for test whether currently it is an identifier and it is consequent.
    *   The old behavior of this operation is now available in {@link #indexAfterIdentifierOld(CharSequence, int, int, String)}.
    * <li>2023-04-30 Hartmut bugfix {@link #startsWith(CharSequence, CharSequence)}: was faulty if number of chars to compare is equal the length. 
@@ -108,7 +109,7 @@ public class StringFunctions {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2022-05-10"; 
+  public final static String version = "2024-01-15"; 
   
   
   /** The char used to code end of text. It is defined in ASCII as EOT. 
@@ -149,7 +150,7 @@ public class StringFunctions {
    * @param src
    * @param start
    * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
-   * @return >=0: position in src of the first non space from start, -1 if not found in range. 
+   * @return anyway >= start, <=end, position in src of the first non space from start. 
    */
   public static int indexNoWhitespace(CharSequence src, int start, int endMax){
     int pos = start;
@@ -1243,15 +1244,15 @@ public class StringFunctions {
    * in a as soon as possible calculation time.
    * <ul>
    * <li>The transcript char following by n r t f b will converted to the known control character codes:
-   * <li>\n newline 0x0a
-   * <li>etc TODO
+   * <li>\\ is the backslash itself.
+   * <li>\n newline 0x0a, \r return 0x0d, \t tabulator 0x09, \f form feed 0x0c, b backspace 0x08
    * <li>\s will converted to a single space. It is useful in input situations
    *     where a space will have another effect.
-   * <li>\a will converted to the code 0x02, known in this class {@link cStartOfText}.
+   * <li>\a will converted to the code 0x02, known in this class {@link #cStartOfText}.
    *     It is useful wether a String may be contain a code for start of text.
-   * <li>\e will converted to the code 0x03, known in this class {@link cEndOfText}.
+   * <li>\e will converted to the code 0x03, known in this class {@link #cEndOfText}.
+   * <li>\W will converted to the code 0x04, known in this class {@link #cNoCidentifier}.
    * <li>\x0123 Convert from given hex code TODO
-   * <li>\\ is the backslash itself.
    * <li>All other chars after the transcription char will be converted to the same char, 
    *     for example "\{" to "{". Don't use this feature for normal alphabetic chars
    *     because some extensions in a future may be conflict with them. But this feature
@@ -1298,6 +1299,12 @@ public class StringFunctions {
         } else if( cNext == 'W')
         { // \W means a non-word character like in regulare expressions.
           sbReturn.setCharAt(posSwitch, cNoCidentifier);
+        }
+        else if( cNext == 'x') {
+          int[] zParsedChars = new int[1];
+          int nr = StringFunctions_C.parseIntRadix(src, posSwitch+2, 4, 16, zParsedChars);
+          sbReturn.setCharAt(posSwitch, (char)nr);
+          sbReturn.delete(posSwitch+1, posSwitch +1 + zParsedChars[0]);  // let one char on posSwitch remain.
         }
         else
         { //the char after cEscape is valid and not changed!

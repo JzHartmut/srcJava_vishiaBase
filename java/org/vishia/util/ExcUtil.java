@@ -172,7 +172,7 @@ public class ExcUtil {
       u.append(startText);
     }
     if(bWithExceptiontext){
-      u.append(exc.toString()).append(" @ ");
+      u.append(" ").append(exc.toString()).append(" @ ");
       //u.append(exc.getMessage()).append("; ");
     }
     StackTraceElement[] stack = exc.getStackTrace();

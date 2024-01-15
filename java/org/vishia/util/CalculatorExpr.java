@@ -1525,7 +1525,7 @@ public class CalculatorExpr
         , Map<String, Object> idxConstData
     ) throws Exception 
     {
-      Object constData = idxConstData ==null ? null : idxConstData.get(sDatapath);
+      Object constData = idxConstData ==null || sDatapath == null ? null : idxConstData.get(sDatapath);
       if(constData !=null) {
         this.ixValue = -1;
         this.dataAccess = null;
@@ -2976,7 +2976,11 @@ public class CalculatorExpr
       DataAccess dataAccess = null;
       Object dataConst = null;
       if(ixOvar == null){ //variable not found
-        if(reflData == null) {
+        if(sIdent.equals("null")) {
+          ixVar = -1;
+          // remain dataConst == null, all is null
+        }
+        else if(reflData == null) {
           //In this mode all need variables are created. 
           ixVar = nameVariables.size();
           ixOvar = new DataAccess.IntegerIx(ixVar);

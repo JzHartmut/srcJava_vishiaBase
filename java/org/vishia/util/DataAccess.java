@@ -932,7 +932,8 @@ public class DataAccess {
    * <ul>
    * <li>"$ENV": From an environment variable
    * <li>"@variable.element": Read start instance form dataPool 
-   * <li>"%java.package.Class.operation()": invokes a static method.
+   * <li>"%package.path.Class.element": gets the value from the static element.
+   * <li>"%package.path.Class.operation()": invokes a static method and returns its return value.
    * <li>"element": read from dataRoot. Read via get(element) if dataRoot is a Map<String, ?>  
    * <li>"reference.element": read from dataRoot, referenced instance. 
    * </ul>
