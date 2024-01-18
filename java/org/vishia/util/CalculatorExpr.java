@@ -46,6 +46,9 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-01-18: bufgix the actual arguments of a called java operation have not gotten the indexed variables.
+   *   fix: In {@link #parseArgument(StringPartScan, Map, Class, String, int)} also for sub elements nameVariables and also reflData
+   *   are given. They are not used for the sub element itself, with bFirst = false, but used for actual arguments of called operations.
    * <li>2023-06-08: {@link #parseCmpExpr(StringPartScan, Map, Class, String, boolean, int)} now regards also ?lt etc. 
    * <li>2023-05-13: TODO using String or StringPartScan for {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} etc. :
    *   If the expression is simple, only an identifier, then a String is sufficient and a StringPartScan needs waste memory.
@@ -179,7 +182,7 @@ public class CalculatorExpr
    * 
    */
   //@SuppressWarnings("hiding")
-  public final static String version = "2023-06-08";
+  public final static String version = "2024-01-18";
   
    
   /**It is the data instance for the caluclation.
@@ -2995,8 +2998,8 @@ public class CalculatorExpr
         ixVar = ixOvar.ix;
       }
       if(spExpr.scan(".").scanOk()) {                      // variable.datapath...
-        dataAccess = new DataAccess(spExpr, null, null, '\0');  // the furthermore path, do not use nameVariables again
-      }
+        dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0', false);  // the furthermore path, mark with '.'
+      }  //cc2024-01-18 may need nameVariables and reflData for the argument values
       Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
       Operation oper = new Operation(operation, operand);
       listOperations_.add(oper);
@@ -3028,7 +3031,7 @@ public class CalculatorExpr
       }
       listOperations_.add(new Operation(operation, value));
     } else {
-      DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0');
+      DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0', true);
       //Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
       Operand operand = new Operand(-1, dataAccess, null, null);
       Operation oper = new Operation(operation, operand);

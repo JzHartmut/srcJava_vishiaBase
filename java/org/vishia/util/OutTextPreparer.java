@@ -1763,7 +1763,7 @@ public class OutTextPreparer
     }
     final Cmd cmd;
     int pos2 = (int)sp.getCurrentPosition();
-    DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0');
+    DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0', true);
     boolean bScanOk = sp.scan(")>").scanOk();
     if(!bScanOk) {
       bScanOk = sp.scan(">").scanOk();
@@ -2356,7 +2356,7 @@ public class OutTextPreparer
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = array[ix];
         if(bFirst) {
-          bFirst = false;
+          bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
           execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }

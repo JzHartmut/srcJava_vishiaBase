@@ -88,7 +88,11 @@ import org.vishia.util.TreeNodeBase;
 public class DataAccess {
   /**Version, history and license.
    * <ul>
-   * <li>2023-12-28:  
+   * <li>2024-01-18: bufgix the actual arguments of a called java operation have not gotten the indexed variables.
+   *   fix: In {@link #DataAccess(StringPartScan, Map, Class, char, boolean)} has gotten a 5th argument 'bFirst' 
+   *   set to true only for the first element of a longer path, but the nameVariables and also reflData should be provided
+   *   to further elements because they may be necessary for operation arguments. 
+   * <li>2024-01-18: fix some error messages on execution. 
    * <li>2023-12-27: new field {@link DatapathElement#ixData}
    *   initial set in {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} for an element found in the variable list "nameVariables",
    * <li>2023-12-27: new field {@link DatapathElement#reflAccess} 
@@ -263,7 +267,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2023-12-27";
+  static final public String sVersion = "2024-01-18";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#varValues}. 
@@ -634,12 +638,15 @@ public class DataAccess {
    *   This feature is introduced with {@link OutTextPreparer} to support simple expressions in a fast way.  
    * @param cTypeNewVariable if A...Z then the last element will be designated with it.
    *   Then a new variable should be created in the parent's container with the access.
+   * @param bFirst set to true only for the first element of a path, false for further elements after dot. 
+   *   Only the first element can use the nameVariables and reflData to find the data. 
+   *   But this both arguments are transproted also to the further elements, 
+   *   because they may be necessary for arguments of called java routines: 'first.further(argument_use_nameVariables,...).
    * @throws ParseException on errors on sp, on not found variables too. 
    */
   public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
-  , Class<?> reflData, char cTypeNewVariable) throws ParseException {
+  , Class<?> reflData, char cTypeNewVariable, boolean bFirst) throws ParseException {
     assert(this.listDatapath==null && this.oneDatapathElement == null);
-    boolean bFirst = nameVariables !=null || reflData !=null;
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData, bFirst);
       if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
@@ -1464,44 +1471,45 @@ public class DataAccess {
           sError = null;                                      // bOk = true if no exception
         } catch(Exception exc){
           sError = ExcUtil.stackInfo("DataAccess - method access problem: " 
-              + method.getClass().getCanonicalName() + method.getName() + "(...)", 3, 5);
+              + method.getName() + "(...): " + exc.getCause().getMessage(), 3, 5);
           if(!bNoExceptionifNotFound) { 
-            throw new InvocationTargetException(exc, sError.toString());
-          }
-        }
-        
-      }
+            throw new InvocationTargetException(exc.getCause(), sError.toString());
+          } else { //cc2024-01-18: fix some error messages on execution.
+            data1 = "<?? " + sError + " ??>";
+      } } } //actArgs !=null
     }
     if(sError !=null) {  //================================== error handling
-      StringBuilder msg = new StringBuilder(1000);
+      StringBuilder msg = new StringBuilder(1000);         
       msg.append(sError);
       if(method !=null) {
-        clazzcheck = clazz1;   //in loop superclass checked etc.
+        clazzcheck = clazz1;                               //in loop superclass checked etc.
         do {
           if(accessPrivate || (clazzcheck.getModifiers() & Modifier.PUBLIC) !=0){
             Method[] methods = accessPrivate ? clazzcheck.getDeclaredMethods() : clazzcheck.getMethods();
-            for(Method methodCheck: methods){
-              bOk = false;
-              if(method.getName().equals(element.ident)){
-                Parameter[] param = method.getParameters();
-                msg.append("  ").append(clazzcheck.getName()).append(".") .append(element.ident) .append("(");
-                boolean bNext = false;
+            for(Method methodCheck: methods){              // output all possible methods
+              bOk = false;   //cc2024-01-18: fix some error messages on execution.
+              if(methodCheck.getName().equals(element.ident)){
+                Parameter[] param = methodCheck.getParameters();
+                msg.append("  ").append(clazzcheck.getName()).append(".") .append(methodCheck.getName()) .append("(");
+                boolean bNext = false;                     // output their parameter, often a parameter mismatch is the cause.
                 for(Parameter par: param) {
                   if(bNext) { msg.append(", "); }
                   else { bNext = true; }
-                  msg.append(par.getType().getName()); //.append(' ').append(par.getName());
+                  msg.append(par.getType().getName());
                 }
                 msg.append(")\n");
           } } }
         } while(!bOk && (clazzcheck = clazzcheck.getSuperclass()) !=null);
         msg.append("  ... given arg names: ");
-        boolean bNext = false;
-        if(element.args !=null) {
+        boolean bNext = false;                             // protocol also the given names and their type,
+        if(element.args !=null) {                          // but not the given values (not relevant).
+          int ixArg = 0;
           for(CalculatorExpr.Operand arg: element.args) {
             if(bNext) { msg.append(", "); }
             else { bNext = true; }
-            msg.append(arg.textOrVar);
-          }
+            msg.append(arg.textOrVar).append(": ");
+            msg.append(givenArgs[ixArg++].getClass());
+          }   //cc2024-01-18: improve output, also the type.
         }
         msg.append("<<;\n  ... stackInfo: ");
         CharSequence stackInfo = Assert.stackInfo(msg, 3, 5);
