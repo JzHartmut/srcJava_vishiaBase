@@ -46,6 +46,14 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-01-19: {@link #parseArgument(StringPartScan, Map, Class, String, int)}: The usage of a identfier for a variable
+   *   is now completely done in {@link DataAccess.DatapathElement#set(StringPartScan, Map, Class, boolean)}. 
+   *   Hence it is remove here in its non completely version (here operations are not detected instead a variable access). 
+   *   <br>But if the DataAccess detects only a simple variable access, it is not referenced, only the 
+   *   {@link DataAccess.DatapathElement#ixData} is stored in the {@link Operand#ixValue} (as before). It is cc4-2024-01-19
+   *   
+   * <li>2024-01-19: {@link Operand#calc(Map, Object[])} What's happen with given variable {@link Operand#ixValue} 
+   *   and given {@link Operand#dataAccess}. Seems never tested.  cc3-2014-01-19
    * <li>2024-01-18: bufgix the actual arguments of a called java operation have not gotten the indexed variables.
    *   fix: In {@link #parseArgument(StringPartScan, Map, Class, String, int)} also for sub elements nameVariables and also reflData
    *   are given. They are not used for the sub element itself, with bFirst = false, but used for actual arguments of called operations.
@@ -1652,7 +1660,7 @@ public class CalculatorExpr
      * @throws Exception
      */
     public Object calc ( Map<String, IntegerIx> nameVariables, Object[] varValues ) throws Exception {
-      Object value;
+      Object value = null;
       if(this.ixValue <0) {
         if(dataConst !=null) {
           if(dataConst instanceof Value) {
@@ -1662,14 +1670,14 @@ public class CalculatorExpr
             value = dataConst;  //use it immediately, often a String
           }
           
-        } else {
-          value = this.textOrVar;   //String literal
+        } else if(this.dataAccess == null) {
+          value = this.textOrVar;                //String literal
         }
       } else {
         value = varValues[this.ixValue];
-        if(this.dataAccess !=null) {
-          value = this.dataAccess.access(value, true, false, nameVariables, varValues);
-        }
+      }
+      if(this.dataAccess !=null) {               // data Access can be after the first element as variable or independent. cc3-2014-01-19
+        value = this.dataAccess.access(value, true, false, nameVariables, varValues);
       }
       return value;
     }
@@ -2552,7 +2560,9 @@ public class CalculatorExpr
   , Class<?> reflData, boolean bSpecialSyntax) {
     this();
     String sError = setExpr(sExpr, nameVariables, reflData, bSpecialSyntax);
-    if(sError !=null) throw new IllegalArgumentException(sError);
+    if(sError !=null) {
+      throw new IllegalArgumentException(sError);
+    }
   }
   
   /**Separates a name and the parameter list from a given String.
@@ -2966,43 +2976,45 @@ public class CalculatorExpr
    * @throws ParseException
    */
   protected void parseArgument(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, String operation, int recursion ) throws ParseException
-  { spExpr.scanStart();
+  { spExpr.scanSkipSpace().scanStart();
     if(spExpr.scanSkipSpace().scan("(").scanOk()){ //(expression)
       parseAddExpr(spExpr, nameVariables, reflData, "!", recursion+1);
       if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
       listOperations_.add(new Operation(operation, Operation.kStackOperand));
-    } else if(nameVariables !=null && spExpr.scanSkipSpace().scanIdentifier().scanOk()) {
-      //nameVariables !=null means, the first identifier should be a known variable
-      String sIdent = spExpr.getLastScannedString();
-      DataAccess.IntegerIx ixOvar = nameVariables.get(sIdent);
-      int ixVar;
-      DataAccess dataAccess = null;
-      Object dataConst = null;
-      if(ixOvar == null){ //variable not found
-        if(sIdent.equals("null")) {
-          ixVar = -1;
-          // remain dataConst == null, all is null
-        }
-        else if(reflData == null) {
-          //In this mode all need variables are created. 
-          ixVar = nameVariables.size();
-          ixOvar = new DataAccess.IntegerIx(ixVar);
-          nameVariables.put(sIdent, ixOvar);
-          //throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
-        } else {
-          ixVar = -1;
-          try{ dataConst = DataAccess.access(sIdent, reflData,true, false, false, null);}
-          catch(Exception exc) { throw new ParseException(exc.getMessage(), 0);}
-        }
-      } else {
-        ixVar = ixOvar.ix;
-      }
-      if(spExpr.scan(".").scanOk()) {                      // variable.datapath...
-        dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0', false);  // the furthermore path, mark with '.'
-      }  //cc2024-01-18 may need nameVariables and reflData for the argument values
-      Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
-      Operation oper = new Operation(operation, operand);
-      listOperations_.add(oper);
+      
+      //TODO remove
+//    } else if(nameVariables !=null && spExpr.scanSkipSpace().scanIdentifier().scanOk()) {
+//      //nameVariables !=null means, the first identifier should be a known variable
+//      String sIdent = spExpr.getLastScannedString();
+//      DataAccess.IntegerIx ixOvar = nameVariables.get(sIdent);
+//      int ixVar;
+//      DataAccess dataAccess = null;
+//      Object dataConst = null;
+//      if(ixOvar == null){ //variable not found
+//        if(sIdent.equals("null")) {
+//          ixVar = -1;
+//          // remain dataConst == null, all is null
+//        }
+//        else if(reflData == null) {
+//          //In this mode all need variables are created. 
+//          ixVar = nameVariables.size();
+//          ixOvar = new DataAccess.IntegerIx(ixVar);
+//          nameVariables.put(sIdent, ixOvar);
+//          //throw new ParseException("Variable not found: " + sIdent, (int)spExpr.getCurrentPosition());
+//        } else {
+//          ixVar = -1;
+//          try{ dataConst = DataAccess.access(sIdent, reflData,true, false, false, null);}
+//          catch(Exception exc) { throw new ParseException(exc.getMessage(), 0);}
+//        }
+//      } else {
+//        ixVar = ixOvar.ix;
+//      }
+//      if(spExpr.scan(".").scanOk()) {                      // variable.datapath...
+//        dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0', false);  // the furthermore path, mark with '.'
+//      }  //cc2024-01-18 may need nameVariables and reflData for the argument values
+//      Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
+//      Operation oper = new Operation(operation, operand);
+//      listOperations_.add(oper);
     } else if(spExpr.scanSkipSpace().scanLiteral("''\\", -1).scanOk()){ //'Stringliteral'
       CharSequence sLiteral = spExpr.getLastScannedString();
       listOperations_.add(new Operation(operation, StringFunctions.convertTransliteration(sLiteral, '\\').toString()));
@@ -3030,10 +3042,17 @@ public class CalculatorExpr
         }
       }
       listOperations_.add(new Operation(operation, value));
-    } else {
+    } else { //============================================== common data access, no (expr) and no literals.
+      //cc4-2024-01-19 here a variable from nameVariables is recognized instead of the remove code.
       DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0', true);
-      //Operand operand = new Operand(ixVar, dataAccess, dataConst, sIdent);
-      Operand operand = new Operand(-1, dataAccess, null, null);
+      final Operand operand;
+      if( dataAccess.oneDatapathElement !=null             // it is only a variable access without indices cc4-2024-01-19
+       && dataAccess.oneDatapathElement.whatisit == '@'    // 
+       && dataAccess.oneDatapathElement.indices == null) { // for the simple form store the index and name immediately in the operand,  
+        operand = new Operand(dataAccess.oneDatapathElement.ixData, null, null, dataAccess.oneDatapathElement.ident);
+      } else {                                             // only for more complex data access refer it. 
+        operand = new Operand(-1, dataAccess, null, null);
+      }
       Operation oper = new Operation(operation, operand);
       listOperations_.add(oper);
     

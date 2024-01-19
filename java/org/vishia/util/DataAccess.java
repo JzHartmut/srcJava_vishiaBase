@@ -87,7 +87,25 @@ import org.vishia.util.TreeNodeBase;
  */
 public class DataAccess {
   /**Version, history and license.
-   * <ul>
+   * <ul>2024-01-19: change was necessary because a simple access to the rootData with an operation does not work.
+   *   The problem was a too specific quest of the variable in {@link CalculatorExpr#parseArgument(StringPartScan, Map, Class, String, int)}
+   *   which does check the identifier for variables but does not regard whether this is an operation call.
+   *   On the other hand the similar algorithm, first access a variable, was implement in this class 
+   *   in {@link DatapathElement#set(StringPartScan, Map, Class, boolean)}. 
+   *   It is twice, because the {@link CalculatorExpr.Operand#dataAccess} uses the DataAccess.
+   *   Cleanup needs some fixes:
+   *   <ul>
+   *   <li>If a variable is requested by name, and reflData are not given, then the variable should be created if not existing. 
+   *     This is necessary in {@link org.vishia.xmlReader.XmlJzReader} and sensible. 
+   *     This feature was built in in the removed part of {@link CalculatorExpr#parseArgument(StringPartScan, Map, Class, String, int)}, used, 
+   *     and should now built in in {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} also. 
+   *     It is documented, proper for general use. Marked with cc1-2024-01-19
+   *   <li>The '@' for {@link DatapathElement#whatisit} was defined but not proper used. Now it is consequently used
+   *     if the {@link DatapathElement} is only an access to a variable with given {@link DatapathElement#ixData}.
+   *     TODO: The usage of {@link DatapathElement#indices} in this situation is currently not clarified, should be possible
+   *     to access element of a given array as variable. Marked with cc2-2024-01-19
+   *   </ul>  
+   *   See also changes in {@link CalculatorExpr} from 2024-01-19.
    * <li>2024-01-18: bufgix the actual arguments of a called java operation have not gotten the indexed variables.
    *   fix: In {@link #DataAccess(StringPartScan, Map, Class, char, boolean)} has gotten a 5th argument 'bFirst' 
    *   set to true only for the first element of a longer path, but the nameVariables and also reflData should be provided
@@ -554,6 +572,7 @@ public class DataAccess {
   
   protected DataAccess.DatapathElement oneDatapathElement;
   
+  
   /**Creates a Datapath with given String.
    * The first character of an element determines the type, see {@link DatapathElement#set(String)}.
    * <ul>
@@ -645,7 +664,8 @@ public class DataAccess {
    * @throws ParseException on errors on sp, on not found variables too. 
    */
   public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
-  , Class<?> reflData, char cTypeNewVariable, boolean bFirst) throws ParseException {
+  , Class<?> reflData, char cTypeNewVariable, boolean bFirst
+  ) throws ParseException {
     assert(this.listDatapath==null && this.oneDatapathElement == null);
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData, bFirst);
@@ -1192,7 +1212,10 @@ public class DataAccess {
           Debugutil.todo();
         }
       } break;
-      case '@': case '.': {
+      case '@': {
+        data1 = varValues[element.ixData];
+      } break;
+      case '.': {
         if(bStatic){
           data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
         } else {
@@ -2911,9 +2934,36 @@ public class DataAccess {
     
     /**Creates the first datapath element, which can also access to the variable pool and a reflData class
      * or create further elements but supports the first element for operations arguments.
+     * <br>
+     * The path is parsed and some parts are recognized:
+     * <ul>
+     * <li>If bFirst then some start character are recognized, stored in {@link #whatisit}.
+     * <li>The identifier is parsed, an identifier should be given. Stored in {@link #ident}
+     * <li>If (...) follows, then then {@link #whatisit} is marked as '(' for an non static operation 
+     *   or remains '% for a static operation. {@link #operation_} = true.
+     *   The arguemnts are parsed, stored in {@link #args}. 
+     * <li>If [...]  follows, indices are parsed as constant values, stored in {@link #indices}
+     * </ul>
+     * With this information the access can be done. 
+     * <br>
+     * For the first element (bFirst argument is set), the following is done:
      * <ul>
      * <li>If the sp starts with the following special chars "$@%+", it is an element with that {@link #whatisit}.
-     * <li>if the sp contains a <code>operation(arg, ...)</code> then it is marked as Operation call. 
+     * <li>If the sp starts with an identifier, is not an operation, then it is checked, wether the identfier is found
+     *   in the nameVariables. If true, then {@link #ixData} is set and {@link #whatisit} = '@'. {@link #ident()} = the parsed indetifier.
+     *   <br>{@link #indices} may be set, as access to array elements in the variable.
+     *   All other elements are null and false. This is a simple access to a variable.
+     * <li>If the identifier is not found in the variables, but the argument reflData == null, 
+     *   then the identifier is added to the nameVariables as new variable on demand. 
+     *   This is sensible because without reflData it is an variable. 
+     *   If the variable name is faulty in the application, later a faulty value (variable was not set) will be resulting,
+     *   so that the error will be found. 
+     * <li>If the identifier is not found, it is not an operation(...), but reflData are given as argument,
+     *   then the identifier is searched as Field in the reflData. If found, {@link #reflAccess} is set to use on access.    
+     * <li>If the sp contains a <code>operation(arg, ...)</code> then it is marked as Operation call.
+     *   If the operation name is found unique in the given reflData, then {@link #reflAccess} is set with this operation,
+     *   so the access can use it. If the operation is not found or it is not unique (overridden arguments),
+     *   then the {@link #reflAccess} is not set, the operation should be searched on access with the current data.
      * <li>If the sp contains <code>array[indices]</code> the index values are parsed with {@link CalculatorExpr#setExpr(StringPartScan)}.
      *   Usual they are only integer literal constants, then the value is stored immediately.  
      * </ul>
@@ -2934,17 +2984,19 @@ public class DataAccess {
     , Class<?> reflData
     , boolean bFirst
     ) throws ParseException {
+      path.scanSkipSpace().scanOk();             // accept and skip leading spaces.
       char cStart = '?';
-      if(bFirst) {
+      if(bFirst) {                               // start of path can contain $ENV, @  +  %staticElement
         cStart = path.getCurrentChar();
         if("$@+%".indexOf(cStart) >=0){  // envVar, givenVar, new, static
           this.whatisit = cStart;
           path.seekPos(1);
         } else {
-          this.whatisit = '.';                //default:  field with ident as name
+          this.whatisit = '.';                   // default:  '.' for field with ident as name
         }
       }
-      if(cStart == '&' ) { //-------------------------------- an indirect path
+      //
+      if(cStart == '&' ) { //---------------------- &(indirectpath) stored in this.args[0]
         this.whatisit = '&';
         if(path.scan("&(").scanOk()) {
           this.args = new CalculatorExpr.Operand[1];       // stores the path to the path
@@ -2955,22 +3007,23 @@ public class DataAccess {
         } else {
           throw new ParseException("&(<expression>) expected, \"(\" missing " + path.getCurrent(32), 0);
         }
-      } else {
-        if(!path.scanStart().scanIdentifier().scanOk()) {
+      } else {  //--------------------------------- not &(path), normal case starts with identifier
+        if(!path.scanStart().scanIdentifier().scanOk()) {  // should start with identifier anyway
           throw new ParseException("idenfifier expected instead: " + path.getCurrent(32), 0);
         }
         this.ident = path.getLastScannedString();
-        if(path.scan("(").scanOk()) { //Function
+        if(path.scan("(").scanOk()) { //----------- operation(...)
           this.whatisit = this.whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
           this.operation_ = true;
-          if(!path.scan(")").scanOk()) { 
-            // ========>        
+          if(!path.scan(")").scanOk()) {         // operation() without args
+            // ======>>>>                        // opeation(args, ...)        
             this.args = parseArgumentExpr(path, nameVariables, reflData);
-          }
-          
-        }
-      }
-      if(path.scan("[").scanOk()) { //Index for element
+          } } }
+      //
+      // this.ident is set, or this.args[0] with &(indirectPath), this.args are set with function arguments.
+      // this.whatisit set with . % & (
+      //
+      if(path.scan("[").scanOk()) { //------------- check for [index, ...]
         List<Object> lIndices = new LinkedList<Object>();
         CalculatorExpr exprIndex = new CalculatorExpr();
         path.scanStart();
@@ -3003,30 +3056,60 @@ public class DataAccess {
           throw new IllegalArgumentException("indices, missing ]");
         }
         Debugutil.stop();
-      } // [...]
-      if(bFirst && this.ident !=null) {
-        if(nameVariables !=null) {
-          IntegerIx ix1 = nameVariables.get(this.ident);
-          if(ix1 !=null) {
+      } // [...]                                 // checked for [index, ...]
+      //
+      // this.ident is set, or this.args[0] with &(indirectPath), this.args are set with function arguments.
+      // this.indices may be set
+      // this.whatisit set with . % & (
+      //
+      if(bFirst && this.ident !=null) {                    // first element, with given ident
+        if(nameVariables !=null && !this.operation_) {
+          IntegerIx ix1 = nameVariables.get(this.ident);   // check whether a variable exists with this name
+          if(ix1 !=null) {                                 // Note: it is concurrently to a field in reflection data with the same name.
             this.ixData = ix1.ix;
+            this.whatisit = '@';                           // mark it as only access to variable cc2-2024-01-19
+            assert(!this.operation_ && this.args ==null && this.fnArgs ==null && this.indices ==null && this.reflAccess == null );
+          } 
+          else if(reflData == null) { //--------------------- firstVariable... not found, but reflection not given
+            this.ixData = nameVariables.size();            // then create the first variable, to use it (auto created variable);
+            ix1 = new DataAccess.IntegerIx(this.ixData);
+            nameVariables.put(this.ident, ix1); //cc1-2024-01-19
+            this.whatisit = '@';                           // mark it as only access to variable cc2-2024-01-19
+            assert(!this.operation_ && this.args ==null && this.fnArgs ==null && this.indices ==null && this.reflAccess == null );
+          } 
+          else {  //----------------------------------------- identifier is not a variable, relfData are given
+            this.ixData = -1;
           }
-        } 
-        if(this.ixData <0 && reflData !=null) {
+        } else {
+          this.ixData = -1;     // either operation or nameVariables =0 null
+        }
+        if(this.ixData <0 && reflData !=null) {   //========= no variable access, then try to access from reflData.
           if("%(".indexOf(this.whatisit) >=0) {            // operation
             Method[] operations = reflData.getMethods();
             Class<?>[] argTypes = null;
-            for(Method operation: operations) {
+            for(Method operation: operations) {            // try to find the only one proper operation, then the access is faster.
               if(operation.getName().equals(this.ident)) {
+                if(this.reflAccess !=null) {
+                  this.reflAccess = null;                  // found a second time, it is not predictable.
+                  break;                                   // then search operation on access with actual arguments.
+                }
                 argTypes = operation.getParameterTypes();
                 this.reflAccess = operation;
-                this.whatisit = '%';   // only a static operation is possible
                 break;
               }
+            } // this.reflAccess only set if operaton is found one time.
+          } else if(".%".indexOf(this.whatisit) >=0){      // not an operation, try to access a field
+            try {
+              this.reflAccess = reflData.getDeclaredField(this.ident);
+            } catch (Exception e) {                        // if the field is not found, it is expectable that the field can be found in an overridden instance.
+              // secondly the field should be searched als in all super classes. This is TODO
+              // hence do not throw. Let the access decide.
+              //throw new ParseException("Variable not found: " + this.ident, (int)path.getCurrentPosition());
             }
-          } else {
-            //TODO try get field
-          }
-        }
+        } }
+      } 
+      else {  //============================================= ! bFirst, a further element
+        // do nothing, all is parsed. Maybe clarifying in future to get also the this.reflAccess for deeper elements.
       }
     }
 

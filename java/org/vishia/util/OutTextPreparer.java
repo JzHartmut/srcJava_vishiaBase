@@ -2176,10 +2176,10 @@ public class OutTextPreparer
       } 
       else if(cmd.cmd != ECmd.exec && cmd.dataAccess !=null) {
         try {
-          //====>
           if(cmd.dataAccess.datapath().size()>3)
             Debugutil.stop();
-          data = cmd.dataAccess.access(null, true, false, nameVariables, args.args);
+          //======>>>>         execObj for given refl, args.args for given ixData
+          data = cmd.dataAccess.access(args.execObj, true, false, this.nameVariables, args.args);
         } catch (Exception e) {
           bDataOk = false;
           data = "<??>";
