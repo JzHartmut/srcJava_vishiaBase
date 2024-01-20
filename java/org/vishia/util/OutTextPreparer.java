@@ -1763,7 +1763,7 @@ public class OutTextPreparer
     }
     final Cmd cmd;
     int pos2 = (int)sp.getCurrentPosition();
-    DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0', true);
+    DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0');
     boolean bScanOk = sp.scan(")>").scanOk();
     if(!bScanOk) {
       bScanOk = sp.scan(">").scanOk();

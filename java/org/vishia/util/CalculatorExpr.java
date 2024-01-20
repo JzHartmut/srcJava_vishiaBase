@@ -46,6 +46,9 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-01-19: {@link #setExpr(StringPartScan, Map, Class, boolean)}: Firstly it is checked whether it is an expression
+   *   containing the characters "+-* /(&|?=" till the end or till a ")", 
+   *   If it is not so, only the {@link #parseArgument(StringPartScan, Map, Class, String, int)} is called, it is faster.  
    * <li>2024-01-19: {@link #parseArgument(StringPartScan, Map, Class, String, int)}: The usage of a identfier for a variable
    *   is now completely done in {@link DataAccess.DatapathElement#set(StringPartScan, Map, Class, boolean)}. 
    *   Hence it is remove here in its non completely version (here operations are not detected instead a variable access). 
@@ -190,7 +193,7 @@ public class CalculatorExpr
    * 
    */
   //@SuppressWarnings("hiding")
-  public final static String version = "2024-01-18";
+  public final static String version = "2024-01-20";
   
    
   /**It is the data instance for the caluclation.
@@ -1554,12 +1557,12 @@ public class CalculatorExpr
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
         CalculatorExpr.Operand exprOperand;
         if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) { // and then extract the only few information
-          //The expr has exact 1 Operand, copy its content to this.
-          this.dataAccess = exprOperand.dataAccess;        // the access on exec is fast. That's the advantage.
-          this.dataConst = exprOperand.dataConst;
-          this.ixValue = exprOperand.ixValue;
-          this.expr = null;
-          this.textOrVar = exprOperand.textOrVar; //exprOperand.textOrVar == null ? sDatapath : exprOperand.textOrVar;
+          //The expr has exact 1 Operand, copy its content to this,  the access on exec is fast. That's the advantage.
+          this.dataAccess = exprOperand.dataAccess;        // maybe null clarified in parseArgument
+          this.dataConst = exprOperand.dataConst;          // maybe null
+          this.ixValue = exprOperand.ixValue;              // maybe -1 or given
+          this.expr = null;                                // do not use the slower access to a complex expression
+          this.textOrVar = exprOperand.textOrVar;          // used only as string literal if all other is null, -1
         } else {
           //the sDatapath is a more complex expression
           this.dataAccess = null;
@@ -2714,8 +2717,22 @@ public class CalculatorExpr
   public String setExpr(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
   , Class<?> reflData, boolean bSpecialSyntax)
   { listOperations_.clear();
-    try{ 
-      parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  
+    try{   
+      // better possibility: use 
+//      Operation oper1 = parseOperand(spExpr, nameVariables, reflData, "!", 0);
+//      if(spExpr.scan("||").scanOk()) {
+//        ...
+//      }
+           // pre-check whether the sDatapath is only short and contains a simple identifier or path
+           // or it contains a longer stuff may be an expression.
+      int posEnd = spExpr.length();
+      if(posEnd >50) { posEnd = StringFunctions.indexOf(spExpr, 0, 100, ')'); }  // limit search length to 100
+      if(posEnd >=0 && StringFunctions.indexOfAnyChar(spExpr, 0, posEnd, "+-*/(&|?=", null) <0) {
+        //--------------------------------------------------- a short expression without operations.
+        parseArgument(spExpr, nameVariables, reflData, "!", 0);  // it is a shorter access
+      } else {
+        parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  //results in same on a short expression
+      }
     } catch(ParseException exc){ 
       return exc.getMessage(); 
     }
@@ -3044,7 +3061,7 @@ public class CalculatorExpr
       listOperations_.add(new Operation(operation, value));
     } else { //============================================== common data access, no (expr) and no literals.
       //cc4-2024-01-19 here a variable from nameVariables is recognized instead of the remove code.
-      DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0', true);
+      DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0');
       final Operand operand;
       if( dataAccess.oneDatapathElement !=null             // it is only a variable access without indices cc4-2024-01-19
        && dataAccess.oneDatapathElement.whatisit == '@'    // 
@@ -3058,6 +3075,67 @@ public class CalculatorExpr
     
     }
   }
+  
+  
+  /**New approach, parse firstly the Operation and push in stack if necessary.
+   * @param spExpr String given operation
+   * @param nameVariables can access it immediately with the first part of a DataPath of each Operations.
+   * @param reflData can access it with the first part of DataPath if not a variable.
+   * @param operator 
+   * @param recursion
+   * @return
+   * @throws ParseException
+   */
+  private Operation parseOperand(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, String operator, int recursion ) throws ParseException
+  { spExpr.scanSkipSpace().scanStart();
+    if(spExpr.scanSkipSpace().scan("(").scanOk()){ //(expression)
+      parseAddExpr(spExpr, nameVariables, reflData, "!", recursion+1);
+      if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
+      return new Operation(operator, Operation.kStackOperand);
+      
+    } else if(spExpr.scanSkipSpace().scanLiteral("''\\", -1).scanOk()){ //'Stringliteral'
+      CharSequence sLiteral = spExpr.getLastScannedString();
+      return (new Operation(operator, StringFunctions.convertTransliteration(sLiteral, '\\').toString()));
+    } else if(spExpr.scanSkipSpace().scanInteger().scanOk()) { //numeric literal
+      Value value = new Value();
+      boolean bNegative = spExpr.getLastScannedIntegerSign();
+      long longvalue = spExpr.getLastScannedIntegerNumber();
+      if(spExpr.scanFractionalNumber(longvalue, bNegative).scanOk()) {
+        double dval = spExpr.getLastScannedFloatNumber();
+        if(spExpr.scan("F").scanOk()){
+          value.floatVal = (float)dval;
+          value.type_ = 'F';
+          value.etype = ExprTypes.floatExpr;
+        } else {
+          value.doubleVal = dval;
+          value.type_ = 'D';
+          value.etype = ExprTypes.doubleExpr;
+        }
+      } else {
+        //no float, check range of integer
+        if(longvalue < 0x80000000L && longvalue >= -0x80000000L) {
+          value.intVal = (int)longvalue; value.type_ = 'I'; value.etype = ExprTypes.intExpr;
+        } else {
+          value.longVal = longvalue; value.type_ = 'J'; value.etype = ExprTypes.longExpr;
+        }
+      }
+      return (new Operation(operator, value));
+    } else { //============================================== common data access, no (expr) and no literals.
+      //cc4-2024-01-19 here a variable from nameVariables is recognized instead of the remove code.
+      DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0');
+      final Operand operand;
+      if( dataAccess.oneDatapathElement !=null             // it is only a variable access without indices cc4-2024-01-19
+       && dataAccess.oneDatapathElement.whatisit == '@'    // 
+       && dataAccess.oneDatapathElement.indices == null) { // for the simple form store the index and name immediately in the operand,  
+        operand = new Operand(dataAccess.oneDatapathElement.ixData, null, null, dataAccess.oneDatapathElement.ident);
+      } else {                                             // only for more complex data access refer it. 
+        operand = new Operand(-1, dataAccess, null, null);
+      }
+      return new Operation(operator, operand);
+    
+    }
+  }
+  
   
   
   

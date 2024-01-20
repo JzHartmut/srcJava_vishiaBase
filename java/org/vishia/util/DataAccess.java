@@ -657,16 +657,12 @@ public class DataAccess {
    *   This feature is introduced with {@link OutTextPreparer} to support simple expressions in a fast way.  
    * @param cTypeNewVariable if A...Z then the last element will be designated with it.
    *   Then a new variable should be created in the parent's container with the access.
-   * @param bFirst set to true only for the first element of a path, false for further elements after dot. 
-   *   Only the first element can use the nameVariables and reflData to find the data. 
-   *   But this both arguments are transproted also to the further elements, 
-   *   because they may be necessary for arguments of called java routines: 'first.further(argument_use_nameVariables,...).
    * @throws ParseException on errors on sp, on not found variables too. 
    */
   public DataAccess(StringPartScan sp, Map<String, DataAccess.IntegerIx> nameVariables
-  , Class<?> reflData, char cTypeNewVariable, boolean bFirst
+  , Class<?> reflData, char cTypeNewVariable
   ) throws ParseException {
-    assert(this.listDatapath==null && this.oneDatapathElement == null);
+    boolean bFirst = true;
     do {
       DatapathElement element = new DatapathElement(sp, nameVariables, reflData, bFirst);
       if(cTypeNewVariable >= 'A' && cTypeNewVariable <='Z' && element !=null){
@@ -730,12 +726,19 @@ public class DataAccess {
 
   
 
-  /**Searches the Object maybe invoking some methods which is referred with this instances, {@link #listDatapath}. 
+  /**This is the recommended access operation for a pre-created and translated DataAccess instance. 
+   * The reflection elements may be pre-searched and stored in the {@link DatapathElement#reflAccess}. 
+   * Then the access is faster. If the reflAccess is not set, the elements are currently searched using the reflection capability of Java.
    * @param dataRoot Either a Map<String, ?> or any other Object which is the root for access.
    *  it is the object where the path starts from. A Map<?,?> which's key is not a String is not admissible. 
+   * @param accessPrivate true then accesses also encapsulated elements.
    * @param bContainer true then returns a found container or build one.
-   * @param varValues maybe null or array of some variables which are sorted by parameter idxVariables 
-   *   in {@link #DataAccess(StringPartScan, Map, Class, char)}
+   * @param nameVariables null, or only necessary for a indirect access path written with '&(path)' to evaluate the indirect given path.  
+   * @param varValues maybe null or an array of some variables which are sorted by parameter idxVariables 
+   *   given in {@link #DataAccess(StringPartScan, Map, Class, char)} as parameter 'nameVariables'. 
+   *   This argument should be given if such named Variables are used or also if used in indirect access paths '&(path)'.
+   *   If named variables are used and this argument is null or has too less elements, then an exception is occured.
+   *   Generally the given variables should match to the nameVariables on construction and given here for indirect accesses.
    * @return Maybe null only if the last reference refers null. 
    * @throws Exception on any not found or etc.
    */
@@ -964,7 +967,7 @@ public class DataAccess {
    * <li>"element": read from dataRoot. Read via get(element) if dataRoot is a Map<String, ?>  
    * <li>"reference.element": read from dataRoot, referenced instance. 
    * </ul>
-   * @param datapathArg 
+   * @param datapathArg String given access path 
    * @param dataRoot Either a Map<String, ?> or any other Object which is the root for access.
    *  it is the object where the path starts from. A Map<?,?> which's key is not a String is not admissible. 
    * @param accessPrivate
@@ -1493,8 +1496,8 @@ public class DataAccess {
           data1 = method.invoke(obj, actArgs);             // invoke
           sError = null;                                      // bOk = true if no exception
         } catch(Exception exc){
-          sError = ExcUtil.stackInfo("DataAccess - method access problem: " 
-              + method.getName() + "(...): " + exc.getCause().getMessage(), 3, 5);
+          sError = "DataAccess - method access problem: "  // ExcUtil.stackInfo(...)
+              + method.getName() + "(...): " + exc.getCause().getMessage();
           if(!bNoExceptionifNotFound) { 
             throw new InvocationTargetException(exc.getCause(), sError.toString());
           } else { //cc2024-01-18: fix some error messages on execution.
