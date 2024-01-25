@@ -3483,7 +3483,7 @@ public class CalculatorExpr
           unary.operate(val2, null);   //change the right value
         }
       }
-      //!!!!!!!!!!
+      //======>>>>        accu := oper(accu, val2...) whereby val2 is read from oper
       oper.operator_.operate(data.accu, val2);  //operate, may change the type if the operator forces it.
       //
       //
