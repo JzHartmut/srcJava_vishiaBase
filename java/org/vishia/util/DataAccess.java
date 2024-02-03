@@ -87,7 +87,12 @@ import org.vishia.util.TreeNodeBase;
  */
 public class DataAccess {
   /**Version, history and license.
-   * <ul>2024-01-19: change was necessary because a simple access to the rootData with an operation does not work.
+   * 
+   * <ul>
+   * <li>2024-02-03: {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} parse of ".[]" now (again) enabled.
+   *   The "access.array.[]" delivers the size of the array or the size of an container, see {@link #access(List, Object, boolean, boolean, Map, Object[], boolean, Dst)}
+   *   This is since many years but maybe only used if directly set elements. 
+   * <li>2024-01-19: change was necessary because a simple access to the rootData with an operation does not work.
    *   The problem was a too specific quest of the variable in {@link CalculatorExpr#parseArgument(StringPartScan, Map, Class, String, int)}
    *   which does check the identifier for variables but does not regard whether this is an operation call.
    *   On the other hand the similar algorithm, first access a variable, was implement in this class 
@@ -1235,6 +1240,8 @@ public class DataAccess {
         if(data1 !=null){
           Class<?> clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
           data1 = invokeMethod(element, clazz, data1, accessPrivate, varValues, false); 
+        } else {
+          Debugutil.stop();
         }
         //else: let data1=null, return null
       } break;
@@ -3011,10 +3018,15 @@ public class DataAccess {
           throw new ParseException("&(<expression>) expected, \"(\" missing " + path.getCurrent(32), 0);
         }
       } else {  //--------------------------------- not &(path), normal case starts with identifier
-        if(!path.scanStart().scanIdentifier().scanOk()) {  // should start with identifier anyway
+        path.scanStart();
+        if(path.scan("[]").scanOk()) { //-------------------- check for [] it returns the length of the container
+          Debugutil.stop();
+          this.ident = "[]";
+        } else if(path.scanIdentifier().scanOk()) {  // should start with identifier anyway
+          this.ident = path.getLastScannedString();
+        } else {
           throw new ParseException("idenfifier expected instead: " + path.getCurrent(32), 0);
         }
-        this.ident = path.getLastScannedString();
         if(path.scan("(").scanOk()) { //----------- operation(...)
           this.whatisit = this.whatisit == '%' ? '%' : '('; //%=static or non (=static routine.
           this.operation_ = true;

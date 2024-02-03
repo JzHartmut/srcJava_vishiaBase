@@ -1701,7 +1701,7 @@ public final class OutTextPreparer
           
           else {
             sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <:for>...<.for> ");
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.for> missing opening <:for:...> ");
           }
         }
         else { //No proper cmd found:
@@ -2069,8 +2069,9 @@ public final class OutTextPreparer
           case addVar: {                                   // the data are already prepared before switch
             //Integer ixVar = varValues.get(cmd.str);
             Object data = dataForCmd(cmd, args, wr);
-            if(data == null) { wr.append("<null>"); }
-            else { wr.append(data.toString()); }
+            if(data == null) { 
+              wr.append("<null>"); 
+            } else { wr.append(data.toString()); }
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;
