@@ -171,6 +171,12 @@ try {
  * Hence you can decide writing simple expressions or also more complex as script or just as Java operations.
  * <br>
  * <br>
+ * <b>Formatted numbers</b><br>
+ * <br>
+ * <br>
+ * With <code>&lt;&...:%format></code> an access to a number can be formatted due to the capabilities of java.util.Formatter.
+ * For example output a value as hexadecimal presentation write <code>&lt;&access.to.value:%04x></code>.
+ * If formatting is not possible an error text from the thrown FormatterException is output. 
  * <b>Control statements</b><br>
  * It is interesting and important to produce an output conditional depending from data, 
  * and also from some container classes.
@@ -239,6 +245,7 @@ public final class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-04 formatted output was tested only for one stage access, now works on any access. 
    * <li>2024-01-25 The whole class is now final. It should be never necessary to create a derived version. 
    *   It may optimize some in Runtime. Expect, all operations are automatically final (?) and does not need dynamic binding. 
    *   It's also better for documentation.
@@ -315,7 +322,7 @@ public final class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2024-01-15";
+  public static final String version = "2024-02-04";
   
   
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
@@ -2171,6 +2178,20 @@ public final class OutTextPreparer
     else {
       data = cmd.textOrVar; //maybe null
     }
+    if( data !=null && cmd instanceof ValueCmd) {          // check whether to format (@since 2023-12)
+      String sFormat = ((ValueCmd)cmd).sFormat;
+      if(sFormat !=null) {
+        try {
+          Object data1 = data;
+          args.sbFormatted.setLength(0);
+          args.formatter.format(sFormat, data1);
+          data = args.sbFormatted;
+        } catch(Exception exc) {
+          data += "??Format error "+ exc.getMessage() + "??";
+        }
+      }
+
+    }
     return data;
   }
   
@@ -2207,19 +2228,6 @@ public final class OutTextPreparer
       }
     } else {
       data = data0;
-    }
-    if( data !=null && cmd instanceof ValueCmd) {          // check whether to format (@since 2023-12)
-      String sFormat = ((ValueCmd)cmd).sFormat;
-      if(sFormat !=null) {
-        try {
-          Object data1 = data;
-          args.sbFormatted.setLength(0);
-          args.formatter.format(sFormat, data1);
-          data = args.sbFormatted;
-        } catch(Exception exc) {
-          data += "??Format error "+ exc.getMessage() + "??";
-        }
-      }
     }
     return data;
   }
