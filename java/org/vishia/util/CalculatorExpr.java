@@ -46,6 +46,8 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-05: set always the field {@link Operand#textOrVar}. If another field is set, the other is used.
+   *   This is necessary for error messages etc. textorVar should contain a hint to the access path.  
    * <li>2024-01-19: {@link #setExpr(StringPartScan, Map, Class, boolean)}: Firstly it is checked whether it is an expression
    *   containing the characters "+-* /(&|?=" till the end or till a ")", 
    *   If it is not so, only the {@link #parseArgument(StringPartScan, Map, Class, String, int)} is called, it is faster.  
@@ -1455,6 +1457,7 @@ public class CalculatorExpr
       this.ixValue = -1;
       this.dataAccess = null;
       this.dataConst = null;
+      assert(text !=null);
       this.textOrVar = text;
       this.expr = null;
     }
@@ -1463,7 +1466,7 @@ public class CalculatorExpr
       this.ixValue = -1;
       this.dataAccess = null;
       this.dataConst = null;
-      this.textOrVar = null;
+      this.textOrVar = expr.toString();
       this.expr = expr;
     }
     
@@ -1497,6 +1500,7 @@ public class CalculatorExpr
       this.ixValue = ixValue;
       this.dataAccess = dataAccess;
       this.dataConst = dataConst;
+      assert(textOrVar !=null);
       this.textOrVar = textOrVar;
       this.expr = null;
     }
@@ -1514,7 +1518,7 @@ public class CalculatorExpr
       this.ixValue = -1;
       this.dataAccess = null;
       this.dataConst = value;
-      this.textOrVar = null;
+      this.textOrVar = value == null ? "<null>" : value.toString();
       this.expr = null;
     }
     
@@ -1619,7 +1623,7 @@ public class CalculatorExpr
         this.dataAccess = null;
         this.dataConst = constData;
         this.expr = null;
-        this.textOrVar = null;
+        this.textOrVar = constData == null ? "<null>" : constData.toString();;
       }
       else if(sDatapath !=null){
         //====>
@@ -1639,7 +1643,7 @@ public class CalculatorExpr
           this.dataConst = null;
           this.ixValue = -1;
           this.expr = expr;
-          this.textOrVar = null; //sDatapath;
+          this.textOrVar = sDatapath.getCurrent(20).toString();
         }
       }
       else { //empty without text and without datapath
@@ -3068,7 +3072,7 @@ public class CalculatorExpr
        && dataAccess.oneDatapathElement.indices == null) { // for the simple form store the index and name immediately in the operand,  
         operand = new Operand(dataAccess.oneDatapathElement.ixData, null, null, dataAccess.oneDatapathElement.ident);
       } else {                                             // only for more complex data access refer it. 
-        operand = new Operand(-1, dataAccess, null, null);
+        operand = new Operand(-1, dataAccess, null, dataAccess.toString());
       }
       Operation oper = new Operation(operation, operand);
       listOperations_.add(oper);
