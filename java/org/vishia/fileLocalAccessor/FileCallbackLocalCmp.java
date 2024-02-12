@@ -15,11 +15,29 @@ import org.vishia.fileRemote.FileRemoteWalkerCallback;
 import org.vishia.fileRemote.FileRemoteCmdEventData;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileCompare;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.SortedTreeWalkerCallback;
 import org.vishia.util.StringFunctions;
 
-/**This class supports comparison of files in a callback routine.
+/**This class supports comparison of files in a tree. It is a callback class for the File Walker.
+ * It works with {@link FileRemote} instances. The result of comparison is set in any file in {@link FileRemote#setMarked(int)}
+ * whereby the argument is an int as mask with one of the bits in 
+ * <ul><li>{@link FileMark#cmpAlone} if the second file is not existing.
+ * <li>{@link FileMark#cmpContentEqual} if both files are compared by content and have equal content, whereby comments etc. are maybe ignored.
+ * <li>{@link FileMark#cmpContentNotEqual} if both files are compared with different content. 
+ * <li>{@link FileMark#cmpLenTimeEqual} if both files have the same length and time stamp. They can be differ though! 
+ *   But the difference is not detected if {@link #mode} have the bit {@link FileCompare#onlyTimestamp} is set.
+ * <li>{@link FileMark#cmpFileDifferences} if the length is differ.
+ * <li>{@link FileMark#cmpTimeGreater} or {@link FileMark#cmpTimeLesser} if there are time differences. 
+ *   Note that it is possible that the files have also set {@link FileMark#cmpContentEqual} if only the timestamp is touched.
+ * </ul>
+ * The directory till the root is marked with
+ * <ul><li>{@link FileMark#selectSomeInDir} if any differences are in the dir and sub directories
+ * <li>{@link FileMark#cmpMissingFiles} if some files are missing in  the dir and sub directories
+ * </ul>
+ * That information are displayed by the {@link org.vishia.gral.widget.GralFileSelector#setCmpFileResult(int)} see there. 
  * @author Hartmut Schorrig
  *
  */
@@ -28,6 +46,10 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-12 Comparison of file trees now also in mode fast, without content:
+   *   <ul><li>The cmp_onlyTimestamp etc. are removed here, instead used {@link FileCompare#onlyTimestamp} etc. They are the same values. Unique!
+   *   <li>{@link #FileCallbackLocalCmp(FileRemote, FileRemote, int, FileRemoteWalkerCallback, EventWithDst)} has a new argument cmpMode
+   *   </ul>
    * <li>2023-07-14 Hartmut adapted because cleanup of FileRemote 
    * <li>2023-02-10 Hartmut new concept with the {@link FileRemoteProgressEvData}: remove <code>progress.show(...)</code>
    *   because it is called in the timer thread instead. Independent of continue the process here. 
@@ -64,7 +86,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2023-02-10";
+  static final public String sVersion = "2024-02-12";
   
   class CompareCtrl {
     
@@ -110,34 +132,42 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   
   private final FileRemoteWalkerCallback callbackUser;
   
+  /**one of the bits
+   * <br> {@link FileCompare#onlyTimestamp} = {@value FileCompare#onlyTimestamp}
+   * <br> {@link FileCompare#withoutLineend} = {@value FileCompare#withoutLineend}
+   * <br> {@link FileCompare#withoutEndlineComment} = {@value FileCompare#withoutEndlineComment}
+   * <br> {@link FileCompare#withoutComment} = {@value FileCompare#withoutComment}
+   * used for the comparison itself.
+   */
   int mode;
   
+  /**Files with a lesser difference in time (2 sec) are seen as equal in time stamp.*/
   long minDiffTimestamp = 2000; 
   
-  final static int cmp_onlyTimestamp = 1;
-  final static int cmp_content = 2;
-  final static int cmp_withoutLineend = 4;
-  final static int cmp_withoutEndlineComment = 8;
-  final static int cmp_withoutComment = 16;
-  
+ 
   boolean aborted = false;
   
   /**Constructs an instance to execute a comparison of directory trees.
+   * since 2024-02: If cmpMode has set the bit {@link FileCompare#onlyTimestamp} then full content comparison is not done. 
+   * The comparison is very more faster (seen 10 times). 
    * @param dir1 One directory which contains a file tree. All files are compared with dir2
    * @param dir2 The other directory to compare
+   * @param cmpMode can contain the bits {@link FileCompare#onlyTimestamp}, {@link FileCompare#withoutLineend}, {@link FileCompare#withoutEndlineComment}, {@link FileCompare#withoutComment}, 
    * @param callbackUser Maybe null. If given, on each directory entry, exit and file the callback will be invoked 
    *   with the handled directory or file. The second argument is an boxed Integer, which contains the bits from
    *   {@link FileMark} to inform what is with that file. 
-   * @param timeOrderProgress maybe null. If given this timeOrder is used to show the progression of the comparison.
+   * @param evBack maybe null. If given this back event is used to show the progression of the comparison.
    *   The timeOrder is set with data
+   *   
    */
-  public FileCallbackLocalCmp(FileRemote dir1, FileRemote dir2, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
+  public FileCallbackLocalCmp(FileRemote dir1, FileRemote dir2, int cmpMode, FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) { //FileRemote.CallbackEvent evCallback){
     //this.evCallback = evCallback;
     //this.evWalker2 = new FileRemoteWalkerEvent("", dir2.device(), null, null, 0);
     this.evBack = evBack;
     this.progress = evBack.data();
     this.callbackUser = callbackUser;
     this.dir1 = dir1; this.dir2 = dir2;
+    this.mode = cmpMode;
     basepath1 = FileSystem.normalizePath(dir1.getAbsolutePath()).toString();
     zBasePath1 = basepath1.length();
     //} catch(Exception exc){
@@ -164,8 +194,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     dir2.refreshPropertiesAndChildren(true, null);  //do it in this thread      
     
     //try{ 
-    int markReset = FileMark.markRoot | FileMark.markDir | FileMark.markDir | FileMark.cmpAlone | FileMark.cmpContentEqual
-      | FileMark.cmpFileDifferences | FileMark.cmpContentNotEqual | FileMark.cmpMissingFiles;
+    int markReset = FileMark.markRoot | FileMark.markDir | FileMark.markDir | FileMark.mCmpFile;
     dir1.resetMarkedRecurs(markReset, null);
     dir2.resetMarkedRecurs(markReset, null);
     dir1.setMarked(FileMark.markRoot);            // a marker to stop going backward with dir marking.
@@ -195,7 +224,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
       if(!dir2sub.exists()){
         dir.setMarked(FileMark.cmpAlone);
         dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
-        System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
+        //System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
         return Result.skipSubtree;  //if it is a directory, skip it.        
       } else {
         //--------------------------------------------------- directory found, but yet not clarified whether all sub file/dir
@@ -204,7 +233,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
           dir2sub.walkLocal(null, FileMark.cmpAlone, FileMark.cmpAlone, null, 0, 0, null, null, 0, null);
         }
         dir2sub.resetMarked(FileMark.cmpAlone);            // hence set cmpAlone for all sub file/dir, but reset for this.
-        System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
+        //System.out.println("FileRemoteCallbackCmp - offerDir, check; " + dir.getAbsolutePath());
         //waitfor
         //dir2sub.refreshPropertiesAndChildren(null);        
         return Result.cont;
@@ -239,10 +268,18 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
       file2.resetMarked(FileMark.cmpAlone);
       int cmprBits = compareFile(file, file2);
       file.setMarked(cmprBits);
+      if((cmprBits & FileMark.cmpTimeGreater)!=0) {
+        cmprBits &= ~FileMark.cmpTimeGreater;
+        cmprBits |= FileMark.cmpTimeLesser;                // revert time greater/lesser for the other file.
+      } else if((cmprBits & FileMark.cmpTimeLesser)!=0) {
+        cmprBits &= ~FileMark.cmpTimeLesser;
+        cmprBits |= FileMark.cmpTimeGreater;               // revert time greater/lesser for the other file.
+      }
       file2.setMarked(cmprBits);
-      if( (cmprBits & FileMark.cmpContentNotEqual) !=0) {
+      if( (cmprBits & (FileMark.cmpContentEqual | FileMark.cmpLenTimeEqual)) ==0) {
         file.mark().setMarkParent(FileMark.cmpFileDifferences, false);
         file2.mark().setMarkParent(FileMark.cmpFileDifferences, false);
+        this.progress.nrofFilesMarked +=1;
       }
       if(callbackUser !=null) {
         callbackUser.offerLeafNode(file, new Integer(cmprBits));  ////
@@ -279,31 +316,41 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     @SuppressWarnings("unused")
     boolean readProblems;
     
-    mode = cmp_withoutLineend;
 
     if(file1.getName().equals("ReleaseNotes.topic"))
       Assert.stop();
+    int ret = 0;
     
     long date1 = file1.lastModified();
     long date2 = file2.lastModified();
     long len1 = file1.length();
     long len2 = file2.length();
-    if(Math.abs(date1 - date2) > minDiffTimestamp && mode == cmp_onlyTimestamp){
-      equal = equalDaylightSaved = contentEqual = contentEqualWithoutEndline = false;
-      lenEqual = len1 == len2;
-    } else if( ( Math.abs(date1 - date2 + 3600000) < minDiffTimestamp
-              || Math.abs(date1 - date2 - 3600000) < minDiffTimestamp
-               ) && mode == cmp_onlyTimestamp){ 
-      equal = equalDaylightSaved = contentEqual = contentEqualWithoutEndline = false;
-    } else if(Math.abs(date1 - date2) < minDiffTimestamp && len1 == len2){
-      //Date is equal, len is equal, don't spend time for check content.
-      equal = equalDaylightSaved = lenEqual = true;
+    if(date1 > (date2 + this.minDiffTimestamp)) {
+      ret |= FileMark.cmpTimeGreater;
+    } else if(date1 < (date2 - this.minDiffTimestamp)) {
+      ret |= FileMark.cmpTimeLesser;
+    } else if(len1 == len2){
+      ret |= FileMark.cmpLenTimeEqual;
     } else {
+      ret |= FileMark.cmpFileDifferences;
+    }
+//    if(Math.abs(date1 - date2) > minDiffTimestamp && mode == FileCompare.onlyTimestamp){
+//      equal = equalDaylightSaved = contentEqual = contentEqualWithoutEndline = false;
+//      lenEqual = len1 == len2;
+//    } else if( ( Math.abs(date1 - date2 + 3600000) < minDiffTimestamp
+//              || Math.abs(date1 - date2 - 3600000) < minDiffTimestamp
+//               ) && mode == FileCompare.onlyTimestamp){ 
+//      equal = equalDaylightSaved = contentEqual = contentEqualWithoutEndline = false;
+//    } else if(Math.abs(date1 - date2) < minDiffTimestamp && len1 == len2){
+//      //Date is equal, len is equal, don't spend time for check content.
+//      equal = equalDaylightSaved = lenEqual = true;
+//    } else {
+    if( (this.mode & FileCompare.onlyTimestamp) ==0) {
       boolean doCmpr;
       //timestamp is not tested.
       if(len1 != len2){
         //different length
-        if((mode & (cmp_withoutComment | cmp_withoutEndlineComment | cmp_withoutLineend)) !=0){
+        if((mode & (FileCompare.withoutComment | FileCompare.withoutEndlineComment | FileCompare.withoutLineend)) !=0){
           //comparison is necessary because it may be equal without that features:
           doCmpr = true;
           equal = false;  //compare it, set only because warning.
@@ -317,19 +364,25 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         //Files are different in timestamp or timestamp is insufficient for comparison:
       }
       if(doCmpr){
-        try{ equal = compareFileContent(file1, file2);
+        try{ 
+          equal = compareFileContent(file1, file2);
+          if(equal){
+            ret |= FileMark.cmpContentEqual;
+            //file1.setMarked(FileMark.cmpContentEqual);
+            //file2.setMarked(FileMark.cmpContentEqual);
+          } else {
+            ret |= FileMark.cmpContentNotEqual;
+          }
         } catch( IOException exc){
           readProblems = true; equal = false;
         }
       }
     }
-    int ret;
-    if(equal){
-      ret = FileMark.cmpContentEqual;
+    if( (ret & FileMark.cmpContentNotEqual) !=0) {
       //file1.setMarked(FileMark.cmpContentEqual);
       //file2.setMarked(FileMark.cmpContentEqual);
     } else {
-      ret = FileMark.cmpContentNotEqual;
+//      ret |= FileMark.cmpContentNotEqual;
       /*
       file1.setMarked(FileMark.cmpContentNotEqual);
       file2.setMarked(FileMark.cmpContentNotEqual);
@@ -415,8 +468,8 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     r1.close();
     r2.close();
     r1 = r2 = null;
-    FileSystem.close(r1);
-    FileSystem.close(r2);
+    FileFunctions.close(r1);
+    FileFunctions.close(r2);
     return bEqu;
   }  
   

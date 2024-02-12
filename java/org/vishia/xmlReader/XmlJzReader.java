@@ -284,7 +284,7 @@ public class XmlJzReader
    * @param zipInput The zipfile itself
    * @param pathInZip The path of a file inside the zip file
    * @param output destination data
-   * @return
+   * @return null or an error message if any exception. It is the {@link Exception#getMessage()}.
    */
   public String readZipXml(File zipInput, String pathInZip, Object output) {
     String error = null;

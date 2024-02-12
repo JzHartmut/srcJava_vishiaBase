@@ -45,6 +45,8 @@ public class FileRemoteCmdEventData  implements Payload {
   /**Mode of operation, see {@link FileRemote#modeCopyCreateAsk} etc. */
   private int modeCopyOper;
   
+  public int modeCmpOper;  // maybe also the modeCopyOper can be used as only one mode...
+  
   /**For {@link Cmd#chgProps}: a new name. */
   private String newName;
   
@@ -74,12 +76,13 @@ public class FileRemoteCmdEventData  implements Payload {
    * @param depthWalk
    */
   public void setCmdWalkRemote ( FileRemote srcdir, Cmd cmd, FileRemote dstdir
-      , String selectFilter, int cycleProgress, int depthWalk) {
+      , String selectFilter, int selectMask, int cycleProgress, int depthWalk) {
     clean();
     this.filesrc = srcdir;
     this.filedst = dstdir;
     this.cmd = cmd; this.cycleProgress = cycleProgress;
     this.selectFilter = selectFilter; 
+    this.selectMask = selectMask;
     this.depthWalk = depthWalk;
   }
   
@@ -127,7 +130,8 @@ public class FileRemoteCmdEventData  implements Payload {
     this.markSetDir = markSetDir;
     this.markSet = markSet;
     this.cmd = cmd; this.cycleProgress = cycleProgress;
-    this.selectFilter = selectFilter; this.selectMask = selectMask;
+    this.selectFilter = selectFilter; 
+    this.selectMask = selectMask;
     this.depthWalk = depthWalk;
     this.callback = callback;
   }

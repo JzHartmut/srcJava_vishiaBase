@@ -89,6 +89,13 @@ public class DataAccess {
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2024-02-10: bugfixes while using for all other especially JZtxtCmd:
+   *   <ul><li>{@link #access(DatapathElement, Object, boolean, boolean, Map, Object[], boolean, Dst)}: 
+   *     If starts with "@..." also the identifier should be searched in the given variable identifier list. 
+   *   <li>"%..." the {@link #invokeStaticMethod(DatapathElement, Object[])} should be used, it was incorrectly ignored.
+   *   <li>the invokeStaticMethod(...) should be deal with arguments, that was missing in the past.
+   *   <li>{@link #storeValue(Object, Object, boolean)} is simplified and used.  
+   *   </ul> 
    * <li>2024-02-03: {@link DatapathElement#set(StringPartScan, Map, Class, boolean)} parse of ".[]" now (again) enabled.
    *   The "access.array.[]" delivers the size of the array or the size of an container, see {@link #access(List, Object, boolean, boolean, Map, Object[], boolean, Dst)}
    *   This is since many years but maybe only used if directly set elements. 
@@ -290,7 +297,7 @@ public class DataAccess {
    * 
    * 
    */
-  static final public String sVersion = "2024-01-18";
+  static final public String sVersion = "2024-02-10";
 
 
   /**Wrapper around the index as integer. An instance is member of {@link OutTextPreparer#varValues}. 
@@ -731,6 +738,7 @@ public class DataAccess {
 
   
 
+
   /**This is the recommended access operation for a pre-created and translated DataAccess instance. 
    * The reflection elements may be pre-searched and stored in the {@link DatapathElement#reflAccess}. 
    * Then the access is faster. If the reflAccess is not set, the elements are currently searched using the reflection capability of Java.
@@ -744,15 +752,27 @@ public class DataAccess {
    *   This argument should be given if such named Variables are used or also if used in indirect access paths '&(path)'.
    *   If named variables are used and this argument is null or has too less elements, then an exception is occured.
    *   Generally the given variables should match to the nameVariables on construction and given here for indirect accesses.
+   * @param dst
    * @return Maybe null only if the last reference refers null. 
    * @throws Exception on any not found or etc.
    */
   public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer
-  , Map<String, IntegerIx> nameVariables, Object[] varValues) 
+  , Map<String, IntegerIx> nameVariables, Object[] varValues) throws Exception {
+    return access(dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
+  }
+
+  
+  
+  /**Same as {@link #access(Object, boolean, boolean, Map, Object[])} but with additional_
+   * @param dst
+   * @return Maybe null only if the last reference refers null. 
+   * @throws Exception on any not found or etc.
+   */
+  public Object access( Object dataRoot , boolean accessPrivate, boolean bContainer
+  , Map<String, IntegerIx> nameVariables, Object[] varValues, boolean bVariable , Dst dst) 
   throws Exception{
     if(this.oneDatapathElement!=null) {
-      boolean bVariable = false;
-      Object data1 = access(this.oneDatapathElement, dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
+      Object data1 = access(this.oneDatapathElement, dataRoot, accessPrivate, bContainer, nameVariables, varValues, bVariable, dst);
       if(data1 instanceof Variable<?> && !bVariable){  //use the value of the variable.
         @SuppressWarnings("unchecked") Variable<Object> var = (Variable<Object>)data1;
         data1 = var.value;
@@ -772,7 +792,7 @@ public class DataAccess {
       else return data1;
     }
     else {
-      return access(listDatapath, dataRoot, accessPrivate, bContainer, nameVariables, varValues, false, null);
+      return access(listDatapath, dataRoot, accessPrivate, bContainer, nameVariables, varValues, bVariable, dst);
     }
   }
 
@@ -815,7 +835,7 @@ public class DataAccess {
    * @throws IOException if append fails.
    * @throws IllegalAccessException if a field exists but can't access. Note that private members can be accessed.
    */
-  public static void storeValue(List<DatapathElement> path, Object dataRoot, Object value, boolean bAccessPrivate) 
+  public static void XXXstoreValue(List<DatapathElement> path, Object dataRoot, Object value, boolean bAccessPrivate) 
   throws Exception {
     Dst dst = new Dst();
     //accesses the data object with given path. 
@@ -876,7 +896,19 @@ public class DataAccess {
   public void storeValue( Object dataRoot, Object value, boolean bAccessPrivate) 
   throws Exception
   {
-    storeValue(listDatapath, dataRoot, value, bAccessPrivate);
+    Dst dst = new Dst();
+    //accesses the data object with given path. 
+    //If it is a Variable, return the Variable, not its content.
+    //If it is not a Variable, the dst contains the Field.
+    Object o = access(dataRoot, bAccessPrivate, false, null, null, true, dst);            //(dataRoot, bAccessPrivate, false, null, null, true, dst);
+    if(o instanceof Variable<?>){
+      @SuppressWarnings("unchecked")
+      Variable<Object> var = (Variable<Object>)(o); 
+      var.setValue(value);
+    } else {
+      dst.set(value);  //try to set the value to the field. If the type is not proper, throws an exception.
+    }
+    //storeValue(listDatapath, dataRoot, value, bAccessPrivate);
   }
   
   
@@ -1221,7 +1253,16 @@ public class DataAccess {
         }
       } break;
       case '@': {
-        data1 = varValues[element.ixData];
+        if(element.ixData <0) {
+          if(data1 !=null && data1 instanceof Map) {
+            //Map<String, Object>data1 = 
+            data1 = ((Map<String, Object>)data1).get(element.ident);
+          } else {
+            data1 = null;  //??
+          }
+        } else {                                           // ixData is given, access immediately
+          data1 = varValues[element.ixData];
+        }
       } break;
       case '.': {
         if(bStatic){
@@ -1241,13 +1282,13 @@ public class DataAccess {
           Class<?> clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
           data1 = invokeMethod(element, clazz, data1, accessPrivate, varValues, false); 
         } else {
-          Debugutil.stop();
+          Debugutil.stop();                                // can occure if data before are null. Then data1 remain null
         }
         //else: let data1=null, return null
       } break;
       case '%': { 
         data1 = element.operation_ || element.args !=null || element.fnArgs !=null 
-          ? data1 = invokeMethod(element, null, data1, accessPrivate, varValues, false)//invokeStaticMethod(element, varValues) 
+          ? invokeStaticMethod(element, varValues)  // data1 = invokeMethod(element, null, data1, accessPrivate, varValues, false)// 
           : getStaticValue(element); 
       } break;
       case '$': {
@@ -1577,10 +1618,11 @@ public class DataAccess {
    * This operation is no more necessary, because {@link #invokeMethod(DatapathElement, Class, Object, boolean, boolean, Object[])} does the same.
    * @param element its {@link DatapathElement#whatisit} == '%'.
    *   The {@link DatapathElement#identArgJbat} should contain the full qualified "packagepath.Class.methodname" separated by dot.
+   * @param varValues the outside given values which are accessed by index (from ident and string given variables)
    * @return the return value of the method
    * @throws Throwable 
    */
-  protected static Object XXXinvokeStaticMethod( DatapathElement element, Object[] args ) 
+  protected static Object invokeStaticMethod( DatapathElement element, Object[] varValues ) 
   throws Exception
   { final Class<?> clazz; 
     final String sMethod;
@@ -1593,6 +1635,18 @@ public class DataAccess {
       sMethod = element.ident.substring(posClass +1);
       ClassLoader classloader = getClassLoader(element);
       clazz = classloader.loadClass(sClass);
+    }
+    Object args[];
+    if(element.fnArgs != null) { //only if fnArgs not given from call, 
+      args = element.fnArgs;
+    } else if(element.args !=null) {                //then evaluate here.
+      args = new Object[element.args.length];
+      int ix = -1;
+      for(CalculatorExpr.Operand expr: element.args) {   // expr contains the ix in varValues
+        args[++ix] = expr.calc(null, varValues);         // get the proper varValue[ix] due to expr
+      }
+    } else {
+      args = null;
     }
     Method[] methods = clazz.getMethods();
     boolean bOk = false;

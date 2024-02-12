@@ -17,6 +17,7 @@ public class FileMark extends SelectMask
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-12 For comparison without content {@link #cmpTimeGreater} and ~Lesser added. 
    * <li>2023-02-12 Hartmut it has uses constants from {@link MarkMask_ifc} de facto, but not documented.
    *   Not documented. Enhanced with {@link #selectForCopy} =^ {@link MarkMask_ifc#select2}.
    *   Also shown as colors in the {@link org.vishia.gral.widget.GralFileSelector}. 
@@ -84,6 +85,13 @@ public class FileMark extends SelectMask
 
   /**Flags means that this file is any directory which is in the mark tree. */
   public static final int markDir = 0x00200000;
+  
+
+  /**Flags as result of an comparison: this file has a time stamp greater then the other.*/
+  public static final int cmpTimeGreater =    0x00400000;
+
+  /**Flags as result of an comparison: this file has a time stamp lesser then the other, the file is older.*/
+  public static final int cmpTimeLesser =    0x00800000;
 
 
   
@@ -97,15 +105,17 @@ public class FileMark extends SelectMask
   /**Flags as result of an comparison: the other file has the same length and same time stamp, it seems it may be equal, but not tested. */
   public static final int cmpLenTimeEqual =    0x02000000;
 
-  /**Flags as result of an comparison: the other file does not exist, or exists only with same length or with same time stamp */
+  /**Flags as result of an comparison: the other file does not exist, or exists only with same length or with same time stamp 
+   * If 0 and also cmpContentNotEqual is 0, it is not tested.  */
   public static final int cmpContentEqual =    0x04000000;
 
   /**Flags as result of an comparison: the other file does not exist, 
-   * or exists with other length or other timestamp, or with other content also with same length or with same time stamp */
+   * or exists with other length or other timestamp, or with other content also with same length or with same time stamp 
+   * If 0 and also cmpContentEqual is 0, it is not tested. */
   public static final int cmpContentNotEqual = 0x08000000;
 
   /**mask of all bits for comparison one file. */
-  public static final int mCmpFile =           0x0f000000;
+  public static final int mCmpFile =           0x0fc00000;
 
   
 

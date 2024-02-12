@@ -234,6 +234,10 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-12 The {@link #cmdRemote(org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, int, int, int, FileRemoteCmdEventData, EventWithDst)}
+   *   has now beside the String selectFilter the int bMaskSel. This CAN be used (is not yet) for selection via bits (TODO test may be run),
+   *   but the importance yet used is the bit {@link FileMark#ignoreSymbolicLinks}. This was the reason of change. 
+   *   Other select possibilities may work because there are regarded by the {@link FileAccessorLocalJava7}. Test it!
    * <li>2023-07-24 the CallbackWait was no more used, removed (cleanup), the concept is adequate {@link FileRemoteProgressEventConsumer}. 
    * <li>2023-07-19 move and create {@link FileRemoteCmdEventData} from the inner class CmdEventData. 
    *   That causes using {@link FileRemoteCmdEventData#setCmdWalkRemote(FileRemote, org.vishia.fileRemote.FileRemoteCmdEventData.Cmd, FileRemote, String, int, int)}
@@ -1129,13 +1133,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    *    The instances for the progressEv and its consumer can be created and used persistently.
    *    Note that {@link EventWithDst#cleanData()} should be invoked before call this operation.
    */
-  public void cmdRemote ( FileRemoteCmdEventData.Cmd cmd, FileRemote dstdir, String selectFilter, int cycleProgress, int depthWalk
+  public void cmdRemote ( FileRemoteCmdEventData.Cmd cmd, FileRemote dstdir, String selectFilter, int bMaskSel, int cycleProgress, int depthWalk
       , FileRemoteCmdEventData cmdDataArg, EventWithDst<FileRemoteProgressEvData,?> progressEv) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData cmdData = cmdDataArg == null ? new FileRemoteCmdEventData() : cmdDataArg.clean();
-    cmdData.setCmdWalkRemote(this, cmd, dstdir, selectFilter, cycleProgress, depthWalk);
+    cmdData.setCmdWalkRemote(this, cmd, dstdir, selectFilter, bMaskSel, cycleProgress, depthWalk);
     this.device.cmd(progressEv ==null, cmdData, progressEv);
   }
   
@@ -1189,13 +1193,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param cycleProgress cycle for progress in ms, 0 means progress for any file.
    * @param evProgress for progress. If bWait is false and evBack is null, no answer is given. 
    */
-  public void walkRemote ( boolean bWait, FileRemote dirDst, int depth, String selectFilter
+  public void walkRemote ( boolean bWait, FileRemote dirDst, int depth, String selectFilter, int bMaskSel
     , int cycleProgress, EventWithDst<FileRemoteProgressEvData,?> evProgress) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkTest, dirDst, selectFilter, cycleProgress, depth);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkTest, dirDst, selectFilter, bMaskSel, cycleProgress, depth);
     this.device.cmd(bWait, co, evProgress);
   }
 
@@ -1221,7 +1225,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkRefresh, null, null, 0, 1);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkRefresh, null, null, 0, 0, 1);
     this.device.cmd(bWait, co, evBack);
     //device.walkFileTree(this, bWait, true, 0, 0, null, 0,  1,  callback, evBack, false);  //should work in an extra thread.
   }
@@ -1248,7 +1252,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * @param progressCopyDirTreeWithCallback instance for callback.
    */
   //tag::refreshAndMark[]
-  public void refreshAndMark ( boolean bWait, int depth, int setMark, int setMarkDir, String sMaskSelection, long markSelection
+  public void refreshAndMark ( boolean bWait, int depth, int setMark, int setMarkDir, String sMaskSelection, int markSelection
       , FileRemoteWalkerCallback callbackUser, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
@@ -1256,7 +1260,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     if(callbackUser !=null)
       Debugutil.stop();
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkLocal(this, FileRemoteCmdEventData.Cmd.walkRefresh, null, setMark, setMarkDir, sMaskSelection, (int)markSelection, depth, null, 0);
+    co.setCmdWalkLocal(this, FileRemoteCmdEventData.Cmd.walkRefresh, null, setMark, setMarkDir, sMaskSelection, markSelection, depth, null, 0);
     this.device.cmd(bWait, co, evBack);
 //    boolean bWait = (evBack ==null);
 //    this.device.walkFileTree(this,  bWait, true, setMark, setMarkDir
@@ -1295,12 +1299,12 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
    * The result is given only if the {@link FileRemoteWalkerCallback#finished(FileRemote, org.vishia.util.SortedTreeWalkerCallback.Counters)}
    * will be invoked.
    * @param depth at least 1 for enter in the first directory. Use 0 if all levels should entered.
-   * @param mask a mask to select directory and files
-   * @param bits to select files by its mark, 0 then select all (ignore mark)
+   * @param sMask a mask to select directory and files
+   * @param bMaskSel to select files by its mark, 0 then select all (ignore mark)
    * @param callbackUser maybe null, a user instance which will be informed on start, any file, any directory and the finish.
    * @param timeOrderProgress maybe null, if given then this callback is informed on any file or directory.
    */
-  public void cmprDirTreeTo(boolean bWait, FileRemote dir2, String mask, EventWithDst<FileRemoteProgressEvData,?> evBack) { 
+  public void cmprDirTreeTo(boolean bWait, FileRemote dir2, String sMask, int bMaskSel, int modeCmpOper, EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
@@ -1312,19 +1316,20 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
     //co.callback = new FileRemoteCallbackCmp(this, dir2, null, evBack);  //evCallback);
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkCompare, dir2, mask, 100, 0);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkCompare, dir2, sMask, bMaskSel, 100, 0);
+    co.modeCmpOper = modeCmpOper;
     this.device.cmd(bWait, co, evBack);
   }
   
   
   
-  public void copyDirTreeTo(boolean bWait, FileRemote dirDst, int depth, String mask
+  public void copyDirTreeTo(boolean bWait, FileRemote dirDst, int depth, String sFilterSel, int bMaskSel
       , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkCopyDirTree, dirDst, mask, 100, depth);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkCopyDirTree, dirDst, sFilterSel, bMaskSel, 100, depth);
 //    co.markSet = setMark;
 //    co.markSetDir = setMarkDir;
 //    co.selectMask = (int)mark;
@@ -1349,13 +1354,13 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
   
   
-  public void deleteFilesDirTree(boolean bWait, int depth, String mask
+  public void deleteFilesDirTree(boolean bWait, int depth, String sFilterSel, int bMaskSel
       , EventWithDst<FileRemoteProgressEvData,?> evBack) { 
     if(this.device == null){
       this.device = FileRemote.getAccessorSelector().selectFileRemoteAccessor(getAbsolutePath());
     }
     FileRemoteCmdEventData co = new FileRemoteCmdEventData();
-    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkDelete, null, mask, 100, depth);
+    co.setCmdWalkRemote(this, FileRemoteCmdEventData.Cmd.walkDelete, null, sFilterSel, bMaskSel, 100, depth);
     this.device.cmd(bWait, co, evBack);
   }
   

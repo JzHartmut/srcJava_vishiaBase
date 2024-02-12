@@ -67,6 +67,15 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-12 Now respects symbolic link as JUNCTION in Windows:
+   *   The {@link Files#isSymbolicLink(Path)} in Java original does not detect a JUNCTION as symbolic link, that is not nice.
+   *   The solution is also tested in {@link WalkFileTreeVisitor#preVisitDirectory(Path, BasicFileAttributes)}:
+   *   With {@link Path#toRealPath(LinkOption...)} the path resulting from JUNCTION is detected, and by comparison with {@link Path#toAbsolutePath()}
+   *   it is detected that this is very probably a JUNCTION.
+   *   It is important that also Junctions are not entered if {@link FileMark#ignoreSymbolicLinks} is set. 
+   *   This is firstly for updating and comparison for source file trees. The symbolic linked directories (via Junction) should not be handled then,
+   *   because they should be handled in there own working tree"
+   *   Also the mode is set from outside, change argument list of {@link FileCallbackLocalCmp#FileCallbackLocalCmp(FileRemote, FileRemote, int, FileRemoteWalkerCallback, EventWithDst)}.
    * <li>2023-07-22 ctor is private, should never called directly, only singleton. 
    * <li>2023-07-22 experience with mkdir, refactored. 
    * <li>2023-07-18 rename and using {@link FileRemoteWalker.WalkInfo} instead CurrDirChildren, the content is the same.
@@ -132,7 +141,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2023-07-16";
+  public static final String sVersion = "2024-02-12";
 
   /**Some experience possible: if true, then store File objects in {@link FileRemote#children} instead
    * {@link FileRemote} objects. The File objects may be replaces by FileRemote later if necessary. This may be done
@@ -701,7 +710,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       break;
     case walkCompare:
       assert(co.callback() == null);
-      co.setCallback(new FileCallbackLocalCmp(co.filesrc(), co.filedst(), null, evBack));
+      co.setCallback(new FileCallbackLocalCmp(co.filesrc(), co.filedst(), co.modeCmpOper, null, evBack));
       FileAccessorLocalJava7.this.walkFileTreeExecInThisThread(co, true, evBack , false); 
       break;
     case walkTest:
@@ -1189,10 +1198,27 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       SortedTreeWalkerCallback.Result result;
       boolean selected;
       final FilepathFilterM childFilter;
+      int mSelectMask = this.co.selectMask();
+      boolean bIgnoreSymbolicLinks = (mSelectMask & FileMark.ignoreSymbolicLinks)!=0;
+      if(bIgnoreSymbolicLinks) {
+        Debugutil.stop();
+      }
+      final Path dirAbs;
+      if(!dir.isAbsolute()) {
+        dirAbs = dir.toAbsolutePath();
+      } else {
+        dirAbs = dir;
+      }
+      Path linkedPath = dirAbs.toRealPath();
+      boolean isSymbolicLink = linkedPath.compareTo(dirAbs)!=0;
+      boolean isSymbolicLinkByFilesystem = Files.isSymbolicLink(namepath);  //Note: this does not detect JUNCTION in Windows.
+      if(isSymbolicLink) {
+        Debugutil.stop();
+      }
       if(this.walkInfo.parent ==null) {                        // the first level of preVisistDirectory, the given one
         selected = true;                                   // is always selected (elsewhere the operation will no t be called)
         childFilter = this.walkInfo.fileFilter;                // the fileFilter is effective from the next level
-      } else if((this.co.selectMask() & FileMark.ignoreSymbolicLinks) !=0 &&  Files.isSymbolicLink(namepath)) {
+      } else if((mSelectMask & FileMark.ignoreSymbolicLinks) !=0 &&  isSymbolicLink) {
         selected = false;                        // skip a directory which is a symbolic link if desired
         childFilter = null;
       } else if(this.fileFilter == null) {       // do not skip if no fileFilter given, because files may be marked

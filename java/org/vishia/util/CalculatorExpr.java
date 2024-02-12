@@ -2360,7 +2360,7 @@ public class CalculatorExpr
           Debugutil.stop();
         //assert(actOperation ==null);
         if(actOperation == null){ actOperation = new CalculatorExpr.Operation(); }
-        if(actOperation.operand_ == null || actOperation.operand_.dataAccess == null){ actOperation.operand_ = new Operand(-1, newDataAccessSet(), null, null);}
+        if(actOperation.operand_ == null || actOperation.operand_.dataAccess == null){ actOperation.operand_ = new Operand(-1, newDataAccessSet(), null, "new empty");}
         return (DataAccess.DataAccessSet)actOperation.operand_.dataAccess;
       } 
       

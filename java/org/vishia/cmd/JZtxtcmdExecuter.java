@@ -3093,7 +3093,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
     { short success = kSuccess;
       CharSequence text = null;
       Object obj = null;
-      try{ obj = dataAccess(statement.dataAccess, localVariables, jzcmdMain.bAccessPrivate, false, false, null);
+      try{ obj = dataAccess(statement.dataAccess, this.localVariables, jzcmdMain.bAccessPrivate, false, false, null);
       } catch(Exception exc) {
         if(statement.errorText !=null){
           text = statement.errorText;

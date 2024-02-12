@@ -25,7 +25,7 @@ public class FileRemoteWalkerCallbackDelete extends FileRemoteProgressEventConsu
   }
 
   @Override public Result offerParentNode ( FileRemote parentNode, Object data, Object oWalkInfo ) {
-    parentNode.deleteFilesDirTree(false, 0, "**/*", this.evBack);
+    parentNode.deleteFilesDirTree(false, 0, "**/*", FileMark.ignoreSymbolicLinks, this.evBack);
     awaitExecution(0, true);
     return Result.skipSubtree;   // all is deleted, do not look for content. 
   }

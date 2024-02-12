@@ -65,25 +65,41 @@ import java.util.List;
   }
  * </pre>
  * You should instantiate in your application:<pre>
-  final Args argData;
- * </pre>
+  public static int amain(Args args) {
+    MyAppl thiz = new MyAppl(args);          // call with your proper prepared arguments
+    int exitCode = thiz.exec();              // arguments can be given whatever it is necessary or possible
+    return exitCode;
+  }</pre>
+ * It offers an <code>amain(args)</code> which is also usable inside another Java program, with given Args,
+ * or for example inside a JzTxtCmd script where also an exception or a error return value will be processed in a specific kind.
+ * <br><br>
+ * The <code>amain(args)</code> is called from:<pre>
+  public static int smain ( String[] sArgs, Appendable logHelp, Appendable logError) {
+    CmdArgs args = new CmdArgs();                // your inherit class of Arguments
+    if(sArgs.length ==0) {                       // show help if no arguments are given.
+      args.showHelp(logHelp);
+      return(1);                
+    }
+    if(  ! args.parseArgs(sArgs, logError)       // returns true if no argument error
+      || ! args.testConsistence(logError)        // returns true if all arguments are proper
+      ) { 
+      return(254);                               // argument error
+    }
+    //LogMessageStream log = new LogMessageStream(System.out);
+    int exitCode = amain(args);                  // internal amain with prepared Args
+    return exitCode;
+  }</pre>
  * In the main you should call:<pre>
-  public static void main(String[] cmdArgs) {
-    Args args = new Args();                  // an inherit class of Arguments
-    if(  args.parseArgs(cmdArgs, System.err) // returns true if no argument error
-      && args.testConsistence(System.err)    // returns true if all arguments are proper
-      ) {                                    // then execute:
-      smain(args);                           // internal smain with prepared Args
-    }
-  }
- * </pre>
- * Now the <code>smain(args)</code> is also usable inside another Java program, with given Args:<pre>
-  public static void smain(Args args) {
+  public static void main ( String[] sArgs) {
     try {
-      MyAppl main = new MyAppl(args);   //should store the args in a final reference
-      thiz.exec();
+      int exitCode = smain(sArgs);
+      System.exit(exitCode);                     // the exit code for the cmd line script
+    } catch (Exception e) {                      // last fall back, unexpected exception
+      System.err.println("Unexpected: " + e.getMessage());
+      e.printStackTrace(System.err);
+      System.exit(255);                          // the exit code for unexpected for the cmd line script
     }
- * </pre>
+  }</pre> 
  * <br>
  * This class supports
  * <ul>
@@ -103,8 +119,17 @@ import java.util.List;
  * pause
  * </pre>
  * This is an example/pattern for a batch file, which contains the arguments one per line in the argument file.
- * This class supports also a comment for the arguments. The comment start string is given after the label, whereby spaces will be omitted (trimmed).
- * One space after the label means that also trailing spaces in the non commented lines will be trimmed. 
+ * <ul>
+ * <li>The characters before the label are used as identification for the arguments lines. 
+ *   <ul><li>So long lines with this start chararcters, here ".." comes, this are argument lines.
+ *   <li>A line without this identification ends the argument line sequence.
+ *   <li>proper for Windows-batch script: The identification ".." is also the designation of a comment line in Windows
+ *   <li>For shell script use "#" or "##" instead with the same effect.
+ *   </ul>
+ * <li>If a space and a identification for end line comments are written, here " ##", 
+ *   then this end line comment and all trailing spaces before the comment are removed.
+ *   <br>Hence, a nice possibility to comment arguments. The " ##" is usual proper except you need ## in your argument.
+ * </ul>    
  * 
  * @author Hartmut Schorrig, LGPL-License Do not remove the license hint.
  */

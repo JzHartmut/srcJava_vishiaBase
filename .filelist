@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2024-02-05 12:12:43  x     .gitCommit                               ::           .200 -2071849143 
+2024-02-13 00:16:16  x     .gitCommit                               ::           .456 -0881274311 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -120,7 +120,7 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2023-12-08 21:37:55  x     JZtxtcmdExecuter.java                    ::        200.025  1790441401 
+2024-02-08 22:12:27  x     JZtxtcmdExecuter.java                    ::        200.030 -1148346500 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
 2023-12-08 21:02:53  x     JZtxtcmdScript.java                      ::        124.574  1033913282 
@@ -169,8 +169,8 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2023-07-24 20:51:42  x     FileAccessorLocalJava7.java              ::         69.943  1223814131 
-2023-07-20 13:37:59  x     FileCallbackLocalCmp.java                ::         19.337  1048006514 
+2024-02-12 23:23:00  x     FileAccessorLocalJava7.java              ::         71.596 -0609110424 
+2024-02-12 23:52:37  x     FileCallbackLocalCmp.java                ::         22.990  0816232209 
 2023-07-19 10:33:07  x     FileCallbackLocalCopy.java               ::          8.171  1972774570 
 2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
@@ -181,19 +181,19 @@
 ============================== java/org/vishia/fileRemote/ =========================================
 2023-07-24 20:50:29  x     FileAccessZip.java                       ::         17.511 -2066156768 
 2023-08-02 20:57:39  x     FileCluster.java                         ::         19.734  2045609325 
-2023-03-12 14:35:13  x     FileMark.java                            ::         10.765 -0673201036 
-2023-08-07 13:22:02  x     FileRemote.java                          ::        141.895  2078221027 
+2024-02-12 23:54:50  x     FileMark.java                            ::         11.306  1650585671 
+2024-02-13 00:01:50  x     FileRemote.java                          ::        142.635 -2124296808 
 2023-07-24 21:02:58  x     FileRemoteAccessor.java                  ::         14.798  1243699740 
 2023-07-19 09:42:23  x     FileRemoteCallbackCopyDispersedFiles.java ::          2.957 -0268023324 
 2023-07-19 09:47:52  x     FileRemoteCallbackSearch.java            ::         10.632  0519511827 
-2023-07-22 18:38:44  x     FileRemoteCmdEventData.java              ::          8.137 -0730680986 
+2024-02-13 00:04:36  x     FileRemoteCmdEventData.java              ::          8.285  1499272580 
 2023-07-24 21:21:27  x     FileRemoteProgressEvData.java            ::         14.138  0116891715 
 2023-07-24 21:12:08  x     FileRemoteProgressEventConsumer.java     ::          4.505 -0188457504 
 2023-07-19 09:47:08  x     FileRemoteTestCallback.java              ::          1.129  1768663812 
 2023-07-23 15:59:34  x     FileRemoteWalker.java                    ::         17.317  1053817515 
 2023-07-19 09:45:57  x     FileRemoteWalkerCallback.java            ::           .625  0311367713 
 2023-07-24 21:02:58  x     FileRemoteWalkerCallbackCopy.java        ::          2.163 -0467025975 
-2023-07-24 21:02:58  x     FileRemoteWalkerCallbackDelete.java      ::          1.819  1808981119 
+2024-02-12 13:15:05  x     FileRemoteWalkerCallbackDelete.java      ::          1.849  2131060152 
 2023-07-19 09:46:10  x     FileRemoteWalkerCallbackLog.java         ::          2.556 -1786771115 
 2023-03-14 23:45:12  x     FileZip.java                             ::          5.640  1234857640 
 
@@ -287,22 +287,22 @@
 ============================== java/org/vishia/util/ ===============================================
 2019-10-26 22:01:54  x     AccessPolicy.java                        ::          1.093  1156331393 
 2023-04-28 18:51:54  x     ApplMain.java                            ::          2.570  1317011550 
-2023-12-08 21:47:52  x     Arguments.java                           ::         34.982  1338524220 
+2024-02-10 18:48:32  x     Arguments.java                           ::         36.577  0557594820 
 2020-07-23 21:31:00  x     Arguments.java_new                       ::         13.517 -0150313183 
 2022-11-12 14:25:16  x     Assert.java                              ::          3.039  0340149536 
-2024-02-05 12:12:25  x     CalculatorExpr.java                      ::        166.331 -0973577720 
+2024-02-08 21:42:26  x     CalculatorExpr.java                      ::        166.338 -0155988716 
 2022-10-01 20:48:49  x     CheckVs.java                             ::          1.055 -0027567892 
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
 2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2024-02-03 20:40:59  x     DataAccess.java                          ::        158.507  0188836191 
+2024-02-13 00:15:07  x     DataAccess.java                          ::        161.346  0245479899 
 2023-05-12 00:34:19  x     DataShow.java                            ::         29.316 -0667858082 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2023-10-19 17:15:11  x     Debugutil.java                           ::          1.472  0341870489 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2024-01-15 14:52:21  x     ExcUtil.java                             ::         16.391  0682194287 
 2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
-2023-12-08 21:50:31  x     FileCompare.java                         ::         15.482 -1469270239 
+2024-02-12 15:29:38  x     FileCompare.java                         ::         15.517 -0056517028 
 2023-10-19 17:17:28  x     FileFunction.java                        ::          6.222 -1788360421 
 2023-10-22 20:57:41  x     FileFunctions.java                       ::         88.141  1232636168 
 2023-03-17 09:34:57  x     FileList.java                            ::         23.371  0742653671 
@@ -389,9 +389,9 @@
 
 ============================== java/org/vishia/xmlReader/ ==========================================
 2023-04-28 17:51:39  x     GenXmlCfgJavaData.java                   ::         16.410  0614327134 
-2023-12-27 16:22:26  x     XmlCfg.java                              ::         33.658 -0640661820 
+2023-04-30 19:07:24  x     XmlCfg.java                              ::         33.658 -0640661820 
 2023-04-29 22:34:01  x     XmlJzCfgAnalyzer.java                    ::         38.691 -0118411386 
-2023-12-28 20:22:56  x     XmlJzReader.java                         ::         55.762  0211055847 
+2024-02-09 21:17:50  x     XmlJzReader.java                         ::         55.847  0486630450 
 2022-06-08 21:14:43  x     XmlNodeSimpleReader.java                 ::          2.313  0733459123 
 2023-04-29 23:14:00  x     ZmlReader.java                           ::          6.365 -0591413995 
 
@@ -410,7 +410,7 @@
 ============================== java/org/vishia/zbnf/ ===============================================
 2022-06-23 17:14:35  x     GenZbnfJavaData.java                     ::         34.173  0306927906 
 2022-02-08 23:44:38  x     Zbnf2Xml.java                            ::         22.080 -0810343213 
-2023-09-30 10:50:16  x     ZbnfJavaOutput.java                      ::         89.902 -0050404989 
+2023-08-15 18:15:34  x     ZbnfJavaOutput.java                      ::         89.902 -0050404989 
 2022-02-09 18:28:47  x     ZbnfParseResultItem.java                 ::         12.232 -1807629494 
 2022-11-13 17:42:39  x     ZbnfParser.java                          ::        191.293  0572222434 
 2022-05-19 17:36:26  x     ZbnfParserStore.java                     ::         60.453 -1940285188 
@@ -435,7 +435,7 @@
 
 ============================== makeScripts/ =======================================================
 2023-04-12 21:36:06  x     +genjavadoc.sh                           ::           .464 -0989684273 
-2023-10-19 17:38:09  x     +makejar_vishiaBase.sh                   ::          3.967  0580397432 
+2024-02-12 22:53:19  x     +makejar_vishiaBase.sh                   ::          3.967  0839413003 
 2023-08-07 23:44:02  x     -deployJar.sh                            ::          2.815 -1570269268 
 2023-04-12 21:41:53  x     -genjavadocbase.sh                       ::          2.493  1912977088 
 2023-10-19 17:37:37  x     -makejar-coreScript.sh                   ::          9.740  1000377985 

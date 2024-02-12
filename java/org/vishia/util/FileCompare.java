@@ -37,11 +37,11 @@ public class FileCompare
    */
   public final static String version = "2019-12-06";
   
-  final static int onlyTimestamp = 1;
-  final static int content = 2;
-  final static int withoutLineend = 4;
-  final static int withoutEndlineComment = 8;
-  final static int withoutComment = 16;
+  public final static int onlyTimestamp = 1;
+  public final static int content = 2;
+  public final static int withoutLineend = 4;
+  public final static int withoutEndlineComment = 8;
+  public final static int withoutComment = 16;
   
   
   final int mode;
