@@ -1193,7 +1193,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         throws IOException
     {
       final FileVisitResult ret;
-      Path namepath = dir.getFileName();
+      Path namepath = dir.getFileName();                   // NOTE namepath is null if for ex. D:/ is dir
       String name = namepath == null ? "/" : namepath.toString();
       SortedTreeWalkerCallback.Result result;
       boolean selected;
@@ -1211,8 +1211,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
       Path linkedPath = dirAbs.toRealPath();
       boolean isSymbolicLink = linkedPath.compareTo(dirAbs)!=0;
-      boolean isSymbolicLinkByFilesystem = Files.isSymbolicLink(namepath);  //Note: this does not detect JUNCTION in Windows.
-      if(isSymbolicLink) {
+      boolean isSymbolicLinkByFilesystem = Files.isSymbolicLink(dir);  //Note: this does not detect JUNCTION in Windows.
+      if(isSymbolicLinkByFilesystem) {
         Debugutil.stop();
       }
       if(this.walkInfo.parent ==null) {                        // the first level of preVisistDirectory, the given one

@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2024-02-13 00:16:16  x     .gitCommit                               ::           .456 -0881274311 
+2024-02-14 18:06:38  x     .gitCommit                               ::           .416 -1814831094 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -169,7 +169,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2024-02-12 23:23:00  x     FileAccessorLocalJava7.java              ::         71.596 -0609110424 
+2024-02-13 09:29:33  x     FileAccessorLocalJava7.java              ::         71.668 -1448750821 
 2024-02-12 23:52:37  x     FileCallbackLocalCmp.java                ::         22.990  0816232209 
 2023-07-19 10:33:07  x     FileCallbackLocalCopy.java               ::          8.171  1972774570 
 2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
@@ -323,10 +323,12 @@
 2021-10-04 14:29:49  x     IntegerBlockArray.java                   ::          5.920 -1972066887 
 2019-12-20 20:54:41  x     IterableIndirect.java                    ::          1.369  0394683047 
 2021-10-04 14:29:49  x     IterableIterator.java                    ::           .433 -0658760924 
-2023-12-08 21:55:18  x     IterableMapValue.java                    ::          1.491 -0837056720 
+2024-02-14 13:55:55  x     IterableMapValue.java                    ::          1.643  0716241467 
 2023-11-09 21:40:28  x     IterableOneElement.java                  ::          1.358 -0520905225 
+2024-02-14 14:00:38  x     IteratorArray.java                       ::          1.041  0397653480 
 2020-09-02 13:01:36  x     IteratorArrayMask.java                   ::          1.388 -0127160055 
-2023-12-08 21:58:54  x     IteratorMask.java                        ::          2.344  0588149093 
+2024-02-13 14:39:46  x     IteratorMask.java                        ::          2.368  0560911471 
+2024-02-14 14:14:28  x     IteratorTypeCast.java                    ::           .998 -1594831597 
 2016-10-16 21:54:24  x     Java4C.java                              ::         16.527 -2096577833 
 2015-10-30 19:10:55  x     KeyCode.java                             ::         12.692  0729595176 
 2021-10-04 14:29:51  x     LeapSeconds.java                         ::          9.363  0348706195 
@@ -337,7 +339,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2024-02-04 19:32:06  x     OutTextPreparer.java                     ::        115.660  2023788508 
+2024-02-14 18:06:21  x     OutTextPreparer.java                     ::        118.647  1686886457 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 

@@ -2,6 +2,8 @@ package org.vishia.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.Flushable;
 import java.io.IOException;
@@ -245,6 +247,10 @@ public final class OutTextPreparer
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-13 new {@link #readTemplateCreatePreparer(Class, String, Map, Object, Map)} replaces the older form without Class,
+   *   but {@link #readStreamTemplateCreatePreparer(InputStream, String, Map, Object, Map)} is also available.
+   *   The argument String lineStart is no more supported from the newer form. 
+   *   All deprecated operations {@link #XXXreadTemplate(InputStream, String)} etc. are marked with XXX, can but should not be used.
    * <li>2024-02-04 formatted output was tested only for one stage access, now works on any access. 
    * <li>2024-01-25 The whole class is now final. It should be never necessary to create a derived version. 
    *   It may optimize some in Runtime. Expect, all operations are automatically final (?) and does not need dynamic binding. 
@@ -322,7 +328,7 @@ public final class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2024-02-04";
+  public static final String version = "2024-02-13";
   
   
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
@@ -979,7 +985,7 @@ public final class OutTextPreparer
    * @throws IOException
    * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)} for all.
    */
-  @Deprecated public static Map<String, String> readTemplate ( InputStream inp, String lineStart) throws IOException {
+  @Deprecated public static Map<String, String> XXXreadTemplate ( InputStream inp, String lineStart) throws IOException {
     Map<String, String> ret = new TreeMap<String, String>();
     InputStreamReader reader = new InputStreamReader(inp, "UTF-8");
     BufferedReader rd = new BufferedReader(reader);
@@ -1146,11 +1152,11 @@ public final class OutTextPreparer
    * @throws ParseException on parsing error of the script.
    * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
    */
-  @Deprecated public static OutTextPreparer readTemplateCreatePreparer 
+  @Deprecated public static OutTextPreparer XXXreadTemplateCreatePreparer 
   ( InputStream inp, String lineStart, Class<?> execClass
   , Map<String, Object> idxConstData, String sMainScript 
   ) throws IOException, ParseException {
-    readTemplateCreatePreparerPriv(inp, lineStart, execClass, idxConstData, (Map<String, OutTextPreparer>)null);
+    XXXreadTemplateCreatePreparerPriv(inp, lineStart, execClass, idxConstData, (Map<String, OutTextPreparer>)null);
     return sMainScript == null ? null : (OutTextPreparer)idxConstData.get(sMainScript);
   } 
     
@@ -1171,7 +1177,7 @@ public final class OutTextPreparer
    * @throws ParseException if the inp has syntax errors
    * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
    */
-  @Deprecated private static void readTemplateCreatePreparerPriv 
+  @Deprecated private static void XXXreadTemplateCreatePreparerPriv 
   ( InputStream inp, String lineStart, Class<?> execClass
   , Map<String, Object> idxConstData 
   , Map<String, OutTextPreparer> idxScript
@@ -1212,7 +1218,48 @@ public final class OutTextPreparer
   }
   
   
+  
   /**Recommended operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
+   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map)} afterwards.
+   * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
+   *  
+   * @since 2024-02-13 opens and closes also the file in jar.
+   *
+   * @param classInJar null or a Class in the jar as start point of path
+   * @param path if classInJar is given, the relative path from classInJar to read a file from jar using {@link Class#getResourceAsStream(String)}.
+   *   If this file is not available, a FileNotFoundException is thrown: Note: {@link Class#getResourceAsStream(String)} does not throw by itself.
+   *   If classInJar==null this is a path in the file system to use this file. Both variants are supported.
+   * @param idxScript container where the read scripts are stored, sorted by its name <:otx:NAME:...>
+   *   The scripts are created, the text is referred via {@link OutTextPreparer#pattern} but the script is not parsed yet.
+   *   Later parsing allows that a script can be &lt;:call:...> which is defined after the calling script. 
+   * @param dataRoot null admissible, possibility to set values from there in <code>&lt;:set:name=&value></code>
+   * @param idxConstData necessary if <code>&lt;:set:name=value></code> is used. 
+   *   null admissible if the inp does not contain <code>&lt;:set:name=&value></code> outside of scripts
+   * @throws IOException general possible on reading inp
+   * @throws ParseException if the inp has syntax errors
+   */
+  public static void readTemplateCreatePreparer 
+  ( Class<?> classInJar, String path
+  , Map<String, OutTextPreparer> idxScript
+  , Object dataRoot, Map<String, Object> idxConstData
+  ) throws IOException, ParseException {
+    final InputStream inp;
+    if(classInJar == null) {
+      inp = new FileInputStream(FileFunctions.newFile(path));
+    } else {
+      inp = classInJar.getResourceAsStream(path);          //pathInJar with slash: from root.
+      if(inp == null) {                                    // null can occur. 
+        throw new FileNotFoundException("resource in jar not found: " + path + " beside " + classInJar.getTypeName());
+      }
+    }
+    readStreamTemplateCreatePreparer(inp, null, idxScript, dataRoot, idxConstData);
+    inp.close();
+  }  
+  
+  
+  
+  
+  /**Older operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
    * To parse all read scripts call {@link #parseTemplates(Map, Class, Map)} afterwards.
    * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
    *  
@@ -1229,7 +1276,7 @@ public final class OutTextPreparer
    * @throws IOException general possible on reading inp
    * @throws ParseException if the inp has syntax errors
    */
-  public static void readTemplateCreatePreparer 
+  public static void readStreamTemplateCreatePreparer 
   ( InputStream inp, String lineStart
   , Map<String, OutTextPreparer> idxScript
   , Object dataRoot, Map<String, Object> idxConstData
@@ -1304,11 +1351,11 @@ public final class OutTextPreparer
    *   Here now it is simpler, the operation returns the new Map filled with the content of the read script. 
    * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
    */
-  @Deprecated public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( InputStream inp, Class<?> execClass) 
+  @Deprecated public static Map<String, OutTextPreparer> XXXreadTemplateCreatePreparer ( InputStream inp, Class<?> execClass) 
       throws IOException, ParseException {
       //
       Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
-      readTemplateCreatePreparerPriv(inp, null, execClass, null, idxScript);
+      XXXreadTemplateCreatePreparerPriv(inp, null, execClass, null, idxScript);
       return idxScript;
     }
 
@@ -1329,12 +1376,12 @@ public final class OutTextPreparer
    * @since 2023-10-22 Used for LibreOffice / FBcl
    * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
    */
-  @Deprecated public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( 
+  @Deprecated public static Map<String, OutTextPreparer> XXXreadTemplateCreatePreparer ( 
       InputStream inp, Class<?> execClass, Map<String, Object> idxConstData) 
       throws IOException, ParseException {
     //
     Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
-    readTemplateCreatePreparerPriv(inp, null, execClass, idxConstData, idxScript);
+    XXXreadTemplateCreatePreparerPriv(inp, null, execClass, idxConstData, idxScript);
     return idxScript;
   }
   
@@ -1355,12 +1402,12 @@ public final class OutTextPreparer
    * @since 2023-10-22 Used for LibreOffice / FBcl
    * @deprecated use {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
    */
-  @Deprecated public static Map<String, OutTextPreparer> readTemplateCreatePreparer ( 
+  @Deprecated public static Map<String, OutTextPreparer> XXXreadTemplateCreatePreparer ( 
       InputStream inp, Map<String, Object> idxConstData) 
       throws IOException, ParseException {
     //
     Map<String, OutTextPreparer> idxScript = new TreeMap<String, OutTextPreparer>();
-    readTemplateCreatePreparerPriv(inp, null, null, idxConstData, idxScript);
+    XXXreadTemplateCreatePreparerPriv(inp, null, null, idxConstData, idxScript);
     return idxScript;
   }
   
@@ -1376,11 +1423,11 @@ public final class OutTextPreparer
    * @throws IOException
    * @since 2023-08, but it is limited for only one data. Hence it may be used only as template.
    */
-  public static void writeOtx(File fout, Object data, InputStream inTpl, Class<?> execClass, String sMain) throws IOException {
+  @Deprecated public static void XXXwriteOtx(File fout, Object data, InputStream inTpl, Class<?> execClass, String sMain) throws IOException {
     OutTextPreparer otxt = null;
     try {
       Map<String, Object> idxOtxt = new TreeMap<String, Object>();
-      otxt = OutTextPreparer.readTemplateCreatePreparer(inTpl, "===", execClass, idxOtxt, sMain);
+      otxt = OutTextPreparer.XXXreadTemplateCreatePreparer(inTpl, "===", execClass, idxOtxt, sMain);
       inTpl.close();
       Writer wr = new OutputStreamWriter(new FileOutputStream(fout), "UTF-8");
       //Appendable wr = new StringBuilder();

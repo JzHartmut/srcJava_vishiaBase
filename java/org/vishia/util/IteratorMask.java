@@ -32,7 +32,7 @@ public class IteratorMask <T> implements Iterator<T>, Iterable<T> {
   }
 
   public IteratorMask(Iterable<T> iterSrc, long mask) {
-    this.iterSrc = iterSrc.iterator();
+    this.iterSrc = iterSrc == null ? null: iterSrc.iterator();
     this.mask = mask;
   }
 

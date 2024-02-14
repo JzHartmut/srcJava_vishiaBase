@@ -8,6 +8,8 @@ import java.util.Set;
 /**This class prepares an {@link Map#entrySet()} to an {@link Iterable} over the values.
  * The key is not used, but the key determines the order of the iteration.
  * But the key have to be of type String. 
+ * <br>Note: You can also use {@link Map#values()} to get a value iterator. 
+ * <br>This class is not necessary. But one can see how an iterator works.
  * @author Hartmut Schorrig
  * 
  * @param <T> Any value type
