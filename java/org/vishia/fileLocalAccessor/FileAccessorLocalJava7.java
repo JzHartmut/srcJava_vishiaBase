@@ -1422,7 +1422,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
         fileRemote = FileRemote.getFile(sDir, name); // and gets a new directory
       }
       //----------------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
-      if((this.co.selectMask() & FileMark.mSelectMarkBits) !=0) {
+      int selectMask = this.co.selectMask();
+      if( (selectMask & FileMark.cmpTimeGreater)!=0 )
+        Debugutil.stop();
+      if((selectMask & FileMark.mSelectMarkBits) !=0) {
         boolean bMarkSelect = (fileRemote.getMark() & FileMark.mSelectMarkBits & this.co.selectMask()) !=0;
         if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
           selected |= bMarkSelect;

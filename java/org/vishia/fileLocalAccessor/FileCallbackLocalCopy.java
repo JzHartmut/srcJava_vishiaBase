@@ -29,6 +29,7 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
 {
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-17 After copy adjust date and length of the new copied FileRemote. Important for next comparison without extra refresh. 
    * <li>2023-07-15 The exclusion of the first directory level with 'bFirst' is now no more necessary
    *   due to change in {@link FileAccessorLocalJava7.WalkFileTreeVisitor#preVisitDirectory(Path, java.nio.file.attribute.BasicFileAttributes)}.
    *   There the first level does not call the {@link #offerParentNode(FileRemote, Object, Object)} as general solution. 
@@ -66,7 +67,7 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
    * 
    */
   //@SuppressWarnings("hiding")
-  static final public String sVersion = "2023-07-14";
+  static final public String sVersion = "2024-02-17";
   
   
 
@@ -179,8 +180,9 @@ public class FileCallbackLocalCopy implements FileRemoteWalkerCallback
             }
           }
         }
-      }
-      if(this.callbackUser !=null) {           // it is a callback in the callback, usual not used.
+      }                                                    // after copy tune also the date in FileRemote fileDst.
+      fileDst.internalAccess().setLengthAndDate(file.length(), file.lastModified(), -1, -1);
+      if(this.callbackUser !=null) {                       // it is a callback in the callback, usual not used.
         this.callbackUser.offerLeafNode(file, info);
       }
     } catch(IOException exc) {

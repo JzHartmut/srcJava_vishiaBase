@@ -4,6 +4,9 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.DateFormat;            // remain it necessary for debug
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -323,6 +326,12 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
     
     long date1 = file1.lastModified();
     long date2 = file2.lastModified();
+//  only debug, to see which dateTime:
+//    final DateFormat formatDateInfo = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss");
+//    String sDate1 = formatDateInfo.format(new Date(date1));
+//    String sDate2 = formatDateInfo.format(new Date(date2));
+//    long dateDiff = date1 - date2;
+    
     long len1 = file1.length();
     long len2 = file2.length();
     if(date1 > (date2 + this.minDiffTimestamp)) {
