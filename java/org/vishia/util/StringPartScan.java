@@ -54,6 +54,7 @@ public class StringPartScan extends StringPart
 {
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-21 new {@link #scanToStringEnd(String)}
    * <li>2023-05-16 Hartmut chg some overengineered ParseExceptions changed to {@link IllegalStateException}
    *   which should not be caught on user level. This is especially only for software errors 
    *   such as programmed too many {@link #scanInteger()} in the user software without the appropriate
@@ -127,7 +128,7 @@ public class StringPartScan extends StringPart
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String sVersion = "2023-05-16"; 
+  public final static String sVersion = "2023-24-21"; 
 
   
   /**Position of scanStart() or after scanOk() as begin of next scan operations. */
@@ -1151,6 +1152,28 @@ public class StringPartScan extends StringPart
       if(posEnd >=0){
         lentoPos(posEnd);
         this.setCurrentPartTo(sLastString[++ixLastString]);
+        fromEnd();
+      } else {
+        bCurrentOk = false;
+      }
+    }
+    return this;
+  }
+
+  
+  
+  /**Scan all till a defined string is found.
+   * Writes the part without the requested sEnd in {@link #getLastScannedString()} output 
+   * @param sEnd requested end of the input
+   * @return this for concatenate parsing. Append {@link #scanOk()} to check the result.
+   */
+  public final StringPartScan scanToStringEnd(String sEnd)
+  { if(scanEntry()){
+      int posEnd = indexOf(sEnd, 0, Integer.MAX_VALUE);
+      if(posEnd >=0){
+        lentoPos(posEnd);
+        this.setCurrentPartTo(sLastString[++ixLastString]);
+        lentoPos(posEnd + sEnd.length());
         fromEnd();
       } else {
         bCurrentOk = false;

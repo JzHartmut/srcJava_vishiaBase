@@ -106,6 +106,8 @@ try {
  * <li><code>&lt;&</code> start of a data access till <code> ... ></code>
  * <li><code>&lt;:</code> start for controlling statements till <code> ... ></code> but with:
  * <li><code>&lt;.</code> end of controling statements till <code> ... ></code>
+ * <li><code>&lt;:--</code> this is a commented part till <code> --></code>
+ *   Note changed 2024-02 before a single <code>&lt;:--... ></code> can only be commented. Now <code>&lt;:--... --></code> is necessary for that.
  * </ul>
  * To output exact this character sequences (for example to produce another OutTextPreparer script)
  * you should use the capapbility <code>&lt;:SPECIAL TEXT></code> for example <code>&lt;:&lt;&></code>
@@ -245,8 +247,10 @@ try {
 public final class OutTextPreparer
 {
 
+  
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-21 Comment in script now till any --> not only this one element <:--..>  It is a changed syntax for comment stuff
    * <li>2024-02-13 new {@link #readTemplateCreatePreparer(Class, String, Map, Object, Map)} replaces the older form without Class,
    *   but {@link #readStreamTemplateCreatePreparer(InputStream, String, Map, Object, Map)} is also available.
    *   The argument String lineStart is no more supported from the newer form. 
@@ -328,7 +332,7 @@ public final class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2024-02-13";
+  public static final String version = "2024-02-21";
   
   
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
@@ -1300,6 +1304,8 @@ public final class OutTextPreparer
       }
       if(! ( posArgs >0 && posEndArgs > posArgs && posNewline > posEndArgs)) throw new ParseException("first line must contain ( args ,...)", 0);
       String name = text.substring(posName, posArgs).trim();
+//      if(name.equals("VarV_UFB"))
+//        Debugutil.stop();
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
       OutTextPreparer otxScript = new OutTextPreparer(name, args, script);  // does not parse, only stores the script.
@@ -1319,6 +1325,8 @@ public final class OutTextPreparer
     if(idxScript!=null) {
       for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
         OutTextPreparer otx = e.getValue();
+//        if(otx.sIdent.equals("VarV_UFB"))
+//          Debugutil.stop();
         try { 
           otx.parse(execClass, idxConstData, idxScript);
         } catch( ParseException exc) {
@@ -1685,7 +1693,7 @@ public final class OutTextPreparer
             addCmd(this.pattern, pos0, pos1, ECmd.debug, null, execClass, idxConstData, idxScript);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
-        else if(sp.scan(":--").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
+        else if(sp.scan(":--").scanToStringEnd("-->").scanOk()) {
           //it is commented
           addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, null, null, null);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -2120,7 +2128,7 @@ public final class OutTextPreparer
       if(bDataOk) {    //==================================== second execute the cmd with the data
         switch(cmd.cmd) {
           case addString: wr.append(cmd.textOrVar); break;
-          case addVar: {                                   // the data are already prepared before switch
+          case addVar: {                                   // <&access...>
             //Integer ixVar = varValues.get(cmd.str);
             Object data = dataForCmd(cmd, args, wr);
             if(data == null) { 
