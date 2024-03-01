@@ -10,7 +10,7 @@ import java.util.Iterator;
  * @param <Tsrc> Type of the original Iterable
  * @param <Tdst> Type of the indirect gotten instance
  */
-public abstract class IterableIndirect<Tsrc, Tdst> implements Iterator<Tdst>, Iterable<Tdst>{
+public abstract class IterableIndirect<Tsrc, Tdst> implements IterableIterator<Tdst> {
 
   /**Converts with given element to the expected result element.
    * @param src element of the given iterSrc of ctor

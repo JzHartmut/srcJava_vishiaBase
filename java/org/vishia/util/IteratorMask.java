@@ -10,7 +10,7 @@ import java.util.NoSuchElementException;
  *
  * @param <T>
  */
-public class IteratorMask <T> implements Iterator<T>, Iterable<T> {
+public class IteratorMask <T> implements IterableIterator<T> {
 
   int ix = -1;
   

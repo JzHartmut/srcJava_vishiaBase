@@ -67,6 +67,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-02-26 {@link WalkFileTreeVisitor#visitFile(Path, BasicFileAttributes)}: Possibility to reset mark bits if the file is non selected.
+   *   This is important to clean marking from the.File.commander. 
+   *   Second: bugfix for comparison files, if cmpTimeGreater or Lesser is set but the files are marked as cmpContentEqual, 
+   *   then they are not selected if cmpContentNotEqual flag is required 
    * <li>2024-02-12 Now respects symbolic link as JUNCTION in Windows:
    *   The {@link Files#isSymbolicLink(Path)} in Java original does not detect a JUNCTION as symbolic link, that is not nice.
    *   The solution is also tested in {@link WalkFileTreeVisitor#preVisitDirectory(Path, BasicFileAttributes)}:
@@ -736,13 +740,13 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       String ret = "no thread free";
       for(WalkerThread th : this.walkerThread) {
         if(th.isFree()) {       
-          //======>>>>    thread found, set break point in operation above!
-          if(! th.setOrder(co, evBack)) {                 // set the order
+          //======>>>>    =====thread found ================= set break point in operation above!
+          if(! th.setOrder(co, evBack)) {                  
             ret = "cannot set order, evBack is null";
           } else {
             ret = null;                                    // and it's all done in this thread
           }
-          break;                                           // the order is executed
+          break;                                           // the order will be executed in the other thread
         }
       }
       return ret;
@@ -1388,8 +1392,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     {
       final FileVisitResult ret;
       String name = file.getFileName().toString();
-//      if(name.startsWith("docs"))
-//        Debugutil.stop();
+      if(name.startsWith("constant-values.html"))
+        Debugutil.stop();
       boolean bDirectory = attrs.isDirectory();
       if(this.progress !=null) {
         if(bDirectory) {
@@ -1423,10 +1427,15 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }
       //----------------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
       int selectMask = this.co.selectMask();
+      int markFile = fileRemote.getMark();
+      if( (markFile & FileMark.cmpContentEqual) !=0        // if the file is equal after comparison.
+       && (selectMask & FileMark.cmpContentNotEqual) !=0) {// and for comparison non equals files should be regarded
+        markFile &= ~ (FileMark.cmpTimeGreater | FileMark.cmpTimeLesser);  // then ignore marks of its time stamp
+      }                                                    // it means if 'non equal' is the command, the file should be non equal or equality is not tested.
       if( (selectMask & FileMark.cmpTimeGreater)!=0 )
-        Debugutil.stop();
-      if((selectMask & FileMark.mSelectMarkBits) !=0) {
-        boolean bMarkSelect = (fileRemote.getMark() & FileMark.mSelectMarkBits & this.co.selectMask()) !=0;
+        Debugutil.stop();                                  // stop here to debug file mark with ^ given
+      if((selectMask & FileMark.mSelectMarkBits) !=0) {    // that are all bits excl. orWithSelectString and ignoreSymbolicLinks
+        boolean bMarkSelect = (markFile & FileMark.mSelectMarkBits & selectMask) !=0;
         if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
           selected |= bMarkSelect;
         } else {
@@ -1435,11 +1444,9 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       }                                          // if co.selectMask does not contain mSelectMarkBits, do nothing with it.
       if(!selected) {
         if(this.co.markSet() !=0) {
-//          if( (this.co.markSet & FileMark.alternativeFunction) !=0) {
-//            fileRemote.setMarked(this.co.markSet);
-//          } else {
-//            fileRemote.resetMarked(this.co.markSet);
-//          }
+          if( (this.co.markSet() & FileMark.resetNonMarked) !=0) {
+            fileRemote.resetMarked(this.co.markSet());
+          }
         }
         ret = FileVisitResult.CONTINUE;  //but does nothing with the file.      
       } 

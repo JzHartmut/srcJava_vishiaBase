@@ -16,7 +16,7 @@ import java.util.Set;
  * @since 2023-12-08 works with null as argument for a Map with {@link #IterableMapValue(Map)}.
  *   then {@link #hasNext()} returns false. This is sensible if a Map is not created, but this should not be checked.
  */
-public class IterableMapValue<T> implements Iterator<T>, Iterable<T> {
+public class IterableMapValue<T> implements IterableIterator<T> {
 
     private Iterator<Map.Entry<String , T>> set;
     

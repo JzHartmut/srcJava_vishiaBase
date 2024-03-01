@@ -128,7 +128,11 @@ public class FileMark extends SelectMask
   public static final int cmpFileDifferences = 0x20000000;
 
   /**This is not used for mark, only for a mark command. 
-   * It means if this bit is set: reset instead set of a mark */
+   * It means if this bit is set: reset the mark bits of non selected files. */
+  public static final int resetNonMarked = 0x40000000;
+  
+  /**This is not used for mark, only for a mark command. 
+   * It means if this bit is set: reset instead set of a mark for selected files. */
   public static final int resetMark = 0x80000000;
   
   /**This is not used for mark, used for selection. 

@@ -20,13 +20,13 @@ import java.util.Iterator;
  *
  * @param <T>
  */
-public class IterableOneElement<T> implements Iterable<T> {
+public class IterableOneElement<T> implements IterableIterator<T> {
 
   
-  private static class IteratorOneElement<T>  implements Iterator<T> {
+//  private static class IteratorOneElement<T>  implements IterableIterator<T> {
     private T elem;
     
-    public IteratorOneElement(T elem) {
+    public IterableOneElement(T elem) {
       this.elem = elem;
     }
 
@@ -40,15 +40,20 @@ public class IterableOneElement<T> implements Iterable<T> {
       return ret;
     }
 
-  }
+    @Override public Iterator<T> iterator () {
+      return this;
+    }
 
-  private IteratorOneElement<T> iter;
+//  }
+
+//  private IteratorOneElement<T> iter;
   
-  public IterableOneElement(T elem) {
-    this.iter = new IteratorOneElement<T>(elem);
-  }
+//  public IterableOneElement(T elem) {
+//    this.iter = new IteratorOneElement<T>(elem);
+//  }
 
-  @Override public Iterator<T> iterator () { return this.iter; }
+//  @Override public Iterator<T> iterator () { return this.iter; }
+
 
 
 }

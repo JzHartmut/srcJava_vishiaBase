@@ -3,13 +3,18 @@ package org.vishia.util;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class IteratorArray<T> implements Iterator<T>, Iterable<T> {
+public class IteratorArray<T> implements IterableIterator<T> {
 
   int ix = -1;
   
   final T[] array;
   
   
+  /**Set to true if {@link #hasNext()} was called, set to false on {@link #next()}.
+   * If false, then {@link #next()} calls first {@link #hasNext()} to prepare the next access.
+   * With this help {@link #next()} can be used without {@link #hasNext()}
+   * which is proper due the interface definition. 
+   */
   boolean bExecHasNext = false;
 
   /**Initializes with given mask.

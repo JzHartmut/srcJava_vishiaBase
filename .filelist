@@ -1,6 +1,6 @@
 2023-01-26 23:09:10  x     +buildTimestamps.sh                      ::           .144 -0575091998 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2024-02-22 00:26:01  x     .gitCommit                               ::           .177 -1690833136 
+2024-03-01 21:28:53  x     .gitCommit                               ::           .304  2087507516 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -171,7 +171,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2024-02-17 18:48:12  x     FileAccessorLocalJava7.java              ::         71.783 -1615994931 
+2024-03-01 21:18:37  x     FileAccessorLocalJava7.java              ::         72.821  0413022679 
 2024-02-18 19:04:17  x     FileCallbackLocalCmp.java                ::         23.416 -0012343790 
 2024-02-18 19:03:03  x     FileCallbackLocalCopy.java               ::          8.521  1096038750 
 2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
@@ -183,7 +183,7 @@
 ============================== java/org/vishia/fileRemote/ =========================================
 2023-07-24 20:50:29  x     FileAccessZip.java                       ::         17.511 -2066156768 
 2023-08-02 20:57:39  x     FileCluster.java                         ::         19.734  2045609325 
-2024-02-12 23:54:50  x     FileMark.java                            ::         11.306  1650585671 
+2024-02-22 23:00:13  x     FileMark.java                            ::         11.522  1453524361 
 2024-02-13 00:01:50  x     FileRemote.java                          ::        142.635 -2124296808 
 2023-07-24 21:02:58  x     FileRemoteAccessor.java                  ::         14.798  1243699740 
 2023-07-19 09:42:23  x     FileRemoteCallbackCopyDispersedFiles.java ::          2.957 -0268023324 
@@ -323,14 +323,14 @@
 2021-10-04 14:29:48  x     InfoAppend.java                          ::          3.788  0366410480 
 2021-10-04 14:29:49  x     InfoFormattedAppend.java                 ::          2.258  1668745967 
 2021-10-04 14:29:49  x     IntegerBlockArray.java                   ::          5.920 -1972066887 
-2019-12-20 20:54:41  x     IterableIndirect.java                    ::          1.369  0394683047 
+2024-03-01 21:27:01  x     IterableIndirect.java                    ::          1.362 -0517000827 
 2021-10-04 14:29:49  x     IterableIterator.java                    ::           .433 -0658760924 
-2024-02-14 13:55:55  x     IterableMapValue.java                    ::          1.643  0716241467 
-2023-11-09 21:40:28  x     IterableOneElement.java                  ::          1.358 -0520905225 
-2024-02-14 14:00:38  x     IteratorArray.java                       ::          1.041  0397653480 
-2020-09-02 13:01:36  x     IteratorArrayMask.java                   ::          1.388 -0127160055 
-2024-02-13 14:39:46  x     IteratorMask.java                        ::          2.368  0560911471 
-2024-02-14 14:14:28  x     IteratorTypeCast.java                    ::           .998 -1594831597 
+2024-03-01 21:26:43  x     IterableMapValue.java                    ::          1.638  0153954671 
+2024-03-01 21:26:28  x     IterableOneElement.java                  ::          1.462  1601531717 
+2024-03-01 21:21:26  x     IteratorArray.java                       ::          1.348 -1083704858 
+2024-03-01 21:22:17  x     IteratorArrayMask.java                   ::          1.383 -1058977595 
+2024-03-01 21:22:41  x     IteratorMask.java                        ::          2.363  1660327596 
+2024-03-01 21:22:55  x     IteratorTypeCast.java                    ::           .990 -1441738714 
 2016-10-16 21:54:24  x     Java4C.java                              ::         16.527 -2096577833 
 2015-10-30 19:10:55  x     KeyCode.java                             ::         12.692  0729595176 
 2021-10-04 14:29:51  x     LeapSeconds.java                         ::          9.363  0348706195 

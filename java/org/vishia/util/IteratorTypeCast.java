@@ -10,7 +10,7 @@ import java.util.Iterator;
  *
  * @param <Tdst>
  */
-public class IteratorTypeCast<Tdst> implements Iterable<Tdst>, Iterator<Tdst> {
+public class IteratorTypeCast<Tdst> implements IterableIterator<Tdst> {
 
   final private Iterable<?> iterable;
   
