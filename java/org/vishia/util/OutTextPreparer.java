@@ -12,7 +12,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -237,6 +236,7 @@ try {
  * <b>...more</b><br>
  * <ul>
  * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
+ * <li>&lt;:set:variable>....&lt;.set>: unfortunately not ready, should set a variable with a prepared expression with placeholder.
  * <li>&lt;:type:value:classpath>: checks the value whether it is of the type of the given class.
  *   This is more for documentation and is used as assertion. Can be switched off for faster execution.
  *   using {@link DataTextPreparer#setCheck(boolean)} for each script. 
@@ -250,6 +250,8 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-03-22 ##Comment: All spaces before are also removed as space for comment. If ##comment start on a new line, the whole line is ignored.
+   *   It is in {@link #readTemplateList(InputStream, String, Object, Map)}. 
    * <li>2024-02-21 Comment in script now till any --> not only this one element <:--..>  It is a changed syntax for comment stuff
    * <li>2024-02-13 new {@link #readTemplateCreatePreparer(Class, String, Map, Object, Map)} replaces the older form without Class,
    *   but {@link #readStreamTemplateCreatePreparer(InputStream, String, Map, Object, Map)} is also available.
@@ -1068,7 +1070,12 @@ public final class OutTextPreparer
     while( (line = rd.readLine()) !=null) {
       nrline +=1;
       int posComment = line.indexOf("##");
-      if(posComment >=0) { line = line.substring(0, posComment); }
+      if(posComment >=0) {
+        while(posComment >0 && line.charAt(posComment-1) == ' ') { posComment -=1; }  // backward to fast non space
+        line = line.substring(0, posComment);              // posComment is the position of the first space before comment or of ##comment
+      }
+      if(posComment == 0) {                                // ignore a line which starts with ##comment, do not produce an empty line.
+      }
       if(!bActiveScript && line.startsWith("<:set:")) {           // a new sub template starts here 
         int posSep = line.indexOf('=');
         if(posSep <0) { 
@@ -2117,9 +2124,9 @@ public final class OutTextPreparer
   private void execSub( Appendable wr, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
     int ixCmd = ixStart;
-    if(args.args[this.ixOUT] == null) {
-      args.args[this.ixOUT] = wr;                          // variable "OU" is the output writer
-    }
+//    if(args.args[this.ixOUT] == null) {
+      args.args[this.ixOUT] = wr;                          // variable "OUT" is the output writer, always stored here as OUT
+//    }
     while(ixCmd < ixEndExcl) {
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
         debug();
