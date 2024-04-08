@@ -1,6 +1,6 @@
 2024-03-27 14:11:02  x     +buildTimestamps.sh                      ::           .251  0001853367 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2024-03-27 14:14:12  x     .gitCommit                               ::           . 75  1278341435 
+2024-04-08 18:07:29  x     .gitCommit                               ::           .458  1456322370 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -171,8 +171,8 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2024-03-01 21:18:37  x     FileAccessorLocalJava7.java              ::         72.821  0413022679 
-2024-02-18 19:04:17  x     FileCallbackLocalCmp.java                ::         23.416 -0012343790 
+2024-04-08 11:50:48  x     FileAccessorLocalJava7.java              ::         73.612 -1965246334 
+2024-04-08 18:01:55  x     FileCallbackLocalCmp.java                ::         23.691  0437789410 
 2024-02-18 19:03:03  x     FileCallbackLocalCopy.java               ::          8.521  1096038750 
 2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
 2023-02-10 09:56:00  x     FileLocalAccessorCopyStateM.java#        ::         53.782 -1885457407 
@@ -297,7 +297,7 @@
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
 2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2024-02-13 00:15:07  x     DataAccess.java                          ::        161.346  0245479899 
+2024-03-29 23:07:20  x     DataAccess.java                          ::        161.324  0579057089 
 2023-05-12 00:34:19  x     DataShow.java                            ::         29.316 -0667858082 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
 2023-10-19 17:15:11  x     Debugutil.java                           ::          1.472  0341870489 
@@ -306,7 +306,7 @@
 2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
 2024-02-12 15:29:38  x     FileCompare.java                         ::         15.517 -0056517028 
 2023-10-19 17:17:28  x     FileFunction.java                        ::          6.222 -1788360421 
-2023-10-22 20:57:41  x     FileFunctions.java                       ::         88.141  1232636168 
+2024-03-28 17:11:34  x     FileFunctions.java                       ::         88.173 -1345948663 
 2023-03-17 09:34:57  x     FileList.java                            ::         23.371  0742653671 
 2021-10-04 14:29:49  x     FilePath.java                            ::         87.603 -0641162706 
 2013-09-07 09:52:46  x     FileSelectWildcard.topic                 ::          1.573  1579396188 
@@ -341,7 +341,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2024-03-23 19:06:05  x     OutTextPreparer.java                     ::        119.791  1292312430 
+2024-04-07 23:08:37  x     OutTextPreparer.java                     ::        119.855 -1590407145 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -439,7 +439,7 @@
 
 ============================== makeScripts/ =======================================================
 2023-04-12 21:36:06  x     +genjavadoc.sh                           ::           .464 -0989684273 
-2024-02-12 22:53:19  x     +makejar_vishiaBase.sh                   ::          3.967  0839413003 
+2024-04-08 18:04:09  x     +makejar_vishiaBase.sh                   ::          3.967 -0323123114 
 2023-08-07 23:44:02  x     -deployJar.sh                            ::          2.815 -1570269268 
 2023-04-12 21:41:53  x     -genjavadocbase.sh                       ::          2.493  1912977088 
 2023-10-19 17:37:37  x     -makejar-coreScript.sh                   ::          9.740  1000377985 

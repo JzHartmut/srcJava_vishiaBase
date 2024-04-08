@@ -18,7 +18,7 @@ export VERSIONSTAMP_MINISYS=""
 ## if it is assumed that the sources are unchanged.
 ## Only then a comparison of MD5 is possible. 
 ## The comparison byte by byte inside the jar (zip) file is always possible.
-export TIMEinJAR="2024-02-16+00:00"
+export TIMEinJAR="2024-03-08+00:00"
 export TIMEinJAR_MINISYS="2023-10-12+00:00"
 
 ## This directory contains some basic scripts. Should be exists

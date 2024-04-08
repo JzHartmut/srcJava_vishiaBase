@@ -1616,7 +1616,7 @@ public final class OutTextPreparer
             sp.close();
             throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
           }
-          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current <:elsif>
+          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;       //The position of the current <:else>
 
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -2305,6 +2305,8 @@ public final class OutTextPreparer
    */
   private int execIf(Appendable wr, IfCmd ifcmd, int ixCmd, Object data, DataTextPreparer args) throws IOException {
     boolean bIf;
+    if(ifcmd.cmd == ECmd.elsifCtrl)
+      Debugutil.stop();
     if (data !=null) { 
       if( data instanceof CalculatorExpr.Value) { bIf = ((CalculatorExpr.Value)data).booleanValue(); }
       else if( data instanceof Boolean ) { bIf = ((Boolean)data).booleanValue(); }

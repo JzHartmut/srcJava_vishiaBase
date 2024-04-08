@@ -1476,13 +1476,14 @@ public class FileFunctions {
    *   myWriter = new FileWriter(...);  //opens
    *   ...
    *   myWriter.write(...)
-   *   myWriter.close();     //closes
-   *   myWriter = null;      //mark it closed in the reference.
+   *   //myWriter.close();     //closes optionally also in try
+   *   //myWriter = null;      //but then mark it closed in the reference.
    * } catch(IOException exc) {
    *   ... do anything
    *   //NOTE: the myWriter may be closed or not, depending on the exception kind
+   * } finally {
+   *   FileSystem.close(myWriter);  //close it if it is remained opened because any exception.
    * }
-   * if(myWriter !=null){ FileSystem.close(myWriter); }  //close it if it is remained opened because any exception.
    * </pre>  
    * This method helps to close without extra effort of a second exception.
    * The close() operation should be done outside and after the main exception for the file operation.

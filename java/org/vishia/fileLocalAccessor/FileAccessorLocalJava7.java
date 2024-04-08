@@ -67,6 +67,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-04-02 {@link WalkFileTreeVisitor#preVisitDirectory(Path, BasicFileAttributes)}:
+   *   If the parent directory is marked with {@link FileMark#cmpAlone} and this bit is part of the select mask in the command (commision),
+   *   then the directory is marked with {@link FileRemoteCmdEventData#markSet()}, means the bits to set for selection. 
+   *   This allows copy also an alone standing directory. But yet todo it does not copy .... the files internally. 
    * <li>2024-02-26 {@link WalkFileTreeVisitor#visitFile(Path, BasicFileAttributes)}: Possibility to reset mark bits if the file is non selected.
    *   This is important to clean marking from the.File.commander. 
    *   Second: bugfix for comparison files, if cmpTimeGreater or Lesser is set but the files are marked as cmpContentEqual, 
@@ -1267,11 +1271,14 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       } else {
         ret = FileVisitResult.CONTINUE;
         //enter in directory always if curr.levelProcessMarked !=1
-        if(this.walkInfo.parent !=null && this.co.markSet() !=0) {                // only reset a mark here, set only if files are marked.
-          if( (this.co.markSet() & FileMark.resetMark) !=0) {
+        if(this.walkInfo.parent !=null && this.co.markSet() !=0) {  // anything to do here?
+          if( (this.co.markSet() & FileMark.resetMark) !=0) {       // reset a mark also for a directory
             dir1.resetMarked(this.co.markSet());
           } else {
-            //NO: dir1.setMarked(this.co.markSet);
+            boolean bMarkDir = (dir1.getMark() & FileMark.cmpAlone & this.co.selectMask()) !=0;
+            if(bMarkDir) {
+              dir1.setMarked(this.co.markSet());           // set the directory mark with the bits from the command because cmpAlone is detected and relevant
+            }                                              // to copy the directory content. 
           }
         }
         setAttributes(dir1, dir, attrs);         // copy the file attributes from nio.file..Path to FileRemote

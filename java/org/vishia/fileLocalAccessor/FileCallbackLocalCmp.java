@@ -49,6 +49,8 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-04-08 {@link #offerParentNode(FileRemote, Object, Object)} do not skip but enter empty directories,
+   *   because the files intern should be also marked with {@link FileMark#cmpAlone}.
    * <li>2024-02-12 Comparison of file trees now also in mode fast, without content:
    *   <ul><li>The cmp_onlyTimestamp etc. are removed here, instead used {@link FileCompare#onlyTimestamp} etc. They are the same values. Unique!
    *   <li>{@link #FileCallbackLocalCmp(FileRemote, FileRemote, int, FileRemoteWalkerCallback, EventWithDst)} has a new argument cmpMode
@@ -228,7 +230,7 @@ public class FileCallbackLocalCmp implements FileRemoteWalkerCallback
         dir.setMarked(FileMark.cmpAlone);
         dir.mark().setMarkParent(FileMark.cmpMissingFiles, false);
         //System.out.println("FileRemoteCallbackCmp - offerDir, not exists; " + dir.getAbsolutePath());
-        return Result.skipSubtree;  //if it is a directory, skip it.        
+        return Result.cont; //skipSubtree;  //if it is a directory, but do not skip it, enter to detect all files intern are cmpAlone. Mark it!        
       } else {
         //--------------------------------------------------- directory found, but yet not clarified whether all sub file/dir
         FileMark mark2 = dir2sub.mark();

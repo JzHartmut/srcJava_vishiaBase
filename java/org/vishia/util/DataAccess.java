@@ -3137,7 +3137,7 @@ public class DataAccess {
           if(ix1 !=null) {                                 // Note: it is concurrently to a field in reflection data with the same name.
             this.ixData = ix1.ix;
             this.whatisit = '@';                           // mark it as only access to variable cc2-2024-01-19
-            assert(!this.operation_ && this.args ==null && this.fnArgs ==null && this.indices ==null && this.reflAccess == null );
+            assert(!this.operation_ && this.args ==null && this.fnArgs ==null  && this.reflAccess == null );
           } 
           else if(reflData == null) { //--------------------- firstVariable... not found, but reflection not given
             this.ixData = nameVariables.size();            // then create the first variable, to use it (auto created variable);
