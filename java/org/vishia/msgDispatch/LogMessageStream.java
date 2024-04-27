@@ -91,6 +91,8 @@ public class LogMessageStream extends LogMessageBase
   
   final Appendable out3;
   
+  final Appendable outErr;
+  
   /**If true than {@link #close()} is effective for all associated channels */
   final boolean closeOnClose;
   
@@ -117,6 +119,7 @@ public class LogMessageStream extends LogMessageBase
     this.out1 = new FileOutputStream(fd);
     this.out2 = null;
     this.out3 = null;
+    this.outErr = null;
     this.closeOnClose = false;
     this.encoding = Charset.defaultCharset();
   }
@@ -131,6 +134,7 @@ public class LogMessageStream extends LogMessageBase
     this.fd = null;
     this.out2 = null;
     this.out3 = null;
+    this.outErr = null;
     this.closeOnClose = false;
     this.encoding = Charset.defaultCharset();
   }
@@ -152,9 +156,37 @@ public class LogMessageStream extends LogMessageBase
     this.fd = null;
     this.out2 = out2;
     this.out3 = out3;
+    this.outErr = null;
     this.closeOnClose = closeOnClose;
     this.encoding = encoding == null ? Charset.defaultCharset() : encoding;
   }
+  
+
+  
+  /**Associates upto four output channels, all gets the same information. 
+   * This is usefull for example if a message should be seen on console (System.out) and also in a file
+   * and also in a StringBuilder for evaluation. 
+   * @param out1 any Stream, can be null, for example System.out
+   * @param out2 any Stream, can be null, for example an opened {@link FileOutputStream}
+   * @param out3 any Appendable for non error messages if outErr is given, can be null, can be a {@link Closeable} too.
+   * @param outErr any Appendable for error messages, can be null, can be a {@link Closeable} too.
+   * @param closeOnClose true than {@link #close()} of this instance closes all associated resources 
+   * @param Charset if null use the default Charset of the JVM, used for the Stream outputs.
+   *   It is recommended to set null (default Charset) if System.out is used as output channel.
+   */
+  public LogMessageStream(OutputStream out1, OutputStream out2, Appendable out3, Appendable outErr
+      , boolean closeOnClose, Charset encoding)
+  {
+    this.out1 = out1; 
+    this.fd = null;
+    this.out2 = out2;
+    this.out3 = out3;
+    this.outErr = outErr;
+    this.closeOnClose = closeOnClose;
+    this.encoding = encoding == null ? Charset.defaultCharset() : encoding;
+  }
+  
+
   
   /**Sends a message. See interface.  
    * @param identNumber
@@ -283,6 +315,36 @@ public class LogMessageStream extends LogMessageBase
     if(this.out3 !=null) { this.out3.append(c); }
     return this;
   }
+
+  private void writeError(String s) {
+    try {
+      if(this.out1 !=null || this.out2 !=null) {
+        byte[] b = s.getBytes(this.encoding); 
+        if(this.out1 !=null) { this.out1.write(b); }
+        if(this.out2 !=null) { this.out2.write(b); }
+      }
+      if(this.outErr !=null) { this.outErr.append(s); }
+      else if(this.out3 !=null) { this.out3.append(s); }
+    } catch(IOException exc) {
+      System.err.println("EXCEPTION: " + s + "  exception:" + exc.getMessage());
+    }
+  }
+
+  
+  /**Output the msg to the error channel if exists, and to the other both file channels.
+   * Before output a new line is output so that the message is written on start of a new line.
+   */
+  @Override public void writeError(String msg, Object... args) {
+    writeError(String.format("\n" + msg, args));
+  }
+
+  /**Output the msg to the error channel if exists, and to the other both file channels.
+   * the message is written appended on the current line.
+   */
+  @Override public void writeErrorAdd(String msg, Object... args) {
+    writeError(String.format(msg, args));
+  }
+
 
 
 }

@@ -247,6 +247,48 @@ public interface LogMessage extends Appendable
   public void writeError(CharSequence sError);
 
 
+  /**Writes a beginning new line with the prepared text to the standard output as information.
+   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first.
+   */
+  public void writeInfo(String text, Object... args);
+  
+  /**Writes an additional information for the info message after the already output info line in the same line. 
+   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first using {@link #writeError(String, Object...)}
+   */
+  public void writeInfoAdd(String text, Object... args);
+  
+  /**Writes a beginning new line with the prepared text to an standard or warning output.
+   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first.
+   */
+  public void writeWarning(String text, Object... args);
+  
+  /**Writes an additional information for the warning message after the already outputt warning line in the same line. 
+   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first using {@link #writeError(String, Object...)}
+   */
+  public void writeWarningAdd(String text, Object... args);
+  
+  /**Writes a beginning new line with the prepared text to an error output.
+   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first.
+   */
+  public void writeError(String text, Object... args);
+  
+  /**Writes an additional information for the error message after the already outputted error line in the same line. 
+   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first using {@link #writeError(String, Object...)}
+   */
+  public void writeErrorAdd(String text, Object... args);
+  
   /** Writes an error line caused by an exception.
   This method should be used instead a directly write via System.err.println(...) and by catching
   an exception.

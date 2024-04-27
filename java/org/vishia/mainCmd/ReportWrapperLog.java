@@ -124,6 +124,48 @@ public class ReportWrapperLog implements Report
   
   
   @Override
+  public void writeInfo(String msg, Object... args)
+  {
+    this.log.sendMsg(0, "\n" + String.format(msg, args));
+    
+  }
+
+  @Override
+  public void writeInfoAdd(String msg, Object... args)
+  {
+    this.log.sendMsg(0, String.format(msg, args));
+    
+  }
+
+  @Override
+  public void writeWarning(String msg, Object... args)
+  {
+    this.log.sendMsg(0, "\n" + String.format(msg, args));
+    
+  }
+
+  @Override
+  public void writeWarningAdd(String msg, Object... args)
+  {
+    this.log.sendMsg(0, String.format(msg, args));
+    
+  }
+
+  @Override
+  public void writeError(String msg, Object... args)
+  {
+    this.log.sendMsg(0, "\n" + String.format(msg, args));
+    
+  }
+
+  @Override
+  public void writeErrorAdd(String msg, Object... args)
+  {
+    this.log.sendMsg(0, String.format(msg, args));
+    
+  }
+
+  @Override
   public void writeError(CharSequence sError)
   {
     log.sendMsg(0, sError.toString());

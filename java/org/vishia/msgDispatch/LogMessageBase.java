@@ -23,6 +23,66 @@ public abstract class LogMessageBase implements LogMessage {
    * It is without throws, simple usage.
    * May be adapted to message output in derived classes
    */
+  @Override public void writeInfo(String msg, Object... args) {
+    try {
+      writeInfo(String.format("\n" + msg, args));
+    } catch(Exception exc) {
+      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  @Override public void writeInfoAdd(String msg, Object... args) {
+    try {
+      writeInfo(String.format(msg, args));
+    } catch(Exception exc) {
+      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  /**Implemented only as wrapper around simple append output.
+   * It is without throws, simple usage.
+   * May be adapted to message output in derived classes
+   */
+  @Override public void writeWarning(String msg, Object... args) {
+    try {
+      writeWarning(String.format("\n" + msg, args));
+    } catch(Exception exc) {
+      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  @Override public void writeWarningAdd(String msg, Object... args) {
+    try {
+      append(String.format("\n" + msg, args));
+    } catch(Exception exc) {
+      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  /**Implemented only as wrapper around simple append output.
+   * It is without throws, simple usage.
+   * May be adapted to message output in derived classes
+   */
+  @Override public void writeError(String msg, Object... args) {
+    try {
+      append('\n').append(String.format(msg, args));
+    } catch(IOException exc) {
+      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  @Override public void writeErrorAdd(String msg, Object... args) {
+    try {
+      append(String.format(msg, args));
+    } catch(IOException exc) {
+      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  /**Implemented only as wrapper around simple append output.
+   * It is without throws, simple usage.
+   * May be adapted to message output in derived classes
+   */
   @Override public void writeError(CharSequence text) {
     try {
       append(text).append('\n');

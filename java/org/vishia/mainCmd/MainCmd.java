@@ -1368,6 +1368,36 @@ import org.vishia.msgDispatch.MsgRedirectConsole;
     }
   }
 
+  
+  @Override public final void writeInfo(String msg, Object... args) {
+    String text = "\n" + String.format(msg, args);
+    writeInfo(text);
+  }
+
+  @Override public final void writeInfoAdd(String msg, Object... args) {
+    String text = String.format(msg, args);
+    writeInfo(text);
+  }
+
+  @Override public final void writeWarning(String msg, Object... args) {
+    String text = "\n" + String.format(msg, args);
+    writeWarning(text);
+  }
+
+  @Override public final void writeWarningAdd(String msg, Object... args) {
+    String text = String.format(msg, args);
+    writeWarning(text);
+  }
+
+  @Override public final void writeError(String msg, Object... args) {
+    String text = "\n" + String.format(msg, args);
+    writeError(text);
+  }
+
+  @Override public final void writeErrorAdd(String msg, Object... args) {
+    String text = String.format(msg, args);
+    writeError(text);
+  }
 
   /** Writes an error line with exception info, implementation of MainCmd_Ifc.
       The info is written also to report depended on command line arguments --rlevel.

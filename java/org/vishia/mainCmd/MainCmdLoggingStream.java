@@ -241,7 +241,37 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   
   @Override
   public void writeError(CharSequence sError)
-  { reportln(MainCmdLogging_ifc.error, sError); 
+  { reportln(LogMessage.error, sError); 
+  }
+
+  @Override
+  public void writeInfo(String msg, Object... args)
+  { report(LogMessage.info, "\n" + String.format(msg, args)); 
+  }
+
+  @Override
+  public void writeInfoAdd(String msg, Object... args)
+  { report(LogMessage.info, String.format(msg, args)); 
+  }
+
+  @Override
+  public void writeWarning(String msg, Object... args)
+  { report(LogMessage.warning, "\n" + String.format(msg, args)); 
+  }
+
+  @Override
+  public void writeWarningAdd(String msg, Object... args)
+  { report(LogMessage.warning, String.format(msg, args)); 
+  }
+
+  @Override
+  public void writeError(String msg, Object... args)
+  { report(LogMessage.error, "\n" + String.format(msg, args)); 
+  }
+
+  @Override
+  public void writeErrorAdd(String msg, Object... args)
+  { report(LogMessage.error, String.format(msg, args)); 
   }
 
   @Override
