@@ -14,6 +14,44 @@ import org.vishia.bridgeC.Va_list;
 //import java.util.Date;
 
 /**An interface to write messages or log entries to any destination.
+ * This interface is universal, it supports also numbered messages and simple messages.
+ * Hence it is possible to use both in an application (the focus may be changed while development)
+ * and it should be also possible to use both forms for the message output.
+ * <br>
+ * An output class for the message to files and possible System.out, System.err 
+ * is supported by {@link LogMessageStream}.
+ * That uses {@link LogMessageBase} which adapts the operations here to more simple outputs.
+ * <br>
+ * But {@link org.vishia.msgDispatch.MsgDispatcher} implements this interface for full numbered messages
+ * with selection of the messages by number. 
+ * <br>
+ * <br><b>Simple messages:</b><br>
+ * For more simple appications it is only intend to write info, warnings and errors. 
+ * For that the operations {@link #writeInfoln(CharSequence)} etc. are responsible.
+ * <br><b>Simple messages with arguments, write newline first:</b><br>
+ * There are two aspects for the 6 operations <ul>
+ * <li>{@link #writeInfo(String, Object...)}, {@link #writeInfoAdd(String, Object...)} 
+ * <li>{@link #writeWarning(String, Object...)}, {@link #writeWarningAdd(String, Object...)} 
+ * <li>{@link #writeError(String, Object...)}, {@link #writeErrorAdd(String, Object...)} 
+ * </ul>
+ * First it is simply possible to have some arguments for the message. 
+ * {@link String#format(String, Object...)} formats it. 
+ * <br>
+ * Second the newline concept is changed: <ul>
+ * <li>On output always first a new line should be output, the message should start left.
+ * <li> ...add(...) should append to this line, for further outputs in the program flow.
+ * <li>The message can immediately shown on a display or write to a file.
+ * <li>But if the message is forwarded as a whole (inclusively later added texts),
+ *   then the implementation should wait a little bit if ...add(msg) comes, then transmit all.
+ * </ul>
+ * A second topic may be the message number for info, error, warning. It can be decide by the implementation.   
+ * <br>
+ * <br><b>Full qualified messages:</b><br>
+ * For this messages the operations {@link #sendMsg(int, CharSequence, Object...)},
+ * {@link #sendMsgTime(int, OS_TimeStamp, CharSequence, Object...)}, 
+ * {@link #sendMsgVaList(int, OS_TimeStamp, CharSequence, Va_list)}
+ * are responsible.
+ * <br>
  * The basic idea is: The messages and logs are dispatched via a number. 
  * The number have two aspects:
  * <ul>

@@ -45,7 +45,7 @@ public abstract class LogMessageBase implements LogMessage {
    */
   @Override public void writeWarning(String msg, Object... args) {
     try {
-      writeWarning(String.format("\n" + msg, args));
+      append(String.format("\n" + msg, args));
     } catch(Exception exc) {
       System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
     }
