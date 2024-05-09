@@ -15,6 +15,11 @@ import org.vishia.util.ExcUtil;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 
+/**This class reads data not in XML format, it is experience. Not using Yaml, too sophisticated ....
+ * not ready yet.
+ * @author hartmut
+ *
+ */
 public class ZmlReader {
 
   

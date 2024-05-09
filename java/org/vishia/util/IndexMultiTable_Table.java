@@ -13,7 +13,11 @@ import org.vishia.bridgeC.AllocInBlock;
 class IndexMultiTable_Table<Key extends Comparable<Key>, Type>
 {
   /**Version, history and license.
-   * <ul>
+   * <ul>2024-05-08 There is maybe a problem using 20 entries for 20 existing entries. Not fixed.
+   *   But increase the nrof entries a little bit to fix the problem in a dirty kind. 
+   *   Tip: do not use this class furthermore if the problem can be proper solved with a TreeMap. 
+   *   Also a TreeMap supports searching not the exact key. Search the next following key after given.
+   *   But more entries with the same key are not supported by TreeMap.   
    * <li>2016-09-25 Hartmut new, copied from {@link IndexMultiTable} .Table without functional changes. 
    * </ul>
    * 
@@ -50,7 +54,7 @@ class IndexMultiTable_Table<Key extends Comparable<Key>, Type>
   
   /**The maximal nr of elements in a block, maximal value of sizeBlock.
    * It is the same value as obj.length or key.length. */
-  protected final static int maxBlock = AllocInBlock.restSizeBlock(IndexMultiTable.class, 160) / 8; //C: 8=sizeof(int) + sizeof(Object*) 
+  protected final static int maxBlock = AllocInBlock.restSizeBlock(IndexMultiTable.class, 200) / 8; //C: 8=sizeof(int) + sizeof(Object*) 
 
   static int identParent_ = 100;
 

@@ -11,6 +11,7 @@ import java.util.TreeMap;
 
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 import org.vishia.util.OutTextPreparer;
 import org.vishia.util.Writer_Appendable;
@@ -33,6 +34,10 @@ public class GenJavaOutClass {
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-05-08 In all otx scripts now generates a comment line in the Java src which script is used there. Starts with //otx-Template
+   * <li>2024-05-08: new {@link #convertToIdentifier(String)} because in odt files text:s is used etc. , the name space was not regarded till now.
+   * <li>2024-05-08 in {@link #tJavaCmpnClassUsg}: use "&lt:&dataClass>_Base" instead "JavaSrc_Base", old manual after generation fixed mistake
+   * <li>2024-05-08 some formally changes, using this. etc. 
    * <li>2022-06-01 Hartmut: instead "JavaSrc" (special usage) generate name of the correct frame class. 
    * <li>2022-03-28 Hartmut: Now line and column is written in own super class SrcInfo. This can be used by applications
    *   to get line and column info independent of the parse result. Very important. 
@@ -196,6 +201,7 @@ public class GenJavaOutClass {
   /**Text for Java header. */
   private final OutTextPreparer tJavaHeadBase = new OutTextPreparer("tJavaHead", null, "pkgpath, dataClass", 
       "package <&pkgpath>;\n"
+    + "//otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaHeadBase\n"
     + "\n"
     + "import java.util.LinkedList;\n"
     + "import java.util.List;\n"
@@ -208,6 +214,7 @@ public class GenJavaOutClass {
   /**Text for Java usage header. */
   private final OutTextPreparer tJavaHeadUsg = new OutTextPreparer("tJavaHeadUsg", null, "pkgpath, dataClass", 
       "package <&pkgpath>;\n"
+    + "//otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaHeadUsg\n"
     + "\n"
     + "//import java.util.LinkedList;\n"
     + "//import java.util.List;\n"
@@ -221,6 +228,7 @@ public class GenJavaOutClass {
   /**Text for Java header for Zbnf writer class. */
   private final OutTextPreparer sJavaHeadZbnf = new OutTextPreparer("sJavaHeadZbnf", null, "pkgpath, dataClass", 
       "package <&pkgpath>;\n"
+    + "//otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaHeadZbnf\n"
     + "\n"
     + "import java.util.LinkedList;\n"
     + "import java.util.List;\n"
@@ -231,11 +239,11 @@ public class GenJavaOutClass {
     + "public class <&dataClass>_Zbnf {\n"
     + "  \n"
     + "  /**Referenced working instance will be filled.*/\n"
-    + "  public final <&dataClass> data<&dataClass>;\n"
+    + "  public final <&dataClass> dataroot;\n"
     + "  \n"
     + "  /**Default ctor for non-inherit instance. */\n"
     + "  public <&dataClass>_Zbnf ( ) {\n"
-    + "    this.data<&dataClass> = new <&dataClass>();\n"
+    + "    this.dataroot = new <&dataClass>();\n"
     + "  }\n"
     + "  \n"
     + "  \n"
@@ -246,6 +254,7 @@ public class GenJavaOutClass {
       "\n"
     + "\n"
     + "\n"
+    + "  //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaSuperTypeClass\n"
     + "  /**Class for Super Types. */\n"
     + "  public abstract static class <&className> {\n"
     + "    //left empty, implementors contains all ...\n"
@@ -257,6 +266,7 @@ public class GenJavaOutClass {
       "\n"
     + "\n"
     + "\n"
+    + "  //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaCmpnClass_Base\n"
     + "  /**Class for Component <&semantic>. */\n"
     + "  public static class <&cmpnClass>_Base extends <:if:superClass><&dataClass>.<&superClass><:else>SrcInfo<.if> {\n"
 //    + "    <:if:superClass==null>\n"
@@ -277,6 +287,7 @@ public class GenJavaOutClass {
       "\n"
     + "\n"
     + "\n"
+    + "  //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaCmpnClassZbnf\n"
     + "  /**Class for Writing the Component <&semantic>.*/\n"
     + "  public static class <&cmpnClass>_Zbnf<:if:superClass> extends <&superClass>_Zbnf<:else> implements SetLineColumn_ifc<.if> {\n"
     + "    /**Referenced working instance will be filled.*/\n"
@@ -313,8 +324,9 @@ public class GenJavaOutClass {
       "\n"
     + "\n"
     + "\n"
+    + "  //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaCmpnClassUsg\n"
     + "  /**Class for Writing the Component <&semantic>.*/\n"
-    + "  public static class <&cmpnClass> extends JavaSrc_Base.<&cmpnClass>_Base {\n"
+    + "  public static class <&cmpnClass> extends <&dataClass>_Base.<&cmpnClass>_Base {\n"
     + "  \n"
     + "  \n"
     + "  \n"
@@ -327,28 +339,32 @@ public class GenJavaOutClass {
   
   private static final String tJavaCmpnEnd = 
       "  \n"
-    + "  }\n"
+    + "  }  //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaCmpnEnd\n"
     + "\n";
   
   private static final  String tJavaEnd = 
       "\n"
-    + "}\n"
+    + "}   //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaEnd\n"
+    + "\n"
     + "\n";
   
   private final OutTextPreparer tJavaSimpleVar = new OutTextPreparer(  "sJavaSimpleVar", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n"
+    + "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaSimpleVar\n"
     + "    protected <:if:typeNs><&typeNs><.if><&type> <&varName>;\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaListVar = new OutTextPreparer(  "sJavaListVar", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n"
+    + "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaListVar\n"
     + "    protected List<<:if:typeNs><&typeNs><.if><&typeGeneric>> <&varName>;\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaSimpleVarOper = new OutTextPreparer( "sJavaSimpleVarOper", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n    \n"
+    + "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaSimpleVarOper\n"
     + "    /**Access to parse result.*/\n"
     + "    public <:if:typeNs><&typeNs><.if><&type> get_<&name>() { return <&varName>; }\n"
     + "    \n"
@@ -356,6 +372,7 @@ public class GenJavaOutClass {
   
   private final OutTextPreparer tJavaListVarOper = new OutTextPreparer( "sJavaListVarOper", null, "typeNs, cmpnClass, typeGeneric, dataClass, varName, name, type, typeZbnf, args",
       "    \n    \n"
+    + "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaListVarOper\n"
     + "    /**Access to parse result, get the elements of the container <&name>*/\n"
     + "    public Iterable<<:if:typeNs><&typeNs><.if><&typeGeneric>> get_<&name>() { return <&varName>; }\n"
     + "    \n"
@@ -372,14 +389,16 @@ public class GenJavaOutClass {
    * </ul>
    */
   private final OutTextPreparer tJavaSimpleVarZbnf = new OutTextPreparer( "tJavaSimpleVarZbnf", null, "typeGeneric, dataClass, cmpnClass, varName, name, typeNs, type, typeZbnf, args",
-      "    /**Set routine for the singular component &lt;<&type>?<&name>>. */\n"
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaSimpleVarZbnf\n"
+    + "    /**Set routine for the singular component &lt;<&type>?<&name>>. */\n"
 //    + "     * <:if:typeNs>Component for argument: <&typeNs><.if>*/\n"
     + "    public void set_<&name>(<&type><:if:typeNs>_Zbnf<.if> val) { this.data<&cmpnClass>.<&varName> = val<:if:typeNs>.data<&type><.if>; }\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaListVarZbnf = new OutTextPreparer( "tJavaListVarZbnf", null, "cmpnClass, typeGeneric, dataClass, varName, name, typeNs, type, typeZbnf, args",
-      "    /**Set routine for the singular component &lt;<&type>?<&name>>. */\n"
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaListVarZbnf\n"
+    + "    /**Set routine for the singular component &lt;<&type>?<&name>>. */\n"
     + "    public void set_<&name>(<&type><:if:typeNs>_Zbnf<.if> val) { \n"
     + "      if(data<&cmpnClass>.<&varName>==null) { data<&cmpnClass>.<&varName> = new LinkedList<<&typeGeneric>>(); }\n"
     + "      data<&cmpnClass>.<&varName>.add(val<:if:typeNs>.data<&type><.if>); \n"
@@ -389,7 +408,8 @@ public class GenJavaOutClass {
   
   
   private final OutTextPreparer tJavaCmpnZbnf = new OutTextPreparer( "tJavaCmpnZbnf", null, "cmpnClass, typeGeneric, dataClass, superType, varName, name, typeNs, type, typeZbnf, args",
-      "    /**Creates an instance for the result Zbnf <:if:args> (not Xml) <.if>. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaCmpnZbnf\n"
+    + "    /**Creates an instance for the result Zbnf <:if:args> (not Xml) <.if>. &lt;<&typeZbnf>?<&name>&gt; for ZBNF data store*/\n"
     + "    <:if:xxxsuperType>@Override <.if>public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
     + "      return val; //Note: needs the derived Zbnf-Type.\n"
@@ -397,7 +417,7 @@ public class GenJavaOutClass {
     + "    \n"  //<:debug:name:FBType>"
     + "<:if:args>"
     + "    /**Creates an instance for the Xml data storage with default attibutes. &lt;<&typeZbnf>?<&name>&gt;  */\n"
-    + "    public <&typeZbnf>_Zbnf new_<&name>(<:for:arg:args>String <&arg><:if:arg_next>,<.if> <.for>) { \n"  //< :if:superType>@Override < .if>
+    + "    public <&typeZbnf>_Zbnf new_<&name>(<:for:arg:args>String <&arg><:if:arg_next>,<.if> <.for>) {\n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf();\n"
     + "      <:for:arg:args>val.data<&type>.<&arg> = <&arg>;\n"
     + "      <.for>//\n"
@@ -406,14 +426,15 @@ public class GenJavaOutClass {
     + "    \n"
     + "<.if>"
     + "    /**Set the result. &lt;<&typeZbnf>?<&name>&gt;*/\n"
-    + "    public void set_<&name>(<&type><:if:typeNs>_Zbnf<.if> val) { \n"
+    + "    public void set_<&name>(<&type><:if:typeNs>_Zbnf<.if> val) {\n"
     + "      data<&cmpnClass>.<&varName> = val<:if:typeNs>.data<&type><.if>;\n"
     + "    }\n"
     + "    \n"
     + "    \n");
   
   private final OutTextPreparer tJavaListCmpnZbnf = new OutTextPreparer( "tJavaListCmpnZbnf", null, "typeGeneric, dataClass, cmpnClass, superType, varName, name, typeNs, type, typeZbnf, args",
-      "    /**create and add routine for the list component <<&typeZbnf>?<&name>>. */\n"
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaListCmpnZbnf\n"
+    + "    /**create and add routine for the list component <<&typeZbnf>?<&name>>. */\n"
     + "    <:if:xxxsuperType>@Override <.if>public <&typeZbnf>_Zbnf new_<&name>() { \n"
     + "      <&typeZbnf>_Zbnf val = new <&typeZbnf>_Zbnf(); \n"
     + "      return val; \n"
@@ -438,18 +459,22 @@ public class GenJavaOutClass {
     + "    \n");
   
   private final OutTextPreparer sJavaMetaClass = new OutTextPreparer( "sJavaMetaClass", null, "cmpnClass, attrfield, dataClass",
-      "    <&dataClass>.<&attrfield.type> <&attrfield.varName>;  \n"
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#sJavaMetaClass\n"
+    + "    <&dataClass>.<&attrfield.type> <&attrfield.varName>;  \n"
     + "  \n");
   
 
   private final OutTextPreparer sJavaMetaClassOper = new OutTextPreparer( "sJavaMetaClass", null, "cmpnClass, attrfield, dataClass",
-      "    <&dataClass>.<&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#sJavaMetaOper\n"
+    + "    <&dataClass>.<&attrfield.type> get_<&attrfield.semantic>() { return <&attrfield.varName>; }  \n"
     + "  \n");
 
   
   
   private final OutTextPreparer tJavaMetaClassZbnf = new OutTextPreparer( "tJavaMetaClassZbnf", null, "attrfield, dataClass, cmpnClass",
-      "    public void set_<&attrfield.semantic>(<&dataClass>.<&attrfield.type> <&attrfield.varName>) { data<&cmpnClass>.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
+      "    //otx-Template org.vishia.genJavaOutClass.GenJavaOutClass#tJavaMetaClassZbnf\n"
+    + "    public void set_<&attrfield.semantic>(<&dataClass>.<&attrfield.type> <&attrfield.varName>) { "
+    + "data<&cmpnClass>.<&attrfield.varName> = <&attrfield.varName>; }  \n\n");
   
   
   
@@ -462,17 +487,17 @@ public class GenJavaOutClass {
   public GenJavaOutClass(CmdArgs args, MainCmdLogging_ifc log)
   { this.cmdArgs = args;
     this.log = log;
-    idxStdTypes.put("boolean","Boolean");
-    idxStdTypes.put("float","Float");
-    idxStdTypes.put("int","Integer");
-    idxStdTypes.put("String","String");
-    idxStdTypes.put("double","Double");
-    idxStdTypes.put("long","Long");
-    idxStdTypes.put("Boolean","Boolean");
-    idxStdTypes.put("Float","Float");
-    idxStdTypes.put("Integer","Integer");
-    idxStdTypes.put("Double","Double");
-    idxStdTypes.put("Long","Long");
+    this.idxStdTypes.put("boolean","Boolean");
+    this.idxStdTypes.put("float","Float");
+    this.idxStdTypes.put("int","Integer");
+    this.idxStdTypes.put("String","String");
+    this.idxStdTypes.put("double","Double");
+    this.idxStdTypes.put("long","Long");
+    this.idxStdTypes.put("Boolean","Boolean");
+    this.idxStdTypes.put("Float","Float");
+    this.idxStdTypes.put("Integer","Integer");
+    this.idxStdTypes.put("Double","Double");
+    this.idxStdTypes.put("Long","Long");
     
     reservedNames.put("const", "const___");
     reservedNames.put("final", "final___");
@@ -481,15 +506,15 @@ public class GenJavaOutClass {
   }
   
   public void setupWriter() {
-    this.sJavaOutputDir = cmdArgs.dirJava.getAbsolutePath() + "/" + cmdArgs.sJavaPkg.replace(".","/") + "/";
-    File fJavaOutputFileZbnf = new File(sJavaOutputDir + cmdArgs.sJavaClass + "_Zbnf.java");
+    this.sJavaOutputDir = this.cmdArgs.dirJava.getAbsolutePath() + "/" + this.cmdArgs.sJavaPkg.replace(".","/") + "/";
+    File fJavaOutputFileZbnf = new File(this.sJavaOutputDir + this.cmdArgs.sJavaClass + "_Zbnf.java");
     File fJavaOutputFile = new File(this.sJavaOutputDir + this.cmdArgs.sJavaClass + "_Base.java");
     File fJavaOutputFileUsg = new File(this.sJavaOutputDir + this.cmdArgs.sJavaClass + ".java");
     try {
-      FileSystem.mkDirPath(sJavaOutputDir);
-      wr = new FileWriter(fJavaOutputFile);  //new StringBuilder(); //
-      wrz = new FileWriter(fJavaOutputFileZbnf);
-      wru = new FileWriter(fJavaOutputFileUsg);
+      FileFunctions.mkDirPath(this.sJavaOutputDir);
+      this.wr = new FileWriter(fJavaOutputFile);  //new StringBuilder(); //
+      this.wrz = new FileWriter(fJavaOutputFileZbnf);
+      this.wru = new FileWriter(fJavaOutputFileUsg);
     } catch (IOException e) {
       System.err.println("cannot create: " + fJavaOutputFileZbnf.getAbsolutePath());
     }
@@ -528,7 +553,7 @@ public class GenJavaOutClass {
 //        File fJavaOutputFile = new File(this.sJavaOutputDir + this.cmdArgs.sJavaClass + ".java");
 //        Writer fwr = new FileWriter(fJavaOutputFile);
 //        fwr.append(this.wr);
-        wr.close(); 
+        this.wr.close(); 
       }
       if(this.wrz!=null) { this.wrz.close(); }
       if(this.wru!=null) { this.wru.close(); }
@@ -538,16 +563,35 @@ public class GenJavaOutClass {
 
   }
   
-  public static String firstUppercase(String src) {
-    char cc = src.charAt(0);
-    if(Character.isUpperCase(cc)) return src;
-    else return Character.toUpperCase(cc) + src.substring(1);
+  
+  public static String convertToIdentifier(String src) {
+    StringBuilder sb = null;
+    for(int ix = 0; ix < src.length(); ++ix) {
+      char c1 = src.charAt(ix);
+      if(c1 >='0' && c1 <= '9' || c1 >= 'A' && c1 <= 'Z' || c1 >= 'a' && c1 <= 'z' || c1 == '_') {
+      } else {
+        if(sb == null) { sb = new StringBuilder(src); }
+        sb.setCharAt(ix, '_');                             // replace a non identifier char with '_', it is often unique. 
+      }
+    }
+    return sb !=null ? sb.toString() : src;
+  }
+  
+  
+  
+  
+  public static String firstUppercaseIdentifier(String src) {
+    String src1 = convertToIdentifier(src);
+    char cc = src1.charAt(0);
+    if(Character.isUpperCase(cc)) return src1;
+    else return Character.toUpperCase(cc) + src1.substring(1);
   }
 
-  public static String firstLowercase(String src) {
-    char cc = src.charAt(0);
-    if(Character.isLowerCase(cc)) return src;
-    else return Character.toLowerCase(cc) + src.substring(1);
+  public static String firstLowercaseIdentifier(String src) {
+    String src1 = convertToIdentifier(src);
+    char cc = src1.charAt(0);
+    if(Character.isLowerCase(cc)) return src1;
+    else return Character.toLowerCase(cc) + src1.substring(1);
   }
 
   public void finishCmpnWrite() throws IOException {
@@ -641,10 +685,22 @@ public class GenJavaOutClass {
 
     
     
-    public void wrVariable(SubClassJava classData, String varNameArg, String typeNs, String varTypeRef, String varTypeObj
+    /**
+     * @param classData
+     * @param varNameArg
+     * @param sOuterClass Either null for a standard type, or the name of the environment class where all types are defined as sub type, then with trainling "."
+     * @param varTypeRef
+     * @param varTypeObj
+     * @param bStdType
+     * @param bList
+     * @param bCmpn
+     * @param args
+     * @throws IOException
+     */
+    public void wrVariable(SubClassJava classData, String varNameArg, String sOuterClass, String varTypeRef, String varTypeObj
         , boolean bStdType, boolean bList, boolean bCmpn, List<String> args) throws IOException {
 
-      if(typeNs ==null || typeNs.length()==0)
+      if(sOuterClass ==null || sOuterClass.length()==0)
         Debugutil.stop();
       ///typeNs = "";
       
@@ -666,7 +722,7 @@ public class GenJavaOutClass {
       } 
       else { //varName not found
         this.variables.put(varName, varTypeRef);
-        String varNameJava = firstLowercase(varName);
+        String varNameJava = firstLowercaseIdentifier(varName);
         String varNameReplReserved = reservedNames.get(varNameJava);
         if(varNameReplReserved !=null) { varNameJava = varNameReplReserved; }
         String sTypeGeneric = idxStdTypes.get(varTypeRef);
@@ -678,7 +734,7 @@ public class GenJavaOutClass {
             varTypeRef += "__";  //it should not be a standard Java type.
           }
         }
-        final String sTypeNsGeneric = typeNs == null ? sTypeGeneric : typeNs + sTypeGeneric;
+        final String sTypeNsGeneric = sOuterClass == null ? sTypeGeneric : sOuterClass + sTypeGeneric;
         String sSuperType = classData.sSuperItemType;
         Map<String, Object> argstxt = new TreeMap<String, Object>();
         OutTextPreparer.DataTextPreparer argsJavaListVarOper = tJavaListVarOper.createArgumentDataObj();
@@ -687,7 +743,7 @@ public class GenJavaOutClass {
         if(varTypeRef.contains("ExprPart"))
           Debugutil.stop();
         
-        argsJavaListVarOper.setArgument("typeNs", typeNs);
+        argsJavaListVarOper.setArgument("typeNs", sOuterClass);
         argsJavaListVarOper.setArgument("typeGeneric", sTypeGeneric);
         argsJavaListVarOper.setArgument("varName", varNameJava);
         argsJavaListVarOper.setArgument("name", varName);
@@ -698,7 +754,7 @@ public class GenJavaOutClass {
         argsJavaListVarOper.setArgument("cmpnClass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
         
         OutTextPreparer.DataTextPreparer argsJavaListVar = tJavaListVar.createArgumentDataObj();
-        argsJavaListVar.setArgument("typeNs", typeNs);
+        argsJavaListVar.setArgument("typeNs", sOuterClass);
         argsJavaListVar.setArgument("typeGeneric", sTypeGeneric);
         argsJavaListVar.setArgument("varName", varNameJava);
         argsJavaListVar.setArgument("name", varName);
@@ -713,7 +769,7 @@ public class GenJavaOutClass {
         argsJavaListVarZbnf.setArgument("varName", varNameJava);
         argsJavaListVarZbnf.setArgument("name", varName);
         argsJavaListVarZbnf.setArgument("type", varTypeRef);
-        argsJavaListVarZbnf.setArgument("typeNs", typeNs);
+        argsJavaListVarZbnf.setArgument("typeNs", sOuterClass);
         argsJavaListVarZbnf.setArgument("typeZbnf", varTypeObj);
         argsJavaListVarZbnf.setArgument("args", args);
         argsJavaListVarZbnf.setArgument("dataClass", GenJavaOutClass.this.cmdArgs.sJavaClass);
@@ -726,13 +782,13 @@ public class GenJavaOutClass {
         argsJavaListCmpnZbnf.setArgument("varName", varNameJava);
         argsJavaListCmpnZbnf.setArgument("name", varName);
         argsJavaListCmpnZbnf.setArgument("type", varTypeRef);
-        argsJavaListCmpnZbnf.setArgument("typeNs", typeNs);
+        argsJavaListCmpnZbnf.setArgument("typeNs", sOuterClass);
         argsJavaListCmpnZbnf.setArgument("typeZbnf", varTypeObj);
         argsJavaListCmpnZbnf.setArgument("args", args);
         argsJavaListCmpnZbnf.setArgument("dataClass", GenJavaOutClass.this.cmdArgs.sJavaClass);
         
         OutTextPreparer.DataTextPreparer argsJavaSimpleVarOper = tJavaSimpleVarOper.createArgumentDataObj();
-        argsJavaSimpleVarOper.setArgument("typeNs", typeNs);
+        argsJavaSimpleVarOper.setArgument("typeNs", sOuterClass);
         argsJavaSimpleVarOper.setArgument("typeGeneric", sTypeGeneric);
         argsJavaSimpleVarOper.setArgument("varName", varNameJava);
         argsJavaSimpleVarOper.setArgument("name", varName);
@@ -752,7 +808,7 @@ public class GenJavaOutClass {
           Debugutil.stop();
         argsJavaSimpleVarZbnf.setArgument("name", varName);
         argsJavaSimpleVarZbnf.setArgument("type", varTypeRef);
-        argsJavaSimpleVarZbnf.setArgument("typeNs", typeNs);
+        argsJavaSimpleVarZbnf.setArgument("typeNs", sOuterClass);
         argsJavaSimpleVarZbnf.setArgument("typeZbnf", varTypeObj);
         argsJavaSimpleVarZbnf.setArgument("args", args);
         argsJavaSimpleVarZbnf.setArgument("dataClass", GenJavaOutClass.this.cmdArgs.sJavaClass);
@@ -763,14 +819,14 @@ public class GenJavaOutClass {
         argsJavaCmpnZbnf.setArgument("varName", varNameJava);
         argsJavaCmpnZbnf.setArgument("name", varName);
         argsJavaCmpnZbnf.setArgument("type", varTypeRef);
-        argsJavaCmpnZbnf.setArgument("typeNs", typeNs);
+        argsJavaCmpnZbnf.setArgument("typeNs", sOuterClass);
         argsJavaCmpnZbnf.setArgument("typeZbnf", varTypeObj);
         argsJavaCmpnZbnf.setArgument("args", args);
         argsJavaCmpnZbnf.setArgument("dataClass", GenJavaOutClass.this.cmdArgs.sJavaClass);
         argsJavaCmpnZbnf.setArgument("cmpnClass", classData.className); //firstUppercase(cmpn.sDefinitionIdent));
         
         OutTextPreparer.DataTextPreparer argsJavaSimpleVar = tJavaSimpleVar.createArgumentDataObj();
-        argsJavaSimpleVar.setArgument("typeNs", typeNs);
+        argsJavaSimpleVar.setArgument("typeNs", sOuterClass);
         argsJavaSimpleVar.setArgument("typeGeneric", sTypeGeneric);
         argsJavaSimpleVar.setArgument("varName", varNameJava);
         argsJavaSimpleVar.setArgument("name", varName);

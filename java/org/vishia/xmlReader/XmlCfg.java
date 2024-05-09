@@ -258,6 +258,10 @@ public class XmlCfg
   }
 
   
+  /**This is an idea, not ready yet TODO to read data non in XML format but in the same destinations,
+   * because the xmlCft is sometimes not nice to edit. 
+   * @param fin
+   */
   public void setCfgFromZml ( File fin) {
     ZmlReader zReader = new ZmlReader();
      zReader.readZml(fin);

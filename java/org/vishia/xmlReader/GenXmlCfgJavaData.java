@@ -22,6 +22,9 @@ public class GenXmlCfgJavaData {
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-05-09: {@link WrClassXml#evaluateChildren(String, XmlCfgNode, SubClassXml, boolean, int)} and also
+   *   {@link WrClassXml#wrVariable(SubClassXml, String, String, String, org.vishia.util.DataAccess.DatapathElement, boolean, boolean, boolean)} 
+   *   now with argument sOuterClass, this was missing till now, (manual adjusted in generated sources)
    * <li>2022-06-23: set type_ns to produce _Zbnf suffix ("<:if:typeNs>_Zbnf<.if>" in GenJavaOutClass) 
    * <li>2022-02-18 only adapted to {@link GenJavaOutClass}, argument typeNs should be null. 
    * <li>201x: Hartmut www.vishia.org creation
@@ -98,7 +101,8 @@ public class GenXmlCfgJavaData {
   }
   
   
-  public void exec(File fileXmlCfg) throws IOException {
+  public void exec(GenJavaOutClass.CmdArgs cmdArgs) throws IOException {
+    File fileXmlCfg = cmdArgs.fileInput;
     xmlReader.readCfg(fileXmlCfg);
     XmlCfg xmlCfg = xmlReader.cfg;
     subtrees = xmlCfg.subtrees;
@@ -110,7 +114,8 @@ public class GenXmlCfgJavaData {
       XmlCfgNode rootNode = xmlCfg.rootNode;
       SubClassXml classDataRoot = new SubClassXml("root", "root");
       classDataRoot.subItem = rootNode;
-      wrClass.evaluateChildren(rootNode, classDataRoot, false, 1);
+      String sOuterClass = cmdArgs.sJavaClass + ".";
+      wrClass.evaluateChildren(sOuterClass, rootNode, classDataRoot, false, 1);
       wrClass.wrClassJava.writeOperations();
       //
       //
@@ -122,7 +127,7 @@ public class GenXmlCfgJavaData {
         wrClass.wrClassJava.wrClassCmpn(classData, null);
         //
         //
-        wrClass.evaluateChildren(classData.subItem, classData, false, 0);
+        wrClass.evaluateChildren(sOuterClass, classData.subItem, classData, false, 0);
         //
         wrClass.wrClassJava.writeOperations();
         //
@@ -185,7 +190,7 @@ public class GenXmlCfgJavaData {
           /* The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
              to hold the contact to the command line execution.
           */
-          try{ main.exec(args.fileInput); }
+          try{ main.exec(args); }
           catch(Exception exc)
           { //catch the last level of error. No error is reported direct on command line!
             System.err.println(exc.getMessage());
@@ -217,7 +222,7 @@ public class GenXmlCfgJavaData {
     private SubClassXml getRegisterSubclass(String name, XmlCfgNode cfgItem) {
       SubClassXml classData = (SubClassXml)genClass.idxRegisteredCmpn.get(name);
       if(classData == null) {
-        classData = new SubClassXml(name, GenJavaOutClass.firstUppercase(name));
+        classData = new SubClassXml(name, GenJavaOutClass.firstUppercaseIdentifier(name));
         classData.sDbgIdent = "xxx";
         classData.subItem = cfgItem;
         genClass.idxRegisteredCmpn.put(name, classData);
@@ -258,7 +263,7 @@ public class GenXmlCfgJavaData {
     
     
     
-    void evaluateChildren(XmlCfgNode cfgNode, SubClassXml classData, boolean bList, int level) throws Exception {
+    void evaluateChildren(String sOuterClass, XmlCfgNode cfgNode, SubClassXml classData, boolean bList, int level) throws Exception {
       System.out.println(cfgNode.tag);
 //      if(cfgNode.tag.equals("section"))
 //        Debugutil.stop();
@@ -266,24 +271,24 @@ public class GenXmlCfgJavaData {
         AttribDstCheck attrib = eattrib.getValue();
         //if(attrib.daccess !=null) {
         String sName = StringFunctions_B.replaceNonIdentifierChars(attrib.name, '-').toString();
-        wrVariable(classData, "String", sName, attrib.daccess, true, false, false);
+        wrVariable(classData, null, "String", sName, attrib.daccess, true, false, false);
       }
       if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
         XmlCfgNode childNode = eNode.getValue();
 //        if(childNode.tag.equals("section"))
 //          Debugutil.stop();
         if(childNode.dstClassName !=null) {
-          String sType = GenJavaOutClass.firstUppercase(childNode.dstClassName);
+          String sType = GenJavaOutClass.firstUppercaseIdentifier(childNode.dstClassName);
           if(GenXmlCfgJavaData.this.genClass.idxStdTypes.get(sType) !=null) {
             sType += "__";  //It must not be a Standard type.
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, sType, sName, childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
+          wrVariable(classData, sOuterClass, sType, sName, childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
         
         } else {
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, "String", sName, childNode.elementStorePath, true, false, false);
+          wrVariable(classData, null, "String", sName, childNode.elementStorePath, true, false, false);
             
         }
       }
@@ -292,7 +297,20 @@ public class GenXmlCfgJavaData {
     
     
 
-    protected void wrVariable(SubClassXml classData, String type, String varName, DataAccess.DatapathElement storePath, boolean bStdType, boolean bList, boolean bCmpn
+    /**
+     * It calls {@link org.vishia.genJavaOutClass.GenJavaOutClass.WrClassJava#wrVariable(org.vishia.genJavaOutClass.GenJavaOutClass.SubClassJava, String, String, String, String, boolean, boolean, boolean, List)} 
+     * 
+     * @param classData
+     * @param typeNs Either null for a standard type, or the name of the environment class where all types are defined as sub type, then with trainling "."
+     * @param type
+     * @param varName
+     * @param storePath
+     * @param bStdType
+     * @param bList
+     * @param bCmpn
+     * @throws Exception
+     */
+    protected void wrVariable(SubClassXml classData, String sOuterClass, String type, String varName, DataAccess.DatapathElement storePath, boolean bStdType, boolean bList, boolean bCmpn
     ) throws Exception {
       if(varName !=null && varName.length() >0) { //else: do not write, parsed without data
         if(varName.startsWith("ST"))
@@ -321,13 +339,12 @@ public class GenXmlCfgJavaData {
               args = new LinkedList<String>();
               for(int ixArg = 0; ixArg < nrArgs; ++ixArg) {
                 String operArg = storePath.argName(ixArg);
-                args.add(GenJavaOutClass.firstLowercase(operArg));
+                args.add(GenJavaOutClass.firstLowercaseIdentifier(operArg));
               }
             }
           }
           //semantic = semantic.replace("@!", "");
-          String typeNs = "Type__Ns";
-          wrClassJava.wrVariable(classData, varName, typeNs, type, type, bStdType, bList, bCmpn, args); 
+          wrClassJava.wrVariable(classData, varName, sOuterClass, type, type, bStdType, bList, bCmpn, args); 
           
         }
       }
@@ -339,7 +356,7 @@ public class GenXmlCfgJavaData {
         if(cmpn == null) {
           throw new IllegalArgumentException("syntax component not found: " + name);
         }
-        SubClassXml classData = new SubClassXml(name, GenJavaOutClass.firstUppercase(cmpn.tag.toString()));
+        SubClassXml classData = new SubClassXml(name, GenJavaOutClass.firstUppercaseIdentifier(cmpn.tag.toString()));
         classData.sDbgIdent = cmpn.tag.toString();
         classData.subItem = null; //cmpn;
         genClass.idxRegisteredCmpn.put(name, classData);

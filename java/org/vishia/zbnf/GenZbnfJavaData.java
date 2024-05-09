@@ -24,6 +24,7 @@ public class GenZbnfJavaData
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-05-08 Only adapted changes in {@link GenJavaOutClass} 
    * <li>2022-06-06 Argument for typeNs prepared, due to {@link GenJavaOutClass} change. 
    * <li>2022-05-13 Hartmut new: regards {@link #bOnlyOneEach} ?& to prevent a container for parse result, only one element.    
    * <li>2022-04-30 Hartmut: <ode>{&lt;?*semantic>...</code> is a component, on calling {@link WrClassZbnf#wrVariable(SubClassZbnf, String, String, String, String, ZbnfSyntaxPrescript, boolean, boolean, List)}
@@ -464,7 +465,7 @@ public class GenZbnfJavaData
     private SubClassZbnf getRegisterSubclass(String name, ZbnfSyntaxPrescript syntaxItem) {
       SubClassZbnf classData = (SubClassZbnf)GenZbnfJavaData.this.genClass.idxRegisteredCmpn.get(name);
       if(classData == null) {
-        classData = new SubClassZbnf(syntaxItem, name, GenJavaOutClass.firstUppercase(name));
+        classData = new SubClassZbnf(syntaxItem, name, GenJavaOutClass.firstUppercaseIdentifier(name));
         classData.sDbgIdent = syntaxItem.sDefinitionIdent;
         GenZbnfJavaData.this.genClass.idxRegisteredCmpn.put(name, classData);
         GenZbnfJavaData.this.genClass.listCmpn.add(classData);
@@ -529,7 +530,7 @@ public class GenZbnfJavaData
           if(sTypeObj == null || sTypeObj.equals("@")) {
             sTypeObj = item.sDefinitionIdent;
           }
-          sTypeObj = GenJavaOutClass.firstUppercase(sTypeObj);
+          sTypeObj = GenJavaOutClass.firstUppercaseIdentifier(sTypeObj);
           String sTypeRef = prescript.sSuperItemType;
           if(sTypeRef ==null) {
             sTypeRef = sTypeObj;
@@ -582,7 +583,7 @@ public class GenZbnfJavaData
 //          }
           //Writes a new MetaClass, it is like a Component.
           wrVariable(classData, typeNs, semantic1, semantic1, semantic1, syntaxitem, bListVar, true, obligateAttribs1);  //create the parent
-          GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(typeRef, GenJavaOutClass.firstLowercase(semantic2), semantic2);
+          GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(typeRef, GenJavaOutClass.firstLowercaseIdentifier(semantic2), semantic2);
           //elems.put("varName", firstLowercase(semantic2));
           //elems.put("semantic", semantic2);
           //elems.put("type", type);
@@ -621,7 +622,7 @@ public class GenZbnfJavaData
             //String attribsAssign = "";
             if(obligateAttribs !=null) for(String attrib: obligateAttribs) {
               if(args == null) {args = new LinkedList<String>(); }
-              args.add(GenJavaOutClass.firstLowercase(attrib));
+              args.add(GenJavaOutClass.firstLowercaseIdentifier(attrib));
             }
             //semantic = semantic.replace("@!", "");
             String semantic2 = semantic.replace("@", "");
@@ -649,7 +650,7 @@ public class GenZbnfJavaData
         name = cmpn.sDefinitionIdent;
       }                                                    // only add a new component if it is not done already.
       if(GenZbnfJavaData.this.genClass.idxRegisteredCmpn.get(name) == null) {
-        SubClassZbnf classData = new SubClassZbnf(cmpn, name, GenJavaOutClass.firstUppercase(name));
+        SubClassZbnf classData = new SubClassZbnf(cmpn, name, GenJavaOutClass.firstUppercaseIdentifier(name));
         classData.sDbgIdent = cmpn.sDefinitionIdent;
         GenZbnfJavaData.this.genClass.idxRegisteredCmpn.put(name, classData);
         GenZbnfJavaData.this.genClass.listCmpn.add(classData);
