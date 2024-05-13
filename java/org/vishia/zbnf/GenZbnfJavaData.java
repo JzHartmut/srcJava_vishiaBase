@@ -367,12 +367,12 @@ public class GenZbnfJavaData
                     bEvaluateChildSyntax = false;
                     String sType = Character.toUpperCase(semantic.charAt(0)) + semantic.substring(1);
                     String typeNs = GenZbnfJavaData.this.cmdArgs.sJavaClass + ".";
-                    wrVariable(classData, typeNs, sType, null, semantic, item, bRepetition, true, null);  //it is as a component, but only inline
+                    wrVariable(classData, typeNs, sType, null, semantic, item, null, bRepetition, true, null);  //it is as a component, but only inline
                     //evaluateSubCmpn(item, classData, false, level);
                     registerCmpn(item);                    // enroll content as component later
                     
                   } else {
-                    wrVariable(classData, null, "String", null, semantic+"_Text", item, bRepetition, false, null); 
+                    wrVariable(classData, null, "String", null, semantic+"_Text", item, null, bRepetition, false, null); 
                   }
                 }
                 break;
@@ -383,7 +383,7 @@ public class GenZbnfJavaData
               case kAlternativeOption:
                 if(item.sSemantic !=null) {
                   //It is [<?semantic>...]: The parsed content in [...] should be stored as String
-                  wrVariable(classData, null, "String", null, semantic, item, bListVar, false, null); 
+                  wrVariable(classData, null, "String", null, semantic, item, "alternative option", bListVar, false, null); 
                 }
                 break;
               
@@ -391,12 +391,12 @@ public class GenZbnfJavaData
                 break;
               
               case kFloatWithFactor:
-              case kFloatNumber: wrVariable(classData, null, "float", null, semantic, item, bListVar, false, null);
+              case kFloatNumber: wrVariable(classData, null, "float", null, semantic, item, null,  bListVar, false, null);
               break;
               
               case kPositivNumber:
               case kIntegerNumber:
-              case kHexNumber: wrVariable(classData, null, "int", null, semantic, item, bListVar, false, null);
+              case kHexNumber: wrVariable(classData, null, "int", null, semantic, item, null, bListVar, false, null);
               break;
               
               case kStoreSrc:
@@ -414,7 +414,7 @@ public class GenZbnfJavaData
               case kRegularExpression:
               case kIdentifier: {
                 if(item.sSubSyntax ==null) {
-                  wrVariable(classData, null, "String", null, semantic, item, bListVar, false, null);
+                  wrVariable(classData, null, "String", null, semantic, item, null, bListVar, false, null);
                 }
               } break;
               
@@ -446,7 +446,7 @@ public class GenZbnfJavaData
             String sType = Character.toUpperCase(item.sSubSyntax.charAt(0)) + item.sSubSyntax.substring(1);
             String typeNs = GenZbnfJavaData.this.cmdArgs.sJavaClass + ".";  //A type defined inside the dataClass
             String name = semantic !=null ? semantic : Character.toLowerCase(item.sSubSyntax.charAt(0)) + item.sSubSyntax.substring(1);
-            wrVariable(classData, typeNs, sType, null, name, item, false, false, null);
+            wrVariable(classData, typeNs, sType, null, name, item, null, false, false, null);
           }
           //any item can contain an inner tree. Especially { ...inner syntax <cmpn>...}
           //in a repetition bList = true;
@@ -514,7 +514,7 @@ public class GenZbnfJavaData
       else {                                               // creates a variable for the component. 
         if(item.bStoreAsString) {
           String name = item.bDonotStoreData ? semantic : semantic + "_string";
-          wrVariable(classData, null, "String", null, name, null, bListVar, false, null); ////xx
+          wrVariable(classData, null, "String", null, name, null, null, bListVar, false, null); ////xx
         }
         if(!item.bDonotStoreData) {
         //create an own class for the component, write a container here.
@@ -550,13 +550,13 @@ public class GenZbnfJavaData
           }
           String typeNs = GenZbnfJavaData.this.cmdArgs.sJavaClass + ".";
           //---------------------------------------------  // the variable for the component's reference
-          wrVariable(classData, typeNs, sTypeRef, sTypeObj, semantic, item, bListVar, true, obligateAttribs);
+          wrVariable(classData, typeNs, sTypeRef, sTypeObj, semantic, item, null, bListVar, true, obligateAttribs);
         }
       }
       
     }
 
-    protected void wrVariable(SubClassZbnf classData, String typeNs, String typeRef, String typeObj, String semantic, ZbnfSyntaxPrescript syntaxitem, boolean bListVar
+    protected void wrVariable(SubClassZbnf classData, String typeNs, String typeRef, String typeObj, String semantic, ZbnfSyntaxPrescript syntaxitem, String sDocu, boolean bListVar
           , boolean bCmpn, List<String> obligateAttribs
           ) throws Exception {
       final String sTypeObj1 = (typeObj == null) ? typeRef :  typeObj;  
@@ -582,7 +582,7 @@ public class GenZbnfJavaData
 //            idxMetaClass.put(semantic1, metaClass);
 //          }
           //Writes a new MetaClass, it is like a Component.
-          wrVariable(classData, typeNs, semantic1, semantic1, semantic1, syntaxitem, bListVar, true, obligateAttribs1);  //create the parent
+          wrVariable(classData, typeNs, semantic1, semantic1, semantic1, syntaxitem, sDocu, bListVar, true, obligateAttribs1);  //create the parent
           GenJavaOutClass.SubClassField elems = new GenJavaOutClass.SubClassField(typeRef, GenJavaOutClass.firstLowercaseIdentifier(semantic2), semantic2);
           //elems.put("varName", firstLowercase(semantic2));
           //elems.put("semantic", semantic2);
@@ -630,7 +630,7 @@ public class GenZbnfJavaData
             if(semantic2.equals("value"))
               Debugutil.stop();
             
-            this.wrClassJava.wrVariable(classData, semantic2, typeNs, typeRef2, sTypeObj1, !bCmpn, bListVar, bCmpn, args); 
+            this.wrClassJava.wrVariable(classData, semantic2, typeNs, typeRef2, sTypeObj1, null, !bCmpn, bListVar, bCmpn, args); 
             
           }  
         }

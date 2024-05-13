@@ -131,8 +131,8 @@ public class XmlJzCfgAnalyzer
   /**The common structure data of the read XML file. */
   final XmlStructureData xmlStructData = new XmlStructureData();
   
-  /**The tree of the structure of the read XML file. It contains the same tag element only one time.
-   * It is tested in {@link XmlStructureNode#addElement(String)}. */
+  /**The tree of the structure of the read XML file. It contains the same tag element for one node only one time.
+   * An element is added to this root node and then to all current nodes in {@link XmlStructureNode#addElement(String)}. */
   XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", xmlStructData);  //the root node for reading config
 
   /**The declared name spaces found in all nodes. */
@@ -583,6 +583,9 @@ public class XmlJzCfgAnalyzer
       if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
         cfgSubtreeType.nodeNames.put(e.getKey(), e.getKey());
       }
+      if(allElementTypes2.get(node.tag) !=null) {
+        Debugutil.stop();
+      }
       allElementTypes2.add(node.tag, cfgSubtreeType);  //more as one with same tag name possible, store only for comparison (check)
       cfgSubtreeByName.put(node.sSubtreenode, node);   //unique cfg-subtree key, for usage.
 
@@ -851,11 +854,12 @@ public class XmlJzCfgAnalyzer
     
     
     
-    /**Returns an instance to store the occurrence of a XML-element.
-     * If more XML-elements with the same tag name are found, only one occurrence of this element type is stored.
-     * If an element with the same tag name is given, which is already registered, then the same instance is returned from the found element before.
+    /**Returns the instance to store the occurrence of a XML-element in a node.
+     * If more XML-elements with the same tag name are found in the same node, only one occurrence for this element tag is stored.
      * With them maybe new occurring attributes or new occurring elements are stored. 
-     * It is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}
+     * <br>Additionally via {@link XmlStructureData#addStructureNodeOccurence(XmlStructureNode)} 
+     *   all elements in the whole xml file with the same tag are registered any later evaluated, if there are semantically also the same. 
+     * <br>This operation is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}
      * @param tag
      * @return
      */

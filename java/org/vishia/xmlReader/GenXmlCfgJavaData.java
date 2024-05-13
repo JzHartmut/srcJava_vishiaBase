@@ -90,7 +90,7 @@ public class GenXmlCfgJavaData {
   
   XmlJzReader xmlReader = new XmlJzReader();
   
-  private final GenJavaOutClass genClass;
+  final GenJavaOutClass genClass;
   
 
   Map<String, XmlCfgNode> subtrees;
@@ -103,12 +103,12 @@ public class GenXmlCfgJavaData {
   
   public void exec(GenJavaOutClass.CmdArgs cmdArgs) throws IOException {
     File fileXmlCfg = cmdArgs.fileInput;
-    xmlReader.readCfg(fileXmlCfg);
-    XmlCfg xmlCfg = xmlReader.cfg;
-    subtrees = xmlCfg.subtrees;
+    this.xmlReader.readCfg(fileXmlCfg);
+    XmlCfg xmlCfg = this.xmlReader.cfg;
+    this.subtrees = xmlCfg.subtrees;
     Debugutil.stop();
     
-    genClass.setupWriter();
+    this.genClass.setupWriter();
     WrClassXml wrClass = this.new WrClassXml();  //the main class to write
     try {
       XmlCfgNode rootNode = xmlCfg.rootNode;
@@ -121,8 +121,8 @@ public class GenXmlCfgJavaData {
       //
       //
       int ixCmpn = 0;
-      while(genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
-        SubClassXml classData = (SubClassXml)genClass.listCmpn.get(ixCmpn++);
+      while(this.genClass.listCmpn.size() > ixCmpn) { //possible to add on end in loop
+        SubClassXml classData = (SubClassXml)this.genClass.listCmpn.get(ixCmpn++);
         wrClass = new WrClassXml();
         wrClass.wrClassJava.wrClassCmpn(classData, null);
         //
@@ -131,17 +131,17 @@ public class GenXmlCfgJavaData {
         //
         wrClass.wrClassJava.writeOperations();
         //
-        genClass.finishCmpnWrite();
+        this.genClass.finishCmpnWrite();
 
       }
       //
-      genClass.finishClassWrite();
+      this.genClass.finishClassWrite();
       //
     } catch (Exception e1) {
       // TODO Auto-generated catch block
       System.err.println(e1.getMessage());
     }
-    genClass.closeWrite();    
+    this.genClass.closeWrite();    
 
     
   }
@@ -215,7 +215,7 @@ public class GenXmlCfgJavaData {
     
     
     WrClassXml() {
-      wrClassJava = genClass.new WrClassJava();
+      this.wrClassJava = GenXmlCfgJavaData.this.genClass.new WrClassJava();
     }
     
     
@@ -271,7 +271,7 @@ public class GenXmlCfgJavaData {
         AttribDstCheck attrib = eattrib.getValue();
         //if(attrib.daccess !=null) {
         String sName = StringFunctions_B.replaceNonIdentifierChars(attrib.name, '-').toString();
-        wrVariable(classData, null, "String", sName, attrib.daccess, true, false, false);
+        wrVariable(classData, null, "String", sName, attrib.daccess, "Attribute " + attrib.name, true, false, false);
       }
       if(cfgNode.subnodes !=null) for(Map.Entry<String, XmlCfgNode> eNode: cfgNode.subnodes.entrySet()) {
         XmlCfgNode childNode = eNode.getValue();
@@ -284,14 +284,14 @@ public class GenXmlCfgJavaData {
           }
           SubClassXml metaClass = getRegisterSubclass(sType, childNode); //idxMetaClass.get(semantic1);
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, sOuterClass, sType, sName, childNode.elementStorePath, false, childNode.bList, true);  //write the create routine and access
-        
+          wrVariable(classData, sOuterClass, sType, sName, childNode.elementStorePath, "Complex node " + childNode.tag, false, childNode.bList, true);  //write the create routine and access
         } else {
           String sName = StringFunctions_B.replaceNonIdentifierChars(childNode.tag, '-').toString();
-          wrVariable(classData, null, "String", sName, childNode.elementStorePath, true, false, false);
+          wrVariable(classData, null, "String", sName, childNode.elementStorePath, "Simple node " + childNode.tag, true, false, false);
             
         }
       }
+      this.wrClassJava.writeListAllNodes(null);            // if at least one list node exists, then create a NameObject list which contains all nodes in natural order:
     }
     
     
@@ -310,7 +310,7 @@ public class GenXmlCfgJavaData {
      * @param bCmpn
      * @throws Exception
      */
-    protected void wrVariable(SubClassXml classData, String sOuterClass, String type, String varName, DataAccess.DatapathElement storePath, boolean bStdType, boolean bList, boolean bCmpn
+    protected void wrVariable(SubClassXml classData, String sOuterClass, String type, String varName, DataAccess.DatapathElement storePath, String sDocu, boolean bStdType, boolean bList, boolean bCmpn
     ) throws Exception {
       if(varName !=null && varName.length() >0) { //else: do not write, parsed without data
         if(varName.startsWith("ST"))
@@ -344,7 +344,7 @@ public class GenXmlCfgJavaData {
             }
           }
           //semantic = semantic.replace("@!", "");
-          wrClassJava.wrVariable(classData, varName, sOuterClass, type, type, bStdType, bList, bCmpn, args); 
+          this.wrClassJava.wrVariable(classData, varName, sOuterClass, type, type, sDocu, bStdType, bList, bCmpn, args); 
           
         }
       }

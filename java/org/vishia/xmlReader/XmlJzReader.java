@@ -477,7 +477,9 @@ public class XmlJzReader
       CheckVs.check(output !=null);
       if(sTag.toString().contains("   "))
         Debugutil.stop();
-      if(sTag.toString().startsWith("Object@"))
+      if(sTag.toString().startsWith("text:p")
+        && inp.getCurrentPart(38).toString().startsWith(" text:style-name=\"P268\"")
+          )
         Debugutil.stop();
       if(cfgNode.subnodes == null) {             // inner content, it is this element should not be stored.
         subCfgNode = null; //don't read inner content

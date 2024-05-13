@@ -276,7 +276,16 @@ public class XmlCfg
     
     if(this.subtrees !=null) for(Map.Entry<String, XmlCfgNode> e : this.subtrees.entrySet()) {
       XmlCfgNode subtree = e.getValue();
-      subtree.dstClassName = subtree.tag.toString();
+      if(subtree.dstClassName == null) {
+        subtree.dstClassName = subtree.tag.toString();
+      }
+      else if(subtree.dstClassName == subtree.tag.toString()) {
+        System.out.println("NOTE: ok dstClassName = " + subtree.dstClassName);
+      } else {
+        System.out.println("NOTE: ?? dstClassName = " + subtree.dstClassName + " vs. subtree.tag = " + subtree.tag.toString());
+        subtree.dstClassName = subtree.tag.toString();
+      }
+      
       //
       //check whether other subtrees has using this subtree as forward:
       List<XmlCfgNode> subtreeUsage = this.subtreeForward ==null ? null: this.subtreeForward.get(subtree.tag.toString());
@@ -284,6 +293,8 @@ public class XmlCfg
         for(XmlCfgNode e1: subtreeUsage) {
           e1.addFromSubtree(subtree);
         }
+      } else {
+        System.out.println("NOTE: subtree " + subtree.tag + " not used");
       }
       //
     }
@@ -544,17 +555,38 @@ public class XmlCfg
     }
     
     
+    /**Adds the elements from a given &lt;xmlinput:subtree ... in the xmlcfg.xml to the used xmlcfg.
+     * <ul><li>The {@link XmlCfgNode#subnodes} in the &lt;xmlinput:subtree ... are also referred in original from this {@link #subnodes}
+     * <li>The attributes from the &lt;xmlinput:subtree are only taken if this {@link #attribs} does not contain the attribute. 
+     *   It means the &lt;xmlinput:subtree ... attribs are not meaningful if they exists in the current element already.
+     *   The entry in the current element is then significant (the called store operation as attribute value).
+     *   But both should be equivalent.
+     * <li>The {@link #setContentStorePath(String)} is not taken from the subtree (ignored, 2024-05-12)
+     * <li>The {@link #elementStorePath} and {@link #elementFinishPath} are not taken from the subtree ( ignored, 2024-05-12).  
+     * @param subtree
+     */
     void addFromSubtree(XmlCfgNode subtree) {
       //Use the same subtree information for all subtree references. 
       //If the data would be copied, some more memory is neccessary, but not too much. But it is not necessary to copy.
       this.subnodes = subtree.subnodes;
       if(subtree.attribs !=null) for(Map.Entry<String, AttribDstCheck> e : subtree.attribs.entrySet()) {
         String attrName = e.getKey();
+        AttribDstCheck a = e.getValue();
         if(this.attribs == null) { this.attribs = new TreeMap/*IndexMultiTable*/<String, AttribDstCheck>(); }
         AttribDstCheck attr = this.attribs.get(attrName);
         if(attr == null) {
           this.attribs.put(attrName, e.getValue());  //store the attrib from the subtree instance.
-        } //else: The attrib in the subtree call wins. (new since 2019-03, before: both are equal)
+        } else {
+          boolean bSame = a.bUseForCheck == attr.bUseForCheck;
+          bSame &= a.daccess == null && attr.daccess == null || a.daccess.toString().equals(attr.daccess.toString());
+          bSame &= a.name.equals(attr.name);
+          bSame &= a.storeInMap.equals(attr.storeInMap);
+          if(!bSame) {
+            System.out.println("NOTE read XmlCfg: Diff. Attribute both in subtree and call found:");  //The attrib in the subtree call wins. (new since 2019-03, before: both are equal)
+          }
+        }
+      } else {
+        System.out.println("NOTE read XmlCfg: No Attribute in subtree found: ");
       }
       if(this.dstClassName == null) { this.dstClassName = subtree.dstClassName; }
     }
