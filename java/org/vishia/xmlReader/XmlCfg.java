@@ -2,11 +2,13 @@ package org.vishia.xmlReader;
 
 import java.io.File;
 import java.text.ParseException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringFunctions;
@@ -302,6 +304,33 @@ public class XmlCfg
     
   }
 
+  
+  public void checkCfg ( LogMessage log) {
+    checkCfg(this.rootNode, log, new HashMap<XmlCfgNode, XmlCfgNode>(), 100);
+  }
+  
+  private void checkCfg ( XmlCfgNode node, LogMessage log, HashMap<XmlCfgNode, XmlCfgNode> nodesChecked, int recursively) {
+    if(recursively <10 ) {
+      Debugutil.stop();
+    } else if(recursively <0 ) {
+      throw new IllegalArgumentException("too many recurions checkCfg");
+    }
+    if(node.subnodes !=null) for(XmlCfgNode subNode : node.subnodes.values()) {
+      if(subNode.cfgSubtreeName !=null) {
+        XmlCfg.XmlCfgNode subCfgNodeSubtree = this.subtrees.get(subNode.cfgSubtreeName);
+        subNode.cmpNode(subCfgNodeSubtree, log);
+        Debugutil.stop();
+      } 
+      if(nodesChecked.get(node) !=null) {
+        if(log!=null) log.writeError("ERROR CheckCfgSubtree : node recursively %s in parent %s", node.tag, node.parent == null ? "??" : node.parent.tag);
+      } else {
+        nodesChecked.put(node, node);
+        checkCfg(subNode, log, nodesChecked, recursively -1);
+        nodesChecked.remove(node);
+      }
+    }
+  }
+  
   
   /**An instance of this class describes for any attribute how to proceed-
    */
@@ -671,6 +700,133 @@ public class XmlCfg
       return subtreenode;
     }
     
+    /**This operation is only a helper to check whether the subtree entry is okay for manual changes.
+     * @param nodeCmp
+     */
+    public boolean cmpNode(XmlCfgNode nodeCmp, LogMessage log) {
+      boolean bOk = true;
+      try{ 
+        if(nodeCmp == null) {
+          bOk = false;
+          if(log !=null) log.writeError("ERROR CheckCfgSubtree : node not found in subtree: %s", this.cfgSubtreeName);
+        } else {
+  //        The arguments can be differ depending on attributes.
+  //        for(Map.Entry<String, DataAccess.IntegerIx> e: this.allArgNames.entrySet()) {
+  //          DataAccess.IntegerIx val = e.getValue();
+  //          DataAccess.IntegerIx cmp = nodeCmp.allArgNames.get(e.getKey());
+  //          if(cmp == null) {
+  //            bOk = false;
+  //            if(log !=null) log.writeError("ERROR CheckCfgSubtree allArgNames: %s allArgNames.%s ix=%d ?? not found ", this.tag, e.getKey(), val.ix);
+  //          }
+  //          else if(val.ix != cmp.ix) {
+  //            bOk = false;
+  //            if(log !=null) log.writeError("ERROR CheckCfgSubtree allArgNames: %s allArgNames.%s ix=%d ?? %d", this.tag, e.getKey(), val.ix, cmp.ix);
+  //          }
+  //        }
+          
+          if(this.attribs !=null) {
+            if(nodeCmp.attribs == null) {
+              bOk = false;
+              if(log !=null) log.writeError("ERROR CheckCfgSubtree attribs: %s has no attributes ", this.tag);
+            } else {
+              for(Map.Entry<String, XmlCfg.AttribDstCheck> e: this.attribs.entrySet()) {
+                // do not check, attributes are all equal, do only check this contains equal or lesser attributes.
+                XmlCfg.AttribDstCheck val = e.getValue();
+                XmlCfg.AttribDstCheck cmp = nodeCmp.attribs.get(e.getKey());
+                if(cmp == null) {
+                  bOk = false;
+                  if(log !=null) log.writeError("ERROR CheckCfgSubtree attribs: %s attribs.%s ?? not found ", this.tag, e.getKey());
+                }
+                else {
+                  if(val.daccess != cmp.daccess) {
+                    bOk = false;
+                    if(log !=null) log.writeError("ERROR CheckCfgSubtree attribs: %s attribs.%s daccess %d ?? %d", this.tag, e.getKey(), val.daccess, cmp.daccess);
+                  } 
+                  if(!val.name.equals(cmp.name)) {
+                    bOk = false;
+                    if(log !=null) log.writeError("ERROR CheckCfgSubtree attribs: %s attribs.%s name %d ?? %d", this.tag, e.getKey(), val.name, cmp.name);
+                  } 
+                  if(!val.storeInMap.equals(cmp.storeInMap)) {
+                    bOk = false;
+                    if(log !=null) log.writeError("ERROR CheckCfgSubtree attribs: %s attribs.%s storeInMap %d ?? %d", this.tag, e.getKey(), val.storeInMap, cmp.storeInMap);
+                  } 
+                }
+              }
+            }
+          } // for attribs
+          if(this.subnodes !=null) {
+            if(nodeCmp.subnodes == null) {                 // nodeCmp should contain subnodes if node contains it
+              bOk = false;
+              if(log !=null) log.writeError("ERROR CheckCfgSubtree subnodes: %s has no subnodes ", this.tag);
+            } else if(this.subnodes != nodeCmp.subnodes) { // if both have the same subnodes, it is ok
+              for(Map.Entry<String, XmlCfg.XmlCfgNode> e: this.subnodes.entrySet()) {
+                // do not check, subnodes are all equal, do only check this contains equal or lesser nodes.
+                XmlCfg.XmlCfgNode val = e.getValue();
+                XmlCfg.XmlCfgNode cmp = nodeCmp.subnodes.get(e.getKey());
+                if(cmp == null) {
+                  bOk = false;
+                  if(log !=null) log.writeError("ERROR CheckCfgSubtree subnodes: %s: %s ?? not found ", this.tag, e.getKey());
+                }
+                else if(cmp != val){
+                  bOk = false;
+                  if(log !=null) log.writeError("ERROR CheckCfgSubtree subnodes: %s: %s different %s ?? 5s ", this.tag, e.getKey(), val, cmp);
+                }
+              }
+            }
+          } // for attribs
+          if(this.bCheckAttributeNode != nodeCmp.bCheckAttributeNode){
+            bOk = false;
+            if(log !=null) log.writeError("ERROR CheckCfgSubtree bCheckAttributeNode: %s:  %b ?? %b", this.tag, this.bList, nodeCmp.bList);
+          }
+          if(this.bCheckAttributeNode != nodeCmp.bCheckAttributeNode){
+            bOk = false;
+            if(log !=null) log.writeError("ERROR CheckCfgSubtree bCheckAttributeNode: %s:  %b ?? %b", this.tag, this.bList, nodeCmp.bList);
+          }
+          if(this.bStoreAttribsInNewContent != nodeCmp.bStoreAttribsInNewContent) {
+            bOk = false;
+            if(log !=null) log.writeError("ERROR CheckCfgSubtree bStoreAttribsInNewContent %s: %b ?? %b", this.tag, this.bStoreAttribsInNewContent, nodeCmp.bStoreAttribsInNewContent);
+          }
+          if(!this.cfgSubtreeName.equals(nodeCmp.cfgSubtreeName)) {
+            bOk = false;
+            if(log !=null) log.writeError("ERROR CheckCfgSubtree cfgSubtreeName %s: %s ?? %s", this.tag, this.cfgSubtreeName, nodeCmp.cfgSubtreeName);
+          }
+          if(!this.dstClassName.equals(nodeCmp.dstClassName)) {
+            bOk = false;
+            if(log !=null) log.writeError("ERROR CheckCfgSubtree dstClassName %s: %s ?? %s", this.tag, this.dstClassName, nodeCmp.dstClassName);
+          }
+          bOk &= cmpDataAccess(this.tag, "contentStorePath", this.contentStorePath, nodeCmp.contentStorePath, log);
+          bOk &= cmpDataAccess(this.tag, "elementStorePath", this.elementStorePath, nodeCmp.elementStorePath, log);
+          bOk &= cmpDataAccess(this.tag, "elementFinishPath", this.elementFinishPath, nodeCmp.elementFinishPath, log);
+          bOk &= cmpDataAccess(this.tag, "nameSpaceDef", this.nameSpaceDef, nodeCmp.nameSpaceDef, log);
+          if(!this.tag.equals(nodeCmp.tag)) {
+            bOk = false;
+            if(log !=null) log.writeError("ERROR CheckCfgSubtree tag %s: %s ?? %s", this.tag, this.tag, nodeCmp.tag);
+          }
+        }
+        if(!bOk) {
+          Debugutil.stop();
+        }
+      } catch(Exception exc) {
+        if(log !=null) log.writeError("ERROR CheckCfgSubtree unexpected exception", exc);
+      }
+      return bOk;
+    }
+    
+
+    
+    private boolean cmpDataAccess(CharSequence tag, String what, DataAccess.DatapathElement d1, DataAccess.DatapathElement d2, LogMessage log) {
+      if(d1 == null ) return true;   // not given in current, but given in subtree node
+      if(d2 == null ) {
+        return true;                 // only given in current
+      }
+      if(!d1.toString().equals(d2.toString())) {
+        if(log !=null) log.writeError("ERROR CheckCfgSubtree %s dataAccess.%s: %s ?? %s", tag, what, d1, d2);
+        return false;
+      } else {
+        //TODO check the attributes
+        return true;
+      }
+    }
     
   
     @Override public String toString(){ 

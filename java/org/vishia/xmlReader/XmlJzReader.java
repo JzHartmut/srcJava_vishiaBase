@@ -17,6 +17,7 @@ import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.CheckVs;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
@@ -164,9 +165,11 @@ public class XmlJzReader
    */
   int sizeBuffer = 200000;
   
-  int debugStopLine = -1;
+  /**It is able to set with {@link #setDebugStop(int)} */
+  private int debugStopLine = -1;
   
-  String debugTag = null;
+  /**It is able to set with {@link #setDebugStopTag(String)}*/
+  private String debugTag = null;
   
   /**Assignment between nameSpace-alias and nameSpace-value gotten from the xmlns:ns="value" declaration in the read XML file. */
   Map<String, String> namespaces = new TreeMap/*IndexMultiTable*/<String, String>(/*IndexMultiTable.providerString*/);
@@ -178,9 +181,15 @@ public class XmlJzReader
   
   XmlSequWriter xmlTestWriter;
   
-  
+  protected final LogMessage log;
+
   
   public XmlJzReader() {
+    this(null);
+  }
+  
+  public XmlJzReader(LogMessage log) {
+    this.log = log;
     this.cfgCfg = XmlCfg.newCfgCfg();
     this.replaceChars.put("&amp;", "&");
     this.replaceChars.put("&lt;", "<");
@@ -510,6 +519,12 @@ public class XmlJzReader
     @SuppressWarnings("unchecked")
     Map<String, DataAccess.IntegerIx>[] attribNames = new Map[1];
     if(subCfgNode !=null) {
+      if(subCfgNode.cfgSubtreeName !=null) {
+        XmlCfg.XmlCfgNode subCfgNodeSubtree = this.cfg.subtrees.get(subCfgNode.cfgSubtreeName);
+        //only test: subCfgNode.cmpNode(subCfgNodeSubtree, this.log);
+        Debugutil.stop();
+      }
+
       attribNames[0] = subCfgNode.allArgNames;  //maybe null if no attribs or text and tag are used.
     }
     //@SuppressWarnings("unchecked")
@@ -540,8 +555,8 @@ public class XmlJzReader
     }
     //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
     subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode.elementStorePath, attribValues);
-    if(subCfgNode !=null && subCfgNode ==null) {
-      Debugutil.stop();
+    if(cfgNode.subnodes !=null && subCfgNode ==null) {
+      Debugutil.stop();       // a node which should not be evaluated
     }
     //
     //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
@@ -1159,6 +1174,12 @@ public class XmlJzReader
    * @param cfg
    */
   public void setCfg(XmlCfg cfg) { this.cfg = cfg; }
+
+
+  /**Gets the XmlCfg data for additional evaluation.
+   * The current config is also returned on {@link #readCfg(File)} or {@link #readCfgFromJar(Class, String)}-as result from setting
+   */
+  public XmlCfg getCfg () { return this.cfg; }
 
 
   /**Read from a resource (file inside jar archive).

@@ -14,6 +14,7 @@ import java.io.Reader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -546,6 +547,39 @@ public class XmlJzCfgAnalyzer
       }
       
       
+      
+      /**Adds the content of a new occurring node to the subtree {@link #representative} node.
+       * @param node new found node in user XML tree.
+       */
+      protected void addContentOfFoundNode(XmlStructureNode node){
+        if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
+          String key = e.getKey();
+          if(this.attributeNames.get(key) ==null) {
+            this.attributeNames.put(key, key);     //an attribute non detected as yet, add it in representative.;
+            if(this.representative.attribs == null) {
+              this.representative.attribs = new TreeMap<String, ZmlReader.AttribRead>();
+            }
+            this.representative.attribs.put(key, e.getValue());
+          }
+        }
+        if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
+          String key = e.getKey();
+          //nonsense on the old source position: foundNodeNames.put(key, key);
+          if(this.nodeNames.get(e.getKey()) ==null) {
+            this.nodeNames.put(key, key);    //a node non detected as yet, add it in representative.
+            if(this.representative.nodes ==null) {
+              //this.representative.addElement(key);
+              this.representative.nodes = new TreeMap<String, ZmlReader.ZmlNode>();
+            }
+            this.representative.nodes.put(key, e.getValue());
+          }
+        }
+        this.representative.bText |= node.bText;
+      }
+      
+      
+   
+      
       @Override public String toString() { return "" + occurrence.size() + " * " + occurrence.get(0).toString(); }
     }
 
@@ -565,7 +599,8 @@ public class XmlJzCfgAnalyzer
     /**Stores all node types for cfg subtree with the subtree name as key. */
     Map<String, XmlStructureNode> cfgSubtreeByName = new TreeMap<String, XmlStructureNode>();
     
-    /**Stores the cfg subtree in the usage order. */
+    /**Stores the cfg subtree in the usage order. @since 2024-05 It seems to be that this is only
+     * the order of output in the XML file by usage, but this output is not sensible. TODO  */
     Map<String, XmlStructureNode> cfgSubtreeList = new TreeMap<String, XmlStructureNode>();
     
     
@@ -575,13 +610,16 @@ public class XmlJzCfgAnalyzer
       if(nameModif < 'A') {
         node.sSubtreenode = node.tag;
       } else {
-        node.sSubtreenode = node.tag + '_' + nameModif;
+        node.sSubtreenode = node.tag + '_' + nameModif;    // if a node structure with same tag is used in a different semantic.
       }
       if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
-        cfgSubtreeType.attributeNames.put(e.getKey(), e.getKey());
+        cfgSubtreeType.attributeNames.put(e.getKey(), e.getKey());  // first time, first attributes
       }
       if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
         cfgSubtreeType.nodeNames.put(e.getKey(), e.getKey());
+      }
+      if(allElementTypes2.get(node.tag) !=null) {
+        Debugutil.stop();
       }
       if(allElementTypes2.get(node.tag) !=null) {
         Debugutil.stop();
@@ -616,7 +654,7 @@ public class XmlJzCfgAnalyzer
      * If the node is a new one, {@link #createCfgSubtree(XmlStructureNode, char)} is called.
      * @param node
      */
-    private void checkStructureNodeOccurence(XmlStructureNode node) {
+    private void checkStructureNodeOccurence(XmlStructureNode node, List<XmlStructureNode> occurrences) {
       if(node.nodes == null && node.attribs == null) {
         return; //without sub nodes: does not need to store as subtree.
       }
@@ -627,7 +665,7 @@ public class XmlJzCfgAnalyzer
       if(node.tag.equals("AttributeList"))
         Debugutil.stop();
       if(!iterCfgSubtrees.hasNext() || !(cfgSubtreeType = iterCfgSubtrees.next()).tag.equals(node.tag)) {
-        createCfgSubtree(node, '\0'); //same tag only one time.
+        createCfgSubtree(node, '\0');                      //first occurrence with this tag.
       }
       else { //Same tag more as one.
         do {
@@ -641,52 +679,54 @@ public class XmlJzCfgAnalyzer
             }
             nrcount +=1;
           }
-          Map<String, String> foundNodeNames = new TreeMap<String, String>();
+          float nrOtherAttribsIncfgSubtree = cfgSubtreeType.attributeNames.size() - nrfound;
+          float nrNewAttribs = nrcount - nrfound;
+          float nrSameAttribs = nrfound;
+          nrfound = nrcount = 0;
           if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
             String key = e.getKey();
-            if(foundNodeNames.get(key)==null) { //only any occurrence of a subnode type only as one time type occurrence.
-              foundNodeNames.put(key, key);
-              if(cfgSubtreeType.nodeNames.get(e.getKey()) !=null) {
-                nrfound +=1;
-              }
-              nrcount +=1;
-            } else {
-              assert(false);
+            if(cfgSubtreeType.nodeNames.get(key) !=null) {
+              nrfound +=1;
             }
+            nrcount +=1;
           }
-          if(nrfound < (nrcount+3) /4) { //most (3/4) nodes or attributes are non-identical: It is another cfgSubtree type.
-          } else {
-            found = true; //>= 3/4 all attrib and nodes are identically:
-            cfgSubtreeType.occurrence.add(node);
-            node.sSubtreenode = cfgSubtreeType.representative.sSubtreenode;
-            assert(node.sSubtreenode !=null);
-            if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
-              String key = e.getKey();
-              if(cfgSubtreeType.attributeNames.get(key) ==null) {
-                cfgSubtreeType.attributeNames.put(key, key);     //an attribute non detected as yet, add it in representative.;
-                if(cfgSubtreeType.representative.attribs == null) {
-                  cfgSubtreeType.representative.attribs = new TreeMap<String, ZmlReader.AttribRead>();
-                }
-                cfgSubtreeType.representative.attribs.put(key, e.getValue());
-              }
-            }
+          int nrOtherSubnodesIncfgSubtree = cfgSubtreeType.nodeNames.size() - nrfound;
+          int nrNewSubnodes = nrcount - nrfound;
+          int nrNodes = nrfound;
+          //================================================= Check whether a group of nodes can be found which has the same sub nodes
+          //                                                  and have no relations to the other groups (they have other sub nodes)
+          //List<XmlStructureNode> listFellow = new LinkedList<>();
+          //List<XmlStructureNode> listNoFellow = new LinkedList<>();
+          for(XmlStructureNode maybeFellow: occurrences) {
+            nrfound = nrcount = 0;
+            int mask = 1;
             if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
               String key = e.getKey();
-              foundNodeNames.put(key, key);
-              if(cfgSubtreeType.nodeNames.get(e.getKey()) ==null) {
-                cfgSubtreeType.nodeNames.put(key, key);    //a node non detected as yet, add it in representative.
-                if(cfgSubtreeType.representative.nodes ==null) {
-                  //cfgSubtreeType.representative.addElement(key);
-                  cfgSubtreeType.representative.nodes = new TreeMap<String, ZmlReader.ZmlNode>();
-                }
-                cfgSubtreeType.representative.nodes.put(key, e.getValue());
+              if(maybeFellow.nodes !=null && maybeFellow.nodes.get(key) !=null) {
+//                nrfound +=1;
+                node.mGroup |= mask;                        // mark the fellows in the mGroup
               }
+//              nrcount +=1;
             }
+//            if(nrfound ==0) {          //-------------------- no common sub nodes
+//              listNoFellow.add(maybeFellow);
+//            } else if(nrcount == nrfound) {  //-------------- at least one common sub node
+//              listFellow.add(maybeFellow);
+//            }
+          }
+          boolean otherNodeType = false; //nrSameAttribs  
+          if(otherNodeType) { //most (3/4) nodes or attributes are non-identical: It is another cfgSubtree type.
+            createCfgSubtree(node, nameModif);
+          } else {
+            found = true; //>= 3/4 all attrib and nodes are identically:
+            cfgSubtreeType.occurrence.add(node);           // add the node instance as occurrence
+            node.sSubtreenode = cfgSubtreeType.representative.sSubtreenode;  // mark this node occurrence with the subtree name.
+            assert(node.sSubtreenode !=null);
+            cfgSubtreeType.addContentOfFoundNode(node);
             break;
           }
         } while(!found && iterCfgSubtrees.hasNext() && (cfgSubtreeType = iterCfgSubtrees.next()).tag.equals(node.tag));
         if(!found) {
-          createCfgSubtree(node, nameModif);
         }
       }
     }
@@ -694,19 +734,22 @@ public class XmlJzCfgAnalyzer
     
     
     
+    /**Checks whether all occurrences of node types have the same meaning (semantic), should represent by one sub tree structure.
+     * If the occurrences of one node have other inner sub node structure as the others, (building groups)
+     * different sub tree structures results. 
+     */
     protected void checkCfgSubtree() {
-      for(Map.Entry<String, CfgSubtreeType> e: allElementTypes.entrySet()) {
-        CfgSubtreeType cfgSubtreeOccurrences = e.getValue();
-        if(cfgSubtreeOccurrences.occurrence.size() >1) { 
-          //only if the element with this tag name occurs more as one time in the structure tree
+      for(CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
+        if(cfgSubtreeOccurrences.occurrence.size() >1) {   // more as one occurrence 
           for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
-            checkStructureNodeOccurence(structNode);
+            checkStructureNodeOccurence(structNode, cfgSubtreeOccurrences.occurrence);
           }            
         }
-        //XmlStructureNode node= e.getValue().representative;
       }
-      //detect all dependencies in cfg-subtree
-      for(Map.Entry<String, CfgSubtreeType2> e: allElementTypes2.entrySet()) {
+      //TODO check all mGroup whether they are exclusively. 
+      Debugutil.stop();
+      //detect all dependencies in cfg-subtree, add to CfgSubtreeType2#dependings
+      for(Map.Entry<String, CfgSubtreeType2> e: this.allElementTypes2.entrySet()) {
         CfgSubtreeType2 cfgSubtree = e.getValue();
         XmlStructureNode node= e.getValue().representative;
         if(!node.bDependencyChecked) {
@@ -714,6 +757,7 @@ public class XmlJzCfgAnalyzer
           checkUsageSubtreenode(cfgSubtree, node, 99);
         }
       }
+      Debugutil.stop();
       for(Map.Entry<String, CfgSubtreeType2> e: allElementTypes2.entrySet()) {
         CfgSubtreeType2 cfgSubtree = e.getValue();
         processDependingCfgSubtree(cfgSubtree, 99);
@@ -751,6 +795,11 @@ public class XmlJzCfgAnalyzer
     
     
     
+    /**Adds all the {@link CfgSubtreeType2#dependings}
+     * @param cfgSubtreeNeeds
+     * @param node
+     * @param recursiveCt
+     */
     private void checkUsageSubtreenode(CfgSubtreeType2 cfgSubtreeNeeds, XmlStructureNode node, int recursiveCt) {
       assert(recursiveCt >= 0);
       if(node.nodes !=null) for(Map.Entry<String,ZmlReader.ZmlNode> e_subnode: node.nodes.entrySet()) {
@@ -816,6 +865,9 @@ public class XmlJzCfgAnalyzer
     /**Tag name of the element as written in Java code, only identifier chars. */
     final String tagIdent;
     
+    /**Name of the representation of the node structure in a subtree. 
+     * After recognizing (selection) of the node, in the {@link XmlCfg}, 
+     * the {@link org.vishia.xmlReader.XmlCfg.XmlCfgNode} can be substituted with the subtree content with this name.*/
     String sSubtreenode;
     
     /**Set if at least one of the occurrences has a text content.*/
@@ -842,6 +894,11 @@ public class XmlJzCfgAnalyzer
     
     
     final XmlStructureData xmlStructData;
+    
+    /**This bit mask is set by one bit per occurrence of a node with same tag 
+     * to characteristic groups with same sub nodes.
+     */
+    long mGroup;
     
     XmlStructureNode(XmlStructureNode parent, String tag, XmlStructureData xmlStructData){ 
       super(parent, tag);
@@ -916,6 +973,7 @@ public class XmlJzCfgAnalyzer
     
     public void setTextOccurrence() { this.bText = true; }
    
+    
     
     void writeNodeData ( Appendable out, int indent) throws IOException {
       ApplMain.outIndent(out, indent);
