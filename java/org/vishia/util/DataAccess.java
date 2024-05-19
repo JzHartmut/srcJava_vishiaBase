@@ -89,6 +89,7 @@ public class DataAccess {
   /**Version, history and license.
    * 
    * <ul>
+   * <li>2024-05-19: new {@link DatapathElement#writeAccessString(Appendable)}
    * <li>2024-02-10: bugfixes while using for all other especially JZtxtCmd:
    *   <ul><li>{@link #access(DatapathElement, Object, boolean, boolean, Map, Object[], boolean, Dst)}: 
    *     If starts with "@..." also the identifier should be searched in the given variable identifier list. 
@@ -3250,7 +3251,31 @@ public class DataAccess {
       }
     }
 
+    
+    
+    /**Writes a String which should show the originally text given access.
+     * It uses only {@link CalculatorExpr.Operand#textOrVar} for the textual representation of the arguments,
+     * because this field should store the originally used textual input.
+     * @param wr to output
+     * @throws IOException
+     */
+    public void writeAccessString(Appendable wr) throws IOException {
+      wr.append(this.ident());
+      if(this.isOperation()) {
+        wr.append("(");
+        String sep = "";
+        if(this.args !=null) {
+          for(CalculatorExpr.Operand arg: args) {
+            wr.append(sep).append(arg.textOrVar);          // this is the textual representation of the argument
+            sep = ", ";
+          }
+        }
+        wr.append(")");
+      }
+    }
 
+
+    
     /**For debugging.*/
     @Override public String toString(){
       if(whatisit == 0){ return ident + ":?"; }

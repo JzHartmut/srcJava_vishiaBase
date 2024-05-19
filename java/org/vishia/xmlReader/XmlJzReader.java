@@ -1164,7 +1164,10 @@ public class XmlJzReader
   public XmlCfg readCfg(File file) throws IOException {
     XmlCfg cfg = new XmlCfg();
     readXml(file, cfg.rootNode, this.cfgCfg);
-    cfg.finishReadCfg(this.namespaces);
+    cfg.transferNamespaceAssignment(this.namespaces); //necessary since 2024-05-17
+
+    cfg.finishReadCfg();
+    this.namespaces.clear();                     // do not merge with namespace of the read XML file
     this.cfg = cfg;
     return cfg;
   }
@@ -1200,7 +1203,10 @@ public class XmlJzReader
     XmlCfg cfg = new XmlCfg();
     readXml(xmlCfgStream, pathMsg, cfg.rootNode, this.cfgCfg);
     xmlCfgStream.close();
-    cfg.finishReadCfg(this.namespaces);
+    cfg.transferNamespaceAssignment(this.namespaces);
+    cfg.writeToText(new File("T:/" + pathInJarFromClazz + ".txt"), log); //only for test yet.
+
+    cfg.finishReadCfg();
     this.cfg = cfg;
     return cfg;
   }

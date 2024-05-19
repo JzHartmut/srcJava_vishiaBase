@@ -175,24 +175,29 @@ try {
  * <br>
  * <br>
  * <b>Formatted numbers</b><br>
- * <br>
- * <br>
  * With <code>&lt;&...:%format></code> an access to a number can be formatted due to the capabilities of java.util.Formatter.
  * For example output a value as hexadecimal presentation write <code>&lt;&access.to.value:%04x></code>.
  * If formatting is not possible an error text from the thrown FormatterException is output. 
+ * <br>
+ * <br>
  * <b>Control statements</b><br>
  * It is interesting and important to produce an output conditional depending from data, 
  * and also from some container classes.
- * <ul> 
- * <li><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;:else>else-Text&lt;.if></code>
+ * <br><br><b><code>&lt;if:condition>conditional Text&lt;elsif:condition>other Text&lt;:else>else-Text&lt;.if></code></b>
  * The condition is an expression built with the {@link CalculatorExpr#setExpr(StringPartScan, Map, Class, boolean)}
  * <br>
  * for example also a type check is possible: <code><:if:obj ?instanceof classXyz></code>
  * whereas the <code>classXyz</code> can be given in the static reflection class as static variable as
  * <code>public static Class<?> classXyz = MyClassXyz.class; </code> 
- * <li><code>&lt;for:variable:container>text for any element &lt;&variable.element> in loop &lt;:if:variable_next>, &lt;.if>&lt;.for></code><br>
- *   ##The next variable is also present, here to test whether a separator character should be output. 
+ * <br>
+ * <br><b><code>&lt;for:var:container>text for any element &lt;&var> with &lt;&var_key> in loop &lt;:if:variable_next>, &lt;.if>&lt;.for></code></b><br>
+ * The container can be an array, any {@link Iterable} such a {@link List} or a {@link Map}.
+ * Inside the statement 
+ * <ul><li><code>var</code> is the value of the container element, 
+ * <li><code>var_key</code> is the key if the container is a map, else null
+ * <li><code>var_next</code> is the following element or null for the last element 
  * </ul>
+ * One can test <code>&lt;if:var_next>....&lt;.if></code> to detect whether there is a following element for example to output an separator.
  * <br>
  * <br>
  * <b>Call operations <code><:call:otxSubScript:arg=value:arg2=value,...></code></b><br>
@@ -250,6 +255,11 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-05-18 {@link ForCmd#ixEntryKey}, {@link #execFor(Appendable, ForCmd, int, Object, DataTextPreparer)}: 
+   *   Now the &lt;:for:var.... creates also a var_key for the key value. 
+   * <li>2024-05-17 {@link DataTextPreparer#DataTextPreparer(OutTextPreparer)}: now checks whether the OutTextPreparer is initialized, 
+   *   prevent construction (thows) if not. This is if {@link OutTextPreparer#cmds} are empty.
+   *   This prevents faulty instances if the {@link DataTextPreparer} is built to early, with a non initialized {@link OutTextPreparer}. 
    * <li>2024-03-22 ##Comment: All spaces before are also removed as space for comment. If ##comment start on a new line, the whole line is ignored.
    *   It is in {@link #readTemplateList(InputStream, String, Object, Map)}. 
    * <li>2024-02-21 Comment in script now till any --> not only this one element <:--..>  It is a changed syntax for comment stuff
@@ -382,6 +392,9 @@ public final class OutTextPreparer
     
     /**Package private constructor invoked only in {@link OutTextPreparer#createArgumentDataObj()}*/
     DataTextPreparer(OutTextPreparer prep){
+      if(prep.cmds.size()==0) {
+        throw new IllegalStateException("OutTextPreparer is not initialized, new DataTextPreparer(...) only possible on initialized OutTextPreparer");
+      }
       this.prep = prep;
       if(prep.nameVariables.size() >0) {
         this.args = new Object[prep.nameVariables.size()];
@@ -538,7 +551,7 @@ public final class OutTextPreparer
     
     /**The index where the entry value is stored while executing. 
      * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
-    public int ixEntryVar, ixEntryVarNext;
+    public int ixEntryVar, ixEntryVarNext, ixEntryKey;
 
     public ForCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception {
       super(outer, ECmd.forCtrl, spDatapath, reflData);
@@ -1325,6 +1338,8 @@ public final class OutTextPreparer
    * It calls {@link #parse(Class, Map, Map)} for all sub scripts stored in idxScript.
    * @param idxScript the index of the sub scripts, filled. Used to parse for all, also used for &lt;:call:...>
    * @param execClass May be null, from this class some operations or data or also hard coded {@link OutTextPreparer} instances can be gotten.
+   *   Static operations can be called and static data can be accessed. Instance operations and data can be accessed 
+   *   if {@link DataTextPreparer#setExecObj(Object)} is set with the proper instance.
    * @param idxConstData May be null, from this index some constant data and also sub scripts can be gotten. 
    * @throws ParseException
    */
@@ -1631,13 +1646,20 @@ public final class OutTextPreparer
             this.nameVariables.put(entryVar, ixOentry);
           }
           cmd.ixEntryVar = ixOentry.ix;
-          entryVar += "_next";                             // the descendant of the current element is also available. 
-          ixOentry = this.nameVariables.get(entryVar); 
+          String entryVarNext = entryVar + "_next";                             // the descendant of the current element is also available. 
+          ixOentry = this.nameVariables.get(entryVarNext); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
-            this.nameVariables.put(entryVar, ixOentry);
+            this.nameVariables.put(entryVarNext, ixOentry);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
+          String entryKey = entryVar + "_key";                             // the descendant of the current element is also available. 
+          ixOentry = this.nameVariables.get(entryKey); 
+          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+            ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
+            this.nameVariables.put(entryKey, ixOentry);
+          }
+          cmd.ixEntryKey = ixOentry.ix;
           ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -2070,10 +2092,14 @@ public final class OutTextPreparer
   /**Returns an proper instance for argument data for a {@link #exec(Appendable, DataTextPreparer)} run.
    * The arguments should be filled using {@link DataTextPreparer#setArgument(String, Object)} by name 
    * or {@link DataTextPreparer#setArgument(int, Object)} by index if the order of arguments are known.
-   * The argument instance can be reused in the same thread by filling arguments newly for subsequently usage.
+   * <br><br>
+   * The returned argument instance can be reused in the same thread by filling arguments newly for subsequently usage.
    * If the {@link #exec(Appendable, DataTextPreparer)} is concurrently executed (multiple threads, 
    * multicore processing), then any thread should have its own data.
-   * @return the argument instance.
+   * Also if it is nested used, of course the nested usage needs its own instance.
+   * <br><br>
+   * Important: this must be ready to use, {@link #parse(Class, Map, Map)} should be successfully called before.
+   * @return the argument instance. 
    */
   public DataTextPreparer createArgumentDataObj() { return new DataTextPreparer(this); }
   
@@ -2341,6 +2367,7 @@ public final class OutTextPreparer
     else if(container instanceof Object[]) {
       Object[] array = (Object[]) container;
       boolean bFirst = true;
+      args.args[cmd.ixEntryKey] = null;
       for(int ix = 0; ix < array.length; ++ix) {
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = array[ix];
@@ -2350,14 +2377,15 @@ public final class OutTextPreparer
           execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
-      if(!bFirst) {  //true only if the container is empty.
+      if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
-        args.args[cmd.ixEntryVarNext] = null;
+        args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
         execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Iterable) {
       boolean bFirst = true;
+      args.args[cmd.ixEntryKey] = null;
       for(Object item: (Iterable<?>)container) {
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = item;
@@ -2367,16 +2395,19 @@ public final class OutTextPreparer
           execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
-      if(!bFirst) {  //true only if the container is empty.
+      if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
-        args.args[cmd.ixEntryVarNext] = null;
+        args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
         execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Map) {
       @SuppressWarnings("unchecked") Map<Object, Object>map = ((Map<Object,Object>)container);
       boolean bFirst = true;
+      Object key = null;
       for(Map.Entry<Object,Object> item: map.entrySet()) {
+        args.args[cmd.ixEntryKey] = key;
+        key = item.getKey();
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = item.getValue();   // buffer always 2 elements, sometimes necessary
         if(bFirst) {
@@ -2385,7 +2416,8 @@ public final class OutTextPreparer
           execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
-      if(!bFirst) {  //true only if the container is empty.
+      if(!bFirst) {  //-------------------------------------- if the container is not empty, 
+        args.args[cmd.ixEntryKey] = key;                   // execute the last or only one element.
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute for the last argument.
         execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);

@@ -1,6 +1,7 @@
 package org.vishia.xmlReader;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -11,6 +12,8 @@ import java.util.TreeMap;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
+import org.vishia.util.FileFunctions;
+import org.vishia.util.OutTextPreparer;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringPartScan;
 
@@ -86,6 +89,10 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2024-05-17 chg: {@link #transferNamespaceAssignment(Map)} does no more call src.clean(), instead it is called outside.
+   *   The clean is not a task of this operation. Clean() is necessary before read a new Xml file in {@link XmlJzReader} instead.
+   *   The solution before was dirty.  
+   * <li>2024-05-17 chg: new {@link #writeToText(File, LogMessage)} as new concept starting but not finished in 2022. 
    * <li>2022-06-25 new: {@link #newCfgCfg()} also setContentStorePath(...) for the xmlinput:subtree node itself. 
    *   it is a special case, hence first not regarded, but possible and necessary.
    *   Some sorting and comments there. 
@@ -248,15 +255,30 @@ public class XmlCfg
   
 
 
+  /**Transfer the nameSpace assignments read from {@link XmlJzReader} stored there in {@link XmlJzReader#namespaces}
+   * in backward direction in the {@link #xmlnsAssign}. Backward means, from the path to the namespace key.
+   * This is necessary because a read XML file uses the same nameSpace string but maybe different namespace keys.
+   * The simple thinking it, it's the same. Then this operation or field {@link #xmlnsAssign} would not be necessary. 
+   * But this thinking is consequently worse. Follow the nameSpace concept in XML:
+   * <pre>&lt;... xmlns:keyXY="nameSpace/string" ....
+   *    &lt;keyXY:element</pre>
+   * In an XML file instance the <code>keyXY</code> is only a locally valid. The real used value is the "nameSpace/string"
+   * To search the element here in cfg this nameSpace string is used, not the short nameSpace alias.
+   * <pre>
+   * String aliasInCfg = xmlnsAssign.get("nameSpace/String");  // value from the read XML file
+   * </pre> 
+   * And this <code>aliasInCfg</code> is then used to search in cfg. 
+   * It is not systematically but often given that both alias nameSpace keys are equal.
+   * @param src
+   * @since 2024-05 does no more invoke src.clean()
+   */
   void transferNamespaceAssignment(Map<String, String> src) {
-    xmlnsAssign = new TreeMap/*IndexMultiTable*/<String, String>();
+    this.xmlnsAssign = new TreeMap/*IndexMultiTable*/<String, String>();
     for(Map.Entry<String, String > ens: src.entrySet()) {
       String nsKey = ens.getKey();
       String nsPath = ens.getValue();
-      xmlnsAssign.put(nsPath, nsKey);  //translate the found path in the XML source to the nameSpace key used in the config.xml 
+      this.xmlnsAssign.put(nsPath, nsKey);  //translate the found path in the XML source to the nameSpace key used in the config.xml 
     }
-    src.clear();
-    
   }
 
   
@@ -273,8 +295,12 @@ public class XmlCfg
   }
   
   
-  void finishReadCfg(Map<String, String> namespaces) {
-    this.transferNamespaceAssignment(namespaces);
+  /**TODO this operation may be non sensible, change XmlJzReader, TODO
+   * It transfers the {@link #subtrees} content to the real sub trees of nodes. 
+   * Better search in {@link #subtrees} while parsing XML.
+   * @since 2024-05-17 does not call {@link #transferNamespaceAssignment(Map)}, should be called outside.
+   */
+  void finishReadCfg() {
     
     if(this.subtrees !=null) for(Map.Entry<String, XmlCfgNode> e : this.subtrees.entrySet()) {
       XmlCfgNode subtree = e.getValue();
@@ -304,6 +330,90 @@ public class XmlCfg
     
   }
 
+  
+  private OutTextPreparer otxNode = new OutTextPreparer("node", "whatis, indent, node", 
+      "<:n><&indent><&whatis><:<><&node.tag><:>>" 
+    + "<:if:node.attribsForCheck> <:for:attr:node.attribsForCheck> @<&attr.name>==\"<&attr.storeInMap>\"<.for><:n><&indent><.if>"  
+    + "<:if:node.cfgSubtreeName> =>SUBTREE:<&node.cfgSubtreeName><.if>"
+    + "<:if:node.dstClassName> CLASS:<&node.dstClassName><.if>"
+    + "<:if:node.elementStorePath><:n><&indent>  NEW:\"<:exec:wrDataAccess(OUT, node.elementStorePath)>\"<.if>"
+    + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
+    + "<:if:node.contentStorePath><:n><&indent>  TEXT:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
+    + "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
+    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=><:if:attr.storeInMap>!<&attr.storeInMap><.if><:if:attr.daccess>\"<&attr.daccess>\"<.if><.for><.if>"  
+    + "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"  
+    + "<:n><&indent><:<>/<&node.tag><:>>" 
+    //<:n>"
+      );
+  
+  
+  
+  private OutTextPreparer otxCfg = new OutTextPreparer("cfg", "xmlCfg", 
+      "XmlJzReader-Config 2024-05" 
+    + "<:if:xmlCfg.xmlnsAssign><:for:ns:xmlCfg.xmlnsAssign>"
+    + "<:n>NS: <&ns>=\"<&ns_key>\""
+    + "<.for><.if>"
+      );
+  
+  
+  
+  
+  
+  
+  public void writeToText (File fText, LogMessage log) {
+    StringBuilder wb = new StringBuilder();
+    Map<String, OutTextPreparer> idxScript = new TreeMap<>();
+    idxScript.put(this.otxNode.sIdent, this.otxNode);
+    idxScript.put(this.otxCfg.sIdent, this.otxCfg);
+    try {
+      OutTextPreparer.parseTemplates(idxScript, this.getClass(), null, log);
+      OutTextPreparer.DataTextPreparer otdCfg = this.otxCfg.createArgumentDataObj();
+      otdCfg.setArgument("xmlCfg", this);
+      otdCfg.setExecObj(this);
+      this.otxCfg.exec(wb, otdCfg);
+      
+      
+      OutTextPreparer.DataTextPreparer otdNode = this.otxNode.createArgumentDataObj();
+      
+      if(this.subtrees !=null) for( XmlCfgNode subtreeNode : this.subtrees.values()) {
+        otdNode.setArgument("whatis", "SUBTREE ");
+        otdNode.setArgument("indent", "");
+        otdNode.setArgument("node", subtreeNode);
+        otdNode.setExecObj(this);
+        this.otxNode.exec(wb, otdNode);
+      }
+      otdNode.setArgument("whatis", "");
+      otdNode.setArgument("indent", "");
+      otdNode.setArgument("node", this.rootNode);
+      otdNode.setExecObj(this);
+      this.otxNode.exec(wb, otdNode);
+      FileFunctions.writeFile(wb.toString(), fText);
+    } catch(Exception exc) {
+      log.writeError("ERROR writing xmlcfg", exc);
+    }
+    
+  }
+  
+  
+  protected void writeSubNode(Appendable wr, String indent, XmlCfgNode node) throws IOException {
+    if(indent.length() > 10) {
+      return;
+    }
+    OutTextPreparer.DataTextPreparer otdSubnode = this.otxNode.createArgumentDataObj();
+    otdSubnode.setArgument("whatis", "");
+    otdSubnode.setArgument("indent", indent+ "  ");
+    otdSubnode.setArgument("node", node);
+    otdSubnode.setExecObj(this);
+    this.otxNode.exec(wr, otdSubnode);
+    Debugutil.stop();
+  }
+  
+  
+  protected static void wrDataAccess(Appendable wr, DataAccess.DatapathElement dacc) throws IOException {
+    dacc.writeAccessString(wr);
+  }
+  
+  
   
   public void checkCfg ( LogMessage log) {
     checkCfg(this.rootNode, log, new HashMap<XmlCfgNode, XmlCfgNode>(), 100);
@@ -509,7 +619,7 @@ public class XmlCfg
       if(key.equals("xmlinput:subtree")) {
         //use this subtree instead:
         this.cfgSubtreeName = sAttrValue;
-        XmlCfgNode subtree = this.cfg.subtrees.get(sAttrValue);
+        XmlCfgNode subtree = null; //should be done all via subtreeForward, or better remove it:   this.cfg.subtrees.get(sAttrValue);
         if(subtree == null) {
           //not found or later in file. 
           if(cfg.subtreeForward == null) { cfg.subtreeForward = new TreeMap<String, List<XmlCfgNode>>(); }
@@ -695,8 +805,7 @@ public class XmlCfg
     public XmlCfgNode addSubTree(CharSequence name) //, CharSequence classDst)
     {
       XmlCfgNode subtreenode = this.cfg.addSubTree(name); //, classDst);
-      //subtreenode.addAttribStorePath("xmlinput:name", name.toString());
-      subtreenode.cfgSubtreeName = name.toString();
+      //it is unnecessary and confusing: subtreenode.cfgSubtreeName = name.toString();
       return subtreenode;
     }
     
