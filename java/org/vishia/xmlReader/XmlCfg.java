@@ -1,7 +1,10 @@
 package org.vishia.xmlReader;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -15,6 +18,8 @@ import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.OutTextPreparer;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringPart;
+import org.vishia.util.StringPartFromFileLines;
 import org.vishia.util.StringPartScan;
 
 /**This class contains the configuration data to assign xml elements to Java data.
@@ -89,6 +94,7 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
+   * <li>2024-05-21 new: {@link #readFromText(File, LogMessage)} Now the representation can be better editable as normal syntactical text. 
    * <li>2024-05-17 chg: {@link #transferNamespaceAssignment(Map)} does no more call src.clean(), instead it is called outside.
    *   The clean is not a task of this operation. Clean() is necessary before read a new Xml file in {@link XmlJzReader} instead.
    *   The solution before was dirty.  
@@ -166,6 +172,7 @@ public class XmlCfg
   
   Map<String, DataAccess.IntegerIx> attribNameVale;
   
+  protected boolean readFromText;
   
   /**Creates the configuration to read a config.xml file.
    * @return instance
@@ -330,7 +337,156 @@ public class XmlCfg
     
   }
 
+
   
+  /**Read the XmlCfg content from the textual representation. Syntax adequate {@link #writeToText(File, LogMessage)}
+   * It calls {@link #readFromText(StringPartScan, LogMessage)}.
+   * @param fText The file 
+   * @param log log on error
+   * @return true if all ok, false if any syntax error.
+   * @throws IllegalCharsetNameException
+   * @throws UnsupportedCharsetException
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  public boolean readFromText ( File fText, LogMessage log) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
+    StringPartScan sp = new StringPartFromFileLines(fText);
+    return readFromText(sp, log);
+  }
+  
+  
+  /**Read the XmlCfg content from the textual representation. Syntax adequate {@link #writeToText(File, LogMessage)}
+   * @param sp should be initialized with the text 
+   * @param log log on error
+   * @return true if all ok, false if any syntax error.
+   */
+  public boolean readFromText(StringPartScan sp, LogMessage log) {
+    this.readFromText = true;
+    boolean bOk = true;
+    sp.setIgnoreWhitespaces(true);
+    if(!sp.scanStart().scan("XmlJzReader-Config 2024-05").scanOk()) {
+      log.writeError("ERROR readCfgFromText, faulty head: %s", sp.getCurrent(30));
+      return false;
+    }
+    this.xmlnsAssign = new TreeMap<String, String>();
+    while(sp.scan("NS:").scanOk()) {
+      String[] value = new String[1];
+      if(!sp.scanIdentifier().scan("="). scanQuotion("\"", "\"", value).scanOk()) {
+        log.writeError("ERROR readCfgFromText, faulty NS: %s", sp.getCurrent(50));
+        return false;
+      }
+      String alias = sp.getLastScannedString();
+      this.xmlnsAssign.put(value[0], alias);
+    }
+    while(sp.scan("SUBTREE:").scanToStringEnd(" ").scan("<").scanToStringEnd(">").scanOk()) {
+      String sTag = sp.getLastScannedString();
+      String nameSubtree = sp.getLastScannedString();
+      XmlCfgNode nodeSubtree = new XmlCfgNode(null, this, sTag);
+      if(this.subtrees == null) {this.subtrees = new TreeMap<>(); }
+      this.subtrees.put(nameSubtree, nodeSubtree);
+      bOk &= readFromTextNode(nodeSubtree, sp, log);
+    }
+    if(sp.scan("<root>").scanOk()) {
+      bOk &= readFromTextNode(this.rootNode, sp, log);
+    } else {
+      log.writeError("ERROR readCfgFromText, <root> is missing %s", sp.getCurrent(50));
+      bOk = false;
+    }
+    return bOk;
+  }
+  
+  
+  private boolean readFromTextNode(XmlCfgNode node, StringPartScan sp, LogMessage log) {
+    boolean bOk = true;
+    String sElementStorePath = null, sElementFinishPath = null, sTextStorePath = null, sNamespaceStorePath = null;
+    if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
+      node.cfgSubtreeName = sp.getLastScannedString();
+    }
+    if(sp.scan("CLASS:").scanIdentifier().scanOk()) {
+      node.dstClassName = sp.getLastScannedString();
+    }
+    if(sp.scan("NEW:").scanLiteral("\"\"\\", 9999).scanOk()) {
+      sElementStorePath = sp.getLastScannedString();
+    }
+    if(sp.scan("ADD:").scanLiteral("\"\"\\", 9999).scanOk()) {
+      sElementFinishPath = sp.getLastScannedString();
+    }
+    if(sp.scan("TEXT:").scanLiteral("\"\"\\", 9999).scanOk()) {
+      sTextStorePath = sp.getLastScannedString();
+    }
+    if(sp.scan("NAMESPACE:").scanLiteral("\"\"\\", 9999).scanOk()) {
+      sNamespaceStorePath = sp.getLastScannedString();
+    }
+    while(sp.scan("@").scanIdentifier(null, "-:").scan("=").scanLiteral("\"\"\\", 9999).scanOk()) {
+      String sAttrStorePath = sp.getLastScannedString();
+      String sAttrNsName = sp.getLastScannedString();
+      try{ node.addAttribStorePath(sAttrNsName, sAttrStorePath);
+      } catch(ParseException exc) {
+        log.writeError("ERROR readCfgFromText, Exception ", exc);
+      }
+    }
+    if(sElementStorePath !=null) {
+      try{ node.setNewElementPath(sElementStorePath);
+      } catch(ParseException exc) {
+        log.writeError("ERROR readCfgFromText, Exception setNewElementStorePath " + sElementStorePath, exc);
+      }
+    }
+    if(sElementFinishPath !=null) {
+      try{ node.setFinishElementPath(sElementFinishPath);
+      } catch(ParseException exc) {
+        log.writeError("ERROR readCfgFromText, Exception setFinishElementStorePath " + sElementFinishPath, exc);
+      }
+    }
+    if(sTextStorePath !=null) {
+      try{ node.setContentStorePath(sTextStorePath);
+      } catch(ParseException exc) {
+        log.writeError("ERROR readCfgFromText, Exception setContentStorePath " + sTextStorePath, exc);
+      }
+    }
+    if(sNamespaceStorePath !=null) {
+      try{ node.setNameSpaceStorePath(sNamespaceStorePath);
+      } catch(ParseException exc) {
+        log.writeError("ERROR readCfgFromText, Exception setNameSpaceStorePath " + sNamespaceStorePath, exc);
+      }
+    }
+    while(bOk && sp.scan("<").scanIdentifier(null, "-:").scan(">").scanOk()) {
+      String sTag = sp.getLastScannedString();
+      XmlCfgNode subnode = new XmlCfgNode(null, this, sTag);
+      if(node.subnodes == null) { node.subnodes = new TreeMap<>(); }
+      node.subnodes.put(sTag, subnode);
+      bOk &= readFromTextNode(subnode, sp, log);
+    }
+    if(sp.scan("</").scanIdentifier(null, "-:").scan(">").scanOk()) {
+      String sTagEnd = sp.getLastScannedString();
+      if(!node.tag.equals(sTagEnd)) {
+        log.writeError("ERROR readCfgFromText: faulty </%s> for node %s", sTagEnd, node.tag);
+      }
+    } else {
+      log.writeError("ERROR readCfgFromText: missing </end:tag>", sp.getCurrentPart(30));
+      bOk = false;
+    }
+    return bOk;
+  }
+  
+  
+  
+  
+  /**Control for {@link #writeToText(File, LogMessage)} for the head of the text file. */
+  private OutTextPreparer otxCfgHead = new OutTextPreparer("cfgHead", "xmlCfg", 
+      "XmlJzReader-Config 2024-05" 
+    + "<:if:xmlCfg.xmlnsAssign><:for:ns:xmlCfg.xmlnsAssign>"
+    + "<:n>NS: <&ns>=\"<&ns_key>\""
+    + "<.for><.if>"
+      );
+  
+
+  
+  /**Control for writing a Node. 
+   * <ul><li>whatis := "SUBTREE" or empty.
+   * <li>indent := spaces from left.
+   * <li>node := the root or sub node
+   * </ul>
+   * */
   private OutTextPreparer otxNode = new OutTextPreparer("node", "whatis, indent, node", 
       "<:n><&indent><&whatis><:<><&node.tag><:>>" 
     + "<:if:node.attribsForCheck> <:for:attr:node.attribsForCheck> @<&attr.name>==\"<&attr.storeInMap>\"<.for><:n><&indent><.if>"  
@@ -340,7 +496,7 @@ public class XmlCfg
     + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
     + "<:if:node.contentStorePath><:n><&indent>  TEXT:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
     + "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
-    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=><:if:attr.storeInMap>!<&attr.storeInMap><.if><:if:attr.daccess>\"<&attr.daccess>\"<.if><.for><.if>"  
+    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"!<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess><.if>\"<.for><.if>"  
     + "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"  
     + "<:n><&indent><:<>/<&node.tag><:>>" 
     //<:n>"
@@ -348,35 +504,31 @@ public class XmlCfg
   
   
   
-  private OutTextPreparer otxCfg = new OutTextPreparer("cfg", "xmlCfg", 
-      "XmlJzReader-Config 2024-05" 
-    + "<:if:xmlCfg.xmlnsAssign><:for:ns:xmlCfg.xmlnsAssign>"
-    + "<:n>NS: <&ns>=\"<&ns_key>\""
-    + "<.for><.if>"
-      );
   
   
   
   
-  
-  
+  /**writes the content of the config to a text file.
+   * @param fText
+   * @param log
+   * @since 2024-05-17
+   */
   public void writeToText (File fText, LogMessage log) {
     StringBuilder wb = new StringBuilder();
     Map<String, OutTextPreparer> idxScript = new TreeMap<>();
     idxScript.put(this.otxNode.sIdent, this.otxNode);
-    idxScript.put(this.otxCfg.sIdent, this.otxCfg);
+    idxScript.put(this.otxCfgHead.sIdent, this.otxCfgHead);
     try {
       OutTextPreparer.parseTemplates(idxScript, this.getClass(), null, log);
-      OutTextPreparer.DataTextPreparer otdCfg = this.otxCfg.createArgumentDataObj();
+      OutTextPreparer.DataTextPreparer otdCfg = this.otxCfgHead.createArgumentDataObj();
       otdCfg.setArgument("xmlCfg", this);
       otdCfg.setExecObj(this);
-      this.otxCfg.exec(wb, otdCfg);
-      
-      
+      this.otxCfgHead.exec(wb, otdCfg);
       OutTextPreparer.DataTextPreparer otdNode = this.otxNode.createArgumentDataObj();
-      
-      if(this.subtrees !=null) for( XmlCfgNode subtreeNode : this.subtrees.values()) {
-        otdNode.setArgument("whatis", "SUBTREE ");
+      if(this.subtrees !=null) for( Map.Entry<String, XmlCfgNode> e : this.subtrees.entrySet()) {
+        String nameSubtree = e.getKey();
+        XmlCfgNode subtreeNode = e.getValue();
+        otdNode.setArgument("whatis", "SUBTREE:" + nameSubtree + " ");
         otdNode.setArgument("indent", "");
         otdNode.setArgument("node", subtreeNode);
         otdNode.setExecObj(this);
@@ -387,6 +539,7 @@ public class XmlCfg
       otdNode.setArgument("node", this.rootNode);
       otdNode.setExecObj(this);
       this.otxNode.exec(wb, otdNode);
+      wb.append("\n");
       FileFunctions.writeFile(wb.toString(), fText);
     } catch(Exception exc) {
       log.writeError("ERROR writing xmlcfg", exc);
@@ -409,12 +562,20 @@ public class XmlCfg
   }
   
   
+  /**Writes the data access path, called inside {@link #otxNode} from script via &lt:exec:wrDataAccess(...)>
+   * @param wr
+   * @param dacc
+   * @throws IOException
+   */
   protected static void wrDataAccess(Appendable wr, DataAccess.DatapathElement dacc) throws IOException {
     dacc.writeAccessString(wr);
   }
   
   
   
+  /**Detect different entries in sub node and node via sub tree to clarify it. 
+   * @param log
+   */
   public void checkCfg ( LogMessage log) {
     checkCfg(this.rootNode, log, new HashMap<XmlCfgNode, XmlCfgNode>(), 100);
   }
@@ -576,11 +737,18 @@ public class XmlCfg
      * @throws ParseException 
      */
     public void setNewElementPath(String dstPath) throws ParseException {
-      if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
-      //this.allArgNames = new TreeMap<String, DataAccess.IntegerIx>();
-      StringPartScan spPath = new StringPartScan(dstPath.substring(1));
-      spPath.setIgnoreWhitespaces(true);
-      this.elementStorePath = new DataAccess.DatapathElement(spPath, allArgNames, null);  //gathered necessary names.
+      String sPath;
+      if(this.cfg.readFromText && !dstPath.startsWith("!")) {
+        sPath = dstPath;
+      } else {
+        if(!dstPath.startsWith("!")) { 
+          throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
+        }
+        sPath = dstPath.substring(1);
+      }
+      StringPartScan spPath = new StringPartScan(sPath);
+      spPath.setIgnoreWhitespaces(true);                   // NOTE: this.allArgNames will be completed by necessary arguments given as String
+      this.elementStorePath = new DataAccess.DatapathElement(spPath, this.allArgNames, null);  //gathered necessary names.
       if(this.allArgNames.size() ==0) {
         this.allArgNames = null; //not necessary.
       }
@@ -592,9 +760,16 @@ public class XmlCfg
      * @throws ParseException 
      */
     public void setFinishElementPath(String dstPath) throws ParseException {
-      if(!dstPath.startsWith("!")) throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
-      //this.allArgNames = new TreeMap<String, DataAccess.IntegerIx>();
-      StringPartScan spPath = new StringPartScan(dstPath.substring(1));
+      String sPath;
+      if(this.cfg.readFromText && !dstPath.startsWith("!")) {
+        sPath = dstPath;
+      } else {
+        if(!dstPath.startsWith("!")) { 
+          throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
+        }
+        sPath = dstPath.substring(1);
+      }
+      StringPartScan spPath = new StringPartScan(sPath);
       spPath.setIgnoreWhitespaces(true);
       this.elementFinishPath = new DataAccess.DatapathElement(spPath, allArgNames, null);  //gathered necessary names.
       if(this.allArgNames.size() ==0) {
@@ -782,7 +957,7 @@ public class XmlCfg
      * @param text should start with ! the dataPath to store the content
      * @throws ParseException 
      */
-    void setContentStorePath(String text) throws ParseException {
+    void setContentStorePath(String dstPath) throws ParseException {
       if(this.tag instanceof StringBuilder) { //it is a second node with same tag, but with attributes for check.
         if(this.tag.toString().startsWith("Object@"))
           Debugutil.stop();
@@ -790,9 +965,16 @@ public class XmlCfg
           Debugutil.stop();
         this.parent.subnodes.put(this.tag.toString(), this); //put this node in its parent, it is not done yet. 
       }
-      if(!text.startsWith("!")) throw new IllegalArgumentException("Any content of a config.xml should start with ! because it is a store path.");
-      StringPartScan sp = new StringPartScan(text.substring(1));
-      
+      String sPath;
+      if(this.cfg.readFromText && !dstPath.startsWith("!")) {
+        sPath = dstPath;
+      } else {
+        if(!dstPath.startsWith("!")) { 
+          throw new IllegalArgumentException("The store path in xmlInput:data= \"" + dstPath + "\" in config.xml should start with ! because it is a store path.");
+        }
+        sPath = dstPath.substring(1);
+      }
+      StringPartScan sp = new StringPartScan(sPath);
       this.contentStorePath = new DataAccess.DatapathElement(sp, this.allArgNames, null);
       sp.close();
     }

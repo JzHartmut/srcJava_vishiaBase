@@ -1590,6 +1590,7 @@ public class CalculatorExpr
      * but without the idxConstData
      * @param sDatapath
      * @param variables
+     *   The variables will be completed by unknown but necessary variables. On execution then all variables are known.  
      * @param reflData
      * @param bSpecialSyntax
      * @throws ParseException
@@ -1608,6 +1609,7 @@ public class CalculatorExpr
      * 
      * @param sDatapath
      * @param variables
+     *   The variables will be completed by unknown but necessary variables. On execution then all variables are known.  
      * @param reflData
      * @param idxConstData
      * @param bSpecialSyntax
@@ -2561,6 +2563,7 @@ public class CalculatorExpr
   /**Constructs an String given expression with some variables.
    * @param sExpr
    * @param nameVariables see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
+   *   The nameVariables will be completed by unknown but necessary variables. On execution then all variables are known.  
    * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
    */
   public CalculatorExpr(StringPartScan sExpr, Map<String, DataAccess.IntegerIx> nameVariables
@@ -2800,6 +2803,7 @@ public class CalculatorExpr
    * @param spExpr given textual expression
    * @param nameVariables An operand can be given as name of a variable from this index.
    *   Then for execution an array should be given as last argument of {@link #calcDataAccess(Map, Object...)}.
+   *   The nameVariables will be completed by unknown but necessary variables. On execution then all variables are known.  
    * @param reflData An operand can be given with access to this data via reflection.
    *   Then for execution data with this reflection class should be given as argument of {@link #calcDataAccess(Map, Object...)}
    * @param startOperation

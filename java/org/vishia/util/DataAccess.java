@@ -2875,6 +2875,10 @@ public class DataAccess {
     
     
     /**Creates a datapath element. see {@link #set(String)} also for details of the arguments. 
+     * @param path
+     * @param nameVariables association between name and index. This will be enhanced with not stored variables on the fly.
+     * @param reflData
+     * @param bFirst
      * @throws ParseException
      */
     public DatapathElement(StringPartScan path, Map<String, DataAccess.IntegerIx> nameVariables
@@ -2886,6 +2890,7 @@ public class DataAccess {
     /**Creates a datapath element. see {@link #set(String)}
      * @param path
      * @param nameVariables see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
+     *   The nameVariables will be completed by unknown but necessary variables. On execution then all variables are known.  
      * @param reflData see {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
      * @throws ParseException
      */
@@ -3192,6 +3197,7 @@ public class DataAccess {
      *   After parsing the sArgs is set before ")" if exist, after the args.
      *   The Syntax of any arg is determined by functionality of {@link CalculatorExpr#CalculatorExpr(StringPartScan, Map, Class)}.  
      * @param nameVariables Map of variables
+     *   The nameVariables will be completed by unknown but necessary variables. On execution then all variables are known.  
      * @param reflData 
      * @return
      * @throws ParseException

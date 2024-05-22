@@ -339,10 +339,10 @@ public interface LogMessage extends Appendable
   @param sError The error text, it should be without such hot spot words line "!!!ERROR!!!",
          because the distinction in display should be done by the implementation of this method.
          A good sample is writeErrorln("cannot create file: " + sFileName);
-  @param exception The catched Exception. The getMessage()-part of the exception is written after sError.
+  @param exc The catched Exception. The getMessage()-part of the exception is written after sError.
          The stacktrace of the exception is written to report.      
    */
-  public void writeError(String CharSequence, Throwable exception);
+  public void writeError(String CharSequence, Throwable exc);
 
 
 

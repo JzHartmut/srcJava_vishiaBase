@@ -3,24 +3,26 @@ package org.vishia.xmlReader;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.Reader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.msgDispatch.LogMessage;
+import org.vishia.msgDispatch.LogMessageStream;
 import org.vishia.util.ApplMain;
-import org.vishia.util.Assert;
+import org.vishia.util.Arguments;
 import org.vishia.util.Debugutil;
 import org.vishia.util.ExcUtil;
 import org.vishia.util.IndexMultiTable;
@@ -40,6 +42,7 @@ public class XmlJzCfgAnalyzer
 {
   /**Version, License and History:
    * <ul>
+   * <li>2024-05-21 Hartmut: Reads a given XmlCfg, uses Arguments for {@link CmdArgs} now. Not ready for all. 
    * <li>2022-06-06 Hartmut: produces the "xmlinput:finish" entry, see {@link XmlCfg}.
    * <li>2022-06-06 Hartmut: regards all namespace entries
    * <li>2019-08-18 improvements with namespace and usage for {@link GenXmlCfgJavaData}.
@@ -75,29 +78,153 @@ public class XmlJzCfgAnalyzer
 
   
 
+  private static class CmdArgs extends Arguments {
 
+    File fIn;
+    
+    String sContent;
+    
+    /**A given config file to supplement */
+    File fInCfg;
+    
+    
+    /**Maybe null, data file to write. */
+    File fdOut;
+    
+    /**Structure file to write. */
+    File fOut;
+    
+    /**Structure XML file to write. */
+    File fxOut;
+    
+    Argument[] argsXmlJzCfgAnalyzer =
+    { new Argument("-inXML", ":D:/path/to/file.xml to analyze"
+        , new SetArgument() { @Override public boolean setArgument (String val) {
+          CmdArgs.this.fIn = new File(val); return CmdArgs.this.fIn.exists(); 
+        } })
+    , new Argument("-inZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
+        , new SetArgument() { @Override public boolean setArgument (String val) {
+          int posSep = val.indexOf(':', 3);
+          if(posSep <0) { 
+            return false; }
+          CmdArgs.this.fIn = new File(val.substring(0, posSep));
+          CmdArgs.this.sContent = val.substring(posSep+1);
+          return CmdArgs.this.fIn.exists(); 
+        } })
+    , new Argument("-inCfg", ":D:/path/to/file.cfg a given config file to supplement"
+        , new SetArgument() { @Override public boolean setArgument (String val) {
+          CmdArgs.this.fInCfg = new File(val); return CmdArgs.this.fInCfg.exists(); 
+        } })
+    , new Argument("-o", ":D:/path/to/file.xml to write the config or file.txt"
+        , new SetArgument() { @Override public boolean setArgument (String val) {
+          File fOut = new File(val); 
+          if( !fOut.getParentFile().exists()) {
+            return false;
+          }
+          if(val.endsWith(".xml")) {
+            CmdArgs.this.fxOut = new File(val);
+          } else {
+            CmdArgs.this.fOut = new File(val); 
+          }
+          return true;
+        } })
+    };
+    
+    
+    CmdArgs () {
+      super.aboutInfo = "...your about info";
+      super.helpInfo="obligate args: -o:...";
+      super.addArgs(this.argsXmlJzCfgAnalyzer);
+    }
 
+    /**This operation checks the consistence of all operations. */
+    @Override
+    public boolean testConsistence(Appendable msg) throws IOException {
+      boolean bOk = true;
+      if(this.fOut == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
+      if(!bOk) {
+        super.showHelp(msg);
+      }
+      return bOk;
+    }
+  
+    
+    
+    
+  }
+
+  
+  public static void main ( String[] sArgs) {
+    try {
+      int exitCode = smain(sArgs, System.out, System.err);
+      System.exit(exitCode);
+    } catch (Exception e) {
+      System.err.println("Unexpected: " + e.getMessage());
+      e.printStackTrace(System.err);
+      System.exit(255);
+    }
+  }
+
+  
+  /**main gets the arguments as String, 
+   * but does not catch unexpected exceptions and does not System.exit(...), use it to execute in a Java environment. 
+   * @param sArgs
+   * @return 0 if all is ok
+   * @throws IOException 
+   * @throws Exception if unexpected.
+   */
+  public static int smain ( String[] sArgs, Appendable logHelp, Appendable logError) throws IOException {
+    CmdArgs args = new CmdArgs();
+    if(sArgs.length ==0) {
+      args.showHelp(logHelp);
+      return(1);                // no arguments, help is shown.
+    }
+    if(  ! args.parseArgs(sArgs, logError)
+      || ! args.testConsistence(logError)
+      ) { 
+      return(2);                    // argument error
+    }
+    //LogMessageStream log = new LogMessageStream(System.out);
+    int exitCode = amain(args);
+    return exitCode;
+  }
+  
+  
+  
+  
   /**Reads a XML file and writes its structure as cfg.xml to help creating a config for the XmlJzReader
    * @param args pathfileIn.xml pathfileOutcfg.xml 
    */
-  public static void main(String[] args) {
+  public static int amain(CmdArgs args) {
+    int error = 0;
     XmlJzCfgAnalyzer main = new XmlJzCfgAnalyzer();
-    if(args.length == 0) {
-      System.out.println("java -cp .... org.vishia.xmlReader.XmlJzCfgAnalyzer INFILE OUTFILE DATAFILE\n"
-          + "  INFILE: Any user xml file\n"
-          + "  OUTFILE: A config.xml file as template to create the config file for XmlJzReader\n");
-    } else {
-      try {
-        main.readXmlStruct(new File(args[0]));
-        if(args.length>=3)
-        main.writeData(new File(args[2]));
-        //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
-        main.writeCfgTemplate(new File(args[1]));
-      } catch (Exception e) {
-        System.err.println("Unexpected: " + e.getMessage());
-        e.printStackTrace(System.err);
+    try {
+      if(args.fInCfg !=null) {   //=========================== read a given cfg file to accordingly in subtree organization.
+        main.cfgGiven = new XmlCfg();
+        main.cfgGiven.readFromText(args.fInCfg, main.log);
+        main.cfgGiven.writeToText(new File("T:/cfgGiven.read.back.txt"), main.log);  // only for test.
       }
+      if(args.sContent !=null) {
+        main.readXmlStructZip(args.fIn, args.sContent);
+      } else {
+        main.readXmlStruct(args.fIn);
+      }
+      if(args.fdOut !=null) {
+        main.writeData(args.fdOut);
+      }
+      //JZtxtcmdTester.dataHtmlNoExc(main.data, new File("T:/datashow.html"), true);
+      if(args.fxOut !=null) {
+        main.writeCfgTemplate(args.fxOut);
+      } 
+      if(args.fOut !=null) {
+        main.cfgData.writeToText(args.fOut, main.log);
+      }
+    } catch (Exception e) {
+      System.err.println("Unexpected: " + e.getMessage());
+      e.printStackTrace(System.err);
+      error = 255;
     }
+    return error;
   }
 
   /**Creates the configuration to read any xml file to store its structure especially in {@link XmlJzCfgAnalyzer.XmlStructureNode}.
@@ -129,20 +256,23 @@ public class XmlJzCfgAnalyzer
 
   int debugStopLineXmlInp = -1;
   
+  LogMessage log;
+  
   /**The common structure data of the read XML file. */
   final XmlStructureData xmlStructData = new XmlStructureData();
   
   /**The tree of the structure of the read XML file. It contains the same tag element for one node only one time.
    * An element is added to this root node and then to all current nodes in {@link XmlStructureNode#addElement(String)}. */
-  XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", xmlStructData);  //the root node for reading config
+  XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", this.xmlStructData);  //the root node for reading config
 
-  /**The declared name spaces found in all nodes. */
-  Map<String, String> nameSpacesAll = new TreeMap<String, String>();   //TODO use it.
   
 
+  XmlCfg cfgData = new XmlCfg();
+  
+  XmlCfg cfgGiven;
   
   public XmlJzCfgAnalyzer(){
-    
+    this.log = new LogMessageStream(null, null, System.out, System.err, false, Charset.forName("UTF-8"));
   }
   
   /**Only for internal debug. See implementation. There is a possibility to set a break point if the parser reaches the line.
@@ -164,8 +294,8 @@ public class XmlJzCfgAnalyzer
       //Output it as cfg.xml
       XmlNodeSimple<?> root = new XmlNodeSimple<>("xmlinput:root");
       root.addNamespaceDeclaration("xmlinput", "www.vishia.org/XmlReader-xmlinput");
-      for(Map.Entry<String, String> en: this.nameSpacesAll.entrySet()) {
-        root.addNamespaceDeclaration(en.getKey(), en.getValue());
+      for(Map.Entry<String, String> en: this.cfgData.xmlnsAssign.entrySet()) {
+        root.addNamespaceDeclaration(en.getValue(), en.getKey() );
       }
       for(Map.Entry<String, XmlStructureNode> estructnode: this.xmlStructData.cfgSubtreeList.entrySet()) {
         XmlStructureNode structnode = estructnode.getValue();
@@ -203,7 +333,7 @@ public class XmlJzCfgAnalyzer
       oXml.write(writer, root);
       writer.close();
     } catch(XmlException | IOException exc) {
-      CharSequence error = Assert.exceptionInfo("unexpected", exc, 0, 100);
+      CharSequence error = ExcUtil.exceptionInfo("unexpected", exc, 0, 100);
       System.err.append(error);
     } finally {
       if(writer !=null) {
@@ -226,9 +356,9 @@ public class XmlJzCfgAnalyzer
       out = new OutputStreamWriter(new FileOutputStream(fout), "UTF-8");
       //Output it as cfg.xml
       out.append("\n\n##== Namespaces ==\n");
-      for(Map.Entry<String, String> en: this.nameSpacesAll.entrySet()) {
+      for(Map.Entry<String, String> en: this.cfgData.xmlnsAssign.entrySet()) {
         ApplMain.outNewlineIndent(out,0);
-        out.append("@xmlns:").append(en.getKey()).append(" = ").append(en.getValue());
+        out.append("@xmlns:").append(en.getValue()).append(" = ").append(en.getKey());
       }
       out.append("\n\n##== Subtrees ==\n");
       for(Map.Entry<String, XmlStructureNode> estructnode: this.xmlStructData.cfgSubtreeList.entrySet()) {
@@ -320,7 +450,7 @@ public class XmlJzCfgAnalyzer
   
   private void readNameSpace(String sLine) {
     int sep = sLine.indexOf(" = ");
-    this.nameSpacesAll.put(sLine.substring(0, sep), sLine.substring(sep+3));
+    this.cfgData.xmlnsAssign.put(sLine.substring(0, sep), sLine.substring(sep+3));
   }
 
   
@@ -475,8 +605,8 @@ public class XmlJzCfgAnalyzer
     }
     XmlCfg cfg = newCfgReadStruct();   // use this special config file to read all data
     xmlReader.readXml(fXmlIn, this.xmlStructTree, cfg);
-    this.xmlStructData.checkCfgSubtree();   //removeSingleEntries();
-    this.nameSpacesAll = xmlReader.namespaces;
+    this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
+    storeInCfg(xmlReader);
     Debugutil.stop();
   }
 
@@ -491,12 +621,67 @@ public class XmlJzCfgAnalyzer
     if(this.debugStopLineXmlInp >0) {
       xmlReader.setDebugStop(this.debugStopLineXmlInp);
     }
+    String sInName = fXmlIn.getName();
+    xmlReader.openXmlTestOut( new File( "T:/" + sInName + "-back.xml")); //fout1);
     xmlReader.readZipXml(fXmlIn, pathInZip, this.xmlStructTree);
-    this.xmlStructData.checkCfgSubtree();   //removeSingleEntries();
-    this.nameSpacesAll = xmlReader.namespaces;
+    this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
+    storeInCfg(xmlReader);
     Debugutil.stop();
   }
 
+  
+  
+  private void storeInCfg ( XmlJzReader xmlReader) {
+    this.cfgData.transferNamespaceAssignment(xmlReader.namespaces);
+    try {
+      for(Map.Entry<String, XmlStructureNode> eSubtree: this.xmlStructData.cfgSubtreeByName.entrySet()) {
+        String nameSubtree = eSubtree.getKey();
+        XmlStructureNode treeRoot = eSubtree.getValue();
+        XmlCfg.XmlCfgNode subroot = this.cfgData.addSubTree(nameSubtree);
+        storeCfgNode(subroot, treeRoot, 100);
+      }
+      storeCfgNode(this.cfgData.rootNode, this.xmlStructTree, 100);
+    } catch(ParseException exc) {
+      this.log.writeError("ERROR unexpected: ", exc);
+    }
+    
+  }
+  
+  
+  private void storeCfgNode(XmlCfg.XmlCfgNode dst, ZmlReader.ZmlNode src, int recursively) throws ParseException {
+    if(recursively <=0) { assert(false); return; }
+    XmlStructureNode srcx = (XmlStructureNode)src;
+    if(srcx.sSubtreenode !=null)
+      Debugutil.stop();
+    dst.cfgSubtreeName = srcx.sSubtreenode;
+    String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
+    dst.dstClassName = sClass;
+    dst.setContentStorePath("!set_Text(text)");
+    dst.setNewElementPath("!set");
+    dst.setFinishElementPath("!add");
+    dst.elementFinishPath = null;
+    dst.setNameSpaceStorePath("!ns");
+    dst.bCheckAttributeNode = false;
+    //dst.attribsForCheck;
+    //dst.allArgNames;
+    dst.bStoreAttribsInNewContent = false;
+    dst.bList = !srcx.onlySingle;
+    if(src.attribs !=null) {
+      for(ZmlReader.AttribRead attrib: src.attribs.values()) {
+        String key = attrib.namespace + attrib.name;
+        dst.addAttribStorePath(key, attrib.value);
+      }
+    }
+    if(src.nodes !=null) {
+      dst.subnodes = new TreeMap<>();
+      for(ZmlReader.ZmlNode nodez: src.nodes.values()) {
+        XmlCfg.XmlCfgNode nodeDst = new XmlCfg.XmlCfgNode(dst, this.cfgData, nodez.tag);
+        dst.addSubnode(nodeDst.tag.toString(), nodeDst);
+        storeCfgNode(nodeDst, nodez, recursively -1);
+      }
+    }
+  }
+  
   public void writeData ( File fout) throws IOException {
     Writer out = new OutputStreamWriter(new FileOutputStream(fout), "UTF-8");
     this.xmlStructTree.writeData(out, 0);
@@ -607,11 +792,13 @@ public class XmlJzCfgAnalyzer
     
     private void createCfgSubtree(XmlStructureNode node, char nameModif) {
       CfgSubtreeType2 cfgSubtreeType = new CfgSubtreeType2(node);
+      String key;
       if(nameModif < 'A') {
-        node.sSubtreenode = node.tag;
+        key = node.tag;
       } else {
-        node.sSubtreenode = node.tag + '_' + nameModif;    // if a node structure with same tag is used in a different semantic.
+        key = node.tag + '_' + nameModif;    // if a node structure with same tag is used in a different semantic.
       }
+      //do not so: node.sSubtreenode = key;
       if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
         cfgSubtreeType.attributeNames.put(e.getKey(), e.getKey());  // first time, first attributes
       }
@@ -625,7 +812,7 @@ public class XmlJzCfgAnalyzer
         Debugutil.stop();
       }
       allElementTypes2.add(node.tag, cfgSubtreeType);  //more as one with same tag name possible, store only for comparison (check)
-      cfgSubtreeByName.put(node.sSubtreenode, node);   //unique cfg-subtree key, for usage.
+      cfgSubtreeByName.put(key, node);   //unique cfg-subtree key, for usage.
 
     }
     
@@ -721,7 +908,7 @@ public class XmlJzCfgAnalyzer
             found = true; //>= 3/4 all attrib and nodes are identically:
             cfgSubtreeType.occurrence.add(node);           // add the node instance as occurrence
             node.sSubtreenode = cfgSubtreeType.representative.sSubtreenode;  // mark this node occurrence with the subtree name.
-            assert(node.sSubtreenode !=null);
+            //assert(node.sSubtreenode !=null);
             cfgSubtreeType.addContentOfFoundNode(node);
             break;
           }
@@ -737,10 +924,21 @@ public class XmlJzCfgAnalyzer
     /**Checks whether all occurrences of node types have the same meaning (semantic), should represent by one sub tree structure.
      * If the occurrences of one node have other inner sub node structure as the others, (building groups)
      * different sub tree structures results. 
+     * TODO It is not ready yet for writing text nodes, and the XML output is too complex for repeat it.
+     * Should be finished with
+     * * Compare with cfgGiven
+     * * take over NEW, ADD, TEXT from cfgGiven if existing
+     * * clarify what are the two more for loops.  
      */
-    protected void checkCfgSubtree() {
+    protected void checkCfgSubtree ( XmlCfg cfgGiven ) {
+      // TODO for the case more as one cfgGiven subtree build a Map with occurences of the config variants.
       for(CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
-        if(cfgSubtreeOccurrences.occurrence.size() >1) {   // more as one occurrence 
+        String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
+        XmlCfg.XmlCfgNode nodeGiven = cfgGiven == null ? null : cfgGiven.subtrees.get(sTag);
+        if ( nodeGiven !=null   //--------------------------- the node is already found as SUBTREE in given cfg 
+          || cfgSubtreeOccurrences.occurrence.size() >1) { // or more as one occurrence 
+          if(nodeGiven !=null && cfgSubtreeOccurrences.occurrence.size() ==1)
+            Debugutil.stop();
           for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
             checkStructureNodeOccurence(structNode, cfgSubtreeOccurrences.occurrence);
           }            

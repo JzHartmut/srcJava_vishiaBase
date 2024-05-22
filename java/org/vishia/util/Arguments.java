@@ -14,32 +14,69 @@ import java.util.List;
 /**This is a base class for simple argument handling of main(...) arguments.
  * It substitutes the org.vishia.mainCmd.MainCmd, less dependencies.
  * Usage example:<br>
- * In your main class you should create (template):<pre>
-  public static class Args extends Arguments {
+ * In your main class you should can copy this given template as sub class, change * / to end of comment and (at) to the @. :<pre>
+  
+  class CmdArgs extends Arguments {
 
-    /**Argument is manually tested * /
+    
+    /**Argument is manually tested in testArgument(...) * /
     public String sTitle;
 
-    /**Argument needs a Arguments.SetArgument(...) operation, longer form * /
+    /**Argument needs a Arguments.SetArgument(...) implementation, longer form * /
     public File fOut;
     
-    /**Argument contains the timestamp.val to use as value, shorter form * / 
+    public File fIn;
+    
+    public String sContent;
+    
+    /**Argument as String value defined in one definition, the value is in timestamp.val
+       But it must be also added with addArg(this.timestamp), see ctor. * / 
     public Argument timestamp = new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)");
     
-    Arguments.SetArgument setOutput = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
-      Args.this.fOut = new File(val);
+    /**This is a single SetArgument implementation for one argument
+       which should be added with {(at)link #addArg(Argument)}. Not recommended. 
+     * /
+    Arguments.SetArgument setOutput = new Arguments.SetArgument(){ 
+    (at)Override public boolean setArgument(String val){ 
+      CmdArgs.this.fOut = new File(val);
       return true;
     }};
     
-    Args(){
+    
+    /**All Arguments for this application.
+       This is the recommended combination of all in one long array.
+       use  {(at)link #addArgs(Argument[])} to add this given array.
+     * /
+    Argument[] argsAppl =
+    { new Argument("-o", ":path/to/output.file"
+        , new SetArgument() { (at)Override public boolean setArgument (String val) {
+          CmdArgs.this.fIn = new File(val); return CmdArgs.this.fIn.exists(); 
+        } })
+    , new Argument("-inZip", ":D:/path/to/file.odx:content.xml to analyze a stored XML in a zip format"
+        , new SetArgument() { @Override public boolean setArgument (String val) {
+          int posSep = val.indexOf(':', 3);
+          if(posSep <0) { 
+            return false; }
+          CmdArgs.this.fIn = new File(val.substring(0, posSep));
+          CmdArgs.this.sContent = val.substring(posSep+1);
+          return CmdArgs.this.fIn.exists(); 
+        } })
+    };
+    
+    
+    CmdArgs () {
       super.aboutInfo = "...your about info";
       super.helpInfo="obligate args: -o:...";
+      //Hint: the manual tested sTitle don't need addArg(...)
       addArg(new Argument("-o", ":path/to/output.file", this.setOutput));
-      addArg(timestamp);
+      addArg(this.timestamp);                    // add all single given Argument (not recommended, see next)
+      addArgs(this.argsAppl);                    // add all arguments from Array
     }
 
-    /**This operation is necessary only for manual test of argument Strings. * /
-    (at)Override protected boolean testArgument(String arg, int nArg) { 
+    /**This operation is only necessary if arguments should be tested manually here,
+       not recommended. The super.testArgument does all the work for given Argument instances.
+       (at)throws FileNotFoundException * /
+    (at)Override protected boolean testArgument(String arg, int nArg) throws FileNotFoundException { 
       boolean bOk = true;  //set to false if the argc is not passed
       String value;
       if( (value = checkArgVal("-title", arg)) !=null) {       
@@ -52,8 +89,7 @@ import java.util.List;
     }
 
     /**This operation checks the consistence of all operations. * /
-    (at)Override
-    public boolean testArgs(Appendable msg) throws IOException {
+    (at)Override public boolean testConsistence(Appendable msg) throws IOException {
       boolean bOk = true;
       if(this.fOut == null) { msg.append("-o:outfile obligate\n"); bOk = false; }
       if(!bOk) {
@@ -61,9 +97,9 @@ import java.util.List;
       }
       return bOk;
     }
-    
   }
- * </pre>
+ </pre>
+ *
  * You should instantiate in your application:<pre>
   public static int amain(Args args) {
     MyAppl thiz = new MyAppl(args);          // call with your proper prepared arguments
@@ -138,6 +174,7 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2024-05-22 Hartmut some docu and optimization 
    * <li>2023-12-08 Hartmut new: now supports "--@:", then the next argument string is one line per argument. 
    *   This is not for command line arguments, it is for java String given arguments 
    *   for example while call with a JZtxtCmd script.  
@@ -288,7 +325,7 @@ public abstract class Arguments {
       this.set = set;
     }
     
-    @Override public String toString(){ return option + help + '\n'; }
+    @Override public String toString(){ return this.option + this.help + '\n'; }
   }
   
 
@@ -298,19 +335,40 @@ public abstract class Arguments {
   
   protected String helpInfo;
   
-  protected List<Argument> argList;
+  /**List of all arguments which are not hard coded in an derivation of {@link #testArgument(String, int)} */
+  private List<Argument> argList;
   
+  /**List of all argument arrays which are not hard coded in an derivation of {@link #testArgument(String, int)} */
+  private List<Argument[]> argArrays;
+  
+  /**Can be used as exit from main(). */
   public static int exitCodeArgError = 6;
   
-  String sLogPath;
+  private String sLogPath;
   
-  String sLogLevel;
+  private String sLogLevel;
   
-  Appendable outMsg, errMsg;
+  private Appendable outMsg, errMsg;
   
+  
+  
+  /**Add one argument. Should be called in constructor of the inherited class.
+   * @param arg Should be constant initialized given in the inherited class.
+   */
   protected final void addArg(Argument arg) {
     if(this.argList == null) { this.argList = new LinkedList<Argument>(); }
     this.argList.add(arg);
+  }
+  
+  
+  
+  /**Add all arguments given in an array. Should be called in constructor of the inherited class.
+   * @param args Should be constant initialized given in the inherited class.
+   */
+  protected final void addArgs(Argument[] args) {
+    if(this.argArrays == null) { this.argArrays = new LinkedList<Argument[]>(); }
+    this.argArrays.add(args);
+    //for(Argument arg: args) { addArg(arg); }
   }
   
   
@@ -357,7 +415,7 @@ public abstract class Arguments {
     while( (posEnv=argvalRet.indexOf("$")) >=0) {
       int posEnvEnd = posEnv +1;
       int posEnvEnd9;
-      char cc;
+      @SuppressWarnings("unused") char cc;
       if( (cc = argvalRet.charAt(posEnvEnd)) == '(') {
         posEnvEnd = argvalRet.indexOf(')', posEnv+2);
         posEnvEnd9 = posEnvEnd +1;    //after ')' 
@@ -379,10 +437,13 @@ public abstract class Arguments {
   
 
   /**This operation tests one argument maybe from a container as String[].
-   * It can be overridden by the inherit Arguments class but should unconditionally also call
+   * It can be overridden by the inherit Arguments class but should unconditionally also call at least
    * <pre>
    *   super.textArgument(argc, nArg);
    * </pre>
+   * Overriding may not be recommended. Use instead {@link #addArg(Argument)} 
+   * to add simple test snippet wrapped in an instance of {@link Argument}.
+   * <br>
    * This operation is only called in {@link #tryTestArgument(String, int, Appendable, Closeable)},
    * which is called in {@link #parseArgs(String[], Appendable)} and nothing else.
    * It is protected to prevent faulty calling.  
@@ -401,6 +462,10 @@ public abstract class Arguments {
   protected boolean testArgument ( String argc, int nArg) throws FileNotFoundException {
     String value;
     boolean bOk = true;
+    Argument emptyArg = null;
+    Argument argFound = null;
+    int argLenFound = 0;
+    int argclen = argc.length();
     if((value = checkArgVal("--report", argc)) !=null) 
     { this.sLogPath = value;   //an example for default output
     }
@@ -422,11 +487,34 @@ public abstract class Arguments {
     else if(argc.startsWith("---")) 
     { //accept but ignore it. Commented calling arguments.
     }
-    else if(this.argList !=null) {                         // search the argument in the given arglist
-      Argument emptyArg = null;
-      Argument argFound = null;
-      int argLenFound = 0;
-      int argclen = argc.length();
+    else if(this.argArrays !=null) {                         // search the argument in the given arglist
+      Iterator<Argument[]> itera = this.argArrays.iterator(); // first check all given Arguments in argArrays, usual only one member.
+      while(argFound == null && itera.hasNext()){          // break while if argument matches.
+        Argument[] argArray = itera.next();
+        int zArgArray = argArray.length;
+        int ixArgArray = -1;
+        while(argFound == null && ++ixArgArray < zArgArray){  //break while if argument matches.
+          Argument argTest = argArray[ixArgArray];
+          int argLen = argTest.option.length();
+          if(argLen == 0){
+            emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
+          } else {
+            assert(argLenFound == 0);
+            boolean bSeparator = false;
+            if((argc.startsWith(argTest.option)            // correct option prefix 
+                 && (  argclen == argLen                   // only the option prefix
+                    || (bSeparator = ":=".indexOf(argc.charAt(argLen))>=0))  //or prefix ends with the separator characters.
+                    )
+                 && argLen >= argLenFound   
+              ){ //then the argument is a candidat
+              argLenFound = bSeparator ? argLen +1 : argLen;
+              argFound = argTest;
+            }
+          }
+        }
+      }
+    }
+    if(argFound == null && this.argList !=null) {
       int ixArglist = 0;
       int lastIxArglist = this.argList.size()-1;
       Iterator<Argument> iter = this.argList.iterator();
@@ -436,6 +524,7 @@ public abstract class Arguments {
         if(argLen == 0){
           emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
         } else {
+          assert(argLenFound == 0);
           boolean bSeparator = false;
           if((argc.startsWith(argTest.option)                //correct prefix 
                && (  argclen == argLen                      //only the prefix
@@ -450,34 +539,34 @@ public abstract class Arguments {
         }
         ixArglist +=1;
       }
-      if(argFound !=null){
-        //then the argument is correct and associated to this argTest.
-        String argval = argclen == argLenFound //no additional value, use argument 
-                        //|| argLen == 0      //argument without prefix (no option)
-                        ? argc              //then use the whole argument as value.
-                        : argc.substring(argLenFound);  //use the argument after the separator as value.
-        argval = replaceEnv(argval);
-        if(argFound.set ==null) {
-          argFound.val = argval;
-        } else {
-          bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
-        }
-        //if(!bOk) throw new ParseException("Argument value error: " + argc, nArg);
-      } 
-      else if(emptyArg !=null){ //argument start string not found but an empty choice possible:
-        //set the empty arg.
-        bOk = emptyArg.set.setArgument(argc);
-      } 
-      else {
-        //argument not found (not returned in for-loop):
-        bOk = false;
-      }
     }
-    else { 
+    if(argFound !=null){
+      //then the argument is correct and associated to this argTest.
+      String argval = argclen == argLenFound //no additional value, use argument 
+                      //|| argLen == 0      //argument without prefix (no option)
+                      ? argc              //then use the whole argument as value.
+                      : argc.substring(argLenFound);  //use the argument after the separator as value.
+      argval = replaceEnv(argval);
+      if(argFound.set ==null) {
+        argFound.val = argval;
+      } else {
+        bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
+      }
+      //if(!bOk) throw new ParseException("Argument value error: " + argc, nArg);
+    } 
+    else if(emptyArg !=null){ //argument start string not found but an empty choice possible:
+      //set the empty arg.
+      bOk = emptyArg.set.setArgument(argc);
+    } 
+    else {
+      //argument not found (not returned in for-loop):
       bOk = false;
     }
     return bOk;
   }
+  
+  
+  
   
   /**Checks whether an option arg is given without argument value.
    * It is an alternative to {@link #checkArgVal(String, String)}.
@@ -624,7 +713,7 @@ public abstract class Arguments {
                 posArg = StringFunctions.indexOf(sCheckLine, 0, zCheck, sLabel);  //check whether sLabel is found in range 0...4 in the line
               }
               if(posArg <0) {
-                errMsg.append("  ERROR: label not found in ").append(arg).append('\n');
+                this.errMsg.append("  ERROR: label not found in ").append(arg).append('\n');
                 posArg = 0;
                 sStartLineArg = null;
                 sCommentEndline = null;
@@ -663,7 +752,7 @@ public abstract class Arguments {
               sArg = sArg.replace("$=", sDirArgFile);      // $= replaces the absolute directory of the own argument file.
               //
               if(  sArg.length() >0) {                     // don't test an empty line in the file
-                if(!tryTestArgument(sArg, ++nArg, errMsg, farg)) {
+                if(!tryTestArgument(sArg, ++nArg, this.errMsg, farg)) {
                   bOk = false;
                 }
               }
@@ -678,8 +767,8 @@ public abstract class Arguments {
               if(farg !=null) { farg.close(); }
               String sMsg = arg + "  ERROR: " + ( argFile !=null ? " File=" + argFile.getAbsolutePath() : "" )
                               + exc.getMessage();
-              if(errMsg !=null) {
-                errMsg.append(sMsg).append('\n');
+              if(this.errMsg !=null) {
+                this.errMsg.append(sMsg).append('\n');
                 bOk = false;
               } else {
                 throw new IllegalArgumentException(sMsg);  //it is faulty
@@ -690,7 +779,7 @@ public abstract class Arguments {
           } 
       }
       else {                                             // other argument than --@ in command line
-        if(!tryTestArgument(arg, ++nArg, errMsg, null)) {
+        if(!tryTestArgument(arg, ++nArg, this.errMsg, null)) {
           bOk = false;
         }
       }
@@ -713,7 +802,7 @@ public abstract class Arguments {
     boolean bOkArg;
     CharSequence sError = "";
     try {
-      bOkArg = testArgument(argc, ++nArg);                 // this operation may be overridden, but should call super.testArguments(...)
+      bOkArg = testArgument(argc, nArg+1);                 // this operation may be overridden, but should call super.testArguments(...)
     } catch(Exception exc) {                               // an exception comes if testArgument causes it in user level.
       sError = ExcUtil.exceptionInfo(" argument eval error: ", exc, 1, 20);  //prepare a proper info with stack trace
       bOkArg = false;
@@ -792,5 +881,13 @@ public abstract class Arguments {
       System.exit(255);
     }
   }
+  
+  
+  public String getLogPath() { return this.sLogPath; }
+  
+  /**Should be return int
+   * @return
+   */
+  public String getLogLevel() { return this.sLogLevel; }
   
 }
