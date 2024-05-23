@@ -487,23 +487,50 @@ public abstract class Arguments {
     else if(argc.startsWith("---")) 
     { //accept but ignore it. Commented calling arguments.
     }
-    else if(this.argArrays !=null) {                         // search the argument in the given arglist
-      Iterator<Argument[]> itera = this.argArrays.iterator(); // first check all given Arguments in argArrays, usual only one member.
-      while(argFound == null && itera.hasNext()){          // break while if argument matches.
-        Argument[] argArray = itera.next();
-        int zArgArray = argArray.length;
-        int ixArgArray = -1;
-        while(argFound == null && ++ixArgArray < zArgArray){  //break while if argument matches.
-          Argument argTest = argArray[ixArgArray];
+    else {
+      if(this.argArrays !=null) {                         // search the argument in the given arglist
+        Iterator<Argument[]> itera = this.argArrays.iterator(); // first check all given Arguments in argArrays, usual only one member.
+        while(argFound == null && itera.hasNext()){          // break while if argument matches.
+          Argument[] argArray = itera.next();
+          int zArgArray = argArray.length;
+          int ixArgArray = -1;
+          while(argFound == null && ++ixArgArray < zArgArray){  //break while if argument matches.
+            Argument argTest = argArray[ixArgArray];
+            int argLen = argTest.option.length();
+            if(argLen == 0){
+              emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
+            } else {
+              assert(argLenFound == 0);
+              boolean bSeparator = false;
+              if((argc.startsWith(argTest.option)            // correct option prefix 
+                   && (  argclen == argLen                   // only the option prefix
+                      || (bSeparator = ":=".indexOf(argc.charAt(argLen))>=0))  //or prefix ends with the separator characters.
+                      )
+                   && argLen >= argLenFound   
+                ){ //then the argument is a candidat
+                argLenFound = bSeparator ? argLen +1 : argLen;
+                argFound = argTest;
+              }
+            }
+          }
+        }
+      }
+      if(argFound == null && this.argList !=null) {
+        int ixArglist = 0;
+        int lastIxArglist = this.argList.size()-1;
+        Iterator<Argument> iter = this.argList.iterator();
+        while(argFound == null && iter.hasNext()){  //break while if found.
+          Argument argTest = iter.next();
           int argLen = argTest.option.length();
           if(argLen == 0){
             emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
           } else {
             assert(argLenFound == 0);
             boolean bSeparator = false;
-            if((argc.startsWith(argTest.option)            // correct option prefix 
-                 && (  argclen == argLen                   // only the option prefix
+            if((argc.startsWith(argTest.option)                //correct prefix 
+                 && (  argclen == argLen                      //only the prefix
                     || (bSeparator = ":=".indexOf(argc.charAt(argLen))>=0))  //or prefix ends with the separator characters.
+                    || (argLen == 0 && (ixArglist == nArg || ixArglist == lastIxArglist))                         //argument without key characters
                     )
                  && argLen >= argLenFound   
               ){ //then the argument is a candidat
@@ -511,57 +538,33 @@ public abstract class Arguments {
               argFound = argTest;
             }
           }
+          ixArglist +=1;
         }
       }
-    }
-    if(argFound == null && this.argList !=null) {
-      int ixArglist = 0;
-      int lastIxArglist = this.argList.size()-1;
-      Iterator<Argument> iter = this.argList.iterator();
-      while(argFound == null && iter.hasNext()){  //break while if found.
-        Argument argTest = iter.next();
-        int argLen = argTest.option.length();
-        if(argLen == 0){
-          emptyArg = argTest;  //possible argument if nothing met. It checks all other argument possibilities.
+      if(argFound !=null){
+        //then the argument is correct and associated to this argTest.
+        String argval = argclen == argLenFound //no additional value, use argument 
+                        //|| argLen == 0      //argument without prefix (no option)
+                        ? argc              //then use the whole argument as value.
+                        : argc.substring(argLenFound);  //use the argument after the separator as value.
+        argval = replaceEnv(argval);
+        if(argFound.set ==null) {
+          argFound.val = argval;
         } else {
-          assert(argLenFound == 0);
-          boolean bSeparator = false;
-          if((argc.startsWith(argTest.option)                //correct prefix 
-               && (  argclen == argLen                      //only the prefix
-                  || (bSeparator = ":=".indexOf(argc.charAt(argLen))>=0))  //or prefix ends with the separator characters.
-                  || (argLen == 0 && (ixArglist == nArg || ixArglist == lastIxArglist))                         //argument without key characters
-                  )
-               && argLen >= argLenFound   
-            ){ //then the argument is a candidat
-            argLenFound = bSeparator ? argLen +1 : argLen;
-            argFound = argTest;
-          }
+          bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
         }
-        ixArglist +=1;
+        //if(!bOk) throw new ParseException("Argument value error: " + argc, nArg);
+      } 
+      else if(emptyArg !=null){ //argument start string not found but an empty choice possible:
+        //set the empty arg.
+        bOk = emptyArg.set.setArgument(argc);
+      }
+      else {
+        //argument not found (not returned in for-loop):
+        bOk = false;
       }
     }
-    if(argFound !=null){
-      //then the argument is correct and associated to this argTest.
-      String argval = argclen == argLenFound //no additional value, use argument 
-                      //|| argLen == 0      //argument without prefix (no option)
-                      ? argc              //then use the whole argument as value.
-                      : argc.substring(argLenFound);  //use the argument after the separator as value.
-      argval = replaceEnv(argval);
-      if(argFound.set ==null) {
-        argFound.val = argval;
-      } else {
-        bOk = argFound.set.setArgument(argval);   //call the user method for this argument.
-      }
-      //if(!bOk) throw new ParseException("Argument value error: " + argc, nArg);
-    } 
-    else if(emptyArg !=null){ //argument start string not found but an empty choice possible:
-      //set the empty arg.
-      bOk = emptyArg.set.setArgument(argc);
-    } 
-    else {
-      //argument not found (not returned in for-loop):
-      bOk = false;
-    }
+ 
     return bOk;
   }
   

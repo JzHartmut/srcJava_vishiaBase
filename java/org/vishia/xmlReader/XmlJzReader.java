@@ -71,6 +71,9 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2024-05-23: {@link #parseElement(StringPartScan, Object, org.vishia.xmlReader.XmlCfg.XmlCfgNode)} refactored.
+   *   Now it uses consequently the subtree if given. See documentation in LibreOffice. 
+   * <li>2024-05-22: New {@link #readCfgTxtFromJar(Class, String)}
    * <li>2023-05-23: Now all text content parts are stored immediately after its parsing, and NOT as a whole. 
    *   The last one is faulty if the text is mixed with some more order relevant content. Especially formatted text.
    *   This is detected and used while parsing Libre Office files (odg). 
@@ -145,7 +148,7 @@ public class XmlJzReader
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2023-05-23";
+  public static final String version = "2024-05-23";
   
   
   /**To store the last used configuration, for parsing with the same config. */
@@ -423,7 +426,7 @@ public class XmlJzReader
         inp.scanOk();
         inp.readNextContent(this.sizeBuffer*2/3);
         {
-          parseElement(inp, output, xmlCfg.rootNode);  //the only one root element.
+          parseElement(inp, output, xmlCfg.rootNode, 100);  //the only one root element.
         }
       }
     }
@@ -438,14 +441,36 @@ public class XmlJzReader
 
 
   /**Parse a whole element with all inner content
+   * <ul>
+   * <li>First the tag is parsed, then all attributes using {@link #parseAttributes(StringPartScan, String, org.vishia.xmlReader.XmlCfg.XmlCfgNode, List[], List[])}.
+   *   This parses stores only the values of the attributes in , and evaluate the CHECK attributes.
+   *   The attributes are stored in a List<AttribToStore> attribsToStore and namespacesToStore.
+   * <li>Then the correct sub node in cfg is searched, maybe depending on attribute CHECK values.
+   * <li>With the cfgSubNode it is detected whether a SUBTREE node should be used.
+   * <li>All attributes which are stored in attribsToStore are now completed with the maybe SUBTREE given information.
+   *   Done in {@link #getCfgAttrib(CharSequence, org.vishia.xmlReader.XmlCfg.XmlCfgNode)}
+   *   Not (old solution) with the immediately subCfgNode.
+   *   But the attribute values are not stored till now, because the output instance is not given.
+   * <li>The output instance for this new node is gotten via the NEW:dataAccess either given in the non-SUBTREE subCfgNode,
+   *   it this is given, if wins. Or the NEW:dataAccess in the maybe given SUBTREE subCfgNode is used.
+   *   Whereby to get the output instance the stored attribute values may be used.
+   *   
+   * <li>Then the attribut values are stored in the new given output instance which have an {@link AttribToStore#daccess} path.
+   *   this is done in {@link #storeAttributesDueToSubCfgNode(org.vishia.xmlReader.XmlCfg.XmlCfgNode, List, List, Map, String[])}
+   *   {@link #storeAttrData(StringPartScan, Object, org.vishia.util.DataAccess.DatapathElement, Map, CharSequence, CharSequence, String)}   
+   * <li>Then this operation is called recursively if more elements are found.   
+   * </ul>  
    * @param inp scanOk-Position after the "<" before the identifier.
-   * @param output
-   * @param cfg1
+   * @param output instance to store the parsed data.
+   * @param cfgNode The config for this element
    * @throws Exception 
    */
-  private void parseElement(StringPartScan inp, Object output, XmlCfg.XmlCfgNode cfgNode) 
+  private void parseElement(StringPartScan inp, Object output, XmlCfg.XmlCfgNode cfgNode, int recursion) 
   throws Exception
   { 
+    if(recursion <=0) {
+      throw new IllegalArgumentException("too many recursions in XML node");
+    }
     int dbgline = -7777;
     if(this.debugStopLine >=0){
       dbgline = inp.getLineAndColumn(null);
@@ -472,12 +497,10 @@ public class XmlJzReader
       Debugutil.stop();
     //TODO replace alias.
     //
-    //--------------------------------------------- Search the tag name in the cfg:
+    //--------------------------------------------- Search the tag name in the subnode in current cfg:
     //
-    Object subOutput = null;
     XmlCfg.XmlCfgNode subCfgNode;
     if(cfgNode == null) {   //check whether the parent element should be regarded:
-      subOutput = null;     //this element should not be evaluated.
       subCfgNode = null;
     } else {  //----------------------------------- The parent element is expected, content should be stored
       if(output ==null) {
@@ -493,40 +516,19 @@ public class XmlJzReader
       if(cfgNode.subnodes == null) {             // inner content, it is this element should not be stored.
         subCfgNode = null; //don't read inner content
       } else {  
-        subCfgNode = cfgNode.subnodes.get(sTag);  //search the proper cfgNode for this <tag
+        subCfgNode = cfgNode.subnodes.get(sTag); //search the proper cfgNode for this <tag
         if(subCfgNode == null) {
-          subCfgNode = cfgNode.subnodes.get("?");  //check whether it is a node with any unspecified tag name possible. 
-//          subCfgNode = cfgNode.subNodeUnspec; 
+          subCfgNode = cfgNode.subnodes.get("?");//check whether it is a node with any unspecified tag name possible. 
         }
       }
       if(sTag.toString().contains("   "))
         Debugutil.stop();
-      //subCfgNode is null if inner content should not be read.
-      //
-      //get the subOutput before parsing attributes because attribute values should be stored in the sub output.:
-//      if(subCfgNode !=null && subCfgNode.bStoreAttribsInNewContent) { //the tag was found, the xml element is expected.
-//        subOutput = getDataForTheElement(output, subCfgNode, sTag, null);
-//        if(subOutput == null) {
-//          Debugutil.stop();
-//        }
-//        //
-//      } else {
-//        subOutput = null; //don't store output. 
-//      }
     }
     //--------------------------------------------- The subCfgNode for the element is either null or found.
-    //
+    //                                              This is the common subCfgNode if attributes determine the subCfgNode.
+    //                                              This common subCfgNode contains the attributes to check.
     @SuppressWarnings("unchecked")
-    Map<String, DataAccess.IntegerIx>[] attribNames = new Map[1];
-    if(subCfgNode !=null) {
-      if(subCfgNode.cfgSubtreeName !=null) {
-        XmlCfg.XmlCfgNode subCfgNodeSubtree = this.cfg.subtrees.get(subCfgNode.cfgSubtreeName);
-        //only test: subCfgNode.cmpNode(subCfgNodeSubtree, this.log);
-        Debugutil.stop();
-      }
-
-      attribNames[0] = subCfgNode.allArgNames;  //maybe null if no attribs or text and tag are used.
-    }
+    Map<String, DataAccess.IntegerIx> attribNames = null;
     //@SuppressWarnings("unchecked")
     String[] attribValues = null;
     @SuppressWarnings("unchecked")
@@ -535,27 +537,58 @@ public class XmlJzReader
     //
     //For attribute evaluation, use the subCfgNode gotten from sTag. It may be necessary to change the subCfgNode after them. 
     //
-    if(attribNames[0] !=null) {
-      attribValues = new String[subCfgNode.allArgNames.size()];
-      DataAccess.IntegerIx ixO = attribNames[0].get("tag");
-      if(ixO !=null) { attribValues[ixO.ix] = sTag; } 
-    }
     if(dbgline == this.debugStopLine)
       Debugutil.stop();
     //Hint: The element (node) where the attributes should be associated is not created.
-    //output is currently the parent node. Hence store attributes firstly locally. Do nout offer output as argument.
-    CharSequence keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, nameSpacesToStore, attribNames, attribValues);
+    //output is currently the parent node. Hence store attributes firstly locally. Do not offer output as argument.
+    String keyResearch = parseAttributes(inp, sTag, subCfgNode, attribsToStore, nameSpacesToStore);
     //
     if(keyResearch.length() > sTag.length()) {
       //Search the appropriate cfg node with the qualified keySearch, elsewhere subCfgNode is correct with the sTag as key. 
-      subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch.toString());  //search the proper cfgNode for this <tag //bugfix .toString() 2023-09-18
+      subCfgNode = cfgNode.subnodes == null ? null : cfgNode.subnodes.get(keyResearch);  //search the proper cfgNode for this <tag //bugfix .toString() 2023-09-18
+    }
+    //============================================= Search a possible SUBTREE entry for the subCfgNode
+    //============================================= and determine the store paths either from subCfgNode or from the SUBTREE
+    final DataAccess.DatapathElement elementStorePath, elementFinishPath, contentStorePath, nameSpaceDef;
+    if(subCfgNode !=null) {
+      if(subCfgNode.cfgSubtreeName !=null) {
+        XmlCfg.XmlCfgNode subCfgNodeSubtree = null;
+        subCfgNodeSubtree = this.cfg.subtrees.get(subCfgNode.cfgSubtreeName);
+        elementStorePath = subCfgNode.elementStorePath !=null ? subCfgNode.elementStorePath : subCfgNodeSubtree.elementStorePath;
+        elementFinishPath = subCfgNode.elementFinishPath !=null ? subCfgNode.elementFinishPath : subCfgNodeSubtree.elementFinishPath;
+        contentStorePath = subCfgNode.contentStorePath !=null ? subCfgNode.contentStorePath : subCfgNodeSubtree.contentStorePath;
+        nameSpaceDef = subCfgNode.nameSpaceDef !=null ? subCfgNode.nameSpaceDef : subCfgNodeSubtree.nameSpaceDef;
+        //only test: subCfgNode.cmpNode(subCfgNodeSubtree, this.log);
+        subCfgNode = subCfgNodeSubtree;
+      } else {  //--------------------------------- not in SUBTREE
+        elementStorePath = subCfgNode.elementStorePath;
+        elementFinishPath = subCfgNode.elementFinishPath;
+        contentStorePath = subCfgNode.contentStorePath;
+        nameSpaceDef = subCfgNode.nameSpaceDef;
+      }
+
+      attribNames = subCfgNode.allArgNames;   // maybe null if no attribs or text and tag are used.
+      if(subCfgNode.allArgNames !=null) {
+        attribValues = new String[subCfgNode.allArgNames.size()];
+        DataAccess.IntegerIx ixO = subCfgNode.allArgNames.get("tag");
+        if(ixO !=null) { attribValues[ixO.ix] = sTag; }
+      }
+    } else {     //-------------------------------- subCfgNode is not given, do not store anything. 
+      elementStorePath = null;
+      elementFinishPath = null;
+      contentStorePath = null;
+      nameSpaceDef = null;
     }
     if(subCfgNode ==null) {
       Debugutil.stop();
     }
+    if(attribsToStore[0] !=null) {
+      storeAttributesDueToSubCfgNode(subCfgNode, attribsToStore[0], nameSpacesToStore[0], subCfgNode.allArgNames, attribValues);
+    }
     //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
-    subOutput = subCfgNode == null ? null : getDataForTheElement(output, subCfgNode.elementStorePath, attribValues);
-    if(cfgNode.subnodes !=null && subCfgNode ==null) {
+    final Object subOutput = subCfgNode == null ? null 
+                           : elementStorePath == null ? output : getDataForTheElement(output, elementStorePath, attribValues);
+    if(cfgNode !=null && cfgNode.subnodes !=null && subCfgNode ==null) {
       Debugutil.stop();       // a node which should not be evaluated
     }
     //
@@ -565,7 +598,9 @@ public class XmlJzReader
         System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
       } else {
         for(AttribToStore e: attribsToStore[0]) {
-          storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
+          if(e.daccess !=null) {
+            storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
+          }
     } } }
     if(nameSpacesToStore[0] !=null) { 
       if(subOutput ==null) {
@@ -614,26 +649,27 @@ public class XmlJzReader
             inp.seekPos(3); //skip over the "]]>"
             if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
               if(contentBuffer !=null) {
-                assert(attribNames[0] !=null);
-                DataAccess.IntegerIx ixO = attribNames[0].get("text");
+                assert(attribNames !=null);
+                assert(attribNames == subCfgNode.allArgNames);
+                DataAccess.IntegerIx ixO = attribNames.get("text");
                 if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
               }
-              storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
+              storeContent(contentBuffer, subCfgNode, subOutput, contentStorePath, subCfgNode.allArgNames, attribValues);
             }
           }
           else {
-            parseElement(inp, subOutput, subCfgNode);      // nested element.
+            parseElement(inp, subOutput, subCfgNode, recursion -1);      // nested element.
           }
         } else {
           StringBuilder contentBuffer = new StringBuilder(100);
           parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
           if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
             if(contentBuffer !=null) {
-              assert(attribNames[0] !=null);
-              DataAccess.IntegerIx ixO = attribNames[0].get("text");
+              assert(subCfgNode.allArgNames !=null);
+              DataAccess.IntegerIx ixO = subCfgNode.allArgNames.get("text");
               if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
             }
-            storeContent(contentBuffer, subCfgNode, subOutput, attribNames, attribValues);
+            storeContent(contentBuffer, subCfgNode, subOutput, contentStorePath, subCfgNode.allArgNames, attribValues);
           }
         }                                                  // call the storeContent(..) operation on end of the node.
       }
@@ -644,7 +680,7 @@ public class XmlJzReader
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
       if(subOutput !=null) {
-        finishElement(output, subOutput, subCfgNode.elementFinishPath);  // "xmlinput:finish"
+        finishElement(output, subOutput, elementFinishPath);  // "xmlinput:finish"
       }
     } else {
       int[] colmn = new int[1];
@@ -667,18 +703,7 @@ public class XmlJzReader
 
 
 
-  /**
-   * @param inp
-   * @param tag
-   * @param output
-   * @param cfgNode
-   * @param attribNames Reference to a map with key,name for attribute values. 
-   *        The key is given in the config file, cfgNode.({@link XmlCfg.XmlCfgNode#attribs}) contains the association 
-   *        it is not the attribute name anyway, but often the attribute name if the config file determines that. 
-   * @return null then do not use this element because faulty attribute values. "" then no special key, length>0: repeat search config.
-   * @throws Exception
-   */
-  /**
+  /**Parses all given Attributes from the XML element. 
    * @param inp
    * @param tag
    * @param cfgNode
@@ -686,16 +711,16 @@ public class XmlJzReader
    *          which's {@link XmlCfg.AttribDstCheck#daccess} is set, then the attribute with the daccess is stored in [0]
    *          to write it in the new created node if this was created after this operation.
    * @param namespacesToStore
-   * @param attribNames
+   * @param attribNames Reference to a map with key,name for attribute values. 
+   *        The key is given in the config file, cfgNode.({@link XmlCfg.XmlCfgNode#attribs}) contains the association 
+   *        it is not the attribute name anyway, but often the attribute name if the config file determines that. 
    * @param attribValues
    * @return
    * @throws Exception
    */
-  private CharSequence parseAttributes(StringPartScan inp, CharSequence tag, XmlCfg.XmlCfgNode cfgNode
+  private String parseAttributes(StringPartScan inp, String tag, XmlCfg.XmlCfgNode cfgNode
       , List<AttribToStore>[] attribsToStore, List<AttribToStore>[] namespacesToStore
-      , Map<String, DataAccess.IntegerIx>[] attribNames, String[] attribValues) 
-  throws Exception
-  { CharSequence keyret = tag; //no special key. use element.
+  ) throws Exception { 
     StringBuilder keyretBuffer = null;
     //read all attributes. NOTE: read formally from text even if bUseElement = false.
     while(inp.scanIdentifier(null, "-:").scan("=").scanOk()) {  //an attribute found:
@@ -712,14 +737,14 @@ public class XmlJzReader
         }
         int posNs = StringFunctions.indexOf(sAttrNsNameRaw, ':');  //namespace check
         final CharSequence sAttrNsName;
-        if(posNs >=0) {
+        if(posNs >=0) {  //================================== ns:... given, replace with real ns definition
           //Namespace
           CharSequence ns = sAttrNsNameRaw.subSequence(0, posNs);
           final CharSequence sAttrName = sAttrNsNameRaw.subSequence(posNs+1, sAttrNsNameRaw.length());
           //String nsName = sAttrName.toString();
-          if(StringFunctions.equals(ns, "xmlns")){
-            String nsValue = sAttrValue.toString();
-            String nsName = sAttrName.toString();
+          if(StringFunctions.equals(ns, "xmlns")) { //======= xmlns: as specific attribute 
+            String nsValue = sAttrValue.toString();        // stored in this.namespaces
+            String nsName = sAttrName.toString();          // and also returned in namespacesToStore[0]
             this.namespaces.put(nsName, nsValue);
             if(namespacesToStore[0]==null) {namespacesToStore[0] = new LinkedList<AttribToStore>(); }
             namespacesToStore[0].add(new AttribToStore(cfgNode.nameSpaceDef, nsName, nsValue));
@@ -752,48 +777,68 @@ public class XmlJzReader
         }
         //----------------------------------------- sAttrNsName is the attribute inclusively the full namespace
         if(sAttrNsName !=null) {
-          XmlCfg.AttribDstCheck cfgAttrib = null;
-          if(cfgNode.attribs != null) { 
-            cfgAttrib= cfgNode.attribs.get(sAttrNsName);
-            if(cfgAttrib == null) {
-              cfgAttrib= cfgNode.attribs.get("?");  //for all attributes
-            }
+          XmlCfg.AttribDstCheck cfgAttrib = getCfgAttrib(sAttrNsName, cfgNode);
+          if(attribsToStore[0]==null && (cfgAttrib !=null && !cfgAttrib.bUseForCheck || cfgNode.attribsUnspec !=null)) {
+            attribsToStore[0] = new LinkedList<AttribToStore>();
           }
           if(cfgAttrib != null) {
             if(cfgAttrib.bUseForCheck) {
-              if(keyretBuffer == null) { keyretBuffer = new StringBuilder(64); keyretBuffer.append(tag); keyret = keyretBuffer; }
+              if(keyretBuffer == null) { keyretBuffer = new StringBuilder(64); keyretBuffer.append(tag); }
               keyretBuffer.append("@").append(sAttrNsName).append("=\"").append(sAttrValue).append("\"");
-            }
-            else if(cfgAttrib.daccess !=null) { //store the dataaccess to eval if the element is created.
-              if(attribsToStore[0]==null) {attribsToStore[0] = new LinkedList<AttribToStore>(); }
+            } else {
               attribsToStore[0].add(new AttribToStore(cfgAttrib.daccess, sAttrNsName.toString(), sAttrValue));
-            } else if(cfgAttrib.storeInMap !=null) {
-//              if(attribNames[0] == null){ 
-//                attribNames[0] = new TreeMap<String, DataAccess.IntegerIx>(); 
-//                attribValues[0] = new LinkedList<String>();
-//              }
-              ////
-              DataAccess.IntegerIx ixO = attribNames[0].get(cfgAttrib.storeInMap);
-              if(ixO !=null) {
-                attribValues[ixO.ix] = sAttrValue;
-              } else {
-                Debugutil.stop(); //not used attribute
-              }
             }
-          } else {
-            if(cfgNode.attribsUnspec !=null) { //it is especially to read the config file itself.
-              if(attribsToStore[0]==null) {attribsToStore[0] = new LinkedList<AttribToStore>(); }
-              attribsToStore[0].add(new AttribToStore(cfgNode.attribsUnspec, sAttrNsName.toString(), sAttrValue));
-            }
+          } 
+          else if(cfgNode.attribsUnspec !=null) { //it is especially to read the config file itself.
+            attribsToStore[0].add(new AttribToStore(cfgNode.attribsUnspec, sAttrNsName.toString(), sAttrValue));
           }
+
         }
       }
       inp.readNextContent(this.sizeBuffer/2);
     } //while
-    return keyret;
+    return keyretBuffer == null ? tag : keyretBuffer.toString();
   }
 
 
+  
+  private XmlCfg.AttribDstCheck getCfgAttrib ( CharSequence sAttrNsName, XmlCfg.XmlCfgNode cfgNode ) {
+    XmlCfg.AttribDstCheck cfgAttrib = null;
+    if(cfgNode.attribs != null) { 
+      cfgAttrib= cfgNode.attribs.get(sAttrNsName);
+      if(cfgAttrib == null) {
+        cfgAttrib= cfgNode.attribs.get("?");  //for all attributes
+      }
+    }
+    return cfgAttrib;
+  }
+  
+  
+  private void storeAttributesDueToSubCfgNode ( XmlCfg.XmlCfgNode cfgNode
+    , List<AttribToStore> attribStore, List<AttribToStore> namespacesStore
+    , Map<String, DataAccess.IntegerIx> attribNames, String[] attribValues 
+  ) {
+    assert(attribNames == cfgNode.allArgNames);
+    for(AttribToStore attrib: attribStore) {     // The attributes are all already gathered from XML to the attribStore
+      XmlCfg.AttribDstCheck cfgAttrib = getCfgAttrib(attrib.name, cfgNode);
+      if(cfgAttrib !=null) {
+        if(cfgAttrib.storeInMap !=null) {          // check store the value to use as calling argument for new_Element...(...)
+          DataAccess.IntegerIx ixO = attribNames.get(cfgAttrib.storeInMap);
+          if(ixO !=null) {
+            attribValues[ixO.ix] = attrib.value;             // store the attribute value for further processing on correct index due to attribNames
+          } else {
+            Debugutil.stop(); //not used attribute
+          }
+        } else if(cfgAttrib.daccess !=null && attrib.daccess == null) {
+          attrib.daccess = cfgAttrib.daccess;      // determine the daccess from found valid subNode only if not given before.
+        }
+      } 
+      else if(cfgNode.attribsUnspec !=null) {
+        attrib.daccess = cfgNode.attribsUnspec;            // maybe null, common store function
+      }
+      else {} // Attribute ignored
+    }
+  }
 
 
 
@@ -891,7 +936,7 @@ public class XmlJzReader
    * @param sAttrValue
    */
   @SuppressWarnings("static-method")
-  void storeAttrData( StringPartScan inp, Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue, String sTag) 
+  private void storeAttrData( StringPartScan inp, Object output, DataAccess.DatapathElement dstPath, Map<String, DataAccess.IntegerIx> attribNames, CharSequence sAttrName, CharSequence sAttrValue, String sTag) 
   {
     try{ 
       if(dstPath.isOperation()) {
@@ -997,13 +1042,15 @@ public class XmlJzReader
   
   
   
-  private static void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output, Map<String, DataAccess.IntegerIx>[] attribs, String[] attribValues) {
-    DataAccess.DatapathElement dstPath = cfgNode.contentStorePath;
-    if(dstPath !=null) {
+  private static void storeContent(StringBuilder buffer, XmlCfg.XmlCfgNode cfgNode, Object output
+  , DataAccess.DatapathElement contentStorePath
+  , Map<String, DataAccess.IntegerIx> attribs, String[] attribValues
+  ) {
+    if(contentStorePath !=null) {
 //      if(dstPath.ident().equals("set_text") && output instanceof org.vishia.odg.data.XmlForOdg_Zbnf.Text_span_Zbnf)
 //        Debugutil.stop();
       try{ 
-        if(dstPath.isOperation()) {
+        if(contentStorePath.isOperation()) {
           //String[] vars = null; 
           if(cfgNode.allArgNames !=null) {
             //vars = new String[cfgNode.allArgNames.size()];
@@ -1015,10 +1062,10 @@ public class XmlJzReader
               }
             }
           }
-          DataAccess.invokeMethod(dstPath, null, output, true, attribValues, false);
+          DataAccess.invokeMethod(contentStorePath, null, output, true, attribValues, false);
           //DataAccess.invokeMethod(dstPath, null, output, true, false, args);
         } else if(buffer !=null) {
-          DataAccess.storeValue(dstPath, output, buffer, true);
+          DataAccess.storeValue(contentStorePath, output, buffer, true);
         }
       } catch(Exception exc) {
         CharSequence sExc = ExcUtil.exceptionInfo("error XmlKzReader storeContent: ", exc, 0, 10);
@@ -1214,6 +1261,35 @@ public class XmlJzReader
 
   
   
+  /**Read from a resource (file inside jar archive).
+   * @param clazz A class in any jar, from there the relative path to the pathInJar is built.
+   *   Often the clazz should be the output data clazz. 
+   * @param pathInJar relative Path from clazz. 
+   *   Usually the cfg should be in the same directory as the output data class. Then this is only the file name.
+   * @return A new XmlCfg instance which is automatically set as referenced and used in {@link #cfg}.
+   *   But you can store this reference and used for {@link #readXml(File, Object, XmlCfg)} later too.
+   * @throws IOException
+   */
+  public XmlCfg readCfgTxtFromJar(Class<?> clazz, String pathInJarFromClazz) throws IOException {
+    String pathMsg = "jar:" + pathInJarFromClazz;
+    //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    //classLoader.getResource("slx.cfg.xml");
+//    InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
+//    if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
+    XmlCfg cfg = new XmlCfg();
+    cfg.readFromJar(clazz, pathInJarFromClazz, this.log);
+//    xmlCfgStream.close();
+//    cfg.transferNamespaceAssignment(this.namespaces);
+    cfg.writeToText(new File("T:/" + pathInJarFromClazz + ".txt"), log); //only for test yet.
+
+    cfg.finishReadCfg();
+    this.cfg = cfg;
+    return cfg;
+  }
+
+
+  
+  
 
   public String readXml(File file, Object dst) throws IOException {
     return this.readXml(file, dst, this.cfg);
@@ -1231,8 +1307,11 @@ public class XmlJzReader
   
   
   static class AttribToStore {
-    /**The data access to store the value.*/
-    final DataAccess.DatapathElement daccess;
+    /**The data access to store the value how it is given in the immediately node, not from SUBTREE.
+     * Maybe null if not given in immediately node, but may exist in SUBTREE. 
+     * It is null if the attribute is not given in immediately node. */
+    DataAccess.DatapathElement daccess;
+    /**Name and value of the attribute. */
     final String name, value;
     AttribToStore(DataAccess.DatapathElement daccess, String name, String value){
       this.daccess = daccess;

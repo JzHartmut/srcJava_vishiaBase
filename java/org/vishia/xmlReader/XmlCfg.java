@@ -3,6 +3,7 @@ package org.vishia.xmlReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.text.ParseException;
@@ -94,7 +95,8 @@ public class XmlCfg
 {
   /**Version, License and History: See {@link XmlJzReader}.
    * <ul>
-   * <li>2024-05-21 new: {@link #readFromText(File, LogMessage)} Now the representation can be better editable as normal syntactical text. 
+   * <li>2024-05-21 new: {@link #readCfgFile(File, LogMessage)}, {@link #readFromJar(Class, String, LogMessage)}, {@link #readFromText(StringPartScan, LogMessage)} 
+   *   Now the representation can be better editable as normal syntactical tet. 
    * <li>2024-05-17 chg: {@link #transferNamespaceAssignment(Map)} does no more call src.clean(), instead it is called outside.
    *   The clean is not a task of this operation. Clean() is necessary before read a new Xml file in {@link XmlJzReader} instead.
    *   The solution before was dirty.  
@@ -152,7 +154,7 @@ public class XmlCfg
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2022-06-06";
+  public static final String version = "2024-05-22";
 
 
   /**Assignment between nameSpace-value and nameSpace-alias gotten from the xmlns:ns="value" declaration in the read cfg.XML file. 
@@ -289,19 +291,6 @@ public class XmlCfg
   }
 
   
-  /**This is an idea, not ready yet TODO to read data non in XML format but in the same destinations,
-   * because the xmlCft is sometimes not nice to edit. 
-   * @param fin
-   */
-  public void setCfgFromZml ( File fin) {
-    ZmlReader zReader = new ZmlReader();
-     zReader.readZml(fin);
-    for(Map.Entry<String, ZmlReader.ZmlNode> e : zReader.idxNodes.entrySet()) {
-      
-    }
-  }
-  
-  
   /**TODO this operation may be non sensible, change XmlJzReader, TODO
    * It transfers the {@link #subtrees} content to the real sub trees of nodes. 
    * Better search in {@link #subtrees} while parsing XML.
@@ -317,7 +306,7 @@ public class XmlCfg
       else if(subtree.dstClassName == subtree.tag.toString()) {
         System.out.println("NOTE: ok dstClassName = " + subtree.dstClassName);
       } else {
-        System.out.println("NOTE: ?? dstClassName = " + subtree.dstClassName + " vs. subtree.tag = " + subtree.tag.toString());
+        System.out.println("NOTE: ?? dstClassName = " + subtree.dstClassName + " vs. subtree.tag = " + subtree.dstClassName.toString());
         subtree.dstClassName = subtree.tag.toString();
       }
       
@@ -349,9 +338,29 @@ public class XmlCfg
    * @throws FileNotFoundException
    * @throws IOException
    */
-  public boolean readFromText ( File fText, LogMessage log) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
+  public boolean readCfgFile ( File fText, LogMessage log) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
     StringPartScan sp = new StringPartFromFileLines(fText);
-    return readFromText(sp, log);
+    boolean bOk = readFromText(sp, log);
+    sp.close();
+    return bOk;
+  }
+  
+  
+  /**Read the XmlCfg content from the textual representation. Syntax adequate {@link #writeToText(File, LogMessage)}
+   * It calls {@link #readFromText(StringPartScan, LogMessage)}.
+   * @param fText The file 
+   * @param log log on error
+   * @return true if all ok, false if any syntax error.
+   * @throws IllegalCharsetNameException
+   * @throws UnsupportedCharsetException
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  public boolean readFromJar ( Class<?> clazz, String pathInJarFromClazz, LogMessage log) throws IllegalCharsetNameException, UnsupportedCharsetException, FileNotFoundException, IOException {
+    StringPartScan sp = new StringPartFromFileLines(clazz, pathInJarFromClazz, 0x10000, null, Charset.forName("UTF-8"));
+    boolean bOk = readFromText(sp, log);
+    sp.close();
+    return bOk;
   }
   
   
@@ -824,7 +833,9 @@ public class XmlCfg
       else if(sAttrValue.length() >0) {  //empty attribute value in cfg: ignore attribute.
         if(attribs == null) { attribs = new TreeMap<String, AttribDstCheck>(); } //IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
         AttribDstCheck dPathAccess;
-        if(!StringFunctions.startsWith(sAttrValue, "!")) throw new IllegalArgumentException("read config: store path should start with !");
+        if(!StringFunctions.startsWith(sAttrValue, "!")) {
+          throw new IllegalArgumentException("read config: store path should start with !");
+        }
         //
         String dstPath;
         if(StringFunctions.equals(sAttrValue, "!CHECK")) {
@@ -1081,7 +1092,7 @@ public class XmlCfg
             bOk = false;
             if(log !=null) log.writeError("ERROR CheckCfgSubtree cfgSubtreeName %s: %s ?? %s", this.tag, this.cfgSubtreeName, nodeCmp.cfgSubtreeName);
           }
-          if(!this.dstClassName.equals(nodeCmp.dstClassName)) {
+          if(this.dstClassName !=null && !this.dstClassName.equals(nodeCmp.dstClassName)) {
             bOk = false;
             if(log !=null) log.writeError("ERROR CheckCfgSubtree dstClassName %s: %s ?? %s", this.tag, this.dstClassName, nodeCmp.dstClassName);
           }

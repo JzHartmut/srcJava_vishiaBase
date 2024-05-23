@@ -201,7 +201,7 @@ public class XmlJzCfgAnalyzer
     try {
       if(args.fInCfg !=null) {   //=========================== read a given cfg file to accordingly in subtree organization.
         main.cfgGiven = new XmlCfg();
-        main.cfgGiven.readFromText(args.fInCfg, main.log);
+        main.cfgGiven.readCfgFile(args.fInCfg, main.log);
         main.cfgGiven.writeToText(new File("T:/cfgGiven.read.back.txt"), main.log);  // only for test.
       }
       if(args.sContent !=null) {
