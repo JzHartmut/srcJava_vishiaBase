@@ -16,6 +16,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -307,15 +308,15 @@ public class XmlJzCfgAnalyzer
         wrCfgsubtreenode.setAttribute("name", "xmlinput", structnode.sSubtreenode);
         String sClass = StringFunctions_B.replaceNonIdentifierChars(structnode.sSubtreenode, '-').toString();
         wrCfgsubtreenode.setAttribute("class", "xmlinput", sClass);
-        if(structnode.attribs !=null)for(Map.Entry<String, ZmlReader.AttribRead> e_attrib: structnode.attribs.entrySet()) {
-          ZmlReader.AttribRead attrib = e_attrib.getValue();
+        if(structnode.attribs !=null)for(Map.Entry<String, AttribRead> e_attrib: structnode.attribs.entrySet()) {
+          AttribRead attrib = e_attrib.getValue();
 //          if(attrib.name.equals("idref"))
 //            Debugutil.stop();
           wrCfgsubtreenode.setAttribute(attrib.name, attrib.namespace, attrib.value);
         }
         wrSetAddContentAttrib(structnode, wrCfgsubtreenode);
         //
-        if(structnode.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e_srcSubnode: structnode.nodes.entrySet()) {
+        if(structnode.nodes !=null) for(Map.Entry<String, XmlStructureNode> e_srcSubnode: structnode.nodes.entrySet()) {
           XmlStructureNode srcSubnode = (XmlStructureNode)e_srcSubnode.getValue();
           XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(srcSubnode.tag);
           wrCfgsubtreenode.addContent(xmlNodeSub);
@@ -377,7 +378,7 @@ public class XmlJzCfgAnalyzer
       }
       out.append("\n\n##== The root struct ==\n");
       if(false) {
-        for(Map.Entry<String, ZmlReader.ZmlNode> enode: this.xmlStructTree.nodes.entrySet()) {
+        for(Map.Entry<String, XmlStructureNode> enode: this.xmlStructTree.nodes.entrySet()) {
           XmlStructureNode node = (XmlStructureNode)enode.getValue();
           node.writeData(out,0);
         }
@@ -516,8 +517,8 @@ public class XmlJzCfgAnalyzer
       StringBuilder uArg= new StringBuilder(100);
       sArg = uArg;
       char sep = '(';
-      for(Map.Entry<String,ZmlReader.AttribRead> e: structNode.attribs.entrySet()) {
-        ZmlReader.AttribRead attrib = e.getValue();
+      for(Map.Entry<String,AttribRead> e: structNode.attribs.entrySet()) {
+        AttribRead attrib = e.getValue();
         wrCfgXmlNode.setAttribute(attrib.name, attrib.namespace, attrib.value);  //transfer to cfg too.
         if(attrib.value.startsWith("!@")) {  //use only attributes which should be used as arguments for the set/add operation
           uArg.append(sep).append(attrib.value.substring(2));
@@ -572,7 +573,7 @@ public class XmlJzCfgAnalyzer
           }
         }
         if(structNode.nodes !=null) { //has subnodes
-          for(Map.Entry<String, ZmlReader.ZmlNode> e: structNode.nodes.entrySet()) {
+          for(Map.Entry<String, XmlStructureNode> e: structNode.nodes.entrySet()) {
             XmlStructureNode subnode = (XmlStructureNode)e.getValue();
             String tag = e.getKey();
             XmlNodeSimple<?> xmlNodeSub = new XmlNodeSimple<>(tag);
@@ -624,23 +625,49 @@ public class XmlJzCfgAnalyzer
     String sInName = fXmlIn.getName();
     xmlReader.openXmlTestOut( new File( "T:/" + sInName + "-back.xml")); //fout1);
     xmlReader.readZipXml(fXmlIn, pathInZip, this.xmlStructTree);
-    this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
+    //
+    checkStructTree();
+    //this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
     storeInCfg(xmlReader);
     Debugutil.stop();
   }
 
-  
+  private void checkStructTree () {
+    for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.xmlStructData.allElementTypes.values()) {
+      String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
+      XmlCfg.XmlCfgNode nodeGiven = cfgGiven == null ? null : cfgGiven.subtrees.get(sTag);
+      if ( nodeGiven !=null   //----------------------------- the node is already found as SUBTREE in given cfg 
+        || cfgSubtreeOccurrences.occurrence.size() >1) {   // or more as one occurrence 
+        if(nodeGiven !=null && cfgSubtreeOccurrences.occurrence.size() ==1)
+          Debugutil.stop();
+        //Build a SUBTREE
+        this.cfgData.addSubTree(sTag);
+        for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
+          structNode.sSubtreenode = sTag;
+        }            
+      }
+    }
+
+  }
   
   private void storeInCfg ( XmlJzReader xmlReader) {
     this.cfgData.transferNamespaceAssignment(xmlReader.namespaces);
     try {
-      for(Map.Entry<String, XmlStructureNode> eSubtree: this.xmlStructData.cfgSubtreeByName.entrySet()) {
-        String nameSubtree = eSubtree.getKey();
-        XmlStructureNode treeRoot = eSubtree.getValue();
-        XmlCfg.XmlCfgNode subroot = this.cfgData.addSubTree(nameSubtree);
-        storeCfgNode(subroot, treeRoot, 100);
+      for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.xmlStructData.allElementTypes.values()) {
+        for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
+          if(structNode.sSubtreenode !=null) {
+            XmlCfg.XmlCfgNode subtree = this.cfgData.subtrees.get(structNode.sSubtreenode);
+            storeCfgNode(subtree, structNode, true, 100);            // store the subtree from the read structNode, the whole tree
+          }
+        }            
       }
-      storeCfgNode(this.cfgData.rootNode, this.xmlStructTree, 100);
+//      for(Map.Entry<String, XmlStructureNode> eSubtree: this.xmlStructData.cfgSubtreeByName.entrySet()) {
+//        String nameSubtree = eSubtree.getKey();
+//        XmlStructureNode treeRoot = eSubtree.getValue();
+//        XmlCfg.XmlCfgNode subroot = this.cfgData.addSubTree(nameSubtree);
+//        storeCfgNode(subroot, treeRoot, 100);
+//      }
+      storeCfgNode(this.cfgData.rootNode, this.xmlStructTree, true, 100);
     } catch(ParseException exc) {
       this.log.writeError("ERROR unexpected: ", exc);
     }
@@ -648,36 +675,38 @@ public class XmlJzCfgAnalyzer
   }
   
   
-  private void storeCfgNode(XmlCfg.XmlCfgNode dst, ZmlReader.ZmlNode src, int recursively) throws ParseException {
-    if(recursively <=0) { assert(false); return; }
-    XmlStructureNode srcx = (XmlStructureNode)src;
-    if(srcx.sSubtreenode !=null)
-      Debugutil.stop();
-    dst.cfgSubtreeName = srcx.sSubtreenode;
-    String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
-    dst.dstClassName = sClass;
-    dst.setContentStorePath("!set_Text(text)");
-    dst.setNewElementPath("!set");
-    dst.setFinishElementPath("!add");
-    dst.elementFinishPath = null;
-    dst.setNameSpaceStorePath("!ns");
-    dst.bCheckAttributeNode = false;
-    //dst.attribsForCheck;
-    //dst.allArgNames;
-    dst.bStoreAttribsInNewContent = false;
-    dst.bList = !srcx.onlySingle;
-    if(src.attribs !=null) {
-      for(ZmlReader.AttribRead attrib: src.attribs.values()) {
-        String key = attrib.namespace + attrib.name;
-        dst.addAttribStorePath(key, attrib.value);
-      }
+  private void storeCfgNode(XmlCfg.XmlCfgNode dst, XmlStructureNode src, boolean bRoot, int recursion) throws ParseException {
+    if(recursion <=0) { assert(false); return; }
+    XmlStructureNode srcx = src;
+    if(!bRoot) {
+      dst.cfgSubtreeName = src.sSubtreenode;
     }
-    if(src.nodes !=null) {
-      dst.subnodes = new TreeMap<>();
-      for(ZmlReader.ZmlNode nodez: src.nodes.values()) {
-        XmlCfg.XmlCfgNode nodeDst = new XmlCfg.XmlCfgNode(dst, this.cfgData, nodez.tag);
-        dst.addSubnode(nodeDst.tag.toString(), nodeDst);
-        storeCfgNode(nodeDst, nodez, recursively -1);
+    if(dst.cfgSubtreeName ==null) {
+      String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
+      dst.dstClassName = sClass;
+      dst.setContentStorePath("!set_Text(text)");
+      dst.setNewElementPath("!set");
+      dst.setFinishElementPath("!add");
+      dst.elementFinishPath = null;
+      dst.setNameSpaceStorePath("!ns");
+      dst.bCheckAttributeNode = false;
+      //dst.attribsForCheck;
+      //dst.allArgNames;
+      dst.bStoreAttribsInNewContent = false;
+      dst.bList = !srcx.onlySingle;
+      if(src.attribs !=null) {
+        for(AttribRead attrib: src.attribs.values()) {
+          String key = attrib.namespace + attrib.name;
+          dst.addAttribStorePath(key, attrib.value);
+        }
+      }
+      if(src.nodes !=null) {
+        dst.subnodes = new TreeMap<>();
+        for(XmlStructureNode nodez: src.nodes.values()) {
+          XmlCfg.XmlCfgNode nodeDst = new XmlCfg.XmlCfgNode(dst, this.cfgData, nodez.tag);
+          dst.addSubnode(nodeDst.tag.toString(), nodeDst);
+          storeCfgNode(nodeDst, nodez, false, recursion -1);
+        }
       }
     }
   }
@@ -737,24 +766,24 @@ public class XmlJzCfgAnalyzer
        * @param node new found node in user XML tree.
        */
       protected void addContentOfFoundNode(XmlStructureNode node){
-        if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
+        if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
           String key = e.getKey();
           if(this.attributeNames.get(key) ==null) {
             this.attributeNames.put(key, key);     //an attribute non detected as yet, add it in representative.;
             if(this.representative.attribs == null) {
-              this.representative.attribs = new TreeMap<String, ZmlReader.AttribRead>();
+              this.representative.attribs = new TreeMap<String, AttribRead>();
             }
             this.representative.attribs.put(key, e.getValue());
           }
         }
-        if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
+        if(node.nodes !=null) for(Map.Entry<String, XmlStructureNode> e: node.nodes.entrySet()) {
           String key = e.getKey();
           //nonsense on the old source position: foundNodeNames.put(key, key);
           if(this.nodeNames.get(e.getKey()) ==null) {
             this.nodeNames.put(key, key);    //a node non detected as yet, add it in representative.
             if(this.representative.nodes ==null) {
               //this.representative.addElement(key);
-              this.representative.nodes = new TreeMap<String, ZmlReader.ZmlNode>();
+              this.representative.nodes = new TreeMap<String, XmlStructureNode>();
             }
             this.representative.nodes.put(key, e.getValue());
           }
@@ -799,10 +828,10 @@ public class XmlJzCfgAnalyzer
         key = node.tag + '_' + nameModif;    // if a node structure with same tag is used in a different semantic.
       }
       //do not so: node.sSubtreenode = key;
-      if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
+      if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
         cfgSubtreeType.attributeNames.put(e.getKey(), e.getKey());  // first time, first attributes
       }
-      if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
+      if(node.nodes !=null) for(Map.Entry<String, XmlStructureNode> e: node.nodes.entrySet()) {
         cfgSubtreeType.nodeNames.put(e.getKey(), e.getKey());
       }
       if(allElementTypes2.get(node.tag) !=null) {
@@ -859,7 +888,7 @@ public class XmlJzCfgAnalyzer
           nameModif +=1;
           //check whether the found cfgSubtree seems to be the same type, because it has the same children:
           int nrfound=0, nrcount=0;
-          if(node.attribs !=null) for(Map.Entry<String, ZmlReader.AttribRead> e: node.attribs.entrySet()) {
+          if(node.attribs !=null) for(Map.Entry<String, AttribRead> e: node.attribs.entrySet()) {
             String key = e.getKey();
             if(cfgSubtreeType.attributeNames.get(key) !=null) {
               nrfound +=1;
@@ -870,7 +899,7 @@ public class XmlJzCfgAnalyzer
           float nrNewAttribs = nrcount - nrfound;
           float nrSameAttribs = nrfound;
           nrfound = nrcount = 0;
-          if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
+          if(node.nodes !=null) for(Map.Entry<String, XmlStructureNode> e: node.nodes.entrySet()) {
             String key = e.getKey();
             if(cfgSubtreeType.nodeNames.get(key) !=null) {
               nrfound +=1;
@@ -887,7 +916,7 @@ public class XmlJzCfgAnalyzer
           for(XmlStructureNode maybeFellow: occurrences) {
             nrfound = nrcount = 0;
             int mask = 1;
-            if(node.nodes !=null) for(Map.Entry<String, ZmlReader.ZmlNode> e: node.nodes.entrySet()) {
+            if(node.nodes !=null) for(Map.Entry<String, XmlStructureNode> e: node.nodes.entrySet()) {
               String key = e.getKey();
               if(maybeFellow.nodes !=null && maybeFellow.nodes.get(key) !=null) {
 //                nrfound +=1;
@@ -1000,7 +1029,7 @@ public class XmlJzCfgAnalyzer
      */
     private void checkUsageSubtreenode(CfgSubtreeType2 cfgSubtreeNeeds, XmlStructureNode node, int recursiveCt) {
       assert(recursiveCt >= 0);
-      if(node.nodes !=null) for(Map.Entry<String,ZmlReader.ZmlNode> e_subnode: node.nodes.entrySet()) {
+      if(node.nodes !=null) for(Map.Entry<String,XmlStructureNode> e_subnode: node.nodes.entrySet()) {
         XmlStructureNode subnode = (XmlStructureNode)e_subnode.getValue();
         if(subnode.sSubtreenode !=null) { //need as subtree
           if(!subnode.bDependencyChecked) {
@@ -1033,6 +1062,14 @@ public class XmlJzCfgAnalyzer
   
   
   
+  public static class AttribRead {
+    String namespace;
+    String name;
+    /**storage type or access routine */
+    String value;
+  }
+
+  
 
   /**This class is one node for one element to store the structure of a XML file via {@link XmlJzReader}.
    * <ul>
@@ -1057,9 +1094,32 @@ public class XmlJzCfgAnalyzer
    * @author Hartmut Schorrig
    *
    */
-  static class XmlStructureNode extends ZmlReader.ZmlNode
+  static class XmlStructureNode
   {
     
+    /**Tag name of the element. */
+    final String tag;
+    
+    final XmlStructureNode parent;
+    
+    /**Found sub nodes. The list is supplemented if new sub nodes are found on further occurrences of elements. 
+     * It contains the same tag element only one time. that is tested in {@link #addElement(String)}.
+     */
+    Map<String, XmlStructureNode> nodes;
+    
+    /**Found attributes. The list is supplemented if new attribute names are found on further occurrences of elements. */
+    Map<String, AttribRead> attribs;
+    
+    
+    /**Set if new attributes are found. Then the */
+    boolean bNewAttributes = false; 
+
+    /**The declared name spaces for this node. */
+    Map<String, String> nameSpaces;
+
+    List<String> attribsUnnamed;
+    
+
     /**Tag name of the element as written in Java code, only identifier chars. */
     final String tagIdent;
     
@@ -1099,7 +1159,8 @@ public class XmlJzCfgAnalyzer
     long mGroup;
     
     XmlStructureNode(XmlStructureNode parent, String tag, XmlStructureData xmlStructData){ 
-      super(parent, tag);
+      this.parent = parent; 
+      this.tag = tag;
       this.tagIdent = StringFunctions_B.replaceNonIdentifierChars(tag, '-').toString();
       
       this.xmlStructData = xmlStructData; 
@@ -1109,6 +1170,47 @@ public class XmlJzCfgAnalyzer
     
     
     
+    /**It is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}
+     * @param tag
+     * @return
+     */
+    public void addAttribute(String namespacename, String attribValue) { 
+      AttribRead attrib = new AttribRead();
+      //replaces the ':' between namespace:name with _
+      attrib.value = attribValue;
+      int posNamespace = namespacename.indexOf(':');
+      if(posNamespace >=0) {
+        attrib.namespace = namespacename.substring(0, posNamespace);
+        attrib.name = namespacename.substring(posNamespace+1);
+      } else {
+        attrib.name = namespacename;
+      }
+      if(this.attribs == null) { 
+        this.attribs = new TreeMap<String, AttribRead>(); 
+        this.bNewAttributes = true;
+        this.attribs.put(namespacename, attrib);  //the first attrin
+      }
+      else if(this.attribs.get(namespacename) ==null) {
+        this.bNewAttributes = true;
+        this.attribs.put(namespacename, attrib);  //a new attrib
+      }
+    }
+
+    /**Adds a value String found in the data presentation, which is not designated by a name.
+     * It may be designated by its distinguished content or by its position.
+     * The post preparation should decide about usage.
+     * @param value value to add to {@link #attribsUnnamed}.
+     */
+    public void addAttributeUnnamed(String value) {
+      if(this.attribsUnnamed == null) { this.attribsUnnamed = new LinkedList<String>(); }
+      this.attribsUnnamed.add(value);
+    }
+
+    void putSubnode(XmlStructureNode subNode) {
+      if(this.nodes == null) { this.nodes = new TreeMap<String, XmlStructureNode>(); }
+      this.nodes.put(subNode.tag, subNode);
+    }
+
     /**Returns the instance to store the occurrence of a XML-element in a node.
      * If more XML-elements with the same tag name are found in the same node, only one occurrence for this element tag is stored.
      * With them maybe new occurring attributes or new occurring elements are stored. 
@@ -1125,7 +1227,7 @@ public class XmlJzCfgAnalyzer
         Debugutil.stop();
       }
       if(this.nodes == null) {
-        this.nodes = new TreeMap<String, ZmlReader.ZmlNode>();
+        this.nodes = new TreeMap<String, XmlStructureNode>();
       }
       if(this.nodesLocal == null) {
         this.nodesLocal = new TreeMap<String, String>();
@@ -1181,9 +1283,9 @@ public class XmlJzCfgAnalyzer
       if(this.onlySingle) { out.append(" SINGLE "); }
       out.append('\n');
       if(this.attribs !=null) {
-        for(Map.Entry<String, ZmlReader.AttribRead> e_attrib : this.attribs.entrySet()) {
+        for(Map.Entry<String, AttribRead> e_attrib : this.attribs.entrySet()) {
           ApplMain.outIndent(out, indent +2);
-          ZmlReader.AttribRead attrib = e_attrib.getValue();
+          AttribRead attrib = e_attrib.getValue();
           out.append('@');
           if(attrib.namespace !=null) { out.append(attrib.namespace).append(':'); }
           out.append(attrib.name).append(" = ").append(attrib.value).append("\n");
@@ -1195,7 +1297,7 @@ public class XmlJzCfgAnalyzer
     void writeData ( Appendable out, int indent) throws IOException {
       writeNodeData(out, indent);
       if(this.nodes !=null) {
-        for(Map.Entry<String, ZmlReader.ZmlNode> e_node : this.nodes.entrySet()) {
+        for(Map.Entry<String, XmlStructureNode> e_node : this.nodes.entrySet()) {
           XmlStructureNode node = (XmlStructureNode)e_node.getValue();
           node.writeData(out, indent +2);
         }
