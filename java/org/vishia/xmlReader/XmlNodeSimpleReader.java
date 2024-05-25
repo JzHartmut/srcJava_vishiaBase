@@ -34,7 +34,7 @@ public class XmlNodeSimpleReader {
    * @return instance
    */
   public static XmlCfg newCfgXmlNodeSimple()
-  { XmlCfg cfgCfg = new XmlCfg();
+  { XmlCfg cfgCfg = new XmlCfg(false);
     cfgCfg.rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, "CFG-ROOT");  //The rootnode of the cfg is only formalistic.
     
     //The next XmlCfgNode is used for all subnodes of the <xmlinput.cfg...

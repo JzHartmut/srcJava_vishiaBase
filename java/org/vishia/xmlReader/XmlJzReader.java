@@ -1209,7 +1209,7 @@ public class XmlJzReader
    * @throws IOException
    */
   public XmlCfg readCfg(File file) throws IOException {
-    XmlCfg cfg = new XmlCfg();
+    XmlCfg cfg = new XmlCfg(false);
     readXml(file, cfg.rootNode, this.cfgCfg);
     cfg.transferNamespaceAssignment(this.namespaces); //necessary since 2024-05-17
 
@@ -1247,7 +1247,7 @@ public class XmlJzReader
     //classLoader.getResource("slx.cfg.xml");
     InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
     if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
-    XmlCfg cfg = new XmlCfg();
+    XmlCfg cfg = new XmlCfg(false);
     readXml(xmlCfgStream, pathMsg, cfg.rootNode, this.cfgCfg);
     xmlCfgStream.close();
     cfg.transferNamespaceAssignment(this.namespaces);
@@ -1276,7 +1276,7 @@ public class XmlJzReader
     //classLoader.getResource("slx.cfg.xml");
 //    InputStream xmlCfgStream = clazz.getResourceAsStream(pathInJarFromClazz);
 //    if(xmlCfgStream == null) throw new FileNotFoundException(pathMsg);
-    XmlCfg cfg = new XmlCfg();
+    XmlCfg cfg = new XmlCfg(true);
     cfg.readFromJar(clazz, pathInJarFromClazz, this.log);
 //    xmlCfgStream.close();
 //    cfg.transferNamespaceAssignment(this.namespaces);

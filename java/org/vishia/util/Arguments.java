@@ -174,6 +174,10 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2024-05-25 Hartmut planned, TODO: SetArgument#setArgument(String) should return an error String, null = no error.
+   * <li>2024-05-25 Hartmut new {@link #errMsg(String, Object...)} able to call in an non static implementation of {@link SetArgument#setArgument(String)},
+   *   see javadoc there.
+   * <li>2024-05-25 Hartmut {@link SetArgument#setArgument(String)} can throw now {@link IOException} instead only {@link FileNotFoundException}
    * <li>2024-05-22 Hartmut some docu and optimization 
    * <li>2023-12-08 Hartmut new: now supports "--@:", then the next argument string is one line per argument. 
    *   This is not for command line arguments, it is for java String given arguments 
@@ -227,7 +231,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2023-07-14";
+  public final static String sVersion = "2024-05-25";
 
   
   /**Interface for implementation of setting arguments.
@@ -245,9 +249,12 @@ public abstract class Arguments {
    * The implementation method can test the admissibility of the argument's value. It can return false
    * to designate that the value is not valid. For example the existence of a file can be checked.
    * @since 2023-09-21 with possible {@link FileNotFoundException}
+   * @since 2024-05-24 with possible {@link IOException} accepted by user implementations because it is possible 
+   *   to {@link Appendable#append(CharSequence)} a message or do anything with files etc. The Exception forces an argument error.
+   * @since TODO it is interesting that this operation returns null if ok and a error string as error message comes from {@link SetArgument#setArgument(String)}
    */
   public interface SetArgument{ 
-    boolean setArgument(String val) throws FileNotFoundException; 
+    boolean setArgument(String val) throws IOException; 
   }
   
   
@@ -458,8 +465,11 @@ public abstract class Arguments {
    * @return true if argument is accepted, false if not found in the {@link #argList} given on ctor
    * @throws FileNotFoundException If the argument is formally accepted but evaluation cause an exception
    * @since 2023-09-21 with possible {@link FileNotFoundException} accepted by user implementations.
+   * @since 2024-05-24 with possible {@link IOException} accepted by user implementations because it is possible 
+   *   to {@link Appendable#append(CharSequence)} a message or do anything with files etc. The Exception forces an argument error.
+   * @since TODO it is interesting that this operation returns null if ok and a error string as error message comes from {@link SetArgument#setArgument(String)}
    */
-  protected boolean testArgument ( String argc, int nArg) throws FileNotFoundException {
+  protected boolean testArgument ( String argc, int nArg) throws IOException {
     String value;
     boolean bOk = true;
     Argument emptyArg = null;
@@ -823,7 +833,31 @@ public abstract class Arguments {
     return bOkArg;
   }
   
+  /**Writes an error message especially usable in the implementation of SetArguments due to the pattern:<pre>
+   new Argument("-dirXYZ", ":<path>  Any example directory should exists", new SetArgument() {
+     (at)Override public boolean setArgument(String val) throws IOException {  
+       File dir = new File(val).getAbsoluteFile();
+       if(dir.exists() && dir.isDirectory()) {
+         CmdArgs.this.dirXYZ = dir;
+         return true;
+       } else {  
+         return CmdArgs.this.errMsg("-dirXYZ:%s not found as directory", dir );
+       }
+   }}}
+   * </pre>
+   * @param text
+   * @param val
+   * @return
+   * @throws IOException
+   */
+  protected boolean errMsg(String text, Object... val) throws IOException {
+    String sErr = String.format(text, val);
+    if(this.errMsg !=null) { this.errMsg.append(sErr); }
+    else { System.err.println(sErr); }
+    return false;
+  }
   
+
   
   
   /**Writes all arguments with {@link Argument#arg} {@link Argument#help} in its order in one in a line.

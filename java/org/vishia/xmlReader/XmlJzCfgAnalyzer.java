@@ -43,6 +43,11 @@ public class XmlJzCfgAnalyzer
 {
   /**Version, License and History:
    * <ul>
+   * <li>2024-05-25 Hartmut: {@link #XXXreadNode(BufferedReader, String)} etc. seems to be unnecessary.
+   * <li>2024-05-25 Hartmut: Criteria to build a SUBTREE: Not if all have the same parent tag.
+   *   This is only closed sensible, if all parent node occurrences or its parents have the same SUBTREE. 
+   *   But this should be regarded if given XmlCfg is really used. 
+   * <li>2024-05-25 Hartmut: Now do no more deal with the "!accessPath", this is only for the XML form of XmlCfg
    * <li>2024-05-21 Hartmut: Reads a given XmlCfg, uses Arguments for {@link CmdArgs} now. Not ready for all. 
    * <li>2022-06-06 Hartmut: produces the "xmlinput:finish" entry, see {@link XmlCfg}.
    * <li>2022-06-06 Hartmut: regards all namespace entries
@@ -201,7 +206,7 @@ public class XmlJzCfgAnalyzer
     XmlJzCfgAnalyzer main = new XmlJzCfgAnalyzer();
     try {
       if(args.fInCfg !=null) {   //=========================== read a given cfg file to accordingly in subtree organization.
-        main.cfgGiven = new XmlCfg();
+        main.cfgGiven = new XmlCfg(true);
         main.cfgGiven.readCfgFile(args.fInCfg, main.log);
         main.cfgGiven.writeToText(new File("T:/cfgGiven.read.back.txt"), main.log);  // only for test.
       }
@@ -232,7 +237,7 @@ public class XmlJzCfgAnalyzer
    * @return instance of XmlCfg to do so.
    */
   public static XmlCfg newCfgReadStruct()
-  { XmlCfg cfgCommon = new XmlCfg();
+  { XmlCfg cfgCommon = new XmlCfg(false);
     cfgCommon.rootNode = new XmlCfg.XmlCfgNode(null, cfgCommon, null);  //The rootnode of the cfg is only formalistic.
     
     XmlCfg.XmlCfgNode rootNode = new XmlCfg.XmlCfgNode(null, cfgCommon, "?");  //<xmlinput:cfg as node 2. level
@@ -260,15 +265,17 @@ public class XmlJzCfgAnalyzer
   LogMessage log;
   
   /**The common structure data of the read XML file. */
-  final XmlStructureData xmlStructData = new XmlStructureData();
+  final XmlStructureData xmlStructData = new XmlStructureData(this);
   
   /**The tree of the structure of the read XML file. It contains the same tag element for one node only one time.
    * An element is added to this root node and then to all current nodes in {@link XmlStructureNode#addElement(String)}. */
   XmlStructureNode xmlStructTree = new XmlStructureNode(null, "root", this.xmlStructData);  //the root node for reading config
 
+  TreeMap<String, XmlStructureData.CfgSubtreeType> allElementTypes = new TreeMap<String, XmlStructureData.CfgSubtreeType>();
   
 
-  XmlCfg cfgData = new XmlCfg();
+
+  XmlCfg cfgData = new XmlCfg(true);
   
   XmlCfg cfgGiven;
   
@@ -399,7 +406,7 @@ public class XmlJzCfgAnalyzer
   }
 
 
-  public void readConfigText(File fin) {
+  public void XXXreadConfigText(File fin) {
     BufferedReader rd = null;
     try {
       rd = new BufferedReader(new InputStreamReader(new FileInputStream(fin), "UTF-8"));
@@ -424,10 +431,10 @@ public class XmlJzCfgAnalyzer
           bSubTreeNodes = false;
         }
         else if(bReadNamespaces) {
-          readNameSpace(sLine);
+          XXXreadNameSpace(sLine);
         }
         else if(bReadNodes) {
-          XmlStructureNode node = readNode(rd, sLine);
+          XmlStructureNode node = XXXreadNode(rd, sLine);
           if(bSubTreeNodes) {
             this.xmlStructData.cfgSubtreeList.put(node.tagIdent, node);
           } else {
@@ -449,13 +456,13 @@ public class XmlJzCfgAnalyzer
   }
   
   
-  private void readNameSpace(String sLine) {
+  private void XXXreadNameSpace(String sLine) {
     int sep = sLine.indexOf(" = ");
     this.cfgData.xmlnsAssign.put(sLine.substring(0, sep), sLine.substring(sep+3));
   }
 
   
-  private XmlStructureNode readNode ( BufferedReader rd, String sLine1) throws IOException {
+  private XmlStructureNode XXXreadNode ( BufferedReader rd, String sLine1) throws IOException {
     String sLine = sLine1 != null ? sLine1 : rd.readLine();
     sLine = sLine.trim();
     assert(sLine.startsWith("<"));
@@ -478,13 +485,13 @@ public class XmlJzCfgAnalyzer
         break;
       }
       else if(sLine.startsWith("<")) {
-        XmlStructureNode subNode = readNode(rd, sLine);
+        XmlStructureNode subNode = XXXreadNode(rd, sLine);
         node.putSubnode(subNode);
       }
       else if(sLine.startsWith("@")) {
         int posSep2 = sLine.indexOf(" = ");
         String sAttrNameSpaceName = sLine.substring(1, posSep2);
-        String sAttrValue = "!@" + StringFunctions_B.replaceNonIdentifierChars(sAttrNameSpaceName, '-').toString();
+        String sAttrValue = "@" + StringFunctions_B.replaceNonIdentifierChars(sAttrNameSpaceName, '-').toString();
         node.addAttribute(sAttrNameSpaceName, sAttrValue);
       }
       else if(sLine.length()==0) {}
@@ -497,13 +504,13 @@ public class XmlJzCfgAnalyzer
   }
 
   
-  private char readAttributeOrSubnode(String sLine) {
+  private char XXXreadAttributeOrSubnode(String sLine) {
     
     return 'a';
   }
   
 
-  private void readRootStructure(String sLine) {
+  private void XXXreadRootStructure(String sLine) {
     
   }
   
@@ -511,6 +518,7 @@ public class XmlJzCfgAnalyzer
   
   
   
+  @SuppressWarnings("static-method") 
   private void wrSetAddContentAttrib(XmlStructureNode structNode, XmlNode wrCfgXmlNode) throws XmlException {
     CharSequence sArg;
     if(structNode.attribs !=null) {
@@ -520,7 +528,7 @@ public class XmlJzCfgAnalyzer
       for(Map.Entry<String,AttribRead> e: structNode.attribs.entrySet()) {
         AttribRead attrib = e.getValue();
         wrCfgXmlNode.setAttribute(attrib.name, attrib.namespace, attrib.value);  //transfer to cfg too.
-        if(attrib.value.startsWith("!@")) {  //use only attributes which should be used as arguments for the set/add operation
+        if(attrib.value.startsWith("@")) {  //use only attributes which should be used as arguments for the set/add operation
           uArg.append(sep).append(attrib.value.substring(2));
           sep = ',';
         }
@@ -632,19 +640,45 @@ public class XmlJzCfgAnalyzer
     Debugutil.stop();
   }
 
+  /**Checks the read XML structure tree.
+   * All the same occurrences of nodes with the same tag are stored in {@link #allElementTypes}.
+   * That entries knows all XmlStructNode occurrences.
+   * If a XmlStructNode is used in several constellations (more as one time found, different parent),
+   * then an entry in {@link #cfgData} {@link XmlCfg#subtrees} will be created to mark, it is an candidate for SUBTREE.
+   * The SUBTREE in {@link #cfgData} is then filled in {@link #storeInCfg(XmlJzReader)}.
+   * 
+   */
   private void checkStructTree () {
-    for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.xmlStructData.allElementTypes.values()) {
+    for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
       String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
       XmlCfg.XmlCfgNode nodeGiven = cfgGiven == null ? null : cfgGiven.subtrees.get(sTag);
       if ( nodeGiven !=null   //----------------------------- the node is already found as SUBTREE in given cfg 
         || cfgSubtreeOccurrences.occurrence.size() >1) {   // or more as one occurrence 
         if(nodeGiven !=null && cfgSubtreeOccurrences.occurrence.size() ==1)
           Debugutil.stop();
-        //Build a SUBTREE
-        this.cfgData.addSubTree(sTag);
+        String sTagParent = null;
+        boolean bCreateSubtree = false;;
         for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
-          structNode.sSubtreenode = sTag;
-        }            
+          if(sTagParent == null) { sTagParent = structNode.parent.tag; } // first initialize
+          else if(!sTagParent.equals(structNode.parent.tag) ) {
+            bCreateSubtree = true;
+            break;      // one different parent is enough
+          }
+        }
+        if(!bCreateSubtree) {
+          Debugutil.stop();
+        }
+        // If !cCreateSubtree: The same node type occurs in several positions in tree, 
+        // but anytime in the same parent. If the parent will be a subtree member, it is only one. 
+        // If the parent will not be a subtree member and also all grand parent won't, 
+        // then it is a node in a specific situation, do not build a subtree because the parents don't. 
+        if(bCreateSubtree) {
+          //Build a SUBTREE
+          this.cfgData.addSubTree(sTag);                     // creates a SUBTREE entry, then the content will be associated in this SUBTREE in #storeInCfg
+          for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
+            structNode.sSubtreenode = sTag;
+          }
+        }
       }
     }
 
@@ -653,7 +687,7 @@ public class XmlJzCfgAnalyzer
   private void storeInCfg ( XmlJzReader xmlReader) {
     this.cfgData.transferNamespaceAssignment(xmlReader.namespaces);
     try {
-      for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.xmlStructData.allElementTypes.values()) {
+      for(XmlStructureData.CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
         for(XmlStructureNode structNode: cfgSubtreeOccurrences.occurrence ) {
           if(structNode.sSubtreenode !=null) {
             XmlCfg.XmlCfgNode subtree = this.cfgData.subtrees.get(structNode.sSubtreenode);
@@ -684,23 +718,45 @@ public class XmlJzCfgAnalyzer
     if(dst.cfgSubtreeName ==null) {
       String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
       dst.dstClassName = sClass;
-      dst.setContentStorePath("!set_Text(text)");
-      dst.setNewElementPath("!set");
-      dst.setFinishElementPath("!add");
-      dst.elementFinishPath = null;
-      dst.setNameSpaceStorePath("!ns");
+      if(src.bText) {
+        dst.setContentStorePath("set_Text(text)");
+      }
+      StringBuilder sNewElement = new StringBuilder(20 + (src.attribs == null ? 0 : src.attribs.size() * 10));
+      if(src.onlySingle) {
+        sNewElement.append("set_").append(src.tagIdent).append('(');
+      } else {
+        sNewElement.append("new_").append(src.tagIdent).append('(');
+        String sAddPath = "add_" + src.tagIdent + "(value)";
+        dst.setFinishElementPath(sAddPath);
+      }
+      if(src.attribs !=null) {
+        String sep = "";
+        for(AttribRead attrib: src.attribs.values()) {
+          if(attrib.value.startsWith("@")) {
+            sNewElement.append(sep).append(attrib.value.substring(1));
+            sep = ",";
+          }
+          else if(attrib.value.startsWith("!@")) {
+            sNewElement.append(sep).append(attrib.value.substring(2));
+            sep = ",";
+          }
+        }
+      }
+      sNewElement.append(')');
+      dst.setNewElementPath(sNewElement.toString() );
+      //dst.setNameSpaceStorePath("!ns");
       dst.bCheckAttributeNode = false;
       //dst.attribsForCheck;
       //dst.allArgNames;
       dst.bStoreAttribsInNewContent = false;
       dst.bList = !srcx.onlySingle;
-      if(src.attribs !=null) {
+      if(src.attribs !=null) { //============================ Transfer all attribs
         for(AttribRead attrib: src.attribs.values()) {
           String key = attrib.namespace + attrib.name;
           dst.addAttribStorePath(key, attrib.value);
         }
       }
-      if(src.nodes !=null) {
+      if(src.nodes !=null) {   //============================ Transfer all nodes
         dst.subnodes = new TreeMap<>();
         for(XmlStructureNode nodez: src.nodes.values()) {
           XmlCfg.XmlCfgNode nodeDst = new XmlCfg.XmlCfgNode(dst, this.cfgData, nodez.tag);
@@ -721,6 +777,8 @@ public class XmlJzCfgAnalyzer
 
   
   static final class XmlStructureData {
+    
+    final XmlJzCfgAnalyzer this0;
     
     /**Contains all elements with its {@link #occurrence}.
      *
@@ -801,8 +859,6 @@ public class XmlJzCfgAnalyzer
     
     /**Stores all node types per tagName, with its occurrence in the structure file. 
      * */
-    TreeMap<String, CfgSubtreeType> allElementTypes = new TreeMap<String, CfgSubtreeType>();
-   
     /**Stores all node types with occurrence more as one time, with tag name 
      * but with extra entry for any different content (really different type with same tag). 
      */
@@ -819,6 +875,13 @@ public class XmlJzCfgAnalyzer
     
     
     
+    
+    
+    public XmlStructureData(XmlJzCfgAnalyzer this0) {
+      this.this0 = this0;
+    }
+
+
     private void createCfgSubtree(XmlStructureNode node, char nameModif) {
       CfgSubtreeType2 cfgSubtreeType = new CfgSubtreeType2(node);
       String key;
@@ -851,10 +914,10 @@ public class XmlJzCfgAnalyzer
      * @param node
      */
     void addStructureNodeOccurence(XmlStructureNode node) {
-      CfgSubtreeType cfgSubtreeWithAllOccurences = allElementTypes.get(node.tag); 
+      CfgSubtreeType cfgSubtreeWithAllOccurences = this.this0.allElementTypes.get(node.tag); 
       if(cfgSubtreeWithAllOccurences == null) {
         cfgSubtreeWithAllOccurences = new CfgSubtreeType();
-        allElementTypes.put(node.tag, cfgSubtreeWithAllOccurences);
+        this.this0.allElementTypes.put(node.tag, cfgSubtreeWithAllOccurences);
       }
       cfgSubtreeWithAllOccurences.occurrence.add(node);
     }
@@ -961,7 +1024,7 @@ public class XmlJzCfgAnalyzer
      */
     protected void checkCfgSubtree ( XmlCfg cfgGiven ) {
       // TODO for the case more as one cfgGiven subtree build a Map with occurences of the config variants.
-      for(CfgSubtreeType cfgSubtreeOccurrences: this.allElementTypes.values()) {
+      for(CfgSubtreeType cfgSubtreeOccurrences: this.this0.allElementTypes.values()) {
         String sTag = cfgSubtreeOccurrences.occurrence.get(0).tag;
         XmlCfg.XmlCfgNode nodeGiven = cfgGiven == null ? null : cfgGiven.subtrees.get(sTag);
         if ( nodeGiven !=null   //--------------------------- the node is already found as SUBTREE in given cfg 
@@ -1260,16 +1323,19 @@ public class XmlJzCfgAnalyzer
 //      this.nameSpacesAll.put(key, value);
     }
     
+    
+    
     /**It is invoked via reflection from {@link XmlJzCfgAnalyzer#newCfgReadStruct()}
      * @param tag
      * @return
      */
     public void setAttribute(String namespacename) { 
       //replaces the ':' between namespace:name with _
-      String value = "!@" + StringFunctions_B.replaceNonIdentifierChars(namespacename, '-').toString();
+      String value = "@" + StringFunctions_B.replaceNonIdentifierChars(namespacename, '-').toString();
       addAttribute(namespacename, value);
     }
 
+    
     
     public void setTextOccurrence() { this.bText = true; }
    

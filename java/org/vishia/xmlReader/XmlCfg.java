@@ -174,13 +174,18 @@ public class XmlCfg
   
   Map<String, DataAccess.IntegerIx> attribNameVale;
   
-  protected boolean readFromText;
+  protected final boolean readFromText;
+  
+  
+  public XmlCfg(boolean readFromText) {
+    this.readFromText = readFromText;
+  }
   
   /**Creates the configuration to read a config.xml file.
    * @return instance
    */
   static XmlCfg newCfgCfg()
-  { XmlCfg cfgCfg = new XmlCfg();
+  { XmlCfg cfgCfg = new XmlCfg(false);
     try {
       cfgCfg.rootNode = new XmlCfg.XmlCfgNode(null, cfgCfg, null);  //The rootnode of the cfg is only formalistic.
       
@@ -370,7 +375,7 @@ public class XmlCfg
    * @return true if all ok, false if any syntax error.
    */
   public boolean readFromText(StringPartScan sp, LogMessage log) {
-    this.readFromText = true;
+    assert(this.readFromText);
     boolean bOk = true;
     sp.setIgnoreWhitespaces(true);
     if(!sp.scanStart().scan("XmlJzReader-Config 2024-05").scanOk()) {
@@ -505,7 +510,7 @@ public class XmlCfg
     + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
     + "<:if:node.contentStorePath><:n><&indent>  TEXT:\"<:exec:wrDataAccess(OUT, node.contentStorePath)>\"<.if>"
     + "<:if:node.nameSpaceDef><:n><&indent>  NAMESPACE:\"<&node.nameSpaceDef>\"<.if>"
-    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"!<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess><.if>\"<.for><.if>"  
+    + "<:if:node.attribs><:for:attr:node.attribs><:n><&indent>  @<&attr.name>=\"<:if:attr.storeInMap>@<&attr.storeInMap><.if><:if:attr.daccess><&attr.daccess><.if>\"<.for><.if>"  
     + "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"  
     + "<:n><&indent><:<>/<&node.tag><:>>" 
     //<:n>"
@@ -746,7 +751,7 @@ public class XmlCfg
      * @throws ParseException 
      */
     public void setNewElementPath(String dstPath) throws ParseException {
-      String sPath;
+      final String sPath;
       if(this.cfg.readFromText && !dstPath.startsWith("!")) {
         sPath = dstPath;
       } else {
@@ -780,7 +785,7 @@ public class XmlCfg
       }
       StringPartScan spPath = new StringPartScan(sPath);
       spPath.setIgnoreWhitespaces(true);
-      this.elementFinishPath = new DataAccess.DatapathElement(spPath, allArgNames, null);  //gathered necessary names.
+      this.elementFinishPath = new DataAccess.DatapathElement(spPath, this.allArgNames, null);  //gathered necessary names.
       if(this.allArgNames.size() ==0) {
         this.allArgNames = null; //not necessary.
       }
@@ -788,7 +793,7 @@ public class XmlCfg
   
     
     public void setList() {
-      bList = true;
+      this.bList = true;
     }
     
     
@@ -806,7 +811,7 @@ public class XmlCfg
         XmlCfgNode subtree = null; //should be done all via subtreeForward, or better remove it:   this.cfg.subtrees.get(sAttrValue);
         if(subtree == null) {
           //not found or later in file. 
-          if(cfg.subtreeForward == null) { cfg.subtreeForward = new TreeMap<String, List<XmlCfgNode>>(); }
+          if(this.cfg.subtreeForward == null) { this.cfg.subtreeForward = new TreeMap<String, List<XmlCfgNode>>(); }
           List<XmlCfgNode> subtreeForwardList = this.cfg.subtreeForward.get(sAttrValue);
           if(subtreeForwardList == null) {
             subtreeForwardList = new LinkedList<XmlCfgNode>();
@@ -820,35 +825,41 @@ public class XmlCfg
 //    else if(key.equals("xmlinput:class")) { //especially for build JavaDst in cfg.xml
 //      this.dstClassName = sAttrValue;
       }  
-      else if(  attribsForCheck !=null     //The attribsForCheck was set because a primary config node with bCheckAttributeNode was found before
-        && (attribForCheck = attribsForCheck.get(key))!=null
+      else if(  this.attribsForCheck !=null     //The attribsForCheck was set because a primary config node with bCheckAttributeNode was found before
+        && (attribForCheck = this.attribsForCheck.get(key))!=null
         && attribForCheck.bUseForCheck
         ) {
           //tag is a StringBuilder in that case.
-        ((StringBuilder)tag).append('@').append(key).append("=\"").append(sAttrValue).append("\"");
+        ((StringBuilder)this.tag).append('@').append(key).append("=\"").append(sAttrValue).append("\"");
         //Note: this instance is not added in the subnodes in the parent yet, because the key is completed here.
         //Because the subnode of cfg should have any content the setContentStorePath(...) is called.
         //There it is added to parent.
       }
       else if(sAttrValue.length() >0) {  //empty attribute value in cfg: ignore attribute.
-        if(attribs == null) { attribs = new TreeMap<String, AttribDstCheck>(); } //IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
+        if(this.attribs == null) { this.attribs = new TreeMap<String, AttribDstCheck>(); } //IndexMultiTable<String, AttribDstCheck>(IndexMultiTable.providerString); }
         AttribDstCheck dPathAccess;
-        if(!StringFunctions.startsWith(sAttrValue, "!")) {
-          throw new IllegalArgumentException("read config: store path should start with !");
+        final String sPath;
+        if(this.cfg.readFromText && !sAttrValue.startsWith("!")) {
+          sPath = sAttrValue;
+        } else {
+          if(!sAttrValue.startsWith("!")) { 
+            throw new IllegalArgumentException("The store path as attrib value \"" + sAttrValue + "\" in config.xml should start with ! because it is a store path.");
+          }
+          sPath = sAttrValue.substring(1);
         }
         //
         String dstPath;
-        if(StringFunctions.equals(sAttrValue, "!CHECK")) {
+        if(StringFunctions.equals(sPath, "CHECK")) {
           //use the attribute value as key for select the config and output, it is the primary config node
           dstPath = null;
           dPathAccess = new AttribDstCheck(key, true);
-          attribs.put(key,  dPathAccess); //create if not exists
-          bCheckAttributeNode = true;       
+          this.attribs.put(key,  dPathAccess); //create if not exists
+          this.bCheckAttributeNode = true;       
         }
         else  {
           dPathAccess = new AttribDstCheck(key, false);
-          attribs.put(key,  dPathAccess);
-          dstPath = sAttrValue.substring(1);
+          this.attribs.put(key,  dPathAccess);
+          dstPath = sPath;
         }
         //
         //
@@ -860,7 +871,7 @@ public class XmlCfg
           } else {
             StringPartScan sp = new StringPartScan(dstPath);
             dPathAccess.daccess = new DataAccess.DatapathElement(sp, this.allArgNames, null);
-            bStoreAttribsInNewContent = true;  
+            this.bStoreAttribsInNewContent = true;  
           }
         }
       }
@@ -919,12 +930,12 @@ public class XmlCfg
     
     
     void addSubnode(String key, XmlCfgNode node) {
-      if(subnodes == null) { subnodes = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(); }
+      if(this.subnodes == null) { this.subnodes = new TreeMap/*IndexMultiTable*/<String, XmlCfgNode>(); }
       if(key.startsWith("Object@"))
         Debugutil.stop();
       if(key.startsWith("Array@"))
         Debugutil.stop();
-      subnodes.put(key, node);
+      this.subnodes.put(key, node);
     }
   
   
@@ -935,14 +946,14 @@ public class XmlCfg
     XmlCfgNode newElement(CharSequence name) {
       String sname = name.toString();
       XmlCfgNode subNode = null;
-      if(subnodes !=null) {
-        XmlCfgNode subNodeForCheck = subnodes.get(sname);  //check whether a subNode with this key is existing already,
+      if(this.subnodes !=null) {
+        XmlCfgNode subNodeForCheck = this.subnodes.get(sname);  //check whether a subNode with this key is existing already,
         if(subNodeForCheck !=null) {
           if(!subNodeForCheck.bCheckAttributeNode) {
             throw new IllegalArgumentException("XmlReader-cfg: An element has more as one node with the same tag name. This is only admissible if the first node contains a \"!CHECK\" attribute.");
           } else {
             StringBuilder tagBuffer = new StringBuilder(64); tagBuffer.append(subNodeForCheck.tag); //append more @attrib="value" for the key in tag.
-            subNode = new XmlCfgNode(this, cfg, tagBuffer);
+            subNode = new XmlCfgNode(this, this.cfg, tagBuffer);
             subNode.attribsForCheck = subNodeForCheck.attribs;
             //Note: this subnode is not added in the subnodes in the parent yet, because the key is completed here.
             //Because the subnode of cfg should have any content the setContentStorePath(...) is called.
@@ -952,7 +963,7 @@ public class XmlCfg
         //than it is the first subnode with some  <tag attr="!CHECK"/> entries. Use it to work with it.
       } 
       if(subNode == null) {
-        subNode = new XmlCfgNode(this, cfg, sname);  //A sub node for the config.
+        subNode = new XmlCfgNode(this, this.cfg, sname);  //A sub node for the config.
         //subNode.elementStorePath = this.elementStorePath;  //the same routine to create the next sub node.
         //subNode.subNodeUnspec = this.subNodeUnspec;
         //subNode.attribsUnspec = this.attribsUnspec;
@@ -976,7 +987,7 @@ public class XmlCfg
           Debugutil.stop();
         this.parent.subnodes.put(this.tag.toString(), this); //put this node in its parent, it is not done yet. 
       }
-      String sPath;
+      final String sPath;
       if(this.cfg.readFromText && !dstPath.startsWith("!")) {
         sPath = dstPath;
       } else {

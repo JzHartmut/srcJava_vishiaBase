@@ -9,6 +9,7 @@ import java.util.Map;
 import org.vishia.genJavaOutClass.GenJavaOutClass;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.DataAccess;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringFunctions_B;
@@ -22,6 +23,8 @@ public class GenXmlCfgJavaData {
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-05-09: new {@link #exec(XmlCfg)} with a given non XML read XmlCfg
+   * <li>2024-05-09: Using {@link LogMessage}, MainCmd is deprecated.
    * <li>2024-05-09: {@link WrClassXml#evaluateChildren(String, XmlCfgNode, SubClassXml, boolean, int)} and also
    *   {@link WrClassXml#wrVariable(SubClassXml, String, String, String, org.vishia.util.DataAccess.DatapathElement, boolean, boolean, boolean)} 
    *   now with argument sOuterClass, this was missing till now, (manual adjusted in generated sources)
@@ -83,28 +86,44 @@ public class GenXmlCfgJavaData {
   }
 
 
+  protected final GenJavaOutClass.CmdArgs cmdArgs;
   
+  protected final LogMessage log;
   
   private final GenJavaOutClass genJava;
   
   
-  XmlJzReader xmlReader = new XmlJzReader();
   
-  final GenJavaOutClass genClass;
+  protected final GenJavaOutClass genClass;
   
 
-  Map<String, XmlCfgNode> subtrees;
+  protected Map<String, XmlCfgNode> subtrees;
   
-  GenXmlCfgJavaData(GenJavaOutClass.CmdArgs cmdArgs, MainCmdLogging_ifc log) {
+  public GenXmlCfgJavaData(GenJavaOutClass.CmdArgs cmdArgs, LogMessage log) {
+    this.cmdArgs = cmdArgs;
     this.genJava = new GenJavaOutClass(cmdArgs, log);
     this.genClass = new GenJavaOutClass(cmdArgs, log);
+    this.log = log;
   }
   
   
-  public void exec(GenJavaOutClass.CmdArgs cmdArgs) throws IOException {
-    File fileXmlCfg = cmdArgs.fileInput;
-    this.xmlReader.readCfg(fileXmlCfg);
-    XmlCfg xmlCfg = this.xmlReader.cfg;
+  public void exec() throws IOException {
+    String fInName = this.cmdArgs.fileInput.getName();
+    final XmlCfg xmlCfg;
+    if(fInName.endsWith(".xml")) {
+      XmlJzReader xmlReader = new XmlJzReader();
+      xmlReader.readCfg(this.cmdArgs.fileInput);
+      xmlCfg = xmlReader.cfg;
+    } else {
+      xmlCfg = new XmlCfg(true);
+      xmlCfg.readCfgFile(this.cmdArgs.fileInput, this.log);
+    }
+    exec(xmlCfg);
+  }
+    
+    
+  public void exec(XmlCfg xmlCfg) {
+
     this.subtrees = xmlCfg.subtrees;
     Debugutil.stop();
     
@@ -114,7 +133,7 @@ public class GenXmlCfgJavaData {
       XmlCfgNode rootNode = xmlCfg.rootNode;
       SubClassXml classDataRoot = new SubClassXml("root", "root");
       classDataRoot.subItem = rootNode;
-      String sOuterClass = cmdArgs.sJavaClass + ".";
+      String sOuterClass = this.cmdArgs.sJavaClass + ".";
       wrClass.evaluateChildren(sOuterClass, rootNode, classDataRoot, false, 1);
       wrClass.wrClassJava.writeOperations();
       //
@@ -190,7 +209,7 @@ public class GenXmlCfgJavaData {
           /* The execution class knows the SampleCmdLine Main class in form of the MainCmd super class
              to hold the contact to the command line execution.
           */
-          try{ main.exec(args); }
+          try{ main.exec(); }
           catch(Exception exc)
           { //catch the last level of error. No error is reported direct on command line!
             System.err.println(exc.getMessage());
