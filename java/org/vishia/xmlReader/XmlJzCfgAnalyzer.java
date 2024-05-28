@@ -624,7 +624,7 @@ public class XmlJzCfgAnalyzer
    * @param fXmlIn
    * @throws IOException 
    */
-  public void readXmlStructZip(File fXmlIn, String pathInZip) throws IOException {
+  public XmlCfg readXmlStructZip(File fXmlIn, String pathInZip) throws IOException {
     XmlJzReader xmlReader = new XmlJzReader();
     xmlReader.setCfg(newCfgReadStruct());
     if(this.debugStopLineXmlInp >0) {
@@ -637,7 +637,7 @@ public class XmlJzCfgAnalyzer
     checkStructTree();
     //this.xmlStructData.checkCfgSubtree(this.cfgGiven);   //removeSingleEntries();
     storeInCfg(xmlReader);
-    Debugutil.stop();
+    return this.cfgData;
   }
 
   /**Checks the read XML structure tree.
@@ -715,6 +715,7 @@ public class XmlJzCfgAnalyzer
     if(!bRoot) {
       dst.cfgSubtreeName = src.sSubtreenode;
     }
+    dst.bList = !srcx.onlySingle;
     if(dst.cfgSubtreeName ==null) {
       String sClass = StringFunctions_B.replaceNonIdentifierChars(srcx.tagIdent, '-').toString();
       dst.dstClassName = sClass;
@@ -736,10 +737,6 @@ public class XmlJzCfgAnalyzer
             sNewElement.append(sep).append(attrib.value.substring(1));
             sep = ",";
           }
-          else if(attrib.value.startsWith("!@")) {
-            sNewElement.append(sep).append(attrib.value.substring(2));
-            sep = ",";
-          }
         }
       }
       sNewElement.append(')');
@@ -749,10 +746,9 @@ public class XmlJzCfgAnalyzer
       //dst.attribsForCheck;
       //dst.allArgNames;
       dst.bStoreAttribsInNewContent = false;
-      dst.bList = !srcx.onlySingle;
       if(src.attribs !=null) { //============================ Transfer all attribs
         for(AttribRead attrib: src.attribs.values()) {
-          String key = attrib.namespace + attrib.name;
+          String key = attrib.namespace + ':' + attrib.name;
           dst.addAttribStorePath(key, attrib.value);
         }
       }

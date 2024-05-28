@@ -71,6 +71,11 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2024-05-27: Meaningful enhancement: Now it writes also without config in an {@link XmlAddData_ifc} instance, if given as data on {@link #readXml(File, Object)} etc.
+   *   The config is only necessary for the namespace declaration, because the namespace alias are not anytime the same in a read XML.
+   *   The {@link #bUseNonSemanticDataStore} is set true if detected and a dummy config {@link #cfgNodeNonSemanticDataStore} 
+   *   is used instead not found config nodes on the elements.
+   *   Writing to the output is always done via the operations of {@link XmlAddData_ifc} if {@link #bUseNonSemanticDataStore} is set.
    * <li>2024-05-23: {@link #parseElement(StringPartScan, Object, org.vishia.xmlReader.XmlCfg.XmlCfgNode)} refactored.
    *   Now it uses consequently the subtree if given. See documentation in LibreOffice. 
    * <li>2024-05-22: New {@link #readCfgTxtFromJar(Class, String)}
@@ -158,7 +163,10 @@ public class XmlJzReader
   /**Configuration to read a config file. */
   final XmlCfg cfgCfg;
   
+  private boolean bUseNonSemanticDataStore; 
   
+  
+  private XmlCfg.XmlCfgNode cfgNodeNonSemanticDataStore;
   
   /**Size of the buffer to hold a part of the xml input file. 
    * It should be enough large to hold 1 element with attributes (without content). 
@@ -409,8 +417,12 @@ public class XmlJzReader
    * @throws Exception
    */
   public void readXml(StringPartScan inp, Object output, XmlCfg xmlCfg) 
-  throws Exception
-  { inp.setIgnoreWhitespaces(true);
+  throws Exception { 
+    inp.setIgnoreWhitespaces(true);
+    this.bUseNonSemanticDataStore = output instanceof XmlAddData_ifc;
+    if(this.bUseNonSemanticDataStore) {
+      this.cfgNodeNonSemanticDataStore = new XmlCfg.XmlCfgNode(null, this.cfg, "::NonSemanticNode");
+    }
     while(inp.seekEnd("<").found()) { //after the beginning < of a element
       inp.scanStart();
       if(inp.scan("?").scanOk()) { //skip over the first "<?xml declaration line ?>
@@ -500,7 +512,9 @@ public class XmlJzReader
     //--------------------------------------------- Search the tag name in the subnode in current cfg:
     //
     XmlCfg.XmlCfgNode subCfgNode;
-    if(cfgNode == null) {   //check whether the parent element should be regarded:
+    if(this.bUseNonSemanticDataStore) {
+      subCfgNode = this.cfgNodeNonSemanticDataStore;
+    } else if (cfgNode == null) {   //check whether the parent element should be regarded:
       subCfgNode = null;
     } else {  //----------------------------------- The parent element is expected, content should be stored
       if(output ==null) {
@@ -582,36 +596,48 @@ public class XmlJzReader
     if(subCfgNode ==null) {
       Debugutil.stop();
     }
-    if(attribsToStore[0] !=null) {
-      storeAttributesDueToSubCfgNode(subCfgNode, attribsToStore[0], nameSpacesToStore[0], subCfgNode.allArgNames, attribValues);
-    }
-    //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
-    final Object subOutput = subCfgNode == null ? null 
-                           : elementStorePath == null ? output : getDataForTheElement(output, elementStorePath, attribValues);
-    if(cfgNode !=null && cfgNode.subnodes !=null && subCfgNode ==null) {
-      Debugutil.stop();       // a node which should not be evaluated
-    }
-    //
-    //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
-    if(attribsToStore[0] !=null) { 
-      if(subOutput ==null) {
-        System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+    final Object subOutput;
+    if(this.bUseNonSemanticDataStore) {
+      final Map<String,String> attribs;
+      if(attribsToStore[0] ==null) { attribs = null;
       } else {
-        for(AttribToStore e: attribsToStore[0]) {
-          if(e.daccess !=null) {
-            storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
-          }
-    } } }
-    if(nameSpacesToStore[0] !=null) { 
-      if(subOutput ==null) {
-        System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
-      } else {
-        for(AttribToStore e: nameSpacesToStore[0]) {
-          if(e.daccess !=null) { //only if should be stored. nameSpacesToStore[0] contains all xmlns attributes.
-            storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
-          }
-    } } }
-    
+        attribs = new TreeMap<>();
+        for(AttribToStore attrib: attribsToStore[0]) {
+          attribs.put(attrib.name, attrib.value);
+        }
+      }
+      subOutput = ((XmlAddData_ifc)output).newNode(sTag, attribs);
+    } else {
+      if(attribsToStore[0] !=null) {
+        storeAttributesDueToSubCfgNode(subCfgNode, attribsToStore[0], nameSpacesToStore[0], subCfgNode.allArgNames, attribValues);
+      }
+      //The subOutput is determined with the correct subCfgNode, either with keySearch == sTag or a attribute-qualified key:
+      subOutput = subCfgNode == null ? null 
+                             : elementStorePath == null ? output : getDataForTheElement(output, elementStorePath, attribValues);
+      if(cfgNode !=null && cfgNode.subnodes !=null && subCfgNode ==null) {
+        Debugutil.stop();       // a node which should not be evaluated
+      }
+      //
+      //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
+      if(attribsToStore[0] !=null) { 
+        if(subOutput ==null) {
+          System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+        } else {
+          for(AttribToStore e: attribsToStore[0]) {
+            if(e.daccess !=null) {
+              storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
+            }
+      } } }
+      if(nameSpacesToStore[0] !=null) { 
+        if(subOutput ==null) {
+          System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+        } else {
+          for(AttribToStore e: nameSpacesToStore[0]) {
+            if(e.daccess !=null) { //only if should be stored. nameSpacesToStore[0] contains all xmlns attributes.
+              storeAttrData(inp, subOutput, e.daccess, subCfgNode.allArgNames, e.name, e.value, sTag);  //subOutput is the destination to store
+            }
+    } } } }
+      
     //
     //check content.
     //
@@ -648,7 +674,9 @@ public class XmlJzReader
             } while(!bEndFound || inp.length() == 0);  //should be abort if no "]]>" found in the whole XML
             inp.seekPos(3); //skip over the "]]>"
             if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
-              if(contentBuffer !=null) {
+              if(this.bUseNonSemanticDataStore) {
+                ((XmlAddData_ifc)subOutput).addText(contentBuffer.toString());
+              } else {
                 assert(attribNames !=null);
                 assert(attribNames == subCfgNode.allArgNames);
                 DataAccess.IntegerIx ixO = attribNames.get("text");
@@ -664,7 +692,9 @@ public class XmlJzReader
           StringBuilder contentBuffer = new StringBuilder(100);
           parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
           if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
-            if(contentBuffer !=null) {
+            if(this.bUseNonSemanticDataStore) {
+              ((XmlAddData_ifc)subOutput).addText(contentBuffer.toString());
+            } else {
               assert(subCfgNode.allArgNames !=null);
               DataAccess.IntegerIx ixO = subCfgNode.allArgNames.get("text");
               if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
@@ -679,14 +709,14 @@ public class XmlJzReader
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
-      if(subOutput !=null) {
-        finishElement(output, subOutput, elementFinishPath);  // "xmlinput:finish"
-      }
     } else {
       int[] colmn = new int[1];
       int line = inp.getLineAndColumn(colmn);
       String sFile = inp.getInputfile();
       throw new IllegalArgumentException("either \">\" or \"/>\" expected, " + " in " + sFile + " @" + line + ":" + colmn[0]);
+    }
+    if(subOutput !=null) {
+      finishElement(output, subOutput, elementFinishPath);  // "xmlinput:finish"
     }
     inp.setLengthMax();  //for next parsing
     if(this.xmlTestWriter !=null) {
@@ -778,7 +808,7 @@ public class XmlJzReader
         //----------------------------------------- sAttrNsName is the attribute inclusively the full namespace
         if(sAttrNsName !=null) {
           XmlCfg.AttribDstCheck cfgAttrib = getCfgAttrib(sAttrNsName, cfgNode);
-          if(attribsToStore[0]==null && (cfgAttrib !=null && !cfgAttrib.bUseForCheck || cfgNode.attribsUnspec !=null)) {
+          if(attribsToStore[0]==null && (cfgAttrib !=null && !cfgAttrib.bUseForCheck || cfgNode.attribsUnspec !=null || this.bUseNonSemanticDataStore)) {
             attribsToStore[0] = new LinkedList<AttribToStore>();
           }
           if(cfgAttrib != null) {
@@ -789,7 +819,8 @@ public class XmlJzReader
               attribsToStore[0].add(new AttribToStore(cfgAttrib.daccess, sAttrNsName.toString(), sAttrValue));
             }
           } 
-          else if(cfgNode.attribsUnspec !=null) { //it is especially to read the config file itself.
+          else if( this.bUseNonSemanticDataStore           // read all content unspecifically
+                || cfgNode.attribsUnspec !=null) {         // it is especially to read the config file itself.
             attribsToStore[0].add(new AttribToStore(cfgNode.attribsUnspec, sAttrNsName.toString(), sAttrValue));
           }
 
@@ -920,7 +951,10 @@ public class XmlJzReader
         System.err.println("help: ");
         System.err.println(sError);
       }
-  } }
+    } else if(this.bUseNonSemanticDataStore) {
+      ((XmlAddData_ifc)parent).addNode((XmlAddData_ifc)element);
+    }
+  }
       
   
   

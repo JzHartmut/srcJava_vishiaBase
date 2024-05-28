@@ -1,3 +1,5 @@
+cd C:\D\%~p0.
+cd
 :loop
 pause
 ::call C:\Programs\Asciidoc\genAsciidoc2Html.bat Base/FileRemote.adoc ../../../../html/Base

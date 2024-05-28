@@ -416,6 +416,9 @@ public class XmlCfg
     if(sp.scan("=>SUBTREE:").scanToAnyChar(" \n\r", '\"', '\"', '\\').scanOk()) {
       node.cfgSubtreeName = sp.getLastScannedString();
     }
+    if(sp.scan("LIST").scanOk()) {
+      node.bList = true;
+    }
     if(sp.scan("CLASS:").scanIdentifier().scanOk()) {
       node.dstClassName = sp.getLastScannedString();
     }
@@ -505,6 +508,7 @@ public class XmlCfg
       "<:n><&indent><&whatis><:<><&node.tag><:>>" 
     + "<:if:node.attribsForCheck> <:for:attr:node.attribsForCheck> @<&attr.name>==\"<&attr.storeInMap>\"<.for><:n><&indent><.if>"  
     + "<:if:node.cfgSubtreeName> =>SUBTREE:<&node.cfgSubtreeName><.if>"
+    + "<:if:node.bList> LIST<.if>"
     + "<:if:node.dstClassName> CLASS:<&node.dstClassName><.if>"
     + "<:if:node.elementStorePath><:n><&indent>  NEW:\"<:exec:wrDataAccess(OUT, node.elementStorePath)>\"<.if>"
     + "<:if:node.elementFinishPath><:n><&indent>  ADD:\"<:exec:wrDataAccess(OUT, node.elementFinishPath)>\"<.if>"
@@ -514,7 +518,7 @@ public class XmlCfg
     + "<:if:node.subnodes><:for:subnode:node.subnodes><:exec:writeSubNode(OUT, indent, subnode)><.for><.if>"  
     + "<:n><&indent><:<>/<&node.tag><:>>" 
     //<:n>"
-      );
+    );
   
   
   
