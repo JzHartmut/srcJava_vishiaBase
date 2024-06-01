@@ -701,11 +701,10 @@ public class XmlJzReader
             }
             storeContent(contentBuffer, subCfgNode, subOutput, contentStorePath, subCfgNode.allArgNames, attribValues);
           }
-        }                                                  // call the storeContent(..) operation on end of the node.
-      }
-      //
+        }                                                  
+      } //while(! inp.scan().scan("<").scan("/").scanOk()))
+      //----------------------------------------------------- if reached here, on complex node is parsed, </ is reached.
       inp.readNextContent(this.sizeBuffer/2);
-      //the </ is parsed on end of while already above.
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
@@ -715,8 +714,8 @@ public class XmlJzReader
       String sFile = inp.getInputfile();
       throw new IllegalArgumentException("either \">\" or \"/>\" expected, " + " in " + sFile + " @" + line + ":" + colmn[0]);
     }
-    if(subOutput !=null) {
-      finishElement(output, subOutput, elementFinishPath);  // "xmlinput:finish"
+    if(subOutput !=null) { //-------------------------------- finish also for a <tag.../> simple node, this was missing before 2024-05-25
+      finishElement(output, subOutput, elementFinishPath); // cfg: ADD:operation
     }
     inp.setLengthMax();  //for next parsing
     if(this.xmlTestWriter !=null) {

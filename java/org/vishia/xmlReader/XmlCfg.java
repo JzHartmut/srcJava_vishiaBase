@@ -591,6 +591,14 @@ public class XmlCfg
   
   
   
+  /**Returns an iterator over all internal name space assignments.
+   * Note: It encapsulates the content of the internal {@link #xmlnsAssign} container, prevent for change.
+   * @return
+   */
+  public Iterable<Map.Entry<String, String>> iterNamespace () { return this.xmlnsAssign.entrySet(); }
+  
+  
+  
   /**Detect different entries in sub node and node via sub tree to clarify it. 
    * @param log
    */

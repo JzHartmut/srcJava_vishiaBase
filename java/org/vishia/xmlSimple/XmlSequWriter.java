@@ -10,11 +10,16 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Stack;
+import java.util.zip.ZipOutputStream;
 
 import org.vishia.charset.CodeCharset;
-import org.vishia.util.CheckVs;
+import org.vishia.util.ExcUtil;
 import org.vishia.util.StringFunctions;
+import org.vishia.zip.ZipUtils;
 
 
 
@@ -58,6 +63,9 @@ public class XmlSequWriter {
   
   /**Version, License and History:
    * <ul>
+   * <li>2024-05-28 {@link #writeElementEnd(String)} important first to check correctness, 
+   *   second also for documentation which kind of element is closed.
+   * <li>2024-05-28 {@link #openZip(File, String, String, Appendable)} Now also to write zips.
    * <li>2020-10-05 check encoding stuff, some better documented and changed.
    *   Hint: Introducing namespace processing is faulty here. 
    *   The namespace can be written as normal attribute name string or tag,
@@ -93,44 +101,29 @@ public class XmlSequWriter {
   public static final String version = "2020-01-01";
 
   
-  private class ElementInfo{
+  private static class ElementInfo{
     final String sTag;
     boolean bIndented;
+    @SuppressWarnings("unused") final ElementInfo parent;
     
     //Map<String, String> nameSpaces;
     
     public ElementInfo(String sTag, ElementInfo parent) {
       this.sTag = sTag;
-//      if(parent !=null && parent.nameSpaces !=null) {
-//        this.nameSpaces = new TreeMap<String, String>();
-//        this.nameSpaces.putAll(parent.nameSpaces);  //copy it because additional namespaces are possible.
-//      }
+      this.parent = parent;
     }
+    
+    @Override public String toString () {return this.sTag; }
   }
   
   
   
   
-//  private class XmlEncoder extends CharsetEncoder {
-//
-//    protected XmlEncoder(Charset cs) {
-//      super(cs, 1.4f, 20.0f);
-//      // TODO Auto-generated constructor stub
-//    }
-//
-//    @Override protected CoderResult encodeLoop(CharBuffer in, ByteBuffer out) {
-//      
-//      CoderResult res = super.encodeLoop(in, out);
-//      
-//      return res;
-//    }
-//    
-//  }
   
   
   
-  
-  
+  /**Used for zip files. */
+  private FileSystem fileSystem;
   
   private Writer wr;
   
@@ -139,8 +132,6 @@ public class XmlSequWriter {
   private Appendable twr;
   
   
-  
-  private byte[] outBuffer;
   
   String sEncoding;
   
@@ -175,7 +166,6 @@ public class XmlSequWriter {
   
   private static String sIndent = "\n                                                                                ";
   
-
   public XmlSequWriter ( ) {
     replaceNewline(false);  //in texts, preserve the \n also in output.
   }
@@ -244,6 +234,43 @@ public class XmlSequWriter {
   
   
   
+  /**Opens for writing in a file, closes an opened file if any is open.
+   * @param file can be null, then only the buffer is written.
+   * @param encoding can be null, then the last used or given {@link #setEncoding(String)} is valid.
+   *   Default is "UTF-8". If given the {@link #setEncoding(String)} is called here.
+   *   <br>If the encoding is "ISO-8859-x" or "US-ASCII" then non map able characters are written as &#xC0DE;
+   *   <br>On other encodings non mapable character are faulty written as defined by Writer(... Charset).
+   * @param buffer can be null, if given, the output is written there, the same as in {@link #setDebugTextOut(Appendable)}  
+   *   The buffer is written with replaced characters by &#xC0DE; as in file.
+   * @return null on success, the error on error. It is either "Encoding ..." on unsupportedCharset 
+   *   or "File not able to create: ..." with the absolute path of the file.
+   * @throws IOException only on closing an opened file. Not expected. 
+   */
+  //Sets either this.wr or this.fwr, never both.
+  public String openZip(File file, String sPathInZip, String encoding, Appendable buffer) throws IOException {
+    this.twr = buffer;
+    if(encoding !=null) { setEncoding(encoding); }
+    else if(this.sEncoding == null) { setEncoding("UTF-8"); }
+    try{
+      if(this.wr !=null) { this.wr.close(); }
+      else if(this.fwr !=null) { this.fwr.close(); }
+      this.wr = null; this.fwr = null;
+      if(file !=null) {
+        this.fileSystem = ZipUtils.openZip(file);
+        Path nf = this.fileSystem.getPath(sPathInZip);
+        this.wr = Files.newBufferedWriter(nf, this.encoding);
+        assert(this.fwr ==null);
+      }
+      return null;
+    } catch(UnsupportedCharsetException exc) {
+      return "Encoding faulty: " + exc.getMessage();
+    } catch (FileNotFoundException e) {
+      return "File not able to create: " + file.getAbsolutePath();
+    }
+  }
+  
+  
+  
   /**Writes closing elementsParent if necessary, then close the files.
    * @throws IOException
    */
@@ -251,8 +278,11 @@ public class XmlSequWriter {
     while(this.elementCurr !=null) {
       writeElementEnd();
     }
-    wrNewline(0);
+    wrNewline();
     fileclose();
+    if(this.fileSystem !=null) {
+      this.fileSystem.close();
+    }
   }
   
   
@@ -269,16 +299,21 @@ public class XmlSequWriter {
       if(this.wr !=null) {
         this.wr.close();   //flush and close fwr too
         this.wr = null;
-        this.fwr = null;
+        assert(this.fwr == null);
       }
       else if(this.fwr !=null) {
-        this.fwr.close();
-        this.fwr = null;
-        this.wr = null;
+        if(this.fwr instanceof ZipOutputStream) {
+          ZipUtils.closeZipEntry(this.fwr);
+        } else {
+          this.fwr.close();   //flush and close fwr too
+        }
+       this.fwr.close();
+       this.fwr = null;
+       assert( this.wr == null);
       }
       this.twr = null;
     } catch(IOException exc) {
-      String err = CheckVs.exceptionInfo("XmlSeqWriter problem on close", exc, 1, 99).toString();
+      String err = ExcUtil.exceptionInfo("XmlSeqWriter problem on close", exc, 1, 99).toString();
       System.err.println(err);
     }
   }
@@ -343,7 +378,7 @@ public class XmlSequWriter {
     }
     else { //if(this.elementCurr.bIndented) { //null on root
       this.elementCurr.bIndented = true;
-      wrNewline(1);
+      wrNewline();
     }
     wrTxtAscii("<"); wrTxt(sTag);
     if(this.elementCurr !=null) { this.elementsParent.push(this.elementCurr); }
@@ -364,12 +399,7 @@ public class XmlSequWriter {
 //  }
   
   
-  private void wrNewline(int add) throws IOException {
-//    if(add >0) {
-//      if((this.indent +=2) > sIndent.length()) { this.indent = sIndent.length(); }
-//    } else if(add <0) {
-//      if((this.indent -=2) < 1) { this.indent = 1; }
-//    }
+  private void wrNewline() throws IOException {
     wrTxtAscii(sIndent.substring(0, this.indent));
     this.nColumn = this.indent;
   }
@@ -387,6 +417,20 @@ public class XmlSequWriter {
     this.elementCurr.bIndented = bNewline;
   }
   
+  
+  
+  /**Writes the </tag> or .../> but checks whether this is the correct tag.
+   * @param sTag
+   * @throws IOException
+   * @throws IllegalStateException on tag mismatch.
+   */
+  public void writeElementEnd(String sTag) throws IOException {
+    if(!this.elementCurr.sTag.equals(sTag)) {
+      throw new IllegalStateException("element mismatch, current = " + this.elementCurr.sTag + " != requ = " + sTag );
+    }
+    writeElementEnd();
+  }
+  
   /**Writes a simple end "</tag>" or "/>" depending on invocation of {@link #writeElementHeadEnd()} before
    * @throws IOException 
    * 
@@ -401,7 +445,7 @@ public class XmlSequWriter {
       this.bElementStart = false;
     } else {
       if(this.elementCurr.bIndented) {
-        wrNewline(-1);
+        wrNewline();
       }
       wrTxtAscii("</"); wrTxt(this.elementCurr.sTag); wrTxtAscii(">");
       if(this.bTreeComment) {
@@ -429,7 +473,7 @@ public class XmlSequWriter {
     }
     this.elementCurr.bIndented = bNewline;
     if(this.elementCurr.bIndented) {
-      wrNewline(0);
+      wrNewline();
     }
     wrTxt(txt);  //TODO long text: line break
   }
@@ -583,7 +627,10 @@ public class XmlSequWriter {
   }
   
   
-  
+  @Override public String toString() {
+    if(this.elementCurr !=null) return this.elementCurr.toString();
+    else return "closed or root";
+  }
   
   
 

@@ -91,7 +91,7 @@ public class XmlDataNode implements XmlAddData_ifc{
   
   
   
-  public XmlDataNode getOneNode ( String key) {
+  public XmlDataNode getFirstNode ( String key) {
     XmlDataNode node = this.singleNodes ==null ? null : this.singleNodes.get(key);
     if(node == null && this.multiNodes !=null) {
       List<XmlDataNode> node1 = this.multiNodes.get(key);
