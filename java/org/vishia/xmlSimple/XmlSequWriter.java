@@ -17,6 +17,7 @@ import java.util.Stack;
 import java.util.zip.ZipOutputStream;
 
 import org.vishia.charset.CodeCharset;
+import org.vishia.util.Debugutil;
 import org.vishia.util.ExcUtil;
 import org.vishia.util.StringFunctions;
 import org.vishia.zip.ZipUtils;
@@ -63,6 +64,7 @@ public class XmlSequWriter {
   
   /**Version, License and History:
    * <ul>
+   * <li>2024-05-28 new {@link #writeElementInline(String)} to write contigous content in one line.
    * <li>2024-05-28 {@link #writeElementEnd(String)} important first to check correctness, 
    *   second also for documentation which kind of element is closed.
    * <li>2024-05-28 {@link #openZip(File, String, String, Appendable)} Now also to write zips.
@@ -362,7 +364,9 @@ public class XmlSequWriter {
   }
   
   
-  /**Writes a new Element with its tag, without closing the element. 
+  /**Writes a new Element with its tag in a new line with incremented indentation.
+   * The element is not closed with >, because attributes should be written.
+   * See also {@link #writeElementInline(String)}.
    * It is a child node of a non closed {@link #writeElement(String)} before.
    * After this call firstly {@link #writeAttribute(String, String)} can be written,
    * then {@link #writeElement(String)} for child nodes or {@link #writeText()}
@@ -387,6 +391,40 @@ public class XmlSequWriter {
     //increase indent anyway, may be not used.
     if((this.indent +=2) > sIndent.length()) { this.indent = sIndent.length(); }
 
+  }
+  
+  
+  
+  
+  /**Writes a new Element with its tag in the line without line break and change or indentation.
+   * The element is not closed with >, because attributes should be written.  
+   * It is a child node of a non closed {@link #writeElement(String)} before.
+   * After this call firstly {@link #writeAttribute(String, String)} can be written,
+   * then {@link #writeElement(String)} for child nodes or {@link #writeText()}
+   * <br><br>
+   * Writing an element in the line, without newline, is sometimes necessary for systems
+   * which reads the text inside the elements. 
+   * In XML it seems to be not absolute clear, when a newline has a meaning for text content or not.
+   * Usual between elements, if no text is there, only the line feed and indentation, 
+   * this is ignored by reading the XML content.
+   * But it seems to be some programs does not so, (Libre Office odt content.xml?)
+   * They seems to interpret an new line as a space. 
+   * That's why all stuff from one text paragraph is written in one line.
+   * Line breaks are only introduced between the paragraphs. 
+   * This is a seen, not explained behavior.
+   * This operation helps to build one line for a defined XML content. 
+   * 
+   * @param sTag
+   * @throws IOException
+   */
+  public void writeElementInline(String sTag) throws IOException {
+    if(this.bElementStart) { //finish the parent element start
+      writeElementHeadEnd(true);
+    }
+    wrTxtAscii("<"); wrTxt(sTag);
+    if(this.elementCurr !=null) { this.elementsParent.push(this.elementCurr); }
+    this.elementCurr = new ElementInfo(sTag, this.elementCurr);
+    this.bElementStart = true;
   }
   
   
@@ -470,6 +508,10 @@ public class XmlSequWriter {
   
 
   public void writeText(CharSequence txt, boolean bNewline) throws IOException {
+    String txt1 = txt.toString();
+    if(bNewline && txt1.startsWith(" ") || txt1.endsWith(" ")) {
+      Debugutil.stop();
+    }
     if(this.bElementStart) { //finish the parent element start
       writeElementHeadEnd(true);
     }
