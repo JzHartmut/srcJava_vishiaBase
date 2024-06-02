@@ -6,9 +6,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.vishia.msgDispatch.LogMessage;
 
 
 /**This is a base class for simple argument handling of main(...) arguments.
@@ -174,6 +179,7 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2024-06-02 Hartmut new static {@link #readConfig(Object, InputStream, String, LogMessage)} 
    * <li>2024-05-25 Hartmut planned, TODO: SetArgument#setArgument(String) should return an error String, null = no error.
    * <li>2024-05-25 Hartmut new {@link #errMsg(String, Object...)} able to call in an non static implementation of {@link SetArgument#setArgument(String)},
    *   see javadoc there.
@@ -231,7 +237,7 @@ public abstract class Arguments {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public final static String sVersion = "2024-05-25";
+  public final static String sVersion = "2024-06-02";
 
   
   /**Interface for implementation of setting arguments.
@@ -926,5 +932,75 @@ public abstract class Arguments {
    * @return
    */
   public String getLogLevel() { return this.sLogLevel; }
+  
+  
+  
+  /**A commonly usable operation to read any configuration data,
+   * usual given in a file given as argument file.
+   * The file should have the form one per line: <pre>
+   * name=value; //comment
+   * </pre>
+   * The name is searched as element in data, and set with the given value.
+   * It calls {@link #readConfig(Object, String, LogMessage)}.
+   * <br>Yet, booleans can only be set. 
+   * @param data Any data class.
+   * @param fIn opened Stream to read from, also able to get with {@link Class#getResourceAsStream(String)}
+   *   from inside a jar archive, or just as {@link java.io.FileInputStream} 
+   * @param sLeadingDesignation null, then not used, possible identifier on left side of a line as designation.
+   *   With them it is possible to use any other, for example a batch or shell script which holds values.
+   * @throws IOException
+   */
+  public static void readConfig(Object data, InputStream fIn, String sLeadingDesignation, LogMessage log) throws IOException {
+    BufferedReader r = new BufferedReader(new InputStreamReader(fIn));
+    String sLine;
+    while( (sLine = r.readLine()) !=null) {
+      int posComment = sLine.indexOf("//");
+      if(posComment >0) {
+        sLine = sLine.substring(0, posComment);
+      }
+      sLine = sLine.trim();
+      if( sLine.length() >0
+       && (sLeadingDesignation == null || sLine.startsWith(sLeadingDesignation))
+       ) {
+       readConfig(data, sLine, log); 
+      }
+    }
+  }
+
+  
+  
+  /**Read one config value from any String.
+   * The line should have the form <pre>
+   * name = value; //comment
+   * </pre>
+   * The name is searched as element in data, and set with the given value.
+   * Internally it calls {@link DataAccess#storeValue(Object, Object, boolean)}
+   * with the name via {@link DataAccess.DatapathElement}
+   * <br>Yet, booleans can only be set. 
+   * @param data
+   * @param sLine
+   * @param log
+   */
+  public static void readConfig (Object data, String sLine, LogMessage log) {
+    StringPartScan spLine = new StringPartScan(sLine);
+    spLine.setIgnoreWhitespaces(true);
+    spLine.scanStart();
+    if(spLine.scanIdentifier().scan("=").scanOk()) {
+      String sIdentifier = spLine.getLastScannedString();
+      spLine.seekNoWhitespaceOrComments();
+      String arg = spLine.getCurrentPart().toString();
+      if(arg.endsWith(";")) {
+        arg= arg.substring(0, arg.length()-1);
+      }
+      try {
+        DataAccess.DatapathElement dpath = new DataAccess.DatapathElement(sIdentifier);
+        DataAccess.storeValue(dpath, data, arg, true);
+      } catch(ParseException exc) {
+        log.writeError("ERROR readConfig variable may faulty: %s", sLine);
+      } catch(Exception exc) {
+        log.writeError("ERROR readConfig Exception writing: " + sLine, exc);
+      }
+    }
+  }
   
 }

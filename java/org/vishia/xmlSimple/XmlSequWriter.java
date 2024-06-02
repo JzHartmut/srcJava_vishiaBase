@@ -462,7 +462,9 @@ public class XmlSequWriter {
   
   
   public void writeAttribute(String name, String value) throws IOException {
-    if(!this.bElementStart) throw new IllegalStateException("should be written not after content");
+    if(!this.bElementStart) {
+      throw new IllegalStateException("should be written not after content");
+    }
     wrTxtAscii(" "); wrTxt(name); wrTxtAscii("=\""); wrTxt(value); wrTxtAscii("\"");
   }
   

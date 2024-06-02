@@ -1316,7 +1316,8 @@ public final StringPart seekAfterNewline() {
 */
 
 /**See {@link #setIgnoreWhitespaces(boolean)}, {@link #setIgnoreComment(boolean)}
- * @deprecated use {@link #setIgnoreWhitespaces(boolean)}, {@link #setIgnoreComment(String, String)} see {@link #seekNoWhitespaceOrComments()}
+ * @deprecated use {@link #seekNoWhitespaceOrComments()}.
+ *   set {@link #setIgnoreWhitespaces(boolean)}, {@link #setIgnoreComment(String, String)} before
 *  @java2c=return-this.
 * 
 */ 
