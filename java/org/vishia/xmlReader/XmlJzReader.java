@@ -1142,6 +1142,8 @@ public class XmlJzReader
     }
     if(!bNewline) {                               
       posEndNewline = zChar;  // does not ends with spaces which contains newline
+    } else {
+      posEndNewline +=1;      // because it refers just the last char before newline, now at newline
     }
     if(StringFunctions.indexOf(src, '&') < 0 && posStartNewline ==0 && posEndNewline == zChar) { 
       return src;                                //unchanged src, no effort returns src
