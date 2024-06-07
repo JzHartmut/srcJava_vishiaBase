@@ -101,11 +101,20 @@ public class XmlDataNode implements XmlAddData_ifc{
   }
   
   
+  /**Get the whole plain text inside the node. 
+   * Either there is exact one text part, it is stored in {@link #text} and returned.
+   * Or there are some more text parts, stored as node with tag="$" in {@link #multiNodes}.
+   * Then all these text parts are concatenated and returned.
+   * 
+   * @return
+   */
   public String getText () {
     if(this.text !=null) { return this.text; }
     else if(this.singleNodes !=null) {
       XmlDataNode nodeText = this.singleNodes.get("$");
-      if(nodeText !=null) { return nodeText.getText(); }
+      if(nodeText !=null) { 
+        return nodeText.getText(); 
+      }
     }  
     if(this.multiNodes !=null) {
       List<XmlDataNode> nodesText = this.multiNodes.get("$");

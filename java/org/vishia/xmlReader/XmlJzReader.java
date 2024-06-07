@@ -71,6 +71,7 @@ public class XmlJzReader
 {
   /**Version, License and History:
    * <ul>
+   * <li>2024-06-07: Important fix: An simple space after > but before \n or before < is also content! Seen in LibreOffice.odt content.xml 
    * <li>2024-05-27: Meaningful enhancement: Now it writes also without config in an {@link XmlAddData_ifc} instance, if given as data on {@link #readXml(File, Object)} etc.
    *   The config is only necessary for the namespace declaration, because the namespace alias are not anytime the same in a read XML.
    *   The {@link #bUseNonSemanticDataStore} is set true if detected and a dummy config {@link #cfgNodeNonSemanticDataStore} 
@@ -650,10 +651,31 @@ public class XmlJzReader
         this.xmlTestWriter.writeElementHeadEnd(false);
       }
       //
-      //loop to parse <tag ...> THE CONTENT </tag>
-      while( ! inp.scan().scan("<").scan("/").scanOk()) { //check </ as end of node
+      //=====================================================
+      boolean bEndOfElement = false;
+      do { //================================================ Loop to parse content and <subElement...> till </ 
         inp.readNextContent(this.sizeBuffer/2);
-        if(inp.scan("<").scanOk()) {
+        if( inp.getCurrent(2).toString().startsWith(" <"))
+          Debugutil.stop();
+        char cc = inp.getCurrentChar();
+        if("\n\r<".indexOf(cc)<0) {    //-------------------- after> not immediately <tag or newline, 
+          StringBuilder contentBuffer = new StringBuilder(100);  // them it is content, maybe only a space or such.
+          parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
+          if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
+            if(this.bUseNonSemanticDataStore) {
+              ((XmlAddData_ifc)subOutput).addText(contentBuffer.toString());
+            } else {
+              assert(subCfgNode.allArgNames !=null);
+              DataAccess.IntegerIx ixO = subCfgNode.allArgNames.get("text");
+              if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
+            }
+            storeContent(contentBuffer, subCfgNode, subOutput, contentStorePath, subCfgNode.allArgNames, attribValues);
+          }
+        }
+        if(inp.scan("</").scanOk()) {  //==================== "</": tag> end of element.
+          bEndOfElement = true;                            // leave the loop.
+        }
+        else if(inp.scan("<").scanOk()) {  //================ "<": start of a new element. Hint: skips over whitespace with scan(...)
           if(inp.scan("!--").scanOk()) {
             inp.seekEnd("-->");
           }
@@ -688,23 +710,10 @@ public class XmlJzReader
           else {
             parseElement(inp, subOutput, subCfgNode, recursion -1);      // nested element.
           }
-        } else {
-          StringBuilder contentBuffer = new StringBuilder(100);
-          parseContent(inp, contentBuffer);                // add the content between some tags to the content Buffer.
-          if(contentBuffer !=null && subOutput !=null) { //subOutput is the destination
-            if(this.bUseNonSemanticDataStore) {
-              ((XmlAddData_ifc)subOutput).addText(contentBuffer.toString());
-            } else {
-              assert(subCfgNode.allArgNames !=null);
-              DataAccess.IntegerIx ixO = subCfgNode.allArgNames.get("text");
-              if(ixO !=null) { attribValues[ixO.ix] = contentBuffer.toString(); } 
-            }
-            storeContent(contentBuffer, subCfgNode, subOutput, contentStorePath, subCfgNode.allArgNames, attribValues);
-          }
-        }                                                  
-      } //while(! inp.scan().scan("<").scan("/").scanOk()))
-      //----------------------------------------------------- if reached here, on complex node is parsed, </ is reached.
-      inp.readNextContent(this.sizeBuffer/2);
+        } else {}  // go back to loop begin, maybe parse CONTENT
+      } while(! bEndOfElement); //inp.scan().scan("<").scan("/").scanOk());
+      //=====================================================
+      inp.readNextContent(this.sizeBuffer/2);  //============ if reached here, on complex node is parsed, </ is reached.
       if(!inp.scanIdentifier(null, "-:.").scanOk())  throw new IllegalArgumentException("</tag expected");
       inp.setLengthMax();  //for next parsing
       if(!inp.scan(">").scanOk())  throw new IllegalArgumentException("</tag > expected");
@@ -1070,6 +1079,7 @@ public class XmlJzReader
       }
       bEofSupposed = inp.readNextContent(this.sizeBuffer/2);
     } while(bContReadContent);
+    inp.scanStart();  // scan newly after reading content 
     return content;
   }
   
