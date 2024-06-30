@@ -64,6 +64,10 @@ public class XmlSequWriter {
   
   /**Version, License and History:
    * <ul>
+   * <li>2024-06-30 new {@link #writeElementEndInline(String)} necessary for LibreOffice 
+   *   because this tool interprets a newline before &lt;/text:p> as a space in the paragraph.
+   *   It was obvious if a paragraph does only contain an image, because then no {@link #writeElementInline(String)}
+   *   was called which also forces &lt:text:p> on end of line. 
    * <li>2024-05-28 new {@link #writeElementInline(String)} to write contigous content in one line.
    * <li>2024-05-28 {@link #writeElementEnd(String)} important first to check correctness, 
    *   second also for documentation which kind of element is closed.
@@ -457,23 +461,56 @@ public class XmlSequWriter {
   
   
   
-  /**Writes the </tag> or .../> but checks whether this is the correct tag.
-   * @param sTag
+  /**Writes the </tag> or .../> in the same line as the opened tag
+   * or in a new line, depending on written child elements.
+   * @param sTag should correspond with the open tag.
    * @throws IOException
    * @throws IllegalStateException on tag mismatch.
    */
   public void writeElementEnd(String sTag) throws IOException {
+    writeElementEnd(sTag, true);
+  }
+
+  /**Writes the </tag> or .../> but checks whether this is the correct tag.
+   * @param sTag should correspond with the open tag.
+   * @param bNewline true then writes the </tag> in a newline, 
+   *   but not if the element was created with {@link #writeElementInline(String)}.  
+   * @throws IOException
+   * @throws IllegalStateException on tag mismatch.
+   */
+  private void writeElementEnd(String sTag, boolean bNewline) throws IOException {
     if(!this.elementCurr.sTag.equals(sTag)) {
       throw new IllegalStateException("element mismatch, current = " + this.elementCurr.sTag + " != requ = " + sTag );
     }
-    writeElementEnd();
+    writeElementEnd(bNewline);
   }
+
+  
+  
+  /**Writes the </tag> or .../> anyway without newline, independent of the tree situation.
+   * This can be used for special cases to prevent interpretation of a newline from the evaluation of the XML.
+   * @param sTag should correspond with the open tag.
+   * @throws IOException
+   * @throws IllegalStateException on tag mismatch.
+   */
+  public void writeElementEndInline(String sTag) throws IOException {
+    writeElementEnd(sTag, false);
+  }
+  
   
   /**Writes a simple end "</tag>" or "/>" depending on invocation of {@link #writeElementHeadEnd()} before
    * @throws IOException 
    * 
    */
-  public void writeElementEnd() throws IOException {
+  public void writeElementEnd () throws IOException {
+    writeElementEnd(true);
+  }
+
+  /**Writes a simple end "</tag>" or "/>" depending on invocation of {@link #writeElementHeadEnd()} before
+   * @throws IOException 
+   * 
+   */
+  private void writeElementEnd( boolean bNewline) throws IOException {
     //decrease indent anyway
     if((this.indent -=2) < 1) { this.indent = 1; }
     if(this.bElementStart) {
@@ -482,7 +519,8 @@ public class XmlSequWriter {
       this.elementCurr.bIndented = true;
       this.bElementStart = false;
     } else {
-      if(this.elementCurr.bIndented) {
+      if( bNewline 
+       && this.elementCurr.bIndented) {        // bIndented is false if the element was written with writeElementInline(...)
         wrNewline();
       }
       wrTxtAscii("</"); wrTxt(this.elementCurr.sTag); wrTxtAscii(">");
@@ -498,6 +536,7 @@ public class XmlSequWriter {
     else { this.elementCurr = null; } //after the root.
   }
   
+
   
   public void writeAttribute(String name, String value) throws IOException {
     if(!this.bElementStart) {

@@ -23,6 +23,7 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-06-21 Hartmut new {@link #lastIndexOfAnyString(CharSequence, int, int, CharSequence[], int[])} 
    * <li>2024-01-15 Hartmut  {@link #convertTransliteration(CharSequence, char)} now it's done at last conversion "\x0041" for example character 'A', also some comments improved.
    * <li>2023-06-08 Hartmut bugfix/chg: Now {@link #indexAfterIdentifier(CharSequence, int, int, String)} returns 0   if the position starts with a number.
    *   That is proper also for test whether currently it is an identifier and it is consequent.
@@ -109,7 +110,7 @@ public class StringFunctions {
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public final static String version = "2024-01-15"; 
+  public final static String version = "2024-06-21"; 
   
   
   /** The char used to code end of text. It is defined in ASCII as EOT. 
@@ -1220,6 +1221,73 @@ public class StringFunctions {
       if(nrofFoundString != null)
       { nrofFoundString[0] = -1;
       }
+    }
+    return pos;
+  }
+
+  
+  
+  
+  
+  
+  /**Returns the position of one of the strings in listStrings within the given sq, maybe started inside the sq with from,
+   *  returns -1 if the char is not found in the part started from 'fromIndex'.
+   * @param from begin of search within the part.
+   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param listStrings contains some Strings to find.
+   * @param nrofFoundString If given, [0] is set with the number of the found String in listStrings, 
+   *                        count from 0. This array reference may be null, then unused.
+   * @param foundString If given, [0] is set with the found String. This array reference may be null.
+   * @return either -1 if not found, or position of first founded char inside sq in range from..to
+   */
+  public static int lastIndexOfAnyString
+  ( CharSequence sq
+  , int from, int to
+  , CharSequence[] listStrings
+  , @Java4C.SimpleVariableRef int[] nrofFoundString
+  )
+  { int zsq = sq.length();
+    int end = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to));  //max is negative if to is left from fromIndex
+    assert(listStrings.length < 100);  //static size is need for C language
+    /** @xxxjava2c=stackInstance.*/
+    @Java4C.StackInstance 
+    StringBuilder sFirstCharBuffer = new StringBuilder(100);
+    boolean acceptToEndOfText = false;
+    //while(iter.hasNext())
+    /**Compose a String with all first chars, to test whether a current char of src is equal. */
+    for( int ii = 0; ii < listStrings.length; ++ii) { 
+      CharSequence sString = listStrings[ii];
+      if(sString.charAt(0) == cEndOfText) { 
+        acceptToEndOfText = true;
+      } else { 
+        sFirstCharBuffer.append(sString.charAt(0));   //to search the first char as one of chars
+      }
+    }
+    /**@java2c=toStringNonPersist.*/
+    String sFirstChars = sFirstCharBuffer.toString();
+    boolean found = false;
+    int pos = end;
+    CharSequence check;
+    int ixFoundString = -1;
+    while(!found && --pos >=from) {
+      ixFoundString = 0;
+      while(!found && ixFoundString >=0 && ixFoundString < listStrings.length) {
+        ixFoundString = sFirstChars.indexOf(sq.charAt(pos), ixFoundString+1);
+        if(ixFoundString >=0) {
+          check = listStrings[ixFoundString];
+          int zCheck = check.length();
+          if(pos + zCheck <= end && compare(sq, pos, check, 0, zCheck)==0) {
+            found = true;
+          }
+        }
+      }
+    } // while
+    if(pos < from) { // not found:
+      pos = -1;
+      ixFoundString = -1;
+    }
+    if(nrofFoundString !=null && nrofFoundString.length >=1) {
+      nrofFoundString[0] = ixFoundString;
     }
     return pos;
   }
