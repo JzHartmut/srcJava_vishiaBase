@@ -64,6 +64,8 @@ public class XmlSequWriter {
   
   /**Version, License and History:
    * <ul>
+   * <li>2024-07-05 uses a temporary {@link #wsb} to see what was written in debug. 
+   *   The {@link #wrTxtToFile(CharSequence)} does yet the conversion to special character for non UTF-8 encoding.  
    * <li>2024-06-30 new {@link #writeElementEndInline(String)} necessary for LibreOffice 
    *   because this tool interprets a newline before &lt;/text:p> as a space in the paragraph.
    *   It was obvious if a paragraph does only contain an image, because then no {@link #writeElementInline(String)}
@@ -131,13 +133,18 @@ public class XmlSequWriter {
   /**Used for zip files. */
   private FileSystem fileSystem;
   
-  private Writer wr;
+  private Writer wrFile;
   
-  private OutputStream fwr;
+  private OutputStream fwrFile;
   
   private Appendable twr;
   
+  /**This is for debugging, see what was written at last.
+   * If the StringBuilder is filled more than 1500, the first 1000 are written to file, and shift.
+   */
+  private StringBuilder wsb = new StringBuilder(2000);
   
+  private static int zWsb = 2000;
   
   String sEncoding;
   
@@ -166,7 +173,12 @@ public class XmlSequWriter {
   
   int indent = 1;
   
-  private String replaceBasics;
+  private String replaceBasics = "&\"'<>\t\r\n";
+  
+  private static String[] stdReplacement =                   //newline character on end!
+    { "&amp;", "&quot;", "&apos;", "&lt;", "&gt;", "&#x09;", "&#x0d;", "&#x0a;"};
+  
+
   
   public boolean bTreeComment = false;  //only able to use for a comment for test.
   
@@ -211,15 +223,15 @@ public class XmlSequWriter {
     if(encoding !=null) { setEncoding(encoding); }
     else if(this.sEncoding == null) { setEncoding("UTF-8"); }
     try{
-      if(this.wr !=null) { this.wr.close(); }
-      else if(this.fwr !=null) { this.fwr.close(); }
-      this.wr = null; this.fwr = null;
+      if(this.wrFile !=null) { this.wrFile.close(); }
+      else if(this.fwrFile !=null) { this.fwrFile.close(); }
+      this.wrFile = null; this.fwrFile = null;
       if(file !=null) {
         if(this.encodingCode !=null) { // encoding with byte output
-          this.fwr = new FileOutputStream(file);
-          assert(this.wr ==null);
+          this.fwrFile = new FileOutputStream(file);
+          assert(this.wrFile ==null);
         } else {
-          this.wr = new FileWriter(file);
+          this.wrFile = new FileWriter(file);
 //          OutputStream fwr = new FileOutputStream(file);
 //          this.fwr = fwr;
 //          if(this.sEncoding.startsWith("UTF-")) {  // this is multibyte, use a Writer
@@ -227,7 +239,7 @@ public class XmlSequWriter {
 //          } else {
 //            assert(this.wr == null);     // not necessary for 1-byte-encoding. 
 //          }
-          assert(this.fwr ==null);
+          assert(this.fwrFile ==null);
         }
       }
       return null;
@@ -258,14 +270,14 @@ public class XmlSequWriter {
     if(encoding !=null) { setEncoding(encoding); }
     else if(this.sEncoding == null) { setEncoding("UTF-8"); }
     try{
-      if(this.wr !=null) { this.wr.close(); }
-      else if(this.fwr !=null) { this.fwr.close(); }
-      this.wr = null; this.fwr = null;
+      if(this.wrFile !=null) { this.wrFile.close(); }
+      else if(this.fwrFile !=null) { this.fwrFile.close(); }
+      this.wrFile = null; this.fwrFile = null;
       if(file !=null) {
         this.fileSystem = ZipUtils.openZip(file);
         Path nf = this.fileSystem.getPath(sPathInZip);
-        this.wr = Files.newBufferedWriter(nf, this.encoding);
-        assert(this.fwr ==null);
+        this.wrFile = Files.newBufferedWriter(nf, this.encoding);
+        assert(this.fwrFile ==null);
       }
       return null;
     } catch(UnsupportedCharsetException exc) {
@@ -292,30 +304,31 @@ public class XmlSequWriter {
   }
   
   
-  public void flush() throws IOException {
-    if(this.wr !=null) {
-      this.wr.flush();    //flushes fwr too because used in wr
-    } else if(this.fwr !=null) {
-      this.fwr.flush();
+  public void XXXflush() throws IOException {
+    if(this.wrFile !=null) {
+      this.wrFile.flush();    //flushes fwr too because used in wr
+    } else if(this.fwrFile !=null) {
+      this.fwrFile.flush();
     }
   }
 
   public void fileclose() {
     try { 
-      if(this.wr !=null) {
-        this.wr.close();   //flush and close fwr too
-        this.wr = null;
-        assert(this.fwr == null);
+      wrTxtToFile(this.wsb);
+      if(this.wrFile !=null) {
+        this.wrFile.close();   //flush and close fwr too
+        this.wrFile = null;
+        assert(this.fwrFile == null);
       }
-      else if(this.fwr !=null) {
-        if(this.fwr instanceof ZipOutputStream) {
-          ZipUtils.closeZipEntry(this.fwr);
+      else if(this.fwrFile !=null) {
+        if(this.fwrFile instanceof ZipOutputStream) {
+          ZipUtils.closeZipEntry(this.fwrFile);
         } else {
-          this.fwr.close();   //flush and close fwr too
+          this.fwrFile.close();   //flush and close fwr too
         }
-       this.fwr.close();
-       this.fwr = null;
-       assert( this.wr == null);
+       this.fwrFile.close();
+       this.fwrFile = null;
+       assert( this.wrFile == null);
       }
       this.twr = null;
     } catch(IOException exc) {
@@ -360,7 +373,7 @@ public class XmlSequWriter {
    * @throws IOException
    */
   private void writeHead() throws IOException {
-    wrTxtAscii("<?xml version=\"1.0\" encoding=\"" + this.encoding.name() + "\"?>\n");
+    wrTxtBuffered("<?xml version=\"1.0\" encoding=\"" + this.encoding.name() + "\"?>\n");
   }
   
   public void writeComment() {
@@ -388,7 +401,7 @@ public class XmlSequWriter {
       this.elementCurr.bIndented = true;
       wrNewline();
     }
-    wrTxtAscii("<"); wrTxt(sTag);
+    wrTxtBuffered("<"); wrTxtWithReplacements(sTag);
     if(this.elementCurr !=null) { this.elementsParent.push(this.elementCurr); }
     this.elementCurr = new ElementInfo(sTag, this.elementCurr);
     this.bElementStart = true;
@@ -425,7 +438,7 @@ public class XmlSequWriter {
     if(this.bElementStart) { //finish the parent element start
       writeElementHeadEnd(true);
     }
-    wrTxtAscii("<"); wrTxt(sTag);
+    wrTxtBuffered("<"); wrTxtWithReplacements(sTag);
     if(this.elementCurr !=null) { this.elementsParent.push(this.elementCurr); }
     this.elementCurr = new ElementInfo(sTag, this.elementCurr);
     this.bElementStart = true;
@@ -442,7 +455,7 @@ public class XmlSequWriter {
   
   
   private void wrNewline() throws IOException {
-    wrTxtAscii(sIndent.substring(0, this.indent));
+    wrTxtBuffered(sIndent.substring(0, this.indent));
     this.nColumn = this.indent;
   }
   
@@ -455,7 +468,7 @@ public class XmlSequWriter {
   public void writeElementHeadEnd(boolean bNewline) throws IOException {
     if(!this.bElementStart) throw new IllegalStateException("not in writing head");
     this.bElementStart = false;
-    wrTxtAscii(">");
+    wrTxtBuffered(">");
     this.elementCurr.bIndented = bNewline;
   }
   
@@ -514,7 +527,7 @@ public class XmlSequWriter {
     //decrease indent anyway
     if((this.indent -=2) < 1) { this.indent = 1; }
     if(this.bElementStart) {
-      wrTxtAscii("/");            //writes "/>" with newline-indent
+      wrTxtBuffered("/");            //writes "/>" with newline-indent
       writeElementHeadEnd(true);
       this.elementCurr.bIndented = true;
       this.bElementStart = false;
@@ -523,13 +536,13 @@ public class XmlSequWriter {
        && this.elementCurr.bIndented) {        // bIndented is false if the element was written with writeElementInline(...)
         wrNewline();
       }
-      wrTxtAscii("</"); wrTxt(this.elementCurr.sTag); wrTxtAscii(">");
+      wrTxtBuffered("</"); wrTxtWithReplacements(this.elementCurr.sTag); wrTxtBuffered(">");
       if(this.bTreeComment) {
-        wrTxtAscii("<!--");
+        wrTxtBuffered("<!--");
         for(ElementInfo elem: this.elementsParent) {
-          wrTxtAscii(elem.sTag); wrTxtAscii(" = ");
+          wrTxtBuffered(elem.sTag); wrTxtBuffered(" = ");
         }
-        wrTxtAscii("-->");
+        wrTxtBuffered("-->");
       }
     }
     if(this.elementsParent.size() >0 ) { this.elementCurr = this.elementsParent.pop(); }
@@ -542,7 +555,7 @@ public class XmlSequWriter {
     if(!this.bElementStart) {
       throw new IllegalStateException("should be written not after content");
     }
-    wrTxtAscii(" "); wrTxt(name); wrTxtAscii("=\""); wrTxt(value); wrTxtAscii("\"");
+    wrTxtBuffered(" "); wrTxtWithReplacements(name); wrTxtBuffered("=\""); wrTxtWithReplacements(value); wrTxtBuffered("\"");
   }
   
 
@@ -558,13 +571,10 @@ public class XmlSequWriter {
     if(this.elementCurr.bIndented) {
       wrNewline();
     }
-    wrTxt(txt);  //TODO long text: line break
+    wrTxtWithReplacements(txt);  //TODO long text: line break
   }
   
   
-  
-  private static String[] stdReplacement =                   //newline character on end!
-    { "&amp;", "&quot;", "&apos;", "&lt;", "&gt;", "&#x09;", "&#x0d;", "&#x0a;"};
   
   
   
@@ -572,7 +582,7 @@ public class XmlSequWriter {
    * @param txt
    * @throws IOException
    */
-  private void wrTxt(CharSequence txt) throws IOException {
+  private void wrTxtWithReplacements(CharSequence txt) throws IOException {
     CharSequence txt1 = txt == null? "?null?" : txt;
     
     int begin = 0;
@@ -581,13 +591,13 @@ public class XmlSequWriter {
     int[] nr = new int[1];
     while( ( posCorr= StringFunctions.indexOfAnyChar(txt1, begin, endMax, this.replaceBasics, nr)) >=0) {
       if(begin < posCorr) { 
-        wrTxtEncoded(txt1.subSequence(begin, posCorr));
+        wrTxtBuffered(txt1.subSequence(begin, posCorr));
       }
-      wrTxtAscii(stdReplacement[nr[0]]);
+      wrTxtBuffered(stdReplacement[nr[0]]);
       begin = posCorr +1;
     }
     if(begin < endMax) {
-      wrTxtEncoded(txt1.subSequence(begin, endMax));
+      wrTxtBuffered(txt1.subSequence(begin, endMax));
     }
   }
   
@@ -595,120 +605,82 @@ public class XmlSequWriter {
 
   
   
-  /**Write a text, using {@link #encoding2} to check write character immediately
-   * or as &#x0123; for non encode able character. 
-   * All character which are defined in the 
-   * @param txt
-   * @throws IOException
-   */
-  private void wrTxtEncoded(CharSequence txt) throws IOException {
-    //this.encoding.
-    
-    if(this.wr !=null) {               //Writes with given encoding. 
-      this.wr.write(txt.toString());   // writes with encoding to fwr.
-      if(this.twr !=null) {
-        this.twr.append(txt);
-      }
-    } else if(this.fwr !=null) { //writes Byte code
-      assert(this.encodingCode !=null);
-      int zChars = txt.length();
-      for(int ix = 0; ix < zChars; ++ix) {
-        char cc = txt.charAt(ix);
-        int b = this.encodingCode.getCode(cc);      
-        if(b !=0) {                    // char is mapped, write it.
-          this.fwr.write(b);
-          if(this.twr !=null) {
-            this.twr.append(cc);
-          }
-        } else {                        // if not possible to map in given encoding:
-          String hex = Integer.toHexString(cc).toUpperCase();
-          wrTxtAscii("&#x");            // hex is the code point, not the bytes of UTF8. It is the value of UTF-16
-          if((hex.length() & 1) ==1) {
-            wrTxtAscii("0");            // leading 0 for 2, 4, 6, 8 character
-          }
-          wrTxtAscii(hex);
-          wrTxtAscii(";");
-        }
-      }
-    } else if(this.twr !=null) { //all other are null, output to twr at least
-      this.twr.append(txt);
-    }
-  }
+  
+  
 
-  
-  
-  
-//  private void XXXwrTxt(String txt) throws IOException {
-//    //this.encoding.
-//    int z = txt.length();
-//    
-//    if(this.wr !=null) {
-//      wr.append(txt);
-//    }
-//    if(this.fwr !=null) {
-//      if(this.bFullEncoding) {
-//        
-//      }
-//      else {
-//        //check whether characters should be subscribed
-//        ByteBuffer bu = this.encoding.encode(txt);
-//        int ix0 = 0;
-//        int ix = 0;
-//        while(bu.remaining() >0 && (ix - ix0) < this.outBuffer.length) {
-//          if((ix - ix0 >= this.outBuffer.length)) {
-//            //no special characters found, output the current.
-//            bu.get(this.outBuffer, 0, this.outBuffer.length);
-//            this.fwr.write(this.outBuffer, 0, this.outBuffer.length);
-//            ix0 = ix+1;
-//          } else {
-//            byte b = bu.get();
-//            switch(b) {
-//            case 0x3f: { //the "?" maybe unsupported
-//              char cc = txt.charAt(ix0 + ix);
-//              if(cc != '?') {
-//                int zOut = ix - ix0;
-//                this.fwr.write(0x3f);
-//                this.fwr.write(0x21);
-//                this.fwr.write(0x3f);
-//                ix0 = ix+1;
-//              }
-//            } break;
-//            default: {
-//              fwr.write(b);
-//            }
-//            } //switch
-//          }
-//          ix += 1;
-//        }
-//      }
-//    }
-//  }
-//  
+  /**Writes the text immediately as given to the debug buffer file, 
+   * but {@link #wrTxtToFile(CharSequence) changes non writeable UTF-16 characters  to the file encoding. 
+   * @param txt as Java internal UTF-16 text stored in {@link #wsb}.
+   * If {@link #wsb} would be overflow, the half content is written to file 
+   * @throws IOException
+   */
+  private void wrTxtBuffered(CharSequence txt) throws IOException {
+    if(txt.length() + this.wsb.length() > zWsb) {
+      int zwsb1 = wsb.length();
+      if(zwsb1 > zWsb/2) { zwsb1 = zWsb/2; }
+      wrTxtToFile(this.wsb.substring(0, zwsb1));
+      this.wsb.delete(0, zwsb1);
+    }
+    this.wsb.append(txt);
+  }
   
   
   
   
-  
-  /**Write as given, only ASCII (7 bit) especially for XML head.
+  /**Write as given, without replacement of "<" etc, it is for the immediately output.
+   * It is called from {@link #wrTxtBuffered(CharSequence)}.
+   * But due to the file encoding non writable character are transformed to "&#x0123;" in its UTF-16 value.
    * @param txt
    * @throws IOException
    */
-  private void wrTxtAscii(String txt) throws IOException {
+  private void wrTxtToFile(CharSequence txt) throws IOException {
     //this.encoding.
     
     if(this.twr !=null) {
       this.twr.append(txt);
     }
-    if(this.wr !=null) {
-      this.wr.write(txt);  //writes with encoding to fwr.
-    } else if(this.fwr !=null) { //writes ASCII
+    if(this.wrFile !=null) {
+      this.wrFile.write(txt.toString());  //writes with encoding to fwr.
+    } else if(this.fwrFile !=null) { //writes ASCII
       int zChars = txt.length();
       for(int ix = 0; ix < zChars; ++ix) {
-        this.fwr.write(((byte)(txt.charAt(ix))));
+        //this.fwrFile.write(((byte)(txt.charAt(ix))));
+        char cc = txt.charAt(ix);
+        int b = this.encodingCode.getCode(cc);      
+        if(b !=0) {                    // char is mapped, write it.
+          this.fwrFile.write(b);
+          if(this.twr !=null) {
+            this.twr.append(cc);
+          }
+        } else {                        // if not possible to map in given encoding:
+          String hex = Integer.toHexString(cc).toUpperCase();
+          wrTxtByteEncoding("&#x");            // hex is the code point, not the bytes of UTF8. It is the value of UTF-16
+          if((hex.length() & 1) ==1) {
+            wrTxtByteEncoding("0");            // leading 0 for 2, 4, 6, 8 character
+          }
+          wrTxtByteEncoding(hex);
+          wrTxtByteEncoding(";");
+        }
       }
     } 
   }
   
+
+  /**Simple writes the ASCII 8 bit code- Text to {@link #fwrFile}
+   * @param txt
+   * @throws IOException
+   */
+  private void wrTxtByteEncoding(String txt) throws IOException {
+    int zChars = txt.length();
+    for(int ix = 0; ix < zChars; ++ix) {
+      //this.fwrFile.write(((byte)(txt.charAt(ix))));
+      byte cc = (byte)txt.charAt(ix);
+      this.fwrFile.write(cc);
+    }
+  } 
+  
+  
+
   
   @Override public String toString() {
     if(this.elementCurr !=null) return this.elementCurr.toString();

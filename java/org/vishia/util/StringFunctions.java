@@ -23,6 +23,7 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-06-21 Hartmut bugfix in {@link #lastIndexOf(CharSequence, int, int, CharSequence)} has had returned faulty position in specific (rarely) cases.
    * <li>2024-06-21 Hartmut new {@link #lastIndexOfAnyString(CharSequence, int, int, CharSequence[], int[])} 
    * <li>2024-01-15 Hartmut  {@link #convertTransliteration(CharSequence, char)} now it's done at last conversion "\x0041" for example character 'A', also some comments improved.
    * <li>2023-06-08 Hartmut bugfix/chg: Now {@link #indexAfterIdentifier(CharSequence, int, int, String)} returns 0   if the position starts with a number.
@@ -1083,24 +1084,27 @@ public class StringFunctions {
    * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param str comparison String, check whether contained fully.
    * @return -1 if not found, elsewhere the position inside sq >=fromIndex and <= to - str.length()
+   * @since 2024-07-07 bugfix has had compared one character too few of str, 
+   *        hence has returned position of "myY" if "myX" is searched. Only "my" was tested.
+   *        Obviously on search of "::", the postion of the second ":" was returned. 
    */
   public static int lastIndexOf(CharSequence sq, int fromIndex, int to, String str){
     int zsq = sq.length();
-    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
-    if (fromIndex >= max) {
+    int pos = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //pos is negative if to is left from fromIndex
+    if (pos < fromIndex) {
       return -1;
     }
-    char ch = str.charAt(0);
-    while(--max >= fromIndex){
-      if(sq.charAt(max) == ch) {
+    char ch = str.charAt(0);          // the first char of str should be found first.
+    while(--pos >= fromIndex){        // pre decrement, start with (to or sq.length()) - str.length()
+      if(sq.charAt(pos) == ch) {
         int s1 = 0;
-        for(int jj = max+1; jj < max + str.length()-1; ++jj){
+        for(int jj = pos+1; jj < pos + str.length(); ++jj){ // compare the others
           if(sq.charAt(jj) != str.charAt(++s1)){
             s1 = -1; //designate: not found
             break;
           }
         }
-        if(s1 >=0) return max;  //found.
+        if(s1 >=0) return pos;       //found. s1 is the index of the last checked char, this is str.length()-1
       }
     }
     return -1;  //not found;
