@@ -111,11 +111,16 @@ public class XmlDataNode implements XmlAddData_ifc{
   }
 
   
+  /**Add a plain text to the node.
+   * If the node is empty yet, the text is stored in {@link #text} for a simple text.
+   * If the node is not empty, then all texts are stored in order of all sub nodes in the List {@link #allNodes}.
+   * A simple text before stored is added also there, but on first position because it was stored as first.
+   */
   @Override public void addText ( String text ) {
     if(this.allNodes.size()==0) {
       this.text = text;                                    // store a singular simple text immediately in the node.
-    } else {
-      XmlDataNode nodeText = new XmlDataNode(this, "$", null);
+    } else {                                               // a given text is stored as node also in addNode. text = null.
+      XmlDataNode nodeText = new XmlDataNode(this, "$", null); // store the text always as node.
       nodeText.text = text;
       addNode(nodeText);
     }
@@ -166,8 +171,10 @@ public class XmlDataNode implements XmlAddData_ifc{
    * @return
    */
   public String getText () {
-    if(this.text !=null) { return this.text; }
-    else if(this.singleNodes !=null) {
+    if(this.text !=null) { 
+      assert(this.allNodes.size()==0);                     // then no nodes should exist.
+      return this.text;                                    // only this text 
+    } else if(this.singleNodes !=null) {
       XmlDataNode nodeText = this.singleNodes.get("$");
       if(nodeText !=null) { 
         return nodeText.getText(); 

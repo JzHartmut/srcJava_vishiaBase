@@ -7,18 +7,22 @@ import java.util.NoSuchElementException;
  * but with a given mask. All non mask elements are not returned.
  * The mask has 64 bits. It means the size is delimited to 64.
  * @author Hartmut Schorrig
+ * @license LPGL do not remove this designations.
+ * @since 2024-07-14 also an array is Iterable, using {@link #IteratorMask(Object[], long)}.
  *
  * @param <T>
  */
 public class IteratorMask <T> implements IterableIterator<T> {
 
-  int ix = -1;
+  private int ix = -1;
   
-  final Iterator<T> iterSrc;
+  final private Iterator<T> iterSrc;
+  
+  final private T[] array;
   
   private T elem;
   
-  final long mask;
+  final private long mask;
   
   boolean bExecHasNext = false;
 
@@ -28,25 +32,42 @@ public class IteratorMask <T> implements IterableIterator<T> {
    */
   public IteratorMask(Iterator<T> iteratorSrc, long mask) {
     this.iterSrc = iteratorSrc;
+    this.array = null;
     this.mask = mask;
   }
 
   public IteratorMask(Iterable<T> iterSrc, long mask) {
     this.iterSrc = iterSrc == null ? null: iterSrc.iterator();
+    this.array = null;
+    this.mask = mask;
+  }
+
+  public IteratorMask(T[] array, long mask) {
+    this.iterSrc = null;
+    this.array = array;
     this.mask = mask;
   }
 
   @Override
   public boolean hasNext() {
     this.bExecHasNext = true;
-    if(this.iterSrc == null) { return false; }
-    while(this.iterSrc.hasNext()) {
-      this.ix +=1;
-      this.elem = this.iterSrc.next();
-      if( (this.mask & (1<< this.ix)) !=0) {
-        return true;  //ixEvout is adjusted
+    if(this.iterSrc != null) {
+      while(this.iterSrc.hasNext()) {
+        this.ix +=1;
+        this.elem = this.iterSrc.next();
+        if( (this.mask & (1<< this.ix)) !=0) {
+          return true;  //ixEvout is adjusted
+        }
+      }
+    } else if(this.array !=null) {
+      while(++this.ix < this.array.length) {
+        if( (this.mask & (1<< this.ix)) !=0) {
+          this.elem = this.array[this.ix];
+          return true;  //ixEvout is adjusted
+        }
       }
     }
+    // lands here if no return in while.
     this.ix = -1; //important for ix=-1 on empty container.
     return false;
   }

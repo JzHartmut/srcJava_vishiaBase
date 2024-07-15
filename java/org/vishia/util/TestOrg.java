@@ -83,6 +83,7 @@ public class TestOrg {
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-07-15 Hartmut new {@link #expect(double, double, double, int, String, Object...)} numeric double and flost results 
    * <li>2023-07-15 Hartmut using Locale.ENGLISH for formatted output, elsewhere a goofy 12,34 comes in German numbers instead 12.34
    * <li>2023-02-02 Hartmut {@link #expect(boolean, int, String, Object...)}, {@link #out(CharSequence, Object...)} now with arguemnts  
    * <li>2022-09-13 Hartmut {@link #expect(CharSequence, CharSequence, int, String)} now returns the position of difference for evaluation.  
@@ -114,7 +115,7 @@ public class TestOrg {
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2023-07-15";
+  public static final String sVersion = "2024-07-15";
 
   
   
@@ -225,6 +226,21 @@ public class TestOrg {
     return eq;
   }
   
+  
+  
+  /**Compares two numeric values, should be equal in the given accuracy. 
+   * @param n1 The test result value to compare.
+   * @param n2 The expected value.
+   * @param accuracy of the comparison. Note that a float or double operation can deviate in the last digits.
+   * @param nVerbose level of verbose: Same as in {@link #expect(boolean, int, String)}. 
+   *     A lower number is a more prior message, a higher (..9) is a message only for a verbose output.
+   * @param txt Understandable description of the test case
+   * @return 0 if matching, position of difference in the strings if >0, never <0
+   */
+  public void expect(double n1, double n2, double accuracy, int nVerbose, String txt, Object... args) {
+    boolean bOk = Math.abs(n1 -n2) < accuracy;
+    expect(bOk, nVerbose, txt, args);
+  }
   
   /**Simple test check routine
    * @param cond if false, {@link #bOk} and all {@link #parent}.bOk are set to false because the test serie has an error.

@@ -2448,10 +2448,10 @@ public class DataAccess {
     while(clazz1.isArray() && ixix < ixArray.length) {
       clazz1 = clazz1.getComponentType();
       if(clazz1 == Integer.TYPE){           //Note: the order is regarded to probability and calculation time. Integer is frequently and should be fast. 
-        float[] data2 = (float[]) data1;
+        int[] data2 = (int[]) data1;        // cc 2024-07 
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Character.TYPE){
-        float[] data2 = (float[]) data1;
+        float[] data2 = (float[]) data1;    // TODO what is with the others?
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Long.TYPE){
         float[] data2 = (float[]) data1;

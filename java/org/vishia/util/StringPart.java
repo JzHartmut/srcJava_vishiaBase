@@ -2562,9 +2562,9 @@ else return pos - this.begin;
     * new since 2008-09: if sCmp contains a cEndOfText char (coded with \e), the end of text is tested.
     * @param sCmp The text to compare.
    */
-   public final boolean startsWith(CharSequence sCmp)
-   { int pos_cEndOfText = StringFunctions.indexOf(sCmp, StringFunctions.cEndOfText, 0); //sCmp.indexOf(cEndOfText);
-     
+   public final boolean startsWith(CharSequence sCmp) { 
+     // check whether sCmp is cEndOfText
+     int pos_cEndOfText = StringFunctions.indexOf(sCmp, StringFunctions.cEndOfText, 0);
      if(pos_cEndOfText >=0)
      { if(pos_cEndOfText ==0)
        { return this.begin == this.end;

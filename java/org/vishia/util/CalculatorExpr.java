@@ -19,12 +19,21 @@ import org.vishia.util.DataAccess.IntegerIx;
  * or from a {@link org.vishia.zbnf.ZbnfJavaOutput} output from a Zbnf parsing process. 
  * It is converted to the internal format for a stack oriented running model. 
  * <br><br>
- * This class contains the expression itself and the capability to calculate in multi thread (since 2019-06).
+ * This class contains the expression itself and the capability to calculate with given data,
+ * also in multi thread (since 2019-06). 
+ * Numeric or boolean operations and also String concatenation are able to execute. 
+ * The "?instanceof" operator is also contained result in boolean after a type check of any {@link Object} in Java.
+ * Boolean operations are partially able to write as "?gt" etc. if the symbol "<" or ">" cannot be used in the textual context
+ * because of other meanings (See {@link org.vishia.jztxtcmd.JZtxtcmd} or {@link OutTextPreparer}.
+ * For operator possibilities see 
+ * <br><br>
  * The calculation can be execute with one or some given values (usual float, integer type)
  * or it can access any Java internal variables using the capability of {@link DataAccess}.
  * <br><br>
  * <ul>
- * <li>Use {@link #setExpr(String)} to convert a String given expression to the internal format.
+ * <li>Use {@link #setExpr(String)} to convert a simple String given expression to the internal format, or more powerful:
+ * <li>Use {@link #setExpr(String, Map, Class)} or the {@link #CalculatorExpr(String, Map, Class)} 
+ *   to convert a String given expression which can access immediately given values or values from a Java context for calculation.
  * <li>Use {@link #calc(float)} for simple operations with one float input, especially for scaling values. It is fast.
  * <li>Use {@link #calc(Object...)} for universal expression calculation.
  * <li>Use {@link #calcDataAccess(Map, Object...)} to calculate with access to other Java data.
@@ -46,6 +55,11 @@ public class CalculatorExpr
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-07-15: some docu, using {@link #calcDataAccess(Data, Map, Object...)} is now deprecated,
+   *   because the accu is created anyway in each execution of {@link #calcDataAccess(Map, Object...)}
+   *   and also the {@link Stack} instance can be created for the calculation (less effort, <code> new Stack();</code> is a cheap operation). 
+   *   But yet {@link Data} is existing. Can be removed.  
+   * <li>2024-07-14: new {@link Operators#concatStringOperation} 
    * <li>2024-02-05: set always the field {@link Operand#textOrVar}. If another field is set, the other is used.
    *   This is necessary for error messages etc. textorVar should contain a hint to the access path.  
    * <li>2024-01-19: {@link #setExpr(StringPartScan, Map, Class, boolean)}: Firstly it is checked whether it is an expression
@@ -80,7 +94,7 @@ public class CalculatorExpr
    * <li>2022-03-14: Hartmut {@link #parseExpr(StringPartScan, Map, Class, String, boolean, int)} now regard precedence of && higher as ||,
    *   that was faulty before.
    * <li>2022-03-14: {@link #setRpnExpr(CharSequence, Map, Class)} now with unary operators, used, ok  
-   * <li>2022-03-12: Hartmut {@link #calcDataAccess(Data, Map, Object...)} enhanced, now can access a numeric array.
+   * <li>2022-03-12: Hartmut {@link #calcDataAccess(Map, Object...)} enhanced, now can access a numeric array.
    * <li>2022-03-12: Hartmut new {@link #setRpnExpr(CharSequence, Map, Class)}.
    * <li>2022-03-12: Hartmut new {@link #setLog(Appendable)} if this is set writes a log to the given output. For debug. 
    * <li>2022-03-12: Hartmut add "#" for put stack and "=" for assign to the textual operators. 
@@ -203,24 +217,36 @@ public class CalculatorExpr
    * but any thread should have its own data. The data instance can be reused in the same thread for the next operation.
    * Invoke clean() before reusing. 
    */
-  public static class Data {
+  @Deprecated public static class Data {
 
     /**The top of stack is the accumulator for the current level of adequate operations,
      * for example all multiplications without stack changing. It is the left operand of an operation.
      * The right operand is given in the operation itself. It an operation acts with the last 2 stack levels,
      * the value of the top of stack (the accu) is set locally in the operation and the second value of the 
      * stack operands is set to the accu. */
-    protected Value accu = new Value();
+    protected Value accu;
     /**The stack of values used temporary. It is only in used while any calculate routine runs. 
      * The top of all values is not stored in the stack but in the accu. It means that often the stack 
      * is not used. */
     protected final Stack<Value> stack = new Stack<Value>();
     
+    /**Cleans, creates a new {@link Data#accu} instance for its cummulativ calculation.
+     * It means if the {@link Data#accu} instance from a calculation before was stored in any other context (are reference),
+     * then is is possible, without problems.
+     * It also call {@link Stack#clear()} to guarantee an empty stack, which may be hang from an exception before.
+     */
     public void clean() { 
       this.stack.clear();
-      this.accu.type_ = '?';
+      this.accu = new Value();
     }
     
+    
+    /**Default empty constructor should be called one time before a specific or all calculations are executed.
+     * Call {@link #clean()} before it is reused for the next calculation. 
+     * */
+    public Data() {
+      clean();
+    }
   }
   
    
@@ -1339,6 +1365,27 @@ public class CalculatorExpr
     @Override public boolean isBoolCheck(){ return true; }
   };
   
+  
+  
+  
+  /**Concatenate the given String with the accu.
+   * The accu should contain a {@link Value#stringVal} from the operation before (initialize with a String).
+   * The {@link Value#stringVal} is changed from any {@link CharSequence}ence to {@link StringBuilder}
+   * to append the value from given arg, whereby the arg value is converted to {@link Value#stringValue()}
+   * to convert a numeric or any Object to a String to concatenate.
+   */
+  protected static final Operator concatStringOperation = new Operator("concat"){
+    @Override public void operate(Value accu, Value arg) {
+      if(!(accu.stringVal instanceof StringBuilder)) {
+        accu.stringVal = new StringBuilder(accu.stringVal);
+      }
+      ((StringBuilder)accu.stringVal).append(arg.stringValue());
+    }
+
+    @Override protected boolean isUnary () { return false; }
+
+    @Override protected boolean isBoolCheck () { return false; }
+  };
   
   
   
@@ -2511,6 +2558,7 @@ public class CalculatorExpr
       operators.put("@",  Operators.setOperation);   //set accu to operand
       operators.put("!set",  Operators.setOperation);   //set accu to operand
       operators.put("=",  Operators.assignOperation);   //assign
+      operators.put(":",  Operators.concatStringOperation);
       operators.put("+",  Operators.addOperation);
       operators.put("-",  Operators.subOperation);
       operators.put("*",  Operators.mulOperation);
@@ -2733,12 +2781,16 @@ public class CalculatorExpr
            // pre-check whether the sDatapath is only short and contains a simple identifier or path
            // or it contains a longer stuff may be an expression.
       int posEnd = spExpr.length();
-      if(posEnd >50) { posEnd = StringFunctions.indexOf(spExpr, 0, 100, ')'); }  // limit search length to 100
-      if(posEnd >=0 && StringFunctions.indexOfAnyChar(spExpr, 0, posEnd, "+-*/(&|?=", null) <0) {
-        //--------------------------------------------------- a short expression without operations.
-        parseArgument(spExpr, nameVariables, reflData, "!", 0);  // it is a shorter access
+      if(spExpr.startsWith("'")) {                         // It is either a simple String else a concatenation:
+        parseString(spExpr, nameVariables, reflData, "!", 0);
       } else {
-        parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  //results in same on a short expression
+        if(posEnd >50) { posEnd = StringFunctions.indexOf(spExpr, 0, 100, ')'); }  // limit search length to 100
+        if(posEnd >=0 && StringFunctions.indexOfAnyChar(spExpr, 0, posEnd, "+-*/(&|?=", null) <0) {
+          //--------------------------------------------------- a short expression without operations.
+          parseArgument(spExpr, nameVariables, reflData, "!", 0);  // it is a shorter access
+        } else {
+          parseExpr(spExpr, nameVariables, reflData, "!", bSpecialSyntax, 1);  //results in same on a short expression
+        }
       }
     } catch(ParseException exc){ 
       return exc.getMessage(); 
@@ -2749,7 +2801,10 @@ public class CalculatorExpr
   
   
   
-  /**Converts the given expression in a stack operable form. One variable with name "X" will be created.
+  /**Converts the given expression in a stack operable form. 
+   * Either the expression accesses data from a Java context given on execution
+   * or from a given array with values, see {@link #calcDataAccess(Map, Object...)}.
+   * One variable with name "X" will be created.
    * It means the expression can use "X" as variable.
    * See {@link #setExpr(StringPartScan, Map, Class, boolean)}
    * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
@@ -2797,6 +2852,35 @@ public class CalculatorExpr
   }
 
   
+  
+  
+  protected void parseString(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables
+      , Class<?> reflData, String startOperation, int recursion
+  ) throws ParseException {
+    String op = startOperation;
+    while(op !=null) {
+      if(spExpr.scanSkipSpace().scanLiteral("''\\", -1).scanOk()){ //'Stringliteral'
+        CharSequence sLiteral = spExpr.getLastScannedString();
+        listOperations_.add(new Operation(op, StringFunctions.convertTransliteration(sLiteral, '\\').toString()));
+      }
+      else {
+        char cc = spExpr.getCurrentChar();
+        if(cc== '(') {
+          parseExpr(spExpr, nameVariables, reflData, op, false, 0);
+          if(spExpr.scanSkipSpace().scan(")").scanOk()) {
+            throw new ParseException(") expected for expression inside parseString", (int)spExpr.getCurrentPosition());
+          }
+        } else {
+          parseArgument(spExpr, nameVariables, reflData, ":", 0);
+        }
+      }
+      if(spExpr.scanSkipSpace().scan(":").scanOk()) {      // continue with :
+        op = ":";                                          // then it is a concatenation
+      } else {
+        op = null;                                         // else end of the spExpr
+      }
+    }
+  }
   
   
   /**Parses a textual given expression.
@@ -3153,7 +3237,7 @@ public class CalculatorExpr
    *   From that a {@link StringPartScan#StringPartScan(CharSequence)} will be created 
    *   and {@link #setRpnExpr(StringPartScan, Map, Class)} is called
    * @param nameVariables Some variables which can be used given on execution in an array. 
-   *   See {@link #calcDataAccess(Data, Map, Object...)}
+   *   See {@link #calcDataAccess(Map, Object...)}
    * @param reflData Access to fields via Reflection also possible. (not done yet).
    * @throws ParseException
    * @since 2022-03-12, not all is done yet, only important stuff for first tests.
@@ -3309,16 +3393,17 @@ public class CalculatorExpr
   
   
   /**Calculates the expression with only one input. This is a simple variant for scaling values etc.
-   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a access Map.
-   * It means it must not contain access to other data.
+   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a accessVars Map and only with the float as Object.
+   * It means it must not contain access to other data. In {@link #setExpr(String)} this value should be designated as "X".
    * @param input The only one input value.
    * @return The result.
    */
   public double calc(double input)
-  { Data data = new Data();
-    try{ calcDataAccess(data, null, input);
+  { CalculatorExpr.Value result;
+    try{ 
+      result = calcDataAccess(null, input);
     } catch(Exception exc){ throw new RuntimeException(exc); }
-    return data.accu.doubleValue();
+    return result.doubleValue();
   }
   
 
@@ -3347,45 +3432,49 @@ public class CalculatorExpr
   
 
   /**Calculates the expression with only one input. This is a simple variant for scaling values etc.
-   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a access Map.
-   * It means it must not contain access to other data.
+   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a accessVars Map and only with the float as Object.
+   * It means it must not contain access to other data. In {@link #setExpr(String)} this value should be designated as "X".
    * @param input The only one input value.
    * @return The result.
    */
   public float calc(float input)
-  { Data data = new Data();
-    try{ calcDataAccess(data, null, input);
+  { CalculatorExpr.Value result;
+    try{ 
+      result = calcDataAccess(null, input);
     } catch(Exception exc){ throw new RuntimeException(exc); }
-    return data.accu.floatValue();
+    return result.floatValue();
   }
   
   
   /**Calculates the expression with only one input. This is a simple variant for scaling values etc.
-   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a access Map.
-   * It means it must not contain access to other data.
+   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a accessVars Map and only with the float as Object.
+   * It means it must not contain access to other data. In {@link #setExpr(String)} this value should be designated as "X".
    * @param input The only one input value.
    * @return The result.
    */
-  public long calcLong(long input)
-  { Data data = new Data();
-    try{ calcDataAccess(data, null, input);
+  public long calc(long input)
+  { CalculatorExpr.Value result;
+    try{ 
+      result = calcDataAccess(null, input);
     } catch(Exception exc){ throw new RuntimeException(exc); }
-    return (long)data.accu.doubleValue();
+    return result.longValue();
   }
   
   
   /**Calculates the expression with only one input. This is a simple variant for scaling values etc.
-   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a access Map.
-   * It means it must not contain access to other data.
+   * It invokes internally {@link #calcDataAccess(Map, Object...)} but without a accessVars Map and only with the float as Object.
+   * It means it must not contain access to other data. In {@link #setExpr(String)} this value should be designated as "X".
    * @param input The only one input value.
    * @return The result.
    */
   public long calcLong(int input)
-  { Data data = new Data();
-    try{ calcDataAccess(data, null, input);
+  { CalculatorExpr.Value result;
+    try{ 
+      result = calcDataAccess(null, input);
     } catch(Exception exc){ throw new RuntimeException(exc); }
-    return data.accu.intValue();
+    return result.intValue();
   }
+  
   
   
   /**Calculates the expression with only one integer input.
@@ -3416,37 +3505,34 @@ public class CalculatorExpr
   /**Calculates the expression with some inputs, often only 1 input.
    * Before calculate, one should have defined the expression using {@link #setExpr(String)}
    * or {@link #setExpr(String, String[])} or via {@link SetExpr}.
-   * Calls then {@link #calcDataAccess(Data, Map, Object...)} see there for argument args.
+   * Calls then {@link #calcDataAccess(Map, Object...)} see there for argument args.
    * @param args Array of some inputs
    * @return The result of the expression.
    */
   public Value calc(Object... args) { 
     Data data = new Data();
-    try{ return calcDataAccess(data, null, args); 
+    try{ return calcDataAccess(null, args); 
     } catch(Exception exc){ throw new RuntimeException(exc); //unexpected if the expression does not contain a dataAccess.
     }
   }
   
   
   
-  /**Creates new {@link Data} for calculation and calls
-   * {@link #calcDataAccess(Data, Map, Object...)}, see there
-   * @param javaVariables
-   * @param args
-   * @return
-   * @throws Exception
-   */
-  public Value calcDataAccess(Map<String, DataAccess.Variable<Object>> javaVariables, Object... args) throws Exception{
-    Data data = new Data();
-    return calcDataAccess(data, javaVariables, args);
-  }  
-  
-  
-  
-  /**Calculates the expression with possible access to any stored object data with access via reflection.
-   * @param data re-used data instance (Stack and accu). Invoke
-   * @param javaVariables Any data which are access-able with its name. It is the first part of a datapath.
-   * @param args Some args given immediately. For example numerical args wrappend with Float etc or strings. Often not used.
+  /**Calculates the expression, this is the core routine with full capability.
+   * Data access to current values can be done:
+   * <ul><li>to given Java instance data via given reflection access stored in the expression as {@link DataAccess} instance {@link Operand#dataAccess}
+   *   whereby the first instance is given in param args or javaVariables.
+   * <li>to given Java static data via given reflection access stored in the expression as {@link DataAccess} instance {@link Operand#dataAccess}.
+   * <li>to immediately given data as numeric or String given in param args
+   * <li>to immediately given data in {@link DataAccess.Variable} instances given via param accessVars. 
+   *    This is more a special case if data itself were built with one of this operation as stored values,
+   *    frequently used in {@link org.vishia.jztxtcmd.JZtxtcmd}.
+   * </ul>
+   * @param data re-used data instance (Stack and accu). 
+   *   You should {@link Data#Data()} for first creation in a calculation thread.
+   *   This operation calls {@link Data#clean()} for new usage. 
+   * @param accessVars Any data which are access-able with its name. It is the first part of a datapath.
+   * @param args Some args given immediately. For example numerical args wrappend with Float etc or strings.
    *   It is also possible that args has member as array, often an (numeric) array. 
    *   Then it is simple to use values from the array. 
    *   The index of this arguments are related to the 2. argument nameVariables in {@link #setExpr(String, Map, Class)}.
@@ -3455,11 +3541,32 @@ public class CalculatorExpr
    *   For example args has two sub arrays with 12 and 8 elements (of two different numerical types).
    *   Then ix=11 is [0][11] and ix=12 is [1][0] etc. 
    * @return The result wrapped with a Value instance. This Value contains also the type info. 
+   *   <ul><li>Use {@link Value#objValue()} to get the value wrapped as {@link Float}, {@link Integer} etc. 
+   *   or especially as {@link CharSequence} for String processing to get the typed value in a wrapper.
+   *   <li>Or use {@link Value#intValue()} etc. to get an expected representation of the value.
+   *   </ul>
+   *   You can refer this return value, it is not influenced by further calls of this operation. 
    * @throws Exception Any exception is possible. Especially {@link java.lang.NoSuchFieldException} or such
    *   if the access via reflection is done.
    */
-  public Value calcDataAccess(Data data, Map<String, DataAccess.Variable<Object>> javaVariables, Object... args) throws Exception{
-    data.accu = new Value(); //empty, use a new instance because the last one may be used as reference anywhere.
+  public Value calcDataAccess(Map<String, DataAccess.Variable<Object>> accessVars, Object... args) throws Exception{
+    Data data = new Data();
+    return calcDataAccess(data, accessVars, args);
+  }  
+  
+  
+  
+  /**This routine does nothing else than {@link #calcDataAccess(Map, Object...)}.
+   * The data instance does not need to hold in any local context, it is temporary.
+   * The result of the calculation is referred and can be stored for further usage without influences.
+   * @param data
+   * @param accessVars
+   * @param args
+   * @return
+   * @throws Exception
+   */
+  @Deprecated public Value calcDataAccess(Data data, Map<String, DataAccess.Variable<Object>> accessVars, Object... args) throws Exception{
+    data.clean();
     Value val2jar = new Value();  //Instance to hold values for the right side operand.
     Value val2; //Reference to the right side operand
     //ExpressionType type = startExpr;
@@ -3470,7 +3577,7 @@ public class CalculatorExpr
       ix +=1;
       if(oper.operator_== Operators.assignOperation)
         Debugutil.stop();
-      val2 = getValue(data, oper, javaVariables, args);
+      val2 = getValue(data, oper, accessVars, args);
       //
       //executes the operation:
       if(oper.unaryOperator !=null){

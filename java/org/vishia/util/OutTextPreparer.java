@@ -255,6 +255,13 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-07-14 new in &lt;:for:var:container> {@link ForCmd} also an integer index can be used as var if container is an Integer. 
+   *   For that in {@link #addCmd(String, int, int, ECmd, String, Class, Map, Map)}
+   *   in case forCmd (called in {@link #parse(Class, Map, Map)} it is tested whether "0.." is written. 
+   *   But the real important effect is, the argument container returns an Integer. This is evaluated in {@link #execFor(Appendable, ForCmd, int, Object, DataTextPreparer)}.
+   *   The solution runs yet with integer index starting from 0. The solution should be a little bit improved:
+   *   TODO either it is necessary to have a start index other than 0, ore superfluous statements should be removed. 
+   * <li>2024-07-14 new {@link DataTextPreparer#setArgumentOptional(String, Object)} 
    * <li>2024-05-18 {@link ForCmd#ixEntryKey}, {@link #execFor(Appendable, ForCmd, int, Object, DataTextPreparer)}: 
    *   Now the &lt;:for:var.... creates also a var_key for the key value. 
    * <li>2024-05-17 {@link DataTextPreparer#DataTextPreparer(OutTextPreparer)}: now checks whether the OutTextPreparer is initialized, 
@@ -422,6 +429,25 @@ public final class OutTextPreparer
     }
     
   
+    /**User routine to set a optional argument with a value.
+     * This operation can be used if some text templates are possible, some have more arguments.
+     * Then try to set all possible and not obligate arguments with this operation.
+     * @param name argument name of the argument list given in the constructor
+     *   {@link OutTextPreparer#OutTextPreparer(String, Object, String, String)}, 3. argment
+     *   or also given in the textual script.
+     * @param value any value for this argument.
+     * @return true if set, false if the argument does not exists.
+     * */
+    public boolean setArgumentOptional(String name, Object value) {
+      DataAccess.IntegerIx ix0 = this.prep.nameVariables.get(name);
+      if(ix0 != null) {
+        int ix = ix0.ix;
+        this.args[ix] = value;
+      }
+      return ix0 !=null;
+    }
+    
+  
     /**User routine to set a argument with an index in order of the argument list with a value.
      * @param ixArg index of the argument starting with 0 for the first argument in the list.
      * @param value any value for this argument.
@@ -552,6 +578,8 @@ public final class OutTextPreparer
     /**The index where the entry value is stored while executing. 
      * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
     public int ixEntryVar, ixEntryVarNext, ixEntryKey;
+    
+    int ixStart = -1;
 
     public ForCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception {
       super(outer, ECmd.forCtrl, spDatapath, reflData);
@@ -561,6 +589,17 @@ public final class OutTextPreparer
       super(outer, ECmd.forCtrl, sDatapath, reflData, null);
     }
   }
+  
+  
+  /**Helper class as container to produce indices for <:for:ix:[0..3]>
+   */
+  static class ForIxContainer {
+    int ixStart; int ixEnd;
+    ForIxContainer(int ixStart, int ixEnd) {
+      this.ixStart = ixStart; this.ixEnd = ixEnd;
+    }
+  }
+  
   
   
   static class SetCmd extends Cmd {
@@ -1244,7 +1283,7 @@ public final class OutTextPreparer
   
   
   /**Recommended operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
-   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map)} afterwards.
+   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map, LogMessage)} afterwards.
    * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
    *  
    * @since 2024-02-13 opens and closes also the file in jar.
@@ -1284,7 +1323,7 @@ public final class OutTextPreparer
   
   
   /**Older operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
-   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map)} afterwards.
+   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map, LogMessage)} afterwards.
    * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
    *  
    * @since 2023-12 new version due to pdf documentation.
@@ -1347,7 +1386,7 @@ public final class OutTextPreparer
     if(idxScript!=null) {
       for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
         OutTextPreparer otx = e.getValue();
-//        if(otx.sIdent.equals("VarV_UFB"))
+//        if(otx.sIdent.equals("setVar_FBexpr"))
 //          Debugutil.stop();
         try { 
           otx.parse(execClass, idxConstData, idxScript);
@@ -1666,6 +1705,8 @@ public final class OutTextPreparer
         else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
+          if(variable.equals("sIx"))
+            Debugutil.stop();
           SetCmd cmd = (SetCmd)addCmd(this.pattern, pos0, pos1, ECmd.setVar, value, execClass, idxConstData, idxScript);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
@@ -2069,7 +2110,18 @@ public final class OutTextPreparer
             cmd = parseExec(src, from, to, new StringPartScan(sDatapath), reflData, idxConstData, idxScript);
             break;
           }
-          case forCtrl: cmd = new ForCmd(this, sDatapath, reflData); break;
+          case forCtrl: {
+            int posIx = sDatapath.indexOf("..");
+            String sDatapath1 = sDatapath;
+            if(posIx >=0) {
+              //TODO scan the start index, yet always 0..
+              sDatapath1 = sDatapath.substring(posIx+2);    // right side
+            }
+            cmd = new ForCmd(this, sDatapath1, reflData); 
+            if(posIx >=0) {
+              ((ForCmd)cmd).ixStart = 0;  // overwrite -1 with the start index, then index for.
+            }
+          } break;
           case setVar: cmd = new SetCmd(this, sDatapath, reflData); break;
           case debug: cmd = new DebugCmd(this, sDatapath, reflData, idxConstData); break;
           case addString: cmd = new CmdString(sDatapath); break;
@@ -2170,7 +2222,16 @@ public final class OutTextPreparer
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;
-            args.args[ ixVar ] = dataForCmd(cmd, args, wr);
+            if(ixVar < this.listArgs.size() && this.listArgs.get(ixVar).equals("sIx")) {   // for debug: Check the given name of the variable.
+              Debugutil.stop();
+            }
+            Object res =  dataForCmd(cmd, args, wr);
+            if(res instanceof CalculatorExpr.Value) {
+              CalculatorExpr.Value resExpr = (CalculatorExpr.Value) res;
+              args.args[ ixVar ] = resExpr.objValue();
+            } else {
+              args.args[ ixVar ] = res;
+            }
           } break;
           case typeCheck: if(args.bChecks){
             TypeCmd cmdt = (TypeCmd)cmd;
@@ -2188,6 +2249,8 @@ public final class OutTextPreparer
           } break;
           case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
           case forCtrl: {
+            if(((ForCmd)cmd).ixStart ==0)
+              Debugutil.stop();
             Object data = dataForCmd(cmd, args, wr);
             execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
             ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
@@ -2235,9 +2298,9 @@ public final class OutTextPreparer
     Object data;  //========================================= first gather the data
     if(cmd.expr !=null) {
       try {                                                // only one time, set the destination data for calc
-        if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
+        //if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
         //======>>>>
-        data = cmd.expr.calcDataAccess(args.calcExprData, null, args.args); 
+        data = cmd.expr.calcDataAccess(null, args.args); 
       } catch (Exception e) {
         bDataOk = false;
         data = null;
@@ -2420,6 +2483,25 @@ public final class OutTextPreparer
         args.args[cmd.ixEntryKey] = key;                   // execute the last or only one element.
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute for the last argument.
+        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+      }
+    }
+    else if(container instanceof Integer) { //--------------- numeric for(int ix=0; ix < container, ++ix)
+      int ixExcl = (Integer)container;
+      boolean bFirst = true;
+      args.args[cmd.ixEntryKey] = null;
+      for(int ix = 0; ix < ixExcl; ++ix) {
+        args.args[cmd.ixEntryVar] = ix-1;
+        args.args[cmd.ixEntryVarNext] = ix;
+        if(bFirst) {
+          bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
+        } else { //start on 2. item
+          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        }
+      }
+      if(!bFirst) {  //-------------------------------------- if the container is not empty, 
+        args.args[cmd.ixEntryVar] = ixExcl-1;
+        args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
         execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
