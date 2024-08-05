@@ -2866,7 +2866,7 @@ public class DataAccess {
     protected DatapathElement(){}
 
     /**Creates a datapath element.
-     * @param name see {@link #set(String)}
+     * @param descr see {@link #set(String)}
      * @throws ParseException 
      */
     public DatapathElement(String path) throws ParseException {

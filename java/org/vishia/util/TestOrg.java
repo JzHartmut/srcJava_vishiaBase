@@ -9,22 +9,24 @@ import java.util.Locale;
  * The result is given as text, it is able to evaluate for overview.
  * <br><br>
  * Pattern to use: <pre>
- * public static void main(String[] args) { 
- *   TestOrg test = new TestOrg("Test description", 2, args);
- *   test.finish();
- * }
+  public static void main(String[] args) { 
+    TestOrg testOrg = new TestOrg("Test description", 2, args);
+    TestClass thiz = new TestClass();                      // create data for test
+    thiz.testRoutine(testOrg);                             // can have more as one testRoutine
+    testOrg.finish();
+  }
  * 
- * void testRoutine(TestOrg testParent) {
- *   TestOrg test = new TestOrg("Test routine description", 4, testParent);
- *   try {
- *     result = doSomethingToTest();
- *     test.expect(result == expected, 5, "test case description");
- *   } 
- *   catch (Exception exc) {
- *     test.exception(exc); 
- *   }
- *   test.finish();
- * }
+  void testRoutine(TestOrg testParent) {
+    TestOrg test = new TestOrg("Test routine description", 4, testParent);
+    try {
+      result = doSomethingToTest();
+      test.expect(result == expected, 5, "test case description");
+    } 
+    catch (Exception exc) {
+      test.exception(exc); 
+    }
+    test.finish();
+  }
  *   
  * </pre> 
  * The output for this situation for a well test can be:<pre>
@@ -83,7 +85,7 @@ public class TestOrg {
 
   /**Version, history and license.
    * <ul>
-   * <li>2024-07-15 Hartmut new {@link #expect(double, double, double, int, String, Object...)} numeric double and flost results 
+   * <li>2024-07-15 Hartmut new {@link #expect(double, double, double, int, String, Object...)} numeric double and float results 
    * <li>2023-07-15 Hartmut using Locale.ENGLISH for formatted output, elsewhere a goofy 12,34 comes in German numbers instead 12.34
    * <li>2023-02-02 Hartmut {@link #expect(boolean, int, String, Object...)}, {@link #out(CharSequence, Object...)} now with arguemnts  
    * <li>2022-09-13 Hartmut {@link #expect(CharSequence, CharSequence, int, String)} now returns the position of difference for evaluation.  
@@ -264,13 +266,13 @@ public class TestOrg {
       showParentTitle(null);
     }
     if(cond) {
-      if(bShowAlsoOkTxt) { out("  ok: "); outln(txt, args); }
+      if(bShowAlsoOkTxt) { out("\n  ok: "); outln(txt, args); }
     } else {
       TestOrg parent = this;
       while(parent !=null) { parent.bOk = false; parent = parent.parent; }
       //Note: the first levels before nStackLevel are from TestOrg itself, not to show. 
       CharSequence sFileLine = CheckVs.stackInfo("", nStackLevel, 3);
-      out("  ERROR: "); out(txt, args); out(" @ "); out(sFileLine);  //sFileLine has 0x0a on end.
+      out("\n  ERROR: "); out(txt, args); out(" @ "); out(sFileLine);  //sFileLine has 0x0a on end.
     }
   }
   

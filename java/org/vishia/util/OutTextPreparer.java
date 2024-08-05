@@ -1705,8 +1705,8 @@ public final class OutTextPreparer
         else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
           String value = sp.getLastScannedString().toString();
           String variable = sp.getLastScannedString().toString();
-          if(variable.equals("sIx"))
-            Debugutil.stop();
+//          if(variable.equals("sIx"))
+//            Debugutil.stop();
           SetCmd cmd = (SetCmd)addCmd(this.pattern, pos0, pos1, ECmd.setVar, value, execClass, idxConstData, idxScript);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
@@ -2222,9 +2222,9 @@ public final class OutTextPreparer
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;
-            if(ixVar < this.listArgs.size() && this.listArgs.get(ixVar).equals("sIx")) {   // for debug: Check the given name of the variable.
-              Debugutil.stop();
-            }
+//            if(ixVar < this.listArgs.size() && this.listArgs.get(ixVar).equals("sIx")) {   // for debug: Check the given name of the variable.
+//              Debugutil.stop();
+//            }
             Object res =  dataForCmd(cmd, args, wr);
             if(res instanceof CalculatorExpr.Value) {
               CalculatorExpr.Value resExpr = (CalculatorExpr.Value) res;

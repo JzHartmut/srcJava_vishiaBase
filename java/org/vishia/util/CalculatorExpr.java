@@ -2884,6 +2884,7 @@ public class CalculatorExpr
   
   
   /**Parses a textual given expression.
+   * NOTE 2024-07-22 the preference of operators is not correct. TODO workaround: use parenthesis in the textual given expressions.
    * @param spExpr given textual expression
    * @param nameVariables An operand can be given as name of a variable from this index.
    *   Then for execution an array should be given as last argument of {@link #calcDataAccess(Map, Object...)}.

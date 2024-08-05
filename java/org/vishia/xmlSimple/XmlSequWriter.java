@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
@@ -148,11 +149,12 @@ public class XmlSequWriter {
   
   String sEncoding;
   
-  //CharsetEncoder encodingX;
-  Charset encoding;
+  /**The used encoding for File output and also the encoding to convert Java internal UTF-16 to the file's enconding. */
+  private Charset encodingFile;
   
-  /**It is null for UTF encoding*/
-  CodeCharset encodingCode;
+  /**The encoding to convert Java internal UTF-16 to the file's encoding.
+     it is the same as encoding, or it is null for UTF encoding*/
+  private CodeCharset encodingJava2File;
   
   /**true then no reason to output transcription characters. */
   boolean bFullEncoding;
@@ -189,15 +191,15 @@ public class XmlSequWriter {
   }
   
   public void setEncoding(String sEncoding) throws IllegalCharsetNameException {
-    this.encoding = Charset.forName(sEncoding);
-    if(sEncoding.startsWith("UTF-")) {
-      this.encodingCode = null;        // it is not necessary, UTF can all character
+    this.encodingFile = Charset.forName(sEncoding);
+    if(this.encodingFile.name().startsWith("UTF")) {       // compare the canonical name!
+      this.encodingJava2File = null;                       // it is not necessary, UTF file encoding can all character
     } else {
-      this.encodingCode = CodeCharset.forName(sEncoding);  
+      this.encodingJava2File = CodeCharset.forName(sEncoding);  // replacer from UTF-16 to file encoding. 
       //it may be null, if the encoding is not supported.
       //if not null, then character are checked and &#x1234; is generated for unknown codes.
     }
-    if(this.encoding == null) throw new IllegalCharsetNameException("Illegal encoding id: " + sEncoding);
+    if(this.encodingFile == null) throw new IllegalCharsetNameException("Illegal encoding id: " + sEncoding);
     this.sEncoding = sEncoding; //not reached because exception on faulty identifier.
   }
   
@@ -207,7 +209,7 @@ public class XmlSequWriter {
   
   /**Opens for writing in a file, closes an opened file if any is open.
    * @param file can be null, then only the buffer is written.
-   * @param encoding can be null, then the last used or given {@link #setEncoding(String)} is valid.
+   * @param encodingArg can be null, then the last used or given {@link #setEncoding(String)} is valid.
    *   Default is "UTF-8". If given the {@link #setEncoding(String)} is called here.
    *   <br>If the encoding is "ISO-8859-x" or "US-ASCII" then non map able characters are written as &#xC0DE;
    *   <br>On other encodings non mapable character are faulty written as defined by Writer(... Charset).
@@ -218,29 +220,22 @@ public class XmlSequWriter {
    * @throws IOException only on closing an opened file. Not expected. 
    */
   //Sets either this.wr or this.fwr, never both.
-  public String open(File file, String encoding, Appendable buffer) throws IOException {
+  public String open(File file, String encodingArg, Appendable buffer) throws IOException {
     this.twr = buffer;
-    if(encoding !=null) { setEncoding(encoding); }
-    else if(this.sEncoding == null) { setEncoding("UTF-8"); }
+    if(encodingArg !=null) { setEncoding(encodingArg); }         // sets for conversion of character, set this.encoding=null  for  UTF-8
+    else { setEncoding("UTF-8"); }
     try{
       if(this.wrFile !=null) { this.wrFile.close(); }
       else if(this.fwrFile !=null) { this.fwrFile.close(); }
       this.wrFile = null; this.fwrFile = null;
       if(file !=null) {
-        if(this.encodingCode !=null) { // encoding with byte output
+        if(this.encodingJava2File !=null) {       //--------- encoding with byte output
           this.fwrFile = new FileOutputStream(file);
           assert(this.wrFile ==null);
-        } else {
-          this.wrFile = new FileWriter(file);
-//          OutputStream fwr = new FileOutputStream(file);
-//          this.fwr = fwr;
-//          if(this.sEncoding.startsWith("UTF-")) {  // this is multibyte, use a Writer
-//            this.wr = new OutputStreamWriter(fwr, this.encoding); 
-//          } else {
-//            assert(this.wr == null);     // not necessary for 1-byte-encoding. 
-//          }
-          assert(this.fwrFile ==null);
-        }
+        } else { //------------------------------------------ Writer accepts immediately UTF-16 Java characters
+          this.wrFile = new OutputStreamWriter(new FileOutputStream(file), this.encodingFile);
+          assert(this.fwrFile ==null);                     // but produces guaranteed correct encoding.
+        } // Hint: simple new FileWriter(file) is faulty, because the system's encoding is used.
       }
       return null;
     } catch(UnsupportedCharsetException exc) {
@@ -253,6 +248,7 @@ public class XmlSequWriter {
   
   
   /**Opens for writing in a file, closes an opened file if any is open.
+   * This is used once, but seems not be correct.
    * @param file can be null, then only the buffer is written.
    * @param encoding can be null, then the last used or given {@link #setEncoding(String)} is valid.
    *   Default is "UTF-8". If given the {@link #setEncoding(String)} is called here.
@@ -265,7 +261,7 @@ public class XmlSequWriter {
    * @throws IOException only on closing an opened file. Not expected. 
    */
   //Sets either this.wr or this.fwr, never both.
-  public String openZip(File file, String sPathInZip, String encoding, Appendable buffer) throws IOException {
+  @Deprecated public String XXXopenZip(File file, String sPathInZip, String encoding, Appendable buffer) throws IOException {
     this.twr = buffer;
     if(encoding !=null) { setEncoding(encoding); }
     else if(this.sEncoding == null) { setEncoding("UTF-8"); }
@@ -276,7 +272,7 @@ public class XmlSequWriter {
       if(file !=null) {
         this.fileSystem = ZipUtils.openZip(file);
         Path nf = this.fileSystem.getPath(sPathInZip);
-        this.wrFile = Files.newBufferedWriter(nf, this.encoding);
+        this.wrFile = Files.newBufferedWriter(nf, this.encodingFile);
         assert(this.fwrFile ==null);
       }
       return null;
@@ -373,7 +369,7 @@ public class XmlSequWriter {
    * @throws IOException
    */
   private void writeHead() throws IOException {
-    wrTxtBuffered("<?xml version=\"1.0\" encoding=\"" + this.encoding.name() + "\"?>\n");
+    wrTxtBuffered("<?xml version=\"1.0\" encoding=\"" + this.encodingFile.name() + "\"?>\n");
   }
   
   public void writeComment() {
@@ -646,7 +642,7 @@ public class XmlSequWriter {
       for(int ix = 0; ix < zChars; ++ix) {
         //this.fwrFile.write(((byte)(txt.charAt(ix))));
         char cc = txt.charAt(ix);
-        int b = this.encodingCode.getCode(cc);      
+        int b = this.encodingJava2File.getCode(cc);      
         if(b !=0) {                    // char is mapped, write it.
           this.fwrFile.write(b);
           if(this.twr !=null) {
