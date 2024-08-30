@@ -250,6 +250,11 @@ public class MainCmdLoggingStream implements MainCmdLogging_ifc
   }
 
   @Override
+  public void writef(String msg, Object... args)
+  { report(LogMessage.info, String.format(msg, args)); 
+  }
+
+  @Override
   public void writeInfoAdd(String msg, Object... args)
   { report(LogMessage.info, String.format(msg, args)); 
   }

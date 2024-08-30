@@ -256,10 +256,12 @@ public class LogMessageStream extends LogMessageBase
       if(this.out1 !=null) {
         this.out1.write(b); 
         this.out1.write(this.sNewLine);
+        this.out1.flush(); 
       }
       if(this.out2 !=null) {
         this.out2.write(b); 
         this.out2.write(this.sNewLine);
+        this.out2.flush(); 
       }
       if(this.out3 !=null) {
         this.out3.append(line).append('\n');
@@ -278,10 +280,12 @@ public class LogMessageStream extends LogMessageBase
       if(this.out1 !=null) {
         this.out1.write(b); 
         this.out1.write(this.sNewLine);
+        this.out1.flush(); 
       }
       if(this.out2 !=null) {
         this.out2.write(b); 
         this.out2.write(this.sNewLine);
+        this.out2.flush(); 
       }
       if(this.out3 !=null) {
         this.out3.append(line).append('\n');
@@ -294,7 +298,7 @@ public class LogMessageStream extends LogMessageBase
   
   @Override public Appendable append(CharSequence csq) throws IOException {
     byte[] b = csq.toString().getBytes(this.encoding);
-    if(this.out1 !=null) { this.out1.write(b); }
+    if(this.out1 !=null) { this.out1.write(b);}
     if(this.out2 !=null) { this.out2.write(b); }
     if(this.out3 !=null) { this.out3.append(csq); }
     return this;
@@ -324,7 +328,7 @@ public class LogMessageStream extends LogMessageBase
         if(this.out2 !=null) { this.out2.write(b); }
       }
       if(this.outErr !=null) { this.outErr.append(s); }
-      else if(this.out3 !=null) { this.out3.append(s); }
+      else if(this.out3 !=null) { this.out3.append(s);}
     } catch(IOException exc) {
       System.err.println("EXCEPTION: " + s + "  exception:" + exc.getMessage());
     }
@@ -336,6 +340,7 @@ public class LogMessageStream extends LogMessageBase
    */
   @Override public void writeError(String msg, Object... args) {
     writeError(String.format("\n" + msg, args));
+    flush();
   }
 
   /**Output the msg to the error channel if exists, and to the other both file channels.
@@ -343,6 +348,7 @@ public class LogMessageStream extends LogMessageBase
    */
   @Override public void writeErrorAdd(String msg, Object... args) {
     writeError(String.format(msg, args));
+    flush();
   }
 
 

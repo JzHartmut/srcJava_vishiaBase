@@ -285,8 +285,15 @@ public interface LogMessage extends Appendable
   public void writeError(CharSequence sError);
 
 
-  /**Writes a beginning new line with the prepared text to the standard output as information.
-   * @param text can be contain format placeholder, {@link String#format(String, Object...)} is used
+  /**Writes the prepared text to the log as information.
+   * @param text should begin with "\n", can be contain format placeholder, {@link String#format(String, Object...)} is used
+   * @param args The args for the placeholder.
+   * @since 2024-04. The difference is here: The newline is output first.
+   */
+  public void writef(String text, Object... args);
+  
+  /**Writes the prepared text to the log as information.
+   * @param text should begin with "\n", can be contain format placeholder, {@link String#format(String, Object...)} is used
    * @param args The args for the placeholder.
    * @since 2024-04. The difference is here: The newline is output first.
    */

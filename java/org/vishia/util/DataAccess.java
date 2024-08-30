@@ -2451,25 +2451,25 @@ public class DataAccess {
         int[] data2 = (int[]) data1;        // cc 2024-07 
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Character.TYPE){
-        float[] data2 = (float[]) data1;    // TODO what is with the others?
+        char[] data2 = (char[]) data1;    // TODO what is with the others?
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Long.TYPE){
-        float[] data2 = (float[]) data1;
+        long[] data2 = (long[]) data1;
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Short.TYPE){
-        float[] data2 = (float[]) data1;
+        short[] data2 = (short[]) data1;
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Byte.TYPE){
-        float[] data2 = (float[]) data1;
+        byte[] data2 = (byte[]) data1;
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Boolean.TYPE){
-        float[] data2 = (float[]) data1;
+        boolean[] data2 = (boolean[]) data1;
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Float.TYPE){
         float[] data2 = (float[]) data1;
         data1 = data2[ixArray[ixix]];
       } else if(clazz1 == Double.TYPE){
-        float[] data2 = (float[]) data1;
+        double[] data2 = (double[]) data1;
         data1 = data2[ixArray[ixix]];
       } else {
         data1 = ((Object[])data1)[ixArray[ixix]];

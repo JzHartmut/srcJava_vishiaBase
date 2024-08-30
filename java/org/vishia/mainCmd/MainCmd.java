@@ -1369,6 +1369,11 @@ import org.vishia.msgDispatch.MsgRedirectConsole;
   }
 
   
+  @Override public final void writef(String msg, Object... args) {
+    String text = String.format(msg, args);
+    writeInfo(text);
+  }
+
   @Override public final void writeInfo(String msg, Object... args) {
     String text = "\n" + String.format(msg, args);
     writeInfo(text);

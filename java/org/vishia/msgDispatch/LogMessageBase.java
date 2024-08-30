@@ -23,19 +23,35 @@ public abstract class LogMessageBase implements LogMessage {
    * It is without throws, simple usage.
    * May be adapted to message output in derived classes
    */
+  @Override public void writef(String msg, Object... args) {
+    try {
+      writeInfo(String.format(msg, args));
+      flush();
+    } catch(Exception exc) {
+      System.err.println("EXCEPTION writef: " + msg + " exc: " + exc.getMessage());
+    }
+  }
+
+  /**Implemented only as wrapper around simple append output.
+   * It is without throws, simple usage.
+   * May be adapted to message output in derived classes
+   */
   @Override public void writeInfo(String msg, Object... args) {
     try {
-      writeInfo(String.format("\n" + msg, args));
+      String msg2 = msg.charAt(0) != '\n' ? "\n" + msg : msg;  // only stupid compatibility
+      writeInfo(String.format(msg2, args));
+      flush();
     } catch(Exception exc) {
-      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+      System.err.println("EXCEPTION writeInfo: " + msg + " exc: " + exc.getMessage());
     }
   }
 
   @Override public void writeInfoAdd(String msg, Object... args) {
     try {
       writeInfo(String.format(msg, args));
+      flush();
     } catch(Exception exc) {
-      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+      System.err.println("EXCEPTION writeInfoAdd: " + msg + " exc: " + exc.getMessage());
     }
   }
 
@@ -45,9 +61,10 @@ public abstract class LogMessageBase implements LogMessage {
    */
   @Override public void writeWarning(String msg, Object... args) {
     try {
-      append(String.format("\n" + msg, args));
+      String msg2 = msg.charAt(0) != '\n' ? "\n" + msg : msg;  // only stupid compatibility
+      append(String.format(msg2, args));
     } catch(Exception exc) {
-      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+      System.err.println("EXCEPTION writeWarning: " + msg + " exc: " + exc.getMessage());
     }
   }
 
@@ -55,7 +72,7 @@ public abstract class LogMessageBase implements LogMessage {
     try {
       append(String.format("\n" + msg, args));
     } catch(Exception exc) {
-      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+      System.err.println("EXCEPTION writeWarningAdd: " + msg + " exc: " + exc.getMessage());
     }
   }
 
@@ -65,9 +82,10 @@ public abstract class LogMessageBase implements LogMessage {
    */
   @Override public void writeError(String msg, Object... args) {
     try {
-      append('\n').append(String.format(msg, args));
+      if(msg.charAt(0) != '\n') append('\n');  // only stupid compatibility
+      append(String.format(msg, args));
     } catch(IOException exc) {
-      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+      System.err.println("EXCEPTION writeError: " + msg + " exc: " + exc.getMessage());
     }
   }
 
@@ -75,7 +93,7 @@ public abstract class LogMessageBase implements LogMessage {
     try {
       append(String.format(msg, args));
     } catch(IOException exc) {
-      System.err.println("EXCEPTION: " + msg + " exc: " + exc.getMessage());
+      System.err.println("EXCEPTION writeErrorAdd: " + msg + " exc: " + exc.getMessage());
     }
   }
 

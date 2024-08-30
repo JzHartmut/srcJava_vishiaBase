@@ -311,8 +311,8 @@ public class XmlCfg
       else if(subtree.dstClassName == subtree.tag.toString()) {
         System.out.println("NOTE: ok dstClassName = " + subtree.dstClassName);
       } else {
-        System.out.println("NOTE: ?? dstClassName = " + subtree.dstClassName + " vs. subtree.tag = " + subtree.dstClassName.toString());
-        subtree.dstClassName = subtree.tag.toString();
+//        System.out.println("NOTE: ?? dstClassName = " + subtree.dstClassName + " vs. subtree.tag = " + subtree.dstClassName.toString());
+//        subtree.dstClassName = subtree.tag.toString();
       }
       
       //
@@ -323,7 +323,7 @@ public class XmlCfg
           e1.addFromSubtree(subtree);
         }
       } else {
-        System.out.println("NOTE: subtree " + subtree.tag + " not used");
+  //      System.out.println("NOTE: subtree " + subtree.tag + " not used");
       }
       //
     }

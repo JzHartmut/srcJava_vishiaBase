@@ -131,6 +131,13 @@ public class ReportWrapperLog implements Report
   }
 
   @Override
+  public void writef(String msg, Object... args)
+  {
+    this.log.sendMsg(0, String.format(msg, args));
+    
+  }
+
+  @Override
   public void writeInfoAdd(String msg, Object... args)
   {
     this.log.sendMsg(0, String.format(msg, args));
