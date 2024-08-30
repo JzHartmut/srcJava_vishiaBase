@@ -3093,6 +3093,7 @@ public class DataAccess {
           if(!path.scan(")").scanOk()) {         // operation() without args
             // ======>>>>                        // opeation(args, ...)        
             this.args = parseArgumentExpr(path, nameVariables, reflData);
+            path.scan(")").scanOk();
           } } }
       //
       // this.ident is set, or this.args[0] with &(indirectPath), this.args are set with function arguments.

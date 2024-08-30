@@ -49,7 +49,8 @@ import org.vishia.util.Java4C.ConstRef;
  * <:otx: otxExample : data: placeholder >
  * Output plain text with <&placeholder.value>
  * <:if:data.cond>conditional output<:else>other variant<.if>
- * <:for:var:data.container>element = <&var><.for>
+ * <:for:var:data.container>element = <&var_key>: <&var><:if:var_next>, <.if><.for>
+ * <:wr:data.wrBuffer>Write this text with <&var> in another buffer<.wr>
  * <:call:subtext:arg=data.var>
  * <:exec:operation(arguments,...)>
  * <.otx>
@@ -200,6 +201,16 @@ try {
  * One can test <code>&lt;if:var_next>....&lt;.if></code> to detect whether there is a following element for example to output an separator.
  * <br>
  * <br>
+ * <b>Write to another output <code><:wr:buffer>...<.wr></code></b><br>
+ * This is for example usable if texts should be placed on another position, but occurs with the data in this order.
+ * It is also usable for example to write log texts in an extra buffer.
+ * The <code>buffer</code> is found via reflection data access. The String building the <code>buffer</code> is used
+ * to build a variable inside the {@link DataTextPreparer#args} with the index stored in {@link #nameVariables},
+ * where the reference to the buffer (as {@link Appendable}) is stored for further usage.
+ * It means if the <code><:wr:buffer>...<.wr></code> is used on more positions in the otx with exact the same String for <code>buffer</code>,
+ * the same buffer is used immediately, only one time gotten via reflection and stored in {@link DataTextPreparer#args}.
+ * <br>
+ * <br>
  * <b>Call operations <code><:call:otxSubScript:arg=value:arg2=value,...></code></b><br>
  * The call operation invokes another script to output. The script is present with its own instance of {@link OutTextPreparer},
  * either manually programmed by the constructor or as part of the whole script see {@link #readTemplateCreatePreparer(InputStream, String, Class, Map, String)}.
@@ -241,6 +252,7 @@ try {
  * <b>...more</b><br>
  * <ul>
  * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
+ * <li>&lt;:set:variable='string':value>: If the value starts with a string literal, it can be concatenated with some other values.
  * <li>&lt;:set:variable>....&lt;.set>: unfortunately not ready, should set a variable with a prepared expression with placeholder.
  * <li>&lt;:type:value:classpath>: checks the value whether it is of the type of the given class.
  *   This is more for documentation and is used as assertion. Can be switched off for faster execution.
@@ -255,6 +267,7 @@ public final class OutTextPreparer
   
   /**Version, history and license.
    * <ul>
+   * <li>2024-08-30 new &lt;:wr:buffer>Output to another buffer.&lt;.wr> See javadoc description.
    * <li>2024-07-14 new in &lt;:for:var:container> {@link ForCmd} also an integer index can be used as var if container is an Integer. 
    *   For that in {@link #addCmd(String, int, int, ECmd, String, Class, Map, Map)}
    *   in case forCmd (called in {@link #parse(Class, Map, Map)} it is tested whether "0.." is written. 
@@ -351,7 +364,7 @@ public final class OutTextPreparer
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  public static final String version = "2024-02-21";
+  public static final String version = "2024-08-30";
   
   
   @ConstRef static final public Map<String, Object> idxConstDataDefault = new TreeMap<String, Object>(); {
@@ -484,6 +497,8 @@ public final class OutTextPreparer
     nothing('-', "nothing"), 
     addString('s', "str"),
     addVar('v', "var"),
+    wr('W', "wr"),
+    wrEnd('w', "wrEnd"),
     ifCtrl('I', "if"),
     elsifCtrl('J', "elsif"),
     elseCtrl('E', "else"),
@@ -616,6 +631,32 @@ public final class OutTextPreparer
       super(outer, ECmd.setVar, sDatapath, reflData, null);
     }
   }
+  
+  
+  
+  /**&lt;:wr:...>....&lt;.wr> writes to a special {@link Appendable} given as DataAccess. */
+  static class WrCmd extends Cmd {
+    
+    /**The offset to the next &lt;:elsif or the following &lt;:else or the following &lt;.if*/
+    //int offsWrEnd;
+    
+    /**Index of the write buffer to use in the data. */
+    int ixDataWr;
+    
+    
+//    public WrCmd(OutTextPreparer outer, StringPartScan sDatapath, Class<?> reflData) throws Exception {
+//      super(outer, ECmd.wr, sDatapath, reflData);
+//    }
+
+    
+    public WrCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
+      super(outer, ECmd.wr, sDatapath, reflData, null);
+    }
+  }
+  
+  
+
+  
   
   
   static class IfCmd extends Cmd {
@@ -1569,7 +1610,8 @@ public final class OutTextPreparer
    */ 
   public void parse(Class<?> execClass, final Map<String, Object> idxConstDataArg, Map<String, OutTextPreparer> idxScript) throws ParseException {
     final Map<String, Object> idxConstData = idxConstDataArg !=null ? idxConstDataArg: idxConstDataDefault;
-    int pos0 = 0; //start of current position after special cmd
+    final Map<String, Integer> idxIxWrBufferIdent = new TreeMap<>();
+    int pos0 = 0; //start of current position after special cmdf
     int pos1 = 0; //end before the next special command
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
     int ixixCmd = -1;
@@ -1630,6 +1672,13 @@ public final class OutTextPreparer
           addCmdValueAccess(this.pattern, pos0, pos1, sDatapath, sFormat, execClass, idxConstData);
           sp.seekPos(1);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
+        }
+        else if(sp.scan(":wr:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+          //====>  ------------------------------------------ <:if:...>
+          parseWr( this.pattern, pos0, pos1, sp, execClass, idxConstData, idxScript);
+          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current wr
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+          
         }
         else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
           //====>  ------------------------------------------ <:if:...>
@@ -1793,6 +1842,23 @@ public final class OutTextPreparer
           }
           pos0 = posend;  //after '>'
         }
+        else if(sp.scan(".wr>").scanOk()) { //The end of an if
+          Cmd wrCmd;
+          addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.wr>
+          if(ixixCmd >=0 && (wrCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.wr) {
+            Cmd endWr = addCmd(this.pattern, pos0, pos1, ECmd.wrEnd, null, null, null, null);
+            endWr.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;
+            pos0 = (int)sp.getCurrentPosition();  //after '>'
+            wrCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
+            ixixCmd -=1;
+          } 
+          
+          else {
+            sp.close();
+            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.wr> missing opening <:wr:...> ");
+          }
+          pos0 = (int)sp.getCurrentPosition();  //after '>'
+        }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd cmd = null;
           addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.if>
@@ -1825,7 +1891,7 @@ public final class OutTextPreparer
           Cmd forCmd;
           if(ixixCmd >=0 && (forCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
             Cmd endLoop = addCmd(this.pattern, pos0, pos1, ECmd.endLoop, null, null, null, null);
-            endLoop.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;
+            endLoop.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;  // it is faulty but unused.
             pos0 = (int)sp.getCurrentPosition();  //after '>'
             forCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
             ixixCmd -=1;
@@ -1867,6 +1933,22 @@ public final class OutTextPreparer
     } while(sp.scan(",").scanOk());
   }
   
+  private void parseWr ( final String pattern, final int pos0, final int pos1, final StringPartScan sp
+      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
+    //====>
+    String wrBufferIdent = sp.getLastScannedString().toString().trim();
+    DataAccess.IntegerIx ixOentry = this.nameVariables.get(wrBufferIdent);  //The string for data access is also used as variable indent in nameVariables
+    if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+      ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
+      this.nameVariables.put(wrBufferIdent, ixOentry);
+    }
+    WrCmd wrcmd = (WrCmd)addCmd(pattern, pos0, pos1, ECmd.wr, wrBufferIdent, reflData, idxConstData, idxScript);
+    wrcmd.ixDataWr = ixOentry.ix;
+    //wrcmd.offsWrEnd = -1;  //in case of no <:else> or following <:elsif is found.
+    
+  }
+  
+  
   private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     String cond = sp.getLastScannedString().toString();
@@ -1887,9 +1969,9 @@ public final class OutTextPreparer
     final Cmd cmd;
     int pos2 = (int)sp.getCurrentPosition();
     DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0');
-    boolean bScanOk = sp.scan(")>").scanOk();
+    boolean bScanOk = sp.scan(")>").scanOk();  // this was necessary because of error in DataAccess fixed on 2024-08-30
     if(!bScanOk) {
-      bScanOk = sp.scan(">").scanOk();
+      bScanOk = sp.scan(">").scanOk();         // this is the correct operation.
     }
     int pos3 = (int)sp.getCurrentPosition();
     String sOperation = src.substring(pos2, pos3-1);
@@ -2122,6 +2204,7 @@ public final class OutTextPreparer
               ((ForCmd)cmd).ixStart = 0;  // overwrite -1 with the start index, then index for.
             }
           } break;
+          case wr: cmd = new WrCmd(this, sDatapath, reflData); break;
           case setVar: cmd = new SetCmd(this, sDatapath, reflData); break;
           case debug: cmd = new DebugCmd(this, sDatapath, reflData, idxConstData); break;
           case addString: cmd = new CmdString(sDatapath); break;
@@ -2199,11 +2282,13 @@ public final class OutTextPreparer
    * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
    */
-  private void execSub( Appendable wr, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
+  private void execSub( Appendable wrArg, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
     int ixCmd = ixStart;
+    Appendable wr = wrArg;  
+    Appendable wrBack = wrArg;  
 //    if(args.args[this.ixOUT] == null) {
-      args.args[this.ixOUT] = wr;                          // variable "OUT" is the output writer, always stored here as OUT
+    args.args[this.ixOUT] = wr;                          // variable "OUT" is the output writer, always stored here as OUT
 //    }
     while(ixCmd < ixEndExcl) {
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
@@ -2254,6 +2339,21 @@ public final class OutTextPreparer
             Object data = dataForCmd(cmd, args, wr);
             execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
             ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
+          } break;
+          case wr: {               //======================== replace the current output
+            int ixWrBuffer = ((WrCmd)cmd).ixDataWr;
+            if(args.args[ixWrBuffer] == null) {  //---------- first get the write buffer
+              args.args[ixWrBuffer] = dataForCmd(cmd, args, wr);
+            }
+            if(args.args[ixWrBuffer] == null || !(args.args[ixWrBuffer] instanceof Appendable)) {
+              wr.append("<??:wr:buffer not found or faulty: ??>");
+              ixCmd += ((WrCmd)cmd).offsEndCtrl -1;
+            } else {
+              args.args[this.ixOUT] = wr = (Appendable)args.args[ixWrBuffer];      // replace the current output
+            }
+          } break;
+          case wrEnd: {
+            args.args[this.ixOUT] = wr = wrBack;        // restore the current output 
           } break;
           case exec: {
             //ExecCmd ecmd = (ExecCmd)cmd;
