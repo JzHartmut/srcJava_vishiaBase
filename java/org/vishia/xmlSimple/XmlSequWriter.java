@@ -676,6 +676,8 @@ public class XmlSequWriter {
   } 
   
   
+  
+  public String elementCurrTag () { return this.elementCurr.sTag; }
 
   
   @Override public String toString() {

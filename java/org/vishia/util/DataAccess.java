@@ -1451,7 +1451,7 @@ public class DataAccess {
     , boolean bNoExceptionifNotFound
   ) throws InvocationTargetException, NoSuchMethodException, Exception {
     Object[] args = null;
-    if(element.ident.equals("toStringDependingNext"))
+    if(element.ident.equals("genExprOut"))
       Debugutil.stop();
     if(element.fnArgs == null) { //only if fnArgs not given from call, 
       //then evaluate here.
@@ -1583,7 +1583,8 @@ public class DataAccess {
             if(bNext) { msg.append(", "); }
             else { bNext = true; }
             msg.append(arg.textOrVar).append(": ");
-            msg.append(givenArgs[ixArg++].getClass());
+            Object givenArg = givenArgs[ixArg++];
+            msg.append(givenArg == null ? "null": givenArg.getClass());
           }   //cc2024-01-18: improve output, also the type.
         }
         msg.append("<<;\n  ... stackInfo: ");

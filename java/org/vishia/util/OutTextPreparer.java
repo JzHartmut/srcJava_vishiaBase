@@ -2342,9 +2342,9 @@ public final class OutTextPreparer
           } break;
           case wr: {               //======================== replace the current output
             int ixWrBuffer = ((WrCmd)cmd).ixDataWr;
-            if(args.args[ixWrBuffer] == null) {  //---------- first get the write buffer
+            //if(args.args[ixWrBuffer] == null) {  //---------- first get the write buffer
               args.args[ixWrBuffer] = dataForCmd(cmd, args, wr);
-            }
+            //}
             if(args.args[ixWrBuffer] == null || !(args.args[ixWrBuffer] instanceof Appendable)) {
               wr.append("<??:wr:buffer not found or faulty: ??>");
               ixCmd += ((WrCmd)cmd).offsEndCtrl -1;
