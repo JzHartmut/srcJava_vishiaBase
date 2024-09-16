@@ -436,7 +436,8 @@ public final class OutTextPreparer
      * */
     public void setArgument(String name, Object value) {
       DataAccess.IntegerIx ix0 = this.prep.nameVariables.get(name);
-      if(ix0 == null) throw new IllegalArgumentException("OutTextPreparer script " + this.prep.sIdent + ", argument: " + name + " not existing: ");
+      if(ix0 == null) 
+        throw new IllegalArgumentException("OutTextPreparer script " + this.prep.sIdent + ", argument: " + name + " not existing: ");
       int ix = ix0.ix;
       this.args[ix] = value;
     }
@@ -2285,7 +2286,8 @@ public final class OutTextPreparer
   private void execSub( Appendable wrArg, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
     int ixCmd = ixStart;
-    Appendable wr = wrArg;  
+    Appendable wr = wrArg;
+    assert(wr !=null);
     Appendable wrBack = wrArg;  
 //    if(args.args[this.ixOUT] == null) {
     args.args[this.ixOUT] = wr;                          // variable "OUT" is the output writer, always stored here as OUT
@@ -2301,9 +2303,9 @@ public final class OutTextPreparer
           case addVar: {                                   // <&access...>
             //Integer ixVar = varValues.get(cmd.str);
             Object data = dataForCmd(cmd, args, wr);
-            if(data == null) { 
-              wr.append("<null>"); 
-            } else { wr.append(data.toString()); }
+            String sData = data == null ? "<null>" : data.toString();
+            assert(sData !=null);
+            if(wr !=null && sData !=null) wr.append(sData); else System.err.println("xxxx");
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;

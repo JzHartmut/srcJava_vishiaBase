@@ -425,23 +425,18 @@ public abstract class Arguments {
       if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
     }
-    while( (posEnv=argvalRet.indexOf("$")) >=0) {
+    while( (posEnv=argvalRet.indexOf("$")) >=0) {  //======== identifier after $
       int posEnvEnd = posEnv +1;
       int posEnvEnd9;
       @SuppressWarnings("unused") char cc;
-      if( (cc = argvalRet.charAt(posEnvEnd)) == '(') {
-        posEnvEnd = argvalRet.indexOf(')', posEnv+2);
-        posEnvEnd9 = posEnvEnd +1;    //after ')' 
-      } else {
-        while(  posEnvEnd < (argvalRet.length()-1) 
-             && Character.isJavaIdentifierPart(cc = argvalRet.charAt(++posEnvEnd))) {
-        }
-        posEnvEnd9 = posEnvEnd;
+      while(  posEnvEnd < (argvalRet.length()-1) 
+           && Character.isJavaIdentifierPart(cc = argvalRet.charAt(++posEnvEnd))) {
       }
-      String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
+      posEnvEnd9 = posEnvEnd;
+      String nameEnv = argvalRet.substring(posEnv+1, posEnvEnd);
       String env = System.getenv(nameEnv);
       if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
-      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9 + 1);
+      argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
     }
     return argvalRet;
   }

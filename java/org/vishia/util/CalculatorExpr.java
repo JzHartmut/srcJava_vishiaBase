@@ -1725,7 +1725,8 @@ public class CalculatorExpr
             //assert(false);
             value = dataConst;  //use it immediately, often a String
           }
-          
+        } else if(this.expr !=null) {
+          value = expr.calcDataAccess(null, varValues);
         } else if(this.dataAccess == null) {
           value = this.textOrVar;                //String literal
         }

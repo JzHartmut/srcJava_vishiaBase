@@ -1339,7 +1339,19 @@ public class DataAccess {
 
     }//switch
     if(data1 !=null && element.indices !=null) { //since 2019-06: check indices on any access, not only default
-      data1 = getArrayElement(data1, element.indices);
+      int[] indices1;
+      if(element.indices[0] <0) {
+        Object argIx = element.args[0].calc(nameVariables, varValues);
+        indices1 = new int[1];
+        if(argIx instanceof Integer) {
+          indices1[0] = ((Integer)argIx).intValue();
+        } else {
+          Debugutil.stop();
+        }
+      } else {
+        indices1 = element.indices;
+      }
+      data1 = getArrayElement(data1, indices1);
     }
     return data1;
   } 
@@ -1545,8 +1557,12 @@ public class DataAccess {
           data1 = method.invoke(obj, actArgs);             // invoke
           sError = null;                                      // bOk = true if no exception
         } catch(Exception exc){
-          sError = "DataAccess - method access problem: "  // ExcUtil.stackInfo(...)
-              + method.getName() + "(...): " + exc.getCause().getMessage();
+          String sActArgs = "";
+          for(Object actArg : actArgs) { sActArgs += ", " + actArg; }
+          sError = ExcUtil.exceptionInfo("DataAccess - Exc in method: " + obj.toString() + "."  // ExcUtil.stackInfo(...)
+              + method.getName() + "("+ "..." + "): ", exc.getCause(), 0, 10);
+//          sError = "DataAccess - method access problem: "  // ExcUtil.stackInfo(...)
+//              + method.getName() + "(...): " + exc.getCause().getMessage();
           if(!bNoExceptionifNotFound) { 
             throw new InvocationTargetException(exc.getCause(), sError.toString());
           } else { //cc2024-01-18: fix some error messages on execution.
