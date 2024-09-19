@@ -23,6 +23,9 @@ public class StringFunctions {
 
   /**Version, history and license.
    * <ul>
+   * <li>2024-09-19 Hartmut new featurefix {@link #indexOf(CharSequence, int, int, CharSequence)} and {@link #lastIndexOf(CharSequence, int, int, CharSequence)}
+   *   regards now an empty "" to search (length()==0). Then the left respectively right position is returned.
+   *   The String variants are removed, they were identically. 
    * <li>2024-06-21 Hartmut bugfix in {@link #lastIndexOf(CharSequence, int, int, CharSequence)} has had returned faulty position in specific (rarely) cases.
    * <li>2024-06-21 Hartmut new {@link #lastIndexOfAnyString(CharSequence, int, int, CharSequence[], int[])} 
    * <li>2024-01-15 Hartmut  {@link #convertTransliteration(CharSequence, char)} now it's done at last conversion "\x0041" for example character 'A', also some comments improved.
@@ -991,51 +994,20 @@ public class StringFunctions {
    * @param fromIndex first checked position in sq
    * @param to >=0 then end position of checked range inclusive str
    *        to <0 then relative position from end. to = -1 exact till end
-   * @param str  which is searched.
-   * @return -1 if not found, else first occurrence of str in sq which is >= fromIndex. 
-   */
-  public static int indexOf(CharSequence sq, int fromIndex, int to, String str){
-    int zsq = sq.length();
-    int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
-    int ii = fromIndex-1;  //pre-increment
-    if (fromIndex < 0) {
-        ii = -1;
-    } else if (fromIndex >= max) {
-        return -1;
-    }
-    char ch = str.charAt(0);   //search first char of str
-    while(++ii < max){
-      if(sq.charAt(ii) == ch) { //search first char of str
-        int s1 = 0;
-        for(int jj = ii+1; jj < ii + str.length(); ++jj){
-          if(sq.charAt(jj) != str.charAt(++s1)){
-            s1 = -1; //designate: not found
-            break;
-          }
-        }
-        if(s1 >=0) return ii;  //found.
-      }
-    }
-    return -1;  //not found;
-  }
-  
-  
-  /**Checks whether the given CharSequence contains the other given CharSequence.
-   * It is the adequate functionality like {@link java.lang.String#indexOf(String, int)}. 
-   * @param sq A CharSequence
-   * @param str CharSequence which is searched.
-   * @param fromIndex first checked position in sq
-   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
+   * @param str  which is searched. If it is "", fromIndex is returned (found at first position).
    * @return -1 if not found, else first occurrence of str in sq which is >= fromIndex. 
    */
   public static int indexOf(CharSequence sq, int fromIndex, int to, CharSequence str){
     int zsq = sq.length();
     int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
     int ii = fromIndex-1;  //pre-increment
-    if (fromIndex < 0) {
+    if (fromIndex < 0) {  // what about this?
         ii = -1;
     } else if (fromIndex >= max) {
         return -1;
+    }
+    if(str.length()==0) {   // special case maybe in special context, str to search is ""
+      return fromIndex;     // then return the current position.
     }
     char ch = str.charAt(0);   //search first char of str
     while(++ii < max){
@@ -1052,6 +1024,7 @@ public class StringFunctions {
     }
     return -1;  //not found;
   }
+
   
   
   /**Searches the first occurrence of the given CharSequence in a CharSequence.
@@ -1077,38 +1050,6 @@ public class StringFunctions {
   }
   
   
-  /**Checks whether the given CharSequence contains the given String.
-   * It is the adequate functionality like {@link java.lang.String#lastIndexOf(String, int)}. 
-   * @param sq Any sequence where to search in
-   * @param from range, it ends searching on from
-   * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
-   * @param str comparison String, check whether contained fully.
-   * @return -1 if not found, elsewhere the position inside sq >=fromIndex and <= to - str.length()
-   * @since 2024-07-07 bugfix has had compared one character too few of str, 
-   *        hence has returned position of "myY" if "myX" is searched. Only "my" was tested.
-   *        Obviously on search of "::", the postion of the second ":" was returned. 
-   */
-  public static int lastIndexOf(CharSequence sq, int fromIndex, int to, String str){
-    int zsq = sq.length();
-    int pos = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //pos is negative if to is left from fromIndex
-    if (pos < fromIndex) {
-      return -1;
-    }
-    char ch = str.charAt(0);          // the first char of str should be found first.
-    while(--pos >= fromIndex){        // pre decrement, start with (to or sq.length()) - str.length()
-      if(sq.charAt(pos) == ch) {
-        int s1 = 0;
-        for(int jj = pos+1; jj < pos + str.length(); ++jj){ // compare the others
-          if(sq.charAt(jj) != str.charAt(++s1)){
-            s1 = -1; //designate: not found
-            break;
-          }
-        }
-        if(s1 >=0) return pos;       //found. s1 is the index of the last checked char, this is str.length()-1
-      }
-    }
-    return -1;  //not found;
-  }
   
   
   
@@ -1119,6 +1060,8 @@ public class StringFunctions {
    * @param from range, it ends searching on from
    * @param to >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param str comparison sequence, check whether contained fully.
+   *            If it is  "", the most right position is returned (found at right).
+   *            That is not identically to, the real length of sq is considerate.
    * @return -1 if not found, elsewhere the position inside sq >=fromIndex and <= to - str.length()
    */
   public static int lastIndexOf(CharSequence sq, int fromIndex, int to, CharSequence str){
@@ -1126,6 +1069,9 @@ public class StringFunctions {
     int max = (to < 0 ? zsq + to +1 : (to >= zsq ? zsq : to)) - str.length()+1 ;  //max is negative if to is left from fromIndex
     if (fromIndex >= max) {
       return -1;
+    }
+    if(str.length()==0) {   // special case maybe in special context, str to search is ""
+      return max;           // then return the current right position.
     }
     char ch = str.charAt(0);
     while(--max >= fromIndex){

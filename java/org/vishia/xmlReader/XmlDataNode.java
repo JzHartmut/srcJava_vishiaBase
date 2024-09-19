@@ -25,6 +25,7 @@ public class XmlDataNode implements XmlAddData_ifc{
   
   /**Version, history and license.
     * <ul>
+    * <li>2024-09-19 new {@link #getTextSub()} for special cases, for example LibreOffc span is sometimes deep nested without necessity. 
     * <li>2024-06-23 new {@link #iterNodes(String)} and {@link OnlyOneNode} to evaluate a dedicated tag of nodes. 
     * <li>2024-05-25 Hartmut created because the structure of an XML file should not be explored on first usage,
     *   but {@link XmlJzReader} should be used adequate a DOM XML reader, reads all what is found.
@@ -53,21 +54,35 @@ public class XmlDataNode implements XmlAddData_ifc{
     * 
     * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
     */
-   public final static String version = "2024-06-21"; 
+   public final static String version = "2024-09-19"; 
 
 
   protected final XmlDataNode parent;
   
   public final String tag;
   
+  /**If this element is set, the node has only one text.*/
   public String text;
   
+  /**Index of all attributes sorted by name.*/
   public final Map<String, String> attribs;
   
+  /**Index of sub nodes with a defined key as &lt;name ...
+   * but only with one member in the node. 
+   * This allows simple select a sub node with a defined &lt;name 
+   */
   public final Map<String, XmlDataNode> singleNodes;
   
+  /**As alternative to members in {@link #singleNodes}: 
+   * Index of sub nodes with a defined key as &lt;name ...
+   * with more as one member in the node. 
+   * This allows simple select all sub nodes with a defined &lt;name in order of their appearance in the node. 
+   */
   public final Map<String, List<XmlDataNode>> multiNodes;
   
+  /**List of all sub nodes in order of appearance in the node.
+   * To evaluate in given order.
+   */
   public final List<XmlDataNode> allNodes;
   
   
@@ -166,7 +181,7 @@ public class XmlDataNode implements XmlAddData_ifc{
   /**Get the whole plain text inside the node. 
    * Either there is exact one text part, it is stored in {@link #text} and returned.
    * Or there are some more text parts, stored as node with tag="$" in {@link #multiNodes}.
-   * Then all these text parts are concatenated and returned.
+   * Then all these text parts are concatenated and returned as one.
    * 
    * @return
    */
@@ -192,9 +207,36 @@ public class XmlDataNode implements XmlAddData_ifc{
       else { return null; }   //--------------------------- no text found. 
     }
     else { return null; }       //--------------------------- no text found. 
-    
   }
+
   
+  /**Get the whole plain text inside the node and from all sub nodes. 
+   * Either there is exact one text part, it is stored in {@link #text} and returned.
+   * Or there are some more text parts, either stored as node with tag="$" in {@link #allNodes}.
+   * or also in sub nodes with any tag in #allNodes.
+   * In the last case the tags of the deeper sub nodes are ignored for getting the whole texts.
+   * 
+   * On return all these text parts are concatenated and returned as one.
+   * 
+   * @return null if no texts found, else the sum of all texts appended in order in XML node and all sub nodes.
+   */
+  public String getTextSub () {
+    if(this.text !=null) { 
+      assert(this.allNodes.size()==0);                     // then no nodes should exist.
+      return this.text;                                    // only this text 
+    } else if(this.allNodes !=null) {
+      StringBuilder sbText = new StringBuilder();
+      for(XmlDataNode subNode: this.allNodes) {
+        if(subNode.tag.equals("$")) {
+          sbText.append(subNode.getText());                // summarize given more texts.
+        } else {
+          sbText.append(subNode.getTextSub());             // summarize all texts from deeper nodes, also recursively
+        }
+      }
+      return sbText.length() ==0 ? null : sbText.toString();
+    }
+    else { return null; }       //--------------------------- no text found. 
+  }
   
   
   @Override public String toString() { return "<" + this.tag + (this.text ==null ? ">" : ">" + this.text); }

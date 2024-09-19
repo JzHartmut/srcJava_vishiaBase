@@ -179,6 +179,9 @@ public abstract class Arguments {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2024-09-18 Hartmut {@link #tryTestArgument(String, int, Appendable, Closeable)} calls replaceEnv(...) to see the effective argument
+   *   on error message.  
+   * <li>2024-09-18 Hartmut {@link #replaceEnv(String)} bugfix for "...$Identifier..."  
    * <li>2024-06-02 Hartmut new static {@link #readConfig(Object, InputStream, String, LogMessage)} 
    * <li>2024-05-25 Hartmut planned, TODO: SetArgument#setArgument(String) should return an error String, null = no error.
    * <li>2024-05-25 Hartmut new {@link #errMsg(String, Object...)} able to call in an non static implementation of {@link SetArgument#setArgument(String)},
@@ -415,14 +418,14 @@ public abstract class Arguments {
       int posEnvEnd = argvalRet.indexOf('$', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
       String env = System.getenv(nameEnv);
-      if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
+      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
     }
     while( (posEnv=argvalRet.indexOf("$(")) >=0) {
       int posEnvEnd = argvalRet.indexOf(')', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
       String env = System.getenv(nameEnv);
-      if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
+      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
     }
     while( (posEnv=argvalRet.indexOf("$")) >=0) {  //======== identifier after $
@@ -435,7 +438,7 @@ public abstract class Arguments {
       posEnvEnd9 = posEnvEnd;
       String nameEnv = argvalRet.substring(posEnv+1, posEnvEnd);
       String env = System.getenv(nameEnv);
-      if(env == null) throw new IllegalArgumentException("Environment variable " + nameEnv + "expected, not found");
+      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
     }
     return argvalRet;
@@ -558,7 +561,7 @@ public abstract class Arguments {
                         //|| argLen == 0      //argument without prefix (no option)
                         ? argc              //then use the whole argument as value.
                         : argc.substring(argLenFound);  //use the argument after the separator as value.
-        argval = replaceEnv(argval);
+        //argval = replaceEnv(argval);  // removed 2024-09-18 it is done before.
         if(argFound.set ==null) {
           argFound.val = argval;
         } else {
@@ -727,7 +730,7 @@ public abstract class Arguments {
                 posArg = StringFunctions.indexOf(sCheckLine, 0, zCheck, sLabel);  //check whether sLabel is found in range 0...4 in the line
               }
               if(posArg <0) {
-                this.errMsg.append("  ERROR: label not found in ").append(arg).append('\n');
+                this.errMsg.append("  ERROR Arguments: label not found in ").append(arg).append('\n');
                 posArg = 0;
                 sStartLineArg = null;
                 sCommentEndline = null;
@@ -779,7 +782,7 @@ public abstract class Arguments {
         catch(IOException exc) {  // it is only on file error and maybe not expectable for errMsg.append(...)
             try {
               if(farg !=null) { farg.close(); }
-              String sMsg = arg + "  ERROR: " + ( argFile !=null ? " File=" + argFile.getAbsolutePath() : "" )
+              String sMsg = arg + "  ERROR Arguments: " + ( argFile !=null ? " File=" + argFile.getAbsolutePath() : "" )
                               + exc.getMessage();
               if(this.errMsg !=null) {
                 this.errMsg.append(sMsg).append('\n');
@@ -815,20 +818,21 @@ public abstract class Arguments {
   private final boolean tryTestArgument(String argc, int nArg, Appendable errMsg, Closeable farg) throws IOException {
     boolean bOkArg;
     CharSequence sError = "";
+    String argc1 = replaceEnv(argc);
     try {
-      bOkArg = testArgument(argc, nArg+1);                 // this operation may be overridden, but should call super.testArguments(...)
+      bOkArg = testArgument(argc1, nArg+1);                 // this operation may be overridden, but should call super.testArguments(...)
     } catch(Exception exc) {                               // an exception comes if testArgument causes it in user level.
       sError = ExcUtil.exceptionInfo(" argument eval error: ", exc, 1, 20);  //prepare a proper info with stack trace
       bOkArg = false;
     }
     if(!bOkArg) {                 // test it, overridden
       if(errMsg !=null) {
-        errMsg.append("  ERROR: ").append(argc).append(sError).append('\n');
+        errMsg.append("  ERROR Arguments: ").append(argc1).append(sError).append('\n');
       } else {
         if(farg !=null) {
           farg.close();
         }
-        throw new IllegalArgumentException( argc + sError);
+        throw new IllegalArgumentException( argc1 + sError);
       }
     }
     return bOkArg;
