@@ -3,6 +3,7 @@ package org.vishia.xmlReader;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -163,12 +164,29 @@ public class XmlDataNode implements XmlAddData_ifc{
   
   /**Iterator over all nodes of a defined tag, also applicable if no node is given.
    * @param tag
-   * @return
+   * @return always an Iterator, it is empty if the node does not exists.
    * @since 2024-06-23
    */
   public Iterable<XmlDataNode> iterNodes(String tag) {
     List<XmlDataNode> listNodes =  this.multiNodes.get(tag);
     if(listNodes !=null) return listNodes;
+    else {
+      XmlDataNode nd = this.singleNodes.get(tag);          // nd maybe null also
+      return new OnlyOneNode(nd);
+    }
+  }
+  
+  
+  
+  
+  /**ListIterator over all nodes of a defined tag, also applicable if no node is given.
+   * @param tag
+   * @return always an ListIterator, it is empty if the node does not exists.
+   * @since 2024-09-23
+   */
+  public ListIterator<XmlDataNode> iterListNodes(String tag) {
+    List<XmlDataNode> listNodes =  this.multiNodes.get(tag);
+    if(listNodes !=null) return listNodes.listIterator();
     else {
       XmlDataNode nd = this.singleNodes.get(tag);          // nd maybe null also
       return new OnlyOneNode(nd);
@@ -210,33 +228,33 @@ public class XmlDataNode implements XmlAddData_ifc{
   }
 
   
-  /**Get the whole plain text inside the node and from all sub nodes. 
-   * Either there is exact one text part, it is stored in {@link #text} and returned.
-   * Or there are some more text parts, either stored as node with tag="$" in {@link #allNodes}.
-   * or also in sub nodes with any tag in #allNodes.
-   * In the last case the tags of the deeper sub nodes are ignored for getting the whole texts.
-   * 
-   * On return all these text parts are concatenated and returned as one.
-   * 
-   * @return null if no texts found, else the sum of all texts appended in order in XML node and all sub nodes.
-   */
-  public String getTextSub () {
-    if(this.text !=null) { 
-      assert(this.allNodes.size()==0);                     // then no nodes should exist.
-      return this.text;                                    // only this text 
-    } else if(this.allNodes !=null) {
-      StringBuilder sbText = new StringBuilder();
-      for(XmlDataNode subNode: this.allNodes) {
-        if(subNode.tag.equals("$")) {
-          sbText.append(subNode.getText());                // summarize given more texts.
-        } else {
-          sbText.append(subNode.getTextSub());             // summarize all texts from deeper nodes, also recursively
-        }
-      }
-      return sbText.length() ==0 ? null : sbText.toString();
-    }
-    else { return null; }       //--------------------------- no text found. 
-  }
+//  /**Get the whole plain text inside the node and from all sub nodes. 
+//   * Either there is exact one text part, it is stored in {@link #text} and returned.
+//   * Or there are some more text parts, either stored as node with tag="$" in {@link #allNodes}.
+//   * or also in sub nodes with any tag in #allNodes.
+//   * In the last case the tags of the deeper sub nodes are ignored for getting the whole texts.
+//   * 
+//   * On return all these text parts are concatenated and returned as one.
+//   * 
+//   * @return null if no texts found, else the sum of all texts appended in order in XML node and all sub nodes.
+//   */
+//  public String XXXgetTextSub () {
+//    if(this.text !=null) { 
+//      assert(this.allNodes.size()==0);                     // then no nodes should exist.
+//      return this.text;                                    // only this text 
+//    } else if(this.allNodes !=null) {
+//      StringBuilder sbText = new StringBuilder();
+//      for(XmlDataNode subNode: this.allNodes) {
+//        if(subNode.tag.equals("$")) {
+//          sbText.append(subNode.getText());                // summarize given more texts.
+//        } else {
+//          sbText.append(subNode.XXXgetTextSub());             // summarize all texts from deeper nodes, also recursively
+//        }
+//      }
+//      return sbText.length() ==0 ? null : sbText.toString();
+//    }
+//    else { return null; }       //--------------------------- no text found. 
+//  }
   
   
   @Override public String toString() { return "<" + this.tag + (this.text ==null ? ">" : ">" + this.text); }
@@ -246,7 +264,7 @@ public class XmlDataNode implements XmlAddData_ifc{
   /**Dummy class to offer an iterator with one or zero nodes
    * @since 2024-06-23
    */
-  class OnlyOneNode implements Iterator<XmlDataNode>, Iterable<XmlDataNode> {
+  class OnlyOneNode implements ListIterator<XmlDataNode>, Iterable<XmlDataNode> {
 
     private XmlDataNode nd;
     
@@ -271,11 +289,35 @@ public class XmlDataNode implements XmlAddData_ifc{
     @Override public Iterator<XmlDataNode> iterator () {
       return this;
     }
+
+    @Override public boolean hasPrevious () {
+      return false;
+    }
+
+    @Override public XmlDataNode previous () {
+      return null;
+    }
+
+    @Override public int nextIndex () {
+      return 0;
+    }
+
+    @Override public int previousIndex () {
+      return 0;
+    }
+
+    @Override public void set ( XmlDataNode e ) {
+    }
+
+    @Override public void add ( XmlDataNode e ) {
+    }
+
+    @Override public void remove () {
+      // TODO Auto-generated method stub
+      
+    }
     
   }
-
-
-
 
 
 }
