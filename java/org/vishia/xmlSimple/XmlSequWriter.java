@@ -488,8 +488,12 @@ public class XmlSequWriter {
    * @throws IllegalStateException on tag mismatch.
    */
   private void writeElementEnd(String sTag, boolean bNewline) throws IOException {
-    if(!this.elementCurr.sTag.equals(sTag)) {
-      throw new IllegalStateException("element mismatch, current = " + this.elementCurr.sTag + " != requ = " + sTag );
+    while(this.elementCurr !=null && !this.elementCurr.sTag.equals(sTag)) {
+      if(this.elementsParent.size()==0) {
+        throw new IllegalStateException("element mismatch, current = " + this.elementCurr.sTag + " != requ = " + sTag );
+      } else {
+        writeElementEnd(bNewline);               // ends the element in stack
+      }
     }
     writeElementEnd(bNewline);
   }
