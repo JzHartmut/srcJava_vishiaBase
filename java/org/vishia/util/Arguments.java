@@ -562,6 +562,9 @@ public abstract class Arguments {
                         ? argc              //then use the whole argument as value.
                         : argc.substring(argLenFound);  //use the argument after the separator as value.
         //argval = replaceEnv(argval);  // removed 2024-09-18 it is done before.
+        if(argval.length()>=2 && argval.charAt(0)=='\"' && argval.charAt(argval.length()-1)== '\"') {
+          argval = argval.substring(1, argval.length()-1); // remove "argval" quotation surround the whole argument, comes from some windows features in batches
+        }
         if(argFound.set ==null) {
           argFound.val = argval;
         } else {
