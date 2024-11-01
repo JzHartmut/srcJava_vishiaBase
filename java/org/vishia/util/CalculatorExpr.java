@@ -3088,7 +3088,8 @@ public class CalculatorExpr
    */
   protected void parseArgument(StringPartScan spExpr, Map<String, DataAccess.IntegerIx> nameVariables, Class<?> reflData, String operation, int recursion ) throws ParseException
   { spExpr.scanSkipSpace().scanStart();
-    if(spExpr.scanSkipSpace().scan("(").scanOk()){ //(expression)
+    final String sUnary;
+    if(spExpr.scanSkipSpace().scan("(").scanOk()){ //(expression)  here is somewhat faulty, unary cannot be used.
       parseAddExpr(spExpr, nameVariables, reflData, "!", recursion+1);
       if(!spExpr.scanSkipSpace().scan(")").scanOk()) throw new ParseException(") expected", (int)spExpr.getCurrentPosition());
       listOperations_.add(new Operation(operation, Operation.kStackOperand));
@@ -3155,6 +3156,14 @@ public class CalculatorExpr
       listOperations_.add(new Operation(operation, value));
     } else { //============================================== common data access, no (expr) and no literals.
       //cc4-2024-01-19 here a variable from nameVariables is recognized instead of the remove code.
+      if(spExpr.scanSkipSpace().scan("NOT").scanOk()) { sUnary = "!"; }
+      else if(spExpr.scanSkipSpace().scan("!").scanOk()) { sUnary = "!"; }
+      else if(spExpr.scanSkipSpace().scan("~").scanOk()) { sUnary = "~"; }
+      else if(spExpr.scanSkipSpace().scan("+").scanOk()) { sUnary = "+"; }
+      else if(spExpr.scanSkipSpace().scan("-").scanOk()) { sUnary = "-"; }
+      else { sUnary = null; }
+      if(sUnary !=null)
+        Debugutil.stop();
       DataAccess dataAccess = new DataAccess(spExpr, nameVariables, reflData, '\0');
       final Operand operand;
       if( dataAccess.oneDatapathElement !=null             // it is only a variable access without indices cc4-2024-01-19
@@ -3165,6 +3174,9 @@ public class CalculatorExpr
         operand = new Operand(-1, dataAccess, null, dataAccess.toString());
       }
       Operation oper = new Operation(operation, operand);
+      if(sUnary !=null) {
+        oper.addUnaryOperator(sUnary);
+      }
       listOperations_.add(oper);
     
     }
