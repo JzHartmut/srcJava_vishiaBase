@@ -223,11 +223,25 @@ public class LogMessageStream extends LogMessageBase
     return true;
   }
 
-  @Override public void close()
-  { 
+  @Override public void close() {
+    
+    if(this.out1 !=null) { 
+      try{ this.out1.close(); } 
+      catch(IOException exc) { 
+        CharSequence sErr = ExcUtil.exceptionInfo("ERROR on close ", exc, 0, 10);
+        System.err.println(sErr); }
+    }
+    if(this.out2 !=null) { 
+      try{ this.out2.close(); } 
+      catch(IOException exc) { 
+        CharSequence sErr = ExcUtil.exceptionInfo("ERROR on close ", exc, 0, 10);
+        System.err.println(sErr); }
+    }
     if(this.out3 instanceof Closeable) { 
       try { ((Closeable)this.out3).close(); }
-      catch(IOException exc) { throw new RuntimeException(exc); }
+      catch(IOException exc) { 
+        CharSequence sErr = ExcUtil.exceptionInfo("ERROR on close ", exc, 0, 10);
+        System.err.println(sErr); }
     }
   }
 

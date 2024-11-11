@@ -622,7 +622,7 @@ public class XmlJzReader
       //store all attributes in the content which are not used as arguments for the new instance (without "!@"):
       if(attribsToStore[0] !=null) { 
         if(subOutput ==null) {
-          System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+          System.err.print("\nProblem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
         } else {
           for(AttribToStore e: attribsToStore[0]) {
             if(e.daccess !=null) {
@@ -631,7 +631,7 @@ public class XmlJzReader
       } } }
       if(nameSpacesToStore[0] !=null) { 
         if(subOutput ==null) {
-          System.err.println("Problem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
+          System.err.print("\nProblem storing attribute values, getDataForTheElement \"" + subCfgNode.elementStorePath + "\" returns null");
         } else {
           for(AttribToStore e: nameSpacesToStore[0]) {
             if(e.daccess !=null) { //only if should be stored. nameSpacesToStore[0] contains all xmlns attributes.
@@ -909,13 +909,13 @@ public class XmlJzReader
       } catch(Exception exc) {
         subOutput = null;
         CharSequence sError = CheckVs.exceptionInfo("", exc, 1, 30);
-        System.err.println("error getDataForTheElement: " + elementStorePath);
-        System.err.println("help: ");
+        System.err.print("\nerror getDataForTheElement: " + elementStorePath);
+        System.err.print("\nhelp: ");
         System.err.println(sError);
       }
     }
-//    if(subOutput == null)
-//      Debugutil.stop();
+    if(subOutput == null)
+      Debugutil.stop();
     return subOutput;
   }
 
@@ -955,8 +955,8 @@ public class XmlJzReader
         }
       } catch(Exception exc) {
         CharSequence sError = CheckVs.exceptionInfo("", exc, 1, 30);
-        System.err.println("error finishElement: " + elementStorePath);
-        System.err.println("help: ");
+        System.err.print("\nerror finishElement: " + elementStorePath);
+        System.err.print("help: ");
         System.err.println(sError);
       }
     } else if(this.bUseNonSemanticDataStore) {

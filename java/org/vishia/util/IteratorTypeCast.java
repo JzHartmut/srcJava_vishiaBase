@@ -5,7 +5,7 @@ import java.util.Iterator;
 /**This class supports iteration over an iterable which has a base (super) type of the necessary type.
  * It is assumed that the elements have really the derived types.
  * The iterator delivers it as desired.
- * But if the Iterable has faulty instances (not instanceof Tdst) an ClassCastException is thrown. 
+ * @throws ClassCastException if the Iterable has faulty instances (not instanceof Tdst). 
  * @author Hartmut Schorrig
  *
  * @param <Tdst>
