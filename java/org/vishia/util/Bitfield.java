@@ -11,7 +11,9 @@ import java.util.Iterator;
  */
 public class Bitfield {
 
+  public static long[][] unconditionalORlong = new long[0][0];
   
+
   
   /**Returns the bit number of the last set bit in the given bitArray.
    * This is a usefully operation if some elements are addressed by a set bit,
@@ -38,7 +40,20 @@ public class Bitfield {
   
 
   
-  public static long[][] orConditionBits( long[][] src, @AccessPolicy.ReadOnly long[][] or, long[] allBitsArg) {
+  
+  
+  /**Returns a new (copied) bit array with given src
+   * with given new word of bits newBits for a set of bits; 
+   * sets unconditionally if all bits are existing in all second dimensions.
+   * It creates anyway a new instance of all bits and copies also all inner words ( bit fields).
+   * @param src null or given bits. 
+   * @param or null or new bits to add in second dimension. May have more second dimensions also.
+   *   Also if it is null, a new instance for return is built, see {@link #set_addNewBits(long[][], long[][], long[])}.
+   * @param allBitsArg If all these bits are given in any of the second dimension, then set to {@link #unconditionalORlong}, 
+   * then the returned value is {@link #unconditionalORlong}.
+   * @return
+   */
+  public static long[][] addNewWords( long[][] src, @AccessPolicy.ReadOnly long[][] or, long[] allBitsArg) {
     if(or == null ) { return src; }                    //no condition given. 
     else if(or.length ==0) {                             //unconditional given. 
       return src;
@@ -82,7 +97,78 @@ public class Bitfield {
   }
 
   
-  public static long[] orConditionBits( long[] dst, long[] or) {
+  
+  /**Returns a new (copied) bit array with given src
+   * with given new word of bits newBits for a set of bits; 
+   * It creates anyway a new instance of all bits and copies also all inner words ( bit fields).
+   * If only one evoutSrc is on each evin-Join, then it is a simple AND, all bits are stored in condBits[0][0]. 
+   * All bits builds boolean condition to AND.
+   * <br><br>
+   * If you have more as one evoutSrc with conditions on any evin-Join then you may have a lot of OR combinations.
+   * The number of combinations is the product of all OR event input's conditions.
+   * It means 8 event inputs, 3 of them have 2 evouSrc, and one has 3 evoutSrc, you get 2*2*2*3 = 24 OR variants or condition[24][].
+   * This variants are regarded also as OR result of further event processing (may be removed because "all" conditions),
+   * and also as selection for doutSrc of the din pins if the doutSrc comes from conditional outputs. 
+   * <ul>
+   * <li>If the first evin-Join has 2 evoutSrc, then we have an OR of this both, but an AND of the other evoutSrc2: 
+   *   Seems to be evoutSrc1 has 0x1 and 0x2, evoutSrc2 has 0x4, then the result is <code>0x05 0x06</code>  
+   * <li>If the first evin-Join has 1 evoutSrc, and the second has 2 evoutSrc3: 
+   *   Seems to be evoutSrc1 has <code>0x1</code>, evoutSrc2 has <code>0x4</code> and <code>0x8</code>, then <pre>
+   *   0x01 0x01      //zOrS = 1
+   *   0x04 0x08      //zOrS = 1
+   *   ---------
+   *   0x05 0x09  =>0x0d</pre>
+   *   The <code>0x0d = 1101</code> is the resulting condition on the prepO of this FBlock for further usage. Condition bit <code>0x02</code> is missing.  
+   * <li> If both have two, evoutSrc1 = <code>0x01, 0x02</code>, evoutSrc2 = <code>0x04 0x08</code>:<pre>
+   *   0x01 0x02 0x01 0x02      //zOrS = 1
+   *   0x04 0x04 0x08 0x08      //zOrS = 2, fill 2 elements one after another with one evoutSrc-cond.
+   *   -------------------
+   *   0x05 0x06 0x09 0x0a  =>0x0f</pre>
+   *   The resulting condition is 0x0f. If that are all condition bits used for this evinMdl, then no condition is stored on output.
+   * <li>If you have a 3th evin-Join but only with one connection, it is similar, not more complex:<pre>
+   *   0x01 0x02 0x01 0x02      //zOrS = 1
+   *   0x04 0x04 0x08 0x08      //zOrS = 2, fill 2 elements one after another with one evoutSrc-cond.
+   *   0x10 0x10 0x10 0x10      //zOrS = 4
+   *   -------------------
+   *   0x15 0x16 0x19 0x1a  =>0x1f</pre>
+   * <li>If you have a 3 evin-Join each with two evoutSrc with each on condition, it is<pre>
+   *   0x01 0x02 0x01 0x02 0x01 0x02 0x01 0x02      //zOrS = 1
+   *   0x04 0x04 0x08 0x08 0x04 0x04 0x08 0x08      //zOrS = 2, fill 2 elements one after another with one evoutSrc-cond.
+   *   0x10 0x10 0x10 0x10 0x20 0x20 0x20 0x20      //zOrS = 4
+   *   ---------------------------------------
+   *   0x15 0x16 0x19 0x1a 0x25 0x26 0x29 0x2a =>0x2f</pre>
+   * <li>If any evoutSrc has already more as one conditions, means {@link Evout_FBcl#condBits} are for example [3][]
+   *   then this conditions are just similar handled as more evoutSrc to this evin Join.
+   *   It means the number of variants is already increased for this example by a factor of 3.
+   * </ul>
+   * @param src null or given bits. 
+   * @param or null or new bits to add in second dimension. May have more second dimensions also.
+   *   Also if it is null, a new instance for return is built, see {@link #set_addNewBits(long[][], long[][], long[])}.
+   * @param allBitsArg If all these bits are given in any of the second dimension, then set to {@link #unconditionalORlong}, 
+   * then the returned value is {@link #unconditionalORlong}.
+   * @return
+   */
+  public static long[][] mergeWords( long[][] src, @AccessPolicy.ReadOnly long[][] mask) {
+    int zVariant = src.length * mask.length;   // any combination of the OR
+    long[][] dst = new long[zVariant][];
+    int ix2d = -1;
+    for(int ix2M = 0; ix2M < mask.length; ++ix2M) {        // repeat action for further long[] elements of mask
+      for(int ix2s = 0; ix2s < src.length; ++ix2s) {          // loop for long[] elements of src
+        int zAnd = src[ix2s].length;                        // create 1th dimension element
+        if(mask[ix2M].length > zAnd) { zAnd = mask[ix2M].length; }
+        dst[++ix2d] = Arrays.copyOf(src[ix2s], zAnd);     // with copy from src
+        for(int ix1 = 0; ix1 < mask[ix2M].length; ++ix1) {
+          dst[ix2d][ix1] |= mask[ix2M][ix1];           // and added bits of mask,
+        }
+        
+      } // repeat for long[] words of src
+    } // repeats for long[] words of mask, adequate multiplication of both length.
+    return dst;
+  }
+  
+  
+  
+  public static long[] set_AddBits( long[] dst, long[] or) {
     if(or == null) return dst;
     else {
       final long[] ret;
@@ -243,7 +329,7 @@ public class Bitfield {
   
   
   public static void writeBits(StringBuilder sb, long[] bits) {
-    if(bits == null) { sb.append("null"); }
+    if(bits == null) { sb.append(""); }
     else { char sep = '[';
       for(int ix = 0; ix<bits.length; ++ix) { sb.append(sep).append(Long.toHexString(bits[ix])); sep = ','; }
       sb.append(']');
@@ -251,20 +337,20 @@ public class Bitfield {
   }
   
   public static void writeBits(StringBuilder sb, long[][] bits) {
-    if(bits == null) { sb.append("null"); }
+    if(bits == null) { sb.append(""); }
     else {
       for(int ix = 0; ix<bits.length; ++ix) { writeBits(sb, bits[ix]); }
     }
   }
 
   
-  public static CharSequence writeBits(long[] bits) {
+  public static StringBuilder writeBits(long[] bits) {
     StringBuilder sb = new StringBuilder();
     writeBits(sb, bits);
     return sb;
   }  
   
-  public static CharSequence writeBits(long[][] bits) {
+  public static StringBuilder writeBits(long[][] bits) {
     StringBuilder sb = new StringBuilder();
     writeBits(sb, bits);
     return sb;
