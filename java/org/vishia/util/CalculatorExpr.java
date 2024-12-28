@@ -1397,8 +1397,9 @@ public class CalculatorExpr
   protected static final Operator cmpInstanceofOperation = new Operator("instanceof"){
     @Override public void operate(Value accu, Value arg) {
       Object oArg = arg.oVal;
-      if(oArg == null || !(oArg instanceof Class<?>)) throw new IllegalArgumentException("\"instanceof\" should compare with a class type instance");
-      
+      if(oArg == null || !(oArg instanceof Class<?>)) {
+        throw new IllegalArgumentException("'instanceof' should compare with a class:" + oArg.toString());
+      }
       accu.boolVal = accu.oVal !=null && DataAccess.isOrExtends(accu.oVal.getClass(), (Class<?>)oArg) 
           || oArg == java.lang.Float.class     && "FISB".indexOf(accu.type_)>=0    //only a primitive value stored which can be converted to float
           || oArg == java.lang.Double.class    && "DFJISB".indexOf(accu.type_)>=0  //only a primitive value stored which can be converted to double

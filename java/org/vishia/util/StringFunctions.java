@@ -775,11 +775,13 @@ public class StringFunctions {
 
   
   /**Searches the first character which is not contains in any given characters.
+   * It is for example proper to skip over white spaces, then set <code>sChars = " \t\n\r\f"</code>.
    * @param sq search this string
    * @param begin >=0 for start
    * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param sChars This characters are skipped
    * @return position of the first character which is not contained in sChars or the length if to whole string contains only chars from sChars.
+   *   returns begin if sq at begin does not start with one of the sChars.
    */
   public static int indexAfterAnyChar(CharSequence sq, int begin, int endMax, CharSequence sChars) {
     int zsq = sq.length();

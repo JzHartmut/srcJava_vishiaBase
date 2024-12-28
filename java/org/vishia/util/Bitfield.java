@@ -12,6 +12,7 @@ import java.util.Iterator;
 public class Bitfield {
 
   public static long[][] unconditionalORlong = new long[0][0];
+  public static long[] unconditionalORlongElem = new long[0];
   
 
   
@@ -89,7 +90,8 @@ public class Bitfield {
           if(allBits[ix] !=0) { allBitsSet = false; break; }
         }
         if(allBitsSet) {
-          dst = new long[0][];
+    //      dst = new long[0][];
+          dst = null;                    // it is unconditionally.
         }
       }
       return dst;
@@ -328,12 +330,48 @@ public class Bitfield {
   
   
   
+  /**Check whether all requested bits are set in one of the OR part of cond
+   * @param requ given bits from {@link #condBits} or from temporary such bits.
+   * @param cond requested bits, all should be set in given
+   * @return true if all given & req == req for all elements
+   */
+  public static boolean checkOrConditionMet(long[][] cond, long[] requ) {
+    for(int ixOr = 0; ixOr < cond.length; ++ixOr) {
+      for(int ix=0; ix< requ.length; ++ix) {
+        if((requ[ix] & cond[ixOr][ix]) == cond[ixOr][ix]) {    // not all bits set in given which are requested
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+ 
+  
+  
   public static void writeBits(StringBuilder sb, long[] bits) {
     if(bits == null) { sb.append(""); }
     else { char sep = '[';
-      for(int ix = 0; ix<bits.length; ++ix) { sb.append(sep).append(Long.toHexString(bits[ix])); sep = ','; }
+      for(int ix = 0; ix<bits.length; ++ix) { 
+        sb.append(sep);
+        writeBitsHex(sb, bits);
+        sep = ','; 
+      }
       sb.append(']');
     }
+  }
+  
+  
+  public static void writeBitsHex(StringBuilder sb, long[] bits) {
+    for(int ix = 0; ix < bits.length; ++ix) {
+      sb.append(Long.toHexString(bits[ix]));    // TODO write 8 chars for further.
+    }
+  }
+  
+  
+  public static CharSequence writeBitsHex(long[] bits) {
+    StringBuilder ret =  new StringBuilder();
+    writeBitsHex(ret, bits);
+    return ret;
   }
   
   public static void writeBits(StringBuilder sb, long[][] bits) {

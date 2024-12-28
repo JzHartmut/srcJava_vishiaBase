@@ -217,7 +217,7 @@ try {
  * <br>
  * The name of the 'otxScript' should be either found in the 'idxConstData' on construction or call of readTemplate...
  * <pre>
- * <:otx: otxSubScript : arg1: arg2>
+ * <:otx: otxSubScript : arg1, arg2>
  * Any script pattern<.end>
  * </pre>
  * or it should be found as static instance of a programmed OutTextPreparer in the 'execClass' given on construction:
@@ -2262,7 +2262,16 @@ public final class OutTextPreparer
   /**Executes preparation of a pattern with given data.
    * Note: The instance data of this are not changed. The instance can be used 
    * in several threads or multicore processing.
-   * @param wr The output channel
+   * <br><br>
+   * Note: it is possible that this operation is recursively called with the same or different instances of this,
+   * because in script-called operation this operation can be also used for detail outputs.
+   * Writing to the same output channel is successive and possible. 
+   * @param wr The output channel. If it is a {@link Flushable} then after this operation flush() is called.
+   *   This allows view ouutput on file level. flush() is also possible to call inside from user level
+   *   in any called sub operations where the wr instance is known, simple using this.
+   *   <br>If the text generation should be done so fast as possible
+   *   then wr can be especially a StringBuilder, writing to RAM,
+   *   which may be used afterwards (write to a file afterwards). In this case file access times are saved.
    * @param args for preparation. 
    *   The value instance should be gotten with {@link OutTextPreparer#createArgumentDataObj()}
    *   proper to the instance of this, because the order of arguments should be match. 
@@ -2274,6 +2283,9 @@ public final class OutTextPreparer
       throw new IllegalArgumentException("OutTextPreparer mismatch: The data does not match to the script.");
     }
     execSub(wr, args, 0, this.cmds.size());
+    if(wr instanceof Flushable) {
+      ((Flushable)wr).flush();             // interesting to see what's written in debug
+    }
   }
   
   
@@ -2402,7 +2414,7 @@ public final class OutTextPreparer
       try {                                                // only one time, set the destination data for calc
         //if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
         //======>>>>
-        data = cmd.expr.calcDataAccess(null, args.args); 
+        data = cmd.expr.calcDataAccess(null, args.args);
       } catch (Exception e) {
         bDataOk = false;
         data = null;

@@ -85,8 +85,9 @@ public class StringFunctions_C
    * 
    * @param srcP The String, non 0-terminated, see ,,size,,.
    * @param pos The position in src to start.
-   * @param sizeP The maximal number of chars to parse. If it is more as the length of the String, no error. 
-   *   One can use {@link Integer#MAX_VALUE} to parse till the end of the String
+   * @param sizeP The maximal number of chars to parse. If it is more as the length of the String, no error.
+   *   Negative: length of srcP shortened, -1 is till end, -2 is till end-1 etc.
+   *   One can use -1 or {@link Integer#MAX_VALUE} to parse till the end of the String
    * @param radixArg The radix of the number, typical 2, 10 or 16, max 36.
    * @param parsedChars [0] number of chars which is used to parse the integer. 
    *   [1] number of real used digits. Important if this is the fractional part of a float.
@@ -106,7 +107,8 @@ public class StringFunctions_C
     char cc;
     int ixSrc = pos;
     int size = srcP.length() - pos;
-    if(size > sizeP){ size = sizeP; }
+    if(sizeP <0) {size += sizeP +1; }   // sizeP negative: -1 means till end
+    if(sizeP >0 && size > sizeP){ size = sizeP; }
     int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
     if(size > 0 && srcP.charAt(ixSrc) == '-') { 
       ixSrc+=1; size -=1; bNegativ = true; 

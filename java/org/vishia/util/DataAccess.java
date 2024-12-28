@@ -1560,7 +1560,7 @@ public class DataAccess {
           String sActArgs = "";
           for(Object actArg : actArgs) { sActArgs += ", " + actArg; }
           sError = ExcUtil.exceptionInfo("DataAccess - Exc in method: " + obj.toString() + "."  // ExcUtil.stackInfo(...)
-              + method.getName() + "("+ "..." + "): ", exc.getCause(), 0, 10);
+              + method.getName() + "("+ "..." + "): ", exc, 0, 10);
 //          sError = "DataAccess - method access problem: "  // ExcUtil.stackInfo(...)
 //              + method.getName() + "(...): " + exc.getCause().getMessage();
           if(!bNoExceptionifNotFound) { 

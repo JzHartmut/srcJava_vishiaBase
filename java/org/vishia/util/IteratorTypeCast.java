@@ -32,6 +32,11 @@ public class IteratorTypeCast<Tdst> implements IterableIterator<Tdst> {
     return ret;
   }
 
+  @Override public void remove () {
+    this.iterator.remove();
+  }
+  
+  
   @Override public Iterator<Tdst> iterator () {
     return this;
   }
