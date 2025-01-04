@@ -934,7 +934,7 @@ public class XmlCfg
           }
         }
       } else {
-        System.out.println("NOTE read XmlCfg: No Attribute in subtree found: ");
+        //System.out.println("NOTE read XmlCfg: No Attribute in subtree found: ");
       }
       if(this.dstClassName == null) { this.dstClassName = subtree.dstClassName; }
     }

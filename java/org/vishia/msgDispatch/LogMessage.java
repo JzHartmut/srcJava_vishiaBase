@@ -5,6 +5,7 @@ package org.vishia.msgDispatch;
 
  */
 
+import java.io.Closeable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -97,7 +98,7 @@ import org.vishia.bridgeC.Va_list;
  * @author Hartmut Schorrig
  *
  */
-public interface LogMessage extends Appendable
+public interface LogMessage extends Appendable, Closeable
 {
   /**Version, history and license.
    * <ul>
@@ -454,7 +455,7 @@ public interface LogMessage extends Appendable
    * <code>close</code> may mean, the processing of messages is finite temporary. 
    * An <code>open</code> occurs automatically, if a new message is dispatched. 
    */
-  public abstract void close();
+  @Override public abstract void close();
 
   /**A call of this method causes an activating of transmission of all messages since last flush. 
    * It is abstract. It depends from the kind of device, what <code>flush</code> mean. 
