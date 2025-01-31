@@ -2841,7 +2841,7 @@ public class CalculatorExpr
    * </ul>
    * This nested calls evaluates the expression due to the common known preference rules.
    * See the specific parts of expression for further explanation. 
-   * @param sExpr For example "5.0*X" or "(X*X+1.5*X)"
+   * @param spExpr For example "5.0*X" or "(X*X+1.5*X)"
    * @see #setExpr(String, String[])
    */
   public String setExpr(StringPartScan spExpr, Class<?> reflData, boolean bSpecialSyntax) {

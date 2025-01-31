@@ -299,7 +299,7 @@ public final class OutTextPreparer
    * <li>2024-01-15 {@link #readTemplateCreatePreparer(InputStream, String, Map, Object, Map)} and {@link #readTemplateList(InputStream, String, Object, Map)}:
    *    more arguments dataRoot, idxConstData, for compatibility provide null for both.
    *    With this on template level outside of scripts <code>&lt;:set:name=value></code> is supported now for constant data.
-   * <li>2023-12-27 {@link #parseExec(String, int, int, StringPartScan, Class, Map, Map)}:
+   * <li>2023-12-27 {@link #parseExec(String, int, int, StringPartScanLineCol, Class, Map, Map)}:
    *   Changed behavior for &lt;:exec:...> using the capability of {@link DataAccess#DataAccess(StringPartScan, Map, Class, char)}
    *   and then {@link DataAccess#access(org.vishia.util.DataAccess.DatapathElement, Object, boolean, boolean, Map, Object[], boolean, org.vishia.util.DataAccess.Dst)}
    *   for execution. This supports more as one argument. Before, &lt;:exec:name(arg,...)> has only supported one element.
@@ -527,19 +527,28 @@ public final class OutTextPreparer
   
   
   static class Cmd extends CalculatorExpr.Operand{
+    
+    public final int ixCmd;
+    
+    public final int[] linecol;
+    
     public final ECmd cmd;
     
     /**If necessary it is the offset skipped over the ctrl sequence. */
     public int offsEndCtrl;
     
-    public Cmd(ECmd what, String textOrDatapath)
+    public Cmd(int ixCmd, int[] linecol, ECmd what, String textOrDatapath)
     { super( textOrDatapath);
+      this.ixCmd = ixCmd;
+      this.linecol = linecol;
       this.cmd = what;
     }
     
     
-    public Cmd(ECmd what, Object value)
+    public Cmd(int ixCmd, int[] linecol, ECmd what, Object value)
     { super( value);
+      this.ixCmd = ixCmd;
+      this.linecol = linecol;
       this.cmd = what;
     }
     
@@ -551,29 +560,37 @@ public final class OutTextPreparer
      * @param dataConst null or a given object, maybe especially a {@link CalculatorExpr.Value}
      * @param textOrVar either the only one given String (valid) or a String info for debug.
      */
-    public Cmd (ECmd what, int ixValue, DataAccess dataAccess, Object dataConst, String textOrVar) {
+    public Cmd (int ixCmd, int[] linecol, ECmd what, int ixValue, DataAccess dataAccess, Object dataConst, String textOrVar) {
       super(ixValue, dataAccess, dataConst, textOrVar);
+      this.ixCmd = ixCmd;
+      this.linecol = linecol;
       this.cmd = what;
     }
     
-    public Cmd ( OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData) throws Exception { 
+    public Cmd ( int ixCmd, int[] linecol, OutTextPreparer outer, ECmd what, StringPartScanLineCol textOrDatapath, Class<?> reflData) throws Exception { 
       super( checkVariable(outer, textOrDatapath), outer.nameVariables, reflData, true);
+      this.ixCmd = ixCmd;
+      this.linecol = linecol;
       this.cmd = what;
     }
     
-    public Cmd ( OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
+    public Cmd ( int ixCmd, int[] linecol, OutTextPreparer outer, ECmd what, String textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
       super( textOrDatapath, outer.nameVariables, reflData, idxConstData);
+      this.ixCmd = ixCmd;
+      this.linecol = linecol;
       this.cmd = what;
     }
     
     
-    public Cmd ( OutTextPreparer outer, ECmd what, StringPartScan textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
+    public Cmd ( int ixCmd, int[] linecol, OutTextPreparer outer, ECmd what, StringPartScanLineCol textOrDatapath, Class<?> reflData, Map<String, Object> idxConstData) throws Exception { 
       super( textOrDatapath, outer.nameVariables, reflData, idxConstData, true);
+      this.ixCmd = ixCmd;
+      this.linecol = linecol;
       this.cmd = what;
     }
     
     
-    private static StringPartScan checkVariable(OutTextPreparer outer, StringPartScan textOrDatapath) {
+    private static StringPartScanLineCol checkVariable(OutTextPreparer outer, StringPartScanLineCol textOrDatapath) {
       if(outer.listArgs == null) { //variables are not given before parse String
         //char c0 = textOr
       }
@@ -597,12 +614,12 @@ public final class OutTextPreparer
     
     int ixStart = -1;
 
-    public ForCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.forCtrl, spDatapath, reflData);
+    public ForCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.forCtrl, spDatapath, reflData);
     }
 
-    public ForCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.forCtrl, sDatapath, reflData, null);
+    public ForCmd ( int ixCmd, int[] linecol,OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.forCtrl, sDatapath, reflData, null);
     }
   }
   
@@ -624,12 +641,12 @@ public final class OutTextPreparer
      * Determined in ctor ({@link OutTextPreparer#parse(String, Object)} */
     public int ixVariable;
 
-    public SetCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.setVar, spDatapath, reflData);
+    public SetCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.setVar, spDatapath, reflData);
     }
 
-    public SetCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.setVar, sDatapath, reflData, null);
+    public SetCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.setVar, sDatapath, reflData, null);
     }
   }
   
@@ -645,13 +662,13 @@ public final class OutTextPreparer
     int ixDataWr;
     
     
-//    public WrCmd(OutTextPreparer outer, StringPartScan sDatapath, Class<?> reflData) throws Exception {
+//    public WrCmd(OutTextPreparer outer, StringPartScanLineCol sDatapath, Class<?> reflData) throws Exception {
 //      super(outer, ECmd.wr, sDatapath, reflData);
 //    }
 
     
-    public WrCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.wr, sDatapath, reflData, null);
+    public WrCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String sDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.wr, sDatapath, reflData, null);
     }
   }
   
@@ -676,13 +693,13 @@ public final class OutTextPreparer
      * @throws Exception */
     //CalculatorExpr.Operand valCmp;
     
-    public IfCmd(OutTextPreparer outer, ECmd cmd, StringPartScan sDatapath, Class<?> reflData) throws Exception {
-      super(outer, cmd, sDatapath, reflData);
+    public IfCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, ECmd cmd, StringPartScanLineCol sDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, cmd, sDatapath, reflData);
     }
 
     
-    public IfCmd(OutTextPreparer outer, ECmd cmd, String sDatapath, Class<?> reflData) throws Exception {
-      super(outer, cmd, sDatapath, reflData, null);
+    public IfCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, ECmd cmd, String sDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, cmd, sDatapath, reflData, null);
     }
   }
   
@@ -695,11 +712,11 @@ public final class OutTextPreparer
     /**The data to get actual arguments for this call. */
     public List<Argument> args;
     
-    public CallCmd(OutTextPreparer otxSub) {
-      super(ECmd.call, otxSub);
+    public CallCmd ( int ixCmd, int[] linecol, OutTextPreparer otxSub) {
+      super(ixCmd, linecol, ECmd.call, otxSub);
     }
     
-//    public CallCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception 
+//    public CallCmd(OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception 
 //    { super(outer, ECmd.call, spDatapath, reflData, outer.idxConstData); 
 //    }
 // 
@@ -713,12 +730,12 @@ public final class OutTextPreparer
   static class DebugCmd extends Cmd {
     public String cmpString;
 
-    public DebugCmd(OutTextPreparer outer, StringPartScan spDatapath, Class<?> reflData) throws Exception {
-      super(outer, ECmd.debug, spDatapath, reflData);
+    public DebugCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, StringPartScanLineCol spDatapath, Class<?> reflData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.debug, spDatapath, reflData);
     }
 
-    public DebugCmd(OutTextPreparer outer, String sDatapath, Class<?> reflData, final Map<String, Object> idxConstData) throws Exception {
-      super(outer, ECmd.debug, sDatapath, reflData, idxConstData);
+    public DebugCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String sDatapath, Class<?> reflData, final Map<String, Object> idxConstData) throws Exception {
+      super(ixCmd, linecol, outer, ECmd.debug, sDatapath, reflData, idxConstData);
     }
   }
   
@@ -729,9 +746,9 @@ public final class OutTextPreparer
   static class ValueCmd extends Cmd {
     final String sFormat;
     
-    ValueCmd ( OutTextPreparer outer, String textOrDatapath, String sFormat
+    ValueCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String textOrDatapath, String sFormat
         , Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
-      super(outer, ECmd.addVar, textOrDatapath, reflData, idxConstData);
+      super(ixCmd, linecol, outer, ECmd.addVar, textOrDatapath, reflData, idxConstData);
       this.sFormat = sFormat;
     }
   }
@@ -744,9 +761,9 @@ public final class OutTextPreparer
     /**The expected type. */
     Class<?> type;
     
-    TypeCmd ( OutTextPreparer outer, String textOrDatapath, Class<?> type
+    TypeCmd ( int ixCmd, int[] linecol, OutTextPreparer outer, String textOrDatapath, Class<?> type
         , Class<?> reflData, Map<String, Object> idxConstData) throws Exception {
-      super(outer, ECmd.typeCheck, textOrDatapath, reflData, idxConstData);
+      super(ixCmd, linecol, outer, ECmd.typeCheck, textOrDatapath, reflData, idxConstData);
       this.type = type;
     }
   }
@@ -754,8 +771,8 @@ public final class OutTextPreparer
   
   
   static class CmdString extends Cmd {
-    public CmdString(String str)
-    { super(ECmd.addString, str);
+    public CmdString ( int ixCmd, int[] linecol, String str)
+    { super(ixCmd, linecol, ECmd.addString, str);
     }
 
   };
@@ -818,6 +835,8 @@ public final class OutTextPreparer
   
   /**The source of the generation script, argument of {@link #parse(Class, String)} only for debug. */
   public final String pattern;
+  
+  int nrLineStartInFile;
   
   /**This is only stored as info, not used in this class.
    * It is the argument execClass from the user, 
@@ -936,28 +955,65 @@ public final class OutTextPreparer
   
   
   /**Creates the text generation control data for the specific pattern and given sub pattern
-   * without parsing.
+   * read from a file or other input stream, without parsing.
+   * <br>
    * This is the preferred ctor if the scripts are read from a textual file with two-phase translation,
    * see {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
-   * It can be also used for hard coded Java scripts.
-   * But afterwards {@link #parse(Class, Map)} have to be called as second phase for translate the scripts.
+   * <b>Afterwards {@link #parse(Class, Map)} have to be called</b> as second phase for translate the scripts.
    * <br><br>
-   * Using this, all sub scripts can be used before definition. 
-   * One of the definitions is instantiated with this ctor and should be stored in the idxScripts.
+   * Using this, the order of sub scripts do not need to be regarded. 
+   * Another script can be called in any order, in its pattern, because it can be found, though it's not translated yet.
+   * TODO description One of the definitions is instantiated with this ctor and should be stored in the idxScripts.
    * See also {@link #readTemplateCreatePreparer(InputStream, String, Map)}, the principle is used there.
    * @param ident Name of the sub pattern, used for error outputs.
    * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
    * @param pattern The pattern in string given form. 
    *   This pattern will be parsed and divided in parts for a fast text generation.
-   * @param idxConstData Container for call able scripts, maybe contain all scripts, also for more const data
+   * @param nrLineStartInFile line number where the pattern starts in a file, maybe 0.
+   * @throws never. 
+   */
+  public OutTextPreparer(String ident, String variables, String pattern, int nrLineStartInFile ) {
+    this.sIdent = ident.trim();
+    this.pattern = pattern;
+    this.nrLineStartInFile = nrLineStartInFile;
+    this.parseVariables(variables);
+  }
+
+  
+  
+  /**Creates the text generation control data for the specific pattern and given sub pattern
+   * without parsing.
+   * <br>
+   * This is the preferred ctor if the scripts is given immediately as String (hard coded scripts in Java),
+   * and two-phase translation should be used.
+   * <b>Afterwards {@link #parse(Class, Map)} have to be called</b> as second phase for translate the scripts.
+   * <br><br>
+   * Using this, the order of sub scripts do not need to be regarded. 
+   * Another script can be called in any order, in its pattern, because it can be found, though it's not translated yet.
+   * TODO description One of the definitions is instantiated with this ctor and should be stored in the idxScripts.
+   * See also {@link #readTemplateCreatePreparer(InputStream, String, Map)}, the principle is used there.
+   * <br><br>Example:<pre>
+    private OutTextPreparer otxNode = new OutTextPreparer("exampleNode", "arg", 
+      "pattern of the script" 
+    + "<:if:arg><&arg>... in more lines <.if>"
+    );
+    //.....
+    Map<String, OutTextPreparer> idxScript = new TreeMap<>();
+    idxScript.put(this.otxNode.sIdent, this.otxNode);
+    idxScript.put(this.otxCfgHead.sIdent, this.otxCfgHead);
+    try {
+      OutTextPreparer.parseTemplates(idxScript, this.getClass(), null, log);
+      ,,,,
+    </pre>
+   * @param ident Name of the sub pattern, used for error outputs.
+   * @param variables One variable or list of identifier separated with comma, whiteSpaces possible. 
+   * @param pattern The pattern in string given form. 
+   *   This pattern will be parsed and divided in parts for a fast text generation.
    * @throws never. 
    */
   public OutTextPreparer(String ident, String variables, String pattern ) {
-    this.sIdent = ident.trim();
-    this.pattern = pattern;
-    this.parseVariables(variables);
+    this(ident, variables, pattern, 0);
   }
-  
   
   /**Creates the text generation control data for the specific pattern and given sub pattern
    * without parsing.
@@ -1309,7 +1365,7 @@ public final class OutTextPreparer
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
       if(idxScript !=null) {
-        OutTextPreparer otxScript = new OutTextPreparer(name, args, script);
+        OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);
         idxScript.put(name, otxScript); 
       }
       else { 
@@ -1409,7 +1465,7 @@ public final class OutTextPreparer
 //        Debugutil.stop();
       String args = text.substring(posArgs+1, posEndArgs);
       String script = text.substring(posNewline+1);
-      OutTextPreparer otxScript = new OutTextPreparer(name, args, script);  // does not parse, only stores the script.
+      OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
       idxScript.put(name, otxScript); 
     }
   }
@@ -1616,7 +1672,8 @@ public final class OutTextPreparer
     int pos1 = 0; //end before the next special command
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
     int ixixCmd = -1;
-    StringPartScan sp = new StringPartScan(this.pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
+    int line =0, colmn =0;
+    StringPartScanLineCol sp = new StringPartScanLineCol(this.pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
     sp.setIgnoreWhitespaces(true);  // it is valid inside the syntactical relevant parts <...>
     int nLastWasSkipOverWhitespace = 0;
     while(sp.length() >0) {
@@ -1634,26 +1691,26 @@ public final class OutTextPreparer
         if(sp.scan(":args:").scanOk()){ 
           parseArgs(sp);
           if(!sp.scan(">").scanOk()) { 
-            addError("faulty <:args:... at " + sp.getCurrentPosition());
+            addError("faulty <:args:... at " + sp.getCurrentPosition(), sp.getlineCol());
           }
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(  nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
             && (sp.scan(": >").scanOk() || sp.scan(":+>").scanOk() || sp.scan(":? >").scanOk())){ 
-         addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, null, null, idxScript);  //adds the text before <:+>
+         addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, null, null, idxScript);  //adds the text before <:+>
          sp.scanSkipSpace();
          pos0 = (int)sp.getCurrentPosition();  //after '>'
          nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
         }  
         else if( sp.scan(":?nl>").scanOk()){ 
-         addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, null, null, idxScript);  //adds the text before <:+>
+         addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, null, null, idxScript);  //adds the text before <:+>
          sp.seekAfterNewline();
          pos0 = (int)sp.getCurrentPosition();  //after newline
         }
         else if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
           //------------------------------------------------- <&varname> a simple access to a given value
           String sName = sp.getLastScannedString();        // it adds a simple index in Cmd, not using DataAccess
-          addCmdSimpleVar(this.pattern, pos0, pos1, ECmd.addVar, sName, execClass, idxConstData);
+          addCmdSimpleVar(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addVar, sName, execClass, idxConstData);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
@@ -1670,7 +1727,7 @@ public final class OutTextPreparer
           } else {
             sFormat = null;
           }
-          addCmdValueAccess(this.pattern, pos0, pos1, sDatapath, sFormat, execClass, idxConstData);
+          addCmdValueAccess(this.pattern, sp.getlineCol(), pos0, pos1, sDatapath, sFormat, execClass, idxConstData);
           sp.seekPos(1);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
@@ -1708,7 +1765,7 @@ public final class OutTextPreparer
         }
         else if(sp.scan(":else>").scanOk()) {
           //====>
-          addCmd(this.pattern, pos0, pos1, ECmd.elseCtrl, null, null, null, idxScript);
+          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.elseCtrl, null, null, null, idxScript);
           Cmd ifCmd;
           int ixixIfCmd = ixixCmd; 
           if(  ixixIfCmd >=0 
@@ -1728,7 +1785,7 @@ public final class OutTextPreparer
           String container = sp.getLastScannedString().toString();
           String entryVar = sp.getLastScannedString().toString();
           //====>
-          ForCmd cmd = (ForCmd)addCmd(this.pattern, pos0, pos1, ECmd.forCtrl, container, execClass, idxConstData, idxScript);
+          ForCmd cmd = (ForCmd)addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.forCtrl, container, execClass, idxConstData, idxScript);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(entryVar); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1757,7 +1814,7 @@ public final class OutTextPreparer
           String variable = sp.getLastScannedString().toString();
 //          if(variable.equals("sIx"))
 //            Debugutil.stop();
-          SetCmd cmd = (SetCmd)addCmd(this.pattern, pos0, pos1, ECmd.setVar, value, execClass, idxConstData, idxScript);
+          SetCmd cmd = (SetCmd)addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.setVar, value, execClass, idxConstData, idxScript);
           DataAccess.IntegerIx ixOentry = this.nameVariables.get(variable); 
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
@@ -1773,16 +1830,16 @@ public final class OutTextPreparer
           try { type = Class.forName(sType);               // Class given as string found on parse time.
           } catch (ClassNotFoundException e) {
             String sError = "Class not found for <:type:"+ sValue + ":" + sType + ">";
-            addError(sError);                              // then ignore this cmd in execution. Write the error text.
+            addError(sError, sp.getlineCol());                              // then ignore this cmd in execution. Write the error text.
             //throw new ParseException(sError, 0);
           }
           if(type !=null) {
             try { 
-              Cmd cmd = new TypeCmd(this, sValue, type, execClass, idxConstData);  //sValue builds an Operand with knowledge of nameVariables
-              addCmd(this.pattern, pos0, pos1, cmd);
+              Cmd cmd = new TypeCmd(this.cmds.size(), sp.getlineCol(), this, sValue, type, execClass, idxConstData);  //sValue builds an Operand with knowledge of nameVariables
+              addCmd(this.pattern, sp.getlineCol(), pos0, pos1, cmd);
             } catch(Exception exc) {
               String sError = "Problem with datapath <:type:"+ sValue + "...: " + exc.getMessage();
-              addError(sError);
+              addError(sError, sp.getlineCol());
               //throw new ParseException(sError, 0);
             }
           }
@@ -1803,26 +1860,26 @@ public final class OutTextPreparer
           String cmpString = sp.getLastScannedString().toString();
           String debugVar = sp.getLastScannedString().toString();
           //====>
-          DebugCmd cmd = (DebugCmd)addCmd(this.pattern, pos0, pos1, ECmd.debug, debugVar, execClass, idxConstData, idxScript);
+          DebugCmd cmd = (DebugCmd)addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.debug, debugVar, execClass, idxConstData, idxScript);
           cmd.cmpString = cmpString;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }  
         else if(sp.scan(":debug>").scanOk()) {
           //====>
           @SuppressWarnings("unused") DebugCmd cmd = (DebugCmd)
-            addCmd(this.pattern, pos0, pos1, ECmd.debug, null, execClass, idxConstData, idxScript);
+            addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.debug, null, execClass, idxConstData, idxScript);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":--").scanToStringEnd("-->").scanOk()) {
           //it is commented
-          addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, null, null, null);
+          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, null, null, null);
           pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
         else if(sp.scan(":x").scanHex(4).scan(">").scanOk()) {
           char[] cText = new char[1];                      // <:x1234> a special UTF16 char
           cText[0] = (char)sp.getLastScannedIntegerNumber();
           String sTextSpecial = new String(cText);
-          addCmd(this.pattern, pos0, pos1, ECmd.addString, sTextSpecial, null, null, null);
+          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addString, sTextSpecial, null, null, null);
         }
         else if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
           // ------------------------------------------------ <:text> or <:n> <:r> <:t> <:s>
@@ -1837,17 +1894,17 @@ public final class OutTextPreparer
           }
           if(what >=0) {
             String[] specials = { "\n", "\r", "\t", " "};  // newline etc.
-            addCmd(this.pattern, pos0, pos1, ECmd.addString, specials[what], null, null, null);
+            addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addString, specials[what], null, null, null);
           } else {                                         // free text with especially special chars
-            addCmd(this.pattern, pos0, pos1, ECmd.addString, sText, null, null, null); //add the <:sText>
+            addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addString, sText, null, null, null); //add the <:sText>
           }
           pos0 = posend;  //after '>'
         }
         else if(sp.scan(".wr>").scanOk()) { //The end of an if
           Cmd wrCmd;
-          addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.wr>
+          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.wr>
           if(ixixCmd >=0 && (wrCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.wr) {
-            Cmd endWr = addCmd(this.pattern, pos0, pos1, ECmd.wrEnd, null, null, null, null);
+            Cmd endWr = addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.wrEnd, null, null, null, null);
             endWr.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;
             pos0 = (int)sp.getCurrentPosition();  //after '>'
             wrCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
@@ -1862,7 +1919,7 @@ public final class OutTextPreparer
         }
         else if(sp.scan(".if>").scanOk()) { //The end of an if
           Cmd cmd = null;
-          addCmd(this.pattern, pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.if>
+          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.if>
           while(  ixixCmd >=0 
             && ( (cmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
               || cmd.cmd == ECmd.elsifCtrl
@@ -1891,7 +1948,7 @@ public final class OutTextPreparer
         else if(sp.scan(".for>").scanOk()) { //The end of an if
           Cmd forCmd;
           if(ixixCmd >=0 && (forCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
-            Cmd endLoop = addCmd(this.pattern, pos0, pos1, ECmd.endLoop, null, null, null, null);
+            Cmd endLoop = addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.endLoop, null, null, null, null);
             endLoop.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;  // it is faulty but unused.
             pos0 = (int)sp.getCurrentPosition();  //after '>'
             forCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
@@ -1909,7 +1966,7 @@ public final class OutTextPreparer
       }
       else { //no more '<' found:
         sp.len0end();
-        addCmd(this.pattern, pos0, pos0 + sp.length(), ECmd.nothing, null, execClass, idxConstData, idxScript);
+        addCmd(this.pattern, sp.getlineCol(), pos0, pos0 + sp.length(), ECmd.nothing, null, execClass, idxConstData, idxScript);
         sp.fromEnd();  //length is null then.
       }
     } //while
@@ -1934,7 +1991,7 @@ public final class OutTextPreparer
     } while(sp.scan(",").scanOk());
   }
   
-  private void parseWr ( final String pattern, final int pos0, final int pos1, final StringPartScan sp
+  private void parseWr ( final String pattern, final int pos0, final int pos1, final StringPartScanLineCol sp
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     //====>
     String wrBufferIdent = sp.getLastScannedString().toString().trim();
@@ -1943,29 +2000,29 @@ public final class OutTextPreparer
       ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
       this.nameVariables.put(wrBufferIdent, ixOentry);
     }
-    WrCmd wrcmd = (WrCmd)addCmd(pattern, pos0, pos1, ECmd.wr, wrBufferIdent, reflData, idxConstData, idxScript);
+    WrCmd wrcmd = (WrCmd)addCmd(pattern, sp.getlineCol(), pos0, pos1, ECmd.wr, wrBufferIdent, reflData, idxConstData, idxScript);
     wrcmd.ixDataWr = ixOentry.ix;
     //wrcmd.offsWrEnd = -1;  //in case of no <:else> or following <:elsif is found.
     
   }
   
   
-  private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScan sp
+  private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScanLineCol sp
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     String cond = sp.getLastScannedString().toString();
 //    if(cond.contains("?instanceof"))
 //      Debugutil.stop();
     //====>
-    IfCmd ifcmd = (IfCmd)addCmd(pattern, pos0, pos1, ecmd, cond, reflData, idxConstData, idxScript);
+    IfCmd ifcmd = (IfCmd)addCmd(pattern, sp.getlineCol(), pos0, pos1, ecmd, cond, reflData, idxConstData, idxScript);
     ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
     
   }
   
   
-  private Cmd parseExec(final String src, final int pos0, final int pos1, StringPartScan sp
+  private Cmd parseExec(final String src, final int pos0, final int pos1, StringPartScanLineCol sp
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) throws ParseException {
     if(pos1 > pos0) {
-      this.cmds.add(new CmdString(src.substring(pos0, pos1)));
+      this.cmds.add(new CmdString(this.cmds.size(), sp.getlineCol(), src.substring(pos0, pos1)));
     }
     final Cmd cmd;
     int pos2 = (int)sp.getCurrentPosition();
@@ -1979,17 +2036,17 @@ public final class OutTextPreparer
     if(!bScanOk) {
       throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
     }
-    cmd = new Cmd(ECmd.exec, -1, access, idxConstData, sOperation);
+    cmd = new Cmd(this.cmds.size(), sp.getlineCol(), ECmd.exec, -1, access, idxConstData, sOperation);
     return cmd;
   }  
 
   
-  private void parseCall(final String src, final int pos0, final int pos1, final StringPartScan sp
+  private void parseCall(final String src, final int pos0, final int pos1, final StringPartScanLineCol sp
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     String sCallVar = sp.getLastScannedString();
     if(sCallVar.equals("otxIfColors"))
       debug();
-    CallCmd cmd = (CallCmd)addCmd(src, pos0, pos1, ECmd.call, sCallVar, reflData, idxConstData, idxScript);
+    CallCmd cmd = (CallCmd)addCmd(src, sp.getlineCol(), pos0, pos1, ECmd.call, sCallVar, reflData, idxConstData, idxScript);
     final OutTextPreparer call;  
     if(cmd.dataConst !=null) { //given as const static:
       if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
@@ -2055,8 +2112,8 @@ public final class OutTextPreparer
   }
   
   
-  private void addError(String sError) {
-    this.cmds.add(new CmdString(" <?? " + sError + "??> "));
+  private void addError(String sError, int[] linecol) {
+    this.cmds.add(new CmdString(this.cmds.size(), linecol, " <?? " + sError + "??> "));
   }
  
   
@@ -2068,9 +2125,9 @@ public final class OutTextPreparer
    * @param to position of start of this cmd
    * @param cmd the Cmd instance.
    */
-  private void addCmd ( String src, int from, int to, Cmd cmd) {
+  private void addCmd ( String src, int[] linecol, int from, int to, Cmd cmd) {
     if(to > from) {
-      this.cmds.add(new CmdString(src.substring(from, to)));
+      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
     }
     this.cmds.add(cmd);
   }
@@ -2091,23 +2148,23 @@ public final class OutTextPreparer
    * @param sName name of the argument or variable or field.
    * @param execClass to search in a data field.
    */
-  private void addCmdSimpleVar ( String src, int from, int to, ECmd eCmd, String sName, Class<?> execClass, Map<String, Object> idxConstData) {
+  private void addCmdSimpleVar ( String src, int[] linecol, int from, int to, ECmd eCmd, String sName, Class<?> execClass, Map<String, Object> idxConstData) {
     if(to > from) {
-      this.cmds.add(new CmdString(src.substring(from, to)));
+      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
     }
     Object data = idxConstData ==null ? null : idxConstData.get(sName);
     if(data != null) {                                     // given const data on construction
-      this.cmds.add(new Cmd(eCmd, -1, null, data, sName));
+      this.cmds.add(new Cmd(this.cmds.size(), linecol, eCmd, -1, null, data, sName));
     } else {
       DataAccess.IntegerIx ix = this.nameVariables.get(sName);
       if(ix !=null) {                                      // Index to the arguments
-        this.cmds.add(new Cmd(eCmd, ix.ix, null, null, sName));
+        this.cmds.add(new Cmd(this.cmds.size(), linecol, eCmd, ix.ix, null, null, sName));
       } else {
         try {                                              // Only access the execClass is possible
           data = DataAccess.access(sName, execClass, true, false, false, null);  //TODO variable data?
-          this.cmds.add(new Cmd(eCmd, -1, null, data, sName));
+          this.cmds.add(new Cmd(this.cmds.size(), linecol, eCmd, -1, null, data, sName));
         } catch (Exception exc) {
-          addError(sName);                                 // inserts <??sName??> in the text
+          addError(sName, linecol);                                 // inserts <??sName??> in the text
         }
       }
     }
@@ -2130,10 +2187,10 @@ public final class OutTextPreparer
    * @param sName name of the argument or variable or field.
    * @param execClass to search in a data field.
    */
-  private void addCmdValueAccess ( String src, int from, int to, String sDatapath
+  private void addCmdValueAccess ( String src, int[] linecol, int from, int to, String sDatapath
       , String sFormat, Class<?> execClass, Map<String, Object> idxConstData) {
     if(to > from) {
-      this.cmds.add(new CmdString(src.substring(from, to)));
+      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
     }
 //    int posSep = sDatapath.indexOf('.');                 // commented, this is done in CalculatorExpr.Operand(...)
 //    if(posSep <0) { posSep = sDatapath.length(); }
@@ -2141,10 +2198,10 @@ public final class OutTextPreparer
 //    DataAccess.IntegerIx ixAccess = this.nameVariables.get(startVariable);  //access to variables (args)
 //    int ix = ixAccess == null ? -1 : ixAccess.ix;          // ix >0: access to variables, often used
     try { 
-      Cmd cmd = new ValueCmd(OutTextPreparer.this, sDatapath, sFormat, execClass, idxConstData);
+      Cmd cmd = new ValueCmd(this.cmds.size(), linecol, OutTextPreparer.this, sDatapath, sFormat, execClass, idxConstData);
       this.cmds.add(cmd);
     } catch (Exception exc) {
-      addError(sDatapath);                                 // inserts <??sDatapath??> in the text
+      addError(sDatapath, linecol);                                 // inserts <??sDatapath??> in the text
     }
   }
   
@@ -2162,16 +2219,16 @@ public final class OutTextPreparer
    * @param idxScript can contain some other OutTextPreparer instances for call.
    * @return the created Cmd for further parameters.
    */
-  private Cmd addCmd ( String src, int from, int to, ECmd ecmd, String sDatapath
+  private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath
       , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
     if(to > from) {
-      this.cmds.add(new CmdString(src.substring(from, to)));
+      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
     }
     final Cmd cmd;
     if(ecmd !=ECmd.nothing) {
       try {
         switch(ecmd) {
-          case ifCtrl: case elsifCtrl: cmd = new IfCmd(this, ecmd, sDatapath, reflData); break;
+          case ifCtrl: case elsifCtrl: cmd = new IfCmd(this.cmds.size(), linecol, this, ecmd, sDatapath, reflData); break;
           case call: 
             Object oOtxSub = null;
             String sNameSub = sDatapath;
@@ -2186,11 +2243,11 @@ public final class OutTextPreparer
             if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
               throw new IllegalArgumentException("subroutine: not found ");
             }
-            cmd = new CallCmd((OutTextPreparer)oOtxSub); //this, sDatapath, data); 
+            cmd = new CallCmd(this.cmds.size(), linecol, (OutTextPreparer)oOtxSub); //this, sDatapath, data); 
             //cmd = new CallCmd(this, sDatapath, data); 
             break;
           case exec: { //cmd = new ExecCmd(this, sDatapath, reflData, idxConstData); 
-            cmd = parseExec(src, from, to, new StringPartScan(sDatapath), reflData, idxConstData, idxScript);
+            cmd = parseExec(src, from, to, new StringPartScanLineCol(sDatapath), reflData, idxConstData, idxScript);
             break;
           }
           case forCtrl: {
@@ -2200,16 +2257,16 @@ public final class OutTextPreparer
               //TODO scan the start index, yet always 0..
               sDatapath1 = sDatapath.substring(posIx+2);    // right side
             }
-            cmd = new ForCmd(this, sDatapath1, reflData); 
+            cmd = new ForCmd(this.cmds.size(), linecol, this, sDatapath1, reflData); 
             if(posIx >=0) {
               ((ForCmd)cmd).ixStart = 0;  // overwrite -1 with the start index, then index for.
             }
           } break;
-          case wr: cmd = new WrCmd(this, sDatapath, reflData); break;
-          case setVar: cmd = new SetCmd(this, sDatapath, reflData); break;
-          case debug: cmd = new DebugCmd(this, sDatapath, reflData, idxConstData); break;
-          case addString: cmd = new CmdString(sDatapath); break;
-          default: cmd = new Cmd(this, ecmd, sDatapath, reflData, null); break;
+          case wr: cmd = new WrCmd(this.cmds.size(), linecol, this, sDatapath, reflData); break;
+          case setVar: cmd = new SetCmd(this.cmds.size(), linecol, this, sDatapath, reflData); break;
+          case debug: cmd = new DebugCmd(this.cmds.size(), linecol, this, sDatapath, reflData, idxConstData); break;
+          case addString: cmd = new CmdString(this.cmds.size(), linecol, sDatapath); break;
+          default: cmd = new Cmd(this.cmds.size(), linecol, this, ecmd, sDatapath, reflData, null); break;
         }
       } catch(Exception exc) {
         throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
@@ -2430,10 +2487,11 @@ public final class OutTextPreparer
           Debugutil.stop();
         //======>>>>         execObj for given refl, args.args for given ixData
         data = cmd.dataAccess.access(args.execObj, true, false, this.nameVariables, args.args);
-      } catch (Exception e) {
+      } catch (Exception exc) {
         bDataOk = false;
+        CharSequence sMsg = ExcUtil.exceptionInfo("", exc, 1, 10);
         data = "<??>";
-        wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + e.getMessage() + "\" ??>");
+        wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + sMsg + "\" ??>");
       }
       
     }

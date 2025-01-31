@@ -1549,7 +1549,10 @@ public class DataAccess {
       if(element.reflAccess == null) {
           //TODO: element.reflAccess = method;               // store if now found.
         }
-      method.setAccessible(accessPrivate);
+      try { method.setAccessible(accessPrivate); }
+      catch( Exception exc) {    // some setAccessible seems to be protected by security Manager, then ignore it.
+        Debugutil.stop();
+      }
       Class<?>[] paramTypes = method.getParameterTypes();  // arguments from the method's signature
       Object[] actArgs = checkAndConvertArgTypes(givenArgs, paramTypes); // tune it with actual arguments
       if(actArgs !=null){                                  // check if actual argument types matches.

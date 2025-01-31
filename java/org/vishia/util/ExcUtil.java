@@ -147,11 +147,45 @@ public class ExcUtil {
    * @return A string in form of CharSequence. Use ...toString() to build a String if necessary.
    */
   public static CharSequence exceptionInfo(CharSequence startText, Throwable exc, int firstLevel, int nrofLevels){
-    return exceptionInfo(startText, exc, firstLevel, nrofLevels, true);
+    return exceptionInfo(startText, exc, firstLevel, nrofLevels, true, true);
   }
-  
+
   
   /**Prepares an exception information inclusively some levels of stack trace in a short (one line) form.
+   * Same as {@link #exceptionInfo(CharSequence, Throwable, int, int)} but writes more lines for stack trace.
+   * @param startText Any start text of the returned text. 
+   *   If this refers a StringBuilder, it is used to prepare the output text. 
+   *   Note that the StringBuilder should be used only locally for that.
+   *   That is a typical practice if the text is assembled before. 
+   *   It saves dynamic memory allocation operations.
+   * @param exc The exception, its getMessage() will be appended
+   * @param firstLevel First level of stack. 0 is the routine where the exception is thrown, 1 the caller etc.
+   * @param nrofLevels maximum of numbers of levels to show in stack. Use for example 10 to prevent to long lines if it may be deeper.
+   * @return A string in form of CharSequence. Use ...toString() to build a String if necessary.
+   */
+  public static CharSequence exceptionInfoLines(CharSequence startText, Throwable exc, int firstLevel, int nrofLevels){
+    return exceptionInfo(startText, exc, firstLevel, nrofLevels, true, false);
+  }
+
+  
+  
+  /**Core function only for compatibility, better use {@link #exceptionInfo(CharSequence, Throwable, int, int, boolean, boolean)}
+   * with full arguments.
+   * @param startText
+   * @param exc
+   * @param firstLevelArg
+   * @param nrofLevels
+   * @param bWithExceptiontext
+   * @return
+   */
+  public static CharSequence exceptionInfo(CharSequence startText, Throwable exc
+      , int firstLevelArg, int nrofLevels, boolean bWithExceptiontext) {
+    return exceptionInfo(startText, exc, firstLevelArg, nrofLevels, bWithExceptiontext, true);
+  }
+
+  
+  /**Prepares an exception information inclusively some levels of stack trace in a short (one line) form.
+   * Core function. Call it for special cases only, use the shorter ones as standard. 
    * @param startText Any start text of the returned text. 
    *   If this refers a StringBuilder, it is used to prepare the output text. 
    *   Note that the StringBuilder should be used only locally for that.
@@ -163,7 +197,7 @@ public class ExcUtil {
    * @return A string in form of CharSequence ended with newline (0x0a). Use ...toString() to build a String if necessary.
    */
   public static CharSequence exceptionInfo(CharSequence startText, Throwable exc
-      , int firstLevel, int nrofLevels, boolean bWithExceptiontext){
+      , int firstLevelArg, int nrofLevels, boolean bWithExceptiontext, boolean bOneLine) {
     StringBuilder u;
     if(startText instanceof StringBuilder){
       u = (StringBuilder)startText;
@@ -177,9 +211,13 @@ public class ExcUtil {
     }
     StackTraceElement[] stack = exc.getStackTrace();
     int zStack = stack.length;
+    int firstLevel = firstLevelArg;
     if(firstLevel >= zStack){ firstLevel = zStack-1; }
     if(zStack> firstLevel + nrofLevels){ zStack = firstLevel + nrofLevels; }
     for(int ix = firstLevel; ix < zStack; ++ix){
+      if(!bOneLine) { 
+        u.append("\n  ");
+      }
       u.append(stack[ix].getClassName())
       .append(".").append(stack[ix].getMethodName())
       .append("(")
@@ -253,7 +291,7 @@ public class ExcUtil {
     try{ throw new NoSuchElementException("stackInfo");
     } catch(NoSuchElementException exc){  //use a non-often used Exception type, do not debug it in Eclipse
       //exc.printStackTrace(System.out);
-      s = exceptionInfo(startText, exc, firstLevel, nrofLevel, false);
+      s = exceptionInfo(startText, exc, firstLevel, nrofLevel, false, true);
     }
     return s;
   }

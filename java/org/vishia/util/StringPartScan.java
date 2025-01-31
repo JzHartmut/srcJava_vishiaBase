@@ -7,7 +7,7 @@ import org.vishia.util.StringPart.Part;
 
 
 
-/**This class extends the capability of StringPartBase for scanning capability.
+/**This class extends the capability of {@link StringPart} for scanning capability.
  * In opposite to the {@link StringPart#seek(int)} functionality with several conditions 
  * the scan methods does not search till a requested char or string but test the string
  * starting from the begin of the valid part. If the test is ok, the begin of the valid part
