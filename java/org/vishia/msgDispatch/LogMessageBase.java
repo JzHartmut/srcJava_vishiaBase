@@ -14,6 +14,42 @@ import org.vishia.util.ExcUtil;
 public abstract class LogMessageBase implements LogMessage {
 
   
+  /**Version, history and license.
+   * <ul>
+   * <li>2025-03-15: {@link #writef(String, Object...)} Now calls String.format only 
+   * if at least one argument for it is given.
+   * The problem was, that without arguments the string has contained '%' in the text, not considerate,
+   * and the format has produced an error.
+   * <li>2023-12-11 created, necessity of some base operations-
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String version = "2023-03-15";
+
+  
   /** All reports with a level less than or equal this level will be reported. Other report calls has non effect.*/
   public int nLogLevel = error;  //default: reports only errors, old: warnings and info, but no debug
 
@@ -21,11 +57,18 @@ public abstract class LogMessageBase implements LogMessage {
   
   /**Implemented only as wrapper around simple append output.
    * It is without throws, simple usage.
-   * May be adapted to message output in derived classes
+   * It prepares the text with args using {@link String#format(String, Object...)}
+   * and then sends it via {@link #writeInfo(CharSequence)}.
+   * @since 2025-03: If args are not given, then it does not call String.format(...). 
+   *   It means no consideration of (maybe faulty) format chars in msg. This makes it more universal.
    */
   @Override public void writef(String msg, Object... args) {
     try {
-      writeInfo(String.format(msg, args));
+      if(args !=null && args.length >0) {
+        writeInfo(String.format(msg, args));
+      } else {
+        writeInfo(msg);
+      }
       flush();
     } catch(Exception exc) {
       System.err.println("EXCEPTION writef: " + msg + " exc: " + exc.getMessage());

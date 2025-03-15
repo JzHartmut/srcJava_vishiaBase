@@ -429,11 +429,13 @@ public abstract class Arguments {
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
     }
     while( (posEnv=argvalRet.indexOf("$")) >=0) {  //======== identifier after $
-      int posEnvEnd = posEnv +1;
+      int posEnvEnd = posEnv;
       int posEnvEnd9;
-      @SuppressWarnings("unused") char cc;
-      while(  posEnvEnd < (argvalRet.length()-1) 
-           && Character.isJavaIdentifierPart(cc = argvalRet.charAt(++posEnvEnd))) {
+      //@SuppressWarnings("unused") 
+      char cc;
+      while( ++posEnvEnd < (argvalRet.length()) 
+          && Character.isJavaIdentifierPart(cc = argvalRet.charAt(posEnvEnd))
+           ) {
       }
       posEnvEnd9 = posEnvEnd;
       String nameEnv = argvalRet.substring(posEnv+1, posEnvEnd);
@@ -770,6 +772,7 @@ public abstract class Arguments {
                 sArg = sArg.substring(0, posEnd);
               }
               sArg = sArg.replace("$=", sDirArgFile);      // $= replaces the absolute directory of the own argument file.
+              sArg = sArg.replace("$!", sFile);            // $! replaces the absolute argument file.
               //
               if(  sArg.length() >0) {                     // don't test an empty line in the file
                 if(!tryTestArgument(sArg, ++nArg, this.errMsg, farg)) {

@@ -18,6 +18,10 @@ import org.vishia.xmlReader.XmlCfg.XmlCfgNode;
 
 
 
+/**Generates Source.java adequate the given XML cfg data to store the results there.
+ * This should only be invoked if an unknown XML file should be analyzed.
+ * 
+ */
 public class GenXmlCfgJavaData {
   
   
