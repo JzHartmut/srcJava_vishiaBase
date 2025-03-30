@@ -16,6 +16,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -270,7 +272,7 @@ public class FileFunctions {
    *   but the intension was using an own algorithm with {@link Files#walk(java.nio.file.Path, java.nio.file.FileVisitOption...)}.
    *   later todo.
    */
-  public static boolean addFilesWithBasePath(final File baseDir, final String sPathArg, List<FileAndBasePath> list) 
+  public static boolean addFilesWithBasePath(final File baseDir, final String sPathArg, List<FileAndBasePath> list, boolean bFollowSymLinks) 
   //throws FileNotFoundException
   { final String sPathBase;
     final File dir;
@@ -304,12 +306,14 @@ public class FileFunctions {
     // The wrapper instance isn't necessary outside of this static method. 
     FilesWithBasePath wrapper = new FilesWithBasePath(sPathBase, posLocalPath, list);
     //FilesWithBasePath wrapper = new FilesWithBasePath(sAbsDir.toString(), posLocalPath, list);
-    return FileFunctions.addFileToList(dir,sPathLocal, wrapper);
+    return FileFunctions.addFileToList(dir,sPathLocal, wrapper, bFollowSymLinks);
   }
   
   
   
-
+  public static boolean addFilesWithBasePath(final File baseDir, final String sPathArg, List<FileAndBasePath> list) {
+    return addFilesWithBasePath(baseDir, sPathArg, list, true);
+  }
   
   
   /**Sets the current dir from the stored String in a file.
@@ -1613,66 +1617,90 @@ public class FileFunctions {
    * @return
    */
   private static boolean addFileToList(AddFileToList listFiles, File dir, String sPath, int posWildcard
-    , FilenameFilter filterName, FilenameFilter filterAlldir, int recursivect
+    , FilenameFilter filterName, FilenameFilter filterAlldir
+    , boolean bFollowLinks, int recursivect
     ) {
+    //String name = fDir.getName();
+    //if(name.equals("genSrc")) Debugutil.stopp();
     boolean bFound = true;
     if(recursivect > 1000) throw new RuntimeException("fatal recursion error");
     int posDir = sPath.lastIndexOf('/', posWildcard) +1;  //is 0 if '/' is not found.
     File fDir = buildDir(dir, sPath, posDir);
     if(fDir.exists()) { 
-      int posBehind = sPath.indexOf('/', posWildcard);
-      boolean bAllTree = false;
-      String sPathSub = sPath.substring(posBehind +1);  //maybe ""
-      if(sPath.startsWith("xxxZBNF/"))
-        Assert.stop();
-      int posWildcardSub = sPathSub.indexOf('*');
-      if(posBehind >=0 || filterAlldir !=null) {
-        FilepathFilter filterDir;
-        //WildcardFilter filterDir;
-        if(posBehind >0){
-          String sPathDir = sPath.substring(posDir, posBehind);  //with ending '/'
-  
-          filterDir = new FilepathFilter(sPath); //Dir); 
-          bAllTree = sPathDir.equals("**");
-          if(filterDir.bAllTree){
-            filterAlldir = filterDir;
-            filterDir = null;
+      boolean bUse = true;
+      if(!bFollowLinks) {
+        try {
+          String sDir = fDir.getCanonicalPath();   // does not follow the symbolic link 
+          Path pathDir = Paths.get(sDir);          // build a java.nio.Path
+          Path linkedPath = pathDir.toRealPath();  // this follows the symbolic link, also a Windows-JUNCTION
+          boolean isSymbolicLink = linkedPath.compareTo(pathDir)!=0;        // true also for JUNCTION
+          boolean isSymbolikLinkNoJunction = Files.isSymbolicLink(pathDir); // false, does not work for JUNCTION
+          boolean isSymbolicLinkRealPath = Files.isSymbolicLink(linkedPath); // false, it is the link.
+          if(isSymbolicLink) {
+            bUse = false;
           }
-        } else {
-          filterDir = null;  //NOTE: filterAlldir may be set
+        } catch(IOException exc) {
+          bUse = false;
         }
-        if(bAllTree){
-          //search from sPathSub in the current dir too, because it is "/**/name..."
-          bFound = addFileToList(listFiles, fDir, sPathSub, posWildcardSub, filterName,filterAlldir, recursivect +1);
-        } else {
-          String[] sFiles = fDir.list();
-          if(sFiles !=null){  //null on error
-            for(String sFile: sFiles){
-              File dirSub;
-              if( (  bAllTree
-                  || filterDir !=null    && filterDir.accept(fDir, sFile)
-                  || filterAlldir !=null && filterAlldir.accept(fDir, sFile)
-                  )
-                  && (dirSub = new File(fDir, sFile)).isDirectory()
-                  ){
-                if(sFile.equals("ZBNF"))
-                  Assert.stop();
-                //dirSub is matching to the filterAlldir:
-                bFound = addFileToList(listFiles, dirSub, sPathSub, posWildcardSub, filterName,filterAlldir, recursivect +1);
+      }
+      if(bUse) {
+        boolean bAllTree = false;
+        int posBehind = sPath.indexOf('/', posWildcard);
+        String sPathSub = sPath.substring(posBehind +1);  //maybe ""
+        if(sPath.startsWith("xxxZBNF/"))
+          Assert.stop();
+        int posWildcardSub = sPathSub.indexOf('*');
+        if(posBehind >=0 || filterAlldir !=null) {
+          FilepathFilter filterDir;
+          //WildcardFilter filterDir;
+          if(posBehind >0){
+            String sPathDir = sPath.substring(posDir, posBehind);  //with ending '/'
+    
+            filterDir = new FilepathFilter(sPath); //Dir); 
+            bAllTree = sPathDir.equals("**");
+            if(filterDir.bAllTree){
+              filterAlldir = filterDir;
+              filterDir = null;
+            }
+          } else {
+            filterDir = null;  //NOTE: filterAlldir may be set
+          }
+          if(bAllTree){
+            //search from sPathSub in the current dir too, because it is "/**/name..."
+            bFound = addFileToList(listFiles, fDir, sPathSub, posWildcardSub, filterName,filterAlldir, bFollowLinks, recursivect +1);
+          } else {
+            String[] sFiles = fDir.list();
+            if(sFiles !=null){  //null on error
+              for(String sFile: sFiles){
+                File dirSub;
+                if( (  bAllTree
+                    || filterDir !=null    && filterDir.accept(fDir, sFile)
+                    || filterAlldir !=null && filterAlldir.accept(fDir, sFile)
+                    )
+                    && (dirSub = new File(fDir, sFile)).isDirectory()
+                    ){
+                  if(sFile.equals("ZBNF"))
+                    Assert.stop();
+                  //dirSub is matching to the filterAlldir:
+                  bFound = addFileToList(listFiles, dirSub, sPathSub, posWildcardSub, filterName,filterAlldir, bFollowLinks, recursivect +1);
+                }
               }
             }
           }
         }
-      }
-      if(posBehind <0 || bAllTree){
-        File[] files = fDir.listFiles(filterName);
-        if(files !=null){
-          for(File file: files)
-          { //if(file.isFile())
-            { listFiles.add(file);
+        if(posBehind <0 || bAllTree){
+          File[] files = fDir.listFiles(filterName);
+          if(files !=null){
+            for(File file: files)
+            { //if(file.isFile())
+              { listFiles.add(file);
+              }
             }
           }
         }
+      } // bUse
+      else {
+        bFound = false;
       }
     }
     else { 
@@ -1691,11 +1719,13 @@ public class FileFunctions {
    * @param dir may be null, a directory as base for sPath.
    * @param sPath path may contain wildcard for path and file. May use backslash or slash.
    * @param listFiles Container to get the files.
+   * @param bFollowSymLinks if false then do not follow directories which are symbolic links or JUNCTION in windows.
    * @return false if the dir not exists or the deepst defined directory of a wildcard path does not exist.
    *   true if the search directory exists independent of the number of founded files.
    *   Note: The number of founded files can be query via the listFiles.size().
+   * @since 2025-03-28 with bFollowSymLinks  
    */
-  public static boolean addFileToList(File dir, String sPath, AddFileToList listFiles) 
+  public static boolean addFileToList(File dir, String sPath, AddFileToList listFiles, boolean bFollowSymLinks) 
   //throws FileNotFoundException
   { boolean bFound = true;
     sPath = sPath.replace('\\', '/');
@@ -1722,12 +1752,24 @@ public class FileFunctions {
       String sName = sPath.substring(posFile); // "" if the path ends with "/"
       FilenameFilter filterName = new FilepathFilter(sName); //WildcardFilter(sName); 
       //
-      bFound = addFileToList(listFiles, dir, sPath, posWildcard, filterName, null, 0);
+      bFound = addFileToList(listFiles, dir, sPath, posWildcard, filterName, null, bFollowSymLinks, 0);
     }
     return bFound;
   }
 
 
+  /**Add files, compatible version.
+   * @param dir may be null, a directory as base for sPath.
+   * @param sPath path may contain wildcard for path and file. May use backslash or slash.
+   * @param listFiles Container to get the files.
+   * @param bFollowSymLinks if false then do not follow directories which are symbolic links or JUNCTION in windows.
+   * @return false if the dir not exists or the deepst defined directory of a wildcard path does not exist.
+   *   true if the search directory exists independent of the number of founded files.
+   *   Note: The number of founded files can be query via the listFiles.size().
+   */
+  public static boolean addFileToList(File dir, String sPath, AddFileToList listFiles) {
+    return addFileToList(dir, sPath, listFiles, true);
+  }
 
   
   

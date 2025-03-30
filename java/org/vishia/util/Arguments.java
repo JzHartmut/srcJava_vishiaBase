@@ -389,15 +389,16 @@ public abstract class Arguments {
   
   
   
-  /**Replaces expressions "...$name... or $(name)... or $$name$ with the content of the named environment variable.
-   * if starts with "/tmp/" for Windows, replaces "/tmp" with the PATH stored in TMP or TEMP
+  /**Replaces expressions "...$name... or $(name)... or $$name$ with the content of the named environment variable
+   * or (since 2025-03) also a {@link System#getProperty(String)} which can be set before Java-intern,
+   * replaces also start with "/tmp/" for Windows, replaces "/tmp" with the PATH stored in TMP or TEMP.
    * <ul>
    * <li>$name: A java-identifier format is used as name. Since 2022-01,
    * <li>$(name): should be used if after them other Java-identifier are following, as in shell scripts
    * <li>$$name$: Other syntax for the same approach, may be better readable.
    * </ul>
-   * @param argval String with environment variables to replace.  
-   * @return replaced environment, if nothing is replaced, this is identical with argval (same instance referred)
+   * @param argval String with possible environment variables to replace or starting with "/tmp/..." 
+   * @return replaced environment and/or "/tmp/". If nothing is replaced, this is identical with argval (same instance referred)
    *   Hence with argval==returnedArgval it can be checked whether a replacement was done. 
    * @throws IllegalArgumentException on faulty name of environment variable
    */
@@ -440,6 +441,7 @@ public abstract class Arguments {
       posEnvEnd9 = posEnvEnd;
       String nameEnv = argvalRet.substring(posEnv+1, posEnvEnd);
       String env = System.getenv(nameEnv);
+      if(env ==null) { env = System.getProperty(nameEnv); }
       if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
     }
@@ -583,7 +585,6 @@ public abstract class Arguments {
         bOk = false;
       }
     }
- 
     return bOk;
   }
   

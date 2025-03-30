@@ -59,4 +59,13 @@ public class Debugutil
     else return false;
   }
     /**maybe called for unused references while development. *///NEW:  public static void unused(Object obj){   stop();  }
+
+
+  public static boolean testEq(String cmp, Object ... obj) {
+    for(int ix = obj.length-1; ix >=0; --ix) {
+      if(obj[ix] == null) return false; 
+    }
+    return obj[0].equals(cmp);
+  }
+
 }

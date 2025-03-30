@@ -23,7 +23,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.vishia.util.Arguments;
-import org.vishia.util.FileSystem;
+import org.vishia.util.FileFunctions;
 
 
 //import org.vishia.mainCmd.MainCmd;
@@ -33,7 +33,7 @@ import org.vishia.util.FileSystem;
 
 /**This class supports creating a jar file and working with zip files using the standard java zip methods.
  * This class supports a base path and wildcards like described 
- * in {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
+ * in {@link org.vishia.util.FileFunctions#addFilesWithBasePath(File, String, List, boolean)}.
  * <br><br>
  * Usage template:
  * <pre>
@@ -132,7 +132,7 @@ public class Zip {
    *   in the systems current directory..
    *   If the sPath does not contain a basepath (especially it is a simple path to a file), this path is used in the zipfile.
    *   Especially the path can start from the current directory.
-   *   For usage of basepath, localpath and wildcards see {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
+   *   For usage of basepath, localpath and wildcards see {@link org.vishia.util.FileFunctions#addFilesWithBasePath(File, String, List, boolean)}.
    */
   public void addSource(String src){
     this.listSrc.add(new Src(src, null));
@@ -145,7 +145,7 @@ public class Zip {
    * @param src Path may contain a basebase:localpath separatet with ':'. The localpath is used inside the zip file
    *   as file tree. The localpath may contain wildcards.
    *   If the sPath does not contain a basepath (especially it is a simple path to a file), this path is used in the zipfile.
-   *   For usage of basepath, localpath and wildcards see {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
+   *   For usage of basepath, localpath and wildcards see {@link org.vishia.util.FileFunctions#addFilesWithBasePath(File, String, List, boolean)}.
    */
   public void addSource(File dir, String src){
     this.listSrc.add(new Src(src, dir));
@@ -201,7 +201,7 @@ public class Zip {
    *   Note: If a given source file was not found, it was ignored but write as return hint.
    * @return an error hint of file errors or null if successful.
    */
-  public String exec(File fileZip, int compressionLevel, String comment, long timestamp)
+  public String exec(File fileZip, int compressionLevel, String comment, long timestamp, boolean bFollowSymbLinks)
   throws IOException
   { StringBuilder errorFiles = null;
     final byte[] buffer = new byte[0x4000];
@@ -232,7 +232,7 @@ public class Zip {
       
       
       //get the files.
-      List<FileSystem.FileAndBasePath> listFiles= new ArrayList<FileSystem.FileAndBasePath>();
+      List<FileFunctions.FileAndBasePath> listFiles= new ArrayList<FileFunctions.FileAndBasePath>();
       for(Src src: this.listSrc){
         String path = src.path;
         if(path.startsWith("/tmp/")) {
@@ -242,15 +242,15 @@ public class Zip {
           }
         }
         System.out.println("  + " /*+ src.dir.getAbsoluteFile() */+ " : " + path);
-        FileSystem.addFilesWithBasePath (src.dir, path, listFiles);  //Note: src.dir = null always, path contains :
+        FileFunctions.addFilesWithBasePath (src.dir, path, listFiles, bFollowSymbLinks);  //Note: src.dir = null always, path contains :
       }
       if(this.bsort) {
-        Map<String, FileSystem.FileAndBasePath> idxSrc = new TreeMap<String, FileSystem.FileAndBasePath>();
-        for(FileSystem.FileAndBasePath src: listFiles) {
+        Map<String, FileFunctions.FileAndBasePath> idxSrc = new TreeMap<String, FileFunctions.FileAndBasePath>();
+        for(FileFunctions.FileAndBasePath src: listFiles) {
           idxSrc.put(src.localPath, src);
         }
         listFiles.clear();
-        for(Map.Entry<String, FileSystem.FileAndBasePath> e: idxSrc.entrySet()) {
+        for(Map.Entry<String, FileFunctions.FileAndBasePath> e: idxSrc.entrySet()) {
           listFiles.add(e.getValue());
         }
       }
@@ -262,7 +262,7 @@ public class Zip {
       
       
       
-        for(FileSystem.FileAndBasePath filentry: listFiles){
+        for(FileFunctions.FileAndBasePath filentry: listFiles){
           if(filentry.file.isFile()){
             ZipEntry zipEntry = null;
             InputStream in = null;
@@ -356,7 +356,7 @@ public class Zip {
       }
     }
     System.out.println("org.vishia.util.Zip: write zip file to " + args.fOut);
-    return exec(args.fOut, args.compress, args.comment, timestamp);
+    return exec(args.fOut, args.compress, args.comment, timestamp, args.bFollowSymbLinks);
   }
   
   
@@ -364,7 +364,25 @@ public class Zip {
   /**Zips some files in a dst file.
    * @param dst The destination file.
    * @param sPath Path should contain the basebase:localpath separatet with ':'. The localpath is used inside the zip file
-   *   as file tree. For usage of basepath, localpath see {@link org.vishia.util.FileSystem#addFilesWithBasePath(File, String, List)}.
+   *   as file tree. For usage of basepath, localpath see {@link org.vishia.util.FileFunctions#addFilesWithBasePath(File, String, List, boolean)}.
+   * @param compressionLevel Level from 0..9 for compression
+   * @param comment in the zip file.
+   * @param bNotFollowSymbLInks true then exclude symbolic linked directories and Junctions in Windows
+   * @return an error hint or null if successful.
+   * @throws IOException 
+   */
+  public static String zipfiles(File dst, File srcdir, String sPath, int compressionLevel, String comment, boolean bNotFollowSymbLInks) throws IOException{
+    Zip zip = new Zip();
+    zip.addSource(sPath);
+    return zip.exec(dst, compressionLevel, comment, 0, bNotFollowSymbLInks); 
+  }
+
+  
+  
+  /**Zips some files in a dst file, also following symbolic links. (compatible to older behavior).
+   * @param dst The destination file.
+   * @param sPath Path should contain the basebase:localpath separatet with ':'. The localpath is used inside the zip file
+   *   as file tree. For usage of basepath, localpath see {@link org.vishia.util.FileFunctions#addFilesWithBasePath(File, String, List, boolean)}.
    * @param compressionLevel Level from 0..9 for compression
    * @param comment in the zip file.
    * @return an error hint or null if successful.
@@ -373,7 +391,7 @@ public class Zip {
   public static String zipfiles(File dst, File srcdir, String sPath, int compressionLevel, String comment) throws IOException{
     Zip zip = new Zip();
     zip.addSource(sPath);
-    return zip.exec(dst, compressionLevel, comment, 0); 
+    return zip.exec(dst, compressionLevel, comment, 0, true); 
   }
 
   
@@ -389,7 +407,7 @@ public class Zip {
    * <li>-timeformat:yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat
    * <li>-manifest:<manifestfile> if given creates a jar file
    * <li>INPUT file possible with localpath-separation and wildcards as "path:** /dir* /name*.ext*"
-   * <li>For possibilities of the inputpath see {@link FileSystem#addFilesWithBasePath(File, String, List)}
+   * <li>For possibilities of the inputpath see {@link FileFunctions#addFilesWithBasePath(File, String, List, boolean)}
    * </ul>
    * @param args command line arguments
    */
@@ -434,6 +452,8 @@ public class Zip {
   public static class Args extends Arguments {
 
     public final List<Src> listSrc = new ArrayList<Src>();
+    
+    boolean bFollowSymbLinks = true;  // compatible old behavior is default.
 
     public int compress = 5;
     
@@ -478,6 +498,14 @@ public class Zip {
       return true;
     }};
     
+    
+    
+    Arguments.SetArgument setNotFollowSymbLinks = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
+      Args.this.bFollowSymbLinks = false;
+      return true;
+    }};
+    
+    
     Arguments.SetArgument sort = new Arguments.SetArgument(){ @Override public boolean setArgument(String val){ 
       Args.this.sortFiles = true;
       return true;
@@ -495,6 +523,7 @@ public class Zip {
       addArg(new Argument("-time", ":yyyy-MM-dd+hh:mm sets a timestamp in UTC (GMT)", this.setTimestamp));
       addArg(new Argument("-timeformat", ":yyyy-MM-dd+hh:mm is default, can define other format, see java.text.SimpleDataFormat", this.setTimestamp));
       addArg(new Argument("-manifest", ":<manifestfile> creates a jar file", this.setManifest));
+      addArg(new Argument("-noSymbLinks", "do not follow symbolik links and JUNCTION in Windows", this.setNotFollowSymbLinks));
       addArg(new Argument("", "INPUT file possible with localpath-separation and wildcards as \"path:**/dir*/name*.ext*\"", this.setInput));
       
     }
