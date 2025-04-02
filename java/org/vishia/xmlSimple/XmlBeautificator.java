@@ -27,6 +27,13 @@ import org.vishia.util.StringFunctions;
  * 
  * @author Hartmut Schorrig
  * @date 2023-04
+ * 
+ * Hint: This solution is not complete. It was developed, and then the {@link org.vishia.xmlReader.XmlJzReader}
+ * was used, and it was seen it outputs also a beautification result, exact that which was read.
+ * A little bit, it can be used to see how to deal with XML.
+ * 
+ * This is more a common universal solution without reading an XML file, but has yet some small errors.
+ * This comment was written on 2025-04, not used in the past from 2023/24....
  *
  */
 public class XmlBeautificator {

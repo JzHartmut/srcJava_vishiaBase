@@ -97,6 +97,42 @@ public class ZipUtils {
   
   
   
+  /**Read the requested file from zip .
+   * @param sfileZip (absolute) path to the zip file
+   * @param sFileDst (absolute) path to the file to write from zip content
+   * @param pathInZip path in zip from root, not starting with "/"
+   * @throws IOException
+   */
+  public static void copyFileFromZip(String sfileZip, String sFileDst, String pathInZip) throws IOException {
+    Path fPathDst = Paths.get(sFileDst);
+    Path zipFilePath = Paths.get(sfileZip);
+    FileSystem fs = FileSystems.newFileSystem(zipFilePath, null);
+    Path fileInsideZipPath = fs.getPath("/" + pathInZip);
+    if(Files.exists(fPathDst)) {
+      Files.delete(fPathDst);
+    }
+    Files.copy(fileInsideZipPath, fPathDst);
+    fs.close();
+  }
+  
+
+  
+  
+  /**Read the requested file from zip .
+   * @param fileZip zip file
+   * @param fileDst file to write from zip content
+   * @param pathInZip path in zip from root, not starting with "/"
+   * @return null or error message on exception. Do not throw the exception.
+   */
+  public static String copyFileFromZip(File fileZip, File fileDst, String pathInZip) {
+    try { copyFileFromZip(fileZip.getAbsolutePath(), fileDst.getAbsolutePath(), pathInZip);
+    
+    } catch(IOException exc) {
+      return exc.getMessage();
+    }
+    return null;
+  }
+  
   /**Replaces the given file in zip with the given, or copies the given.
    * @param sfileZip (absolute) path to the zip file
    * @param snewFile (absolute) path to the file which replaces
