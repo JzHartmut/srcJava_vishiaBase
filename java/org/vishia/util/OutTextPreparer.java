@@ -2618,6 +2618,25 @@ public final class OutTextPreparer
         execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
+    else if(container instanceof int[]) {
+      int[] array = (int[]) container;
+      boolean bFirst = true;
+      args.args[cmd.ixEntryKey] = null;
+      for(int ix = 0; ix < array.length; ++ix) {
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = array[ix];
+        if(bFirst) {
+          bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
+        } else { //start on 2. item
+          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        }
+      }
+      if(!bFirst) {  //-------------------------------------- if the container is not empty, 
+        args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
+        args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
+        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+      }
+    }
     else if(container instanceof Iterable) {
       boolean bFirst = true;
       args.args[cmd.ixEntryKey] = null;

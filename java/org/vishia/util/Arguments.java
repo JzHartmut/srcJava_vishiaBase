@@ -8,7 +8,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.text.ParseException;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -242,6 +245,10 @@ public abstract class Arguments {
    */
   public final static String sVersion = "2024-06-02";
 
+  private static DateFormat formatDateYYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
+
+  private static DateFormat formatDateHHmm = new SimpleDateFormat("HH_mm_ss");
+
   
   /**Interface for implementation of setting arguments.
    * The implementation can be written with an anonymous implementation with the simple form:
@@ -418,15 +425,13 @@ public abstract class Arguments {
     while( (posEnv=argvalRet.indexOf("$$")) >=0) {
       int posEnvEnd = argvalRet.indexOf('$', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
-      String env = System.getenv(nameEnv);
-      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
+      String env = getEnv(nameEnv);
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
     }
     while( (posEnv=argvalRet.indexOf("$(")) >=0) {
       int posEnvEnd = argvalRet.indexOf(')', posEnv+2);
       String nameEnv = argvalRet.substring(posEnv+2, posEnvEnd);
-      String env = System.getenv(nameEnv);
-      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
+      String env = getEnv(nameEnv);
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd+1);
     }
     while( (posEnv=argvalRet.indexOf("$")) >=0) {  //======== identifier after $
@@ -440,15 +445,37 @@ public abstract class Arguments {
       }
       posEnvEnd9 = posEnvEnd;
       String nameEnv = argvalRet.substring(posEnv+1, posEnvEnd);
-      String env = System.getenv(nameEnv);
-      if(env ==null) { env = System.getProperty(nameEnv); }
-      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
+      String env = getEnv(nameEnv);
       argvalRet = argvalRet.substring(0, posEnv) + env + argvalRet.substring(posEnvEnd9);
     }
     return argvalRet;
   }
   
   
+  /**Operation used for environment variables in arguments, see {@link #replaceEnv(String)}.
+   * Additional "DATE" and "TIME" is supported which returns "2025-04-03" and "17_45_33" adequate with the current time on call.
+   * @param nameEnv
+   * @return value of the environment.
+   * @throws IllegalArgumentException if the environment variable are not found.
+   */
+  public static final String getEnv(String nameEnv) {
+    String env;
+    if(nameEnv.equals("DATE")) {
+      long msec = System.currentTimeMillis();
+      Date date = new java.util.Date(msec);
+      env = formatDateYYYYMMDD.format(date);
+    } else if(nameEnv.equals("TIME")) {
+      long msec = System.currentTimeMillis();              // seems to be it takes the time zone of the computer or standard Java settings
+      Date time = new java.util.Date(msec);
+      env = formatDateHHmm.format(time);
+    } else {
+      env = System.getenv(nameEnv);
+      if(env ==null) { env = System.getProperty(nameEnv); }
+      if(env == null) throw new IllegalArgumentException("Environment variable >>" + nameEnv + "<< expected, not found");
+    }
+    return env;
+  }
+    
   
 
   /**This operation tests one argument maybe from a container as String[].
