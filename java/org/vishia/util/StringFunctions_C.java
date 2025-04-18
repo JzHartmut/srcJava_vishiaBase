@@ -106,16 +106,18 @@ public class StringFunctions_C
     int usedDigits = 0;
     char cc;
     int ixSrc = pos;
-    int size = srcP.length() - pos;
-    if(sizeP <0) {size += sizeP +1; }   // sizeP negative: -1 means till end
-    if(sizeP >0 && size > sizeP){ size = sizeP; }
+    int zSrc = srcP.length() - pos;
+    int restlen;
+    if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
+    else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
+    //
     int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
-    if(size > 0 && srcP.charAt(ixSrc) == '-') { 
-      ixSrc+=1; size -=1; bNegativ = true; 
+    if(restlen > 0 && srcP.charAt(ixSrc) == '-') { 
+      ixSrc+=1; restlen -=1; bNegativ = true; 
     }
     else { bNegativ = false; }
     long valMax = radix == 16 ? 0xffffffffL : (bNegativ ? 0x080000000L : 0x7fffffff);
-    while(--size >= 0) {               // break in loop!
+    while(--restlen >= 0) {               // break in loop!
       cc = srcP.charAt(ixSrc);
       if(spaceChars !=null && spaceChars.indexOf(cc)>=0){
         ixSrc +=1;
@@ -153,6 +155,11 @@ public class StringFunctions_C
 
   
   /**Parses an integer value. See {@link #parseIntRadix(CharSequence, int, int, int, int[], String)}
+   * @param sizeP The number of chars to regard at maximum. A value of -1 means: use the whole String till end. 
+   *   sizeP = 0 is possible, then nothing should be parsed and paredCharsP[0] is set to 0. It may be possible
+   *   that the number of characters to parse will be calculated outside, and 0 is a valid result. 
+   *   If sizeP is > the length, then the whole String is used.
+   *   You can set both sizeP = -1 or sizeP = Integer.MAXVALUE to deactivate this argument.
    * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
    * @return
    */
@@ -165,21 +172,29 @@ public class StringFunctions_C
 
   
   /**Adequate method for long values, see {@link #parseIntRadix(String, int, int, int, int[], String)}.
+   * @param sizeP The number of chars to regard at maximum. A value of -1 means: use the whole String till end. 
+   *   sizeP = 0 is possible, then nothing should be parsed and paredCharsP[0] is set to 0. It may be possible
+   *   that the number of characters to parse will be calculated outside, and 0 is a valid result. 
+   *   If sizeP is > the length, then the whole String is used.
+   *   You can set both sizeP = -1 or sizeP = Integer.MAXVALUE to deactivate this argument.
    * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
    * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
    *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    */
   public static long parseLong(final CharSequence srcP, final int pos, final int sizeP, final int radix
       , final int[] parsedChars, final String separatorChars) {
-    int size = srcP.length() - pos;
-    if(size > sizeP){ size = sizeP; }
+    int zSrc = srcP.length() - pos;
+    int restlen;
+    if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
+    else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
+    //
     boolean bNegativ;
     int pos1 = pos;
-    if(size > 0 && srcP.charAt(pos1) == '-') { 
-      pos1+=1; size -=1; bNegativ = true; 
+    if(restlen > 0 && srcP.charAt(pos1) == '-') { 
+      pos1+=1; restlen -=1; bNegativ = true; 
     }
     else { bNegativ = false; }
-    long val = parseUlong(srcP, pos1, sizeP, radix, parsedChars, separatorChars);
+    long val = parseUlong(srcP, pos1, restlen, radix, parsedChars, separatorChars);
     if(bNegativ){ val = -val; }
     return val;
   }
@@ -189,29 +204,32 @@ public class StringFunctions_C
   
   
   /**Adequate method for long values, see {@link #parseIntRadix(String, int, int, int, int[], String)}.
-   * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
-   * @param spaceChars maybe null, some characters which are skipped by reading the digits. It is especially ". '" to skip over a dot, or spaces or '
-   */
-  /**
    * @param src Any CharSequence which should start on pos with a digit representation.
    * @param pos start position in src.
-   * @param size max number of chars from src. The given size should not exceed the  size of src. Note: other than in {@link #parseLong(CharSequence, int, int, int, int[], String)}.
+   * @param sizeP The number of chars to regard at maximum. A value of -1 means: use the whole String till end. 
+   *   sizeP = 0 is possible, then nothing should be parsed and paredCharsP[0] is set to 0. It may be possible
+   *   that the number of characters to parse will be calculated outside, and 0 is a valid result. 
+   *   If sizeP is > the length, then the whole String is used.
+   *   You can set both sizeP = -1 or sizeP = Integer.MAXVALUE to deactivate this argument.
    * @param radix of the number, it can be any value 0..36- If >10 then characters A..Z or a..z are used for digits.
    *   Usually 16 for hex numbers. 
-   * @param parsedChars maybe null, if not null it should be intialized with int[1]. The position [0] returns the number of the digits.
+   * @param parsedChars maybe null, if not null it should be intialized with int[1]. The position [0] returns the number of the digits. @pjava2c=simpleVariableRef.
    * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
    *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    * @return The parsed number, 0 if no character is detected.
    */
-  public static long parseUlong(final CharSequence src, final int pos, final int size, final int radix
+  public static long parseUlong(final CharSequence src, final int pos, final int sizeP, final int radix
       , final int[] parsedChars, final String separatorChars)
   { long val = 0;  //exact same lines as parseInt, difference is: using long instead int. 
-    int size1 = size;
+    int zSrc = src.length() - pos;
+    int restlen;
+    if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
+    else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
     int digit;
     char cc;
     int ixSrc = pos;
     int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
-    while(--size1 >= 0){
+    while(--restlen >= 0){
       cc = src.charAt(ixSrc);
       if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
         ixSrc +=1;
@@ -242,7 +260,7 @@ public class StringFunctions_C
    * known as hexa numbers A..F or a..f. 
    * @param srcP The String.
    * @param pos The position in src to the last digit.
-   * @param size The maximum of chars to parse. Should be less or equal pos.
+   * @param sizeP The maximum of chars to parse. Should be less or equal pos.
    * @param radix The radix of the number, typical 2, 10 or 16, max 36.
    * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
    * @return the Number.
@@ -255,13 +273,13 @@ public class StringFunctions_C
     int digit;
     char cc;
     int ixSrc = pos;
-    int size = srcP.length() - pos;
-    if(size > sizeP){ size = sizeP; }
+    int restlen = srcP.length() - pos;
+    if(restlen > sizeP){ restlen = sizeP; }
     int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
     int maxHexDigitLower = 'A' + radix - 11; 
     int maxHexDigitUpper = 'a' + radix - 11; 
     int multPosition = 1;
-    while(size > 0 && ixSrc >=0 && (digit = (cc = srcP.charAt(ixSrc)) - '0') >=0 
+    while(restlen > 0 && ixSrc >=0 && (digit = (cc = srcP.charAt(ixSrc)) - '0') >=0 
          && (  cc <= maxDigit 
             || (radix >10 && (  cc >= 'A' && (digit = (cc - 'A'+ 10)) <=radix
                              || cc >= 'a' && (digit = (cc - 'a'+ 10)) <=radix)
@@ -269,10 +287,10 @@ public class StringFunctions_C
     { val += multPosition * digit;
       multPosition *= radix;
       ixSrc-=1;
-      size -=1;
+      restlen -=1;
     }
-    if(size > 0 && ixSrc >=0 && srcP.charAt(ixSrc) == '-') { 
-      ixSrc-=1; size -=1; 
+    if(restlen > 0 && ixSrc >=0 && srcP.charAt(ixSrc) == '-') { 
+      ixSrc-=1; restlen -=1; 
       val = -val;
     }
     if(parsedChars !=null){
@@ -314,8 +332,12 @@ public class StringFunctions_C
   { 
     float ret;
     int poscurr = pos;
-    int restlen = src.length() - pos;
-    if(sizeP >=0 && restlen > sizeP){ restlen = sizeP; }
+
+    int zSrc = src.length() - pos;
+    int restlen;
+    if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
+    else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
+    //
     boolean bNegative;
     if(restlen > 0 && src.charAt(poscurr) == '-') { 
       poscurr+=1; restlen -=1; bNegative = true; 
