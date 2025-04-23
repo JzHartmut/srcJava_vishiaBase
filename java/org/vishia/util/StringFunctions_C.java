@@ -447,6 +447,46 @@ public class StringFunctions_C
   
   
   
+  /**Converts the given double to a String representation, whereby the number of digits is minimized,
+   * so that the resulting String is a value >=v1 and <= v2 with the minimum of representing digits.
+   * This is used for code generation necessary Strings with only this accuracy
+   * @param v1 should be < v2, it is the lower presentation of the exact value
+   * @param v2 It is the higher presentation of the value. returned value should be < v2
+   * @return CharSequence contains the proper image of the values. It is a StringBuilder, but it should not be changed.
+   */
+  public final static CharSequence doubleToStringTruncated (double v1, double v2) {
+    String s1 = Double.toString(v1);
+    String s2 = Double.toString(v1+ (v2-v1)/2);            // build the mid between both values, this should be output. 
+    int z1 = s1.length(); 
+    int z2 = s2.length();
+    StringBuilder ret = new StringBuilder();
+    boolean bDot = false;
+    boolean bEnd = false;
+    for(int ix = 0; ix < z1; ++ix) {
+      char c1 = s1.charAt(ix); 
+      char c2 = ix < z2 ? s2.charAt(ix) : '0'; 
+      if(c2 == '.') {                            //--------vv output anyway till '.'
+        ret.append(c1);
+        bDot = true;
+        if(bEnd) {                               //---------- end reached before '.', fill '.0' and break;
+          ret.append('0'); 
+          break;
+        }
+      } else if(bEnd) {                          //--------vv stop output, break, one character after different chars
+        if(bDot) break;                                    // but only after '.'
+        ret.append('0');
+      }
+      else {                                     //--------vv regular, nothing occurred till now
+        ret.append(c2);                                    // output the mid value
+        if(c1 != c2) {                                     // but end output digits if different
+          bEnd = true;                                     // but output trailing '0.0'
+        }
+      }
+    }
+    return ret;
+  }
+  
+  
   
   /**Array with power of 10 to detect the exponent size of a long value. */
   private static final long[] n10a =                      
