@@ -1475,7 +1475,7 @@ public class DataAccess {
         }
       }
     }
-     return invokeMethodWithGivenArgValues(element, clazz, obj, accessPrivate, bNoExceptionifNotFound, args);
+    return invokeMethodWithGivenArgValues(element, clazz, obj, accessPrivate, bNoExceptionifNotFound, args);
   }  
   
   
@@ -1806,10 +1806,10 @@ public class DataAccess {
       //check whether the element.fnArgs are matching to a String array 
       if(providedArgs == null){ 
         actArgs = new Object[1];
-        actArgs[0] = new String[0];
+        actArgs[0] = new Object[0];
       } else {
         actArgs = new Object[1];
-        String[] actArgs1 = new String[providedArgs.length];
+        Object[] actArgs1 = new Object[providedArgs.length];
         actArgs[0] = actArgs1;
         int ix = -1;
         for(Object arg: providedArgs){
@@ -1892,7 +1892,7 @@ public class DataAccess {
               lastArrayArg = new String[providedArgs.length - argTypes.length +1]; }
             else {
               //TODO what else
-              lastArrayArg = new String[providedArgs.length - argTypes.length +1]; }
+              lastArrayArg = new Object[providedArgs.length - argTypes.length +1]; }
           } else {
             lastArrayArg = null;
           }

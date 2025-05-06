@@ -389,7 +389,13 @@ public final class OutTextPreparer
     
     /**Array of all arguments. It is sorted to the {@link OutTextPreparer#nameVariables} with its value {@link DataAccess.IntegerIx}. 
      */
-    Object[] args;
+    final Object[] args;
+    
+    /**This is only to see the arguments for debug.*/
+    Map<String, Object> argsByName;
+    
+    /**This is only to see the arguments for debug.*/
+    final Map<String, DataAccess.IntegerIx> argsIxByName;
     
     /**Any &lt;call in the pattern get the data for the called OutTextPreparer, but only ones, reused. */
     DataTextPreparer[] argSub;
@@ -416,8 +422,11 @@ public final class OutTextPreparer
         throw new IllegalStateException("OutTextPreparer is not initialized, new DataTextPreparer(...) only possible on initialized OutTextPreparer");
       }
       this.prep = prep;
+      this.argsIxByName = prep.nameVariables;
       if(prep.nameVariables.size() >0) {
         this.args = new Object[prep.nameVariables.size()];
+      } else {
+        this.args = null;
       }
       if(prep.ctCall >0) {
         this.argSub = new DataTextPreparer[prep.ctCall];
@@ -599,7 +608,7 @@ public final class OutTextPreparer
     
     
     @Override public String toString() {
-      return this.cmd + ":" + this.textOrVar;
+      return this.linecol[0] + "," + this.linecol[1] + " " + this.cmd + ":" + this.textOrVar;
     }
     
   }//sub class Cmd
@@ -1640,19 +1649,28 @@ public final class OutTextPreparer
   
   
   
-  /**Sets all variables from list, but at last "OUT".
-   * "OUT" is the opened output writer for generation (Type Appendable)
-   * 
+  /**Sets all variables from list, but at last "OUT", "CMD" and "OTX".
+   * <ul>
+   * <li>"OUT" is the opened output writer for generation (Type Appendable)
+   * <li>"OTXcmd" is the actual {@link Cmd}
+   * <li>"OTXdata" is the actual {@link DataTextPreparer}
+   * <li>"OTX" it this. used for debug.
+   * </ul>
+   * The first variables have the index in order of the argument list of the otx scripts.
+   * This is important to also access the variables manually by index.
+   * Variables after "OTX" are variables created in the otx script itself.
    * @param listArgs first argument in the list gets the index 0
    */
   private void setVariables(List<String> listArgs) {
     this.listArgs = listArgs; 
+    this.ixOUT = this.listArgs.size();
+    this.listArgs.add("OUT");
+    this.listArgs.add("OTXcmd");
+    this.listArgs.add("OTXdata");
+    this.listArgs.add("OTX");
     for(String var: listArgs) {
       this.nameVariables.put(var, new DataAccess.IntegerIx(this.nameVariables.size()));
     }
-    this.ixOUT = this.nameVariables.size();
-    this.nameVariables.put("OUT", new DataAccess.IntegerIx(this.ixOUT));
-    
   }
   
   
@@ -1790,6 +1808,7 @@ public final class OutTextPreparer
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
             this.nameVariables.put(entryVar, ixOentry);
+            this.listArgs.add(entryVar);
           }
           cmd.ixEntryVar = ixOentry.ix;
           String entryVarNext = entryVar + "_next";                             // the descendant of the current element is also available. 
@@ -1797,6 +1816,7 @@ public final class OutTextPreparer
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
             this.nameVariables.put(entryVarNext, ixOentry);
+            this.listArgs.add(entryVarNext);
           }
           cmd.ixEntryVarNext = ixOentry.ix;
           String entryKey = entryVar + "_key";                             // the descendant of the current element is also available. 
@@ -1804,6 +1824,7 @@ public final class OutTextPreparer
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
             this.nameVariables.put(entryKey, ixOentry);
+            this.listArgs.add(entryKey);
           }
           cmd.ixEntryKey = ixOentry.ix;
           ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;
@@ -1819,6 +1840,7 @@ public final class OutTextPreparer
           if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
             ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
             this.nameVariables.put(variable, ixOentry);
+            this.listArgs.add(variable);
           }
           cmd.ixVariable = ixOentry.ix;
           pos0 = (int)sp.getCurrentPosition();  //after '>'
@@ -1972,7 +1994,7 @@ public final class OutTextPreparer
     } //while
     if(ixixCmd >=0) {
       sp.close();
-      throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": closing <.> for <" + this.cmds.get(ixCtrlCmd[ixixCmd]) +"> is missing ");
+      throw new IllegalArgumentException("\nOutTextPreparer " + this.sIdent + ": closing <.> for <" + this.cmds.get(ixCtrlCmd[ixixCmd]) +"> is missing ");
     }
     sp.close();
   }
@@ -1999,6 +2021,7 @@ public final class OutTextPreparer
     if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
       ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
       this.nameVariables.put(wrBufferIdent, ixOentry);
+      this.listArgs.add(wrBufferIdent);
     }
     WrCmd wrcmd = (WrCmd)addCmd(pattern, sp.getlineCol(), pos0, pos1, ECmd.wr, wrBufferIdent, reflData, idxConstData, idxScript);
     wrcmd.ixDataWr = ixOentry.ix;
@@ -2358,13 +2381,24 @@ public final class OutTextPreparer
     Appendable wr = wrArg;
     assert(wr !=null);
     Appendable wrBack = wrArg;  
-//    if(args.args[this.ixOUT] == null) {
-    args.args[this.ixOUT] = wr;                          // variable "OUT" is the output writer, always stored here as OUT
-//    }
+    args.args[this.ixOUT] = wr;                            // variable "OUT" is the output writer, always stored here as OUT
+    args.args[this.ixOUT+2] = args;                        // variable "OTXdata" is args itself, for debug info
+    args.args[this.ixOUT+3] = this;                        // variable "OTX" is this itself, for debug info
+    Cmd cmd;
+    if(args.argsByName == null) {
+      args.argsByName = new TreeMap<>();
+      for(Map.Entry<String, DataAccess.IntegerIx> e : this.nameVariables.entrySet()) {
+        int ix = e.getValue().ix;
+        String name = e.getKey();
+        Object value = args.args[ix];
+        args.argsByName.put(name, value);
+      }
+    }
     while(ixCmd < ixEndExcl) {
       if(args.debugOtx !=null && args.debugOtx.equals(this.sIdent) && args.debugIxCmd == ixCmd)
         debug();
-      Cmd cmd = this.cmds.get(ixCmd++);
+      cmd = this.cmds.get(ixCmd++);
+      args.args[this.ixOUT+1] = cmd;                       // variable "OTXCMD" is the current cmd
       boolean bDataOk = true;
       if(bDataOk) {    //==================================== second execute the cmd with the data
         switch(cmd.cmd) {
@@ -2388,6 +2422,8 @@ public final class OutTextPreparer
             } else {
               args.args[ ixVar ] = res;
             }
+            String name = this.listArgs.get(ixVar);
+            args.argsByName.put(name, args.args[ixVar]);
           } break;
           case typeCheck: if(args.bChecks){
             TypeCmd cmdt = (TypeCmd)cmd;
@@ -2462,7 +2498,7 @@ public final class OutTextPreparer
     }
   }
   
-  
+
   
   private Object dataForCmd ( Cmd cmd, DataTextPreparer args, Appendable wr ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
@@ -2587,6 +2623,27 @@ public final class OutTextPreparer
   
   
   
+  /**Executes preparation for a for cmd for internal control structures
+   * complete the names of the for variables, only used for debug
+   * @param wr The output channel
+   * @param args for preparation.
+   * @param ixStart from this cmd in {@link #cmds} 
+   * @throws IOException 
+   */
+  private void execSubFor( Appendable wrArg, DataTextPreparer args, ForCmd cmd, int ixStart, int ixEndExcl ) throws IOException {
+    int ix = cmd.ixEntryKey;
+    String name = this.listArgs.get(ix);
+    args.argsByName.put(name, args.args[ix]);
+    ix = cmd.ixEntryVar;
+    name = this.listArgs.get(ix);
+    args.argsByName.put(name, args.args[ix]);
+    ix = cmd.ixEntryVarNext;
+    name = this.listArgs.get(ix);
+    args.argsByName.put(name, args.args[ix]);
+    execSub(wrArg, args, ixStart, ixEndExcl);
+  }
+  
+  
   /**Executes a for loop
    * @param wr the output channel
    * @param cmd The ForCmd
@@ -2609,13 +2666,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
-          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof int[]) {
@@ -2628,13 +2685,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
-          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Iterable) {
@@ -2646,13 +2703,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;
         } else { //start on 2. item
-          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Map) {
@@ -2667,14 +2724,14 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;
         } else { //start on 2. item
-          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryKey] = key;                   // execute the last or only one element.
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute for the last argument.
-        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Integer) { //--------------- numeric for(int ix=0; ix < container, ++ix)
@@ -2687,13 +2744,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
-          execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = ixExcl-1;
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSub(wr, args, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else {
@@ -2747,6 +2804,8 @@ public final class OutTextPreparer
   @Override public String toString() { return this.sIdent + ":" + this.pattern; }
   
   
-  void debug() {}
+  void debug() { 
+    Debugutil.stopp(); 
+  }
   
 } //class OutTextPreparer
