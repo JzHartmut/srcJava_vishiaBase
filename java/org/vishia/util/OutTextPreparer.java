@@ -46,7 +46,7 @@ import org.vishia.util.Java4C.ConstRef;
  * in the following forms (example, text file via readTemplate...(): 
  * <pre>
  * 
- * <:otx: otxExample : data: placeholder >
+ * <:otx: otxExample : data, placeholder, NEWLINE==nli >
  * Output plain text with <&placeholder.value>
  * <:if:data.cond>conditional output<:else>other variant<.if>
  * <:for:var:data.container>element = <&var_key>: <&var><:if:var_next>, <.if><.for>
@@ -845,7 +845,17 @@ public final class OutTextPreparer
   /**The source of the generation script, argument of {@link #parse(Class, String)} only for debug. */
   public final String pattern;
   
+  /**If not null then this is the start String of an line for output,
+   * set if "NEWLINE===" is given in arguments.
+   * 
+   */
+  String sLineoutStart;
+  
+  int nLineoutStart;
+  
   int nrLineStartInFile;
+  
+  int ixVarLineoutStart;
   
   /**This is only stored as info, not used in this class.
    * It is the argument execClass from the user, 
@@ -860,7 +870,7 @@ public final class OutTextPreparer
  
   int ctCall = 0;
   
-  private List<Cmd> cmds = new ArrayList<Cmd>();
+  List<Cmd> cmds = new ArrayList<Cmd>();
   
   
   /**Name of the generation script used for debug and comparison with data. */
@@ -1626,9 +1636,24 @@ public final class OutTextPreparer
 
   
   
-  /**Sets all variables from string, but at last "OUT".
-   * "OUT" is the opened output writer for generation (Type Appendable)
+  /**Sets all variables from string, detects 'NEWLINE'.
+   * This are the argument variables for the script.
    * It calls {@link #setVariables(List)}
+   * Additional the variables 'OUT', 'OTX', 'OTXCMD', 'OTXDATA' are set.
+   * <br><br>
+   * If instead the variable name 'NEWLINE' is written,
+   * it sets the line mode for parsing the script. Then:
+   * <ul><li>The immediately next characters, which should be the same,
+   *     defines the start sequence of a newline in the output script.
+   *     This char sequence is set to {@link #sLineoutStart} to detect it in the script.
+   *   <li>immediately after this characters a variable as indentifier may be given
+   *     which is stored as variable, but its index is set to {@link #ixVarLineoutStart}.
+   *     The content of this variable is then output as newline sequence.
+   *     It should contain '\n' or other desired newline sequence on first position, 
+   *     and then indentation characters. 
+   *   <li>If this variable is not found, means 'NEWLINE---,' is found, 
+   *     then '\n' will be output simple as newline character string.
+   * </ul>
    * @param variables String with identifier names, separated with comma, white spaces admissible. 
    *   first name in the String gets the index 0
    */
@@ -1638,7 +1663,21 @@ public final class OutTextPreparer
     sp.setIgnoreWhitespaces(true);
     while(sp.scanStart().scanIdentifier().scanOk()) {
       String sVariable = sp.getLastScannedString();
-      listvarValues.add(sVariable);
+      if(sVariable.equals("NEWLINE")) {
+        char cLineoutStart = sp.getCurrentChar();
+        long pos = sp.getCurrentPosition();
+        sp.seekNoChar("" + cLineoutStart);
+        long pos2 = sp.getCurrentPosition();
+        this.nLineoutStart = (int)(pos2 - pos);
+        this.sLineoutStart = sp.getCharSequenceRange(pos, pos2).toString();
+        if(sp.scanStart().scanIdentifier().scanOk()) {
+          String sVariableLineIndent = sp.getLastScannedString();
+          this.ixVarLineoutStart = listvarValues.size();
+          listvarValues.add(sVariableLineIndent);
+        }
+      } else {
+        listvarValues.add(sVariable);
+      }
       if(!sp.scan(",").scanOk() && !sp.scan(":").scanOk()) {
         break; //, as separator
       }
@@ -1672,637 +1711,722 @@ public final class OutTextPreparer
       this.nameVariables.put(var, new DataAccess.IntegerIx(this.nameVariables.size()));
     }
   }
-  
-  
+
   
   /**Parse the pattern. This routine will be called from the constructor or in application
    * or especially in {@link #readTemplateCreatePreparer(InputStream, Class, Map)}
    * for two-phase-translation. 
-   * TODO may control whether an error message is written in the cmd or it should be aborted by a ParseException. Make it unify and document it.
    * @param execClass used to parse &lt;:exec:...>, the class where the operation should be located.
    * @param idxScript Map with all sub scripts to support &lt;:call:subscript..>
    * @throws ParseException 
    */ 
   public void parse(Class<?> execClass, final Map<String, Object> idxConstDataArg, Map<String, OutTextPreparer> idxScript) throws ParseException {
-    final Map<String, Object> idxConstData = idxConstDataArg !=null ? idxConstDataArg: idxConstDataDefault;
-    final Map<String, Integer> idxIxWrBufferIdent = new TreeMap<>();
+    ParseHelper thiz = new ParseHelper(this, execClass, idxConstDataArg, idxScript);
+    thiz.parse();
+  }
+  
+  
+  
+  /**internal class to organize data for parsing.
+   * @since 2025-05-07
+   */
+  private static class ParseHelper {
+    
+    final OutTextPreparer otx;
+    
+    final Map<String, Object> idxConstData;
+    
+    //final Map<String, Integer> idxIxWrBufferIdent = new TreeMap<>();
+    
+    final Class<?> execClass;
+    
+    final Map<String, OutTextPreparer> idxScript;
+    
     int pos0 = 0; //start of current position after special cmdf
+    
     int pos1 = 0; //end before the next special command
+    
     int[] ixCtrlCmd = new int[20];  //max. 20 levels for nested things.
+    
     int ixixCmd = -1;
-    int line =0, colmn =0;
-    StringPartScanLineCol sp = new StringPartScanLineCol(this.pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
-    sp.setIgnoreWhitespaces(true);  // it is valid inside the syntactical relevant parts <...>
+    
+    //int line =0, colmn =0;
+    
+    boolean bNewline = false;
+    
+    final StringPartScanLineCol sp;       
+    
     int nLastWasSkipOverWhitespace = 0;
-    while(sp.length() >0) {
-      nLastWasSkipOverWhitespace +=1;
-      if(sp.scanStart().scan("##").scanOk()) {             // if a ## was found, seek till newline.
-        sp.seek("\n").seekPos(1);                          // skip all till newline
-        pos0 = (int)sp.getCurrentPosition();
-      }                                                    // Note: spaces are detected because of content till <
-      sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);  // < is always start of a special output
-      if(sp.found()) {
-        
-        pos1 = (int)sp.getCurrentPosition() -1; //before <
-        sp.scanStart();
-        //if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
-        if(sp.scan(":args:").scanOk()){ 
-          parseArgs(sp);
-          if(!sp.scan(">").scanOk()) { 
-            addError("faulty <:args:... at " + sp.getCurrentPosition(), sp.getlineCol());
-          }
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(  nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
-            && (sp.scan(": >").scanOk() || sp.scan(":+>").scanOk() || sp.scan(":? >").scanOk())){ 
-         addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, null, null, idxScript);  //adds the text before <:+>
-         sp.scanSkipSpace();
-         pos0 = (int)sp.getCurrentPosition();  //after '>'
-         nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
-        }  
-        else if( sp.scan(":?nl>").scanOk()){ 
-         addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, null, null, idxScript);  //adds the text before <:+>
-         sp.seekAfterNewline();
-         pos0 = (int)sp.getCurrentPosition();  //after newline
-        }
-        else if(sp.scan("&").scanIdentifier().scan(">").scanOk()){
-          //------------------------------------------------- <&varname> a simple access to a given value
-          String sName = sp.getLastScannedString();        // it adds a simple index in Cmd, not using DataAccess
-          addCmdSimpleVar(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addVar, sName, execClass, idxConstData);
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
-          //------------------------------------------------- <&data.path:format> more complex access to a given value
-          final String sDatapath = sp.getLastScannedString();
-//          if(sDatapath.startsWith("&("))
-//            Debugutil.stop();
-//          if(sDatapath.contains("pin.pinDtype.dataType.dt.sTypeCpp"))
-//            Debugutil.stop();
-          //====> ////
-          final String sFormat;
-          if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scanOk()) {
-            sFormat = sp.getLastScannedString();           // <&...:format> is given
-          } else {
-            sFormat = null;
-          }
-          addCmdValueAccess(this.pattern, sp.getlineCol(), pos0, pos1, sDatapath, sFormat, execClass, idxConstData);
-          sp.seekPos(1);
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(":wr:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          //====>  ------------------------------------------ <:if:...>
-          parseWr( this.pattern, pos0, pos1, sp, execClass, idxConstData, idxScript);
-          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current wr
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-          
-        }
-        else if(sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          //====>  ------------------------------------------ <:if:...>
-          parseIf( this.pattern, pos0, pos1, ECmd.ifCtrl, sp, execClass, idxConstData, idxScript);
-          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current if
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-          
-        }
-        else if(sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          //====>
-          parseIf( this.pattern, pos0, pos1, ECmd.elsifCtrl, sp, execClass, idxConstData, idxScript);
-          Cmd ifCmdLast;
-          int ixixIfCmd = ixixCmd; 
-          if(  ixixIfCmd >=0 
-            && ( (ifCmdLast = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
-               || ifCmdLast.cmd == ECmd.elsifCtrl
-            )  ) {
-            ((IfCmd)ifCmdLast).offsElsif = this.cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
-          }else { 
-            sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
-          }
-          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;  //The position of the current <:elsif>
-          
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(":else>").scanOk()) {
-          //====>
-          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.elseCtrl, null, null, null, idxScript);
-          Cmd ifCmd;
-          int ixixIfCmd = ixixCmd; 
-          if(  ixixIfCmd >=0 
-              && ( (ifCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
-                 || ifCmd.cmd == ECmd.elsifCtrl
-                  )  ) {
-            ((IfCmd)ifCmd).offsElsif = this.cmds.size() - ixCtrlCmd[ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
-          }else { 
-            sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.elsif> without <:if> ");
-          }
-          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;       //The position of the current <:else>
+    
+    
+    ParseHelper (OutTextPreparer otx, Class<?> execClass, final Map<String, Object> idxConstDataArg, Map<String, OutTextPreparer> idxScript) {
+      this.otx = otx;
+      this.sp = new StringPartScanLineCol(otx.pattern);       // Note: pattern, pos0, pos1 is used to select a immediately output text
+      this.idxConstData = idxConstDataArg !=null ? idxConstDataArg: idxConstDataDefault;
+      this.execClass = execClass;
+      this.idxScript = idxScript;
+    }
 
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
+  
+  
+    /**Parse the given script in the created {@link OutTextPreparer} instance with given variables.
+     * @throws ParseException
+     */
+    void parse() throws ParseException {
+      if(this.otx.sLineoutStart !=null) {        //---------- line mode:
+        this.bNewline = true;                              // the script starts with newline.
+      }
+      this.sp.setIgnoreWhitespaces(true);  // it is valid inside the syntactical relevant parts <...>
+      while(this.sp.length() >0) {               //========== main loop of parsing
+        this.nLastWasSkipOverWhitespace +=1;
+        if(this.bNewline && this.otx.sLineoutStart !=null) {  
+          //===============================================vv newline in line mode
+          if(this.sp.scanStart().scan(this.otx.sLineoutStart).scanOk()) { //========== newline found 
+            if(this.otx.ixVarLineoutStart >=0) {           
+              String sName = this.otx.listArgs.get(this.otx.ixVarLineoutStart);  // insert content of this variable
+              addCmdSimpleVar(null, this.sp.getlineCol(), 0,0, ECmd.addVar, sName);
+            } else {
+              addCmd("\n", this.sp.getlineCol(), 0, 1, null);
+            }
+            this.sp.seekNoChar(this.otx.sLineoutStart.substring(0,1));
+          } else {
+            this.sp.seekNoWhitespace();   // if no newline mark found, ignore the bNewline, start on next content
+          }
+          this.bNewline = false;
+          this.pos0 = (int)this.sp.getCurrentPosition();
+        } //===============================================^^ newline in line mode
+        if(this.otx.sLineoutStart !=null) { this.sp.lentoLineEnd(); }    // line mode
+        if(this.sp.scanStart().scan("##").scanOk()) {             // if a ## was found, seek till newline.
+          this.sp.seek("\n").seekPos(1);                          // skip all till newline
+          this.bNewline = true;
+          this.pos0 = (int)this.sp.getCurrentPosition();
+        }                                                    // Note: spaces are detected because of content till <
+        //    //===========================================vv search an <...>, the text before is also stored.
+        this.sp.seek("<", StringPart.mSeekCheck + StringPart.mSeekEnd);  // < is always start of a special output
+        if(this.sp.found()) {
+          this.sp.lentoMax();                              // in line mode, here see the whole pattern.
+          parseElement();                                  // stores also the text before the element.
+        }     //===========================================^^ found a element in script or only in the line
+        else { //==========================================vv no more '<' found in the script
+          if(this.otx.sLineoutStart !=null) {    //--------vv line mode
+            String sText;
+            sText = this.sp.getCurrent().toString();                       // the rest of the line
+            int posComment = sText.indexOf("##");
+            if(posComment >=0) {
+              sText = sText.substring(0, posComment);
+              sText.trim();                                // without spaces before ##
+            }
+            int zText = sText.length();
+            if(zText>0) {                                  // add the last text of the line.
+              addCmd(sText.toString(), this.sp.getlineCol(), 0, zText, null);
+            }
+            this.sp.fromEnd().seekNoChar("\n\r\f");        // start scanning from next line start
+            this.bNewline = true;
+          }                                      //========^^ line mode 
+          else {                                 //========vv really the end of script.
+            this.sp.len0end();                             // add the last text of the pattern
+            addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos0 + this.sp.length(), ECmd.nothing, null);
+            this.sp.fromEnd();  //length is null then.
+          }
         }
-        else if(sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          String container = sp.getLastScannedString().toString();
-          String entryVar = sp.getLastScannedString().toString();
-          //====>
-          ForCmd cmd = (ForCmd)addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.forCtrl, container, execClass, idxConstData, idxScript);
-          DataAccess.IntegerIx ixOentry = this.nameVariables.get(entryVar); 
-          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-            ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
-            this.nameVariables.put(entryVar, ixOentry);
-            this.listArgs.add(entryVar);
-          }
-          cmd.ixEntryVar = ixOentry.ix;
-          String entryVarNext = entryVar + "_next";                             // the descendant of the current element is also available. 
-          ixOentry = this.nameVariables.get(entryVarNext); 
-          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-            ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
-            this.nameVariables.put(entryVarNext, ixOentry);
-            this.listArgs.add(entryVarNext);
-          }
-          cmd.ixEntryVarNext = ixOentry.ix;
-          String entryKey = entryVar + "_key";                             // the descendant of the current element is also available. 
-          ixOentry = this.nameVariables.get(entryKey); 
-          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-            ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
-            this.nameVariables.put(entryKey, ixOentry);
-            this.listArgs.add(entryKey);
-          }
-          cmd.ixEntryKey = ixOentry.ix;
-          ixCtrlCmd[++ixixCmd] = this.cmds.size()-1;
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
+      } //while
+      if(this.ixixCmd >=0) {
+        this.sp.close();
+        throw new IllegalArgumentException("\nOutTextPreparer " + this.otx.sIdent + ": closing <.> for <" + this.otx.cmds.get(this.ixCtrlCmd[this.ixixCmd]) +"> is missing ");
+      }
+      this.sp.close();
+    }
+  
+    
+    
+    
+    private void parseElement ( ) throws ParseException {
+      this.pos1 = (int)this.sp.getCurrentPosition() -1;     //before '<' as end of text before
+      this.sp.scanStart();
+      //if(this.sp.scan("&").scanIdentifier().scan(">").scanOk()){
+      if(this.sp.scan(":args:").scanOk()){ 
+        parseArgs();
+        if(!this.sp.scan(">").scanOk()) { 
+          addError("faulty <:args:... at " + this.sp.getCurrentPosition(), this.sp.getlineCol());
         }
-        else if(sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
-          String value = sp.getLastScannedString().toString();
-          String variable = sp.getLastScannedString().toString();
-//          if(variable.equals("sIx"))
-//            Debugutil.stop();
-          SetCmd cmd = (SetCmd)addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.setVar, value, execClass, idxConstData, idxScript);
-          DataAccess.IntegerIx ixOentry = this.nameVariables.get(variable); 
-          if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-            ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
-            this.nameVariables.put(variable, ixOentry);
-            this.listArgs.add(variable);
-          }
-          cmd.ixVariable = ixOentry.ix;
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(  this.nLastWasSkipOverWhitespace !=0 //The last scan action was not a <: >, it it was, it is one space insertion.
+          && (this.sp.scan(": >").scanOk() || this.sp.scan(":+>").scanOk() || this.sp.scan(":? >").scanOk())){ 
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //adds the text before <:+>
+        this.sp.scanSkipSpace();
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+        this.nLastWasSkipOverWhitespace = -1;  //then the next check of <: > is not a skipOverWhitespace
+      }  
+      else if( this.sp.scan(":?nl>").scanOk()){ 
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //adds the text before <:+>
+        this.sp.seekAfterNewline();
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after newline
+      }
+      else if(this.sp.scan("&").scanIdentifier().scan(">").scanOk()){
+        //------------------------------------------------- <&varname> a simple access to a given value
+        String sName = this.sp.getLastScannedString();        // it adds a simple index in Cmd, not using DataAccess
+        addCmdSimpleVar(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addVar, sName);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
+        //------------------------------------------------- <&data.path:format> more complex access to a given value
+        final String sDatapath = this.sp.getLastScannedString();
+  //      if(sDatapath.startsWith("&("))
+  //        Debugutil.stop();
+  //      if(sDatapath.contains("pin.pinDtype.dataType.dt.sTypeCpp"))
+  //        Debugutil.stop();
+        //====> ////
+        final String sFormat;
+        if(this.sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scanOk()) {
+          sFormat = this.sp.getLastScannedString();           // <&...:format> is given
+        } else {
+          sFormat = null;
         }
-        else if(sp.scan(":type:").scanToAnyChar(":", '\\', '\'', '\'').scan(":").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
-          String sType = sp.getLastScannedString().toString();
-          String sValue = sp.getLastScannedString().toString();
-          Class<?> type = null;;
-          try { type = Class.forName(sType);               // Class given as string found on parse time.
-          } catch (ClassNotFoundException e) {
-            String sError = "Class not found for <:type:"+ sValue + ":" + sType + ">";
-            addError(sError, sp.getlineCol());                              // then ignore this cmd in execution. Write the error text.
+        addCmdValueAccess(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, sDatapath, sFormat, this.execClass, this.idxConstData);
+        this.sp.seekPos(1);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(":wr:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+        //====>  ------------------------------------------ <:if:...>
+        parseWr();
+        this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;  //The position of the current wr
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+        
+      }
+      else if(this.sp.scan(":if:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+        //====>  ------------------------------------------ <:if:...>
+        parseIf( ECmd.ifCtrl);
+        this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;  //The position of the current if
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+        
+      }
+      else if(this.sp.scan(":elsif:").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+        //====>
+        parseIf( ECmd.elsifCtrl);
+        Cmd ifCmdLast;
+        int ixixIfCmd = this.ixixCmd; 
+        if(  ixixIfCmd >=0 
+          && ( (ifCmdLast = this.otx.cmds.get(this.ixCtrlCmd[this. ixixCmd])).cmd == ECmd.ifCtrl 
+             || ifCmdLast.cmd == ECmd.elsifCtrl
+          )  ) {
+          ((IfCmd)ifCmdLast).offsElsif = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+        } else { 
+          this.sp.close();
+          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.elsif> without <:if> ");
+        }
+        this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;  //The position of the current <:elsif>
+        
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(":else>").scanOk()) {
+        //====>
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.elseCtrl, null);
+        Cmd ifCmd;
+        int ixixIfCmd = this.ixixCmd; 
+        if(  ixixIfCmd >=0 
+            && ( (ifCmd = this.otx.cmds.get(this.ixCtrlCmd[this. ixixCmd])).cmd == ECmd.ifCtrl 
+               || ifCmd.cmd == ECmd.elsifCtrl
+                )  ) {
+          ((IfCmd)ifCmd).offsElsif = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
+        }else { 
+          this.sp.close();
+          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.elsif> without <:if> ");
+        }
+        this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;       //The position of the current <:else>
+  
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(":for:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+        String container = this.sp.getLastScannedString().toString();
+        String entryVar = this.sp.getLastScannedString().toString();
+        //====>
+        ForCmd cmd = (ForCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.forCtrl, container);
+        DataAccess.IntegerIx ixOentry = this.otx.nameVariables.get(entryVar); 
+        if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+          ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
+          this.otx.nameVariables.put(entryVar, ixOentry);
+          this.otx.listArgs.add(entryVar);
+        }
+        cmd.ixEntryVar = ixOentry.ix;
+        String entryVarNext = entryVar + "_next";                             // the descendant of the current element is also available. 
+        ixOentry = this.otx.nameVariables.get(entryVarNext); 
+        if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+          ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
+          this.otx.nameVariables.put(entryVarNext, ixOentry);
+          this.otx.listArgs.add(entryVarNext);
+        }
+        cmd.ixEntryVarNext = ixOentry.ix;
+        String entryKey = entryVar + "_key";                             // the descendant of the current element is also available. 
+        ixOentry = this.otx.nameVariables.get(entryKey); 
+        if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+          ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
+          this.otx.nameVariables.put(entryKey, ixOentry);
+          this.otx.listArgs.add(entryKey);
+        }
+        cmd.ixEntryKey = ixOentry.ix;
+        this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(":set:").scanIdentifier().scan("=").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
+        String value = this.sp.getLastScannedString().toString();
+        String variable = this.sp.getLastScannedString().toString();
+  //      if(variable.equals("sIx"))
+  //        Debugutil.stop();
+        SetCmd cmd = (SetCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.setVar, value);
+        DataAccess.IntegerIx ixOentry = this.otx.nameVariables.get(variable); 
+        if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+          ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
+          this.otx.nameVariables.put(variable, ixOentry);
+          this.otx.listArgs.add(variable);
+        }
+        cmd.ixVariable = ixOentry.ix;
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(":type:").scanToAnyChar(":", '\\', '\'', '\'').scan(":").scanToAnyChar(">", '\\', '\'', '\'').scan(">").scanOk()) {
+        String sType = this.sp.getLastScannedString().toString();
+        String sValue = this.sp.getLastScannedString().toString();
+        Class<?> type = null;;
+        try { type = Class.forName(sType);               // Class given as string found on parse time.
+        } catch (ClassNotFoundException e) {
+          String sError = "Class not found for <:type:"+ sValue + ":" + sType + ">";
+          addError(sError, this.sp.getlineCol());                              // then ignore this cmd in execution. Write the error text.
+          //throw new ParseException(sError, 0);
+        }
+        if(type !=null) {
+          try { 
+            Cmd cmd = new TypeCmd(this.otx.cmds.size(), this.sp.getlineCol(), this.otx, sValue, type, this.execClass, this.idxConstData);  //sValue builds an Operand with knowledge of nameVariables
+            addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, cmd);
+          } catch(Exception exc) {
+            String sError = "Problem with datapath <:type:"+ sValue + "...: " + exc.getMessage();
+            addError(sError, this.sp.getlineCol());
             //throw new ParseException(sError, 0);
           }
-          if(type !=null) {
-            try { 
-              Cmd cmd = new TypeCmd(this.cmds.size(), sp.getlineCol(), this, sValue, type, execClass, idxConstData);  //sValue builds an Operand with knowledge of nameVariables
-              addCmd(this.pattern, sp.getlineCol(), pos0, pos1, cmd);
-            } catch(Exception exc) {
-              String sError = "Problem with datapath <:type:"+ sValue + "...: " + exc.getMessage();
-              addError(sError, sp.getlineCol());
-              //throw new ParseException(sError, 0);
-            }
-          }
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
         }
-        else if(sp.scan(":exec:").scanOk()) { //scanIdentifier().scanOk()) {
-          //====>
-          Cmd cmd = parseExec(this.pattern, pos0, pos1, sp, execClass, idxConstData, idxScript);
-          this.cmds.add(cmd);
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(":call:").scanIdentifier().scanOk()) {
-          //====>
-          parseCall(this.pattern, pos0, pos1, sp, execClass, idxConstData, idxScript);
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
-          String cmpString = sp.getLastScannedString().toString();
-          String debugVar = sp.getLastScannedString().toString();
-          //====>
-          DebugCmd cmd = (DebugCmd)addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.debug, debugVar, execClass, idxConstData, idxScript);
-          cmd.cmpString = cmpString;
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }  
-        else if(sp.scan(":debug>").scanOk()) {
-          //====>
-          @SuppressWarnings("unused") DebugCmd cmd = (DebugCmd)
-            addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.debug, null, execClass, idxConstData, idxScript);
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(":--").scanToStringEnd("-->").scanOk()) {
-          //it is commented
-          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, null, null, null);
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(":x").scanHex(4).scan(">").scanOk()) {
-          char[] cText = new char[1];                      // <:x1234> a special UTF16 char
-          cText[0] = (char)sp.getLastScannedIntegerNumber();
-          String sTextSpecial = new String(cText);
-          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addString, sTextSpecial, null, null, null);
-        }
-        else if(sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
-          // ------------------------------------------------ <:text> or <:n> <:r> <:t> <:s>
-          final int posend = (int)sp.getCurrentPosition();
-          final String sText = this.pattern.substring(pos1+2, posend-1);
-          //Note: do not use sp.getLastScannedString().toString(); because scanToAnyChar skips over whitespaces
-          final int what;
-          if(sText.length() == 1) {
-            what = "nrts".indexOf(sText.charAt(0));        // <:n> <:s> <:r>: <:t>
-          } else {
-            what = -1; 
-          }
-          if(what >=0) {
-            String[] specials = { "\n", "\r", "\t", " "};  // newline etc.
-            addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addString, specials[what], null, null, null);
-          } else {                                         // free text with especially special chars
-            addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.addString, sText, null, null, null); //add the <:sText>
-          }
-          pos0 = posend;  //after '>'
-        }
-        else if(sp.scan(".wr>").scanOk()) { //The end of an if
-          Cmd wrCmd;
-          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.wr>
-          if(ixixCmd >=0 && (wrCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.wr) {
-            Cmd endWr = addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.wrEnd, null, null, null, null);
-            endWr.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;
-            pos0 = (int)sp.getCurrentPosition();  //after '>'
-            wrCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
-            ixixCmd -=1;
-          } 
-          
-          else {
-            sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.wr> missing opening <:wr:...> ");
-          }
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(".if>").scanOk()) { //The end of an if
-          Cmd cmd = null;
-          addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.nothing, null, execClass, idxConstData, idxScript);  //The last text before <.if>
-          while(  ixixCmd >=0 
-            && ( (cmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.ifCtrl 
-              || cmd.cmd == ECmd.elsifCtrl
-              || cmd.cmd == ECmd.elseCtrl
-            )  ) {
-            IfCmd ifcmd;
-            cmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
-            if(cmd.cmd != ECmd.elseCtrl && (ifcmd = (IfCmd)cmd).offsElsif <0) {
-              ifcmd.offsElsif = ifcmd.offsEndCtrl; //without <:else>, go after <.if>
-            }
-            ixCtrlCmd[ixixCmd] = 0;    // no more necessary.
-            ixixCmd -=1;
-            if(cmd.cmd == ECmd.ifCtrl) {
-              break;
-            } else {
-              cmd = null;    //remain ifCtrl to check: at least <:if> necessary.
-            }
-          } 
-          if(cmd == null) {  //nothing found or <:if not found: 
-            String sError = sp.getCurrent(30).toString();
-            sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.if> without <:if> or  <:elsif> : " + sError);
-          }
-          pos0 = (int)sp.getCurrentPosition();  //after '>'
-        }
-        else if(sp.scan(".for>").scanOk()) { //The end of an if
-          Cmd forCmd;
-          if(ixixCmd >=0 && (forCmd = this.cmds.get(ixCtrlCmd[ixixCmd])).cmd == ECmd.forCtrl) {
-            Cmd endLoop = addCmd(this.pattern, sp.getlineCol(), pos0, pos1, ECmd.endLoop, null, null, null, null);
-            endLoop.offsEndCtrl = -this.cmds.size() - ixCtrlCmd[ixixCmd] -1;  // it is faulty but unused.
-            pos0 = (int)sp.getCurrentPosition();  //after '>'
-            forCmd.offsEndCtrl = this.cmds.size() - ixCtrlCmd[ixixCmd];
-            ixixCmd -=1;
-          } 
-          
-          else {
-            sp.close();
-            throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ": faulty <.for> missing opening <:for:...> ");
-          }
-        }
-        else { //No proper cmd found:
-          
-        }
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else { //no more '<' found:
-        sp.len0end();
-        addCmd(this.pattern, sp.getlineCol(), pos0, pos0 + sp.length(), ECmd.nothing, null, execClass, idxConstData, idxScript);
-        sp.fromEnd();  //length is null then.
+      else if(this.sp.scan(":exec:").scanOk()) { //scanIdentifier().scanOk()) {
+        //====>
+        Cmd cmd = parseExec(this.otx.pattern, this.pos0, this.pos1, this.sp, this.execClass, this.idxConstData,this. idxScript);
+        this.otx.cmds.add(cmd);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-    } //while
-    if(ixixCmd >=0) {
-      sp.close();
-      throw new IllegalArgumentException("\nOutTextPreparer " + this.sIdent + ": closing <.> for <" + this.cmds.get(ixCtrlCmd[ixixCmd]) +"> is missing ");
-    }
-    sp.close();
-  }
-
-  
-
-  
-  private void parseArgs(StringPartScan sp) {
-    do {
-      if(sp.scanIdentifier().scanOk()) {
-        String sArg = sp.getLastScannedString();
-        this.nameVariables.put(sArg, new DataAccess.IntegerIx(this.nameVariables.size()));
-        if(this.listArgs == null) { this.listArgs = new LinkedList<String>(); }
-        this.listArgs.add(sArg);
+      else if(this.sp.scan(":call:").scanIdentifier().scanOk()) {
+        //====>
+        parseCall(this.otx.pattern, this.pos0, this.pos1, this.sp, this.execClass, this.idxConstData,this. idxScript);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-    } while(sp.scan(",").scanOk());
-  }
-  
-  private void parseWr ( final String pattern, final int pos0, final int pos1, final StringPartScanLineCol sp
-      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
-    //====>
-    String wrBufferIdent = sp.getLastScannedString().toString().trim();
-    DataAccess.IntegerIx ixOentry = this.nameVariables.get(wrBufferIdent);  //The string for data access is also used as variable indent in nameVariables
-    if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
-      ixOentry = new DataAccess.IntegerIx(this.nameVariables.size());         //create the entry variable newly.
-      this.nameVariables.put(wrBufferIdent, ixOentry);
-      this.listArgs.add(wrBufferIdent);
-    }
-    WrCmd wrcmd = (WrCmd)addCmd(pattern, sp.getlineCol(), pos0, pos1, ECmd.wr, wrBufferIdent, reflData, idxConstData, idxScript);
-    wrcmd.ixDataWr = ixOentry.ix;
-    //wrcmd.offsWrEnd = -1;  //in case of no <:else> or following <:elsif is found.
-    
-  }
-  
-  
-  private void parseIf ( final String pattern, final int pos0, final int pos1, ECmd ecmd, final StringPartScanLineCol sp
-      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
-    String cond = sp.getLastScannedString().toString();
-//    if(cond.contains("?instanceof"))
-//      Debugutil.stop();
-    //====>
-    IfCmd ifcmd = (IfCmd)addCmd(pattern, sp.getlineCol(), pos0, pos1, ecmd, cond, reflData, idxConstData, idxScript);
-    ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
-    
-  }
-  
-  
-  private Cmd parseExec(final String src, final int pos0, final int pos1, StringPartScanLineCol sp
-      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) throws ParseException {
-    if(pos1 > pos0) {
-      this.cmds.add(new CmdString(this.cmds.size(), sp.getlineCol(), src.substring(pos0, pos1)));
-    }
-    final Cmd cmd;
-    int pos2 = (int)sp.getCurrentPosition();
-    DataAccess access = new DataAccess(sp, this.nameVariables, reflData, '\0');
-    boolean bScanOk = sp.scan(")>").scanOk();  // this was necessary because of error in DataAccess fixed on 2024-08-30
-    if(!bScanOk) {
-      bScanOk = sp.scan(">").scanOk();         // this is the correct operation.
-    }
-    int pos3 = (int)sp.getCurrentPosition();
-    String sOperation = src.substring(pos2, pos3-1);
-    if(!bScanOk) {
-      throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
-    }
-    cmd = new Cmd(this.cmds.size(), sp.getlineCol(), ECmd.exec, -1, access, idxConstData, sOperation);
-    return cmd;
-  }  
-
-  
-  private void parseCall(final String src, final int pos0, final int pos1, final StringPartScanLineCol sp
-      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
-    String sCallVar = sp.getLastScannedString();
-    if(sCallVar.equals("otxIfColors"))
-      debug();
-    CallCmd cmd = (CallCmd)addCmd(src, sp.getlineCol(), pos0, pos1, ECmd.call, sCallVar, reflData, idxConstData, idxScript);
-    final OutTextPreparer call;  
-    if(cmd.dataConst !=null) { //given as const static:
-      if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
-        throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": <:call: " + sCallVar + " is const but not a OutTextPreparer");
-//      } else { //call variable should be given dynamically:
-//        if(!this.varValues.containsKey(sCallVar)) {
-//          String sError = "OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ": not given as argument";
-//          if(reflData != null) {
-//            sError += " and not found staticly in " + reflData.toString();
-//          } else {
-//            sError += "Hint: no staticly data given in first argument of ctor.";
-//          } 
-//          throw new IllegalArgumentException(sError);
-//        }
+      else if(this.sp.scan(":debug:").scanIdentifier().scan(":").scanToAnyChar(">", '\\', '"', '"').scan(">").scanOk()) {
+        String cmpString = this.sp.getLastScannedString().toString();
+        String debugVar = this.sp.getLastScannedString().toString();
+        //====>
+        DebugCmd cmd = (DebugCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, debugVar);
+        cmd.cmpString = cmpString;
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }  
+      else if(this.sp.scan(":debug>").scanOk()) {
+        //====>
+        @SuppressWarnings("unused") DebugCmd cmd = (DebugCmd)
+          addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, null);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      call = (OutTextPreparer)cmd.dataConst; //check argument names with it.
-    } else {
-      call = null; //not possible to check arguments.
-    }
-    if(sp.scan(":").scanOk()) {  //-------------------------- arg following
-      do {
-        cmd.ixDataArg = this.ctCall;
-        this.ctCall +=1;
-        if(sp.scanIdentifier().scan("=").scanOk()) {
-          if(cmd.args == null) { cmd.args = new ArrayList<Argument>(); }
-          String sNameArg = sp.getLastScannedString();
-          int ixCalledArg;
-          if(call == null) {
-            ixCalledArg = -1;
-          } else {
-            DataAccess.IntegerIx ixOcalledArg = call.nameVariables.get(sNameArg);
-            if(ixOcalledArg == null) {
-              throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
-            }
-            ixCalledArg = ixOcalledArg.ix;
-          }
-          Argument arg;
-          try {
-            if(sp.scanLiteral("''\\", -1).scanOk()) {
-              String sText = sp.getLastScannedString().trim();
-              arg = new Argument(sNameArg, ixCalledArg, sText, null, sText);
-            }
-            else if(sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
-              String sDataPath = sp.getLastScannedString().trim();    //this may be a more complex expression.
-              arg = new Argument(this, sNameArg, ixCalledArg, sDataPath, reflData, idxConstData);   //maybe an expression to calculate the value or a simple access
-            }
-            else { 
-              throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
-            }
-          } catch(Exception exc) {
-            throw new IllegalArgumentException(exc); //"OutTextPreparer " + sIdent + ", argument: " + sNameArg + " not existing: ");
-          }
-          cmd.args.add(arg);
+      else if(this.sp.scan(":--").scanToStringEnd("-->").scanOk()) {
+        //it is commented
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(":x").scanHex(4).scan(">").scanOk()) {
+        char[] cText = new char[1];                      // <:x1234> a special UTF16 char
+        cText[0] = (char)this.sp.getLastScannedIntegerNumber();
+        String sTextSpecial = new String(cText);
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addString, sTextSpecial);
+      }
+      else if(this.sp.scan(":").scanToAnyChar(">", '\0', '\0', '\0').scan(">").scanOk()) {
+        // ------------------------------------------------ <:text> or <:n> <:r> <:t> <:s>
+        final int posend = (int)this.sp.getCurrentPosition();
+        final String sText = this.otx.pattern.substring(this.pos1+2, posend-1);
+        //Note: do not use this.sp.getLastScannedString().toString(); because scanToAnyChar skips over whitespaces
+        final int what;
+        if(sText.length() == 1) {
+          what = "nrts".indexOf(sText.charAt(0));        // <:n> <:s> <:r>: <:t>
         } else {
-          throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": syntax error for arguments in <:call: " + sCallVar + ":arguments>");
+          what = -1; 
         }
-      } while(sp.scan(",").scanOk());
+        if(what >=0) {
+          String[] specials = { "\n", "\r", "\t", " "};  // newline etc.
+          addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addString, specials[what]);
+        } else {                                         // free text with especially special chars
+          addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addString, sText); //add the <:sText>
+        }
+        this.pos0 = posend;  //after '>'
+      }
+      else if(this.sp.scan(".wr>").scanOk()) { //The end of an if
+        Cmd wrCmd;
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //The last text before <.wr>
+        if(this. ixixCmd >=0 && (wrCmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.wr) {
+          Cmd endWr = addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.wrEnd, null);
+          endWr.offsEndCtrl = -this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;
+          this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+          wrCmd.offsEndCtrl = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd];
+          this. ixixCmd -=1;
+        } 
+        
+        else {
+          this.sp.close();
+          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.wr> missing opening <:wr:...> ");
+        }
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(".if>").scanOk()) { //The end of an if
+        Cmd cmd = null;
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //The last text before <.if>
+        while(  this. ixixCmd >=0 
+          && ( (cmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.ifCtrl 
+            || cmd.cmd == ECmd.elsifCtrl
+            || cmd.cmd == ECmd.elseCtrl
+          )  ) {
+          IfCmd ifcmd;
+          cmd.offsEndCtrl = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd];
+          if(cmd.cmd != ECmd.elseCtrl && (ifcmd = (IfCmd)cmd).offsElsif <0) {
+            ifcmd.offsElsif = ifcmd.offsEndCtrl; //without <:else>, go after <.if>
+          }
+          this.ixCtrlCmd[this. ixixCmd] = 0;    // no more necessary.
+          this. ixixCmd -=1;
+          if(cmd.cmd == ECmd.ifCtrl) {
+            break;
+          } else {
+            cmd = null;    //remain ifCtrl to check: at least <:if> necessary.
+          }
+        } 
+        if(cmd == null) {  //nothing found or <:if not found: 
+          String sError = this.sp.getCurrent(30).toString();
+          this.sp.close();
+          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.if> without <:if> or  <:elsif> : " + sError);
+        }
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
+      else if(this.sp.scan(".for>").scanOk()) { //The end of an if
+        Cmd forCmd;
+        if(this. ixixCmd >=0 && (forCmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.forCtrl) {
+          Cmd endLoop = addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.endLoop, null);
+          endLoop.offsEndCtrl = -this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;  // it is faulty but unused.
+          this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+          forCmd.offsEndCtrl = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd];
+          this. ixixCmd -=1;
+        } 
+        
+        else {
+          this.sp.close();
+          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.for> missing opening <:for:...> ");
+        }
+      }
+      else { //No proper cmd found:
+        Debugutil.stop();
+      }
     }
-    if(!sp.scan(">").scanOk()) {
-      throw new IllegalArgumentException("OutTextPreparer "+ this.sIdent + ": syntax error \">\" expected in <:call: " + sCallVar + "...>");
+  
+  
+  
+    private void parseArgs() {
+      do {
+        if(this.sp.scanIdentifier().scanOk()) {
+          String sArg = this.sp.getLastScannedString();
+          this.otx.nameVariables.put(sArg, new DataAccess.IntegerIx(this.otx.nameVariables.size()));
+          if(this.otx.listArgs == null) { this.otx.listArgs = new LinkedList<String>(); }
+          this.otx.listArgs.add(sArg);
+        }
+      } while(this.sp.scan(",").scanOk());
     }
     
-  }
-  
-  
-  private void addError(String sError, int[] linecol) {
-    this.cmds.add(new CmdString(this.cmds.size(), linecol, " <?? " + sError + "??> "));
-  }
- 
-  
-  
-  
-  /**Common addCmd with given Cmd instance (may be derived). Usable for all ...
-   * @param src the pattern
-   * @param from position of text before this cmd
-   * @param to position of start of this cmd
-   * @param cmd the Cmd instance.
-   */
-  private void addCmd ( String src, int[] linecol, int from, int to, Cmd cmd) {
-    if(to > from) {
-      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
+    private void parseWr () {
+      //====>
+      String wrBufferIdent = this.sp.getLastScannedString().toString().trim();
+      DataAccess.IntegerIx ixOentry = this.otx.nameVariables.get(wrBufferIdent);  //The string for data access is also used as variable indent in nameVariables
+      if(ixOentry == null) { //Check whether the same entry variable exists already from another for, only ones.
+        ixOentry = new DataAccess.IntegerIx(this.otx.nameVariables.size());         //create the entry variable newly.
+        this.otx.nameVariables.put(wrBufferIdent, ixOentry);
+        this.otx.listArgs.add(wrBufferIdent);
+      }
+      WrCmd wrcmd = (WrCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.wr, wrBufferIdent);
+      wrcmd.ixDataWr = ixOentry.ix;
+      //wrcmd.offsWrEnd = -1;  //in case of no <:else> or following <:elsif is found.
+      
     }
-    this.cmds.add(cmd);
-  }
-
-  
-  
-  /**Called if a simple <code>&lt;&name></code> is detected.
-   * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
-   * and at least in the execClass via Datapath access.
-   * If not found then <code><??sName??></code> is output on runtime.
-   * It adds the plain text if necessary and the data access calling {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
-   * to the list of commands.
-   * 
-   * @param src The text before to output the plain text before
-   * @param from range in src
-   * @param to to > from, then output the plain text
-   * @param eCmd The {@link ECmd} for the Cmd 
-   * @param sName name of the argument or variable or field.
-   * @param execClass to search in a data field.
-   */
-  private void addCmdSimpleVar ( String src, int[] linecol, int from, int to, ECmd eCmd, String sName, Class<?> execClass, Map<String, Object> idxConstData) {
-    if(to > from) {
-      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
+    
+    
+    private void parseIf ( ECmd ecmd) {
+      String cond = this.sp.getLastScannedString().toString();
+  //    if(cond.contains("?instanceof"))
+  //      Debugutil.stop();
+      //====>
+      IfCmd ifcmd = (IfCmd)addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ecmd, cond);
+      ifcmd.offsElsif = -1;  //in case of no <:else> or following <:elsif is found.
+      
     }
-    Object data = idxConstData ==null ? null : idxConstData.get(sName);
-    if(data != null) {                                     // given const data on construction
-      this.cmds.add(new Cmd(this.cmds.size(), linecol, eCmd, -1, null, data, sName));
-    } else {
-      DataAccess.IntegerIx ix = this.nameVariables.get(sName);
-      if(ix !=null) {                                      // Index to the arguments
-        this.cmds.add(new Cmd(this.cmds.size(), linecol, eCmd, ix.ix, null, null, sName));
+    
+    
+    private Cmd parseExec(final String src, final int pos0, final int pos1, StringPartScanLineCol sp
+        , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) throws ParseException {
+      if(pos1 > pos0) {
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), this.sp.getlineCol(), src.substring(pos0, pos1)));
+      }
+      final Cmd cmd;
+      int pos2 = (int)this.sp.getCurrentPosition();
+      DataAccess access = new DataAccess(this.sp, this.otx.nameVariables, reflData, '\0');
+      boolean bScanOk = this.sp.scan(")>").scanOk();  // this was necessary because of error in DataAccess fixed on 2024-08-30
+      if(!bScanOk) {
+        bScanOk = this.sp.scan(">").scanOk();         // this is the correct operation.
+      }
+      int pos3 = (int)this.sp.getCurrentPosition();
+      String sOperation = src.substring(pos2, pos3-1);
+      if(!bScanOk) {
+        throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
+      }
+      cmd = new Cmd(this.otx.cmds.size(), this.sp.getlineCol(), ECmd.exec, -1, access, idxConstData, sOperation);
+      return cmd;
+    }  
+  
+    
+    private void parseCall(final String src, final int pos0, final int pos1, final StringPartScanLineCol sp
+        , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
+      String sCallVar = this.sp.getLastScannedString();
+      if(sCallVar.equals("otxIfColors"))
+        otx.debug();
+      CallCmd cmd = (CallCmd)addCmd(src, this.sp.getlineCol(), pos0, pos1, ECmd.call, sCallVar);
+      final OutTextPreparer call;  
+      if(cmd.dataConst !=null) { //given as const static:
+        if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
+          throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": <:call: " + sCallVar + " is const but not a OutTextPreparer");
+  //      } else { //call variable should be given dynamically:
+  //        if(!this.otx.varValues.containsKey(sCallVar)) {
+  //          String sError = "OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ": not given as argument";
+  //          if(reflData != null) {
+  //            sError += " and not found staticly in " + reflData.toString();
+  //          } else {
+  //            sError += "Hint: no staticly data given in first argument of ctor.";
+  //          } 
+  //          throw new IllegalArgumentException(sError);
+  //        }
+        }
+        call = (OutTextPreparer)cmd.dataConst; //check argument names with it.
       } else {
-        try {                                              // Only access the execClass is possible
-          data = DataAccess.access(sName, execClass, true, false, false, null);  //TODO variable data?
-          this.cmds.add(new Cmd(this.cmds.size(), linecol, eCmd, -1, null, data, sName));
-        } catch (Exception exc) {
-          addError(sName, linecol);                                 // inserts <??sName??> in the text
-        }
+        call = null; //not possible to check arguments.
       }
-    }
-  }
-  
-  
-  
-  
-  /**Called if a simple <code>&lt;&name></code> is detected.
-   * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
-   * and at least in the execClass via Datapath access.
-   * If not found then <code><??sName??></code> is output on runtime.
-   * It adds the plain text if necessary and the data access as {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
-   * to the list of commands.
-   * 
-   * @param src The text before to output the plain text before
-   * @param from range in src
-   * @param to to > from, then output the plain text
-   * @param eCmd The {@link ECmd} for the Cmd 
-   * @param sName name of the argument or variable or field.
-   * @param execClass to search in a data field.
-   */
-  private void addCmdValueAccess ( String src, int[] linecol, int from, int to, String sDatapath
-      , String sFormat, Class<?> execClass, Map<String, Object> idxConstData) {
-    if(to > from) {
-      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
-    }
-//    int posSep = sDatapath.indexOf('.');                 // commented, this is done in CalculatorExpr.Operand(...)
-//    if(posSep <0) { posSep = sDatapath.length(); }
-//    String startVariable = sDatapath.substring(0, posSep); // first expression part is start or only variable
-//    DataAccess.IntegerIx ixAccess = this.nameVariables.get(startVariable);  //access to variables (args)
-//    int ix = ixAccess == null ? -1 : ixAccess.ix;          // ix >0: access to variables, often used
-    try { 
-      Cmd cmd = new ValueCmd(this.cmds.size(), linecol, OutTextPreparer.this, sDatapath, sFormat, execClass, idxConstData);
-      this.cmds.add(cmd);
-    } catch (Exception exc) {
-      addError(sDatapath, linecol);                                 // inserts <??sDatapath??> in the text
-    }
-  }
-  
-  
-  
-  
-  /**Explore the sDatapath and adds the proper Cmd
-   * @param src The pattern to get text contents
-   * @param from start position for text content
-   * @param to end position for text content, if <= from then no text content is stored (both = 0)
-   * @param ecmd The cmd kind
-   * @param sDatapath null or a textual data path. It will be split to {@link Cmd#ixValue} and {@link Cmd#dataAccess}
-   * @param reflData class to main data, usable for static operations, also otxScript for call
-   * @param idxConstData container of constant data for compile (parse) time
-   * @param idxScript can contain some other OutTextPreparer instances for call.
-   * @return the created Cmd for further parameters.
-   */
-  private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath
-      , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
-    if(to > from) {
-      this.cmds.add(new CmdString(this.cmds.size(), linecol, src.substring(from, to)));
-    }
-    final Cmd cmd;
-    if(ecmd !=ECmd.nothing) {
-      try {
-        switch(ecmd) {
-          case ifCtrl: case elsifCtrl: cmd = new IfCmd(this.cmds.size(), linecol, this, ecmd, sDatapath, reflData); break;
-          case call: 
-            Object oOtxSub = null;
-            String sNameSub = sDatapath;
-            //Field[] fields = data.getDeclaredFields();  // only debug
-            if(idxScript !=null) { oOtxSub = idxScript.get(sNameSub); }  // search the sub script
-            if(oOtxSub == null && idxConstData !=null) { oOtxSub = idxConstData.get(sNameSub); } //sub script given in const data
-            if(oOtxSub == null && reflData !=null) {       // sub script in the given class
-              Field otxField = reflData.getDeclaredField(sNameSub); // get also private fields.
-              otxField.setAccessible(true);                     // access the private field with get()
-              oOtxSub = otxField.get(null);                     // get the static field (null = without instance).
+      if(this.sp.scan(":").scanOk()) {  //-------------------------- arg following
+        do {
+          cmd.ixDataArg = this.otx.ctCall;
+          this.otx.ctCall +=1;
+          if(this.sp.scanIdentifier().scan("=").scanOk()) {
+            if(cmd.args == null) { cmd.args = new ArrayList<Argument>(); }
+            String sNameArg = this.sp.getLastScannedString();
+            int ixCalledArg;
+            if(call == null) {
+              ixCalledArg = -1;
+            } else {
+              DataAccess.IntegerIx ixOcalledArg = call.nameVariables.get(sNameArg);
+              if(ixOcalledArg == null) {
+                throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
+              }
+              ixCalledArg = ixOcalledArg.ix;
             }
-            if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
-              throw new IllegalArgumentException("subroutine: not found ");
+            Argument arg;
+            try {
+              if(this.sp.scanLiteral("''\\", -1).scanOk()) {
+                String sText = this.sp.getLastScannedString().trim();
+                arg = new Argument(sNameArg, ixCalledArg, sText, null, sText);
+              }
+              else if(this.sp.scanToAnyChar(">,", '\\', '"', '"').scanOk()) {
+                String sDataPath = this.sp.getLastScannedString().trim();    //this may be a more complex expression.
+                arg = new Argument(this.otx, sNameArg, ixCalledArg, sDataPath, reflData, idxConstData);   //maybe an expression to calculate the value or a simple access
+              }
+              else { 
+                throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
+              }
+            } catch(Exception exc) {
+              throw new IllegalArgumentException(exc); //"OutTextPreparer " + sIdent + ", argument: " + sNameArg + " not existing: ");
             }
-            cmd = new CallCmd(this.cmds.size(), linecol, (OutTextPreparer)oOtxSub); //this, sDatapath, data); 
-            //cmd = new CallCmd(this, sDatapath, data); 
-            break;
-          case exec: { //cmd = new ExecCmd(this, sDatapath, reflData, idxConstData); 
-            cmd = parseExec(src, from, to, new StringPartScanLineCol(sDatapath), reflData, idxConstData, idxScript);
-            break;
+            cmd.args.add(arg);
+          } else {
+            throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error for arguments in <:call: " + sCallVar + ":arguments>");
           }
-          case forCtrl: {
-            int posIx = sDatapath.indexOf("..");
-            String sDatapath1 = sDatapath;
-            if(posIx >=0) {
-              //TODO scan the start index, yet always 0..
-              sDatapath1 = sDatapath.substring(posIx+2);    // right side
-            }
-            cmd = new ForCmd(this.cmds.size(), linecol, this, sDatapath1, reflData); 
-            if(posIx >=0) {
-              ((ForCmd)cmd).ixStart = 0;  // overwrite -1 with the start index, then index for.
-            }
-          } break;
-          case wr: cmd = new WrCmd(this.cmds.size(), linecol, this, sDatapath, reflData); break;
-          case setVar: cmd = new SetCmd(this.cmds.size(), linecol, this, sDatapath, reflData); break;
-          case debug: cmd = new DebugCmd(this.cmds.size(), linecol, this, sDatapath, reflData, idxConstData); break;
-          case addString: cmd = new CmdString(this.cmds.size(), linecol, sDatapath); break;
-          default: cmd = new Cmd(this.cmds.size(), linecol, this, ecmd, sDatapath, reflData, null); break;
-        }
-      } catch(Exception exc) {
-        throw new IllegalArgumentException("OutTextPreparer " + this.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
+        } while(this.sp.scan(",").scanOk());
       }
-      this.cmds.add(cmd);
-    } else {
-      cmd = null;
+      if(!this.sp.scan(">").scanOk()) {
+        throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \">\" expected in <:call: " + sCallVar + "...>");
+      }
+      
     }
-    return cmd;
+    
+    
+    private void addError(String sError, int[] linecol) {
+      this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, " <?? " + sError + "??> "));
+    }
+   
+    
+    
+    
+    /**Common addCmd with given Cmd instance (may be derived). Usable for all ...
+     * @param src the pattern or specific String
+     * @param from position of text before this cmd from pattern, or from specific String
+     * @param to end text after from.
+     * @param cmd the intrinsic {@link Cmd} to add. Can be null, then not added.
+     */
+    private void addCmd ( String src, int[] linecol, int from, int to, Cmd cmd) {
+      if(to > from) {
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+      }
+      if(cmd !=null) {
+        this.otx.cmds.add(cmd);
+      }
+    }
+  
+    
+    
+    /**Called if a simple <code>&lt;&name></code> is detected.
+     * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
+     * and at least in the execClass via Datapath access.
+     * If not found then <code><??sName??></code> is output on runtime.
+     * It adds the plain text if necessary and the data access calling {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
+     * to the list of commands.
+     * 
+     * @param src The text before to output the plain text before
+     * @param from range in src
+     * @param to to > from, then output the plain text
+     * @param eCmd The {@link ECmd} for the Cmd 
+     * @param sName name of the argument or variable or field.
+     * @param execClass to search in a data field.
+     */
+    private void addCmdSimpleVar ( String src, int[] linecol, int from, int to, ECmd eCmd, String sName) {
+      if(to > from) {
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+      }
+      Object data = this.idxConstData ==null ? null : this.idxConstData.get(sName);
+      if(data != null) {                                     // given const data on construction
+        this.otx.cmds.add(new Cmd(this.otx.cmds.size(), linecol, eCmd, -1, null, data, sName));
+      } else {
+        DataAccess.IntegerIx ix = this.otx.nameVariables.get(sName);
+        if(ix !=null) {                                      // Index to the arguments
+          this.otx.cmds.add(new Cmd(this.otx.cmds.size(), linecol, eCmd, ix.ix, null, null, sName));
+        } else {
+          try {                                              // Only access the execClass is possible
+            data = DataAccess.access(sName, this.execClass, true, false, false, null);  //TODO variable data?
+            this.otx.cmds.add(new Cmd(this.otx.cmds.size(), linecol, eCmd, -1, null, data, sName));
+          } catch (Exception exc) {
+            addError(sName, linecol);                                 // inserts <??sName??> in the text
+          }
+        }
+      }
+    }
+    
+    
+    
+    
+    /**Called if a simple <code>&lt;&name></code> is detected.
+     * It is searched firstly in {@link #idxConstData}, then in {@link #nameVariables}
+     * and at least in the execClass via Datapath access.
+     * If not found then <code><??sName??></code> is output on runtime.
+     * It adds the plain text if necessary and the data access as {@link Cmd#Cmd(ECmd, int, DataAccess, Object, String)}
+     * to the list of commands.
+     * 
+     * @param src The text before to output the plain text before
+     * @param from range in src
+     * @param to to > from, then output the plain text
+     * @param eCmd The {@link ECmd} for the Cmd 
+     * @param sName name of the argument or variable or field.
+     * @param execClass to search in a data field.
+     */
+    private void addCmdValueAccess ( String src, int[] linecol, int from, int to, String sDatapath
+        , String sFormat, Class<?> execClass, Map<String, Object> idxConstData) {
+      if(to > from) {
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+      }
+  //    int posSep = sDatapath.indexOf('.');                 // commented, this is done in CalculatorExpr.Operand(...)
+  //    if(posSep <0) { posSep = sDatapath.length(); }
+  //    String startVariable = sDatapath.substring(0, posSep); // first expression part is start or only variable
+  //    DataAccess.IntegerIx ixAccess = this.otx.nameVariables.get(startVariable);  //access to variables (args)
+  //    int ix = ixAccess == null ? -1 : ixAccess.ix;          // ix >0: access to variables, often used
+      try { 
+        Cmd cmd = new ValueCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, sFormat, execClass, idxConstData);
+        this.otx.cmds.add(cmd);
+      } catch (Exception exc) {
+        addError(sDatapath, linecol);                                 // inserts <??sDatapath??> in the text
+      }
+    }
+    
+    
+    
+    
+    /**Explore the sDatapath and adds the proper Cmd
+     * @param src The pattern to get text contents
+     * @param from start position for text content
+     * @param to end position for text content, if <= from then no text content is stored (both = 0)
+     * @param ecmd The cmd kind
+     * @param sDatapath null or a textual data path. It will be split to {@link Cmd#ixValue} and {@link Cmd#dataAccess}
+     * @param reflData class to main data, usable for static operations, also otxScript for call
+     * @param idxConstData container of constant data for compile (parse) time
+     * @param idxScript can contain some other OutTextPreparer instances for call.
+     * @return the created Cmd for further parameters.
+     */
+    private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath ) {
+      if(to > from) {
+        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+      }
+      final Cmd cmd;
+      if(ecmd !=ECmd.nothing) {
+        try {
+          switch(ecmd) {
+            case ifCtrl: case elsifCtrl: cmd = new IfCmd(this.otx.cmds.size(), linecol, this.otx, ecmd, sDatapath, this.execClass); break;
+            case call: 
+              Object oOtxSub = null;
+              String sNameSub = sDatapath;
+              //Field[] fields = data.getDeclaredFields();  // only debug
+              if(this.idxScript !=null) { oOtxSub = this.idxScript.get(sNameSub); }  // search the sub script
+              if(oOtxSub == null && this.idxConstData !=null) { oOtxSub = this.idxConstData.get(sNameSub); } //sub script given in const data
+              if(oOtxSub == null && this.execClass !=null) {       // sub script in the given class
+                Field otxField = this.execClass.getDeclaredField(sNameSub); // get also private fields.
+                otxField.setAccessible(true);                     // access the private field with get()
+                oOtxSub = otxField.get(null);                     // get the static field (null = without instance).
+              }
+              if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
+                throw new IllegalArgumentException("subroutine: not found ");
+              }
+              cmd = new CallCmd(this.otx.cmds.size(), linecol, (OutTextPreparer)oOtxSub); //this, sDatapath, data); 
+              //cmd = new CallCmd(this, sDatapath, data); 
+              break;
+            case exec: { //cmd = new ExecCmd(this, sDatapath, reflData, idxConstData); 
+              cmd = parseExec(src, from, to, new StringPartScanLineCol(sDatapath), this.execClass, idxConstData, idxScript);
+              break;
+            }
+            case forCtrl: {
+              int posIx = sDatapath.indexOf("..");
+              String sDatapath1 = sDatapath;
+              if(posIx >=0) {
+                //TODO scan the start index, yet always 0..
+                sDatapath1 = sDatapath.substring(posIx+2);    // right side
+              }
+              cmd = new ForCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath1, this.execClass); 
+              if(posIx >=0) {
+                ((ForCmd)cmd).ixStart = 0;  // overwrite -1 with the start index, then index for.
+              }
+            } break;
+            case wr: cmd = new WrCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass); break;
+            case setVar: cmd = new SetCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass); break;
+            case debug: cmd = new DebugCmd(this.otx.cmds.size(), linecol, this.otx, sDatapath, this.execClass, idxConstData); break;
+            case addString: cmd = new CmdString(this.otx.cmds.size(), linecol, sDatapath); break;
+            default: cmd = new Cmd(this.otx.cmds.size(), linecol, this.otx, ecmd, sDatapath, this.execClass, null); break;
+          }
+        } catch(Exception exc) {
+          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
+        }
+        this.otx.cmds.add(cmd);
+      } else {
+        cmd = null;
+      }
+      return cmd;
+    }
+  
+
   }
-
-
-
 
 
   /**Returns an proper instance for argument data for a {@link #exec(Appendable, DataTextPreparer)} run.

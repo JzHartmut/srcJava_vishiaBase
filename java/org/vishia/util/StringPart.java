@@ -2364,15 +2364,24 @@ public final StringPart lentoAnyChar(CharSequence sChars)
 }
 
 
+/**Sets the length to the end of the maximal part.
+ * Note: it is the same as {@link #setLengthMax()} but by the name better able to find.
+ * @java2c=return-this.
+ */
+public final StringPart lentoMax() { 
+  this.end = this.endMax;
+  return this;
+}
 
 
-  /**Sets the length to the end of the maximal part if the length is 0. This method could be called at example
-if a end char is not detected and for that reason the part is valid to the end.
+
+/**Sets the length to the end of the maximal part if the length is 0. This method could be called for example
+ * if a end char is not detected and for that reason the part is valid to the end.
  * @java2c=return-this.
  @return <code>this</code> to concatenate some operations, like <code>part.set(src).seek(sKey).lento(';').len0end();</code>
  */
-public final StringPart len0end()
-{ if(this.end <= this.begin) this.end = this.endMax;
+public final StringPart len0end() { 
+  if(this.end <= this.begin) this.end = this.endMax;
   return this;
 }
 
@@ -2380,9 +2389,9 @@ public final StringPart len0end()
 
   /**Sets the length to the end of the maximal part.
    * @java2c=return-this.
-  */
-  public final StringPart setLengthMax()
-  { this.end = this.endMax;
+   */
+  public final StringPart setLengthMax() { 
+    this.end = this.endMax;
     return this;
   }
 
