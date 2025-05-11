@@ -2978,7 +2978,11 @@ public class CalculatorExpr
         op = null;
         if(spExpr.scan("==").scanOk()) {
           op = "==";
+        } else if(spExpr.scan("?eq").scanOk()) {
+          op = "==";
         } else if(spExpr.scan("!=").scanOk()) {
+          op = "!=";
+        } else if(spExpr.scan("?ne").scanOk()) {
           op = "!=";
         } else if(spExpr.scan(">=").scanOk()) {
           op = ">=";

@@ -2651,7 +2651,7 @@ public final class OutTextPreparer
         bDataOk = false;
         CharSequence sMsg = ExcUtil.exceptionInfo("", exc, 1, 10);
         data = "<??>";
-        wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + sMsg + "\" ??>");
+        wr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
       }
       
     }
@@ -2704,7 +2704,7 @@ public final class OutTextPreparer
         }
       } catch (Exception e) {
         data = null;
-        wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + e.getMessage() + "\" ??>");
+        wr.append("<??OutTextPreparer dataAccess error: '" + this.sIdent + ":" + cmd.toString() + "'" + e.getMessage() + "\" ??>");
         if(wr instanceof Flushable) { 
           ((Flushable)wr).flush(); 
         }
@@ -2907,7 +2907,7 @@ public final class OutTextPreparer
         Object value = null;
         try{ value = arg.calc(null, args.args); }
         catch(Exception exc) { 
-          wr.append("<??OutTextPreparer in script \"" + this.sIdent + "\"" + " with reference \""  + cmd.textOrVar + "\" variable not found or access error: " + exc.getMessage() + "\" ??>");
+          wr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
         }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
