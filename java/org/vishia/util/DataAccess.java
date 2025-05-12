@@ -1197,6 +1197,7 @@ public class DataAccess {
 
   
   /**Access to the given element, used internally, also able to use for one element form extern.
+   * 
    * @param element describes the access, can be a field, operation, environment variable or all possibilities
    * @param data1 If it is instanceof Class, then static access. Can be null for instance access, then output null.
    * @param accessPrivate
@@ -1207,10 +1208,13 @@ public class DataAccess {
    * @param dst
    * @return The accessed content. 
    * @throws Exception
+   * @since 2025-05-12 use {@link DatapathElement#reflAccess} immediately if it is instanceof {@link Field}.
+   *   This is prepared but was not used before. It is important when only this information is given, especially from {@link OutTextPreparer}
+   *   if a reflection access from the given reflAccess is done, which is only known in the translation phase, not on execution. 
    */
   public static Object access(
       DatapathElement element
-      , Object data1
+      , Object dataArg
       //, Map<String, DataAccess.Variable<Object>> dataPool
       , boolean accessPrivate
       , boolean bContainer
@@ -1220,10 +1224,7 @@ public class DataAccess {
       , Dst dst
   ) throws Exception {
     boolean bStatic;
-    if(element.reflAccess !=null) {
-      Debugutil.stop();
-    }
-    //                                 // Hint: data1 can be null, if the previous access has deliverd null
+    Object data1 = dataArg;
     if(data1 instanceof Class){
       bStatic = true;              //If a class type is given as argument, static accesses are supported.
     } else if(data1 instanceof Variable<?>){
@@ -1237,107 +1238,120 @@ public class DataAccess {
     } else {
       bStatic = false;
     }
-    //
-    switch(element.whatisit) {
-      case '&': {
-        Object arg = element.args[0].calc(nameVariables, varValues);
-        assert(arg instanceof String);
-        if(nameVariables !=null) {
-          IntegerIx ixvar = nameVariables.get((String)arg); 
-          if(ixvar !=null) {
-            data1 = varValues[ixvar.ix];
+    boolean bReflAccessDone = false;
+    if(element.reflAccess !=null) {
+      if(element.reflAccess instanceof Field) {            // A field is given, use it immediately. It may be set by the translation already from reflClass.
+        data1 = ((Field)element.reflAccess).get(data1);    // if data1 is null, static access
+        bReflAccessDone = true;
+        Debugutil.stop();
+      } else { //if(element.reflAccess instanceof Method) {
+        bReflAccessDone = false;    // the element.reflAccess is used in called invokeMethod(...), invokeNew(...), invokeStaticMethod(...), here later in switch.
+      }
+    }
+    if(!bReflAccessDone) {
+      //                                 // Hint: data1 can be null, if the previous access has deliverd null
+      //
+      switch(element.whatisit) {
+        case '&': {
+          Object arg = element.args[0].calc(nameVariables, varValues);
+          assert(arg instanceof String);
+          if(nameVariables !=null) {
+            IntegerIx ixvar = nameVariables.get((String)arg); 
+            if(ixvar !=null) {
+              data1 = varValues[ixvar.ix];
+            } else {
+              throw new IllegalArgumentException(" variable with name in &(>>" + arg + "<<) not found");
+            }
+          } else if(data1 instanceof Map) {
+            Debugutil.todo();
+          }
+        } break;
+        case '@': {
+          if(element.ixData <0) {
+            if(data1 !=null && data1 instanceof Map) {
+              //Map<String, Object>data1 = 
+              data1 = ((Map<String, Object>)data1).get(element.ident);
+            } else {
+              data1 = null;  //??
+            }
+          } else {                                           // ixData is given, access immediately
+            data1 = varValues[element.ixData];
+          }
+        } break;
+        case '.': {
+          if(bStatic){
+            data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
           } else {
-            throw new IllegalArgumentException(" variable with name in &(>>" + arg + "<<) not found");
+            if(data1 !=null){     // reference null because access before, remain null as return.
+              //retain a Variable.
+              data1 = getDataPriv(element.ident, data1, accessPrivate, bContainer, true /*bVariable*/, dst);
+            }
           }
-        } else if(data1 instanceof Map) {
-          Debugutil.todo();
-        }
-      } break;
-      case '@': {
-        if(element.ixData <0) {
-          if(data1 !=null && data1 instanceof Map) {
-            //Map<String, Object>data1 = 
-            data1 = ((Map<String, Object>)data1).get(element.ident);
-          } else {
-            data1 = null;  //??
-          }
-        } else {                                           // ixData is given, access immediately
-          data1 = varValues[element.ixData];
-        }
-      } break;
-      case '.': {
-        if(bStatic){
-          data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
-        } else {
-          if(data1 !=null){     // reference null because access before, remain null as return.
-            //retain a Variable.
-            data1 = getDataPriv(element.ident, data1, accessPrivate, bContainer, true /*bVariable*/, dst);
-          }
-        }
-      } break;
-      case '+': {  //create a new instance, call constructor
-        data1 = invokeNew(element);
-      } break;
-      case '(': {
-        if(data1 !=null){
-          Class<?> clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
-          data1 = invokeMethod(element, clazz, data1, accessPrivate, varValues, false); 
-        } else {
-          Debugutil.stop();                                // can occure if data before are null. Then data1 remain null
-        }
-        //else: let data1=null, return null
-      } break;
-      case '%': { 
-        data1 = element.operation_ || element.args !=null || element.fnArgs !=null 
-          ? invokeStaticMethod(element, varValues)  // data1 = invokeMethod(element, null, data1, accessPrivate, varValues, false)// 
-          : getStaticValue(element); 
-      } break;
-      case '$': {
-        if((data1 instanceof Map<?,?>)){  //should be Map<String, Variable>
-          @SuppressWarnings("unchecked")
-          Map<String, DataAccess.Variable<Object>> dataPool = (Map<String, DataAccess.Variable<Object>>)data1;
-          data1 = dataPool.get("$" + element.ident);
-        }
-        if(data1 == null){
-          data1 = System.getenv(element.ident);
-        }
-        if(data1 == null) {
-          data1 = System.getProperty(element.ident);  //read from Java system property
-        }
-        if(data1 == null) throw new NoSuchElementException("DataAccess - environment variable not found: >>" + element.ident + "<<");
-      } break;
-      default: {
-        final boolean bConstNewVariable;
-        char whatisit = element.whatisit;
-        if(element.whatisit >='a' && element.whatisit <='z'){
-          bConstNewVariable = true;
-          whatisit -= ('a' - 'A');
-        } else {
-          bConstNewVariable = false;
-        }
-        if(whatisit >='A' && whatisit <='Z') {
-          //It is a new defined variable. 
-          if(data1 instanceof Map<?,?>){ //unable to check generic type.
-            //it should be a variable container!
-            @SuppressWarnings("unchecked")
-            Map<String, DataAccess.Variable> varContainer = (Map<String, DataAccess.Variable>)data1;
-            Variable<Object> newVariable = new DataAccess.Variable<Object>(element.whatisit, element.ident, null, bConstNewVariable);
-            varContainer.put(element.ident, newVariable);
-            data1 = newVariable;
-          } else {
-            throw new IllegalArgumentException("DataAccess.storeValue - destination should be Map<String, DataAccess.Variable>; " + dst);
-          }
-        } 
-        else if(bStatic){
-          data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
-        } else {
+        } break;
+        case '+': {  //create a new instance, call constructor
+          data1 = invokeNew(element);
+        } break;
+        case '(': {
           if(data1 !=null){
-            data1 = getDataPriv(element.ident, data1, accessPrivate, bContainer, bVariable, dst);
+            Class<?> clazz = bStatic && data1 instanceof Class<?> ? (Class<?>)data1: data1.getClass();
+            data1 = invokeMethod(element, clazz, data1, accessPrivate, varValues, false); 
+          } else {
+            Debugutil.stop();                                // can occure if data before are null. Then data1 remain null
           }
-        }
-      }//default
-
-    }//switch
+          //else: let data1=null, return null
+        } break;
+        case '%': { 
+          data1 = element.operation_ || element.args !=null || element.fnArgs !=null 
+            ? invokeStaticMethod(element, varValues)  // data1 = invokeMethod(element, null, data1, accessPrivate, varValues, false)// 
+            : getStaticValue(element); 
+        } break;
+        case '$': {
+          if((data1 instanceof Map<?,?>)){  //should be Map<String, Variable>
+            @SuppressWarnings("unchecked")
+            Map<String, DataAccess.Variable<Object>> dataPool = (Map<String, DataAccess.Variable<Object>>)data1;
+            data1 = dataPool.get("$" + element.ident);
+          }
+          if(data1 == null){
+            data1 = System.getenv(element.ident);
+          }
+          if(data1 == null) {
+            data1 = System.getProperty(element.ident);  //read from Java system property
+          }
+          if(data1 == null) throw new NoSuchElementException("DataAccess - environment variable not found: >>" + element.ident + "<<");
+        } break;
+        default: {
+          final boolean bConstNewVariable;
+          char whatisit = element.whatisit;
+          if(element.whatisit >='a' && element.whatisit <='z'){
+            bConstNewVariable = true;
+            whatisit -= ('a' - 'A');
+          } else {
+            bConstNewVariable = false;
+          }
+          if(whatisit >='A' && whatisit <='Z') {
+            //It is a new defined variable. 
+            if(data1 instanceof Map<?,?>){ //unable to check generic type.
+              //it should be a variable container!
+              @SuppressWarnings("unchecked")
+              Map<String, DataAccess.Variable> varContainer = (Map<String, DataAccess.Variable>)data1;
+              Variable<Object> newVariable = new DataAccess.Variable<Object>(element.whatisit, element.ident, null, bConstNewVariable);
+              varContainer.put(element.ident, newVariable);
+              data1 = newVariable;
+            } else {
+              throw new IllegalArgumentException("DataAccess.storeValue - destination should be Map<String, DataAccess.Variable>; " + dst);
+            }
+          } 
+          else if(bStatic){
+            data1 = getDataFromField(element.ident, null, accessPrivate, (Class<?>)data1, dst, 0); 
+          } else {
+            if(data1 !=null){
+              data1 = getDataPriv(element.ident, data1, accessPrivate, bContainer, bVariable, dst);
+            }
+          }
+        }//default
+  
+      }//switch
+    } // if else reflAccess
     if(data1 !=null && element.indices !=null) { //since 2019-06: check indices on any access, not only default
       int[] indices1;
       if(element.indices[0] <0) {
@@ -1353,6 +1367,11 @@ public class DataAccess {
       }
       data1 = getArrayElement(data1, indices1);
     }
+//    if(data1 == null && element.reflAccess !=null) {
+//      if(element.reflAccess instanceof Field) {
+//        data1 = ((Field)element.reflAccess).get(data1);   // because data1 is null, static access
+//      }
+//    }
     return data1;
   } 
   
