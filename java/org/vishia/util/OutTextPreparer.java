@@ -409,6 +409,9 @@ public final class OutTextPreparer
     public int debugIxCmd;
     
     
+    /**If this is not null, the line of the cmd is written into on certain cmds. It is for a log of execution.*/
+    Appendable outCmdline;
+    
     StringBuilder sbFormatted = new StringBuilder();
     
     /**Default use formatter for ENCLISH to be international. */
@@ -479,6 +482,13 @@ public final class OutTextPreparer
       this.args[ixArg] = value;
     }
     
+    
+    /**Sets an output channel to output the line on certain cmds. It is for a log of execution.
+     * @param log
+     */
+    public void setLogCmdline(Appendable log) {
+      this.outCmdline = log;
+    }
     
     /**Sets an instance due to the given 'execClass' for the script.
      * @param data The instance must be proper to the 'execClass' argument of the constructors
@@ -1831,8 +1841,9 @@ public final class OutTextPreparer
         }
       } //while
       if(this.ixixCmd >=0) {
+        int[] lineCol = sp.getlineCol();
         this.sp.close();
-        throw new IllegalArgumentException("\nOutTextPreparer " + this.otx.sIdent + ": closing <.> for <" + this.otx.cmds.get(this.ixCtrlCmd[this.ixixCmd]) +"> is missing ");
+        throw new IllegalArgumentException("OutTextPreparer closing <.> is missing: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + " to cmd: " + this.otx.cmds.get(this.ixCtrlCmd[this.ixixCmd]));
       }
       this.sp.close();
     }
@@ -1912,8 +1923,9 @@ public final class OutTextPreparer
           )  ) {
           ((IfCmd)ifCmdLast).offsElsif = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
         } else { 
+          int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.elsif> without <:if> ");
+          throw new IllegalArgumentException("OutTextPreparer faulty <:elsif>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1]);
         }
         this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;  //The position of the current <:elsif>
         
@@ -1930,8 +1942,9 @@ public final class OutTextPreparer
                 )  ) {
           ((IfCmd)ifCmd).offsElsif = this.otx.cmds.size() - this.ixCtrlCmd[this. ixixCmd] -1;   //The distance from <:if> to next <:elsif> 
         }else { 
+          int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.elsif> without <:if> ");
+          throw new IllegalArgumentException("OutTextPreparer faulty <:else>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1]);
         }
         this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;       //The position of the current <:else>
   
@@ -2072,12 +2085,14 @@ public final class OutTextPreparer
         } 
         
         else {
+          int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.wr> missing opening <:wr:...> ");
+          throw new IllegalArgumentException("OutTextPreparer faulty <.wr> missing opening <:wr:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1]);
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(".if>").scanOk()) { //The end of an if
+      else if(this.sp.scan(".if").scanOk()) { //The end of an if
+        this.sp.seek('>', StringPart.mSeekEnd);
         Cmd cmd = null;
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //The last text before <.if>
         while(  this. ixixCmd >=0 
@@ -2100,8 +2115,9 @@ public final class OutTextPreparer
         } 
         if(cmd == null) {  //nothing found or <:if not found: 
           String sError = this.sp.getCurrent(30).toString();
+          int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.if> without <:if> or  <:elsif> : " + sError);
+          throw new IllegalArgumentException("OutTextPreparer faulty <.if> without <:if> or  <:elsif> : " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
@@ -2116,8 +2132,10 @@ public final class OutTextPreparer
         } 
         
         else {
+          String sError = this.sp.getCurrent(30).toString();
+          int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ": faulty <.for> missing opening <:for:...> ");
+          throw new IllegalArgumentException("OutTextPreparer faulty <.for> missing opening <:for:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
         }
       }
       else { //No proper cmd found:
@@ -2180,7 +2198,11 @@ public final class OutTextPreparer
       int pos3 = (int)this.sp.getCurrentPosition();
       String sOperation = src.substring(pos2, pos3-1);
       if(!bScanOk) {
-        throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
+        String sError = this.sp.getCurrent(30).toString();
+        int[] lineCol = sp.getlineCol();
+        this.sp.close();
+        throw new IllegalArgumentException("OutTextPreparer syntax error \")>\" expected in <:exec: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
+        //throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
       }
       cmd = new Cmd(this.otx.cmds.size(), this.sp.getlineCol(), ECmd.exec, -1, access, idxConstData, sOperation);
       return cmd;
@@ -2627,6 +2649,7 @@ public final class OutTextPreparer
   private Object dataForCmd ( Cmd cmd, DataTextPreparer args, Appendable wr ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
     Object data;  //========================================= first gather the data
+    if(args.outCmdline !=null) { args.outCmdline.append(" " + cmd.linecol[0]); } 
     if(cmd.expr !=null) {
       try {                                                // only one time, set the destination data for calc
         //if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
@@ -2692,6 +2715,7 @@ public final class OutTextPreparer
     Object data0 = cmd.ixValue <0 ? null: args.args[cmd.ixValue];
     Object data;
     if(cmd.dataAccess !=null) {
+      if(args.outCmdline !=null) { args.outCmdline.append(" " + cmd.linecol[0]); } 
 //      String sDataAccess = cmd.dataAccess.toString();
 //      if(sDataAccess.contains("Dtype")) {
 //        Debugutil.stop();
@@ -2777,6 +2801,7 @@ public final class OutTextPreparer
    * @throws Exception
    */
   private void execFor(Appendable wr, ForCmd cmd, int ixCmd, Object container, DataTextPreparer args) throws IOException {
+    if(args.outCmdline !=null) { args.outCmdline.append(" :for@" + cmd.linecol[0]); } 
     if(container == null) {
       //do nothing, no for
     }
@@ -2895,6 +2920,7 @@ public final class OutTextPreparer
   private void execCall(Appendable wr, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws IOException {
     @SuppressWarnings("cast") OutTextPreparer callVar1 = (OutTextPreparer)callVar;
     DataTextPreparer valSub;
+    if(args.outCmdline !=null) { args.outCmdline.append(" :call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
     if(cmd.args !=null) {
       valSub = args.argSub[cmd.ixDataArg];
       if(valSub == null) { //only first time for this call
@@ -2920,6 +2946,7 @@ public final class OutTextPreparer
       valSub = args;
     }
     callVar1.exec(wr, valSub);
+    if(args.outCmdline !=null) { args.outCmdline.append(" .call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
   }
   
   

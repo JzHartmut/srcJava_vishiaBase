@@ -1636,22 +1636,23 @@ return this;
 
 
 
-  /** Searchs the given character inside the valid part, posits the begin of the part to the begin of the searched char.
-    The end of the part is not affected.
-    If the string is not found, the begin is posit on the actual end
-    or, if mode contents seekBack, the begin of the maximal part. 
-    In this cases isFound() returns false and a call of restoreLastPart() restores the old parts.
-    The length()-method supplies 0.
-    Methods such fromEnd() are not interacted from the result of the searching.
-    The rule is: seek()-methods only shifts the begin position.<br/>
-    The examples are adequate to seek(CharSequence, int mode);
-  
-  *  @java2c=return-this.
-    @param cSeek The character to search for.
-    @param mode Mode of seeking, use ones of back, seekToLeft, seekNormal, added with seekEnd.
+  /**Searches the given character inside the valid part, posits the begin of the part to the begin of the searched char.
+   * The end of the part is not affected.
+   * If the string is not found, the begin is posit on the actual end
+   * or, if mode contents seekBack, the begin of the maximal part. 
+   * In this cases isFound() returns false and a call of restoreLastPart() restores the old parts.
+   * The length()-method supplies 0.
+   * Methods such fromEnd() are not interacted from the result of the searching.
+   * The rule is: seek()-methods only shifts the begin position.<br/>
+   * The examples are adequate to seek(CharSequence, int mode);
+   * <br>   
+   * Hint: use {@link #found()} to detect whether the end string is found.
+   * if the end String is not found, the current part has length ==0
+
+   * @java2c=return-this.
+   * @param cSeek The character to search for.
+   * @param mode Mode of seeking, combination of bits from {@link #mSeekBack} {@link #mSeekToLeft} {@link #mSeekEnd} or 0 for simple seek to the character.
    * @return <code>this</code> to concatenate some operations, usage example <code>part.set(src).seek(sKey).lento(';').len0end();</code>
-   *   Hint: use {@link #found()} to detect whether the end string is found.
-   *   if the end String is not found, the current part has length ==0
    */
   public final StringPart seek(char cSeek, int mode)
   { this.beginLast = this.begin;
