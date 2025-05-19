@@ -410,7 +410,7 @@ public final class OutTextPreparer
     
     
     /**If this is not null, the line of the cmd is written into on certain cmds. It is for a log of execution.*/
-    Appendable outCmdline;
+    Appendable logExec;
     
     StringBuilder sbFormatted = new StringBuilder();
     
@@ -487,7 +487,7 @@ public final class OutTextPreparer
      * @param log
      */
     public void setLogCmdline(Appendable log) {
-      this.outCmdline = log;
+      this.logExec = log;
     }
     
     /**Sets an instance due to the given 'execClass' for the script.
@@ -1142,6 +1142,257 @@ public final class OutTextPreparer
   
   
   
+  /**Recommended operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
+   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map, LogMessage)} afterwards.
+   * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
+   *  
+   * @since 2024-02-13 opens and closes also the file in jar.
+   * @since 2025-05-19 now it can also read the script only in one line '<:otx:...>...<.otx>'
+   *
+   * @param classInJar null or a Class in the jar as start point of path
+   * @param path if classInJar is given, the relative path from classInJar to read a file from jar using {@link Class#getResourceAsStream(String)}.
+   *   If this file is not available, a FileNotFoundException is thrown: Note: {@link Class#getResourceAsStream(String)} does not throw by itself.
+   *   If classInJar==null this is a path in the file system to use this file. Both variants are supported.
+   * @param idxScript container where the read scripts are stored, sorted by its name <:otx:NAME:...>
+   *   The scripts are created, the text is referred via {@link OutTextPreparer#pattern} but the script is not parsed yet.
+   *   Later parsing allows that a script can be &lt;:call:...> which is defined after the calling script. 
+   * @param dataRoot null admissible, possibility to set values from there in <code>&lt;:set:name=&value></code>
+   * @param idxConstData necessary if <code>&lt;:set:name=value></code> is used. 
+   *   null admissible if the inp does not contain <code>&lt;:set:name=&value></code> outside of scripts
+   * @throws IOException general possible on reading inp
+   * @throws ParseException if the inp has syntax errors
+   */
+  public static void readTemplateCreatePreparer 
+  ( Class<?> classInJar, String path
+  , Map<String, OutTextPreparer> idxScript
+  , Object dataRoot, Map<String, Object> idxConstData
+  ) throws IOException, ParseException {
+    final InputStream inp;
+    if(classInJar == null) {
+      inp = new FileInputStream(FileFunctions.newFile(path));
+    } else {
+      inp = classInJar.getResourceAsStream(path);          //pathInJar with slash: from root.
+      if(inp == null) {                                    // null can occur. 
+        throw new FileNotFoundException("resource in jar not found: " + path + " beside " + classInJar.getTypeName());
+      }
+    }
+    readStreamTemplateCreatePreparer(inp, null, idxScript, dataRoot, idxConstData);
+    inp.close();
+  }
+
+  /**Recommended operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
+   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map, LogMessage)} afterwards.
+   * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
+   * @since 2025-05-19 now it can also read the script only in one line '<:otx:...>...<.otx>'
+   *  
+   * @param inp opened input stream, maybe also a file in jar, see {@link #readTemplateCreatePreparer(Class, String, Map, Object, Map)}
+   * @param lineStart
+   * @param idxScript container where the read scripts are stored, sorted by its name <:otx:NAME:...>
+   *   The scripts are created, the text is referred via {@link OutTextPreparer#pattern} but the script is not parsed yet.
+   *   Later parsing allows that a script can be &lt;:call:...> which is defined after the calling script. 
+   * @param dataRoot null admissible, possibility to set values from there in <code>&lt;:set:name=&value></code>
+   * @param idxConstData necessary if <code>&lt;:set:name=value></code> is used. 
+   *   null admissible if the inp does not contain <code>&lt;:set:name=&value></code> outside of scripts
+   * @throws IOException general possible on reading inp
+   * @throws ParseException on error on a '<:set:... ' line or also formal error on a '<:otx:...' line.
+   *   It does not parse the script here, inner parse errors in the script are not detected here, 
+   *   see {@link #parseTemplates(Map, Class, Map, LogMessage)}
+   */
+  public static void readStreamTemplateCreatePreparer 
+  ( InputStream inp, String lineStart
+  , Map<String, OutTextPreparer> idxScript
+  , Object dataRoot, Map<String, Object> idxConstData
+  ) throws IOException, ParseException {
+    readStreamTemplateCreatePreparer(idxScript, null, inp, lineStart, dataRoot, idxConstData);
+  }
+  
+  
+  
+  /**Reads a given template which may contain the pattern for some associated OutTextPreparer srcipts (parts of the template).
+   * It does not parse, only detect the scripts as parts and const variable associations.
+   * @since 2023-05. See also {@link #readTemplateCreatePreparer(InputStream, String, Class)}
+   * <br>
+   * The file can contain different patterns in segments: <pre>
+   * <:otx: patternName : variable : var2 >  ##comment
+   * content with <&ariables>       ##comment
+   * more lines<.otx>
+   * 
+   * free text between pattern
+   * 
+   * <:otx: nextPatternName ...
+   *   etc.
+   * </pre>
+   * @param inp
+   * @param lineStart null for newer versions if all scripts starts with <:otx:, elsewhere the designation of a new script.
+   *   Then the arguments should be written after the lineStart string in "(arg, ...)" 
+   * @param dataRoot null or can be used for access <:set:name=&element> inside dataRoot, the current value in element will be stored with name.
+   * @param idxConstData necessary as destination if the script contains <:set:name=value>, elsewhere can be null
+   * @return list of all read scripts as part of inp. The scripts starts with <:otx: or with the line after lineStart.
+   * @throws IOException
+   * @throws ParseException
+   * @since 2024-01-15 more arguments dataRoot, idxConstData, for compatibility provide null for both.
+   * @deprecated, use {@link #readStreamTemplateCreatePreparer(Map, List, InputStream, String, Object, Map)} with given idxScript argument
+   */
+  public static List<String> readTemplateList ( InputStream inp, String lineStart, Object dataRoot, Map<String, Object> idxConstData) throws IOException, ParseException {
+    List<String> ret = new LinkedList<String>();
+    readStreamTemplateCreatePreparer(null, ret, inp, lineStart, dataRoot, idxConstData);
+    return ret;
+  }
+  
+  
+  /**Inner operation only separated because oder approach with ret argument.
+   * Reads a given template which may contain the pattern for some associated OutTextPreparer srcipts (parts of the template).
+   * It does not parse, only detect the scripts as parts and const variable associations.
+   * @since 2023-05. See also {@link #readTemplateCreatePreparer(InputStream, String, Class)}
+   * <br>
+   * The file can contain different patterns in segments: <pre>
+   * <:otx: patternName : variable : var2 >  ##comment
+   * content with <&ariables>       ##comment
+   * more lines<.otx>
+   * 
+   * free text between pattern
+   * 
+   * <:otx: nextPatternName ...
+   *   etc.
+   * </pre>
+   * @param inp
+   * @param lineStart null for newer versions if all scripts starts with <:otx:, elsewhere the designation of a new script.
+   *   Then the arguments should be written after the lineStart string in "(arg, ...)" 
+   * @param dataRoot null or can be used for access <:set:name=&element> inside dataRoot, the current value in element will be stored with name.
+   * @param idxConstData necessary as destination if the script contains <:set:name=value>, elsewhere can be null
+   * @return list of all read scripts as part of inp. The scripts starts with <:otx: or with the line after lineStart.
+   * @throws IOException
+   * @throws ParseException
+   * @since 2024-01-15 more arguments dataRoot, idxConstData, for compatibility provide null for both.
+   */
+  private static void readStreamTemplateCreatePreparer ( Map<String, OutTextPreparer> idxScript, List<String> ret
+    , InputStream inp, String lineStart, Object dataRoot, Map<String, Object> idxConstData
+  ) throws IOException, ParseException {
+    InputStreamReader reader = new InputStreamReader(inp, "UTF-8");
+    BufferedReader rd = new BufferedReader(reader);
+    String line;
+    int nrline =0;
+    StringBuilder buf = new StringBuilder(500);
+    boolean bActiveScript = false;
+    String name = null;
+    String args = null;
+    while( (line = rd.readLine()) !=null) {
+      nrline +=1;
+      int posComment = line.indexOf("##");
+      if(posComment >=0) {
+        while(posComment >0 && line.charAt(posComment-1) == ' ') { posComment -=1; }  // backward to fast non space
+        line = line.substring(0, posComment);              // posComment is the position of the first space before comment or of ##comment
+      }
+      if(posComment == 0) {                                // ignore a line which starts with ##comment, do not produce an empty line.
+      }
+      if(!bActiveScript && line.startsWith("<:set:")) {           // a new sub template starts here 
+        int posSep = line.indexOf('=');
+        if(posSep <0) { 
+          throw new ParseException("<:set:...= syntax error, missing \"=\"; line: " + line, nrline); }
+        String key = line.substring(6, posSep).trim();
+        int posEnd = StringFunctions.indexOutsideQuotation(line, posSep, -1, '>', "\"", "\"", '\\');  //search > outside quotation and transcription
+        if(posEnd <0) {
+          throw new ParseException("<:set:...> syntax error, missing \">\"; line: " + line, nrline); }
+        posSep = StringFunctions.indexNoWhitespace(line, posSep+1, -1);
+        final char cc = line.charAt(posSep);
+        final Object data;
+        if(cc == '&') { //----------------------------------- access with DataPath
+          String sDatapath = line.substring(posSep+1, posEnd);
+          try {
+            data = DataAccess.access(sDatapath, dataRoot, true, false, false, null);
+          } catch (Exception e) {
+            throw new ParseException("<:set:...=datapath faulty: " + e.getMessage(), nrline);
+          }
+        } else if(cc == '\"' && line.charAt(posEnd-1) == '\"') {
+          data = StringFunctions.convertTransliteration(line.substring(posSep +1, posEnd -1), '\\').toString(); // text inside "text\n\>" with transliteration
+        } else {
+          data = line.substring(posSep, posEnd);
+        }
+        idxConstData.put(key, data);
+      }
+      else if(!bActiveScript && line.startsWith("<:otx:")) {           // a new sub template starts here 
+        int posName = 6;
+        int posArgs=line.indexOf(':', 6);
+        int posEndArgs = line.indexOf('>');
+        name = line.substring(posName, posArgs).trim();
+        //if(name.equals("castValue_FD")) Debugutil.stopp();
+        args = line.substring(posArgs+1, posEndArgs);
+        line = line.substring(posEndArgs+1).trim();
+        if(line.length()==0) {                             // for compatibility: do not write a '\n' if the first line does not contain text.
+          line = null;                                     // do not write an \n on start
+        }
+        bActiveScript = true;                              // switch state to "in the script" 
+      }
+      else if(lineStart !=null && !bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
+        buf.append(line.substring(lineStart.length())).append('\n');  // first line with args starting with "("
+        bActiveScript = true;
+      }
+      else {
+        // ignore lines outside active script.
+      }
+      if(bActiveScript && line !=null) {                   //--------vv from the second line of a script
+        int posEndScript = line.indexOf("<.otx>");
+        if(posEndScript >=0) {
+          buf.append(line.substring(0, posEndScript));
+          if(ret !=null) {
+            ret.add(buf.toString());                       // old compatible variant.
+          } else {
+            String script = buf.toString();
+            OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
+            idxScript.put(name, otxScript);                // new variant, store the script sorted by name.
+            name = null;
+            args = null;
+          }
+          buf.setLength(0);
+          bActiveScript = false;
+        } else {
+          buf.append(line).append("\n");
+        }
+      }
+    }
+    if(bActiveScript) {
+      if(ret !=null) {
+        ret.add(buf.toString());                       // old compatible variant.
+      } else {
+        String script = buf.toString();
+        OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
+        idxScript.put(name, otxScript);                // new variant, store the script sorted by name.
+        name = null;
+        args = null;
+      }
+    }
+  }
+  
+  
+  
+  /**Parse all templates which are read with {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
+     * It calls {@link #parse(Class, Map, Map)} for all sub scripts stored in idxScript.
+     * @param idxScript the index of the sub scripts, filled. Used to parse for all, also used for &lt;:call:...>
+     * @param execClass May be null, from this class some operations or data or also hard coded {@link OutTextPreparer} instances can be gotten.
+     *   Static operations can be called and static data can be accessed. Instance operations and data can be accessed 
+     *   if {@link DataTextPreparer#setExecObj(Object)} is set with the proper instance.
+     * @param idxConstData May be null, from this index some constant data and also sub scripts can be gotten. 
+     * @throws ParseException
+     */
+    public static void parseTemplates ( Map<String, OutTextPreparer> idxScript, Class<?> execClass, final Map<String, Object> idxConstData, LogMessage log ) throws ParseException {
+      if(idxScript!=null) {
+        for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
+          OutTextPreparer otx = e.getValue();
+  //        if(otx.sIdent.equals("setVar_FBexpr"))
+  //          Debugutil.stop();
+          try { 
+            otx.parse(execClass, idxConstData, idxScript);
+          } catch( ParseException exc) {
+            if(log !=null) {
+              log.writeError("ERROR parseTemplates in script: " + otx.sIdent, exc);
+            } else {
+              throw exc;
+            }
+          }
+        }
+      }
+    }
+
   /**Reads a given template which may contain the pattern for several separated OutTextPreparer.
    * See also {@link #readTemplateList(InputStream, String)}
    * <br>
@@ -1211,106 +1462,7 @@ public final class OutTextPreparer
     }
     return ret;
   }
-  
-  
-  
-  /**Reads a given template which may contain the pattern for some associated OutTextPreparer srcipts (parts of the template).
-   * It does not parse, only detect the scripts as parts and const variable associations.
-   * @since 2023-05. See also {@link #readTemplateCreatePreparer(InputStream, String, Class)}
-   * <br>
-   * The file can contain different patterns in segments: <pre>
-   * <:otx: patternName : variable : var2 >  ##comment
-   * content with <&ariables>       ##comment
-   * more lines<.otx>
-   * 
-   * free text between pattern
-   * 
-   * <:otx: nextPatternName ...
-   *   etc.
-   * </pre>
-   * @param inp
-   * @param lineStart null for newer versions if all scripts starts with <:otx:, elsewhere the designation of a new script.
-   *   Then the arguments should be written after the lineStart string in "(arg, ...)" 
-   * @param dataRoot null or can be used for access <:set:name=&element> inside dataRoot, the current value in element will be stored with name.
-   * @param idxConstData necessary as destination if the script contains <:set:name=value>, elsewhere can be null
-   * @return list of all read scripts as part of inp. The scripts starts with <:otx: or with the line after lineStart.
-   * @throws IOException
-   * @throws ParseException
-   * @since 2024-01-15 more arguments dataRoot, idxConstData, for compatibility provide null for both.
-   */
-  public static List<String> readTemplateList ( InputStream inp, String lineStart, Object dataRoot, Map<String, Object> idxConstData) throws IOException, ParseException {
-    List<String> ret = new LinkedList<String>();
-    InputStreamReader reader = new InputStreamReader(inp, "UTF-8");
-    BufferedReader rd = new BufferedReader(reader);
-    String line;
-    int nrline =0;
-    StringBuilder buf = new StringBuilder(500);
-    boolean bActiveScript = false;
-    while( (line = rd.readLine()) !=null) {
-      nrline +=1;
-      int posComment = line.indexOf("##");
-      if(posComment >=0) {
-        while(posComment >0 && line.charAt(posComment-1) == ' ') { posComment -=1; }  // backward to fast non space
-        line = line.substring(0, posComment);              // posComment is the position of the first space before comment or of ##comment
-      }
-      if(posComment == 0) {                                // ignore a line which starts with ##comment, do not produce an empty line.
-      }
-      if(!bActiveScript && line.startsWith("<:set:")) {           // a new sub template starts here 
-        int posSep = line.indexOf('=');
-        if(posSep <0) { 
-          throw new ParseException("<:set:...= syntax error, missing \"=\"; line: " + line, nrline); }
-        String key = line.substring(6, posSep).trim();
-        int posEnd = StringFunctions.indexOutsideQuotation(line, posSep, -1, '>', "\"", "\"", '\\');  //search > outside quotation and transcription
-        if(posEnd <0) {
-          throw new ParseException("<:set:...> syntax error, missing \">\"; line: " + line, nrline); }
-        posSep = StringFunctions.indexNoWhitespace(line, posSep+1, -1);
-        final char cc = line.charAt(posSep);
-        final Object data;
-        if(cc == '&') { //----------------------------------- access with DataPath
-          String sDatapath = line.substring(posSep+1, posEnd);
-          try {
-            data = DataAccess.access(sDatapath, dataRoot, true, false, false, null);
-          } catch (Exception e) {
-            throw new ParseException("<:set:...=datapath faulty: " + e.getMessage(), nrline);
-          }
-        } else if(cc == '\"' && line.charAt(posEnd-1) == '\"') {
-          data = StringFunctions.convertTransliteration(line.substring(posSep +1, posEnd -1), '\\').toString(); // text inside "text\n\>" with transliteration
-        } else {
-          data = line.substring(posSep, posEnd);
-        }
-        idxConstData.put(key, data);
-      }
-      else if(!bActiveScript && line.startsWith("<:otx:")) {           // a new sub template starts here 
-        buf.append(line).append('\n');  // first line with args starting with "("
-        bActiveScript = true;
-      }
-      else if(lineStart !=null && !bActiveScript && line.startsWith(lineStart)) {           // a new sub template starts here 
-        buf.append(line.substring(lineStart.length())).append('\n');  // first line with args starting with "("
-        bActiveScript = true;
-      }
-      else if(bActiveScript) {
-        int posEndScript = line.indexOf("<.otx>");
-        if(posEndScript >=0) {
-          buf.append(line.substring(0, posEndScript));
-          ret.add(buf.toString());
-          buf.setLength(0);
-          bActiveScript = false;
-        } else {
-          buf.append(line).append("\n");
-        }
-      }
-      else {
-        // ignore lines outside active script.
-      }
-    }
-    if(bActiveScript) {
-      ret.add(buf.toString());
-    }
-    return ret;
-  }
-  
-  
-  
+
   /**Reads a given template which may contain the pattern for some associated OutTextPreparer also for call operations
    * and instantiates all OutTextPreparer to execute the script.
    * @since 2023-05. 
@@ -1409,46 +1561,6 @@ public final class OutTextPreparer
   
   
   
-  /**Recommended operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
-   * To parse all read scripts call {@link #parseTemplates(Map, Class, Map, LogMessage)} afterwards.
-   * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
-   *  
-   * @since 2024-02-13 opens and closes also the file in jar.
-   *
-   * @param classInJar null or a Class in the jar as start point of path
-   * @param path if classInJar is given, the relative path from classInJar to read a file from jar using {@link Class#getResourceAsStream(String)}.
-   *   If this file is not available, a FileNotFoundException is thrown: Note: {@link Class#getResourceAsStream(String)} does not throw by itself.
-   *   If classInJar==null this is a path in the file system to use this file. Both variants are supported.
-   * @param idxScript container where the read scripts are stored, sorted by its name <:otx:NAME:...>
-   *   The scripts are created, the text is referred via {@link OutTextPreparer#pattern} but the script is not parsed yet.
-   *   Later parsing allows that a script can be &lt;:call:...> which is defined after the calling script. 
-   * @param dataRoot null admissible, possibility to set values from there in <code>&lt;:set:name=&value></code>
-   * @param idxConstData necessary if <code>&lt;:set:name=value></code> is used. 
-   *   null admissible if the inp does not contain <code>&lt;:set:name=&value></code> outside of scripts
-   * @throws IOException general possible on reading inp
-   * @throws ParseException if the inp has syntax errors
-   */
-  public static void readTemplateCreatePreparer 
-  ( Class<?> classInJar, String path
-  , Map<String, OutTextPreparer> idxScript
-  , Object dataRoot, Map<String, Object> idxConstData
-  ) throws IOException, ParseException {
-    final InputStream inp;
-    if(classInJar == null) {
-      inp = new FileInputStream(FileFunctions.newFile(path));
-    } else {
-      inp = classInJar.getResourceAsStream(path);          //pathInJar with slash: from root.
-      if(inp == null) {                                    // null can occur. 
-        throw new FileNotFoundException("resource in jar not found: " + path + " beside " + classInJar.getTypeName());
-      }
-    }
-    readStreamTemplateCreatePreparer(inp, null, idxScript, dataRoot, idxConstData);
-    inp.close();
-  }  
-  
-  
-  
-  
   /**Older operation to read one template script and create all {@link OutTextPreparer} instances but does not parse.
    * To parse all read scripts call {@link #parseTemplates(Map, Class, Map, LogMessage)} afterwards.
    * This assures that all sub scripts in all templates can be &lt;:call...> independent of the definition order.
@@ -1465,8 +1577,9 @@ public final class OutTextPreparer
    *   null admissible if the inp does not contain <code>&lt;:set:name=&value></code> outside of scripts
    * @throws IOException general possible on reading inp
    * @throws ParseException if the inp has syntax errors
+   * @deprecated remove it, use {@link #readStreamTemplateCreatePreparerNew(InputStream, String, Map, Object, Map)}
    */
-  public static void readStreamTemplateCreatePreparer 
+  @Deprecated public static void XXXreadStreamTemplateCreatePreparer 
   ( InputStream inp, String lineStart
   , Map<String, OutTextPreparer> idxScript
   , Object dataRoot, Map<String, Object> idxConstData
@@ -1490,41 +1603,19 @@ public final class OutTextPreparer
       }
       if(! ( posArgs >0 && posEndArgs > posArgs && posNewline > posEndArgs)) throw new ParseException("first line must contain ( args ,...)", 0);
       String name = text.substring(posName, posArgs).trim();
-//      if(name.equals("VarV_UFB"))
-//        Debugutil.stop();
+      if(name.equals("castValue_FD")) Debugutil.stopp();
       String args = text.substring(posArgs+1, posEndArgs);
-      String script = text.substring(posNewline+1);
-      OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
-      idxScript.put(name, otxScript); 
-    }
-  }
-  
-  
-  /**Parse all templates which are read with {@link #readTemplateCreatePreparer(InputStream, String, Map)}.
-   * It calls {@link #parse(Class, Map, Map)} for all sub scripts stored in idxScript.
-   * @param idxScript the index of the sub scripts, filled. Used to parse for all, also used for &lt;:call:...>
-   * @param execClass May be null, from this class some operations or data or also hard coded {@link OutTextPreparer} instances can be gotten.
-   *   Static operations can be called and static data can be accessed. Instance operations and data can be accessed 
-   *   if {@link DataTextPreparer#setExecObj(Object)} is set with the proper instance.
-   * @param idxConstData May be null, from this index some constant data and also sub scripts can be gotten. 
-   * @throws ParseException
-   */
-  public static void parseTemplates ( Map<String, OutTextPreparer> idxScript, Class<?> execClass, final Map<String, Object> idxConstData, LogMessage log ) throws ParseException {
-    if(idxScript!=null) {
-      for(Map.Entry<String, OutTextPreparer> e: idxScript.entrySet()) {
-        OutTextPreparer otx = e.getValue();
-//        if(otx.sIdent.equals("setVar_FBexpr"))
-//          Debugutil.stop();
-        try { 
-          otx.parse(execClass, idxConstData, idxScript);
-        } catch( ParseException exc) {
-          if(log !=null) {
-            log.writeError("ERROR parseTemplates in script: " + otx.sIdent, exc);
-          } else {
-            throw exc;
-          }
+      int posStartScript = posEndArgs +1;                  // script starts after '>'
+      while(posStartScript < posNewline+1) {
+        if("\n\r ".indexOf(text.charAt(posStartScript)) >=0) {
+          posStartScript +=1;                              // but first skip over all white spaces till the next line
+        } else {
+          break;                                           // the first character which is not a white space also in the first line is the start.
         }
       }
+      String script = text.substring(posStartScript);
+      OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
+      idxScript.put(name, otxScript); 
     }
   }
   
@@ -2649,7 +2740,7 @@ public final class OutTextPreparer
   private Object dataForCmd ( Cmd cmd, DataTextPreparer args, Appendable wr ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
     Object data;  //========================================= first gather the data
-    if(args.outCmdline !=null) { args.outCmdline.append(" " + cmd.linecol[0]); } 
+    if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
     if(cmd.expr !=null) {
       try {                                                // only one time, set the destination data for calc
         //if(args.calcExprData == null) { args.calcExprData = new CalculatorExpr.Data(); }
@@ -2715,7 +2806,7 @@ public final class OutTextPreparer
     Object data0 = cmd.ixValue <0 ? null: args.args[cmd.ixValue];
     Object data;
     if(cmd.dataAccess !=null) {
-      if(args.outCmdline !=null) { args.outCmdline.append(" " + cmd.linecol[0]); } 
+      if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
 //      String sDataAccess = cmd.dataAccess.toString();
 //      if(sDataAccess.contains("Dtype")) {
 //        Debugutil.stop();
@@ -2801,7 +2892,7 @@ public final class OutTextPreparer
    * @throws Exception
    */
   private void execFor(Appendable wr, ForCmd cmd, int ixCmd, Object container, DataTextPreparer args) throws IOException {
-    if(args.outCmdline !=null) { args.outCmdline.append(" :for@" + cmd.linecol[0]); } 
+    if(args.logExec !=null) { args.logExec.append(" " + this.sIdent + ":for@" + cmd.linecol[0]); } 
     if(container == null) {
       //do nothing, no for
     }
@@ -2920,7 +3011,7 @@ public final class OutTextPreparer
   private void execCall(Appendable wr, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws IOException {
     @SuppressWarnings("cast") OutTextPreparer callVar1 = (OutTextPreparer)callVar;
     DataTextPreparer valSub;
-    if(args.outCmdline !=null) { args.outCmdline.append(" :call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
+    if(args.logExec !=null) { args.logExec.append(" :call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
     if(cmd.args !=null) {
       valSub = args.argSub[cmd.ixDataArg];
       if(valSub == null) { //only first time for this call
@@ -2946,7 +3037,7 @@ public final class OutTextPreparer
       valSub = args;
     }
     callVar1.exec(wr, valSub);
-    if(args.outCmdline !=null) { args.outCmdline.append(" .call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
+    if(args.logExec !=null) { args.logExec.append(" .call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
   }
   
   
