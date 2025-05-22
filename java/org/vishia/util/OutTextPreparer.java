@@ -1337,8 +1337,13 @@ public final class OutTextPreparer
           if(ret !=null) {
             ret.add(buf.toString());                       // old compatible variant.
           } else {
+            OutTextPreparer otxScript = idxScript.get(name);
+            if(otxScript !=null) {
+              Debugutil.stopp();
+              throw new ParseException("script otx: " + name + " is already existing, this is twice", nrline);
+            }
             String script = buf.toString();
-            OutTextPreparer otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
+            otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
             idxScript.put(name, otxScript);                // new variant, store the script sorted by name.
             name = null;
             args = null;
@@ -2763,6 +2768,7 @@ public final class OutTextPreparer
         data = cmd.dataAccess.access(args.execObj, true, false, this.nameVariables, args.args);
       } catch (Exception exc) {
         bDataOk = false;
+        if(args.logExec !=null) { args.logExec.append(" Exception dataAccess: ").append(this.sIdent).append(':').append(cmd.toString()); }
         CharSequence sMsg = ExcUtil.exceptionInfo("", exc, 1, 10);
         data = "<??>";
         wr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
