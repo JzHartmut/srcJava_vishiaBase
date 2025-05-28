@@ -89,18 +89,18 @@ public class StringFunctions_C
    *   Negative: length of srcP shortened, -1 is till end, -2 is till end-1 etc.
    *   One can use -1 or {@link Integer#MAX_VALUE} to parse till the end of the String
    * @param radixArg The radix of the number, typical 2, 10 or 16, max 36.
-   * @param parsedChars [0] number of chars which is used to parse the integer. 
-   *   [1] number of real used digits. Important if this is the fractional part of a float.
-   *   The pointer may be null if not necessary. @pjava2c=simpleVariableRef. 
-   * @param spaceChars maybe null, some characters which are skipped by reading the digits. It is especially ". '" to skip over a dot, or spaces or '
-   * @return the Number.
+    * @param parsedChars maybe null, if not null it should be intialized with int[1] or int[2]. 
+   *   <br> parsedChars [0] number of chars which is used to parse the integer. 
+   *   <br> [1] number of real used digits. Important if this is the fractional part of a float.
+   * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
+   *   <code>12'345</code> or   <code>12,234</code> or   <code>12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
+  * @return the Number.
    * @throws never. All possible digits where scanned, the rest of non-scanable digits are returned.
    *  For example the String contains "-123.45" it returns -123, and the retSize is 3.
    */
   public static int parseIntRadix(final CharSequence srcP, final int pos, final int sizeP, final int radixArg
       , final int[] parsedChars, final String spaceChars)
   { int val = 0;
-    int radix = radixArg;
     boolean bNegativ;
     int digit;
     int usedDigits = 0;
@@ -111,11 +111,21 @@ public class StringFunctions_C
     if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
     else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
     //
-    int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
     if(restlen > 0 && srcP.charAt(ixSrc) == '-') { 
       ixSrc+=1; restlen -=1; bNegativ = true; 
     }
     else { bNegativ = false; }
+    //
+    int radix = radixArg;
+    if(restlen > 1 && srcP.charAt(ixSrc) == '0') { 
+      char cBase = srcP.charAt(ixSrc+1);
+      int ixBase = "bBxX".indexOf(cBase);
+      if(ixBase >=0) {
+        radix = ixBase >=2 ? 16: 2;                        // detect 0x 0X for hexa, 0b 0B for binary
+        ixSrc+=2; restlen -=2; 
+      }
+    }
+    int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
     long valMax = radix == 16 ? 0xffffffffL : (bNegativ ? 0x080000000L : 0x7fffffff);
     while(--restlen >= 0) {               // break in loop!
       cc = srcP.charAt(ixSrc);
@@ -160,7 +170,11 @@ public class StringFunctions_C
    *   that the number of characters to parse will be calculated outside, and 0 is a valid result. 
    *   If sizeP is > the length, then the whole String is used.
    *   You can set both sizeP = -1 or sizeP = Integer.MAXVALUE to deactivate this argument.
-   * @param parsedChars number of chars which is used to parse. The pointer may be null if not necessary. @pjava2c=simpleVariableRef.
+   * @param parsedChars maybe null, if not null it should be intialized with int[1] or int[2]. 
+   *   <br> parsedChars [0] number of chars which is used to parse the integer. 
+   *   <br> [1] number of real used digits. Important if this is the fractional part of a float.
+   * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
+   *   <code>12'345</code> or   <code>12,234</code> or   <code>12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    * @return
    */
   @Java4C.Inline public static int parseIntRadix(final CharSequence srcP, final int pos, final int sizeP, final int radix, final int[] parsedChars)
@@ -181,20 +195,63 @@ public class StringFunctions_C
    * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
    *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    */
-  public static long parseLong(final CharSequence srcP, final int pos, final int sizeP, final int radix
+  /**Parses a given String and convert it to the long number.
+   * It is the adequate method for long values, see {@link #parseIntRadix(CharSequence, int, int, int, int[], String)}.
+   * The String may start with a negative sign ('-') and should contain digits after them.
+   * The digits for radix > 10 are 'A'..'Z' respectively 'a'..'z', known as hexa numbers A..F or a..f. 
+   * <br>
+   * Between any character except '0x' .. '0b' any of the given 'separatorChars' can be written. 
+   * It is for better readability for the number.
+   * <br>
+   * If the string contains "0x" or "0X" before digits then the number is read hexadecimal also if radix = 10.
+   * This allows accept hexa where decimal is expected.
+   * <br>
+   * If the string contains "0x" or "0X" before digits then the number is read hexadecimal also if radix = 10.
+   * This allows accept hexa where decimal is expected.
+   * <br>
+   * The number of parsed digits is limited to the int size (32 bit).
+   * Whereby on radix==16 also till "0xffffffff" is parsed, but this represents -1, written without negative sign. 
+   * It is the same as "-0x1" or "-0x00000001".
+   * <br>
+   * If for example "3 000 000 000" is given, only "3 000 000 00" is parsed, one "0" remains. 
+   * If digit characters remain, there are not parsed and able to recognize after srcP.subSequence(parsedChars[0]).
+   * But the number of digits is not limited outside of sizeP, for example "0000002123456789" is correctly parsed as result 0x7E916115
+   * 
+   * @param srcP The String, non 0-terminated, see ,,size,,.
+   * @param pos The position in src to start.
+   * @param sizeP The maximal number of chars to parse. If it is more as the length of the String, no error.
+   *   Negative: length of srcP shortened, -1 is till end, -2 is till end-1 etc.
+   *   One can use -1 or {@link Integer#MAX_VALUE} to parse till the end of the String
+   * @param radixArg The radix of the number, typical 2, 10 or 16, max 36.
+   * @param parsedChars maybe null, if not null it should be intialized with int[1] or int[2]. 
+   *   <br> parsedChars [0] number of chars which is used to parse the integer. 
+   *   <br> [1] number of real used digits. Important if this is the fractional part of a float.
+   * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
+   *   <code>12'345</code> or   <code>12,234</code> or   <code>12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
+   * @return the Number.
+   * @throws never. All possible digits where scanned, the rest of non-scanable digits are returned.
+   *  For example the String contains "-123.45" it returns -123, and the retSize is 3.
+   */
+  public static long parseLong(final CharSequence srcP, final int posArg, final int sizeP, final int radix
       , final int[] parsedChars, final String separatorChars) {
-    int zSrc = srcP.length() - pos;
+    int zSrc = srcP.length() - posArg;
     int restlen;
     if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
     else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
     //
     boolean bNegativ;
-    int pos1 = pos;
-    if(restlen > 0 && srcP.charAt(pos1) == '-') { 
-      pos1+=1; restlen -=1; bNegativ = true; 
+    int pos = posArg;
+    char cc = restlen >0 ? srcP.charAt(pos) : 0;
+    if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
+      pos +=1;
+      cc = restlen >0 ? srcP.charAt(pos) : 0;
+    } 
+    if(cc == '-') { 
+      pos+=1; restlen -=1; bNegativ = true; 
     }
     else { bNegativ = false; }
-    long val = parseUlong(srcP, pos1, restlen, radix, parsedChars, separatorChars);
+    //
+    long val = parseUlong(srcP, pos, restlen, radix, parsedChars, separatorChars);
     if(bNegativ){ val = -val; }
     return val;
   }
@@ -213,22 +270,40 @@ public class StringFunctions_C
    *   You can set both sizeP = -1 or sizeP = Integer.MAXVALUE to deactivate this argument.
    * @param radix of the number, it can be any value 0..36- If >10 then characters A..Z or a..z are used for digits.
    *   Usually 16 for hex numbers. 
-   * @param parsedChars maybe null, if not null it should be intialized with int[1]. The position [0] returns the number of the digits. @pjava2c=simpleVariableRef.
+   * @param parsedChars maybe null, if not null it should be intialized with int[1] or int[2]. 
+   *   <br> parsedChars [0] number of chars which is used to parse the integer. 
+   *   <br> [1] number of real used digits. Important if this is the fractional part of a float.
    * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
-   *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
+   *   <code>12'345</code> or   <code>12,234</code> or   <code>12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    * @return The parsed number, 0 if no character is detected.
    */
-  public static long parseUlong(final CharSequence src, final int pos, final int sizeP, final int radix
+  public static long parseUlong(final CharSequence src, final int pos, final int sizeP, final int radixArg
       , final int[] parsedChars, final String separatorChars)
   { long val = 0;  //exact same lines as parseInt, difference is: using long instead int. 
     int zSrc = src.length() - pos;
     int restlen;
     if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
     else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
-    int digit;
-    char cc;
     int ixSrc = pos;
+    char cc = restlen >0 ? src.charAt(ixSrc) : 0;
+    if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
+      ixSrc +=1;
+      cc = restlen >0 ? src.charAt(pos) : 0;
+    } 
+    //
+    int radix = radixArg;
+    if(restlen > 1 && cc == '0') { 
+      char cBase = src.charAt(pos+1);
+      int ixBase = "bBxX".indexOf(cBase);
+      if(ixBase >=0) {
+        radix = ixBase >=2 ? 16: 2;                        // detect 0x 0X for hexa, 0b 0B for binary
+        ixSrc+=2; restlen -=2; 
+      }
+    }
+
     int maxDigit = (radix <=10) ? '0' + radix -1 : '9'; 
+    int digit;
+    int parsedDigits = 0;
     while(--restlen >= 0){
       cc = src.charAt(ixSrc);
       if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
@@ -240,6 +315,7 @@ public class StringFunctions_C
                                || cc >= 'a' && (digit = (cc - 'a'+ 10)) <=radix)
            )  )                ) {
         val = radix * val + digit;
+        parsedDigits +=1;
         ixSrc+=1;
       } else {
         break;  //other char
@@ -247,6 +323,9 @@ public class StringFunctions_C
     }
     if(parsedChars !=null){
       parsedChars[0] = ixSrc - pos;
+      if(parsedChars.length >1) {
+        parsedChars[1] = parsedDigits;
+      }
     }
     return( val);
   }

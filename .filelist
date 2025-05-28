@@ -1,6 +1,6 @@
 2024-03-27 14:11:02  x     +buildTimestamps.sh                      ::           .251  0001853367 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2025-05-22 10:18:50  x     .gitCommit                               ::           .133  1189694785 
+2025-05-28 22:58:52  x     .gitCommit                               ::           .254  1285660749 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2023-05-13 08:43:58  x     .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -343,7 +343,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2025-05-19 21:36:22  x     OutTextPreparer.java                     ::        155.102 -1311153392 
+2025-05-28 22:34:31  x     OutTextPreparer.java                     ::        159.045 -1314902565 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -370,7 +370,7 @@
 2023-01-28 22:17:16  x     StringFormatter.java                     ::         51.459 -1023273497 
 2024-12-20 21:12:19  x     StringFunctions.java                     ::         70.597 -0264943031 
 2023-02-05 22:17:06  x     StringFunctions_B.java                   ::         18.615 -0708190660 
-2025-04-22 22:06:24  x     StringFunctions_C.java                   ::         34.636  1708992913 
+2025-05-28 20:21:42  x     StringFunctions_C.java                   ::         39.142 -0937309011 
 2025-05-15 00:35:54  x     StringPart.java                          ::        139.816  2118853782 
 2021-10-04 14:29:52  x     StringPartAppend.java                    ::          5.309 -1348645578 
 2015-09-30 08:42:27  x     StringPartFromFile.java                  ::          2.812  0877476463 

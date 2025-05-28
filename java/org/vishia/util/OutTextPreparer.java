@@ -372,6 +372,99 @@ public final class OutTextPreparer
     // but usable for others ... in future
   }
   
+  
+  
+  /**This class is used to write out the generated text.
+   * It supports line count. 
+   * All {@link #append(CharSequence)} operations looks for '\n' inside the output text.
+   * Any found new line character increments the {@link #lineCt()}.
+   * The {@link #lineCt()} can be used to output the line number. 
+   * 
+   */
+  public static class WriteDst implements Appendable {
+    
+    public final Appendable wr;
+    
+    /**This is set if the {@link #wr} is a {@link StringBuilder}. 
+     * It allows more access possibilities of the user to the generated text.
+     * If {@link #wr} is not a StringBulder this field remains null.
+     * The user can use it immediately if the calling environment of the ctor delivers a {@link StringBuilder} as {@link Appendable}.
+     * But note that changing content of this field and hence content of {@link #wr}
+     * does not effect the {@link #lineCt()}.
+     */
+    public final StringBuilder sb;
+    
+    /**Counts the '\n' inside appended texts. */
+    private int lineCt;
+    
+    /**Constructs a new output destination to write the generated text.
+     * @param wr may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
+     * The lineCt starts from 1 for the first line.
+     */
+    public WriteDst(Appendable wr) {
+      this.wr = wr;
+      this.sb = wr instanceof StringBuilder ? (StringBuilder)wr: null;
+      this.lineCt = 1;
+    }
+
+    public int lineCt() { return this.lineCt; }
+    
+    /**This operation can be used if a part of the output text is generated meanwhile with another WriteDst instance
+     * and should be added now. The {@link #lineCt()} is also incremented by the 'other.lineCt'. 
+     * @param other The {@link #wr} must be an instance of {@link CharSequence}, else assertion and exception.
+     * @throws IOException
+     */
+    public void add(WriteDst other) throws IOException {
+      assert(other.wr instanceof CharSequence);
+      this.lineCt += other.lineCt;
+      this.wr.append((CharSequence)other.wr);
+    }
+    
+    
+    /**Append operation similar as in {@link StringBuilder#append(int)}
+     * @param val
+     * @return
+     * @throws IOException
+     */
+    public WriteDst append(int val) throws IOException {
+      this.wr.append(Integer.toString(val));
+      return this;
+    }
+    
+
+    /**Standard append operation see {@link Appendable#append(CharSequence)} */
+    @Override public WriteDst append ( CharSequence csq ) throws IOException {
+      return append(csq, 0, csq.length());
+    }
+
+    /**Standard append operation see {@link Appendable#append(CharSequence, int, int)} */
+    @Override public WriteDst append ( CharSequence csq, int start, int end ) throws IOException {
+      for(int ix = start; ix < end; ++ix) {
+        char cc = csq.charAt(ix);
+        if(cc =='\n') { this.lineCt +=1; }
+        this.wr.append(cc);
+      }
+      //this.wr.append(csq, start, end);  //TODO test calculation time.
+      return this;
+    }
+
+    /**Standard append operation see {@link Appendable#append(char)} */
+    @Override public WriteDst append ( char c ) throws IOException {
+      if(c=='\n') { this.lineCt +=1; }
+      this.wr.append(c);
+      return this;
+    }
+    
+    /**This should be used only for debug view. 
+     * It outputs the {@link #lineCt()} and only the content if {@link #wr} is a {@link StringBuilder}
+     */
+    @Override public String toString() {
+      return "lines: " + this.lineCt + this.sb == null ? "" : "\n" + this.sb;
+    }
+  }
+  
+  
+  
   /**Instances of this class holds the data for one OutTextPreparer instance but maybe for all invocations.
    * An instance can be gotten from {@link OutTextPreparer#createArgumentDataObj()} proper and associated to the out text.
    * The constructor of this class is not public, it should be only gotten with this routine.
@@ -2576,7 +2669,10 @@ public final class OutTextPreparer
   
   
   
-  
+  public void exec( Appendable wr, DataTextPreparer args) throws IOException {
+    WriteDst wrCt = new WriteDst(wr);
+    execLineCt(wrCt, args);
+  }
 
   
   
@@ -2600,13 +2696,13 @@ public final class OutTextPreparer
    *   It is internally tested. 
    * @throws Exception 
    */
-  public void exec( Appendable wr, DataTextPreparer args) throws IOException {
+  public void execLineCt( WriteDst wrCt, DataTextPreparer args) throws IOException {
     if(args.prep != this) {
       throw new IllegalArgumentException("OutTextPreparer mismatch: The data does not match to the script.");
     }
-    execSub(wr, args, 0, this.cmds.size());
-    if(wr instanceof Flushable) {
-      ((Flushable)wr).flush();             // interesting to see what's written in debug
+    execSub(wrCt, args, 0, this.cmds.size());
+    if(wrCt.wr instanceof Flushable) {
+      ((Flushable)wrCt.wr).flush();             // interesting to see what's written in debug
     }
   }
   
@@ -2617,13 +2713,13 @@ public final class OutTextPreparer
    * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
    */
-  private void execSub( Appendable wrArg, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
+  private void execSub( WriteDst wdArg, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
     int ixCmd = ixStart;
-    Appendable wr = wrArg;
-    assert(wr !=null);
-    Appendable wrBack = wrArg;  
-    args.args[this.ixOUT] = wr;                            // variable "OUT" is the output writer, always stored here as OUT
+    WriteDst wrCt = wdArg;
+    assert(wrCt !=null);
+    WriteDst wdBack = wdArg;  
+    args.args[this.ixOUT] = wrCt;                            // variable "OUT" is the output writer, always stored here as OUT
     args.args[this.ixOUT+2] = args;                        // variable "OTXdata" is args itself, for debug info
     args.args[this.ixOUT+3] = this;                        // variable "OTX" is this itself, for debug info
     Cmd cmd;
@@ -2644,20 +2740,20 @@ public final class OutTextPreparer
       boolean bDataOk = true;
       if(bDataOk) {    //==================================== second execute the cmd with the data
         switch(cmd.cmd) {
-          case addString: wr.append(cmd.textOrVar); break;
+          case addString: wrCt.append(cmd.textOrVar); break;
           case addVar: {                                   // <&access...>
             //Integer ixVar = varValues.get(cmd.str);
-            Object data = dataForCmd(cmd, args, wr);
+            Object data = dataForCmd(cmd, args, wrCt);
             String sData = data == null ? "<null>" : data.toString();
             assert(sData !=null);
-            if(wr !=null && sData !=null) wr.append(sData); else System.err.println("xxxx");
+            if(wrCt !=null && sData !=null) wrCt.append(sData); else System.err.println("xxxx");
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;
 //            if(ixVar < this.listArgs.size() && this.listArgs.get(ixVar).equals("sIx")) {   // for debug: Check the given name of the variable.
 //              Debugutil.stop();
 //            }
-            Object res =  dataForCmd(cmd, args, wr);
+            Object res =  dataForCmd(cmd, args, wrCt);
             if(res instanceof CalculatorExpr.Value) {
               CalculatorExpr.Value resExpr = (CalculatorExpr.Value) res;
               args.args[ ixVar ] = resExpr.objValue();
@@ -2669,40 +2765,46 @@ public final class OutTextPreparer
           } break;
           case typeCheck: if(args.bChecks){
             TypeCmd cmdt = (TypeCmd)cmd;
-            Object data = dataForCmd(cmd, args, wr);
+            Object data = dataForCmd(cmd, args, wrCt);
             boolean bOk = cmdt.type.isInstance(data);
             if(!bOk) {
               Class<?> typefound = data.getClass();
-              wr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
+              wrCt.wr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
             }
           } break;
           case elsifCtrl:
           case ifCtrl: {
-            Object data = dataForCmd(cmd, args, wr);
-            ixCmd = execIf(wr, (IfCmd)cmd, ixCmd, data, args);
+            Object data = dataForCmd(cmd, args, wrCt);
+            ixCmd = execIf(wrCt, (IfCmd)cmd, ixCmd, data, args);
           } break;
           case elseCtrl: break;  //if <:else> is found in queue of <:if>...<:elseif> ...<:else> next statements are executed.
           case forCtrl: {
             if(((ForCmd)cmd).ixStart ==0)
               Debugutil.stop();
-            Object data = dataForCmd(cmd, args, wr);
-            execFor(wr, (ForCmd)cmd, ixCmd, data, args);;
+            Object data = dataForCmd(cmd, args, wrCt);
+            execFor(wrCt, (ForCmd)cmd, ixCmd, data, args);;
             ixCmd += cmd.offsEndCtrl -1;  //continue after <.for>
           } break;
           case wr: {               //======================== replace the current output
             int ixWrBuffer = ((WrCmd)cmd).ixDataWr;
             //if(args.args[ixWrBuffer] == null) {  //---------- first get the write buffer
-              args.args[ixWrBuffer] = dataForCmd(cmd, args, wr);
+              args.args[ixWrBuffer] = dataForCmd(cmd, args, wrCt);
             //}
             if(args.args[ixWrBuffer] == null || !(args.args[ixWrBuffer] instanceof Appendable)) {
-              wr.append("<??:wr:buffer not found or faulty: ??>");
+              wrCt.wr.append("<??:wr:buffer not found or faulty: ??>");
               ixCmd += ((WrCmd)cmd).offsEndCtrl -1;
             } else {
-              args.args[this.ixOUT] = wr = (Appendable)args.args[ixWrBuffer];      // replace the current output
+              Object wo = args.args[ixWrBuffer];
+              if(wo instanceof WriteDst) {
+                wrCt = (WriteDst)wo;
+              } else {
+                wrCt = new WriteDst((Appendable)wo);
+              }
+              args.args[this.ixOUT] = wrCt;      // replace the current output
             }
           } break;
           case wrEnd: {
-            args.args[this.ixOUT] = wr = wrBack;        // restore the current output 
+            args.args[this.ixOUT] = wrCt = wdBack;        // restore the current output 
           } break;
           case exec: {
             //ExecCmd ecmd = (ExecCmd)cmd;
@@ -2710,22 +2812,22 @@ public final class OutTextPreparer
             try {
               DataAccess.access(dataAccess1, args.execObj, true, false, null, args.args, false, null); 
             } catch (Exception exc) {
-              wr.append("<?? OutTextPreparer script " + this.sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
+              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<exec:" + cmd.textOrVar + ": execution exception " + exc.getMessage() + "??>");
             } 
           } break;
           case call: {
-            Object data = dataForCmd(cmd, args, wr);
+            Object data = dataForCmd(cmd, args, wrCt);
             if(data == null) {
-              wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
+              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ": variable not found, not given??>");
             }
             if(!(data instanceof OutTextPreparer)) {
-              wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
+              wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + "<call:" + cmd.textOrVar + ":  variable is not an OutTextPreparer ??>");
             } else {
-              execCall(wr, (CallCmd)cmd, args, (OutTextPreparer)data);
+              execCall(wrCt, (CallCmd)cmd, args, (OutTextPreparer)data);
             } 
           } break;
           case debug: {
-            if(((DebugCmd)cmd).cmpString ==null || dataForCmd(cmd, args, wr).toString().equals(((DebugCmd)cmd).cmpString)){
+            if(((DebugCmd)cmd).cmpString ==null || dataForCmd(cmd, args, wrCt).toString().equals(((DebugCmd)cmd).cmpString)){
               debug();
             }
           } break;
@@ -2742,7 +2844,7 @@ public final class OutTextPreparer
   
 
   
-  private Object dataForCmd ( Cmd cmd, DataTextPreparer args, Appendable wr ) throws IOException {
+  private Object dataForCmd ( Cmd cmd, DataTextPreparer args, WriteDst wrCt ) throws IOException {
     @SuppressWarnings("unused") boolean bDataOk = true;
     Object data;  //========================================= first gather the data
     if(args.logExec !=null) { args.logExec.append(" " + cmd.linecol[0]); } 
@@ -2754,11 +2856,11 @@ public final class OutTextPreparer
       } catch (Exception e) {
         bDataOk = false;
         data = null;
-        wr.append("<??OutTextPreparer script >>" + this.sIdent + "<<: >>" + cmd.textOrVar + "<< execution error: " + e.getMessage() + "??>");
+        wrCt.wr.append("<??OutTextPreparer script >>" + this.sIdent + "<<: >>" + cmd.textOrVar + "<< execution error: " + e.getMessage() + "??>");
       }
     }
     else if(cmd.ixValue >=0) { //-------------------------- any index to the arguments or local arguments
-      data = execDataAccess(wr, cmd, args); 
+      data = execDataAccess(wrCt, cmd, args); 
     } 
     else if(cmd.cmd != ECmd.exec && cmd.dataAccess !=null) {
       try {
@@ -2771,7 +2873,7 @@ public final class OutTextPreparer
         if(args.logExec !=null) { args.logExec.append(" Exception dataAccess: ").append(this.sIdent).append(':').append(cmd.toString()); }
         CharSequence sMsg = ExcUtil.exceptionInfo("", exc, 1, 10);
         data = "<??>";
-        wr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
+        wrCt.wr.append("<??OutTextPreparer variable error: '" + this.sIdent + ":" + cmd.toString() + "'" + sMsg + "\" ??>");
       }
       
     }
@@ -2845,7 +2947,7 @@ public final class OutTextPreparer
    * @param args actual args of the calling level
    * @throws Exception
    */
-  private int execIf(Appendable wr, IfCmd ifcmd, int ixCmd, Object data, DataTextPreparer args) throws IOException {
+  private int execIf(WriteDst wrCt, IfCmd ifcmd, int ixCmd, Object data, DataTextPreparer args) throws IOException {
     boolean bIf;
     if(ifcmd.cmd == ECmd.elsifCtrl)
       Debugutil.stop();
@@ -2858,7 +2960,7 @@ public final class OutTextPreparer
       bIf = false;
     }
     if( bIf) { //execute if branch
-      execSub(wr, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
+      execSub(wrCt, args, ixCmd, ixCmd + ifcmd.offsElsif -1);
       return ixCmd + ifcmd.offsEndCtrl -1;  //continue after <.if>
     } else {
       //forward inside if to the next <:elsif or <:else
@@ -2875,7 +2977,7 @@ public final class OutTextPreparer
    * @param ixStart from this cmd in {@link #cmds} 
    * @throws IOException 
    */
-  private void execSubFor( Appendable wrArg, DataTextPreparer args, ForCmd cmd, int ixStart, int ixEndExcl ) throws IOException {
+  private void execSubFor( WriteDst wdArg, DataTextPreparer args, ForCmd cmd, int ixStart, int ixEndExcl ) throws IOException {
     int ix = cmd.ixEntryKey;
     String name = this.listArgs.get(ix);
     args.argsByName.put(name, args.args[ix]);
@@ -2885,7 +2987,7 @@ public final class OutTextPreparer
     ix = cmd.ixEntryVarNext;
     name = this.listArgs.get(ix);
     args.argsByName.put(name, args.args[ix]);
-    execSub(wrArg, args, ixStart, ixEndExcl);
+    execSub(wdArg, args, ixStart, ixEndExcl);
   }
   
   
@@ -2897,7 +2999,7 @@ public final class OutTextPreparer
    * @param args actual args of the calling level
    * @throws Exception
    */
-  private void execFor(Appendable wr, ForCmd cmd, int ixCmd, Object container, DataTextPreparer args) throws IOException {
+  private void execFor(WriteDst wrCt, ForCmd cmd, int ixCmd, Object container, DataTextPreparer args) throws IOException {
     if(args.logExec !=null) { args.logExec.append(" " + this.sIdent + ":for@" + cmd.linecol[0]); } 
     if(container == null) {
       //do nothing, no for
@@ -2912,13 +3014,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
-          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof int[]) {
@@ -2931,13 +3033,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
-          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Iterable) {
@@ -2949,13 +3051,13 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;
         } else { //start on 2. item
-          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Map) {
@@ -2970,14 +3072,14 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;
         } else { //start on 2. item
-          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryKey] = key;                   // execute the last or only one element.
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = null;              // execute for the last argument.
-        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else if(container instanceof Integer) { //--------------- numeric for(int ix=0; ix < container, ++ix)
@@ -2990,17 +3092,17 @@ public final class OutTextPreparer
         if(bFirst) {
           bFirst = false;                     // first step only fills [cmd.ixEntryVarNext] 
         } else { //start on 2. item
-          execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+          execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = ixExcl-1;
         args.args[cmd.ixEntryVarNext] = null;              // execute the last or only one element.
-        execSubFor(wr, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
+        execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
       }
     }
     else {
-      wr.append("<?? OutTextPreparer script " + this.sIdent + ": for variable is not an container: " + cmd.textOrVar + "??>");
+      wrCt.wr.append("<?? OutTextPreparer script " + this.sIdent + ": for variable is not an container: " + cmd.textOrVar + "??>");
     }
   }
     
@@ -3014,7 +3116,7 @@ public final class OutTextPreparer
    * @param callVar The OutTextPreparer which is called here.
    * @throws Exception
    */
-  private void execCall(Appendable wr, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws IOException {
+  private void execCall(WriteDst wrCt, CallCmd cmd, DataTextPreparer args, OutTextPreparer callVar) throws IOException {
     @SuppressWarnings("cast") OutTextPreparer callVar1 = (OutTextPreparer)callVar;
     DataTextPreparer valSub;
     if(args.logExec !=null) { args.logExec.append(" :call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
@@ -3030,7 +3132,7 @@ public final class OutTextPreparer
         Object value = null;
         try{ value = arg.calc(null, args.args); }
         catch(Exception exc) { 
-          wr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
+          wrCt.wr.append("<??OutTextPreparer call argument error: '" + this.sIdent + ":" + cmd.toString() + "'" +exc.getMessage() + "\" ??>");
         }
         if(arg.ixDst >=0) {
           valSub.setArgument(arg.ixDst, value);
@@ -3042,7 +3144,7 @@ public final class OutTextPreparer
       //<:call:name> without arguments: Use the same as calling level.
       valSub = args;
     }
-    callVar1.exec(wr, valSub);
+    callVar1.exec(wrCt, valSub);
     if(args.logExec !=null) { args.logExec.append(" .call:" + callVar1.sIdent + "@" + cmd.linecol[0]); } 
   }
   
