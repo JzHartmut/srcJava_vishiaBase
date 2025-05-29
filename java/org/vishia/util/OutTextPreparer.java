@@ -156,24 +156,27 @@ try {
  * <br>
  * <br>
  * <b>Placeholder values and expression evaluation via reflection</b><br>
- * A simple value is immediately gotten from the argument as set via {@link DataTextPreparer#setArgument(int, Object)}.
- * or also as constant argument given in the 'execClass' or 'idxConstData' given on construction. 
- * This is a fast access, only to an container {@link TreeMap} or via indexed array access to the arguments.
- * <br><br>
- * If the <code>&lt;&data.element></code> is a more complex access expression 
- * then the capability of {@link DataAccess} is used. This accesses the elements via reflection.
- * It means the given {@link Class#getDeclaredFields()}, {@link Class#getDeclaredMethods()} etc. are used
- * to get the data, accessed via {@link java.lang.reflect.Field} etc. 
- * The access is completely controlled in the {@link DataAccess} class. For usage it is simple.
- * <br><br>
- * The <code>&lt;&data.operation(arg) + otherdata></code> can be also a complex expression for numeric calculation,
- * String concatenation and boolean evaluation. This expression is executed in {@link }
- * with an interpreted approach. 
- * It means the calculation needs a longer time then executed in the Java-VM per bytecode/JIT machine code. 
- * But you can also prepare complex expressions by Java programming and call this expressions or operations.
- * For that the 'execClass' class can be used which may contain prepared operations for your own. 
- * Hence you can decide writing simple expressions or also more complex as script or just as Java operations.
- * <br>
+ * <ul>
+ * <li><code>&lt;&var></code>: <code>var</code> can be an argument variable. 
+ *   Then the value is immediately gotten from the argument as set via {@link DataTextPreparer#setArgument(int, Object)}.
+ * <li><code>&lt;&var></code>: <code>var</code> can be an field name in the 'execClass'.
+ * <li>TODO improve documentation, static from execClass? 
+ * <li> or 'idxConstData' given on construction. 
+ *   This is a fast access, only to an container {@link TreeMap} or via indexed array access to the arguments.
+ * <li><code>&lt;&data.element></code> is a more complex access expression 
+ *   then the capability of {@link DataAccess} is used. This accesses the elements via reflection.
+ *   It means the given {@link Class#getDeclaredFields()}, {@link Class#getDeclaredMethods()} etc. are used
+ *   to get the data, accessed via {@link java.lang.reflect.Field} etc. 
+ *   The access is completely controlled in the {@link DataAccess} class. For usage it is simple.
+ * <li><code>&lt;&data.operation(arg) + otherdata></code> can be also a complex expression for numeric calculation,
+ *   String concatenation and boolean evaluation. This expression is executed in {@link }
+ *   with an interpreted approach. 
+ *   It means the calculation needs a longer time then executed in the Java-VM per bytecode/JIT machine code. 
+ *   But you can also prepare complex expressions by Java programming and call this expressions or operations.
+ *   For that the 'execClass' class can be used which may contain prepared operations for your own. 
+ *   Hence you can decide writing simple expressions or also more complex as script or just as Java operations.
+ * <li><code>&lt;&#></code> produces the line number, which is automatically count. (since 2025-05)
+ * </ul>
  * <br>
  * <b>Formatted numbers</b><br>
  * With <code>&lt;&...:%format></code> an access to a number can be formatted due to the capabilities of java.util.Formatter.
@@ -397,17 +400,28 @@ public final class OutTextPreparer
     /**Counts the '\n' inside appended texts. */
     private int lineCt;
     
+    private final int lineStart;
+    
     /**Constructs a new output destination to write the generated text.
      * @param wr may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
+     * @param lineStart number of this first line. It is important for immediately instances.
      * The lineCt starts from 1 for the first line.
      */
-    public WriteDst(Appendable wr) {
+    public WriteDst(Appendable wr, int lineStart) {
+      assert(! (wr instanceof WriteDst));                  // prevent error using recursively
       this.wr = wr;
       this.sb = wr instanceof StringBuilder ? (StringBuilder)wr: null;
-      this.lineCt = 1;
+      this.lineCt = lineStart;
+      this.lineStart = lineStart;
     }
 
-    public int lineCt() { return this.lineCt; }
+    public void setLineCt (int lineCt) {
+      this.lineCt = lineCt;
+    }
+    
+    public int lineCt() { 
+      return this.lineCt; 
+    }
     
     /**This operation can be used if a part of the output text is generated meanwhile with another WriteDst instance
      * and should be added now. The {@link #lineCt()} is also incremented by the 'other.lineCt'. 
@@ -416,7 +430,7 @@ public final class OutTextPreparer
      */
     public void add(WriteDst other) throws IOException {
       assert(other.wr instanceof CharSequence);
-      this.lineCt += other.lineCt;
+      this.lineCt += (other.lineCt - other.lineStart);
       this.wr.append((CharSequence)other.wr);
     }
     
@@ -610,6 +624,7 @@ public final class OutTextPreparer
     nothing('-', "nothing"), 
     addString('s', "str"),
     addVar('v', "var"),
+    addLinenr('l', "linenr"),
     wr('W', "wr"),
     wrEnd('w', "wrEnd"),
     ifCtrl('I', "if"),
@@ -2069,6 +2084,10 @@ public final class OutTextPreparer
         addCmdSimpleVar(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addVar, sName);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
+      else if(this.sp.scan("&#>").scanOk()) { //The line count
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.addLinenr, null);
+        this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
+      }
       else if(this.sp.scan("&").scanToAnyChar(">:", '\0', '\0', '\0').scanOk()){
         //------------------------------------------------- <&data.path:format> more complex access to a given value
         final String sDatapath = this.sp.getLastScannedString();
@@ -2669,9 +2688,20 @@ public final class OutTextPreparer
   
   
   
+  /**Compatible variant see {@link #execLineCt(WriteDst, DataTextPreparer)}
+   * It is for compatibility and simplifies usage.
+   * @param wr If it is an instance of {@link WriteDst} it is taken and calls {@link #execLineCt(WriteDst, DataTextPreparer)}.
+   *   Else a new instance {@link WriteDst#WriteDst(Appendable, int)} is created started with lineCt = 1
+   * @param args see {@link #execLineCt(WriteDst, DataTextPreparer)}
+   * @throws IOException
+   */
   public void exec( Appendable wr, DataTextPreparer args) throws IOException {
-    WriteDst wrCt = new WriteDst(wr);
-    execLineCt(wrCt, args);
+    if(wr instanceof WriteDst) {
+      execLineCt((WriteDst)wr, args);
+    } else {
+      WriteDst wrCt = new WriteDst(wr, 1);
+      execLineCt(wrCt, args);
+    }
   }
 
   
@@ -2772,6 +2802,9 @@ public final class OutTextPreparer
               wrCt.wr.append("<?? typecheck fails, " + cmdt.textOrVar + " is type of " + typefound.getCanonicalName() + " ??>");
             }
           } break;
+          case addLinenr: {
+            wrCt.wr.append("#" + wrCt.lineCt());
+          } break;
           case elsifCtrl:
           case ifCtrl: {
             Object data = dataForCmd(cmd, args, wrCt);
@@ -2798,7 +2831,7 @@ public final class OutTextPreparer
               if(wo instanceof WriteDst) {
                 wrCt = (WriteDst)wo;
               } else {
-                wrCt = new WriteDst((Appendable)wo);
+                wrCt = new WriteDst((Appendable)wo, 1);
               }
               args.args[this.ixOUT] = wrCt;      // replace the current output
             }
