@@ -1027,6 +1027,7 @@ public class CalculatorExpr
         case 'D': accu.doubleVal += arg.doubleVal; break;
         case 'F': accu.floatVal += arg.floatVal; break;
         case 'Z': accu.boolVal |= arg.boolVal; break;
+        case 't': accu.stringVal = accu.stringVal.toString() + arg.stringVal; break;
         case 'e': throw (Exception)accu.oVal;
         default: throw new IllegalArgumentException("unknown type" + accu.etype.toString());
       }
@@ -1707,9 +1708,26 @@ public class CalculatorExpr
 
     
     
-    /**Accesses and returns the value of this operand. The start object is given 
-     * in varValues with {@link #ixValue}. If {@link #ixValue} is <0 then either the given {@link #dataConst}
-     *   or the {@link #textOrVar} is returned. 
+    /**Accesses or calculates and returns the value of this operand. 
+     * <ul>
+     * <li>The member {@link #ixValue} addresses the possible value or start value for access.
+     * <li>If ixValue is <0, then either or:
+     *   <ul>
+     *   <li>if {@link #dataConst} is given, contains the value.
+     *   If {@link #dataConst} is instance of {@link Value}, the stored value in {@link Value} is used.
+     *   <li>if {@link #expr} is given, it is used to calculate the value, using the 'varValues'
+     *   If the result is instanceof {@link Value}, the stored value in {@link Value} is used.
+     *   <li>if {@link #dataAccess} is given, calculates a static value (start with null as instance).
+     *   <li>else it returns the given text in {@link #textOrVar}
+     *   </ul>
+     * <li>If ixValue is >=0, the value is taken from the given 'varValues' with this index.
+     * <li>If {@link #dataAccess} is given, it accesses the data with the start path 
+     *   from {@link #dataConst}, {@link #expr} or just null (static data access).
+     * <li>It means, it combines the given {@link #dataConst} or the given {@link #expr} with data Access,
+     *   whereby combination with {@link #expr} is only sensible if it returns an Object.
+     *   This can be an array access expression or also a function call.  
+     * <li>If {@link #dataAccess} is not given, the value, at least the {@link #textOrVar} is returned.
+     * </ul>
      * @param nameVariables see {@link DataAccess#access(List, Object, boolean, boolean, Map, Object[], boolean, org.vishia.util.DataAccess.Dst)}
      *                      necessary on indirect access to variable via String, construct  such as &lt;&&(path)>
      * @param varValues Array of possible values proper to the given {@link #ixValue}
@@ -1717,7 +1735,7 @@ public class CalculatorExpr
      * @throws Exception
      */
     public Object calc ( Map<String, IntegerIx> nameVariables, Object[] varValues ) throws Exception {
-      Object value = null;
+      final Object value;
       if(this.ixValue <0) {
         if(dataConst !=null) {
           if(dataConst instanceof Value) {
@@ -1727,17 +1745,23 @@ public class CalculatorExpr
             value = dataConst;  //use it immediately, often a String
           }
         } else if(this.expr !=null) {
-          value = expr.calcDataAccess(null, varValues);
-        } else if(this.dataAccess == null) {
+          CalculatorExpr.Value exprValue = expr.calcDataAccess(null, varValues);
+          value = exprValue.objValue();          // builds Integer, Float etc. if it is num, returns the String itself if it is. cc2025-06
+        } else if(this.dataAccess != null) {
+          value = null;                          // start value of dataAccess, here null, for static access.
+        } else {
           value = this.textOrVar;                //String literal
         }
       } else {
         value = varValues[this.ixValue];
       }
+      final Object valueRet;
       if(this.dataAccess !=null) {               // data Access can be after the first element as variable or independent. cc3-2014-01-19
-        value = this.dataAccess.access(value, true, false, nameVariables, varValues);
+        valueRet = this.dataAccess.access(value, true, false, nameVariables, varValues);
+      } else {
+        valueRet = value;
       }
-      return value;
+      return valueRet;
     }
     
     

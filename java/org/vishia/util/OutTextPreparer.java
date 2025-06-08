@@ -1448,7 +1448,7 @@ public final class OutTextPreparer
             OutTextPreparer otxScript = idxScript.get(name);
             if(otxScript !=null) {
               Debugutil.stopp();
-              throw new ParseException("script otx: " + name + " is already existing, this is twice", nrline);
+              throw new ParseException("script is already existing, it is twice: otx: " + name, nrline);
             }
             String script = buf.toString();
             otxScript = new OutTextPreparer(name, args, script, 0);  // does not parse, only stores the script.
