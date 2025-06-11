@@ -473,7 +473,7 @@ public final class OutTextPreparer
      * It outputs the {@link #lineCt()} and only the content if {@link #wr} is a {@link StringBuilder}
      */
     @Override public String toString() {
-      return "lines: " + this.lineCt + this.sb == null ? "" : "\n" + this.sb;
+      return "lines: " + this.lineStart + " + " + (this.lineCt - this.lineStart +1) + (this.sb == null ? "" : "\n" + this.sb);
     }
   }
   
