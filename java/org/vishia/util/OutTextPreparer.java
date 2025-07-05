@@ -243,7 +243,8 @@ try {
  * <br>
  * Call that operations with <code><:exec:operation(arg1, arg, ...)></code>. 
  * <br>It is similar to a data access written as <code><&path.to.obj.operation(arg1,arg...)</code> 
- * but it is faster parsed and executed due to the immediately given 'execClass'.
+ * but it is faster parsed and executed due to the immediately given 'execClass'
+ * if the operation is member of this 'execClass'.
  * <br><br>
  * <b><code>&lt;:exec:operation(arg)></code></b>:<br>
  * The <code>:arg</code> is optional. The <code>operation</code> will be searched in the given reflection class (ctor argument).
@@ -251,6 +252,21 @@ try {
  * The optional argument is used from given arguments of call, it should be match to the operations argument type.
  * If the operation is not found, an exception with a detailed error message is thrown on ctor. 
  * If the operations argument is not proper, an exception is thrown on {@link #exec(Appendable, DataTextPreparer)}.
+ * <br>
+ * <br>
+ * <b>Execute operations in any given instance</b><br>
+ * If you write <code><&obj.operation(args ...)></code> then the called operation can have any side effects as programmed.
+ * Intrinsically it should return a String as variable text similar as <code><&var></code> or <code><&path.to.var></code>.
+ * But if the operation is a void operation, or returns null, then no text is created.
+ * This (and also side effects in String returning operations) allows change states in the underlying data
+ * depending from the script. It is a contribution to free programming controlled by the script.
+ * This is sometimes necessary. Hence, the script is not only a text preparer.
+ * <br>
+ * The second reason using an <code><&obj.operation(args ...)></code> is: It can be get the {@link WriteDst} as argument
+ * and writes the created text itself in its body. The buffer can be also a local one, inserted later in the main location
+ * of generated text. It should return null if all is ok. 
+ * But if the operation has an error, it can return an error message, which is then placed in the code
+ * maybe on the current main location. 
  * <br><br>
  * <b>...more</b><br>
  * <ul>
@@ -2299,7 +2315,7 @@ public final class OutTextPreparer
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
-      else if(this.sp.scan(".if").scanOk()) { //The end of an if
+      else if(this.sp.scan(".if").scanOk()) {    //--------vv The end of an if // <.if:any comment>
         this.sp.seek('>', StringPart.mSeekEnd);
         Cmd cmd = null;
         addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.nothing, null);  //The last text before <.if>
@@ -2328,8 +2344,9 @@ public final class OutTextPreparer
           throw new IllegalArgumentException("OutTextPreparer faulty <.if> without <:if> or  <:elsif> : " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
-      }
-      else if(this.sp.scan(".for>").scanOk()) { //The end of an if
+      }                                                    
+      else if(this.sp.scan(".for").scanOk()) {   //--------vv The end of a for loop // <.for:any comment>
+        this.sp.seek('>', StringPart.mSeekEnd);
         Cmd forCmd;
         if(this. ixixCmd >=0 && (forCmd = this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd])).cmd == ECmd.forCtrl) {
           Cmd endLoop = addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.endLoop, null);
@@ -2774,9 +2791,11 @@ public final class OutTextPreparer
           case addVar: {                                   // <&access...>
             //Integer ixVar = varValues.get(cmd.str);
             Object data = dataForCmd(cmd, args, wrCt);
-            String sData = data == null ? "<null>" : data.toString();
-            assert(sData !=null);
-            if(wrCt !=null && sData !=null) wrCt.append(sData); else System.err.println("xxxx");
+            if(data != null) {                   //--------vv call of void operation delivers null, no output then. 
+              String sData = data == null ? "" : data.toString();
+              assert(sData !=null);
+              if(wrCt !=null && sData !=null) wrCt.append(sData); else System.err.println("xxxx");
+            }
           } break;
           case setVar: {
             int ixVar = ((SetCmd)cmd).ixVariable;

@@ -1609,7 +1609,13 @@ public class CalculatorExpr
         CalculatorExpr expr = new CalculatorExpr(sDatapath, variables, reflData);     // use the full capability of expr though usual unnecessary
         List<CalculatorExpr.Operation> exprOper = expr.listOperations();
         CalculatorExpr.Operand exprOperand;
-        if( exprOper.size()==1 && (exprOperand = exprOper.get(0).operand()) !=null) { // and then extract the only few information
+        CalculatorExpr.Operation oper;
+        if( exprOper.size()==1 
+         && (oper = exprOper.get(0)) !=null
+         && oper.unaryOperator == null && oper.unaryOperators == null
+         && oper.kindOperand == Operation.kDatapath
+         && (exprOperand = oper.operand()) !=null
+          ) { // and then extract the only few information
           //The expr has exact 1 Operand, copy its content to this,  the access on exec is fast. That's the advantage.
           this.dataAccess = exprOperand.dataAccess;        // maybe null clarified in parseArgument
           this.dataConst = exprOperand.dataConst;          // maybe null
@@ -2811,7 +2817,7 @@ public class CalculatorExpr
         parseString(spExpr, nameVariables, reflData, "!", 0);
       } else {
         if(posEnd >50) { posEnd = StringFunctions.indexOf(spExpr, 0, 100, ')'); }  // limit search length to 100
-        if(posEnd >=0 && StringFunctions.indexOfAnyChar(spExpr, 0, posEnd, "+-*/(&|?=", null) <0) {
+        if(posEnd >=0 && StringFunctions.indexOfAnyChar(spExpr, 0, posEnd, "+-*/(&|?=", null) <0) {  // not containing these chars:
           //--------------------------------------------------- a short expression without operations.
           parseArgument(spExpr, nameVariables, reflData, "!", 0);  // it is a shorter access
         } else {

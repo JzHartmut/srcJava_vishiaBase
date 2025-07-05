@@ -16,6 +16,8 @@ public abstract class QueuePrc<T> {
   
   Map<String, T> idxinQueue = new TreeMap<>();
   
+  boolean bPreventRequeue;
+  
   
   /**Should be defined by usage. This operation should build a key
    * which determines the functional same instance which may be already in queue
@@ -26,7 +28,12 @@ public abstract class QueuePrc<T> {
   public abstract String key (T obj); 
   
   
-  public QueuePrc () {}
+  /**Constructs
+   * @param preventRequeue true means, later the same obj cannot be  added again in the queue.
+   *   If {@link #addToQueue(int, Object)} is called with the same Object is prevented,
+   *   till {@link #reset()} is called.
+   */
+  public QueuePrc (boolean preventRequeue) {this.bPreventRequeue = preventRequeue; }
   
   /**Adds an object to the queue and checks before whether it is contained already.
    * The key to check contained is built with {@link #key(Object)}.
@@ -38,11 +45,12 @@ public abstract class QueuePrc<T> {
   public T addToQueue(int pos, T obj) {
     String key = key(obj);
     T exist = this.idxinQueue.get(key);
-    if(exist !=null) { return exist; }
-    else {
+    if(exist !=null) { 
+      return exist; 
+    } else {
       this.idxinQueue.put(key, obj);
       if(pos <0) this.queue.add(obj); else this.queue.add(pos, obj);
-      assert(this.idxinQueue.size()==this.queue.size());
+      assert(this.bPreventRequeue || this.idxinQueue.size()==this.queue.size());
       return null;
     }
   }
@@ -55,16 +63,30 @@ public abstract class QueuePrc<T> {
    */
   public T getFromQueue () {
     if(this.queue.size() == 0) {
-      assert(this.idxinQueue.size()==0);
+      assert(this.bPreventRequeue || this.idxinQueue.size()==0);
       return null;
     }
     else {
       T obj = this.queue.remove(0);
-      String key = key(obj);
-      T exist = this.idxinQueue.remove(key);
-      assert(exist == obj);
-      return exist;
+      if(!this.bPreventRequeue) {
+        String key = key(obj);
+        T exist = this.idxinQueue.remove(key);
+        assert(exist == obj);
+      }
+      return obj;
     }
+  }
+  
+  
+  
+  /**Resets the queue, cleans, also for prevent requeue.
+   * The queue is empty as after ctor.
+   * @param preventRequeue
+   */
+  public void reset (boolean preventRequeue) {
+    this.bPreventRequeue = preventRequeue; 
+    this.idxinQueue.clear();
+    this.queue.clear();
   }
   
   
