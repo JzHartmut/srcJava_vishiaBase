@@ -39,7 +39,16 @@ public class Debugutil
   /**Adequate assert(false) but possible to set a central breakpoint. Use only while program development. */
   public static void unexpected(){
     assert(false);
+    // if assertion is disabled:
+    try {
+      throw new Exception("ERROR should not come here:");
+    } catch (Exception exc) {
+      CharSequence sExc = ExcUtil.exceptionInfo("\nERROR ", exc, 1, 15);
+      System.err.println(sExc);
+    }
   }
+  
+  
   
   public static int stop(Object toView) {
     return 0;
