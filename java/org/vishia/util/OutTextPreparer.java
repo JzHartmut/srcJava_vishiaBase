@@ -1,6 +1,7 @@
 package org.vishia.util;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -394,22 +395,49 @@ public final class OutTextPreparer
   
   
   /**This class is used to write out the generated text.
-   * It supports line count. 
-   * All {@link #append(CharSequence)} operations looks for '\n' inside the output text.
-   * Any found new line character increments the {@link #lineCt()}.
-   * The {@link #lineCt()} can be used to output the line number. 
-   * 
+   * It supports line count and debug view of the text.
+   * <ul>
+   * <li>If one of the ctor is called with a StringBuilder as {@link Appendable}, as the output,
+   *   then the field {@link #sb} is also set. It is only a second link, not immediately used for OutText preparation.
+   *   It allows more possibilities to deal with the generated text, for example insert a text on a definite position,
+   *   which is generated afterwards (for example local variable definition generated on usage of the variable,
+   *   but necessary as definition before. But this is outside of OutText preparation. 
+   *   The operation {@link #add(WriteDst)} allows adding a generated text to the current output, 
+   *   the source to add needs the StringBuilder output.
+   * <li>All {@link #append(CharSequence)} operations looks for '\n' inside the output text.
+   *   Any found new line character increments the {@link #lineCt()}.
+   *   The {@link #lineCt()} can be used to output the line number. 
+   * <li>If {@link #OutTextPreparer(Appendable, int, int)} is used, an extra StringBuilder is created.
+   *   then all {@link #append(CharSequence)} operations appends only to {@link #wr},
+   *   buf if {@link #finishAppend()} is called, it writes out the content to {@link #wrDst},
+   *   but prevents the content in the {@link #sb}. So it can be visited both in the file (after flush)
+   *   and also in the {@link #sb}.
+   *   And then the next any {@link #append(CharSequence)} cleans first the {@link #sb} for further operation.
+   *   The flag {@link #bSbClean} controls the behavior.
+   * </ul>
    */
   public static class WriteDst implements Appendable {
     
-    public final Appendable wr;
+    /**The primary output if {@link #OutTextPreparer(Appendable, int, int)} is called, else null.
+     * It can be a StringBuilder, then also {@link #sb} is set with the same instance reference.
+     * Or it can be any other {@link Appendable}, especially {@link Writer} for file output.
+     */
+    private final Appendable wrDst;
     
-    /**This is set if the {@link #wr} is a {@link StringBuilder}. 
-     * It allows more access possibilities of the user to the generated text.
-     * If {@link #wr} is not a StringBulder this field remains null.
+    /**This is always the destination for all {@link #append(char)}, {@link #append(CharSequence)}, {@link #append(int)},
+     * {@link #append(CharSequence, int, int)} and {@link #add(WriteDst)}.
+     * It is either a StringBuilder if {@link #OutTextPreparer(Appendable, int, int)} is called,
+     * or it is any other Appendable.
+     */
+    private final Appendable wr;
+    
+    /**This is set if the Appendable on construction, the last used output, is a {@link StringBuilder}. 
+     * It allows more access possibilities for the user to change the generated text.
+     * If the output Appendable is not a StringBulder this field remains null.
      * The user can use it immediately if the calling environment of the ctor delivers a {@link StringBuilder} as {@link Appendable}.
-     * But note that changing content of this field and hence content of {@link #wr}
-     * does not effect the {@link #lineCt()}.
+     * But note that changing content of this field does not effect the {@link #lineCt()}.
+     * If the StringBuilder sb is changed, it is similar as the generated output text is changed afterwards,
+     * independent of the functionality of the {@link OutTextPreparer} and in full responsibility to the user.
      */
     public final StringBuilder sb;
     
@@ -418,6 +446,14 @@ public final class OutTextPreparer
     
     private final int lineStart;
     
+    /**If true, then the next any {@link #append(char)} cleans first the {@link #wr} as StringBuilder
+     * and sets this flag to false. 
+     * This flag is set to true after {@link #finishAppend()}, after the content is written to {@link #wrDst}.
+     * {@link #close()} also call {@link #finishAppend()} to write out content.
+     * If this flag is true, the {@link #wr} contains the last written content
+     */
+    private boolean bSbClean;
+    
     /**Constructs a new output destination to write the generated text.
      * @param wr may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
      * @param lineStart number of this first line. It is important for immediately instances.
@@ -425,8 +461,24 @@ public final class OutTextPreparer
      */
     public WriteDst(Appendable wr, int lineStart) {
       assert(! (wr instanceof WriteDst));                  // prevent error using recursively
+      this.wrDst = null;
       this.wr = wr;
       this.sb = wr instanceof StringBuilder ? (StringBuilder)wr: null;
+      this.lineCt = lineStart;
+      this.lineStart = lineStart;
+    }
+
+    /**Constructs a new output destination to write the generated text using a temporary used StringBuilder
+     * for any {@link OutTextPreparer#exec(Appendable, DataTextPreparer) }.
+     * @param wrDst may be also an instance of {@link StringBuilder}, then {@link #sb} is set also.
+     * @param lineStart number of this first line. It is important for immediately instances.
+     * The lineCt starts from 1 for the first line.
+     */
+    public WriteDst(Appendable wrDst, int lineStart, int sizeStringBuilder) {
+      assert(! (wrDst instanceof WriteDst));                  // prevent error using recursively
+      this.wrDst = wrDst;
+      this.wr = new StringBuilder(sizeStringBuilder);
+      this.sb = wrDst instanceof StringBuilder ? (StringBuilder)wrDst: null;
       this.lineCt = lineStart;
       this.lineStart = lineStart;
     }
@@ -439,15 +491,38 @@ public final class OutTextPreparer
       return this.lineCt; 
     }
     
+    
+    
+    /**Finishes one append phase. 
+     * Only if this is constructed with {@link #OutTextPreparer(Appendable, int, int)}
+     * and hence {@link #wr} is a StringBuilder: Writes out the content of {@link #wr} to {@link #wrDst}
+     * but prevent the content in {@link #wr} (it is a StringBuilder) for debug view, else do nothing. 
+     * Sets {@link #bSbClean} which forces clean {@link #sb} on the next any {@link #append(char)}.
+     * This operation is also called on {@link #close()}. 
+     * @throws IOException
+     */
+    public void finishAppend() throws IOException {
+      if(!this.bSbClean && this.wrDst !=null && this.wr instanceof StringBuilder) {   // extra StringBuilder to view output text:
+        this.wrDst.append((StringBuilder)this.wr);               // then transfer the output to the file, but let it readable for debug
+        if(this.wrDst instanceof Flushable) {
+          ((Flushable)this.wrDst).flush();             // interesting to see what's written in debug
+        }
+        this.bSbClean = true;
+      }                                           
+    }
+    
     /**This operation can be used if a part of the output text is generated meanwhile with another WriteDst instance
      * and should be added now. The {@link #lineCt()} is also incremented by the 'other.lineCt'. 
-     * @param other The {@link #wr} must be an instance of {@link CharSequence}, else assertion and exception.
+     * @param other The {@link #sb} must be set, else assertion and exception.
+     *   It means 'other' should be created (ctor) using a StringBuilder as Appendable.
      * @throws IOException
      */
     public void add(WriteDst other) throws IOException {
-      assert(other.wr instanceof CharSequence);
+      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
+      assert(other.sb !=null);
       this.lineCt += (other.lineCt - other.lineStart);
-      this.wr.append((CharSequence)other.wr);
+      other.finishAppend();
+      this.wr.append(other.sb);
     }
     
     
@@ -457,6 +532,7 @@ public final class OutTextPreparer
      * @throws IOException
      */
     public WriteDst append(int val) throws IOException {
+      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
       this.wr.append(Integer.toString(val));
       return this;
     }
@@ -469,6 +545,7 @@ public final class OutTextPreparer
 
     /**Standard append operation see {@link Appendable#append(CharSequence, int, int)} */
     @Override public WriteDst append ( CharSequence csq, int start, int end ) throws IOException {
+      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
       for(int ix = start; ix < end; ++ix) {
         char cc = csq.charAt(ix);
         if(cc =='\n') { this.lineCt +=1; }
@@ -480,16 +557,33 @@ public final class OutTextPreparer
 
     /**Standard append operation see {@link Appendable#append(char)} */
     @Override public WriteDst append ( char c ) throws IOException {
+      if(this.bSbClean && this.wr instanceof StringBuilder) { ((StringBuilder)this.wr).setLength(0); this.bSbClean = false; } 
       if(c=='\n') { this.lineCt +=1; }
       this.wr.append(c);
       return this;
     }
     
+    /**Close() if any of {@link #wrDst} or {@link #wr} is a {@link Closeable},
+     * especially a File {@link Writer}
+     *
+     */
+    public void close () throws IOException {
+      finishAppend();
+      if(this.wrDst !=null && this.wrDst instanceof Closeable) {
+        ((Closeable)this.wrDst).close();
+      }
+      if(this.wr !=null && this.wr instanceof Closeable) {
+        ((Closeable)this.wr).close();
+      }
+    }
+
     /**This should be used only for debug view. 
      * It outputs the {@link #lineCt()} and only the content if {@link #wr} is a {@link StringBuilder}
      */
     @Override public String toString() {
-      return "lines: " + this.lineStart + " + " + (this.lineCt - this.lineStart +1) + (this.sb == null ? "" : "\n" + this.sb);
+      return "lines: " + this.lineStart + " + " + (this.lineCt - this.lineStart +1) 
+           + ( this.wr instanceof StringBuilder ? "\n" + this.wr 
+             : this.sb == null ? "" : "\n" + this.sb);
     }
   }
   
@@ -2714,9 +2808,10 @@ public final class OutTextPreparer
    */
   public void exec( Appendable wr, DataTextPreparer args) throws IOException {
     if(wr instanceof WriteDst) {
-      execLineCt((WriteDst)wr, args);
+      WriteDst wr1 = (WriteDst) wr;
+      execLineCt(wr1, args);
     } else {
-      WriteDst wrCt = new WriteDst(wr, 1);
+      WriteDst wrCt = new WriteDst(wr, 1);       // simple instance with the Appendable
       execLineCt(wrCt, args);
     }
   }
@@ -2748,6 +2843,7 @@ public final class OutTextPreparer
       throw new IllegalArgumentException("OutTextPreparer mismatch: The data does not match to the script.");
     }
     execSub(wrCt, args, 0, this.cmds.size());
+    wrCt.finishAppend();                        // finish a possible existing append content from before.
     if(wrCt.wr instanceof Flushable) {
       ((Flushable)wrCt.wr).flush();             // interesting to see what's written in debug
     }
