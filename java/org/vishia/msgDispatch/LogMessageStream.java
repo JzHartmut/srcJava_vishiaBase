@@ -310,19 +310,33 @@ public class LogMessageStream extends LogMessageBase
   }
   
   
+  /**Append to given {@link #out1} and {@link #out2}. 
+   * If the 'csq' contains 'ERROR' in the first 20 characters (max 15 chars before),
+   * then it is written to given {@link #outErr},
+   * else written in given {@link #out3}.
+   */
   @Override public Appendable append(CharSequence csq) throws IOException {
     byte[] b = csq.toString().getBytes(this.encoding);
     if(this.out1 !=null) { this.out1.write(b);}
     if(this.out2 !=null) { this.out2.write(b); }
-    if(this.out3 !=null) { this.out3.append(csq); }
+    if(StringFunctions.indexOf(csq, 0, 20, "ERROR")>=0 && this.outErr !=null) {
+      this.outErr.append(csq);
+    } else if(this.out3 !=null) { this.out3.append(csq); }
     return this;
   }
 
+  /**Append to given {@link #out1} and {@link #out2}. 
+   * If the 'csq' contains 'ERROR' in its range,
+   * then it is written to given {@link #outErr},
+   * else written in given {@link #out3}.
+   */
   @Override public Appendable append(CharSequence csq, int start, int end) throws IOException {
     byte[] b = csq.subSequence(start, end).toString().getBytes(this.encoding);
     if(this.out1 !=null) { this.out1.write(b); }
     if(this.out2 !=null) { this.out2.write(b); }
-    if(this.out3 !=null) { this.out3.append(csq, start, end); }
+    if(StringFunctions.indexOf(csq, start, start+20, "ERROR")>=0 && this.outErr !=null) {
+      this.outErr.append(csq, start, end);
+    } else if(this.out3 !=null) { this.out3.append(csq, start, end); }
     return this;
   }
 
