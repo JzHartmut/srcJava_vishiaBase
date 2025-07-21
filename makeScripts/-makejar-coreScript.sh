@@ -47,6 +47,8 @@ if test "$SRCZIPFILE" = ""; then export SRCZIPFILE="$DSTNAME-$VERSIONSTAMP-sourc
 
 
 ##specific condition, use the yet compiled class files to zip:
+## This Classpath_vishiaBase is not an input for compilation, only for usage for zip.
+## for javac CLASSPATH is used. Set in calling environment. 
 if test "$DSTNAME" = "vishiaBase"; then export Classpath_vishiaBase=$TMPJAVAC/binjar;
 elif test "$Classpath_vishiaBase" = ""; then
   if test -f tools/vishiaBase.jar; then export Classpath_vishiaBase="tools/vishiaBase.jar"
