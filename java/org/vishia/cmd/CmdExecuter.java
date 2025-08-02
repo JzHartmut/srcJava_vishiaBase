@@ -152,12 +152,12 @@ public class CmdExecuter implements Closeable
   final Thread threadExecIn;
   final Thread threadExecError;
   
-  ConcurrentLinkedQueue<CmdQueueEntry> cmdQueue;
+  public ConcurrentLinkedQueue<CmdQueueEntry> cmdQueue;
   
   /**For {@link JZtxtcmdScript.Subroutine}. It is created on demand if necessity.
    * 
    */
-  private JZtxtcmdExecuter jzcmdExecuter;
+  public JZtxtcmdExecuter jzcmdExecuter;
   
 
   
@@ -463,7 +463,7 @@ public class CmdExecuter implements Closeable
       if(e.jzsub !=null) {
         try{ this.jzcmdExecuter.execSub(e.jzsub, e.args, true, e.out1, e.currentDir, CmdExecuter.this);
         } catch(ScriptException exc){ 
-          String text = "execute JZsub, scriptexception, " + exc.getMessage();
+          String text = "\nexecuteCmdQueue JZsub, scriptexception: " + exc.getMessage();
           try{ e.out1.append(text); } catch(IOException exc1){}
         }
         if(e.executeAfterFinish !=null) {
@@ -841,9 +841,9 @@ public class CmdExecuter implements Closeable
     public String[] cmd;
     /**If given this subroutine should be executed. cmd is not used then. */
     public JZtxtcmdScript.Subroutine jzsub;
-    List<DataAccess.Variable<Object>> args;
+    public List<DataAccess.Variable<Object>> args;
     public String input;
-    Appendable out1;
+    public Appendable out1;
     public List<Appendable> out;
     public List<Appendable> err;
     public File currentDir;

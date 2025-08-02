@@ -1365,6 +1365,8 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
     boolean bscriptInitialized = checkInitialize(statement.theScript, true, null, currdir);
     final ExecuteLevel level = this.acc.scriptLevel.levelForSubroutine(statement);  //uses the script variable if subroutine uses the locals. //new ExecuteLevel(acc, this.acc.jzcmdScript.scriptClass, this.acc.scriptThread, this.acc.scriptLevel, null);
     if(cmdExecuter !=null) {
+      String sPath = cmdExecuter.environment().get("PATH");  // experience: set the path for shell
+      //cmdExecuter.setEnv("PATH", "/home/hartmut/batch:"+sPath); // but it is faulty. the shell sets its path by itself.
       level.setCmdExecuter(cmdExecuter);
       if(currdir !=null) {
         cmdExecuter.setCurrentDir(currdir);
@@ -1742,7 +1744,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
           case 'm': exec_Move((JZtxtcmdScript.FileOpArg)statement); break;             //move
           case 'y': exec_Copy((JZtxtcmdScript.FileOpArg)statement); break;             //copy
           case 'l': exec_Delete((JZtxtcmdScript.FileOpArg)statement); break;             //copy
-          case 'c': exec_cmdline((JZtxtcmdScript.CmdInvoke)statement); break;              //cmd
+          case 'c': exec_cmdline((JZtxtcmdScript.CmdInvoke)statement); break;              //cmd start shell
           case 'd': ret = exec_ChangeCurrDir(statement); break;                              //cd
           case '9': ret = exec_MkDir(statement); break;                              //mkdir
           case 'f': ret = exec_forContainer((JZtxtcmdScript.ForStatement)statement, outText, indentOut, --nDebug1); break;  //for
@@ -2824,6 +2826,12 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
 
     
     
+    /**Executes 'start cmdline', 'cmd cmdline' or 'shell cmdline' TODO shell
+     * It starts a process in Java and executes then the given command. 
+     * @param statement
+     * @throws IllegalArgumentException
+     * @throws Exception
+     */
     private void exec_cmdline(JZtxtcmdScript.CmdInvoke statement) 
     throws IllegalArgumentException, Exception
     {

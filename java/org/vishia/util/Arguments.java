@@ -414,7 +414,7 @@ public abstract class Arguments {
     String argvalRet = argval;
     if(argval.startsWith("/tmp/")){                        // this is ok for linux
       String os = System.getenv("OS");
-      if(os.startsWith("Windows")) {                       // for Windows replace with TMP path
+      if(os !=null && os.startsWith("Windows")) {                       // for Windows replace with TMP path
         String sTmp = System.getenv("TMP");
         if(sTmp == null) { sTmp = System.getenv("TEMP"); }
         if(sTmp !=null) {

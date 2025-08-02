@@ -1630,23 +1630,30 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       StringBuilder ret = new StringBuilder(zDir + 1 + zFile);
       if(zDir >0){
         ret.append(sDir);
-        if(sDir.charAt(zDir-1) != '/' //does not end with "/"
-          && sFile.charAt(0) !='/'    //root path has "/" in sFile
-        ) { 
-          ret.append('/'); 
-        }
+//        if(sDir.charAt(zDir-1) != '/' //does not end with "/"
+//          && sFile.charAt(0) !='/'    //root path has "/" in sFile
+//        ) { 
+//          ret.append('/'); 
+//        }
       }
-      if(zFile==1 && sFile.charAt(0) == '/') {
-        // it is a root dir, do nothing
-      } else {
-        ret.append(sFile);
-        if(this.isDirectory()){
+//      if(zFile==1 && sFile.charAt(0) == '/') {
+//        // it is a root dir, do nothing
+//      } else {
+        if(zDir ==0 || this.sDir.charAt(zDir-1) != '/' ) {     // special case, sDir == "" or null, and 
           ret.append('/');
         }
-      }
+        if(zFile==1 && sFile.charAt(0) == '/') {
+          // it is a root dir, do nothing
+        } else {
+          ret.append(sFile);
+          if(this.isDirectory()){
+            ret.append('/');
+          }
+        }
+//      }
       return ret;
     } else {
-      return sDir;
+      return this.sDir;
     }    
   }
 

@@ -254,48 +254,41 @@ public class Zip {
           listFiles.add(e.getValue());
         }
       }
-      
+      //      
       System.out.println(" files:" + listFiles.size());
-      
-      
-      
-      
-      
-      
-        for(FileFunctions.FileAndBasePath filentry: listFiles){
-          if(filentry.file.isFile()){
-            ZipEntry zipEntry = null;
-            InputStream in = null;
-            String sPath = filentry.localPath;
-            if(sPath.startsWith("/")){    //The entries in zip/jar must not start with /
-              sPath = sPath.substring(1);
-            }
-            try{
-              if(manifest !=null){
-                zipEntry = new JarEntry(sPath);
-              } else {
-                zipEntry = new ZipEntry(sPath);
-              }
-              zipEntry.setTime(timestamp == 0 ? filentry.file.lastModified(): timestamp);
-              outZip.putNextEntry(zipEntry);
-              in = new FileInputStream(filentry.file);
-              int bytes;
-              while( (bytes = in.read(buffer))>0){
-                outZip.write(buffer, 0, bytes);
-              }
-            } catch(IOException exc){
-              if(errorFiles == null) { errorFiles = new StringBuilder(); }
-              errorFiles.append(exc.getMessage()).append("\n");
-            } finally {
-              if(in !=null) { in.close(); }
-              if(zipEntry !=null) { outZip.closeEntry(); }
-            }
-          } else {
-            //directory is written in zip already by filentry.localPath
+      for(FileFunctions.FileAndBasePath filentry: listFiles){
+        if(filentry.file.isFile()){
+          ZipEntry zipEntry = null;
+          InputStream in = null;
+          String sPath = filentry.localPath;
+          if(sPath.startsWith("/")){    //The entries in zip/jar must not start with /
+            sPath = sPath.substring(1);
           }
+          try{
+            if(manifest !=null){
+              zipEntry = new JarEntry(sPath);
+            } else {
+              zipEntry = new ZipEntry(sPath);
+            }
+            zipEntry.setTime(timestamp == 0 ? filentry.file.lastModified(): timestamp);
+            outZip.putNextEntry(zipEntry);
+            in = new FileInputStream(filentry.file);
+            int bytes;
+            while( (bytes = in.read(buffer))>0){
+              outZip.write(buffer, 0, bytes);
+            }
+          } catch(IOException exc){
+            if(errorFiles == null) { errorFiles = new StringBuilder(); }
+            errorFiles.append(exc.getMessage()).append("\n");
+          } finally {
+            if(in !=null) { in.close(); }
+            if(zipEntry !=null) { outZip.closeEntry(); }
+          }
+        } else {
+          //directory is written in zip already by filentry.localPath
         }
+      }
       outZip.close();
-      
     } finally {
       try{ if(outZip !=null) outZip.close();
       } catch(IOException exc){ throw new RuntimeException("Archiver.createJar - unexpected IOException"); }

@@ -210,6 +210,7 @@ public final class JZtxtcmdSyntax {
     + " | while <whileCtrl> \n"
     + " | do <dowhileCtrl> \n"
     + " | start <cmdLine?cmdStart> \n"
+    + " | shell <cmdLine?cmdShell> \n"
     + " | zmake <zmake> \n"
     + " | move <srcdst?move> ; \n"
     + " | copy <srcdst?copy> ; \n"

@@ -910,7 +910,7 @@ public class JZtxtcmdScript extends CompiledScript
      */
     void writeStructLine(Appendable u) {
       try{
-        u.append("JZtxtcmdScript: ");
+        //u.append("JZtxtcmdScript: ");
         switch(this.elementType){
           case 't': u.append(" text \"").append(this.textArg).append("\""); break;
           /*
@@ -966,7 +966,8 @@ public class JZtxtcmdScript extends CompiledScript
           case ',': u.append(" errortoOutput "); if(this.textArg == null){ u.append("off "); } break;
           default: //do nothing. Fo in overridden method.
         }
-        u/*.append("-").append(this.elementType)*/.append(" @").append(Integer.toString(this.srcLine)).append(",").append(Integer.toString(this.srcColumn)).append(" ").append(this.srcFile).append(':');
+        //u/*.append("-").append(this.elementType)*/.append(" @").append(Integer.toString(this.srcLine)).append(",").append(Integer.toString(this.srcColumn)).append(" ").append(this.srcFile).append(':');
+        u.append(" @").append(Integer.toString(this.srcLine)).append(",").append(Integer.toString(this.srcColumn)).append(':');
         
       } catch(IOException exc){
         throw new RuntimeException(exc); //unexpected.
@@ -2269,6 +2270,13 @@ public class JZtxtcmdScript extends CompiledScript
     boolean bCmdCheck;
 
     public boolean bShouldNotWait;
+    
+    /**In Linux a script can be executed also with 'cmd' or 'start' but in Windows
+     * it needs more effort: call 'cmd.exe /C script.bat'.
+     * It should not be part of the script (till 2025-07), should be done OS-depending in the {@link JZtxtcmdExecuter},
+     * If this flag is set, it is a script called with 'shell script'
+     */
+    public boolean bExecScript;
 
     CmdInvoke(StatementList parentList, char elementType)
     { super(parentList, elementType);
@@ -3165,6 +3173,18 @@ public class JZtxtcmdScript extends CompiledScript
     }
     
     public void add_cmdStart(CmdInvoke val){}
+
+    
+    public CmdInvoke new_cmdShell() { 
+      CmdInvoke statement = new CmdInvoke(this, 'c');
+      statement.bExecScript = true;
+      statement.bShouldNotWait = false;
+      this.statementsAdd.add(statement);
+      this.onerrorAccu = null; this.withoutOnerror.add(statement);
+      return statement;
+    }
+    
+    public void add_cmdShell(CmdInvoke val){}
 
     
 

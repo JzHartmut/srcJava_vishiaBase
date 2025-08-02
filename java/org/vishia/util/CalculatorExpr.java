@@ -3731,12 +3731,11 @@ public class CalculatorExpr
           }
         } else if(oper.operand_.dataConst !=null) {
           oval2 = oper.operand_.dataConst;
-        } else if(oper.operand_.textOrVar !=null) {
+        } else if(oper.operand_.dataAccess !=null) {
+            oval2 = oper.operand_.dataAccess.access(oval2, true, false, null, args);
+        } else if(oper.operand_.textOrVar !=null) {     // this is the fallback. textOrVar is set also in the other cases.
           oval2 = oper.operand_.textOrVar;
         } 
-        if(oper.operand_.dataAccess !=null) {
-          oval2 = oper.operand_.dataAccess.access(oval2, true, false, null, args);
-        }
         if(oval2 ==null)
           Debugutil.stop();
         convertObj(val2jar, oval2);
