@@ -788,7 +788,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
   
  
   public FileRemote getChild(CharSequence name){
-    boolean bWindows = this.sDir.charAt(1) == ':';
+    boolean bWindows = this.sDir.length() >=2 && this.sDir.charAt(1) == ':';
     String key = bWindows ? name.toString().toUpperCase() : name.toString();
     return this.children == null ? null : this.children.get(key);
   }

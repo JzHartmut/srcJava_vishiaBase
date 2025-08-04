@@ -1,5 +1,5 @@
 
-export DST=docuSrcJava_vishiaBase
+export DST=Java/docuSrcJava_vishiaBase
 ##export DST_priv=docuSrcJavaPriv_vishiaBase
 
 export SRC="-subpackages org.vishia"
