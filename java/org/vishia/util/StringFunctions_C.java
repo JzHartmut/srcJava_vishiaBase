@@ -195,23 +195,20 @@ public class StringFunctions_C
    * @param separatorChars Any character are accept inside the number as a separation character. For Example _ or ' or ,  to write:
    *   <code>12'345  12,234  12_345</code> which is parsed as 12345 in any case. Usual such as "'" 
    */
-  /**Parses a given String and convert it to the long number.
+  /**Parses a given String and convert it to the long number with possible sign.
    * It is the adequate method for long values, see {@link #parseIntRadix(CharSequence, int, int, int, int[], String)}.
    * The String may start with a negative sign ('-') and should contain digits after them.
    * The digits for radix > 10 are 'A'..'Z' respectively 'a'..'z', known as hexa numbers A..F or a..f. 
    * <br>
-   * Between any character except '0x' .. '0b' any of the given 'separatorChars' can be written. 
+   * On start or before the sign or between any character except '0x' .. '0b' any of the given 'separatorChars' can be written. 
    * It is for better readability for the number.
    * <br>
    * If the string contains "0x" or "0X" before digits then the number is read hexadecimal also if radix = 10.
    * This allows accept hexa where decimal is expected.
    * <br>
-   * If the string contains "0x" or "0X" before digits then the number is read hexadecimal also if radix = 10.
-   * This allows accept hexa where decimal is expected.
-   * <br>
-   * The number of parsed digits is limited to the int size (32 bit).
-   * Whereby on radix==16 also till "0xffffffff" is parsed, but this represents -1, written without negative sign. 
-   * It is the same as "-0x1" or "-0x00000001".
+   * The number of parsed digits is limited to the long size (64 bit).
+   * Whereby on radix==16 also till "0xffffffffffffffff" is parsed, but this represents -1, written without negative sign. 
+   * It is the same as "-0x1" or "-0x0000000000000001".
    * <br>
    * If for example "3 000 000 000" is given, only "3 000 000 00" is parsed, one "0" remains. 
    * If digit characters remain, there are not parsed and able to recognize after srcP.subSequence(parsedChars[0]).
@@ -233,7 +230,7 @@ public class StringFunctions_C
    *  For example the String contains "-123.45" it returns -123, and the retSize is 3.
    */
   public static long parseLong(final CharSequence srcP, final int posArg, final int sizeP, final int radix
-      , final int[] parsedChars, final String separatorChars) {
+  , final int[] parsedChars, final String separatorChars) {
     int zSrc = srcP.length() - posArg;
     int restlen;
     if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
@@ -241,10 +238,10 @@ public class StringFunctions_C
     //
     boolean bNegativ;
     int pos = posArg;
-    char cc = restlen >0 ? srcP.charAt(pos) : 0;
-    if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
+    char cc = 0;
+    while(restlen > 0 && separatorChars !=null && separatorChars.indexOf(cc = srcP.charAt(pos))>=0){
       pos +=1;
-      cc = restlen >0 ? srcP.charAt(pos) : 0;
+      cc = --restlen >0 ? srcP.charAt(pos) : 0;
     } 
     if(cc == '-') { 
       pos+=1; restlen -=1; bNegativ = true; 
@@ -253,6 +250,7 @@ public class StringFunctions_C
     //
     long val = parseUlong(srcP, pos, restlen, radix, parsedChars, separatorChars);
     if(bNegativ){ val = -val; }
+    if(parsedChars !=null) { parsedChars[0] += pos-posArg; }
     return val;
   }
 
@@ -285,14 +283,14 @@ public class StringFunctions_C
     if(sizeP < 0) { restlen = zSrc - (- sizeP) +1; }             // maybe <0, tested later
     else { restlen = sizeP; if (restlen > zSrc) { restlen = zSrc; } }  // limited to max of srcP
     int ixSrc = pos;
-    char cc = restlen >0 ? src.charAt(ixSrc) : 0;
-    if(separatorChars !=null && separatorChars.indexOf(cc)>=0){
+    char cc = 0; //restlen >0 ? src.charAt(ixSrc) : 0;
+    while(restlen > 0 && separatorChars !=null && separatorChars.indexOf(cc = src.charAt(ixSrc))>=0){
       ixSrc +=1;
-      cc = restlen >0 ? src.charAt(pos) : 0;
+      cc = --restlen >0 ? src.charAt(pos) : 0;
     } 
-    //
+   //
     int radix = radixArg;
-    if(restlen > 1 && cc == '0') { 
+    if(restlen > 1 && cc == '0') {                         // test 0x...
       char cBase = src.charAt(pos+1);
       int ixBase = "bBxX".indexOf(cBase);
       if(ixBase >=0) {

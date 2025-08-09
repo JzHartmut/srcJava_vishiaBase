@@ -385,12 +385,13 @@ public class StringFunctions {
    *   Note: if 0, the return value of this method is 0 because all (=0) characters are equal. This may be important for some extrem situations.
    * @return 0 if all characters are equal, positive if the part of s1 > s2,  negative if s1 < s2.
    *   <br>The absolute of return is the number of equal characters +1.
+   *     or also, the position of the first differ character started with 1 for the first character.
    *   <br>Note that the different character is charAt(returnValue -1) or the length of the shorter CharSeqence is returnVal -1.
    *     This convention is necessary because 0 means equal. It should be distinguish from the result charAt(0) is different.
    *   <br>-1 means, the first character is different whereby s1.charAt(0) < s2.charAt(0) or s1.length()==0 && s2.length() >0
    *   <br> 1 means, the first character is different whereby s1.charAt(0) > s2.charAt(0) or s1.length() >= && s2.length()==0
    *   <br> The comparison of "abcx" with "abcy" results -4 because 'x' < 'y' on the position 3.
-   *   <br> The comparison of "abc" with "abcy" results -4 because 'x' < 'y' on the position 3.
+   *   <br> The comparison of "abc" with "abcy" results -4 because on position 4 s1 ends, but s2 has 'y'.
    *   
    */
   public static int comparePos(CharSequence s1, int from1, CharSequence s2, int from2, int nrofChars){
@@ -401,8 +402,8 @@ public class StringFunctions {
     if(nrofChars ==0) return 0; //NOTE: following while compares at least one char
     int zChars =  nrofChars >= 0 ? Math.min(nrofChars, Math.min(z1- i1, z2-i2)) : Math.min(z1-i1, z2-i2);
     //z1 -=1; z2 -=1;  //compare before increment then.
-    if(z1 > zChars) { z1 = zChars; }
-    if(z2 > zChars) { z2 = zChars; }
+//    if(z1 > zChars) { z1 = zChars; }      // that's faulty, disturb the result if z1 != z2
+//    if(z2 > zChars) { z2 = zChars; }
     char c1=0, c2=0;
     while(c1 == c2 && --zChars >=0) {
       c1 = s1.charAt(i1++);
