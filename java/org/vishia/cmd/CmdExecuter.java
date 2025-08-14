@@ -605,11 +605,7 @@ public class CmdExecuter implements Closeable
       try {
         this.echoCmd.append(">cmdExecuter>");
         for(String arg: cmdArgs) {
-          if(arg.indexOf(' ') >=0) {                       // write with "arg if contains space"
-            this.echoCmd.append(" \"").append(arg).append("\""); 
-          } else {
-            this.echoCmd.append(" ").append(arg); 
-          }
+          this.echoCmd.append(" <").append(arg).append(">"); 
         }
         this.echoCmd.append("\n");
       } catch (IOException e) {
@@ -704,11 +700,15 @@ public class CmdExecuter implements Closeable
   /**Aborts the running cmd. 
    * @return true if any cmd is aborted.
    */
-  public boolean abortCmd()
+  public boolean abortCmd(boolean bForcibly)
   { boolean destroyed = false;
     synchronized(this){
       if(this.process !=null){
-        this.process.destroy();
+        if(bForcibly) {
+          this.process.destroyForcibly();
+        } else {
+          this.process.destroy();
+        }
         destroyed = true;
       }
       try{ 
@@ -746,7 +746,7 @@ public class CmdExecuter implements Closeable
   public boolean abortAllCmds()
   {
     if(this.cmdQueue !=null) { this.cmdQueue.clear(); }
-    return abortCmd();
+    return abortCmd(true);  // forcibly
   }
 
   /**Splits command line arguments. See {@link #splitArgs(String, String[], String[])}, without preArgs and postArgs.

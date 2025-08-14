@@ -1022,7 +1022,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
   public boolean abortCmdExecution() {
     boolean bAborted = false;
     for(CmdExecuter cmd: this.acc.runningCmdExecuter) {
-      if(cmd.abortCmd()) {
+      if(cmd.abortCmd(true)) {
         bAborted = true;
       }
     }
@@ -1592,7 +1592,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
      * @param executer may be opened, should not be in process, will be used then.
      */
     public void setCmdExecuter(CmdExecuter executer) {
-      if(this.cmdExecuter !=null) { this.cmdExecuter.abortCmd(); this.cmdExecuter.close(); }
+      if(this.cmdExecuter !=null) { this.cmdExecuter.abortCmd(true); this.cmdExecuter.close(); }
       this.cmdExecuter = executer;
     }
 
