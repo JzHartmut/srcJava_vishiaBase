@@ -95,8 +95,6 @@ try {
  * That are your user data which can be accessed via <code><&arg1....></code> in your pattern. 
  * Compare it with the arguments of a printf, but with the difference that the possibilities to use the arguments
  * are some more powerful, not only for numbers and date. 
- * But possibilities for number formatting are not given yet (maybe interesting, in future).
- * For number formatting just call your java operations.
  * 
  * <br>
  * <br>
@@ -274,9 +272,9 @@ try {
  * <li>&lt;:set:variable=value>: sets a new created variable, can be used as &lt;&variable> etc.
  * <li>&lt;:set:variable='string':value>: If the value starts with a string literal, it can be concatenated with some other values.
  * <li>&lt;:set:variable>....&lt;.set>: unfortunately not ready, should set a variable with a prepared expression with placeholder.
- * <li>&lt;:type:value:classpath>: checks the value whether it is of the type of the given class.
- *   This is more for documentation and is used as assertion. Can be switched off for faster execution.
- *   using {@link DataTextPreparer#setCheck(boolean)} for each script. 
+ * <li>&lt;:type:value:org.path.to.Class>: checks the value whether it is of the type of the given class.
+ *   This produces an "<??ERROR text??>" if it is not matching. 
+ *   <br>Able to switch off for faster execution using {@link DataTextPreparer#setCheck(boolean)} for each script. 
  * </ul>   
  * @author Hartmut Schorrig
  *
@@ -1083,7 +1081,15 @@ public final class OutTextPreparer
   
   int nrLineStartInFile;
   
-  int ixVarLineoutStart;
+  /**If this field is >=0 (usual >0), then the value in {@link DataTextPreparer#args} on this index  
+   * should contain the String to produce a newline. 
+   * This should be given on user level in {@link DataTextPreparer#setArgument(String, Object)} 
+   * with the arg1 as 'nameNewlineVariable' given with 'NEWLINE====<$?nameNewlineVariable>' 
+   * The name of this 'nameNewlineVariable' is stored in {@link #nameVariables} to get this index
+   * and in {@link #listArgs} on the position of this index.
+   * 
+   */
+  int ixVarLineoutStart = -1;
   
   /**This is only stored as info, not used in this class.
    * It is the argument execClass from the user, 
@@ -2112,7 +2118,7 @@ public final class OutTextPreparer
             } else {
               addCmd("\n", this.sp.getlineCol(), 0, 1, null);
             }
-            this.sp.seekNoChar(this.otx.sLineoutStart.substring(0,1));
+            //this.sp.seekNoChar(this.otx.sLineoutStart.substring(0,1));
           } else {
             this.sp.seekNoWhitespace();   // if no newline mark found, ignore the bNewline, start on next content
           }
@@ -2454,7 +2460,7 @@ public final class OutTextPreparer
           String sError = this.sp.getCurrent(30).toString();
           int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer faulty <.for> missing opening <:for:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
+          throw new ParseException("OutTextPreparer faulty <.for> missing opening <:for:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError, 0);
         }
       }
       else { //No proper cmd found:

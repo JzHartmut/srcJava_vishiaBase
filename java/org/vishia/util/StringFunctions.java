@@ -225,7 +225,7 @@ public class StringFunctions {
   
   /**Returns the position after the end of an identifier.
    * @param src If the first char on [start] is 0..9 it returns 0, it is not an identifier.
-   * @param start from this position
+   * @param start from this position, should usual the start of the identifier found before.
    * @param endMax >=0: absolute exclusive end position for search, <0: end position relative to end, -1 is the end of src
    * @param additionalChars maybe null, some chars as additional chars of an identifier, inside and as start.
    * @return 0 if it is not start with an identifier start character. '0'..'9' is not an identifier start.
