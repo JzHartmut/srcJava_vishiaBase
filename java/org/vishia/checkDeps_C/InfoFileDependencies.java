@@ -136,7 +136,7 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
     this.sFilePathIncludeline = sFilePathIncludeline;
     this.fileSrc = fileSrc;
     this.fileMirror = fileMirror;
-    this.sAbsolutePath = fileSrc.exists() ? FileSystem.getCanonicalPath(fileSrc): null;
+    this.sAbsolutePath = fileSrc.exists() ? FileFunctions.normalizePath(fileSrc).toString(): null;
     this.isSrc = isSrc;
     this.dateFileSrc = fileSrc ==null ? 0 : fileSrc.lastModified();
     this.timestampNewestDependingFiles_ = this.dateFileSrc;
@@ -288,8 +288,8 @@ public class InfoFileDependencies implements AddDependency_InfoFileDependencies
         final long timestampMirror = fileMirror.lastModified();
         final String sTimestampMirror = formatTimestamp.format(new Date(timestampMirror));
         //final String sNewly = bNewly ? "!!" : "=";
-        sDateNameLine = sTimestampMirror + "; " + timestampMirror + "; " + FileSystem.getCanonicalPath(fileMirror)
-         + "; " + cNewly + "; " + FileSystem.getCanonicalPath(fileSrc) + "; " + timestampSrc + "; "+ sTimestampSrc;
+        sDateNameLine = sTimestampMirror + "; " + timestampMirror + "; " + FileFunctions.normalizePath(fileMirror)
+         + "; " + cNewly + "; " + FileFunctions.normalizePath(fileSrc) + "; " + timestampSrc + "; "+ sTimestampSrc;
       } else {
         sDateNameLine = sTimestampSrc + "; " + timestampSrc + "; " + sAbsolutePath;
       }

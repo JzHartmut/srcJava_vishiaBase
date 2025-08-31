@@ -3,6 +3,7 @@ package org.vishia.checkDeps_C;
 import java.io.File;
 import java.io.IOException;
 
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 
 /**This class stores canonical pathes of source files and there associated local part.
@@ -83,7 +84,7 @@ public class InputSrc
       if(!dirSrcBase.exists()) throw new IllegalArgumentException("CheckDeps - src directory not found: " + dirSrcBase.getAbsolutePath());
       if(!dirSrcBase.isDirectory()) throw new IllegalArgumentException("CheckDeps -src=PATH should be a directory: " + dirSrcBase.getAbsolutePath()); 
     }
-    sCanonicalPathSrc = FileSystem.getCanonicalPath(dirSrcBase) + '/'; 
+    sCanonicalPathSrc = FileFunctions.normalizePath(dirSrcBase).toString() + '/'; 
   }
 
   /**For debugging. Returns the absolute path to show what is it. */

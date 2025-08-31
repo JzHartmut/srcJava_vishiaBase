@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.Report;
+import org.vishia.util.FileFunctions;
 import org.vishia.util.FileSystem;
 
 
@@ -305,7 +306,7 @@ public class CheckDeps_Old
     //The source files maybe generated from a tool as secondary sources: 
     for(File fileSrc: listFilesSrcAll){
       checkData.nrofSrcFiles +=1;
-      String sFileSrcAbs = FileSystem.getCanonicalPath(fileSrc);
+      String sFileSrcAbs = FileFunctions.normalizePath(fileSrc).toString();
       console.reportln(Report.debug, "CheckDeps - check source file; " + sFileSrcAbs);
       if(sFileSrcAbs.contains("ObjectJc.h"))
         stop();

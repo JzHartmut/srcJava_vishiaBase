@@ -1,6 +1,6 @@
 2025-08-09 14:53:08  x     +buildTimestamps.sh                      ::           .254  1130920915 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2025-08-21 21:12:07  x     .gitCommit                               ::           .511 -1529383406 
+2025-09-01 01:25:28  x     .gitCommit                               ::          1.686  1572887058 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2025-08-14 20:18:15  x     .gitRepository                           ::           . 64 -0723375549 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -103,12 +103,12 @@
 2017-07-29 11:17:07  x     CfgData.java                             ::          3.560 -0509839928 
 2022-11-19 21:10:14  x     CheckAllDepFile.java                     ::          6.203 -1215854895 
 2012-12-25 17:01:12  x     CheckData.java                           ::          4.951  0627506369 
-2023-09-21 13:14:28  x     CheckDependencyFile.java                 ::         48.796  1842766089 
+2025-08-31 23:50:04  x     CheckDependencyFile.java                 ::         48.852 -1617079770 
 2023-09-21 13:13:03  x     CheckDeps.java                           ::          7.631  1418934012 
-2023-09-21 13:15:01  x     CheckDeps_Old.java                       ::         12.624  0783667633 
+2025-08-31 23:44:15  x     CheckDeps_Old.java                       ::         12.673 -0703008905 
 2012-12-25 15:33:10  x     DateTime.java                            ::          1.823  2018610045 
-2022-11-19 21:13:16  x     InfoFileDependencies.java                ::         19.051 -1524932443 
-2014-05-04 22:56:29  x     InputSrc.java                            ::          4.196  1587914190 
+2025-08-31 23:41:27  x     InfoFileDependencies.java                ::         19.062 -1627752444 
+2025-08-31 23:42:22  x     InputSrc.java                            ::          4.245 -0795285309 
 2023-09-21 13:13:39  x     ObjectFileDeps.java                      ::          7.258  1698708741 
 2023-09-21 13:13:43  x     ParserConfigFile.java                    ::          7.399 -1698340084 
 2020-07-23 18:57:23  x     package-info.java                        ::           .399  1943722203 
@@ -171,7 +171,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2024-04-08 11:50:48  x     FileAccessorLocalJava7.java              ::         73.612 -1965246334 
+2025-08-29 19:52:01  x     FileAccessorLocalJava7.java              ::         76.326 -0850846131 
 2024-04-08 18:01:55  x     FileCallbackLocalCmp.java                ::         23.691  0437789410 
 2024-02-18 19:03:03  x     FileCallbackLocalCopy.java               ::          8.521  1096038750 
 2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
@@ -185,7 +185,7 @@
 2023-08-02 20:57:39  x     FileCluster.java                         ::         19.734  2045609325 
 2024-02-22 23:00:13  x     FileMark.java                            ::         11.522  1453524361 
 2025-08-02 15:02:54  x     FileRemote.java                          ::        142.952 -0799326611 
-2023-07-24 21:02:58  x     FileRemoteAccessor.java                  ::         14.798  1243699740 
+2025-08-29 19:40:42  x     FileRemoteAccessor.java                  ::         14.944 -0556793629 
 2023-07-19 09:42:23  x     FileRemoteCallbackCopyDispersedFiles.java ::          2.957 -0268023324 
 2023-07-19 09:47:52  x     FileRemoteCallbackSearch.java            ::         10.632  0519511827 
 2024-02-13 00:04:36  x     FileRemoteCmdEventData.java              ::          8.285  1499272580 
@@ -298,10 +298,10 @@
 2021-10-04 14:29:48  x     CompleteConstructionAndStart.java        ::          1.406 -1371934273 
 2021-10-04 14:29:52  x     Conversion.java                          ::          2.311 -1170445937 
 2013-02-09 20:40:18  x     Copy.java                                ::           . 51  0836434438 
-2025-05-12 22:59:18  x     DataAccess.java                          ::        165.045 -0836890169 
+2025-08-23 09:40:50  x     DataAccess.java                          ::        165.258 -0767543476 
 2023-05-12 00:34:19  x     DataShow.java                            ::         29.316 -0667858082 
 2015-01-17 17:32:28  x     DateOrder.java                           ::          4.061  1657283238 
-2025-07-12 10:27:04  x     Debugutil.java                           ::          2.453 -2047689875 
+2025-08-23 19:34:00  x     Debugutil.java                           ::          2.453 -2047689875 
 2013-11-24 19:10:50  x     Docu_UML_simpleNotation.java             ::          4.825 -0664458674 
 2025-01-19 19:37:02  x     ExcUtil.java                             ::         18.327 -0066966055 
 2022-12-10 11:34:43  x     FileAppend.java                          ::          9.804 -1860003572 
@@ -343,7 +343,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2025-08-21 20:22:57  x     OutTextPreparer.java                     ::        168.504  0635853986 
+2025-08-25 10:23:35  x     OutTextPreparer.java                     ::        168.911 -0101921246 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -448,7 +448,7 @@
 2025-08-02 00:45:02  x     +makejar_vishiaBase.sh                   ::          3.967  0859902050 
 2023-08-07 23:44:02  x     -deployJar.sh                            ::          2.815 -1570269268 
 2025-08-05 00:08:14  x     -genjavadocbase.sh                       ::          2.628 -1895934550 
-2025-08-02 10:17:52  x     -makejar-coreScript.sh                   ::          9.901 -0996390276 
+2025-09-01 01:24:42  x     -makejar-coreScript.sh                   ::          9.557  1002227684 
 2021-06-28 23:34:15  x     JAVAC_HOME.sh                            ::          1.154 -1792697615 
 2022-09-17 16:20:31  x     Java2Xmi.jzcmd                           ::          4.373 -1492198453 
 2022-07-27 22:07:55  x     corrBom.jzTc                             ::          4.643 -0135911090 

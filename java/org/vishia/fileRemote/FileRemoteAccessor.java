@@ -126,6 +126,7 @@ public abstract class FileRemoteAccessor implements EventConsumer
    *   If it is especially a file on a remote device only able to reach via communication 
    *   ( for example on an embedded device), the operation should wait for success.
    * @param co Command description. It is the payload of an command event. 
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
    * @param evBack prepared event for back information or also for progress.
    *   The event knows a destination where the back event is processed. 
    *   If this argument is null, no back information will be sent. This is sensible if bWait is true,

@@ -419,7 +419,8 @@ public class CheckDependencyFile
       throw new IllegalArgumentException("CheckDeps - recursion to deep;" + fileSrc.getAbsolutePath());
     }
     try{
-      String sFileSrcGenAbs = FileSystem.getCanonicalPath(fileSrc);
+      String sFileSrcGenAbs = FileFunctions.normalizePath(fileSrc).toString();
+
       String sLocalPath = cfgData.checkIsInSourcePool(sFileSrcGenAbs);
       if(sLocalPath.contains("ObjectRefl_emC.c"))
         Debugutil.stop();
@@ -429,7 +430,7 @@ public class CheckDependencyFile
       //
       //create info for this file.
       
-      String sPathSrcCanonical = FileSystem.getCanonicalPath(fileSrc);
+      String sPathSrcCanonical = FileFunctions.normalizePath(fileSrc).toString();
       infoFile = checkData.indexAllInclFilesAbsPath.get(sPathSrcCanonical);
       if(infoFile != null){
         //it is checked already.
@@ -559,7 +560,7 @@ public class CheckDependencyFile
     if(sFileSrgGenAbs.contains("ObjectJc.h"))
       stop();
     
-    final String sDirCurrentFile = FileSystem.getCanonicalPath(fileSrcGen.getParentFile());
+    final String sDirCurrentFile = FileFunctions.normalizePath(fileSrcGen.getParentFile()).toString();
     do{
       sLineSrc = codeLineSrc.nextCodeLine();   //skips over all empty lines, forex lines which are commented with //
       if(codeLineMirror !=null){
@@ -737,7 +738,7 @@ public class CheckDependencyFile
         if(fileIncl.exists()){ 
           //A file relative to the current file is found. It means, that is included.
           //Get its absolute path in check whether it is processed already:
-          String sInclFileAbs = FileSystem.getCanonicalPath(fileIncl);
+          String sInclFileAbs = FileFunctions.normalizePath(fileIncl).toString();
           inclFileInfo = checkData.indexAllInclFilesAbsPath.get(sInclFileAbs);
         } else {
           //because the included file isn't found relative, it may be assumed 
@@ -769,7 +770,7 @@ public class CheckDependencyFile
             //no: throw new IllegalArgumentException("searchInclude - file not found: " + sFileIncl);
           } else {
             //The file is found. Save it in the index of processed files. Fill content then.
-            sInclFileAbs = FileSystem.getCanonicalPath(fileIncl);
+            sInclFileAbs = FileFunctions.normalizePath(fileIncl).toString();
             //The fileInfo may be found with its absolute path. It is if different #include <path/name.h>-notations are used.
             inclFileInfo = checkData.indexAllInclFilesAbsPath.get(sInclFileAbs);
             if(inclFileInfo == null){ //not found yet

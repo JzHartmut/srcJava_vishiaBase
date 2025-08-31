@@ -74,9 +74,9 @@ if ! test "$DSTJARDIR" = ""; then echo DSTJARDIR is set by calling script.
 elif test -d tools; then export DSTJARDIR="tools"
 elif test -d jars; then export DSTJARDIR="jars"
 elif test -d ../tools; then export DSTJARDIR="../tools"
-else mkdir jars; export DSTJARDIR="jars"
+else mkdir jars; export DSTJARDIR="jars"                      ## fallback is: jar beside src
 fi
-
+export DSTJARDIR=$(realpath "$DSTJARDIR")
 
 echo pwd=$(PWD)
 echo VERSIONSTAMP = $VERSIONSTAMP  ## determine suffix of output file names
@@ -150,7 +150,7 @@ if ! test "$MD5FILE" = ""; then echo output MD5 checksum
   cat $MD5FILE
 fi  
 
-if test -v SRCADD_ZIP; then  ## do not zip sources if $SRCADD_ZIP is non existing, but build zip if it is empty.
+if ! test -z "$SRCADD_ZIP"; then  ## do not zip sources if $SRCADD_ZIP is non existing, but build zip if it is empty.
   echo
   echo ====== zip-sources ================================================
   pwd
@@ -168,16 +168,8 @@ if test -v SRCADD_ZIP; then  ## do not zip sources if $SRCADD_ZIP is non existin
   if test -f $BUILD_TMP/deploy/$SRCZIPFILE; then echo ok $BUILD_TMP/deploy/$SRCZIPFILE; else echo ERROR src.zip $BUILD_TMP/deploy/$SRCZIPFILE; fi
 fi  
 
-## ====== copy to  ================================================
 if test -f $JARFILE; then echo ok $JARFILE; else echo ERROR $JARFILE; fi
 
-#xx echo ====== copy to DSTJARDIR=$DSTJARDIR ==============================================================
-##REM: It should be assumed that the file is correct. 
-##REM It replaces the given in $DSTJARDIR to support more tests with the new jar without more effort.
-##REM Only the jar file is copied. The rest is done by the deploy script.
-##echo cp $BUILD_TMP/deploy/* $DSTJARDIR
-##cp $BUILD_TMP/deploy/* $DSTJARDIR
-#xx echo "current dir =$PWD"
 echo
 echo ====== copy to $DSTJARDIR ================================================
 echo "cp $JARFILE $DSTJARDIR/$DSTNAME.jar"
@@ -195,4 +187,6 @@ cp $BUILD_TMP/deploy/$SRCZIPFILE $DSTJARDIR  ## copy zipped sources
 #xx echo ====== deploy script ==============================================================
 #xx echo DEPLOYSCRIPT=$DEPLOYSCRIPT
 
-
+if test "$1" != "NOPAUSE"; then
+  read -p "$2 ...Press ENTER..." VAR
+fi

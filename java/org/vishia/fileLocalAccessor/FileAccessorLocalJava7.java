@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.FileSystem;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -50,7 +51,6 @@ import org.vishia.fileRemote.FileRemoteWalker;
 import org.vishia.util.Debugutil;
 import org.vishia.util.FileFunctions;
 import org.vishia.util.FilepathFilterM;
-import org.vishia.util.FileSystem;
 import org.vishia.util.SortedTreeWalkerCallback;
 
 /**This is the implementation of the FileRemoteAccessor working with {@link FileRemote}
@@ -309,7 +309,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
    * @param path should be gotten as existing path, 
    * @param attribs
    */
-  protected static void setAttributes(FileRemote fileRemote, Path path, BasicFileAttributes attribs){
+  protected static void setAttributes(FileRemote fileRemote, Path pathArg, BasicFileAttributes attribs){
+    Path path = pathArg;
     fileRemote.internalAccess().setPath(path);
     FileTime fileTime = attribs.lastModifiedTime();
     long dateLastModified = fileTime.toMillis();
@@ -317,6 +318,28 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     long dateLastAccess = attribs.lastAccessTime().toMillis();
     long length = attribs.size();
     int flags = FileRemote.mExist | FileRemote.mTested;
+    //if(fileRemote.getName().contains("build")) Debugutil.stopp();
+//
+// cc-2025-08:
+// This following lines were a experience why attribs do not contain the information about directory if pathArg is a symbolic linked dir.
+// But it was not sufficient, but Problematic of get toRealPath() may be interesting also for other situations.
+// That's why this commented lines should be left here.
+// The solution of the problem was: 'options.add(FileVisitOption.FOLLOW_LINKS);' to arg of 'java.nio.file.Files.walkFileTree(..., options, ...)'
+// changed in 'walkFileTreeExecInThisThread (...)'    
+//    if(attribs.isSymbolicLink()) {
+//      try {
+//        path = path.toRealPath();
+//        FileSystem fs = path.getFileSystem();
+//        //Files.getAttribute(path, sVersion);
+//      } catch (IOException e) {
+//        // TODO Auto-generated catch block
+//        
+//      }
+//      Debugutil.stop();
+//    }
+//    if(Files.isDirectory(pathArg)) {
+//      flags |= FileRemote.mDirectory;
+//    }
     if(attribs.isDirectory()){ flags |= FileRemote.mDirectory; }
     String sAbsPath = fileRemote.getAbsolutePath();
     try {
@@ -330,7 +353,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     }catch(IOException exc){
       System.err.println("FileAccessorLocalJava7 - Problem on toRealPath; " + fileRemote.getAbsolutePath());
     }
-    //symbolicLink is already detected by toRealPath, inclusively the Windows JUNCTION which are not regard by isSymbolicLink()
+// symbolicLink is already detected by toRealPath, inclusively the Windows JUNCTION which are not regard by isSymbolicLink()
+// cc-2024-02
 //    if(attribs.isSymbolicLink()){
 //      try{
 //        Path target = Files.readSymbolicLink(path);
@@ -465,7 +489,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
 
   @Override public OutputStream openOutputStream(FileRemote file, long passPhase){
     try{ 
-      FileSystem.mkDirPath(file);
+      FileFunctions.mkDirPath(file);
       FileOutputStream stream = new FileOutputStream(file);
       return stream;
     } catch(FileNotFoundException exc){
@@ -478,7 +502,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   @Override public WritableByteChannel openWrite(FileRemote file, long passPhase)
   { try{ 
-      FileSystem.mkDirPath(file);
+      FileFunctions.mkDirPath(file);
       @SuppressWarnings("resource") //will be closed on WriteableByteChannel.close();
       FileOutputStream stream = new FileOutputStream(file);
       return stream.getChannel();
@@ -577,6 +601,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   
+  /**
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
+   * @param evBack
+   * @return
+   */
   protected static String copyFile(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String sError = null;
     try {
@@ -593,6 +622,11 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
 
   
+  /**
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
+   * @param evBack
+   * @return
+   */
   protected static String moveFile(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     String sError = null;
     try {
@@ -680,7 +714,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   /**This is called in the {@link WalkerThread} or immediately from {@link #cmd(boolean, org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}
    * if first argument is true.
-   * @param co
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
    * @param evBack
    * @return
    */
@@ -736,6 +770,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   /**See {@link FileRemoteAccessor#cmd(boolean, org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}.
    * Hint: Set breakpoint to {@link #execCmd(org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}
    * to stop in the execution thread.
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
    */
   @Override public String cmd(boolean bWait, FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
     if(bWait) {
@@ -758,6 +793,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
   
   
+  /**
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
+   * @param evBack
+   */
   private void execChgProps(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     FileRemote dst;
     //FileRemote.FileRemoteEvent callBack = co;  //access only 1 time, check callBack. co may be changed from another thread.
@@ -792,6 +831,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   }
   
   
+  /**
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
+   * @param evBack
+   */
   private void execChgPropsRecurs(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     FileRemote dst;
     boolean ok = co !=null;
@@ -869,6 +912,10 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   
+  /**
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
+   * @param evBack
+   */
   private void execCountLength(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData, ?> evBack){
     long length = countLengthDir(co.filesrc(), 0, 0);    
     FileRemoteProgressEvData.ProgressCmd cmd;
@@ -909,7 +956,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   
   
   /**Executes delete file maybe in an extra thread or really remote
-   * @param co
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
    * @param evBack 
    */
   void execDel(FileRemoteCmdEventData co, EventWithDst<FileRemoteProgressEvData,?> evBack) {
@@ -998,17 +1045,18 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
   //tag::walkFileTreeExecInThisThread[]
   /**Executes walk file tree. Usual called in the {@link #execCmd(org.vishia.fileRemote.FileRemoteCmdEventData, EventWithDst)}
    * either in one of the {@link WalkerThread} or immediately in the caller thread.  
+   * @param co commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
    * @param co data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
    * @param bRefreshChildren true then reads the properties of all children from the original file system.
    * @param evBack a progress event, also usable for quests with answer via the {@link EventWithDst#getOpponent()} prepared before call.
    * @param debugOut
    */
-  protected void walkFileTreeExecInThisThread(
-      FileRemoteCmdEventData co
-      , boolean bRefreshChildren
-      , EventWithDst<FileRemoteProgressEvData, ?> evBack
-      , boolean debugOut)
-  {
+  protected void walkFileTreeExecInThisThread (
+  FileRemoteCmdEventData co
+  , boolean bRefreshChildren
+  , EventWithDst<FileRemoteProgressEvData, ?> evBack
+  , boolean debugOut
+  ) {
     int progressFinish = EventConsumer.mEventConsumFinished;
     String sError = null;                        // for unexpected exception message
     try{ 
@@ -1032,6 +1080,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       WalkFileTreeVisitor visitor = new WalkFileTreeVisitor(co.filesrc().itsCluster, bRefreshChildren
           , co, evBack, debugOut);
       Set<FileVisitOption> options = new TreeSet<FileVisitOption>();
+      options.add(FileVisitOption.FOLLOW_LINKS);
       //======>>>>                ----------------- call of the java.nio-walker
       //==========                ----------------- set breakpoints in visitFile etc. in the following class
       java.nio.file.Files.walkFileTree(co.filesrc().path(), options, depth1, visitor);  
@@ -1082,6 +1131,8 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     final FileCluster fileCluster;
     final boolean bRefresh; //, bResetMark;
     
+    /**Commission data what should be done, especially {@link FileRemoteCmdEventData#callback} describes what should be done with a file.
+     */
     final FileRemoteCmdEventData co;
     
     final FileRemoteWalkerCallback callback;
@@ -1401,7 +1452,7 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
       String name = file.getFileName().toString();
       if(name.startsWith("constant-values.html"))
         Debugutil.stop();
-      boolean bDirectory = attrs.isDirectory();
+      boolean bDirectory = Files.isDirectory(file); //  attrs.isDirectory();
       if(this.progress !=null) {
         if(bDirectory) {
           this.progress.nrDirVisited +=1;

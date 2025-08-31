@@ -2163,7 +2163,7 @@ public final class OutTextPreparer
       if(this.ixixCmd >=0) {
         int[] lineCol = sp.getlineCol();
         this.sp.close();
-        throw new IllegalArgumentException("OutTextPreparer closing <.> is missing: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + " to cmd: " + this.otx.cmds.get(this.ixCtrlCmd[this.ixixCmd]));
+        throw new ParseException("OutTextPreparer closing <.> is missing: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + " to cmd: " + this.otx.cmds.get(this.ixCtrlCmd[this.ixixCmd]),0);
       }
       this.sp.close();
     }
@@ -2249,7 +2249,7 @@ public final class OutTextPreparer
         } else { 
           int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer faulty <:elsif>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1]);
+          throw new ParseException("OutTextPreparer faulty <:elsif>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
         }
         this.ixCtrlCmd[++this. ixixCmd] = this.otx.cmds.size()-1;  //The position of the current <:elsif>
         
@@ -2268,7 +2268,7 @@ public final class OutTextPreparer
         }else { 
           int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer faulty <:else>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1]);
+          throw new ParseException("OutTextPreparer faulty <:else>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
         }
         this.ixCtrlCmd[++this.ixixCmd] = this.otx.cmds.size()-1;       //The position of the current <:else>
   
@@ -2411,7 +2411,7 @@ public final class OutTextPreparer
         else {
           int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer faulty <.wr> missing opening <:wr:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1]);
+          throw new ParseException("OutTextPreparer faulty <.wr> missing opening <:wr:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1], lineCol[0]);
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
@@ -2441,7 +2441,7 @@ public final class OutTextPreparer
           String sError = this.sp.getCurrent(30).toString();
           int[] lineCol = sp.getlineCol();
           this.sp.close();
-          throw new IllegalArgumentException("OutTextPreparer faulty <.if> without <:if> or  <:elsif> : " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
+          throw new ParseException("OutTextPreparer faulty <.if> without <:if> or  <:elsif> : " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError, lineCol[0]);
         }
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }                                                    
@@ -2457,10 +2457,14 @@ public final class OutTextPreparer
         } 
         
         else {
-          String sError = this.sp.getCurrent(30).toString();
           int[] lineCol = sp.getlineCol();
+          String sError = String.format("\nOutTextPreparer faulty <.for> missing opening <:for:...>:"
+                                      + "\n  otx=%s @%d,%d, last ctrl is <:%s:...> \n  Following text is: %s\n"
+                                      , this.otx.sIdent, lineCol[0], lineCol[1]
+                                      , this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd]).cmd
+                                      , this.sp.getCurrent(30).toString().replace('\n', '|'));
           this.sp.close();
-          throw new ParseException("OutTextPreparer faulty <.for> missing opening <:for:...>: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError, 0);
+          throw new ParseException(sError, 0);
         }
       }
       else { //No proper cmd found:
@@ -2481,7 +2485,7 @@ public final class OutTextPreparer
       } while(this.sp.scan(",").scanOk());
     }
     
-    private void parseWr () {
+    private void parseWr () throws ParseException {
       //====>
       String wrBufferIdent = this.sp.getLastScannedString().toString().trim();
       DataAccess.IntegerIx ixOentry = this.otx.nameVariables.get(wrBufferIdent);  //The string for data access is also used as variable indent in nameVariables
@@ -2497,7 +2501,7 @@ public final class OutTextPreparer
     }
     
     
-    private void parseIf ( ECmd ecmd) {
+    private void parseIf ( ECmd ecmd) throws ParseException {
       String cond = this.sp.getLastScannedString().toString();
   //    if(cond.contains("?instanceof"))
   //      Debugutil.stop();
@@ -2526,7 +2530,7 @@ public final class OutTextPreparer
         String sError = this.sp.getCurrent(30).toString();
         int[] lineCol = sp.getlineCol();
         this.sp.close();
-        throw new IllegalArgumentException("OutTextPreparer syntax error \")>\" expected in <:exec: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError);
+        throw new ParseException("OutTextPreparer syntax error \")>\" expected in <:exec: " + this.otx.sIdent + "@" + lineCol[0] + "," + lineCol[1] + ": " + sError, lineCol[0]);
         //throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \")>\" expected in <:exec: " + sOperation + "...>");
       }
       cmd = new Cmd(this.otx.cmds.size(), this.sp.getlineCol(), ECmd.exec, -1, access, idxConstData, sOperation);
@@ -2535,7 +2539,7 @@ public final class OutTextPreparer
   
     
     private void parseCall(final String src, final int pos0, final int pos1, final StringPartScanLineCol sp
-        , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) {
+        , Class<?> reflData, final Map<String, Object> idxConstData, final Map<String, OutTextPreparer> idxScript) throws ParseException {
       String sCallVar = this.sp.getLastScannedString();
       if(sCallVar.equals("otxIfColors"))
         otx.debug();
@@ -2543,7 +2547,7 @@ public final class OutTextPreparer
       final OutTextPreparer call;  
       if(cmd.dataConst !=null) { //given as const static:
         if(!(cmd.dataConst instanceof OutTextPreparer)) { //check the type on creation
-          throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": <:call: " + sCallVar + " is const but not a OutTextPreparer");
+          throw new ParseException("OutTextPreparer "+ this.otx.sIdent + ": <:call: " + sCallVar + " is const but not a OutTextPreparer", 0);
   //      } else { //call variable should be given dynamically:
   //        if(!this.otx.varValues.containsKey(sCallVar)) {
   //          String sError = "OutTextPreparer "+ sIdent + ": <:call: " + sCallVar + ": not given as argument";
@@ -2552,7 +2556,7 @@ public final class OutTextPreparer
   //          } else {
   //            sError += "Hint: no staticly data given in first argument of ctor.";
   //          } 
-  //          throw new IllegalArgumentException(sError);
+  //          throw new ParseException(sError);
   //        }
         }
         call = (OutTextPreparer)cmd.dataConst; //check argument names with it.
@@ -2572,7 +2576,7 @@ public final class OutTextPreparer
             } else {
               DataAccess.IntegerIx ixOcalledArg = call.nameVariables.get(sNameArg);
               if(ixOcalledArg == null) {
-                throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg);
+                throw new ParseException("OutTextPreparer "+ this.otx.sIdent + ": <:call: " + sCallVar + ":argument not found: " + sNameArg, 0);
               }
               ixCalledArg = ixOcalledArg.ix;
             }
@@ -2587,19 +2591,19 @@ public final class OutTextPreparer
                 arg = new Argument(this.otx, sNameArg, ixCalledArg, sDataPath, reflData, idxConstData);   //maybe an expression to calculate the value or a simple access
               }
               else { 
-                throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>");
+                throw new ParseException("OutTextPreparer "+ this.otx.sIdent + ": syntax error for argument value in <:call: " + sCallVar + ":arguments>", 0);
               }
             } catch(Exception exc) {
-              throw new IllegalArgumentException(exc); //"OutTextPreparer " + sIdent + ", argument: " + sNameArg + " not existing: ");
+              throw new ParseException("Any unexpected Exception: "+ exc.getMessage(), 0); //"OutTextPreparer " + sIdent + ", argument: " + sNameArg + " not existing: ",);
             }
             cmd.args.add(arg);
           } else {
-            throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error for arguments in <:call: " + sCallVar + ":arguments>");
+            throw new ParseException("OutTextPreparer "+ this.otx.sIdent + ": syntax error for arguments in <:call: " + sCallVar + ":arguments>", 0);
           }
         } while(this.sp.scan(",").scanOk());
       }
       if(!this.sp.scan(">").scanOk()) {
-        throw new IllegalArgumentException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \">\" expected in <:call: " + sCallVar + "...>");
+        throw new ParseException("OutTextPreparer "+ this.otx.sIdent + ": syntax error \">\" expected in <:call: " + sCallVar + "...>", 0);
       }
       
     }
@@ -2713,8 +2717,9 @@ public final class OutTextPreparer
      * @param idxConstData container of constant data for compile (parse) time
      * @param idxScript can contain some other OutTextPreparer instances for call.
      * @return the created Cmd for further parameters.
+     * @throws ParseException 
      */
-    private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath ) {
+    private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath ) throws ParseException {
       if(to > from) {
         this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
       }
@@ -2735,7 +2740,7 @@ public final class OutTextPreparer
                 oOtxSub = otxField.get(null);                     // get the static field (null = without instance).
               }
               if(oOtxSub == null || ! (oOtxSub instanceof OutTextPreparer)) {
-                throw new IllegalArgumentException("subroutine: not found ");
+                throw new ParseException("subroutine: not found: " + sNameSub, 0);
               }
               cmd = new CallCmd(this.otx.cmds.size(), linecol, (OutTextPreparer)oOtxSub); //this, sDatapath, data); 
               //cmd = new CallCmd(this, sDatapath, data); 
@@ -2763,7 +2768,7 @@ public final class OutTextPreparer
             default: cmd = new Cmd(this.otx.cmds.size(), linecol, this.otx, ecmd, sDatapath, this.execClass, null); break;
           }
         } catch(Exception exc) {
-          throw new IllegalArgumentException("OutTextPreparer " + this.otx.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage());
+          throw new ParseException("OutTextPreparer " + this.otx.sIdent + ", variable or path: " + sDatapath + " error: " + exc.getMessage(), 0);
         }
         this.otx.cmds.add(cmd);
       } else {
