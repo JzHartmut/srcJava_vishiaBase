@@ -1448,125 +1448,130 @@ public final class FileAccessorLocalJava7 extends FileRemoteAccessor {
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
         throws IOException
     {
-      final FileVisitResult ret;
-      String name = file.getFileName().toString();
-      if(name.startsWith("constant-values.html"))
-        Debugutil.stop();
-      boolean bDirectory = Files.isDirectory(file); //  attrs.isDirectory();
-      if(this.progress !=null) {
-        if(bDirectory) {
-          this.progress.nrDirVisited +=1;
-        } else {
-          this.progress.nrFilesVisited +=1;
-        }
-      }
-      boolean selected = (this.fileFilter == null)         // check selection via String, fileFilter: 
-                      || this.walkInfo.fileFilter.check(name, bDirectory) !=null;
-      if( !selected                                        // not selected via String
-       && this.co.markSet() == 0                                // and no set mark operation necessary 
-       && ( this.co.selectMask() == 0                            // AND no select mask given,
-         || (this.co.selectMask() & FileMark.orWithSelectString) ==0 //OR no OR-selectmask given,
-        ) ) {                                              // it means not selected and no more to do
-        return FileVisitResult.CONTINUE;                   // ====>> return but does nothing with the file,  
-      }
-      //----------------------------------------------------- continue get the file
-      FileRemote fileRemote;
-      if(this.walkInfo.dir !=null) { 
-        if(bDirectory) {                                   // visitFile comes also on directory entries
-          fileRemote = this.walkInfo.dir.subdir(name);         // get or create a sub directory in given dir
-        } else {
-          fileRemote = this.walkInfo.dir.child(name);          // get or create a file in given dir
-        }
-      } else {     // only a file is selected.             // get the file immediately.
-        //assert(false);                                   // NO: starts always with a directory!
-        String sDir = file.getParent().toString();         // get directory from nio.file.Path
-        this.walkInfo.dir = FileRemote.getFile(sDir, null);
-        fileRemote = FileRemote.getFile(sDir, name); // and gets a new directory
-      }
-      //----------------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
-      int selectMask = this.co.selectMask();
-      int markFile = fileRemote.getMark();
-      if( (markFile & FileMark.cmpContentEqual) !=0        // if the file is equal after comparison.
-       && (selectMask & FileMark.cmpContentNotEqual) !=0) {// and for comparison non equals files should be regarded
-        markFile &= ~ (FileMark.cmpTimeGreater | FileMark.cmpTimeLesser);  // then ignore marks of its time stamp
-      }                                                    // it means if 'non equal' is the command, the file should be non equal or equality is not tested.
-      if( (selectMask & FileMark.cmpTimeGreater)!=0 )
-        Debugutil.stop();                                  // stop here to debug file mark with ^ given
-      if((selectMask & FileMark.mSelectMarkBits) !=0) {    // that are all bits excl. orWithSelectString and ignoreSymbolicLinks
-        boolean bMarkSelect = (markFile & FileMark.mSelectMarkBits & selectMask) !=0;
-        if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
-          selected |= bMarkSelect;
-        } else {
-          selected &= bMarkSelect;
-        }
-      }                                          // if co.selectMask does not contain mSelectMarkBits, do nothing with it.
-      if(!selected) {
-        if(this.co.markSet() !=0) {
-          if( (this.co.markSet() & FileMark.resetNonMarked) !=0) {
-            fileRemote.resetMarked(this.co.markSet());
-          }
-        }
-        ret = FileVisitResult.CONTINUE;  //but does nothing with the file.      
-      } 
-      else {  //--------------------------------------------- The file is selected.
-        if(this.co.markSet() !=0) {                             // setMark activity necessary: do it here
-          if( (this.co.markSet() & FileMark.resetMark) !=0) {
-            fileRemote.resetMarked(this.co.markSet());
+      try {
+        final FileVisitResult ret;
+        String name = file.getFileName().toString();
+        if(name.startsWith("constant-values.html"))
+          Debugutil.stop();
+        boolean bDirectory = Files.isDirectory(file); //  attrs.isDirectory();
+        if(this.progress !=null) {
+          if(bDirectory) {
+            this.progress.nrDirVisited +=1;
           } else {
-            fileRemote.setMarked(this.co.markSet());
-          }
-          if(this.progress !=null) {
-            this.progress.nrofFilesMarked +=1;
+            this.progress.nrFilesVisited +=1;
           }
         }
-        //
-        setAttributes(fileRemote, file, attrs);            // copy the file attributes from nio.file..Path to FileRemote
-        long size = attrs.size();
-        assert(this.walkInfo.dir == fileRemote.getParentFile());
-        this.walkInfo.nrBytesInDir += size;
-        this.walkInfo.nrBytesInDirSelected += size;
-        this.walkInfo.nrofFilesSelected +=1;
-        if(this.progress !=null) {                         
-          //--------------------------------------- creates or updates a time order for the state. 
-          if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
-          this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshFile;
-          this.progress.nrofFilesSelected +=1;
-          this.progress.nrofBytesAll += size;
-          this.progress.currFile = fileRemote;          // all information about the FileRemote will be proper serialized if remote
-          if(this.co.cycleProgress() ==0) {        // send back event on any file or dir entry:
-            this.evBack.sendEvent(this);             // evBack is associated to the progress
-          } else {                               // send cyclically only informations about progress
-            long timeEvent = System.currentTimeMillis() + this.co.cycleProgress();
-            this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
-            //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
-            //this.progress.nrFilesProcessed += this.curr.dir.children().size();
-          }
+        boolean selected = (this.fileFilter == null)         // check selection via String, fileFilter: 
+                        || this.walkInfo.fileFilter.check(name, bDirectory) !=null;
+        if( !selected                                        // not selected via String
+         && this.co.markSet() == 0                                // and no set mark operation necessary 
+         && ( this.co.selectMask() == 0                            // AND no select mask given,
+           || (this.co.selectMask() & FileMark.orWithSelectString) ==0 //OR no OR-selectmask given,
+          ) ) {                                              // it means not selected and no more to do
+          return FileVisitResult.CONTINUE;                   // ====>> return but does nothing with the file,  
         }
-        if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - file; " + name);
-        FileRemoteWalkerCallback.Result result;
-        if(this.callback !=null && this.callback.shouldAborted()){
-          //only if a manual abort comes from the callback.
-          result = SortedTreeWalkerCallback.Result.terminate;
-        } else {
-          if(this.bRefresh){
-            //if(curr.children !=null) { curr.children.put(name, fileRemote); }
-            fileRemote.internalAccess().clrFlagBit(FileRemote.mRefreshChildPending);
-            fileRemote.internalAccess().setRefreshed();
-    
+        //----------------------------------------------------- continue get the file
+        FileRemote fileRemote;
+        if(this.walkInfo.dir !=null) { 
+          if(bDirectory) {                                   // visitFile comes also on directory entries
+            fileRemote = this.walkInfo.dir.subdir(name);         // get or create a sub directory in given dir
+          } else {
+            fileRemote = this.walkInfo.dir.child(name);          // get or create a file in given dir
           }
-          if(this.callback !=null) {
-            if(bDirectory)
-              Debugutil.stop();
-            //check mask:
-            result = this.callback.offerLeafNode(fileRemote, file);
-          } else { 
-            result = SortedTreeWalkerCallback.Result.cont;
-          }
+        } else {     // only a file is selected.             // get the file immediately.
+          //assert(false);                                   // NO: starts always with a directory!
+          String sDir = file.getParent().toString();         // get directory from nio.file.Path
+          this.walkInfo.dir = FileRemote.getFile(sDir, null);
+          fileRemote = FileRemote.getFile(sDir, name); // and gets a new directory
         }
-        ret = translateResult(result);
+        //----------------------------------------------------- If a co.selectMask is given, then the subdir should contain one of the bit.
+        int selectMask = this.co.selectMask();
+        int markFile = fileRemote.getMark();
+        if( (markFile & FileMark.cmpContentEqual) !=0        // if the file is equal after comparison.
+         && (selectMask & FileMark.cmpContentNotEqual) !=0) {// and for comparison non equals files should be regarded
+          markFile &= ~ (FileMark.cmpTimeGreater | FileMark.cmpTimeLesser);  // then ignore marks of its time stamp
+        }                                                    // it means if 'non equal' is the command, the file should be non equal or equality is not tested.
+        if( (selectMask & FileMark.cmpTimeGreater)!=0 )
+          Debugutil.stop();                                  // stop here to debug file mark with ^ given
+        if((selectMask & FileMark.mSelectMarkBits) !=0) {    // that are all bits excl. orWithSelectString and ignoreSymbolicLinks
+          boolean bMarkSelect = (markFile & FileMark.mSelectMarkBits & selectMask) !=0;
+          if( (this.co.selectMask() & FileMark.orWithSelectString) !=0) {
+            selected |= bMarkSelect;
+          } else {
+            selected &= bMarkSelect;
+          }
+        }                                          // if co.selectMask does not contain mSelectMarkBits, do nothing with it.
+        if(!selected) {
+          if(this.co.markSet() !=0) {
+            if( (this.co.markSet() & FileMark.resetNonMarked) !=0) {
+              fileRemote.resetMarked(this.co.markSet());
+            }
+          }
+          ret = FileVisitResult.CONTINUE;  //but does nothing with the file.      
+        } 
+        else {  //--------------------------------------------- The file is selected.
+          if(this.co.markSet() !=0) {                             // setMark activity necessary: do it here
+            if( (this.co.markSet() & FileMark.resetMark) !=0) {
+              fileRemote.resetMarked(this.co.markSet());
+            } else {
+              fileRemote.setMarked(this.co.markSet());
+            }
+            if(this.progress !=null) {
+              this.progress.nrofFilesMarked +=1;
+            }
+          }
+          //
+          setAttributes(fileRemote, file, attrs);            // copy the file attributes from nio.file..Path to FileRemote
+          long size = attrs.size();
+          assert(this.walkInfo.dir == fileRemote.getParentFile());
+          this.walkInfo.nrBytesInDir += size;
+          this.walkInfo.nrBytesInDirSelected += size;
+          this.walkInfo.nrofFilesSelected +=1;
+          if(this.progress !=null) {                         
+            //--------------------------------------- creates or updates a time order for the state. 
+            if(this.timeOrderProgress !=null) { this.timeOrderProgress.hold(); }
+            this.progress.progressCmd = FileRemoteProgressEvData.ProgressCmd.refreshFile;
+            this.progress.nrofFilesSelected +=1;
+            this.progress.nrofBytesAll += size;
+            this.progress.currFile = fileRemote;          // all information about the FileRemote will be proper serialized if remote
+            if(this.co.cycleProgress() ==0) {        // send back event on any file or dir entry:
+              this.evBack.sendEvent(this);             // evBack is associated to the progress
+            } else {                               // send cyclically only informations about progress
+              long timeEvent = System.currentTimeMillis() + this.co.cycleProgress();
+              this.timeOrderProgress.activateAt(timeEvent, timeEvent); // activate a time order with delay, not too much traffic
+              //this.progress.nrofBytesAll += this.curr.nrBytesInDir;
+              //this.progress.nrFilesProcessed += this.curr.dir.children().size();
+            }
+          }
+          if(this.debugOut) System.out.println("FileRemoteAccessorLocalJava7.walker - file; " + name);
+          FileRemoteWalkerCallback.Result result;
+          if(this.callback !=null && this.callback.shouldAborted()){
+            //only if a manual abort comes from the callback.
+            result = SortedTreeWalkerCallback.Result.terminate;
+          } else {
+            if(this.bRefresh){
+              //if(curr.children !=null) { curr.children.put(name, fileRemote); }
+              fileRemote.internalAccess().clrFlagBit(FileRemote.mRefreshChildPending);
+              fileRemote.internalAccess().setRefreshed();
+      
+            }
+            if(this.callback !=null) {
+              if(bDirectory)
+                Debugutil.stop();
+              //check mask:
+              result = this.callback.offerLeafNode(fileRemote, file);
+            } else { 
+              result = SortedTreeWalkerCallback.Result.cont;
+            }
+          }
+          ret = translateResult(result);
+        }
+        return ret;
+      } catch(Exception exc ) {                  //--------vv anything is wrong with this file.
+        // log output?
+        return FileVisitResult.SKIP_SUBTREE;  // same as CONTINUE, ignore this file, cannot do anything. 
       }
       //try { Thread.sleep(1); } catch (InterruptedException e) { }
-      return ret;
     }
 
     @Override

@@ -1,6 +1,6 @@
 2025-08-09 14:53:08  x     +buildTimestamps.sh                      ::           .254  1130920915 
 2023-04-13 11:08:12  x     .git                                     ::           . 72 -1237754712 
-2025-09-01 01:25:28  x     .gitCommit                               ::          1.686  1572887058 
+2025-09-01 11:33:57  x     .gitCommit                               ::           .520  0923004611 
 2022-05-11 00:09:17  x     .gitCommit_tillcurr                      ::          2.695  0194683831 
 2025-08-14 20:18:15  x     .gitRepository                           ::           . 64 -0723375549 
 2023-05-01 18:07:43  x     .gitignore                               ::           . 49  0026385455 
@@ -171,7 +171,7 @@
 
 ============================== java/org/vishia/fileLocalAccessor/ ==================================
 2023-02-03 23:42:47  x     FileAccessorLocalJava6.java#             ::         30.197  0856149247 
-2025-08-29 19:52:01  x     FileAccessorLocalJava7.java              ::         76.326 -0850846131 
+2025-09-01 11:08:49  x     FileAccessorLocalJava7.java              ::         76.807 -1408888824 
 2024-04-08 18:01:55  x     FileCallbackLocalCmp.java                ::         23.691  0437789410 
 2024-02-18 19:03:03  x     FileCallbackLocalCopy.java               ::          8.521  1096038750 
 2023-07-24 19:37:36  x     FileCallbackLocalDelete.java             ::          4.665 -0575631861 
