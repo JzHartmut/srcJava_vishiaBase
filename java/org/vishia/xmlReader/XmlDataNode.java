@@ -228,6 +228,29 @@ public class XmlDataNode implements XmlAddData_ifc{
   }
 
   
+  /**Get the whole plain text inside the node also gathered from all sub nodes in the node order.
+   * This can be used if only a plain text is expected, but the source xml as document may wrap the text in some sub nodes,
+   * which are not relevant for evaluation. Only the text is relevant. 
+   * For example additional <code>&lt;text:span>...</code> in text document in ODF (OpenDocument Format).
+   * 
+   * @return
+   */
+  public String getTextAllSubNodes () {
+    if(this.text !=null && this.allNodes.size()==0) {                     // then no nodes should exist.
+      return this.text;                                    // only this text 
+    } else if( this.text ==null && this.allNodes.size()==1) {
+      return this.allNodes.get(0).getTextAllSubNodes();
+    } else {
+      StringBuilder sbText = new StringBuilder();
+      if(this.text !=null) { sbText.append(this.text); }
+      for(XmlDataNode nodeText1 : this.allNodes) {
+        sbText.append(nodeText1.getTextAllSubNodes());
+      }
+      return sbText.toString();
+    }
+  }
+
+  
 //  /**Get the whole plain text inside the node and from all sub nodes. 
 //   * Either there is exact one text part, it is stored in {@link #text} and returned.
 //   * Or there are some more text parts, either stored as node with tag="$" in {@link #allNodes}.

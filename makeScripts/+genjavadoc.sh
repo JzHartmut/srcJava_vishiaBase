@@ -3,7 +3,7 @@ export DST=Java/docuSrcJava_vishiaBase
 ##export DST_priv=docuSrcJavaPriv_vishiaBase
 
 export SRC="-subpackages org.vishia"
-export SRCPATH=../Java
+export SRCPATH=../java
 export CLASSPATH=xxxxx
 export LINKPATH=
 ##export LINKPATH=-link ../docuSrcJava_vishiaBase

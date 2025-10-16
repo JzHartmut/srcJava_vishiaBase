@@ -18,7 +18,8 @@ if test "$OS" = "Windows_NT"; then
   #should be found in path
   echo ""
 else
-  JAVAC_HOME="/usr/share/JDK/jdk1.8.0_241"
+  JAVAC_HOME="/usr/Java/JDK8_86zulu/"
+  ##JAVAC_HOME="/usr/share/JDK/jdk1.8.0_241"
   if test -f $JAVAC_HOME; then echo $JAVAC_HOME/; exit; fi
   echo ""
 fi
