@@ -5,15 +5,26 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-/**Filter for a file path maybe with wildcards in the directory path
- * and also with a multi selection.
+/**Filter for a file path maybe with wildcard and include and exclude options (specific multi selection) also in the directory path.
  * <br>
  * For example selecting all files for the FileList but only in dedicated directories and exclusing specifics are written as:
  * <br><code>[[src/**|result/**]/[~#*|~*#]|~_*]</code>
- * <br>it means, files are gotten either from <code>src</code> or <code>result</code>, form no other sub directory.
- * But from the root level the valid mask for files is <code>~_*</code>, it means should not start with "_".
+ * <br>it means, files are gotten either from <code>src</code> or <code>result</code> sub directory.
+ * But from the root level the valid mask for files is <code>~_*</code>, it means, excluding, should not start with "_".
  * For all deeper levels the files should not start or end with an <code>#</code>.
- * Hence all source files are gathered, but not commented files with <code>#</code>.  
+ * Hence all source files are gathered, but not commented files with <code>#</code>.
+ * <ul>
+ * <li>{@link #createWildcardFilter(String)}: operation to creates an instance of this class as filter, including sub instances for all sub paths.
+ * <li>{@link #check(String, boolean)}: operation to check a file or directory name with the current filter.
+ *   It returns the proper child filter to continue check in the child levels or the path. Use it in a loop or for... for the longer path.
+ * </ul>
+ * Syntax of the path:  <pre>
+ * filter::={ &lt;filterElement> ? / }.
+ * filterElement::= { '['[~&lt;?exclude>] &lt;startAlternative?filterWildcard> ? '|' } &lt;*...   TODO description not ready yet.
+ *        | 
+ * </pre> 
+ * <br><br>
+ * 
  */
 public class FilepathFilterM implements ToStringBuilder {
 
@@ -26,6 +37,8 @@ public class FilepathFilterM implements ToStringBuilder {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2025-11-02 Hartmut changes, not more as one excluding Strings are possible also with including strings,
+   *   means <code>[~dirA*|~dirB]/*]</code> this has not worked before. 
    * <li>2023-07-16 Hartmut new {@link #selAllFilesInDir()}, {@link #selAllDirEntries()}. {@link #selAllEntries()}
    *   It is used for quest delete a directory entry, only if the first two conditions are met.
    *   It checks the given mask.
@@ -318,6 +331,7 @@ public class FilepathFilterM implements ToStringBuilder {
   
   private static String parseVariants(String sPart, int posBracket, List<FilepathFilterM> list, FilepathFilterM filterChild) {
     // search ] but not inside a quotation with [...]
+    //if(sPart.startsWith("[~docuSrc*")) Debugutil.stopp();
     int posEndBracket = StringFunctions.indexOfAnyCharOutsideQuotation(sPart, posBracket+1, -1, "]", "[", "]", '\\', null);
         //sPart.indexOf(']');
     String sPart1 = sPart.substring(0, posBracket);
@@ -448,7 +462,9 @@ public class FilepathFilterM implements ToStringBuilder {
     }
   }
   
-  /**Checks the given name against the current Level of this FilepathFilterM.
+  
+  
+   /**Checks the given name against the current Level of this FilepathFilterM.
    * <br>If it is a directory, the current filter is "**" and the next directory level matches, 
    * then it uses the next level.
    * <br>If it is a directory, the current filter is "**" and the next directory level does not match,
@@ -460,12 +476,21 @@ public class FilepathFilterM implements ToStringBuilder {
    *   On a non directory entry this return value should not be used, it marks only !=null, it is not used on a leaf.  
    */
   public FilepathFilterM check(String name, boolean bDir) { //, FilepathFilterM[] next) { 
+    int posEndBegin[] = new int[1];
+    return checkRecursive(name, bDir, posEndBegin);
+  }
+  
+  
+  
+  private FilepathFilterM checkRecursive(String name, boolean bDir, int posEndBegin[]
+  ) { //, FilepathFilterM[] next) { 
     FilepathFilterM nextf;
-    if( this.bAllTree && this.aFilterChild !=null 
+    if( this.bAllTree                            //--------vv it is for '**'
+     && this.aFilterChild !=null                           // && Filter contains aFilterChild, it is for a directory:
      && ( bDir && this.aFilterChild.aFilterChild !=null    // only check the child for bDir if it is not the last child 
        || !bDir && this.aFilterChild.aFilterChild ==null   // or the entry after "**/aFilterChild" has not a child
       ) ) {
-      nextf = this.aFilterChild.check(name, bDir);         // then use the child filter to check the entry 
+      nextf = this.aFilterChild.checkRecursive(name, bDir, posEndBegin);         // then use the child filter to check the entry 
       if( nextf !=null ) {                                 // if the child filter accepts the entry,
         return nextf;                                      // then continue with it. On a file as especially also on a directory 
       } else if(!bDir) {
@@ -481,15 +506,20 @@ public class FilepathFilterM implements ToStringBuilder {
       return null;                                         // a file, it must be the last entry in the filter queue
     }
     int zName = name.length();
-    int posEndBegin[] = new int[1];
-    posEndBegin[0] = this.zBegin;
     int posStartEnd = zName - this.zEnd;
-    if(this.zBegin > posStartEnd) {                        // name is to short for the mask sBefore*sBehind
-      return this.bNotBegin ? nextf : null;                               // returns true if the matching should be false
+    if(this.zBegin > posStartEnd) {                        // name is to short for the mask sBefore*sBehind, cannot match
+      if(this.bNotBegin) {                                 // should not match, hence returns true, with used length unchanged
+      } else {  
+        nextf = null;                                      // should match, hence return null
+      }
+      return nextf;                                        // returns true if the matching should be false
     } 
-    if(this.sBegin !=null ) {
-      if(this.bNotBegin == name.startsWith(this.sBegin)) { // bNotBegin && sbegin matches or !bNotBegin and does not match:
-        return null;                                      // then faulty.
+    if(this.zBegin >0 ) {
+      boolean bMatchBegin = name.startsWith(this.sBegin); 
+      if(this.bNotBegin == bMatchBegin) {                  // bNotBegin && sbegin matches or !bNotBegin and does not match:
+        return null;                                       // then faulty.
+      } else {
+        posEndBegin[0] = this.zBegin;
       }
     }
     if(this.variantsBegin !=null) {                        // variants given on begin, test it.
@@ -510,17 +540,27 @@ public class FilepathFilterM implements ToStringBuilder {
     } else {
       posEnd = zName;
     }
-    if(this.sEnd !=null ) {
+    if(this.zEnd >0) {                      //--------vv check end
       if(  posStartEnd <0                                  // not enough character for sEnd 
        || !name.substring(posStartEnd, posEnd).equals(this.sEnd)
        ) {
-        return null;
+        if(this.bNotBegin) {                     //--------<< end test does not match and should not match, do nothing. 
+        } else {
+          return null;                           //<<<<====== end test does not match, should match, return null
+        }
+      } else {
+        posStartEnd = zName - this.sEnd.length();
       }
-    }
+    } else {                                     //--------^^ vv no check end.
+      posStartEnd = zName;
+    }                                            //--------^^ check end, posStartEnd is set.
+    //
     if(this.sContain !=null) {
       if(! name.substring(posEndBegin[0], posStartEnd).contains(this.sContain)) {
         return null;                                    // does non contains *contain*
       }
+    } else if(!this.bNoWildcard) {
+      posEndBegin[0] = zName;    // the rest is wildcard
     }
     return nextf;                                         // all has matched
   }
@@ -564,20 +604,58 @@ public class FilepathFilterM implements ToStringBuilder {
   
   private FilepathFilterM checkVariants ( String name, boolean bDir, int[] posEndBegin, int posStartEnd) {
     boolean bOkBeginVariants = false;
+    boolean bCheckFalse = false;
+    boolean bCheckFalseAll = true;
+    boolean bCheckPositive = false;
     FilepathFilterM nextf2 = null;
+    FilepathFilterM nextfok = null;
+    FilepathFilterM nextfPositive = null;
+    int posEndBeginGiven = posEndBegin[0];                 // given on call, it is the length before this variants, often 0
+    int posEndBeginOk = -1;
+    int posEndBeginOkPositive = -1;
+    final String sPart = name.substring(posEndBeginGiven, posStartEnd);
     for(FilepathFilterM variant: this.variantsBegin) {
-      final String sPart = name.substring(posEndBegin[0], posStartEnd);
-      nextf2 = variant.check(sPart, bDir);
-      if(nextf2 !=null) {         // check a variant
-          bOkBeginVariants = true;                          // if the variant is matching
-          posEndBegin[0] = variant.sBegin.length();        // then use it.
+      //if(name.startsWith("+")) Debugutil.stopp();
+      //if(name.equals("fbg") && this.toString().startsWith("[~docuSrc*|~asciidoc-gen]/**/[~#*|~*#]")) Debugutil.stopp();
+      posEndBegin[0] = posEndBeginGiven;                   // as given on call
+      bCheckFalse |= variant.bNotBegin;  // true then check all variants, if one returns null, it is false.
+      //
+      //======>>>>
+      nextf2 = variant.checkRecursive(sPart, bDir, posEndBegin);                 //<<<<====== check the variant
+      //
+      if(bCheckFalse) {                   // it is a not variant which does not match, means it is one of the not matching variants:
+        bCheckPositive |= !variant.bNotBegin;              //<<-- true if at least one variant found with postive check.
+        if(variant.bNotBegin && nextf2 == null) { //-------vv one variant with bNotBegin has not matched, abort all.
+          nextfok = nextfPositive = null;
+          break;                                             // not matching variant found, it does not match. 
+        } else if(nextf2 !=null) {               //--------vv candidate which matches. Either (the last) with bNotBegin, or one of the positive variants.
+          if(bCheckPositive) {
+            nextfPositive = nextf2;                        // use it if all negative variants are ok
+            posEndBeginOkPositive = variant.sBegin.length();         // may use it.
+          } else {
+            nextfok = nextf2;
+            posEndBeginOk = posEndBegin[0];                // as returned from 'variant.check'.
+          }
+        }
+      } else {                         //------------------vv only positive tests, the first which matches is taken. 
+        bCheckPositive = true;
+        if(nextf2 !=null) {         // check a variant
+          nextfPositive = nextf2;                                  // candidate to match, but test all variant.bNotBegin
+          posEndBeginOkPositive = variant.sBegin.length();           // may use it.
           break;
         }
+      }
     }
-    if(this.bNotBegin == bOkBeginVariants) {
-      return null;                                      // positive varinants given, both nothing matches.
+    if(bCheckPositive) {
+      nextfok = nextfPositive;                             // maybe 0
+      posEndBeginOk = posEndBeginOkPositive;               // undetermined if nextof == null
     }
-    return nextf2;
+    if(nextfok !=null) {
+      posEndBegin[0] = posEndBeginOk;
+    } else {
+      posEndBegin[0] = posEndBeginGiven;                   // as given on call
+    }
+    return nextfok;
   }
   
   
@@ -617,7 +695,7 @@ public class FilepathFilterM implements ToStringBuilder {
   
   
   
-  /**
+  /**Creates 
    * @param maskP
    * @param bEnd true if [internal] is parsed in sEnd range
    * @return
@@ -627,17 +705,17 @@ public class FilepathFilterM implements ToStringBuilder {
     int zMask = mask.length();
     int pos1 = 0;
     List<String> parts = new LinkedList<String>();
-    while(pos1 >=0 && pos1 < zMask) {
+    while(pos1 >=0 && pos1 < zMask) {            //--------vv separates folder till '/' and adds backward in parts. 
       int pos2 = StringFunctions.indexOfAnyCharOutsideQuotation(mask, pos1, zMask, "/", "[", "]", '\\', null);
-      if(pos2 <0) { pos2 = zMask; }
+      if(pos2 <0) { pos2 = zMask; }                        //path[~*.bak]/to/xy results in 'xy', 'to', path[~*.bak]
       parts.add(0, mask.substring(pos1, pos2));
       pos1 = pos2 +1;  // after '/'
     }
 //    int posEnd = zMask;
     FilepathFilterM filter = filterChildP;
     boolean bLast = true;
-    for(String part : parts) {
-      //======>>>>
+    for(String part : parts) {                   //--------vv builds with the given parts the filter
+      //======>>>>                                         // with recursively call for the filter from right to left
       filter = new FilepathFilterM(part, bLast, filter);  // filter =^ before*behind till [ or /
       bLast = false;
     }

@@ -68,7 +68,7 @@ public class FileList
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String sVersion = "2016-08-20";
+  public static final String sVersion = "2025-11-02";
 
   
   public static class Args extends Arguments
@@ -184,8 +184,8 @@ public class FileList
   protected void xxxlist() throws IOException
   {
     List<FileSystem.FileAndBasePath> list = new LinkedList<FileSystem.FileAndBasePath>();
-    File baseDir = args.sDirectory == null ? null: new File(args.sDirectory);
-    FileSystem.addFilesWithBasePath(baseDir, args.sMask, list);
+    File baseDir = args.sDirectory == null ? null: new File(this.args.sDirectory);
+    FileFunctions.addFilesWithBasePath(baseDir, this.args.sMask, list);
     Map<String, FileSystem.FileAndBasePath> sort = new TreeMap<String, FileSystem.FileAndBasePath>();
     for(FileSystem.FileAndBasePath entry: list){
       boolean bExclude = false;
@@ -257,12 +257,10 @@ public class FileList
         File file = entry.getValue();
         if( file.isDirectory()) {
           String name = file.getName();
-          if(name.equals("test"))
-            Debugutil.stop();
+          //if(name.equals("asciidoc-gen")) Debugutil.stopp();
+          //if(name.startsWith("docuSrc")) Debugutil.stopp();
           filterChild = filter.check(name, true);
           if( filterChild !=null) {
-//           && filterChild[0] !=null                        // not the last entry of a path, filter for a directory
-//           ){
             writeDirectoryLine(out, file, localDir, name);  //the dirAbsectory entry
             CharSequence path = FileSystem.normalizePath(file);
             CharSequence localDirSub = path.subSequence(posLocalPath, path.length());

@@ -51,6 +51,8 @@ public class LogMessageStream extends LogMessageBase
   
   /**Version, history and license.
    * <ul>
+   * <li>2025-10-25 {@link #close()} and {@link #flush()} processed now also {@link #outErr}. This was forgotten in the past,
+   *   but also usual not used because {@link #outErr} was often {@link System#err}. 
    * <li>2023-02-13 Experience with stack info on messages. It is nice to know from where the message comes (srcfile, line). 
    * <li>2022-09-23 enhanced  with a second channel to output twice, 
    * and also with an Appendable channel as second channel to output immediately to a StringBuilder or any other Appendable destination. 
@@ -81,7 +83,7 @@ public class LogMessageStream extends LogMessageBase
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20220923;
+  public static final String sVersion = "2025-10-01";
 
   
   
@@ -243,6 +245,12 @@ public class LogMessageStream extends LogMessageBase
         CharSequence sErr = ExcUtil.exceptionInfo("ERROR on close ", exc, 0, 10);
         System.err.println(sErr); }
     }
+    if(this.outErr instanceof Closeable) { 
+      try { ((Closeable)this.outErr).close(); }
+      catch(IOException exc) { 
+        CharSequence sErr = ExcUtil.exceptionInfo("ERROR on close ", exc, 0, 10);
+        System.err.println(sErr); }
+    }
   }
 
   @Override public void flush() { 
@@ -250,6 +258,7 @@ public class LogMessageStream extends LogMessageBase
       if(this.out1 !=null) { this.out1.flush();}
       if(this.out2 !=null) { this.out2.flush();}
       if(this.out3 instanceof Flushable) { ((Flushable)this.out3).flush();}
+      if(this.outErr instanceof Flushable) { ((Flushable)this.outErr).flush();}
     } catch(IOException exc){}
   }
 

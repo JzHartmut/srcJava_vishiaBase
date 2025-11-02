@@ -97,7 +97,11 @@ echo SRCZIPFILE = $SRCZIPFILE - generated sozrce.zip file
 echo DSTJARDIR = $DSTJARDIR
 
 if test "$JAVAC_HOME" = ""; then
-  export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
+  ##  export JAVAC_HOME="$($(dirname $0)/JAVAC_HOME.sh)"
+  echo "include $(dirname $0)/JAVAC_HOME.sh:" 
+  . $(dirname $0)/JAVAC_HOME.sh
+  echo JAVAC_HOME=$JAVAC_HOME
+  pause
 fi  
 echo JAVAC_HOME = $JAVAC_HOME
 ##regards an empty JAVAC_HOME, then javac should be able as command in the path:
@@ -127,6 +131,8 @@ fi
 echo
 echo ====== javac ================================================
 echo $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
+whereis $JAVAC
+$JAVAC --version
 $JAVAC -encoding UTF-8 -d $TMPJAVAC/binjar $CLASSPATH -sourcepath $SRCPATH $FILE1SRC 
 if test ! $? = 0; then
   echo ERROR javac --?????????????????????????????????????????--
