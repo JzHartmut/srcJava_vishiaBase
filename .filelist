@@ -1,6 +1,6 @@
 2025-08-09 14:53:08  x     +buildTimestamps.sh                      ::           .254  1130920915 
 2023-04-13 11:08:12  x  H  .git                                     ::           . 72 -1237754712 
-2025-11-02 15:13:42  x  H  .gitCommit                               ::           .347 -0303984626 
+2025-11-12 10:58:20  x  H  .gitCommit                               ::           . 29  0034363800 
 2022-05-11 00:09:17  x  H  .gitCommit_tillcurr                      ::          2.695  0194683831 
 2025-11-02 00:09:30  x  H  .gitRepository                           ::           . 64 -0977734709 
 2023-05-01 18:07:43  x  H  .gitignore                               ::           . 49  0026385455 
@@ -122,10 +122,10 @@
 2013-02-11 20:02:26  x     Filecmd.java                             ::          7.182  0296091865 
 2017-09-13 08:06:08  x     JZtxtcmdAccessFileset.java               ::          6.650 -2055459211 
 2018-09-22 20:52:36  x     JZtxtcmdEngine.java                      ::          3.054 -0509879877 
-2025-08-12 23:36:53  x     JZtxtcmdExecuter.java                    ::        200.518 -1788209141 
+2025-11-12 10:08:03  x     JZtxtcmdExecuter.java                    ::        200.551  0617748241 
 2019-09-20 20:30:03  x     JZtxtcmdFilepath.java                    ::         16.175 -0391989336 
 2018-09-22 20:53:18  x     JZtxtcmdFileset.java                     ::          5.346  1547774762 
-2025-08-02 01:09:58  x     JZtxtcmdScript.java                      ::        125.447 -0709507584 
+2025-11-12 09:59:34  x     JZtxtcmdScript.java                      ::        125.458  1419001303 
 2019-05-29 21:17:25  x     JZtxtcmdTester.java                      ::          9.595 -1222215183 
 2020-07-23 10:48:30  x     JZtxtcmdThread.java                      ::          4.900  0431672573 
 2018-09-17 23:38:41  x     JZtxtcmdThreadData.java                  ::          2.262 -1378212364 
@@ -184,7 +184,7 @@
 2023-07-24 20:50:29  x     FileAccessZip.java                       ::         17.511 -2066156768 
 2023-08-02 20:57:39  x     FileCluster.java                         ::         19.734  2045609325 
 2024-02-22 23:00:13  x     FileMark.java                            ::         11.522  1453524361 
-2025-08-02 15:02:54  x     FileRemote.java                          ::        142.952 -0799326611 
+2025-11-12 09:59:03  x     FileRemote.java                          ::        142.963 -1163152597 
 2025-08-29 19:40:42  x     FileRemoteAccessor.java                  ::         14.944 -0556793629 
 2023-07-19 09:42:23  x     FileRemoteCallbackCopyDispersedFiles.java ::          2.957 -0268023324 
 2023-07-19 09:47:52  x     FileRemoteCallbackSearch.java            ::         10.632  0519511827 
@@ -318,8 +318,8 @@
 2025-11-02 15:12:40  x     FilepathFilterM.java                     ::         35.994  2134638769 
 2018-01-25 11:24:23  x     FilesToList.java                         ::          4.861  1950624767 
 2021-10-04 14:29:58  x     GetTypeToUse.java                        ::           .605  1887254405 
-2021-10-04 14:29:51  x     IndexMultiTable.java                     ::         44.043  0606115824 
-2021-10-04 14:29:52  x     IndexMultiTableInteger.java              ::         30.557 -0476465162 
+2025-11-12 10:16:01  x     IndexMultiTable.java                     ::         44.158  1725771741 
+2025-11-12 10:18:29  x     IndexMultiTableInteger.java              ::         30.566 -1891418794 
 2024-05-09 22:57:20  x     IndexMultiTable_Table.java               ::         35.387 -2101748883 
 2021-10-04 14:29:48  x     InfoAppend.java                          ::          3.788  0366410480 
 2021-10-04 14:29:49  x     InfoFormattedAppend.java                 ::          2.258  1668745967 
@@ -343,7 +343,7 @@
 2021-10-04 14:29:49  x     ObjectId.java                            ::          7.448  1779547736 
 2021-10-04 14:29:58  x     ObjectValue.java                         ::          1.129 -1707393614 
 2021-10-04 14:29:58  x     OrderListExecuter.java                   ::           .333 -1361536439 
-2025-08-25 10:23:35  x     OutTextPreparer.java                     ::        168.911 -0101921246 
+2025-11-05 00:55:51  x     OutTextPreparer.java                     ::        170.075 -1681476037 
 2022-09-23 17:47:34  x     OutputTwice.java                         ::          2.192  1551916794 
 2021-10-04 14:29:58  x     PathCheck.java                           ::          5.593 -2108435717 
 2021-10-04 14:29:51  x     PipeRingBuffer.java                      ::          6.670 -1226037779 
@@ -384,7 +384,7 @@
 2022-10-06 00:17:08  x     TimedValues.java                         ::         11.341 -1313582399 
 2022-09-28 10:10:52  x     Timeshort.java                           ::          9.766 -1923684124 
 2023-05-01 18:12:34  x     ToStringBuilder.java                     ::          1.051  0212421825 
-2022-10-22 14:18:39  x     TreeNodeBase.java                        ::         42.316  0815563807 
+2025-11-12 10:23:44  x     TreeNodeBase.java                        ::         42.329  1017256777 
 2021-10-04 14:29:50  x     TreeNodeCallback.java                    ::          2.281  1360272692 
 2019-05-29 11:12:40  x     TreeNodeHtmlOutput.java                  ::          5.557  2032896486 
 2021-10-04 14:29:52  x     TreeNodeNamed_ifc.java                   ::           . 85  1747010936 
@@ -401,7 +401,7 @@
 2025-01-04 19:34:07  x     XmlCfg.java                              ::         58.081 -0889693245 
 2025-09-15 12:22:32  x     XmlDataNode.java                         ::         13.285 -1974562545 
 2024-05-25 23:56:31  x     XmlJzCfgAnalyzer.java                    ::         55.943 -2040303943 
-2024-11-11 20:44:55  x     XmlJzReader.java                         ::         66.159  1379723695 
+2025-11-12 10:00:16  x     XmlJzReader.java                         ::         66.181  0496376862 
 2024-05-24 21:19:05  x     XmlNodeSimpleReader.java                 ::          2.318  1827392019 
 
 ============================== java/org/vishia/xmlSimple/ ==========================================
