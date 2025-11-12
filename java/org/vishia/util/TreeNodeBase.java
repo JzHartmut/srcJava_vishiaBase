@@ -519,7 +519,7 @@ implements TreeNode_ifc<DerivedNode, Data>, SortedTree<IfcType>, Iterable<Derive
       if(nd_parent.nd_key == metaNodeKey){
         //remove the child in the real parent.
         MetaNode<DerivedNode, Data, IfcType> metaNode = (MetaNode<DerivedNode, Data, IfcType>)nd_parent;
-        metaNode.children.remove(this);
+        metaNode.children.remove((DerivedNode)this);
         //maybe queue in metaNode, remove it too. 
         //NOTE: It is not found in the idxChildren, only the meta node is there!
         if(metaNode.children.size() == 0){

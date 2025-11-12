@@ -788,7 +788,7 @@ public class XmlJzReader
             namespacesToStore[0].add(new AttribToStore(cfgNode.nameSpaceDef, nsName, nsValue));
             sAttrNsName = null;
           } else {
-            String nsValue = this.namespaces.get(ns);  //defined in this read xml file.
+            String nsValue = this.namespaces.get(ns.toString());  //defined in this read xml file.
             if(nsValue == null && ns.equals("xml")) {
               nsValue = "http://www.w3.org/1999/xml";  //default for xmlns:xml 
             }
@@ -844,7 +844,7 @@ public class XmlJzReader
   private XmlCfg.AttribDstCheck getCfgAttrib ( CharSequence sAttrNsName, XmlCfg.XmlCfgNode cfgNode ) {
     XmlCfg.AttribDstCheck cfgAttrib = null;
     if(cfgNode.attribs != null) { 
-      cfgAttrib= cfgNode.attribs.get(sAttrNsName);
+      cfgAttrib= cfgNode.attribs.get(sAttrNsName.toString());
       if(cfgAttrib == null) {
         cfgAttrib= cfgNode.attribs.get("?");  //for all attributes
       }

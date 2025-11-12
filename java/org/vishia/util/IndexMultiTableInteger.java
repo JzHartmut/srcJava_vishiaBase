@@ -727,7 +727,7 @@ public class IndexMultiTableInteger<Type> implements Map<Integer,Type>, Iterable
       else if(idx < sizeBlock)
       { child = ((IndexMultiTableInteger<Type>)(obj[idx]));
         //the child has space.
-        lastObj = child.get(key2); 
+        lastObj = child.get((Integer)key2); 
       }
     }
     else

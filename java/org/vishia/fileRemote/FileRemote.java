@@ -751,7 +751,7 @@ public class FileRemote extends File implements MarkMask_ifc, TreeNodeNamed_ifc
       uPath.setLength(0);
       dir1.setPathTo(uPath).append('/').append(pathchild1);
       final CharSequence pathchildKey = bWindows ? pathchild1.toString().toUpperCase(): pathchild1;
-      child = dir1.children == null ? null : dir1.children.get(pathchildKey); //search whether the child is known already.
+      child = dir1.children == null ? null : dir1.children.get(pathchildKey.toString()); //search whether the child is known already.
       if(child == null) {
         if( pathchild !=null){  //a child given with a pathchild/name
           //maybe the child directory is registered already, take it.

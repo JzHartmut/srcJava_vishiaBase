@@ -1534,6 +1534,19 @@ public final class OutTextPreparer
         }
         idxConstData.put(key, data);
       }
+      else if(!bActiveScript && line.startsWith("<:gzTxt:")) {           // a new sub template starts here 
+        int posName = 8;
+        int posArgs=line.indexOf(':', 8);
+        int posEndArgs = line.indexOf('>');
+        name = line.substring(posName, posArgs).trim();
+        //if(name.equals("castValue_FD")) Debugutil.stopp();
+        args = line.substring(posArgs+1, posEndArgs);
+        line = line.substring(posEndArgs+1).trim();
+        if(line.length()==0) {                             // for compatibility: do not write a '\n' if the first line does not contain text.
+          line = null;                                     // do not write an \n on start
+        }
+        bActiveScript = true;                              // switch state to "in the script" 
+      }
       else if(!bActiveScript && line.startsWith("<:otx:")) {           // a new sub template starts here 
         int posName = 6;
         int posArgs=line.indexOf(':', 6);
@@ -1555,7 +1568,13 @@ public final class OutTextPreparer
         // ignore lines outside active script.
       }
       if(bActiveScript && line !=null) {                   //--------vv from the second line of a script
-        int posEndScript = line.indexOf("<.otx>");
+        int posEndScript = line.indexOf("<.gzTxt>");
+        int posEndScriptOld = line.indexOf("<.otx>");
+        if(posEndScriptOld >=0 && (posEndScript < 0 || posEndScript > posEndScriptOld)) {
+          posEndScript = posEndScriptOld;     // <.otx> found.
+        } else if(posEndScript >=0){
+          Debugutil.stopp();   // use the new variant.
+        }
         if(posEndScript >=0) {
           buf.append(line.substring(0, posEndScript));
           if(ret !=null) {
@@ -2869,6 +2888,7 @@ public final class OutTextPreparer
    */
   private void execSub( WriteDst wdArg, DataTextPreparer args, int ixStart, int ixEndExcl ) throws IOException {
     //int ixVal = 0;
+    //if(this.sIdent.equals("StateTrans_OFB")) Debugutil.stopp();
     int ixCmd = ixStart;
     WriteDst wrCt = wdArg;
     assert(wrCt !=null);

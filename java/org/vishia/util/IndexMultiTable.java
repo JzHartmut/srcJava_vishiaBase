@@ -963,15 +963,18 @@ implements Map<Key,Type>, Iterable<Type>  //TODO: , NavigableMap<Key, Type>
     }
 
     @Override
-    public boolean contains(Object o)
-    { return IndexMultiTable.this.containsValue(o);
+    public boolean contains(Object o) { 
+//      if(o instanceof Key) {
+//      
+//      }
+      return false; //TDOO ... never used: IndexMultiTable.this.containsValue(o);
     }
 
     @Override
     public boolean containsAll(Collection<?> c)
     { boolean ok = true;
       for(Object obj: c){
-        if(!IndexMultiTable.this.containsValue(obj)){
+        if(false) { //TDOO ... never used: !IndexMultiTable.this.containsValue(obj)){
           ok = false;
         }
       }

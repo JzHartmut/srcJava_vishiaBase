@@ -497,7 +497,7 @@ public class JZtxtcmdScript extends CompiledScript
   
   public Subroutine getSubroutine(CharSequence name){ return this.subroutinesAll.get(name.toString()); }
   
-  public JZcmdClass getClass(CharSequence name){ return this.classesAll.get(name); }
+  public JZcmdClass getClass(CharSequence name){ return this.classesAll.get(name.toString()); }
   
   
   public void writeStruct(Appendable out) throws IOException{

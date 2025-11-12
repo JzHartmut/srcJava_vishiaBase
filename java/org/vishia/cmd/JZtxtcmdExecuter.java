@@ -2487,7 +2487,7 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
         }
       }
       if(subroutine == null && nameSubtext !=null) {
-        subroutine = this.jzClass.subroutines.get(nameSubtext);
+        subroutine = this.jzClass.subroutines.get(nameSubtext.toString());
         if(subroutine == null) { //not found in this class:    
           subroutine = this.jzcmdMain.jzcmdScript.getSubroutine(nameSubtext);  //the subtext script to call
         }
@@ -4208,11 +4208,11 @@ public ExecuteLevel newExecuteLevel ( JZtxtcmdThreadData threadData ) {
    }
 
     @Override
-    public boolean containsKey(Object key){ return vars.containsKey(key); }
+    public boolean containsKey(Object key){ return vars.containsKey(key.toString()); }
   
     @Override
     public Object get(Object key)
-    { DataAccess.Variable<Object> var = vars.get(key);
+    { DataAccess.Variable<Object> var = vars.get(key.toString());
       return var == null ? null : var.value();
     }
   
