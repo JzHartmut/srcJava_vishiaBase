@@ -1534,9 +1534,9 @@ public final class OutTextPreparer
         }
         idxConstData.put(key, data);
       }
-      else if(!bActiveScript && line.startsWith("<:gzTxt:")) {           // a new sub template starts here 
-        int posName = 8;
-        int posArgs=line.indexOf(':', 8);
+      else if(!bActiveScript && line.startsWith("<:gTxt:")) {           // a new sub template starts here 
+        int posName = 7;
+        int posArgs=line.indexOf(':', 7);
         int posEndArgs = line.indexOf('>');
         name = line.substring(posName, posArgs).trim();
         //if(name.equals("castValue_FD")) Debugutil.stopp();
@@ -1568,12 +1568,12 @@ public final class OutTextPreparer
         // ignore lines outside active script.
       }
       if(bActiveScript && line !=null) {                   //--------vv from the second line of a script
-        int posEndScript = line.indexOf("<.gzTxt>");
+        int posEndScript = line.indexOf("<.gTxt>");
         int posEndScriptOld = line.indexOf("<.otx>");
         if(posEndScriptOld >=0 && (posEndScript < 0 || posEndScript > posEndScriptOld)) {
           posEndScript = posEndScriptOld;     // <.otx> found.
         } else if(posEndScript >=0){
-          Debugutil.stopp();   // use the new variant.
+          Debugutil.stop();   // use the new variant.
         }
         if(posEndScript >=0) {
           buf.append(line.substring(0, posEndScript));
@@ -2147,6 +2147,7 @@ public final class OutTextPreparer
         if(this.otx.sLineoutStart !=null) { this.sp.lentoLineEnd(); }    // line mode
         if(this.sp.scanStart().scan("##").scanOk()) {             // if a ## was found, seek till newline.
           this.sp.seek("\n").seekPos(1);                          // skip all till newline
+          this.sp.seekNoWhitespace();
           this.bNewline = true;
           this.pos0 = (int)this.sp.getCurrentPosition();
         }                                                    // Note: spaces are detected because of content till <
@@ -2740,7 +2741,13 @@ public final class OutTextPreparer
      */
     private Cmd addCmd ( String src, int[] linecol, int from, int to, ECmd ecmd, String sDatapath ) throws ParseException {
       if(to > from) {
-        this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+        String sText = src.substring(from, to);
+//        if( this.bLastWasValueAccess                     // cannot be distinguish ... 
+//         || StringFunctions.indexAfterAnyChar(sText, 0, -1, " ") < (to - from)) {                     // add the whole text, not trimmed, if it contains other than spaces.
+          this.otx.cmds.add(new CmdString(this.otx.cmds.size(), linecol, src.substring(from, to)));
+//        } else {
+//          Debugutil.stop();  // only spaces.
+//        }
       }
       final Cmd cmd;
       if(ecmd !=ECmd.nothing) {
