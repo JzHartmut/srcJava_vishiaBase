@@ -328,7 +328,10 @@ public class LogMessageStream extends LogMessageBase
     byte[] b = csq.toString().getBytes(this.encoding);
     if(this.out1 !=null) { this.out1.write(b);}
     if(this.out2 !=null) { this.out2.write(b); }
-    if(StringFunctions.indexOf(csq, 0, 20, "ERROR")>=0 && this.outErr !=null) {
+    if ( ( StringFunctions.indexOf(csq, 0, 20, "ERROR")>=0
+        || StringFunctions.indexOf(csq, 0, 20, "EXCEPTION")>=0 
+         )
+      && this.outErr !=null) {
       this.outErr.append(csq);
     } else if(this.out3 !=null) { this.out3.append(csq); }
     return this;

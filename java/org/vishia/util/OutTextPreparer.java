@@ -2384,7 +2384,7 @@ public final class OutTextPreparer
       else if(this.sp.scan(":debug>").scanOk()) {
         //====>
         @SuppressWarnings("unused") DebugCmd cmd = (DebugCmd)
-          addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, null);
+        addCmd(this.otx.pattern, this.sp.getlineCol(), this.pos0, this.pos1, ECmd.debug, null);
         this.pos0 = (int)this.sp.getCurrentPosition();  //after '>'
       }
       else if(this.sp.scan(":--").scanToStringEnd("-->").scanOk()) {
@@ -3231,6 +3231,9 @@ public final class OutTextPreparer
     else if(container instanceof Iterable) {
       boolean bFirst = true;
       args.args[cmd.ixEntryKey] = null;
+      if(container instanceof LinkedListLock) {
+        ((LinkedListLock<?>)container).lock();
+      }
       for(Object item: (Iterable<?>)container) {
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
         args.args[cmd.ixEntryVarNext] = item;
@@ -3239,6 +3242,9 @@ public final class OutTextPreparer
         } else { //start on 2. item
           execSubFor(wrCt, args, cmd, ixCmd, ixCmd + cmd.offsEndCtrl -1);
         }
+      }
+      if(container instanceof LinkedListLock) {
+        ((LinkedListLock<?>)container).unlock();
       }
       if(!bFirst) {  //-------------------------------------- if the container is not empty, 
         args.args[cmd.ixEntryVar] = args.args[cmd.ixEntryVarNext];
