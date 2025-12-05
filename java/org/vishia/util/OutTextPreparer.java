@@ -2481,7 +2481,7 @@ public final class OutTextPreparer
           String sError = String.format("\nOutTextPreparer faulty <.for> missing opening <:for:...>:"
                                       + "\n  otx=%s @%d,%d, last ctrl is <:%s:...> \n  Following text is: %s\n"
                                       , this.otx.sIdent, lineCol[0], lineCol[1]
-                                      , this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd]).cmd
+                                      , this.ixixCmd <0 ? "??" :  this.otx.cmds.get(this. ixCtrlCmd[this. ixixCmd]).cmd
                                       , this.sp.getCurrent(30).toString().replace('\n', '|'));
           this.sp.close();
           throw new ParseException(sError, 0);

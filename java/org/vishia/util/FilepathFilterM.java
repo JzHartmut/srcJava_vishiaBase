@@ -18,10 +18,18 @@ import java.util.List;
  * <li>{@link #check(String, boolean)}: operation to check a file or directory name with the current filter.
  *   It returns the proper child filter to continue check in the child levels or the path. Use it in a loop or for... for the longer path.
  * </ul>
- * Syntax of the path:  <pre>
+ * Syntax of the path, it is recursively for variants, see ZBNF parser.
+ * Note, the ZBNF parser is not used here, only its syntax is used for description. 
+ * Writing without spaces. Spaces are (not recommended) part of the name. <pre>
  * filter::={ &lt;filterElement> ? / }.
- * filterElement::= { '['[~&lt;?exclude>] &lt;startAlternative?filterWildcard> ? '|' } &lt;*...   TODO description not ready yet.
- *        | 
+ * filterElement::= **                        ## This means 'all tree', accepts all directory entries till the next matches. 
+ * | [ [~&lt;?bNotBegin>] &lt;*?sBegin> ]           ## optional begin text, ~ if should not match
+ *   [ \[ { &lt;filter?variantBegin> ? \| } \] ] ## [...|...] variants to begin optional, can contain ~ for exclude
+ *   [ * &lt;*?sContain> * ]                     ## Between two '*' an inner String which should contain
+ *   [ *                                      ## after asterisk check of end string 
+ *     [ \[ { [~&lt;?mNotEnd>] &lt;*?variantEnd> ? \| } \] ] ## [...|...] variants to end optional
+ *     [ &lt;*?sEnd> ]                           ## an end String optional. 
+ *   ] .
  * </pre> 
  * <br><br>
  * 
@@ -37,6 +45,10 @@ public class FilepathFilterM implements ToStringBuilder {
   /**Version, history and license.
    * Changes:
    * <ul>
+   * <li>2025-11-02 Hartmut {@link #checkRecursive(String, boolean, int[])};
+   *   bugfix the last only file entry was used to accept a directory with this name.
+   *   Now test in {@link #checkRecursive(String, boolean, int[])} whether it is the last entry and not dir or vice versa,
+   *   but now only for the end of variants. Because variants may have not {@link #aFilterChild}.
    * <li>2025-11-02 Hartmut changes, not more as one excluding Strings are possible also with including strings,
    *   means <code>[~dirA*|~dirB]/*]</code> this has not worked before. 
    * <li>2023-07-16 Hartmut new {@link #selAllFilesInDir()}, {@link #selAllDirEntries()}. {@link #selAllEntries()}
@@ -100,6 +112,9 @@ public class FilepathFilterM implements ToStringBuilder {
   /**up to 32 bit for negation of variants, bit 0 for first text etc.*/
   final boolean bNotBegin;
   
+  /**bit from 0 for each {@link #variantsEnd} whether it must match (0) or not (1). 
+   * See {@link #checkVariantsEnd(String, int)}.
+   */
   int mNotEnd;
   
   
@@ -329,44 +344,48 @@ public class FilepathFilterM implements ToStringBuilder {
   }
 
   
-  private static String parseVariants(String sPart, int posBracket, List<FilepathFilterM> list, FilepathFilterM filterChild) {
+  /**Variants are given in sPart in [...|...]. Whereby inside variants also variants are possible: '[.../[...|...]/xx|...]'
+   * <ul><li>reads out each variant with detection matching [ | ]
+   * <li> call {@link #createWildcardFilter(String, FilepathFilterM)} recursively for each found variant. 
+   * <li> adds the variants {@link FilepathFilterM} to the list, to store in the parents {@link #variantsBegin}.
+   * @param sPart The given textual part with variants till posBracket.
+   * @param posBracket the end of the given variants in sPart (behind some other parts follow)
+   * @param list The list to add the variants. 
+   * @param filterChild The given {@link FilepathFilterM} for children in the path (Note: parsing is processed backward)
+   * @return not used
+   */
+  private static void parseVariants(String sPart, int posBracket, List<FilepathFilterM> list, FilepathFilterM filterChild) {
     // search ] but not inside a quotation with [...]
     //if(sPart.startsWith("[~docuSrc*")) Debugutil.stopp();
     int posEndBracket = StringFunctions.indexOfAnyCharOutsideQuotation(sPart, posBracket+1, -1, "]", "[", "]", '\\', null);
         //sPart.indexOf(']');
-    String sPart1 = sPart.substring(0, posBracket);
-    String sPart2;
-    if(posEndBracket <0) { 
-      posEndBracket = sPart.length(); 
-      sPart2 = "";
-    } else {
-      sPart2 = sPart.substring(posEndBracket+1);
-    }
+    if(posEndBracket <0) { posEndBracket = sPart.length(); }
     int posVariety = posBracket +1;                    // check [variety|...
     while(posVariety < posEndBracket) {                // do not enter if no [ or ] found.  
       //int posEndVariety = sPart.indexOf('|', posVariety);
       int posEndVariety = StringFunctions.indexOfAnyCharOutsideQuotation(sPart, posVariety, -1, "|", "[", "]", '\\', null);;
       if(posEndVariety <0) { posEndVariety = posEndBracket; }
       String sVariant = sPart.substring(posVariety, posEndVariety);
+      //
+      //======>>>>                                         // recursively call of the variants filter.
       FilepathFilterM variant = createWildcardFilter(sVariant, filterChild);
       list.add(variant);
       posVariety = posEndVariety +1;
     }
-    return sPart1 + "*" + sPart2;
   }
   
   
   
+  /**Similar as {@link #parseVariants(String, int, List, FilepathFilterM)} but only for end.
+   * The end cannot contain directories, hence list is only a String.
+   * @param sPart used after posBracket
+   * @param posBracket the position of the opening bracket for the variants in sPart
+   * @param list
+   * @return
+   */
   private static int parseVariantsEnd(String sPart, int posBracket, List<String> list) {
     int posEndBracket = sPart.indexOf(']');
-    String sPart1 = sPart.substring(0, posBracket);
-    String sPart2;
-    if(posEndBracket <0) { 
-      posEndBracket = sPart.length(); 
-      sPart2 = "";
-    } else {
-      sPart2 = sPart.substring(posEndBracket+1);
-    }
+    if(posEndBracket <0) { posEndBracket = sPart.length(); }
     int posVariety = posBracket +1;                    // check [variety|...
     int mBit = 0x1;
     int mNotEnd = 0x0;
@@ -378,7 +397,7 @@ public class FilepathFilterM implements ToStringBuilder {
       if(sPart.charAt(posVariety)== '~') {
         mNotEnd |= mBit;
         posVariety += 1;
-      }
+      }                                                    //vv add the variant string.
       String sVariant = sPart.substring(posVariety, posEndVariety);
       list.add(sVariant);
       posVariety = posEndVariety +1;
@@ -482,6 +501,53 @@ public class FilepathFilterM implements ToStringBuilder {
   
   
   
+  /**This is the essential check operation:
+   * <ul>
+   * <li>_A_ If {@link #bAllTree} is set, then this 'name' is tested with the {@link #aFilterChild}.
+   *   <ul>
+   *   <li>_A1_ If {@link #aFilterChild} matches, it is the child. 
+   *     Then the return value of the recursively call is returned as filter for the next path entry. 
+   *   <li>_A2_ If {@link #aFilterChild} does not match, and 'name' is a directory, 
+   *     then name is matching, because {@link #bAllTree} matches.
+   *     Then this is returned as next filter to check the next path entry.
+   *   <li>_A3_ If {@link #aFilterChild} does not match but 'name' is not a directory, then it returns null for not matching.
+   *     The {@link #bAllTree} flag is only valid for directory entries as 'name'
+   *   </ul>
+   * <li>_B_ If {@link #bAllTree} is not set, then the internal 'nextf' is set to the {@link #aFilterChild} or to 'this'
+   *   if 'name' is a file (not directory, 'bDir' == false.
+   *   This value is prepared for return if all tests matches. 
+   *   If tests are not matching, null is returned.  
+   * <li>_C_ If {@link #variantsBegin} are not given, then the 'bDir' of name should matching to {@link #aFilterChild}:
+   *   A directory need {@link #aFilterChild}, a file must not have {@link #aFilterChild}. If this is not proper, returns null.
+   *   But if {@link #variantsBegin} are given, {@link #aFilterChild} can be null, because the variants contains the filterchild.
+   *   Hence 'bDir' is then not evalueated.
+   * <li>The tests of {@link #zBegin} and {@link #zEnd} shortens the middle part of 'name'.
+   * <li>_D_ If {@link #bNotBegin} is given and the {@link #sBegin} is longer then 'name' without {@link #zEnd}, 
+   *   then it is ok, the {@link #sBegin} does not match, the test goes on. 
+   *   But if {@link #bNotBegin} is false, the test failes, return null.
+   * <li>_E_ If {@link #sBegin} is given, name without {@link #zEnd} is tested.
+   *   returns false if is ok but {@link #bNotBegin} is set, or if not ok and {@link #bNotBegin} is false.
+   *   Else continue with further tests.
+   * <li>_F_ If {@link #variantsBegin} is given, then all variants are tested with the name part after {@link #zBegin}
+   *   till {@link #zEnd}. 
+   *   This is done with recursively call of this operation via {@link #checkVariants(String, boolean, int[], int)}.
+   *   return value null of this call returns with null, it does not match. 
+   *   The detailed {@link #bNotBegin} etc. are done in the recursion.
+   * <li>_G_ If {@link #variantsEnd} are given, they are checked via {@link #checkVariantsEnd(String, int)}.
+   *   If this operation returns null, return null.   
+   * <li>_H_ If {@link #sEnd} is given, it should match {@link #zEnd} == 0, then not relevant.
+   * <li>_J_ at last {@link #sContain} is test with the remaining middle part.
+   * </ul>
+   * @param name Name of the entry in path, either a directory or file name.
+   * @param bDir true if 'name' is a directory entry
+   * @param posEndBegin position to test 'name', >0 if this is called as inner variant test.
+   * @return The next {@link FilepathFilterM} to test the next entry in the path.
+   *   <ul><li>It is 'this' if {@link #bAllTree} matches. It is 'this' only to have a value !=null if not 'bDir'. 
+   *   the last check does not call more checks because it is the last entry. 
+   *   <li>It is {@link #aFilterChild} on matching the current entry.#
+   *   <li>It is null for non matching.
+   *   </ul>
+   */
   private FilepathFilterM checkRecursive(String name, boolean bDir, int posEndBegin[]
   ) { //, FilepathFilterM[] next) { 
     FilepathFilterM nextf;
@@ -502,19 +568,23 @@ public class FilepathFilterM implements ToStringBuilder {
       nextf = !bDir ? this :                               // default return on positive test is for !bDir  !=null (leaf)  
               this.bAllTree ? this : this.aFilterChild;    // use normally child for next, but for "**" this itself.
     }
-    if(!bDir && this.aFilterChild !=null) {
-      return null;                                         // a file, it must be the last entry in the filter queue
+    if(this.variantsBegin ==null) {              //---------- _C_ only for the end of variants, test file or directory
+      if(!bDir && this.aFilterChild !=null) {
+        return null;                                       // a file, it must be the last entry in the filter queue
+      }
+      if(bDir && this.aFilterChild ==null) {
+        return null;                                       // a dir, it must not be the last entry in the filter queue
+      }
     }
     int zName = name.length();
     int posStartEnd = zName - this.zEnd;
-    if(this.zBegin > posStartEnd) {                        // name is to short for the mask sBefore*sBehind, cannot match
+    if(this.zBegin > posStartEnd) {                        // _D_ name is to short for the mask sBefore*sBehind, cannot match
       if(this.bNotBegin) {                                 // should not match, hence returns true, with used length unchanged
       } else {  
-        nextf = null;                                      // should match, hence return null
+        return null;                                      // should match, hence return null
       }
-      return nextf;                                        // returns true if the matching should be false
     } 
-    if(this.zBegin >0 ) {
+    if(this.zBegin >0 ) {                                  //_E_ check sBegin
       boolean bMatchBegin = name.startsWith(this.sBegin); 
       if(this.bNotBegin == bMatchBegin) {                  // bNotBegin && sbegin matches or !bNotBegin and does not match:
         return null;                                       // then faulty.
@@ -522,15 +592,14 @@ public class FilepathFilterM implements ToStringBuilder {
         posEndBegin[0] = this.zBegin;
       }
     }
-    if(this.variantsBegin !=null) {                        // variants given on begin, test it.
+    if(this.variantsBegin !=null) {                        //_F_ variants given on begin, test it.
       nextf = checkVariants(name, bDir, posEndBegin, posStartEnd); //The variants contains the next filter 
       if(nextf == null) {               // ^- updated on the posBegin inside the variant. 
         return null;
       }
     }
-    boolean bOk = true; //! this.bNotBegin;                      // false if begin has matched
     int posEnd = zName;
-    if(this.variantsEnd !=null) {                          //"*[end1|end2|...]" given
+    if(this.variantsEnd !=null) {                          //_G_ "*[end1|end2|...]" given
       int posEndVariant = checkVariantsEnd(name, zName);
       if(posEndVariant <0) {                               // posEndVariant is the position in name before fond [end1|end2|...]
         return null;                                       // -1 then checkVariantsEnd does not match, return null
@@ -540,7 +609,7 @@ public class FilepathFilterM implements ToStringBuilder {
     } else {
       posEnd = zName;
     }
-    if(this.zEnd >0) {                      //--------vv check end
+    if(this.zEnd >0) {                           //--------vv _H_ check end
       if(  posStartEnd <0                                  // not enough character for sEnd 
        || !name.substring(posStartEnd, posEnd).equals(this.sEnd)
        ) {
@@ -555,7 +624,7 @@ public class FilepathFilterM implements ToStringBuilder {
       posStartEnd = zName;
     }                                            //--------^^ check end, posStartEnd is set.
     //
-    if(this.sContain !=null) {
+    if(this.sContain !=null) {                   //--------vv _J_
       if(! name.substring(posEndBegin[0], posStartEnd).contains(this.sContain)) {
         return null;                                    // does non contains *contain*
       }

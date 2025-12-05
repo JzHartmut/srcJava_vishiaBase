@@ -55,7 +55,8 @@ public class LinkedListLock<T> extends LinkedList<T> {
    */
   @Override public boolean add(T d) {
     if(this.bLock) {
-      throw new IllegalStateException("List is locked");
+      Debugutil.stop();
+//      throw new IllegalStateException("List is locked");
     }
     return super.add(d);
   }

@@ -787,7 +787,7 @@ public abstract class Arguments {
             }
             // =============================================== Now reads the line of the file for arguments
             while( (arg = farg.readLine()) !=null) {
-              if(posArg >0 && !arg.startsWith(sStartLineArg)) { // label mode: break of arguments lines if no more lines with the start line found
+              if(sStartLineArg !=null && !arg.startsWith(sStartLineArg)) { // label mode: break of arguments lines if no more lines with the start line found
                 break;
               }
               String sArg = arg.substring(posArg);         // The argument itself from 0 or from the posArg
